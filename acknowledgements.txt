@@ -1,0 +1,3 @@
+Rhino Divan DB is making use of the builtin Esent database and the ManagedEsent project (http://codeplex.com/ManagedEsent),
+ICSharpCode.NRefactory from the SharpDevelop project (http://.sharpdevelop.net)
+Newtonsoft.Json from James Newton-King (http://james.newtonking.com/pages/json-net.aspx)

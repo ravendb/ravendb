@@ -49,7 +49,7 @@
     <Reference Include="System.Xml" />
     <Reference Include="xunit, Version=1.1.0.1323, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\OSS\rhino-tools\SharedLibs\xUnit\xunit.dll</HintPath>
+      <HintPath>..\SharedLibs\xunit.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
