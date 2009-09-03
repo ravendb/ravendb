@@ -6,7 +6,7 @@ using Newtonsoft.Json.Linq;
 using Rhino.DivanDB.Linq;
 using Xunit;
 
-namespace Rhino.DivanDB.Tests
+namespace Rhino.DivanDB.Tests.Linq
 {
     public class LinqTransformerCompilationTests
     {
@@ -26,15 +26,15 @@ var pagesByTitle =
         [Fact]
         public void Can_create_new_instance_from_query()
         {
-			var compiled = new LinqTransformer(query, "docs", typeof(JsonDynamicObject)).Compile();
+            var compiled = new LinqTransformer(query, "docs", typeof(JsonDynamicObject)).Compile();
             Activator.CreateInstance(compiled);
         }
 
         [Fact]
         public void Can_get_type_of_result_from_query()
         {
-			var compiled = new LinqTransformer(query, "docs", typeof(JsonDynamicObject)).Compile();
-			var instance = (AbstractViewGenerator<JsonDynamicObject>)Activator.CreateInstance(compiled);
+            var compiled = new LinqTransformer(query, "docs", typeof(JsonDynamicObject)).Compile();
+            var instance = (AbstractViewGenerator<JsonDynamicObject>)Activator.CreateInstance(compiled);
             var argument = instance.ViewDefinition.Body.Type.GetGenericArguments()[0];
             
             Assert.NotNull(argument.GetProperty("Key"));
@@ -49,8 +49,8 @@ var pagesByTitle =
         [Fact]
         public void Can_execute_query()
         {
-			var compiled = new LinqTransformer(query, "docs", typeof(JsonDynamicObject)).Compile();
-			var generator = (AbstractViewGenerator<JsonDynamicObject>)Activator.CreateInstance(compiled);
+            var compiled = new LinqTransformer(query, "docs", typeof(JsonDynamicObject)).Compile();
+            var generator = (AbstractViewGenerator<JsonDynamicObject>)Activator.CreateInstance(compiled);
             var results = generator.Execute(new[]
             {
                 new JsonDynamicObject(@"

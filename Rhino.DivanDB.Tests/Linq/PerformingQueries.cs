@@ -7,7 +7,7 @@ using Rhino.DivanDB.Linq;
 using Xunit;
 using System.Linq;
 
-namespace Rhino.DivanDB.Tests
+namespace Rhino.DivanDB.Tests.Linq
 {
     public class PerformingQueries
     {
@@ -26,9 +26,9 @@ var pagesByTitle =
 {'type':'page', title: 'there', content: 'foobar 2', size: 3},
 {'type':'revision', size: 4}
 ]");
-        	var compiled = new LinqTransformer(query, "docs", typeof(JsonDynamicObject)).Compile();
+            var compiled = new LinqTransformer(query, "docs", typeof(JsonDynamicObject)).Compile();
             var compiledQuery = (AbstractViewGenerator<JsonDynamicObject>)Activator.CreateInstance(compiled);
-        	var actual = compiledQuery.Execute(documents)
+            var actual = compiledQuery.Execute(documents)
                 .Cast<object>().ToArray();
             var expected = new[]
             {
@@ -43,14 +43,14 @@ var pagesByTitle =
             }
         }
 
-    	private static IEnumerable<JsonDynamicObject> GetDocumentsFromString(string json)
-    	{
-    		var serializer = new JsonSerializer();
-    		var docs = (JArray)serializer.Deserialize(
-    		                   	new JsonTextReader(
-    		                   		new StringReader(
-    		                   			json)));
-    		return docs.Select(x => new JsonDynamicObject(x));
-    	}
+        private static IEnumerable<JsonDynamicObject> GetDocumentsFromString(string json)
+        {
+            var serializer = new JsonSerializer();
+            var docs = (JArray)serializer.Deserialize(
+                                   new JsonTextReader(
+                                       new StringReader(
+                                           json)));
+            return docs.Select(x => new JsonDynamicObject(x));
+        }
     }
 }

@@ -3,7 +3,7 @@ using System.IO;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace Rhino.DivanDB.Tests
+namespace Rhino.DivanDB.Tests.Linq
 {
     public class JsonDynamicObject : DynamicObject
     {
@@ -14,12 +14,12 @@ namespace Rhino.DivanDB.Tests
             this.json = json;
         }
 
-		public JsonDynamicObject(string jsonString)
-		{
-			var serializer = new JsonSerializer();
-			using (var reader = new JsonTextReader(new StringReader(jsonString)))
-				json = (JToken) serializer.Deserialize(reader);
-		}
+        public JsonDynamicObject(string jsonString)
+        {
+            var serializer = new JsonSerializer();
+            using (var reader = new JsonTextReader(new StringReader(jsonString)))
+                json = (JToken) serializer.Deserialize(reader);
+        }
 
         public override DynamicObject this[string key]
         {

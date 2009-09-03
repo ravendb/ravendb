@@ -1,6 +1,6 @@
 using System;
 
-namespace Rhino.DivanDB.Tests
+namespace Rhino.DivanDB.Tests.Linq
 {
     public abstract class DynamicObject
     {
