@@ -73,16 +73,7 @@ namespace Rhino.DivanDB.Tests.Storage
                 Api.JetOpenDatabase(session, db.Storage.Database, null, out dbid, OpenDatabaseGrbit.None);
                 try
                 {
-                    ColumnInfo[] columnInfos =
-                        Api.GetTableColumns(session, dbid, "views_pagesByTitle").ToArray();
-
-                    Assert.Equal("Key", columnInfos[0].Name);
-                    Assert.Equal("Size", columnInfos[1].Name);
-                    Assert.Equal("Value", columnInfos[2].Name);
-
-                    Assert.Equal(JET_coltyp.LongText, columnInfos[0].Coltyp);
-                    Assert.Equal(JET_coltyp.Long, columnInfos[1].Coltyp);
-                    Assert.Equal(JET_coltyp.LongText, columnInfos[2].Coltyp);
+                    Assert.True(Api.GetTableNames(session, dbid).Contains("views_pagesByTitle"));
                 }
                 finally
                 {

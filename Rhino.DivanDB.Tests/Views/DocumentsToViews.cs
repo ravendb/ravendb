@@ -1,0 +1,60 @@
+using System;
+using System.Threading;
+using Newtonsoft.Json.Linq;
+using Rhino.DivanDB.Tests.Storage;
+using Xunit;
+using System.Linq;
+
+namespace Rhino.DivanDB.Tests.Views
+{
+    public class DocumentsToViews : AbstractDocumentStorageTest, IDisposable
+    {
+        private readonly DocumentDatabase db;
+
+        public DocumentsToViews()
+        {
+            db = new DocumentDatabase("divan.db.test.esent");
+        }
+
+        [Fact]
+        public void Adding_a_document_will_add_it_to_the_queue_of_existing_views()
+        {
+            db.AddView(
+                @"var pagesByTitle = 
+    from doc in docs
+    where doc.type == ""page""
+    select new { Key = doc.title, Value = doc.content, Size = (int)doc.size };
+");
+            db.AddDocument(JObject.Parse("{_id: '1', type: 'page', content: 'this is the content', title: 'hello world', size: 5}"));
+
+            db.Storage.Batch(actions =>
+            {
+                var id = actions.QueuedDocumentsFor("pagesByTitle").ToArray()[0];
+                Assert.Equal("1", id);
+            });
+        }
+
+        [Fact]
+        public void Adding_a_view_will_queue_all_documents_for_this_view()
+        {
+            db.AddDocument(JObject.Parse("{_id: '1', type: 'page', content: 'this is the content', title: 'hello world', size: 5}"));
+
+            db.AddView(
+               @"var pagesByTitle = 
+    from doc in docs
+    where doc.type == ""page""
+    select new { Key = doc.title, Value = doc.content, Size = (int)doc.size };
+");
+            db.Storage.Batch(actions =>
+            {
+                var id = actions.QueuedDocumentsFor("pagesByTitle").ToArray()[0];
+                Assert.Equal("1", id);
+            });
+        }
+
+        public void Dispose()
+        {
+            db.Dispose();
+        }
+    }
+}

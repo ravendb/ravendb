@@ -64,6 +64,7 @@
     <Compile Include="Storage\CreateUpdateDeleteDocuments.cs" />
     <Compile Include="Storage\CreateViews.cs" />
     <Compile Include="Storage\DeleteViews.cs" />
+    <Compile Include="Views\DocumentsToViews.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Rhino.DivanDB\Rhino.DivanDB.csproj">

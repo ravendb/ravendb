@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -22,6 +23,8 @@ namespace Rhino.DivanDB.Storage
         private readonly IDictionary<string, JET_COLUMNID> documentsColumns;
         private readonly Table views;
         private readonly IDictionary<string, JET_COLUMNID> viewsColumns;
+        private readonly Table viewsTransformationQueues;
+        private readonly IDictionary<string, JET_COLUMNID> viewsTransformationQueuesColumns;
 
 
         public DocumentStorageActions(JET_INSTANCE instance,
@@ -37,6 +40,9 @@ namespace Rhino.DivanDB.Storage
 
             views = new Table(session, dbid, "viewDefinitions", OpenTableGrbit.None);
             viewsColumns = Api.GetColumnDictionary(session, views);
+
+            viewsTransformationQueues = new Table(session, dbid, "viewTransformationQueues", OpenTableGrbit.None);
+            viewsTransformationQueuesColumns = Api.GetColumnDictionary(session, viewsTransformationQueues);
         }
 
 
@@ -89,6 +95,12 @@ namespace Rhino.DivanDB.Storage
 
         public void Dispose()
         {
+            if(viewsTransformationQueues != null)
+                viewsTransformationQueues.Dispose();
+
+            if(views != null)
+                views.Dispose();
+
             if (documents != null)
                 documents.Dispose();
 
@@ -169,45 +181,36 @@ namespace Rhino.DivanDB.Storage
             Api.JetCreateTable(session, dbid, "views_" + name, 16, 100, out newViewTable);
             try
             {
-                foreach (var property in generatedType.GetProperties())
+                JET_COLUMNID columnid;
+                Api.JetAddColumn(session, newViewTable, "key", new JET_COLUMNDEF
                 {
-                    JET_COLUMNID columnid;
-                    Api.JetAddColumn(session, newViewTable, property.Name, PropertyToColumnInfo(property), null, 0, out columnid );
-                }
+                    cbMax = 255,
+                    coltyp = JET_coltyp.Text,
+                    cp = JET_CP.Unicode,
+                    grbit = ColumndefGrbit.ColumnNotNULL
+                }, null, 0, out columnid);
+                Api.JetAddColumn(session, newViewTable, "original_doc_key", new JET_COLUMNDEF
+                {
+                    cbMax = 255,
+                    coltyp = JET_coltyp.Text,
+                    cp = JET_CP.Unicode,
+                    grbit = ColumndefGrbit.ColumnNotNULL
+                }, null, 0, out columnid);
+                Api.JetAddColumn(session, newViewTable, "data", new JET_COLUMNDEF
+                {
+                    coltyp = JET_coltyp.LongText,
+                    cp = JET_CP.Unicode,
+                    grbit = ColumndefGrbit.ColumnNotNULL
+                }, null, 0, out columnid);
+                var indexDef = "+key\0\0";
+                Api.JetCreateIndex(session, newViewTable, "pk", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,100);
+                indexDef = "+original_doc_key\0\0";
+                Api.JetCreateIndex(session, newViewTable, "by_original_doc_key", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length, 100);
             }
             finally
             {
                 Api.JetCloseTable(session, newViewTable);
             }
-        }
-
-        private JET_COLUMNDEF PropertyToColumnInfo(PropertyInfo property)
-        {
-            if (property.PropertyType == typeof(string))
-            {
-                return new JET_COLUMNDEF
-                {
-                    coltyp = JET_coltyp.LongText,
-                    cp = JET_CP.Unicode,
-                    grbit = property.Name == "Key" ? ColumndefGrbit.ColumnNotNULL : ColumndefGrbit.None,
-                };
-            }
-            if (property.PropertyType == typeof(int))
-            {
-                return new JET_COLUMNDEF
-                {
-                    coltyp = JET_coltyp.Long,
-                };
-            }
-            if(property.PropertyType == typeof(bool))
-            {
-                return new JET_COLUMNDEF
-                {
-                    coltyp = JET_coltyp.Bit,
-                };
-            }
-
-            throw new NotImplementedException("Don't understand how to turn a "+property.PropertyType+" to a column type");
         }
 
         public string DeleteView(string name)
@@ -228,6 +231,59 @@ namespace Rhino.DivanDB.Storage
             if(Api.GetTableNames(session, dbid).Contains(tableViewName) == false)
                 return;
             Api.JetDeleteTable(session, dbid, tableViewName);
+        }
+
+        public IEnumerable<string> ViewRecordsByNameAndKey(string name, string key)
+        {
+            using(var viewTable = new Table(session, dbid, "views_"+name,OpenTableGrbit.ReadOnly))
+            {
+                var viewTableColumns = Api.GetColumnDictionary(session, viewTable);
+                Api.JetSetIndexRange(session, viewTable, SetIndexRangeGrbit.None);
+                Api.MakeKey(session, viewTable, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+                if(Api.TrySeek(session, viewTable, SeekGrbit.SeekEQ) == false)
+                    yield break;
+                Api.MakeKey(session, viewTable, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+                Api.JetSetIndexRange(session, viewTable,
+                                     SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
+
+                do
+                {
+                    yield return Api.RetrieveColumnAsString(session, viewTable, viewTableColumns["data"], Encoding.Unicode);
+                } while (Api.TryMoveNext(session, viewTable));
+            }
+        }
+
+        public IEnumerable<string> QueuedDocumentsFor(string name)
+        {
+            Api.JetSetCurrentIndex(session, viewsTransformationQueues, "by_view");
+            Api.MakeKey(session, viewsTransformationQueues, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            if(Api.TrySeek(session, viewsTransformationQueues, SeekGrbit.SeekEQ) == false)
+                yield break;
+            do
+            {
+                yield return Api.RetrieveColumnAsString(session, viewsTransformationQueues,
+                                               viewsTransformationQueuesColumns["documentKey"], Encoding.Unicode);
+            } while (Api.TryMoveNext(session, viewsTransformationQueues));
+        }
+
+        public void QueueDocumentForViewTransformation(string name, string key)
+        {
+            using(var update = new Update(session, viewsTransformationQueues, JET_prep.Insert))
+            {
+                Api.SetColumn(session, viewsTransformationQueues, viewsTransformationQueuesColumns["documentKey"], key, Encoding.Unicode);
+                Api.SetColumn(session, viewsTransformationQueues, viewsTransformationQueuesColumns["viewName"], name, Encoding.Unicode);
+
+                update.Save();
+            }
+        }
+
+        public IEnumerable<string> DocumentKeys()
+        {
+            Api.MoveBeforeFirst(session, documents);
+            while(Api.TryMoveNext(session, documents))
+            {
+                yield return Api.RetrieveColumnAsString(session, documents, documentsColumns["key"], Encoding.Unicode);
+            }
         }
     }
 }

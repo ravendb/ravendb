@@ -31,6 +31,10 @@ namespace Rhino.DivanDB
             Storage.Batch(actions =>
             {
                 actions.AddDocument(key, document.ToString());
+                foreach (var view in actions.ListViews())
+                {
+                    actions.QueueDocumentForViewTransformation(view, key);
+                }
                 actions.Commit();
             });
             return key;
@@ -121,6 +125,10 @@ namespace Rhino.DivanDB
             {
                 actions.AddView(transformer.Name, viewDefinition, compiled);
                 actions.CreateViewTable(transformer.Name, generator.GeneratedType);
+                foreach (var key in actions.DocumentKeys())
+                {
+                    actions.QueueDocumentForViewTransformation(transformer.Name, key);
+                }
                 actions.Commit();
             });
         }
@@ -195,6 +203,26 @@ namespace Rhino.DivanDB
                 actions.DeleteViewTable(name);
                 actions.Commit();
             });
+        }
+
+        public bool IsViewUpToDate(string name)
+        {
+            throw new NotImplementedException();
+        }
+
+        public JObject[] ViewRecordsByNameAndKey(string name, string key)
+        {
+            var records = new List<JObject>();
+            Storage.Batch(actions =>
+            {
+                foreach (var data in actions.ViewRecordsByNameAndKey(name, key))
+                {
+                    records.Add(JObject.Parse(data));
+                }
+               
+                actions.Commit();
+            });
+            return records.ToArray();
         }
     }
 }

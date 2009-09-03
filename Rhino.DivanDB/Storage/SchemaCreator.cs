@@ -26,6 +26,7 @@ namespace Rhino.DivanDB.Storage
                     CreateDetailsTable(dbid);
                     CreateDocumentsTable(dbid);
                     CreateViewsTable(dbid);
+                    CreateViewTransformationQueueTable(dbid);
 
                     tx.Commit(CommitTransactionGrbit.None);
                 }
@@ -34,6 +35,44 @@ namespace Rhino.DivanDB.Storage
             {
                 Api.JetCloseDatabase(session, dbid, CloseDatabaseGrbit.None);
             }
+        }
+
+        private void CreateViewTransformationQueueTable(JET_DBID dbid)
+        {
+            JET_TABLEID tableid;
+            Api.JetCreateTable(session, dbid, "viewTransformationQueues", 16, 100, out tableid);
+            JET_COLUMNID columnid;
+
+
+            Api.JetAddColumn(session, tableid, "id", new JET_COLUMNDEF
+            {
+                coltyp = JET_coltyp.Long,
+                grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnAutoincrement
+            }, null, 0, out columnid);
+
+            Api.JetAddColumn(session, tableid, "documentKey", new JET_COLUMNDEF
+            {
+                cbMax = 255,
+                coltyp = JET_coltyp.Text,
+                cp = JET_CP.Unicode,
+                grbit = ColumndefGrbit.ColumnNotNULL
+            }, null, 0, out columnid);
+
+            Api.JetAddColumn(session, tableid, "viewName", new JET_COLUMNDEF
+            {
+                cbMax = 255,
+                coltyp = JET_coltyp.Text,
+                cp = JET_CP.Unicode,
+                grbit = ColumndefGrbit.ColumnNotNULL
+            }, null, 0, out columnid);
+
+            var indexDef = "+id\0\0";
+            Api.JetCreateIndex(session, tableid, "pk", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
+                               100);
+
+             indexDef = "+viewName\0\0";
+            Api.JetCreateIndex(session, tableid, "by_view", CreateIndexGrbit.None, indexDef, indexDef.Length,
+                               100);
         }
 
         private void CreateViewsTable(JET_DBID dbid)
