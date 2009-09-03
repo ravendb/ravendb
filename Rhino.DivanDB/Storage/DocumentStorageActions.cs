@@ -35,7 +35,7 @@ namespace Rhino.DivanDB.Storage
             documents = new Table(session, dbid, "documents", OpenTableGrbit.None);
             documentsColumns = Api.GetColumnDictionary(session, documents);
 
-            views = new Table(session, dbid, "view_definitions", OpenTableGrbit.None);
+            views = new Table(session, dbid, "viewDefinitions", OpenTableGrbit.None);
             viewsColumns = Api.GetColumnDictionary(session, views);
         }
 
@@ -208,6 +208,26 @@ namespace Rhino.DivanDB.Storage
             }
 
             throw new NotImplementedException("Don't understand how to turn a "+property.PropertyType+" to a column type");
+        }
+
+        public string DeleteView(string name)
+        {
+            Api.JetSetCurrentIndex(session, views, "by_name");
+            Api.MakeKey(session, views, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, views, SeekGrbit.SeekEQ) == false)
+                return null;
+            string hash = Api.RetrieveColumnAsString(session, views, viewsColumns["hash"],Encoding.Unicode);
+            Api.JetDelete(session, views);
+            return hash;
+          
+        }
+
+        public void DeleteViewTable(string name)
+        {
+            string tableViewName = "views_"+name;
+            if(Api.GetTableNames(session, dbid).Contains(tableViewName) == false)
+                return;
+            Api.JetDeleteTable(session, dbid, tableViewName);
         }
     }
 }

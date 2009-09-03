@@ -182,5 +182,19 @@ namespace Rhino.DivanDB
             });
             return viewFunc;
         }
+
+        public void DeleteView(string name)
+        {
+            Storage.Batch(actions =>
+            {
+                string hash = actions.DeleteView(name);
+                if(hash!=null)
+                {
+                    viewsCache.Write(writer => writer.Remove(hash));
+                }
+                actions.DeleteViewTable(name);
+                actions.Commit();
+            });
+        }
     }
 }

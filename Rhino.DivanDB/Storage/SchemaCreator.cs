@@ -39,7 +39,7 @@ namespace Rhino.DivanDB.Storage
         private void CreateViewsTable(JET_DBID dbid)
         {
             JET_TABLEID tableid;
-            Api.JetCreateTable(session, dbid, "view_definitions", 16, 100, out tableid);
+            Api.JetCreateTable(session, dbid, "viewDefinitions", 16, 100, out tableid);
             JET_COLUMNID columnid;
 
             Api.JetAddColumn(session, tableid, "name", new JET_COLUMNDEF

@@ -26,7 +26,8 @@ task Init -depends Clean {
 		-company "Hibernating Rhinos" `
 		-product "Rhino DivanDB $version" `
 		-version $version `
-		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2009"
+		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2009" `
+		-clsCompliant "false"
 		
 	Generate-Assembly-Info `
 		-file "$base_dir\Rhino.DivanDB.Tests\Properties\AssemblyInfo.cs" `
@@ -35,8 +36,8 @@ task Init -depends Clean {
 		-company "Hibernating Rhinos" `
 		-product "Rhino DivanDB $version" `
 		-version $version `
-		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2009"
-    
+		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2009" `
+		-clsCompliant "false"
 		
 	new-item $release_dir -itemType directory 
 	new-item $buildartifacts_dir -itemType directory 
