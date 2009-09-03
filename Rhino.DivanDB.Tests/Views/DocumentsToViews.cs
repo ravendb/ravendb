@@ -52,6 +52,28 @@ namespace Rhino.DivanDB.Tests.Views
             });
         }
 
+        [Fact]
+        public void Can_read_values_from_view()
+        {
+            db.AddDocument(JObject.Parse("{_id: '1', type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"));
+
+            db.AddView(
+               @"var pagesByTitle = 
+    from doc in docs
+    where doc.type == ""page""
+    select new { Key = doc.title, Value = doc.content, Size = (int)doc.size };
+");
+            db.ProcessQueuedDocuments();
+
+            var docs = db.ViewRecordsByNameAndKey("pagesByTitle", "hello world");
+            Assert.Equal(1, docs.Length);
+            Assert.Equal(@"{
+  ""Key"": ""hello world"",
+  ""Value"": ""this is the content"",
+  ""Size"": 5
+}", docs[0].ToString());
+        }
+
         public void Dispose()
         {
             db.Dispose();

@@ -203,7 +203,7 @@ namespace Rhino.DivanDB.Storage
                     grbit = ColumndefGrbit.ColumnNotNULL
                 }, null, 0, out columnid);
                 var indexDef = "+key\0\0";
-                Api.JetCreateIndex(session, newViewTable, "pk", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,100);
+                Api.JetCreateIndex(session, newViewTable, "pk", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,100);
                 indexDef = "+original_doc_key\0\0";
                 Api.JetCreateIndex(session, newViewTable, "by_original_doc_key", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length, 100);
             }
@@ -238,7 +238,7 @@ namespace Rhino.DivanDB.Storage
             using(var viewTable = new Table(session, dbid, "views_"+name,OpenTableGrbit.ReadOnly))
             {
                 var viewTableColumns = Api.GetColumnDictionary(session, viewTable);
-                Api.JetSetIndexRange(session, viewTable, SetIndexRangeGrbit.None);
+                Api.JetSetCurrentIndex(session, viewTable, "pk");
                 Api.MakeKey(session, viewTable, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
                 if(Api.TrySeek(session, viewTable, SeekGrbit.SeekEQ) == false)
                     yield break;
@@ -263,6 +263,7 @@ namespace Rhino.DivanDB.Storage
             {
                 yield return Api.RetrieveColumnAsString(session, viewsTransformationQueues,
                                                viewsTransformationQueuesColumns["documentKey"], Encoding.Unicode);
+                Api.JetDelete(session, viewsTransformationQueues);
             } while (Api.TryMoveNext(session, viewsTransformationQueues));
         }
 
@@ -283,6 +284,20 @@ namespace Rhino.DivanDB.Storage
             while(Api.TryMoveNext(session, documents))
             {
                 yield return Api.RetrieveColumnAsString(session, documents, documentsColumns["key"], Encoding.Unicode);
+            }
+        }
+
+        public void AddViewRecord(string view, string key, string documentKey,string data)
+        {
+            using(var viewTable = new Table(session, dbid, "views_"+view, OpenTableGrbit.None))
+            using (var update = new Update(session, viewTable, JET_prep.Insert))
+            {
+                var columns = Api.GetColumnDictionary(session, viewTable);
+                Api.SetColumn(session, viewTable, columns["key"],key, Encoding.Unicode);
+                Api.SetColumn(session, viewTable, columns["original_doc_key"], documentKey, Encoding.Unicode);
+                Api.SetColumn(session, viewTable, columns["data"], data, Encoding.Unicode);
+
+                update.Save();
             }
         }
     }

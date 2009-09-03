@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security;
 using System.Threading;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Rhino.DivanDB.DataStructures;
 using Rhino.DivanDB.Json;
@@ -223,6 +225,31 @@ namespace Rhino.DivanDB
                 actions.Commit();
             });
             return records.ToArray();
+        }
+
+        public void ProcessQueuedDocuments()
+        {
+            var serializer = new JsonSerializer();
+            Storage.Batch(actions =>
+            {
+                foreach (var view in ListView())
+                {
+                    var viewFunc = ViewInstanceByName(view);
+                    foreach (var queuedDocumentKey in actions.QueuedDocumentsFor(view))
+                    {
+                        var doc = DocumentByKey(queuedDocumentKey);
+                        foreach (var viewDoc in viewFunc(new[] { new JsonDynamicObject(doc), }))
+                        {
+                            var keyProperty = viewDoc.GetType().GetProperty("Key");
+                            var key = (string)keyProperty.GetValue(viewDoc, null);
+                            var writer = new StringWriter();
+                            serializer.Serialize(writer, viewDoc);
+                            actions.AddViewRecord(view, key, queuedDocumentKey, writer.GetStringBuilder().ToString());       
+                        }
+                    }
+                }
+                actions.Commit();
+            });
         }
     }
 }
