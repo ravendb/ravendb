@@ -1,0 +1,6 @@
+Consider:
+
+ - Using Rhino Queues to push out the requests for processing a view
+	- will give us the ability to process views on remote machines
+	- otoh, it introduce marshaling into the mix
+	
