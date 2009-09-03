@@ -57,7 +57,7 @@ namespace Rhino.DivanDB.Tests.Storage
         }
 
         [Fact]
-        public void Cannot_edit_document()
+        public void Can_edit_document()
         {
             db.AddDocument(JObject.Parse("{_id: '1', first_name: 'ayende', last_name: 'rahien'}"));
             db.EditDocument(JObject.Parse("{_id: '1', first_name: 'ayende2', last_name: 'rahien2'}"));
@@ -68,6 +68,15 @@ namespace Rhino.DivanDB.Tests.Storage
             Assert.Equal("rahien2", document.Value<string>("last_name"));
         }
 
+        [Fact]
+        public void Can_delete_document()
+        {
+            db.AddDocument(JObject.Parse("{_id: '1', first_name: 'ayende', last_name: 'rahien'}"));
+            db.DeleteDocument(JObject.Parse("{_id: '1', first_name: 'ayende2', last_name: 'rahien2'}"));
+            JObject document = db.DocumentByKey("1");
+
+            Assert.Null(document);
+        }
 
         [Fact]
         public void Can_query_document_by_id_when_having_multiple_documents()

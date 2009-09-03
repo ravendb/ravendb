@@ -32,7 +32,7 @@ namespace Rhino.DivanDB
 
         private static string GetKeyFromDocumentOrGenerateNewOne(IDictionary<string, JToken> document)
         {
-            string id = GetKeyFromDocument(document);
+            string id = GetKeyFromDocumentOrNull(document);
             if (id != null)
                 return id;
             Guid value;
@@ -40,7 +40,7 @@ namespace Rhino.DivanDB
             return  value.ToString();
         }
 
-        private static string GetKeyFromDocument(IDictionary<string, JToken> document)
+        private static string GetKeyFromDocumentOrNull(IDictionary<string, JToken> document)
         {
             JToken idToken;
             if (document.TryGetValue("_id", out idToken))
@@ -76,17 +76,32 @@ namespace Rhino.DivanDB
 
         public void EditDocument(JObject document)
         {
-            var key = GetKeyFromDocument(document);
-            if(key == null)
-                throw new InvalidOperationException("'_id' is a mandatory property for editing documents");
-            
+            string key = GetKeyFromDocument(document);
+
             storage.Batch(actions =>
             {
                 actions.DeleteDocument(key);
                 actions.AddDocument(key, document.ToString());
                 actions.Commit();
             });
+        }
 
+        private string GetKeyFromDocument(JObject document)
+        {
+            var key = GetKeyFromDocumentOrNull(document);
+            if(key == null)
+                throw new InvalidOperationException("'_id' is a mandatory property for editing documents");
+            return key;
+        }
+
+        public void DeleteDocument(JObject document)
+        {
+            string key = GetKeyFromDocument(document);
+            storage.Batch(actions =>
+            {
+                actions.DeleteDocument(key);
+                actions.Commit();
+            });
         }
     }
 }
