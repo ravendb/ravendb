@@ -153,7 +153,7 @@ namespace Rhino.DivanDB.Storage
         }
 
         [CLSCompliant(false)]
-        [DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough, DebuggerStepperBoundary]
+        [DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
         public void Batch(Action<DocumentStorageActions> action)
         {
             using (var pht = new DocumentStorageActions(instance, database, Id))

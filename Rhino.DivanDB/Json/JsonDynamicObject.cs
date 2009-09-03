@@ -3,7 +3,7 @@ using System.IO;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace Rhino.DivanDB.Tests.Linq
+namespace Rhino.DivanDB.Json
 {
     public class JsonDynamicObject : DynamicObject
     {

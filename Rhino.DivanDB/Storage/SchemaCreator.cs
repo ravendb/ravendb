@@ -25,7 +25,8 @@ namespace Rhino.DivanDB.Storage
                 {
                     CreateDetailsTable(dbid);
                     CreateDocumentsTable(dbid);
-                   
+                    CreateViewsTable(dbid);
+
                     tx.Commit(CommitTransactionGrbit.None);
                 }
             }
@@ -35,17 +36,49 @@ namespace Rhino.DivanDB.Storage
             }
         }
 
+        private void CreateViewsTable(JET_DBID dbid)
+        {
+            JET_TABLEID tableid;
+            Api.JetCreateTable(session, dbid, "view_definitions", 16, 100, out tableid);
+            JET_COLUMNID columnid;
+
+            Api.JetAddColumn(session, tableid, "name", new JET_COLUMNDEF
+            {
+                cbMax = 255,
+                coltyp = JET_coltyp.Text,
+                cp = JET_CP.Unicode,
+                grbit = ColumndefGrbit.ColumnNotNULL
+            }, null, 0, out columnid);
+
+            Api.JetAddColumn(session, tableid, "definition", new JET_COLUMNDEF
+            {
+                coltyp = JET_coltyp.LongText,
+                grbit = ColumndefGrbit.ColumnNotNULL
+            }, null, 0, out columnid);
+
+            Api.JetAddColumn(session, tableid, "hash", new JET_COLUMNDEF
+            {
+                coltyp = JET_coltyp.Text,
+                grbit = ColumndefGrbit.ColumnNotNULL
+            }, null, 0, out columnid);
+
+
+            Api.JetAddColumn(session, tableid, "complied_assembly", new JET_COLUMNDEF
+            {
+                coltyp = JET_coltyp.LongBinary,
+                grbit = ColumndefGrbit.ColumnNotNULL
+            }, null, 0, out columnid);
+
+            const string indexDef = "+name\0\0";
+            Api.JetCreateIndex(session, tableid, "by_name", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
+                               100);
+        }
+
         private void CreateDocumentsTable(JET_DBID dbid)
         {
             JET_TABLEID tableid;
             Api.JetCreateTable(session, dbid, "documents", 16, 100, out tableid);
             JET_COLUMNID columnid;
-
-            Api.JetAddColumn(session, tableid, "id", new JET_COLUMNDEF
-            {
-                coltyp = JET_coltyp.Long,
-                grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL|ColumndefGrbit.ColumnAutoincrement
-            }, null, 0, out columnid);
 
             Api.JetAddColumn(session, tableid, "key", new JET_COLUMNDEF
             {
@@ -61,12 +94,8 @@ namespace Rhino.DivanDB.Storage
                 grbit = ColumndefGrbit.ColumnNotNULL
             }, null, 0, out columnid);
 
-            var indexDef = "+id\0\0";
-            Api.JetCreateIndex(session, tableid, "pk", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
-                               100);
-
-            indexDef = "+key\0\0";
-            Api.JetCreateIndex(session, tableid, "by_key", CreateIndexGrbit.IndexDisallowNull | CreateIndexGrbit.IndexUnique, indexDef, indexDef.Length,
+            const string indexDef = "+key\0\0";
+            Api.JetCreateIndex(session, tableid, "by_key", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
                                100);
         }
 

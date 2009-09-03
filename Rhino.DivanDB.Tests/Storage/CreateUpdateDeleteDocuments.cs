@@ -5,11 +5,11 @@ using Xunit;
 
 namespace Rhino.DivanDB.Tests.Storage
 {
-    public class CreateUpdateDelete : AbstractDocumentStorageTest, IDisposable
+    public class CreateUpdateDeleteDocuments : AbstractDocumentStorageTest, IDisposable
     {
         private readonly DocumentDatabase db;
 
-        public CreateUpdateDelete()
+        public CreateUpdateDeleteDocuments()
         {
             db = new DocumentDatabase("divan.db.test.esent");
         }

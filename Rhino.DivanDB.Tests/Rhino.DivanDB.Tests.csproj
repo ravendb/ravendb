@@ -57,13 +57,12 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Linq\DynamicObject.cs" />
-    <Compile Include="Linq\JsonDynamicObject.cs" />
     <Compile Include="Linq\LinqTransformerCompilationTests.cs" />
     <Compile Include="Linq\PerformingQueries.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Storage\AbstractDocumentStorageTest.cs" />
-    <Compile Include="Storage\CreateUpdateDelete.cs" />
+    <Compile Include="Storage\CreateUpdateDeleteDocuments.cs" />
+    <Compile Include="Storage\CreateAndDeleteViews.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Rhino.DivanDB\Rhino.DivanDB.csproj">

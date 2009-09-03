@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Rhino.DivanDB.Json;
 using Rhino.DivanDB.Linq;
 using Xunit;
 using System.Linq;
@@ -27,7 +28,7 @@ var pagesByTitle =
 {'type':'revision', size: 4}
 ]");
             var compiled = new LinqTransformer(query, "docs", typeof(JsonDynamicObject)).Compile();
-            var compiledQuery = (AbstractViewGenerator<JsonDynamicObject>)Activator.CreateInstance(compiled);
+            var compiledQuery = (AbstractViewGenerator)Activator.CreateInstance(compiled);
             var actual = compiledQuery.Execute(documents)
                 .Cast<object>().ToArray();
             var expected = new[]

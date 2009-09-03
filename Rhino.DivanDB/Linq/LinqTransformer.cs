@@ -17,7 +17,10 @@ namespace Rhino.DivanDB.Linq
         private readonly string source;
         private readonly string rootQueryName;
         private readonly Type rootQueryType;
-        private string name;
+
+        public string Name { get; private set; }
+
+        public string PathToAssembly { get; private set; }
 
         public LinqTransformer(string source, string rootQueryName, Type rootQueryType)
         {
@@ -31,7 +34,6 @@ namespace Rhino.DivanDB.Linq
             var implicitClassSource = LinqQueryToImplicitClass();
             var tempFileName = Path.GetTempFileName()+".cs";
             File.WriteAllText(tempFileName, implicitClassSource);
-            Debug.WriteLine(tempFileName);
             var provider = new CSharpCodeProvider(new Dictionary<string, string> { { "CompilerVersion", "v3.5" } });
             var results = provider.CompileAssemblyFromFile(new CompilerParameters
             {
@@ -40,7 +42,7 @@ namespace Rhino.DivanDB.Linq
                 IncludeDebugInformation = true,
                 ReferencedAssemblies =
                     {
-                        typeof(AbstractViewGenerator<>).Assembly.Location,
+                        typeof(AbstractViewGenerator).Assembly.Location,
                         typeof(NameValueCollection).Assembly.Location,
                         typeof(object).Assembly.Location,
                         typeof(System.Linq.Enumerable).Assembly.Location,
@@ -56,8 +58,8 @@ namespace Rhino.DivanDB.Linq
                 }
                 throw new InvalidOperationException(sb.ToString());
             }
-
-            return results.CompiledAssembly.GetType(name);
+            PathToAssembly = results.PathToAssembly;
+            return results.CompiledAssembly.GetType(Name);
         }
 
         private string LinqQueryToImplicitClass()
@@ -70,19 +72,19 @@ namespace Rhino.DivanDB.Linq
 
             VariableDeclaration variable = GetVariableDeclaration(block);
 
-            name = variable.Name;
+            Name = variable.Name;
 
             var type = new TypeDeclaration(Modifiers.Public, new List<AttributeSection>())
             {
                 BaseTypes =
                     {
-                        new TypeReference("AbstractViewGenerator<"+rootQueryType+">")
+                        new TypeReference("AbstractViewGenerator")
                     },
-                Name = name,
+                Name = Name,
                 Type = ClassType.Class
             };
 
-            var ctor = new ConstructorDeclaration(name,
+            var ctor = new ConstructorDeclaration(Name,
                                                   Modifiers.Public,
                                                   new List<ParameterDeclarationExpression>(), null);
             type.Children.Add(ctor);
@@ -107,7 +109,7 @@ namespace Rhino.DivanDB.Linq
 
             
             var unit = new CompilationUnit();
-            unit.AddChild(new Using(typeof(AbstractViewGenerator<>).Namespace));
+            unit.AddChild(new Using(typeof(AbstractViewGenerator).Namespace));
             unit.AddChild(new Using(typeof(System.Linq.Enumerable).Namespace));
             unit.AddChild(type);
 

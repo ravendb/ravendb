@@ -63,6 +63,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="DocumentDatabase.cs" />
+    <Compile Include="DataStructures\Hashtable.cs" />
+    <Compile Include="Json\DynamicObject.cs" />
+    <Compile Include="Json\JsonDynamicObject.cs" />
     <Compile Include="Linq\AbstractViewGenerator.cs" />
     <Compile Include="Linq\LinqTransformer.cs" />
     <Compile Include="Linq\TransformVisitor.cs" />
@@ -71,6 +74,7 @@
     <Compile Include="Storage\EsentExtension.cs" />
     <Compile Include="Storage\DocumentStorageActions.cs" />
     <Compile Include="Storage\SchemaCreator.cs" />
+    <Compile Include="Storage\ViewDefinition.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

@@ -15,24 +15,49 @@ namespace Rhino.DivanDB.Storage
         private ILog logger = LogManager.GetLogger(typeof(DocumentStorageActions));
 
         private readonly Session session;
-        private readonly Guid instanceId;
         private readonly JET_DBID dbid;
         private readonly Transaction transaction;
         private readonly Table documents;
         private readonly IDictionary<string, JET_COLUMNID> documentsColumns;
+        private readonly Table views;
+        private readonly IDictionary<string, JET_COLUMNID> viewsColumns;
 
 
         public DocumentStorageActions(JET_INSTANCE instance,
                                           string database,
                                           Guid instanceId)
         {
-            this.instanceId = instanceId;
             session = new Session(instance);
             transaction = new Transaction(session);
             Api.JetOpenDatabase(session, database, null, out dbid, OpenDatabaseGrbit.None);
 
             documents = new Table(session, dbid, "documents", OpenTableGrbit.None);
             documentsColumns = Api.GetColumnDictionary(session, documents);
+
+            views = new Table(session, dbid, "view_definitions", OpenTableGrbit.None);
+            viewsColumns = Api.GetColumnDictionary(session, views);
+        }
+
+
+        public void AddView(string name, string definition, byte[] compiled)
+        {
+            using (var update = new Update(session, views, JET_prep.Insert))
+            {
+                Api.SetColumn(session, views, viewsColumns["name"], name, Encoding.Unicode);
+                Api.SetColumn(session, views, viewsColumns["definition"], definition, Encoding.Unicode);
+                Api.SetColumn(session, views, viewsColumns["hash"], ComputeSha256Hash(definition), Encoding.Unicode);
+                Api.SetColumn(session, views, viewsColumns["complied_assembly"], compiled);
+
+                update.Save();
+            }
+            logger.DebugFormat("Inserted a new view '{0}'", name);
+        }
+
+        private string ComputeSha256Hash(string definition)
+        {
+            byte[] stream = Encoding.Unicode.GetBytes(definition);
+            byte[] hashed = SHA256.Create().ComputeHash(stream);
+            return Convert.ToBase64String(hashed);
         }
 
         public void AddDocument(string key, string data)
@@ -92,6 +117,46 @@ namespace Rhino.DivanDB.Storage
 
             Api.JetDelete(session, documents);
             logger.DebugFormat("Document with key '{0}' was deleted", key);
+        }
+
+        public string[] ListViews()
+        {
+            var viewNames = new List<string>();
+            Api.MoveBeforeFirst(session, views);
+            while(Api.TryMoveNext(session, views))
+                viewNames.Add(Api.RetrieveColumnAsString(session, views, viewsColumns["name"], Encoding.Unicode));
+            return viewNames.ToArray();
+        }
+
+        public string ViewDefinitionByName(string name)
+        {
+            Api.JetSetCurrentIndex(session, views, "by_name");
+            Api.MakeKey(session, views, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, views, SeekGrbit.SeekEQ) == false)
+                return null;
+            return Api.RetrieveColumnAsString(session, views, viewsColumns["definition"], Encoding.Unicode);
+        }
+
+        public string ViewHashByName(string name)
+        {
+            Api.JetSetCurrentIndex(session, views, "by_name");
+            Api.MakeKey(session, views, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, views, SeekGrbit.SeekEQ) == false)
+                return null;
+            return Api.RetrieveColumnAsString(session, views, viewsColumns["hash"], Encoding.Unicode);
+        }
+
+        public ViewDefinition ViewCompiledAssemblyByName(string name)
+        {
+            Api.JetSetCurrentIndex(session, views, "by_name");
+            Api.MakeKey(session, views, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, views, SeekGrbit.SeekEQ) == false)
+                return null;
+            return new ViewDefinition
+            {
+                CompiledAssembly = Api.RetrieveColumn(session, views, viewsColumns["complied_assembly"]),
+                Name = Api.RetrieveColumnAsString(session, views, viewsColumns["name"],Encoding.Unicode)
+            };
         }
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using Newtonsoft.Json.Linq;
+using Rhino.DivanDB.Json;
 using Rhino.DivanDB.Linq;
 using Xunit;
 
@@ -34,7 +35,7 @@ var pagesByTitle =
         public void Can_get_type_of_result_from_query()
         {
             var compiled = new LinqTransformer(query, "docs", typeof(JsonDynamicObject)).Compile();
-            var instance = (AbstractViewGenerator<JsonDynamicObject>)Activator.CreateInstance(compiled);
+            var instance = (AbstractViewGenerator)Activator.CreateInstance(compiled);
             var argument = instance.ViewDefinition.Body.Type.GetGenericArguments()[0];
             
             Assert.NotNull(argument.GetProperty("Key"));
@@ -50,7 +51,7 @@ var pagesByTitle =
         public void Can_execute_query()
         {
             var compiled = new LinqTransformer(query, "docs", typeof(JsonDynamicObject)).Compile();
-            var generator = (AbstractViewGenerator<JsonDynamicObject>)Activator.CreateInstance(compiled);
+            var generator = (AbstractViewGenerator)Activator.CreateInstance(compiled);
             var results = generator.Execute(new[]
             {
                 new JsonDynamicObject(@"
