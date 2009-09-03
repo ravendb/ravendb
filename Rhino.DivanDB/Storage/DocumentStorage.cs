@@ -13,6 +13,16 @@ namespace Rhino.DivanDB.Storage
         private readonly string database;
         private readonly string path;
 
+        public JET_INSTANCE Instance
+        {
+            get { return instance; }
+        }
+
+        public string Database
+        {
+            get { return database; }
+        }
+
         public Guid Id { get; private set; }
 
         public DocumentStorage(string database)

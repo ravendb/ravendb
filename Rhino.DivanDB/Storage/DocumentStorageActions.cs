@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Web.Caching;
@@ -157,6 +158,56 @@ namespace Rhino.DivanDB.Storage
                 CompiledAssembly = Api.RetrieveColumn(session, views, viewsColumns["complied_assembly"]),
                 Name = Api.RetrieveColumnAsString(session, views, viewsColumns["name"],Encoding.Unicode)
             };
+        }
+
+        public void CreateViewTable(string name, Type generatedType)
+        {
+            if(generatedType.GetProperty("Key") == null)
+                throw new InvalidOperationException("Generated type must have a property called 'Key'");
+
+            JET_TABLEID newViewTable;
+            Api.JetCreateTable(session, dbid, "views_" + name, 16, 100, out newViewTable);
+            try
+            {
+                foreach (var property in generatedType.GetProperties())
+                {
+                    JET_COLUMNID columnid;
+                    Api.JetAddColumn(session, newViewTable, property.Name, PropertyToColumnInfo(property), null, 0, out columnid );
+                }
+            }
+            finally
+            {
+                Api.JetCloseTable(session, newViewTable);
+            }
+        }
+
+        private JET_COLUMNDEF PropertyToColumnInfo(PropertyInfo property)
+        {
+            if (property.PropertyType == typeof(string))
+            {
+                return new JET_COLUMNDEF
+                {
+                    coltyp = JET_coltyp.LongText,
+                    cp = JET_CP.Unicode,
+                    grbit = property.Name == "Key" ? ColumndefGrbit.ColumnNotNULL : ColumndefGrbit.None,
+                };
+            }
+            if (property.PropertyType == typeof(int))
+            {
+                return new JET_COLUMNDEF
+                {
+                    coltyp = JET_coltyp.Long,
+                };
+            }
+            if(property.PropertyType == typeof(bool))
+            {
+                return new JET_COLUMNDEF
+                {
+                    coltyp = JET_coltyp.Bit,
+                };
+            }
+
+            throw new NotImplementedException("Don't understand how to turn a "+property.PropertyType+" to a column type");
         }
     }
 }

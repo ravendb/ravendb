@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using Rhino.DivanDB.Json;
+using Rhino.DivanDB.Storage;
 
 namespace Rhino.DivanDB.Linq
 {
@@ -15,6 +16,14 @@ namespace Rhino.DivanDB.Linq
         public string ViewText { get; set; }
 
         public Expression<ViewFunc> ViewDefinition { get; protected set; }
+
+        public Type GeneratedType
+        {
+            get
+            {
+                return ViewDefinition.Body.Type.GetGenericArguments()[0];
+            }
+        }
 
         public IEnumerable Execute(IEnumerable<JsonDynamicObject> source)
         {

@@ -15,20 +15,20 @@ namespace Rhino.DivanDB
 {
     public class DocumentDatabase
     {
-        private readonly DocumentStorage storage;
+        public DocumentStorage Storage { get; private set; }
 
         private readonly Hashtable<string, ViewFunc> viewsCache = new Hashtable<string, ViewFunc>(); 
 
         public DocumentDatabase(string path)
         {
-            storage = new DocumentStorage(path);
-            storage.Initialize();
+            Storage = new DocumentStorage(path);
+            Storage.Initialize();
         }
 
         public string AddDocument(JObject document)
         {
             string key = GetKeyFromDocumentOrGenerateNewOne(document);
-            storage.Batch(actions =>
+            Storage.Batch(actions =>
             {
                 actions.AddDocument(key, document.ToString());
                 actions.Commit();
@@ -62,13 +62,13 @@ namespace Rhino.DivanDB
 
         public void Dispose()
         {
-            storage.Dispose();
+            Storage.Dispose();
         }
 
         public JObject DocumentByKey(string key)
         {
             string document = null;
-            storage.Batch(actions =>
+            Storage.Batch(actions =>
             {
                 document = actions.DocumentByKey(key);
                 actions.Commit();
@@ -84,7 +84,7 @@ namespace Rhino.DivanDB
         {
             string key = GetKeyFromDocument(document);
 
-            storage.Batch(actions =>
+            Storage.Batch(actions =>
             {
                 actions.DeleteDocument(key);
                 actions.AddDocument(key, document.ToString());
@@ -103,7 +103,7 @@ namespace Rhino.DivanDB
         public void DeleteDocument(JObject document)
         {
             string key = GetKeyFromDocument(document);
-            storage.Batch(actions =>
+            Storage.Batch(actions =>
             {
                 actions.DeleteDocument(key);
                 actions.Commit();
@@ -113,11 +113,14 @@ namespace Rhino.DivanDB
         public void AddView(string viewDefinition)
         {
             var transformer = new LinqTransformer(viewDefinition, "docs", typeof(JsonDynamicObject));
-            transformer.Compile();
+            Type type = transformer.Compile();
+            var generator = (AbstractViewGenerator)Activator.CreateInstance(type);
+
             byte[] compiled = File.ReadAllBytes(transformer.PathToAssembly);
-            storage.Batch(actions =>
+            Storage.Batch(actions =>
             {
                 actions.AddView(transformer.Name, viewDefinition, compiled);
+                actions.CreateViewTable(transformer.Name, generator.GeneratedType);
                 actions.Commit();
             });
         }
@@ -125,7 +128,7 @@ namespace Rhino.DivanDB
         public string[] ListView()
         {
             string[] views = null;
-            storage.Batch(actions =>
+            Storage.Batch(actions =>
             {
                 views = actions.ListViews();
                 actions.Commit();
@@ -136,7 +139,7 @@ namespace Rhino.DivanDB
         public string ViewDefinitionByName(string name)
         {
             string def = null;
-            storage.Batch(actions =>
+            Storage.Batch(actions =>
             {
                 def = actions.ViewDefinitionByName(name);
                 actions.Commit();
@@ -147,7 +150,7 @@ namespace Rhino.DivanDB
         public ViewFunc ViewInstanceByName(string name)
         {
             ViewFunc viewFunc = null;
-            storage.Batch(actions =>
+            Storage.Batch(actions =>
             {
                 string hash = actions.ViewHashByName(name);
                 if (hash == null)
