@@ -55,7 +55,7 @@ namespace Rhino.DivanDB.Storage
                 cbMax = 255,
                 coltyp = JET_coltyp.Text,
                 cp = JET_CP.Unicode,
-                grbit = ColumndefGrbit.ColumnNotNULL
+                grbit = ColumndefGrbit.ColumnTagged
             }, null, 0, out columnid);
 
             Api.JetAddColumn(session, tableid, "viewName", new JET_COLUMNDEF
@@ -63,7 +63,7 @@ namespace Rhino.DivanDB.Storage
                 cbMax = 255,
                 coltyp = JET_coltyp.Text,
                 cp = JET_CP.Unicode,
-                grbit = ColumndefGrbit.ColumnNotNULL
+                grbit = ColumndefGrbit.ColumnTagged
             }, null, 0, out columnid);
 
             var indexDef = "+id\0\0";
@@ -86,26 +86,26 @@ namespace Rhino.DivanDB.Storage
                 cbMax = 255,
                 coltyp = JET_coltyp.Text,
                 cp = JET_CP.Unicode,
-                grbit = ColumndefGrbit.ColumnNotNULL
+                grbit = ColumndefGrbit.ColumnTagged
             }, null, 0, out columnid);
 
             Api.JetAddColumn(session, tableid, "definition", new JET_COLUMNDEF
             {
                 coltyp = JET_coltyp.LongText,
-                grbit = ColumndefGrbit.ColumnNotNULL
+                grbit = ColumndefGrbit.ColumnTagged
             }, null, 0, out columnid);
 
             Api.JetAddColumn(session, tableid, "hash", new JET_COLUMNDEF
             {
                 coltyp = JET_coltyp.Text,
-                grbit = ColumndefGrbit.ColumnNotNULL
+                grbit = ColumndefGrbit.ColumnTagged
             }, null, 0, out columnid);
 
 
             Api.JetAddColumn(session, tableid, "complied_assembly", new JET_COLUMNDEF
             {
                 coltyp = JET_coltyp.LongBinary,
-                grbit = ColumndefGrbit.ColumnNotNULL
+                grbit = ColumndefGrbit.ColumnTagged
             }, null, 0, out columnid);
 
             const string indexDef = "+name\0\0";
@@ -124,13 +124,13 @@ namespace Rhino.DivanDB.Storage
                 cbMax = 255,
                 coltyp = JET_coltyp.Text,
                 cp = JET_CP.Unicode,
-                grbit = ColumndefGrbit.ColumnNotNULL
+                grbit = ColumndefGrbit.ColumnTagged
             }, null, 0, out columnid);
 
             Api.JetAddColumn(session, tableid, "data", new JET_COLUMNDEF
             {
                 coltyp = JET_coltyp.LongText,
-                grbit = ColumndefGrbit.ColumnNotNULL
+                grbit = ColumndefGrbit.ColumnTagged
             }, null, 0, out columnid);
 
             const string indexDef = "+key\0\0";

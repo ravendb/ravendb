@@ -235,10 +235,10 @@ namespace Rhino.DivanDB
                 foreach (var view in ListView())
                 {
                     var viewFunc = ViewInstanceByName(view);
-                    foreach (var queuedDocumentKey in actions.QueuedDocumentsFor(view))
+                    foreach (var queuedDocumentKey in actions.QueuedDocumentsFor(view) ?? new string[0])
                     {
                         var doc = DocumentByKey(queuedDocumentKey);
-                        foreach (var viewDoc in viewFunc(new[] { new JsonDynamicObject(doc), }))
+                        foreach (var viewDoc in viewFunc(new[] { new JsonDynamicObject(doc) }))
                         {
                             var keyProperty = viewDoc.GetType().GetProperty("Key");
                             var key = (string)keyProperty.GetValue(viewDoc, null);

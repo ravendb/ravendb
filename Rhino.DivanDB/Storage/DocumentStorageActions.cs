@@ -83,22 +83,22 @@ namespace Rhino.DivanDB.Storage
         {
             Api.JetSetCurrentIndex(session, documents, "by_key");
             Api.MakeKey(session, documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
-            if(Api.TrySeek(session, documents, SeekGrbit.SeekEQ) == false)
+            if (Api.TrySeek(session, documents, SeekGrbit.SeekEQ) == false)
             {
                 logger.DebugFormat("Document with key '{0}' was not found", key);
                 return null;
             }
             var data = Api.RetrieveColumnAsString(session, documents, documentsColumns["data"]);
-            logger.DebugFormat("Document with key '{0}' was found, doc lenght: {1}", key, data.Length);
+            logger.DebugFormat("Document with key '{0}' was found, doc length: {1}", key, data.Length);
             return data;
         }
 
         public void Dispose()
         {
-            if(viewsTransformationQueues != null)
+            if (viewsTransformationQueues != null)
                 viewsTransformationQueues.Dispose();
 
-            if(views != null)
+            if (views != null)
                 views.Dispose();
 
             if (documents != null)
@@ -136,7 +136,7 @@ namespace Rhino.DivanDB.Storage
         {
             var viewNames = new List<string>();
             Api.MoveBeforeFirst(session, views);
-            while(Api.TryMoveNext(session, views))
+            while (Api.TryMoveNext(session, views))
                 viewNames.Add(Api.RetrieveColumnAsString(session, views, viewsColumns["name"], Encoding.Unicode));
             return viewNames.ToArray();
         }
@@ -168,13 +168,13 @@ namespace Rhino.DivanDB.Storage
             return new ViewDefinition
             {
                 CompiledAssembly = Api.RetrieveColumn(session, views, viewsColumns["complied_assembly"]),
-                Name = Api.RetrieveColumnAsString(session, views, viewsColumns["name"],Encoding.Unicode)
+                Name = Api.RetrieveColumnAsString(session, views, viewsColumns["name"], Encoding.Unicode)
             };
         }
 
         public void CreateViewTable(string name, Type generatedType)
         {
-            if(generatedType.GetProperty("Key") == null)
+            if (generatedType.GetProperty("Key") == null)
                 throw new InvalidOperationException("Generated type must have a property called 'Key'");
 
             JET_TABLEID newViewTable;
@@ -187,23 +187,23 @@ namespace Rhino.DivanDB.Storage
                     cbMax = 255,
                     coltyp = JET_coltyp.Text,
                     cp = JET_CP.Unicode,
-                    grbit = ColumndefGrbit.ColumnNotNULL
+                    grbit = ColumndefGrbit.ColumnTagged
                 }, null, 0, out columnid);
                 Api.JetAddColumn(session, newViewTable, "original_doc_key", new JET_COLUMNDEF
                 {
                     cbMax = 255,
                     coltyp = JET_coltyp.Text,
                     cp = JET_CP.Unicode,
-                    grbit = ColumndefGrbit.ColumnNotNULL
+                    grbit = ColumndefGrbit.ColumnTagged
                 }, null, 0, out columnid);
                 Api.JetAddColumn(session, newViewTable, "data", new JET_COLUMNDEF
                 {
                     coltyp = JET_coltyp.LongText,
                     cp = JET_CP.Unicode,
-                    grbit = ColumndefGrbit.ColumnNotNULL
+                    grbit = ColumndefGrbit.ColumnTagged
                 }, null, 0, out columnid);
                 var indexDef = "+key\0\0";
-                Api.JetCreateIndex(session, newViewTable, "pk", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,100);
+                Api.JetCreateIndex(session, newViewTable, "pk", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length, 100);
                 indexDef = "+original_doc_key\0\0";
                 Api.JetCreateIndex(session, newViewTable, "by_original_doc_key", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length, 100);
             }
@@ -219,28 +219,28 @@ namespace Rhino.DivanDB.Storage
             Api.MakeKey(session, views, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
             if (Api.TrySeek(session, views, SeekGrbit.SeekEQ) == false)
                 return null;
-            string hash = Api.RetrieveColumnAsString(session, views, viewsColumns["hash"],Encoding.Unicode);
+            string hash = Api.RetrieveColumnAsString(session, views, viewsColumns["hash"], Encoding.Unicode);
             Api.JetDelete(session, views);
             return hash;
-          
+
         }
 
         public void DeleteViewTable(string name)
         {
-            string tableViewName = "views_"+name;
-            if(Api.GetTableNames(session, dbid).Contains(tableViewName) == false)
+            string tableViewName = "views_" + name;
+            if (Api.GetTableNames(session, dbid).Contains(tableViewName) == false)
                 return;
             Api.JetDeleteTable(session, dbid, tableViewName);
         }
 
         public IEnumerable<string> ViewRecordsByNameAndKey(string name, string key)
         {
-            using(var viewTable = new Table(session, dbid, "views_"+name,OpenTableGrbit.ReadOnly))
+            using (var viewTable = new Table(session, dbid, "views_" + name, OpenTableGrbit.ReadOnly))
             {
                 var viewTableColumns = Api.GetColumnDictionary(session, viewTable);
                 Api.JetSetCurrentIndex(session, viewTable, "pk");
                 Api.MakeKey(session, viewTable, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
-                if(Api.TrySeek(session, viewTable, SeekGrbit.SeekEQ) == false)
+                if (Api.TrySeek(session, viewTable, SeekGrbit.SeekEQ) == false)
                     yield break;
                 Api.MakeKey(session, viewTable, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
                 Api.JetSetIndexRange(session, viewTable,
@@ -257,19 +257,26 @@ namespace Rhino.DivanDB.Storage
         {
             Api.JetSetCurrentIndex(session, viewsTransformationQueues, "by_view");
             Api.MakeKey(session, viewsTransformationQueues, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
-            if(Api.TrySeek(session, viewsTransformationQueues, SeekGrbit.SeekEQ) == false)
+            if (Api.TrySeek(session, viewsTransformationQueues, SeekGrbit.SeekEQ) == false)
                 yield break;
+
             do
             {
-                yield return Api.RetrieveColumnAsString(session, viewsTransformationQueues,
-                                               viewsTransformationQueuesColumns["documentKey"], Encoding.Unicode);
+                Api.MakeKey(session, viewsTransformationQueues, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+                if (Api.TrySeek(session, viewsTransformationQueues, SeekGrbit.SeekEQ) == false)
+                    yield break;
+             
+                var doc = Api.RetrieveColumnAsString(session, viewsTransformationQueues,
+                                                      viewsTransformationQueuesColumns["documentKey"], Encoding.Unicode);
+                yield return doc;
                 Api.JetDelete(session, viewsTransformationQueues);
             } while (Api.TryMoveNext(session, viewsTransformationQueues));
+
         }
 
         public void QueueDocumentForViewTransformation(string name, string key)
         {
-            using(var update = new Update(session, viewsTransformationQueues, JET_prep.Insert))
+            using (var update = new Update(session, viewsTransformationQueues, JET_prep.Insert))
             {
                 Api.SetColumn(session, viewsTransformationQueues, viewsTransformationQueuesColumns["documentKey"], key, Encoding.Unicode);
                 Api.SetColumn(session, viewsTransformationQueues, viewsTransformationQueuesColumns["viewName"], name, Encoding.Unicode);
@@ -281,19 +288,19 @@ namespace Rhino.DivanDB.Storage
         public IEnumerable<string> DocumentKeys()
         {
             Api.MoveBeforeFirst(session, documents);
-            while(Api.TryMoveNext(session, documents))
+            while (Api.TryMoveNext(session, documents))
             {
                 yield return Api.RetrieveColumnAsString(session, documents, documentsColumns["key"], Encoding.Unicode);
             }
         }
 
-        public void AddViewRecord(string view, string key, string documentKey,string data)
+        public void AddViewRecord(string view, string key, string documentKey, string data)
         {
-            using(var viewTable = new Table(session, dbid, "views_"+view, OpenTableGrbit.None))
+            using (var viewTable = new Table(session, dbid, "views_" + view, OpenTableGrbit.None))
             using (var update = new Update(session, viewTable, JET_prep.Insert))
             {
                 var columns = Api.GetColumnDictionary(session, viewTable);
-                Api.SetColumn(session, viewTable, columns["key"],key, Encoding.Unicode);
+                Api.SetColumn(session, viewTable, columns["key"], key, Encoding.Unicode);
                 Api.SetColumn(session, viewTable, columns["original_doc_key"], documentKey, Encoding.Unicode);
                 Api.SetColumn(session, viewTable, columns["data"], data, Encoding.Unicode);
 
