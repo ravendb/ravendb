@@ -1,3 +1,9 @@
+function Get-Git-Commit
+{
+	$gitLog = git log --oneline -1
+	return $gitLog.Split(' ')[0]
+}
+
 function Generate-Assembly-Info
 {
 param(
@@ -10,7 +16,7 @@ param(
 	[string]$version,
 	[string]$file = $(throw "file is a required parameter.")
 )
-
+  $commit = Get-Git-Commit
   $asmInfo = "using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -24,7 +30,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyProductAttribute(""$product"")]
 [assembly: AssemblyCopyrightAttribute(""$copyright"")]
 [assembly: AssemblyVersionAttribute(""$version"")]
-[assembly: AssemblyInformationalVersionAttribute(""$version"")]
+[assembly: AssemblyInformationalVersionAttribute(""$version / $commit"")]
 [assembly: AssemblyFileVersionAttribute(""$version"")]
 [assembly: AssemblyDelaySignAttribute(false)]
 "
