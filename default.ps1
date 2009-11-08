@@ -44,7 +44,7 @@ task Init -depends Clean {
 } 
 
 task Compile -depends Init { 
-  exec msbuild "/p:OutDir=""$buildartifacts_dir "" $sln_file"
+  exec msbuild "/p:OutDir=""$buildartifacts_dir "" ""$sln_file"""
 } 
 
 task Test -depends Compile {

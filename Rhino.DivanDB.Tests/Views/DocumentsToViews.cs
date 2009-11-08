@@ -53,9 +53,33 @@ namespace Rhino.DivanDB.Tests.Views
         }
 
         [Fact]
+        public void Can_Read_values_when_two_views_exist()
+        {
+            db.AddView(
+               @"var pagesByTitle = 
+    from doc in docs
+    where doc.type == ""page""
+    select new { Key = doc.title, Value = doc.content, Size = (int)doc.size };
+");  
+            db.AddView(
+               @"var pagesByTitle2 = 
+    from doc in docs
+    where doc.type == ""page""
+    select new { Key = doc.other, Value = doc.content, Size = (int)doc.size };
+");
+            db.AddDocument(JObject.Parse("{_id: '1', type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"));
+
+            db.ProcessQueuedDocuments();
+
+            var docs = db.ViewRecordsByNameAndKey("pagesByTitle2", "var");
+            Assert.Equal(1, docs.Length);
+
+        }
+
+        [Fact]
         public void Can_read_values_from_view()
         {
-            db.AddDocument(JObject.Parse("{_id: '1', type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"));
+          
 
             db.AddView(
                @"var pagesByTitle = 
@@ -63,6 +87,8 @@ namespace Rhino.DivanDB.Tests.Views
     where doc.type == ""page""
     select new { Key = doc.title, Value = doc.content, Size = (int)doc.size };
 ");
+            db.AddDocument(JObject.Parse("{_id: '1', type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"));
+
             db.ProcessQueuedDocuments();
 
             var docs = db.ViewRecordsByNameAndKey("pagesByTitle", "hello world");
