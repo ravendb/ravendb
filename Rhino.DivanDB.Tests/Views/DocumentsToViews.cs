@@ -1,5 +1,7 @@
 using System;
+using System.IO;
 using System.Threading;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Rhino.DivanDB.Tests.Storage;
 using Xunit;
@@ -93,11 +95,16 @@ namespace Rhino.DivanDB.Tests.Views
 
             var docs = db.ViewRecordsByNameAndKey("pagesByTitle", "hello world");
             Assert.Equal(1, docs.Length);
-            Assert.Equal(@"{
+            var serializer = new JsonSerializer();
+            var expected = serializer.Deserialize(
+                new JsonTextReader(
+                    new StringReader(
+                        @"{
   ""Key"": ""hello world"",
   ""Value"": ""this is the content"",
   ""Size"": 5
-}", docs[0].ToString());
+}")));
+            Assert.Equal(expected.ToString(), docs[0].ToString());
         }
 
         public void Dispose()
