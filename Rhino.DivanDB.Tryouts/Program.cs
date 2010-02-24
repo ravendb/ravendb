@@ -8,17 +8,12 @@ namespace Rhino.DivanDB.Tryouts
         public static void Main()
         {
             var db = new DocumentDatabase("Db");
-            for (int i = 0; i < 5; i++)
+
+            var query = db.Query("pagesByTitle", "name:ayende");
+            foreach (var q in query)
             {
-                string documentId = db.Put(JObject.Parse("{first_name: 'ayende', last_name: 'rahien'}"));
-                Console.WriteLine(documentId);
-                var val = db.Get(documentId);
-                Console.WriteLine(val);
+                Console.WriteLine(q);
             }
-            db.AddView(@"var pagesByTitle = 
-    from doc in docs
-    select new { name = doc.first_name, date = DateTime.Now };
-");
         }
     }
 }

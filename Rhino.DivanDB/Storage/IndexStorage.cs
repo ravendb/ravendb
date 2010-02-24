@@ -7,6 +7,8 @@ using System.Runtime.ConstrainedExecution;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
+using Lucene.Net.QueryParsers;
+using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Rhino.DivanDB.Json;
 using Rhino.DivanDB.Linq;
@@ -19,6 +21,7 @@ namespace Rhino.DivanDB.Storage
     {
         private readonly string path;
         private readonly FSDirectory directory;
+        private IndexSearcher searcher;
 
         public IndexStorage(string path)
         {
@@ -27,6 +30,14 @@ namespace Rhino.DivanDB.Storage
             var create = Directory.Exists(this.path) == false;
 
             directory = FSDirectory.GetDirectory(this.path, create);
+            searcher = new IndexSearcher(directory);
+        }
+
+        private void RecreateSearcher()
+        {
+            searcher = new IndexSearcher(directory);
+            //note, we are leaking the previous searcher here, not sure how to
+            // handle this yet, since it might be currently in use.
         }
 
         public void Dispose()
@@ -41,11 +52,13 @@ namespace Rhino.DivanDB.Storage
             try
             {
                 indexWriter.DeleteDocuments(new Term("_id", key));
+                indexWriter.Flush();
             }
             finally
             {
                 indexWriter.Close();
             }
+            RecreateSearcher();
         }
 
         public void Index(ViewFunc func, IEnumerable<JsonDynamicObject> input)
@@ -66,6 +79,7 @@ namespace Rhino.DivanDB.Storage
             {
                 indexWriter.Close();
             }
+            RecreateSearcher();
         }
 
         private static Document CreateOrEditDoc(IndexWriter writer,Document doc, object val)
@@ -108,6 +122,17 @@ namespace Rhino.DivanDB.Storage
         ~IndexStorage()
         {
             directory.Close();
+        }
+
+        public IEnumerable<string> Query(string index, string query)
+        {
+            var parser = new QueryParser("", new StandardAnalyzer());
+            var luceneQuery = parser.Parse("+_indexName:" + index + " " + query);
+            var search = searcher.Search(luceneQuery);
+            for (int i = 0; i < search.Length(); i++)
+            {
+                yield return search.Doc(i).GetField("_id").StringValue();
+            }
         }
     }
 }

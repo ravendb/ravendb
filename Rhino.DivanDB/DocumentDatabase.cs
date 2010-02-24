@@ -113,5 +113,12 @@ namespace Rhino.DivanDB
                                                                                   .Select(s => new JsonDynamicObject(s))));
             }
         }
+
+        public JObject[] Query(string index, string query)
+        {
+            var list = new List<JObject>();
+            DocumentStorage.Read(actions => list.AddRange(IndexStorage.Query(index, query).Select(key => JObject.Parse(actions.DocumentByKey(key)))));
+            return list.ToArray();
+        }
     }
 }
