@@ -17,7 +17,7 @@ namespace Rhino.DivanDB.Tryouts
             }
             db.AddView(@"var pagesByTitle = 
     from doc in docs
-    select new { name = doc.first_name };
+    select new { name = doc.first_name, date = DateTime.Now };
 ");
         }
     }

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using ICSharpCode.NRefactory.Ast;
 using ICSharpCode.NRefactory.Visitors;
@@ -7,6 +8,8 @@ namespace Rhino.DivanDB.Linq
     public class TransformVisitor : AbstractAstTransformer
     {
         private string identifier;
+
+        public string Name { get; set; }
 
         public override object VisitQueryExpressionFromClause(QueryExpressionFromClause queryExpressionFromClause, object data)
         {
@@ -39,10 +42,15 @@ namespace Rhino.DivanDB.Linq
                 createExpr.ObjectInitializer.CreateExpressions.Add(
                     new NamedArgumentExpression(
                         "_id",
-                        new MemberReferenceExpression(new TypeReferenceExpression(new TypeReference("ViewContext")), "CurrentDocumentId")                        
+                        new MemberReferenceExpression(new IdentifierExpression(identifier), "_id")
                         )
                     );
-
+                createExpr.ObjectInitializer.CreateExpressions.Add(
+                    new NamedArgumentExpression(
+                        "_indexName",
+                        new PrimitiveExpression(Name,Name)
+                        )
+                    );
             }
             return base.VisitQueryExpressionSelectClause(queryExpressionSelectClause, data);
         }

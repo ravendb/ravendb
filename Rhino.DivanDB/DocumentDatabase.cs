@@ -85,6 +85,7 @@ namespace Rhino.DivanDB
                    actions.AddDocument(key, document.ToString());
                    actions.Commit();
                });
+               IndexStorage.Index(ViewStorage.AllViews, new[] { new JsonDynamicObject(document.Root) });
                return key;
            }
         }
@@ -107,13 +108,9 @@ namespace Rhino.DivanDB
             lock(writeLock)
             {
                 var viewFunc = ViewStorage.AddView(viewDefinition);
-                DocumentStorage.Write(actions =>
-                {
-                    var results = viewFunc(actions.DocumentKeys
-                                                                  .Select(key => actions.DocumentByKey(key))
-                                                                  .Select(s => new JsonDynamicObject(s)));
-                    IndexStorage.Index(results);
-                });
+                DocumentStorage.Write(actions => IndexStorage.Index(viewFunc, actions.DocumentKeys
+                                                                                  .Select(key => actions.DocumentByKey(key))
+                                                                                  .Select(s => new JsonDynamicObject(s))));
             }
         }
     }

@@ -1,17 +1,21 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
+using System.Runtime.ConstrainedExecution;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
+using Rhino.DivanDB.Json;
+using Rhino.DivanDB.Linq;
 using Directory = System.IO.Directory;
 using System.Linq;
 
 namespace Rhino.DivanDB.Storage
 {
-    public class IndexStorage : IDisposable
+    public class IndexStorage : CriticalFinalizerObject,IDisposable
     {
         private readonly string path;
         private readonly FSDirectory directory;
@@ -27,6 +31,7 @@ namespace Rhino.DivanDB.Storage
 
         public void Dispose()
         {
+            GC.SuppressFinalize(this);
             directory.Close();
         }
 
@@ -43,8 +48,9 @@ namespace Rhino.DivanDB.Storage
             }
         }
 
-        public void Index(IEnumerable docs)
+        public void Index(ViewFunc func, IEnumerable<JsonDynamicObject> input)
         {
+            var docs = func(input);
             var indexWriter = new IndexWriter(directory, new StandardAnalyzer());
             try
             {
@@ -82,7 +88,7 @@ namespace Rhino.DivanDB.Storage
                 if(property == id)
                     continue;
                 doc.Add(new Field(property.Name, ToIndexableString(property.GetValue(val)), 
-                    Field.Store.NO, 
+                    Field.Store.YES, 
                     Field.Index.TOKENIZED));
             }
             return doc;
@@ -97,7 +103,11 @@ namespace Rhino.DivanDB.Storage
                 return DateTools.DateToString((DateTime)val, DateTools.Resolution.DAY);
 
             return val.ToString();
+        }
 
+        ~IndexStorage()
+        {
+            directory.Close();
         }
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using log4net;
@@ -37,7 +38,7 @@ namespace Rhino.DivanDB.Storage
         public ViewFunc AddView(string viewDefinition)
         {
             var transformer = CompileViewDefinition(viewDefinition);
-            File.WriteAllText(transformer.Name + ".view", viewDefinition);
+            File.WriteAllText(Path.Combine(path,transformer.Name + ".view"), viewDefinition);
             return viewsCache[transformer.Name];
         }
 
@@ -48,6 +49,17 @@ namespace Rhino.DivanDB.Storage
             var generator = (AbstractViewGenerator)Activator.CreateInstance(type);
             viewsCache[transformer.Name] = generator.CompiledDefinition;
             return transformer;
+        }
+
+        public IEnumerable AllViews(IEnumerable<JsonDynamicObject> source)
+        {
+            foreach (var viewFunc in viewsCache.Values)
+            {
+                foreach (var doc in viewFunc(source))
+                {
+                    yield return doc;
+                }
+            }
         }
     }
 }

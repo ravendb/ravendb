@@ -2,7 +2,6 @@ using System;
 using System.CodeDom.Compiler;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Diagnostics;
 using System.IO;
 using System.Text;
 using ICSharpCode.NRefactory;
@@ -49,6 +48,7 @@ namespace Rhino.DivanDB.Linq
                         rootQueryType.Assembly.Location
                     },
             }, tempFileName);
+            Console.WriteLine(File.ReadAllText(tempFileName));
             if (results.Errors.HasErrors)
             {
                 var sb = new StringBuilder().AppendLine();
@@ -67,12 +67,14 @@ namespace Rhino.DivanDB.Linq
             var parser = ParserFactory.CreateParser(SupportedLanguage.CSharp, new StringReader(source));
             var block = parser.ParseBlock();
 
-            var visitor = new TransformVisitor();
-            block.AcceptVisitor(visitor, null);
-
             VariableDeclaration variable = GetVariableDeclaration(block);
 
             Name = variable.Name;
+
+            var visitor = new TransformVisitor{Name = Name};
+            block.AcceptVisitor(visitor, null);
+
+
 
             var type = new TypeDeclaration(Modifiers.Public, new List<AttributeSection>())
             {
@@ -111,6 +113,7 @@ namespace Rhino.DivanDB.Linq
             var unit = new CompilationUnit();
             unit.AddChild(new Using(typeof(AbstractViewGenerator).Namespace));
             unit.AddChild(new Using(typeof(System.Linq.Enumerable).Namespace));
+            unit.AddChild(new Using(typeof(int).Namespace));
             unit.AddChild(type);
 
             var output = new CSharpOutputVisitor();
