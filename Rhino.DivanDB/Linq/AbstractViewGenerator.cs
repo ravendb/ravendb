@@ -3,8 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using Newtonsoft.Json.Linq;
 using Rhino.DivanDB.Json;
-using Rhino.DivanDB.Storage;
 
 namespace Rhino.DivanDB.Linq
 {
@@ -43,7 +43,21 @@ namespace Rhino.DivanDB.Linq
         private void ForceCompilationIfNeeded()
         {
             if (compiledDefinition == null)
-                compiledDefinition = ViewDefinition.Compile();
+            {
+                var def = ViewDefinition.Compile();
+                compiledDefinition = source => def(AddViewContextCurrentDocumentId(source));
+            }
+        }
+
+        private static IEnumerable<JsonDynamicObject> AddViewContextCurrentDocumentId(IEnumerable<JsonDynamicObject> source)
+        {
+            foreach (var doc in source)
+            {
+                ViewContext.CurrentDocumentId = doc["_id"].Unwrap();
+                yield return doc;
+            }
+            ViewContext.CurrentDocumentId = null;
+
         }
     }
 }

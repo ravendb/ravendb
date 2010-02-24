@@ -1,9 +1,5 @@
-using System;
 using System.Collections.Generic;
-using System.IO;
-using ICSharpCode.NRefactory;
 using ICSharpCode.NRefactory.Ast;
-using ICSharpCode.NRefactory.PrettyPrinter;
 using ICSharpCode.NRefactory.Visitors;
 
 namespace Rhino.DivanDB.Linq
@@ -33,6 +29,22 @@ namespace Rhino.DivanDB.Linq
             namedArgumentExpression.Expression.Parent = right;
             namedArgumentExpression.Expression = right;
             return base.VisitNamedArgumentExpression(namedArgumentExpression, data);
+        }
+
+        public override object VisitQueryExpressionSelectClause(QueryExpressionSelectClause queryExpressionSelectClause, object data)
+        {
+            var createExpr = queryExpressionSelectClause.Projection as ObjectCreateExpression;
+            if(createExpr != null && createExpr.IsAnonymousType)
+            {
+                createExpr.ObjectInitializer.CreateExpressions.Add(
+                    new NamedArgumentExpression(
+                        "_id",
+                        new MemberReferenceExpression(new TypeReferenceExpression(new TypeReference("ViewContext")), "CurrentDocumentId")                        
+                        )
+                    );
+
+            }
+            return base.VisitQueryExpressionSelectClause(queryExpressionSelectClause, data);
         }
 
         public override object VisitMemberReferenceExpression(MemberReferenceExpression memberReferenceExpression, object data)

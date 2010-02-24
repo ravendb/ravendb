@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Runtime.ConstrainedExecution;
+using System.Threading;
 using System.Web;
 using Microsoft.Isam.Esent.Interop;
 using System.Diagnostics;
@@ -12,6 +13,7 @@ namespace Rhino.DivanDB.Storage
         private JET_INSTANCE instance;
         private readonly string database;
         private readonly string path;
+        private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
 
         public JET_INSTANCE Instance
         {
@@ -138,8 +140,16 @@ namespace Rhino.DivanDB.Storage
 
         public void Dispose()
         {
-            GC.SuppressFinalize(this);
-            Api.JetTerm2(instance, TermGrbit.Abrupt);
+            disposerLock.EnterWriteLock();
+            try
+            {
+                GC.SuppressFinalize(this);
+                Api.JetTerm2(instance, TermGrbit.Abrupt);
+            }
+            finally
+            {
+                disposerLock.ExitWriteLock();
+            }
         }
 
         ~DocumentStorage()
@@ -148,7 +158,7 @@ namespace Rhino.DivanDB.Storage
             {
                 Trace.WriteLine(
                     "Disposing esent resources from finalizer! You should call DocumentStorage.Dispose() instead!");
-                Api.JetTerm(instance);
+                Api.JetTerm2(instance, TermGrbit.Abrupt);
             }
             catch (Exception exception)
             {
@@ -164,11 +174,37 @@ namespace Rhino.DivanDB.Storage
 
         [CLSCompliant(false)]
         [DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
-        public void Batch(Action<DocumentStorageActions> action)
+        public void Read(Action<DocumentStorageActions> action)
         {
-            using (var pht = new DocumentStorageActions(instance, database, Id))
+            disposerLock.EnterReadLock();
+            try
             {
-                action(pht);
+                using (var pht = new DocumentStorageActions(instance, database))
+                {
+                    action(pht);
+                }
+            }
+            finally
+            {
+                disposerLock.ExitReadLock();
+            }
+        }
+
+        [CLSCompliant(false)]
+        [DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
+        public void Write(Action<DocumentStorageWriteActions> action)
+        {
+            disposerLock.EnterReadLock();
+            try
+            {
+                using (var pht = new DocumentStorageWriteActions(instance, database))
+                {
+                    action(pht);
+                }
+            }
+            finally
+            {
+                disposerLock.ExitReadLock();
             }
         }
 
