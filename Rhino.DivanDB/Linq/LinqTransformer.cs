@@ -15,24 +15,26 @@ namespace Rhino.DivanDB.Linq
     {
         private readonly string source;
         private readonly string rootQueryName;
+        private readonly string path;
         private readonly Type rootQueryType;
 
         public string Name { get; private set; }
 
         public string PathToAssembly { get; private set; }
 
-        public LinqTransformer(string source, string rootQueryName, Type rootQueryType)
+        public LinqTransformer(string source, string rootQueryName, string path, Type rootQueryType)
         {
             this.source = source;
             this.rootQueryName = rootQueryName;
+            this.path = path;
             this.rootQueryType = rootQueryType;
         }
 
         public Type Compile()
         {
             var implicitClassSource = LinqQueryToImplicitClass();
-            var tempFileName = Path.GetTempFileName()+".cs";
-            File.WriteAllText(tempFileName, implicitClassSource);
+            var outputPath = Path.Combine(path, Name + ".view.cs");
+            File.WriteAllText(outputPath, implicitClassSource);
             var provider = new CSharpCodeProvider(new Dictionary<string, string> { { "CompilerVersion", "v3.5" } });
             var results = provider.CompileAssemblyFromFile(new CompilerParameters
             {
@@ -47,8 +49,7 @@ namespace Rhino.DivanDB.Linq
                         typeof(System.Linq.Enumerable).Assembly.Location,
                         rootQueryType.Assembly.Location
                     },
-            }, tempFileName);
-            Console.WriteLine(File.ReadAllText(tempFileName));
+            }, outputPath);
             if (results.Errors.HasErrors)
             {
                 var sb = new StringBuilder().AppendLine();

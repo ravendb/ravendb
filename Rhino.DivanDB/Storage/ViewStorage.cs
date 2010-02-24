@@ -44,7 +44,7 @@ namespace Rhino.DivanDB.Storage
 
         private LinqTransformer CompileViewDefinition(string viewDefinition)
         {
-            var transformer = new LinqTransformer(viewDefinition, "docs", typeof(JsonDynamicObject));
+            var transformer = new LinqTransformer(viewDefinition, "docs", path, typeof(JsonDynamicObject));
             Type type = transformer.Compile();
             var generator = (AbstractViewGenerator)Activator.CreateInstance(type);
             viewsCache[transformer.Name] = generator.CompiledDefinition;
