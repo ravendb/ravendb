@@ -117,6 +117,8 @@ namespace Rhino.DivanDB.Storage
 
         private static string ToIndexableString(object val)
         {
+            if (val is JsonDynamicObject)
+                return ((JsonDynamicObject) val).Unwrap();
             if (val is string)
                 return val.ToString();
 
