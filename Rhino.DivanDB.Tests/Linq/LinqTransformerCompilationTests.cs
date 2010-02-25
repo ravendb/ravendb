@@ -56,6 +56,7 @@ var pagesByTitle =
             {
                 new JsonDynamicObject(@"
                 {
+                    '_id': 1,
                     'Type': 'page',
                     'Title': 'doc1',
                     'Content': 'Foobar',
@@ -63,10 +64,12 @@ var pagesByTitle =
                 }"),
                 new JsonDynamicObject(@"
                 {
+                    '_id': 2,
                     'Type': 'not a page',
                 }"),
                 new JsonDynamicObject(@"
                 {
+                    '_id': 3,
                     'Type': 'page',
                     'Title': 'doc2',
                     'Content': 'Foobar',
@@ -76,8 +79,8 @@ var pagesByTitle =
 
             var expected = new[]
             {
-                "{ Key = doc1, Value = Foobar, Size = 31 }",
-                "{ Key = doc2, Value = Foobar, Size = 31 }"
+                "{ Key = doc1, Value = Foobar, Size = 31, _id = 1, _indexName = pagesByTitle }",
+                "{ Key = doc2, Value = Foobar, Size = 31, _id = 3, _indexName = pagesByTitle }"
             };
 
             for (int i = 0; i < results.Length; i++)

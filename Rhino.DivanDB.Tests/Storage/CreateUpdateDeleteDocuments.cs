@@ -48,15 +48,6 @@ namespace Rhino.DivanDB.Tests.Storage
         }
 
         [Fact]
-        public void Cannot_add_document_twice()
-        {
-            db.Put(JObject.Parse("{_id: '1', first_name: 'ayende', last_name: 'rahien'}"));
-            var exception = Assert.Throws<EsentErrorException>(
-                ()=>db.Put(JObject.Parse("{_id: '1', first_name: 'ayende2', last_name: 'rahien2'}")));
-            Assert.Equal(JET_err.KeyDuplicate, exception.Error);
-        }
-
-        [Fact]
         public void Can_edit_document()
         {
             db.Put(JObject.Parse("{_id: '1', first_name: 'ayende', last_name: 'rahien'}"));
