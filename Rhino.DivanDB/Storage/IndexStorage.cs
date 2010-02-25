@@ -30,6 +30,10 @@ namespace Rhino.DivanDB.Storage
             var create = Directory.Exists(this.path) == false;
 
             directory = FSDirectory.GetDirectory(this.path, create);
+            if(create)
+            {
+                new IndexWriter(directory, new StandardAnalyzer()).Close();
+            }
             searcher = new IndexSearcher(directory);
         }
 
@@ -101,7 +105,10 @@ namespace Rhino.DivanDB.Storage
             {
                 if(property == id)
                     continue;
-                doc.Add(new Field(property.Name, ToIndexableString(property.GetValue(val)), 
+                var value = property.GetValue(val);
+                if (value == null)
+                    continue;
+                doc.Add(new Field(property.Name, ToIndexableString(value), 
                     Field.Store.YES, 
                     Field.Index.TOKENIZED));
             }
@@ -133,6 +140,21 @@ namespace Rhino.DivanDB.Storage
             {
                 yield return search.Doc(i).GetField("_id").StringValue();
             }
+        }
+
+        public void DeleteAllDocumentsWith(string key, string val)
+        {
+            var indexWriter = new IndexWriter(directory, new StandardAnalyzer());
+            try
+            {
+                indexWriter.DeleteDocuments(new Term(key, val));
+                indexWriter.Flush();
+            }
+            finally
+            {
+                indexWriter.Close();
+            }
+            RecreateSearcher();
         }
     }
 }

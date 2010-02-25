@@ -60,15 +60,41 @@ namespace Rhino.DivanDB.Linq
             var identifierExpression = memberReferenceExpression.TargetObject as IdentifierExpression;
             if (identifierExpression == null || identifierExpression.Identifier != identifier)
                 return base.VisitMemberReferenceExpression(memberReferenceExpression, data);
-
+           
             var indexerExpression = new IndexerExpression(
                 memberReferenceExpression.TargetObject,
                 new List<Expression> { new PrimitiveExpression(memberReferenceExpression.MemberName, memberReferenceExpression.MemberName) });
 
-            ReplaceCurrentNode(indexerExpression);
+            if (ShouldAddNamedArg(memberReferenceExpression))
+            {
+                var namedArgumentExpression = new NamedArgumentExpression(memberReferenceExpression.MemberName,
+                                                                          memberReferenceExpression);
+                ReplaceCurrentNode(namedArgumentExpression);
+                namedArgumentExpression.Parent = memberReferenceExpression.Parent;
+                memberReferenceExpression.Parent = namedArgumentExpression;
+                namedArgumentExpression.AcceptVisitor(this, data);
+                namedArgumentExpression.Expression = indexerExpression;
+                ReplaceCurrentNode(namedArgumentExpression);
+            }
+            else
+            {
+                ReplaceCurrentNode(indexerExpression);
+            }
             indexerExpression.Parent = memberReferenceExpression.Parent;
-
             return indexerExpression;
+        }
+
+        private static bool ShouldAddNamedArg(INode node)
+        {
+            if (node == null)
+                return false;
+            if(node is NamedArgumentExpression)
+                return false;
+            if(node is ObjectCreateExpression)
+            {
+                return ((ObjectCreateExpression) node).IsAnonymousType;
+            }
+            return ShouldAddNamedArg(node.Parent);
         }
     }
 }

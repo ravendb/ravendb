@@ -1,11 +1,7 @@
 using System;
-using System.IO;
-using System.Threading;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Rhino.DivanDB.Tests.Storage;
 using Xunit;
-using System.Linq;
 
 namespace Rhino.DivanDB.Tests.Views
 {
@@ -16,42 +12,6 @@ namespace Rhino.DivanDB.Tests.Views
         public DocumentsToViews()
         {
             db = new DocumentDatabase("divan.db.test.esent");
-        }
-
-        [Fact]
-        public void Adding_a_document_will_add_it_to_the_queue_of_existing_views()
-        {
-            db.AddView(
-                @"var pagesByTitle = 
-    from doc in docs
-    where doc.type == ""page""
-    select new { Key = doc.title, Value = doc.content, Size = (int)doc.size };
-");
-            db.AddDocument(JObject.Parse("{_id: '1', type: 'page', content: 'this is the content', title: 'hello world', size: 5}"));
-
-            db.Storage.Batch(actions =>
-            {
-                var id = actions.QueuedDocumentsFor("pagesByTitle").ToArray()[0];
-                Assert.Equal("1", id);
-            });
-        }
-
-        [Fact]
-        public void Adding_a_view_will_queue_all_documents_for_this_view()
-        {
-            db.AddDocument(JObject.Parse("{_id: '1', type: 'page', content: 'this is the content', title: 'hello world', size: 5}"));
-
-            db.AddView(
-               @"var pagesByTitle = 
-    from doc in docs
-    where doc.type == ""page""
-    select new { Key = doc.title, Value = doc.content, Size = (int)doc.size };
-");
-            db.Storage.Batch(actions =>
-            {
-                var id = actions.QueuedDocumentsFor("pagesByTitle").ToArray()[0];
-                Assert.Equal("1", id);
-            });
         }
 
         [Fact]
@@ -67,44 +27,13 @@ namespace Rhino.DivanDB.Tests.Views
                @"var pagesByTitle2 = 
     from doc in docs
     where doc.type == ""page""
-    select new { Key = doc.other, Value = doc.content, Size = (int)doc.size };
+    select new { doc.some };
 ");
-            db.AddDocument(JObject.Parse("{_id: '1', type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"));
+            db.Put(JObject.Parse("{_id: '1', type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"));
 
-            db.ProcessQueuedDocuments();
-
-            var docs = db.ViewRecordsByNameAndKey("pagesByTitle2", "var");
+            var docs = db.Query("pagesByTitle2", "+some:var");
             Assert.Equal(1, docs.Length);
 
-        }
-
-        [Fact]
-        public void Can_read_values_from_view()
-        {
-          
-
-            db.AddView(
-               @"var pagesByTitle = 
-    from doc in docs
-    where doc.type == ""page""
-    select new { Key = doc.title, Value = doc.content, Size = (int)doc.size };
-");
-            db.AddDocument(JObject.Parse("{_id: '1', type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"));
-
-            db.ProcessQueuedDocuments();
-
-            var docs = db.ViewRecordsByNameAndKey("pagesByTitle", "hello world");
-            Assert.Equal(1, docs.Length);
-            var serializer = new JsonSerializer();
-            var expected = serializer.Deserialize(
-                new JsonTextReader(
-                    new StringReader(
-                        @"{
-  ""Key"": ""hello world"",
-  ""Value"": ""this is the content"",
-  ""Size"": 5
-}")));
-            Assert.Equal(expected.ToString(), docs[0].ToString());
         }
 
         public void Dispose()

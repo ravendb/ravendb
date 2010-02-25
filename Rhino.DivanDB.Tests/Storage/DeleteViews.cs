@@ -57,31 +57,6 @@ namespace Rhino.DivanDB.Tests.Storage
         }
 
         [Fact]
-        public void Removing_view_will_drop_table_for_the_values()
-        {
-            const string definition = @"var pagesByTitle = 
-    from doc in docs
-    where doc.type == ""page""
-    select new { Key = doc.title, Value = doc.content, Size = (int)doc.size };
-";
-            db.AddView(definition);
-            db.DeleteView("pagesByTitle");
-            using (var session = new Session(db.Storage.Instance))
-            {
-                JET_DBID dbid;
-                Api.JetOpenDatabase(session, db.Storage.Database, null, out dbid, OpenDatabaseGrbit.None);
-                try
-                {
-                    Assert.False(Api.GetTableNames(session, dbid).Contains("views_pagesByTitle"));
-                }
-                finally
-                {
-                    Api.JetCloseDatabase(session, dbid, CloseDatabaseGrbit.None);
-                }
-            }
-        }
-
-        [Fact]
         public void View_instances_cache_will_be_removed()
         {
             const string definition = @"var pagesByTitle = 
@@ -95,7 +70,6 @@ namespace Rhino.DivanDB.Tests.Storage
             db.DeleteView("pagesByTitle");
             Assert.Throws<InvalidOperationException>("Cannot find a view named: 'pagesByTitle'",
                 () => db.ViewInstanceByName("pagesByTitle"));
-     
         }
 
         public void Dispose()

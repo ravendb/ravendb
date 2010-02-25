@@ -120,5 +120,14 @@ namespace Rhino.DivanDB
             DocumentStorage.Read(actions => list.AddRange(IndexStorage.Query(index, query).Select(key => JObject.Parse(actions.DocumentByKey(key)))));
             return list.ToArray();
         }
+
+        public void DeleteView(string name)
+        {
+            lock(writeLock)
+            {
+                ViewStorage.RemoveView(name);
+                IndexStorage.DeleteAllDocumentsWith("_indexName", name);
+            }
+        }
     }
 }

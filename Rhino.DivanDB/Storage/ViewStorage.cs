@@ -61,5 +61,12 @@ namespace Rhino.DivanDB.Storage
                 }
             }
         }
+
+        public void RemoveView(string name)
+        {
+            viewsCache.Remove(name);
+            File.Delete(Path.Combine(path, name+".view"));
+            File.Delete(Path.Combine(path, name + ".view.cs"));
+        }
     }
 }
