@@ -2,11 +2,11 @@ using Kayak;
 
 namespace Rhino.DivanDB.Server.Responders
 {
-    public class PutView : KayakResponder
+    public class PutQuery : KayakResponder
     {
         public override string UrlPattern
         {
-            get { return "/views"; }
+            get { return "/queries"; }
         }
 
         public override string[] SupportedVerbs

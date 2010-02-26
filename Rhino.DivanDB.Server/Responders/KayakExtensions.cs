@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using Kayak;
 using Newtonsoft.Json;
@@ -22,7 +23,28 @@ namespace Rhino.DivanDB.Server.Responders
 
         public static void WriteJson(this KayakContext context, object obj)
         {
-            new JsonSerializer().Serialize(context.Response.Output, obj);
+            new JsonSerializer
+            {
+                Converters = { new JsonToJsonConverter() }
+            }.Serialize(context.Response.Output, obj);
+        }
+
+        public class JsonToJsonConverter : JsonConverter
+        {
+            public override void WriteJson(JsonWriter writer, object value)
+            {
+                ((JObject)value).WriteTo(writer);
+            }
+
+            public override object ReadJson(JsonReader reader, Type objectType)
+            {
+                throw new NotImplementedException();
+            }
+
+            public override bool CanConvert(Type objectType)
+            {
+                return objectType == typeof(JObject);
+            }
         }
     }
 }

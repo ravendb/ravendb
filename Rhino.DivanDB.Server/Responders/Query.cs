@@ -1,6 +1,4 @@
-using System;
 using Kayak;
-using Newtonsoft.Json;
 
 namespace Rhino.DivanDB.Server.Responders
 {
@@ -8,7 +6,7 @@ namespace Rhino.DivanDB.Server.Responders
     {
         public override string UrlPattern
         {
-            get { return "/query"; }
+            get { return "/queries"; }
         }
 
         public override string[] SupportedVerbs
