@@ -1,0 +1,162 @@
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Linq;
+using System.Threading;
+using Lucene.Net.Analysis.Standard;
+using Lucene.Net.Documents;
+using Lucene.Net.Index;
+using Lucene.Net.QueryParsers;
+using Lucene.Net.Search;
+using Lucene.Net.Store;
+using Rhino.DivanDB.Json;
+using Rhino.DivanDB.Linq;
+
+namespace Rhino.DivanDB.Indexing
+{
+    public class Index : IDisposable
+    {
+        private class CurrentIndexSearcher
+        {
+            public IndexSearcher Searcher;
+            private int useCount;
+            private bool shouldDisposeWhenThereAreNoUsages = false;
+
+
+            public IDisposable Use()
+            {
+                Interlocked.Increment(ref useCount);
+                return new CleanUp(this);
+            }
+
+            private class CleanUp : IDisposable
+            {
+                private CurrentIndexSearcher parent;
+
+                public CleanUp(CurrentIndexSearcher parent)
+                {
+                    this.parent = parent;
+                }
+
+                public void Dispose()
+                {
+                    var uses = Interlocked.Decrement(ref parent.useCount);
+                    if(parent.shouldDisposeWhenThereAreNoUsages && uses ==0)
+                        parent.Searcher.Close();
+
+                }
+            }
+
+            public void MarkForDispoal()
+            {
+                shouldDisposeWhenThereAreNoUsages = true;
+            }
+        }
+
+        private readonly FSDirectory directory;
+        private CurrentIndexSearcher searcher;
+
+        public Index(FSDirectory directory)
+        {
+            this.directory = directory;
+            searcher = new CurrentIndexSearcher
+                       {
+                           Searcher = new IndexSearcher(directory)
+                       };
+        }
+
+        public void Dispose()
+        {
+            directory.Close();
+        }
+
+        public IEnumerable<string> Query(string query)
+        {
+            var luceneQuery = new QueryParser("",new StandardAnalyzer()).Parse(query);
+            using (searcher.Use())
+            {
+                var search = searcher.Searcher.Search(luceneQuery);
+                for (int i = 0; i < search.Length(); i++)
+                {
+                    yield return search.Doc(i).GetField("_id").StringValue();
+                }
+            }
+        }
+
+        public void IndexDocuments(ViewFunc func, IEnumerable<JsonDynamicObject> documents)
+        {
+            var docs = func(documents).Cast<object>();
+            var indexWriter = new IndexWriter(directory, new StandardAnalyzer());
+            try
+            {
+                var currentId = Guid.NewGuid().ToString();
+                var luceneDoc = new Document();
+                foreach (var doc in docs)
+                {
+                    var fields = new List<Field>();
+                    var docId = AddValuesToDocument(fields, doc);
+                    if(docId != currentId)
+                    {
+                        if (luceneDoc.GetFieldsCount() > 0)
+                            indexWriter.UpdateDocument(new Term("_id", docId), luceneDoc);
+                        luceneDoc = new Document();
+                        luceneDoc.Add(new Field("_id", docId, Field.Store.YES, Field.Index.UN_TOKENIZED));
+                    }
+                    foreach (var field in fields)
+                    {
+                        luceneDoc.Add(field);
+                    }
+                }
+            }
+            finally
+            {
+                indexWriter.Close();
+            }
+            RecreateSearcher();
+        }
+
+        private void RecreateSearcher()
+        {
+            using(searcher.Use())
+            {
+                searcher = new CurrentIndexSearcher
+                           {
+                               Searcher = new IndexSearcher(directory)
+                           };
+                searcher.MarkForDispoal();
+            }
+        }
+
+        private static string AddValuesToDocument(IList<Field> fields, object val)
+        {
+            var properties = TypeDescriptor.GetProperties(val).Cast<PropertyDescriptor>().ToArray();
+            var id = properties.First(x => x.Name == "_id");
+           
+            foreach (PropertyDescriptor property in properties)
+            {
+                if (property == id)
+                    continue;
+                var value = property.GetValue(val);
+                if (value == null)
+                    continue;
+                fields.Add(new Field(property.Name, ToIndexableString(value),
+                    Field.Store.YES,
+                    Field.Index.TOKENIZED));
+            }
+            return (string)id.GetValue(val);
+        }
+
+        private static string ToIndexableString(object val)
+        {
+            if (val is JsonDynamicObject)
+                return ((JsonDynamicObject)val).Unwrap();
+            if (val is string)
+                return val.ToString();
+
+            if (val is DateTime)
+                return DateTools.DateToString((DateTime)val, DateTools.Resolution.DAY);
+
+            return val.ToString();
+        }
+    }
+}

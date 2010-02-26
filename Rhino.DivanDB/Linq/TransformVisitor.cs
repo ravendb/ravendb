@@ -45,12 +45,6 @@ namespace Rhino.DivanDB.Linq
                         new MemberReferenceExpression(new IdentifierExpression(identifier), "_id")
                         )
                     );
-                createExpr.ObjectInitializer.CreateExpressions.Add(
-                    new NamedArgumentExpression(
-                        "_indexName",
-                        new PrimitiveExpression(Name,Name)
-                        )
-                    );
             }
             return base.VisitQueryExpressionSelectClause(queryExpressionSelectClause, data);
         }

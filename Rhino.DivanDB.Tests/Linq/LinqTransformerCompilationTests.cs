@@ -79,8 +79,8 @@ var pagesByTitle =
 
             var expected = new[]
             {
-                "{ Key = doc1, Value = Foobar, Size = 31, _id = 1, _indexName = pagesByTitle }",
-                "{ Key = doc2, Value = Foobar, Size = 31, _id = 3, _indexName = pagesByTitle }"
+                "{ Key = doc1, Value = Foobar, Size = 31, _id = 1 }",
+                "{ Key = doc2, Value = Foobar, Size = 31, _id = 3 }"
             };
 
             for (int i = 0; i < results.Length; i++)

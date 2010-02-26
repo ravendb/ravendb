@@ -51,7 +51,7 @@ namespace Rhino.DivanDB.Storage
             return data;
         }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
             if (documents != null)
                 documents.Dispose();
@@ -81,6 +81,19 @@ namespace Rhino.DivanDB.Storage
                     yield return Api.RetrieveColumnAsString(session, documents, documentsColumns["key"], Encoding.Unicode);
                 }
             }
+        }
+
+
+        public FirstAndLast FirstAndLastDocumentKeys()
+        {
+            var result = new FirstAndLast();
+            Api.MoveBeforeFirst(session, documents);
+            if (Api.TryMoveNext(session, documents))
+                result.First = Api.RetrieveColumnAsString(session, documents, documentsColumns["key"], Encoding.Unicode);
+            Api.MoveAfterLast(session, documents);
+            if (Api.TryMovePrevious(session, documents))
+                result.Last = Api.RetrieveColumnAsString(session, documents, documentsColumns["key"], Encoding.Unicode);
+            return result;
         }
     }
 }

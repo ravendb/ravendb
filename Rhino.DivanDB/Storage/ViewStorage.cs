@@ -5,6 +5,7 @@ using System.IO;
 using log4net;
 using Rhino.DivanDB.Json;
 using Rhino.DivanDB.Linq;
+using System.Linq;
 
 namespace Rhino.DivanDB.Storage
 {
@@ -35,11 +36,16 @@ namespace Rhino.DivanDB.Storage
             }
         }
 
-        public ViewFunc AddView(string viewDefinition)
+        public string[] ViewNames
+        {
+            get { return viewsCache.Keys.ToArray(); }
+        }
+
+        public string AddView(string viewDefinition)
         {
             var transformer = CompileViewDefinition(viewDefinition);
             File.WriteAllText(Path.Combine(path,transformer.Name + ".view"), viewDefinition);
-            return viewsCache[transformer.Name];
+            return transformer.Name;
         }
 
         private LinqTransformer CompileViewDefinition(string viewDefinition)
@@ -65,8 +71,23 @@ namespace Rhino.DivanDB.Storage
         public void RemoveView(string name)
         {
             viewsCache.Remove(name);
-            File.Delete(Path.Combine(path, name+".view"));
-            File.Delete(Path.Combine(path, name + ".view.cs"));
+            File.Delete(GetViewFile(name));
+            File.Delete(GetViewSourceFile(name));
+        }
+
+        private string GetViewSourceFile(string name)
+        {
+            return Path.Combine(path, name + ".view.cs");
+        }
+
+        private string GetViewFile(string name)
+        {
+            return Path.Combine(path, name+".view");
+        }
+
+        public string GetViewDefinition(string name)
+        {
+            return File.ReadAllText(GetViewFile(name));
         }
     }
 }

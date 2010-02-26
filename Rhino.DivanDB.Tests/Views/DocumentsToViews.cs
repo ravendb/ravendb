@@ -31,7 +31,7 @@ namespace Rhino.DivanDB.Tests.Views
 ");
             db.Put(JObject.Parse("{_id: '1', type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"));
 
-            var docs = db.Query("pagesByTitle2", "+some:val");
+            var docs = db.Query("pagesByTitle2", "some:val");
             Assert.Equal(1, docs.Length);
 
         }

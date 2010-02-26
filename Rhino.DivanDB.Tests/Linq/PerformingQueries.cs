@@ -33,8 +33,8 @@ var pagesByTitle =
                 .Cast<object>().ToArray();
             var expected = new[]
             {
-                "{ Key = hello, Value = foobar, Size = 2, _id = 1, _indexName = pagesByTitle }",
-                "{ Key = there, Value = foobar 2, Size = 3, _id = 2, _indexName = pagesByTitle }"
+                "{ Key = hello, Value = foobar, Size = 2, _id = 1 }",
+                "{ Key = there, Value = foobar 2, Size = 3, _id = 2 }"
             };
 
             Assert.Equal(expected.Length, actual.Length);

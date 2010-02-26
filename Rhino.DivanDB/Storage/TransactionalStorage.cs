@@ -2,13 +2,12 @@
 using System.IO;
 using System.Runtime.ConstrainedExecution;
 using System.Threading;
-using System.Web;
 using Microsoft.Isam.Esent.Interop;
 using System.Diagnostics;
 
 namespace Rhino.DivanDB.Storage
 {
-    public class DocumentStorage : CriticalFinalizerObject, IDisposable
+    public class TransactionalStorage : CriticalFinalizerObject, IDisposable
     {
         private JET_INSTANCE instance;
         private readonly string database;
@@ -27,7 +26,7 @@ namespace Rhino.DivanDB.Storage
 
         public Guid Id { get; private set; }
 
-        public DocumentStorage(string database)
+        public TransactionalStorage(string database)
         {
             this.database = database;
             path = database;
@@ -39,9 +38,9 @@ namespace Rhino.DivanDB.Storage
 
         public void Initialize()
         {
-            ConfigureInstance(instance);
             try
             {
+                ConfigureInstance(instance);
                 Api.JetInit(ref instance);
 
                 EnsureDatabaseIsCreatedAndAttachToDatabase();
@@ -152,12 +151,12 @@ namespace Rhino.DivanDB.Storage
             }
         }
 
-        ~DocumentStorage()
+        ~TransactionalStorage()
         {
             try
             {
                 Trace.WriteLine(
-                    "Disposing esent resources from finalizer! You should call DocumentStorage.Dispose() instead!");
+                    "Disposing esent resources from finalizer! You should call TransactionalStorage.Dispose() instead!");
                 Api.JetTerm2(instance, TermGrbit.Abrupt);
             }
             catch (Exception exception)

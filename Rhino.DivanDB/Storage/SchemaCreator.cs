@@ -25,6 +25,7 @@ namespace Rhino.DivanDB.Storage
                 {
                     CreateDetailsTable(dbid);
                     CreateDocumentsTable(dbid);
+                    CreateTasksTable(dbid);
 
                     tx.Commit(CommitTransactionGrbit.None);
                 }
@@ -57,6 +58,29 @@ namespace Rhino.DivanDB.Storage
 
             const string indexDef = "+key\0\0";
             Api.JetCreateIndex(session, tableid, "by_key", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
+                               100);
+        }
+
+        private void CreateTasksTable(JET_DBID dbid)
+        {
+            JET_TABLEID tableid;
+            Api.JetCreateTable(session, dbid, "tasks", 16, 100, out tableid);
+            JET_COLUMNID columnid;
+
+            Api.JetAddColumn(session, tableid, "id", new JET_COLUMNDEF
+            {
+                coltyp = JET_coltyp.Long,
+                grbit = ColumndefGrbit.ColumnFixed|ColumndefGrbit.ColumnAutoincrement|ColumndefGrbit.ColumnNotNULL
+            }, null, 0, out columnid);
+
+            Api.JetAddColumn(session, tableid, "task", new JET_COLUMNDEF
+            {
+                coltyp = JET_coltyp.LongText,
+                grbit = ColumndefGrbit.ColumnTagged
+            }, null, 0, out columnid);
+
+            const string indexDef = "+id\0\0";
+            Api.JetCreateIndex(session, tableid, "by_id", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
                                100);
         }
 

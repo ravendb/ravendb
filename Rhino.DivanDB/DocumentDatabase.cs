@@ -1,36 +1,46 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security;
 using Newtonsoft.Json.Linq;
-using Rhino.DivanDB.Json;
+using Rhino.DivanDB.Indexing;
 using Rhino.DivanDB.Storage;
-using System.Linq;
+using Rhino.DivanDB.Tasks;
 
 namespace Rhino.DivanDB
 {
     public class DocumentDatabase : IDisposable
     {
-        public DocumentStorage DocumentStorage { get; private set; }
-        public ViewStorage ViewStorage { get; private set; }
-        public IndexStorage IndexStorage { get; private set; }
-        private object writeLock = new object();
-
         public DocumentDatabase(string path)
         {
-            DocumentStorage = new DocumentStorage(path);
+            TransactionalStorage = new TransactionalStorage(path);
             try
             {
-                DocumentStorage.Initialize();
+                TransactionalStorage.Initialize();
             }
             catch (Exception)
             {
-                DocumentStorage.Dispose();
+                TransactionalStorage.Dispose();
             }
 
             ViewStorage = new ViewStorage(path);
             IndexStorage = new IndexStorage(path);
         }
+
+        public TransactionalStorage TransactionalStorage { get; private set; }
+        public ViewStorage ViewStorage { get; private set; }
+        public IndexStorage IndexStorage { get; private set; }
+
+        #region IDisposable Members
+
+        public void Dispose()
+        {
+            TransactionalStorage.Dispose();
+            IndexStorage.Dispose();
+        }
+
+        #endregion
 
         private static string GetKeyFromDocumentOrGenerateNewOne(IDictionary<string, JToken> document)
         {
@@ -38,36 +48,30 @@ namespace Rhino.DivanDB
             JToken idToken;
             if (document.TryGetValue("_id", out idToken))
             {
-                id = (string)((JValue)idToken).Value;
+                id = (string) ((JValue) idToken).Value;
             }
             if (id != null)
                 return id;
             Guid value;
             UuidCreateSequential(out value);
             document.Add("_id", new JValue(value.ToString()));
-            return  value.ToString();
+            return value.ToString();
         }
 
         [SuppressUnmanagedCodeSecurity]
         [DllImport("rpcrt4.dll", SetLastError = true)]
-        static extern int UuidCreateSequential(out Guid value);
-
-        public void Dispose()
-        {
-            DocumentStorage.Dispose();
-            IndexStorage.Dispose();
-        }
+        private static extern int UuidCreateSequential(out Guid value);
 
         public JObject Get(string key)
         {
             string document = null;
-            DocumentStorage.Read(actions =>
-            {
-                document = actions.DocumentByKey(key);
-                actions.Commit();
-            });
+            TransactionalStorage.Read(actions =>
+                                      {
+                                          document = actions.DocumentByKey(key);
+                                          actions.Commit();
+                                      });
 
-            if(document == null)
+            if (document == null)
                 return null;
 
             return JObject.Parse(document);
@@ -75,59 +79,64 @@ namespace Rhino.DivanDB
 
         public string Put(JObject document)
         {
-           lock(writeLock)
-           {
-               string key = GetKeyFromDocumentOrGenerateNewOne(document);
+            string key = GetKeyFromDocumentOrGenerateNewOne(document);
 
-               DocumentStorage.Write(actions =>
-               {
-                   actions.DeleteDocument(key);
-                   actions.AddDocument(key, document.ToString());
-                   actions.Commit();
-               });
-               IndexStorage.Index(ViewStorage.AllViews, new[] { new JsonDynamicObject(document.Root) });
-               return key;
-           }
+            TransactionalStorage.Write(actions =>
+                                       {
+                                           actions.DeleteDocument(key);
+                                           actions.AddDocument(key, document.ToString());
+                                           actions.AddTask(new IndexDocumentRangeTask
+                                                           {View = "*", FromKey = key, ToKey = key});
+                                           actions.Commit();
+                                       });
+            return key;
         }
 
         public void Delete(string key)
         {
-           lock(writeLock)
-           {
-               DocumentStorage.Write(actions =>
-               {
-                   actions.DeleteDocument(key);
-                   actions.Commit();
-               });
-               IndexStorage.Delete(key);
-           }
+            TransactionalStorage.Write(actions =>
+                                       {
+                                           actions.DeleteDocument(key);
+                                           actions.AddTask(new RemoveFromIndexTask {View = "*", Keys = new[] {key}});
+                                           actions.Commit();
+                                       });
         }
 
         public void AddView(string viewDefinition)
         {
-            lock(writeLock)
-            {
-                var viewFunc = ViewStorage.AddView(viewDefinition);
-                DocumentStorage.Write(actions => IndexStorage.Index(viewFunc, actions.DocumentKeys
-                                                                                  .Select(key => actions.DocumentByKey(key))
-                                                                                  .Select(s => new JsonDynamicObject(s))));
-            }
+            string viewName = ViewStorage.AddView(viewDefinition);
+            IndexStorage.CreateIndex(viewName);
+            TransactionalStorage.Write(actions =>
+                                       {
+                                           var firstAndLast = actions.FirstAndLastDocumentKeys();
+                                           actions.AddTask(new IndexDocumentRangeTask
+                                                           {
+                                                               View = viewName,
+                                                               FromKey = firstAndLast.First,
+                                                               ToKey = firstAndLast.Last
+                                                           });
+                                       });
         }
 
         public JObject[] Query(string index, string query)
         {
             var list = new List<JObject>();
-            DocumentStorage.Read(actions => list.AddRange(IndexStorage.Query(index, query).Select(key => JObject.Parse(actions.DocumentByKey(key)))));
+            TransactionalStorage.Read(
+                actions =>
+                {
+                    list.AddRange(from key in IndexStorage.Query(index, query)
+                                  select actions.DocumentByKey(key)
+                                  into doc 
+                                  where doc != null 
+                                  select JObject.Parse(doc));
+                });
             return list.ToArray();
         }
 
         public void DeleteView(string name)
         {
-            lock(writeLock)
-            {
-                ViewStorage.RemoveView(name);
-                IndexStorage.DeleteAllDocumentsWith("_indexName", name);
-            }
+            ViewStorage.RemoveView(name);
+            IndexStorage.DeleteIndex(name);
         }
     }
 }

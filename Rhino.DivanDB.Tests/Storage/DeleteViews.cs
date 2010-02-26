@@ -24,12 +24,12 @@ namespace Rhino.DivanDB.Tests.Storage
     select new { Key = doc.title, Value = doc.content, Size = (int)doc.size };
 ");
             db.DeleteView("pagesByTitle");
-            var views = db.ListView();
+            var views = db.ViewStorage.ViewNames;
             Assert.Equal(0, views.Length);
         }
 
         [Fact]
-        public void Removing_view_will_remove_view_definition()
+        public void Removing_view_will_remove_index()
         {
             const string definition = @"var pagesByTitle = 
     from doc in docs
@@ -38,38 +38,8 @@ namespace Rhino.DivanDB.Tests.Storage
 ";
             db.AddView(definition);
             db.DeleteView("pagesByTitle");
-            var actualDefinition = db.ViewDefinitionByName("pagesByTitle");
-            Assert.Null(actualDefinition);
-        }
-
-        [Fact]
-        public void Cannot_get_view_instance_by_name_after_removal()
-        {
-            const string definition = @"var pagesByTitle = 
-    from doc in docs
-    where doc.type == ""page""
-    select new { Key = doc.title, Value = doc.content, Size = (int)doc.size };
-";
-            db.AddView(definition);
-            db.DeleteView("pagesByTitle");
-            Assert.Throws<InvalidOperationException>("Cannot find a view named: 'pagesByTitle'", 
-                () => db.ViewInstanceByName("pagesByTitle"));
-        }
-
-        [Fact]
-        public void View_instances_cache_will_be_removed()
-        {
-            const string definition = @"var pagesByTitle = 
-    from doc in docs
-    where doc.type == ""page""
-    select new { Key = doc.title, Value = doc.content, Size = (int)doc.size };
-";
-            db.AddView(definition);
-            var actualDefinition1 = db.ViewInstanceByName("pagesByTitle");
-            Assert.NotNull(actualDefinition1);
-            db.DeleteView("pagesByTitle");
-            Assert.Throws<InvalidOperationException>("Cannot find a view named: 'pagesByTitle'",
-                () => db.ViewInstanceByName("pagesByTitle"));
+            var actualDefinition = db.IndexStorage.Indexes;
+            Assert.Empty(actualDefinition);
         }
 
         public void Dispose()
