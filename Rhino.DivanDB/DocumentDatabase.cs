@@ -56,6 +56,20 @@ namespace Rhino.DivanDB
         public ViewStorage ViewStorage { get; private set; }
         public IndexStorage IndexStorage { get; private set; }
 
+        public int CountOfDocuments
+        {
+            get
+            {
+                int value = 0;
+                TransactionalStorage.Batch(actions =>
+                {
+                    value = actions.GetDocumentsCount();
+                    actions.Commit();
+                });
+                return value;
+            }
+        }
+
         #region IDisposable Members
 
         public void Dispose()
@@ -91,7 +105,7 @@ namespace Rhino.DivanDB
         [DllImport("rpcrt4.dll", SetLastError = true)]
         private static extern int UuidCreateSequential(out Guid value);
 
-        public JObject Get(string key)
+        public string Get(string key)
         {
             string document = null;
             TransactionalStorage.Batch(actions =>
@@ -99,11 +113,7 @@ namespace Rhino.DivanDB
                                           document = actions.DocumentByKey(key);
                                           actions.Commit();
                                       });
-
-            if (document == null)
-                return null;
-
-            return JObject.Parse(document);
+            return document;
         }
 
         public string Put(JObject document)
@@ -132,13 +142,13 @@ namespace Rhino.DivanDB
             workContext.NotifyAboutWork();
         }
 
-        public void PutView(string viewDefinition)
+        public string PutView(string viewDefinition)
         {
             string viewName;
             switch (ViewStorage.FindViewCreationStrategy(viewDefinition, out viewName))
             {
                 case ViewCreationStrategy.Noop:
-                    return;
+                    return viewName;
                 case ViewCreationStrategy.Update:
                     DeleteView(viewName);
                     break;
@@ -157,6 +167,7 @@ namespace Rhino.DivanDB
                                            actions.Commit();
                                        });
             workContext.NotifyAboutWork();
+            return viewName;
         }
 
         public QueryResult Query(string index, string query)

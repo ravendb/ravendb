@@ -17,7 +17,7 @@ namespace Rhino.DivanDB.Tasks
         public override void Execute(WorkContext context)
         {
             var viewFunc = context.ViewStorage.GetViewFunc(View);
-            if(viewFunc==null)
+            if (viewFunc == null)
                 return; // view was deleted, probably
             int lastId = FromKey;
             context.TransactionaStorage.Batch(actions =>
@@ -28,11 +28,12 @@ namespace Rhino.DivanDB.Tasks
                                                                    lastId = d.Id;
                                                                    return d.Document;
                                                                })
+                                                               .Where(x => x != null)
                                                                .Select(s => new JsonDynamicObject(s)));
                 actions.Commit();
             });
 
-            if(lastId < ToKey)
+            if (lastId < ToKey && lastId != -1)
             {
                 context.TransactionaStorage.Batch(actions =>
                 {

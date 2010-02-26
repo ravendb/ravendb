@@ -40,7 +40,7 @@ namespace Rhino.DivanDB.Tests.Storage
         public void Can_create_and_read_document()
         {
             db.Put(JObject.Parse("{_id: '1', first_name: 'ayende', last_name: 'rahien'}"));
-            JObject document = db.Get("1");
+            JObject document = db.Get("1").ToJson();
 
             Assert.Equal("1", document.Value<string>("_id"));
             Assert.Equal("ayende", document.Value<string>("first_name"));
@@ -52,7 +52,7 @@ namespace Rhino.DivanDB.Tests.Storage
         {
             db.Put(JObject.Parse("{_id: '1', first_name: 'ayende', last_name: 'rahien'}"));
             db.Put(JObject.Parse("{_id: '1', first_name: 'ayende2', last_name: 'rahien2'}"));
-            JObject document = db.Get("1");
+            JObject document = db.Get("1").ToJson();
 
             Assert.Equal("1", document.Value<string>("_id"));
             Assert.Equal("ayende2", document.Value<string>("first_name"));
@@ -64,9 +64,8 @@ namespace Rhino.DivanDB.Tests.Storage
         {
             db.Put(JObject.Parse("{_id: '1', first_name: 'ayende', last_name: 'rahien'}"));
             db.Delete("1");
-            JObject document = db.Get("1");
 
-            Assert.Null(document);
+            Assert.Null(db.Get("1"));
         }
 
         [Fact]
@@ -74,7 +73,7 @@ namespace Rhino.DivanDB.Tests.Storage
         {
             db.Put(JObject.Parse("{_id: '1', first_name: 'ayende', last_name: 'rahien'}"));
             db.Put(JObject.Parse("{_id: '21', first_name: 'ayende2', last_name: 'rahien2'}"));
-            JObject document = db.Get("21");
+            JObject document = db.Get("21").ToJson();
 
             Assert.Equal("21", document.Value<string>("_id"));
             Assert.Equal("ayende2", document.Value<string>("first_name"));
@@ -84,8 +83,7 @@ namespace Rhino.DivanDB.Tests.Storage
         [Fact]
         public void Querying_by_non_existant_document_returns_null()
         {
-            JObject document = db.Get("1");
-            Assert.Null(document);
+            Assert.Null(db.Get("1"));
         }
 
         public void Dispose()

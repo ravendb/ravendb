@@ -106,6 +106,26 @@ namespace Rhino.DivanDB.Tests.Views
             Assert.Equal(1, docs.Results.Length);
         }
 
+        [Fact]
+        public void Can_read_values_from_views_of_documents_already_in_db_when_multiple_docs_exists()
+        {
+            db.Put(JObject.Parse("{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"));
+            db.Put(JObject.Parse("{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"));
+
+            db.PutView(
+               @"var pagesByTitle = 
+    from doc in docs
+    where doc.type == ""page""
+    select new { doc.other };
+");
+            QueryResult docs;
+            do
+            {
+                docs = db.Query("pagesByTitle", "other:var");
+            } while (docs.IsStale);
+            Assert.Equal(2, docs.Results.Length);
+        }
+
 
         public void Dispose()
         {

@@ -5,11 +5,11 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProductVersion>9.0.30729</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{267AC60C-751E-42E9-AA18-66035DEFF63A}</ProjectGuid>
-    <OutputType>Library</OutputType>
+    <ProjectGuid>{3B90EB20-AEA3-4972-8219-936F1A62768C}</ProjectGuid>
+    <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Rhino.DivanDB.Tests</RootNamespace>
-    <AssemblyName>Rhino.DivanDB.Tests</AssemblyName>
+    <RootNamespace>Rhino.DivanDB.Server</RootNamespace>
+    <AssemblyName>Rhino.DivanDB.Server</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -31,9 +31,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Esent.Interop, Version=1.0.0.0, Culture=neutral, PublicKeyToken=b93b4ad6c4b80595, processorArchitecture=MSIL">
+    <Reference Include="Kayak, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\Esent.Interop.dll</HintPath>
+      <HintPath>..\SharedLibs\Kayak.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=3.5.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -51,23 +51,18 @@
     </Reference>
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
-    <Reference Include="xunit, Version=1.1.0.1323, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\xunit.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="JsonExtensions.cs" />
-    <Compile Include="Linq\LinqTransformerCompilationTests.cs" />
-    <Compile Include="Linq\PerformingQueries.cs" />
+    <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Storage\AbstractDocumentStorageTest.cs" />
-    <Compile Include="Storage\CreateUpdateDeleteDocuments.cs" />
-    <Compile Include="Storage\CreateViews.cs" />
-    <Compile Include="Storage\DeleteViews.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Views\DocumentsToViews.cs" />
+    <Compile Include="Responders\GetDocs.cs" />
+    <Compile Include="Responders\GetDocument.cs" />
+    <Compile Include="Responders\KayakExtensions.cs" />
+    <Compile Include="Responders\KayakResponder.cs" />
+    <Compile Include="Responders\PutDocument.cs" />
+    <Compile Include="Responders\PutView.cs" />
+    <Compile Include="Responders\QueryIndex.cs" />
+    <Compile Include="Responders\Query.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Rhino.DivanDB\Rhino.DivanDB.csproj">

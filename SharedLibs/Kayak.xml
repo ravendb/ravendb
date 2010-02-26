@@ -1,0 +1,379 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Kayak</name>
+    </assembly>
+    <members>
+        <member name="T:Kayak.NameValuePair">
+            <summary>
+            Defines a pair of a single name and one or more values assocated with that name.
+            </summary>
+        </member>
+        <member name="M:Kayak.NameValuePair.#ctor(System.String,System.Collections.Generic.IList{System.String})">
+            <summary>
+            Creates a new NameValuePair with the given name and collection of values.
+            </summary>
+            <param name="values">The collection of values associated with the given name.
+            Note that they will not be copied to a new collection.</param>
+        </member>
+        <member name="M:Kayak.NameValuePair.#ctor(System.String,System.String)">
+            <summary>
+            Creates a new NameValuePair with the given name and single value.
+            </summary>
+        </member>
+        <member name="P:Kayak.NameValuePair.Value">
+            <summary>
+            Gets the value associated with this name. If there are multiple values, they will be
+            returned as one comma-separated string (without padding).
+            </summary>
+        </member>
+        <member name="T:Kayak.NameValueDictionary">
+            <summary>
+            Implements a sorted list of string name-value pairs, with semantics like a string-string
+            hashtable. Names are permitted to have multiple values.
+            </summary>
+        </member>
+        <member name="M:Kayak.NameValueDictionary.#ctor">
+            <summary>
+            Initializes a new empty instance of NameValueDictionary.
+            </summary>
+        </member>
+        <member name="M:Kayak.NameValueDictionary.BecomeReadOnly">
+            <summary>
+            Makes this dictionary read-only. This is a one-way street.
+            </summary>
+        </member>
+        <member name="M:Kayak.NameValueDictionary.Add(System.String,System.String)">
+            <summary>
+            Adds a name-value pair to this dictionary. If the name exists in the dictionary already,
+            the value will be added to the list of values for that name.
+            </summary>
+        </member>
+        <member name="M:Kayak.NameValueDictionary.Add(Kayak.NameValueDictionary)">
+            <summary>
+            Adds the name-value pairs in the dictionary to this dictionary. If a name already
+            exists, the values will be appended to the list of values for that name.
+            </summary>
+            <param name="dict"></param>
+        </member>
+        <member name="M:Kayak.NameValueDictionary.AddRange(System.String,System.Collections.Generic.IEnumerable{System.String})">
+            <summary>
+            Adds a name-values pair to this dictionary. If the name exists in the dictionary already,
+            the values will be appended to the list of values for that name.
+            </summary>
+        </member>
+        <member name="M:Kayak.NameValueDictionary.Remove(System.String)">
+            <summary>
+            Removes the values associated with the given name from this dictionary.
+            </summary>
+        </member>
+        <member name="M:Kayak.NameValueDictionary.Get(System.String)">
+            <summary>
+            Gets a value for a name as a single string. If you query a name that has
+            multiple values, the values will be combined to a comma-separated-string using
+            the ToCommaSeparatedString() extension method. If you query a name that is not 
+            present in the dictionary, null will be returned.
+            </summary>
+        </member>
+        <member name="M:Kayak.NameValueDictionary.GetValues(System.String)">
+            <summary>
+            Gets a list of all values associated with the given name.
+            </summary>
+        </member>
+        <member name="M:Kayak.NameValueDictionary.Set(System.String,System.String)">
+            <summary>
+            Sets the value associated with the given name to the given string. The value will not
+            be inspected in any way (for instance, you cannot use this method to set multiple values).
+            This will replace out any existing values for the name.
+            </summary>
+        </member>
+        <member name="M:Kayak.NameValueDictionary.Set(System.String,System.Collections.Generic.IEnumerable{System.String})">
+            <summary>
+            Associates the given set of values with the given name. This will replace any existing
+            values for the name. The values will be copied into a new list.
+            </summary>
+        </member>
+        <member name="M:Kayak.NameValueDictionary.Contains(System.String)">
+            <summary>
+            Returns true if this dictionary contains the given string.
+            </summary>
+        </member>
+        <member name="M:Kayak.NameValueDictionary.Add(Kayak.NameValuePair)">
+            <summary>
+            Adds the given NameValuePair to this dictionary. If the name exists already, the values
+            will be appended to the existing list of values.
+            </summary>
+            <param name="item"></param>
+        </member>
+        <member name="M:Kayak.NameValueDictionary.Clear">
+            <summary>
+            Removes all elements from our dictionary.
+            </summary>
+        </member>
+        <member name="P:Kayak.NameValueDictionary.IsReadOnly">
+            <summary>
+            Gets whether this dictionary is read-only.
+            </summary>
+        </member>
+        <member name="P:Kayak.NameValueDictionary.Names">
+            <summary>
+            Gets a list of all the names in this dictionary.
+            </summary>
+        </member>
+        <member name="P:Kayak.NameValueDictionary.Item(System.String)">
+            <summary>
+            Gets or sets a name-value pair as a single string. See the Get and Set methods on this
+            class for additional information about behavior.
+            </summary>
+        </member>
+        <member name="P:Kayak.NameValueDictionary.Count">
+            <summary>
+            Gets the number of name-value pairs in this dictionary.
+            </summary>
+        </member>
+        <member name="T:Kayak.KayakServer">
+            <summary>
+            A light, fast, multi-threaded, asynchronous web server. BOOM. SKEET.
+            </summary>
+        </member>
+        <member name="M:Kayak.KayakServer.Start">
+            <summary>
+            Starts the server on the default IP address on port 8080.
+            </summary>
+        </member>
+        <member name="M:Kayak.KayakServer.Start(System.Net.IPEndPoint)">
+            <summary>
+            Starts the server, listening on the given IPEndPoint.
+            </summary>
+        </member>
+        <member name="M:Kayak.KayakServer.Stop">
+            <summary>
+            Stops the server, waiting for any pending HTTP transactions to finish.
+            </summary>
+        </member>
+        <member name="P:Kayak.KayakServer.EndPoint">
+            <summary>
+            The IPEndPoint the on which the server is listening.
+            </summary>
+        </member>
+        <member name="P:Kayak.KayakServer.Responders">
+            <summary>
+            The objects configured to respond to requests made to the server.
+            </summary>
+        </member>
+        <member name="M:Kayak.FileExtensions.ServeFile(Kayak.KayakContext,System.IO.FileInfo)">
+            <summary>
+            Serves a request for a static file. Supports the If-Modified-Since request
+            header for more efficient transfers, and attempts to guess the MIME type of the file
+            based on its extension. To set your own MIME type, set the Content-Type key
+            on the response header collection before calling this method. If the file does not exist,
+            a 404 response is generated.
+            </summary>
+        </member>
+        <member name="T:Kayak.Async.IYieldable">
+            <summary>
+            Represents an action which may complete asynchronously.
+            </summary>
+        </member>
+        <member name="T:Kayak.ResponseBehavior">
+            <summary>
+            Instructs KayakServer on how to proceed after an IKayakResponder responds to a context.
+            Default behavior is to send a response, but this can be used to forcibly close the 
+            underlying TCP connection.
+            </summary>
+        </member>
+        <member name="M:Kayak.KayakResponse.Clear">
+            <summary>
+            Clears the contents of the in-memory output buffer, along with all headers.
+            </summary>
+        </member>
+        <member name="M:Kayak.KayakResponse.ClearOutput">
+            <summary>
+            Clears the contents of the in-memory output buffer.
+            </summary>
+        </member>
+        <member name="M:Kayak.KayakResponse.Write(System.String)">
+            <summary>
+            Shortcuts for Output.Write().
+            </summary>
+        </member>
+        <member name="P:Kayak.KayakResponse.Behavior">
+            <summary>
+            Instructs KayakServer on how to proceed after an IKayakResponder responds to a context.
+            Default behavior is to send a response, but this can be used to forcibly close the 
+            underlying TCP connection.
+            </summary>
+        </member>
+        <member name="P:Kayak.KayakResponse.Cookies">
+            <summary>
+            Gets an <code>HttpCookieCollection</code> of cookies that will be sent with this response.
+            </summary>
+        </member>
+        <member name="P:Kayak.KayakResponse.File">
+            <summary>
+            Instructs the server to send a file as the response. This method returns immediately, 
+            the file is sent after the responder returns control to the server.
+            </summary>
+        </member>
+        <member name="P:Kayak.KayakResponse.OutputStream">
+            <summary>
+            Gets the in-memory response data buffer.
+            </summary>
+        </member>
+        <member name="P:Kayak.KayakResponse.Output">
+            <summary>
+            Gets a TextWriter for writing text to the in-memory response data buffer.
+            </summary>
+        </member>
+        <member name="P:Kayak.KayakResponse.StatusCode">
+            <summary>
+            Gets or sets the HTTP status code (e.g., 200, 404, 304, etc.) to be sent with the response. An exception
+            will be thrown if this property is set after the headers have been sent.
+            </summary>
+        </member>
+        <member name="P:Kayak.KayakResponse.ReasonPhrase">
+            <summary>
+            Gets or sets the HTTP status description (e.g., "OK", "Not Found", etc.) to be sent with the response. An exception
+            will be thrown if this property is set after the headers have been sent.
+            </summary>
+        </member>
+        <member name="P:Kayak.KayakResponse.ContentLength">
+            <summary>
+            Returns the content length specified in a call to GetDirectOutputStream, or the current length of the
+            buffered response.
+            </summary>
+        </member>
+        <member name="T:Kayak.IKayakResponder">
+            <summary>
+            Implement this interface to handle requests sent to a KayakServer. Signal the server that
+            you are done by invoking the callback parameter. Make sure that any exceptions raised are passed
+            back to the callback. Invoke the callback exactly one time! If you never invoke it, the 
+            connection and all associated resources will be leaked! If you invoke it more than once, the 
+            behavior is undefined!
+            </summary>
+        </member>
+        <member name="M:Kayak.IKayakResponder.WillRespond(Kayak.KayakContext,System.Action{System.Boolean,System.Exception})">
+            <summary>
+            Called to determine which responder will be used to handle the request. Invoke the
+            callback with true to indicate that you will handle the request, and false if you
+            will not. If an exception occurs, pass it into the callback (the bool value is ignored).
+            If no exception occurs, pass in null for the exception.
+            </summary>
+        </member>
+        <member name="M:Kayak.IKayakResponder.Respond(Kayak.KayakContext,System.Action{System.Exception})">
+            <summary>
+            Called if WillRespond "returns" true. Process the request and generate a response,
+            and invoke the callback (with any exception that may have occurred) when you are done.
+            </summary>
+        </member>
+        <member name="T:Kayak.HttpExtensions">
+            <summary>
+            A collection of extension methods to help speak HTTP.
+            </summary>
+        </member>
+        <member name="M:Kayak.HttpExtensions.ReadHttpRequestLine(System.IO.Stream)">
+            <summary>
+            Parses the first line of an incoming HTTP request.
+            </summary>
+        </member>
+        <member name="M:Kayak.HttpExtensions.ReadHttpHeaders(System.IO.Stream)">
+            <summary>
+            Parses a list of HTTP request headers, terminated by an empty line.
+            </summary>
+        </member>
+        <member name="T:Kayak.KayakContext">
+            <summary>
+            Encapsulates the lifecycle of a single HTTP transaction.
+            </summary>
+        </member>
+        <member name="P:Kayak.KayakContext.Server">
+            <summary>
+            The KayakServer which accepted the underlying connection.
+            </summary>
+        </member>
+        <member name="P:Kayak.KayakContext.Request">
+            <summary>
+            The KayakRequest object for this context.
+            </summary>
+        </member>
+        <member name="P:Kayak.KayakContext.Response">
+            <summary>
+            The KayakResponse object for this context.
+            </summary>
+        </member>
+        <member name="P:Kayak.KayakContext.Items">
+            <summary>
+            A handy collection to throw stuff into.
+            </summary>
+        </member>
+        <member name="T:Kayak.IO.EntityStream">
+            <summary>
+            Limits the number of bytes that can be written/read to/from an underlying Stream. 
+            Has mutually exclusive reading and writing modes. In reading mode, a 'read first'
+            buffer will be read from before reading the underlying stream (this is
+            because when reading request headers, a bit of the body may have been eaten).
+            </summary>
+        </member>
+        <member name="T:Kayak.Async.Coroutine">
+            <summary>
+            Executes an IYieldable iterator block, using the default Scheduler.
+            </summary>
+        </member>
+        <member name="T:Kayak.Async.ScheduledTask">
+            <summary>
+            Represents a Coroutine given to a Scheduler. The callback is invoked after the Coroutine completes.
+            </summary>
+        </member>
+        <member name="M:Kayak.StreamExtensions.ReadAsync(System.IO.Stream,System.Byte[],System.Int32,System.Int32)">
+            <summary>
+            Returns a yieldable which continues after an asynchronous read.
+            </summary>
+        </member>
+        <member name="M:Kayak.StreamExtensions.WriteAsync(System.IO.Stream,System.Byte[],System.Int32,System.Int32)">
+            <summary>
+            Returns a yieldable which continues after an asynchronous write.
+            </summary>
+        </member>
+        <member name="M:Kayak.StreamExtensions.ReadLine(System.IO.Stream,System.Text.Encoding,System.Int32)">
+            <summary>
+            Synchronously reads a line terminated with \r\n off the source stream into a 
+            string using the given Encoding. Throws if the line buffer exceeds maxLength bytes.
+            </summary>
+        </member>
+        <member name="T:Kayak.KayakRequest">
+            <summary>
+            Provides methods for interacting the an HTTP request made to a KayakServer.
+            </summary>
+        </member>
+        <member name="P:Kayak.KayakRequest.Headers">
+            <summary>
+            A collection of the headers for the request.
+            </summary>
+        </member>
+        <member name="P:Kayak.KayakRequest.Path">
+            <summary>
+            Get the Uri Path for this request, i.e. "/some/path" without querystring or "http://".
+            </summary>
+        </member>
+        <member name="P:Kayak.KayakRequest.QueryString">
+            <summary>
+            Gets the collection of parameters defined in the request uri's query string.
+            </summary>
+        </member>
+        <member name="P:Kayak.KayakRequest.Cookies">
+            <summary>
+            Gets the collection of cookies submitted with this request.
+            </summary>
+        </member>
+        <member name="P:Kayak.KayakRequest.Item(System.String)">
+            <summary>
+            Searches (in this order) Params, QueryString, Form (if PreserveInputStream == false), and Cookies dictionaries for the given name.
+            </summary>
+        </member>
+        <member name="P:Kayak.KayakRequest.InputStream">
+            <summary>
+            The contents of the request body. Throws InvalidOperationException if the did not indicate a Content-Length header.
+            </summary>
+        </member>
+    </members>
+</doc>

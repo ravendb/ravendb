@@ -134,14 +134,9 @@ namespace Rhino.DivanDB.Storage
                 logger.DebugFormat("Document with id {0} or higher was not found", startId);
                 yield break;
             }
-            Api.MakeKey(session, documents, endId, MakeKeyGrbit.NewKey);
-            Api.JetSetIndexRange(session, documents,
-                                 SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive);
-
             int count = 0;
-            while (count < limit)
+            do
             {
-                count++;
                 var id = Api.RetrieveColumnAsInt32(session, documents, documentsColumns["id"],
                                                    RetrieveColumnGrbit.RetrieveFromIndex).Value;
                 if (id > endId)
@@ -149,8 +144,12 @@ namespace Rhino.DivanDB.Storage
 
                 var data = Api.RetrieveColumnAsString(session, documents, documentsColumns["data"], Encoding.Unicode);
                 logger.DebugFormat("Document with id '{0}' was found, doc length: {1}", id, data.Length);
-                yield return new DocumentAndId { Document = data, Id = id };
-            }
+                yield return new DocumentAndId {Document = data, Id = id};
+
+                if((++count) > limit)
+                    yield break;
+            } while (Api.TryMoveNext(session, documents));
+            yield return new DocumentAndId {Id = -1, Document = null};
         }
 
         public void AddDocument(string key, string data)
@@ -225,6 +224,13 @@ namespace Rhino.DivanDB.Storage
         public void PopTx()
         {
             innerTxCount--;
+        }
+
+        public int GetDocumentsCount()
+        {
+            int val;
+            Api.JetIndexRecordCount(session, documents, out val, 0);
+            return val;
         }
     }
 }
