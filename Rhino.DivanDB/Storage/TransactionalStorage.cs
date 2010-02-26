@@ -146,7 +146,7 @@ namespace Rhino.DivanDB.Storage
             try
             {
                 GC.SuppressFinalize(this);
-                Api.JetTerm2(instance, TermGrbit.Abrupt);
+                Api.JetTerm2(instance, TermGrbit.Complete);
             }
             finally
             {

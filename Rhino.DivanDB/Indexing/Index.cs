@@ -67,6 +67,7 @@ namespace Rhino.DivanDB.Indexing
 
         public void Dispose()
         {
+            searcher.Searcher.Close();
             directory.Close();
         }
 
