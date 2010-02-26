@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using log4net;
 using Microsoft.Isam.Esent.Interop;
@@ -18,6 +19,9 @@ namespace Rhino.DivanDB.Storage
         protected readonly IDictionary<string, JET_COLUMNID> documentsColumns;
 
 
+
+        [CLSCompliant(false)]
+        [DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
         public DocumentStorageActions(JET_INSTANCE instance,
                                           string database)
         {

@@ -27,6 +27,12 @@ namespace Rhino.DivanDB
 
             ViewStorage = new ViewStorage(path);
             IndexStorage = new IndexStorage(path);
+            workContext = new WorkContext
+                          {
+                              IndexStorage = IndexStorage,
+                              TransactionaStorage = TransactionalStorage,
+                              ViewStorage = ViewStorage
+                          };
         }
 
         public void SpinBackgroundWorkers()
@@ -45,7 +51,7 @@ namespace Rhino.DivanDB
         }
 
         private Thread[] backgroundWorkers = new Thread[0];
-        private readonly WorkContext workContext = new WorkContext();
+        private readonly WorkContext workContext;
         public TransactionalStorage TransactionalStorage { get; private set; }
         public ViewStorage ViewStorage { get; private set; }
         public IndexStorage IndexStorage { get; private set; }
@@ -71,7 +77,7 @@ namespace Rhino.DivanDB
             JToken idToken;
             if (document.TryGetValue("_id", out idToken))
             {
-                id = (string) ((JValue) idToken).Value;
+                id = (string)((JValue)idToken).Value;
             }
             if (id != null)
                 return id;
@@ -108,7 +114,7 @@ namespace Rhino.DivanDB
                                        {
                                            actions.DeleteDocument(key);
                                            actions.AddDocument(key, document.ToString());
-                                           actions.AddTask(new IndexDocumentTask {Key = key});
+                                           actions.AddTask(new IndexDocumentTask { Key = key });
                                            actions.Commit();
                                        });
             workContext.NotifyAboutWork();
@@ -120,7 +126,7 @@ namespace Rhino.DivanDB
             TransactionalStorage.Write(actions =>
                                        {
                                            actions.DeleteDocument(key);
-                                           actions.AddTask(new RemoveFromIndexTask {View = "*", Keys = new[] {key}});
+                                           actions.AddTask(new RemoveFromIndexTask { View = "*", Keys = new[] { key } });
                                            actions.Commit();
                                        });
             workContext.NotifyAboutWork();
@@ -151,9 +157,9 @@ namespace Rhino.DivanDB
                 {
                     list.AddRange(from key in IndexStorage.Query(index, query)
                                   select actions.DocumentByKey(key)
-                                  into doc 
-                                  where doc != null 
-                                  select JObject.Parse(doc));
+                                      into doc
+                                      where doc != null
+                                      select JObject.Parse(doc));
                 });
             return list.ToArray();
         }

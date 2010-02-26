@@ -175,7 +175,9 @@ namespace Rhino.DivanDB.Storage
         [DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
         public void Read(Action<DocumentStorageActions> action)
         {
-            disposerLock.EnterReadLock();
+            var isReadLockHeld = disposerLock.IsReadLockHeld;
+            if (isReadLockHeld == false)
+                disposerLock.EnterReadLock();
             try
             {
                 using (var pht = new DocumentStorageActions(instance, database))
@@ -185,7 +187,8 @@ namespace Rhino.DivanDB.Storage
             }
             finally
             {
-                disposerLock.ExitReadLock();
+                if(isReadLockHeld == false)
+                    disposerLock.ExitReadLock();
             }
         }
 
@@ -193,7 +196,9 @@ namespace Rhino.DivanDB.Storage
         [DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
         public void Write(Action<DocumentStorageWriteActions> action)
         {
-            disposerLock.EnterReadLock();
+            var isWriteLockHeld = disposerLock.IsWriteLockHeld;
+            if(isWriteLockHeld == false)
+                disposerLock.EnterReadLock();
             try
             {
                 using (var pht = new DocumentStorageWriteActions(instance, database))
@@ -203,7 +208,8 @@ namespace Rhino.DivanDB.Storage
             }
             finally
             {
-                disposerLock.ExitReadLock();
+                if (isWriteLockHeld == false)
+                    disposerLock.ExitReadLock();
             }
         }
 

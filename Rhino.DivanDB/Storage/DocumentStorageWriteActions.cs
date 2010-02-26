@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
 using Newtonsoft.Json.Linq;
@@ -12,7 +13,11 @@ namespace Rhino.DivanDB.Storage
         protected readonly Table tasks;
         protected readonly IDictionary<string, JET_COLUMNID> tasksColumns;
 
-        public DocumentStorageWriteActions(JET_INSTANCE instance, string database) : base(instance, database)
+
+        [CLSCompliant(false)]
+        [DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
+        public DocumentStorageWriteActions(JET_INSTANCE instance, string database)
+            : base(instance, database)
         {
             try
             {

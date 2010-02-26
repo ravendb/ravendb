@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -8,6 +9,8 @@ using System.Linq;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
+using Rhino.DivanDB.Json;
+using Rhino.DivanDB.Linq;
 using Directory = System.IO.Directory;
 
 namespace Rhino.DivanDB.Indexing
@@ -82,6 +85,27 @@ namespace Rhino.DivanDB.Indexing
                 throw new InvalidOperationException("Index " + index + " does not exists");
             }
             return value.Query(query);
+        }
+
+        public void RemoveFromIndex(string index, string[] keys)
+        {
+            Index value;
+            if (indexes.TryGetValue(index, out value) == false)
+            {
+                log.DebugFormat("Removing from non existing index {0}, ignoring", index);
+                return;
+            }
+            value.Remove(keys);
+        }
+
+        public void Index(string index, ViewFunc viewFunc, IEnumerable<JsonDynamicObject> docs)
+        {
+            Index value;
+            if(indexes.TryGetValue(index, out value)==false)
+            {
+                log.DebugFormat("Tried to index on a non existant index {0}, ignoring", index);
+            }
+            value.IndexDocuments(viewFunc, docs);
         }
     }
 }

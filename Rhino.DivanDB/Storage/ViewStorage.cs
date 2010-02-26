@@ -57,17 +57,6 @@ namespace Rhino.DivanDB.Storage
             return transformer;
         }
 
-        public IEnumerable AllViews(IEnumerable<JsonDynamicObject> source)
-        {
-            foreach (var viewFunc in viewsCache.Values)
-            {
-                foreach (var doc in viewFunc(source))
-                {
-                    yield return doc;
-                }
-            }
-        }
-
         public void RemoveView(string name)
         {
             viewsCache.Remove(name);
@@ -88,6 +77,14 @@ namespace Rhino.DivanDB.Storage
         public string GetViewDefinition(string name)
         {
             return File.ReadAllText(GetViewFile(name));
+        }
+
+        public ViewFunc GetViewFunc(string name)
+        {
+            ViewFunc value;
+            if(viewsCache.TryGetValue(name, out value)==false)
+                return null;
+            return value;
         }
     }
 }

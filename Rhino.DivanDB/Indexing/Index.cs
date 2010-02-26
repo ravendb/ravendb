@@ -41,7 +41,7 @@ namespace Rhino.DivanDB.Indexing
                 public void Dispose()
                 {
                     var uses = Interlocked.Decrement(ref parent.useCount);
-                    if(parent.shouldDisposeWhenThereAreNoUsages && uses ==0)
+                    if (parent.shouldDisposeWhenThereAreNoUsages && uses == 0)
                         parent.Searcher.Close();
 
                 }
@@ -72,7 +72,7 @@ namespace Rhino.DivanDB.Indexing
 
         public IEnumerable<string> Query(string query)
         {
-            var luceneQuery = new QueryParser("",new StandardAnalyzer()).Parse(query);
+            var luceneQuery = new QueryParser("", new StandardAnalyzer()).Parse(query);
             using (searcher.Use())
             {
                 var search = searcher.Searcher.Search(luceneQuery);
@@ -82,56 +82,76 @@ namespace Rhino.DivanDB.Indexing
                 }
             }
         }
-
-        public void IndexDocuments(ViewFunc func, IEnumerable<JsonDynamicObject> documents)
+        private void Write(Func<IndexWriter, bool> action)
         {
-            var docs = func(documents).Cast<object>();
             var indexWriter = new IndexWriter(directory, new StandardAnalyzer());
+            bool shouldRcreateSearcher;
             try
             {
-                var currentId = Guid.NewGuid().ToString();
-                var luceneDoc = new Document();
-                foreach (var doc in docs)
-                {
-                    var fields = new List<Field>();
-                    var docId = AddValuesToDocument(fields, doc);
-                    if(docId != currentId)
-                    {
-                        if (luceneDoc.GetFieldsCount() > 0)
-                            indexWriter.UpdateDocument(new Term("_id", docId), luceneDoc);
-                        luceneDoc = new Document();
-                        luceneDoc.Add(new Field("_id", docId, Field.Store.YES, Field.Index.UN_TOKENIZED));
-                    }
-                    foreach (var field in fields)
-                    {
-                        luceneDoc.Add(field);
-                    }
-                }
+                shouldRcreateSearcher = action(indexWriter);
             }
             finally
             {
                 indexWriter.Close();
             }
-            RecreateSearcher();
+            if (shouldRcreateSearcher)
+                RecreateSearcher();
+        }
+
+        public void IndexDocuments(ViewFunc func, IEnumerable<JsonDynamicObject> documents)
+        {
+            Write(indexWriter =>
+                  {
+                      var docs = func(documents).Cast<object>();
+                      var currentId = Guid.NewGuid().ToString();
+                      var luceneDoc = new Document();
+                      bool shouldRcreateSearcher = false;
+                      foreach (var doc in docs)
+                      {
+                          var fields = new List<Field>();
+                          var docId = AddValuesToDocument(fields, doc);
+                          if (docId != currentId)
+                          {
+                              if (luceneDoc.GetFieldsCount() > 0)
+                              {
+                                  indexWriter.UpdateDocument(new Term("_id", docId), luceneDoc);
+                                  shouldRcreateSearcher = true;
+                              }
+                              luceneDoc = new Document();
+                              currentId = docId;
+                              luceneDoc.Add(new Field("_id", docId, Field.Store.YES, Field.Index.UN_TOKENIZED));
+                          }
+                          foreach (var field in fields)
+                          {
+                              luceneDoc.Add(field);
+                          }
+                      }
+                      if (luceneDoc.GetFieldsCount() > 0)
+                      {
+                          indexWriter.UpdateDocument(new Term("_id", currentId), luceneDoc);
+                          shouldRcreateSearcher = true;
+                      }
+                      return shouldRcreateSearcher;
+                  });
         }
 
         private void RecreateSearcher()
         {
-            using(searcher.Use())
+            using (searcher.Use())
             {
+                searcher.MarkForDispoal();
                 searcher = new CurrentIndexSearcher
                            {
                                Searcher = new IndexSearcher(directory)
                            };
-                searcher.MarkForDispoal();
             }
         }
 
-        private static string AddValuesToDocument(IList<Field> fields, object val)
+        private static string AddValuesToDocument(ICollection<Field> fields, object val)
         {
             var properties = TypeDescriptor.GetProperties(val).Cast<PropertyDescriptor>().ToArray();
             var id = properties.First(x => x.Name == "_id");
-           
+
             foreach (PropertyDescriptor property in properties)
             {
                 if (property == id)
@@ -157,6 +177,15 @@ namespace Rhino.DivanDB.Indexing
                 return DateTools.DateToString((DateTime)val, DateTools.Resolution.DAY);
 
             return val.ToString();
+        }
+
+        public void Remove(string[] keys)
+        {
+            Write(writer =>
+                  {
+                      writer.DeleteDocuments(keys.Select(k => new Term("_id", k)).ToArray());
+                      return true;
+                  });
         }
     }
 }

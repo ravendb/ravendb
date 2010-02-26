@@ -1,4 +1,6 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
+using Rhino.DivanDB.Storage;
 
 namespace Rhino.DivanDB.Indexing
 {
@@ -14,6 +16,12 @@ namespace Rhino.DivanDB.Indexing
                 return doWork;
             }
         }
+
+        public IndexStorage IndexStorage { get; set; }
+
+        public ViewStorage ViewStorage { get; set; }
+
+        public TransactionalStorage TransactionaStorage { get; set; }
 
         public void WaitForWork()
         {

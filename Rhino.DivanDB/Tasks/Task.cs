@@ -31,9 +31,6 @@ namespace Rhino.DivanDB.Tasks
             return (Task)new JsonSerializer().Deserialize(new StringReader(task), type);
         }
 
-        public void Execute(WorkContext context)
-        {
-            Console.WriteLine("executing " + this);
-        }
+        public abstract void Execute(WorkContext context);
     }
 }

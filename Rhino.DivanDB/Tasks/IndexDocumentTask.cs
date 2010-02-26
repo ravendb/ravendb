@@ -1,4 +1,9 @@
-﻿namespace Rhino.DivanDB.Tasks
+﻿using System;
+using Newtonsoft.Json.Linq;
+using Rhino.DivanDB.Indexing;
+using Rhino.DivanDB.Json;
+
+namespace Rhino.DivanDB.Tasks
 {
     public class IndexDocumentTask : Task
     {
@@ -7,6 +12,27 @@
         public override string ToString()
         {
             return string.Format("IndexDocumentTask - Key: {0}", Key);
+        }
+
+        public override void Execute(WorkContext context)
+        {
+            context.TransactionaStorage.Read(actions =>
+                                             {
+                                                 var doc = actions.DocumentByKey(Key);
+                                                 if (doc == null)
+                                                     return;
+
+                                                 var json = new JsonDynamicObject(JObject.Parse(doc));
+
+                                                 foreach (var viewName in context.ViewStorage.ViewNames)
+                                                 {
+                                                     var viewFunc = context.ViewStorage.GetViewFunc(viewName);
+                                                     if (viewFunc != null)
+                                                         context.IndexStorage.Index(viewName, viewFunc, new[] { json, });
+                                                 }
+
+                                                 actions.Commit();
+                                             });
         }
     }
 }
