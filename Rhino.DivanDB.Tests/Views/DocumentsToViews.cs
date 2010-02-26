@@ -12,6 +12,7 @@ namespace Rhino.DivanDB.Tests.Views
         public DocumentsToViews()
         {
             db = new DocumentDatabase("divan.db.test.esent");
+            db.SpinBackgroundWorkers();
         }
 
         [Fact]
@@ -31,8 +32,13 @@ namespace Rhino.DivanDB.Tests.Views
 ");
             db.Put(JObject.Parse("{_id: '1', type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"));
 
-            var docs = db.Query("pagesByTitle2", "some:val");
-            Assert.Equal(1, docs.Length);
+
+            QueryResult docs;
+            do
+            {
+                docs = db.Query("pagesByTitle2", "some:val");
+            } while (docs.IsStale);
+            Assert.Equal(1, docs.Results.Length);
         }
 
         public void Dispose()

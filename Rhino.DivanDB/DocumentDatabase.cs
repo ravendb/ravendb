@@ -149,7 +149,7 @@ namespace Rhino.DivanDB
             workContext.NotifyAboutWork();
         }
 
-        public JObject[] Query(string index, string query)
+        public QueryResult Query(string index, string query)
         {
             var list = new List<JObject>();
             TransactionalStorage.Read(
@@ -161,7 +161,11 @@ namespace Rhino.DivanDB
                                       where doc != null
                                       select JObject.Parse(doc));
                 });
-            return list.ToArray();
+            return new QueryResult
+                   {
+                       Results = list.ToArray(),
+                       IsStale = false
+                   };
         }
 
         public void DeleteView(string name)
@@ -169,5 +173,11 @@ namespace Rhino.DivanDB
             ViewStorage.RemoveView(name);
             IndexStorage.DeleteIndex(name);
         }
+    }
+
+    public class QueryResult
+    {
+        public JObject[] Results { get; set; }
+        public bool IsStale { get; set; }
     }
 }
