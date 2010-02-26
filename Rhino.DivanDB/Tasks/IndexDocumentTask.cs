@@ -16,11 +16,14 @@ namespace Rhino.DivanDB.Tasks
 
         public override void Execute(WorkContext context)
         {
-            context.TransactionaStorage.Read(actions =>
+            context.TransactionaStorage.Batch(actions =>
                                              {
                                                  var doc = actions.DocumentByKey(Key);
                                                  if (doc == null)
+                                                 {
+                                                     actions.Commit();
                                                      return;
+                                                 }
 
                                                  var json = new JsonDynamicObject(JObject.Parse(doc));
 

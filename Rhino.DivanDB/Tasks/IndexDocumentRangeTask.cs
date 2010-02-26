@@ -1,5 +1,6 @@
-﻿using System;
-using Rhino.DivanDB.Indexing;
+﻿using Rhino.DivanDB.Indexing;
+using System.Linq;
+using Rhino.DivanDB.Json;
 
 namespace Rhino.DivanDB.Tasks
 {
@@ -15,7 +16,35 @@ namespace Rhino.DivanDB.Tasks
 
         public override void Execute(WorkContext context)
         {
-            throw new NotImplementedException();
+            var viewFunc = context.ViewStorage.GetViewFunc(View);
+            if(viewFunc==null)
+                return; // view was deleted, probably
+            int lastId = FromKey;
+            context.TransactionaStorage.Batch(actions =>
+            {
+                context.IndexStorage.Index(View, viewFunc, actions.DocumentsById(FromKey, ToKey, 100)
+                                                               .Select(d =>
+                                                               {
+                                                                   lastId = d.Id;
+                                                                   return d.Document;
+                                                               })
+                                                               .Select(s => new JsonDynamicObject(s)));
+                actions.Commit();
+            });
+
+            if(lastId < ToKey)
+            {
+                context.TransactionaStorage.Batch(actions =>
+                {
+                    actions.AddTask(new IndexDocumentRangeTask
+                    {
+                        FromKey = lastId,
+                        ToKey = ToKey,
+                        View = View
+                    });
+                    actions.Commit();
+                });
+            }
         }
     }
 }

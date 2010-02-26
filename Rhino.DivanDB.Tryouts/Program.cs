@@ -14,7 +14,7 @@ namespace Rhino.DivanDB.Tryouts
             {
                 db.SpinBackgroundWorkers();
 
-                db.AddView(@"var pagesByTitle = 
+                db.PutView(@"var pagesByTitle = 
 from doc in docs
 where doc.type == ""page""
 select new {doc.title}");

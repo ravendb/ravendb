@@ -94,7 +94,7 @@ namespace Rhino.DivanDB
         public JObject Get(string key)
         {
             string document = null;
-            TransactionalStorage.Read(actions =>
+            TransactionalStorage.Batch(actions =>
                                       {
                                           document = actions.DocumentByKey(key);
                                           actions.Commit();
@@ -110,7 +110,7 @@ namespace Rhino.DivanDB
         {
             string key = GetKeyFromDocumentOrGenerateNewOne(document);
 
-            TransactionalStorage.Write(actions =>
+            TransactionalStorage.Batch(actions =>
                                        {
                                            actions.DeleteDocument(key);
                                            actions.AddDocument(key, document.ToString());
@@ -123,7 +123,7 @@ namespace Rhino.DivanDB
 
         public void Delete(string key)
         {
-            TransactionalStorage.Write(actions =>
+            TransactionalStorage.Batch(actions =>
                                        {
                                            actions.DeleteDocument(key);
                                            actions.AddTask(new RemoveFromIndexTask { View = "*", Keys = new[] { key } });
@@ -132,11 +132,20 @@ namespace Rhino.DivanDB
             workContext.NotifyAboutWork();
         }
 
-        public void AddView(string viewDefinition)
+        public void PutView(string viewDefinition)
         {
-            string viewName = ViewStorage.AddView(viewDefinition);
+            string viewName;
+            switch (ViewStorage.FindViewCreationStrategy(viewDefinition, out viewName))
+            {
+                case ViewCreationStrategy.Noop:
+                    return;
+                case ViewCreationStrategy.Update:
+                    DeleteView(viewName);
+                    break;
+            }
+            viewName = ViewStorage.AddView(viewDefinition);
             IndexStorage.CreateIndex(viewName);
-            TransactionalStorage.Write(actions =>
+            TransactionalStorage.Batch(actions =>
                                        {
                                            var firstAndLast = actions.FirstAndLastDocumentKeys();
                                            actions.AddTask(new IndexDocumentRangeTask
@@ -145,6 +154,7 @@ namespace Rhino.DivanDB
                                                                FromKey = firstAndLast.First,
                                                                ToKey = firstAndLast.Last
                                                            });
+                                           actions.Commit();
                                        });
             workContext.NotifyAboutWork();
         }
@@ -153,7 +163,7 @@ namespace Rhino.DivanDB
         {
             var list = new List<JObject>();
             var stale = false;
-            TransactionalStorage.Read(
+            TransactionalStorage.Batch(
                 actions =>
                 {
                     stale = actions.DoesTasksExistsForIndex(index);
@@ -162,7 +172,7 @@ namespace Rhino.DivanDB
                                       into doc
                                       where doc != null
                                       select JObject.Parse(doc));
-
+                    actions.Commit();
                 });
             return new QueryResult
                    {
@@ -175,6 +185,7 @@ namespace Rhino.DivanDB
         {
             ViewStorage.RemoveView(name);
             IndexStorage.DeleteIndex(name);
+            workContext.NotifyAboutWork();
         }
     }
 

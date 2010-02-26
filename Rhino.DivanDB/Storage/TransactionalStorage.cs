@@ -14,6 +14,9 @@ namespace Rhino.DivanDB.Storage
         private readonly string path;
         private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
 
+        [ThreadStatic]
+        private static DocumentStorageActions current;
+
         public JET_INSTANCE Instance
         {
             get { return instance; }
@@ -172,46 +175,38 @@ namespace Rhino.DivanDB.Storage
         }
 
         [CLSCompliant(false)]
-        [DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
-        public void Read(Action<DocumentStorageActions> action)
+        //[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
+        public void Batch(Action<DocumentStorageActions> action)
         {
-            var isReadLockHeld = disposerLock.IsReadLockHeld;
-            if (isReadLockHeld == false)
-                disposerLock.EnterReadLock();
+            if (current != null)
+            {
+                try
+                {
+                    current.PushTx();
+                    action(current);
+                }
+                finally 
+                {
+                    current.PopTx();
+                }
+                return;
+            }
+            disposerLock.EnterReadLock();
             try
             {
                 using (var pht = new DocumentStorageActions(instance, database))
                 {
+                    current = pht;
                     action(pht);
+                    if(pht.CommitCalled == false)
+                        throw new InvalidOperationException("You forgot to call commit!");
                 }
             }
             finally
             {
-                if(isReadLockHeld == false)
-                    disposerLock.ExitReadLock();
+                disposerLock.ExitReadLock();
+                current = null;
             }
         }
-
-        [CLSCompliant(false)]
-        [DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
-        public void Write(Action<DocumentStorageWriteActions> action)
-        {
-            var isWriteLockHeld = disposerLock.IsWriteLockHeld;
-            if(isWriteLockHeld == false)
-                disposerLock.EnterReadLock();
-            try
-            {
-                using (var pht = new DocumentStorageWriteActions(instance, database))
-                {
-                    action(pht);
-                }
-            }
-            finally
-            {
-                if (isWriteLockHeld == false)
-                    disposerLock.ExitReadLock();
-            }
-        }
-
     }
 }

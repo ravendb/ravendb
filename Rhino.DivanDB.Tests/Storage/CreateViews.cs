@@ -13,9 +13,27 @@ namespace Rhino.DivanDB.Tests.Storage
         }
 
         [Fact]
+        public void View_with_same_name_can_be_added_twice()
+        {
+            db.PutView(
+                @"var pagesByTitle = 
+    from doc in docs
+    where doc.type == ""page""
+    select new { Key = doc.title, Value = doc.content, Size = (int)doc.size };
+");
+
+            db.PutView(
+                @"var pagesByTitle = 
+    from doc in docs
+    where doc.type == ""page""
+    select new { Key = doc.title, Value = doc.content, Size = (int)doc.size };
+");
+        }
+
+        [Fact]
         public void Can_add_view_to_document()
         {
-            db.AddView(
+            db.PutView(
                 @"var pagesByTitle = 
     from doc in docs
     where doc.type == ""page""
@@ -34,7 +52,7 @@ namespace Rhino.DivanDB.Tests.Storage
     where doc.type == ""page""
     select new { Key = doc.title, Value = doc.content, Size = (int)doc.size };
 ";
-            db.AddView(
+            db.PutView(
                 definition);
             var actualDefinition = db.ViewStorage.GetViewDefinition("pagesByTitle");
             Assert.Equal(definition, actualDefinition);

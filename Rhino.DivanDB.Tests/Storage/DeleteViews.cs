@@ -17,7 +17,7 @@ namespace Rhino.DivanDB.Tests.Storage
         [Fact]
         public void Can_remove_view_to_document()
         {
-            db.AddView(
+            db.PutView(
                 @"var pagesByTitle = 
     from doc in docs
     where doc.type == ""page""
@@ -36,7 +36,7 @@ namespace Rhino.DivanDB.Tests.Storage
     where doc.type == ""page""
     select new { Key = doc.title, Value = doc.content, Size = (int)doc.size };
 ";
-            db.AddView(definition);
+            db.PutView(definition);
             db.DeleteView("pagesByTitle");
             var actualDefinition = db.IndexStorage.Indexes;
             Assert.Empty(actualDefinition);

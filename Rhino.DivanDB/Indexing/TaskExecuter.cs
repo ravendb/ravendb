@@ -19,11 +19,14 @@ namespace Rhino.DivanDB.Indexing
             while(context.DoWork)
             {
                 bool foundWork = false;
-                transactionalStorage.Write(actions =>
+                transactionalStorage.Batch(actions =>
                                            {
                                                var task = actions.GetTask();
                                                if(task == null)
+                                               {
+                                                   actions.Commit(); 
                                                    return;
+                                               }
                                                foundWork = true;
 
                                                task.Execute(context);

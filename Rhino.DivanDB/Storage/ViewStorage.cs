@@ -76,7 +76,10 @@ namespace Rhino.DivanDB.Storage
 
         public string GetViewDefinition(string name)
         {
-            return File.ReadAllText(GetViewFile(name));
+            var viewFile = GetViewFile(name);
+            if(File.Exists(viewFile) == false)
+                return null;
+            return File.ReadAllText(viewFile);
         }
 
         public ViewFunc GetViewFunc(string name)
@@ -85,6 +88,20 @@ namespace Rhino.DivanDB.Storage
             if(viewsCache.TryGetValue(name, out value)==false)
                 return null;
             return value;
+        }
+
+        public ViewCreationStrategy FindViewCreationStrategy(string viewDefinition, out string viewName)
+        {
+            viewName = null;
+            var transformer = CompileViewDefinition(viewDefinition);
+            if(viewsCache.ContainsKey(transformer.Name))
+            {
+                viewName = transformer.Name;
+                return GetViewDefinition(transformer.Name) == viewDefinition
+                           ? ViewCreationStrategy.Noop
+                           : ViewCreationStrategy.Update;
+            }
+            return ViewCreationStrategy.Create;
         }
     }
 }
