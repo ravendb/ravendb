@@ -10,25 +10,11 @@ namespace Rhino.DivanDB.Storage
 {
     public class DocumentStorageWriteActions : DocumentStorageActions
     {
-        protected readonly Table tasks;
-        protected readonly IDictionary<string, JET_COLUMNID> tasksColumns;
-
-
         [CLSCompliant(false)]
         [DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
         public DocumentStorageWriteActions(JET_INSTANCE instance, string database)
             : base(instance, database)
         {
-            try
-            {
-                tasks = new Table(session, dbid, "tasks", OpenTableGrbit.None);
-                tasksColumns = Api.GetColumnDictionary(session, tasks);
-            }
-            catch (Exception)
-            {
-                Dispose();
-                throw;
-            }
         }
 
         public void AddDocument(string key, string data)
@@ -62,19 +48,12 @@ namespace Rhino.DivanDB.Storage
             using (var update = new Update(session, tasks, JET_prep.Insert))
             {
                 Api.SetColumn(session, tasks, tasksColumns["task"], task.AsString(), Encoding.Unicode);
+                Api.SetColumn(session, tasks, tasksColumns["for_index"], task.View, Encoding.Unicode);
 
                 update.Save();
             }
             logger.DebugFormat("New task '{0}'", task);
     
-        }
-
-        public override void Dispose()
-        {
-            if(tasks!=null)
-                tasks.Dispose();
-
-            base.Dispose();
         }
 
         public Task GetTask()

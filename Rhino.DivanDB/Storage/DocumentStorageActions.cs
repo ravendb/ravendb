@@ -17,8 +17,8 @@ namespace Rhino.DivanDB.Storage
         private readonly Transaction transaction;
         protected readonly Table documents;
         protected readonly IDictionary<string, JET_COLUMNID> documentsColumns;
-
-
+        protected readonly Table tasks;
+        protected readonly IDictionary<string, JET_COLUMNID> tasksColumns;
 
         [CLSCompliant(false)]
         [DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
@@ -33,6 +33,8 @@ namespace Rhino.DivanDB.Storage
 
                 documents = new Table(session, dbid, "documents", OpenTableGrbit.None);
                 documentsColumns = Api.GetColumnDictionary(session, documents);
+                tasks = new Table(session, dbid, "tasks", OpenTableGrbit.None);
+                tasksColumns = Api.GetColumnDictionary(session, tasks);
             }
             catch (Exception)
             {
@@ -55,10 +57,13 @@ namespace Rhino.DivanDB.Storage
             return data;
         }
 
-        public virtual void Dispose()
+        public void Dispose()
         {
             if (documents != null)
                 documents.Dispose();
+
+            if (tasks != null)
+                tasks.Dispose();
 
             if (Equals(dbid, JET_DBID.Nil) == false)
                 Api.JetCloseDatabase(session, dbid, CloseDatabaseGrbit.None);
@@ -98,6 +103,18 @@ namespace Rhino.DivanDB.Storage
             if (Api.TryMovePrevious(session, documents))
                 result.Last = Api.RetrieveColumnAsInt32(session, documents, documentsColumns["id"]).Value;
             return result;
+        }
+
+        public bool DoesTasksExistsForIndex(string name)
+        {
+            Api.JetSetCurrentIndex(session, tasks, "by_index");
+            Api.MakeKey(session, tasks, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, tasks, SeekGrbit.SeekEQ) == false)
+            {
+                Api.MakeKey(session, tasks, "*", Encoding.Unicode, MakeKeyGrbit.NewKey);
+                return Api.TrySeek(session, tasks, SeekGrbit.SeekEQ);
+            }
+            return true;
         }
     }
 }

@@ -114,7 +114,7 @@ namespace Rhino.DivanDB
                                        {
                                            actions.DeleteDocument(key);
                                            actions.AddDocument(key, document.ToString());
-                                           actions.AddTask(new IndexDocumentTask { Key = key });
+                                           actions.AddTask(new IndexDocumentTask { View = "*", Key = key });
                                            actions.Commit();
                                        });
             workContext.NotifyAboutWork();
@@ -152,19 +152,22 @@ namespace Rhino.DivanDB
         public QueryResult Query(string index, string query)
         {
             var list = new List<JObject>();
+            var stale = false;
             TransactionalStorage.Read(
                 actions =>
                 {
+                    stale = actions.DoesTasksExistsForIndex(index);
                     list.AddRange(from key in IndexStorage.Query(index, query)
                                   select actions.DocumentByKey(key)
                                       into doc
                                       where doc != null
                                       select JObject.Parse(doc));
+
                 });
             return new QueryResult
                    {
                        Results = list.ToArray(),
-                       IsStale = false
+                       IsStale = stale
                    };
         }
 

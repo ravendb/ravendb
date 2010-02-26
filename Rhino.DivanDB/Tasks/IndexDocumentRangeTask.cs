@@ -5,7 +5,6 @@ namespace Rhino.DivanDB.Tasks
 {
     public class IndexDocumentRangeTask : Task
     {
-        public string View { get; set; }
         public int FromKey { get; set; }
         public int ToKey { get; set; }
 

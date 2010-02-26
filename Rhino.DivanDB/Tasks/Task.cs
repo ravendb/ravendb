@@ -8,6 +8,8 @@ namespace Rhino.DivanDB.Tasks
 {
     public abstract class Task
     {
+        public string View { get; set; }
+
         public string Type
         {
             get

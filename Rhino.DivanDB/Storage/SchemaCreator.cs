@@ -85,8 +85,20 @@ namespace Rhino.DivanDB.Storage
                 grbit = ColumndefGrbit.ColumnTagged
             }, null, 0, out columnid);
 
-            const string indexDef = "+id\0\0";
+            Api.JetAddColumn(session, tableid, "for_index", new JET_COLUMNDEF
+            {
+                cbMax = 255,
+                coltyp = JET_coltyp.Text,
+                cp = JET_CP.Unicode,
+                grbit = ColumndefGrbit.ColumnTagged
+            }, null, 0, out columnid);
+
+
+            string indexDef = "+id\0\0";
             Api.JetCreateIndex(session, tableid, "by_id", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
+                               100);
+            indexDef = "+for_index\0\0";
+            Api.JetCreateIndex(session, tableid, "by_index", CreateIndexGrbit.IndexIgnoreNull, indexDef, indexDef.Length,
                                100);
         }
 
