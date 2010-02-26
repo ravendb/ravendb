@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
+using Newtonsoft.Json.Linq;
 using Rhino.DivanDB.Tasks;
 
 namespace Rhino.DivanDB.Storage
@@ -69,6 +70,31 @@ namespace Rhino.DivanDB.Storage
                 tasks.Dispose();
 
             base.Dispose();
+        }
+
+        public Task GetTask()
+        {
+            Api.MoveBeforeFirst(session, tasks);
+            while(Api.TryMoveNext(session, tasks))
+            {
+                try
+                {
+                    Api.JetGetLock(session, tasks, GetLockGrbit.Write);
+                }
+                catch(EsentErrorException e)
+                {
+                    if (e.Error != JET_err.WriteConflict)
+                        throw;
+                }
+                var task = Api.RetrieveColumnAsString(session, tasks, tasksColumns["task"], Encoding.Unicode);
+                return Task.ToTask(task);
+            }
+            return null;
+        }
+
+        public void CompleteCurrentTask()
+        {
+            Api.JetDelete(session, tasks);
         }
     }
 }

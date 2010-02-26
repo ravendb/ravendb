@@ -1,5 +1,8 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Rhino.DivanDB.Indexing;
 
 namespace Rhino.DivanDB.Tasks
 {
@@ -9,7 +12,7 @@ namespace Rhino.DivanDB.Tasks
         {
             get
             {
-                return GetType().Name;
+                return GetType().FullName;
             }
         }
 
@@ -18,6 +21,19 @@ namespace Rhino.DivanDB.Tasks
             var stringWriter = new StringWriter();
             new JsonSerializer().Serialize(stringWriter, this);
             return stringWriter.GetStringBuilder().ToString();
+        }
+
+        public static Task ToTask(string task)
+        {
+            var json = JObject.Parse(task);
+            var typename = json.Property("Type").Value.Value<string>();
+            var type = typeof (Task).Assembly.GetType(typename);
+            return (Task)new JsonSerializer().Deserialize(new StringReader(task), type);
+        }
+
+        public void Execute(WorkContext context)
+        {
+            Console.WriteLine("executing " + this);
         }
     }
 }

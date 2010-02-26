@@ -33,7 +33,6 @@ namespace Rhino.DivanDB.Tests.Views
 
             var docs = db.Query("pagesByTitle2", "some:val");
             Assert.Equal(1, docs.Length);
-
         }
 
         public void Dispose()

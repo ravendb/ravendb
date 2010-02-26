@@ -3,8 +3,8 @@
     public class IndexDocumentRangeTask : Task
     {
         public string View { get; set; }
-        public string FromKey { get; set; }
-        public string ToKey { get; set; }
+        public int FromKey { get; set; }
+        public int ToKey { get; set; }
 
         public override string ToString()
         {

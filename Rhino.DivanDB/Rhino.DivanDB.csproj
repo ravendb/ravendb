@@ -69,6 +69,8 @@
   <ItemGroup>
     <Compile Include="DocumentDatabase.cs" />
     <Compile Include="Indexing\Index.cs" />
+    <Compile Include="Indexing\TaskExecuter.cs" />
+    <Compile Include="Indexing\WorkContext.cs" />
     <Compile Include="Json\DynamicObject.cs" />
     <Compile Include="Json\JsonDynamicObject.cs" />
     <Compile Include="Linq\AbstractViewGenerator.cs" />
@@ -78,6 +80,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Storage\FirstAndLast.cs" />
     <Compile Include="Tasks\IndexDocumentRangeTask.cs" />
+    <Compile Include="Tasks\IndexDocumentTask.cs" />
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
     <Compile Include="Tasks\Task.cs" />
     <Compile Include="Storage\TransactionalStorage.cs" />

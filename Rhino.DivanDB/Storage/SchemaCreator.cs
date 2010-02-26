@@ -50,6 +50,12 @@ namespace Rhino.DivanDB.Storage
                 grbit = ColumndefGrbit.ColumnTagged
             }, null, 0, out columnid);
 
+            Api.JetAddColumn(session, tableid, "id", new JET_COLUMNDEF
+            {
+                coltyp = JET_coltyp.Long,
+                grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnAutoincrement | ColumndefGrbit.ColumnNotNULL
+            }, null, 0, out columnid);
+
             Api.JetAddColumn(session, tableid, "data", new JET_COLUMNDEF
             {
                 coltyp = JET_coltyp.LongText,

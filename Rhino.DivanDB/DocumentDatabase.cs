@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security;
+using System.Threading;
 using Newtonsoft.Json.Linq;
 using Rhino.DivanDB.Indexing;
 using Rhino.DivanDB.Storage;
@@ -28,6 +29,23 @@ namespace Rhino.DivanDB
             IndexStorage = new IndexStorage(path);
         }
 
+        public void SpinBackgroundWorkers()
+        {
+            var threadCount = 1;// Environment.ProcessorCount;
+            backgroundWorkers = new Thread[threadCount];
+            for (int i = 0; i < threadCount; i++)
+            {
+                backgroundWorkers[i] = new Thread(new TaskExecuter(TransactionalStorage, workContext).Execute)
+                                       {
+                                           IsBackground = true,
+                                           Name = "RDB Background Worker #" + i,
+                                       };
+                backgroundWorkers[i].Start();
+            }
+        }
+
+        private Thread[] backgroundWorkers = new Thread[0];
+        private readonly WorkContext workContext = new WorkContext();
         public TransactionalStorage TransactionalStorage { get; private set; }
         public ViewStorage ViewStorage { get; private set; }
         public IndexStorage IndexStorage { get; private set; }
@@ -36,8 +54,13 @@ namespace Rhino.DivanDB
 
         public void Dispose()
         {
+            workContext.StopWork();
             TransactionalStorage.Dispose();
             IndexStorage.Dispose();
+            foreach (var backgroundWorker in backgroundWorkers)
+            {
+                backgroundWorker.Join();
+            }
         }
 
         #endregion
@@ -85,10 +108,10 @@ namespace Rhino.DivanDB
                                        {
                                            actions.DeleteDocument(key);
                                            actions.AddDocument(key, document.ToString());
-                                           actions.AddTask(new IndexDocumentRangeTask
-                                                           {View = "*", FromKey = key, ToKey = key});
+                                           actions.AddTask(new IndexDocumentTask {Key = key});
                                            actions.Commit();
                                        });
+            workContext.NotifyAboutWork();
             return key;
         }
 
@@ -100,6 +123,7 @@ namespace Rhino.DivanDB
                                            actions.AddTask(new RemoveFromIndexTask {View = "*", Keys = new[] {key}});
                                            actions.Commit();
                                        });
+            workContext.NotifyAboutWork();
         }
 
         public void AddView(string viewDefinition)
@@ -116,6 +140,7 @@ namespace Rhino.DivanDB
                                                                ToKey = firstAndLast.Last
                                                            });
                                        });
+            workContext.NotifyAboutWork();
         }
 
         public JObject[] Query(string index, string query)

@@ -2,7 +2,7 @@
 {
     public class FirstAndLast
     {
-        public string Last { get; set; }
-        public string First { get; set; }
+        public int Last { get; set; }
+        public int First { get; set; }
     }
 }

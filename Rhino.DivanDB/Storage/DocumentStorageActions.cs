@@ -89,10 +89,10 @@ namespace Rhino.DivanDB.Storage
             var result = new FirstAndLast();
             Api.MoveBeforeFirst(session, documents);
             if (Api.TryMoveNext(session, documents))
-                result.First = Api.RetrieveColumnAsString(session, documents, documentsColumns["key"], Encoding.Unicode);
+                result.First = Api.RetrieveColumnAsInt32(session, documents, documentsColumns["id"]).Value;
             Api.MoveAfterLast(session, documents);
             if (Api.TryMovePrevious(session, documents))
-                result.Last = Api.RetrieveColumnAsString(session, documents, documentsColumns["key"], Encoding.Unicode);
+                result.Last = Api.RetrieveColumnAsInt32(session, documents, documentsColumns["id"]).Value;
             return result;
         }
     }
