@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.ConstrainedExecution;
@@ -100,12 +101,19 @@ namespace Rhino.DivanDB.Indexing
 
         public void Index(string index, IndexingFunc indexingFunc, IEnumerable<JsonDynamicObject> docs)
         {
-            Index value;
-            if(indexes.TryGetValue(index, out value)==false)
+            try
             {
-                log.DebugFormat("Tried to index on a non existant index {0}, ignoring", index);
+                Index value;
+                if(indexes.TryGetValue(index, out value)==false)
+                {
+                    log.DebugFormat("Tried to index on a non existant index {0}, ignoring", index);
+                }
+                value.IndexDocuments(indexingFunc, docs);
             }
-            value.IndexDocuments(indexingFunc, docs);
+            catch (Exception e)
+            {
+                Debugger.Launch();
+            }
         }
     }
 }
