@@ -17,8 +17,8 @@ namespace Rhino.DivanDB.Tests.Storage
         [Fact]
         public void Can_remove_index()
         {
-            db.PutIndex(
-                @"var pagesByTitle = 
+            db.PutIndex("pagesByTitle",
+                @"
     from doc in docs
     where doc.type == ""page""
     select new { Key = doc.title, Value = doc.content, Size = (int)doc.size };
@@ -31,12 +31,12 @@ namespace Rhino.DivanDB.Tests.Storage
         [Fact]
         public void Removing_index_remove_it_from_index_storage()
         {
-            const string definition = @"var pagesByTitle = 
+            const string definition = @"
     from doc in docs
     where doc.type == ""page""
     select new { Key = doc.title, Value = doc.content, Size = (int)doc.size };
 ";
-            db.PutIndex(definition);
+            db.PutIndex("pagesByTitle", definition);
             db.DeleteIndex("pagesByTitle");
             var actualDefinition = db.IndexStorage.Indexes;
             Assert.Empty(actualDefinition);

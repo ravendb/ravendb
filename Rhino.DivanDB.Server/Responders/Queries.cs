@@ -11,7 +11,7 @@ namespace Rhino.DivanDB.Server.Responders
 
         public override string[] SupportedVerbs
         {
-            get { return new[] {"GET","PUT"}; }
+            get { return new[] {"GET"}; }
         }
 
         protected override void Respond(KayakContext context)
@@ -20,10 +20,6 @@ namespace Rhino.DivanDB.Server.Responders
             {
                 case "GET":
                     context.WriteJson(Database.IndexDefinitionStorage.IndexNames);
-                    break;
-                case "PUT":
-                    context.Response.SetStatusToCreated();
-                    context.WriteJson(new { viewName = Database.PutIndex(context.ReadString()) });
                     break;
             }
         }

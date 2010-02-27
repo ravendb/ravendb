@@ -1,8 +1,8 @@
 HTTP/1.1 200 OK
 Connection: close
-Content-Length: 69
+Content-Length: 56
 Content-Type: application/json; charset=utf-8
 Date: Sat, 27 Feb 2010 09:27:48 GMT
 Server: Kayak
 
-{"view":"var byEmail = from doc in docs\r\nselect new {doc.email };"}
+{"index":"from doc in docs\r\nselect new {doc.email };"}

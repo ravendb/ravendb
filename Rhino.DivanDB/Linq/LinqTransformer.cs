@@ -13,13 +13,13 @@ namespace Rhino.DivanDB.Linq
 {
     public class LinqTransformer
     {
+        public string Name { get; private set; }
         private readonly string source;
         private readonly string rootQueryName;
         private readonly string path;
         private readonly Type rootQueryType;
         private CompilerResults compilerResults;
 
-        public string Name { get; private set; }
 
         public string PathToAssembly { get; private set; }
 
@@ -28,8 +28,9 @@ namespace Rhino.DivanDB.Linq
             get { return source; }
         }
 
-        public LinqTransformer(string source, string rootQueryName, string path, Type rootQueryType)
+        public LinqTransformer(string name, string source, string rootQueryName, string path, Type rootQueryType)
         {
+            Name = name;
             this.source = source;
             this.rootQueryName = rootQueryName;
             this.path = path;
@@ -81,12 +82,11 @@ namespace Rhino.DivanDB.Linq
 
         private string LinqQueryToImplicitClass()
         {
-            var parser = ParserFactory.CreateParser(SupportedLanguage.CSharp, new StringReader(source));
+            var preProcessedSource = "var query = " + source;
+            var parser = ParserFactory.CreateParser(SupportedLanguage.CSharp, new StringReader(preProcessedSource));
             var block = parser.ParseBlock();
 
             VariableDeclaration variable = GetVariableDeclaration(block);
-
-            Name = variable.Name;
 
             var visitor = new TransformVisitor{Name = Name};
             block.AcceptVisitor(visitor, null);

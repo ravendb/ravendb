@@ -13,7 +13,6 @@ namespace Rhino.DivanDB.Tests.Linq
     public class PerformingQueries
     {
         const string query = @"
-var pagesByTitle = 
     from doc in docs
     where doc.type == ""page""
     select new { Key = doc.title, Value = doc.content, Size = (int)doc.size };
@@ -27,7 +26,7 @@ var pagesByTitle =
 {'type':'page', title: 'there', content: 'foobar 2', size: 3, _id: 2},
 {'type':'revision', size: 4, _id: 3}
 ]");
-            var compiled = new LinqTransformer(query, "docs",Path.GetTempPath(), typeof(JsonDynamicObject)).CompiledType;
+            var compiled = new LinqTransformer("pagesByTitle", query, "docs", Path.GetTempPath(), typeof(JsonDynamicObject)).CompiledType;
             var compiledQuery = (AbstractViewGenerator)Activator.CreateInstance(compiled);
             var actual = compiledQuery.Execute(documents)
                 .Cast<object>().ToArray();

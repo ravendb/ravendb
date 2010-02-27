@@ -145,10 +145,10 @@ namespace Rhino.DivanDB
             workContext.NotifyAboutWork();
         }
 
-        public string PutIndex(string indexDef)
+        public string PutIndex(string name, string indexDef)
         {
             LinqTransformer transformer;
-            switch (IndexDefinitionStorage.FindIndexCreationOptionsOptions(indexDef, out transformer))
+            switch (IndexDefinitionStorage.FindIndexCreationOptionsOptions(name, indexDef, out transformer))
             {
                 case IndexCreationOptions.Noop:
                     return transformer.Name;

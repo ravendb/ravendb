@@ -12,7 +12,6 @@ namespace Rhino.DivanDB.Tests.Linq
     public class LinqTransformerCompilationTests
     {
         const string query = @"
-var pagesByTitle = 
     from doc in docs
     where doc.Type == ""page""
     select new { Key = doc.Title, Value = doc.Content, Size = (int)doc.Size };
@@ -20,21 +19,21 @@ var pagesByTitle =
         [Fact]
         public void Will_compile_query_successfully()
         {
-            var compiled = new LinqTransformer(query, "docs",System.IO.Path.GetTempPath(), typeof(JsonDynamicObject)).CompiledType;
+            var compiled = new LinqTransformer("pagesByTitle", query, "docs", System.IO.Path.GetTempPath(), typeof(JsonDynamicObject)).CompiledType;
             Assert.NotNull(compiled);
         }
 
         [Fact]
         public void Can_create_new_instance_from_query()
         {
-            var compiled = new LinqTransformer(query, "docs", System.IO.Path.GetTempPath(), typeof(JsonDynamicObject)).CompiledType;
+            var compiled = new LinqTransformer("pagesByTitle", query, "docs", System.IO.Path.GetTempPath(), typeof(JsonDynamicObject)).CompiledType;
             Activator.CreateInstance(compiled);
         }
 
         [Fact]
         public void Can_get_type_of_result_from_query()
         {
-            var compiled = new LinqTransformer(query, "docs", System.IO.Path.GetTempPath(), typeof(JsonDynamicObject)).CompiledType;
+            var compiled = new LinqTransformer("pagesByTitle", query, "docs", System.IO.Path.GetTempPath(), typeof(JsonDynamicObject)).CompiledType;
             var instance = (AbstractViewGenerator)Activator.CreateInstance(compiled);
             var argument = instance.IndexDefinition.Body.Type.GetGenericArguments()[0];
             
@@ -50,7 +49,7 @@ var pagesByTitle =
         [Fact]
         public void Can_execute_query()
         {
-            var compiled = new LinqTransformer(query, "docs", System.IO.Path.GetTempPath(), typeof(JsonDynamicObject)).CompiledType;
+            var compiled = new LinqTransformer("pagesByTitle", query, "docs", System.IO.Path.GetTempPath(), typeof(JsonDynamicObject)).CompiledType;
             var generator = (AbstractViewGenerator)Activator.CreateInstance(compiled);
             var results = generator.Execute(new[]
             {

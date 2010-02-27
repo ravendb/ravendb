@@ -18,14 +18,21 @@ namespace Rhino.DivanDB.Tests.Indexes
         [Fact]
         public void Can_Read_values_from_index()
         {
-            db.PutIndex(
-                @"var pagesByTitle2 = 
-    from doc in docs
-    where doc.type == ""page""
-    select new { doc.some };
-");
-            db.Put(JObject.Parse("{_id: '1', type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"));
-
+            db.PutIndex("pagesByTitle2",
+                @"
+                    from doc in docs
+                    where doc.type == ""page""
+                    select new { doc.some };
+                ");
+            db.Put(JObject.Parse(@"{
+                _id: '1', 
+                type: 'page', 
+                some: 'val', 
+                other: 'var', 
+                content: 'this is the content', 
+                title: 'hello world', 
+                size: 5
+            }"));
 
             QueryResult docs;
             do
@@ -38,14 +45,14 @@ namespace Rhino.DivanDB.Tests.Indexes
         [Fact]
         public void Can_Read_values_when_two_indexes_exist()
         {
-            db.PutIndex(
-                @"var pagesByTitle = 
+            db.PutIndex("pagesByTitle",
+                @" 
     from doc in docs
     where doc.type == ""page""
     select new { doc.other};
 ");
-            db.PutIndex(
-                @"var pagesByTitle2 = 
+            db.PutIndex("pagesByTitle2",
+                @"
     from doc in docs
     where doc.type == ""page""
     select new { doc.some };
@@ -64,14 +71,14 @@ namespace Rhino.DivanDB.Tests.Indexes
         [Fact]
         public void Updating_an_index_will_result_in_new_values()
         {
-            db.PutIndex(
-                @"var pagesByTitle = 
+            db.PutIndex("pagesByTitle",
+                @"
     from doc in docs
     where doc.type == ""page""
     select new { doc.other};
 ");
-            db.PutIndex(
-                @"var pagesByTitle = 
+            db.PutIndex("pagesByTitle",
+                @"
     from doc in docs
     where doc.type == ""page""
     select new { doc.other };
@@ -92,8 +99,8 @@ namespace Rhino.DivanDB.Tests.Indexes
         {
             db.Put(JObject.Parse("{_id: '1', type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"));
 
-            db.PutIndex(
-                @"var pagesByTitle = 
+            db.PutIndex("pagesByTitle",
+                @"
     from doc in docs
     where doc.type == ""page""
     select new { doc.other };
@@ -112,8 +119,8 @@ namespace Rhino.DivanDB.Tests.Indexes
             db.Put(JObject.Parse("{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"));
             db.Put(JObject.Parse("{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"));
 
-            db.PutIndex(
-                @"var pagesByTitle = 
+            db.PutIndex("pagesByTitle",
+                @"
     from doc in docs
     where doc.type == ""page""
     select new { doc.other };

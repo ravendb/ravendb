@@ -25,10 +25,10 @@ namespace Rhino.DivanDB.Storage
 
             foreach (var index in Directory.GetFiles(this.path, "*.index"))
             {
-                var viewDefinition = File.ReadAllText(index);
+                var indexDef = File.ReadAllText(index);
                 try
                 {
-                    CompileIndex(viewDefinition);
+                    CompileIndex(Path.GetFileNameWithoutExtension(index),indexDef);
                 }
                 catch (Exception e)
                 {
@@ -50,9 +50,9 @@ namespace Rhino.DivanDB.Storage
             return transformer.Name;
         }
 
-        private LinqTransformer CompileIndex(string indexDef)
+        private LinqTransformer CompileIndex(string name, string indexDef)
         {
-            var transformer = new LinqTransformer(indexDef, "docs", path, typeof(JsonDynamicObject));
+            var transformer = new LinqTransformer(name, indexDef, "docs", path, typeof(JsonDynamicObject));
             transformer.Compile();
             return transformer;
         }
@@ -90,9 +90,9 @@ namespace Rhino.DivanDB.Storage
             return value;
         }
 
-        public IndexCreationOptions FindIndexCreationOptionsOptions(string indexDef, out LinqTransformer transformer)
+        public IndexCreationOptions FindIndexCreationOptionsOptions(string name, string indexDef, out LinqTransformer transformer)
         {
-            transformer = CompileIndex(indexDef);
+            transformer = CompileIndex(name, indexDef);
             if(indexCache.ContainsKey(transformer.Name))
             {
                 return GetIndexDefinition(transformer.Name) == indexDef

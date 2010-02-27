@@ -15,15 +15,15 @@ namespace Rhino.DivanDB.Tests.Storage
         [Fact]
         public void Index_with_same_name_can_be_added_twice()
         {
-            db.PutIndex(
-                @"var pagesByTitle = 
+            db.PutIndex("pagesByTitle",
+                @"
     from doc in docs
     where doc.type == ""page""
     select new { Key = doc.title, Value = doc.content, Size = (int)doc.size };
 ");
 
-            db.PutIndex(
-                @"var pagesByTitle = 
+            db.PutIndex("pagesByTitle",
+                @"
     from doc in docs
     where doc.type == ""page""
     select new { Key = doc.title, Value = doc.content, Size = (int)doc.size };
@@ -33,8 +33,8 @@ namespace Rhino.DivanDB.Tests.Storage
         [Fact]
         public void Can_add_index()
         {
-            db.PutIndex(
-                @"var pagesByTitle = 
+            db.PutIndex("pagesByTitle",
+                @"
     from doc in docs
     where doc.type == ""page""
     select new { Key = doc.title, Value = doc.content, Size = (int)doc.size };
@@ -47,12 +47,12 @@ namespace Rhino.DivanDB.Tests.Storage
         [Fact]
         public void Can_list_index_definition()
         {
-            const string definition = @"var pagesByTitle = 
+            const string definition = @" 
     from doc in docs
     where doc.type == ""page""
     select new { Key = doc.title, Value = doc.content, Size = (int)doc.size };
 ";
-            db.PutIndex(definition);
+            db.PutIndex("pagesByTitle", definition);
             var actualDefinition = db.IndexDefinitionStorage.GetIndexDefinition("pagesByTitle");
             Assert.Equal(definition, actualDefinition);
         }
