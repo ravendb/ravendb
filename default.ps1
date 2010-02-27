@@ -60,13 +60,15 @@ task Release -depends Test {
 	& $tools_dir\zip.exe -9 -A -j `
 		$release_dir\Rhino.DivanDB.zip `
 		$build_dir\Rhino.DivanDB.dll `
-		$build_dir\Rhino.DivanDB.xml `
-        $build_dir\Esent.Interop.dll `
-        $build_dir\Esent.Interop.xml `
-        $build_dir\log4net.dll `
-        $build_dir\log4net.xml `
-        $build_dir\ICSharpCode.NRefactory.dll `
-        $build_dir\Newtonsoft.Json.dll `
+		$build_dir\Rhino.DivanDB.Server.exe `
+    $build_dir\Esent.Interop.dll `
+    $build_dir\Esent.Interop.xml `
+    $build_dir\log4net.dll `
+    $build_dir\log4net.xml `
+    $build_dir\Kayak.dll `
+    $build_dir\Lucene.Net.dll `
+    $build_dir\ICSharpCode.NRefactory.dll `
+    $build_dir\Newtonsoft.Json.dll `
 		license.txt `
 		acknowledgements.txt
 	if ($lastExitCode -ne 0) {
