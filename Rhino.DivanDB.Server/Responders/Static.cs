@@ -1,9 +1,8 @@
 using Kayak;
-using Rhino.DivanDB.Server.Responders;
 
 namespace Rhino.DivanDB.Server.Responders
 {
-    public abstract class Static : KayakResponder
+    public class Static : KayakResponder
     {
         public override string UrlPattern
         {

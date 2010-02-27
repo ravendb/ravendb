@@ -93,9 +93,10 @@ namespace Rhino.DivanDB.Scenarios
 
             if (expected.Length != actual.Length)
             {
-                throw new InvalidOperationException("Response #" +responseNumber + " doesn't match.\r\nExpected: " + expectedFull +
-                                                    "\r\nActual: " + actualFull);
-
+                string message = string.Format("Request {0} doesn't match in response!\r\nRequest is:\r\n{3}\r\nExpected: {1}\r\nActual: {2}",
+                                                 responseNumber,expectedFull, actualFull, request);
+                throw new InvalidOperationException(message);
+               
             }
 
             for (int i = 0; i < actual.Length; i++)
