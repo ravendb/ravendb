@@ -32,6 +32,12 @@ namespace Rhino.DivanDB.Server.Responders
             }.Serialize(context.Response.Output, obj);
         }
 
+        public static void WriteJson(this KayakContext context, JToken obj)
+        {
+            context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
+            obj.WriteTo(new JsonTextWriter(context.Response.Output));
+        }
+
         public static void WriteData(this KayakContext context, byte[] data)
         {
             if (data == null)

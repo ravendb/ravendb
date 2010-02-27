@@ -231,9 +231,9 @@ namespace Rhino.DivanDB
             });
         }
 
-        public JObject[] GetDocuments(int start, int pageSize)
+        public JArray GetDocuments(int start, int pageSize)
         {
-            var list = new List<JObject>();
+            var list = new JArray();
             TransactionalStorage.Batch(actions =>
             {
                 foreach (var documentAndId in actions.DocumentsById(start, int.MaxValue, pageSize))
@@ -247,7 +247,7 @@ namespace Rhino.DivanDB
                 }
                 actions.Commit();
             });
-            return list.ToArray();
+            return list;
         }
     }
 
