@@ -1,8 +1,0 @@
-HTTP/1.1 201 Created
-Connection: close
-Content-Length: 22
-Content-Type: application/json; charset=utf-8
-Date: Sat, 27 Feb 2010 09:27:34 GMT
-Server: Kayak
-
-{"viewName":"byEmail"}
