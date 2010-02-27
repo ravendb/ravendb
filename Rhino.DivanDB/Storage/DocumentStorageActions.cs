@@ -144,6 +144,8 @@ namespace Rhino.DivanDB.Storage
             int count = 0;
             do
             {
+                if ((++count) > limit)
+                    yield break;
                 var id = Api.RetrieveColumnAsInt32(session, documents, documentsColumns["id"],
                                                    RetrieveColumnGrbit.RetrieveFromIndex).Value;
                 if (id > endId)
@@ -153,8 +155,7 @@ namespace Rhino.DivanDB.Storage
                 logger.DebugFormat("Document with id '{0}' was found, doc length: {1}", id, data.Length);
                 yield return new DocumentAndId { Document = Encoding.UTF8.GetString(data), Id = id };
 
-                if((++count) > limit)
-                    yield break;
+                
             } while (Api.TryMoveNext(session, documents));
             yield return new DocumentAndId {Id = -1, Document = null};
         }
