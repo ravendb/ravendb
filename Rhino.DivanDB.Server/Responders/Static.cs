@@ -1,4 +1,5 @@
 using Kayak;
+using System.Linq;
 
 namespace Rhino.DivanDB.Server.Responders
 {
@@ -21,10 +22,11 @@ namespace Rhino.DivanDB.Server.Responders
             switch (context.Request.Verb)
             {
                 case "GET":
-                    context.WriteData(Database.GetStatic(filename));
+                    var attachmentAndHeaders = Database.GetStatic(filename);
+                    context.WriteData(attachmentAndHeaders.First, attachmentAndHeaders.Second);
                     break;
                 case "PUT":
-                    Database.PutStatic(filename, context.ReadData());
+                    Database.PutStatic(filename, context.ReadData(), context.Request.Headers.ToNameValueCollection());
                     context.SetStatusToCreated("/static/"+filename);
                     break;
                 case "DELETE":

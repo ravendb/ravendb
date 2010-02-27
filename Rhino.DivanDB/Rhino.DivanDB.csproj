@@ -69,6 +69,8 @@
   <ItemGroup>
     <Compile Include="DocumentDatabase.cs" />
     <Compile Include="Extensions\JsonExtensions.cs" />
+    <Compile Include="Extensions\Reference.cs" />
+    <Compile Include="Extensions\Tuple.cs" />
     <Compile Include="Indexing\Index.cs" />
     <Compile Include="Indexing\TaskExecuter.cs" />
     <Compile Include="Indexing\WorkContext.cs" />
@@ -78,8 +80,6 @@
     <Compile Include="Linq\LinqTransformer.cs" />
     <Compile Include="Linq\TransformVisitor.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Storage\DocumentAndId.cs" />
-    <Compile Include="Storage\FirstAndLast.cs" />
     <Compile Include="Storage\IndexCreationOptions.cs" />
     <Compile Include="Tasks\IndexDocumentRangeTask.cs" />
     <Compile Include="Tasks\IndexDocumentTask.cs" />

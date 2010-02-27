@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Rhino.DivanDB.Extensions;
 using Rhino.DivanDB.Indexing;
 using System.Linq;
 using Rhino.DivanDB.Json;
@@ -21,13 +22,14 @@ namespace Rhino.DivanDB.Tasks
             if (viewFunc == null)
                 return; // view was deleted, probably
             int lastId = FromKey;
+            var hasMoreItems = new Reference<bool>();
             context.TransactionaStorage.Batch(actions =>
             {
-                var docsToIndex = actions.DocumentsById(FromKey, ToKey, 100)
+                var docsToIndex = actions.DocumentsById(hasMoreItems, FromKey, ToKey, 100)
                     .Select(d =>
                     {
-                        lastId = d.Id;
-                        return d.Document;
+                        lastId = d.Second;
+                        return d.First;
                     })
                     .Where(x => x != null)
                     .Select(s => new JsonDynamicObject(s));
@@ -35,7 +37,7 @@ namespace Rhino.DivanDB.Tasks
                 actions.Commit();
             });
 
-            if (lastId < ToKey && lastId != -1)
+            if (hasMoreItems.Value)
             {
                 context.TransactionaStorage.Batch(actions =>
                 {

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.IO;
 using Kayak;
 using Newtonsoft.Json;
@@ -10,6 +11,21 @@ namespace Rhino.DivanDB.Server.Responders
 {
     public static class KayakExtensions
     {
+        public static NameValueCollection ToNameValueCollection(this NameValueDictionary self)
+        {
+            var nvc = new NameValueCollection();
+
+            foreach (var k in self)
+            {
+                foreach (var val in k.Values)
+                {
+                    nvc.Add(k.Name, val);
+                }
+            }
+
+            return nvc;
+        }
+
         public static JObject ReadJson(this KayakContext context)
         {
             using (var streamReader = new StreamReader(context.Request.InputStream))
@@ -38,7 +54,7 @@ namespace Rhino.DivanDB.Server.Responders
             obj.WriteTo(new JsonTextWriter(context.Response.Output));
         }
 
-        public static void WriteData(this KayakContext context, byte[] data)
+        public static void WriteData(this KayakContext context, byte[] data, NameValueCollection headers)
         {
             if (data == null)
             {

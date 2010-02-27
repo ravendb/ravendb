@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Text;
 using log4net;
 using Microsoft.Isam.Esent.Interop;
+using Rhino.DivanDB.Extensions;
 using Rhino.DivanDB.Tasks;
 
 namespace Rhino.DivanDB.Storage
@@ -108,15 +109,15 @@ namespace Rhino.DivanDB.Storage
         }
 
 
-        public FirstAndLast FirstAndLastDocumentKeys()
+        public Tuple<int,int> FirstAndLastDocumentKeys()
         {
-            var result = new FirstAndLast();
+            var result = new Tuple<int, int>();
             Api.MoveBeforeFirst(session, documents);
             if (Api.TryMoveNext(session, documents))
                 result.First = Api.RetrieveColumnAsInt32(session, documents, documentsColumns["id"]).Value;
             Api.MoveAfterLast(session, documents);
             if (Api.TryMovePrevious(session, documents))
-                result.Last = Api.RetrieveColumnAsInt32(session, documents, documentsColumns["id"]).Value;
+                result.Second = Api.RetrieveColumnAsInt32(session, documents, documentsColumns["id"]).Value;
             return result;
         }
 
@@ -132,7 +133,7 @@ namespace Rhino.DivanDB.Storage
             return true;
         }
 
-        public IEnumerable<DocumentAndId> DocumentsById(int startId, int endId, int limit)
+        public IEnumerable<Tuple<string,int>> DocumentsById(Reference<bool> hasMoreWork ,int startId, int endId, int limit)
         {
             Api.JetSetCurrentIndex(session, documents, "by_id");
             Api.MakeKey(session, documents, startId, MakeKeyGrbit.NewKey);
@@ -145,7 +146,10 @@ namespace Rhino.DivanDB.Storage
             do
             {
                 if ((++count) > limit)
+                {
+                    hasMoreWork.Value = true;
                     yield break;
+                }
                 var id = Api.RetrieveColumnAsInt32(session, documents, documentsColumns["id"],
                                                    RetrieveColumnGrbit.RetrieveFromIndex).Value;
                 if (id > endId)
@@ -153,11 +157,15 @@ namespace Rhino.DivanDB.Storage
 
                 var data = Api.RetrieveColumn(session, documents, documentsColumns["data"]);
                 logger.DebugFormat("Document with id '{0}' was found, doc length: {1}", id, data.Length);
-                yield return new DocumentAndId { Document = Encoding.UTF8.GetString(data), Id = id };
+                yield return new Tuple<string, int>
+                {
+                    First = Encoding.UTF8.GetString(data), 
+                    Second = id
+                };
 
                 
             } while (Api.TryMoveNext(session, documents));
-            yield return new DocumentAndId {Id = -1, Document = null};
+            hasMoreWork.Value = false;
         }
 
         public void AddDocument(string key, string data)
@@ -199,7 +207,7 @@ namespace Rhino.DivanDB.Storage
 
         }
 
-        public void AddAttachment(string key, byte[] data)
+        public void AddAttachment(string key, byte[] data, string headers)
         {
             Api.JetSetCurrentIndex(session, files, "by_name");
             Api.MakeKey(session, files, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -209,6 +217,7 @@ namespace Rhino.DivanDB.Storage
                 {
                     Api.SetColumn(session, files, filesColumns["name"], key, Encoding.Unicode);
                     Api.SetColumn(session, files, filesColumns["data"], data);
+                    Api.SetColumn(session, files, filesColumns["headers"], headers,Encoding.Unicode);
 
                     update.Save();
                 }
@@ -239,7 +248,7 @@ namespace Rhino.DivanDB.Storage
             logger.DebugFormat("Attachment with key '{0}' was deleted", key);
         }
 
-        public byte[] GetAttachment(string key)
+        public Tuple<byte[], string> GetAttachment(string key)
         {
             Api.JetSetCurrentIndex(session, files, "by_name");
             Api.MakeKey(session, files, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -248,7 +257,11 @@ namespace Rhino.DivanDB.Storage
                 return null;
             }
 
-            return Api.RetrieveColumn(session, files, filesColumns["data"]);
+            return new Tuple<byte[], string>
+            {
+                First = Api.RetrieveColumn(session, files, filesColumns["data"]),
+                Second= Api.RetrieveColumnAsString(session, files, filesColumns["header"], Encoding.Unicode)
+            };
         }
 
 

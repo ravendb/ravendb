@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security;
 using System.Threading;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Rhino.DivanDB.Indexing;
 using Rhino.DivanDB.Linq;
@@ -165,7 +168,7 @@ namespace Rhino.DivanDB
                                                            {
                                                                View = transformer.Name,
                                                                FromKey = firstAndLast.First,
-                                                               ToKey = firstAndLast.Last
+                                                               ToKey = firstAndLast.Second
                                                            });
                                            actions.Commit();
                                        });
@@ -202,24 +205,48 @@ namespace Rhino.DivanDB
             workContext.NotifyAboutWork();
         }
 
-        public byte[] GetStatic(string name)
+        public Tuple<byte[], NameValueCollection> GetStatic(string name)
         {
-            byte[] attachment = null;
+            Tuple<byte[], string> attachment = null;
             TransactionalStorage.Batch(actions =>
             {
                 attachment = actions.GetAttachment(name);
                 actions.Commit();
             });
-            return attachment;
+            return new Tuple<byte[], NameValueCollection>
+            {
+                First = attachment.First,
+                Second = GetHeadersAsNameValueString(attachment.Second)
+            };
         }
 
-        public void PutStatic(string name, byte[] data)
+        public void PutStatic(string name, byte[] data, NameValueCollection headers)
         {
             TransactionalStorage.Batch(actions =>
             {
-                actions.AddAttachment(name, data);
+                actions.AddAttachment(name, data,GetHeadersAsString(headers));
                 actions.Commit();
             });
+        }
+
+        private static string GetHeadersAsString(NameValueCollection headers)
+        {
+            var writer = new StringWriter();
+            var headersAdJson = new JObject(headers.AllKeys.Select(key=> new JProperty(key,headers[key])));
+            headersAdJson.WriteTo(new JsonTextWriter(writer));
+            return writer.GetStringBuilder().ToString();
+        }
+
+
+        private static NameValueCollection GetHeadersAsNameValueString(string headers)
+        {
+            var nvc = new NameValueCollection();
+            foreach (var property in JObject.Parse(headers).Properties())
+            {
+                var value = property.Value.Value<object>() ?? "null";
+                nvc.Add(property.Name, value.ToString());
+            }
+            return nvc;
         }
 
         public void DeleteStatic(string name)
@@ -236,12 +263,10 @@ namespace Rhino.DivanDB
             var list = new JArray();
             TransactionalStorage.Batch(actions =>
             {
-                foreach (var documentAndId in actions.DocumentsById(start, int.MaxValue, pageSize))
+                foreach (var documentAndId in actions.DocumentsById(new Reference<bool>(), start, int.MaxValue, pageSize))
                 {
-                    if(documentAndId.Id==-1)
-                        break;
-                    var doc = JObject.Parse(documentAndId.Document);
-                    doc.Add("_docNum", new JValue(documentAndId.Id));
+                    var doc = JObject.Parse(documentAndId.First);
+                    doc.Add("_docNum", new JValue(documentAndId.Second));
 
                     list.Add(doc);
                 }

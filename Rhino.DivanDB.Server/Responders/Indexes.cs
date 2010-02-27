@@ -16,12 +16,7 @@ namespace Rhino.DivanDB.Server.Responders
 
         protected override void Respond(KayakContext context)
         {
-            switch (context.Request.Verb)
-            {
-                case "GET":
-                    context.WriteJson(Database.IndexDefinitionStorage.IndexNames);
-                    break;
-            }
+            context.WriteJson(Database.IndexDefinitionStorage.IndexNames);
         }
     }
 }

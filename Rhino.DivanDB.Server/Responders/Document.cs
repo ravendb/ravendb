@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Specialized;
 using System.Text.RegularExpressions;
 using Kayak;
 using Newtonsoft.Json.Linq;
@@ -25,7 +26,7 @@ namespace Rhino.DivanDB.Server.Responders
             {
                 case "GET":
                     context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
-                    context.WriteData(Database.Get(docId));
+                    context.WriteData(Database.Get(docId), new NameValueCollection());
                     break;
                 case "DELETE":
                     Database.Delete(docId);
