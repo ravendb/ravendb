@@ -31,7 +31,7 @@ namespace Rhino.DivanDB.Indexing
             foreach (var index in Directory.GetDirectories(this.path))
             {
                 log.DebugFormat("Starting index {0}", index);
-                indexes.Add(Path.GetFileName(index), 
+                indexes.Add(Path.GetFileName(index),
                     new Index(FSDirectory.GetDirectory(index, false)));
             }
         }
@@ -102,18 +102,11 @@ namespace Rhino.DivanDB.Indexing
         public void Index(string index, IndexingFunc indexingFunc, IEnumerable<JsonDynamicObject> docs)
         {
             Index value;
-            try
+            if (indexes.TryGetValue(index, out value) == false)
             {
-                if(indexes.TryGetValue(index, out value)==false)
-                {
-                    log.DebugFormat("Tried to index on a non existant index {0}, ignoring", index);
-                }
-                value.IndexDocuments(indexingFunc, docs);
+                log.DebugFormat("Tried to index on a non existant index {0}, ignoring", index);
             }
-            catch (Exception e)
-            {
-                Debugger.Launch();
-            }
+            value.IndexDocuments(indexingFunc, docs);
         }
     }
 }
