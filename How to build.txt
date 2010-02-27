@@ -1,0 +1,10 @@
+In order to build this project, you need to execute the psake build script from the PowerShell console.
+You do this using the following command from the root project directory:
+
+	.\psake.ps1 default.ps1
+	
+You may need to allow script execution by running the following command as adminstrator:
+
+	Set-ExecutionPolicy unrestricted
+	
+Also note that the build script assume that you have git.exe on your path.
