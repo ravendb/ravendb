@@ -77,7 +77,8 @@ namespace Rhino.DivanDB.Scenarios
             CompareResponses(
                 responseNumber++,
                 expectedResponse,
-                actual);
+                actual,
+                request);
         }
 
         private bool IsStaleResponse(string response)
@@ -85,7 +86,7 @@ namespace Rhino.DivanDB.Scenarios
             return response.Contains("\"IsStale\":true");
         }
 
-        private static void CompareResponses(int responseNumber, string expectedFull, string actualFull)
+        private static void CompareResponses(int responseNumber, string expectedFull, string actualFull, string request)
         {
             var expected = expectedFull.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
             var actual = actualFull.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
@@ -102,8 +103,8 @@ namespace Rhino.DivanDB.Scenarios
                 if ((expected[i].StartsWith("Date:") && actual[i].StartsWith("Date:") == false) ||
                     (expected[i].StartsWith("Date:") == false && expected[i] != actual[i]))
                 {
-                    string message = string.Format("Line {0} doesn't match for {1}\r\nExpected: {2}\r\nActual: {3}\r\nExpected full: \r\n{4}\r\nActual full: \r\n{5}",
-                                                   i, expected[i], actual[i], expectedFull, actualFull);
+                    string message = string.Format("Line {0} doesn't match in response!\r\nRequest is:\r\n{5}\r\nExpected: {1}\r\nActual: {2}\r\nExpected full: \r\n{3}\r\nActual full: \r\n{4}",
+                                                   i, expected[i], actual[i], expectedFull, actualFull,request);
                     throw new InvalidOperationException(message);
                 }
             }
