@@ -8,7 +8,7 @@ namespace Rhino.DivanDB.Storage
     public class SchemaCreator
     {
         private readonly Session session;
-        public const string SchemaVersion = "1.1";
+        public const string SchemaVersion = "1.2";
 
         public SchemaCreator(Session session)
         {
@@ -26,6 +26,7 @@ namespace Rhino.DivanDB.Storage
                     CreateDetailsTable(dbid);
                     CreateDocumentsTable(dbid);
                     CreateTasksTable(dbid);
+                    CreateFilesTable(dbid);
 
                     tx.Commit(CommitTransactionGrbit.None);
                 }
@@ -103,6 +104,33 @@ namespace Rhino.DivanDB.Storage
                                100);
             indexDef = "+for_index\0\0";
             Api.JetCreateIndex(session, tableid, "by_index", CreateIndexGrbit.IndexIgnoreNull, indexDef, indexDef.Length,
+                               100);
+        }
+
+        private void CreateFilesTable(JET_DBID dbid)
+        {
+            JET_TABLEID tableid;
+            Api.JetCreateTable(session, dbid, "files", 16, 100, out tableid);
+            JET_COLUMNID columnid;
+
+
+            Api.JetAddColumn(session, tableid, "name", new JET_COLUMNDEF
+            {
+                cbMax = 255,
+                coltyp = JET_coltyp.Text,
+                cp = JET_CP.Unicode,
+                grbit = ColumndefGrbit.ColumnTagged
+            }, null, 0, out columnid);
+
+            Api.JetAddColumn(session, tableid, "data", new JET_COLUMNDEF
+            {
+                coltyp = JET_coltyp.LongBinary,
+                grbit = ColumndefGrbit.ColumnTagged
+            }, null, 0, out columnid);
+
+
+            const string indexDef = "+name\0\0";
+            Api.JetCreateIndex(session, tableid, "by_name", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
                                100);
         }
 

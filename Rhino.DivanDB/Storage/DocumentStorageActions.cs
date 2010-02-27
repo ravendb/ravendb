@@ -21,6 +21,8 @@ namespace Rhino.DivanDB.Storage
         protected readonly IDictionary<string, JET_COLUMNID> documentsColumns;
         protected readonly Table tasks;
         protected readonly IDictionary<string, JET_COLUMNID> tasksColumns;
+        protected readonly Table files;
+        protected readonly IDictionary<string, JET_COLUMNID> filesColumns;
 
         public bool CommitCalled { get; set; }
 
@@ -39,6 +41,8 @@ namespace Rhino.DivanDB.Storage
                 documentsColumns = Api.GetColumnDictionary(session, documents);
                 tasks = new Table(session, dbid, "tasks", OpenTableGrbit.None);
                 tasksColumns = Api.GetColumnDictionary(session, tasks);
+                files = new Table(session, dbid, "files", OpenTableGrbit.None);
+                filesColumns = Api.GetColumnDictionary(session, files);
             }
             catch (Exception)
             {
@@ -63,14 +67,17 @@ namespace Rhino.DivanDB.Storage
 
         public void Dispose()
         {
+            if (files != null)
+                files.Dispose();
+
             if (documents != null)
                 documents.Dispose();
 
             if (tasks != null)
                 tasks.Dispose();
 
-            if (Equals(dbid, JET_DBID.Nil) == false)
-                Api.JetCloseDatabase(session, dbid, CloseDatabaseGrbit.None);
+            if (Equals(dbid, JET_DBID.Nil) == false && session != null)
+                Api.JetCloseDatabase(session.JetSesid, dbid, CloseDatabaseGrbit.None);
 
             if (transaction != null)
                 transaction.Dispose();
@@ -191,7 +198,61 @@ namespace Rhino.DivanDB.Storage
 
         }
 
-        public Task GetTask()
+        public void AddAttachment(string key, byte[] data)
+        {
+            Api.JetSetCurrentIndex(session, files, "by_name");
+            Api.MakeKey(session, files, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, files, SeekGrbit.SeekEQ) == false)
+            {
+                using (var update = new Update(session, files, JET_prep.Insert))
+                {
+                    Api.SetColumn(session, files, filesColumns["name"], key, Encoding.Unicode);
+                    Api.SetColumn(session, files, filesColumns["data"], data);
+
+                    update.Save();
+                }
+            }
+            else
+            {
+                using (var update = new Update(session, files, JET_prep.Replace))
+                {
+                    Api.SetColumn(session, files, filesColumns["name"], key, Encoding.Unicode);
+                    Api.SetColumn(session, files, filesColumns["data"], data);
+
+                    update.Save();
+                }
+            }
+        }
+        
+        public void DeleteAttachment(string key)
+        {
+            Api.JetSetCurrentIndex(session, files, "by_name");
+            Api.MakeKey(session, files, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, files, SeekGrbit.SeekEQ) == false)
+            {
+                logger.DebugFormat("Attachment with key '{0}' was not found, and considered deleted", key);
+                return;
+            }
+
+            Api.JetDelete(session, files);
+            logger.DebugFormat("Attachment with key '{0}' was deleted", key);
+        }
+
+        public byte[] GetAttachment(string key)
+        {
+            Api.JetSetCurrentIndex(session, files, "by_name");
+            Api.MakeKey(session, files, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, files, SeekGrbit.SeekEQ) == false)
+            {
+                return null;
+            }
+
+            return Api.RetrieveColumn(session, files, filesColumns["data"]);
+        }
+
+
+
+        public Task GetFirstTask()
         {
             Api.MoveBeforeFirst(session, tasks);
             while (Api.TryMoveNext(session, tasks))

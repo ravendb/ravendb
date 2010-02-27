@@ -16,6 +16,7 @@ namespace Rhino.DivanDB.Server.Responders
 
         protected override void Respond(KayakContext context)
         {
+            context.Response.SetStatusToCreated();
             context.WriteJson(new { viewName = Database.PutView(context.ReadString()) });
         }
     }

@@ -21,7 +21,7 @@ namespace Rhino.DivanDB.Indexing
                 bool foundWork = false;
                 transactionalStorage.Batch(actions =>
                                            {
-                                               var task = actions.GetTask();
+                                               var task = actions.GetFirstTask();
                                                if(task == null)
                                                {
                                                    actions.Commit(); 

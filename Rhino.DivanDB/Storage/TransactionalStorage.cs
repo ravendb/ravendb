@@ -13,7 +13,7 @@ namespace Rhino.DivanDB.Storage
         private readonly string database;
         private readonly string path;
         private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
-
+        private bool disposed;
         [ThreadStatic]
         private static DocumentStorageActions current;
 
@@ -53,7 +53,7 @@ namespace Rhino.DivanDB.Storage
             catch (Exception e)
             {
                 Dispose();
-                throw new InvalidOperationException("Could not open cache: " + database, e);
+                throw new InvalidOperationException("Could not open transactional storage: " + database, e);
             }
         }
 
@@ -145,11 +145,14 @@ namespace Rhino.DivanDB.Storage
             disposerLock.EnterWriteLock();
             try
             {
+                if (disposed)
+                    return; 
                 GC.SuppressFinalize(this);
                 Api.JetTerm2(instance, TermGrbit.Complete);
             }
             finally
             {
+                disposed = true;
                 disposerLock.ExitWriteLock();
             }
         }
@@ -175,7 +178,7 @@ namespace Rhino.DivanDB.Storage
         }
 
         [CLSCompliant(false)]
-        //[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
+        [DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
         public void Batch(Action<DocumentStorageActions> action)
         {
             if (current != null)

@@ -23,6 +23,7 @@ namespace Rhino.DivanDB
             catch (Exception)
             {
                 TransactionalStorage.Dispose();
+                throw;
             }
 
             ViewStorage = new ViewStorage(path);
@@ -197,6 +198,35 @@ namespace Rhino.DivanDB
             ViewStorage.RemoveView(name);
             IndexStorage.DeleteIndex(name);
             workContext.NotifyAboutWork();
+        }
+
+        public byte[] GetStatic(string name)
+        {
+            byte[] attachment = null;
+            TransactionalStorage.Batch(actions =>
+            {
+                attachment = actions.GetAttachment(name);
+                actions.Commit();
+            });
+            return attachment;
+        }
+
+        public void PutStatic(string name, byte[] data)
+        {
+            TransactionalStorage.Batch(actions =>
+            {
+                actions.AddAttachment(name, data);
+                actions.Commit();
+            });
+        }
+
+        public void DeleteStatic(string name)
+        {
+            TransactionalStorage.Batch(actions =>
+            {
+                actions.DeleteAttachment(name);
+                actions.Commit();
+            });
         }
     }
 
