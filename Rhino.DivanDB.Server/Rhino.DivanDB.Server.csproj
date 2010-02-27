@@ -62,6 +62,7 @@
     <Compile Include="Responders\KayakResponder.cs" />
     <Compile Include="Responders\Index.cs" />
     <Compile Include="Responders\Indexes.cs" />
+    <Compile Include="Responders\Root.cs" />
     <Compile Include="Responders\Static.cs" />
     <Compile Include="Responders\Statistics.cs" />
   </ItemGroup>

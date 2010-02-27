@@ -6,14 +6,10 @@ namespace Rhino.DivanDB.Server
     {
         static void Main()
         {
-            while (true)
+            using (new DivanServer("Db", 8080))
             {
-                Console.WriteLine("\tStarting!");
-                using (new DivanServer("Db", 8080))
-                {
-                    Console.WriteLine("Ready to process requests...");
-                    Console.ReadLine();
-                }
+                Console.WriteLine("Ready to process requests...");
+                Console.ReadLine();
             }
         }
     }
