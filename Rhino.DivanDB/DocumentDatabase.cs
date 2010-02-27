@@ -230,6 +230,25 @@ namespace Rhino.DivanDB
                 actions.Commit();
             });
         }
+
+        public JObject[] GetDocuments(int start, int pageSize)
+        {
+            var list = new List<JObject>();
+            TransactionalStorage.Batch(actions =>
+            {
+                foreach (var documentAndId in actions.DocumentsById(start, int.MaxValue, pageSize))
+                {
+                    if(documentAndId.Id==-1)
+                        break;
+                    var doc = JObject.Parse(documentAndId.Document);
+                    doc.Add("_docNum", new JValue(documentAndId.Id));
+
+                    list.Add(doc);
+                }
+                actions.Commit();
+            });
+            return list.ToArray();
+        }
     }
 
     public class QueryResult
