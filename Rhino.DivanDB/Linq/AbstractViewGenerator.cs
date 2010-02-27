@@ -44,20 +44,8 @@ namespace Rhino.DivanDB.Linq
         {
             if (compiledDefinition == null)
             {
-                var def = IndexDefinition.Compile();
-                compiledDefinition = source => def(AddViewContextCurrentDocumentId(source));
+                compiledDefinition = IndexDefinition.Compile();
             }
-        }
-
-        private static IEnumerable<JsonDynamicObject> AddViewContextCurrentDocumentId(IEnumerable<JsonDynamicObject> source)
-        {
-            foreach (var doc in source)
-            {
-                ViewContext.CurrentDocumentId = doc["_id"].Unwrap();
-                yield return doc;
-            }
-            ViewContext.CurrentDocumentId = null;
-
         }
     }
 }
