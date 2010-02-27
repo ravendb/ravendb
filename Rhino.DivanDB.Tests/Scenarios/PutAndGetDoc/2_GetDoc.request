@@ -1,0 +1,4 @@
+GET /docs/ayende HTTP/1.1
+Host: 127.0.01:8080
+Content-Length: 0
+
