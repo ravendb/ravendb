@@ -25,6 +25,7 @@ namespace Rhino.DivanDB.Server.Responders
 
         public static void WriteJson(this KayakContext context, object obj)
         {
+            context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
             new JsonSerializer
             {
                 Converters = {new JsonToJsonConverter()}
