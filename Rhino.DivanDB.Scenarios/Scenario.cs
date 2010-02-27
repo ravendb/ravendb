@@ -2,17 +2,19 @@
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
+using ICSharpCode.SharpZipLib.Zip;
 using Rhino.DivanDB.Server;
 
 namespace Rhino.DivanDB.Scenarios
 {
     public class Scenario
     {
-        private readonly string diretory;
+        private readonly string file;
+        private int responseNumber;
 
-        public Scenario(string diretory)
+        public Scenario(string file)
         {
-            this.diretory = diretory;
+            this.file = file;
         }
 
         public void Execute()
@@ -23,29 +25,34 @@ namespace Rhino.DivanDB.Scenarios
             {
                 using (new DivanServer(tempFileName, 55080))
                 {
-                    foreach (var requestFile in System.IO.Directory.GetFiles(diretory, "*.request")
-                        .OrderBy(file => OrderFromRequestName(file)))
+                    using (var zipFile = new ZipFile(file))
                     {
-                        string responseFile = Path.Combine(Path.GetDirectoryName(requestFile),
-                                                           Path.GetFileNameWithoutExtension(requestFile) + ".response");
-                        if (File.Exists(responseFile) == false)
-                        {
-                            throw new InvalidOperationException("Cannot find matching response file " + responseFile);
-                        }
-                        TestSingleRequest(requestFile, responseFile);
+                        var zipEntries = zipFile.OfType<ZipEntry>()
+                            .Where(x => x.Name.StartsWith("raw/"))
+                            .Where(x => Path.GetExtension(x.Name) == ".txt")
+                            .GroupBy(x => x.Name.Split('_').First())
+                            .Select(x => new { Request = x.First(), Response = x.Last() })
+                            .ToArray();
 
+                        foreach (var pair in zipEntries)
+                        {
+                            TestSingleRequest(
+                                new StreamReader(zipFile.GetInputStream(pair.Request)).ReadToEnd(),
+                                new StreamReader(zipFile.GetInputStream(pair.Response)).ReadToEnd()
+                                );
+                        }
                     }
                 }
             }
             finally
             {
-                System.IO.Directory.Delete(tempFileName, true);
+                Directory.Delete(tempFileName, true);
             }
         }
 
 
 
-        private void TestSingleRequest(string requestFile, string responseFile)
+        private void TestSingleRequest(string request, string expectedResponse)
         {
             string actual;
             int count = 0;
@@ -58,7 +65,6 @@ namespace Rhino.DivanDB.Scenarios
                     var sw = new StreamWriter(stream);
                     var sr = new StreamReader(stream);
 
-                    var request = File.ReadAllText(requestFile);
                     sw.Write(request);
                     sw.Flush();
                     stream.Flush();
@@ -66,13 +72,11 @@ namespace Rhino.DivanDB.Scenarios
                     actual = sr.ReadToEnd();
                 }
                 count++;
-            } while (IsStaleResponse(actual) == false && count < 5);
-
-            string expected = File.ReadAllText(responseFile);
+            } while (IsStaleResponse(actual) && count < 5);
 
             CompareResponses(
-                responseFile,
-                expected,
+                responseNumber++,
+                expectedResponse,
                 actual);
         }
 
@@ -81,14 +85,14 @@ namespace Rhino.DivanDB.Scenarios
             return response.Contains("\"IsStale\":true");
         }
 
-        private static void CompareResponses(string file, string expectedFull, string actualFull)
+        private static void CompareResponses(int responseNumber, string expectedFull, string actualFull)
         {
             var expected = expectedFull.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
             var actual = actualFull.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
 
             if (expected.Length != actual.Length)
             {
-                throw new InvalidOperationException(file + " doesn't match.\r\nExpected: " + expectedFull +
+                throw new InvalidOperationException("Response #" +responseNumber + " doesn't match.\r\nExpected: " + expectedFull +
                                                     "\r\nActual: " + actualFull);
 
             }
@@ -99,7 +103,7 @@ namespace Rhino.DivanDB.Scenarios
                     (expected[i].StartsWith("Date:") == false && expected[i] != actual[i]))
                 {
                     string message = string.Format("Line {0} doesn't match for {1}\r\nExpected: {2}\r\nActual: {3}\r\nExpected full: \r\n{4}\r\nActual full: \r\n{5}",
-                                                   i, file, expected[i], actual[i], expectedFull, actualFull);
+                                                   i, expected[i], actual[i], expectedFull, actualFull);
                     throw new InvalidOperationException(message);
                 }
             }

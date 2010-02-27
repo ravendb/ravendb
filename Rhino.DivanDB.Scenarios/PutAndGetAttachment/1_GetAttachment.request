@@ -1,5 +1,0 @@
-GET http://127.0.0.1:8080/static/thank.you HTTP/1.1
-User-Agent: Fiddler
-Host: 127.0.0.1:8080
-Content-Length: 0
-

@@ -8,9 +8,9 @@ namespace Rhino.DivanDB.Scenarios
     {
         [Theory]
         [PropertyData("ScenariosWithoutExplicitScenario")]
-        public void Execute(string directory)
+        public void Execute(string file)
         {
-            new Scenario(Path.Combine(ScenariosPath, directory)).Execute();
+            new Scenario(file).Execute();
         }
 
         public static string ScenariosPath
@@ -18,7 +18,7 @@ namespace Rhino.DivanDB.Scenarios
             get
             {
                 return Directory.Exists(@"..\..\bin") // running in VS
-                           ? @"..\..\" : @"..\Rhino.DivanDB.Scenarios";
+                           ? @"..\..\Scenarios" : @"..\Rhino.DivanDB.Scenarios\Scenarios";
             }
         }
 
@@ -26,14 +26,11 @@ namespace Rhino.DivanDB.Scenarios
         {
             get
             {
-                foreach (var directory in Directory.GetDirectories(ScenariosPath))
+                foreach (var file in Directory.GetFiles(ScenariosPath,"*.saz"))
                 {
-                    var dir = Path.GetFileName(directory);
-                    if(dir.Equals("bin") || dir.Equals("obj") || dir.Equals("Properties"))
+                    if (typeof(Scenario).Assembly.GetType("Rhino.DivanDB.Scenarios." + Path.GetFileNameWithoutExtension(file) +"Scenario") != null)
                         continue;
-                    if (typeof(Scenario).Assembly.GetType("Rhino.DivanDB.Scenarios." + dir +".Scenario") != null)
-                        continue;
-                    yield return new object[] {dir};
+                    yield return new object[] {file};
                 };
             }
         }

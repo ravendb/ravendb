@@ -101,9 +101,9 @@ namespace Rhino.DivanDB.Indexing
 
         public void Index(string index, IndexingFunc indexingFunc, IEnumerable<JsonDynamicObject> docs)
         {
+            Index value;
             try
             {
-                Index value;
                 if(indexes.TryGetValue(index, out value)==false)
                 {
                     log.DebugFormat("Tried to index on a non existant index {0}, ignoring", index);

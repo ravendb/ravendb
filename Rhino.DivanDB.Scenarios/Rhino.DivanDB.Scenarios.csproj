@@ -31,6 +31,10 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="ICSharpCode.SharpZipLib, Version=0.85.0.0, Culture=neutral, PublicKeyToken=1b03e6acf1164f73, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SharedLibs\ICSharpCode.SharpZipLib.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
@@ -53,7 +57,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AbstractScenario.cs" />
     <Compile Include="AllScenariosWithoutExplicitScenario.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Scenario.cs" />
