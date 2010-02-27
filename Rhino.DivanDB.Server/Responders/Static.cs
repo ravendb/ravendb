@@ -25,11 +25,11 @@ namespace Rhino.DivanDB.Server.Responders
                     break;
                 case "PUT":
                     Database.PutStatic(filename, context.ReadData());
-                    context.Response.SetStatusToCreated();
+                    context.SetStatusToCreated("/static/"+filename);
                     break;
                 case "DELETE":
                     Database.DeleteStatic(filename);
-                    context.Response.SetStatusToDeleted();
+                    context.SetStatusToDeleted();
                     break;
             }
         }

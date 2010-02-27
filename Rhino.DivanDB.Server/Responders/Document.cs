@@ -29,7 +29,7 @@ namespace Rhino.DivanDB.Server.Responders
                     break;
                 case "DELETE":
                     Database.Delete(docId);
-                    context.Response.SetStatusToDeleted();
+                    context.SetStatusToDeleted();
                     break;
                 case "PUT":
                     Put(context, docId);
@@ -39,7 +39,6 @@ namespace Rhino.DivanDB.Server.Responders
 
         private void Put(KayakContext context, string docId)
         {
-            context.Response.SetStatusToCreated();
             var json = context.ReadJson();
             var idProp = json.Property("_id");
             if (idProp == null) // set the in-document id based on the url
@@ -59,6 +58,7 @@ namespace Rhino.DivanDB.Server.Responders
                     return;
                 }
             }
+            context.SetStatusToCreated("/docs/" + docId);
             context.WriteJson(new { id = Database.Put(json) });
         }
     }

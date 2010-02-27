@@ -25,7 +25,7 @@ namespace Rhino.DivanDB.Server.Responders
                     OnGet(context, index);
                     break;
                 case "PUT":
-                    context.Response.SetStatusToCreated();
+                    context.SetStatusToCreated("/indexes/" + index);
                     context.WriteJson(new
                     {
                         index = Database.PutIndex(index, context.ReadString())

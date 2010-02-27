@@ -25,7 +25,6 @@ namespace Rhino.DivanDB.Server.Responders
                     context.WriteJson(Database.GetDocuments(GetStart(context), GetPageSize(context)));
                     break;
                 case "POST":
-                    context.Response.SetStatusToCreated();
                     var json = context.ReadJson();
                     var idProp = json.Property("_id");
                     if (idProp != null) 
@@ -34,7 +33,10 @@ namespace Rhino.DivanDB.Server.Responders
                         context.Response.WriteLine("POST to " + context.Request.Path +" with a document conatining '_id'");
                         return;
                     }
-                    context.WriteJson(new { id = Database.Put(json) });
+                    var id = Database.Put(json);
+
+                    context.SetStatusToCreated("/docs/" + id);
+                    context.WriteJson(new { id });
                     break;
             }
         }

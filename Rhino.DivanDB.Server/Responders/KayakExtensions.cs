@@ -51,11 +51,18 @@ namespace Rhino.DivanDB.Server.Responders
             }
         }
 
-        public static void SetStatusToDeleted(this KayakResponse response)
+        public static void SetStatusToDeleted(this KayakContext context)
         {
-            response.StatusCode = 204;
-            response.ReasonPhrase = "No Content";
+            context.Response.StatusCode = 204;
+            context.Response.ReasonPhrase = "No Content";
         }
+
+        public static void SetStatusToCreated(this KayakContext context, string location)
+        {
+            context.Response.SetStatusToCreated();
+            context.Response.Headers["Location"] = location;
+        }
+
 
         /// <summary>
         /// Reads the entire request buffer to memory and
