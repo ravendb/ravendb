@@ -1,0 +1,8 @@
+HTTP/1.1 200 OK
+Connection: close
+Content-Length: 260
+Content-Type: application/json; charset=utf-8
+Date: Sat, 27 Feb 2010 09:32:26 GMT
+Server: Kayak
+
+{"Results":[{"_id":"ayende","email":"ayende@ayende.com","projects":["rhino mocks","nhibernate","rhino service bus","rhino divan db","rhino persistent hash table","rhino distributed hash table","rhino etl","rhino security","rampaging rhinos"]}],"IsStale":false}
