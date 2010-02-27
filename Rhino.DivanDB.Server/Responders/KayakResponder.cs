@@ -27,8 +27,8 @@ namespace Rhino.DivanDB.Server.Responders
             try
             {
                 var match = urlMatcher.Match(context.Request.RequestUri);
-                callback(match.Success &&
-                         supportedVerbsCached.Contains(context.Request.Verb), null);
+                bool validRequest = match.Success && supportedVerbsCached.Contains(context.Request.Verb);
+                callback(validRequest, null);
             }
             catch (Exception e)
             {
