@@ -30,7 +30,17 @@ task Init -depends Clean {
 		-clsCompliant "false"
 		
 	Generate-Assembly-Info `
-		-file "$base_dir\Rhino.DivanDB.Tests\Properties\AssemblyInfo.cs" `
+		-file "$base_dir\Rhino.DivanDB.Server\Properties\AssemblyInfo.cs" `
+		-title "Rhino DivanDB $version" `
+		-description "A linq enabled document database for .NET" `
+		-company "Hibernating Rhinos" `
+		-product "Rhino DivanDB $version" `
+		-version $version `
+		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2009" `
+		-clsCompliant "false"
+
+	Generate-Assembly-Info `
+		-file "$base_dir\Rhino.DivanDB.Scenarios\Properties\AssemblyInfo.cs" `
 		-title "Rhino DivanDB $version" `
 		-description "A linq enabled document database for .NET" `
 		-company "Hibernating Rhinos" `
@@ -39,6 +49,25 @@ task Init -depends Clean {
 		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2009" `
 		-clsCompliant "false"
 		
+	Generate-Assembly-Info `
+		-file "$base_dir\Rhino.DivanDB.Tests\Properties\AssemblyInfo.cs" `
+		-title "Rhino DivanDB $version" `
+		-description "A linq enabled document database for .NET" `
+		-company "Hibernating Rhinos" `
+		-product "Rhino DivanDB $version" `
+		-version $version `
+		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2009" `
+		-clsCompliant "false"				
+		
+	Generate-Assembly-Info `
+		-file "$base_dir\Rhino.DivanDB.Tryouts\Properties\AssemblyInfo.cs" `
+		-title "Rhino DivanDB $version" `
+		-description "A linq enabled document database for .NET" `
+		-company "Hibernating Rhinos" `
+		-product "Rhino DivanDB $version" `
+		-version $version `
+		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2009" `
+		-clsCompliant "false"				
 	new-item $release_dir -itemType directory 
 	new-item $buildartifacts_dir -itemType directory 
 } 
