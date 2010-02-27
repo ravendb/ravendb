@@ -8,20 +8,20 @@ using Rhino.DivanDB.Json;
 
 namespace Rhino.DivanDB.Linq
 {
-    public delegate IEnumerable ViewFunc(IEnumerable<JsonDynamicObject> source);
+    public delegate IEnumerable IndexingFunc(IEnumerable<JsonDynamicObject> source);
 
     public class AbstractViewGenerator
     {
-        private ViewFunc compiledDefinition;
+        private IndexingFunc compiledDefinition;
         public string ViewText { get; set; }
 
-        public Expression<ViewFunc> ViewDefinition { get; protected set; }
+        public Expression<IndexingFunc> IndexDefinition { get; protected set; }
 
         public Type GeneratedType
         {
             get
             {
-                return ViewDefinition.Body.Type.GetGenericArguments()[0];
+                return IndexDefinition.Body.Type.GetGenericArguments()[0];
             }
         }
 
@@ -31,7 +31,7 @@ namespace Rhino.DivanDB.Linq
             return compiledDefinition(source);
         }
 
-        public ViewFunc CompiledDefinition
+        public IndexingFunc CompiledDefinition
         {
             get
             {
@@ -44,7 +44,7 @@ namespace Rhino.DivanDB.Linq
         {
             if (compiledDefinition == null)
             {
-                var def = ViewDefinition.Compile();
+                var def = IndexDefinition.Compile();
                 compiledDefinition = source => def(AddViewContextCurrentDocumentId(source));
             }
         }

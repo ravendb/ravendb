@@ -19,11 +19,11 @@ namespace Rhino.DivanDB.Server.Responders
             switch (context.Request.Verb)
             {
                 case "GET":
-                    context.WriteJson(Database.ViewStorage.ViewNames);
+                    context.WriteJson(Database.IndexDefinitionStorage.IndexNames);
                     break;
                 case "PUT":
                     context.Response.SetStatusToCreated();
-                    context.WriteJson(new { viewName = Database.PutView(context.ReadString()) });
+                    context.WriteJson(new { viewName = Database.PutIndex(context.ReadString()) });
                     break;
             }
         }

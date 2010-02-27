@@ -99,7 +99,7 @@ namespace Rhino.DivanDB.Indexing
                 RecreateSearcher();
         }
 
-        public void IndexDocuments(ViewFunc func, IEnumerable<JsonDynamicObject> documents)
+        public void IndexDocuments(IndexingFunc func, IEnumerable<JsonDynamicObject> documents)
         {
             Write(indexWriter =>
                   {

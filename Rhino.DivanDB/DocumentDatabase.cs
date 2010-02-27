@@ -6,6 +6,7 @@ using System.Security;
 using System.Threading;
 using Newtonsoft.Json.Linq;
 using Rhino.DivanDB.Indexing;
+using Rhino.DivanDB.Linq;
 using Rhino.DivanDB.Storage;
 using Rhino.DivanDB.Tasks;
 using Rhino.DivanDB.Extensions;
@@ -27,13 +28,13 @@ namespace Rhino.DivanDB
                 throw;
             }
 
-            ViewStorage = new ViewStorage(path);
+            IndexDefinitionStorage = new IndexDefinitionStorage(path);
             IndexStorage = new IndexStorage(path);
             workContext = new WorkContext
                           {
                               IndexStorage = IndexStorage,
                               TransactionaStorage = TransactionalStorage,
-                              ViewStorage = ViewStorage
+                              IndexDefinitionStorage = IndexDefinitionStorage
                           };
         }
 
@@ -55,7 +56,7 @@ namespace Rhino.DivanDB
         private Thread[] backgroundWorkers = new Thread[0];
         private readonly WorkContext workContext;
         public TransactionalStorage TransactionalStorage { get; private set; }
-        public ViewStorage ViewStorage { get; private set; }
+        public IndexDefinitionStorage IndexDefinitionStorage { get; private set; }
         public IndexStorage IndexStorage { get; private set; }
 
         public int CountOfDocuments
@@ -144,32 +145,32 @@ namespace Rhino.DivanDB
             workContext.NotifyAboutWork();
         }
 
-        public string PutView(string viewDefinition)
+        public string PutIndex(string indexDef)
         {
-            string viewName;
-            switch (ViewStorage.FindViewCreationStrategy(viewDefinition, out viewName))
+            LinqTransformer transformer;
+            switch (IndexDefinitionStorage.FindIndexCreationOptionsOptions(indexDef, out transformer))
             {
-                case ViewCreationStrategy.Noop:
-                    return viewName;
-                case ViewCreationStrategy.Update:
-                    DeleteView(viewName);
+                case IndexCreationOptions.Noop:
+                    return transformer.Name;
+                case IndexCreationOptions.Update:
+                    DeleteIndex(transformer.Name);
                     break;
             }
-            viewName = ViewStorage.AddView(viewDefinition);
-            IndexStorage.CreateIndex(viewName);
+            IndexDefinitionStorage.AddIndex(transformer);
+            IndexStorage.CreateIndex(transformer.Name);
             TransactionalStorage.Batch(actions =>
                                        {
                                            var firstAndLast = actions.FirstAndLastDocumentKeys();
                                            actions.AddTask(new IndexDocumentRangeTask
                                                            {
-                                                               View = viewName,
+                                                               View = transformer.Name,
                                                                FromKey = firstAndLast.First,
                                                                ToKey = firstAndLast.Last
                                                            });
                                            actions.Commit();
                                        });
             workContext.NotifyAboutWork();
-            return viewName;
+            return transformer.Name;
         }
 
         public QueryResult Query(string index, string query)
@@ -194,9 +195,9 @@ namespace Rhino.DivanDB
                    };
         }
 
-        public void DeleteView(string name)
+        public void DeleteIndex(string name)
         {
-            ViewStorage.RemoveView(name);
+            IndexDefinitionStorage.RemoveIndex(name);
             IndexStorage.DeleteIndex(name);
             workContext.NotifyAboutWork();
         }

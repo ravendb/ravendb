@@ -27,7 +27,7 @@ var pagesByTitle =
 {'type':'page', title: 'there', content: 'foobar 2', size: 3, _id: 2},
 {'type':'revision', size: 4, _id: 3}
 ]");
-            var compiled = new LinqTransformer(query, "docs",Path.GetTempPath(), typeof(JsonDynamicObject)).Compile();
+            var compiled = new LinqTransformer(query, "docs",Path.GetTempPath(), typeof(JsonDynamicObject)).CompiledType;
             var compiledQuery = (AbstractViewGenerator)Activator.CreateInstance(compiled);
             var actual = compiledQuery.Execute(documents)
                 .Cast<object>().ToArray();

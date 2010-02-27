@@ -59,9 +59,8 @@
     <Compile Include="Responders\Document.cs" />
     <Compile Include="Responders\KayakExtensions.cs" />
     <Compile Include="Responders\KayakResponder.cs" />
-    <Compile Include="Responders\PutQuery.cs" />
-    <Compile Include="Responders\QueryIndex.cs" />
     <Compile Include="Responders\Query.cs" />
+    <Compile Include="Responders\Queries.cs" />
     <Compile Include="Responders\Static.cs" />
   </ItemGroup>
   <ItemGroup>

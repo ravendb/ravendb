@@ -3,26 +3,26 @@ using Xunit;
 
 namespace Rhino.DivanDB.Tests.Storage
 {
-    public class CreateViews : AbstractDocumentStorageTest, IDisposable
+    public class CreateIndexes : AbstractDocumentStorageTest, IDisposable
     {
         private readonly DocumentDatabase db;
 
-        public CreateViews()
+        public CreateIndexes()
         {
             db = new DocumentDatabase("divan.db.test.esent");
         }
 
         [Fact]
-        public void View_with_same_name_can_be_added_twice()
+        public void Index_with_same_name_can_be_added_twice()
         {
-            db.PutView(
+            db.PutIndex(
                 @"var pagesByTitle = 
     from doc in docs
     where doc.type == ""page""
     select new { Key = doc.title, Value = doc.content, Size = (int)doc.size };
 ");
 
-            db.PutView(
+            db.PutIndex(
                 @"var pagesByTitle = 
     from doc in docs
     where doc.type == ""page""
@@ -31,30 +31,29 @@ namespace Rhino.DivanDB.Tests.Storage
         }
 
         [Fact]
-        public void Can_add_view_to_document()
+        public void Can_add_index()
         {
-            db.PutView(
+            db.PutIndex(
                 @"var pagesByTitle = 
     from doc in docs
     where doc.type == ""page""
     select new { Key = doc.title, Value = doc.content, Size = (int)doc.size };
 ");
-            var views = db.ViewStorage.ViewNames;
-            Assert.Equal(1, views.Length);
-            Assert.Equal("pagesByTitle", views[0]);
+            var indexNames = db.IndexDefinitionStorage.IndexNames;
+            Assert.Equal(1, indexNames.Length);
+            Assert.Equal("pagesByTitle", indexNames[0]);
         }
 
         [Fact]
-        public void Can_list_view_definition()
+        public void Can_list_index_definition()
         {
             const string definition = @"var pagesByTitle = 
     from doc in docs
     where doc.type == ""page""
     select new { Key = doc.title, Value = doc.content, Size = (int)doc.size };
 ";
-            db.PutView(
-                definition);
-            var actualDefinition = db.ViewStorage.GetViewDefinition("pagesByTitle");
+            db.PutIndex(definition);
+            var actualDefinition = db.IndexDefinitionStorage.GetIndexDefinition("pagesByTitle");
             Assert.Equal(definition, actualDefinition);
         }
 

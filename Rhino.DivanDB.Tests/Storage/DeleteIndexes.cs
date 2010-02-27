@@ -5,39 +5,39 @@ using Xunit;
 
 namespace Rhino.DivanDB.Tests.Storage
 {
-    public class DeleteViews : AbstractDocumentStorageTest, IDisposable
+    public class DeleteIndexes : AbstractDocumentStorageTest, IDisposable
     {
         private readonly DocumentDatabase db;
 
-        public DeleteViews()
+        public DeleteIndexes()
         {
             db = new DocumentDatabase("divan.db.test.esent");
         }
 
         [Fact]
-        public void Can_remove_view_to_document()
+        public void Can_remove_index()
         {
-            db.PutView(
+            db.PutIndex(
                 @"var pagesByTitle = 
     from doc in docs
     where doc.type == ""page""
     select new { Key = doc.title, Value = doc.content, Size = (int)doc.size };
 ");
-            db.DeleteView("pagesByTitle");
-            var views = db.ViewStorage.ViewNames;
+            db.DeleteIndex("pagesByTitle");
+            var views = db.IndexDefinitionStorage.IndexNames;
             Assert.Equal(0, views.Length);
         }
 
         [Fact]
-        public void Removing_view_will_remove_index()
+        public void Removing_index_remove_it_from_index_storage()
         {
             const string definition = @"var pagesByTitle = 
     from doc in docs
     where doc.type == ""page""
     select new { Key = doc.title, Value = doc.content, Size = (int)doc.size };
 ";
-            db.PutView(definition);
-            db.DeleteView("pagesByTitle");
+            db.PutIndex(definition);
+            db.DeleteIndex("pagesByTitle");
             var actualDefinition = db.IndexStorage.Indexes;
             Assert.Empty(actualDefinition);
         }

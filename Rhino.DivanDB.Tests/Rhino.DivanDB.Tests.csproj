@@ -62,11 +62,11 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Storage\AbstractDocumentStorageTest.cs" />
     <Compile Include="Storage\CreateUpdateDeleteDocuments.cs" />
-    <Compile Include="Storage\CreateViews.cs" />
-    <Compile Include="Storage\DeleteViews.cs">
+    <Compile Include="Storage\CreateIndexes.cs" />
+    <Compile Include="Storage\DeleteIndexes.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Views\DocumentsToViews.cs" />
+    <Compile Include="Indexes\DocumentsToIndex.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Rhino.DivanDB\Rhino.DivanDB.csproj">

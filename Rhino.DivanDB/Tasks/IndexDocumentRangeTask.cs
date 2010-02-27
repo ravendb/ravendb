@@ -16,7 +16,7 @@ namespace Rhino.DivanDB.Tasks
 
         public override void Execute(WorkContext context)
         {
-            var viewFunc = context.ViewStorage.GetViewFunc(View);
+            var viewFunc = context.IndexDefinitionStorage.GetIndexingFunction(View);
             if (viewFunc == null)
                 return; // view was deleted, probably
             int lastId = FromKey;

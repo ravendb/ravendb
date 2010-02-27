@@ -1,6 +1,6 @@
 ﻿namespace Rhino.DivanDB.Storage
 {
-    public enum ViewCreationStrategy
+    public enum IndexCreationOptions
     {
         Noop,
         Update,

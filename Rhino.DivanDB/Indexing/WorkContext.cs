@@ -19,7 +19,7 @@ namespace Rhino.DivanDB.Indexing
 
         public IndexStorage IndexStorage { get; set; }
 
-        public ViewStorage ViewStorage { get; set; }
+        public IndexDefinitionStorage IndexDefinitionStorage { get; set; }
 
         public TransactionalStorage TransactionaStorage { get; set; }
 

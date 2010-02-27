@@ -22,7 +22,7 @@ namespace Rhino.DivanDB.Server.Responders
 
             if (query == null)
             {
-                context.WriteJson(new { view = Database.ViewStorage.GetViewDefinition(index) });
+                context.WriteJson(new { view = Database.IndexDefinitionStorage.GetIndexDefinition(index) });
             }
             else
             {

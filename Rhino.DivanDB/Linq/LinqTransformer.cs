@@ -17,10 +17,16 @@ namespace Rhino.DivanDB.Linq
         private readonly string rootQueryName;
         private readonly string path;
         private readonly Type rootQueryType;
+        private CompilerResults compilerResults;
 
         public string Name { get; private set; }
 
         public string PathToAssembly { get; private set; }
+
+        public string Source
+        {
+            get { return source; }
+        }
 
         public LinqTransformer(string source, string rootQueryName, string path, Type rootQueryType)
         {
@@ -30,25 +36,36 @@ namespace Rhino.DivanDB.Linq
             this.rootQueryType = rootQueryType;
         }
 
-        public Type Compile()
+        public Type CompiledType
+        {
+            get
+            {
+                if (compilerResults == null)
+                    Compile();
+                PathToAssembly = compilerResults.PathToAssembly;
+                return compilerResults.CompiledAssembly.GetType(Name);
+            }
+        }
+
+        public void Compile()
         {
             var implicitClassSource = LinqQueryToImplicitClass();
             var outputPath = Path.Combine(path, Name + ".view.cs");
             File.WriteAllText(outputPath, implicitClassSource);
-            var provider = new CSharpCodeProvider(new Dictionary<string, string> { { "CompilerVersion", "v3.5" } });
+            var provider = new CSharpCodeProvider(new Dictionary<string, string> {{"CompilerVersion", "v3.5"}});
             var results = provider.CompileAssemblyFromFile(new CompilerParameters
             {
                 GenerateExecutable = false,
                 GenerateInMemory = false,
                 IncludeDebugInformation = true,
                 ReferencedAssemblies =
-                    {
-                        typeof(AbstractViewGenerator).Assembly.Location,
-                        typeof(NameValueCollection).Assembly.Location,
-                        typeof(object).Assembly.Location,
-                        typeof(System.Linq.Enumerable).Assembly.Location,
-                        rootQueryType.Assembly.Location
-                    },
+                                                               {
+                                                                   typeof (AbstractViewGenerator).Assembly.Location,
+                                                                   typeof (NameValueCollection).Assembly.Location,
+                                                                   typeof (object).Assembly.Location,
+                                                                   typeof (System.Linq.Enumerable).Assembly.Location,
+                                                                   rootQueryType.Assembly.Location
+                                                               },
             }, outputPath);
             if (results.Errors.HasErrors)
             {
@@ -59,8 +76,7 @@ namespace Rhino.DivanDB.Linq
                 }
                 throw new InvalidOperationException(sb.ToString());
             }
-            PathToAssembly = results.PathToAssembly;
-            return results.CompiledAssembly.GetType(Name);
+            compilerResults = results;
         }
 
         private string LinqQueryToImplicitClass()
@@ -99,7 +115,7 @@ namespace Rhino.DivanDB.Linq
                                        new PrimitiveExpression(source, source))));
             ctor.Body.AddChild(new ExpressionStatement(
                                    new AssignmentExpression(
-                                       new MemberReferenceExpression(new ThisReferenceExpression(), "ViewDefinition"),
+                                       new MemberReferenceExpression(new ThisReferenceExpression(), "IndexDefinition"),
                                        AssignmentOperatorType.Assign,
                                        new LambdaExpression
                                        {

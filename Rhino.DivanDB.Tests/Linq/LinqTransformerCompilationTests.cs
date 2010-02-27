@@ -20,23 +20,23 @@ var pagesByTitle =
         [Fact]
         public void Will_compile_query_successfully()
         {
-            var compiled = new LinqTransformer(query, "docs",System.IO.Path.GetTempPath(), typeof(JsonDynamicObject)).Compile();
+            var compiled = new LinqTransformer(query, "docs",System.IO.Path.GetTempPath(), typeof(JsonDynamicObject)).CompiledType;
             Assert.NotNull(compiled);
         }
 
         [Fact]
         public void Can_create_new_instance_from_query()
         {
-            var compiled = new LinqTransformer(query, "docs", System.IO.Path.GetTempPath(), typeof(JsonDynamicObject)).Compile();
+            var compiled = new LinqTransformer(query, "docs", System.IO.Path.GetTempPath(), typeof(JsonDynamicObject)).CompiledType;
             Activator.CreateInstance(compiled);
         }
 
         [Fact]
         public void Can_get_type_of_result_from_query()
         {
-            var compiled = new LinqTransformer(query, "docs", System.IO.Path.GetTempPath(), typeof(JsonDynamicObject)).Compile();
+            var compiled = new LinqTransformer(query, "docs", System.IO.Path.GetTempPath(), typeof(JsonDynamicObject)).CompiledType;
             var instance = (AbstractViewGenerator)Activator.CreateInstance(compiled);
-            var argument = instance.ViewDefinition.Body.Type.GetGenericArguments()[0];
+            var argument = instance.IndexDefinition.Body.Type.GetGenericArguments()[0];
             
             Assert.NotNull(argument.GetProperty("Key"));
             Assert.NotNull(argument.GetProperty("Value"));
@@ -50,7 +50,7 @@ var pagesByTitle =
         [Fact]
         public void Can_execute_query()
         {
-            var compiled = new LinqTransformer(query, "docs", System.IO.Path.GetTempPath(), typeof(JsonDynamicObject)).Compile();
+            var compiled = new LinqTransformer(query, "docs", System.IO.Path.GetTempPath(), typeof(JsonDynamicObject)).CompiledType;
             var generator = (AbstractViewGenerator)Activator.CreateInstance(compiled);
             var results = generator.Execute(new[]
             {

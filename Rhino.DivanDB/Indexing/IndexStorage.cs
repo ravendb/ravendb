@@ -98,14 +98,14 @@ namespace Rhino.DivanDB.Indexing
             value.Remove(keys);
         }
 
-        public void Index(string index, ViewFunc viewFunc, IEnumerable<JsonDynamicObject> docs)
+        public void Index(string index, IndexingFunc indexingFunc, IEnumerable<JsonDynamicObject> docs)
         {
             Index value;
             if(indexes.TryGetValue(index, out value)==false)
             {
                 log.DebugFormat("Tried to index on a non existant index {0}, ignoring", index);
             }
-            value.IndexDocuments(viewFunc, docs);
+            value.IndexDocuments(indexingFunc, docs);
         }
     }
 }
