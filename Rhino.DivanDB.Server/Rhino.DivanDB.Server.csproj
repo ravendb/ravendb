@@ -63,6 +63,7 @@
     <Compile Include="Responders\Index.cs" />
     <Compile Include="Responders\Indexes.cs" />
     <Compile Include="Responders\Static.cs" />
+    <Compile Include="Responders\Statistics.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Rhino.DivanDB\Rhino.DivanDB.csproj">
