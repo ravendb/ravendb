@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Threading;
 using Kayak;
 using Rhino.DivanDB.Server.Responders;
 
@@ -42,8 +43,13 @@ namespace Rhino.DivanDB.Server
 
         public void Dispose()
         {
-            server.Stop();
-            database.Dispose();
+            using (var stopped = new ManualResetEvent(false))
+            {
+                server.Stopped += (sender, args) => stopped.Set();
+                server.Stop();
+                database.Dispose();
+                stopped.WaitOne();
+            }
         }
     }
 }
