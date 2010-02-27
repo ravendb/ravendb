@@ -22,6 +22,12 @@ namespace Rhino.DivanDB.Server
                     (
                     typeof(KayakResponder).Assembly.GetTypes()
                         .Where(t => typeof(KayakResponder).IsAssignableFrom(t) && t.IsAbstract == false)
+                        
+                        // to ensure that we would get consistent order, so we would always 
+                        // have the responders using the same order, otherwise we get possibly
+                        // random ordering, and that might cause issues
+                        .OrderBy(x => x.Name)
+
                         .Select(t => (KayakResponder)Activator.CreateInstance(t))
                         .Select(r =>
                         {
