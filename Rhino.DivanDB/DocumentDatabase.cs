@@ -213,6 +213,8 @@ namespace Rhino.DivanDB
                 attachment = actions.GetAttachment(name);
                 actions.Commit();
             });
+            if(attachment==null)
+                return null;
             return new Tuple<byte[], NameValueCollection>
             {
                 First = attachment.First,

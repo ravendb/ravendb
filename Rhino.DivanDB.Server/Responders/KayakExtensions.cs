@@ -11,12 +11,22 @@ namespace Rhino.DivanDB.Server.Responders
 {
     public static class KayakExtensions
     {
+        private static readonly HashSet<string> HeadersToIgnore = new HashSet<string>
+        {
+            "User-Agent",
+            "Host",
+            "Content-Length"
+        };
+
         public static NameValueCollection ToNameValueCollection(this NameValueDictionary self)
         {
             var nvc = new NameValueCollection();
 
             foreach (var k in self)
             {
+                if(HeadersToIgnore.Contains(k.Name))
+                    continue;
+
                 foreach (var val in k.Values)
                 {
                     nvc.Add(k.Name, val);
@@ -56,15 +66,12 @@ namespace Rhino.DivanDB.Server.Responders
 
         public static void WriteData(this KayakContext context, byte[] data, NameValueCollection headers)
         {
-            if (data == null)
+            foreach (var header in headers.AllKeys)
             {
-                context.Response.SetStatusToNotFound();
+                context.Response.Headers[header] = headers[header];
             }
-            else
-            {
-                Stream stream = context.Response.GetDirectOutputStream(data.Length);
-                stream.Write(data, 0, data.Length);
-            }
+            Stream stream = context.Response.GetDirectOutputStream(data.Length);
+            stream.Write(data, 0, data.Length);
         }
 
         public static void SetStatusToDeleted(this KayakContext context)

@@ -23,6 +23,11 @@ namespace Rhino.DivanDB.Server.Responders
             {
                 case "GET":
                     var attachmentAndHeaders = Database.GetStatic(filename);
+                    if(attachmentAndHeaders == null)
+                    {
+                        context.Response.SetStatusToNotFound();
+                        return;
+                    }
                     context.WriteData(attachmentAndHeaders.First, attachmentAndHeaders.Second);
                     break;
                 case "PUT":

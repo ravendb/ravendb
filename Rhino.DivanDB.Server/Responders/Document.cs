@@ -26,7 +26,13 @@ namespace Rhino.DivanDB.Server.Responders
             {
                 case "GET":
                     context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
-                    context.WriteData(Database.Get(docId), new NameValueCollection());
+                    var bytes = Database.Get(docId);
+                    if(bytes==null)
+                    {
+                        context.Response.SetStatusToNotFound();
+                        return;
+                    }
+                    context.WriteData(bytes, new NameValueCollection());
                     break;
                 case "DELETE":
                     Database.Delete(docId);
