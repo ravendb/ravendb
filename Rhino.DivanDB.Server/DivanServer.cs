@@ -37,7 +37,7 @@ namespace Rhino.DivanDB.Server
                         })
                     )
             };
-            server.MapDirectory("/static/divandb_ui", @"C:\Users\Ayende\Downloads\RedCity\red_city");
+            server.MapDirectory("/divan", @"DivanUI");
             server.Start(new IPEndPoint(IPAddress.Any, port));
 
         }

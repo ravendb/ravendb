@@ -1,0 +1,27 @@
+body { margin:0; font-size:0.9em; line-height:20px; background:url(images/body_bckg.jpg) repeat-x #ffffff; font-family: "Myriad Pro", "Trebuchet MS", Arial;}
+a { color:#FF5220;}
+a:hover { text-decoration:none;}
+
+#header { background:url(images/header_bckg.jpg) repeat-x;}
+#logo { padding:30px 0 0 40px; height:36px; }
+#logo a{ color:#FFFFFF; text-decoration:none; font-weight:bold; height:36px; font-size:26px; text-transform:uppercase;}
+#logo a:hover { }
+#menu { background:url(images/menu_bckg.jpg) repeat-x; width:780px; margin:0 auto; height:32px; margin-top:47px;}
+#menu ul { margin:0; padding:0;}
+#menu ul li{ display:inline-block; float:left; width:100px; list-style:none; text-align:center; height:32px;}
+#menu a { display:block; float:left; width:100px; color:#FFFFFF; font-size:14px; text-transform:uppercase; font-weight:bold; text-decoration:none; padding-top:8px;}
+#menu a:hover{ background: #FF5220; padding-top:8px; height:24px;}
+
+#main { width:100%;}
+#content { margin:0 auto; padding:0;  padding:30px 10px 0px 10px;}
+#content h1 { margin:0; text-transform:uppercase; font-size:2em;}
+.red { color:#FF5220;}
+#content p { border-bottom:15px solid #fafafa; padding-bottom:20px;}
+
+#footer {background:url(images/footer_bckg.jpg) repeat-x #000000; height:102px;}
+#left_footer { float:left; padding:40px 0 0 60px; background:url(images/c.gif) no-repeat 30px 35px; text-transform:uppercase; color:#FFFFFF; font-weight:bold; font-size:11px;}
+#left_footer a { color:#FFFFFF;}
+#left_footer a:hover { text-decoration:none;}
+#right_footer { float:right;  padding:40px 30px 0 0; text-transform:uppercase; color:#FFFFFF; font-weight:bold; font-size:11px; text-align:right;}
+#right_footer a { color:#FFFFFF;}
+#right_footer a:hover { text-decoration:none;}

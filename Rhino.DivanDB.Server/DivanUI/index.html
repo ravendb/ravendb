@@ -1,0 +1,242 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!--
+Author: Reality Software
+Website: http://www.realitysoftware.ca
+Note: This is a free template released under the Creative Commons Attribution 3.0 license, 
+which means you can use it in any way you want provided you keep the link to the author intact.
+-->
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Rhino Divan DB</title>
+<link href="style.css" rel="stylesheet" type="text/css" />
+<script src="jquery-1.4.2.js"></script>
+<script src="jquery-jtemplates_uncompressed.js"></script>
+<script>
+  var rootUrl = "http://127.0.0.1:8080";
+  function indexes()
+  {
+    var content = $('#content');
+    content.setTemplateElement("indexes-list-template");  
+    $.ajax({
+      url: rootUrl = "/indexes",
+      success: function (data){
+        content.processTemplate(data);
+      }
+    });
+  }
+  function home()
+  {
+    var content = $('#content');
+    content.setTemplateElement("home-template");
+    $.ajax({
+      url: rootUrl = "/stats",
+      success: function (data){
+        content.processTemplate(data);
+      }
+    });
+   }
+  function addIndex()
+  {
+    var content = $('#content');
+    content.setTemplateElement("add-index-template");
+    content.processTemplate();
+  }
+  function addIndexToDb()
+  {
+    $.ajax({
+      url: "/indexes/"+$('#name').val(),
+      type: "PUT",
+      data: $('#def').val(),
+      success: function(data){
+        indexes();
+      }
+    });
+    return false;
+  }
+  function showIndex(name)
+  {
+    var content = $('#content');
+    content.setTemplateElement("show-index-template");
+    $.ajax({
+      url: rootUrl = "/indexes/"+ name,
+      success: function (data){
+        content.processTemplate({
+          name: name,
+          def: data
+        });
+      }
+    });
+  }
+  function query()
+  {
+    var content = $('#content');
+    content.setTemplateElement("query-template");
+    content.processTemplate();
+  }
+  function perfromQuery()
+  {
+    var query = $('#query').val();
+    var content = $('#queryResults');
+    content.setTemplateElement("query-results-template");
+    
+    $.ajax({
+      url: "/indexes/"+$('#name').val(),
+      data: { query: query },
+      success: function(data){
+        debugger;
+          content.processTemplate(data);
+      }
+    });
+    return false;
+  }
+</script>
+</head>
+<body>
+<div id="container">
+	<!-- header -->
+    <div id="header">
+    	<div id="logo"><a href="http://hibernatingrhinos.com/open-source/rhino-divandb">Rhino Divan DB</a></div>
+        <div id="menu">
+        	<ul>
+              <li><a href="#" onclick="home()">Home</a></li>
+              <li><a href="#" onclick="indexes()">Indexes</a></li>
+              <li><a href="#" onclick="query()">Query</a></li>
+              <li><a href="/static/about">About Us</a></li>
+          </ul>
+      </div>
+  </div>
+    <!--end header -->
+    <!-- main -->
+    <div id="main">
+    	<div id="content">
+             
+        </div>
+        <p/>
+    </div>
+    <!-- end main -->
+    <!-- footer -->
+    <div id="footer">
+    <div id="left_footer">Copyright 20010 - <a href="http://hibernatingrhinos.com">Hibernating Rhinos</a>
+    </div>
+    <div id="right_footer">
+<!-- DO NOT DELETE THIS LINK! READ THE LICENSE! -->
+Design by <a href="http://www.realitysoftware.ca" title="Website Design">Reality Software</a>
+<!-- ****************************************** -->
+    </div>
+    </div>
+    <!-- end footer -->
+    <p style="display:none">  
+    <textarea id="indexes-list-template" rows="0" cols="0">
+<!--
+  <h1>Indexes</h1>
+  <div>
+  <a href="#" onclick="addIndex()">Create new index</a>
+  </div>
+  {#if $T.length > 0}
+	<table>
+    <thead>
+      <tr>
+        <th>
+          Index
+        </th>
+      </tr>
+    </thead>
+		<tbody>
+		{#foreach $T as index}
+			<tr>
+				<td><a href="#" onclick="showIndex('{$T.index}')">{$T.index}</a></td>
+			</tr>
+		{#/for}
+		</tbody>
+	</table>
+	{#else}
+    <h2>No indexes are defined.</h2>
+    <p>Why don't you define <a href="#" onclick="addIndex()">one</a>?</p>
+	{#/if}
+--></textarea> 
+<textarea id="home-template" rows="0" cols="0">
+<!--
+  <h1>Welcome</h1>
+  <p>This is your Rhino Divan DB instance, which contains {$T.docCount} documents.</p>
+  <p>Rhino Divan DB is a document database with superb indexing capabilities... MORE DOCS HERE</p>
+ --></textarea> 
+    <textarea id="add-index-template" rows="0" cols="0">
+<!--
+  <h1>Add new index</h1>
+  <form>
+    <div>
+    <p>
+      <label for="name">Name:</label><br/>
+      <input type="text" id="name"></input>
+    </p>
+    <p>
+      <label for="def">Definition:</label><br/>
+      <textarea id="def" rows="10" cols="50"></textarea>
+    </p>
+    <input type="submit" value="Index!" onclick="addIndexToDb()"/>
+    </div>
+  </form>
+ --></textarea> 
+       <textarea id="show-index-template" rows="0" cols="0">
+<!--
+  <h2>Index: {$T.name}</h2>
+  <pre>
+  {$T.def.index}
+  </pre>
+ --></textarea> 
+    <textarea id="query-template" rows="0" cols="0">
+<!--
+  <h2>Querying</h2>
+  <form onsubmit="perfromQuery()">
+    <p>
+      <p>TODO: make into a drop down</p>
+      <p>
+        <label for="name">Name:</label><br/>
+        <input type="text" id="name"></input>
+      </p>
+    
+      <p>
+        <label for="query">Query:</label><br/>
+        <input type="text" id="query"></input>
+      </p>
+    
+    </p>
+    <input type="submit" value="Index!" />
+  </form>
+  <div id="queryResults">
+    
+  </div>
+  <div>
+    TODO: Put small tutorial about query syntax here.
+  </div>
+ --></textarea> 
+                                            
+    <textarea id="query-results-template" rows="0" cols="0">
+<!--
+    <p>Results stale: {$T.IsStale}</p>
+  	<table>
+    <thead>
+      <tr>
+        <th>
+          Index
+        </th>
+      </tr>
+    </thead>
+		<tbody>
+		{#foreach $T.Results as doc}
+			<tr>
+				<td><a href="#" onclick="showDoc('{$T.doc._id}')">{$T.doc}</a></td>
+			</tr>
+		{#/for}
+		</tbody>
+	</table>
+ --></textarea> 
+                                           
+    </p>
+    </div>
+    <script>
+      home();
+    </script>
+</body>
+</html>
