@@ -78,7 +78,7 @@ namespace Rhino.DivanDB.Storage
         {
             var viewFile = GetIndexPath(name);
             if(File.Exists(viewFile) == false)
-                return null;
+                throw new InvalidOperationException("Index file does not exists");
             return File.ReadAllText(viewFile);
         }
 
