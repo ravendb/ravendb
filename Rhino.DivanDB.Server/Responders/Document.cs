@@ -23,6 +23,7 @@ namespace Rhino.DivanDB.Server.Responders
             switch (context.Request.Verb)
             {
                 case "GET":
+                    context.Response.Headers["Content-Type"] = "application/json; charset=utf-16";
                     context.WriteData(Database.Get(docId));
                     break;
                 case "DELETE":
