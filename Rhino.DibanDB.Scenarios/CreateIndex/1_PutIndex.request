@@ -1,0 +1,6 @@
+PUT http://127.0.01:8080/queries HTTP/1.1
+Host: 127.0.01:8080
+Content-Length: 56
+
+var byEmail = from doc in docs
+select new {doc.email };

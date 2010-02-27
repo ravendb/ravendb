@@ -51,6 +51,7 @@ task Test -depends Compile {
   $old = pwd
   cd $build_dir
   exec "$tools_dir\xUnit\xunit.console.exe" "$build_dir\Rhino.DivanDB.Tests.dll"
+  exec "$tools_dir\xUnit\xunit.console.exe" "$build_dir\Rhino.DibanDB.Scenarios.dll"
   cd $old		
 }
 

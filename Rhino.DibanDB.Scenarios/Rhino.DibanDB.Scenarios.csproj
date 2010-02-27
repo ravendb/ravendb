@@ -5,11 +5,11 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProductVersion>9.0.30729</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{267AC60C-751E-42E9-AA18-66035DEFF63A}</ProjectGuid>
+    <ProjectGuid>{46DB852F-4E76-44BD-B46F-5E7DE7E4B3B7}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Rhino.DivanDB.Tests</RootNamespace>
-    <AssemblyName>Rhino.DivanDB.Tests</AssemblyName>
+    <RootNamespace>Rhino.DibanDB.Scenarios</RootNamespace>
+    <AssemblyName>Rhino.DibanDB.Scenarios</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -31,14 +31,6 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Esent.Interop, Version=1.0.0.0, Culture=neutral, PublicKeyToken=b93b4ad6c4b80595, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\Esent.Interop.dll</HintPath>
-    </Reference>
-    <Reference Include="Newtonsoft.Json, Version=3.5.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\Newtonsoft.Json.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
@@ -57,25 +49,34 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Linq\LinqTransformerCompilationTests.cs" />
-    <Compile Include="Linq\PerformingQueries.cs" />
+    <Compile Include="AbstractScenario.cs" />
+    <Compile Include="CreateIndex\Scenario.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Storage\AbstractDocumentStorageTest.cs" />
-    <Compile Include="Storage\CreateUpdateDeleteDocuments.cs" />
-    <Compile Include="Storage\CreateIndexes.cs" />
-    <Compile Include="Storage\DeleteIndexes.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Indexes\DocumentsToIndex.cs" />
+    <Compile Include="PutAndGetDoc\Scenario.cs" />
+    <Compile Include="QueryUsingIndex\Scenario.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="CreateIndex\1_PutIndex.request" />
+    <None Include="CreateIndex\1_PutIndex.response" />
+    <None Include="CreateIndex\2_GetIndex.request" />
+    <None Include="CreateIndex\2_GetIndex.response" />
+    <None Include="PutAndGetDoc\1_PutDoc.request" />
+    <None Include="PutAndGetDoc\1_PutDoc.response" />
+    <None Include="PutAndGetDoc\2_GetDoc.request" />
+    <None Include="PutAndGetDoc\2_GetDoc.response" />
+    <None Include="QueryUsingIndex\0_PutDoc.request" />
+    <None Include="QueryUsingIndex\0_PutDoc.response" />
+    <None Include="QueryUsingIndex\1_PutIndex.request" />
+    <None Include="QueryUsingIndex\1_PutIndex.response" />
+    <None Include="QueryUsingIndex\2_GetIndex.request" />
+    <None Include="QueryUsingIndex\2_GetIndex.response" />
+    <None Include="QueryUsingIndex\3_QueryIndex.request" />
+    <None Include="QueryUsingIndex\3_QueryIndex.response" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Rhino.DivanDB.Server\Rhino.DivanDB.Server.csproj">
       <Project>{3B90EB20-AEA3-4972-8219-936F1A62768C}</Project>
       <Name>Rhino.DivanDB.Server</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Rhino.DivanDB\Rhino.DivanDB.csproj">
-      <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
-      <Name>Rhino.DivanDB</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
