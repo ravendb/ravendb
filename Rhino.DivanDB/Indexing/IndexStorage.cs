@@ -30,8 +30,8 @@ namespace Rhino.DivanDB.Indexing
             foreach (var index in Directory.GetDirectories(this.path))
             {
                 log.DebugFormat("Starting index {0}", index);
-                var value = new Index(FSDirectory.GetDirectory(index, false));
-                indexes.Add(Path.GetFileName(index), value);
+                indexes.Add(Path.GetFileName(index), 
+                    new Index(FSDirectory.GetDirectory(index, false)));
             }
         }
 

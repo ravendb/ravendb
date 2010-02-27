@@ -1,4 +1,5 @@
-﻿using Rhino.DivanDB.Indexing;
+﻿using System.Collections.Generic;
+using Rhino.DivanDB.Indexing;
 using System.Linq;
 using Rhino.DivanDB.Json;
 
@@ -22,14 +23,15 @@ namespace Rhino.DivanDB.Tasks
             int lastId = FromKey;
             context.TransactionaStorage.Batch(actions =>
             {
-                context.IndexStorage.Index(View, viewFunc, actions.DocumentsById(FromKey, ToKey, 100)
-                                                               .Select(d =>
-                                                               {
-                                                                   lastId = d.Id;
-                                                                   return d.Document;
-                                                               })
-                                                               .Where(x => x != null)
-                                                               .Select(s => new JsonDynamicObject(s)));
+                var docsToIndex = actions.DocumentsById(FromKey, ToKey, 100)
+                    .Select(d =>
+                    {
+                        lastId = d.Id;
+                        return d.Document;
+                    })
+                    .Where(x => x != null)
+                    .Select(s => new JsonDynamicObject(s));
+                context.IndexStorage.Index(View, viewFunc, docsToIndex);
                 actions.Commit();
             });
 

@@ -45,11 +45,14 @@ namespace Rhino.DibanDB.Scenarios
 
         private void TestSingleRequest(string requestFile, string responseFile)
         {
-            using (var client = new TcpClient())
+            string actual;
+            int count = 0;
+            do
             {
-                client.Connect("localhost", 55080);
+                using (var client = new TcpClient("localhost", 55080))
                 using (var stream = client.GetStream())
                 {
+
                     var sw = new StreamWriter(stream);
                     var sr = new StreamReader(stream);
 
@@ -58,22 +61,29 @@ namespace Rhino.DibanDB.Scenarios
                     sw.Flush();
                     stream.Flush();
 
-                    string actual = sr.ReadToEnd();
-                    string expected = File.ReadAllText(responseFile);
-
-                    CompareResponses(
-                        responseFile,
-                        expected,
-                        actual,
-                        expected.Split(new[] {Environment.NewLine}, StringSplitOptions.None),
-                        actual.Split(new[] {Environment.NewLine}, StringSplitOptions.None)
-                        );
+                    actual = sr.ReadToEnd();
                 }
-            }
+                count++;
+            } while (IsStaleResponse(actual) == false && count < 5);
+
+            string expected = File.ReadAllText(responseFile);
+
+            CompareResponses(
+                responseFile,
+                expected,
+                actual);
         }
 
-        private static void CompareResponses(string file, string expectedFull, string actualFull, string[] expected, string[] actual)
+        private bool IsStaleResponse(string response)
         {
+            return response.Contains("\"IsStale\":true");
+        }
+
+        private static void CompareResponses(string file, string expectedFull, string actualFull)
+        {
+            var expected = expectedFull.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+            var actual = actualFull.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+
             if (expected.Length != actual.Length)
             {
                 throw new InvalidOperationException(file + " doesn't match.\r\nExpected: " + expectedFull +
@@ -83,21 +93,12 @@ namespace Rhino.DibanDB.Scenarios
 
             for (int i = 0; i < actual.Length; i++)
             {
-                if (expected[i].StartsWith("Date:"))
+                if ((expected[i].StartsWith("Date:") && actual[i].StartsWith("Date:") == false) ||
+                    (expected[i].StartsWith("Date:") == false && expected[i] != actual[i]))
                 {
-                    if (actual[i].StartsWith("Date:") == false)
-                        throw new InvalidOperationException("Line " + i + " doesn't match for " + file + "\r\nExpected: " +
-                                                          expected[i] +
-                                                          "\r\nActual: " + actual[i] + "\r\nExpected full: \r\n" +
-                                                          expectedFull + "\r\nActual full: \r\n" + actualFull);
-
-                }
-                else if (expected[i] != actual[i])
-                {
-                    throw new InvalidOperationException("Line " + i + " doesn't match for " + file + "\r\nExpected: " +
-                                                        expected[i] +
-                                                        "\r\nActual: " + actual[i] + "\r\nExpected full: \r\n" +
-                                                        expectedFull + "\r\nActual full: \r\n" + actualFull);
+                    string message = string.Format("Line {0} doesn't match for {1}\r\nExpected: {2}\r\nActual: {3}\r\nExpected full: \r\n{4}\r\nActual full: \r\n{5}",
+                        i, file, expected[i], actual[i], expectedFull, actualFull);
+                    throw new InvalidOperationException(message);
                 }
             }
         }
