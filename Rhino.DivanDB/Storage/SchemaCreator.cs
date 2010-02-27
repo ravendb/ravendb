@@ -8,7 +8,7 @@ namespace Rhino.DivanDB.Storage
     public class SchemaCreator
     {
         private readonly Session session;
-        public const string SchemaVersion = "1.2";
+        public const string SchemaVersion = "1.3";
 
         public SchemaCreator(Session session)
         {
@@ -59,7 +59,7 @@ namespace Rhino.DivanDB.Storage
 
             Api.JetAddColumn(session, tableid, "data", new JET_COLUMNDEF
             {
-                coltyp = JET_coltyp.LongText,
+                coltyp = JET_coltyp.LongBinary,
                 grbit = ColumndefGrbit.ColumnTagged
             }, null, 0, out columnid);
 

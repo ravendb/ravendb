@@ -149,9 +149,9 @@ namespace Rhino.DivanDB.Storage
                 if (id > endId)
                     break;
 
-                var data = Api.RetrieveColumnAsString(session, documents, documentsColumns["data"], Encoding.Unicode);
+                var data = Api.RetrieveColumn(session, documents, documentsColumns["data"]);
                 logger.DebugFormat("Document with id '{0}' was found, doc length: {1}", id, data.Length);
-                yield return new DocumentAndId {Document = data, Id = id};
+                yield return new DocumentAndId { Document = Encoding.UTF8.GetString(data), Id = id };
 
                 if((++count) > limit)
                     yield break;
@@ -164,7 +164,7 @@ namespace Rhino.DivanDB.Storage
             using (var update = new Update(session, documents, JET_prep.Insert))
             {
                 Api.SetColumn(session, documents, documentsColumns["key"], key, Encoding.Unicode);
-                Api.SetColumn(session, documents, documentsColumns["data"], data, Encoding.Unicode);
+                Api.SetColumn(session, documents, documentsColumns["data"], Encoding.UTF8.GetBytes(data));
 
                 update.Save();
             }
