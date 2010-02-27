@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.IO;
 using System.Reflection;
 using Xunit;
 using Xunit.Sdk;
@@ -12,7 +13,7 @@ namespace Rhino.DivanDB.Tests.Scenarios
 
         protected override IEnumerable<ITestCommand> EnumerateTestCommands(MethodInfo method)
         {
-            return Enumerable.Select<string, ITestCommand>(Directory.GetDirectories(Path), directory => new ScenarioCommand(directory, method) as ITestCommand);
+            return Enumerable.Select(Directory.GetDirectories(Path), directory => new ScenarioCommand(directory, method) as ITestCommand);
         }
     }
 }

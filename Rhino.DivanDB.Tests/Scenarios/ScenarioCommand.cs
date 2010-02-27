@@ -24,63 +24,91 @@ namespace Rhino.DivanDB.Tests.Scenarios
         {
             string tempFileName = Path.GetTempFileName();
             File.Delete(tempFileName);
-            using (new DivanServer(tempFileName,55080))
+            try
             {
-                foreach (var requestFile in Directory.GetFiles(directory, "*.request")
-                    .OrderBy(file => OrderFromRequestName(file)))
+                using (new DivanServer(tempFileName, 55080))
                 {
-                    string responseFile = Path.Combine(Path.GetDirectoryName(requestFile),
-                                                       Path.GetFileNameWithoutExtension(requestFile) + ".response");
-                    if(File.Exists(responseFile)==false)
+                    foreach (var requestFile in Directory.GetFiles(directory, "*.request")
+                        .OrderBy(file => OrderFromRequestName(file)))
                     {
-                        throw new InvalidOperationException("Cannot find matching response file " + responseFile);
-                    }
-                    using(var client = new TcpClient("localhost", 55080))
-                    using (var stream = client.GetStream())
-                    {
-                        byte[] request = File.ReadAllBytes(requestFile);
-                        stream.Write(request, 0, request.Length);
-
-                        using(var sr = new StreamReader(stream))
+                        string responseFile = Path.Combine(Path.GetDirectoryName(requestFile),
+                                              Path.GetFileNameWithoutExtension(requestFile) + ".response");
+                        if (File.Exists(responseFile) == false)
                         {
-                            string actual = sr.ReadToEnd();
-                            string expected = File.ReadAllText(responseFile);
-                            if(CompareResponses(expected.Split(new[] { Environment.NewLine }, StringSplitOptions.None),
-                                                actual.Split(new[] {Environment.NewLine}, StringSplitOptions.None)
-                                   ) == false)
-                            {
-                                throw new InvalidOperationException("Expected: \r\n" +expected + "\r\n\r\nActual: \r\n"+ actual);
-                            }
+                            throw new InvalidOperationException("Cannot find matching response file " + responseFile);
+                        }
+                        try
+                        {
+                            TestSingleRequest(requestFile, responseFile);
+                        }
+                        catch (Exception e)
+                        {
+                            return new FailedResult(methodInfo, e, Path.GetFileName(directory));
                         }
                     }
                 }
             }
+            finally
+            {
+                Directory.Delete(tempFileName, true);
+            }
             return new PassedResult(methodInfo, Path.GetFileName(directory));
         }
 
-        private static bool CompareResponses(string[] expected, string[] actual)
+        private void TestSingleRequest(string requestFile, string responseFile)
         {
-            if(expected.Length!=actual.Length)
-                return false;
+            using (var client = new TcpClient("localhost", 55080))
+            using (var stream = client.GetStream())
+            {
+                byte[] request = File.ReadAllBytes(requestFile);
+                stream.Write(request, 0, request.Length);
+
+                using (var sr = new StreamReader(stream))
+                {
+                    string actual = sr.ReadToEnd();
+                    string expected = File.ReadAllText(responseFile);
+
+                    CompareResponses(
+                        responseFile,
+                        expected,
+                        actual,
+                        expected.Split(new[] { Environment.NewLine }, StringSplitOptions.None),
+                        actual.Split(new[] { Environment.NewLine }, StringSplitOptions.None)
+                        );
+                }
+            }
+        }
+
+        private static void CompareResponses(string file, string expectedFull, string actualFull, string[] expected, string[] actual)
+        {
+            if (expected.Length != actual.Length)
+            {
+                throw new InvalidOperationException(file + " doesn't match.\r\nExpected: " + expectedFull +
+                                                           "\r\nActual: " + actualFull);
+
+            }
 
             for (int i = 0; i < actual.Length; i++)
             {
-                if(expected[i].StartsWith("Date:"))
+                if (expected[i].StartsWith("Date:"))
                 {
-                    if(actual[i].StartsWith("Date:") == false)
-                        return false;
+                    if (actual[i].StartsWith("Date:") == false)
+                        throw new InvalidOperationException("Line " + i + " doesn't match for " + file + "\r\nExpected: " + expected[i] +
+                                                            "\r\nActual: " + actual[i]);
                 }
-                else if(expected[i] != actual[i])
-                    return false;
+                else if (expected[i] != actual[i])
+                {
+                    throw new InvalidOperationException("Line " + i + " doesn't match for " + file + "\r\nExpected: " + expected[i] +
+                                                        "\r\nActual: " + actual[i]);
+                }
             }
-            return true;
         }
 
         private static int OrderFromRequestName(string file)
         {
             string number = Path.GetFileNameWithoutExtension(file).Split('_').First();
             int result;
-            if(int.TryParse(number, out result) == false)
+            if (int.TryParse(number, out result) == false)
                 throw new InvalidOperationException("Could not extract order from: " + file);
             return result;
         }
