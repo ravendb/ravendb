@@ -16,7 +16,7 @@ namespace Rhino.DivanDB.Server.Responders
 
         protected override void Respond(KayakContext context)
         {
-            var match = urlMatcher.Match(context.Request.RequestUri);
+            var match = urlMatcher.Match(context.Request.Path);
             var index = match.Groups[1].Value;
 
             switch (context.Request.Verb)

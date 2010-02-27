@@ -3,7 +3,7 @@ using Rhino.DivanDB.Server.Responders;
 
 namespace Rhino.DivanDB.Server.Responders
 {
-    public class Static : KayakResponder
+    public abstract class Static : KayakResponder
     {
         public override string UrlPattern
         {
@@ -17,7 +17,7 @@ namespace Rhino.DivanDB.Server.Responders
 
         protected override void Respond(KayakContext context)
         {
-            var match = urlMatcher.Match(context.Request.RequestUri);
+            var match = urlMatcher.Match(context.Request.Path);
             var filename = match.Groups[1].Value;
             switch (context.Request.Verb)
             {

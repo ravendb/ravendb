@@ -19,7 +19,7 @@ namespace Rhino.DivanDB.Server.Responders
 
         protected override void Respond(KayakContext context)
         {
-            var match = urlMatcher.Match(context.Request.RequestUri);
+            var match = urlMatcher.Match(context.Request.Path);
             var docId = match.Groups[1].Value;
             switch (context.Request.Verb)
             {
@@ -54,7 +54,7 @@ namespace Rhino.DivanDB.Server.Responders
                     context.Response.SetStatusToBadRequest();
                     var err = string.Format(
                         "PUT on {0} but the document contained '_id' property with: '{1}'",
-                        context.Request.RequestUri, idVal);
+                        context.Request.Path, idVal);
                     context.Response.WriteLine(err);
                     return;
                 }
