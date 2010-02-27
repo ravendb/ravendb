@@ -55,11 +55,10 @@
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Responders\GetDocs.cs" />
-    <Compile Include="Responders\GetDocument.cs" />
+    <Compile Include="Responders\Docs.cs" />
+    <Compile Include="Responders\Document.cs" />
     <Compile Include="Responders\KayakExtensions.cs" />
     <Compile Include="Responders\KayakResponder.cs" />
-    <Compile Include="Responders\PutDocument.cs" />
     <Compile Include="Responders\PutQuery.cs" />
     <Compile Include="Responders\QueryIndex.cs" />
     <Compile Include="Responders\Query.cs" />

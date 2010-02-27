@@ -8,6 +8,7 @@ using Newtonsoft.Json.Linq;
 using Rhino.DivanDB.Indexing;
 using Rhino.DivanDB.Storage;
 using Rhino.DivanDB.Tasks;
+using Rhino.DivanDB.Extensions;
 
 namespace Rhino.DivanDB
 {
@@ -106,9 +107,9 @@ namespace Rhino.DivanDB
         [DllImport("rpcrt4.dll", SetLastError = true)]
         private static extern int UuidCreateSequential(out Guid value);
 
-        public string Get(string key)
+        public byte[] Get(string key)
         {
-            string document = null;
+            byte[] document = null;
             TransactionalStorage.Batch(actions =>
                                       {
                                           document = actions.DocumentByKey(key);
@@ -183,7 +184,7 @@ namespace Rhino.DivanDB
                                   select actions.DocumentByKey(key)
                                       into doc
                                       where doc != null
-                                      select JObject.Parse(doc));
+                                      select doc.ToJson());
                     actions.Commit();
                 });
             return new QueryResult

@@ -68,6 +68,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="DocumentDatabase.cs" />
+    <Compile Include="Extensions\JsonExtensions.cs" />
     <Compile Include="Indexing\Index.cs" />
     <Compile Include="Indexing\TaskExecuter.cs" />
     <Compile Include="Indexing\WorkContext.cs" />

@@ -51,7 +51,7 @@ namespace Rhino.DivanDB.Storage
             }
         }
 
-        public string DocumentByKey(string key)
+        public byte[] DocumentByKey(string key)
         {
             Api.JetSetCurrentIndex(session, documents, "by_key");
             Api.MakeKey(session, documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -60,8 +60,8 @@ namespace Rhino.DivanDB.Storage
                 logger.DebugFormat("Document with key '{0}' was not found", key);
                 return null;
             }
-            var data = Api.RetrieveColumnAsString(session, documents, documentsColumns["data"]);
-            logger.DebugFormat("Document with key '{0}' was found, doc length: {1}", key, data.Length);
+            var data = Api.RetrieveColumn(session, documents, documentsColumns["data"]);
+            logger.DebugFormat("Document with key '{0}' was found", key);
             return data;
         }
 

@@ -1,6 +1,7 @@
 using System;
 using Microsoft.Isam.Esent.Interop;
 using Newtonsoft.Json.Linq;
+using Rhino.DivanDB.Extensions;
 using Xunit;
 
 namespace Rhino.DivanDB.Tests.Storage

@@ -6,17 +6,28 @@ namespace Rhino.DivanDB.Server.Responders
     {
         public override string UrlPattern
         {
-            get { return "/queries"; }
+            get { return @"/queries/([\w\d_-]+)"; }
         }
 
         public override string[] SupportedVerbs
         {
-            get { return new[] {"GET"}; }
+            get { return new[] { "GET" }; }
         }
 
         protected override void Respond(KayakContext context)
         {
-            context.WriteJson(Database.ViewStorage.ViewNames);
+            var match = urlMatcher.Match(context.Request.RequestUri);
+            var index = match.Groups[1].Value;
+            var query = context.Request.QueryString["query"];
+
+            if (query == null)
+            {
+                context.WriteJson(new { view = Database.ViewStorage.GetViewDefinition(index) });
+            }
+            else
+            {
+                context.WriteJson(Database.Query(index, query));
+            }
         }
     }
 }

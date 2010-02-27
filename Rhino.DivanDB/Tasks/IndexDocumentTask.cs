@@ -1,5 +1,6 @@
 ﻿using System;
 using Newtonsoft.Json.Linq;
+using Rhino.DivanDB.Extensions;
 using Rhino.DivanDB.Indexing;
 using Rhino.DivanDB.Json;
 
@@ -25,7 +26,7 @@ namespace Rhino.DivanDB.Tasks
                                                      return;
                                                  }
 
-                                                 var json = new JsonDynamicObject(JObject.Parse(doc));
+                                                 var json = new JsonDynamicObject(doc.ToJson());
 
                                                  foreach (var viewName in context.ViewStorage.ViewNames)
                                                  {

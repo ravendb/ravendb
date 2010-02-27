@@ -4,7 +4,7 @@ using Kayak;
 
 namespace Rhino.DivanDB.Server.Responders
 {
-    public class GetDocument : KayakResponder
+    public class Document : KayakResponder
     {
         public override string UrlPattern
         {
@@ -13,18 +13,23 @@ namespace Rhino.DivanDB.Server.Responders
 
         public override string[] SupportedVerbs
         {
-            get { return new[]{"GET"}; }
+            get { return new[]{"GET","DELETE"}; }
         }
 
         protected override void Respond(KayakContext context)
         {
             var match = urlMatcher.Match(context.Request.RequestUri);
             var docId = match.Groups[1].Value;
-            var doc = Database.Get(docId);
-            if (doc != null)
-                context.Response.Write(doc);
-            else
-                context.Response.SetStatusToNotFound();
+            switch (context.Request.Verb)
+            {
+                case "GET":
+                    context.WriteData(Database.Get(docId));
+                    break;
+                case "DELETE":
+                    Database.Delete(docId);
+                    context.Response.SetStatusToDeleted();
+                    break;
+            }
         }
     }
 }
