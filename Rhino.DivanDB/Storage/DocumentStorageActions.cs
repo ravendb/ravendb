@@ -211,29 +211,19 @@ namespace Rhino.DivanDB.Storage
         {
             Api.JetSetCurrentIndex(session, files, "by_name");
             Api.MakeKey(session, files, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
-            if (Api.TrySeek(session, files, SeekGrbit.SeekEQ) == false)
+            var prep = (Api.TrySeek(session, files, SeekGrbit.SeekEQ) == false)
+                              ? JET_prep.Insert
+                              : JET_prep.Replace;
+            using (var update = new Update(session, files, prep))
             {
-                using (var update = new Update(session, files, JET_prep.Insert))
-                {
-                    Api.SetColumn(session, files, filesColumns["name"], key, Encoding.Unicode);
-                    Api.SetColumn(session, files, filesColumns["data"], data);
-                    Api.SetColumn(session, files, filesColumns["headers"], headers,Encoding.Unicode);
+                Api.SetColumn(session, files, filesColumns["name"], key, Encoding.Unicode);
+                Api.SetColumn(session, files, filesColumns["data"], data);
+                Api.SetColumn(session, files, filesColumns["headers"], headers, Encoding.Unicode);
 
-                    update.Save();
-                }
-            }
-            else
-            {
-                using (var update = new Update(session, files, JET_prep.Replace))
-                {
-                    Api.SetColumn(session, files, filesColumns["name"], key, Encoding.Unicode);
-                    Api.SetColumn(session, files, filesColumns["data"], data);
-
-                    update.Save();
-                }
+                update.Save();
             }
         }
-        
+
         public void DeleteAttachment(string key)
         {
             Api.JetSetCurrentIndex(session, files, "by_name");
@@ -260,7 +250,7 @@ namespace Rhino.DivanDB.Storage
             return new Tuple<byte[], string>
             {
                 First = Api.RetrieveColumn(session, files, filesColumns["data"]),
-                Second= Api.RetrieveColumnAsString(session, files, filesColumns["header"], Encoding.Unicode)
+                Second= Api.RetrieveColumnAsString(session, files, filesColumns["headers"], Encoding.Unicode)
             };
         }
 
