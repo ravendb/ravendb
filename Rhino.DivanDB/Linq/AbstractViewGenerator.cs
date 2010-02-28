@@ -17,6 +17,11 @@ namespace Rhino.DivanDB.Linq
 
         public Expression<IndexingFunc> IndexDefinition { get; protected set; }
 
+        public AbstractViewGenerator()
+        {
+            AccessedFields = new HashSet<string>();
+        }
+
         public Type GeneratedType
         {
             get
@@ -39,6 +44,8 @@ namespace Rhino.DivanDB.Linq
                 return compiledDefinition;
             }
         }
+
+        public HashSet<string> AccessedFields { get; set; }
 
         private void ForceCompilationIfNeeded()
         {

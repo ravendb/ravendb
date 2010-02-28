@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using ICSharpCode.NRefactory.Ast;
 using ICSharpCode.NRefactory.Visitors;
@@ -8,12 +7,18 @@ namespace Rhino.DivanDB.Linq
     public class TransformVisitor : AbstractAstTransformer
     {
         private string identifier;
+        public HashSet<string> FieldNames { get; set; }
 
         public string Name { get; set; }
 
+        public TransformVisitor()
+        {
+            FieldNames = new HashSet<string>();
+        }
+
         public override object VisitQueryExpressionFromClause(QueryExpressionFromClause queryExpressionFromClause, object data)
         {
-            this.identifier = queryExpressionFromClause.Identifier;
+            identifier = queryExpressionFromClause.Identifier;
             return base.VisitQueryExpressionFromClause(queryExpressionFromClause, data);
         }
 
@@ -51,13 +56,15 @@ namespace Rhino.DivanDB.Linq
 
         public override object VisitMemberReferenceExpression(MemberReferenceExpression memberReferenceExpression, object data)
         {
-            var identifierExpression = memberReferenceExpression.TargetObject as IdentifierExpression;
-            if (identifierExpression == null || identifierExpression.Identifier != identifier)
+            var identifierExpression = GetIdentifierExpression(memberReferenceExpression);
+            if (identifierExpression == null || identifierExpression.Identifier != identifier ||
+                memberReferenceExpression.MemberName == "Unwrap")
                 return base.VisitMemberReferenceExpression(memberReferenceExpression, data);
            
             var indexerExpression = new IndexerExpression(
                 memberReferenceExpression.TargetObject,
                 new List<Expression> { new PrimitiveExpression(memberReferenceExpression.MemberName, memberReferenceExpression.MemberName) });
+            FieldNames.Add(memberReferenceExpression.MemberName);
 
             if (ShouldAddNamedArg(memberReferenceExpression))
             {
@@ -75,7 +82,15 @@ namespace Rhino.DivanDB.Linq
                 ReplaceCurrentNode(indexerExpression);
             }
             indexerExpression.Parent = memberReferenceExpression.Parent;
-            return indexerExpression;
+            return base.VisitIndexerExpression(indexerExpression, data); ;
+        }
+
+        private static IdentifierExpression GetIdentifierExpression(MemberReferenceExpression memberReferenceExpression)
+        {
+            var referenceExpression = memberReferenceExpression.TargetObject as MemberReferenceExpression;
+            if (referenceExpression != null)
+                return GetIdentifierExpression(referenceExpression);
+            return memberReferenceExpression.TargetObject as IdentifierExpression;
         }
 
         private static bool ShouldAddNamedArg(INode node)

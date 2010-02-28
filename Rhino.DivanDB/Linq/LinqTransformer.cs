@@ -80,7 +80,7 @@ namespace Rhino.DivanDB.Linq
             compilerResults = results;
         }
 
-        private string LinqQueryToImplicitClass()
+        public string LinqQueryToImplicitClass()
         {
             var preProcessedSource = "var query = " + source;
             var parser = ParserFactory.CreateParser(SupportedLanguage.CSharp, new StringReader(preProcessedSource));
@@ -90,7 +90,6 @@ namespace Rhino.DivanDB.Linq
 
             var visitor = new TransformVisitor{Name = Name};
             block.AcceptVisitor(visitor, null);
-
 
 
             var type = new TypeDeclaration(Modifiers.Public, new List<AttributeSection>())
@@ -125,7 +124,16 @@ namespace Rhino.DivanDB.Linq
                                                },
                                            ExpressionBody = variable.Initializer
                                        })));
-
+            foreach (var fieldName in visitor.FieldNames)
+            {
+                ctor.Body.AddChild(new ExpressionStatement(
+                    new InvocationExpression(
+                        new MemberReferenceExpression(
+                            new IdentifierExpression("AccessedFields"), "Add"),
+                        new List<Expression> { new PrimitiveExpression(fieldName, fieldName) }
+                        )
+                    ));
+            }
             
             var unit = new CompilationUnit();
             unit.AddChild(new Using(typeof(AbstractViewGenerator).Namespace));
