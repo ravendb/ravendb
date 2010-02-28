@@ -2,14 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
-using Kayak;
+using System.Net;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Linq;
 
 namespace Rhino.DivanDB.Server.Responders
 {
-    public static class KayakExtensions
+    public static class HttpExtensions
     {
         private static readonly HashSet<string> HeadersToIgnore = new HashSet<string>
         {
@@ -18,88 +18,105 @@ namespace Rhino.DivanDB.Server.Responders
             "Content-Length"
         };
 
-        public static NameValueCollection ToNameValueCollection(this NameValueDictionary self)
+        public static NameValueCollection FilterHeaders(this NameValueCollection self)
         {
-            var nvc = new NameValueCollection();
-
-            foreach (var k in self)
+            var nameValueCollection = new NameValueCollection(self);
+            foreach (var header in HeadersToIgnore)
             {
-                if(HeadersToIgnore.Contains(k.Name))
-                    continue;
-
-                foreach (var val in k.Values)
-                {
-                    nvc.Add(k.Name, val);
-                }
+                nameValueCollection.Remove(header);
             }
-
-            return nvc;
+            return nameValueCollection;
         }
 
-        public static JObject ReadJson(this KayakContext context)
+        public static JObject ReadJson(this HttpListenerContext context)
         {
             using (var streamReader = new StreamReader(context.Request.InputStream))
             using (var jsonReader = new JsonTextReader(streamReader))
                 return JObject.Load(jsonReader);
         }
 
-        public static string ReadString(this KayakContext context)
+        public static string ReadString(this HttpListenerContext context)
         {
             using (var streamReader = new StreamReader(context.Request.InputStream))
                 return streamReader.ReadToEnd();
         }
 
-        public static void WriteJson(this KayakContext context, object obj)
+        public static void WriteJson(this HttpListenerContext context, object obj)
         {
             context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
+            var streamWriter = new StreamWriter(context.Response.OutputStream);
             new JsonSerializer
             {
                 Converters = {new JsonToJsonConverter()}
-            }.Serialize(context.Response.Output, obj);
+            }.Serialize(streamWriter, obj);
+            streamWriter.Flush();
         }
 
-        public static void WriteJson(this KayakContext context, JToken obj)
+        public static void WriteJson(this HttpListenerContext context, JToken obj)
         {
             context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
-            obj.WriteTo(new JsonTextWriter(context.Response.Output));
+            var streamWriter = new StreamWriter(context.Response.OutputStream);
+            var jsonTextWriter = new JsonTextWriter(streamWriter);
+            obj.WriteTo(jsonTextWriter);
+            jsonTextWriter.Flush();
+            streamWriter.Flush();
         }
 
-        public static void WriteData(this KayakContext context, byte[] data, NameValueCollection headers)
+        public static void WriteData(this HttpListenerContext context, byte[] data, NameValueCollection headers)
         {
             foreach (var header in headers.AllKeys)
             {
                 context.Response.Headers[header] = headers[header];
             }
-            Stream stream = context.Response.GetDirectOutputStream(data.Length);
-            stream.Write(data, 0, data.Length);
+            context.Response.ContentLength64 = data.Length;
+            context.Response.OutputStream.Write(data, 0, data.Length);
+            context.Response.OutputStream.Flush();
         }
 
-        public static void SetStatusToDeleted(this KayakContext context)
+        public static void SetStatusToDeleted(this HttpListenerContext context)
         {
             context.Response.StatusCode = 204;
-            context.Response.ReasonPhrase = "No Content";
+            context.Response.StatusDescription = "No Content";
         }
 
-        public static void SetStatusToCreated(this KayakContext context, string location)
+        public static void SetStatusToCreated(this HttpListenerContext context, string location)
         {
-            context.Response.SetStatusToCreated();
+            context.Response.StatusCode = 201;
+            context.Response.StatusDescription = "Created";
             context.Response.Headers["Location"] = location;
         }
 
+        public static void SetStatusToNotFound(this HttpListenerContext context)
+        {
+            context.Response.StatusCode = 404;
+            context.Response.StatusDescription = "Not Found";
+        }
+
+        public static void SetStatusToBadRequest(this HttpListenerContext context)
+        {
+            context.Response.StatusCode = 400;
+            context.Response.StatusDescription = "Bad Request";
+        }
+
+        public static void Write(this HttpListenerContext context, string str)
+        {
+            var sw = new StreamWriter(context.Response.OutputStream);
+            sw.Write(str);
+            sw.Flush();
+        }
 
         /// <summary>
         /// Reads the entire request buffer to memory and
         /// return it as a byte array.
         /// </summary>
-        public static byte[] ReadData(this KayakContext context)
+        public static byte[] ReadData(this Stream steram)
         {
             var list = new List<byte[]>();
-            var inputStream = context.Request.InputStream;
             const int defaultBufferSize = 1024*16;
             var buffer = new byte[defaultBufferSize];
             int offset = 0;
             int read;
-            while ((read = inputStream.Read(buffer, offset, buffer.Length - offset)) != 0)
+            while ((read = steram.Read(buffer, offset, buffer.Length - offset)) != 0)
             {
                 offset += read;
                 if (offset == buffer.Length)
@@ -121,14 +138,14 @@ namespace Rhino.DivanDB.Server.Responders
             return result;
         }
 
-        public static int GetStart(this KayakContext context)
+        public static int GetStart(this HttpListenerContext context)
         {
             int start;
             int.TryParse(context.Request.QueryString["start"], out start);
             return start;
         }
 
-        public static int GetPageSize(this KayakContext context)
+        public static int GetPageSize(this HttpListenerContext context)
         {
             int pageSize;
             int.TryParse(context.Request.QueryString["pageSize"], out pageSize);
@@ -138,6 +155,7 @@ namespace Rhino.DivanDB.Server.Responders
                 pageSize = 1024;
             return pageSize;
         }
+
 
         #region Nested type: JsonToJsonConverter
 

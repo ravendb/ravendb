@@ -1,8 +1,8 @@
-using Kayak;
+using System.Net;
 
 namespace Rhino.DivanDB.Server.Responders
 {
-    public class Indexes : KayakResponder
+    public class Indexes : RequestResponder
     {
         public override string UrlPattern
         {
@@ -14,7 +14,7 @@ namespace Rhino.DivanDB.Server.Responders
             get { return new[] {"GET"}; }
         }
 
-        protected override void Respond(KayakContext context)
+        public override void Respond(HttpListenerContext context)
         {
             context.WriteJson(Database.IndexDefinitionStorage.IndexNames);
         }

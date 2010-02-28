@@ -1,9 +1,8 @@
-using System;
-using Kayak;
+using System.Net;
 
 namespace Rhino.DivanDB.Server.Responders
 {
-    public class Root : KayakResponder
+    public class Root : RequestResponder
     {
         public override string UrlPattern
         {
@@ -15,7 +14,7 @@ namespace Rhino.DivanDB.Server.Responders
             get { return new[]{"GET"}; }
         }
 
-        protected override void Respond(KayakContext context)
+        public override void Respond(HttpListenerContext context)
         {
             context.Response.Redirect("/divan/index.html");
         }

@@ -1,9 +1,8 @@
-using Kayak;
-using System.Linq;
+using System.Net;
 
 namespace Rhino.DivanDB.Server.Responders
 {
-    public class Static : KayakResponder
+    public class Static : RequestResponder
     {
         public override string UrlPattern
         {
@@ -15,23 +14,23 @@ namespace Rhino.DivanDB.Server.Responders
             get { return new[] {"GET", "PUT", "DELETE"}; }
         }
 
-        protected override void Respond(KayakContext context)
+        public override void Respond(HttpListenerContext context)
         {
-            var match = urlMatcher.Match(context.Request.Path);
+            var match = urlMatcher.Match(context.Request.Url.LocalPath);
             var filename = match.Groups[1].Value;
-            switch (context.Request.Verb)
+            switch (context.Request.HttpMethod)
             {
                 case "GET":
                     var attachmentAndHeaders = Database.GetStatic(filename);
                     if(attachmentAndHeaders == null)
                     {
-                        context.Response.SetStatusToNotFound();
+                        context.SetStatusToNotFound();
                         return;
                     }
                     context.WriteData(attachmentAndHeaders.First, attachmentAndHeaders.Second);
                     break;
                 case "PUT":
-                    Database.PutStatic(filename, context.ReadData(), context.Request.Headers.ToNameValueCollection());
+                    Database.PutStatic(filename, context.Request.InputStream.ReadData(), context.Request.Headers.FilterHeaders());
                     context.SetStatusToCreated("/static/"+filename);
                     break;
                 case "DELETE":

@@ -31,10 +31,6 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Kayak, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\Kayak.dll</HintPath>
-    </Reference>
     <Reference Include="Newtonsoft.Json, Version=3.5.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Newtonsoft.Json.dll</HintPath>
@@ -54,12 +50,13 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="DivanServer.cs" />
+    <Compile Include="HttpServer.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Responders\Docs.cs" />
     <Compile Include="Responders\Document.cs" />
-    <Compile Include="Responders\KayakExtensions.cs" />
-    <Compile Include="Responders\KayakResponder.cs" />
+    <Compile Include="Responders\HttpExtensions.cs" />
+    <Compile Include="Responders\RequestResponder.cs" />
     <Compile Include="Responders\Index.cs" />
     <Compile Include="Responders\Indexes.cs" />
     <Compile Include="Responders\Root.cs" />
