@@ -22,7 +22,8 @@ namespace Rhino.DivanDB.Tryouts
             {
                 var linqTransformer = new LinqTransformer("pagesByTitle", query, "docs", Path.GetTempPath(), typeof(JsonDynamicObject));
                 linqTransformer.Compile();
-                Console.WriteLine(linqTransformer.LinqQueryToImplicitClass());
+                File.WriteAllText("a.txt",linqTransformer.LinqQueryToImplicitClass());
+                Process.Start("a.txt");
             }
             catch (Exception e)
             {

@@ -77,14 +77,14 @@ namespace Rhino.DivanDB.Indexing
             directory.Close();
         }
 
-        public IEnumerable<string> Query(string query)
+        public IEnumerable<string> Query(string query, int start, int pageSize)
         {
             log.DebugFormat("Issuing query on index {0} for: {1}", name, query);
             var luceneQuery = new QueryParser("", new StandardAnalyzer()).Parse(query);
             using (searcher.Use())
             {
                 var search = searcher.Searcher.Search(luceneQuery);
-                for (int i = 0; i < search.Length(); i++)
+                for (int i = start; i < search.Length() && (i - start) < pageSize; i++)
                 {
                     yield return search.Doc(i).GetField("_id").StringValue();
                 }

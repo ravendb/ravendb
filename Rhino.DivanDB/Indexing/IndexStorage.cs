@@ -75,7 +75,7 @@ namespace Rhino.DivanDB.Indexing
             }
         }
 
-        public IEnumerable<string> Query(string index, string query)
+        public IEnumerable<string> Query(string index, string query, int start, int pageSize)
         {
             Index value;
             if (indexes.TryGetValue(index, out value) == false)
@@ -83,7 +83,7 @@ namespace Rhino.DivanDB.Indexing
                 log.DebugFormat("Query on non existing index {0}", index);
                 throw new InvalidOperationException("Index " + index + " does not exists");
             }
-            return value.Query(query);
+            return value.Query(query, start, pageSize);
         }
 
         public void RemoveFromIndex(string index, string[] keys)

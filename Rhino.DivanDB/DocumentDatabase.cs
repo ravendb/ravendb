@@ -176,7 +176,7 @@ namespace Rhino.DivanDB
             return transformer.Name;
         }
 
-        public QueryResult Query(string index, string query)
+        public QueryResult Query(string index, string query, int start, int pageSize)
         {
             var list = new List<JObject>();
             var stale = false;
@@ -184,7 +184,7 @@ namespace Rhino.DivanDB
                 actions =>
                 {
                     stale = actions.DoesTasksExistsForIndex(index);
-                    list.AddRange(from key in IndexStorage.Query(index, query)
+                    list.AddRange(from key in IndexStorage.Query(index, query, start, pageSize)
                                   select actions.DocumentByKey(key)
                                       into doc
                                       where doc != null

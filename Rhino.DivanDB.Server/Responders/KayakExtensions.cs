@@ -121,6 +121,24 @@ namespace Rhino.DivanDB.Server.Responders
             return result;
         }
 
+        public static int GetStart(this KayakContext context)
+        {
+            int start;
+            int.TryParse(context.Request.QueryString["start"], out start);
+            return start;
+        }
+
+        public static int GetPageSize(this KayakContext context)
+        {
+            int pageSize;
+            int.TryParse(context.Request.QueryString["pageSize"], out pageSize);
+            if (pageSize == 0)
+                pageSize = 25;
+            if (pageSize > 1024)
+                pageSize = 1024;
+            return pageSize;
+        }
+
         #region Nested type: JsonToJsonConverter
 
         public class JsonToJsonConverter : JsonConverter

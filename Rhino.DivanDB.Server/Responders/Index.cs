@@ -44,7 +44,7 @@ namespace Rhino.DivanDB.Server.Responders
             }
             else
             {
-                context.WriteJson(Database.Query(index, query));
+                context.WriteJson(Database.Query(index, query, context.GetStart(), context.GetPageSize()));
             }
         }
     }

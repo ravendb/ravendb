@@ -22,7 +22,7 @@ namespace Rhino.DivanDB.Server.Responders
             switch (context.Request.Verb)
             {
                 case "GET":
-                    context.WriteJson(Database.GetDocuments(GetStart(context), GetPageSize(context)));
+                    context.WriteJson(Database.GetDocuments(context.GetStart(), context.GetPageSize()));
                     break;
                 case "POST":
                     var json = context.ReadJson();
@@ -39,24 +39,6 @@ namespace Rhino.DivanDB.Server.Responders
                     context.WriteJson(new { id });
                     break;
             }
-        }
-
-        private int GetStart(KayakContext context)
-        {
-            int start;
-            int.TryParse(context.Request.QueryString["start"], out start);
-            return start;
-        }
-
-        private int GetPageSize(KayakContext context)
-        {
-            int pageSize;
-            int.TryParse(context.Request.QueryString["pageSize"], out pageSize);
-            if(pageSize== 0)
-                pageSize = 25;
-            if(pageSize > 1024)
-                pageSize = 1024;
-            return pageSize;
         }
     }
 }

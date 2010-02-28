@@ -37,7 +37,7 @@ namespace Rhino.DivanDB.Tests.Indexes
             QueryResult docs;
             do
             {
-                docs = db.Query("pagesByTitle2", "some:val");
+                docs = db.Query("pagesByTitle2", "some:val",0,10);
             } while (docs.IsStale);
             Assert.Equal(1, docs.Results.Length);
         }
@@ -63,7 +63,7 @@ namespace Rhino.DivanDB.Tests.Indexes
             QueryResult docs;
             do
             {
-                docs = db.Query("pagesByTitle2", "some:val");
+                docs = db.Query("pagesByTitle2", "some:val",0,10);
             } while (docs.IsStale);
             Assert.Equal(1, docs.Results.Length);
         }
@@ -89,7 +89,7 @@ namespace Rhino.DivanDB.Tests.Indexes
             QueryResult docs;
             do
             {
-                docs = db.Query("pagesByTitle", "other:var");
+                docs = db.Query("pagesByTitle", "other:var",0,10);
             } while (docs.IsStale);
             Assert.Equal(1, docs.Results.Length);
         }
@@ -108,7 +108,7 @@ namespace Rhino.DivanDB.Tests.Indexes
             QueryResult docs;
             do
             {
-                docs = db.Query("pagesByTitle", "other:var");
+                docs = db.Query("pagesByTitle", "other:var",0,10);
             } while (docs.IsStale);
             Assert.Equal(1, docs.Results.Length);
         }
@@ -128,7 +128,7 @@ namespace Rhino.DivanDB.Tests.Indexes
             QueryResult docs;
             do
             {
-                docs = db.Query("pagesByTitle", "other:var");
+                docs = db.Query("pagesByTitle", "other:var",0,10);
             } while (docs.IsStale);
             Assert.Equal(2, docs.Results.Length);
         }
