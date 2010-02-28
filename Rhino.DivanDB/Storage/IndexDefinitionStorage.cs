@@ -28,7 +28,8 @@ namespace Rhino.DivanDB.Storage
                 var indexDef = File.ReadAllText(index);
                 try
                 {
-                    CompileIndex(Path.GetFileNameWithoutExtension(index),indexDef);
+                    var transformer = CompileIndex(Path.GetFileNameWithoutExtension(index),indexDef);
+                    AddIndex(transformer);
                 }
                 catch (Exception e)
                 {

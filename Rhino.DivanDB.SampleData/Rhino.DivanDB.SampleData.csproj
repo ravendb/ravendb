@@ -2,20 +2,18 @@
 <Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>9.0.30729</ProductVersion>
+    <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{267AC60C-751E-42E9-AA18-66035DEFF63A}</ProjectGuid>
-    <OutputType>Library</OutputType>
+    <ProjectGuid>{65517D5D-A193-4EFC-B28B-A74D771B6082}</ProjectGuid>
+    <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Rhino.DivanDB.Tests</RootNamespace>
-    <AssemblyName>Rhino.DivanDB.Tests</AssemblyName>
+    <RootNamespace>Rhino.DivanDB.SampleData</RootNamespace>
+    <AssemblyName>Rhino.DivanDB.SampleData</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <TargetFrameworkProfile>
+    </TargetFrameworkProfile>
     <FileAlignment>512</FileAlignment>
-    <FileUpgradeFlags>
-    </FileUpgradeFlags>
-    <OldToolsVersion>3.5</OldToolsVersion>
-    <UpgradeBackupLocation />
     <PublishUrl>publish\</PublishUrl>
     <Install>true</Install>
     <InstallFrom>Disk</InstallFrom>
@@ -32,7 +30,8 @@
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
+    <PlatformTarget>x86</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -42,7 +41,8 @@
     <WarningLevel>4</WarningLevel>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
+    <PlatformTarget>x86</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
@@ -52,48 +52,58 @@
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Esent.Interop, Version=1.0.0.0, Culture=neutral, PublicKeyToken=b93b4ad6c4b80595, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\Esent.Interop.dll</HintPath>
-    </Reference>
-    <Reference Include="Newtonsoft.Json, Version=3.5.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="Newtonsoft.Json">
       <HintPath>..\SharedLibs\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
-    <Reference Include="System.Core">
-      <RequiredTargetFramework>3.5</RequiredTargetFramework>
-    </Reference>
-    <Reference Include="System.Xml.Linq">
-      <RequiredTargetFramework>3.5</RequiredTargetFramework>
-    </Reference>
-    <Reference Include="System.Data.DataSetExtensions">
-      <RequiredTargetFramework>3.5</RequiredTargetFramework>
-    </Reference>
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
-    <Reference Include="xunit, Version=1.1.0.1323, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\xunit.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Linq\LinqTransformerCompilationTests.cs" />
-    <Compile Include="Linq\PerformingQueries.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Storage\AbstractDocumentStorageTest.cs" />
-    <Compile Include="Storage\CreateUpdateDeleteDocuments.cs" />
-    <Compile Include="Storage\CreateIndexes.cs" />
-    <Compile Include="Storage\DeleteIndexes.cs">
-      <SubType>Code</SubType>
+    <Compile Include="SampleDataCreator.cs" />
+    <Compile Include="NwindDataSet.cs">
+      <DependentUpon>NwindDataSet.xsd</DependentUpon>
     </Compile>
-    <Compile Include="Indexes\DocumentsToIndex.cs" />
+    <Compile Include="NwindDataSet.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>NwindDataSet.xsd</DependentUpon>
+    </Compile>
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+      <DependentUpon>Settings.settings</DependentUpon>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Rhino.DivanDB.Server\Rhino.DivanDB.Server.csproj">
-      <Project>{3B90EB20-AEA3-4972-8219-936F1A62768C}</Project>
-      <Name>Rhino.DivanDB.Server</Name>
-    </ProjectReference>
+    <None Include="app.config" />
+    <None Include="NwindDataSet.xsc">
+      <DependentUpon>NwindDataSet.xsd</DependentUpon>
+    </None>
+    <None Include="NwindDataSet.xsd">
+      <Generator>MSDataSetGenerator</Generator>
+      <LastGenOutput>NwindDataSet.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="NwindDataSet.xss">
+      <DependentUpon>NwindDataSet.xsd</DependentUpon>
+    </None>
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Nwind.mdb">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\Rhino.DivanDB\Rhino.DivanDB.csproj">
       <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
       <Name>Rhino.DivanDB</Name>

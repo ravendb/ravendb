@@ -17,7 +17,7 @@ namespace Rhino.DivanDB.Server.Responders
 
         protected override void Respond(KayakContext context)
         {
-            context.WriteJson(new { docCount = Database.CountOfDocuments });
+            context.WriteJson(new { docCount = Database.CountOfDocuments, indexCount = Database.CountOfIndexes });
         }
     }
 }

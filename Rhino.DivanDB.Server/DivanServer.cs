@@ -37,7 +37,7 @@ namespace Rhino.DivanDB.Server
                         })
                     )
             };
-            server.MapDirectory("/divan", @"DivanUI");
+            server.MapDirectory("/divan", @"WebUI");
             server.Start(new IPEndPoint(IPAddress.Any, port));
 
         }

@@ -73,6 +73,16 @@ namespace Rhino.DivanDB
             }
         }
 
+        public int CountOfIndexes
+        {
+            get
+            {
+                int value = 0;
+                value = IndexStorage.Indexes.Count();
+                return value;
+            }
+        }
+
         #region IDisposable Members
 
         public void Dispose()
@@ -247,6 +257,18 @@ namespace Rhino.DivanDB
                 }
                 actions.Commit();
             });
+            return list;
+        }
+
+        public JArray GetIndexNames(int start, int pageSize)
+        {
+            var list = new JArray();
+            for (int i = start; i < start + pageSize; i++)
+            {
+                if (i > IndexDefinitionStorage.IndexNames.Length - 1)
+                    break;
+                list.Add(new JValue(IndexDefinitionStorage.IndexNames[i]));
+            }
             return list;
         }
     }
