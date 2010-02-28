@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading;
+using log4net;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
@@ -16,11 +17,13 @@ namespace Rhino.DivanDB.Indexing
 {
     public class Index : IDisposable
     {
+        private ILog log = LogManager.GetLogger(typeof (Index));
+
         private class CurrentIndexSearcher
         {
-            public IndexSearcher Searcher;
+            public IndexSearcher Searcher{ get; set;}
             private int useCount;
-            private bool shouldDisposeWhenThereAreNoUsages = false;
+            private bool shouldDisposeWhenThereAreNoUsages;
 
 
             public IDisposable Use()
@@ -55,9 +58,12 @@ namespace Rhino.DivanDB.Indexing
 
         private readonly FSDirectory directory;
         private CurrentIndexSearcher searcher;
+        private readonly string name;
 
         public Index(FSDirectory directory)
         {
+            name = directory.GetFile().Name;
+            log.DebugFormat("Creating index for {0}", name);
             this.directory = directory;
             searcher = new CurrentIndexSearcher
                        {
@@ -73,6 +79,7 @@ namespace Rhino.DivanDB.Indexing
 
         public IEnumerable<string> Query(string query)
         {
+            log.DebugFormat("Issuing query on index {0} for: {1}", name, query);
             var luceneQuery = new QueryParser("", new StandardAnalyzer()).Parse(query);
             using (searcher.Use())
             {
@@ -101,6 +108,7 @@ namespace Rhino.DivanDB.Indexing
 
         public void IndexDocuments(IndexingFunc func, IEnumerable<JsonDynamicObject> documents)
         {
+            int count = 0;
             Write(indexWriter =>
                   {
                       var docs = func(documents).Cast<object>();
@@ -109,6 +117,7 @@ namespace Rhino.DivanDB.Indexing
                       bool shouldRcreateSearcher = false;
                       foreach (var doc in docs)
                       {
+                          count++;
                           var fields = new List<Field>();
                           var docId = AddValuesToDocument(fields, doc);
                           if (docId != currentId)
@@ -134,6 +143,7 @@ namespace Rhino.DivanDB.Indexing
                       }
                       return shouldRcreateSearcher;
                   });
+            log.InfoFormat("Indexed {0} documents for {1}", count, name);
         }
 
         private void RecreateSearcher()
@@ -184,6 +194,10 @@ namespace Rhino.DivanDB.Indexing
         {
             Write(writer =>
                   {
+                      if(log.IsDebugEnabled)
+                      {
+                          log.DebugFormat("Deleting ({0}) from {1}", string.Format(", ", keys), name);
+                      }
                       writer.DeleteDocuments(keys.Select(k => new Term("_id", k)).ToArray());
                       return true;
                   });
