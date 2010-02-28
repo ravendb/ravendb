@@ -1,4 +1,5 @@
 using System;
+using Lucene.Net.Documents;
 
 namespace Rhino.DivanDB.Json
 {
@@ -8,33 +9,54 @@ namespace Rhino.DivanDB.Json
 
         protected abstract object Value { get; }
 
-        public string Unwrap()
+        public static bool operator==(DynamicObject dyn, string val)
         {
-            return Value.ToString();
+            return Equals(dyn.Value, val);
         }
 
-        public static bool operator==(DynamicObject dyn, string str)
+        public static bool operator !=(DynamicObject dyn, string val)
         {
-            if (ReferenceEquals(dyn, null))
-                return str == null;
-            return dyn.Value is string && dyn.Value.Equals(str);
+            return Equals(dyn.Value, val) == false;
         }
 
-        public static implicit operator int(DynamicObject dyn)
+        public static bool operator ==(DynamicObject dyn, bool val)
         {
-            return (int) (long) dyn;
+            return Equals(dyn.Value, val);
         }
 
-        public static implicit operator long(DynamicObject dyn)
+        public static bool operator !=(DynamicObject dyn, bool val)
         {
-            if (dyn.Value is long)
-                return (long)dyn.Value;
-            throw new InvalidCastException("Cannot convert value to integer because it is: " + (dyn.Value ?? "null"));
+            return Equals(dyn.Value, val) == false;
         }
 
-        public static bool operator !=(DynamicObject dyn, string str)
+        public static bool operator ==(DynamicObject dyn, int val)
         {
-            return Equals(dyn.Value, str) == false;
+            return Equals(dyn.Value, val);
+        }
+
+        public static bool operator !=(DynamicObject dyn, int val)
+        {
+            return Equals(dyn.Value, val) == false;
+        }
+
+        public static bool operator >(DynamicObject dyn, int val)
+        {
+            return Convert.ToInt32(dyn.Value) > val;
+        }
+
+        public static bool operator <(DynamicObject dyn, int val)
+        {
+            return Convert.ToInt32(dyn.Value) < val;
+        }
+
+        public static bool operator >=(DynamicObject dyn, int val)
+        {
+            return Convert.ToInt32(dyn.Value) >= val;
+        }
+
+        public static bool operator <=(DynamicObject dyn, int val)
+        {
+            return Convert.ToInt32(dyn.Value) <= val;
         }
 
         public bool Equals(DynamicObject other)
@@ -52,7 +74,22 @@ namespace Rhino.DivanDB.Json
 
         public override int GetHashCode()
         {
-            return 0;
+            if (Value == null)
+                return 0;
+            return Value.GetHashCode();
+        }
+
+
+        public string ToIndexableString()
+        {
+            var val = Value;
+            if (val is DateTime)
+                return DateTools.DateToString((DateTime)val, DateTools.Resolution.DAY);
+
+            if (val is int)
+                return NumberTools.LongToString((int)val);
+
+            return val.ToString();
         }
     }
 }

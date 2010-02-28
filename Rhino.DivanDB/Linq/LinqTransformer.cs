@@ -91,6 +91,8 @@ namespace Rhino.DivanDB.Linq
             var visitor = new TransformVisitor{Name = Name};
             block.AcceptVisitor(visitor, null);
 
+            ((QueryExpression) variable.Initializer).SelectOrGroupClause.AcceptVisitor(
+                new TurnOutwardReferenceToString {Identifier = visitor.Identifier}, null);
 
             var type = new TypeDeclaration(Modifiers.Public, new List<AttributeSection>())
             {

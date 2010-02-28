@@ -81,6 +81,7 @@
     <Compile Include="Json\DynamicObject.cs" />
     <Compile Include="Json\JsonDynamicObject.cs" />
     <Compile Include="Linq\AbstractViewGenerator.cs" />
+    <Compile Include="Linq\TurnOutwardReferenceToString.cs" />
     <Compile Include="Linq\LinqTransformer.cs" />
     <Compile Include="Linq\TransformVisitor.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

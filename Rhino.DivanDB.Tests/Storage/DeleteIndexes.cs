@@ -21,7 +21,7 @@ namespace Rhino.DivanDB.Tests.Storage
                 @"
     from doc in docs
     where doc.type == ""page""
-    select new { Key = doc.title, Value = doc.content, Size = (int)doc.size };
+    select new { Key = doc.title, Value = doc.content, Size = doc.size };
 ");
             db.DeleteIndex("pagesByTitle");
             var views = db.IndexDefinitionStorage.IndexNames;
@@ -34,7 +34,7 @@ namespace Rhino.DivanDB.Tests.Storage
             const string definition = @"
     from doc in docs
     where doc.type == ""page""
-    select new { Key = doc.title, Value = doc.content, Size = (int)doc.size };
+    select new { Key = doc.title, Value = doc.content, Size = doc.size };
 ";
             db.PutIndex("pagesByTitle", definition);
             db.DeleteIndex("pagesByTitle");

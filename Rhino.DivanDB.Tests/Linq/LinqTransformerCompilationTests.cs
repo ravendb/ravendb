@@ -14,7 +14,7 @@ namespace Rhino.DivanDB.Tests.Linq
         const string query = @"
     from doc in docs
     where doc.Type == ""page""
-    select new { Key = doc.Title, Value = doc.Content, Size = (int)doc.Size };
+    select new { Key = doc.Title, Value = doc.Content, Size = doc.Size };
 ";
         [Fact]
         public void Will_compile_query_successfully()
@@ -43,7 +43,7 @@ namespace Rhino.DivanDB.Tests.Linq
 
             Assert.Equal(typeof(string), argument.GetProperty("Key").PropertyType);
             Assert.Equal(typeof(string), argument.GetProperty("Value").PropertyType);
-            Assert.Equal(typeof(int), argument.GetProperty("Size").PropertyType);
+            Assert.Equal(typeof(string), argument.GetProperty("Size").PropertyType);
         }
 
         [Fact]

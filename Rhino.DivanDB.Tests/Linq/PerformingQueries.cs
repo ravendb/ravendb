@@ -15,7 +15,7 @@ namespace Rhino.DivanDB.Tests.Linq
         const string query = @"
     from doc in docs
     where doc.type == ""page""
-    select new { Key = doc.title, Value = doc.content, Size = (int)doc.size };
+    select new { Key = doc.title, Value = doc.content, Size = doc.size };
 ";
 
         [Fact]

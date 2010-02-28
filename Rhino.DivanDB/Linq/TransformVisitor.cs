@@ -6,7 +6,7 @@ namespace Rhino.DivanDB.Linq
 {
     public class TransformVisitor : AbstractAstTransformer
     {
-        private string identifier;
+        public string Identifier { get; set; }
         public HashSet<string> FieldNames { get; set; }
 
         public string Name { get; set; }
@@ -18,25 +18,8 @@ namespace Rhino.DivanDB.Linq
 
         public override object VisitQueryExpressionFromClause(QueryExpressionFromClause queryExpressionFromClause, object data)
         {
-            identifier = queryExpressionFromClause.Identifier;
+            Identifier = queryExpressionFromClause.Identifier;
             return base.VisitQueryExpressionFromClause(queryExpressionFromClause, data);
-        }
-
-        public override object VisitNamedArgumentExpression(NamedArgumentExpression namedArgumentExpression, object data)
-        {
-            var expression = namedArgumentExpression.Expression as MemberReferenceExpression;
-            if (expression == null)
-                return base.VisitNamedArgumentExpression(namedArgumentExpression, data);
-            var identifierExpression = expression.TargetObject as IdentifierExpression;
-            if (identifierExpression == null || identifierExpression.Identifier != identifier)
-                return base.VisitNamedArgumentExpression(namedArgumentExpression, data);
-            var right = new InvocationExpression(new MemberReferenceExpression(namedArgumentExpression.Expression, "Unwrap"))
-            {
-                Parent = namedArgumentExpression.Expression.Parent
-            };
-            namedArgumentExpression.Expression.Parent = right;
-            namedArgumentExpression.Expression = right;
-            return base.VisitNamedArgumentExpression(namedArgumentExpression, data);
         }
 
         public override object VisitQueryExpressionSelectClause(QueryExpressionSelectClause queryExpressionSelectClause, object data)
@@ -47,7 +30,7 @@ namespace Rhino.DivanDB.Linq
                 createExpr.ObjectInitializer.CreateExpressions.Add(
                     new NamedArgumentExpression(
                         "_id",
-                        new MemberReferenceExpression(new IdentifierExpression(identifier), "_id")
+                        new MemberReferenceExpression(new IdentifierExpression(Identifier), "_id")
                         )
                     );
             }
@@ -57,8 +40,7 @@ namespace Rhino.DivanDB.Linq
         public override object VisitMemberReferenceExpression(MemberReferenceExpression memberReferenceExpression, object data)
         {
             var identifierExpression = GetIdentifierExpression(memberReferenceExpression);
-            if (identifierExpression == null || identifierExpression.Identifier != identifier ||
-                memberReferenceExpression.MemberName == "Unwrap")
+            if (identifierExpression == null || identifierExpression.Identifier != Identifier)
                 return base.VisitMemberReferenceExpression(memberReferenceExpression, data);
            
             var indexerExpression = new IndexerExpression(

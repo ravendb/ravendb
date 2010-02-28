@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Lucene.Net.Documents;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -40,10 +41,17 @@ namespace Rhino.DivanDB.Json
             get
             {
                 var value = json as JValue;
-                if (value != null)
-                    return value.Value;
+                if (value != null && value.Value != null)
+                        return value.Value;
                 return null;
             }
+        }
+
+        public override string ToString()
+        {
+            if(Value==null)
+                return null;
+            return Value.ToString();
         }
     }
 }

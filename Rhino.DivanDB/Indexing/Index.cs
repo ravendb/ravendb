@@ -179,11 +179,6 @@ namespace Rhino.DivanDB.Indexing
 
         private static string ToIndexableString(object val)
         {
-            if (val is JsonDynamicObject)
-                return ((JsonDynamicObject)val).Unwrap();
-            if (val is string)
-                return val.ToString();
-
             if (val is DateTime)
                 return DateTools.DateToString((DateTime)val, DateTools.Resolution.DAY);
 
