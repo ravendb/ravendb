@@ -18,25 +18,25 @@ namespace Rhino.DivanDB.Tasks
         public override void Execute(WorkContext context)
         {
             context.TransactionaStorage.Batch(actions =>
-                                             {
-                                                 var doc = actions.DocumentByKey(Key);
-                                                 if (doc == null)
-                                                 {
-                                                     actions.Commit();
-                                                     return;
-                                                 }
+            {
+                var doc = actions.DocumentByKey(Key);
+                if (doc == null)
+                {
+                    actions.Commit();
+                    return;
+                }
 
-                                                 var json = new JsonDynamicObject(doc.ToJson());
+                var json = new JsonDynamicObject(doc.ToJson());
 
-                                                 foreach (var viewName in context.IndexDefinitionStorage.IndexNames)
-                                                 {
-                                                     var viewFunc = context.IndexDefinitionStorage.GetIndexingFunction(viewName);
-                                                     if (viewFunc != null)
-                                                         context.IndexStorage.Index(viewName, viewFunc, new[] { json, });
-                                                 }
+                foreach (var viewName in context.IndexDefinitionStorage.IndexNames)
+                {
+                    var viewFunc = context.IndexDefinitionStorage.GetIndexingFunction(viewName);
+                    if (viewFunc != null)
+                        context.IndexStorage.Index(viewName, viewFunc, new[] {json,});
+                }
 
-                                                 actions.Commit();
-                                             });
+                actions.Commit();
+            });
         }
     }
 }
