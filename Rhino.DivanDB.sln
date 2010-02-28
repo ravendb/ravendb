@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 10.00
-# Visual Studio 2010
+# Visual Studio 2008
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rhino.DivanDB", "Rhino.DivanDB\Rhino.DivanDB.csproj", "{212823CD-25E1-41AC-92D1-D6DF4D53FC85}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rhino.DivanDB.Tests", "Rhino.DivanDB.Tests\Rhino.DivanDB.Tests.csproj", "{267AC60C-751E-42E9-AA18-66035DEFF63A}"
