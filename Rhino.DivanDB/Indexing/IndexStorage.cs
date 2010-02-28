@@ -1,7 +1,5 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.ConstrainedExecution;
@@ -30,7 +28,7 @@ namespace Rhino.DivanDB.Indexing
             log.DebugFormat("Initializing index storage at {0}", this.path);
             foreach (var index in Directory.GetDirectories(this.path))
             {
-                log.DebugFormat("Starting index {0}", index);
+                log.DebugFormat("Loading saved index {0}", index);
                 indexes.Add(Path.GetFileName(index),
                     new Index(FSDirectory.GetDirectory(index, false)));
             }
@@ -50,7 +48,7 @@ namespace Rhino.DivanDB.Indexing
                 log.InfoFormat("Ignoring delete for non existing index {0}", name);
                 return;
             }
-            log.InfoFormat("Deleting delete for index {0}", name);
+            log.InfoFormat("Deleting index {0}", name);
             value.Dispose();
             indexes = indexes.Where(x => x.Key != name)
                 .ToDictionary(x => x.Key, y => y.Value);
@@ -105,6 +103,7 @@ namespace Rhino.DivanDB.Indexing
             if (indexes.TryGetValue(index, out value) == false)
             {
                 log.DebugFormat("Tried to index on a non existant index {0}, ignoring", index);
+                return;
             }
             value.IndexDocuments(indexingFunc, docs);
         }
