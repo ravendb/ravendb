@@ -33,14 +33,23 @@ DivanUI.GetDocumentCount = function (successCallback) {
     $.divanDB.getDocumentCount(successCallback);
 }
 
-DivanUI.GetDocumentPage = function(pageNum, pageSize, targetSelector) {
+DivanUI.GetDocumentPage = function (pageNum, pageSize, targetSelector, successCallback) {
     if (!$(targetSelector).hasTemplate()) {
         $(targetSelector).setTemplateURL('JSONTemplates/documentPage.html');
     }
 
     $.divanDB.getDocumentPage(pageNum, pageSize, function (docs) {
         $(targetSelector).processTemplate(docs);
+        successCallback();
     });
+}
+
+DivanUI.GetDocument = function (id, successCallback) {
+    $.divanDB.getDocument(id, successCallback);
+}
+
+DivanUI.SaveDocument = function (id, json, successCallback) {
+    $.divanDB.saveDocument(id, json, successCallback);
 }
 
 //indexes
@@ -48,12 +57,25 @@ DivanUI.GetIndexCount = function (successCallback) {
     $.divanDB.getIndexCount(successCallback);
 }
 
-DivanUI.GetIndexPage = function (pageNum, pageSize, targetSelector) {
+DivanUI.GetIndexPage = function (pageNum, pageSize, targetSelector, successCallback) {
     if (!$(targetSelector).hasTemplate()) {
         $(targetSelector).setTemplateURL('JSONTemplates/indexPage.html');
     }
 
     $.divanDB.getIndexPage(pageNum, pageSize, function (indexes) {
         $(targetSelector).processTemplate(indexes);
+        successCallback();
     });
+}
+
+DivanUI.GetIndex = function (name, successCallback) {
+    $.divanDB.getIndex(name, successCallback);
+}
+
+DivanUI.SaveIndex = function (name, def, successCallback) {
+    $.divanDB.saveIndex(name, def, successCallback);
+}
+
+DivanUI.SearchIndexes = function (name, successCallback) {
+    $.divanDB.searchIndexes(name, successCallback);
 }
