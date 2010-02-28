@@ -19,7 +19,7 @@ namespace Rhino.DivanDB.Server.Responders
             switch (context.Request.Verb)
             {
                 case "GET":
-                    context.WriteJson(Database.GetIndexNames(GetStart(context), GetPageSize(context)));
+                    context.WriteJson(Database.GetIndexes(GetStart(context), GetPageSize(context)));
                     break;
             }
         }

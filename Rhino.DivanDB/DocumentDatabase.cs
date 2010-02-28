@@ -271,6 +271,25 @@ namespace Rhino.DivanDB
             }
             return list;
         }
+
+        public JArray GetIndexes(int start, int pageSize)
+        {
+            var list = new JArray();
+            for (int i = start; i < start + pageSize; i++)
+            {
+                if (i > IndexDefinitionStorage.IndexNames.Length - 1)
+                    break;
+                string indexName = IndexDefinitionStorage.IndexNames[i];                                
+                string indexDefinition = IndexDefinitionStorage.GetIndexDefinition(indexName);
+
+                JObject index = new JObject();
+                index.Add("name", new JValue(indexName));
+                index.Add("definition", new JValue(indexDefinition));
+
+                list.Add(index);
+            }
+            return list;
+        }
     }
 
     public class QueryResult

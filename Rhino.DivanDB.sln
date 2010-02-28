@@ -11,8 +11,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rhino.DivanDB.Server", "Rhi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rhino.DivanDB.Scenarios", "Rhino.DivanDB.Scenarios\Rhino.DivanDB.Scenarios.csproj", "{46DB852F-4E76-44BD-B46F-5E7DE7E4B3B7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rhino.DivanDB.SampleData", "Rhino.DivanDB.SampleData\Rhino.DivanDB.SampleData.csproj", "{65517D5D-A193-4EFC-B28B-A74D771B6082}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -73,16 +71,6 @@ Global
 		{46DB852F-4E76-44BD-B46F-5E7DE7E4B3B7}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{46DB852F-4E76-44BD-B46F-5E7DE7E4B3B7}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{46DB852F-4E76-44BD-B46F-5E7DE7E4B3B7}.Release|x86.ActiveCfg = Release|Any CPU
-		{65517D5D-A193-4EFC-B28B-A74D771B6082}.Debug|Any CPU.ActiveCfg = Debug|x86
-		{65517D5D-A193-4EFC-B28B-A74D771B6082}.Debug|Mixed Platforms.ActiveCfg = Debug|x86
-		{65517D5D-A193-4EFC-B28B-A74D771B6082}.Debug|Mixed Platforms.Build.0 = Debug|x86
-		{65517D5D-A193-4EFC-B28B-A74D771B6082}.Debug|x86.ActiveCfg = Debug|x86
-		{65517D5D-A193-4EFC-B28B-A74D771B6082}.Debug|x86.Build.0 = Debug|x86
-		{65517D5D-A193-4EFC-B28B-A74D771B6082}.Release|Any CPU.ActiveCfg = Release|x86
-		{65517D5D-A193-4EFC-B28B-A74D771B6082}.Release|Mixed Platforms.ActiveCfg = Release|x86
-		{65517D5D-A193-4EFC-B28B-A74D771B6082}.Release|Mixed Platforms.Build.0 = Release|x86
-		{65517D5D-A193-4EFC-B28B-A74D771B6082}.Release|x86.ActiveCfg = Release|x86
-		{65517D5D-A193-4EFC-B28B-A74D771B6082}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

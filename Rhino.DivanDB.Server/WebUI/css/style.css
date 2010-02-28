@@ -15,9 +15,7 @@ ul {
 	padding:0px;
 	list-style:none;
 }
-input {
-	background:transparent 
-}
+
 a {
 	color:#650000;
 	text-decoration:none;
@@ -568,4 +566,53 @@ input.footerSubmit {
 	color:#B7B7B7;
 }#footerContainer p label a:hover{
 	color:#666666;
+}
+#editorTree img { float:none; margin: 0; }
+
+.searchListWrapper 
+{
+    width: 100%;
+    border: 1px solid #EBE8D9;  
+}
+
+.searchListItem
+{    
+    padding: 5px 10px;
+}
+
+.searchListItem:hover { cursor:pointer; }
+
+.searchListItem.alternate
+{
+    background-color: #eee;
+}
+
+.tooltip 
+{
+    display:none; 
+    font-size:12px; 
+    padding:10px 25px ;  
+    top: 0; 
+    z-index: 3;  
+    background-color:#1F5B75;
+    opacity: .9;        
+    color:#fff;
+    position: absolute; 
+    line-height: 20px; 
+    width:300px;
+    -moz-box-shadow: 3px 3px 5px 2px #444;
+    -webkit-box-shadow: 3px 3px 5px 2px #444;        
+}
+.tooltipArrow
+{
+    width:0; 
+	height:0; 
+	border-bottom: 8px solid transparent; 
+	border-top: 8px solid transparent;
+	border-right: 8px solid #1F5B75;
+	border-left: 0;
+	top: 0;
+	left: 0;
+	opacity: .9; 
+	position:absolute;
 }
