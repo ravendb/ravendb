@@ -1,0 +1,229 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+    <title>Rhino Divan DB</title>
+    <link href="css/style.css" rel="stylesheet" type="text/css" />
+    <link href="css/Pager.css" rel="stylesheet" type="text/css" />
+    <link href="css/smoothness/jquery-ui-1.8rc2.custom.css" rel="Stylesheet" type="text/css" />
+
+    <script type="text/javascript" src="js/jquery-1.4.2.min.js"></script>
+    <script type="text/javascript" src="js/jquery-ui.js"></script>
+    <script type="text/javascript" src="js/jquery.simpletip.js"></script>
+    <script type="text/javascript" src="js/jquery-jtemplates.js"></script>
+    <script type="text/javascript" src="js/jquery.pager.js"></script>
+    <script type="text/javascript" src="js/json2.js"></script>
+
+    <script type="text/javascript" src="js/jquery.divanDB.js"></script>
+    <script type="text/javascript" src="js/divan-ui.js"></script>
+
+    <script type="text/javascript">
+        var numPages;
+        var pageSize = 25;
+
+        $(document).ready(function () {
+            DivanUI.GetIndexCount(function (totalCount) {
+                var totalIndexes = totalCount;
+                if (totalIndexes != 0) {
+                    numPages = Math.ceil(totalIndexes / pageSize);
+                    $("#pager").pager({
+                        pagenumber: 1,
+                        pagecount: numPages,
+                        buttonClickCallback: pagerClick
+                    });
+                    getIndexPage(1, pageSize);
+                } else {
+                    $('#docList').html('There are no indexes in your database');
+                }
+            });
+
+            $('#createNewIndex').button({
+                icons: { primary: 'ui-icon-plusthick' }
+            }).click(function () {
+                CreateIndex();
+            });
+
+            $('#editSearchedIndex').button({
+                icons: { primary: 'ui-icon-pencil' }
+            }).click(function () {
+                EditIndex($('#indexNameSearch').val());
+            });
+
+
+            $('#indexNameSearch').autocomplete({
+                source: function (request, response) {
+                    DivanUI.SearchIndexes(request.term, function (searchResult) {
+                        response(searchResult);
+                    });
+                },
+                minLength: 2,
+                select: function (event, ui) {
+                    $('#editSearchedIndex').fadeIn();
+                }
+            }).keyup(function (event) {
+                if (event.keyCode != 13) {
+                    $('#editSearchedIndex').fadeOut();
+                }
+            });
+        });
+
+        function getIndexPage(pageNum, selectedPageSize) {
+            $('#indexList').html('<img src="images/ajax-loader.gif" /> Loading...');
+
+            DivanUI.GetIndexPage(pageNum, selectedPageSize, '#indexList', function () {
+                $('.searchListItem').each(function () {
+                    $(this).simpletip({
+                        content: "<strong>Click to edit this index</strong><br />Index Preview: <br />" + $(this).children('.searchListItemValue').html(),
+                        fixed: true,
+                        position: 'top right',
+                        offset: [322, 0],
+                        baseClass: 'tooltip ui-corner-all'
+                    });
+
+                    $(this).click(function () {
+                        EditIndex($(this).attr('id'));
+                    });
+
+                    $(this).hover(function () {
+                        $(this).css('border', '1px solid #666').css('padding', '4px 9px');
+                        var tooltipArrow = $('<div class="tooltipArrow"> </div>');
+                        $(tooltipArrow).css('top', $(this).offset().top + 8);
+                        $(tooltipArrow).css('left', $(this).offset().left + $(this).outerWidth());
+                        $(this).append(tooltipArrow);
+                    }, function () {
+                        $(this).css('border', 'none').css('padding', '5px 10px');
+                        $(this).children('.tooltipArrow').remove();
+                    });
+                });
+            });
+        }
+
+        function EditIndex(name) {
+            DivanUI.GetIndex(name, function (index) {
+                $('#indexEditorName').val(name);
+                $('#indexEditorDef').val(index.index);
+                $('#divEditor').dialog({
+                    modal: true,
+                    buttons: {
+                        Save: function () {
+                            var newName = $('#indexEditorName').val();
+                            var def = $('#indexEditorDef').val();
+                            DivanUI.SaveIndex(newName, def, function (data) {
+                                $('#divEditor').dialog('close');
+                                //TODO: Update values in list/preview
+                            });                                                        
+                        },
+                        Cancel: function () {
+                            $(this).dialog('close');
+                        }
+                    },
+                    title: 'Edit Index',
+                    width: 500
+                });
+            });
+        }
+
+        function CreateIndex() {
+            $('#indexEditorName').val('');
+            $('#indexEditorDef').val('');
+            $('#divEditor').dialog({
+                modal: true,
+                buttons: {
+                    Save: function () {
+                        var newName = $('#indexEditorName').val();
+                        var def = $('#indexEditorDef').val();
+                        DivanUI.SaveIndex(newName, def, function (data) {
+                            $('#divEditor').dialog('close');
+                            //TODO: Update values in list/preview
+                        });
+                    },
+                    Cancel: function () {
+                        $(this).dialog('close');
+                    }
+                },
+                title: 'Create New Index',
+                width: 500
+            });
+        }
+
+
+        function pagerClick(newPageNumber) {
+            $("#pager").pager({
+                pagenumber: newPageNumber,
+                pagecount: numPages,
+                buttonClickCallback: pagerClick
+            });
+            getIndexPage(newPageNumber, pageSize);
+        }
+    </script>
+</head>
+<body>
+    <div id="wrapper">
+        <div id="branding">
+            <h1 class="logo">
+                <a href="index.html" title="&lt; Rhino Divan DB /&gt;">&lt; Rhino Divan DB /&gt;</a></h1>
+            <ul class="topNav">
+                <li><a href="index.html">HOME</a></li>
+                <li><a href="statistics.html">GLOBAL STATISTICS</a></li>
+                <li><a href="documents.html">DOCUMENTS</a></li>
+                <li><a href="indexes.html" class="topNavAct">INDEXES</a></li>
+                <li><a href="query.html">QUERY</a></li>
+                <li><a href="documentation.html">DOCUMENTATION</a></li>
+            </ul>
+            <br class="clear" />
+        </div>
+
+<!-- Content -->
+        <div id="content">
+            <div class="content_1">
+                <div class="content_1_left">
+                    <h2>
+                        Indexes
+                    </h2>
+                    <div id="divEditor" style="display:none;">
+                        <label for="indexEditorName">Name</label><br />
+                        <input type="text" style="width:100%;" id="indexEditorName" name="indexEditorName"></input><br /><br />
+
+                        <label for="indexEditorDef">Definition</label><br />
+                        <textarea style="width:100%; height:100px;" id="indexEditorDef" name="indexEditorDef"></textarea><br /><br />
+                    </div>
+                    <p id="indexList">
+                        <img src="images/ajax-loader.gif" /> Loading...
+                    </p>
+                    <div id="pager"></div>
+                </div>
+                <div class="sideBar">
+                    <div class="sideBarListBox">
+                        <img src="images/sideBarListBoxTop.png" alt="" width="240" height="10" />
+                        <h3>Index Actions</h3>
+                        <ul>
+                            <li><button id="createNewIndex">Create New Index</button></li>
+                            <li>
+                                Search Indexes By Name<br />
+                                <input id="indexNameSearch" style="width:95%; margin: 10px 0;" /><br />
+                                <button id="editSearchedIndex" style="display:none;">Edit Index</button>
+                            </li>
+                        </ul>
+                        <img src="images/sideBarListBoxBottom.png" alt="" width="240" height="10" />
+                    </div>
+                </div>
+            </div>        
+        </div>
+    </div>
+<!-- end content -->
+    
+    <br class="clear" />
+
+    <div id="footerContainer">
+        <p>
+            <label>
+                Initial Design by <a href="http://vectorart.org">VectorArt</a><br />
+                Modification by <a href="http://werul.com">Werül</a>
+            </label>
+
+            <span>Copyright 2010 <a href="http://hibernatingrhinos.com">Hibernating Rhinos</a>. All Rights Reserved</span>
+            <div style="clear:both;"></div>
+        </p>
+    </div>
+</body>
+</html>

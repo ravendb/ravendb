@@ -1,0 +1,197 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+    <title>Rhino Divan DB</title>
+    <link href="css/style.css" rel="stylesheet" type="text/css" />
+    <link href="css/Pager.css" rel="stylesheet" type="text/css" />
+    <link href="css/smoothness/jquery-ui-1.8rc2.custom.css" rel="Stylesheet" type="text/css" />
+
+    <script type="text/javascript" src="js/jquery-1.4.2.min.js"></script>
+    <script type="text/javascript" src="js/jquery-ui.js"></script>
+    <script type="text/javascript" src="js/jquery.simpletip.js"></script>
+    <script type="text/javascript" src="js/jquery-jtemplates.js"></script>
+    <script type="text/javascript" src="js/jquery.pager.js"></script>
+    <script type="text/javascript" src="js/JSONEditor.js"></script>
+    <script type="text/javascript" src="js/json2.js"></script>
+
+    <script type="text/javascript" src="js/jquery.divanDB.js"></script>
+    <script type="text/javascript" src="js/divan-ui.js"></script>
+    <script type="text/javascript">
+        var numPages;
+        var pageSize = 25;
+
+        $(document).ready(function () {
+            DivanUI.GetDocumentCount(function (totalCount) {
+                var totalDocs = totalCount;
+                if (totalDocs != 0) {
+                    numPages = Math.ceil(totalDocs / pageSize);
+                    $("#pager").pager({
+                        pagenumber: 1,
+                        pagecount: numPages,
+                        buttonClickCallback: pagerClick
+                    });
+                    getDocumentPage(1, pageSize);
+                } else {
+                    $('#docList').html('There are no documents in your database');
+                }
+            });
+
+            $('#createNewDocument').button({
+                icons: { primary: 'ui-icon-plusthick' }
+            }).click(function () {
+                CreateDocument();
+            });
+        });
+
+        function getDocumentPage(pageNum, selectedPageSize) {
+            $('#docList').html('<img src="images/ajax-loader.gif" /> Loading...');
+            DivanUI.GetDocumentPage(pageNum, selectedPageSize, '#docList', function () {
+                $('.searchListItem').each(function () {
+                    $(this).simpletip({
+                        content: "<strong>Click to edit this document</strong><br />Data Preview: <br />" + $(this).children('.searchListItemValue').html(),
+                        fixed: true,
+                        position: 'top right',
+                        offset: [322, 0],
+                        baseClass: 'tooltip ui-corner-all'
+                    });
+
+                    $(this).click(function () {
+                        EditDocument($(this).attr('id'));
+                    });
+
+                    $(this).hover(function () {
+                        $(this).css('border', '1px solid #666').css('padding', '4px 9px');
+                        var tooltipArrow = $('<div class="tooltipArrow"> </div>');
+                        $(tooltipArrow).css('top', $(this).offset().top + 8);
+                        $(tooltipArrow).css('left', $(this).offset().left + $(this).outerWidth());
+                        $(this).append(tooltipArrow);
+                    }, function () {
+                        $(this).css('border', 'none').css('padding', '5px 10px');
+                        $(this).children('.tooltipArrow').remove();
+                    });
+                });
+            });
+        }
+
+        function pagerClick(newPageNumber) {
+            $("#pager").pager({
+                pagenumber: newPageNumber,
+                pagecount: numPages,
+                buttonClickCallback: pagerClick
+            });
+            getDocumentPage(newPageNumber, pageSize);
+        }
+
+        function EditDocument(id) {
+            DivanUI.GetDocument(id, function (doc) {
+                JSONeditor.start('editorTree', 'editorForm', doc, false);
+                $('#divEditor').dialog({
+                    modal: true,
+                    buttons: {
+                        Save: function () {
+                            treeBuilder.jsonChange($('#editorForm').children('form')[0]);
+                            DivanUI.SaveDocument(id, JSON.stringify(treeBuilder.json), function () {
+                                $('#divEditor').dialog('close');
+                                //TODO: Update values in list/preview
+                            });
+                        },
+                        Cancel: function () {
+                            $(this).dialog('close');
+                        }
+                    },
+                    title: 'Edit Document',
+                    width: 'auto'
+                });
+            });
+        }
+
+        function CreateDocument() {
+            JSONeditor.start('editorTree', 'editorForm', [], false);
+            $('#divEditor').dialog({
+                modal: true,
+                buttons: {
+                    Save: function () {
+                        treeBuilder.jsonChange($('#editorForm').children('form')[0]);
+                        DivanUI.SaveDocument(null, JSON.stringify(treeBuilder.json), function () {
+                            $('#divEditor').dialog('close');
+                            //TODO: Update values in list/preview
+                        });
+                    },
+                    Cancel: function () {
+                        $(this).dialog('close');
+                    }
+                },
+                title: 'Create New Document',
+                width: 'auto'
+            });
+        }
+
+        function SaveDocument(id, json) {
+            DivanUI.SaveDocument(id, JSON.stringify(json), function () { });
+        }
+
+
+    </script>
+</head>
+<body>
+    <div id="wrapper">
+        <div id="branding">
+            <h1 class="logo">
+                <a href="index.html" title="&lt; Rhino Divan DB /&gt;">&lt; Rhino Divan DB /&gt;</a></h1>
+            <ul class="topNav">
+                <li><a href="index.html">HOME</a></li>
+                <li><a href="statistics.html">GLOBAL STATISTICS</a></li>
+                <li><a href="documents.html" class="topNavAct">DOCUMENTS</a></li>
+                <li><a href="indexes.html">INDEXES</a></li>
+                <li><a href="query.html">QUERY</a></li>
+                <li><a href="documentation.html">DOCUMENTATION</a></li>
+            </ul>
+            <br class="clear" />
+        </div>
+        <!-- Content -->
+        <div id="content">
+            <div class="content_1">
+                <div class="content_1_left">
+                    <h2>
+                        Documents
+                    </h2>
+                    <div id="divEditor" style="display:none; position:relative;height:500px;">
+                        <div id="editorTree" style="float:left; margin-right: 40px; "></div>
+                        <div id="editorForm" style="float:left;"></div>                        
+                        <br class="clear" />
+                    </div>
+                    <p id="docList">
+                        <img src="images/ajax-loader.gif" /> Loading...
+                    </p>
+                    <div id="pager"></div>
+                </div>
+                <div class="sideBar">
+                    <div class="sideBarListBox">
+                        <img src="images/sideBarListBoxTop.png" alt="" width="240" height="10" />
+                        <h3>Document Actions</h3>
+                        <ul>
+                            <li><button id="createNewDocument">Create New Document</button></li>
+                        </ul>
+                        <img src="images/sideBarListBoxBottom.png" alt="" width="240" height="10" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- end content -->
+    <br class="clear" />
+    <div id="footerContainer">
+        <p>
+            <label>
+                Initial Design by <a href="http://vectorart.org">VectorArt</a><br />
+                Modification by <a href="http://werul.com">Werül</a>
+            </label>
+            <span>Copyright 2010 <a href="http://hibernatingrhinos.com">Hibernating Rhinos</a>.
+                All Rights Reserved</span>
+            <br class="clear" />
+        </p>
+    </div>
+    <br class="clear" />
+</body>
+</html>

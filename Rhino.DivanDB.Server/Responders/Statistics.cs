@@ -1,8 +1,9 @@
-using System.Net;
+using System;
+using Kayak;
 
 namespace Rhino.DivanDB.Server.Responders
 {
-    public class Statistics : RequestResponder
+    public class Statistics : KayakResponder
     {
         public override string UrlPattern
         {
@@ -14,9 +15,9 @@ namespace Rhino.DivanDB.Server.Responders
             get { return new[]{"GET"}; }
         }
 
-        public override void Respond(HttpListenerContext context)
+        protected override void Respond(KayakContext context)
         {
-            context.WriteJson(new { docCount = Database.CountOfDocuments });
+            context.WriteJson(new { docCount = Database.CountOfDocuments, indexCount = Database.CountOfIndexes });
         }
     }
 }
