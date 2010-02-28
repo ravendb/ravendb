@@ -256,7 +256,7 @@ namespace Rhino.DivanDB.Storage
 
 
 
-        public Task GetFirstTask()
+        public string GetFirstTask()
         {
             Api.MoveBeforeFirst(session, tasks);
             while (Api.TryMoveNext(session, tasks))
@@ -270,8 +270,7 @@ namespace Rhino.DivanDB.Storage
                     if (e.Error != JET_err.WriteConflict)
                         throw;
                 }
-                var task = Api.RetrieveColumnAsString(session, tasks, tasksColumns["task"], Encoding.Unicode);
-                return Task.ToTask(task);
+                return Api.RetrieveColumnAsString(session, tasks, tasksColumns["task"], Encoding.Unicode);
             }
             return null;
         }
