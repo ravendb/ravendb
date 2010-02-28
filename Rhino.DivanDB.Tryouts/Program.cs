@@ -13,15 +13,22 @@ namespace Rhino.DivanDB.Tryouts
     {
         const string query = @"
     from doc in docs
-    where doc.type == ""page"" && doc.user.is_active == false
-    select new { Key = doc.title, Value = doc.content, Size = (int)doc.size };
+    where doc.type <= 1 && doc.user.is_active == false
+    select new { Key = doc.title, Value = doc.content, Size = doc.size };
 ";
         public static void Main()
         {
-            var linqTransformer = new LinqTransformer("pagesByTitle", query, "docs", Path.GetTempPath(), typeof(JsonDynamicObject));
-            
+            try
+            {
+                var linqTransformer = new LinqTransformer("pagesByTitle", query, "docs", Path.GetTempPath(), typeof(JsonDynamicObject));
+                linqTransformer.Compile();
+                Console.WriteLine(linqTransformer.LinqQueryToImplicitClass());
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
 
-            Console.WriteLine(linqTransformer.LinqQueryToImplicitClass());
 //            using (var db = new DocumentDatabase("Db"))
 //            {
 //                db.SpinBackgroundWorkers();

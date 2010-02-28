@@ -47,6 +47,8 @@ namespace Rhino.DivanDB.Storage
             var generator = (AbstractViewGenerator)Activator.CreateInstance(transformer.CompiledType);
             indexCache[transformer.Name] = generator.CompiledDefinition;
             File.WriteAllText(Path.Combine(path,transformer.Name + ".index"), transformer.Source);
+            logger.InfoFormat("New index {0}:\r\n{1}\r\nCompiled to:\r\n{2}", transformer.Name, transformer.Source,
+                transformer.ImplicitClassSource);
             return transformer.Name;
         }
 

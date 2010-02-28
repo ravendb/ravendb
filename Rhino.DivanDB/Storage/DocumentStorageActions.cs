@@ -203,8 +203,8 @@ namespace Rhino.DivanDB.Storage
 
                 update.Save();
             }
-            logger.DebugFormat("New task '{0}'", task);
-
+            if (logger.IsDebugEnabled)
+                logger.DebugFormat("New task '{0}'", task.AsString());
         }
 
         public void AddAttachment(string key, byte[] data, string headers)
@@ -222,6 +222,7 @@ namespace Rhino.DivanDB.Storage
 
                 update.Save();
             }
+            logger.DebugFormat("Adding attachment {0}", key);
         }
 
         public void DeleteAttachment(string key)

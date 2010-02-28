@@ -48,11 +48,13 @@ namespace Rhino.DivanDB.Linq
             }
         }
 
+        public string ImplicitClassSource { get; set; }
+
         public void Compile()
         {
-            var implicitClassSource = LinqQueryToImplicitClass();
+            ImplicitClassSource = LinqQueryToImplicitClass();
             var outputPath = Path.Combine(path, Name + ".view.cs");
-            File.WriteAllText(outputPath, implicitClassSource);
+            File.WriteAllText(outputPath, ImplicitClassSource);
             var provider = new CSharpCodeProvider(new Dictionary<string, string> {{"CompilerVersion", "v3.5"}});
             var results = provider.CompileAssemblyFromFile(new CompilerParameters
             {
