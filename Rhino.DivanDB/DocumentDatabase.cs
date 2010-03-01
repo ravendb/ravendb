@@ -194,11 +194,12 @@ namespace Rhino.DivanDB
         {
             var list = new List<JObject>();
             var stale = false;
+            var totalSize = new Reference<int>();
             TransactionalStorage.Batch(
                 actions =>
                 {
                     stale = actions.DoesTasksExistsForIndex(index);
-                    list.AddRange(from key in IndexStorage.Query(index, query, start, pageSize)
+                    list.AddRange(from key in IndexStorage.Query(index, query, start, pageSize, totalSize)
                                   select actions.DocumentByKey(key)
                                       into doc
                                       where doc != null
@@ -208,7 +209,8 @@ namespace Rhino.DivanDB
             return new QueryResult
                    {
                        Results = list.ToArray(),
-                       IsStale = stale
+                       IsStale = stale,
+                       TotalResults = totalSize.Value
                    };
         }
 

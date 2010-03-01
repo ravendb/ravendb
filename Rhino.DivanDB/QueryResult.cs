@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Linq;
 
 namespace Rhino.DivanDB
 {
@@ -6,5 +6,6 @@ namespace Rhino.DivanDB
     {
         public JObject[] Results { get; set; }
         public bool IsStale { get; set; }
+        public int TotalResults { get; set; }
     }
 }
