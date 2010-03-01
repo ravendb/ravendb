@@ -11,6 +11,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rhino.DivanDB.Server", "Rhi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rhino.DivanDB.Scenarios", "Rhino.DivanDB.Scenarios\Rhino.DivanDB.Scenarios.csproj", "{46DB852F-4E76-44BD-B46F-5E7DE7E4B3B7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rhino.DivanDB.Client", "Rhino.DivanDB.Client\Rhino.DivanDB.Client.csproj", "{9F92FD36-60B6-4655-B8C6-00125B46AB6A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rhino.DivanDB.Client.Tests", "Rhino.DivanDB.Client.Tests\Rhino.DivanDB.Client.Tests.csproj", "{36B31D69-508B-4594-8F8E-85774BAA7D3F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -37,6 +41,14 @@ Global
 		{46DB852F-4E76-44BD-B46F-5E7DE7E4B3B7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{46DB852F-4E76-44BD-B46F-5E7DE7E4B3B7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{46DB852F-4E76-44BD-B46F-5E7DE7E4B3B7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9F92FD36-60B6-4655-B8C6-00125B46AB6A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9F92FD36-60B6-4655-B8C6-00125B46AB6A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9F92FD36-60B6-4655-B8C6-00125B46AB6A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9F92FD36-60B6-4655-B8C6-00125B46AB6A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{36B31D69-508B-4594-8F8E-85774BAA7D3F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{36B31D69-508B-4594-8F8E-85774BAA7D3F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{36B31D69-508B-4594-8F8E-85774BAA7D3F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{36B31D69-508B-4594-8F8E-85774BAA7D3F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
