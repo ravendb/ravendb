@@ -70,7 +70,7 @@
             $.ajax({
                 url: settings.server + 'stats',
                 success: function (data) {
-                    successCallback(data.indexCount);
+                    successCallback(data.CountOfIndexes);
                 }
             });
         },
