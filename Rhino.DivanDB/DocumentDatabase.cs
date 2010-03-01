@@ -274,7 +274,8 @@ namespace Rhino.DivanDB
                 foreach (var documentAndId in actions.DocumentsById(new Reference<bool>(), start, int.MaxValue, pageSize))
                 {
                     var doc = JObject.Parse(documentAndId.First);
-                    doc.Add("_docNum", new JValue(documentAndId.Second));
+                    if (doc["_docNum"] == null)
+                        doc.Add("_docNum", new JValue(documentAndId.Second));
 
                     list.Add(doc);
                 }

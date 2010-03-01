@@ -79,3 +79,7 @@ DivanUI.SaveIndex = function (name, def, successCallback) {
 DivanUI.SearchIndexes = function (name, successCallback) {
     $.divanDB.searchIndexes(name, successCallback);
 }
+
+DivanUI.QueryIndex = function (name, queryValues, successCallback) {
+    $.divanDB.queryIndex(name, queryValues, successCallback);
+}

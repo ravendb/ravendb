@@ -4,17 +4,133 @@
     <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
     <title>Rhino Divan DB</title>
     <link href="css/style.css" rel="stylesheet" type="text/css" />
+    <link href="css/Pager.css" rel="stylesheet" type="text/css" />
+    <link href="css/smoothness/jquery-ui-1.8rc2.custom.css" rel="Stylesheet" type="text/css" />
 
     <script type="text/javascript" src="js/jquery-1.4.2.min.js"></script>
+    <script type="text/javascript" src="js/jquery-ui.js"></script>
+    <script type="text/javascript" src="js/jquery.simpletip.js"></script>
     <script type="text/javascript" src="js/jquery-jtemplates.js"></script>
-    
+    <script type="text/javascript" src="js/jquery.pager.js"></script>
+    <script type="text/javascript" src="js/json2.js"></script>
+    <script type="text/javascript" src="js/JSONEditor.js"></script>
+
     <script type="text/javascript" src="js/jquery.divanDB.js"></script>
     <script type="text/javascript" src="js/divan-ui.js"></script>
 
     <script type="text/javascript">
+        var numPages;
+        var pageNumber = 1;
+        var pageSize = 25;
+        var indexName;
+        var indexValues;
+
         $(document).ready(function () {
-            
+            $('#executeQuery').button({
+                icons: { primary: 'ui-icon-circle-triangle-e' }
+            }).click(function () {
+                indexName = $('#txtIndexName').val();
+                indexValues = $('#txtIndexValue').val();
+                ExecuteQuery();
+            });
+
+            $('#txtIndexName').autocomplete({
+                source: function (request, response) {
+                    DivanUI.SearchIndexes(request.term, function (searchResult) {
+                        response(searchResult);
+                    });
+                },
+                minLength: 2,
+                select: function (event, ui) {
+                    $('#queryValueSubmit').fadeIn();
+                }
+            }).keyup(function (event) {
+                if (event.keyCode != 13) {
+                    $('#queryValueSubmit').fadeOut();
+                }
+            });
+
         });
+
+        function ExecuteQuery() {
+            $('#docList').fadeIn();
+
+            DivanUI.QueryIndex(indexName, indexValues, function (data) {
+                if (data.Results.length > 0) {
+                    numPages = Math.ceil(data.Results.length / pageSize);
+                    $("#pager").pager({
+                        pagenumber: pageNumber,
+                        pagecount: numPages,
+                        buttonClickCallback: pagerClick
+                    });
+
+                    if (!$('#docList').hasTemplate()) {
+                        $('#docList').setTemplateURL('JSONTemplates/documentPage.html');
+                    }
+
+                    $('#docList').processTemplate(data.Results);
+                    $('.searchListItem').each(function () {
+                        $(this).simpletip({
+                            content: "<strong>Click to edit this document</strong><br />Data Preview: <br />" + $(this).children('.searchListItemValue').html(),
+                            fixed: true,
+                            position: 'top right',
+                            offset: [322, 0],
+                            baseClass: 'tooltip ui-corner-all'
+                        });
+
+                        $(this).click(function () {
+                            EditDocument($(this).attr('id'));
+                        });
+
+                        $(this).hover(function () {
+                            $(this).css('border', '1px solid #666').css('padding', '4px 9px');
+                            var tooltipArrow = $('<div class="tooltipArrow"> </div>');
+                            $(tooltipArrow).css('top', $(this).offset().top + 8);
+                            $(tooltipArrow).css('left', $(this).offset().left + $(this).outerWidth());
+                            $(this).append(tooltipArrow);
+                        }, function () {
+                            $(this).css('border', 'none').css('padding', '5px 10px');
+                            $(this).children('.tooltipArrow').remove();
+                        });
+                    });
+                } else {
+                    $('#docList').html('No documents matched your query.');
+                }
+            });
+        }
+
+        function EditDocument(id) {
+            DivanUI.GetDocument(id, function (doc) {
+                JSONeditor.start('editorTree', 'editorForm', doc, false);
+                $('#divEditor').dialog({
+                    modal: true,
+                    buttons: {
+                        Save: function () {
+                            treeBuilder.jsonChange($('#editorForm').children('form')[0]);
+                            DivanUI.SaveDocument(id, JSON.stringify(treeBuilder.json), function () {
+                                $('#divEditor').dialog('close');
+                                //TODO: Update values in list/preview
+                            });
+                        },
+                        Cancel: function () {
+                            $(this).dialog('close');
+                        }
+                    },
+                    title: 'Edit Document',
+                    width: 'auto'
+                });
+            });
+        }
+
+        function pagerClick(newPageNumber) {
+            pageNumber = newPageNumber;
+            ExecuteQuery();
+        }
+
+        function SaveDocument(id, json) {
+            DivanUI.SaveDocument(id, JSON.stringify(json), function () { });
+        }
+        
     </script>
 </head>
 <body>
@@ -40,7 +156,24 @@
                     <h2>
                         Query
                     </h2>
+                    <div id="divEditor" style="display:none; position:relative;height:500px;">
+                        <div id="editorTree" style="float:left; margin-right: 40px; "></div>
+                        <div id="editorForm" style="float:left;"></div>                        
+                        <br class="clear" />
+                    </div>
+                    <label for="txtIndexName">Index Name</label><br />
+                    <input type="text" id="txtIndexName" name="txtIndexName" style="width:200px;" /><br /><br />
 
+                    <div id="queryValueSubmit" style="display:none;">
+                        <label for="txtIndexValue">Index Value</label><br />
+                        <input type="text" id="txtIndexValue" name="txtIndexValue" style="width:200px;" /><br /><br />
+
+                        <button id="executeQuery">Execute Query</button><br /><br />
+                    </div>
+                    <p id="docList" style="display:none;">
+                        <img src="images/ajax-loader.gif" /> Loading...
+                    </p>
+                    <div id="pager"></div>
                 </div>
             </div>        
         </div>

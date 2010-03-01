@@ -54,10 +54,13 @@
 
         saveDocument: function (id, json, successCallback) {
             var idStr = '';
-            if (id != null)
+            var type = 'POST';
+            if (id != null) {
                 idStr = id;
+                type = 'PUT';
+            }
             $.ajax({
-                type: 'PUT',
+                type: type,
                 url: settings.server + 'docs/' + idStr,
                 data: json,
                 success: function (data) {
@@ -70,7 +73,7 @@
             $.ajax({
                 url: settings.server + 'stats',
                 success: function (data) {
-                    successCallback(data.indexCount);
+                    successCallback(data.CountOfIndexes);
                 }
             });
         },
@@ -104,6 +107,17 @@
                 type: 'PUT',
                 url: settings.server + 'indexes/' + name,
                 data: def,
+                success: function (data) {
+                    successCallback(data);
+                }
+            });
+        },
+
+        queryIndex: function (name, queryValues, successCallback) {
+            $.ajax({
+                type: 'GET',
+                url: settings.server + 'indexes/' + name,
+                data: { query : queryValues },
                 success: function (data) {
                     successCallback(data);
                 }
