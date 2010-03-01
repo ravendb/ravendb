@@ -6,7 +6,13 @@ namespace Rhino.DivanDB.Server.Responders
 {
     public class DivanUserInterfaceResponser : RequestResponder
     {
-        public const string DivanPath = @"C:\Users\LukeHertert\Documents\Code\rhino-divandb\Rhino.DivanDB.Server\WebUI\";
+        public string DivanPath
+        {
+            get
+            {
+                return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\WebUI");
+            }
+        }
 
         public override string UrlPattern
         {
