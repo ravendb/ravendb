@@ -1,4 +1,3 @@
-
 using System.Net;
 
 namespace Rhino.DivanDB.Server.Responders
@@ -12,7 +11,7 @@ namespace Rhino.DivanDB.Server.Responders
 
         public override string[] SupportedVerbs
         {
-            get { return new[] { "GET","PUT" }; }
+            get { return new[] { "GET","PUT","DELETE" }; }
         }
 
         public override void Respond(HttpListenerContext context)
@@ -32,6 +31,11 @@ namespace Rhino.DivanDB.Server.Responders
                         index = Database.PutIndex(index, context.ReadString())
                     });
                     break;
+                case "DELETE":
+                    context.SetStatusToDeleted();
+                    Database.DeleteIndex(index);
+                    context.WriteJson(new { index });
+                    break;
             }
         }
 
@@ -49,4 +53,5 @@ namespace Rhino.DivanDB.Server.Responders
             }
         }
     }
+
 }
