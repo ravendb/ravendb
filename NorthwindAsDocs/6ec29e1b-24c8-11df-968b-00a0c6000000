@@ -1,0 +1,15 @@
+{
+  "ProductID": 49,
+  "ProductName": "Maxilaku",
+  "SupplierID": "6ec29de1-24c8-11df-968b-00a0c6000000",
+  "CategoryID": "6ec29d61-24c8-11df-968b-00a0c6000000",
+  "QuantityPerUnit": "24 - 50 g pkgs.",
+  "UnitPrice": 20,
+  "UnitsInStock": 10,
+  "UnitsOnOrder": 60,
+  "ReorderLevel": 15,
+  "Discontinued": false,
+  "ObjectType": "Product",
+  "_id": "6ec29e1b-24c8-11df-968b-00a0c6000000",
+  "_docNum": 197
+}

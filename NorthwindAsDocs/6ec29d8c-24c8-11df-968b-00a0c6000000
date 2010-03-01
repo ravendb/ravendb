@@ -1,0 +1,16 @@
+{
+  "CustomerID": "ISLAT",
+  "CompanyName": "Island Trading",
+  "ContactName": "Helen Bennett",
+  "ContactTitle": "Marketing Manager",
+  "Address": "Garden House\r\nCrowther Way",
+  "City": "Cowes",
+  "Region": "Isle of Wight",
+  "PostalCode": "PO31 7PJ",
+  "Country": "UK",
+  "Phone": "(198) 555-8888",
+  "Fax": null,
+  "ObjectType": "Customer",
+  "_id": "6ec29d8c-24c8-11df-968b-00a0c6000000",
+  "_docNum": 46
+}

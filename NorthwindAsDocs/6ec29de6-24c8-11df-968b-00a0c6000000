@@ -1,0 +1,17 @@
+{
+  "SupplierID": 28,
+  "CompanyName": "Gai pâturage",
+  "ContactName": "Eliane Noz",
+  "ContactTitle": "Sales Representative",
+  "Address": "Bat. B\r\n3, rue des Alpes",
+  "City": "Annecy",
+  "Region": null,
+  "PostalCode": "74000",
+  "Country": "France",
+  "Phone": "38.76.98.06",
+  "Fax": "38.76.98.58",
+  "HomePage": null,
+  "ObjectType": "Supplier",
+  "_id": "6ec29de6-24c8-11df-968b-00a0c6000000",
+  "_docNum": 144
+}

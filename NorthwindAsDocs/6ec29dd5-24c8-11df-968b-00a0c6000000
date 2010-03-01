@@ -1,0 +1,17 @@
+{
+  "SupplierID": 11,
+  "CompanyName": "Heli Süßwaren GmbH & Co. KG",
+  "ContactName": "Petra Winkler",
+  "ContactTitle": "Sales Manager",
+  "Address": "Tiergartenstraße 5",
+  "City": "Berlin",
+  "Region": null,
+  "PostalCode": "10785",
+  "Country": "Germany",
+  "Phone": "(010) 9984510",
+  "Fax": null,
+  "HomePage": null,
+  "ObjectType": "Supplier",
+  "_id": "6ec29dd5-24c8-11df-968b-00a0c6000000",
+  "_docNum": 127
+}

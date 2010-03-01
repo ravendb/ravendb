@@ -1,0 +1,16 @@
+{
+  "CustomerID": "WILMK",
+  "CompanyName": "Wilman Kala",
+  "ContactName": "Matti Karttunen",
+  "ContactTitle": "Owner/Marketing Assistant",
+  "Address": "Keskuskatu 45",
+  "City": "Helsinki",
+  "Region": null,
+  "PostalCode": "21240",
+  "Country": "Finland",
+  "Phone": "90-224 8858",
+  "Fax": "90-224 8858",
+  "ObjectType": "Customer",
+  "_id": "6ec29dc0-24c8-11df-968b-00a0c6000000",
+  "_docNum": 98
+}

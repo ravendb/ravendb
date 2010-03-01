@@ -1,0 +1,15 @@
+{
+  "ProductID": 56,
+  "ProductName": "Gnocchi di nonna Alice",
+  "SupplierID": "6ec29de4-24c8-11df-968b-00a0c6000000",
+  "CategoryID": "6ec29d63-24c8-11df-968b-00a0c6000000",
+  "QuantityPerUnit": "24 - 250 g pkgs.",
+  "UnitPrice": 38,
+  "UnitsInStock": 21,
+  "UnitsOnOrder": 10,
+  "ReorderLevel": 30,
+  "Discontinued": false,
+  "ObjectType": "Product",
+  "_id": "6ec29e22-24c8-11df-968b-00a0c6000000",
+  "_docNum": 204
+}

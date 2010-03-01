@@ -1,0 +1,17 @@
+{
+  "SupplierID": 27,
+  "CompanyName": "Escargots Nouveaux",
+  "ContactName": "Marie Delamare",
+  "ContactTitle": "Sales Manager",
+  "Address": "22, rue H. Voiron",
+  "City": "Montceau",
+  "Region": null,
+  "PostalCode": "71300",
+  "Country": "France",
+  "Phone": "85.57.00.07",
+  "Fax": null,
+  "HomePage": null,
+  "ObjectType": "Supplier",
+  "_id": "6ec29de5-24c8-11df-968b-00a0c6000000",
+  "_docNum": 143
+}

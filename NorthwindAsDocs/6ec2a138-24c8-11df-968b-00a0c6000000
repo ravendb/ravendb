@@ -1,0 +1,19 @@
+{
+  "OrderID": 11016,
+  "CustomerID": "6ec29d6a-24c8-11df-968b-00a0c6000000",
+  "EmployeeID": "6ec29dca-24c8-11df-968b-00a0c6000000",
+  "OrderDate": "\/Date(831682800000+0100)\/",
+  "RequiredDate": "\/Date(834102000000+0100)\/",
+  "ShippedDate": "\/Date(831942000000+0100)\/",
+  "ShipVia": "6ec29de9-24c8-11df-968b-00a0c6000000",
+  "Freight": 33.8,
+  "ShipName": "Around the Horn",
+  "ShipAddress": "Brook Farm\r\nStratford St. Mary",
+  "ShipCity": "Colchester",
+  "ShipRegion": "Essex",
+  "ShipPostalCode": "CO7 6JX",
+  "ShipCountry": "UK",
+  "ObjectType": "Order",
+  "_id": "6ec2a138-24c8-11df-968b-00a0c6000000",
+  "_docNum": 994
+}

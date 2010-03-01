@@ -1,0 +1,16 @@
+{
+  "CustomerID": "MAISD",
+  "CompanyName": "Maison Dewey",
+  "ContactName": "Catherine Dewey",
+  "ContactTitle": "Sales Agent",
+  "Address": "Rue Joseph-Bens 532",
+  "City": "Bruxelles",
+  "Region": null,
+  "PostalCode": "B-1180",
+  "Country": "Belgium",
+  "Phone": "(02) 201 24 67",
+  "Fax": "(02) 201 24 68",
+  "ObjectType": "Customer",
+  "_id": "6ec29d98-24c8-11df-968b-00a0c6000000",
+  "_docNum": 58
+}

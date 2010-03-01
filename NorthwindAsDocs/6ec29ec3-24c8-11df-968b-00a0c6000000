@@ -1,0 +1,19 @@
+{
+  "OrderID": 10387,
+  "CustomerID": "6ec29dac-24c8-11df-968b-00a0c6000000",
+  "EmployeeID": "6ec29dc2-24c8-11df-968b-00a0c6000000",
+  "OrderDate": "\/Date(790387200000+0000)\/",
+  "RequiredDate": "\/Date(792806400000+0000)\/",
+  "ShippedDate": "\/Date(790560000000+0000)\/",
+  "ShipVia": "6ec29de9-24c8-11df-968b-00a0c6000000",
+  "Freight": 93.63,
+  "ShipName": "Santé Gourmet",
+  "ShipAddress": "Erling Skakkes gate 78",
+  "ShipCity": "Stavern",
+  "ShipRegion": null,
+  "ShipPostalCode": "4110",
+  "ShipCountry": "Norway",
+  "ObjectType": "Order",
+  "_id": "6ec29ec3-24c8-11df-968b-00a0c6000000",
+  "_docNum": 365
+}

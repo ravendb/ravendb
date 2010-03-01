@@ -1,0 +1,16 @@
+{
+  "CustomerID": "HANAR",
+  "CompanyName": "Hanari Carnes",
+  "ContactName": "Mario Pontes",
+  "ContactTitle": "Accounting Manager",
+  "Address": "Rua do Paço, 67",
+  "City": "Rio de Janeiro",
+  "Region": "RJ",
+  "PostalCode": "05454-876",
+  "Country": "Brazil",
+  "Phone": "(21) 555-0091",
+  "Fax": "(21) 555-8765",
+  "ObjectType": "Customer",
+  "_id": "6ec29d88-24c8-11df-968b-00a0c6000000",
+  "_docNum": 42
+}

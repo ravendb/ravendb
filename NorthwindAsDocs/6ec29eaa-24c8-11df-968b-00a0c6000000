@@ -1,0 +1,19 @@
+{
+  "OrderID": 10362,
+  "CustomerID": "6ec29d6f-24c8-11df-968b-00a0c6000000",
+  "EmployeeID": "6ec29dc4-24c8-11df-968b-00a0c6000000",
+  "OrderDate": "\/Date(788400000000+0000)\/",
+  "RequiredDate": "\/Date(790819200000+0000)\/",
+  "ShippedDate": "\/Date(788659200000+0000)\/",
+  "ShipVia": "6ec29de8-24c8-11df-968b-00a0c6000000",
+  "Freight": 96.04,
+  "ShipName": "Bon app'",
+  "ShipAddress": "12, rue des Bouchers",
+  "ShipCity": "Marseille",
+  "ShipRegion": null,
+  "ShipPostalCode": "13008",
+  "ShipCountry": "France",
+  "ObjectType": "Order",
+  "_id": "6ec29eaa-24c8-11df-968b-00a0c6000000",
+  "_docNum": 340
+}

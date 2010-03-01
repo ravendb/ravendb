@@ -1,0 +1,16 @@
+{
+  "CustomerID": "FRANR",
+  "CompanyName": "France restauration",
+  "ContactName": "Carine Schmitt",
+  "ContactTitle": "Marketing Manager",
+  "Address": "54, rue Royale",
+  "City": "Nantes",
+  "Region": null,
+  "PostalCode": "44000",
+  "Country": "France",
+  "Phone": "40.32.21.21",
+  "Fax": "40.32.21.20",
+  "ObjectType": "Customer",
+  "_id": "6ec29d80-24c8-11df-968b-00a0c6000000",
+  "_docNum": 34
+}

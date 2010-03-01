@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Runtime.ConstrainedExecution;
 using System.Threading;
@@ -16,6 +17,10 @@ namespace Rhino.DivanDB.Storage
         private bool disposed;
         [ThreadStatic]
         private static DocumentStorageActions current;
+
+        private IDictionary<string, JET_COLUMNID> documentsColumns;
+        private IDictionary<string, JET_COLUMNID> tasksColumns;
+        private IDictionary<string, JET_COLUMNID> filesColumns;
 
         public JET_INSTANCE Instance
         {
@@ -49,11 +54,36 @@ namespace Rhino.DivanDB.Storage
                 EnsureDatabaseIsCreatedAndAttachToDatabase();
 
                 SetIdFromDb();
+                
+                InitColumDictionaries();
             }
             catch (Exception e)
             {
                 Dispose();
                 throw new InvalidOperationException("Could not open transactional storage: " + database, e);
+            }
+        }
+
+        private void InitColumDictionaries()
+        {
+            using (var session = new Session(instance))
+            {
+                JET_DBID dbid=JET_DBID.Nil;
+                try
+                {
+                    Api.JetOpenDatabase(session, database, null, out dbid, OpenDatabaseGrbit.None);
+                    using (var documents = new Table(session, dbid, "documents", OpenTableGrbit.None))
+                        documentsColumns = Api.GetColumnDictionary(session, documents);
+                    using (var tasks = new Table(session, dbid, "tasks", OpenTableGrbit.None))
+                        tasksColumns = Api.GetColumnDictionary(session, tasks);
+                    using (var files = new Table(session, dbid, "files", OpenTableGrbit.None))
+                        filesColumns = Api.GetColumnDictionary(session, files);
+                }
+                finally
+                {
+                    if (Equals(dbid, JET_DBID.Nil) == false)
+                        Api.JetCloseDatabase(session, dbid, CloseDatabaseGrbit.None);
+                }
             }
         }
 
@@ -197,7 +227,7 @@ namespace Rhino.DivanDB.Storage
             disposerLock.EnterReadLock();
             try
             {
-                using (var pht = new DocumentStorageActions(instance, database))
+                using (var pht = new DocumentStorageActions(instance, database,documentsColumns, tasksColumns, filesColumns))
                 {
                     current = pht;
                     action(pht);

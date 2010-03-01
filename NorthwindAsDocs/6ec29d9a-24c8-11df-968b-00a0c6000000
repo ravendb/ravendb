@@ -1,0 +1,16 @@
+{
+  "CustomerID": "MORGK",
+  "CompanyName": "Morgenstern Gesundkost",
+  "ContactName": "Alexander Feuer",
+  "ContactTitle": "Marketing Assistant",
+  "Address": "Heerstr. 22",
+  "City": "Leipzig",
+  "Region": null,
+  "PostalCode": "04179",
+  "Country": "Germany",
+  "Phone": "0342-023176",
+  "Fax": null,
+  "ObjectType": "Customer",
+  "_id": "6ec29d9a-24c8-11df-968b-00a0c6000000",
+  "_docNum": 60
+}

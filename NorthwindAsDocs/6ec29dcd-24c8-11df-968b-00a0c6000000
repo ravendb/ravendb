@@ -1,0 +1,17 @@
+{
+  "SupplierID": 3,
+  "CompanyName": "Grandma Kelly's Homestead",
+  "ContactName": "Regina Murphy",
+  "ContactTitle": "Sales Representative",
+  "Address": "707 Oxford Rd.",
+  "City": "Ann Arbor",
+  "Region": "MI",
+  "PostalCode": "48104",
+  "Country": "USA",
+  "Phone": "(313) 555-5735",
+  "Fax": "(313) 555-3349",
+  "HomePage": null,
+  "ObjectType": "Supplier",
+  "_id": "6ec29dcd-24c8-11df-968b-00a0c6000000",
+  "_docNum": 119
+}

@@ -30,7 +30,11 @@ namespace Rhino.DivanDB.Storage
         [CLSCompliant(false)]
         [DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
         public DocumentStorageActions(JET_INSTANCE instance,
-                                          string database)
+                                        string database,
+                                        IDictionary<string, JET_COLUMNID> documentsColumns,
+                                        IDictionary<string, JET_COLUMNID> tasksColumns,
+                                        IDictionary<string, JET_COLUMNID> filesColumns
+            )
         {
             try
             {
@@ -39,11 +43,11 @@ namespace Rhino.DivanDB.Storage
                 Api.JetOpenDatabase(session, database, null, out dbid, OpenDatabaseGrbit.None);
 
                 documents = new Table(session, dbid, "documents", OpenTableGrbit.None);
-                documentsColumns = Api.GetColumnDictionary(session, documents);
                 tasks = new Table(session, dbid, "tasks", OpenTableGrbit.None);
-                tasksColumns = Api.GetColumnDictionary(session, tasks);
                 files = new Table(session, dbid, "files", OpenTableGrbit.None);
-                filesColumns = Api.GetColumnDictionary(session, files);
+                this.documentsColumns = documentsColumns;
+                this.tasksColumns = tasksColumns;
+                this.filesColumns = filesColumns;
             }
             catch (Exception)
             {
@@ -109,7 +113,7 @@ namespace Rhino.DivanDB.Storage
         }
 
 
-        public Tuple<int,int> FirstAndLastDocumentKeys()
+        public Tuple<int, int> FirstAndLastDocumentKeys()
         {
             var result = new Tuple<int, int>();
             Api.MoveBeforeFirst(session, documents);
@@ -133,7 +137,7 @@ namespace Rhino.DivanDB.Storage
             return true;
         }
 
-        public IEnumerable<Tuple<string,int>> DocumentsById(Reference<bool> hasMoreWork ,int startId, int endId, int limit)
+        public IEnumerable<Tuple<string, int>> DocumentsById(Reference<bool> hasMoreWork, int startId, int endId, int limit)
         {
             Api.JetSetCurrentIndex(session, documents, "by_id");
             Api.MakeKey(session, documents, startId, MakeKeyGrbit.NewKey);
@@ -159,11 +163,11 @@ namespace Rhino.DivanDB.Storage
                 logger.DebugFormat("Document with id '{0}' was found, doc length: {1}", id, data.Length);
                 yield return new Tuple<string, int>
                 {
-                    First = Encoding.UTF8.GetString(data), 
+                    First = Encoding.UTF8.GetString(data),
                     Second = id
                 };
 
-                
+
             } while (Api.TryMoveNext(session, documents));
             hasMoreWork.Value = false;
         }
@@ -251,7 +255,7 @@ namespace Rhino.DivanDB.Storage
             return new Tuple<byte[], string>
             {
                 First = Api.RetrieveColumn(session, files, filesColumns["data"]),
-                Second= Api.RetrieveColumnAsString(session, files, filesColumns["headers"], Encoding.Unicode)
+                Second = Api.RetrieveColumnAsString(session, files, filesColumns["headers"], Encoding.Unicode)
             };
         }
 

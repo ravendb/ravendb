@@ -1,0 +1,15 @@
+{
+  "ProductID": 14,
+  "ProductName": "Tofu",
+  "SupplierID": "6ec29dd0-24c8-11df-968b-00a0c6000000",
+  "CategoryID": "6ec29d65-24c8-11df-968b-00a0c6000000",
+  "QuantityPerUnit": "40 - 100 g pkgs.",
+  "UnitPrice": 23.25,
+  "UnitsInStock": 35,
+  "UnitsOnOrder": 0,
+  "ReorderLevel": 0,
+  "Discontinued": false,
+  "ObjectType": "Product",
+  "_id": "6ec29df8-24c8-11df-968b-00a0c6000000",
+  "_docNum": 162
+}

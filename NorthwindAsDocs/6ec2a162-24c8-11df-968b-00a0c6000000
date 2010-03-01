@@ -1,0 +1,19 @@
+{
+  "OrderID": 11058,
+  "CustomerID": "6ec29d6c-24c8-11df-968b-00a0c6000000",
+  "EmployeeID": "6ec29dca-24c8-11df-968b-00a0c6000000",
+  "OrderDate": "\/Date(833324400000+0100)\/",
+  "RequiredDate": "\/Date(835743600000+0100)\/",
+  "ShippedDate": null,
+  "ShipVia": "6ec29dea-24c8-11df-968b-00a0c6000000",
+  "Freight": 31.14,
+  "ShipName": "Blauer See Delikatessen",
+  "ShipAddress": "Forsterstr. 57",
+  "ShipCity": "Mannheim",
+  "ShipRegion": null,
+  "ShipPostalCode": "68306",
+  "ShipCountry": "Germany",
+  "ObjectType": "Order",
+  "_id": "6ec2a162-24c8-11df-968b-00a0c6000000",
+  "_docNum": 1036
+}

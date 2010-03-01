@@ -1,0 +1,19 @@
+{
+  "OrderID": 10251,
+  "CustomerID": "6ec29dba-24c8-11df-968b-00a0c6000000",
+  "EmployeeID": "6ec29dc4-24c8-11df-968b-00a0c6000000",
+  "OrderDate": "\/Date(776300400000+0100)\/",
+  "RequiredDate": "\/Date(778719600000+0100)\/",
+  "ShippedDate": "\/Date(776905200000+0100)\/",
+  "ShipVia": "6ec29de8-24c8-11df-968b-00a0c6000000",
+  "Freight": 41.34,
+  "ShipName": "Victuailles en stock",
+  "ShipAddress": "2, rue du Commerce",
+  "ShipCity": "Lyon",
+  "ShipRegion": null,
+  "ShipPostalCode": "69004",
+  "ShipCountry": "France",
+  "ObjectType": "Order",
+  "_id": "6ec29e4c-24c8-11df-968b-00a0c6000000",
+  "_docNum": 246
+}

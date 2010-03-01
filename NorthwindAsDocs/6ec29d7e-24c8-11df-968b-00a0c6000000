@@ -1,0 +1,16 @@
+{
+  "CustomerID": "FOLKO",
+  "CompanyName": "Folk och fä HB",
+  "ContactName": "Maria Larsson",
+  "ContactTitle": "Owner",
+  "Address": "Åkergatan 24",
+  "City": "Bräcke",
+  "Region": null,
+  "PostalCode": "S-844 67",
+  "Country": "Sweden",
+  "Phone": "0695-34 67 21",
+  "Fax": null,
+  "ObjectType": "Customer",
+  "_id": "6ec29d7e-24c8-11df-968b-00a0c6000000",
+  "_docNum": 32
+}

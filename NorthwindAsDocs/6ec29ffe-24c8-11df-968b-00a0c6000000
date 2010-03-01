@@ -1,0 +1,19 @@
+{
+  "OrderID": 10702,
+  "CustomerID": "6ec29d67-24c8-11df-968b-00a0c6000000",
+  "EmployeeID": "6ec29dc5-24c8-11df-968b-00a0c6000000",
+  "OrderDate": "\/Date(816220800000+0000)\/",
+  "RequiredDate": "\/Date(819849600000+0000)\/",
+  "ShippedDate": "\/Date(816912000000+0000)\/",
+  "ShipVia": "6ec29de8-24c8-11df-968b-00a0c6000000",
+  "Freight": 23.94,
+  "ShipName": "Alfred's Futterkiste",
+  "ShipAddress": "Obere Str. 57",
+  "ShipCity": "Berlin",
+  "ShipRegion": null,
+  "ShipPostalCode": "12209",
+  "ShipCountry": "Germany",
+  "ObjectType": "Order",
+  "_id": "6ec29ffe-24c8-11df-968b-00a0c6000000",
+  "_docNum": 680
+}

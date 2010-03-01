@@ -1,0 +1,16 @@
+{
+  "CustomerID": "WELLI",
+  "CompanyName": "Wellington Importadora",
+  "ContactName": "Paula Parente",
+  "ContactTitle": "Sales Manager",
+  "Address": "Rua do Mercado, 12",
+  "City": "Resende",
+  "Region": "SP",
+  "PostalCode": "08737-363",
+  "Country": "Brazil",
+  "Phone": "(14) 555-8122",
+  "Fax": null,
+  "ObjectType": "Customer",
+  "_id": "6ec29dbe-24c8-11df-968b-00a0c6000000",
+  "_docNum": 96
+}

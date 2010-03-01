@@ -1,0 +1,16 @@
+{
+  "CustomerID": "BLONP",
+  "CompanyName": "Blondel père et fils",
+  "ContactName": "Frédérique Citeaux",
+  "ContactTitle": "Marketing Manager",
+  "Address": "24, place Kléber",
+  "City": "Strasbourg",
+  "Region": null,
+  "PostalCode": "67000",
+  "Country": "France",
+  "Phone": "88.60.15.31",
+  "Fax": "88.60.15.32",
+  "ObjectType": "Customer",
+  "_id": "6ec29d6d-24c8-11df-968b-00a0c6000000",
+  "_docNum": 15
+}

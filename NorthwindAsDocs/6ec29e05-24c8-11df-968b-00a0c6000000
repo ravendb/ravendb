@@ -1,0 +1,15 @@
+{
+  "ProductID": 27,
+  "ProductName": "Schoggi Schokolade",
+  "SupplierID": "6ec29dd5-24c8-11df-968b-00a0c6000000",
+  "CategoryID": "6ec29d61-24c8-11df-968b-00a0c6000000",
+  "QuantityPerUnit": "100 - 100 g pieces",
+  "UnitPrice": 43.9,
+  "UnitsInStock": 49,
+  "UnitsOnOrder": 0,
+  "ReorderLevel": 30,
+  "Discontinued": false,
+  "ObjectType": "Product",
+  "_id": "6ec29e05-24c8-11df-968b-00a0c6000000",
+  "_docNum": 175
+}

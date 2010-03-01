@@ -1,0 +1,16 @@
+{
+  "CustomerID": "THECR",
+  "CompanyName": "The Cracker Box",
+  "ContactName": "Liu Wong",
+  "ContactTitle": "Marketing Assistant",
+  "Address": "55 Grizzly Peak Rd.",
+  "City": "Butte",
+  "Region": "MT",
+  "PostalCode": "59801",
+  "Country": "USA",
+  "Phone": "(406) 555-5834",
+  "Fax": "(406) 555-8083",
+  "ObjectType": "Customer",
+  "_id": "6ec29db4-24c8-11df-968b-00a0c6000000",
+  "_docNum": 86
+}

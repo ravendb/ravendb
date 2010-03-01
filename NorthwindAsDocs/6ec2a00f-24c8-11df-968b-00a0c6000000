@@ -1,0 +1,19 @@
+{
+  "OrderID": 10719,
+  "CustomerID": "6ec29d93-24c8-11df-968b-00a0c6000000",
+  "EmployeeID": "6ec29dc9-24c8-11df-968b-00a0c6000000",
+  "OrderDate": "\/Date(817430400000+0000)\/",
+  "RequiredDate": "\/Date(819849600000+0000)\/",
+  "ShippedDate": "\/Date(818208000000+0000)\/",
+  "ShipVia": "6ec29de9-24c8-11df-968b-00a0c6000000",
+  "Freight": 51.44,
+  "ShipName": "Let's Stop N Shop",
+  "ShipAddress": "87 Polk St.\r\nSuite 5",
+  "ShipCity": "San Francisco",
+  "ShipRegion": "CA",
+  "ShipPostalCode": "94117",
+  "ShipCountry": "USA",
+  "ObjectType": "Order",
+  "_id": "6ec2a00f-24c8-11df-968b-00a0c6000000",
+  "_docNum": 697
+}

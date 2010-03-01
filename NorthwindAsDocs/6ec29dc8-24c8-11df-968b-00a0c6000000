@@ -1,0 +1,21 @@
+{
+  "EmployeeID": 7,
+  "LastName": "King",
+  "FirstName": "Robert",
+  "Title": "Sales Representative",
+  "TitleOfCourtesy": "Mr.",
+  "BirthDate": "\/Date(-302749200000+0100)\/",
+  "HireDate": "\/Date(757468800000+0000)\/",
+  "Address": "Edgeham Hollow\r\nWinchester Way",
+  "City": "London",
+  "Region": null,
+  "PostalCode": "RG1 9SP",
+  "Country": "UK",
+  "HomePhone": "(71) 555-5598",
+  "Extension": "465",
+  "Notes": "Robert King served in the Peace Corps and traveled extensively before completing his degree in English at the University of Michigan in 1992, the year he joined the company.  After completing a course entitled \"Selling in Europe,\" he was transferred to the London office in March 1993.",
+  "ReportsTo": "6ec29dc6-24c8-11df-968b-00a0c6000000",
+  "ObjectType": "Employee",
+  "_id": "6ec29dc8-24c8-11df-968b-00a0c6000000",
+  "_docNum": 114
+}

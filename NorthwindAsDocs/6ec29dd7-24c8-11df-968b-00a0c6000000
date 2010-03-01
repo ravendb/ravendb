@@ -1,0 +1,17 @@
+{
+  "SupplierID": 13,
+  "CompanyName": "Nord-Ost-Fisch Handelsgesellschaft mbH",
+  "ContactName": "Sven Petersen",
+  "ContactTitle": "Coordinator Foreign Markets",
+  "Address": "Frahmredder 112a",
+  "City": "Cuxhaven",
+  "Region": null,
+  "PostalCode": "27478",
+  "Country": "Germany",
+  "Phone": "(04721) 8713",
+  "Fax": "(04721) 8714",
+  "HomePage": null,
+  "ObjectType": "Supplier",
+  "_id": "6ec29dd7-24c8-11df-968b-00a0c6000000",
+  "_docNum": 129
+}

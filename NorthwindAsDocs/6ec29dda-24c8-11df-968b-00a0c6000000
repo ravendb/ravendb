@@ -1,0 +1,17 @@
+{
+  "SupplierID": 16,
+  "CompanyName": "Bigfoot Breweries",
+  "ContactName": "Cheryl Saylor",
+  "ContactTitle": "Regional Account Rep.",
+  "Address": "3400 - 8th Avenue\r\nSuite 210",
+  "City": "Bend",
+  "Region": "OR",
+  "PostalCode": "97101",
+  "Country": "USA",
+  "Phone": "(503) 555-9931",
+  "Fax": null,
+  "HomePage": null,
+  "ObjectType": "Supplier",
+  "_id": "6ec29dda-24c8-11df-968b-00a0c6000000",
+  "_docNum": 132
+}

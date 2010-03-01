@@ -1,0 +1,16 @@
+{
+  "CustomerID": "PERIC",
+  "CompanyName": "Pericles Comidas clásicas",
+  "ContactName": "Guillermo Fernández",
+  "ContactTitle": "Sales Representative",
+  "Address": "Calle Dr. Jorge Cash 321",
+  "City": "México D.F.",
+  "Region": null,
+  "PostalCode": "05033",
+  "Country": "Mexico",
+  "Phone": "(5) 552-3745",
+  "Fax": "(5) 545-3745",
+  "ObjectType": "Customer",
+  "_id": "6ec29da0-24c8-11df-968b-00a0c6000000",
+  "_docNum": 66
+}

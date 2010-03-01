@@ -1,0 +1,16 @@
+{
+  "CustomerID": "SUPRD",
+  "CompanyName": "Suprêmes délices",
+  "ContactName": "Pascale Cartrain",
+  "ContactTitle": "Accounting Manager",
+  "Address": "Boulevard Tirou, 255",
+  "City": "Charleroi",
+  "Region": null,
+  "PostalCode": "B-6000",
+  "Country": "Belgium",
+  "Phone": "(071) 23 67 22 20",
+  "Fax": "(071) 23 67 22 21",
+  "ObjectType": "Customer",
+  "_id": "6ec29db2-24c8-11df-968b-00a0c6000000",
+  "_docNum": 84
+}

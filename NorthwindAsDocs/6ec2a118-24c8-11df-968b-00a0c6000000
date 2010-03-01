@@ -1,0 +1,19 @@
+{
+  "OrderID": 10984,
+  "CustomerID": "6ec29dad-24c8-11df-968b-00a0c6000000",
+  "EmployeeID": "6ec29dc2-24c8-11df-968b-00a0c6000000",
+  "OrderDate": "\/Date(830732400000+0100)\/",
+  "RequiredDate": "\/Date(833151600000+0100)\/",
+  "ShippedDate": "\/Date(831078000000+0100)\/",
+  "ShipVia": "6ec29dea-24c8-11df-968b-00a0c6000000",
+  "Freight": 211.22,
+  "ShipName": "Save-a-lot Markets",
+  "ShipAddress": "187 Suffolk Ln.",
+  "ShipCity": "Boise",
+  "ShipRegion": "ID",
+  "ShipPostalCode": "83720",
+  "ShipCountry": "USA",
+  "ObjectType": "Order",
+  "_id": "6ec2a118-24c8-11df-968b-00a0c6000000",
+  "_docNum": 962
+}

@@ -1,0 +1,17 @@
+{
+  "SupplierID": 17,
+  "CompanyName": "Svensk Sjöföda AB",
+  "ContactName": "Michael Björn",
+  "ContactTitle": "Sales Representative",
+  "Address": "Brovallavägen 231",
+  "City": "Stockholm",
+  "Region": null,
+  "PostalCode": "S-123 45",
+  "Country": "Sweden",
+  "Phone": "08-123 45 67",
+  "Fax": null,
+  "HomePage": null,
+  "ObjectType": "Supplier",
+  "_id": "6ec29ddb-24c8-11df-968b-00a0c6000000",
+  "_docNum": 133
+}

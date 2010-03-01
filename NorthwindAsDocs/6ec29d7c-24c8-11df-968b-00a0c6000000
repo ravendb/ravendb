@@ -1,0 +1,16 @@
+{
+  "CustomerID": "FISSA",
+  "CompanyName": "FISSA Fabrica Inter. Salchichas S.A.",
+  "ContactName": "Diego Roel",
+  "ContactTitle": "Accounting Manager",
+  "Address": "C/ Moralzarzal, 86",
+  "City": "Madrid",
+  "Region": null,
+  "PostalCode": "28034",
+  "Country": "Spain",
+  "Phone": "(91) 555 94 44",
+  "Fax": "(91) 555 55 93",
+  "ObjectType": "Customer",
+  "_id": "6ec29d7c-24c8-11df-968b-00a0c6000000",
+  "_docNum": 30
+}

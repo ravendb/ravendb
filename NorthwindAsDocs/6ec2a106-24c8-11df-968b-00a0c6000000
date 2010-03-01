@@ -1,0 +1,19 @@
+{
+  "OrderID": 10966,
+  "CustomerID": "6ec29d74-24c8-11df-968b-00a0c6000000",
+  "EmployeeID": "6ec29dc5-24c8-11df-968b-00a0c6000000",
+  "OrderDate": "\/Date(829868400000+0100)\/",
+  "RequiredDate": "\/Date(832287600000+0100)\/",
+  "ShippedDate": "\/Date(831510000000+0100)\/",
+  "ShipVia": "6ec29de8-24c8-11df-968b-00a0c6000000",
+  "Freight": 27.19,
+  "ShipName": "Chop-suey Chinese",
+  "ShipAddress": "Hauptstr. 31",
+  "ShipCity": "Bern",
+  "ShipRegion": null,
+  "ShipPostalCode": "3012",
+  "ShipCountry": "Switzerland",
+  "ObjectType": "Order",
+  "_id": "6ec2a106-24c8-11df-968b-00a0c6000000",
+  "_docNum": 944
+}
