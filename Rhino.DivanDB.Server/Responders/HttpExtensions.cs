@@ -13,9 +13,49 @@ namespace Rhino.DivanDB.Server.Responders
     {
         private static readonly HashSet<string> HeadersToIgnore = new HashSet<string>
         {
-            "User-Agent",
+            // Request headers
+            "Accept-Charset",
+            "Accept-Encoding",
+            "Accept",
+            "Accept-Language",
+            "Authorization",
+            "Cookie",
+            "Expect",
+            "From",
             "Host",
-            "Content-Length"
+            "If-Match",
+            "If-Modified-Since",
+            "If-None-Match",
+            "If-Range",
+            "If-Unmodified-Since",
+            "Max-Forwards",
+            "Referer",
+            "TE",
+            "User-Agent",
+
+            //Response headers
+            "Accept-Ranges",
+            "Age",
+            "Allow",
+            "ETag",
+            "Location",
+            "Retry-After",
+            "Server",
+            "Set-Cookie2",
+            "Set-Cookie",
+            "Vary",
+            "Www-Authenticate",
+
+            // General
+            "Cache-Control",
+            "Connection",
+            "Date",
+            "Pragma",
+            "Trailer",
+            "Transfer-Encoding",
+            "Upgrade",
+            "Via",
+            "Warning",
         };
 
         public static NameValueCollection FilterHeaders(this NameValueCollection self)
@@ -47,7 +87,7 @@ namespace Rhino.DivanDB.Server.Responders
             var streamWriter = new StreamWriter(context.Response.OutputStream);
             new JsonSerializer
             {
-                Converters = {new JsonToJsonConverter()}
+                Converters = { new JsonToJsonConverter() }
             }.Serialize(streamWriter, obj);
             streamWriter.Flush();
         }
@@ -112,7 +152,7 @@ namespace Rhino.DivanDB.Server.Responders
         public static byte[] ReadData(this Stream steram)
         {
             var list = new List<byte[]>();
-            const int defaultBufferSize = 1024*16;
+            const int defaultBufferSize = 1024 * 16;
             var buffer = new byte[defaultBufferSize];
             int offset = 0;
             int read;
@@ -165,7 +205,7 @@ namespace Rhino.DivanDB.Server.Responders
                 void WriteJson
                 (JsonWriter writer, object value)
             {
-                ((JObject) value).WriteTo(writer);
+                ((JObject)value).WriteTo(writer);
             }
 
             public override
@@ -180,7 +220,7 @@ namespace Rhino.DivanDB.Server.Responders
                 (Type
                      objectType)
             {
-                return objectType == typeof (JObject);
+                return objectType == typeof(JObject);
             }
         }
 
