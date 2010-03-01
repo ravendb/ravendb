@@ -113,11 +113,17 @@
             });
         },
 
-        queryIndex: function (name, queryValues, successCallback) {
+        queryIndex: function (name, queryValues, pageNumber, pageSize, successCallback) {
+            var start = (pageNumber - 1) * pageSize;
+
             $.ajax({
                 type: 'GET',
                 url: settings.server + 'indexes/' + name,
-                data: { query : queryValues },
+                data: { 
+                    query : queryValues,
+                    start: start,
+                    pageSize: pageSize
+                },
                 success: function (data) {
                     successCallback(data);
                 }

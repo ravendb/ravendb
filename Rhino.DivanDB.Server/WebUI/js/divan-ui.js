@@ -33,14 +33,9 @@ DivanUI.GetDocumentCount = function (successCallback) {
     $.divanDB.getDocumentCount(successCallback);
 }
 
-DivanUI.GetDocumentPage = function (pageNum, pageSize, targetSelector, successCallback) {
-    if (!$(targetSelector).hasTemplate()) {
-        $(targetSelector).setTemplateURL('JSONTemplates/documentPage.html');
-    }
-
+DivanUI.GetDocumentPage = function (pageNum, pageSize, successCallback) {
     $.divanDB.getDocumentPage(pageNum, pageSize, function (docs) {
-        $(targetSelector).processTemplate(docs);
-        successCallback();
+        successCallback(docs);
     });
 }
 
@@ -80,6 +75,6 @@ DivanUI.SearchIndexes = function (name, successCallback) {
     $.divanDB.searchIndexes(name, successCallback);
 }
 
-DivanUI.QueryIndex = function (name, queryValues, successCallback) {
-    $.divanDB.queryIndex(name, queryValues, successCallback);
+DivanUI.QueryIndex = function (name, queryValues, pageNumber, pageSize, successCallback) {
+    $.divanDB.queryIndex(name, queryValues, pageNumber, pageSize, successCallback);
 }
