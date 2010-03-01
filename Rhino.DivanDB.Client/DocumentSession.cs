@@ -1,8 +1,6 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Text;
 using Newtonsoft.Json;
 using JObject=Newtonsoft.Json.Linq.JObject;
@@ -12,13 +10,13 @@ namespace Rhino.DivanDB.Client
 {
     public class DocumentSession
     {
-        private readonly DocumentStore documentDb;
-        private readonly DocumentDatabase database;
+        private readonly DocumentStore documentStore;
+        private readonly IDatabaseCommands database;
         private ArrayList entities = new ArrayList();
 
-        public DocumentSession(DocumentStore documentDb, DocumentDatabase database)
+        public DocumentSession(DocumentStore documentStore, IDatabaseCommands database)
         {
-            this.documentDb = documentDb;
+            this.documentStore = documentStore;
             this.database = database;
         }
 
@@ -37,7 +35,7 @@ namespace Rhino.DivanDB.Client
 
             foreach (var property in entity.GetType().GetProperties())
             {
-                var isIdentityProperty = documentDb.Conventions.FindIdentityProperty.Invoke(property);
+                var isIdentityProperty = documentStore.Conventions.FindIdentityProperty.Invoke(property);
                 if (isIdentityProperty)
                     property.SetValue(entity, id, null);
             }
@@ -52,7 +50,7 @@ namespace Rhino.DivanDB.Client
             entities.Add(entity);
 
             var identityProperty = entity.GetType().GetProperties()
-                                        .FirstOrDefault(q => documentDb.Conventions.FindIdentityProperty.Invoke(q));
+                                        .FirstOrDefault(q => documentStore.Conventions.FindIdentityProperty.Invoke(q));
             
             if (identityProperty != null)
                 identityProperty.SetValue(entity, key, null);
@@ -70,7 +68,7 @@ namespace Rhino.DivanDB.Client
         private JObject convertEntityToJson(object entity)
         {
             var identityProperty = entity.GetType().GetProperties()
-                            .FirstOrDefault(q => documentDb.Conventions.FindIdentityProperty.Invoke(q));
+                            .FirstOrDefault(q => documentStore.Conventions.FindIdentityProperty.Invoke(q));
 
             var objectAsJson = JObject.FromObject(entity);
             if (identityProperty != null)

@@ -31,6 +31,10 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Newtonsoft.Json, Version=3.5.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SharedLibs\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
@@ -50,13 +54,18 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BaseTest.cs" />
-    <Compile Include="DocumentDbClientTests.cs" />
+    <Compile Include="DocumentStoreEmbeddedTests.cs" />
+    <Compile Include="DocumentStoreServerTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Rhino.DivanDB.Client\Rhino.DivanDB.Client.csproj">
       <Project>{9F92FD36-60B6-4655-B8C6-00125B46AB6A}</Project>
       <Name>Rhino.DivanDB.Client</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Rhino.DivanDB.Server\Rhino.DivanDB.Server.csproj">
+      <Project>{3B90EB20-AEA3-4972-8219-936F1A62768C}</Project>
+      <Name>Rhino.DivanDB.Server</Name>
     </ProjectReference>
     <ProjectReference Include="..\Rhino.DivanDB\Rhino.DivanDB.csproj">
       <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>

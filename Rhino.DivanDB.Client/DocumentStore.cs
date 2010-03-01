@@ -4,6 +4,15 @@ namespace Rhino.DivanDB.Client
 {
     public class DocumentStore : IDisposable
     {
+        private readonly string localhost;
+        private readonly int port;
+
+        public DocumentStore(string localhost, int port) : this()
+        {
+            this.localhost = localhost;
+            this.port = port;
+        }
+
         public DocumentStore()
         {
             Conventions = new DocumentConvention();
@@ -20,17 +29,28 @@ namespace Rhino.DivanDB.Client
 
         public void Dispose()
         {
-            database.Dispose();
+            var embeddedDatabase = (DocumentDatabase)database;
+            if (embeddedDatabase != null)
+                embeddedDatabase.Dispose();
         }
 
         public void Initialise()
         {
-            database = new DocumentDatabase(Database);
-            database.SpinBackgroundWorkers();
+            if (String.IsNullOrEmpty(localhost))
+            {
+                var embeddedDatabase = new DocumentDatabase(Database);
+                embeddedDatabase.SpinBackgroundWorkers();
+                database = embeddedDatabase;
+            }
+            else
+            {
+                database = new ServerClient(localhost)
+            }
+
             database.PutIndex("getByType", "from entity in docs select new { entity.type };");
         }
 
-        private DocumentDatabase database;
+        private IDatabaseCommands database;
 
         public void Delete(Guid id)
         {

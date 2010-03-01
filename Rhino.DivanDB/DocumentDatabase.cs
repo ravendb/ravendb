@@ -17,7 +17,7 @@ using Rhino.DivanDB.Extensions;
 
 namespace Rhino.DivanDB
 {
-    public class DocumentDatabase : IDisposable
+    public class DocumentDatabase : IDatabaseCommands,  IDisposable
     {
         public DocumentDatabase(string path)
         {

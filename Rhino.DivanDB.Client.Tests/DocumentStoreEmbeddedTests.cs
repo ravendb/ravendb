@@ -5,7 +5,7 @@ using Xunit;
 namespace Rhino.DivanDB.Client.Tests
 {
 
-    public class DocumentDbClientTests : BaseTest
+    public class DocumentStoreEmbeddedTests : BaseTest
     {
         private DocumentStore newDocumentStore()
         {
@@ -94,24 +94,25 @@ namespace Rhino.DivanDB.Client.Tests
                 Assert.Equal(2, companyFound.Count);
             }
         }
+    }
 
-        public class Company
-        {
-            public string Id { get; set; }
-            public string Name { get; set; }
-            public string Address1 { get; set; }
-            public string Address2 { get; set; }
-            public string Address3 { get; set; }
-            public List<Contact> Contacts { get; set; }
-            public int Phone { get; set; }
-        }
 
-        public class Contact
-        {
-            public string FirstName { get; set; }
-            public string Surname { get; set; }
-            public string Email { get; set; }
-        }
+    public class Company
+    {
+        public string Id { get; set; }
+        public string Name { get; set; }
+        public string Address1 { get; set; }
+        public string Address2 { get; set; }
+        public string Address3 { get; set; }
+        public List<Contact> Contacts { get; set; }
+        public int Phone { get; set; }
+    }
+
+    public class Contact
+    {
+        public string FirstName { get; set; }
+        public string Surname { get; set; }
+        public string Email { get; set; }
     }
 }
 
