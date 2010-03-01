@@ -74,7 +74,7 @@ namespace Rhino.DivanDB.Client
             {
                 var entity = JsonConvert.DeserializeObject(q.ToString(), typeof(T));
                 var map = documentDb.GetMap<T>();
-                var id = new Guid(q.Value<string>("_id"));
+                var id = q.Value<string>("_id");
                 map.IdentityProperty.SetValue(entity, id, null);
                 return (T)entity;
             }).ToList();
