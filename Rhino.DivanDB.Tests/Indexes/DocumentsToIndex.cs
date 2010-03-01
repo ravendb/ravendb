@@ -32,7 +32,7 @@ namespace Rhino.DivanDB.Tests.Indexes
                 content: 'this is the content', 
                 title: 'hello world', 
                 size: 5
-            }"));
+            }"), new JObject());
 
             QueryResult docs;
             do
@@ -57,7 +57,7 @@ namespace Rhino.DivanDB.Tests.Indexes
     where doc.type == ""page""
     select new { doc.some };
 ");
-            db.Put(JObject.Parse("{_id: '1', type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"));
+            db.Put(JObject.Parse("{_id: '1', type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"), new JObject());
 
 
             QueryResult docs;
@@ -83,7 +83,7 @@ namespace Rhino.DivanDB.Tests.Indexes
     where doc.type == ""page""
     select new { doc.other };
 ");
-            db.Put(JObject.Parse("{_id: '1', type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"));
+            db.Put(JObject.Parse("{_id: '1', type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"), new JObject());
 
 
             QueryResult docs;
@@ -97,7 +97,7 @@ namespace Rhino.DivanDB.Tests.Indexes
         [Fact]
         public void Can_read_values_from_index_of_documents_already_in_db()
         {
-            db.Put(JObject.Parse("{_id: '1', type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"));
+            db.Put(JObject.Parse("{_id: '1', type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"), new JObject());
 
             db.PutIndex("pagesByTitle",
                 @"
@@ -116,8 +116,8 @@ namespace Rhino.DivanDB.Tests.Indexes
         [Fact]
         public void Can_read_values_from_indexes_of_documents_already_in_db_when_multiple_docs_exists()
         {
-            db.Put(JObject.Parse("{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"));
-            db.Put(JObject.Parse("{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"));
+            db.Put(JObject.Parse("{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"), new JObject());
+            db.Put(JObject.Parse("{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"), new JObject());
 
             db.PutIndex("pagesByTitle",
                 @"

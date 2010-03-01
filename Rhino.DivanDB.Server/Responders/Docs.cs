@@ -1,4 +1,5 @@
 using System.Net;
+using Newtonsoft.Json.Linq;
 
 namespace Rhino.DivanDB.Server.Responders
 {
@@ -30,7 +31,7 @@ namespace Rhino.DivanDB.Server.Responders
                         context.Write("POST to " + context.Request.Url.LocalPath +" with a document conatining '_id'");
                         return;
                     }
-                    var id = Database.Put(json);
+                    var id = Database.Put(json, new JObject());
 
                     context.SetStatusToCreated("/docs/" + id);
                     context.WriteJson(new { id });

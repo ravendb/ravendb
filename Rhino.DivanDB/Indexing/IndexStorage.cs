@@ -8,6 +8,7 @@ using System.Linq;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
+using Rhino.DivanDB.Extensions;
 using Rhino.DivanDB.Json;
 using Rhino.DivanDB.Linq;
 using Directory = System.IO.Directory;
@@ -75,7 +76,7 @@ namespace Rhino.DivanDB.Indexing
             }
         }
 
-        public IEnumerable<string> Query(string index, string query, int start, int pageSize)
+        public IEnumerable<string> Query(string index, string query, int start, int pageSize, Reference<int> totalSize)
         {
             Index value;
             if (indexes.TryGetValue(index, out value) == false)
@@ -83,7 +84,7 @@ namespace Rhino.DivanDB.Indexing
                 log.DebugFormat("Query on non existing index {0}", index);
                 throw new InvalidOperationException("Index " + index + " does not exists");
             }
-            return value.Query(query, start, pageSize);
+            return value.Query(query, start, pageSize, totalSize);
         }
 
         public void RemoveFromIndex(string index, string[] keys)

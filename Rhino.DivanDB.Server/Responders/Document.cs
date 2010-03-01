@@ -64,7 +64,7 @@ namespace Rhino.DivanDB.Server.Responders
                 }
             }
             context.SetStatusToCreated("/docs/" + docId);
-            context.WriteJson(new { id = Database.Put(json) });
+            context.WriteJson(new { id = Database.Put(json, new JObject()) });
         }
     }
 }

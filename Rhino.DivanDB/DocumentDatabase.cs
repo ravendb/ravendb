@@ -131,7 +131,7 @@ namespace Rhino.DivanDB
             return document;
         }
 
-        public string Put(JObject document)
+        public string Put(JObject document, JObject metadata)
         {
             string key = GetKeyFromDocumentOrGenerateNewOne(document);
 
@@ -143,7 +143,7 @@ namespace Rhino.DivanDB
             TransactionalStorage.Batch(actions =>
                                        {
                                            actions.DeleteDocument(key);
-                                           actions.AddDocument(key, document.ToString());
+                                           actions.AddDocument(key, document.ToString(), metadata.ToString());
                                            actions.AddTask(new IndexDocumentTask { View = "*", Key = key });
                                            actions.Commit();
                                        });
@@ -194,11 +194,12 @@ namespace Rhino.DivanDB
         {
             var list = new List<JObject>();
             var stale = false;
+            var totalSize = new Reference<int>();
             TransactionalStorage.Batch(
                 actions =>
                 {
                     stale = actions.DoesTasksExistsForIndex(index);
-                    list.AddRange(from key in IndexStorage.Query(index, query, start, pageSize)
+                    list.AddRange(from key in IndexStorage.Query(index, query, start, pageSize, totalSize)
                                   select actions.DocumentByKey(key)
                                       into doc
                                       where doc != null
@@ -208,7 +209,8 @@ namespace Rhino.DivanDB
             return new QueryResult
                    {
                        Results = list.ToArray(),
-                       IsStale = stale
+                       IsStale = stale,
+                       TotalResults = totalSize.Value
                    };
         }
 
@@ -311,11 +313,5 @@ namespace Rhino.DivanDB
                         })
                 );
         }
-    }
-
-    public class QueryResult
-    {
-        public JObject[] Results { get; set; }
-        public bool IsStale { get; set; }
     }
 }

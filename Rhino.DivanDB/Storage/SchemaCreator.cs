@@ -8,7 +8,7 @@ namespace Rhino.DivanDB.Storage
     public class SchemaCreator
     {
         private readonly Session session;
-        public const string SchemaVersion = "1.4";
+        public const string SchemaVersion = "1.5";
 
         public SchemaCreator(Session session)
         {
@@ -62,6 +62,13 @@ namespace Rhino.DivanDB.Storage
                 coltyp = JET_coltyp.LongBinary,
                 grbit = ColumndefGrbit.ColumnTagged
             }, null, 0, out columnid);
+
+            Api.JetAddColumn(session, tableid, "metadata", new JET_COLUMNDEF
+            {
+                coltyp = JET_coltyp.LongText,
+                grbit = ColumndefGrbit.ColumnTagged
+            }, null, 0, out columnid);
+
 
             string indexDef = "+key\0\0";
             Api.JetCreateIndex(session, tableid, "by_key", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,

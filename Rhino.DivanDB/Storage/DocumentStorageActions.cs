@@ -172,12 +172,13 @@ namespace Rhino.DivanDB.Storage
             hasMoreWork.Value = false;
         }
 
-        public void AddDocument(string key, string data)
+        public void AddDocument(string key, string data, string metadata)
         {
             using (var update = new Update(session, documents, JET_prep.Insert))
             {
                 Api.SetColumn(session, documents, documentsColumns["key"], key, Encoding.Unicode);
                 Api.SetColumn(session, documents, documentsColumns["data"], Encoding.UTF8.GetBytes(data));
+                Api.SetColumn(session, documents, documentsColumns["metadata"], data, Encoding.Unicode);
 
                 update.Save();
             }

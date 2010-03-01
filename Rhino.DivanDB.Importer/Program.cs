@@ -26,7 +26,7 @@ namespace Rhino.DivanDB.Importer
                 foreach (var doc in array)
                 {
                     count++;
-                    db.Put(doc);
+                    db.Put(doc, new JObject());
                 }
             }
             Console.WriteLine("{0} doc inserts in {1}", count, sw.Elapsed);

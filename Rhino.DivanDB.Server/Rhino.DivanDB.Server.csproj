@@ -186,7 +186,6 @@
     <Content Include="WebUI\js\jquery.simpletip.js" />
     <Content Include="WebUI\js\json2.js" />
     <Content Include="WebUI\js\JSONeditor.js" />
-    <Content Include="WebUI\query.html" />
     <Content Include="WebUI\statistics.html" />
   </ItemGroup>
   <ItemGroup>

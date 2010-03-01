@@ -107,6 +107,7 @@
     <Compile Include="Linq\LinqTransformer.cs" />
     <Compile Include="Linq\TransformVisitor.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="QueryResult.cs" />
     <Compile Include="Storage\IndexCreationOptions.cs" />
     <Compile Include="Tasks\IndexDocumentRangeTask.cs" />
     <Compile Include="Tasks\IndexDocumentTask.cs" />
