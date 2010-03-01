@@ -11,7 +11,7 @@ namespace Rhino.DivanDB.Client.Tests
         {
             var documentStore = new DocumentStore();
             documentStore.Database = DbName;
-            documentStore.MapAggregate<Company>(q => q.IdentityProperty = typeof(Company).GetProperty("Id"));
+            documentStore.Conventions.FindIdentityProperty = q => q.Name == "Id";
             documentStore.Initialise();
             return documentStore;
         }

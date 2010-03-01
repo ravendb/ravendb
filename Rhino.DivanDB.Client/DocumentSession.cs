@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using Newtonsoft.Json;
 using JObject=Newtonsoft.Json.Linq.JObject;
@@ -33,8 +34,13 @@ namespace Rhino.DivanDB.Client
         private object convertToEntity<T>(string id, string documentFound)
         {
             var entity = JsonConvert.DeserializeObject(documentFound, typeof(T));
-            var map = documentDb.GetMap<T>();
-            map.IdentityProperty.SetValue(entity, id, null);
+
+            foreach (var property in entity.GetType().GetProperties())
+            {
+                var isIdentityProperty = documentDb.Conventions.FindIdentityProperty.Invoke(property);
+                if (isIdentityProperty)
+                    property.SetValue(entity, id, null);
+            }
             return entity;
         }
 
@@ -45,8 +51,11 @@ namespace Rhino.DivanDB.Client
             var key = database.Put(json);
             entities.Add(entity);
 
-            var map = documentDb.GetMap<T>();
-            map.IdentityProperty.SetValue(entity, key, null);
+            var identityProperty = entity.GetType().GetProperties()
+                                        .FirstOrDefault(q => documentDb.Conventions.FindIdentityProperty.Invoke(q));
+            
+            if (identityProperty != null)
+                identityProperty.SetValue(entity, key, null);
         }
 
         public void SaveChanges()
@@ -60,13 +69,18 @@ namespace Rhino.DivanDB.Client
 
         private JObject convertEntityToJson(object entity)
         {
-            var map = documentDb.GetMap(entity.GetType());
-            var value = map.IdentityProperty.GetValue(entity, null);
-                
+            var identityProperty = entity.GetType().GetProperties()
+                            .FirstOrDefault(q => documentDb.Conventions.FindIdentityProperty.Invoke(q));
+
             var objectAsJson = JObject.FromObject(entity);
-            objectAsJson.Remove(map.IdentityProperty.Name);
-            if (value != null)
-                objectAsJson.Add("_id", JToken.FromObject(value));
+            if (identityProperty != null)
+            {
+                var value = identityProperty.GetValue(entity, null);
+                objectAsJson.Remove(identityProperty.Name);
+
+                if (value != null)
+                    objectAsJson.Add("_id", JToken.FromObject(value));
+            }
 
             objectAsJson.Add("type", JToken.FromObject(entity.GetType()));
             return objectAsJson;
