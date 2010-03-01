@@ -38,6 +38,16 @@ task Init -depends Clean {
 		-version $version `
 		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2009" `
 		-clsCompliant "false"
+	
+		Generate-Assembly-Info `
+		-file "$base_dir\Rhino.DivanDB.Importer\Properties\AssemblyInfo.cs" `
+		-title "Rhino DivanDB $version" `
+		-description "A linq enabled document database for .NET" `
+		-company "Hibernating Rhinos" `
+		-product "Rhino DivanDB $version" `
+		-version $version `
+		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2009" `
+		-clsCompliant "false"
 
 	Generate-Assembly-Info `
 		-file "$base_dir\Rhino.DivanDB.Scenarios\Properties\AssemblyInfo.cs" `
