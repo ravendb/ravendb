@@ -23,7 +23,7 @@
             $.ajax({
                 url: settings.server + 'stats',
                 success: function (data) {
-                    successCallback(data.docCount);
+                    successCallback(data.CountOfDocuments);
                 }
             });
         },
