@@ -6,7 +6,7 @@ namespace Rhino.DivanDB.Server.Responders
 {
     public class DivanUserInterfaceResponser : RequestResponder
     {
-        public const string DivanPath = @"C:\Work\divandb\Rhino.DivanDB.Server\WebUI\";
+        public const string DivanPath = @"C:\Users\LukeHertert\Documents\Code\rhino-divandb\Rhino.DivanDB.Server\WebUI\";
 
         public override string UrlPattern
         {

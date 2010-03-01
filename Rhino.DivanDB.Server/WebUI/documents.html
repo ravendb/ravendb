@@ -19,68 +19,126 @@
     <script type="text/javascript" src="js/divan-ui.js"></script>
     <script type="text/javascript">
         var numPages;
+        var pageNumber = 1;
         var pageSize = 25;
+        var allDocsTotalCount;
+        var indexName;
+        var indexValues;
+        var isInQueryMode = false;
 
         $(document).ready(function () {
-            DivanUI.GetDocumentCount(function (totalCount) {
-                var totalDocs = totalCount;
-                if (totalDocs != 0) {
-                    numPages = Math.ceil(totalDocs / pageSize);
-                    $("#pager").pager({
-                        pagenumber: 1,
-                        pagecount: numPages,
-                        buttonClickCallback: pagerClick
-                    });
-                    getDocumentPage(1, pageSize);
-                } else {
-                    $('#docList').html('There are no documents in your database');
-                }
-            });
+            DivanUI.GetDocumentCount(function (count) {
+                allDocsTotalCount = count;
+                getAllDocuments();
+            });            
 
             $('#createNewDocument').button({
                 icons: { primary: 'ui-icon-plusthick' }
             }).click(function () {
                 CreateDocument();
             });
+
+            $('#executeQuery').button({
+                icons: { primary: 'ui-icon-circle-triangle-e' }
+            }).click(function () {
+                indexName = $('#txtIndexName').val();
+                indexValues = $('#txtIndexValue').val();
+                ExecuteQuery();
+            });
+
+            $('#txtIndexName').autocomplete({
+                source: function (request, response) {
+                    DivanUI.SearchIndexes(request.term, function (searchResult) {
+                        response(searchResult);
+                    });
+                },
+                minLength: 2,
+                select: function (event, ui) {
+                    $('#queryValueSubmit').fadeIn();
+                }
+            }).keyup(function (event) {
+                if (event.keyCode != 13) {
+                    $('#queryValueSubmit').fadeOut();
+                }
+            });
         });
 
-        function getDocumentPage(pageNum, selectedPageSize) {
-            $('#docList').html('<img src="images/ajax-loader.gif" /> Loading...');
-            DivanUI.GetDocumentPage(pageNum, selectedPageSize, '#docList', function () {
-                $('.searchListItem').each(function () {
-                    $(this).simpletip({
-                        content: "<strong>Click to edit this document</strong><br />Data Preview: <br />" + $(this).children('.searchListItemValue').html(),
-                        fixed: true,
-                        position: 'top right',
-                        offset: [322, 0],
-                        baseClass: 'tooltip ui-corner-all'
-                    });
+        function getAllDocuments() {
+            $('#docList').show().html('<img src="images/ajax-loader.gif" /> Loading...');
+            DivanUI.GetDocumentPage(pageNumber, pageSize, function (docs) {
+                if (docs.length == 0) {
+                    $('#docList').html('There are no documents in your database.');
+                    $('#pager').hide();
+                } else {
+                    processDocumentResults(docs, allDocsTotalCount);
+                }
+            });
+        }
 
-                    $(this).click(function () {
-                        EditDocument($(this).attr('id'));
-                    });
+        function ExecuteQuery() {
+            isInQueryMode = true;
 
-                    $(this).hover(function () {
-                        $(this).css('border', '1px solid #666').css('padding', '4px 9px');
-                        var tooltipArrow = $('<div class="tooltipArrow"> </div>');
-                        $(tooltipArrow).css('top', $(this).offset().top + 8);
-                        $(tooltipArrow).css('left', $(this).offset().left + $(this).outerWidth());
-                        $(this).append(tooltipArrow);
-                    }, function () {
-                        $(this).css('border', 'none').css('padding', '5px 10px');
-                        $(this).children('.tooltipArrow').remove();
-                    });
+            $('#docList').show().html('<img src="images/ajax-loader.gif" /> Loading...');
+
+            DivanUI.QueryIndex(indexName, indexValues, pageNumber, pageSize, function (data) {
+                if (data.Results.length == 0) {
+                    $('#docList').html('No documents matched your query.');
+                    $('#pager').hide();
+                } else {
+                    //this is only here because there's no way to get the total count on a query currently
+                    allDocsTotalCount = data.Results.length;
+                    processDocumentResults(data.Results, allDocsTotalCount);
+                }
+            });
+        }
+
+
+        function processDocumentResults(results, totalCount) {
+            numPages = Math.ceil(totalCount / pageSize);
+            $("#pager").pager({
+                pagenumber: pageNumber,
+                pagecount: numPages,
+                buttonClickCallback: pagerClick
+            });
+
+            if (!$('#docList').hasTemplate()) {
+                $('#docList').setTemplateURL('JSONTemplates/documentPage.html');
+            }
+
+            $('#docList').processTemplate(results);
+            $('.searchListItem').each(function () {
+                $(this).simpletip({
+                    content: "<strong>Click to edit this document</strong><br />Data Preview: <br />" + $(this).children('.searchListItemValue').html(),
+                    fixed: true,
+                    position: 'top right',
+                    offset: [322, 0],
+                    baseClass: 'tooltip ui-corner-all'
+                });
+
+                $(this).click(function () {
+                    EditDocument($(this).attr('id'));
+                });
+
+                $(this).hover(function () {
+                    $(this).css('border', '1px solid #666').css('padding', '4px 9px');
+                    var tooltipArrow = $('<div class="tooltipArrow"> </div>');
+                    $(tooltipArrow).css('top', $(this).offset().top + 8);
+                    $(tooltipArrow).css('left', $(this).offset().left + $(this).outerWidth());
+                    $(this).append(tooltipArrow);
+                }, function () {
+                    $(this).css('border', 'none').css('padding', '5px 10px');
+                    $(this).children('.tooltipArrow').remove();
                 });
             });
         }
 
         function pagerClick(newPageNumber) {
-            $("#pager").pager({
-                pagenumber: newPageNumber,
-                pagecount: numPages,
-                buttonClickCallback: pagerClick
-            });
-            getDocumentPage(newPageNumber, pageSize);
+            pageNumber = newPageNumber;
+            if (!isInQueryMode) {
+                getAllDocuments();
+            } else {
+                ExecuteQuery();
+            }
         }
 
         function EditDocument(id) {
@@ -144,7 +202,6 @@
                 <li><a href="statistics.html">GLOBAL STATISTICS</a></li>
                 <li><a href="documents.html" class="topNavAct">DOCUMENTS</a></li>
                 <li><a href="indexes.html">INDEXES</a></li>
-                <li><a href="query.html">QUERY</a></li>
                 <li><a href="documentation.html">DOCUMENTATION</a></li>
             </ul>
             <br class="clear" />
@@ -169,9 +226,22 @@
                 <div class="sideBar">
                     <div class="sideBarListBox">
                         <img src="images/sideBarListBoxTop.png" alt="" width="240" height="10" />
-                        <h3>Document Actions</h3>
                         <ul>
                             <li><button id="createNewDocument">Create New Document</button></li>
+                        </ul>
+                        <ul>
+                            <li>
+                                <h3 style="padding: 10px 0;">Query Documents</h3>
+                                <label for="txtIndexName">Index Name</label><br />
+                                <input type="text" id="txtIndexName" name="txtIndexName" style="width:200px;" /><br /><br />
+
+                                <div id="queryValueSubmit" style="display:none;">
+                                    <label for="txtIndexValue">Index Value</label><br />
+                                    <input type="text" id="txtIndexValue" name="txtIndexValue" style="width:200px;" /><br /><br />
+
+                                    <button id="executeQuery">Execute Query</button><br /><br />
+                                </div>
+                            </li>
                         </ul>
                         <img src="images/sideBarListBoxBottom.png" alt="" width="240" height="10" />
                     </div>
