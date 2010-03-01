@@ -59,26 +59,31 @@ namespace Rhino.DivanDB
 
         private Thread[] backgroundWorkers = new Thread[0];
         private readonly WorkContext workContext;
-        public TransactionalStorage TransactionalStorage { get; private set; }
-        public IndexDefinitionStorage IndexDefinitionStorage { get; private set; }
-        public IndexStorage IndexStorage { get; private set; }
-
-        public int CountOfDocuments
         private readonly static string[] ReservedFields = new[] { "_docNum" };
 
         public DatabaseStatistics Statistics
         {
             get
             {
-                int value = 0;
+                var result = new DatabaseStatistics
+                {
+                    CountOfIndexes = IndexStorage.Indexes.Length
+                };
                 TransactionalStorage.Batch(actions =>
                 {
-                    value = actions.GetDocumentsCount();
+                    result.CountOfDocuments = actions.GetDocumentsCount();
+                    result.StaleIndexes = IndexStorage.Indexes
+                        .Where(actions.DoesTasksExistsForIndex)
+                        .ToArray();
                     actions.Commit();
                 });
-                return value;
+                return result;
             }
         }
+        public TransactionalStorage TransactionalStorage { get; private set; }
+        public IndexDefinitionStorage IndexDefinitionStorage { get; private set; }
+        public IndexStorage IndexStorage { get; private set; }
+
 
         #region IDisposable Members
 
@@ -285,11 +290,26 @@ namespace Rhino.DivanDB
             });
             return list;
         }
-    }
 
-    public class QueryResult
-    {
-        public JObject[] Results { get; set; }
-        public bool IsStale { get; set; }
+        public JArray GetIndexNames(int start, int pageSize)
+        {
+            return new JArray(
+                IndexDefinitionStorage.IndexNames.Skip(start).Take(pageSize)
+                    .Select(s => new JValue(s))
+                );
+        }
+
+        public JArray GetIndexes(int start, int pageSize)
+        {
+            return new JArray(
+                IndexDefinitionStorage.IndexNames.Skip(start).Take(pageSize)
+                    .Select(
+                        indexName => new JObject
+                        {
+                            {"name", new JValue(indexName)},
+                            {"definition", new JValue(IndexDefinitionStorage.GetIndexDefinition(indexName))}
+                        })
+                );
+        }
     }
 }
