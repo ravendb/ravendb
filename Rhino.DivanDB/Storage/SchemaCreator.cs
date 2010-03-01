@@ -135,7 +135,7 @@ namespace Rhino.DivanDB.Storage
                 grbit = ColumndefGrbit.ColumnTagged
             }, null, 0, out columnid);
 
-            Api.JetAddColumn(session, tableid, "headers", new JET_COLUMNDEF
+            Api.JetAddColumn(session, tableid, "metadata", new JET_COLUMNDEF
             {
                 coltyp = JET_coltyp.LongText,
                 grbit = ColumndefGrbit.ColumnTagged

@@ -13,6 +13,24 @@ namespace Rhino.DivanDB.Server.Responders
     {
         private static readonly HashSet<string> HeadersToIgnore = new HashSet<string>
         {
+            // Entity headers - those are NOT ignored
+            /*
+            "Allow",
+            "Content-Disposition",
+            "Content-Encoding",
+            "Content-Language",
+            "Content-Location",
+            "Content-MD5",
+            "Content-Range",
+            "Content-Type",
+            "Expires",
+            "Last-Modified",
+             */
+            // Ignoring this header, since it may
+            // very well change due to things like encoding,
+            // adding metadata, etc
+            "Content-Length",
+
             // Request headers
             "Accept-Charset",
             "Accept-Encoding",
@@ -58,14 +76,20 @@ namespace Rhino.DivanDB.Server.Responders
             "Warning",
         };
 
-        public static NameValueCollection FilterHeaders(this NameValueCollection self)
+        public static JObject FilterHeaders(this NameValueCollection self)
         {
-            var nameValueCollection = new NameValueCollection(self);
-            foreach (var header in HeadersToIgnore)
+            var metadata = new JObject();
+            foreach (var header in self.AllKeys)
             {
-                nameValueCollection.Remove(header);
+                if (HeadersToIgnore.Contains(header))
+                    continue;
+                var values = self.GetValues(header);
+                if (values.Length == 1)
+                    metadata.Add(header, new JValue(values[0]));
+                else
+                    metadata.Add(header, new JArray(values.Select(x => new JValue(x))));
             }
-            return nameValueCollection;
+            return metadata;
         }
 
         public static JObject ReadJson(this HttpListenerContext context)
@@ -102,15 +126,22 @@ namespace Rhino.DivanDB.Server.Responders
             streamWriter.Flush();
         }
 
-        public static void WriteData(this HttpListenerContext context, byte[] data, NameValueCollection headers)
+        public static void WriteData(this HttpListenerContext context, byte[] data, JObject headers)
         {
-            foreach (var header in headers.AllKeys)
+            foreach (var header in headers.Properties())
             {
-                context.Response.Headers[header] = headers[header];
+                context.Response.Headers[header.Name] = StringQuotesIfNeeded(header.Value.ToString());
             }
             context.Response.ContentLength64 = data.Length;
             context.Response.OutputStream.Write(data, 0, data.Length);
             context.Response.OutputStream.Flush();
+        }
+
+        private static string StringQuotesIfNeeded(string str)
+        {
+            if (str.StartsWith("\"") && str.EndsWith("\""))
+                return str.Substring(1, str.Length - 2);
+            return str;
         }
 
         public static void SetStatusToDeleted(this HttpListenerContext context)

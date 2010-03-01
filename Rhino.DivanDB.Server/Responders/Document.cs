@@ -24,13 +24,13 @@ namespace Rhino.DivanDB.Server.Responders
             {
                 case "GET":
                     context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
-                    var bytes = Database.Get(docId);
-                    if(bytes==null)
+                    var doc = Database.Get(docId);
+                    if(doc==null)
                     {
                         context.SetStatusToNotFound();
                         return;
                     }
-                    context.WriteData(bytes, new NameValueCollection());
+                    context.WriteData(doc.Data, doc.Metadata);
                     break;
                 case "DELETE":
                     Database.Delete(docId);
@@ -64,7 +64,9 @@ namespace Rhino.DivanDB.Server.Responders
                 }
             }
             context.SetStatusToCreated("/docs/" + docId);
-            context.WriteJson(new { id = Database.Put(json, new JObject()) });
+            context.WriteJson(new { id = Database.Put(json, 
+                context.Request.Headers.FilterHeaders()
+                ) });
         }
     }
 }

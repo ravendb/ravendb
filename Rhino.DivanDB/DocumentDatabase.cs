@@ -59,7 +59,7 @@ namespace Rhino.DivanDB
 
         private Thread[] backgroundWorkers = new Thread[0];
         private readonly WorkContext workContext;
-        private readonly static string[] ReservedFields = new[] { "_docNum" };
+        private readonly static string[] ReservedFields = new[] { "_docNum","_metadata" };
 
         public DatabaseStatistics Statistics
         {
@@ -120,9 +120,9 @@ namespace Rhino.DivanDB
         [DllImport("rpcrt4.dll", SetLastError = true)]
         private static extern int UuidCreateSequential(out Guid value);
 
-        public byte[] Get(string key)
+        public JsonDocument Get(string key)
         {
-            byte[] document = null;
+            JsonDocument document = null;
             TransactionalStorage.Batch(actions =>
                                       {
                                           document = actions.DocumentByKey(key);
@@ -221,50 +221,24 @@ namespace Rhino.DivanDB
             workContext.NotifyAboutWork();
         }
 
-        public Tuple<byte[], NameValueCollection> GetStatic(string name)
+        public Attachment GetStatic(string name)
         {
-            Tuple<byte[], string> attachment = null;
+            Attachment attachment = null;
             TransactionalStorage.Batch(actions =>
             {
                 attachment = actions.GetAttachment(name);
                 actions.Commit();
             });
-            if(attachment==null)
-                return null;
-            return new Tuple<byte[], NameValueCollection>
-            {
-                First = attachment.First,
-                Second = GetHeadersAsNameValueString(attachment.Second)
-            };
+            return attachment;
         }
 
-        public void PutStatic(string name, byte[] data, NameValueCollection headers)
+        public void PutStatic(string name, byte[] data, JObject metadata)
         {
             TransactionalStorage.Batch(actions =>
             {
-                actions.AddAttachment(name, data,GetHeadersAsString(headers));
+                actions.AddAttachment(name, data, metadata.ToString(Formatting.None));
                 actions.Commit();
             });
-        }
-
-        private static string GetHeadersAsString(NameValueCollection headers)
-        {
-            var writer = new StringWriter();
-            var headersAdJson = new JObject(headers.AllKeys.Select(key=> new JProperty(key,headers[key])));
-            headersAdJson.WriteTo(new JsonTextWriter(writer));
-            return writer.GetStringBuilder().ToString();
-        }
-
-
-        private static NameValueCollection GetHeadersAsNameValueString(string headers)
-        {
-            var nvc = new NameValueCollection();
-            foreach (var property in JObject.Parse(headers).Properties())
-            {
-                var value = property.Value.Value<object>() ?? "null";
-                nvc.Add(property.Name, value.ToString());
-            }
-            return nvc;
         }
 
         public void DeleteStatic(string name)
@@ -283,10 +257,10 @@ namespace Rhino.DivanDB
             {
                 foreach (var documentAndId in actions.DocumentsById(new Reference<bool>(), start, int.MaxValue, pageSize))
                 {
-                    var doc = JObject.Parse(documentAndId.First);
-                    doc.Add("_docNum", new JValue(documentAndId.Second));
+                    var doc = documentAndId.First;
+                    documentAndId.First.Metadata.Add("_docNum", new JValue(documentAndId.Second));
 
-                    list.Add(doc);
+                    list.Add(doc.ToJson());
                 }
                 actions.Commit();
             });
