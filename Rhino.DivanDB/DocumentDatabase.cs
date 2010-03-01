@@ -58,33 +58,29 @@ namespace Rhino.DivanDB
 
         private Thread[] backgroundWorkers = new Thread[0];
         private readonly WorkContext workContext;
+        public DatabaseStatistics Statistics
+        {
+            get
+            {
+                var result = new DatabaseStatistics
+                {
+                    CountOfIndexes = IndexStorage.Indexes.Length
+                };
+                TransactionalStorage.Batch(actions =>
+                {
+                    result.CountOfDocuments = actions.GetDocumentsCount();
+                    result.StaleIndexes = IndexStorage.Indexes
+                        .Where(actions.DoesTasksExistsForIndex)
+                        .ToArray();
+                    actions.Commit();
+                });
+                return result;
+            }
+        }
         public TransactionalStorage TransactionalStorage { get; private set; }
         public IndexDefinitionStorage IndexDefinitionStorage { get; private set; }
         public IndexStorage IndexStorage { get; private set; }
 
-        public int CountOfDocuments
-        {
-            get
-            {
-                int value = 0;
-                TransactionalStorage.Batch(actions =>
-                {
-                    value = actions.GetDocumentsCount();
-                    actions.Commit();
-                });
-                return value;
-            }
-        }
-
-        public int CountOfIndexes
-        {
-            get
-            {
-                int value = 0;
-                value = IndexStorage.Indexes.Count();
-                return value;
-            }
-        }
 
         #region IDisposable Members
 

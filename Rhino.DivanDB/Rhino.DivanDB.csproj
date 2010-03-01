@@ -71,6 +71,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DatabaseStatistics.cs" />
     <Compile Include="DocumentDatabase.cs" />
     <Compile Include="Extensions\JsonExtensions.cs" />
     <Compile Include="Extensions\Reference.cs" />

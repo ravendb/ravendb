@@ -18,46 +18,10 @@ namespace Rhino.DivanDB.Tryouts
 ";
         public static void Main()
         {
-            try
+
+            using (var db = new DocumentDatabase("Db"))
             {
-                var linqTransformer = new LinqTransformer("pagesByTitle", query, "docs", Path.GetTempPath(), typeof(JsonDynamicObject));
-                linqTransformer.Compile();
-                File.WriteAllText("a.txt",linqTransformer.LinqQueryToImplicitClass());
-                Process.Start("a.txt");
             }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-            }
-
-//            using (var db = new DocumentDatabase("Db"))
-//            {
-//                db.SpinBackgroundWorkers();
-
-//                db.PutIndex("pagesByTitle", @"
-//    from doc in docs
-//    where doc.type == ""page""
-//    select new {doc.title}");
-
-//                db.Put(JObject.Parse("{type: 'page', title: 'what will happen? michael' }"));
-//                db.Put(JObject.Parse("{type: 'page', title: 'ayende is in the pub' }"));
-
-//                for (int i = 0; i < 5; i++)
-//                {
-//                    var sw = Stopwatch.StartNew();
-//                    QueryResult query;
-//                    do
-//                    {
-//                        query = db.Query("pagesByTitle", "title:michael");
-//                    } while (query.IsStale);
-//                    Console.WriteLine(sw.ElapsedMilliseconds);
-//                    foreach (var result in query.Results)
-//                    {
-//                        Console.WriteLine(result);
-//                    }
-
-//                }
-//            }
         }
     }
 }

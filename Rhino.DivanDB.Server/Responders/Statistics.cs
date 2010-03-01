@@ -15,7 +15,7 @@ namespace Rhino.DivanDB.Server.Responders
         }
         public override void Respond(HttpListenerContext context)
         {
-            context.WriteJson(new { docCount = Database.CountOfDocuments, indexCount = Database.CountOfIndexes });
+            context.WriteJson(Database.Statistics);
         }
     }
 }
