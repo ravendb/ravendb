@@ -1,12 +1,10 @@
-using System;
 using System.Collections.Specialized;
-using System.Text.RegularExpressions;
-using Kayak;
+using System.Net;
 using Newtonsoft.Json.Linq;
 
 namespace Rhino.DivanDB.Server.Responders
 {
-    public class Document : KayakResponder
+    public class Document : RequestResponder
     {
         public override string UrlPattern
         {
@@ -18,18 +16,18 @@ namespace Rhino.DivanDB.Server.Responders
             get { return new[] { "GET", "DELETE", "PUT" }; }
         }
 
-        protected override void Respond(KayakContext context)
+        public override void Respond(HttpListenerContext context)
         {
-            var match = urlMatcher.Match(context.Request.Path);
+            var match = urlMatcher.Match(context.Request.Url.LocalPath);
             var docId = match.Groups[1].Value;
-            switch (context.Request.Verb)
+            switch (context.Request.HttpMethod)
             {
                 case "GET":
                     context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
                     var bytes = Database.Get(docId);
                     if(bytes==null)
                     {
-                        context.Response.SetStatusToNotFound();
+                        context.SetStatusToNotFound();
                         return;
                     }
                     context.WriteData(bytes, new NameValueCollection());
@@ -44,7 +42,7 @@ namespace Rhino.DivanDB.Server.Responders
             }
         }
 
-        private void Put(KayakContext context, string docId)
+        private void Put(HttpListenerContext context, string docId)
         {
             var json = context.ReadJson();
             var idProp = json.Property("_id");
@@ -57,11 +55,11 @@ namespace Rhino.DivanDB.Server.Responders
                 var idVal = idProp.Value.Value<object>();
                 if (idVal != null && idVal.ToString() != docId) // doc id conflict
                 {
-                    context.Response.SetStatusToBadRequest();
+                    context.SetStatusToBadRequest();
                     var err = string.Format(
                         "PUT on {0} but the document contained '_id' property with: '{1}'",
-                        context.Request.Path, idVal);
-                    context.Response.WriteLine(err);
+                        context.Request.Url.LocalPath, idVal);
+                    context.Write(err);
                     return;
                 }
             }

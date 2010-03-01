@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
@@ -58,23 +59,31 @@ namespace Rhino.DivanDB
 
         private Thread[] backgroundWorkers = new Thread[0];
         private readonly WorkContext workContext;
+        private readonly static string[] ReservedFields = new[] { "_docNum" };
+
+        public DatabaseStatistics Statistics
+        {
+            get
+            {
+                var result = new DatabaseStatistics
+                {
+                    CountOfIndexes = IndexStorage.Indexes.Length
+                };
+                TransactionalStorage.Batch(actions =>
+                {
+                    result.CountOfDocuments = actions.GetDocumentsCount();
+                    result.StaleIndexes = IndexStorage.Indexes
+                        .Where(actions.DoesTasksExistsForIndex)
+                        .ToArray();
+                    actions.Commit();
+                });
+                return result;
+            }
+        }
         public TransactionalStorage TransactionalStorage { get; private set; }
         public IndexDefinitionStorage IndexDefinitionStorage { get; private set; }
         public IndexStorage IndexStorage { get; private set; }
 
-        public int CountOfDocuments
-        {
-            get
-            {
-                int value = 0;
-                TransactionalStorage.Batch(actions =>
-                {
-                    value = actions.GetDocumentsCount();
-                    actions.Commit();
-                });
-                return value;
-            }
-        }
 
         #region IDisposable Members
 
@@ -125,6 +134,11 @@ namespace Rhino.DivanDB
         public string Put(JObject document)
         {
             string key = GetKeyFromDocumentOrGenerateNewOne(document);
+
+            foreach (var reservedField in ReservedFields)
+            {
+                document.Remove(reservedField);
+            }
 
             TransactionalStorage.Batch(actions =>
                                        {
@@ -180,11 +194,12 @@ namespace Rhino.DivanDB
         {
             var list = new List<JObject>();
             var stale = false;
+            var totalSize = new Reference<int>();
             TransactionalStorage.Batch(
                 actions =>
                 {
                     stale = actions.DoesTasksExistsForIndex(index);
-                    list.AddRange(from key in IndexStorage.Query(index, query, start, pageSize)
+                    list.AddRange(from key in IndexStorage.Query(index, query, start, pageSize, totalSize)
                                   select actions.DocumentByKey(key)
                                       into doc
                                       where doc != null
@@ -194,7 +209,8 @@ namespace Rhino.DivanDB
             return new QueryResult
                    {
                        Results = list.ToArray(),
-                       IsStale = stale
+                       IsStale = stale,
+                       TotalResults = totalSize.Value
                    };
         }
 
@@ -276,11 +292,26 @@ namespace Rhino.DivanDB
             });
             return list;
         }
-    }
 
-    public class QueryResult
-    {
-        public JObject[] Results { get; set; }
-        public bool IsStale { get; set; }
+        public JArray GetIndexNames(int start, int pageSize)
+        {
+            return new JArray(
+                IndexDefinitionStorage.IndexNames.Skip(start).Take(pageSize)
+                    .Select(s => new JValue(s))
+                );
+        }
+
+        public JArray GetIndexes(int start, int pageSize)
+        {
+            return new JArray(
+                IndexDefinitionStorage.IndexNames.Skip(start).Take(pageSize)
+                    .Select(
+                        indexName => new JObject
+                        {
+                            {"name", new JValue(indexName)},
+                            {"definition", new JValue(IndexDefinitionStorage.GetIndexDefinition(indexName))}
+                        })
+                );
+        }
     }
 }

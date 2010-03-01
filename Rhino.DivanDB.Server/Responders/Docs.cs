@@ -1,11 +1,8 @@
-using System;
-using Kayak;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using System.Net;
 
 namespace Rhino.DivanDB.Server.Responders
 {
-    public class Docs : KayakResponder
+    public class Docs : RequestResponder
     {
         public override string UrlPattern
         {
@@ -17,9 +14,9 @@ namespace Rhino.DivanDB.Server.Responders
             get { return new[]{"GET", "POST"}; }
         }
 
-        protected override void Respond(KayakContext context)
+        public override void Respond(HttpListenerContext context)
         {
-            switch (context.Request.Verb)
+            switch (context.Request.HttpMethod)
             {
                 case "GET":
                     context.WriteJson(Database.GetDocuments(context.GetStart(), context.GetPageSize()));
@@ -29,8 +26,8 @@ namespace Rhino.DivanDB.Server.Responders
                     var idProp = json.Property("_id");
                     if (idProp != null) 
                     {
-                        context.Response.SetStatusToBadRequest();
-                        context.Response.WriteLine("POST to " + context.Request.Path +" with a document conatining '_id'");
+                        context.SetStatusToBadRequest();
+                        context.Write("POST to " + context.Request.Url.LocalPath +" with a document conatining '_id'");
                         return;
                     }
                     var id = Database.Put(json);

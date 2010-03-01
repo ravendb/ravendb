@@ -10,6 +10,7 @@ using Lucene.Net.Index;
 using Lucene.Net.QueryParsers;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
+using Rhino.DivanDB.Extensions;
 using Rhino.DivanDB.Json;
 using Rhino.DivanDB.Linq;
 
@@ -77,13 +78,14 @@ namespace Rhino.DivanDB.Indexing
             directory.Close();
         }
 
-        public IEnumerable<string> Query(string query, int start, int pageSize)
+        public IEnumerable<string> Query(string query, int start, int pageSize, Reference<int> totalSize)
         {
             log.DebugFormat("Issuing query on index {0} for: {1}", name, query);
             var luceneQuery = new QueryParser("", new StandardAnalyzer()).Parse(query);
             using (searcher.Use())
             {
                 var search = searcher.Searcher.Search(luceneQuery);
+                totalSize.Value = search.Length();
                 for (int i = start; i < search.Length() && (i - start) < pageSize; i++)
                 {
                     yield return search.Doc(i).GetField("_id").StringValue();

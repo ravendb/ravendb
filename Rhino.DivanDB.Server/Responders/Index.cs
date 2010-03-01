@@ -1,8 +1,8 @@
-using Kayak;
+using System.Net;
 
 namespace Rhino.DivanDB.Server.Responders
 {
-    public class Index : KayakResponder
+    public class Index : RequestResponder
     {
         public override string UrlPattern
         {
@@ -11,15 +11,15 @@ namespace Rhino.DivanDB.Server.Responders
 
         public override string[] SupportedVerbs
         {
-            get { return new[] { "GET","PUT" }; }
+            get { return new[] { "GET","PUT","DELETE" }; }
         }
 
-        protected override void Respond(KayakContext context)
+        public override void Respond(HttpListenerContext context)
         {
-            var match = urlMatcher.Match(context.Request.Path);
+            var match = urlMatcher.Match(context.Request.Url.LocalPath);
             var index = match.Groups[1].Value;
 
-            switch (context.Request.Verb)
+            switch (context.Request.HttpMethod)
             {
                 case "GET":
                     OnGet(context, index);
@@ -31,10 +31,15 @@ namespace Rhino.DivanDB.Server.Responders
                         index = Database.PutIndex(index, context.ReadString())
                     });
                     break;
+                case "DELETE":
+                    context.SetStatusToDeleted();
+                    Database.DeleteIndex(index);
+                    context.WriteJson(new { index });
+                    break;
             }
         }
 
-        private void OnGet(KayakContext context, string index)
+        private void OnGet(HttpListenerContext context, string index)
         {
             var query = context.Request.QueryString["query"];
 
@@ -48,4 +53,5 @@ namespace Rhino.DivanDB.Server.Responders
             }
         }
     }
+
 }

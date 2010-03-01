@@ -66,6 +66,10 @@
       <Project>{3B90EB20-AEA3-4972-8219-936F1A62768C}</Project>
       <Name>Rhino.DivanDB.Server</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Rhino.DivanDB\Rhino.DivanDB.csproj">
+      <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
+      <Name>Rhino.DivanDB</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
