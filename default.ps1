@@ -28,6 +28,26 @@ task Init -depends Clean {
 		-version $version `
 		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2009" `
 		-clsCompliant "false"
+
+	Generate-Assembly-Info `
+		-file "$base_dir\Rhino.DivanDB.Client\Properties\AssemblyInfo.cs" `
+		-title "Rhino DivanDB Client $version" `
+		-description "A linq enabled document database for .NET" `
+		-company "Hibernating Rhinos" `
+		-product "Rhino DivanDB $version" `
+		-version $version `
+		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2009" `
+		-clsCompliant "false"
+		
+	Generate-Assembly-Info `
+		-file "$base_dir\Rhino.DivanDB.Client.Tests\Properties\AssemblyInfo.cs" `
+		-title "Rhino DivanDB Client $version" `
+		-description "A linq enabled document database for .NET" `
+		-company "Hibernating Rhinos" `
+		-product "Rhino DivanDB $version" `
+		-version $version `
+		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2009" `
+		-clsCompliant "false"
 		
 	Generate-Assembly-Info `
 		-file "$base_dir\Rhino.DivanDB.Server\Properties\AssemblyInfo.cs" `
@@ -79,6 +99,7 @@ task Compile -depends Init {
 task Test -depends Compile {
   $old = pwd
   cd $build_dir
+  exec "$tools_dir\xUnit\xunit.console.exe" "$build_dir\Rhino.DivanDB.Client.Tests.dll"
   exec "$tools_dir\xUnit\xunit.console.exe" "$build_dir\Rhino.DivanDB.Tests.dll"
   exec "$tools_dir\xUnit\xunit.console.exe" "$build_dir\Rhino.DivanDB.Scenarios.dll"
   cd $old		
