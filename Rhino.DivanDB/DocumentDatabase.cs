@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
@@ -58,6 +59,8 @@ namespace Rhino.DivanDB
 
         private Thread[] backgroundWorkers = new Thread[0];
         private readonly WorkContext workContext;
+        private readonly static string[] ReservedFields = new[] { "_docNum" };
+
         public DatabaseStatistics Statistics
         {
             get
@@ -131,6 +134,11 @@ namespace Rhino.DivanDB
         public string Put(JObject document)
         {
             string key = GetKeyFromDocumentOrGenerateNewOne(document);
+
+            foreach (var reservedField in ReservedFields)
+            {
+                document.Remove(reservedField);
+            }
 
             TransactionalStorage.Batch(actions =>
                                        {
