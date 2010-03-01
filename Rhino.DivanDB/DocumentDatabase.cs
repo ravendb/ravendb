@@ -135,7 +135,7 @@ namespace Rhino.DivanDB
         {
             string key = GetKeyFromDocumentOrGenerateNewOne(document);
 
-d            foreach (var reservedField in ReservedFields)
+            foreach (var reservedField in ReservedFields)
             {
                 document.Remove(reservedField);
             }
