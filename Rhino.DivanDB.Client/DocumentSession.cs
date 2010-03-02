@@ -60,8 +60,7 @@ namespace Rhino.DivanDB.Client
         {
             foreach (var entity in entities)
             {
-                JObject objectAsJson = ConvertEntityToJson(entity);
-                database.Put(objectAsJson);
+                database.Put(ConvertEntityToJson(entity));
             }
         }
 
