@@ -82,11 +82,11 @@ namespace Rhino.DivanDB.Client
 
         public IQueryable<T> Query<T>()
         {
-            // Todo implement Linq to document here instead of the horrible list all below.
+            // Todo implement Linq to Lucene here instead of the horrible list all below.
             return GetAll<T>().AsQueryable();
         }
 
-        public IList<T> GetAll<T>()
+        public IList<T> GetAll<T>() // NOTE: We probably need to ask the user if they can accept stale results
         {
             QueryResult result;
             do
