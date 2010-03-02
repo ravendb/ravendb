@@ -1,18 +1,17 @@
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Newtonsoft.Json;
-using JObject=Newtonsoft.Json.Linq.JObject;
-using JToken=Newtonsoft.Json.Linq.JToken;
+using Newtonsoft.Json.Linq;
+using Raven.Database;
 
-namespace Rhino.DivanDB.Client
+namespace Raven.Client
 {
     public class DocumentSession
     {
         private readonly DocumentStore documentStore;
         private readonly IDatabaseCommands database;
-        private readonly HashSet<object> entities = new HashSet<object>();
+        private readonly HashSet<object> trackedEntities = new HashSet<object>();
 
         public DocumentSession(DocumentStore documentStore, IDatabaseCommands database)
         {
@@ -23,9 +22,9 @@ namespace Rhino.DivanDB.Client
         public T Load<T>(string id)
         {
             var documentFound = database.Get(id);
-            var jsonString = Encoding.UTF8.GetString(documentFound);
+            var jsonString = Encoding.UTF8.GetString(documentFound.Data);
             var entity = ConvertToEntity<T>(id, jsonString);
-            entities.Add(entity);
+            trackedEntities.Add(entity);
             return (T)entity;
         }
 
@@ -46,11 +45,11 @@ namespace Rhino.DivanDB.Client
         {
             var json = ConvertEntityToJson(entity);
 
-            var key = database.Put(json);
-            entities.Add(entity);
+            var key = database.Put(null, json, new JObject());
+            trackedEntities.Add(entity);
 
             var identityProperty = entity.GetType().GetProperties()
-                                        .FirstOrDefault(q => documentStore.Conventions.FindIdentityProperty.Invoke(q));
+                .FirstOrDefault(q => documentStore.Conventions.FindIdentityProperty.Invoke(q));
             
             if (identityProperty != null)
                 identityProperty.SetValue(entity, key, null);
@@ -58,17 +57,17 @@ namespace Rhino.DivanDB.Client
 
         public void SaveChanges()
         {
-            foreach (var entity in entities)
+            foreach (var entity in trackedEntities)
             {
                 //TODO: Switch to more the batch version when it becomes available
-                database.Put(ConvertEntityToJson(entity));
+                database.Put(null, ConvertEntityToJson(entity), new JObject());
             }
         }
 
         private JObject ConvertEntityToJson(object entity)
         {
             var identityProperty = entity.GetType().GetProperties()
-                            .FirstOrDefault(q => documentStore.Conventions.FindIdentityProperty.Invoke(q));
+                .FirstOrDefault(q => documentStore.Conventions.FindIdentityProperty.Invoke(q));
 
             var objectAsJson = JObject.FromObject(entity);
             if (identityProperty != null)
