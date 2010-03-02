@@ -24,7 +24,7 @@ namespace Rhino.DivanDB.Server.Responders
                     break;
                 case "POST":
                     var json = context.ReadJson();
-                    var id = Database.Put(null, json, new JObject());
+                    var id = Database.Put(null, json, context.Request.Headers.FilterHeaders());
 
                     context.SetStatusToCreated("/docs/" + id);
                     context.WriteJson(new { id });
