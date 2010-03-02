@@ -121,8 +121,7 @@ task Test -depends Compile {
   cd $build_dir
   exec "$tools_dir\xUnit\xunit.console.exe" "$build_dir\Raven.Tests.dll"
   exec "$tools_dir\xUnit\xunit.console.exe" "$build_dir\Raven.Scenarios.dll"
- # DISABLING UNTIL BUILD PASSES AGAIN
- # exec "$tools_dir\xUnit\xunit.console.exe" "$build_dir\Raven.Client.Tests.dll"
+  exec "$tools_dir\xUnit\xunit.console.exe" "$build_dir\Raven.Client.Tests.dll"
   cd $old
 }
 
