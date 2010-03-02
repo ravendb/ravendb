@@ -258,7 +258,7 @@ namespace Rhino.DivanDB
                 foreach (var documentAndId in actions.DocumentsById(new Reference<bool>(), start, int.MaxValue, pageSize))
                 {
                     var doc = documentAndId.First;
-                    documentAndId.First.Metadata.Add("position", new JValue(documentAndId.Second));
+                    documentAndId.First.Metadata.Add("@docNum", new JValue(documentAndId.Second));
 
                     list.Add(doc.ToJson());
                 }
