@@ -6,9 +6,9 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using Newtonsoft.Json;
-using Rhino.DivanDB.Server.Responders;
+using Raven.Server.Responders;
 
-namespace Rhino.DivanDB.Server
+namespace Raven.Server
 {
     public class HttpServer : IDisposable
     {
@@ -58,15 +58,15 @@ namespace Rhino.DivanDB.Server
             {
                 var curReq = Interlocked.Increment(ref reqNum);
                 Console.WriteLine("Request {0}: {1} {2}",
-                    curReq, 
-                    ctx.Request.HttpMethod,
-                    ctx.Request.Url.PathAndQuery
+                                  curReq, 
+                                  ctx.Request.HttpMethod,
+                                  ctx.Request.Url.PathAndQuery
                     );
                 var sw = Stopwatch.StartNew();
                 HandleRequest(ctx);
                 
                 Console.WriteLine("Request {0}: {1}",
-                    curReq, sw.Elapsed);
+                                  curReq, sw.Elapsed);
             }
             catch (Exception e)
             {
@@ -75,11 +75,11 @@ namespace Rhino.DivanDB.Server
                 using(var sw = new StreamWriter(ctx.Response.OutputStream))
                 {
                     new JsonSerializer().Serialize(sw, 
-                        new
-                        {
-                            url = ctx.Request.RawUrl,
-                            error = e.ToString()
-                        });
+                                                   new
+                                                   {
+                                                       url = ctx.Request.RawUrl,
+                                                       error = e.ToString()
+                                                   });
                 }
             }
             finally

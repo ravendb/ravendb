@@ -1,8 +1,9 @@
 using System.Linq;
 using System.Net;
 using System.Text.RegularExpressions;
+using Raven.Database;
 
-namespace Rhino.DivanDB.Server.Responders
+namespace Raven.Server.Responders
 {
     public abstract class RequestResponder
     {

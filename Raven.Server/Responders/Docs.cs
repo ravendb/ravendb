@@ -1,7 +1,6 @@
 using System.Net;
-using Newtonsoft.Json.Linq;
 
-namespace Rhino.DivanDB.Server.Responders
+namespace Raven.Server.Responders
 {
     public class Docs : RequestResponder
     {

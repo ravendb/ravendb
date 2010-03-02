@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 
-namespace Rhino.DivanDB.Server
+namespace Raven.Server
 {
     class Program
     {

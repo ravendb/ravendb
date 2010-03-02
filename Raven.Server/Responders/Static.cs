@@ -1,6 +1,6 @@
 using System.Net;
 
-namespace Rhino.DivanDB.Server.Responders
+namespace Raven.Server.Responders
 {
     public class Static : RequestResponder
     {

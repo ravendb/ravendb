@@ -3,8 +3,9 @@ using System.Diagnostics;
 using System.IO;
 using Newtonsoft.Json.Linq;
 using System.Linq;
+using Raven.Database;
 
-namespace Rhino.DivanDB.Importer
+namespace Raven.Importer
 {
     class Program
     {
@@ -33,3 +34,5 @@ namespace Rhino.DivanDB.Importer
         }
     }
 }
+
+

@@ -2,7 +2,7 @@ using System.IO;
 using Xunit;
 using System.Linq;
 
-namespace Rhino.DivanDB.Scenarios
+namespace Raven.Scenarios
 {
     public abstract class AbstractScenario
     {

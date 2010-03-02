@@ -1,17 +1,17 @@
 using System.Net;
 
-namespace Rhino.DivanDB.Server.Responders
+namespace Raven.Server.Responders
 {
-    public class Root : RequestResponder
+    public class DivanRootResponser : RequestResponder
     {
         public override string UrlPattern
         {
-            get { return "/$"; }
+            get { return "^/divan$"; }
         }
 
         public override string[] SupportedVerbs
         {
-            get { return new[]{"GET"}; }
+            get { return new[] { "GET" }; }
         }
 
         public override void Respond(HttpListenerContext context)

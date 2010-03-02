@@ -1,13 +1,12 @@
 using System;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Security.Principal;
-using System.Threading;
-using Rhino.DivanDB.Server.Responders;
+using Raven.Database;
+using Raven.Server.Responders;
 
-namespace Rhino.DivanDB.Server
+namespace Raven.Server
 {
     public class DivanServer : IDisposable
     {
@@ -19,20 +18,20 @@ namespace Rhino.DivanDB.Server
             database = new DocumentDatabase(directory);
             database.SpinBackgroundWorkers();
             server = new HttpServer(port,
-                typeof(RequestResponder).Assembly.GetTypes()
-                        .Where(t => typeof(RequestResponder).IsAssignableFrom(t) && t.IsAbstract == false)
+                                    typeof(RequestResponder).Assembly.GetTypes()
+                                        .Where(t => typeof(RequestResponder).IsAssignableFrom(t) && t.IsAbstract == false)
 
-                        // to ensure that we would get consistent order, so we would always 
-                // have the responders using the same order, otherwise we get possibly
-                // random ordering, and that might cause issues
-                        .OrderBy(x => x.Name)
+                                        // to ensure that we would get consistent order, so we would always 
+                                        // have the responders using the same order, otherwise we get possibly
+                                        // random ordering, and that might cause issues
+                                        .OrderBy(x => x.Name)
 
-                        .Select(t => (RequestResponder)Activator.CreateInstance(t))
-                        .Select(r =>
-                        {
-                            r.Database = database;
-                            return r;
-                        })
+                                        .Select(t => (RequestResponder)Activator.CreateInstance(t))
+                                        .Select(r =>
+                                        {
+                                            r.Database = database;
+                                            return r;
+                                        })
                 );
             server.Start();
         }

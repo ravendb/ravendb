@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using Xunit.Extensions;
 
-namespace Rhino.DivanDB.Scenarios
+namespace Raven.Scenarios
 {
     public class AllScenariosWithoutExplicitScenario
     {

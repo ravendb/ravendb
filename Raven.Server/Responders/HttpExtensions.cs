@@ -7,7 +7,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Linq;
 
-namespace Rhino.DivanDB.Server.Responders
+namespace Raven.Server.Responders
 {
     public static class HttpExtensions
     {

@@ -1,21 +1,22 @@
 using System.Net;
 
-namespace Rhino.DivanDB.Server.Responders
+namespace Raven.Server.Responders
 {
-    public class Statistics : RequestResponder
+    public class Indexes : RequestResponder
     {
         public override string UrlPattern
         {
-            get { return "/stats"; }
+            get { return "/indexes/?$"; }
         }
 
         public override string[] SupportedVerbs
         {
-            get { return new[]{"GET"}; }
+            get { return new[] {"GET"}; }
         }
+
         public override void Respond(HttpListenerContext context)
         {
-            context.WriteJson(Database.Statistics);
+            context.WriteJson(Database.GetIndexes(context.GetStart(), context.GetPageSize()));
         }
     }
 }

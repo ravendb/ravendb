@@ -7,11 +7,11 @@ using System.Net;
 using System.Text;
 using System.Threading;
 using ICSharpCode.SharpZipLib.Zip;
-using Rhino.DivanDB.Extensions;
-using Rhino.DivanDB.Server;
-using Rhino.DivanDB.Server.Responders;
+using Raven.Database.Extensions;
+using Raven.Server;
+using Raven.Server.Responders;
 
-namespace Rhino.DivanDB.Scenarios
+namespace Raven.Scenarios
 {
     public class Scenario
     {
@@ -168,7 +168,7 @@ namespace Rhino.DivanDB.Scenarios
                 {
                     throw new InvalidDataException(
                         string.Format("Request {0} header {1} differs. Expected {2}, Actual {3}\r\nRequest{4}",
-                        responseNumber, parts[0], parts[1], actual.Second[parts[0]], request));
+                                      responseNumber, parts[0], parts[1], actual.Second[parts[0]], request));
                 }
             }
 

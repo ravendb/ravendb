@@ -1,8 +1,6 @@
-using System.Collections.Specialized;
 using System.Net;
-using Newtonsoft.Json.Linq;
 
-namespace Rhino.DivanDB.Server.Responders
+namespace Raven.Server.Responders
 {
     public class Document : RequestResponder
     {
@@ -47,8 +45,8 @@ namespace Rhino.DivanDB.Server.Responders
             var json = context.ReadJson();
             context.SetStatusToCreated("/docs/" + docId);
             context.WriteJson(new { id = Database.Put(docId, json, 
-                context.Request.Headers.FilterHeaders()
-                ) });
+                                                      context.Request.Headers.FilterHeaders()
+                                  ) });
         }
     }
 }
