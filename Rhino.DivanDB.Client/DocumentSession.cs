@@ -73,11 +73,7 @@ namespace Rhino.DivanDB.Client
             var objectAsJson = JObject.FromObject(entity);
             if (identityProperty != null)
             {
-                var value = identityProperty.GetValue(entity, null);
                 objectAsJson.Remove(identityProperty.Name);
-
-                if (value != null)
-                    objectAsJson.Add("_id", JToken.FromObject(value));
             }
 
             objectAsJson.Add("type", JToken.FromObject(entity.GetType()));
