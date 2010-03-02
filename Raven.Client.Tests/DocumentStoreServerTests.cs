@@ -66,5 +66,25 @@ namespace Raven.Client.Tests
                 Assert.Equal("New Name", session2.Load<Company>(companyId).Name);
             }
         }
+
+        [Fact]
+        public void Should_retrieve_all_entities()
+        {
+            DivanServer.EnsureCanListenToWhenInNonAdminContext(8080);
+            using (var server = new DivanServer(DbName, 8080))
+            {
+                var documentStore = new DocumentStore("localhost", 8080);
+                documentStore.Initialise();
+
+                var session1 = documentStore.OpenSession();
+                session1.Store(new Company { Name = "Company 1" });
+                session1.Store(new Company { Name = "Company 2" });
+
+                var session2 = documentStore.OpenSession();
+                var companyFound = session2.GetAll<Company>();
+
+                Assert.Equal(2, companyFound.Count);
+            }
+        }
     }
 }

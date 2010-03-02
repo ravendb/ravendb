@@ -69,8 +69,27 @@ namespace Raven.Client
 
         public string PutIndex(string name, string indexDef)
         {
-            //throw new NotImplementedException();
-            return "";
+            var request = WebRequest.Create(url + "/indexes/" + name);
+
+            request.Method = "PUT";
+            request.ContentType = "application/json";
+
+            using (var dataStream = request.GetRequestStream())
+            {
+                var byteArray = Encoding.UTF8.GetBytes(indexDef);
+                dataStream.Write(byteArray, 0, byteArray.Length);
+                dataStream.Close();
+            }
+
+            var response = request.GetResponse();
+            using (var responseString = response.GetResponseStream())
+            {
+                var reader = new StreamReader(responseString);
+                var text = reader.ReadToEnd();
+                var id = new JsonDynamicObject(text)["index"];
+                reader.Close();
+                return id.ToString();
+            }
         }
 
         public QueryResult Query(string index, string query, int start, int pageSize)
