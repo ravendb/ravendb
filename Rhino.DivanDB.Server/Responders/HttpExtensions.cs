@@ -130,6 +130,8 @@ namespace Rhino.DivanDB.Server.Responders
         {
             foreach (var header in headers.Properties())
             {
+                if (header.Name.StartsWith("@"))
+                    continue;
                 context.Response.Headers[header.Name] = StringQuotesIfNeeded(header.Value.ToString());
             }
             context.Response.ContentLength64 = data.Length;
