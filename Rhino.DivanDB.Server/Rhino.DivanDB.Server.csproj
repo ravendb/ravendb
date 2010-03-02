@@ -121,6 +121,7 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="WebUI\css\Pager.css" />
+    <Content Include="WebUI\css\rdb.css" />
     <Content Include="WebUI\css\rdb.jsonEditor.css" />
     <Content Include="WebUI\css\smoothness\images\ui-bg_flat_0_aaaaaa_40x100.png" />
     <Content Include="WebUI\css\smoothness\images\ui-bg_flat_75_ffffff_40x100.png" />
@@ -136,7 +137,6 @@
     <Content Include="WebUI\css\smoothness\images\ui-icons_888888_256x240.png" />
     <Content Include="WebUI\css\smoothness\images\ui-icons_cd0a0a_256x240.png" />
     <Content Include="WebUI\css\smoothness\jquery-ui-1.8rc2.custom.css" />
-    <Content Include="WebUI\css\style.css" />
     <Content Include="WebUI\documentation.html" />
     <Content Include="WebUI\documents.html" />
     <Content Include="WebUI\images\ajax-loader.gif" />
@@ -149,6 +149,8 @@
     <Content Include="WebUI\images\c2_i6.png" />
     <Content Include="WebUI\images\c3_i7.png" />
     <Content Include="WebUI\images\footerContainerBgR.png" />
+    <Content Include="WebUI\images\footer_bg.png" />
+    <Content Include="WebUI\images\header_bg.png" />
     <Content Include="WebUI\images\jsonEditor\doc.gif" />
     <Content Include="WebUI\images\jsonEditor\docNode.gif" />
     <Content Include="WebUI\images\jsonEditor\docNodeLast.gif" />
@@ -179,6 +181,7 @@
     <Content Include="WebUI\JSONTemplates\indexPage.html" />
     <Content Include="WebUI\JSONTemplates\quickStats.html" />
     <Content Include="WebUI\js\divan-ui.js" />
+    <Content Include="WebUI\js\divan-ui.documents.js" />
     <Content Include="WebUI\js\jquery-1.4.2.min.js" />
     <Content Include="WebUI\js\jquery-jtemplates.js" />
     <Content Include="WebUI\js\jquery-ui.js" />

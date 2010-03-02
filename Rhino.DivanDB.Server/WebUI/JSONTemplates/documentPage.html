@@ -2,7 +2,7 @@
     {#foreach $T as doc}
         <div id="{$T.doc._id}" class="searchListItem {#if $T.doc$iteration % 2} alternate{#/if}">
             {JSON.stringify($T.doc).substring(0, 90)}...
-            <div class="searchListItemValue" style="display:none;">{JSON.stringify($T.doc, null, '<br />&nbsp;&nbsp;&nbsp;').replace(String.fromCharCode(125), '<br />' + String.fromCharCode(125))}</div>
+            <div class="searchListItemValue" style="display:none;">{escape(JSON.stringify($T.doc))}</div>
         </div>
     {#/for}    
 </div>

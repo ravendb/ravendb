@@ -210,23 +210,32 @@ function JSONToViewHTML(jsonObj) {
     if (typeof jsonObj == "object") {
         var jsonDiv = $('<div class="jsonObjectView"></div>');
         $.each(jsonObj, function (key, value) {
-            // key is either an array index or object key                    
-            var children = JSONToViewHTML(value);
+            if (value) {
+                // key is either an array index or object key                    
+                var children = JSONToViewHTML(value);
 
-            if (typeof children == "object") {
-                $(jsonDiv).append('<span class="arrayNameView">' + key + '</span>');
-                $(jsonDiv).append(children);
+                if (typeof children == "object") {
+                    $(jsonDiv).append('<span class="arrayNameView">' + key + '</span>');
+                    $(jsonDiv).append(children);
+                } else {
+                        var childDiv = $('<div class="jsonObjectMemberView"></div>');
+                        $(childDiv).append('<span class="memberNameView">' + key + '</span>');
+                        $(childDiv).append('<span class="memberValueView">' +  children + '</span>');
+                        $(jsonDiv).append(childDiv);
+                }
             } else {
                 var childDiv = $('<div class="jsonObjectMemberView"></div>');
                 $(childDiv).append('<span class="memberNameView">' + key + '</span>');
-                $(childDiv).append('<span class="memberValueView">' +  children + '</span>');
+                $(childDiv).append('<span class="memberValueView"></span>');
                 $(jsonDiv).append(childDiv);
             }
         });
+        debugger;
         return jsonDiv;
     }
     else {
         // jsonOb is a number or string
+        debugger;
         return jsonObj;                
     }
 }
@@ -235,18 +244,25 @@ function JSONToTreeJSON(jsonObj) {
     if (typeof jsonObj == "object") {
         var jsonArr = [];
         $.each(jsonObj, function (key, value) {
-            // key is either an array index or object key                    
-            var children = JSONToTreeJSON(value);
+            if (value) {
+                // key is either an array index or object key                    
+                var children = JSONToTreeJSON(value);
 
-            if (typeof children == "object") {
-                jsonArr.push({
-                    data: key,
-                    children: children
-                });
+                if (typeof children == "object") {
+                    jsonArr.push({
+                        data: key,
+                        children: children
+                    });
+                } else {
+                    jsonArr.push({
+                        data: key,
+                        attributes: { rel : 'jsonValue',  "jsonvalue": escape(children) }
+                    });
+                }
             } else {
                 jsonArr.push({
                     data: key,
-                    attributes: { rel : 'jsonValue',  "jsonvalue": escape(children) }
+                    attributes: { rel : 'jsonValue', "jsonvalue": '' }
                 });
             }
         });
