@@ -8,8 +8,8 @@
     <ProjectGuid>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Rhino.DivanDB</RootNamespace>
-    <AssemblyName>Rhino.DivanDB</AssemblyName>
+    <RootNamespace>Raven.Database</RootNamespace>
+    <AssemblyName>Raven.Database</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
