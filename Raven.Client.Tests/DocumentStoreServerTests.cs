@@ -1,13 +1,8 @@
 using System;
-using System.IO;
-using System.Net;
-using System.Text;
-using Newtonsoft.Json;
-using Rhino.DivanDB.Server;
+using Raven.Server;
 using Xunit;
 
-namespace Rhino.DivanDB.Client.Tests
-{
+namespace Raven.Client.Tests{
     public class DocumentStoreServerTests : BaseTest
     {
         [Fact]
@@ -26,5 +21,4 @@ namespace Rhino.DivanDB.Client.Tests
                 Assert.NotEqual(Guid.Empty.ToString(), entity.Id);
             }
         }
-    }
-}
+    }}

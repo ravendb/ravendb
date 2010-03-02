@@ -1,12 +1,12 @@
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Newtonsoft.Json;
+using Raven.Database;
 using JObject=Newtonsoft.Json.Linq.JObject;
 using JToken=Newtonsoft.Json.Linq.JToken;
 
-namespace Rhino.DivanDB.Client
+namespace Raven.Client
 {
     public class DocumentSession
     {
@@ -23,7 +23,7 @@ namespace Rhino.DivanDB.Client
         public T Load<T>(string id)
         {
             var documentFound = database.Get(id);
-            var jsonString = Encoding.UTF8.GetString(documentFound);
+            var jsonString = Encoding.UTF8.GetString(documentFound.Data);
             var entity = ConvertToEntity<T>(id, jsonString);
             entities.Add(entity);
             return (T)entity;
@@ -44,31 +44,35 @@ namespace Rhino.DivanDB.Client
 
         public void Store<T>(T entity)
         {
-            var json = ConvertEntityToJson(entity);
-
-            var key = database.Put(json);
+            storeEntity(entity);
             entities.Add(entity);
+        }
 
+        private void storeEntity<T>(T entity)
+        {
+            var json = ConvertEntityToJson(entity);
             var identityProperty = entity.GetType().GetProperties()
-                                        .FirstOrDefault(q => documentStore.Conventions.FindIdentityProperty.Invoke(q));
-            
-            if (identityProperty != null)
-                identityProperty.SetValue(entity, key, null);
+                .FirstOrDefault(q => documentStore.Conventions.FindIdentityProperty.Invoke(q));
+
+            var key = (string)identityProperty.GetValue(entity, null);
+            key = database.Put(key, json, new JObject());
+
+            identityProperty.SetValue(entity, key, null);
         }
 
         public void SaveChanges()
         {
             foreach (var entity in entities)
             {
-                //TODO: Switch to more the batch version when it becomes available
-                database.Put(ConvertEntityToJson(entity));
+                //TODO: Switch to more the batch version when it becomes available#
+                storeEntity(entity);
             }
         }
 
         private JObject ConvertEntityToJson(object entity)
         {
             var identityProperty = entity.GetType().GetProperties()
-                            .FirstOrDefault(q => documentStore.Conventions.FindIdentityProperty.Invoke(q));
+                .FirstOrDefault(q => documentStore.Conventions.FindIdentityProperty.Invoke(q));
 
             var objectAsJson = JObject.FromObject(entity);
             if (identityProperty != null)
@@ -95,12 +99,12 @@ namespace Rhino.DivanDB.Client
             } while (result.IsStale);
 
             return result.Results.Select(q =>
-            {
-                var entity = JsonConvert.DeserializeObject(q.ToString(), typeof(T));
-                var id = q.Value<string>("_id");
-                ConvertToEntity<T>(id, q.ToString());
-                return (T)entity;
-            }).ToList();
+                                             {
+                                                 var entity = JsonConvert.DeserializeObject(q.ToString(), typeof(T));
+                                                 var id = q.Value<string>("_id");
+                                                 ConvertToEntity<T>(id, q.ToString());
+                                                 return (T)entity;
+                                             }).ToList();
         }
     }
 }

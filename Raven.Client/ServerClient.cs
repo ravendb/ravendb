@@ -3,8 +3,10 @@ using System.IO;
 using System.Net;
 using System.Text;
 using Newtonsoft.Json.Linq;
+using Raven.Database;
+using Raven.Database.Json;
 
-namespace Rhino.DivanDB.Client
+namespace Raven.Client
 {
     public class ServerClient : IDatabaseCommands
     {
@@ -15,12 +17,12 @@ namespace Rhino.DivanDB.Client
             url = String.Format("http://{0}:{1}", localhost, port);
         }
 
-        public byte[] Get(string key)
+        public JsonDocument Get(string key)
         {
             throw new NotImplementedException();
         }
 
-        public string Put(JObject document)
+        public string Put(string key, JObject document, JObject metadata)
         {
             var request = WebRequest.Create(url + "/docs");
             request.Method = "POST";
@@ -38,7 +40,7 @@ namespace Rhino.DivanDB.Client
             {
                 var reader = new StreamReader(responseString);
                 var text = reader.ReadToEnd();
-                var id = new Json.JsonDynamicObject(text)["id"];
+                var id = new JsonDynamicObject(text)["id"];
                 reader.Close();
                 return id.ToString();
             }
