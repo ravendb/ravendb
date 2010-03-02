@@ -4,7 +4,6 @@ using Raven.Database;
 using Raven.Database.Json;
 using Raven.Tests.Storage;
 using Xunit;
-using System.Linq;
 
 namespace Raven.Tests.Indexes
 {
@@ -54,7 +53,6 @@ from prj in doc.projects
 select new{project_name = prj.name}
 ");
             var document = JObject.Parse("{'name':'ayende','email':'ayende@ayende.com','projects':[{'name':'raven'}], '@metadata': { '@id': 1}}");
-            new DocsByProject().CompiledDefinition(new[] { new JsonDynamicObject(document), }).Cast<object>().ToArray();
             db.Put("1", document, new JObject());
 
             QueryResult docs;
