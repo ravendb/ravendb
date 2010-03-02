@@ -13,16 +13,9 @@ namespace Rhino.DivanDB.Server.Responders
         {
             get { return new[]{"GET"}; }
         }
-<<<<<<< HEAD
-
-        public override void Respond(HttpListenerContext context)
-        {
-            context.WriteJson(new { docCount = Database.Statistics.CountOfDocuments });
-=======
         public override void Respond(HttpListenerContext context)
         {
             context.WriteJson(Database.Statistics);
->>>>>>> luke
         }
     }
 }

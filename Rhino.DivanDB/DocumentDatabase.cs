@@ -126,11 +126,6 @@ namespace Rhino.DivanDB
             RemoveReservedProperties(metadata);
             metadata.Add("@id", new JValue(key));
 
-            foreach (var reservedField in ReservedFields)
-            {
-                document.Remove(reservedField);
-            }
-
             TransactionalStorage.Batch(actions =>
                                        {
                                            actions.DeleteDocument(key);

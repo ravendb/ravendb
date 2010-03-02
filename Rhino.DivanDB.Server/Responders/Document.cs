@@ -24,22 +24,13 @@ namespace Rhino.DivanDB.Server.Responders
             {
                 case "GET":
                     context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
-<<<<<<< HEAD
-                    var bytes = Database.Get(docId);
-                    if(bytes==null)
-=======
                     var doc = Database.Get(docId);
                     if(doc==null)
->>>>>>> luke
                     {
                         context.SetStatusToNotFound();
                         return;
                     }
-<<<<<<< HEAD
-                    context.WriteData(bytes, new NameValueCollection());
-=======
                     context.WriteData(doc.Data, doc.Metadata);
->>>>>>> luke
                     break;
                 case "DELETE":
                     Database.Delete(docId);
@@ -54,33 +45,10 @@ namespace Rhino.DivanDB.Server.Responders
         private void Put(HttpListenerContext context, string docId)
         {
             var json = context.ReadJson();
-<<<<<<< HEAD
-            var idProp = json.Property("_id");
-            if (idProp == null) // set the in-document id based on the url
-            {
-                json.Add("_id", new JValue(docId));
-            }
-            else
-            {
-                var idVal = idProp.Value.Value<object>();
-                if (idVal != null && idVal.ToString() != docId) // doc id conflict
-                {
-                    context.SetStatusToBadRequest();
-                    var err = string.Format(
-                        "PUT on {0} but the document contained '_id' property with: '{1}'",
-                        context.Request.Url.LocalPath, idVal);
-                    context.Write(err);
-                    return;
-                }
-            }
-            context.SetStatusToCreated("/docs/" + docId);
-            context.WriteJson(new { id = Database.Put(json) });
-=======
             context.SetStatusToCreated("/docs/" + docId);
             context.WriteJson(new { id = Database.Put(docId, json, 
                 context.Request.Headers.FilterHeaders()
                 ) });
->>>>>>> luke
         }
     }
 }

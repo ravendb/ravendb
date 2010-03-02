@@ -5,10 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
-<<<<<<< HEAD
-=======
 using System.Threading;
->>>>>>> luke
 using ICSharpCode.SharpZipLib.Zip;
 using Rhino.DivanDB.Extensions;
 using Rhino.DivanDB.Server;
@@ -70,16 +67,11 @@ namespace Rhino.DivanDB.Scenarios
             do
             {
                 actual = SendRequest(request);
-<<<<<<< HEAD
-                count++;
-            } while (IsStaleResponse(actual.First) && count < 5);
-=======
                 count++;
                 if (!IsStaleResponse(actual.First))
                     break;
                 Thread.Sleep(100);
             } while (count < 5);
->>>>>>> luke
 
             CompareResponses(
                 responseNumber++,
