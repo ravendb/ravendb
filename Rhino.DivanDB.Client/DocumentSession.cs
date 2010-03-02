@@ -46,31 +46,33 @@ namespace Rhino.DivanDB.Client
 
         public void Store<T>(T entity)
         {
-            //NOTE: Removed because of API change, not sure how to handle that and not
-            // enough time to handle it right not
+            updateStoredEntity(entity);
+            entities.Add(entity);
+        }
 
-            throw new NotImplementedException("Need to find a way to get the entity id to the Put");
-            //var json = convertEntityToJson(entity);
+        private void updateStoredEntity<T>(T entity)
+        {
+            var json = convertEntityToJson(entity);
 
+            var identityProperty = entity.GetType().GetProperties()
+                .FirstOrDefault(q => documentDb.Conventions.FindIdentityProperty.Invoke(q));
 
-            ////var key = database.Put(json, );
-            //entities.Add(entity);
+            var currentKey = (string)identityProperty.GetValue(entity, null);
 
-            //var identityProperty = entity.GetType().GetProperties()
-            //                            .FirstOrDefault(q => documentDb.Conventions.FindIdentityProperty.Invoke(q));
+            if (currentKey == null)
+                currentKey = Guid.NewGuid().ToString();
 
-            //if (identityProperty != null)
-            //    identityProperty.SetValue(entity, key, null);
+            var key = database.Put(currentKey, json, new JObject());
+            
+            identityProperty.SetValue(entity, key, null);
         }
 
         public void SaveChanges()
         {
-            throw new NotImplementedException("Need to find a way to get the entity id to the Put");
-            //foreach (var entity in entities)
-            //{
-            //    JObject objectAsJson = convertEntityToJson(entity);
-            //    database.Put(objectAsJson);
-            //}
+            foreach (var entity in entities)
+            {
+                updateStoredEntity(entity);
+            }
         }
 
         private JObject convertEntityToJson(object entity)
