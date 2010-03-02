@@ -94,16 +94,6 @@
     <Compile Include="Indexes\DocumentsToIndex.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Rhino.DivanDB.Server\Rhino.DivanDB.Server.csproj">
-      <Project>{3B90EB20-AEA3-4972-8219-936F1A62768C}</Project>
-      <Name>Rhino.DivanDB.Server</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Rhino.DivanDB\Rhino.DivanDB.csproj">
-      <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
-      <Name>Rhino.DivanDB</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
       <Visible>False</Visible>
       <ProductName>.NET Framework 3.5 SP1 Client Profile</ProductName>

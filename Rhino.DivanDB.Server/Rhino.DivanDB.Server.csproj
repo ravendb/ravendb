@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="3.5" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -85,12 +85,6 @@
     <Compile Include="Responders\Root.cs" />
     <Compile Include="Responders\Static.cs" />
     <Compile Include="Responders\Statistics.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Rhino.DivanDB\Rhino.DivanDB.csproj">
-      <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
-      <Name>Rhino.DivanDB</Name>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Content Include="DivanUI\images\c.gif">

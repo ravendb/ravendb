@@ -53,16 +53,6 @@
     <Compile Include="DocumentDbClientTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Rhino.DivanDB.Client\Rhino.DivanDB.Client.csproj">
-      <Project>{9F92FD36-60B6-4655-B8C6-00125B46AB6A}</Project>
-      <Name>Rhino.DivanDB.Client</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Rhino.DivanDB\Rhino.DivanDB.csproj">
-      <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
-      <Name>Rhino.DivanDB</Name>
-    </ProjectReference>
-  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
