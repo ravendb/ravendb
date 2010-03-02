@@ -2,7 +2,6 @@ using System;
 using System.IO;
 using System.Net;
 using System.Text;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace Rhino.DivanDB.Client
@@ -34,9 +33,9 @@ namespace Rhino.DivanDB.Client
 
         public void Dispose()
         {
-            var embeddedDatabase = (DocumentDatabase)database;
-            if (embeddedDatabase != null)
-                embeddedDatabase.Dispose();
+            var disposable = database as IDisposable;
+            if (disposable != null)
+                disposable.Dispose();
         }
 
         public void Initialise()
