@@ -1,6 +1,4 @@
-using System;
 using System.IO;
-using Lucene.Net.Documents;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -36,7 +34,7 @@ namespace Rhino.DivanDB.Json
             }
         }
 
-        protected override object Value
+        public override object Value
         {
             get
             {

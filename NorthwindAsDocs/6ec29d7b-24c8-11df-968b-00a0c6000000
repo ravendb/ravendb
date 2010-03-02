@@ -1,0 +1,16 @@
+{
+  "CustomerID": "FAMIA",
+  "CompanyName": "Familia Arquibaldo",
+  "ContactName": "Aria Cruz",
+  "ContactTitle": "Marketing Assistant",
+  "Address": "Rua Orós, 92",
+  "City": "São Paulo",
+  "Region": "SP",
+  "PostalCode": "05442-030",
+  "Country": "Brazil",
+  "Phone": "(11) 555-9857",
+  "Fax": null,
+  "ObjectType": "Customer",
+  "_id": "6ec29d7b-24c8-11df-968b-00a0c6000000",
+  "_docNum": 29
+}

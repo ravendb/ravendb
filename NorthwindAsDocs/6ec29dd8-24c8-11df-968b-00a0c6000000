@@ -1,0 +1,17 @@
+{
+  "SupplierID": 14,
+  "CompanyName": "Formaggi Fortini s.r.l.",
+  "ContactName": "Elio Rossi",
+  "ContactTitle": "Sales Representative",
+  "Address": "Viale Dante, 75",
+  "City": "Ravenna",
+  "Region": null,
+  "PostalCode": "48100",
+  "Country": "Italy",
+  "Phone": "(0544) 60323",
+  "Fax": "(0544) 60603",
+  "HomePage": "#FORMAGGI.HTM#",
+  "ObjectType": "Supplier",
+  "_id": "6ec29dd8-24c8-11df-968b-00a0c6000000",
+  "_docNum": 130
+}

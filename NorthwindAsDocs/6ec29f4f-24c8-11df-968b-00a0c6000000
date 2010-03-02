@@ -1,0 +1,19 @@
+{
+  "OrderID": 10527,
+  "CustomerID": "6ec29da5-24c8-11df-968b-00a0c6000000",
+  "EmployeeID": "6ec29dc8-24c8-11df-968b-00a0c6000000",
+  "OrderDate": "\/Date(802306800000+0100)\/",
+  "RequiredDate": "\/Date(804726000000+0100)\/",
+  "ShippedDate": "\/Date(802479600000+0100)\/",
+  "ShipVia": "6ec29de8-24c8-11df-968b-00a0c6000000",
+  "Freight": 41.9,
+  "ShipName": "QUICK-Stop",
+  "ShipAddress": "Taucherstraße 10",
+  "ShipCity": "Cunewalde",
+  "ShipRegion": null,
+  "ShipPostalCode": "01307",
+  "ShipCountry": "Germany",
+  "ObjectType": "Order",
+  "_id": "6ec29f4f-24c8-11df-968b-00a0c6000000",
+  "_docNum": 505
+}

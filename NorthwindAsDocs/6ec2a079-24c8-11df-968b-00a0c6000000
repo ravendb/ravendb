@@ -1,0 +1,19 @@
+{
+  "OrderID": 10825,
+  "CustomerID": "6ec29d77-24c8-11df-968b-00a0c6000000",
+  "EmployeeID": "6ec29dc2-24c8-11df-968b-00a0c6000000",
+  "OrderDate": "\/Date(823824000000+0000)\/",
+  "RequiredDate": "\/Date(826243200000+0000)\/",
+  "ShippedDate": "\/Date(824256000000+0000)\/",
+  "ShipVia": "6ec29de8-24c8-11df-968b-00a0c6000000",
+  "Freight": 79.25,
+  "ShipName": "Drachenblut Delikatessen",
+  "ShipAddress": "Walserweg 21",
+  "ShipCity": "Aachen",
+  "ShipRegion": null,
+  "ShipPostalCode": "52066",
+  "ShipCountry": "Germany",
+  "ObjectType": "Order",
+  "_id": "6ec2a079-24c8-11df-968b-00a0c6000000",
+  "_docNum": 803
+}

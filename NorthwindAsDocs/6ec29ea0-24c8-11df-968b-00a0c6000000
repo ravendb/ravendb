@@ -1,0 +1,19 @@
+{
+  "OrderID": 10352,
+  "CustomerID": "6ec29d82-24c8-11df-968b-00a0c6000000",
+  "EmployeeID": "6ec29dc4-24c8-11df-968b-00a0c6000000",
+  "OrderDate": "\/Date(787276800000+0000)\/",
+  "RequiredDate": "\/Date(788486400000+0000)\/",
+  "ShippedDate": "\/Date(787795200000+0000)\/",
+  "ShipVia": "6ec29dea-24c8-11df-968b-00a0c6000000",
+  "Freight": 1.3,
+  "ShipName": "Furia Bacalhau e Frutos do Mar",
+  "ShipAddress": "Jardim das rosas n. 32",
+  "ShipCity": "Lisboa",
+  "ShipRegion": null,
+  "ShipPostalCode": "1675",
+  "ShipCountry": "Portugal",
+  "ObjectType": "Order",
+  "_id": "6ec29ea0-24c8-11df-968b-00a0c6000000",
+  "_docNum": 330
+}

@@ -16,7 +16,11 @@ namespace Rhino.DivanDB.Server.Responders
 
         public override void Respond(HttpListenerContext context)
         {
+<<<<<<< HEAD
             context.WriteJson(Database.IndexDefinitionStorage.IndexNames);
+=======
+            context.WriteJson(Database.GetIndexes(context.GetStart(), context.GetPageSize()));
+>>>>>>> luke
         }
     }
 }

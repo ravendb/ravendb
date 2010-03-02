@@ -8,6 +8,7 @@ using ICSharpCode.NRefactory;
 using ICSharpCode.NRefactory.Ast;
 using ICSharpCode.NRefactory.PrettyPrinter;
 using Microsoft.CSharp;
+using Rhino.DivanDB.Json;
 
 namespace Rhino.DivanDB.Linq
 {
@@ -128,6 +129,19 @@ namespace Rhino.DivanDB.Linq
                                                },
                                            ExpressionBody = variable.Initializer
                                        })));
+
+            ctor.Body.AddChild(new ExpressionStatement(
+                                 new AssignmentExpression(
+                                     new MemberReferenceExpression(new ThisReferenceExpression(), "CompiledDefinition"),
+                                     AssignmentOperatorType.Assign,
+                                     new LambdaExpression
+                                     {
+                                         Parameters =
+                                               {
+                                                   new ParameterDeclarationExpression(new TypeReference("System.Collections.Generic.IEnumerable<"+rootQueryType+">"), rootQueryName)
+                                               },
+                                         ExpressionBody = variable.Initializer
+                                     })));
             foreach (var fieldName in visitor.FieldNames)
             {
                 ctor.Body.AddChild(new ExpressionStatement(
@@ -143,6 +157,7 @@ namespace Rhino.DivanDB.Linq
             unit.AddChild(new Using(typeof(AbstractViewGenerator).Namespace));
             unit.AddChild(new Using(typeof(System.Linq.Enumerable).Namespace));
             unit.AddChild(new Using(typeof(int).Namespace));
+            unit.AddChild(new Using(typeof(DynamicObjectExtensions).Namespace));
             unit.AddChild(type);
 
             var output = new CSharpOutputVisitor();

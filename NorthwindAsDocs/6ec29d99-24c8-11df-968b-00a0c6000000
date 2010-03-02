@@ -1,0 +1,16 @@
+{
+  "CustomerID": "MEREP",
+  "CompanyName": "Mère Paillarde",
+  "ContactName": "Jean Fresnière",
+  "ContactTitle": "Marketing Assistant",
+  "Address": "43 rue St. Laurent",
+  "City": "Montréal",
+  "Region": "Québec",
+  "PostalCode": "H1J 1C3",
+  "Country": "Canada",
+  "Phone": "(514) 555-8054",
+  "Fax": "(514) 555-8055",
+  "ObjectType": "Customer",
+  "_id": "6ec29d99-24c8-11df-968b-00a0c6000000",
+  "_docNum": 59
+}

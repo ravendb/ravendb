@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="3.5" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
@@ -99,11 +100,225 @@
     </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+=======
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>9.0.30729</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{3B90EB20-AEA3-4972-8219-936F1A62768C}</ProjectGuid>
+    <OutputType>Exe</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Rhino.DivanDB.Server</RootNamespace>
+    <AssemblyName>Rhino.DivanDB.Server</AssemblyName>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <FileUpgradeFlags>
+    </FileUpgradeFlags>
+    <OldToolsVersion>3.5</OldToolsVersion>
+    <UpgradeBackupLocation />
+    <PublishUrl>publish\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Disk</InstallFrom>
+    <UpdateEnabled>false</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <ApplicationRevision>0</ApplicationRevision>
+    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Newtonsoft.Json, Version=3.5.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SharedLibs\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Xml.Linq">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Data.DataSetExtensions">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="DivanServer.cs" />
+    <Compile Include="HttpServer.cs" />
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Responders\DivanRootResponser.cs" />
+    <Compile Include="Responders\DivanUserInterfaceResponder.cs" />
+    <Compile Include="Responders\Docs.cs" />
+    <Compile Include="Responders\Document.cs" />
+    <Compile Include="Responders\HttpExtensions.cs" />
+    <Compile Include="Responders\RequestResponder.cs" />
+    <Compile Include="Responders\Index.cs" />
+    <Compile Include="Responders\Indexes.cs" />
+    <Compile Include="Responders\Root.cs" />
+    <Compile Include="Responders\Static.cs" />
+    <Compile Include="Responders\Statistics.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Rhino.DivanDB\Rhino.DivanDB.csproj">
+      <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
+      <Name>Rhino.DivanDB</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="DivanUI\images\c.gif">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="DivanUI\images\footer_bckg.jpg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="DivanUI\images\header_bckg.jpg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="DivanUI\images\li.gif">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="DivanUI\images\menu_bckg.jpg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="DivanUI\index.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="DivanUI\jquery-1.4.2.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="DivanUI\jquery-jtemplates_uncompressed.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="DivanUI\style.css">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WebUI\css\Pager.css" />
+    <Content Include="WebUI\css\smoothness\images\ui-bg_flat_0_aaaaaa_40x100.png" />
+    <Content Include="WebUI\css\smoothness\images\ui-bg_flat_75_ffffff_40x100.png" />
+    <Content Include="WebUI\css\smoothness\images\ui-bg_glass_55_fbf9ee_1x400.png" />
+    <Content Include="WebUI\css\smoothness\images\ui-bg_glass_65_ffffff_1x400.png" />
+    <Content Include="WebUI\css\smoothness\images\ui-bg_glass_75_dadada_1x400.png" />
+    <Content Include="WebUI\css\smoothness\images\ui-bg_glass_75_e6e6e6_1x400.png" />
+    <Content Include="WebUI\css\smoothness\images\ui-bg_glass_95_fef1ec_1x400.png" />
+    <Content Include="WebUI\css\smoothness\images\ui-bg_highlight-soft_75_cccccc_1x100.png" />
+    <Content Include="WebUI\css\smoothness\images\ui-icons_222222_256x240.png" />
+    <Content Include="WebUI\css\smoothness\images\ui-icons_2e83ff_256x240.png" />
+    <Content Include="WebUI\css\smoothness\images\ui-icons_454545_256x240.png" />
+    <Content Include="WebUI\css\smoothness\images\ui-icons_888888_256x240.png" />
+    <Content Include="WebUI\css\smoothness\images\ui-icons_cd0a0a_256x240.png" />
+    <Content Include="WebUI\css\smoothness\jquery-ui-1.8rc2.custom.css" />
+    <Content Include="WebUI\css\style.css" />
+    <Content Include="WebUI\documentation.html" />
+    <Content Include="WebUI\documents.html" />
+    <Content Include="WebUI\images\ajax-loader.gif" />
+    <Content Include="WebUI\images\bgR.png" />
+    <Content Include="WebUI\images\c1_i1.png" />
+    <Content Include="WebUI\images\c2_i2.png" />
+    <Content Include="WebUI\images\c2_i3.png" />
+    <Content Include="WebUI\images\c2_i4.png" />
+    <Content Include="WebUI\images\c2_i5.png" />
+    <Content Include="WebUI\images\c2_i6.png" />
+    <Content Include="WebUI\images\c3_i7.png" />
+    <Content Include="WebUI\images\footerContainerBgR.png" />
+    <Content Include="WebUI\images\jsonEditor\doc.gif" />
+    <Content Include="WebUI\images\jsonEditor\docNode.gif" />
+    <Content Include="WebUI\images\jsonEditor\docNodeLast.gif" />
+    <Content Include="WebUI\images\jsonEditor\docNodeLastFirst.gif" />
+    <Content Include="WebUI\images\jsonEditor\folder.gif" />
+    <Content Include="WebUI\images\jsonEditor\folderNode.gif" />
+    <Content Include="WebUI\images\jsonEditor\folderNodeFirst.gif" />
+    <Content Include="WebUI\images\jsonEditor\folderNodeLast.gif" />
+    <Content Include="WebUI\images\jsonEditor\folderNodeLastFirst.gif" />
+    <Content Include="WebUI\images\jsonEditor\folderNodeOpen.gif" />
+    <Content Include="WebUI\images\jsonEditor\folderNodeOpenFirst.gif" />
+    <Content Include="WebUI\images\jsonEditor\folderNodeOpenLast.gif" />
+    <Content Include="WebUI\images\jsonEditor\folderNodeOpenLastFirst.gif" />
+    <Content Include="WebUI\images\jsonEditor\folderOpen.gif" />
+    <Content Include="WebUI\images\jsonEditor\vertLine.gif" />
+    <Content Include="WebUI\images\logo.png" />
+    <Content Include="WebUI\images\midBox1.png" />
+    <Content Include="WebUI\images\midBox2Arrow.png" />
+    <Content Include="WebUI\images\sideBarArrow.png" />
+    <Content Include="WebUI\images\sideBarListBoxBottom.png" />
+    <Content Include="WebUI\images\sideBarListBoxTop.png" />
+    <Content Include="WebUI\images\submit.png" />
+    <Content Include="WebUI\images\topNavSep.png" />
+    <Content Include="WebUI\index.html" />
+    <Content Include="WebUI\indexes.html" />
+    <Content Include="WebUI\JSONTemplates\documentPage.html" />
+    <Content Include="WebUI\JSONTemplates\globalStats.html" />
+    <Content Include="WebUI\JSONTemplates\indexPage.html" />
+    <Content Include="WebUI\JSONTemplates\quickStats.html" />
+    <Content Include="WebUI\js\divan-ui.js" />
+    <Content Include="WebUI\js\jquery-1.4.2.min.js" />
+    <Content Include="WebUI\js\jquery-jtemplates.js" />
+    <Content Include="WebUI\js\jquery-ui.js" />
+    <Content Include="WebUI\js\jquery.divanDB.js" />
+    <Content Include="WebUI\js\jquery.pager.js" />
+    <Content Include="WebUI\js\jquery.simpletip.js" />
+    <Content Include="WebUI\js\json2.js" />
+    <Content Include="WebUI\js\JSONeditor.js" />
+    <Content Include="WebUI\statistics.html" />
+  </ItemGroup>
+  <ItemGroup>
+    <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1 Client Profile</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Windows.Installer.3.1">
+      <Visible>False</Visible>
+      <ProductName>Windows Installer 3.1</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+>>>>>>> luke
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
   </Target>
   <Target Name="AfterBuild">
   </Target>
+<<<<<<< HEAD
   -->
+=======
+  -->
+>>>>>>> luke
 </Project>

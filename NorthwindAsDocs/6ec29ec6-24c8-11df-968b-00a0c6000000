@@ -1,0 +1,19 @@
+{
+  "OrderID": 10390,
+  "CustomerID": "6ec29d7a-24c8-11df-968b-00a0c6000000",
+  "EmployeeID": "6ec29dc7-24c8-11df-968b-00a0c6000000",
+  "OrderDate": "\/Date(790819200000+0000)\/",
+  "RequiredDate": "\/Date(793238400000+0000)\/",
+  "ShippedDate": "\/Date(791078400000+0000)\/",
+  "ShipVia": "6ec29de8-24c8-11df-968b-00a0c6000000",
+  "Freight": 126.38,
+  "ShipName": "Ernst Handel",
+  "ShipAddress": "Kirchgasse 6",
+  "ShipCity": "Graz",
+  "ShipRegion": null,
+  "ShipPostalCode": "8010",
+  "ShipCountry": "Austria",
+  "ObjectType": "Order",
+  "_id": "6ec29ec6-24c8-11df-968b-00a0c6000000",
+  "_docNum": 368
+}

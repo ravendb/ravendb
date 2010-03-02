@@ -1,0 +1,16 @@
+{
+  "CustomerID": "VINET",
+  "CompanyName": "Vins et alcools Chevalier",
+  "ContactName": "Paul Henriot",
+  "ContactTitle": "Accounting Manager",
+  "Address": "59 rue de l'Abbaye",
+  "City": "Reims",
+  "Region": null,
+  "PostalCode": "51100",
+  "Country": "France",
+  "Phone": "26.47.15.10",
+  "Fax": "26.47.15.11",
+  "ObjectType": "Customer",
+  "_id": "6ec29dbb-24c8-11df-968b-00a0c6000000",
+  "_docNum": 93
+}

@@ -1,0 +1,19 @@
+{
+  "OrderID": 10401,
+  "CustomerID": "6ec29da7-24c8-11df-968b-00a0c6000000",
+  "EmployeeID": "6ec29dc2-24c8-11df-968b-00a0c6000000",
+  "OrderDate": "\/Date(791596800000+0000)\/",
+  "RequiredDate": "\/Date(794016000000+0000)\/",
+  "ShippedDate": "\/Date(792374400000+0000)\/",
+  "ShipVia": "6ec29de8-24c8-11df-968b-00a0c6000000",
+  "Freight": 12.51,
+  "ShipName": "Rattlesnake Canyon Grocery",
+  "ShipAddress": "2817 Milton Dr.",
+  "ShipCity": "Albuquerque",
+  "ShipRegion": "NM",
+  "ShipPostalCode": "87110",
+  "ShipCountry": "USA",
+  "ObjectType": "Order",
+  "_id": "6ec29ed1-24c8-11df-968b-00a0c6000000",
+  "_docNum": 379
+}

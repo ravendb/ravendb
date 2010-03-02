@@ -1,0 +1,17 @@
+{
+  "SupplierID": 15,
+  "CompanyName": "Norske Meierier",
+  "ContactName": "Beate Vileid",
+  "ContactTitle": "Marketing Manager",
+  "Address": "Hatlevegen 5",
+  "City": "Sandvika",
+  "Region": null,
+  "PostalCode": "1320",
+  "Country": "Norway",
+  "Phone": "(0)2-953010",
+  "Fax": null,
+  "HomePage": null,
+  "ObjectType": "Supplier",
+  "_id": "6ec29dd9-24c8-11df-968b-00a0c6000000",
+  "_docNum": 131
+}

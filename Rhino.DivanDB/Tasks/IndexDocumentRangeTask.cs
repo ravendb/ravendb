@@ -32,7 +32,7 @@ namespace Rhino.DivanDB.Tasks
                         return d.First;
                     })
                     .Where(x => x != null)
-                    .Select(s => new JsonDynamicObject(s));
+                    .Select(s => new JsonDynamicObject(s.ToJson()));
                 context.IndexStorage.Index(View, viewFunc, docsToIndex);
                 actions.Commit();
             });

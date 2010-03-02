@@ -1,0 +1,19 @@
+{
+  "OrderID": 10277,
+  "CustomerID": "6ec29d9a-24c8-11df-968b-00a0c6000000",
+  "EmployeeID": "6ec29dc3-24c8-11df-968b-00a0c6000000",
+  "OrderDate": "\/Date(779065200000+0100)\/",
+  "RequiredDate": "\/Date(781484400000+0100)\/",
+  "ShippedDate": "\/Date(779410800000+0100)\/",
+  "ShipVia": "6ec29dea-24c8-11df-968b-00a0c6000000",
+  "Freight": 125.77,
+  "ShipName": "Morgenstern Gesundkost",
+  "ShipAddress": "Heerstr. 22",
+  "ShipCity": "Leipzig",
+  "ShipRegion": null,
+  "ShipPostalCode": "04179",
+  "ShipCountry": "Germany",
+  "ObjectType": "Order",
+  "_id": "6ec29e66-24c8-11df-968b-00a0c6000000",
+  "_docNum": 272
+}

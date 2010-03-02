@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Text;
 using log4net;
 using Microsoft.Isam.Esent.Interop;
+using Newtonsoft.Json.Linq;
 using Rhino.DivanDB.Extensions;
 using Rhino.DivanDB.Tasks;
 
@@ -30,7 +31,11 @@ namespace Rhino.DivanDB.Storage
         [CLSCompliant(false)]
         [DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
         public DocumentStorageActions(JET_INSTANCE instance,
-                                          string database)
+                                        string database,
+                                        IDictionary<string, JET_COLUMNID> documentsColumns,
+                                        IDictionary<string, JET_COLUMNID> tasksColumns,
+                                        IDictionary<string, JET_COLUMNID> filesColumns
+            )
         {
             try
             {
@@ -39,11 +44,11 @@ namespace Rhino.DivanDB.Storage
                 Api.JetOpenDatabase(session, database, null, out dbid, OpenDatabaseGrbit.None);
 
                 documents = new Table(session, dbid, "documents", OpenTableGrbit.None);
-                documentsColumns = Api.GetColumnDictionary(session, documents);
                 tasks = new Table(session, dbid, "tasks", OpenTableGrbit.None);
-                tasksColumns = Api.GetColumnDictionary(session, tasks);
                 files = new Table(session, dbid, "files", OpenTableGrbit.None);
-                filesColumns = Api.GetColumnDictionary(session, files);
+                this.documentsColumns = documentsColumns;
+                this.tasksColumns = tasksColumns;
+                this.filesColumns = filesColumns;
             }
             catch (Exception)
             {
@@ -52,7 +57,7 @@ namespace Rhino.DivanDB.Storage
             }
         }
 
-        public byte[] DocumentByKey(string key)
+        public JsonDocument DocumentByKey(string key)
         {
             Api.JetSetCurrentIndex(session, documents, "by_key");
             Api.MakeKey(session, documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -63,7 +68,12 @@ namespace Rhino.DivanDB.Storage
             }
             var data = Api.RetrieveColumn(session, documents, documentsColumns["data"]);
             logger.DebugFormat("Document with key '{0}' was found", key);
-            return data;
+            return new JsonDocument
+            {
+                Data = data,
+                Key = Api.RetrieveColumnAsString(session, documents, documentsColumns["key"],Encoding.Unicode),
+                Metadata = JObject.Parse(Api.RetrieveColumnAsString(session, documents, documentsColumns["metadata"]))
+            };
         }
 
         public void Dispose()
@@ -109,7 +119,7 @@ namespace Rhino.DivanDB.Storage
         }
 
 
-        public Tuple<int,int> FirstAndLastDocumentKeys()
+        public Tuple<int, int> FirstAndLastDocumentKeys()
         {
             var result = new Tuple<int, int>();
             Api.MoveBeforeFirst(session, documents);
@@ -133,7 +143,7 @@ namespace Rhino.DivanDB.Storage
             return true;
         }
 
-        public IEnumerable<Tuple<string,int>> DocumentsById(Reference<bool> hasMoreWork ,int startId, int endId, int limit)
+        public IEnumerable<Tuple<JsonDocument, int>> DocumentsById(Reference<bool> hasMoreWork, int startId, int endId, int limit)
         {
             Api.JetSetCurrentIndex(session, documents, "by_id");
             Api.MakeKey(session, documents, startId, MakeKeyGrbit.NewKey);
@@ -157,23 +167,30 @@ namespace Rhino.DivanDB.Storage
 
                 var data = Api.RetrieveColumn(session, documents, documentsColumns["data"]);
                 logger.DebugFormat("Document with id '{0}' was found, doc length: {1}", id, data.Length);
-                yield return new Tuple<string, int>
+                var json = Api.RetrieveColumnAsString(session, documents, documentsColumns["metadata"],Encoding.Unicode);
+                yield return new Tuple<JsonDocument, int>
                 {
-                    First = Encoding.UTF8.GetString(data), 
+                    First = new JsonDocument
+                    {
+                        Key = Api.RetrieveColumnAsString(session, documents, documentsColumns["key"],Encoding.Unicode),
+                        Data = data,
+                        Metadata = JObject.Parse(json)
+                    },
                     Second = id
                 };
 
-                
+
             } while (Api.TryMoveNext(session, documents));
             hasMoreWork.Value = false;
         }
 
-        public void AddDocument(string key, string data)
+        public void AddDocument(string key, string data, string metadata)
         {
             using (var update = new Update(session, documents, JET_prep.Insert))
             {
                 Api.SetColumn(session, documents, documentsColumns["key"], key, Encoding.Unicode);
                 Api.SetColumn(session, documents, documentsColumns["data"], Encoding.UTF8.GetBytes(data));
+                Api.SetColumn(session, documents, documentsColumns["metadata"], metadata, Encoding.Unicode);
 
                 update.Save();
             }
@@ -218,7 +235,7 @@ namespace Rhino.DivanDB.Storage
             {
                 Api.SetColumn(session, files, filesColumns["name"], key, Encoding.Unicode);
                 Api.SetColumn(session, files, filesColumns["data"], data);
-                Api.SetColumn(session, files, filesColumns["headers"], headers, Encoding.Unicode);
+                Api.SetColumn(session, files, filesColumns["metadata"], headers, Encoding.Unicode);
 
                 update.Save();
             }
@@ -239,7 +256,7 @@ namespace Rhino.DivanDB.Storage
             logger.DebugFormat("Attachment with key '{0}' was deleted", key);
         }
 
-        public Tuple<byte[], string> GetAttachment(string key)
+        public Attachment GetAttachment(string key)
         {
             Api.JetSetCurrentIndex(session, files, "by_name");
             Api.MakeKey(session, files, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -248,10 +265,11 @@ namespace Rhino.DivanDB.Storage
                 return null;
             }
 
-            return new Tuple<byte[], string>
+            var metadata = Api.RetrieveColumnAsString(session, files, filesColumns["metadata"], Encoding.Unicode);
+            return new Attachment
             {
-                First = Api.RetrieveColumn(session, files, filesColumns["data"]),
-                Second= Api.RetrieveColumnAsString(session, files, filesColumns["headers"], Encoding.Unicode)
+                Data= Api.RetrieveColumn(session, files, filesColumns["data"]),
+                Metadata = JObject.Parse(metadata)
             };
         }
 

@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Linq;
-using Newtonsoft.Json.Linq;
 using Rhino.DivanDB.Json;
 using Rhino.DivanDB.Linq;
 using Xunit;
@@ -55,7 +52,7 @@ namespace Rhino.DivanDB.Tests.Linq
             {
                 new JsonDynamicObject(@"
                 {
-                    '_id': 1,
+                    '@metadata': {'@id': 1},
                     'Type': 'page',
                     'Title': 'doc1',
                     'Content': 'Foobar',
@@ -63,12 +60,12 @@ namespace Rhino.DivanDB.Tests.Linq
                 }"),
                 new JsonDynamicObject(@"
                 {
-                    '_id': 2,
+                    '@metadata': {'@id': 2},
                     'Type': 'not a page',
                 }"),
                 new JsonDynamicObject(@"
                 {
-                    '_id': 3,
+                    '@metadata': {'@id': 3},
                     'Type': 'page',
                     'Title': 'doc2',
                     'Content': 'Foobar',
@@ -78,8 +75,8 @@ namespace Rhino.DivanDB.Tests.Linq
 
             var expected = new[]
             {
-                "{ Key = doc1, Value = Foobar, Size = 31, _id = 1 }",
-                "{ Key = doc2, Value = Foobar, Size = 31, _id = 3 }"
+                "{ Key = doc1, Value = Foobar, Size = 31, __document_id = 1 }",
+                "{ Key = doc2, Value = Foobar, Size = 31, __document_id = 3 }"
             };
 
             for (int i = 0; i < results.Length; i++)

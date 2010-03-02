@@ -1,0 +1,17 @@
+{
+  "SupplierID": 18,
+  "CompanyName": "Aux joyeux ecclésiastiques",
+  "ContactName": "Guylène Nodier",
+  "ContactTitle": "Sales Manager",
+  "Address": "203, Rue des Francs-Bourgeois",
+  "City": "Paris",
+  "Region": null,
+  "PostalCode": "75004",
+  "Country": "France",
+  "Phone": "(1) 03.83.00.68",
+  "Fax": "(1) 03.83.00.62",
+  "HomePage": null,
+  "ObjectType": "Supplier",
+  "_id": "6ec29ddc-24c8-11df-968b-00a0c6000000",
+  "_docNum": 134
+}

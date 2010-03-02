@@ -1,0 +1,19 @@
+{
+  "OrderID": 10350,
+  "CustomerID": "6ec29d8f-24c8-11df-968b-00a0c6000000",
+  "EmployeeID": "6ec29dc7-24c8-11df-968b-00a0c6000000",
+  "OrderDate": "\/Date(787190400000+0000)\/",
+  "RequiredDate": "\/Date(789609600000+0000)\/",
+  "ShippedDate": "\/Date(789091200000+0000)\/",
+  "ShipVia": "6ec29de9-24c8-11df-968b-00a0c6000000",
+  "Freight": 64.19,
+  "ShipName": "La maison d'Asie",
+  "ShipAddress": "1 rue Alsace-Lorraine",
+  "ShipCity": "Toulouse",
+  "ShipRegion": null,
+  "ShipPostalCode": "31000",
+  "ShipCountry": "France",
+  "ObjectType": "Order",
+  "_id": "6ec29e9e-24c8-11df-968b-00a0c6000000",
+  "_docNum": 328
+}

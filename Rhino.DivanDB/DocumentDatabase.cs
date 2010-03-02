@@ -59,7 +59,6 @@ namespace Rhino.DivanDB
 
         private Thread[] backgroundWorkers = new Thread[0];
         private readonly WorkContext workContext;
-        private readonly static string[] ReservedFields = new[] { "_docNum" };
 
         public DatabaseStatistics Statistics
         {
@@ -100,29 +99,13 @@ namespace Rhino.DivanDB
 
         #endregion
 
-        private static string GetKeyFromDocumentOrGenerateNewOne(IDictionary<string, JToken> document)
-        {
-            string id = null;
-            JToken idToken;
-            if (document.TryGetValue("_id", out idToken))
-            {
-                id = (string)((JValue)idToken).Value;
-            }
-            if (id != null)
-                return id;
-            Guid value;
-            UuidCreateSequential(out value);
-            document.Add("_id", new JValue(value.ToString()));
-            return value.ToString();
-        }
-
         [SuppressUnmanagedCodeSecurity]
         [DllImport("rpcrt4.dll", SetLastError = true)]
         private static extern int UuidCreateSequential(out Guid value);
 
-        public byte[] Get(string key)
+        public JsonDocument Get(string key)
         {
-            byte[] document = null;
+            JsonDocument document = null;
             TransactionalStorage.Batch(actions =>
                                       {
                                           document = actions.DocumentByKey(key);
@@ -131,9 +114,17 @@ namespace Rhino.DivanDB
             return document;
         }
 
-        public string Put(JObject document)
+        public string Put(string key, JObject document, JObject metadata)
         {
-            string key = GetKeyFromDocumentOrGenerateNewOne(document);
+            if (string.IsNullOrEmpty(key))
+            {
+                Guid value;
+                UuidCreateSequential(out value);
+                key = value.ToString();
+            }
+            RemoveReservedProperties(document);
+            RemoveReservedProperties(metadata);
+            metadata.Add("@id", new JValue(key));
 
             foreach (var reservedField in ReservedFields)
             {
@@ -143,12 +134,26 @@ namespace Rhino.DivanDB
             TransactionalStorage.Batch(actions =>
                                        {
                                            actions.DeleteDocument(key);
-                                           actions.AddDocument(key, document.ToString());
+                                           actions.AddDocument(key, document.ToString(), metadata.ToString());
                                            actions.AddTask(new IndexDocumentTask { View = "*", Key = key });
                                            actions.Commit();
                                        });
             workContext.NotifyAboutWork();
             return key;
+        }
+
+        private void RemoveReservedProperties(JObject document)
+        {
+            var toRemove = new HashSet<string>();
+            foreach (var property in document.Properties())
+            {
+                if (property.Name.StartsWith("@"))
+                    toRemove.Add(property.Name);
+            }
+            foreach (var propertyName in toRemove)
+            {
+                document.Remove(propertyName);
+            }
         }
 
         public void Delete(string key)
@@ -221,50 +226,24 @@ namespace Rhino.DivanDB
             workContext.NotifyAboutWork();
         }
 
-        public Tuple<byte[], NameValueCollection> GetStatic(string name)
+        public Attachment GetStatic(string name)
         {
-            Tuple<byte[], string> attachment = null;
+            Attachment attachment = null;
             TransactionalStorage.Batch(actions =>
             {
                 attachment = actions.GetAttachment(name);
                 actions.Commit();
             });
-            if(attachment==null)
-                return null;
-            return new Tuple<byte[], NameValueCollection>
-            {
-                First = attachment.First,
-                Second = GetHeadersAsNameValueString(attachment.Second)
-            };
+            return attachment;
         }
 
-        public void PutStatic(string name, byte[] data, NameValueCollection headers)
+        public void PutStatic(string name, byte[] data, JObject metadata)
         {
             TransactionalStorage.Batch(actions =>
             {
-                actions.AddAttachment(name, data,GetHeadersAsString(headers));
+                actions.AddAttachment(name, data, metadata.ToString(Formatting.None));
                 actions.Commit();
             });
-        }
-
-        private static string GetHeadersAsString(NameValueCollection headers)
-        {
-            var writer = new StringWriter();
-            var headersAdJson = new JObject(headers.AllKeys.Select(key=> new JProperty(key,headers[key])));
-            headersAdJson.WriteTo(new JsonTextWriter(writer));
-            return writer.GetStringBuilder().ToString();
-        }
-
-
-        private static NameValueCollection GetHeadersAsNameValueString(string headers)
-        {
-            var nvc = new NameValueCollection();
-            foreach (var property in JObject.Parse(headers).Properties())
-            {
-                var value = property.Value.Value<object>() ?? "null";
-                nvc.Add(property.Name, value.ToString());
-            }
-            return nvc;
         }
 
         public void DeleteStatic(string name)
@@ -283,10 +262,10 @@ namespace Rhino.DivanDB
             {
                 foreach (var documentAndId in actions.DocumentsById(new Reference<bool>(), start, int.MaxValue, pageSize))
                 {
-                    var doc = JObject.Parse(documentAndId.First);
-                    doc.Add("_docNum", new JValue(documentAndId.Second));
+                    var doc = documentAndId.First;
+                    documentAndId.First.Metadata.Add("@docNum", new JValue(documentAndId.Second));
 
-                    list.Add(doc);
+                    list.Add(doc.ToJson());
                 }
                 actions.Commit();
             });

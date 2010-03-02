@@ -1,0 +1,16 @@
+{
+  "CustomerID": "HUNGO",
+  "CompanyName": "Hungry Owl All-Night Grocers",
+  "ContactName": "Patricia McKenna",
+  "ContactTitle": "Sales Associate",
+  "Address": "8 Johnstown Road",
+  "City": "Cork",
+  "Region": "Co. Cork",
+  "PostalCode": null,
+  "Country": "Ireland",
+  "Phone": "2967 542",
+  "Fax": "2967 3333",
+  "ObjectType": "Customer",
+  "_id": "6ec29d8b-24c8-11df-968b-00a0c6000000",
+  "_docNum": 45
+}

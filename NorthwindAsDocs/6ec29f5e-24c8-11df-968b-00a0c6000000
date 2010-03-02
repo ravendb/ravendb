@@ -1,0 +1,19 @@
+{
+  "OrderID": 10542,
+  "CustomerID": "6ec29d8d-24c8-11df-968b-00a0c6000000",
+  "EmployeeID": "6ec29dc2-24c8-11df-968b-00a0c6000000",
+  "OrderDate": "\/Date(803602800000+0100)\/",
+  "RequiredDate": "\/Date(806022000000+0100)\/",
+  "ShippedDate": "\/Date(804121200000+0100)\/",
+  "ShipVia": "6ec29dea-24c8-11df-968b-00a0c6000000",
+  "Freight": 10.95,
+  "ShipName": "Königlich Essen",
+  "ShipAddress": "Maubelstr. 90",
+  "ShipCity": "Brandenburg",
+  "ShipRegion": null,
+  "ShipPostalCode": "14776",
+  "ShipCountry": "Germany",
+  "ObjectType": "Order",
+  "_id": "6ec29f5e-24c8-11df-968b-00a0c6000000",
+  "_docNum": 520
+}

@@ -1,0 +1,21 @@
+{
+  "EmployeeID": 4,
+  "LastName": "Peacock",
+  "FirstName": "Margaret",
+  "Title": "Sales Representative",
+  "TitleOfCourtesy": "Mrs.",
+  "BirthDate": "\/Date(-1018832400000+0100)\/",
+  "HireDate": "\/Date(736383600000+0100)\/",
+  "Address": "4110 Old Redmond Rd.",
+  "City": "Redmond",
+  "Region": "WA",
+  "PostalCode": "98052",
+  "Country": "USA",
+  "HomePhone": "(206) 555-8122",
+  "Extension": "5176",
+  "Notes": "Margaret holds a BA in English literature from Concordia College (1958) and an MA from the American Institute of Culinary Arts (1966).  She was assigned to the London office temporarily from July through November 1992.",
+  "ReportsTo": "6ec29dc3-24c8-11df-968b-00a0c6000000",
+  "ObjectType": "Employee",
+  "_id": "6ec29dc5-24c8-11df-968b-00a0c6000000",
+  "_docNum": 111
+}

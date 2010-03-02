@@ -1,0 +1,17 @@
+{
+  "SupplierID": 20,
+  "CompanyName": "Leka Trading",
+  "ContactName": "Chandra Leka",
+  "ContactTitle": "Owner",
+  "Address": "471 Serangoon Loop, Suite #402",
+  "City": "Singapore",
+  "Region": null,
+  "PostalCode": "0512",
+  "Country": "Singapore",
+  "Phone": "555-8787",
+  "Fax": null,
+  "HomePage": null,
+  "ObjectType": "Supplier",
+  "_id": "6ec29dde-24c8-11df-968b-00a0c6000000",
+  "_docNum": 136
+}

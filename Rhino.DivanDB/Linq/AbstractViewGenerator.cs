@@ -10,7 +10,7 @@ namespace Rhino.DivanDB.Linq
 
     public class AbstractViewGenerator
     {
-        private IndexingFunc compiledDefinition;
+        public IndexingFunc CompiledDefinition { get; set; }
         public string ViewText { get; set; }
 
         public Expression<IndexingFunc> IndexDefinition { get; protected set; }
@@ -30,27 +30,11 @@ namespace Rhino.DivanDB.Linq
 
         public IEnumerable Execute(IEnumerable<JsonDynamicObject> source)
         {
-            ForceCompilationIfNeeded();
-            return compiledDefinition(source);
+            return CompiledDefinition(source);
         }
 
-        public IndexingFunc CompiledDefinition
-        {
-            get
-            {
-                ForceCompilationIfNeeded();
-                return compiledDefinition;
-            }
-        }
 
         public HashSet<string> AccessedFields { get; set; }
 
-        private void ForceCompilationIfNeeded()
-        {
-            if (compiledDefinition == null)
-            {
-                compiledDefinition = IndexDefinition.Compile();
-            }
-        }
     }
 }

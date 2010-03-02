@@ -1,0 +1,16 @@
+{
+  "CustomerID": "WOLZA",
+  "CompanyName": "Wolski  Zajazd",
+  "ContactName": "Zbyszek Piestrzeniewicz",
+  "ContactTitle": "Owner",
+  "Address": "ul. Filtrowa 68",
+  "City": "Warszawa",
+  "Region": null,
+  "PostalCode": "01-012",
+  "Country": "Poland",
+  "Phone": "(26) 642-7012",
+  "Fax": "(26) 642-7012",
+  "ObjectType": "Customer",
+  "_id": "6ec29dc1-24c8-11df-968b-00a0c6000000",
+  "_docNum": 99
+}

@@ -1,0 +1,10 @@
+{
+  "OrderID": "6ec29ffa-24c8-11df-968b-00a0c6000000",
+  "ProductID": "6ec29dfb-24c8-11df-968b-00a0c6000000",
+  "UnitPrice": 39,
+  "Quantity": 8,
+  "Discount": 0.05,
+  "ObjectType": "OrderDetail",
+  "_id": "6ec2a616-24c8-11df-968b-00a0c6000000",
+  "_docNum": 2240
+}

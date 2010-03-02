@@ -1,0 +1,21 @@
+{
+  "EmployeeID": 1,
+  "LastName": "Davolio",
+  "FirstName": "Nancy",
+  "Title": "Sales Representative",
+  "TitleOfCourtesy": "Ms.",
+  "BirthDate": "\/Date(-664761600000+0000)\/",
+  "HireDate": "\/Date(704674800000+0100)\/",
+  "Address": "507 - 20th Ave. E.\r\nApt. 2A",
+  "City": "Seattle",
+  "Region": "WA",
+  "PostalCode": "98122",
+  "Country": "USA",
+  "HomePhone": "(206) 555-9857",
+  "Extension": "5467",
+  "Notes": "Education includes a BA in psychology from Colorado State University in 1970.  She also completed \"The Art of the Cold Call.\"  Nancy is a member of Toastmasters International.",
+  "ReportsTo": "6ec29dc3-24c8-11df-968b-00a0c6000000",
+  "ObjectType": "Employee",
+  "_id": "6ec29dc2-24c8-11df-968b-00a0c6000000",
+  "_docNum": 109
+}

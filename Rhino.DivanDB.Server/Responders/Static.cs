@@ -27,7 +27,11 @@ namespace Rhino.DivanDB.Server.Responders
                         context.SetStatusToNotFound();
                         return;
                     }
+<<<<<<< HEAD
                     context.WriteData(attachmentAndHeaders.First, attachmentAndHeaders.Second);
+=======
+                    context.WriteData(attachmentAndHeaders.Data, attachmentAndHeaders.Metadata);
+>>>>>>> luke
                     break;
                 case "PUT":
                     Database.PutStatic(filename, context.Request.InputStream.ReadData(), context.Request.Headers.FilterHeaders());

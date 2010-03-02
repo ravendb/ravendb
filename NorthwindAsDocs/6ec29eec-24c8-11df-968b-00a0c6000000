@@ -1,0 +1,19 @@
+{
+  "OrderID": 10428,
+  "CustomerID": "6ec29da8-24c8-11df-968b-00a0c6000000",
+  "EmployeeID": "6ec29dc8-24c8-11df-968b-00a0c6000000",
+  "OrderDate": "\/Date(793929600000+0000)\/",
+  "RequiredDate": "\/Date(796345200000+0100)\/",
+  "ShippedDate": "\/Date(794534400000+0000)\/",
+  "ShipVia": "6ec29de8-24c8-11df-968b-00a0c6000000",
+  "Freight": 11.09,
+  "ShipName": "Reggiani Caseifici",
+  "ShipAddress": "Strada Provinciale 124",
+  "ShipCity": "Reggio Emilia",
+  "ShipRegion": null,
+  "ShipPostalCode": "42100",
+  "ShipCountry": "Italy",
+  "ObjectType": "Order",
+  "_id": "6ec29eec-24c8-11df-968b-00a0c6000000",
+  "_docNum": 406
+}

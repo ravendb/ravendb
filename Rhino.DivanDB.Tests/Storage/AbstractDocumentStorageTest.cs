@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.IO;
 
 namespace Rhino.DivanDB.Tests.Storage

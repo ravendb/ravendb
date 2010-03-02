@@ -1,0 +1,16 @@
+{
+  "CustomerID": "HUNGC",
+  "CompanyName": "Hungry Coyote Import Store",
+  "ContactName": "Yoshi Latimer",
+  "ContactTitle": "Sales Representative",
+  "Address": "City Center Plaza\r\n516 Main St.",
+  "City": "Elgin",
+  "Region": "OR",
+  "PostalCode": "97827",
+  "Country": "USA",
+  "Phone": "(503) 555-6874",
+  "Fax": "(503) 555-2376",
+  "ObjectType": "Customer",
+  "_id": "6ec29d8a-24c8-11df-968b-00a0c6000000",
+  "_docNum": 44
+}

@@ -1,0 +1,19 @@
+{
+  "OrderID": 10446,
+  "CustomerID": "6ec29db5-24c8-11df-968b-00a0c6000000",
+  "EmployeeID": "6ec29dc7-24c8-11df-968b-00a0c6000000",
+  "OrderDate": "\/Date(795398400000+0000)\/",
+  "RequiredDate": "\/Date(797814000000+0100)\/",
+  "ShippedDate": "\/Date(795830400000+0000)\/",
+  "ShipVia": "6ec29de8-24c8-11df-968b-00a0c6000000",
+  "Freight": 14.68,
+  "ShipName": "Toms Spezialitäten",
+  "ShipAddress": "Luisenstr. 48",
+  "ShipCity": "Münster",
+  "ShipRegion": null,
+  "ShipPostalCode": "44087",
+  "ShipCountry": "Germany",
+  "ObjectType": "Order",
+  "_id": "6ec29efe-24c8-11df-968b-00a0c6000000",
+  "_docNum": 424
+}

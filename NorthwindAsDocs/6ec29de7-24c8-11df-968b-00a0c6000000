@@ -1,0 +1,17 @@
+{
+  "SupplierID": 29,
+  "CompanyName": "Forêts d'érables",
+  "ContactName": "Chantal Goulet",
+  "ContactTitle": "Accounting Manager",
+  "Address": "148 rue Chasseur",
+  "City": "Ste-Hyacinthe",
+  "Region": "Québec",
+  "PostalCode": "J2S 7S8",
+  "Country": "Canada",
+  "Phone": "(514) 555-2955",
+  "Fax": "(514) 555-2921",
+  "HomePage": null,
+  "ObjectType": "Supplier",
+  "_id": "6ec29de7-24c8-11df-968b-00a0c6000000",
+  "_docNum": 145
+}

@@ -1,0 +1,16 @@
+{
+  "CustomerID": "FURIB",
+  "CompanyName": "Furia Bacalhau e Frutos do Mar",
+  "ContactName": "Lino Rodriguez ",
+  "ContactTitle": "Sales Manager",
+  "Address": "Jardim das rosas n. 32",
+  "City": "Lisboa",
+  "Region": null,
+  "PostalCode": "1675",
+  "Country": "Portugal",
+  "Phone": "(1) 354-2534",
+  "Fax": "(1) 354-2535",
+  "ObjectType": "Customer",
+  "_id": "6ec29d82-24c8-11df-968b-00a0c6000000",
+  "_docNum": 36
+}

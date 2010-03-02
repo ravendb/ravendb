@@ -1,0 +1,267 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+    <title>Rhino Divan DB</title>
+    <link href="css/style.css" rel="stylesheet" type="text/css" />
+    <link href="css/Pager.css" rel="stylesheet" type="text/css" />
+    <link href="css/smoothness/jquery-ui-1.8rc2.custom.css" rel="Stylesheet" type="text/css" />
+
+    <script type="text/javascript" src="js/jquery-1.4.2.min.js"></script>
+    <script type="text/javascript" src="js/jquery-ui.js"></script>
+    <script type="text/javascript" src="js/jquery.simpletip.js"></script>
+    <script type="text/javascript" src="js/jquery-jtemplates.js"></script>
+    <script type="text/javascript" src="js/jquery.pager.js"></script>
+    <script type="text/javascript" src="js/JSONEditor.js"></script>
+    <script type="text/javascript" src="js/json2.js"></script>
+
+    <script type="text/javascript" src="js/jquery.divanDB.js"></script>
+    <script type="text/javascript" src="js/divan-ui.js"></script>
+    <script type="text/javascript">
+        var numPages;
+        var pageNumber = 1;
+        var pageSize = 25;
+        var allDocsTotalCount;
+        var indexName;
+        var indexValues;
+        var isInQueryMode = false;
+
+        $(document).ready(function () {
+            DivanUI.GetDocumentCount(function (count) {
+                allDocsTotalCount = count;
+                getAllDocuments();
+            });            
+
+            $('#createNewDocument').button({
+                icons: { primary: 'ui-icon-plusthick' }
+            }).click(function () {
+                CreateDocument();
+            });
+
+            $('#executeQuery').button({
+                icons: { primary: 'ui-icon-circle-triangle-e' }
+            }).click(function () {
+                indexName = $('#txtIndexName').val();
+                indexValues = $('#txtIndexValue').val();
+                ExecuteQuery();
+            });
+
+            $('#txtIndexName').autocomplete({
+                source: function (request, response) {
+                    DivanUI.SearchIndexes(request.term, function (searchResult) {
+                        response(searchResult);
+                    });
+                },
+                minLength: 2,
+                select: function (event, ui) {
+                    $('#queryValueSubmit').fadeIn();
+                }
+            }).keyup(function (event) {
+                if (event.keyCode != 13) {
+                    $('#queryValueSubmit').fadeOut();
+                }
+            });
+        });
+
+        function getAllDocuments() {
+            $('#docList').show().html('<img src="images/ajax-loader.gif" /> Loading...');
+            DivanUI.GetDocumentPage(pageNumber, pageSize, function (docs) {
+                if (docs.length == 0) {
+                    $('#docList').html('There are no documents in your database.');
+                    $('#pager').hide();
+                } else {
+                    processDocumentResults(docs, allDocsTotalCount);
+                }
+            });
+        }
+
+        function ExecuteQuery() {
+            isInQueryMode = true;
+
+            $('#docList').show().html('<img src="images/ajax-loader.gif" /> Loading...');
+
+            DivanUI.QueryIndex(indexName, indexValues, pageNumber, pageSize, function (data) {
+                if (data.Results.length == 0) {
+                    $('#docList').html('No documents matched your query.');
+                    $('#pager').hide();
+                } else {
+                    //this is only here because there's no way to get the total count on a query currently
+                    allDocsTotalCount = data.Results.length;
+                    processDocumentResults(data.Results, allDocsTotalCount);
+                }
+            });
+        }
+
+
+        function processDocumentResults(results, totalCount) {
+            numPages = Math.ceil(totalCount / pageSize);
+            $("#pager").pager({
+                pagenumber: pageNumber,
+                pagecount: numPages,
+                buttonClickCallback: pagerClick
+            });
+
+            if (!$('#docList').hasTemplate()) {
+                $('#docList').setTemplateURL('JSONTemplates/documentPage.html');
+            }
+
+            $('#docList').processTemplate(results);
+            $('.searchListItem').each(function () {
+                $(this).simpletip({
+                    content: "<strong>Click to edit this document</strong><br />Data Preview: <br />" + $(this).children('.searchListItemValue').html(),
+                    fixed: true,
+                    position: 'top right',
+                    offset: [322, 0],
+                    baseClass: 'tooltip ui-corner-all'
+                });
+
+                $(this).click(function () {
+                    EditDocument($(this).attr('id'));
+                });
+
+                $(this).hover(function () {
+                    $(this).css('border', '1px solid #666').css('padding', '4px 9px');
+                    var tooltipArrow = $('<div class="tooltipArrow"> </div>');
+                    $(tooltipArrow).css('top', $(this).offset().top + 8);
+                    $(tooltipArrow).css('left', $(this).offset().left + $(this).outerWidth());
+                    $(this).append(tooltipArrow);
+                }, function () {
+                    $(this).css('border', 'none').css('padding', '5px 10px');
+                    $(this).children('.tooltipArrow').remove();
+                });
+            });
+        }
+
+        function pagerClick(newPageNumber) {
+            pageNumber = newPageNumber;
+            if (!isInQueryMode) {
+                getAllDocuments();
+            } else {
+                ExecuteQuery();
+            }
+        }
+
+        function EditDocument(id) {
+            DivanUI.GetDocument(id, function (doc) {
+                JSONeditor.start('editorTree', 'editorForm', doc, false);
+                $('#divEditor').dialog({
+                    modal: true,
+                    buttons: {
+                        Save: function () {
+                            treeBuilder.jsonChange($('#editorForm').children('form')[0]);
+                            DivanUI.SaveDocument(id, JSON.stringify(treeBuilder.json), function () {
+                                $('#divEditor').dialog('close');
+                                //TODO: Update values in list/preview
+                            });
+                        },
+                        Cancel: function () {
+                            $(this).dialog('close');
+                        }
+                    },
+                    title: 'Edit Document',
+                    width: 'auto'
+                });
+            });
+        }
+
+        function CreateDocument() {
+            JSONeditor.start('editorTree', 'editorForm', [], false);
+            $('#divEditor').dialog({
+                modal: true,
+                buttons: {
+                    Save: function () {
+                        treeBuilder.jsonChange($('#editorForm').children('form')[0]);
+                        DivanUI.SaveDocument(null, JSON.stringify(treeBuilder.json), function () {
+                            $('#divEditor').dialog('close');
+                            //TODO: Update values in list/preview
+                        });
+                    },
+                    Cancel: function () {
+                        $(this).dialog('close');
+                    }
+                },
+                title: 'Create New Document',
+                width: 'auto'
+            });
+        }
+
+        function SaveDocument(id, json) {
+            DivanUI.SaveDocument(id, JSON.stringify(json), function () { });
+        }
+
+
+    </script>
+</head>
+<body>
+    <div id="wrapper">
+        <div id="branding">
+            <h1 class="logo">
+                <a href="index.html" title="&lt; Rhino Divan DB /&gt;">&lt; Rhino Divan DB /&gt;</a></h1>
+            <ul class="topNav">
+                <li><a href="index.html">HOME</a></li>
+                <li><a href="statistics.html">GLOBAL STATISTICS</a></li>
+                <li><a href="documents.html" class="topNavAct">DOCUMENTS</a></li>
+                <li><a href="indexes.html">INDEXES</a></li>
+                <li><a href="documentation.html">DOCUMENTATION</a></li>
+            </ul>
+            <br class="clear" />
+        </div>
+        <!-- Content -->
+        <div id="content">
+            <div class="content_1">
+                <div class="content_1_left">
+                    <h2>
+                        Documents
+                    </h2>
+                    <div id="divEditor" style="display:none; position:relative;height:500px;">
+                        <div id="editorTree" style="float:left; margin-right: 40px; "></div>
+                        <div id="editorForm" style="float:left;"></div>                        
+                        <br class="clear" />
+                    </div>
+                    <p id="docList">
+                        <img src="images/ajax-loader.gif" /> Loading...
+                    </p>
+                    <div id="pager"></div>
+                </div>
+                <div class="sideBar">
+                    <div class="sideBarListBox">
+                        <img src="images/sideBarListBoxTop.png" alt="" width="240" height="10" />
+                        <ul>
+                            <li><button id="createNewDocument">Create New Document</button></li>
+                        </ul>
+                        <ul>
+                            <li>
+                                <h3 style="padding: 10px 0;">Query Documents</h3>
+                                <label for="txtIndexName">Index Name</label><br />
+                                <input type="text" id="txtIndexName" name="txtIndexName" style="width:200px;" /><br /><br />
+
+                                <div id="queryValueSubmit" style="display:none;">
+                                    <label for="txtIndexValue">Index Value</label><br />
+                                    <input type="text" id="txtIndexValue" name="txtIndexValue" style="width:200px;" /><br /><br />
+
+                                    <button id="executeQuery">Execute Query</button><br /><br />
+                                </div>
+                            </li>
+                        </ul>
+                        <img src="images/sideBarListBoxBottom.png" alt="" width="240" height="10" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- end content -->
+    <br class="clear" />
+    <div id="footerContainer">
+        <p>
+            <label>
+                Initial Design by <a href="http://vectorart.org">VectorArt</a><br />
+                Modification by <a href="http://werul.com">Werül</a>
+            </label>
+            <span>Copyright 2010 <a href="http://hibernatingrhinos.com">Hibernating Rhinos</a>.
+                All Rights Reserved</span>
+            <br class="clear" />
+        </p>
+    </div>
+    <br class="clear" />
+</body>
+</html>
