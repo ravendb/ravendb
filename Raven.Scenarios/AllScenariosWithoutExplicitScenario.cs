@@ -18,7 +18,7 @@ namespace Raven.Scenarios
             get
             {
                 return Directory.Exists(@"..\..\bin") // running in VS
-                           ? @"..\..\Scenarios" : @"..\Rhino.DivanDB.Scenarios\Scenarios";
+                           ? @"..\..\Scenarios" : @"..\Raven.Scenarios\Scenarios";
             }
         }
 
@@ -28,7 +28,7 @@ namespace Raven.Scenarios
             {
                 foreach (var file in Directory.GetFiles(ScenariosPath,"*.saz"))
                 {
-                    if (typeof(Scenario).Assembly.GetType("Rhino.DivanDB.Scenarios." + Path.GetFileNameWithoutExtension(file) +"Scenario") != null)
+                    if (typeof(Scenario).Assembly.GetType("Raven.Scenarios." + Path.GetFileNameWithoutExtension(file) +"Scenario") != null)
                         continue;
                     yield return new object[] {file};
                 };
