@@ -2,8 +2,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Raven.Database;
+using JObject=Newtonsoft.Json.Linq.JObject;
+using JToken=Newtonsoft.Json.Linq.JToken;
 
 namespace Raven.Client
 {
@@ -11,7 +12,7 @@ namespace Raven.Client
     {
         private readonly DocumentStore documentStore;
         private readonly IDatabaseCommands database;
-        private readonly HashSet<object> trackedEntities = new HashSet<object>();
+        private readonly HashSet<object> entities = new HashSet<object>();
 
         public DocumentSession(DocumentStore documentStore, IDatabaseCommands database)
         {
@@ -24,7 +25,7 @@ namespace Raven.Client
             var documentFound = database.Get(id);
             var jsonString = Encoding.UTF8.GetString(documentFound.Data);
             var entity = ConvertToEntity<T>(id, jsonString);
-            trackedEntities.Add(entity);
+            entities.Add(entity);
             return (T)entity;
         }
 
@@ -43,40 +44,40 @@ namespace Raven.Client
 
         public void Store<T>(T entity)
         {
-            string id;
-            var json = ConvertEntityToJson(entity, out id);
+            storeEntity(entity);
+            entities.Add(entity);
+        }
 
-            var key = database.Put(id, json, new JObject());
-            trackedEntities.Add(entity);
-
+        private void storeEntity<T>(T entity)
+        {
+            var json = ConvertEntityToJson(entity);
             var identityProperty = entity.GetType().GetProperties()
                 .FirstOrDefault(q => documentStore.Conventions.FindIdentityProperty.Invoke(q));
-            
-            if (identityProperty != null)
-                identityProperty.SetValue(entity, key, null);
+
+            var key = (string)identityProperty.GetValue(entity, null);
+            key = database.Put(key, json, new JObject());
+
+            identityProperty.SetValue(entity, key, null);
         }
 
         public void SaveChanges()
         {
-            foreach (var entity in trackedEntities)
+            foreach (var entity in entities)
             {
-                //TODO: Switch to more the batch version when it becomes available
-                string id;
-                var entityAsJson = ConvertEntityToJson(entity,out id);
-                database.Put(id, entityAsJson, new JObject());
+                //TODO: Switch to more the batch version when it becomes available#
+                storeEntity(entity);
             }
         }
 
-        private JObject ConvertEntityToJson(object entity, out string id)
+        private JObject ConvertEntityToJson(object entity)
         {
             var identityProperty = entity.GetType().GetProperties()
                 .FirstOrDefault(q => documentStore.Conventions.FindIdentityProperty.Invoke(q));
-            id = null;
+
             var objectAsJson = JObject.FromObject(entity);
             if (identityProperty != null)
             {
                 objectAsJson.Remove(identityProperty.Name);
-                id = (string) identityProperty.GetValue(entity, null);
             }
 
             objectAsJson.Add("type", JToken.FromObject(entity.GetType().FullName));
@@ -98,12 +99,12 @@ namespace Raven.Client
             } while (result.IsStale);
 
             return result.Results.Select(q =>
-            {
-                var entity = JsonConvert.DeserializeObject(q.ToString(), typeof(T));
-                var id = q.Value<string>("_id");
-                ConvertToEntity<T>(id, q.ToString());
-                return (T)entity;
-            }).ToList();
+                                             {
+                                                 var entity = JsonConvert.DeserializeObject(q.ToString(), typeof(T));
+                                                 var id = q.Value<string>("_id");
+                                                 ConvertToEntity<T>(id, q.ToString());
+                                                 return (T)entity;
+                                             }).ToList();
         }
     }
 }
