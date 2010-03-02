@@ -19,7 +19,23 @@ namespace Raven.Client
 
         public JsonDocument Get(string key)
         {
-            throw new NotImplementedException();
+            var request = WebRequest.Create(url + "/docs/" + key);
+            request.Method = "GET";
+            request.ContentType = "application/json";
+            var response = request.GetResponse();
+            using (var responseString = response.GetResponseStream())
+            {
+                var reader = new StreamReader(responseString);
+                var text = reader.ReadToEnd();
+                reader.Close();
+
+                return new JsonDocument
+                {
+                    Data = Encoding.UTF8.GetBytes(text),
+                    Key = key,
+                    //Metadata = JObject.Parse(Api.RetrieveColumnAsString(session, documents, documentsColumns["metadata"]))
+                };
+            }
         }
 
         public string Put(string key, JObject document, JObject metadata)
