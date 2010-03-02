@@ -8,9 +8,9 @@ using ICSharpCode.NRefactory;
 using ICSharpCode.NRefactory.Ast;
 using ICSharpCode.NRefactory.PrettyPrinter;
 using Microsoft.CSharp;
-using Rhino.DivanDB.Json;
+using Raven.Database.Json;
 
-namespace Rhino.DivanDB.Linq
+namespace Raven.Database.Linq
 {
     public class LinqTransformer
     {
@@ -124,33 +124,33 @@ namespace Rhino.DivanDB.Linq
                                        new LambdaExpression
                                        {
                                            Parameters =
-                                               {
-                                                   new ParameterDeclarationExpression(new TypeReference("System.Collections.Generic.IEnumerable<"+rootQueryType+">"), rootQueryName)
-                                               },
+                                           {
+                                               new ParameterDeclarationExpression(new TypeReference("System.Collections.Generic.IEnumerable<"+rootQueryType+">"), rootQueryName)
+                                           },
                                            ExpressionBody = variable.Initializer
                                        })));
 
             ctor.Body.AddChild(new ExpressionStatement(
-                                 new AssignmentExpression(
-                                     new MemberReferenceExpression(new ThisReferenceExpression(), "CompiledDefinition"),
-                                     AssignmentOperatorType.Assign,
-                                     new LambdaExpression
-                                     {
-                                         Parameters =
-                                               {
-                                                   new ParameterDeclarationExpression(new TypeReference("System.Collections.Generic.IEnumerable<"+rootQueryType+">"), rootQueryName)
-                                               },
-                                         ExpressionBody = variable.Initializer
-                                     })));
+                                   new AssignmentExpression(
+                                       new MemberReferenceExpression(new ThisReferenceExpression(), "CompiledDefinition"),
+                                       AssignmentOperatorType.Assign,
+                                       new LambdaExpression
+                                       {
+                                           Parameters =
+                                           {
+                                               new ParameterDeclarationExpression(new TypeReference("System.Collections.Generic.IEnumerable<"+rootQueryType+">"), rootQueryName)
+                                           },
+                                           ExpressionBody = variable.Initializer
+                                       })));
             foreach (var fieldName in visitor.FieldNames)
             {
                 ctor.Body.AddChild(new ExpressionStatement(
-                    new InvocationExpression(
-                        new MemberReferenceExpression(
-                            new IdentifierExpression("AccessedFields"), "Add"),
-                        new List<Expression> { new PrimitiveExpression(fieldName, fieldName) }
-                        )
-                    ));
+                                       new InvocationExpression(
+                                           new MemberReferenceExpression(
+                                               new IdentifierExpression("AccessedFields"), "Add"),
+                                           new List<Expression> { new PrimitiveExpression(fieldName, fieldName) }
+                                           )
+                                       ));
             }
             
             var unit = new CompilationUnit();

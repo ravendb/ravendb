@@ -1,21 +1,18 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security;
 using System.Threading;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Rhino.DivanDB.Indexing;
-using Rhino.DivanDB.Linq;
-using Rhino.DivanDB.Storage;
-using Rhino.DivanDB.Tasks;
-using Rhino.DivanDB.Extensions;
+using Raven.Database.Extensions;
+using Raven.Database.Indexing;
+using Raven.Database.Linq;
+using Raven.Database.Storage;
+using Raven.Database.Tasks;
 
-namespace Rhino.DivanDB
+namespace Raven.Database
 {
     public class DocumentDatabase : IDisposable
     {
@@ -35,11 +32,11 @@ namespace Rhino.DivanDB
             IndexDefinitionStorage = new IndexDefinitionStorage(path);
             IndexStorage = new IndexStorage(path);
             workContext = new WorkContext
-                          {
-                              IndexStorage = IndexStorage,
-                              TransactionaStorage = TransactionalStorage,
-                              IndexDefinitionStorage = IndexDefinitionStorage
-                          };
+            {
+                IndexStorage = IndexStorage,
+                TransactionaStorage = TransactionalStorage,
+                IndexDefinitionStorage = IndexDefinitionStorage
+            };
         }
 
         public void SpinBackgroundWorkers()
@@ -49,10 +46,10 @@ namespace Rhino.DivanDB
             for (int i = 0; i < threadCount; i++)
             {
                 backgroundWorkers[i] = new Thread(new TaskExecuter(TransactionalStorage, workContext).Execute)
-                                       {
-                                           IsBackground = true,
-                                           Name = "RDB Background Worker #" + i,
-                                       };
+                {
+                    IsBackground = true,
+                    Name = "RDB Background Worker #" + i,
+                };
                 backgroundWorkers[i].Start();
             }
         }
@@ -107,10 +104,10 @@ namespace Rhino.DivanDB
         {
             JsonDocument document = null;
             TransactionalStorage.Batch(actions =>
-                                      {
-                                          document = actions.DocumentByKey(key);
-                                          actions.Commit();
-                                      });
+            {
+                document = actions.DocumentByKey(key);
+                actions.Commit();
+            });
             return document;
         }
 
@@ -127,12 +124,12 @@ namespace Rhino.DivanDB
             metadata.Add("@id", new JValue(key));
 
             TransactionalStorage.Batch(actions =>
-                                       {
-                                           actions.DeleteDocument(key);
-                                           actions.AddDocument(key, document.ToString(), metadata.ToString());
-                                           actions.AddTask(new IndexDocumentTask { View = "*", Key = key });
-                                           actions.Commit();
-                                       });
+            {
+                actions.DeleteDocument(key);
+                actions.AddDocument(key, document.ToString(), metadata.ToString());
+                actions.AddTask(new IndexDocumentTask { View = "*", Key = key });
+                actions.Commit();
+            });
             workContext.NotifyAboutWork();
             return key;
         }
@@ -154,11 +151,11 @@ namespace Rhino.DivanDB
         public void Delete(string key)
         {
             TransactionalStorage.Batch(actions =>
-                                       {
-                                           actions.DeleteDocument(key);
-                                           actions.AddTask(new RemoveFromIndexTask { View = "*", Keys = new[] { key } });
-                                           actions.Commit();
-                                       });
+            {
+                actions.DeleteDocument(key);
+                actions.AddTask(new RemoveFromIndexTask { View = "*", Keys = new[] { key } });
+                actions.Commit();
+            });
             workContext.NotifyAboutWork();
         }
 
@@ -176,16 +173,16 @@ namespace Rhino.DivanDB
             IndexDefinitionStorage.AddIndex(transformer);
             IndexStorage.CreateIndex(transformer.Name);
             TransactionalStorage.Batch(actions =>
-                                       {
-                                           var firstAndLast = actions.FirstAndLastDocumentKeys();
-                                           actions.AddTask(new IndexDocumentRangeTask
-                                                           {
-                                                               View = transformer.Name,
-                                                               FromKey = firstAndLast.First,
-                                                               ToKey = firstAndLast.Second
-                                                           });
-                                           actions.Commit();
-                                       });
+            {
+                var firstAndLast = actions.FirstAndLastDocumentKeys();
+                actions.AddTask(new IndexDocumentRangeTask
+                {
+                    View = transformer.Name,
+                    FromKey = firstAndLast.First,
+                    ToKey = firstAndLast.Second
+                });
+                actions.Commit();
+            });
             workContext.NotifyAboutWork();
             return transformer.Name;
         }
@@ -201,17 +198,17 @@ namespace Rhino.DivanDB
                     stale = actions.DoesTasksExistsForIndex(index);
                     list.AddRange(from key in IndexStorage.Query(index, query, start, pageSize, totalSize)
                                   select actions.DocumentByKey(key)
-                                      into doc
+                                  into doc
                                       where doc != null
                                       select doc.ToJson());
                     actions.Commit();
                 });
             return new QueryResult
-                   {
-                       Results = list.ToArray(),
-                       IsStale = stale,
-                       TotalResults = totalSize.Value
-                   };
+            {
+                Results = list.ToArray(),
+                IsStale = stale,
+                TotalResults = totalSize.Value
+            };
         }
 
         public void DeleteIndex(string name)

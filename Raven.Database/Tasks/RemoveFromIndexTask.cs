@@ -1,7 +1,6 @@
-using System;
-using Rhino.DivanDB.Indexing;
+using Raven.Database.Indexing;
 
-namespace Rhino.DivanDB.Tasks
+namespace Raven.Database.Tasks
 {
     public class RemoveFromIndexTask : Task
     {

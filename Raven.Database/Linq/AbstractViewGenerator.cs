@@ -2,9 +2,9 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq.Expressions;
-using Rhino.DivanDB.Json;
+using Raven.Database.Json;
 
-namespace Rhino.DivanDB.Linq
+namespace Raven.Database.Linq
 {
     public delegate IEnumerable IndexingFunc(IEnumerable<JsonDynamicObject> source);
 

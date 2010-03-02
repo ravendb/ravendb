@@ -5,10 +5,10 @@ using System.Text;
 using log4net;
 using Microsoft.Isam.Esent.Interop;
 using Newtonsoft.Json.Linq;
-using Rhino.DivanDB.Extensions;
-using Rhino.DivanDB.Tasks;
+using Raven.Database.Extensions;
+using Raven.Database.Tasks;
 
-namespace Rhino.DivanDB.Storage
+namespace Raven.Database.Storage
 {
     [CLSCompliant(false)]
     public class DocumentStorageActions : IDisposable
@@ -31,10 +31,10 @@ namespace Rhino.DivanDB.Storage
         [CLSCompliant(false)]
         [DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
         public DocumentStorageActions(JET_INSTANCE instance,
-                                        string database,
-                                        IDictionary<string, JET_COLUMNID> documentsColumns,
-                                        IDictionary<string, JET_COLUMNID> tasksColumns,
-                                        IDictionary<string, JET_COLUMNID> filesColumns
+                                      string database,
+                                      IDictionary<string, JET_COLUMNID> documentsColumns,
+                                      IDictionary<string, JET_COLUMNID> tasksColumns,
+                                      IDictionary<string, JET_COLUMNID> filesColumns
             )
         {
             try
@@ -229,8 +229,8 @@ namespace Rhino.DivanDB.Storage
             Api.JetSetCurrentIndex(session, files, "by_name");
             Api.MakeKey(session, files, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
             var prep = (Api.TrySeek(session, files, SeekGrbit.SeekEQ) == false)
-                              ? JET_prep.Insert
-                              : JET_prep.Replace;
+                           ? JET_prep.Insert
+                           : JET_prep.Replace;
             using (var update = new Update(session, files, prep))
             {
                 Api.SetColumn(session, files, filesColumns["name"], key, Encoding.Unicode);

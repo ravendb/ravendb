@@ -1,10 +1,9 @@
-using System;
 using System.IO;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Rhino.DivanDB.Indexing;
+using Raven.Database.Indexing;
 
-namespace Rhino.DivanDB.Tasks
+namespace Raven.Database.Tasks
 {
     public abstract class Task
     {

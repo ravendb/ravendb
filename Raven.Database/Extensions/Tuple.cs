@@ -1,4 +1,4 @@
-namespace Rhino.DivanDB.Extensions
+namespace Raven.Database.Extensions
 {
     public class Tuple<T1,T2>
     {

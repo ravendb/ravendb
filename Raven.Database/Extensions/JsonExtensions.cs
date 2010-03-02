@@ -1,7 +1,7 @@
 using System.Text;
 using Newtonsoft.Json.Linq;
 
-namespace Rhino.DivanDB.Extensions
+namespace Raven.Database.Extensions
 {
     public static class JsonExtensions
     {

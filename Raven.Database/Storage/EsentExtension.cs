@@ -1,7 +1,7 @@
 using System;
 using Microsoft.Isam.Esent.Interop;
 
-namespace Rhino.DivanDB.Storage
+namespace Raven.Database.Storage
 {
     [CLSCompliant(false)]
     public static class EsentExtension

@@ -2,7 +2,7 @@ using System.IO;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace Rhino.DivanDB.Json
+namespace Raven.Database.Json
 {
     public class JsonDynamicObject : DynamicObject
     {
@@ -40,7 +40,7 @@ namespace Rhino.DivanDB.Json
             {
                 var value = json as JValue;
                 if (value != null && value.Value != null)
-                        return value.Value;
+                    return value.Value;
                 return null;
             }
         }

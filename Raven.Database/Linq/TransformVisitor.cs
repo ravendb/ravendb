@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using ICSharpCode.NRefactory.Ast;
 using ICSharpCode.NRefactory.Visitors;
 
-namespace Rhino.DivanDB.Linq
+namespace Raven.Database.Linq
 {
     public class TransformVisitor : AbstractAstTransformer
     {
@@ -31,8 +31,8 @@ namespace Rhino.DivanDB.Linq
                     new NamedArgumentExpression(
                         "__document_id",
                         new IndexerExpression(new IndexerExpression(new IdentifierExpression(Identifier),
-                            new List<Expression> { new PrimitiveExpression("@metadata", "@metadata") }),
-                            new List<Expression> { new PrimitiveExpression("@id", "@id") })
+                                                                    new List<Expression> { new PrimitiveExpression("@metadata", "@metadata") }),
+                                              new List<Expression> { new PrimitiveExpression("@id", "@id") })
                         )
                     );
             }

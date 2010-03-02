@@ -1,8 +1,7 @@
 using System.Text;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace Rhino.DivanDB
+namespace Raven.Database
 {
     public class JsonDocument
     {

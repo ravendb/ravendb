@@ -8,12 +8,12 @@ using System.Linq;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
-using Rhino.DivanDB.Extensions;
-using Rhino.DivanDB.Json;
-using Rhino.DivanDB.Linq;
+using Raven.Database.Extensions;
+using Raven.Database.Json;
+using Raven.Database.Linq;
 using Directory = System.IO.Directory;
 
-namespace Rhino.DivanDB.Indexing
+namespace Raven.Database.Indexing
 {
     public class IndexStorage : CriticalFinalizerObject, IDisposable
     {
@@ -31,7 +31,7 @@ namespace Rhino.DivanDB.Indexing
             {
                 log.DebugFormat("Loading saved index {0}", index);
                 indexes.Add(Path.GetFileName(index),
-                    new Index(FSDirectory.GetDirectory(index, false)));
+                            new Index(FSDirectory.GetDirectory(index, false)));
             }
         }
 
@@ -63,9 +63,9 @@ namespace Rhino.DivanDB.Indexing
             var directory = FSDirectory.GetDirectory(Path.Combine(path, name), true);
             new IndexWriter(directory, new StandardAnalyzer()).Close();//creating index structure
             indexes = new Dictionary<string, Index>(indexes)
-                      {
-                          {name, new Index(directory)}
-                      };
+            {
+                {name, new Index(directory)}
+            };
         }
 
         public void Dispose()

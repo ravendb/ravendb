@@ -6,7 +6,7 @@ using System.Threading;
 using Microsoft.Isam.Esent.Interop;
 using System.Diagnostics;
 
-namespace Rhino.DivanDB.Storage
+namespace Raven.Database.Storage
 {
     public class TransactionalStorage : CriticalFinalizerObject, IDisposable
     {

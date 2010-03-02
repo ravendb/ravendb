@@ -1,10 +1,7 @@
-using System;
-using Newtonsoft.Json.Linq;
-using Rhino.DivanDB.Extensions;
-using Rhino.DivanDB.Indexing;
-using Rhino.DivanDB.Json;
+using Raven.Database.Indexing;
+using Raven.Database.Json;
 
-namespace Rhino.DivanDB.Tasks
+namespace Raven.Database.Tasks
 {
     public class IndexDocumentTask : Task
     {

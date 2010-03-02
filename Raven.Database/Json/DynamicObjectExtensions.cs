@@ -1,7 +1,7 @@
 using System;
 using Lucene.Net.Documents;
 
-namespace Rhino.DivanDB.Json
+namespace Raven.Database.Json
 {
     public static class DynamicObjectExtensions
     {

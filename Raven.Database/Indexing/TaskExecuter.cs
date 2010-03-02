@@ -1,9 +1,9 @@
 using System;
 using log4net;
-using Rhino.DivanDB.Storage;
-using Rhino.DivanDB.Tasks;
+using Raven.Database.Storage;
+using Raven.Database.Tasks;
 
-namespace Rhino.DivanDB.Indexing
+namespace Raven.Database.Indexing
 {
     public class TaskExecuter
     {

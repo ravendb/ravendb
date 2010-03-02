@@ -1,6 +1,6 @@
 using Newtonsoft.Json.Linq;
 
-namespace Rhino.DivanDB
+namespace Raven.Database
 {
     public class Attachment
     {

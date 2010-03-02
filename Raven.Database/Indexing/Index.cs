@@ -11,11 +11,11 @@ using Lucene.Net.Index;
 using Lucene.Net.QueryParsers;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
-using Rhino.DivanDB.Extensions;
-using Rhino.DivanDB.Json;
-using Rhino.DivanDB.Linq;
+using Raven.Database.Extensions;
+using Raven.Database.Json;
+using Raven.Database.Linq;
 
-namespace Rhino.DivanDB.Indexing
+namespace Raven.Database.Indexing
 {
     public class Index : IDisposable
     {
@@ -68,9 +68,9 @@ namespace Rhino.DivanDB.Indexing
             log.DebugFormat("Creating index for {0}", name);
             this.directory = directory;
             searcher = new CurrentIndexSearcher
-                       {
-                           Searcher = new IndexSearcher(directory)
-                       };
+            {
+                Searcher = new IndexSearcher(directory)
+            };
         }
 
         public void Dispose()
@@ -135,39 +135,39 @@ namespace Rhino.DivanDB.Indexing
         {
             int count = 0;
             Write(indexWriter =>
-                  {
-                      var docs = HandleErrorsGracefully(func,documents);
-                      var currentId = Guid.NewGuid().ToString();
-                      var luceneDoc = new Document();
-                      bool shouldRcreateSearcher = false;
-                      foreach (var doc in docs)
-                      {
-                          count++;
-                          var fields = new List<Field>();
-                          var docId = AddValuesToDocument(fields, doc);
-                          if (docId != currentId)
-                          {
-                              if (luceneDoc.GetFieldsCount() > 0)
-                              {
-                                  indexWriter.UpdateDocument(new Term("__document_id", docId), luceneDoc);
-                                  shouldRcreateSearcher = true;
-                              }
-                              luceneDoc = new Document();
-                              currentId = docId;
-                              luceneDoc.Add(new Field("__document_id", docId, Field.Store.YES, Field.Index.UN_TOKENIZED));
-                          }
-                          foreach (var field in fields)
-                          {
-                              luceneDoc.Add(field);
-                          }
-                      }
-                      if (luceneDoc.GetFieldsCount() > 0)
-                      {
-                          indexWriter.UpdateDocument(new Term("__document_id", currentId), luceneDoc);
-                          shouldRcreateSearcher = true;
-                      }
-                      return shouldRcreateSearcher;
-                  });
+            {
+                var docs = HandleErrorsGracefully(func,documents);
+                var currentId = Guid.NewGuid().ToString();
+                var luceneDoc = new Document();
+                bool shouldRcreateSearcher = false;
+                foreach (var doc in docs)
+                {
+                    count++;
+                    var fields = new List<Field>();
+                    var docId = AddValuesToDocument(fields, doc);
+                    if (docId != currentId)
+                    {
+                        if (luceneDoc.GetFieldsCount() > 0)
+                        {
+                            indexWriter.UpdateDocument(new Term("__document_id", docId), luceneDoc);
+                            shouldRcreateSearcher = true;
+                        }
+                        luceneDoc = new Document();
+                        currentId = docId;
+                        luceneDoc.Add(new Field("__document_id", docId, Field.Store.YES, Field.Index.UN_TOKENIZED));
+                    }
+                    foreach (var field in fields)
+                    {
+                        luceneDoc.Add(field);
+                    }
+                }
+                if (luceneDoc.GetFieldsCount() > 0)
+                {
+                    indexWriter.UpdateDocument(new Term("__document_id", currentId), luceneDoc);
+                    shouldRcreateSearcher = true;
+                }
+                return shouldRcreateSearcher;
+            });
             log.InfoFormat("Indexed {0} documents for {1}", count, name);
         }
 
@@ -177,9 +177,9 @@ namespace Rhino.DivanDB.Indexing
             {
                 searcher.MarkForDispoal();
                 searcher = new CurrentIndexSearcher
-                           {
-                               Searcher = new IndexSearcher(directory)
-                           };
+                {
+                    Searcher = new IndexSearcher(directory)
+                };
             }
         }
 
@@ -196,8 +196,8 @@ namespace Rhino.DivanDB.Indexing
                 if (value == null)
                     continue;
                 fields.Add(new Field(property.Name, ToIndexableString(value),
-                    Field.Store.YES,
-                    Field.Index.TOKENIZED));
+                                     Field.Store.YES,
+                                     Field.Index.TOKENIZED));
             }
             return (string)id.GetValue(val);
         }
@@ -213,14 +213,14 @@ namespace Rhino.DivanDB.Indexing
         public void Remove(string[] keys)
         {
             Write(writer =>
-                  {
-                      if(log.IsDebugEnabled)
-                      {
-                          log.DebugFormat("Deleting ({0}) from {1}", string.Format(", ", keys), name);
-                      }
-                      writer.DeleteDocuments(keys.Select(k => new Term("__document_id", k)).ToArray());
-                      return true;
-                  });
+            {
+                if(log.IsDebugEnabled)
+                {
+                    log.DebugFormat("Deleting ({0}) from {1}", string.Format(", ", keys), name);
+                }
+                writer.DeleteDocuments(keys.Select(k => new Term("__document_id", k)).ToArray());
+                return true;
+            });
         }
     }
 }

@@ -1,8 +1,7 @@
-using System;
 using System.Threading;
-using Rhino.DivanDB.Storage;
+using Raven.Database.Storage;
 
-namespace Rhino.DivanDB.Indexing
+namespace Raven.Database.Indexing
 {
     public class WorkContext
     {

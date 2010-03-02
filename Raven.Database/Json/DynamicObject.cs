@@ -1,6 +1,6 @@
 using System;
 
-namespace Rhino.DivanDB.Json
+namespace Raven.Database.Json
 {
     public abstract class DynamicObject
     {

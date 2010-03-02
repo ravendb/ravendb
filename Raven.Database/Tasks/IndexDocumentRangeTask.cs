@@ -1,10 +1,9 @@
-using System.Collections.Generic;
-using Rhino.DivanDB.Extensions;
-using Rhino.DivanDB.Indexing;
 using System.Linq;
-using Rhino.DivanDB.Json;
+using Raven.Database.Extensions;
+using Raven.Database.Indexing;
+using Raven.Database.Json;
 
-namespace Rhino.DivanDB.Tasks
+namespace Raven.Database.Tasks
 {
     public class IndexDocumentRangeTask : Task
     {

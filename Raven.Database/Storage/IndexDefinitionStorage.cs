@@ -1,13 +1,12 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using log4net;
-using Rhino.DivanDB.Json;
-using Rhino.DivanDB.Linq;
 using System.Linq;
+using Raven.Database.Json;
+using Raven.Database.Linq;
 
-namespace Rhino.DivanDB.Storage
+namespace Raven.Database.Storage
 {
     public class IndexDefinitionStorage
     {
@@ -49,7 +48,7 @@ namespace Rhino.DivanDB.Storage
             indexCache[transformer.Name] = generator.CompiledDefinition;
             File.WriteAllText(Path.Combine(path,transformer.Name + ".index"), transformer.Source);
             logger.InfoFormat("New index {0}:\r\n{1}\r\nCompiled to:\r\n{2}", transformer.Name, transformer.Source,
-                transformer.ImplicitClassSource);
+                              transformer.ImplicitClassSource);
             return transformer.Name;
         }
 

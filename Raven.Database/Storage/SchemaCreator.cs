@@ -2,7 +2,7 @@ using System;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
 
-namespace Rhino.DivanDB.Storage
+namespace Raven.Database.Storage
 {
     [CLSCompliant(false)]
     public class SchemaCreator
