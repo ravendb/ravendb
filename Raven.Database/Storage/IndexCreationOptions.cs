@@ -1,4 +1,4 @@
-﻿namespace Rhino.DivanDB.Storage
+namespace Rhino.DivanDB.Storage
 {
     public enum IndexCreationOptions
     {

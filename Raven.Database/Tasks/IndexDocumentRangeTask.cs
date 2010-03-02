@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Rhino.DivanDB.Extensions;
 using Rhino.DivanDB.Indexing;
 using System.Linq;

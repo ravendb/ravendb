@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using Rhino.DivanDB.Json;
 using Rhino.DivanDB.Linq;

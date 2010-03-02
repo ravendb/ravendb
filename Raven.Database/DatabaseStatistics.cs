@@ -1,4 +1,4 @@
-﻿namespace Rhino.DivanDB
+namespace Rhino.DivanDB
 {
     public class DatabaseStatistics
     {

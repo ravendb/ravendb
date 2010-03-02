@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Rhino.DivanDB.Indexing;
 
 namespace Rhino.DivanDB.Tasks
