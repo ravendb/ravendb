@@ -58,10 +58,6 @@ namespace Rhino.DivanDB.Client
                 .FirstOrDefault(q => documentDb.Conventions.FindIdentityProperty.Invoke(q));
 
             var currentKey = (string)identityProperty.GetValue(entity, null);
-
-            if (currentKey == null)
-                currentKey = Guid.NewGuid().ToString();
-
             var key = database.Put(currentKey, json, new JObject());
             
             identityProperty.SetValue(entity, key, null);
