@@ -1,4 +1,5 @@
 using System;
+using Raven.Database;
 
 namespace Raven.Client
 {

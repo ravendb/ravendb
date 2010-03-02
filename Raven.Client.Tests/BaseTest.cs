@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 
-namespace Rhino.DivanDB.Client.Tests
+namespace Raven.Client.Tests
 {
     public class BaseTest
     {

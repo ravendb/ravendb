@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using Xunit;
 
-namespace Rhino.DivanDB.Client.Tests
+namespace Raven.Client.Tests
 {
 
     public class DocumentDbClientTests : BaseTest
@@ -114,6 +114,5 @@ namespace Rhino.DivanDB.Client.Tests
         }
     }
 }
-
 
 

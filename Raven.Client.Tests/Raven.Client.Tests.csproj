@@ -8,8 +8,8 @@
     <ProjectGuid>{36B31D69-508B-4594-8F8E-85774BAA7D3F}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Rhino.DivanDB.Client.Tests</RootNamespace>
-    <AssemblyName>Rhino.DivanDB.Client.Tests</AssemblyName>
+    <RootNamespace>Raven.Client.Tests</RootNamespace>
+    <AssemblyName>Raven.Client.Tests</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -52,6 +52,12 @@
     <Compile Include="BaseTest.cs" />
     <Compile Include="DocumentDbClientTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Raven.Client\Raven.Client.csproj">
+      <Project>{9F92FD36-60B6-4655-B8C6-00125B46AB6A}</Project>
+      <Name>Raven.Client</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
