@@ -24,14 +24,7 @@ namespace Rhino.DivanDB.Server.Responders
                     break;
                 case "POST":
                     var json = context.ReadJson();
-                    var idProp = json.Property("_id");
-                    if (idProp != null) 
-                    {
-                        context.SetStatusToBadRequest();
-                        context.Write("POST to " + context.Request.Url.LocalPath +" with a document conatining '_id'");
-                        return;
-                    }
-                    var id = Database.Put(json, new JObject());
+                    var id = Database.Put(null, json, new JObject());
 
                     context.SetStatusToCreated("/docs/" + id);
                     context.WriteJson(new { id });

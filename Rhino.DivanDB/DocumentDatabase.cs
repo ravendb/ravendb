@@ -59,7 +59,7 @@ namespace Rhino.DivanDB
 
         private Thread[] backgroundWorkers = new Thread[0];
         private readonly WorkContext workContext;
-        private readonly static string[] ReservedFields = new[] { "_docNum","_metadata" };
+        private readonly static string[] ReservedFields = new[] { "@metadata" };
 
         public DatabaseStatistics Statistics
         {
@@ -100,22 +100,6 @@ namespace Rhino.DivanDB
 
         #endregion
 
-        private static string GetKeyFromDocumentOrGenerateNewOne(IDictionary<string, JToken> document)
-        {
-            string id = null;
-            JToken idToken;
-            if (document.TryGetValue("_id", out idToken))
-            {
-                id = (string)((JValue)idToken).Value;
-            }
-            if (id != null)
-                return id;
-            Guid value;
-            UuidCreateSequential(out value);
-            document.Add("_id", new JValue(value.ToString()));
-            return value.ToString();
-        }
-
         [SuppressUnmanagedCodeSecurity]
         [DllImport("rpcrt4.dll", SetLastError = true)]
         private static extern int UuidCreateSequential(out Guid value);
@@ -131,10 +115,14 @@ namespace Rhino.DivanDB
             return document;
         }
 
-        public string Put(JObject document, JObject metadata)
+        public string Put(string key, JObject document, JObject metadata)
         {
-            string key = GetKeyFromDocumentOrGenerateNewOne(document);
-
+            if (string.IsNullOrEmpty(key))
+            {
+                Guid value;
+                UuidCreateSequential(out value);
+                key = value.ToString();
+            }
             foreach (var reservedField in ReservedFields)
             {
                 document.Remove(reservedField);
@@ -258,7 +246,7 @@ namespace Rhino.DivanDB
                 foreach (var documentAndId in actions.DocumentsById(new Reference<bool>(), start, int.MaxValue, pageSize))
                 {
                     var doc = documentAndId.First;
-                    documentAndId.First.Metadata.Add("_docNum", new JValue(documentAndId.Second));
+                    documentAndId.First.Metadata.Add("position", new JValue(documentAndId.Second));
 
                     list.Add(doc.ToJson());
                 }

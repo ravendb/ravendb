@@ -29,8 +29,8 @@ namespace Rhino.DivanDB.Linq
             {
                 createExpr.ObjectInitializer.CreateExpressions.Add(
                     new NamedArgumentExpression(
-                        "_id",
-                        new MemberReferenceExpression(new IdentifierExpression(Identifier), "_id")
+                        "__document_id",
+                        new MemberReferenceExpression(new IdentifierExpression(Identifier), "__document_id")
                         )
                     );
             }

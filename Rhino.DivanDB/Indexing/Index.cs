@@ -88,7 +88,7 @@ namespace Rhino.DivanDB.Indexing
                 totalSize.Value = search.Length();
                 for (int i = start; i < search.Length() && (i - start) < pageSize; i++)
                 {
-                    yield return search.Doc(i).GetField("_id").StringValue();
+                    yield return search.Doc(i).GetField("__document_id").StringValue();
                 }
             }
         }
@@ -126,12 +126,12 @@ namespace Rhino.DivanDB.Indexing
                           {
                               if (luceneDoc.GetFieldsCount() > 0)
                               {
-                                  indexWriter.UpdateDocument(new Term("_id", docId), luceneDoc);
+                                  indexWriter.UpdateDocument(new Term("__document_id", docId), luceneDoc);
                                   shouldRcreateSearcher = true;
                               }
                               luceneDoc = new Document();
                               currentId = docId;
-                              luceneDoc.Add(new Field("_id", docId, Field.Store.YES, Field.Index.UN_TOKENIZED));
+                              luceneDoc.Add(new Field("__document_id", docId, Field.Store.YES, Field.Index.UN_TOKENIZED));
                           }
                           foreach (var field in fields)
                           {
@@ -140,7 +140,7 @@ namespace Rhino.DivanDB.Indexing
                       }
                       if (luceneDoc.GetFieldsCount() > 0)
                       {
-                          indexWriter.UpdateDocument(new Term("_id", currentId), luceneDoc);
+                          indexWriter.UpdateDocument(new Term("__document_id", currentId), luceneDoc);
                           shouldRcreateSearcher = true;
                       }
                       return shouldRcreateSearcher;
@@ -163,7 +163,7 @@ namespace Rhino.DivanDB.Indexing
         private static string AddValuesToDocument(ICollection<Field> fields, object val)
         {
             var properties = TypeDescriptor.GetProperties(val).Cast<PropertyDescriptor>().ToArray();
-            var id = properties.First(x => x.Name == "_id");
+            var id = properties.First(x => x.Name == "__document_id");
 
             foreach (PropertyDescriptor property in properties)
             {
@@ -195,7 +195,7 @@ namespace Rhino.DivanDB.Indexing
                       {
                           log.DebugFormat("Deleting ({0}) from {1}", string.Format(", ", keys), name);
                       }
-                      writer.DeleteDocuments(keys.Select(k => new Term("_id", k)).ToArray());
+                      writer.DeleteDocuments(keys.Select(k => new Term("__document_id", k)).ToArray());
                       return true;
                   });
         }
