@@ -5,7 +5,6 @@ using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
-using Raven.Database.Json;
 
 namespace Raven.Client
 {
@@ -53,9 +52,9 @@ namespace Raven.Client
             var path = url + "/indexes/" + index + "?query=" + query + "&start=" + start + "&pageSize=" + pageSize;
             var request = new HttpJsonRequest(path, "GET");
             var serializer = new JsonSerializer();
-            var reader = new JsonTextReader(new StringReader(request.ReadResponseString()));
-            var json = (JToken)serializer.Deserialize(reader);
-            reader.Close();
+            JToken json;
+            using (var reader = new JsonTextReader(new StringReader(request.ReadResponseString())))
+                json = (JToken) serializer.Deserialize(reader);
 
             return new QueryResult
             {

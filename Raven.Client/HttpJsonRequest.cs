@@ -1,4 +1,3 @@
-using System;
 using System.IO;
 using System.Net;
 using System.Text;
@@ -8,7 +7,7 @@ namespace Raven.Client
 {
     public class HttpJsonRequest
     {
-        private WebRequest webRequest;
+        private readonly WebRequest webRequest;
 
         public HttpJsonRequest(string url, string method)
         {
