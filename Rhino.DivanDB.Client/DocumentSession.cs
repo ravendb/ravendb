@@ -12,7 +12,7 @@ namespace Rhino.DivanDB.Client
     {
         private readonly DocumentStore documentStore;
         private readonly IDatabaseCommands database;
-        private ArrayList entities = new ArrayList();
+        private readonly HashSet<object> entities = new HashSet<object>();
 
         public DocumentSession(DocumentStore documentStore, IDatabaseCommands database)
         {
