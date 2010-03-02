@@ -76,7 +76,7 @@ namespace Rhino.DivanDB.Client
                 objectAsJson.Remove(identityProperty.Name);
             }
 
-            objectAsJson.Add("type", JToken.FromObject(entity.GetType()));
+            objectAsJson.Add("type", JToken.FromObject(entity.GetType().FullName));
             return objectAsJson;
         }
 
