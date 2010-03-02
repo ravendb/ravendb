@@ -1,4 +1,4 @@
-Rhino Divan DB is making use of the following OSS projects:
+The Raven Datbase is making use of the following OSS projects:
 
 * ManagedEsent project (http://codeplex.com/ManagedEsent)
 * ICSharpCode.NRefactory from the SharpDevelop project (http://.sharpdevelop.net)
