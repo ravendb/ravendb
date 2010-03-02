@@ -1,42 +1,41 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Raven.Database;
+using JObject=Newtonsoft.Json.Linq.JObject;
+using JToken=Newtonsoft.Json.Linq.JToken;
 
-namespace Raven.Client
+namespace Rhino.DivanDB.Client
 {
     public class DocumentSession
     {
-        private readonly DocumentStore documentDb;
-        private readonly DocumentDatabase database;
-        private ArrayList entities = new ArrayList();
+        private readonly DocumentStore documentStore;
+        private readonly IDatabaseCommands database;
+        private readonly HashSet<object> entities = new HashSet<object>();
 
-        public DocumentSession(DocumentStore documentDb, DocumentDatabase database)
+        public DocumentSession(DocumentStore documentStore, IDatabaseCommands database)
         {
-            this.documentDb = documentDb;
+            this.documentStore = documentStore;
             this.database = database;
         }
 
         public T Load<T>(string id)
         {
             var documentFound = database.Get(id);
-            var jsonString = Encoding.UTF8.GetString(documentFound.Data);
-            var entity = convertToEntity<T>(id, jsonString);
+            var jsonString = Encoding.UTF8.GetString(documentFound);
+            var entity = ConvertToEntity<T>(id, jsonString);
             entities.Add(entity);
             return (T)entity;
         }
 
-        private object convertToEntity<T>(string id, string documentFound)
+        private object ConvertToEntity<T>(string id, string documentFound)
         {
             var entity = JsonConvert.DeserializeObject(documentFound, typeof(T));
 
             foreach (var property in entity.GetType().GetProperties())
             {
-                var isIdentityProperty = documentDb.Conventions.FindIdentityProperty.Invoke(property);
+                var isIdentityProperty = documentStore.Conventions.FindIdentityProperty.Invoke(property);
                 if (isIdentityProperty)
                     property.SetValue(entity, id, null);
             }
@@ -45,57 +44,49 @@ namespace Raven.Client
 
         public void Store<T>(T entity)
         {
-            updateStoredEntity(entity);
-            entities.Add(entity);
-        }
+            var json = ConvertEntityToJson(entity);
 
-        private void updateStoredEntity<T>(T entity)
-        {
-            var json = convertEntityToJson(entity);
+            var key = database.Put(json);
+            entities.Add(entity);
 
             var identityProperty = entity.GetType().GetProperties()
-                .FirstOrDefault(q => documentDb.Conventions.FindIdentityProperty.Invoke(q));
-
-            var currentKey = (string)identityProperty.GetValue(entity, null);
-            var key = database.Put(currentKey, json, new JObject());
+                                        .FirstOrDefault(q => documentStore.Conventions.FindIdentityProperty.Invoke(q));
             
-            identityProperty.SetValue(entity, key, null);
+            if (identityProperty != null)
+                identityProperty.SetValue(entity, key, null);
         }
 
         public void SaveChanges()
         {
             foreach (var entity in entities)
             {
-                updateStoredEntity(entity);
+                //TODO: Switch to more the batch version when it becomes available
+                database.Put(ConvertEntityToJson(entity));
             }
         }
 
-        private JObject convertEntityToJson(object entity)
+        private JObject ConvertEntityToJson(object entity)
         {
             var identityProperty = entity.GetType().GetProperties()
-                .FirstOrDefault(q => documentDb.Conventions.FindIdentityProperty.Invoke(q));
+                            .FirstOrDefault(q => documentStore.Conventions.FindIdentityProperty.Invoke(q));
 
             var objectAsJson = JObject.FromObject(entity);
             if (identityProperty != null)
             {
-                var value = identityProperty.GetValue(entity, null);
                 objectAsJson.Remove(identityProperty.Name);
-
-                if (value != null)
-                    objectAsJson.Add("_id", JToken.FromObject(value));
             }
 
-            objectAsJson.Add("type", JToken.FromObject(entity.GetType()));
+            objectAsJson.Add("type", JToken.FromObject(entity.GetType().FullName));
             return objectAsJson;
         }
 
         public IQueryable<T> Query<T>()
         {
-            // Todo implement Linq to document here instead of the horrible list all below.
+            // Todo implement Linq to Lucene here instead of the horrible list all below.
             return GetAll<T>().AsQueryable();
         }
 
-        public IList<T> GetAll<T>()
+        public IList<T> GetAll<T>() // NOTE: We probably need to ask the user if they can accept stale results
         {
             QueryResult result;
             do
@@ -107,7 +98,7 @@ namespace Raven.Client
             {
                 var entity = JsonConvert.DeserializeObject(q.ToString(), typeof(T));
                 var id = q.Value<string>("_id");
-                convertToEntity<T>(id, q.ToString());
+                ConvertToEntity<T>(id, q.ToString());
                 return (T)entity;
             }).ToList();
         }

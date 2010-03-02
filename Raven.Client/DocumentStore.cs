@@ -1,10 +1,18 @@
 using System;
-using Raven.Database;
 
-namespace Raven.Client
+namespace Rhino.DivanDB.Client
 {
     public class DocumentStore : IDisposable
     {
+        private readonly string localhost;
+        private readonly int port;
+
+        public DocumentStore(string localhost, int port) : this()
+        {
+            this.localhost = localhost;
+            this.port = port;
+        }
+
         public DocumentStore()
         {
             Conventions = new DocumentConvention();
@@ -21,17 +29,28 @@ namespace Raven.Client
 
         public void Dispose()
         {
-            database.Dispose();
+            var disposable = database as IDisposable;
+            if (disposable != null)
+                disposable.Dispose();
         }
 
         public void Initialise()
         {
-            database = new DocumentDatabase(Database);
-            database.SpinBackgroundWorkers();
+            if (String.IsNullOrEmpty(localhost))
+            {
+                var embeddedDatabase = new DocumentDatabase(Database);
+                embeddedDatabase.SpinBackgroundWorkers();
+                database = embeddedDatabase;
+            }
+            else
+            {
+                database = new ServerClient(localhost, port);
+            }
+            //NOTE: this should be done contitionally, index creation is expensive
             database.PutIndex("getByType", "from entity in docs select new { entity.type };");
         }
 
-        private DocumentDatabase database;
+        private IDatabaseCommands database;
 
         public void Delete(Guid id)
         {
