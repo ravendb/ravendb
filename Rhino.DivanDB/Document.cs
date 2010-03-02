@@ -8,6 +8,7 @@ namespace Rhino.DivanDB
     {
         public byte[] Data { get; set; }
         public JObject Metadata { get; set; }
+        public string Key { get; set; }
 
         public JObject ToJson()
         {

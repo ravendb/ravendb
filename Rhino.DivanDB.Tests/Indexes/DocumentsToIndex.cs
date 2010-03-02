@@ -30,7 +30,8 @@ namespace Rhino.DivanDB.Tests.Indexes
                 other: 'var', 
                 content: 'this is the content', 
                 title: 'hello world', 
-                size: 5
+                size: 5,
+                '@metadata': {'@id': 1}
             }"), new JObject());
 
             QueryResult docs;

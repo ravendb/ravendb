@@ -59,7 +59,6 @@ namespace Rhino.DivanDB
 
         private Thread[] backgroundWorkers = new Thread[0];
         private readonly WorkContext workContext;
-        private readonly static string[] ReservedFields = new[] { "@metadata" };
 
         public DatabaseStatistics Statistics
         {
@@ -123,10 +122,9 @@ namespace Rhino.DivanDB
                 UuidCreateSequential(out value);
                 key = value.ToString();
             }
-            foreach (var reservedField in ReservedFields)
-            {
-                document.Remove(reservedField);
-            }
+            RemoveReservedProperties(document);
+            RemoveReservedProperties(metadata);
+            metadata.Add("@id", new JValue(key));
 
             TransactionalStorage.Batch(actions =>
                                        {
@@ -137,6 +135,20 @@ namespace Rhino.DivanDB
                                        });
             workContext.NotifyAboutWork();
             return key;
+        }
+
+        private void RemoveReservedProperties(JObject document)
+        {
+            var toRemove = new HashSet<string>();
+            foreach (var property in document.Properties())
+            {
+                if (property.Name.StartsWith("@"))
+                    toRemove.Add(property.Name);
+            }
+            foreach (var propertyName in toRemove)
+            {
+                document.Remove(propertyName);
+            }
         }
 
         public void Delete(string key)

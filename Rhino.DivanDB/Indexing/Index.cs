@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -108,12 +109,34 @@ namespace Rhino.DivanDB.Indexing
                 RecreateSearcher();
         }
 
+        public IEnumerable<object> HandleErrorsGracefully(IndexingFunc func, IEnumerable<JsonDynamicObject> docs)
+        {
+            foreach (var doc in docs)
+            {
+                IEnumerable enumerable;
+                try
+                {
+                    enumerable = func(new[] {doc});
+                }
+                catch (Exception e)
+                {
+                    log.Warn("Could not process document: " + doc, e);
+                    continue;
+                }
+                foreach (var item in enumerable)
+                {
+                    yield return item;
+                }
+            }
+            
+        }
+
         public void IndexDocuments(IndexingFunc func, IEnumerable<JsonDynamicObject> documents)
         {
             int count = 0;
             Write(indexWriter =>
                   {
-                      var docs = func(documents).Cast<object>();
+                      var docs = HandleErrorsGracefully(func,documents);
                       var currentId = Guid.NewGuid().ToString();
                       var luceneDoc = new Document();
                       bool shouldRcreateSearcher = false;

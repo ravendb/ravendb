@@ -1,5 +1,4 @@
 using System;
-using Lucene.Net.Documents;
 
 namespace Rhino.DivanDB.Json
 {
@@ -7,16 +6,18 @@ namespace Rhino.DivanDB.Json
     {
         public abstract DynamicObject this[string key] { get; }
 
-        protected abstract object Value { get; }
+        public abstract object Value { get; }
 
-        public static bool operator==(DynamicObject dyn, string val)
+        public static bool operator ==(DynamicObject dyn, string val)
         {
+            if (ReferenceEquals(dyn, null))
+                return val == null;
             return Equals(dyn.Value, val);
         }
 
         public static bool operator !=(DynamicObject dyn, string val)
         {
-            return Equals(dyn.Value, val) == false;
+            return !(dyn == val);
         }
 
         public static bool operator ==(DynamicObject dyn, bool val)
@@ -68,8 +69,8 @@ namespace Rhino.DivanDB.Json
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != typeof (DynamicObject)) return false;
-            return Equals((DynamicObject) obj);
+            if (obj.GetType() != typeof(DynamicObject)) return false;
+            return Equals((DynamicObject)obj);
         }
 
         public override int GetHashCode()
@@ -77,19 +78,6 @@ namespace Rhino.DivanDB.Json
             if (Value == null)
                 return 0;
             return Value.GetHashCode();
-        }
-
-
-        public string ToIndexableString()
-        {
-            var val = Value;
-            if (val is DateTime)
-                return DateTools.DateToString((DateTime)val, DateTools.Resolution.DAY);
-
-            if (val is int)
-                return NumberTools.LongToString((int)val);
-
-            return val.ToString();
         }
     }
 }

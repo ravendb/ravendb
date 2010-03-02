@@ -18,16 +18,7 @@ namespace Rhino.DivanDB.Tryouts
 ";
         public static void Main()
         {
-            Directory.CreateDirectory("docs");
-            using (var db = new DocumentDatabase(@"C:\Work\divandb\Data"))
-            {
-                foreach (JObject document in db.GetDocuments(0, int.MaxValue))
-                {
-                    var id = document.Property("_id").Value.Value<string>();
-                    Console.WriteLine(id);
-                    File.WriteAllText("docs\\"+id, document.ToString());
-                }
-            }
+            
         }
     }
 }

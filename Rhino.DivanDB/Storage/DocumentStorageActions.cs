@@ -71,6 +71,7 @@ namespace Rhino.DivanDB.Storage
             return new JsonDocument
             {
                 Data = data,
+                Key = Api.RetrieveColumnAsString(session, documents, documentsColumns["key"],Encoding.Unicode),
                 Metadata = JObject.Parse(Api.RetrieveColumnAsString(session, documents, documentsColumns["metadata"]))
             };
         }
@@ -171,6 +172,7 @@ namespace Rhino.DivanDB.Storage
                 {
                     First = new JsonDocument
                     {
+                        Key = Api.RetrieveColumnAsString(session, documents, documentsColumns["key"],Encoding.Unicode),
                         Data = data,
                         Metadata = JObject.Parse(json)
                     },

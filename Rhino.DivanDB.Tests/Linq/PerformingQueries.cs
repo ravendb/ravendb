@@ -22,18 +22,19 @@ namespace Rhino.DivanDB.Tests.Linq
         public void Can_query_json()
         {
             var documents = GetDocumentsFromString(@"[
-{'type':'page', title: 'hello', content: 'foobar', size: 2, _id: 1},
-{'type':'page', title: 'there', content: 'foobar 2', size: 3, _id: 2},
+{'type':'page', title: 'hello', content: 'foobar', size: 2, '@metadata': {'@id': 1}},
+{'type':'page', title: 'there', content: 'foobar 2', size: 3, '@metadata': {'@id': 2} },
 {'type':'revision', size: 4, _id: 3}
 ]");
-            var compiled = new LinqTransformer("pagesByTitle", query, "docs", Path.GetTempPath(), typeof(JsonDynamicObject)).CompiledType;
+            var transformer = new LinqTransformer("pagesByTitle", query, "docs", Path.GetTempPath(), typeof(JsonDynamicObject));
+            var compiled = transformer.CompiledType;
             var compiledQuery = (AbstractViewGenerator)Activator.CreateInstance(compiled);
             var actual = compiledQuery.Execute(documents)
                 .Cast<object>().ToArray();
             var expected = new[]
             {
-                "{ Key = hello, Value = foobar, Size = 2, _id = 1 }",
-                "{ Key = there, Value = foobar 2, Size = 3, _id = 2 }"
+                "{ Key = hello, Value = foobar, Size = 2, __document_id = 1 }",
+                "{ Key = there, Value = foobar 2, Size = 3, __document_id = 2 }"
             };
 
             Assert.Equal(expected.Length, actual.Length);
