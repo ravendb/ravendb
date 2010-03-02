@@ -24,12 +24,12 @@ namespace Rhino.DivanDB.Client
         {
             var documentFound = database.Get(id);
             var jsonString = Encoding.UTF8.GetString(documentFound);
-            var entity = convertToEntity<T>(id, jsonString);
+            var entity = ConvertToEntity<T>(id, jsonString);
             entities.Add(entity);
             return (T)entity;
         }
 
-        private object convertToEntity<T>(string id, string documentFound)
+        private object ConvertToEntity<T>(string id, string documentFound)
         {
             var entity = JsonConvert.DeserializeObject(documentFound, typeof(T));
 
@@ -44,7 +44,7 @@ namespace Rhino.DivanDB.Client
 
         public void Store<T>(T entity)
         {
-            var json = convertEntityToJson(entity);
+            var json = ConvertEntityToJson(entity);
 
             var key = database.Put(json);
             entities.Add(entity);
@@ -60,12 +60,12 @@ namespace Rhino.DivanDB.Client
         {
             foreach (var entity in entities)
             {
-                JObject objectAsJson = convertEntityToJson(entity);
+                JObject objectAsJson = ConvertEntityToJson(entity);
                 database.Put(objectAsJson);
             }
         }
 
-        private JObject convertEntityToJson(object entity)
+        private JObject ConvertEntityToJson(object entity)
         {
             var identityProperty = entity.GetType().GetProperties()
                             .FirstOrDefault(q => documentStore.Conventions.FindIdentityProperty.Invoke(q));
@@ -102,7 +102,7 @@ namespace Rhino.DivanDB.Client
             {
                 var entity = JsonConvert.DeserializeObject(q.ToString(), typeof(T));
                 var id = q.Value<string>("_id");
-                convertToEntity<T>(id, q.ToString());
+                ConvertToEntity<T>(id, q.ToString());
                 return (T)entity;
             }).ToList();
         }
