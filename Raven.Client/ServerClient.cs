@@ -1,7 +1,9 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Text;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Json;
@@ -94,7 +96,27 @@ namespace Raven.Client
 
         public QueryResult Query(string index, string query, int start, int pageSize)
         {
-            throw new NotImplementedException();
+            var request = WebRequest.Create(url + "/indexes/" + index + "?query=" + query + "&start="+start + "&pageSize=" + pageSize);
+
+            request.Method = "GET";
+            request.ContentType = "application/json";
+
+            var response = request.GetResponse();
+            using (var responseString = response.GetResponseStream())
+            {
+                var reader = new StreamReader(responseString);
+                var text = reader.ReadToEnd();
+
+                var serializer = new JsonSerializer();
+                var reader2 = new JsonTextReader(new StringReader(text));
+                var json = (JToken) serializer.Deserialize(reader2);
+                reader.Close();
+                return new QueryResult
+                           {
+                               IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
+                               Results = json["Results"].Children().Cast<JObject>().ToArray(),
+                           };
+            }
         }
 
         public void DeleteIndex(string name)

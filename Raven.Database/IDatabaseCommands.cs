@@ -1,6 +1,7 @@
 using Newtonsoft.Json.Linq;
 
-namespace Raven.Database{
+namespace Raven.Database
+{
     public interface IDatabaseCommands
     {
         JsonDocument Get(string key);
