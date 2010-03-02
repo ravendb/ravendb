@@ -82,7 +82,6 @@
     <Compile Include="Indexing\Index.cs" />
     <Compile Include="Indexing\TaskExecuter.cs" />
     <Compile Include="Indexing\WorkContext.cs" />
-    <Compile Include="Json\DynamicObject.cs" />
     <Compile Include="Json\DynamicObjectExtensions.cs" />
     <Compile Include="Json\JsonDynamicObject.cs" />
     <Compile Include="Linq\AbstractViewGenerator.cs" />

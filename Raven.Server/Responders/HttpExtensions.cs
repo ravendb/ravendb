@@ -30,6 +30,10 @@ namespace Raven.Server.Responders
             // very well change due to things like encoding,
             // adding metadata, etc
             "Content-Length",
+            
+            // Special things to ignore
+            "Keep-Alive",
+            "X-Requested-With",
 
             // Request headers
             "Accept-Charset",

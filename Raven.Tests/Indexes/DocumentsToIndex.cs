@@ -1,8 +1,10 @@
 using System;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
+using Raven.Database.Json;
 using Raven.Tests.Storage;
 using Xunit;
+using System.Linq;
 
 namespace Raven.Tests.Indexes
 {
@@ -41,6 +43,28 @@ namespace Raven.Tests.Indexes
                 docs = db.Query("pagesByTitle2", "some:val",0,10);
             } while (docs.IsStale);
             Assert.Equal(1, docs.Results.Length);
+        }
+
+        [Fact]
+        public void Can_Read_Values_Using_Deep_Nesting()
+        {
+            db.PutIndex(@"DocsByProject", @"
+from doc in docs
+from prj in doc.projects
+select new{project_name = prj.name}
+");
+            var document = JObject.Parse("{'name':'ayende','email':'ayende@ayende.com','projects':[{'name':'raven'}], '@metadata': { '@id': 1}}");
+            new DocsByProject().CompiledDefinition(new[] { new JsonDynamicObject(document), }).Cast<object>().ToArray();
+            db.Put("1", document, new JObject());
+
+            QueryResult docs;
+            do
+            {
+                docs = db.Query("DocsByProject", "project_name:raven", 0, 10);
+            } while (docs.IsStale);
+            Assert.Equal(1, docs.Results.Length);
+            var jProperty = docs.Results[0].Property("name");
+            Assert.Equal("ayende", jProperty.Value.Value<string>());
         }
 
         [Fact]

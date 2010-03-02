@@ -95,7 +95,7 @@ namespace Raven.Database.Linq
             block.AcceptVisitor(visitor, null);
 
             ((QueryExpression) variable.Initializer).SelectOrGroupClause.AcceptVisitor(
-                new TurnOutwardReferenceToString {Identifier = visitor.Identifier}, null);
+                new TurnOutwardReferenceToString(), null);
 
             var type = new TypeDeclaration(Modifiers.Public, new List<AttributeSection>())
             {

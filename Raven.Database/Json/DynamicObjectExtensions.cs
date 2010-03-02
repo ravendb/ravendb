@@ -5,7 +5,7 @@ namespace Raven.Database.Json
 {
     public static class DynamicObjectExtensions
     {
-        public static string ToIndexableString(this DynamicObject self)
+        public static string ToIndexableString(this JsonDynamicObject self)
         {
             if(self == null)
                 return null;
