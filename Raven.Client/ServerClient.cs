@@ -33,15 +33,15 @@ namespace Raven.Client
                 {
                     Data = Encoding.UTF8.GetBytes(text),
                     Key = key,
-                    //Metadata = JObject.Parse(Api.RetrieveColumnAsString(session, documents, documentsColumns["metadata"]))
                 };
             }
         }
 
         public string Put(string key, JObject document, JObject metadata)
         {
-            var request = WebRequest.Create(url + "/docs");
-            request.Method = "POST";
+            var request = WebRequest.Create(url + "/docs/" + key);
+
+            request.Method = String.IsNullOrEmpty(key) ? "POST" : "PUT";
             request.ContentType = "application/json";
 
             using (var dataStream = request.GetRequestStream())

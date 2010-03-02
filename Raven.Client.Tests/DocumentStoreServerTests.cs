@@ -16,7 +16,7 @@ namespace Raven.Client.Tests
                 documentStore.Initialise();
 
                 var session = documentStore.OpenSession();
-                var entity = new Company { Name = "Pap" };
+                var entity = new Company { Name = "Company" };
                 session.Store(entity);
 
                 Assert.NotEqual(Guid.Empty.ToString(), entity.Id);
@@ -33,14 +33,37 @@ namespace Raven.Client.Tests
                 documentStore.Initialise();
 
                 var session = documentStore.OpenSession();
-                var entity = new Company { Name = "Pap" };
-                session.Store(entity);
-                entity.Name = "New Company Name";
+                var company = new Company { Name = "Company 1" };
+                session.Store(company);
+                var id = company.Id;
+                company.Name = "Company 2";
                 session.SaveChanges();
+                var companyFound = session.Load<Company>(company.Id);
+                Assert.Equal("Company 2", companyFound.Name);
+                Assert.Equal(id, company.Id);
+            }
+        }
+
+        [Fact]
+        public void Should_update_retrieved_entity()
+        {
+            DivanServer.EnsureCanListenToWhenInNonAdminContext(8080);
+            using (var server = new DivanServer(DbName, 8080))
+            {
+                var documentStore = new DocumentStore("localhost", 8080);
+                documentStore.Initialise();
+
+                var session1 = documentStore.OpenSession();
+                var company = new Company { Name = "Company 1" };
+                session1.Store(company);
+                var companyId = company.Id;
 
                 var session2 = documentStore.OpenSession();
-                var companyFromDb = session2.Load<Company>(entity.Id);
-                Assert.Equal(companyFromDb.Name, "New Company Name");
+                var companyFound = session2.Load<Company>(companyId);
+                companyFound.Name = "New Name";
+                session2.SaveChanges();
+
+                Assert.Equal("New Name", session2.Load<Company>(companyId).Name);
             }
         }
     }
