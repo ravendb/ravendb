@@ -5,6 +5,7 @@
     <title>Rhino Divan DB</title>
     <link href="css/style.css" rel="stylesheet" type="text/css" />
     <link href="css/Pager.css" rel="stylesheet" type="text/css" />
+    <link href="css/rdb.jsonEditor.css" rel="Stylesheet" type="text/css" />
     <link href="css/smoothness/jquery-ui-1.8rc2.custom.css" rel="Stylesheet" type="text/css" />
 
     <script type="text/javascript" src="js/jquery-1.4.2.min.js"></script>
@@ -12,11 +13,13 @@
     <script type="text/javascript" src="js/jquery.simpletip.js"></script>
     <script type="text/javascript" src="js/jquery-jtemplates.js"></script>
     <script type="text/javascript" src="js/jquery.pager.js"></script>
-    <script type="text/javascript" src="js/JSONEditor.js"></script>
     <script type="text/javascript" src="js/json2.js"></script>
+    <script type="text/javascript" src="js/jstree/jquery.tree.js"></script>
 
     <script type="text/javascript" src="js/jquery.divanDB.js"></script>
     <script type="text/javascript" src="js/divan-ui.js"></script>
+    <script type="text/javascript" src="js/rdb.jsonEditor.js"></script>
+    
     <script type="text/javascript">
         var numPages;
         var pageNumber = 1;
@@ -143,13 +146,12 @@
 
         function EditDocument(id) {
             DivanUI.GetDocument(id, function (doc) {
-                JSONeditor.start('editorTree', 'editorForm', doc, false);
+                InitializeJSONEditor(doc);
                 $('#divEditor').dialog({
                     modal: true,
                     buttons: {
                         Save: function () {
-                            treeBuilder.jsonChange($('#editorForm').children('form')[0]);
-                            DivanUI.SaveDocument(id, JSON.stringify(treeBuilder.json), function () {
+                            DivanUI.SaveDocument(id, GetJSONFromEditor(), function () {
                                 $('#divEditor').dialog('close');
                                 //TODO: Update values in list/preview
                             });
@@ -214,9 +216,42 @@
                         Documents
                     </h2>
                     <div id="divEditor" style="display:none; position:relative;height:500px;">
-                        <div id="editorTree" style="float:left; margin-right: 40px; "></div>
-                        <div id="editorForm" style="float:left;"></div>                        
-                        <br class="clear" />
+                        <div style="margin: 0 auto; width:600px;" id="editorTabs">
+        	                <ul>
+        		                <li><a href="#fancyJSONEditor">JSON Editor</a></li>
+        		                <li><a href="#rawJSONEditor">Raw JSON</a></li>
+                                <li><a href="#jsonViewer">View</a></li>
+        	                </ul>
+
+                            <div style="background-color:#D6EEFA; padding:5px;" class="ui-corner-all" id="fancyJSONEditor">
+                                <div style="float:left; overflow:auto; background-color:#fff; padding:20px;" class="ui-corner-left">
+                                    <div id="jsonTree"></div>
+                                    <div class="clear"></div>
+                                    <br />
+                                    <a href="#" onclick = "CreateArray(); return false;">+ Create New Array</a><br /><br />
+                                    <a href="#" onclick = "CreateValue(); return false;">+ Create New Value</a>
+                                </div>
+                                
+                                <div id="jsonEditor" style="float:left; padding:20px; display:none;">
+                                    Element Name<br />
+                                    <input type="text" id="selectedJSONname" /><br /><br />
+                                    Element Value<br />
+                                    <textarea style="width:300px; height:100px;" id="selectedJSONval"></textarea><br /><br />
+                                    <button id="editorApplyChanges">Apply Changes</button><br /><br />                                    
+                                </div>
+                                <div id="jsonArrayEditor" style="float:left; padding:20px; display:none;">
+                                    Array Name<br />
+                                    <input type="text" id="selectedJSONArrayName" /><br /><br />
+                                    <button id="editorApplyChanges2">Apply Changes</button><br /><br />                                     
+                                </div>
+                                <div class="clear"></div>
+                            </div>
+                            <div id="rawJSONEditor">
+                                Raw JSON<br />
+                                <textarea style="width:100%; height: 200px;" id="txtJSON"></textarea>
+                            </div>
+                            <div id="jsonViewer"></div>
+                        </div>
                     </div>
                     <p id="docList">
                         <img src="images/ajax-loader.gif" /> Loading...
