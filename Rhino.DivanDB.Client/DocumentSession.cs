@@ -60,6 +60,7 @@ namespace Rhino.DivanDB.Client
         {
             foreach (var entity in entities)
             {
+                //TODO: Switch to more the batch version when it becomes available
                 database.Put(ConvertEntityToJson(entity));
             }
         }
