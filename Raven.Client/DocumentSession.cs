@@ -43,9 +43,10 @@ namespace Raven.Client
 
         public void Store<T>(T entity)
         {
-            var json = ConvertEntityToJson(entity);
+            string id;
+            var json = ConvertEntityToJson(entity, out id);
 
-            var key = database.Put(null, json, new JObject());
+            var key = database.Put(id, json, new JObject());
             trackedEntities.Add(entity);
 
             var identityProperty = entity.GetType().GetProperties()
@@ -60,19 +61,22 @@ namespace Raven.Client
             foreach (var entity in trackedEntities)
             {
                 //TODO: Switch to more the batch version when it becomes available
-                database.Put(null, ConvertEntityToJson(entity), new JObject());
+                string id;
+                var entityAsJson = ConvertEntityToJson(entity,out id);
+                database.Put(id, entityAsJson, new JObject());
             }
         }
 
-        private JObject ConvertEntityToJson(object entity)
+        private JObject ConvertEntityToJson(object entity, out string id)
         {
             var identityProperty = entity.GetType().GetProperties()
                 .FirstOrDefault(q => documentStore.Conventions.FindIdentityProperty.Invoke(q));
-
+            id = null;
             var objectAsJson = JObject.FromObject(entity);
             if (identityProperty != null)
             {
                 objectAsJson.Remove(identityProperty.Name);
+                id = (string) identityProperty.GetValue(entity, null);
             }
 
             objectAsJson.Add("type", JToken.FromObject(entity.GetType().FullName));
