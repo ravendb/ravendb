@@ -7,7 +7,7 @@ namespace Raven.Client.Tests
 
     public class DocumentDbClientTests : BaseTest
     {
-        private DocumentStore newDocumentStore()
+        private static DocumentStore newDocumentStore()
         {
             var documentStore = new DocumentStore();
             documentStore.Database = DbName;
