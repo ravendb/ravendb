@@ -1,7 +1,7 @@
 using System;
 using System.Reflection;
 
-namespace Rhino.DivanDB.Client
+namespace Raven.Client
 {
     public class DocumentConvention
     {

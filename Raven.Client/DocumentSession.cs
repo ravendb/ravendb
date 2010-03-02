@@ -2,13 +2,12 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Text;
 using Newtonsoft.Json;
-using JObject = Newtonsoft.Json.Linq.JObject;
-using JToken = Newtonsoft.Json.Linq.JToken;
+using Newtonsoft.Json.Linq;
+using Raven.Database;
 
-namespace Rhino.DivanDB.Client
+namespace Raven.Client
 {
     public class DocumentSession
     {
@@ -76,7 +75,7 @@ namespace Rhino.DivanDB.Client
         private JObject convertEntityToJson(object entity)
         {
             var identityProperty = entity.GetType().GetProperties()
-                            .FirstOrDefault(q => documentDb.Conventions.FindIdentityProperty.Invoke(q));
+                .FirstOrDefault(q => documentDb.Conventions.FindIdentityProperty.Invoke(q));
 
             var objectAsJson = JObject.FromObject(entity);
             if (identityProperty != null)

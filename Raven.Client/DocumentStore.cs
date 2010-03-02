@@ -1,6 +1,6 @@
 using System;
 
-namespace Rhino.DivanDB.Client
+namespace Raven.Client
 {
     public class DocumentStore : IDisposable
     {
