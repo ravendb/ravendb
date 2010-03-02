@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Threading;
 using ICSharpCode.SharpZipLib.Zip;
 using Rhino.DivanDB.Extensions;
 using Rhino.DivanDB.Server;
@@ -67,7 +68,10 @@ namespace Rhino.DivanDB.Scenarios
             {
                 actual = SendRequest(request);
                 count++;
-            } while (IsStaleResponse(actual.First) && count < 5);
+                if (!IsStaleResponse(actual.First))
+                    break;
+                Thread.Sleep(100);
+            } while (count < 5);
 
             CompareResponses(
                 responseNumber++,

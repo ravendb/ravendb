@@ -6,7 +6,7 @@ namespace Rhino.DivanDB.Server.Responders
     {
         public override string UrlPattern
         {
-            get { return "/divan$"; }
+            get { return "^/divan$"; }
         }
 
         public override string[] SupportedVerbs

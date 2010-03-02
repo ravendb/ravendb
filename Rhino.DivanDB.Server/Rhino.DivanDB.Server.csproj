@@ -75,7 +75,7 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Responders\DivanRootResponser.cs" />
-    <Compile Include="Responders\DivanUserInterfaceResponser.cs" />
+    <Compile Include="Responders\DivanUserInterfaceResponder.cs" />
     <Compile Include="Responders\Docs.cs" />
     <Compile Include="Responders\Document.cs" />
     <Compile Include="Responders\HttpExtensions.cs" />
