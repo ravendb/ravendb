@@ -230,12 +230,10 @@ function JSONToViewHTML(jsonObj) {
                 $(jsonDiv).append(childDiv);
             }
         });
-        debugger;
         return jsonDiv;
     }
     else {
         // jsonOb is a number or string
-        debugger;
         return jsonObj;                
     }
 }
