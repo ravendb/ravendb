@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.IO;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Rhino.DivanDB.Json;
-using Rhino.DivanDB.Linq;
+using Raven.Database.Json;
+using Raven.Database.Linq;
 using Xunit;
 using System.Linq;
 
-namespace Rhino.DivanDB.Tests.Linq
+namespace Raven.Tests.Linq
 {
     public class PerformingQueries
     {
@@ -48,9 +48,9 @@ namespace Rhino.DivanDB.Tests.Linq
         {
             var serializer = new JsonSerializer();
             var docs = (JArray)serializer.Deserialize(
-                                   new JsonTextReader(
-                                       new StringReader(
-                                           json)));
+                new JsonTextReader(
+                    new StringReader(
+                        json)));
             return docs.Select(x => new JsonDynamicObject(x));
         }
     }

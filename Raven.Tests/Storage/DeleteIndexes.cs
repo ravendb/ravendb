@@ -1,9 +1,8 @@
 using System;
-using System.Linq;
-using Microsoft.Isam.Esent.Interop;
+using Raven.Database;
 using Xunit;
 
-namespace Rhino.DivanDB.Tests.Storage
+namespace Raven.Tests.Storage
 {
     public class DeleteIndexes : AbstractDocumentStorageTest, IDisposable
     {
@@ -18,7 +17,7 @@ namespace Rhino.DivanDB.Tests.Storage
         public void Can_remove_index()
         {
             db.PutIndex("pagesByTitle",
-                @"
+                        @"
     from doc in docs
     where doc.type == ""page""
     select new { Key = doc.title, Value = doc.content, Size = doc.size };

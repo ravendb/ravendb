@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace Rhino.DivanDB.Tests.Storage
+namespace Raven.Tests.Storage
 {
     public class AbstractDocumentStorageTest
     {

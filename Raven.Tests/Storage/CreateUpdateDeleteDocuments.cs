@@ -1,8 +1,9 @@
 using System;
 using Newtonsoft.Json.Linq;
+using Raven.Database;
 using Xunit;
 
-namespace Rhino.DivanDB.Tests.Storage
+namespace Raven.Tests.Storage
 {
     public class CreateUpdateDeleteDocuments : AbstractDocumentStorageTest, IDisposable
     {

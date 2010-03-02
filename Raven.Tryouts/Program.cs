@@ -1,13 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using Newtonsoft.Json.Linq;
-using System.Linq;
-using Rhino.DivanDB.Json;
-using Rhino.DivanDB.Linq;
-
-namespace Rhino.DivanDB.Tryouts
+namespace Raven.Tryouts
 {
     class Program
     {

@@ -1,10 +1,10 @@
 using System;
 using System.Linq;
-using Rhino.DivanDB.Json;
-using Rhino.DivanDB.Linq;
+using Raven.Database.Json;
+using Raven.Database.Linq;
 using Xunit;
 
-namespace Rhino.DivanDB.Tests.Linq
+namespace Raven.Tests.Linq
 {
     public class LinqTransformerCompilationTests
     {

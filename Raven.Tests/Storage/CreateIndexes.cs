@@ -1,7 +1,8 @@
 using System;
+using Raven.Database;
 using Xunit;
 
-namespace Rhino.DivanDB.Tests.Storage
+namespace Raven.Tests.Storage
 {
     public class CreateIndexes : AbstractDocumentStorageTest, IDisposable
     {
@@ -16,14 +17,14 @@ namespace Rhino.DivanDB.Tests.Storage
         public void Index_with_same_name_can_be_added_twice()
         {
             db.PutIndex("pagesByTitle",
-                @"
+                        @"
     from doc in docs
     where doc.type == ""page""
     select new { Key = doc.title, Value = doc.content, Size = doc.size };
 ");
 
             db.PutIndex("pagesByTitle",
-                @"
+                        @"
     from doc in docs
     where doc.type == ""page""
     select new { Key = doc.title, Value = doc.content, Size = doc.size };
@@ -34,7 +35,7 @@ namespace Rhino.DivanDB.Tests.Storage
         public void Can_add_index()
         {
             db.PutIndex("pagesByTitle",
-                @"
+                        @"
     from doc in docs
     where doc.type == ""page""
     select new { Key = doc.title, Value = doc.content, Size = doc.size };

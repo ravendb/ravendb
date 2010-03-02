@@ -1,9 +1,10 @@
 using System;
 using Newtonsoft.Json.Linq;
-using Rhino.DivanDB.Tests.Storage;
+using Raven.Database;
+using Raven.Tests.Storage;
 using Xunit;
 
-namespace Rhino.DivanDB.Tests.Indexes
+namespace Raven.Tests.Indexes
 {
     public class DocumentsToIndex : AbstractDocumentStorageTest, IDisposable
     {
@@ -19,7 +20,7 @@ namespace Rhino.DivanDB.Tests.Indexes
         public void Can_Read_values_from_index()
         {
             db.PutIndex("pagesByTitle2",
-                @"
+                        @"
                     from doc in docs
                     where doc.type == ""page""
                     select new { doc.some };
@@ -46,13 +47,13 @@ namespace Rhino.DivanDB.Tests.Indexes
         public void Can_Read_values_when_two_indexes_exist()
         {
             db.PutIndex("pagesByTitle",
-                @" 
+                        @" 
     from doc in docs
     where doc.type == ""page""
     select new { doc.other};
 ");
             db.PutIndex("pagesByTitle2",
-                @"
+                        @"
     from doc in docs
     where doc.type == ""page""
     select new { doc.some };
@@ -72,13 +73,13 @@ namespace Rhino.DivanDB.Tests.Indexes
         public void Updating_an_index_will_result_in_new_values()
         {
             db.PutIndex("pagesByTitle",
-                @"
+                        @"
     from doc in docs
     where doc.type == ""page""
     select new { doc.other};
 ");
             db.PutIndex("pagesByTitle",
-                @"
+                        @"
     from doc in docs
     where doc.type == ""page""
     select new { doc.other };
@@ -100,7 +101,7 @@ namespace Rhino.DivanDB.Tests.Indexes
             db.Put("1",JObject.Parse("{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"), new JObject());
 
             db.PutIndex("pagesByTitle",
-                @"
+                        @"
     from doc in docs
     where doc.type == ""page""
     select new { doc.other };
@@ -120,7 +121,7 @@ namespace Rhino.DivanDB.Tests.Indexes
             db.Put(null, JObject.Parse("{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"), new JObject());
 
             db.PutIndex("pagesByTitle",
-                @"
+                        @"
     from doc in docs
     where doc.type == ""page""
     select new { doc.other };
