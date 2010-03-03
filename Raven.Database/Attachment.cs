@@ -1,3 +1,4 @@
+using System;
 using Newtonsoft.Json.Linq;
 
 namespace Raven.Database
@@ -6,5 +7,6 @@ namespace Raven.Database
     {
         public byte[] Data { get; set; }
         public JObject Metadata { get; set; }
+        public Guid Etag { get; set; }
     }
 }

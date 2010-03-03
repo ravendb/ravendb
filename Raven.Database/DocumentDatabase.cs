@@ -229,20 +229,21 @@ namespace Raven.Database
             return attachment;
         }
 
-        public void PutStatic(string name, byte[] data, JObject metadata)
+        public void PutStatic(string name, Guid etag, byte[] data, JObject metadata)
         {
             TransactionalStorage.Batch(actions =>
             {
-                actions.AddAttachment(name, data, metadata.ToString(Formatting.None));
+                actions.DeleteAttachment(name, etag);
+                actions.AddAttachment(name, etag, data, metadata.ToString(Formatting.None));
                 actions.Commit();
             });
         }
 
-        public void DeleteStatic(string name)
+        public void DeleteStatic(string name, Guid etag)
         {
             TransactionalStorage.Batch(actions =>
             {
-                actions.DeleteAttachment(name);
+                actions.DeleteAttachment(name, etag);
                 actions.Commit();
             });
         }

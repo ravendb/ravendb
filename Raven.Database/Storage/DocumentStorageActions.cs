@@ -213,7 +213,7 @@ namespace Raven.Database.Storage
 
             var rowEtag = new Guid(Api.RetrieveColumn(session, documents, documentsColumns["etag"]));
             if(rowEtag!=etag)
-                throw new DBConcurrencyException("Put attempted on document '" + key +
+                throw new DBConcurrencyException("PUT or DELETE attempted on document '" + key +
                                                  "' using a non current etag");
 
             Api.JetDelete(session, documents);
@@ -233,7 +233,7 @@ namespace Raven.Database.Storage
                 logger.DebugFormat("New task '{0}'", task.AsString());
         }
 
-        public void AddAttachment(string key, byte[] data, string headers)
+        public void AddAttachment(string key, Guid etag, byte[] data, string headers)
         {
             Api.JetSetCurrentIndex(session, files, "by_name");
             Api.MakeKey(session, files, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -244,6 +244,7 @@ namespace Raven.Database.Storage
             {
                 Api.SetColumn(session, files, filesColumns["name"], key, Encoding.Unicode);
                 Api.SetColumn(session, files, filesColumns["data"], data);
+                Api.SetColumn(session, files, filesColumns["etag"], etag.ToByteArray());
                 Api.SetColumn(session, files, filesColumns["metadata"], headers, Encoding.Unicode);
 
                 update.Save();
@@ -251,7 +252,7 @@ namespace Raven.Database.Storage
             logger.DebugFormat("Adding attachment {0}", key);
         }
 
-        public void DeleteAttachment(string key)
+        public void DeleteAttachment(string key, Guid etag)
         {
             Api.JetSetCurrentIndex(session, files, "by_name");
             Api.MakeKey(session, files, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -260,6 +261,10 @@ namespace Raven.Database.Storage
                 logger.DebugFormat("Attachment with key '{0}' was not found, and considered deleted", key);
                 return;
             }
+            var fileEtag = new Guid(Api.RetrieveColumn(session, files, filesColumns["etag"]));
+            if(fileEtag != etag)
+                throw new DBConcurrencyException("PUT or DELETE attempted on attachment '" + key +
+                                            "' using a non current etag");
 
             Api.JetDelete(session, files);
             logger.DebugFormat("Attachment with key '{0}' was deleted", key);
@@ -277,12 +282,11 @@ namespace Raven.Database.Storage
             var metadata = Api.RetrieveColumnAsString(session, files, filesColumns["metadata"], Encoding.Unicode);
             return new Attachment
             {
-                Data= Api.RetrieveColumn(session, files, filesColumns["data"]),
+                Data = Api.RetrieveColumn(session, files, filesColumns["data"]),
+                Etag = new Guid(Api.RetrieveColumn(session, files, filesColumns["etag"])),
                 Metadata = JObject.Parse(metadata)
             };
         }
-
-
 
         public string GetFirstTask()
         {

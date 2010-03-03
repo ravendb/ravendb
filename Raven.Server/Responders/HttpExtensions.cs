@@ -130,7 +130,7 @@ namespace Raven.Server.Responders
             streamWriter.Flush();
         }
 
-        public static void WriteData(this HttpListenerContext context, byte[] data, JObject headers)
+        public static void WriteData(this HttpListenerContext context, byte[] data, JObject headers, Guid etag)
         {
             foreach (var header in headers.Properties())
             {
@@ -233,6 +233,22 @@ namespace Raven.Server.Responders
             return pageSize;
         }
 
+        public static Guid GetEtag(this HttpListenerContext context)
+        {
+            var etagAsString = context.Request.Headers["etag"];
+            if (etagAsString != null)
+            {
+                try
+                {
+                    return new Guid(etagAsString);
+                }
+                catch
+                {
+             
+                }
+            } 
+            return Guid.Empty;
+        }
 
         #region Nested type: JsonToJsonConverter
 

@@ -24,17 +24,21 @@ namespace Raven.Server.Responders
                 case "GET":
                     context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
                     var doc = Database.Get(docId);
-                    if(doc==null)
+                    if(doc == null)
                     {
                         context.SetStatusToNotFound();
                         return;
                     }
-                    context.WriteData(doc.Data, doc.Metadata);
+                    context.WriteData(doc.Data, doc.Metadata,doc.Etag);
                     break;
                 case "DELETE":
-                    Guid etag;
-                    if(GetEtag(context, out etag) == false)
+                    var etag = context.GetEtag();
+                    if(etag ==Guid.Empty)
+                    {
+                        context.SetStatusToBadRequest();
+                        context.Write("Invalid ETag for DELETE opeartion");
                         return;
+                    }
                     Database.Delete(docId, etag);
                     context.SetStatusToDeleted();
                     break;
@@ -44,35 +48,11 @@ namespace Raven.Server.Responders
             }
         }
 
-        private bool GetEtag(HttpListenerContext context, out Guid etag)
-        {
-            etag = Guid.Empty;
-            var etagAsString = context.Request.Headers["etag"];
-            if(etagAsString != null)
-            {
-                try
-                {
-                    etag = new Guid(etagAsString);
-                }
-                catch {}
-            }
-            if(etag==Guid.Empty)
-            {
-                context.SetStatusToBadRequest();
-                context.Write("Invalid ETag for DELETE opeartion");
-                return false;
-            }
-            return true;
-        }
-
         private void Put(HttpListenerContext context, string docId)
         {
-            Guid etag;
-            if(GetEtag(context, out etag)==false)
-                return;
             var json = context.ReadJson();
             context.SetStatusToCreated("/docs/" + docId);
-            var id = Database.Put(docId, etag, json, context.Request.Headers.FilterHeaders());
+            var id = Database.Put(docId, context.GetEtag(), json, context.Request.Headers.FilterHeaders());
             context.WriteJson(new { id });
         }
     }
