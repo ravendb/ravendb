@@ -76,9 +76,8 @@ namespace Raven.Scenarios
                 Thread.Sleep(100);
             } while (count < 5);
 
-            actual.First = etagFinder.Replace(actual.First, "$`" + lastEtag + "$'");
-
             lastEtag = actual.Second["ETag"];
+
             CompareResponses(
                 responseNumber++,
                 expectedResponse,
@@ -148,9 +147,14 @@ namespace Raven.Scenarios
             return response.Contains("\"IsStale\":true");
         }
 
-        private static void CompareResponses(int responseNumber, byte[] response, Tuple<string, NameValueCollection, string> actual, string request)
+        private void CompareResponses(int responseNumber, byte[] response, Tuple<string, NameValueCollection, string> actual, string request)
         {
-            var sr = new StringReader(HandleChunking(response));
+            var responseAsString = HandleChunking(response);
+            var actualEtag = etagFinder.Match(actual.First).Groups[1].Value;
+            var expectedEtag = etagFinder.Match(responseAsString).Groups[1].Value;
+            if (string.IsNullOrEmpty(actualEtag) == false)
+                responseAsString = responseAsString.Replace(expectedEtag, actualEtag);
+            var sr = new StringReader(responseAsString);
             string statusLine = sr.ReadLine();
             if (statusLine != actual.Third)
             {
