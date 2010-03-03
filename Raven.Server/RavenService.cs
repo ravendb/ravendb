@@ -11,7 +11,7 @@ namespace Raven.Server
 {
     partial class RavenService : ServiceBase
     {
-        DivanServer m_Server = null;
+        DivanServer server;
 
         public RavenService()
         {
@@ -20,13 +20,13 @@ namespace Raven.Server
 
         protected override void OnStart(string[] args)
         {
-            m_Server = new DivanServer(@"..\..\..\Data", 8080);
+            server = new DivanServer(@"..\..\..\Data", 8080);
         }
 
         protected override void OnStop()
         {
-            if (m_Server != null)
-                m_Server.Dispose();
+            if (server != null)
+                server.Dispose();
         }
     }
 }
