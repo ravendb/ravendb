@@ -100,6 +100,8 @@
                     var width = $('#body').width() - x - 20;
                     var unParsedJSON = unescape($(this).children('.searchListItemValue').html());
                     var json = JSON.parse(unParsedJSON);
+                    if (json.@metadata)
+                        delete json.@metadata;
                     var jsonPreview = $('<div class="jsonViewWrapper"></div>');
                     $(jsonPreview).html(JSONToViewHTML(json));
                     $(jsonPreview).find('.jsonObjectView:first').css('border', 'none').css('padding', '0').css('margin-left', '0');
@@ -133,16 +135,20 @@
         }
 
         function EditDocument(id) {
-            DivanUI.GetDocument(id, function (doc) {
-                InitializeJSONEditor(doc);
+            DivanUI.GetDocument(id, function (doc, etag) { 
                 $('#divEditor').dialog({
                     modal: true,
+                    open: function(event, ui) {
+                        InitializeJSONEditor(doc);
+                    },
                     buttons: {
                         Save: function () {
-                            DivanUI.SaveDocument(id, GetJSONFromEditor(), function () {
-                                $('#divEditor').dialog('close');
-                                //TODO: Update values in list/preview
-                            });
+                            if (ValidateRawJSON()) {
+                                DivanUI.SaveDocument(id, etag, GetJSONFromEditor(), function () {
+                                    $('#divEditor').dialog('close');
+                                    //TODO: Update values in list/preview
+                                });
+                            };
                         },
                         Cancel: function () {
                             $(this).dialog('close');
@@ -158,12 +164,17 @@
             InitializeJSONEditor({ PropertyName : 'Value'})
             $('#divEditor').dialog({
                 modal: true,
+                open: function(event, ui) {
+                    InitializeJSONEditor({ PropertyName : 'Value'});
+                },
                 buttons: {
                     Save: function () {
-                        DivanUI.SaveDocument(null, GetJSONFromEditor(), function () {
-                            $('#divEditor').dialog('close');
-                            //TODO: Update values in list/preview
-                        });
+                        if (ValidateRawJSON()) {
+                            DivanUI.SaveDocument(null, null, GetJSONFromEditor(), function () {
+                                $('#divEditor').dialog('close');
+                                //TODO: Update values in list/preview
+                            });
+                        }
                     },
                     Cancel: function () {
                         $(this).dialog('close');

@@ -1,58 +1,66 @@
 ﻿var indexSearchCache = null;
 
-(function($) {
+(function ($) {
     $.divanDB = {
         settings: null,
 
-        init: function(options) {
+        init: function (options) {
             settings = $.extend({
                 server: '/'
             }, options);
         },
 
-        getStatistics: function(successCallback) {
+        getStatistics: function (successCallback) {
             $.ajax({
                 url: settings.server + 'stats',
-                success: function(data) {
+                dataType: 'json',
+                success: function (data) {
                     successCallback(data);
                 }
             });
         },
 
-        getDocumentCount: function(successCallback) {
+        getDocumentCount: function (successCallback) {
             $.ajax({
                 url: settings.server + 'stats',
-                success: function(data) {
+                dataType: 'json',
+                success: function (data) {
                     successCallback(data.CountOfDocuments);
                 }
             });
         },
 
-        getDocumentPage: function(pageNum, pageSize, successCallback) {
+        getDocumentPage: function (pageNum, pageSize, successCallback) {
             var start = (pageNum - 1) * pageSize;
 
             $.ajax({
                 url: settings.server + 'docs/',
+                dataType: 'json',
                 data: {
                     start: start,
                     pageSize: pageSize
                 },
-                success: function(data) {
+                success: function (data) {
                     successCallback(data);
                 }
             });
         },
 
-        getDocument: function(id, successCallback) {
+        getDocument: function (id, successCallback) {
             $.ajax({
                 url: settings.server + 'docs/' + id,
-                success: function(data, status, xhr) {
-                    successCallback(data, xhr);
+                dataType: 'json',
+                complete: function(xhr) {
+                    if (xhr.status == 200) {
+                        var data = JSON.parse(xhr.responseText);
+                        var etag = xhr.getResponseHeader("Etag");
+                        successCallback(data, etag);
+                    }
                 }
             });
         },
 
-        saveDocument: function(id, json, successCallback) {
+        saveDocument: function (id, etag, json, successCallback) {
             var idStr = '';
             var type = 'POST';
             if (id != null) {
@@ -63,83 +71,91 @@
                 type: type,
                 url: settings.server + 'docs/' + idStr,
                 data: json,
-                success: function(data) {
+                beforeSend: function(xhr) {
+                    if (etag)
+                        xhr.setRequestHeader("If-Match", etag);        
+                },
+                success: function (data) {
                     successCallback(data);
                 }
             });
         },
 
-        getIndexCount: function(successCallback) {
+        getIndexCount: function (successCallback) {
             $.ajax({
                 url: settings.server + 'stats',
-                success: function(data) {
+                dataType: 'json',
+                success: function (data) {
                     successCallback(data.CountOfIndexes);
                 }
             });
         },
 
-        getIndexPage: function(pageNum, pageSize, successCallback) {
+        getIndexPage: function (pageNum, pageSize, successCallback) {
             var start = (pageNum - 1) * pageSize;
 
             $.ajax({
                 url: settings.server + 'indexes/',
+                dataType: 'json',
                 data: {
                     start: start,
                     pageSize: pageSize
                 },
-                success: function(data) {
+                success: function (data) {
                     successCallback(data);
                 }
             });
         },
 
-        getIndex: function(name, successCallback) {
+        getIndex: function (name, successCallback) {
             $.ajax({
                 url: settings.server + 'indexes/' + name,
-                data: { definition: 'yes' },
-                success: function(data) {
+                dataType: 'json',
+                data: {definition: 'yes'},
+                success: function (data) {
                     successCallback(data);
                 }
             });
         },
 
-        saveIndex: function(name, def, successCallback) {
+        saveIndex: function (name, def, successCallback) {
             $.ajax({
                 type: 'PUT',
                 url: settings.server + 'indexes/' + name,
                 data: def,
-                success: function(data) {
+                success: function (data) {
                     successCallback(data);
                 }
             });
         },
 
-        queryIndex: function(name, queryValues, pageNumber, pageSize, successCallback) {
+        queryIndex: function (name, queryValues, pageNumber, pageSize, successCallback) {
             var start = (pageNumber - 1) * pageSize;
 
             $.ajax({
                 type: 'GET',
                 url: settings.server + 'indexes/' + name,
-                data: {
-                    query: queryValues,
+                dataType: 'json',
+                data: { 
+                    query : queryValues,
                     start: start,
                     pageSize: pageSize
                 },
-                success: function(data) {
+                success: function (data) {
                     successCallback(data);
                 }
             });
         },
 
-        searchIndexes: function(name, successCallback) {
+        searchIndexes: function (name, successCallback) {
             name = name.toLowerCase();
 
             if (indexSearchCache == null) {
                 //this should do server side searching, but that's not implemented yet
-                this.getIndexPage(1, 1000, function(data) {
+                this.getIndexPage(1, 1000, function (data) {
                     indexSearchCache = data;
                     var indexes = new Array();
-                    $(data).each(function() {
+                    $(data).each(function () {
                         if (this.name.toLowerCase().indexOf(name) > 0) {
                             indexes.push(this.name);
                         }
@@ -150,7 +166,7 @@
             } else {
                 var indexes = new Array();
 
-                $(indexSearchCache).each(function() {
+                $(indexSearchCache).each(function () {
                     if (this.name.toLowerCase().indexOf(name) >= 0) {
                         indexes.push(this.name);
                     }
