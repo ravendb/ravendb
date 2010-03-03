@@ -1,4 +1,14 @@
-﻿function InitializeJSONEditor(jsonToEdit) {
+﻿/*
+requires the following includes to be on page
+<link href="css/rdb.jsonEditor.css" rel="Stylesheet" type="text/css" />
+<link href="css/smoothness/jquery-ui-1.8rc2.custom.css" rel="Stylesheet" type="text/css" />
+<script type="text/javascript" src="js/jquery-1.4.2.min.js"></script>
+<script type="text/javascript" src="js/jquery-ui.js"></script>
+<script type="text/javascript" src="js/json2.js"></script>
+<script type="text/javascript" src="js/jstree/jquery.tree.js"></script>
+*/
+
+function InitializeJSONEditor(jsonToEdit) {
     $('#txtJSON').val(JSON.stringify(jsonToEdit));
 
     $('#editorTabs').tabs({
@@ -41,6 +51,38 @@
     } else {
         $('#editorTabs').tabs('select', 1);
     }
+}
+
+function ShowEditorForNewDocument(saveCallback) {
+    ShowEditorForDocument(null, { PropertyName : 'Value'}, null, 'Create New Document', function(id, etag, json, editor) {
+        saveCallback(json, editor);
+    });
+}
+
+function ShowEditorForDocument(id, doc, etag, title, saveCallback) {
+    var editorHtml = $('<div></div>');
+    $(editorHtml).load('/divan/js/rdb.jsonEditor/editor.html', function() {
+        $(editorHtml).css('position', 'relative').css('height', '500px');
+        $(editorHtml).dialog({
+        modal: true,
+        open: function(event, ui) {
+            InitializeJSONEditor(doc);
+        },
+        buttons: {
+            Save: function () {
+                if (ValidateRawJSON()) {
+                    saveCallback(id, etag, GetJSONFromEditor(), editorHtml);
+                };
+            },
+            Cancel: function () {
+                $(this).dialog('close').destroy();
+            }
+        },
+        title: title,
+        width: 'auto'
+    });
+    
+});
 }
 
 function ValidateRawJSON() {
