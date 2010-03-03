@@ -225,30 +225,39 @@ namespace Raven.Scenarios
             }
 
             string chunk;
-            while (((chunk = ReadChuck(memoryStream))) != null)
+            while (((chunk = ReadChuck(streamReader))) != null)
             {
                 sb.Append(chunk);
             }
             return sb.ToString();
         }
 
-        private static string ReadChuck(MemoryStream memoryStream)
+        private static string ReadChuck(StreamReader memoryStream)
         {
             var chunkSizeBytes = new List<byte>();
-            byte cur;
+            byte prev = 0;
+            byte cur = 0;
             do
             {
-                int readByte = memoryStream.ReadByte();
+                int readByte = memoryStream.Read();
                 if (readByte == -1)
                     return null;
-                cur = (byte)readByte;
-            } while (cur != '\n' && chunkSizeBytes.LastOrDefault() != '\r');
-            chunkSizeBytes.RemoveAt(chunkSizeBytes.Count - 1);
-            int size = int.Parse(Encoding.UTF8.GetString(chunkSizeBytes.ToArray()));
+                prev = cur;
+                cur = (byte) readByte;
+                chunkSizeBytes.Add(cur);
+            } while (!(prev == '\r' && cur == '\n')); // (cur != '\n' && chunkSizeBytes.LastOrDefault() != '\r');
 
-            var buffer = new byte[size];
+            chunkSizeBytes.RemoveAt(chunkSizeBytes.Count - 1);
+            chunkSizeBytes.RemoveAt(chunkSizeBytes.Count - 1);
+
+            if (chunkSizeBytes.Count == 0)
+                return null;
+
+            int size = Convert.ToInt32(Encoding.UTF8.GetString(chunkSizeBytes.ToArray()), 16);
+
+            var buffer = new char[size];
             memoryStream.Read(buffer, 0, size);//not doing repeated read because it is all in mem
-            return Encoding.UTF8.GetString(buffer);
+            return new string(buffer);
         }
     }
 }

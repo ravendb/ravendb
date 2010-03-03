@@ -93,6 +93,7 @@
     <Compile Include="Responders\DivanUI.cs" />
     <Compile Include="Responders\Docs.cs" />
     <Compile Include="Responders\Document.cs" />
+    <Compile Include="Responders\DocumentRenderer.cs" />
     <Compile Include="Responders\Favicon.cs" />
     <Compile Include="Responders\HttpExtensions.cs" />
     <Compile Include="Responders\Queries.cs" />
