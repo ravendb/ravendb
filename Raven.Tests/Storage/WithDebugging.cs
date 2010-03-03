@@ -9,7 +9,7 @@ namespace Raven.Tests.Storage
         static WithDebugging()
         {
             BasicConfigurator.Configure(
-                new DebugAppender
+                new OutputDebugStringAppender()
                 {
                     Layout = new SimpleLayout()
                 });
