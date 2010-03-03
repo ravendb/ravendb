@@ -10,7 +10,7 @@ namespace Raven.Scenarios
         [PropertyData("ScenariosWithoutExplicitScenario")]
         public void Execute(string file)
         {
-            new Scenario(file).Execute();
+            new Scenario(Path.Combine(ScenariosPath, file+".saz")).Execute();
         }
 
         public static string ScenariosPath
@@ -30,7 +30,7 @@ namespace Raven.Scenarios
                 {
                     if (typeof(Scenario).Assembly.GetType("Raven.Scenarios." + Path.GetFileNameWithoutExtension(file) +"Scenario") != null)
                         continue;
-                    yield return new object[] {file};
+                    yield return new object[] {Path.GetFileNameWithoutExtension(file)};
                 };
             }
         }
