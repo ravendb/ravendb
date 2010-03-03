@@ -89,6 +89,7 @@
     <Compile Include="RavenService.Designer.cs">
       <DependentUpon>RavenService.cs</DependentUpon>
     </Compile>
+    <Compile Include="Responders\BadRequestException.cs" />
     <Compile Include="Responders\DivanRoot.cs" />
     <Compile Include="Responders\DivanUI.cs" />
     <Compile Include="Responders\Docs.cs" />
