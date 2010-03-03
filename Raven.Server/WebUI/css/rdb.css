@@ -70,6 +70,25 @@ div#nav a.nav_active
 	border: 1px solid #aaa;
 }
 
+#ajaxSuccess 
+{
+	display: none;
+	padding: 20px;
+	margin: 0;
+	background-color: #00C91E;
+	color: #fff;
+	font-size: 18px;
+}
+#ajaxError 
+{
+	display: none;
+	padding: 20px;
+	margin: 0;
+	background-color: #F73B3B;
+	color: #fff;
+	font-size: 18px;
+}
+#ajaxSuccess a, #ajaxError a { color: #ccc; }
 
 div#footer
 {

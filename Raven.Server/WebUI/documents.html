@@ -38,6 +38,8 @@
         <div class="clear"></div>
     </div>    
     <div id="body" style="position:relative;">
+        <div id="ajaxSuccess"></div>
+        <div id="ajaxError"></div>
         <div id="right" style="width:250px;">
             <div class="sideBarListBox">
                 <ul>
@@ -63,46 +65,6 @@
             <h2>
                 Documents
             </h2>
-<!--
-            <div id="divEditor" style="display:none; position:relative;height:500px;">
-                <div style="margin: 0 auto; width:600px;" id="editorTabs">
-	                <ul>
-		                <li><a href="#fancyJSONEditor">JSON Editor</a></li>
-		                <li><a href="#rawJSONEditor">Raw JSON</a></li>
-                        <li><a href="#jsonViewer">View</a></li>
-	                </ul>
-
-                    <div style="background-color:#D6EEFA; padding:5px;" class="ui-corner-all" id="fancyJSONEditor">
-                        <div style="float:left; overflow:auto; background-color:#fff; padding:20px;" class="ui-corner-left">
-                            <div id="jsonTree"></div>
-                            <div class="clear"></div>
-                            <br />
-                            <a href="#" onclick = "CreateArray(); return false;">+ Create New Array</a><br /><br />
-                            <a href="#" onclick = "CreateValue(); return false;">+ Create New Value</a>
-                        </div>
-                        
-                        <div id="jsonEditor" style="float:left; padding:20px; display:none;">
-                            Element Name<br />
-                            <input type="text" id="selectedJSONname" /><br /><br />
-                            Element Value<br />
-                            <textarea style="width:300px; height:100px;" id="selectedJSONval"></textarea><br /><br />
-                            <button id="editorApplyChanges">Apply Changes</button><br /><br />                                    
-                        </div>
-                        <div id="jsonArrayEditor" style="float:left; padding:20px; display:none;">
-                            Array Name<br />
-                            <input type="text" id="selectedJSONArrayName" /><br /><br />
-                            <button id="editorApplyChanges2">Apply Changes</button><br /><br />                                     
-                        </div>
-                        <div class="clear"></div>
-                    </div>
-                    <div id="rawJSONEditor">
-                        Raw JSON<br />
-                        <textarea style="width:100%; height: 200px;" id="txtJSON"></textarea>
-                    </div>
-                    <div id="jsonViewer"></div>
-                </div>
-            </div>
--->
             <p id="docList">
                 <img src="images/ajax-loader.gif" /> Loading...
             </p>

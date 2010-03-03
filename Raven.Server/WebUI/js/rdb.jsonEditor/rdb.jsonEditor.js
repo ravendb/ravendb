@@ -9,6 +9,7 @@ requires the following includes to be on page
 */
 
 function InitializeJSONEditor(jsonToEdit) {
+    $('#editorContainer').hide().before($('<div id="editorLoading" style="width:600px;">Loading...</div>'));    
     $('#txtJSON').val(JSON.stringify(jsonToEdit));
 
     $('#editorTabs').tabs({
@@ -36,7 +37,7 @@ function InitializeJSONEditor(jsonToEdit) {
                     event.preventDefault();
                 }
             }
-        }
+        }       
     });
     
     $('#editorApplyChanges, #editorApplyChanges2').button({
@@ -50,7 +51,9 @@ function InitializeJSONEditor(jsonToEdit) {
         LoadJSONToTree(json);
     } else {
         $('#editorTabs').tabs('select', 1);
-    }
+    }    
+    $('#editorLoading').hide();
+    $('#editorContainer').show();
 }
 
 function ShowEditorForNewDocument(saveCallback) {
@@ -60,13 +63,17 @@ function ShowEditorForNewDocument(saveCallback) {
 }
 
 function ShowEditorForDocument(id, doc, etag, title, saveCallback) {
-    var editorHtml = $('<div></div>');
+    var editorHtml = $('<div id="editorContainer"></div>');
     $(editorHtml).load('/divan/js/rdb.jsonEditor/editor.html', function() {
         $(editorHtml).css('position', 'relative').css('height', '500px');
         $(editorHtml).dialog({
         modal: true,
         open: function(event, ui) {
             InitializeJSONEditor(doc);
+        },
+        close: function() {
+            $('#editorContainer').dialog('destroy');
+            $('#editorContainer').remove();
         },
         buttons: {
             Save: function () {
@@ -75,7 +82,7 @@ function ShowEditorForDocument(id, doc, etag, title, saveCallback) {
                 };
             },
             Cancel: function () {
-                $(this).dialog('close').destroy();
+                $(this).dialog('close');
             }
         },
         title: title,
@@ -100,7 +107,7 @@ function ValidateRawJSON() {
                 modal: true,
                 buttons: { 
                     Ok: function() {
-                        $(this).dialog('close').dialog('destroy');
+                        $(this).dialog('close');
                     }
                 }
             });
