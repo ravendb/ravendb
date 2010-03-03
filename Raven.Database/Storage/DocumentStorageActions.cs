@@ -190,7 +190,7 @@ namespace Raven.Database.Storage
             hasMoreWork.Value = false;
         }
 
-        public void AddDocument(string key, string data, Guid etag, string metadata)
+        public void AddDocument(string key, string data, Guid? etag, string metadata)
         {
             Api.JetSetCurrentIndex(session, documents, "by_key");
             Api.MakeKey(session, documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -198,24 +198,24 @@ namespace Raven.Database.Storage
             if (isUpdate)
             {
                 var existingEtag = new Guid(Api.RetrieveColumn(session, documents,documentsColumns["etag"]));
-                if (existingEtag != etag)
+                if (existingEtag != etag && etag != null)
                 {
                     throw new ConcurrencyException("PUT attempted on document '" + key +
                                                    "' using a non current etag")
                     {
-                        ActualETag = etag,
+                        ActualETag = etag.Value,
                         ExpectedETag = existingEtag
                     };
                 }
             }
-
-            DocumentDatabase.UuidCreateSequential(out etag);
+            Guid newEtag;
+            DocumentDatabase.UuidCreateSequential(out newEtag);
 
             using (var update = new Update(session, documents, isUpdate ? JET_prep.Replace : JET_prep.Insert))
             {
                 Api.SetColumn(session, documents, documentsColumns["key"], key, Encoding.Unicode);
                 Api.SetColumn(session, documents, documentsColumns["data"], Encoding.UTF8.GetBytes(data));
-                Api.SetColumn(session, documents, documentsColumns["etag"], etag.ToByteArray());
+                Api.SetColumn(session, documents, documentsColumns["etag"], newEtag.ToByteArray());
                 Api.SetColumn(session, documents, documentsColumns["metadata"], metadata, Encoding.Unicode);
 
                 update.Save();
@@ -224,7 +224,7 @@ namespace Raven.Database.Storage
                 key, data.Length, isUpdate);
         }
 
-        public void DeleteDocument(string key, Guid etag)
+        public void DeleteDocument(string key, Guid? etag)
         {
             Api.JetSetCurrentIndex(session, documents, "by_key");
             Api.MakeKey(session, documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -235,12 +235,12 @@ namespace Raven.Database.Storage
             }
 
             var rowEtag = new Guid(Api.RetrieveColumn(session, documents, documentsColumns["etag"]));
-            if(rowEtag!=etag)
+            if(rowEtag!=etag && etag != null)
             {
                 throw new ConcurrencyException("DELETE attempted on document '" + key +
                                                "' using a non current etag")
                 {
-                    ActualETag = etag,
+                    ActualETag = etag.Value,
                     ExpectedETag = rowEtag
                 };
             }
@@ -262,7 +262,7 @@ namespace Raven.Database.Storage
                 logger.DebugFormat("New task '{0}'", task.AsString());
         }
 
-        public void AddAttachment(string key, Guid etag, byte[] data, string headers)
+        public void AddAttachment(string key, Guid? etag, byte[] data, string headers)
         {
             Api.JetSetCurrentIndex(session, files, "by_name");
             Api.MakeKey(session, files, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -270,23 +270,24 @@ namespace Raven.Database.Storage
             if(isUpdate)
             {
                 var existingEtag = new Guid(Api.RetrieveColumn(session, files, filesColumns["etag"]));
-                if (existingEtag != etag)
+                if (existingEtag != etag && etag != null)
                 {
                     throw new ConcurrencyException("PUT attempted on attachment '" + key +
                                                    "' using a non current etag")
                     {
-                        ActualETag = etag,
+                        ActualETag = etag.Value,
                         ExpectedETag = existingEtag
                     };
                 }
-            
             }
-            DocumentDatabase.UuidCreateSequential(out etag);
+
+            Guid newETag;
+            DocumentDatabase.UuidCreateSequential(out newETag);
             using (var update = new Update(session, files, isUpdate ? JET_prep.Replace : JET_prep.Insert))
             {
                 Api.SetColumn(session, files, filesColumns["name"], key, Encoding.Unicode);
                 Api.SetColumn(session, files, filesColumns["data"], data);
-                Api.SetColumn(session, files, filesColumns["etag"], etag.ToByteArray());
+                Api.SetColumn(session, files, filesColumns["etag"], newETag.ToByteArray());
                 Api.SetColumn(session, files, filesColumns["metadata"], headers, Encoding.Unicode);
 
                 update.Save();
@@ -294,7 +295,7 @@ namespace Raven.Database.Storage
             logger.DebugFormat("Adding attachment {0}", key);
         }
 
-        public void DeleteAttachment(string key, Guid etag)
+        public void DeleteAttachment(string key, Guid? etag)
         {
             Api.JetSetCurrentIndex(session, files, "by_name");
             Api.MakeKey(session, files, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -304,12 +305,12 @@ namespace Raven.Database.Storage
                 return;
             }
             var fileEtag = new Guid(Api.RetrieveColumn(session, files, filesColumns["etag"]));
-            if(fileEtag != etag)
+            if(fileEtag != etag && etag != null)
             {
                 throw new ConcurrencyException("DELETE attempted on attachment '" + key +
                                                "' using a non current etag")
                 {
-                    ActualETag = etag,
+                    ActualETag = etag.Value,
                     ExpectedETag = fileEtag
                 };
             }

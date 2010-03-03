@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -84,7 +83,9 @@ namespace Raven.Scenarios
                 if (!IsStaleResponse(actual.First))
                     break;
                 Thread.Sleep(100);
-            } while (count < 5);
+            } while (count < 50);
+            if (IsStaleResponse(actual.First))
+                throw new InvalidOperationException("Request remained stale for too long");
 
             lastEtag = actual.Second["ETag"];
             responseNumber++;
@@ -108,7 +109,8 @@ namespace Raven.Scenarios
                     string[] headerParts = header.Split(new[] { ": " }, 2, StringSplitOptions.None);
                     if (new[] { "Host", "Content-Length", "User-Agent" }.Any(s => s.Equals(headerParts[0], StringComparison.InvariantCultureIgnoreCase)))
                         continue;
-                    if (headerParts[0] == "If-Match")
+                    if (headerParts[0] == "If-Match" && 
+                        IsValidETag(headerParts))
                         headerParts[1] = lastEtag;
                     req.Headers[headerParts[0]] = headerParts[1];
                 }
@@ -134,6 +136,18 @@ namespace Raven.Scenarios
                             webResponse.StatusDescription
                     };
                 }
+            }
+        }
+
+        private static bool IsValidETag(string[] headerParts)
+        {
+            try
+            {
+                return new Guid(headerParts[1]) != Guid.Empty;
+            }
+            catch 
+            {
+                return false;   
             }
         }
 
@@ -225,30 +239,39 @@ namespace Raven.Scenarios
             }
 
             string chunk;
-            while (((chunk = ReadChuck(memoryStream))) != null)
+            while (((chunk = ReadChuck(streamReader))) != null)
             {
                 sb.Append(chunk);
             }
             return sb.ToString();
         }
 
-        private static string ReadChuck(MemoryStream memoryStream)
+        private static string ReadChuck(StreamReader memoryStream)
         {
             var chunkSizeBytes = new List<byte>();
-            byte cur;
+            byte prev = 0;
+            byte cur = 0;
             do
             {
-                int readByte = memoryStream.ReadByte();
+                int readByte = memoryStream.Read();
                 if (readByte == -1)
                     return null;
-                cur = (byte)readByte;
-            } while (cur != '\n' && chunkSizeBytes.LastOrDefault() != '\r');
-            chunkSizeBytes.RemoveAt(chunkSizeBytes.Count - 1);
-            int size = int.Parse(Encoding.UTF8.GetString(chunkSizeBytes.ToArray()));
+                prev = cur;
+                cur = (byte) readByte;
+                chunkSizeBytes.Add(cur);
+            } while (!(prev == '\r' && cur == '\n')); // (cur != '\n' && chunkSizeBytes.LastOrDefault() != '\r');
 
-            var buffer = new byte[size];
+            chunkSizeBytes.RemoveAt(chunkSizeBytes.Count - 1);
+            chunkSizeBytes.RemoveAt(chunkSizeBytes.Count - 1);
+
+            if (chunkSizeBytes.Count == 0)
+                return null;
+
+            int size = Convert.ToInt32(Encoding.UTF8.GetString(chunkSizeBytes.ToArray()), 16);
+
+            var buffer = new char[size];
             memoryStream.Read(buffer, 0, size);//not doing repeated read because it is all in mem
-            return Encoding.UTF8.GetString(buffer);
+            return new string(buffer);
         }
     }
 }

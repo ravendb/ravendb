@@ -89,6 +89,7 @@
     <Compile Include="RavenService.Designer.cs">
       <DependentUpon>RavenService.cs</DependentUpon>
     </Compile>
+    <Compile Include="Responders\BadRequestException.cs" />
     <Compile Include="Responders\DivanRoot.cs" />
     <Compile Include="Responders\DivanUI.cs" />
     <Compile Include="Responders\Docs.cs" />
@@ -104,6 +105,7 @@
     <Compile Include="Responders\Statistics.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="WebUI\view.html" />
     <Content Include="WebUI\css\Pager.css" />
     <Content Include="WebUI\css\rdb.css" />
     <Content Include="WebUI\css\rdb.jsonEditor.css" />
@@ -171,6 +173,7 @@
     <Content Include="WebUI\js\jquery-ui.js" />
     <Content Include="WebUI\js\jquery.divanDB.js" />
     <Content Include="WebUI\js\jquery.pager.js" />
+    <Content Include="WebUI\js\jquery.querystring.js" />
     <Content Include="WebUI\js\jquery.simpletip.js" />
     <Content Include="WebUI\js\json2.js" />
     <Content Include="WebUI\js\jstree\jquery.tree.js" />

@@ -111,7 +111,7 @@ namespace Raven.Database
             return document;
         }
 
-        public string Put(string key, Guid etag, JObject document, JObject metadata)
+        public string Put(string key, Guid? etag, JObject document, JObject metadata)
         {
             if (string.IsNullOrEmpty(key))
             {
@@ -147,7 +147,7 @@ namespace Raven.Database
             }
         }
 
-        public void Delete(string key, Guid etag)
+        public void Delete(string key, Guid? etag)
         {
             TransactionalStorage.Batch(actions =>
             {
@@ -231,7 +231,7 @@ namespace Raven.Database
             return attachment;
         }
 
-        public void PutStatic(string name, Guid etag, byte[] data, JObject metadata)
+        public void PutStatic(string name, Guid? etag, byte[] data, JObject metadata)
         {
             TransactionalStorage.Batch(actions =>
             {
@@ -240,7 +240,7 @@ namespace Raven.Database
             });
         }
 
-        public void DeleteStatic(string name, Guid etag)
+        public void DeleteStatic(string name, Guid? etag)
         {
             TransactionalStorage.Batch(actions =>
             {

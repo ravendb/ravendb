@@ -21,7 +21,7 @@ namespace Raven.Server
         public HttpServer(IEnumerable<RequestResponder> requestResponders)
             : this(8080, requestResponders)
         {
-            
+
         }
 
         public HttpServer(
@@ -49,7 +49,7 @@ namespace Raven.Server
                 //setup waiting for the next request
                 listener.BeginGetContext(GetContext, null);
             }
-            catch (HttpListenerException) 
+            catch (HttpListenerException)
             {
                 // can't get current request / end new one, probably
                 // listner shutdown
@@ -82,6 +82,20 @@ namespace Raven.Server
                                                        url = ctx.Request.RawUrl,
                                                        actualETag = e.ActualETag,
                                                        expectedETag = e.ExpectedETag,
+                                                       error = e.Message
+                                                   });
+                }
+            }
+            catch (BadRequestException e)
+            {
+                ctx.SetStatusToBadRequest();
+                using (var sw = new StreamWriter(ctx.Response.OutputStream))
+                {
+                    new JsonSerializer().Serialize(sw,
+                                                   new
+                                                   {
+                                                       url = ctx.Request.RawUrl,
+                                                       message = e.Message,
                                                        error = e.Message
                                                    });
                 }

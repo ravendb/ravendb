@@ -96,3 +96,20 @@ DivanUI.SearchIndexes = function (name, successCallback) {
 DivanUI.QueryIndex = function (name, queryValues, pageNumber, pageSize, successCallback) {
     $.divanDB.queryIndex(name, queryValues, pageNumber, pageSize, successCallback);
 }
+
+// View
+DivanUI.ShowTemplatedDocument = function(docId, operation, elementName) {
+    if ($.query.get('docId').length == 0) {
+        $(elementName).html('No document id specified.');
+        return;
+    }
+    DivanUI.GetDocument(docId, function(data, xhr) {
+        var template = xhr.getResponseHeader('Raven-' + operation + '-Template');
+        if (template == null) {
+            $(elementName).html('No ' + operation + ' template was specified for this document.');
+            return;
+        }
+        $(elementName).setTemplateURL(template);
+        $(elementName).processTemplate(JSON.parse(data));
+    })
+}
