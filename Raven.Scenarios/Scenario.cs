@@ -84,7 +84,9 @@ namespace Raven.Scenarios
                 if (!IsStaleResponse(actual.First))
                     break;
                 Thread.Sleep(100);
-            } while (count < 5);
+            } while (count < 50);
+            if (IsStaleResponse(actual.First))
+                throw new InvalidOperationException("Request remained stale for too long");
 
             lastEtag = actual.Second["ETag"];
             responseNumber++;
