@@ -6,6 +6,7 @@ using System.Net;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Linq;
+using Raven.Database.Exceptions;
 
 namespace Raven.Server.Responders
 {
@@ -241,7 +242,7 @@ namespace Raven.Server.Responders
             return pageSize;
         }
 
-        public static Guid GetEtag(this HttpListenerContext context)
+        public static Guid? GetEtag(this HttpListenerContext context)
         {
             var etagAsString = context.Request.Headers["If-Match"];
             if (etagAsString != null)
@@ -252,10 +253,10 @@ namespace Raven.Server.Responders
                 }
                 catch
                 {
-             
+                    throw new BadRequestException("Could not parse If-Match header as Guid");
                 }
-            } 
-            return Guid.Empty;
+            }
+            return null;
         }
 
         #region Nested type: JsonToJsonConverter
