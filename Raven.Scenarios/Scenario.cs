@@ -154,7 +154,7 @@ namespace Raven.Scenarios
             if (statusLine != actual.Third)
             {
                 throw new InvalidDataException(
-                    string.Format("Request {0} status differs. Expected {1}, Actual {2}\r\nRequest{3}",
+                    string.Format("Request {0} status differs. Expected {1}, Actual {2}\r\nRequest:\r\n{3}",
                                   responseNumber, statusLine, actual.Third, request));
             }
             string header;
@@ -167,7 +167,7 @@ namespace Raven.Scenarios
                 if (actual.Second[parts[0]] != parts[1])
                 {
                     throw new InvalidDataException(
-                        string.Format("Request {0} header {1} differs. Expected {2}, Actual {3}\r\nRequest{4}",
+                        string.Format("Request {0} header {1} differs. Expected {2}, Actual {3}\r\nRequest:\r\n{4}",
                                       responseNumber, parts[0], parts[1], actual.Second[parts[0]], request));
                 }
             }
