@@ -81,15 +81,29 @@ namespace Raven.Database.Indexing
 
         public IEnumerable<string> Query(string query, int start, int pageSize, Reference<int> totalSize)
         {
-            log.DebugFormat("Issuing query on index {0} for: {1}", name, query);
-            var luceneQuery = new QueryParser("", new StandardAnalyzer()).Parse(query);
             using (searcher.Use())
             {
-                var search = searcher.Searcher.Search(luceneQuery);
-                totalSize.Value = search.Length();
-                for (int i = start; i < search.Length() && (i - start) < pageSize; i++)
+                var indexSearcher = searcher.Searcher;
+                if(string.IsNullOrEmpty(query) == false)
                 {
-                    yield return search.Doc(i).GetField("__document_id").StringValue();
+                    log.DebugFormat("Issuing query on index {0} for: {1}", name, query);
+                    var luceneQuery = new QueryParser("", new StandardAnalyzer()).Parse(query);
+                    var search = indexSearcher.Search(luceneQuery);
+                    totalSize.Value = search.Length();
+                    for (int i = start; i < search.Length() && (i - start) < pageSize; i++)
+                    {
+                        yield return search.Doc(i).GetField("__document_id").StringValue();
+                    }
+                }
+                else
+                {
+                    log.DebugFormat("Browsing index {0}", name);
+                    var maxDoc = indexSearcher.MaxDoc();
+                    totalSize.Value = maxDoc;
+                    for (int i = start; i < maxDoc && (i - start) < pageSize; i++)
+                    {
+                        yield return indexSearcher.Doc(i).GetField("__document_id").StringValue();
+                    }
                 }
             }
         }

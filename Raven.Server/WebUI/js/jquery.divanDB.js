@@ -95,7 +95,8 @@
 
         getIndex: function (name, successCallback) {
             $.ajax({
-                url: settings.server + 'indexes/' + name,
+            url: settings.server + 'indexes/' + name,
+                data: {definition: 'yes'},
                 success: function (data) {
                     successCallback(data);
                 }
