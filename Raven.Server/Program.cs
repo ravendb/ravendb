@@ -1,6 +1,10 @@
 using System;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Security;
+using System.Security.Principal;
 using System.ServiceProcess;
 using System.Configuration.Install;
 using System.Reflection;
@@ -13,38 +17,92 @@ namespace Raven.Server
         {
             if (Environment.UserInteractive)
             {
-                if (args.Length == 1)
+                switch (GetArgument(args))
                 {
-                    switch (args[0])
-                    {
-                        case "/service":
-                            RunAsService();
-                            break;
-
-                        case "/install":
-                            InstallAndStart();
-                            break;
-
-                        case "/uninstall":
-                            EnsureStoppedAndUninstall();
-                            break;
-                    }
-                }
-                else
-                {
-                    DivanServer.EnsureCanListenToWhenInNonAdminContext(8080);
-                    Console.WriteLine(Path.GetFullPath(@"..\..\..\Data"));
-                    using (new DivanServer(@"..\..\..\Data", 8080))
-                    {
-                        Console.WriteLine("Ready to process requests...");
-                        Console.ReadLine();
-                    }
+                    case "install":
+                        AdminRequired(InstallAndStart,"/install");
+                        break;
+                    case "uninstall":
+                        AdminRequired(EnsureStoppedAndUninstall, "/uninstall");
+                        break;
+                    case "debug":
+                        RunInDebugMode();
+                        break;
+                    default:
+                        PrintUsage();
+                        break;
                 }
             }
             else
             {
                 ServiceBase.Run(new RavenService());
             }
+        }
+
+        private static void AdminRequired(Action actionThatMayRequiresAdminPrivileges, string cmdLine)
+        {
+            var principal = new WindowsPrincipal(WindowsIdentity.GetCurrent());
+            if (principal.IsInRole(WindowsBuiltInRole.Administrator) == false)
+            {
+                if (RunAgainAsAdmin(cmdLine))
+                    return;
+            }
+            actionThatMayRequiresAdminPrivileges();
+        }
+
+        private static bool RunAgainAsAdmin(string cmdLine)
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    Arguments = cmdLine,
+                    FileName = Assembly.GetExecutingAssembly().Location,
+                    Verb = "runas",
+                }).WaitForExit();
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        private static string GetArgument(string[] args)
+        {
+            if (args.Length == 0)
+                return "debug";
+            if (args.Length > 1 || args[0].StartsWith("/") == false)
+                return "help";
+            return args[0].Substring(1);
+        }
+
+        private static void RunInDebugMode()
+        {
+            DivanServer.EnsureCanListenToWhenInNonAdminContext(8080);
+            using (new DivanServer(@"..\..\..\Data", 8080))
+            {
+                Console.WriteLine("Raven is ready to process requests.");
+                Console.WriteLine("Press any key to stop the server");
+                Console.ReadLine();
+            }
+        }
+
+        private static void PrintUsage()
+        {
+            Console.WriteLine(@"
+Raven DB
+Document Database for the .Net Platform
+----------------------------------------
+Copyright (C) 2010 - Hibernating Rhinos
+----------------------------------------
+Command line ptions:
+    raven             - with no args, starts Raven in local server mode
+    raven /install    - installs and starts the Raven service
+    raven /unisntall  - stops and uninstalls the Raven service
+
+Enjoy...
+");
         }
 
         private static void EnsureStoppedAndUninstall()
@@ -66,21 +124,16 @@ namespace Raven.Server
 
         private static void InstallAndStart()
         {
-            if (ServiceIsInstalled() == true)
+            if (ServiceIsInstalled())
             {
                 Console.WriteLine("Service is already installed");
             }
             else
             {
-                ManagedInstallerClass.InstallHelper(new string[] { Assembly.GetExecutingAssembly().Location });
+                ManagedInstallerClass.InstallHelper(new[] { Assembly.GetExecutingAssembly().Location });
                 var startController = new ServiceController(ProjectInstaller.SERVICE_NAME);
                 startController.Start();
             }
-        }
-
-        private static void RunAsService()
-        {
-            //TODO: not sure about this one
         }
 
         private static bool ServiceIsInstalled()
