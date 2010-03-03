@@ -7,12 +7,13 @@ namespace Raven.Database.Tasks
 {
     public class IndexDocumentRangeTask : Task
     {
-        public int FromKey { get; set; }
-        public int ToKey { get; set; }
+        public int FromId { get; set; }
+        public int ToId { get; set; }
 
         public override string ToString()
         {
-            return string.Format("IndexDocumentRangeTask - View: {0}, FromKey: {1}, ToKey: {2}", View, FromKey, ToKey);
+            return string.Format("IndexDocumentRangeTask - View: {0}, FromId: {1}, ToId: {2}", 
+                View, FromId, ToId);
         }
 
         public override void Execute(WorkContext context)
@@ -20,11 +21,11 @@ namespace Raven.Database.Tasks
             var viewFunc = context.IndexDefinitionStorage.GetIndexingFunction(View);
             if (viewFunc == null)
                 return; // view was deleted, probably
-            int lastId = FromKey;
+            int lastId = FromId;
             var hasMoreItems = new Reference<bool>();
             context.TransactionaStorage.Batch(actions =>
             {
-                var docsToIndex = actions.DocumentsById(hasMoreItems, FromKey, ToKey, 100)
+                var docsToIndex = actions.DocumentsById(hasMoreItems, FromId, ToId, 100)
                     .Select(d =>
                     {
                         lastId = d.Second;
@@ -42,8 +43,8 @@ namespace Raven.Database.Tasks
                 {
                     actions.AddTask(new IndexDocumentRangeTask
                     {
-                        FromKey = lastId,
-                        ToKey = ToKey,
+                        FromId = lastId,
+                        ToId = ToId,
                         View = View
                     });
                     actions.Commit();

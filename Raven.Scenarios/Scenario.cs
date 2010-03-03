@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using ICSharpCode.SharpZipLib.Zip;
 using Raven.Database.Extensions;
@@ -18,6 +19,8 @@ namespace Raven.Scenarios
         private readonly string file;
         private int responseNumber;
         const int testPort = 58080;
+        private string lastEtag;
+        private readonly Regex etagFinder = new Regex(@",""expectedETag"":""(\{{0,1}([0-9a-fA-F]){8}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){12}\}{0,1})"",");
 
         public Scenario(string file)
         {
@@ -73,6 +76,9 @@ namespace Raven.Scenarios
                 Thread.Sleep(100);
             } while (count < 5);
 
+            actual.First = etagFinder.Replace(actual.First, "$`" + lastEtag + "$'");
+
+            lastEtag = actual.Second["ETag"];
             CompareResponses(
                 responseNumber++,
                 expectedResponse,
@@ -85,7 +91,7 @@ namespace Raven.Scenarios
             using (var sr = new StringReader(request))
             {
                 string[] reqParts = sr.ReadLine().Split(' ');
-                var req = (HttpWebRequest)WebRequest.Create(reqParts[1].Replace(":8080/",":"+testPort+"/"));
+                var req = (HttpWebRequest)WebRequest.Create(reqParts[1].Replace(":8080/", ":" + testPort + "/"));
                 req.Method = reqParts[0];
 
                 string header;
@@ -94,14 +100,9 @@ namespace Raven.Scenarios
                     string[] headerParts = header.Split(new[] { ": " }, 2, StringSplitOptions.None);
                     if (new[] { "Host", "Content-Length", "User-Agent" }.Any(s => s.Equals(headerParts[0], StringComparison.InvariantCultureIgnoreCase)))
                         continue;
-                    try
-                    {
-                        req.Headers[headerParts[0]] = headerParts[1];
-                    }
-                    catch (Exception e)
-                    {
-                        throw new IndexOutOfRangeException(headerParts[0]);
-                    }
+                    if (headerParts[0] == "ETag")
+                        headerParts[1] = lastEtag;
+                    req.Headers[headerParts[0]] = headerParts[1];
                 }
 
                 if (req.Method != "GET")
@@ -128,7 +129,7 @@ namespace Raven.Scenarios
             }
         }
 
-        private HttpWebResponse GetResponse(HttpWebRequest req)
+        private static HttpWebResponse GetResponse(HttpWebRequest req)
         {
             HttpWebResponse webResponse;
             try
@@ -142,7 +143,7 @@ namespace Raven.Scenarios
             return webResponse;
         }
 
-        private bool IsStaleResponse(string response)
+        private static bool IsStaleResponse(string response)
         {
             return response.Contains("\"IsStale\":true");
         }
@@ -161,9 +162,9 @@ namespace Raven.Scenarios
             while (string.IsNullOrEmpty((header = sr.ReadLine())) == false)
             {
                 string[] parts = header.Split(new[] { ": " }, 2, StringSplitOptions.None);
-                if (parts[0] == "Date" || parts[0] == "Content-Length")
+                if (parts[0] == "Date" || parts[0] == "Content-Length" || 
+                    parts[0] == "ETag")
                     continue;
-                
                 if (actual.Second[parts[0]] != parts[1])
                 {
                     throw new InvalidDataException(
@@ -192,14 +193,14 @@ namespace Raven.Scenarios
         {
             var memoryStream = new MemoryStream(data);
             var streamReader = new StreamReader(memoryStream);
-            
+
             var sb = new StringBuilder();
             sb.AppendLine(streamReader.ReadLine());//status
             string line;
             while ((line = streamReader.ReadLine()) != "")
                 sb.AppendLine(line);// header
             sb.AppendLine();//separator line
-            if(sb.ToString().Contains("Transfer-Encoding: chunked") == false)
+            if (sb.ToString().Contains("Transfer-Encoding: chunked") == false)
             {
                 sb.Append(streamReader.ReadToEnd());
                 return sb.ToString();
@@ -222,7 +223,7 @@ namespace Raven.Scenarios
                 int readByte = memoryStream.ReadByte();
                 if (readByte == -1)
                     return null;
-                cur = (byte) readByte;
+                cur = (byte)readByte;
             } while (cur != '\n' && chunkSizeBytes.LastOrDefault() != '\r');
             chunkSizeBytes.RemoveAt(chunkSizeBytes.Count - 1);
             int size = int.Parse(Encoding.UTF8.GetString(chunkSizeBytes.ToArray()));

@@ -138,6 +138,7 @@ namespace Raven.Server.Responders
                     continue;
                 context.Response.Headers[header.Name] = StringQuotesIfNeeded(header.Value.ToString());
             }
+            context.Response.Headers["ETag"] = etag.ToString();
             context.Response.ContentLength64 = data.Length;
             context.Response.OutputStream.Write(data, 0, data.Length);
             context.Response.OutputStream.Flush();
