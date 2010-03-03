@@ -22,7 +22,14 @@ namespace Raven.Server.Responders
             switch (context.Request.HttpMethod)
             {
                 case "GET":
-                    Get(context, docId);
+                    context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
+                    var doc = Database.Get(docId);
+                    if(doc == null)
+                    {
+                        context.SetStatusToNotFound();
+                        return;
+                    }
+                    context.WriteData(doc.Data, doc.Metadata,doc.Etag);
                     break;
                 case "DELETE":
                     Database.Delete(docId, context.GetEtag());
@@ -32,19 +39,6 @@ namespace Raven.Server.Responders
                     Put(context, docId);
                     break;
             }
-        }
-
-        private void Get(HttpListenerContext context, string docId)
-        {
-            var doc = Database.Get(docId);
-
-            if (doc == null)
-            {
-                context.SetStatusToNotFound();
-                return;
-            }
-
-            new DocumentRenderer(doc, context, Database).Render();
         }
 
         private void Put(HttpListenerContext context, string docId)
