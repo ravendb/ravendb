@@ -37,12 +37,6 @@ namespace Raven.Server.Responders
                     context.SetStatusToCreated("/static/"+filename);
                     break;
                 case "DELETE":
-                    if (etag == Guid.Empty)
-                    {
-                        context.SetStatusToBadRequest();
-                        context.Write("Invalid ETag for DELETE opeartion");
-                        return;
-                    }
                     Database.DeleteStatic(filename, etag);
                     context.SetStatusToDeleted();
                     break;

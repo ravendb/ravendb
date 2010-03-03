@@ -82,7 +82,7 @@ namespace Raven.Server
                                                        url = ctx.Request.RawUrl,
                                                        actualETag = e.ActualETag,
                                                        expectedETag = e.ExpectedETag,
-                                                       error = e.ToString()
+                                                       error = e.Message
                                                    });
                 }
             }

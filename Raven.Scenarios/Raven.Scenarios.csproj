@@ -59,7 +59,7 @@
   <ItemGroup>
     <Compile Include="AbstractScenario.cs" />
     <Compile Include="AllScenariosWithoutExplicitScenario.cs" />
-    <Compile Include="DeleteStatic.cs" />
+    <Compile Include="CannotDeleteStaticWithoutAccruateETag.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Scenario.cs" />
   </ItemGroup>
