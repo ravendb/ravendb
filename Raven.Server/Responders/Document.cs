@@ -32,14 +32,7 @@ namespace Raven.Server.Responders
                     context.WriteData(doc.Data, doc.Metadata,doc.Etag);
                     break;
                 case "DELETE":
-                    var etag = context.GetEtag();
-                    if(etag ==Guid.Empty)
-                    {
-                        context.SetStatusToBadRequest();
-                        context.Write("Invalid ETag for DELETE opeartion");
-                        return;
-                    }
-                    Database.Delete(docId, etag);
+                    Database.Delete(docId, context.GetEtag());
                     context.SetStatusToDeleted();
                     break;
                 case "PUT":

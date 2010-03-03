@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -77,9 +78,8 @@ namespace Raven.Scenarios
             } while (count < 5);
 
             lastEtag = actual.Second["ETag"];
-
+            responseNumber++;
             CompareResponses(
-                responseNumber++,
                 expectedResponse,
                 actual,
                 request);
@@ -147,13 +147,15 @@ namespace Raven.Scenarios
             return response.Contains("\"IsStale\":true");
         }
 
-        private void CompareResponses(int responseNumber, byte[] response, Tuple<string, NameValueCollection, string> actual, string request)
+        private void CompareResponses(byte[] response, Tuple<string, NameValueCollection, string> actual, string request)
         {
             var responseAsString = HandleChunking(response);
             var actualEtag = etagFinder.Match(actual.First).Groups[1].Value;
             var expectedEtag = etagFinder.Match(responseAsString).Groups[1].Value;
-            if (string.IsNullOrEmpty(actualEtag) == false)
+            if (string.IsNullOrEmpty(expectedEtag) == false)
+            {
                 responseAsString = responseAsString.Replace(expectedEtag, actualEtag);
+            }
             var sr = new StringReader(responseAsString);
             string statusLine = sr.ReadLine();
             if (statusLine != actual.Third)
@@ -166,7 +168,7 @@ namespace Raven.Scenarios
             while (string.IsNullOrEmpty((header = sr.ReadLine())) == false)
             {
                 string[] parts = header.Split(new[] { ": " }, 2, StringSplitOptions.None);
-                if (parts[0] == "Date" || parts[0] == "Content-Length" || 
+                if (parts[0] == "Date" || parts[0] == "Content-Length" ||
                     parts[0] == "ETag")
                     continue;
                 if (actual.Second[parts[0]] != parts[1])
