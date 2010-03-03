@@ -61,8 +61,8 @@ DivanUI.GetDocument = function (id, successCallback) {
     $.divanDB.getDocument(id, successCallback);
 }
 
-DivanUI.SaveDocument = function (id, json, successCallback) {
-    $.divanDB.saveDocument(id, json, successCallback);
+DivanUI.SaveDocument = function (id, etag, json, successCallback) {
+    $.divanDB.saveDocument(id, etag, json, successCallback);
 }
 
 //indexes

@@ -173,7 +173,6 @@
     <Content Include="WebUI\js\jquery.pager.js" />
     <Content Include="WebUI\js\jquery.simpletip.js" />
     <Content Include="WebUI\js\json2.js" />
-    <Content Include="WebUI\js\JSONeditor.js" />
     <Content Include="WebUI\js\jstree\jquery.tree.js" />
     <Content Include="WebUI\js\jstree\themes\default\dot_for_ie.gif" />
     <Content Include="WebUI\js\jstree\themes\default\icons.png" />

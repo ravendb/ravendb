@@ -9,14 +9,22 @@
                     $('#txtJSON').val(treeJSON);
                 }
             } else if (ui.index == 0) { //edit
-                var json = JSON.parse($('#txtJSON').val());
-                LoadJSONToTree(json);
+                if (ValidateRawJSON()) {
+                    var json = JSON.parse($('#txtJSON').val());
+                    LoadJSONToTree(json);
+                } else {
+                    event.preventDefault();
+                }
             } else if (ui.index == 2) { //view
                 if ($('#editorTabs').find(".ui-tabs-panel:visible").attr('id') == 'fancyJSONEditor') {
                     var json = GetJSONFromTree();
                     $('#txtJSON').val(json);
                 }
-                LoadJSONView(JSON.parse($('#txtJSON').val()));
+                if (ValidateRawJSON()) {
+                    LoadJSONView(JSON.parse($('#txtJSON').val()));
+                } else {
+                    event.preventDefault();
+                }
             }
         }
     });
@@ -27,8 +35,35 @@
         UpdateSelectedNode(); 
     });
     
-    var json = JSON.parse($('#txtJSON').val());
-    LoadJSONToTree(json);
+    if (ValidateRawJSON()) {
+        var json = JSON.parse($('#txtJSON').val());
+        LoadJSONToTree(json);
+    } else {
+        $('#editorTabs').tabs('select', 1);
+    }
+}
+
+function ValidateRawJSON() {
+    try
+    {
+        var json = JSON.parse($('#txtJSON').val());
+        if (typeof json != "object")
+            throw "Invalid";
+        return true;
+    }
+    catch (err)
+    {
+        $('<div title="Invalid JSON">There was an error parsing the JSON value.  Please enter valid JSON before proceeding.</div>').
+            dialog({
+                modal: true,
+                buttons: { 
+                    Ok: function() {
+                        $(this).dialog('close').dialog('destroy');
+                    }
+                }
+            });
+        return false;
+    }
 }
 
 function GetJSONFromEditor() {
@@ -169,7 +204,6 @@ function CreateValue() {
 function LoadJSONToTree(json) {
     json = { Document : json };
     json = JSONToTreeJSON(json, '');
-    $('#parsedJSON').val(JSON.stringify(json, null, '\t'));
     LoadTree(json);
 }
 
