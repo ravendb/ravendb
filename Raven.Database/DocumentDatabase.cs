@@ -14,7 +14,7 @@ using Raven.Database.Tasks;
 
 namespace Raven.Database
 {
-    public class DocumentDatabase : IDatabaseCommands, IDisposable
+    public class DocumentDatabase : IDisposable
     {
         public DocumentDatabase(string path)
         {
@@ -111,7 +111,7 @@ namespace Raven.Database
             return document;
         }
 
-        public string Put(string key, JObject document, JObject metadata)
+        public string Put(string key, Guid etag, JObject document, JObject metadata)
         {
             if (string.IsNullOrEmpty(key))
             {
@@ -125,8 +125,8 @@ namespace Raven.Database
 
             TransactionalStorage.Batch(actions =>
             {
-                actions.DeleteDocument(key);
-                actions.AddDocument(key, document.ToString(), metadata.ToString());
+                actions.DeleteDocument(key, etag);
+                actions.AddDocument(key, document.ToString(), etag, metadata.ToString());
                 actions.AddTask(new IndexDocumentTask { View = "*", Key = key });
                 actions.Commit();
             });
@@ -148,11 +148,11 @@ namespace Raven.Database
             }
         }
 
-        public void Delete(string key)
+        public void Delete(string key, Guid etag)
         {
             TransactionalStorage.Batch(actions =>
             {
-                actions.DeleteDocument(key);
+                actions.DeleteDocument(key, etag);
                 actions.AddTask(new RemoveFromIndexTask { View = "*", Keys = new[] { key } });
                 actions.Commit();
             });

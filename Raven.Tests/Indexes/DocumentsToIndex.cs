@@ -26,7 +26,7 @@ namespace Raven.Tests.Indexes
                     where doc.type == ""page""
                     select new { doc.some };
                 ");
-            db.Put("1",JObject.Parse(@"{
+            db.Put("1", Guid.Empty, JObject.Parse(@"{
                 type: 'page', 
                 some: 'val', 
                 other: 'var', 
@@ -53,7 +53,7 @@ from prj in doc.projects
 select new{project_name = prj.name}
 ");
             var document = JObject.Parse("{'name':'ayende','email':'ayende@ayende.com','projects':[{'name':'raven'}], '@metadata': { '@id': 1}}");
-            db.Put("1", document, new JObject());
+            db.Put("1", Guid.Empty, document, new JObject());
 
             QueryResult docs;
             do
@@ -80,7 +80,7 @@ select new{project_name = prj.name}
     where doc.type == ""page""
     select new { doc.some };
 ");
-            db.Put("1",JObject.Parse("{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"), new JObject());
+            db.Put("1", Guid.Empty, JObject.Parse("{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"), new JObject());
 
 
             QueryResult docs;
@@ -106,7 +106,7 @@ select new{project_name = prj.name}
     where doc.type == ""page""
     select new { doc.other };
 ");
-            db.Put("1",JObject.Parse("{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"), new JObject());
+            db.Put("1", Guid.Empty, JObject.Parse("{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"), new JObject());
 
 
             QueryResult docs;
@@ -120,7 +120,7 @@ select new{project_name = prj.name}
         [Fact]
         public void Can_read_values_from_index_of_documents_already_in_db()
         {
-            db.Put("1",JObject.Parse("{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"), new JObject());
+            db.Put("1", Guid.Empty, JObject.Parse("{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"), new JObject());
 
             db.PutIndex("pagesByTitle",
                         @"
@@ -139,8 +139,8 @@ select new{project_name = prj.name}
         [Fact]
         public void Can_read_values_from_indexes_of_documents_already_in_db_when_multiple_docs_exists()
         {
-            db.Put(null,JObject.Parse("{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"), new JObject());
-            db.Put(null, JObject.Parse("{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"), new JObject());
+            db.Put(null, Guid.Empty, JObject.Parse("{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"), new JObject());
+            db.Put(null, Guid.Empty, JObject.Parse("{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"), new JObject());
 
             db.PutIndex("pagesByTitle",
                         @"

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Diagnostics;
 using System.Text;
 using log4net;
@@ -71,6 +72,7 @@ namespace Raven.Database.Storage
             return new JsonDocument
             {
                 Data = data,
+                Etag = new Guid(Api.RetrieveColumn(session, documents, documentsColumns["etag"])),
                 Key = Api.RetrieveColumnAsString(session, documents, documentsColumns["key"],Encoding.Unicode),
                 Metadata = JObject.Parse(Api.RetrieveColumnAsString(session, documents, documentsColumns["metadata"]))
             };
@@ -174,6 +176,7 @@ namespace Raven.Database.Storage
                     {
                         Key = Api.RetrieveColumnAsString(session, documents, documentsColumns["key"],Encoding.Unicode),
                         Data = data,
+                        Etag = new Guid(Api.RetrieveColumn(session, documents, documentsColumns["etag"])),
                         Metadata = JObject.Parse(json)
                     },
                     Second = id
@@ -184,12 +187,13 @@ namespace Raven.Database.Storage
             hasMoreWork.Value = false;
         }
 
-        public void AddDocument(string key, string data, string metadata)
+        public void AddDocument(string key, string data, Guid etag, string metadata)
         {
             using (var update = new Update(session, documents, JET_prep.Insert))
             {
                 Api.SetColumn(session, documents, documentsColumns["key"], key, Encoding.Unicode);
                 Api.SetColumn(session, documents, documentsColumns["data"], Encoding.UTF8.GetBytes(data));
+                Api.SetColumn(session, documents, documentsColumns["etag"], etag.ToByteArray());
                 Api.SetColumn(session, documents, documentsColumns["metadata"], metadata, Encoding.Unicode);
 
                 update.Save();
@@ -197,7 +201,7 @@ namespace Raven.Database.Storage
             logger.DebugFormat("Inserted a new document with key '{0}', doc length: {1}", key, data.Length);
         }
 
-        public void DeleteDocument(string key)
+        public void DeleteDocument(string key, Guid etag)
         {
             Api.JetSetCurrentIndex(session, documents, "by_key");
             Api.MakeKey(session, documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -206,6 +210,11 @@ namespace Raven.Database.Storage
                 logger.DebugFormat("Document with key '{0}' was not found, and considered deleted", key);
                 return;
             }
+
+            var rowEtag = new Guid(Api.RetrieveColumn(session, documents, documentsColumns["etag"]));
+            if(rowEtag!=etag)
+                throw new DBConcurrencyException("Put attempted on document '" + key +
+                                                 "' using a non current etag");
 
             Api.JetDelete(session, documents);
             logger.DebugFormat("Document with key '{0}' was deleted", key);

@@ -1,3 +1,4 @@
+using System;
 using System.Net;
 
 namespace Raven.Server.Responders
@@ -31,7 +32,10 @@ namespace Raven.Server.Responders
                     context.WriteData(doc.Data, doc.Metadata);
                     break;
                 case "DELETE":
-                    Database.Delete(docId);
+                    Guid etag;
+                    if(GetEtag(context, out etag) == false)
+                        return;
+                    Database.Delete(docId, etag);
                     context.SetStatusToDeleted();
                     break;
                 case "PUT":
@@ -40,13 +44,36 @@ namespace Raven.Server.Responders
             }
         }
 
+        private bool GetEtag(HttpListenerContext context, out Guid etag)
+        {
+            etag = Guid.Empty;
+            var etagAsString = context.Request.Headers["etag"];
+            if(etagAsString != null)
+            {
+                try
+                {
+                    etag = new Guid(etagAsString);
+                }
+                catch {}
+            }
+            if(etag==Guid.Empty)
+            {
+                context.SetStatusToBadRequest();
+                context.Write("Invalid ETag for DELETE opeartion");
+                return false;
+            }
+            return true;
+        }
+
         private void Put(HttpListenerContext context, string docId)
         {
+            Guid etag;
+            if(GetEtag(context, out etag)==false)
+                return;
             var json = context.ReadJson();
             context.SetStatusToCreated("/docs/" + docId);
-            context.WriteJson(new { id = Database.Put(docId, json, 
-                                                      context.Request.Headers.FilterHeaders()
-                                  ) });
+            var id = Database.Put(docId, etag, json, context.Request.Headers.FilterHeaders());
+            context.WriteJson(new { id });
         }
     }
 }
