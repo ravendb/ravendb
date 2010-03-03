@@ -50,8 +50,9 @@ namespace Raven.Tests.Storage
         public void Can_edit_document()
         {
             db.Put("1", Guid.Empty, JObject.Parse("{ first_name: 'ayende', last_name: 'rahien'}"), new JObject());
-            db.Put("1", Guid.Empty, JObject.Parse("{ first_name: 'ayende2', last_name: 'rahien2'}"), new JObject());
-            JObject document = db.Get("1").ToJson();
+
+            db.Put("1", db.Get("1").Etag, JObject.Parse("{ first_name: 'ayende2', last_name: 'rahien2'}"), new JObject());
+            var document = db.Get("1").ToJson();
 
             Assert.Equal("ayende2", document.Value<string>("first_name"));
             Assert.Equal("rahien2", document.Value<string>("last_name"));

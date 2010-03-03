@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Json;
@@ -40,6 +41,8 @@ namespace Raven.Tests.Indexes
             do
             {
                 docs = db.Query("pagesByTitle2", "some:val",0,10);
+                if(docs.IsStale)
+                    Thread.Sleep(100);
             } while (docs.IsStale);
             Assert.Equal(1, docs.Results.Length);
         }
@@ -59,6 +62,8 @@ select new{project_name = prj.name}
             do
             {
                 docs = db.Query("DocsByProject", "project_name:raven", 0, 10);
+                if (docs.IsStale)
+                    Thread.Sleep(100);
             } while (docs.IsStale);
             Assert.Equal(1, docs.Results.Length);
             var jProperty = docs.Results[0].Property("name");
@@ -87,6 +92,8 @@ select new{project_name = prj.name}
             do
             {
                 docs = db.Query("pagesByTitle2", "some:val",0,10);
+                if (docs.IsStale)
+                    Thread.Sleep(100);
             } while (docs.IsStale);
             Assert.Equal(1, docs.Results.Length);
         }
@@ -113,6 +120,8 @@ select new{project_name = prj.name}
             do
             {
                 docs = db.Query("pagesByTitle", "other:var",0,10);
+                if (docs.IsStale)
+                    Thread.Sleep(100);
             } while (docs.IsStale);
             Assert.Equal(1, docs.Results.Length);
         }
@@ -132,6 +141,8 @@ select new{project_name = prj.name}
             do
             {
                 docs = db.Query("pagesByTitle", "other:var",0,10);
+                if (docs.IsStale)
+                    Thread.Sleep(100);
             } while (docs.IsStale);
             Assert.Equal(1, docs.Results.Length);
         }
@@ -152,6 +163,8 @@ select new{project_name = prj.name}
             do
             {
                 docs = db.Query("pagesByTitle", "other:var",0,10);
+                if (docs.IsStale)
+                    Thread.Sleep(100);
             } while (docs.IsStale);
             Assert.Equal(2, docs.Results.Length);
         }
