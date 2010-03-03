@@ -14,6 +14,13 @@ namespace Raven.Database
         public JObject ToJson()
         {
             var doc = JObject.Parse(Encoding.UTF8.GetString(Data));
+            var etagProp = Metadata.Property("@etag");
+            if(etagProp == null)
+            {
+                etagProp = new JProperty("etag");
+                Metadata.Add(etagProp);
+            }
+            etagProp.Value = new JValue(Etag.ToString());
             doc.Add("@metadata", Metadata);
             return doc;
         }

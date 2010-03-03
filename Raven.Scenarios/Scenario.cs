@@ -21,7 +21,16 @@ namespace Raven.Scenarios
         private int responseNumber;
         const int testPort = 58080;
         private string lastEtag;
-        private readonly Regex etagFinder = new Regex(@",""expectedETag"":""(\{{0,1}([0-9a-fA-F]){8}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){12}\}{0,1})"",");
+
+        private readonly Regex[] etagFinders = new Regex[]
+        {
+            new Regex(
+                @",""expectedETag"":""(\{{0,1}([0-9a-fA-F]){8}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){12}\}{0,1})"",")
+            ,
+            new Regex(
+                @"""etag"":""(\{{0,1}([0-9a-fA-F]){8}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){12}\}{0,1})""")
+            ,
+        };
 
         public Scenario(string file)
         {
@@ -150,11 +159,14 @@ namespace Raven.Scenarios
         private void CompareResponses(byte[] response, Tuple<string, NameValueCollection, string> actual, string request)
         {
             var responseAsString = HandleChunking(response);
-            var actualEtag = etagFinder.Match(actual.First).Groups[1].Value;
-            var expectedEtag = etagFinder.Match(responseAsString).Groups[1].Value;
-            if (string.IsNullOrEmpty(expectedEtag) == false)
+            foreach (var etagFinder in etagFinders)
             {
-                responseAsString = responseAsString.Replace(expectedEtag, actualEtag);
+                var actualEtag = etagFinder.Match(actual.First).Groups[1].Value;
+                var expectedEtag = etagFinder.Match(responseAsString).Groups[1].Value;
+                if (string.IsNullOrEmpty(expectedEtag) == false)
+                {
+                    responseAsString = responseAsString.Replace(expectedEtag, actualEtag);
+                }
             }
             var sr = new StringReader(responseAsString);
             string statusLine = sr.ReadLine();
