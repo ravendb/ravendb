@@ -2,11 +2,11 @@ using System.Net;
 
 namespace Raven.Server.Responders
 {
-    public class DivanRootResponser : RequestResponder
+    public class FavIconResponder: RequestResponder
     {
         public override string UrlPattern
         {
-            get { return "^/divan$"; }
+            get { return "^/favicon.ico$"; }
         }
 
         public override string[] SupportedVerbs
@@ -16,7 +16,7 @@ namespace Raven.Server.Responders
 
         public override void Respond(HttpListenerContext context)
         {
-            context.Response.Redirect("/divan/index.html");
+            context.Response.Redirect("/divan/favicon.ico");
         }
     }
 }
