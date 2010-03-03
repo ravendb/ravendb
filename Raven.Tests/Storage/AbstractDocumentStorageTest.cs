@@ -2,7 +2,7 @@ using System.IO;
 
 namespace Raven.Tests.Storage
 {
-    public class AbstractDocumentStorageTest
+    public class AbstractDocumentStorageTest : WithDebugging
     {
         public AbstractDocumentStorageTest()
         {
