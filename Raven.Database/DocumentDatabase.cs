@@ -41,7 +41,7 @@ namespace Raven.Database
 
         public void SpinBackgroundWorkers()
         {
-            var threadCount = 1;// Environment.ProcessorCount;
+            const int threadCount = 1;// Environment.ProcessorCount;
             backgroundWorkers = new Thread[threadCount];
             for (int i = 0; i < threadCount; i++)
             {
@@ -98,7 +98,7 @@ namespace Raven.Database
 
         [SuppressUnmanagedCodeSecurity]
         [DllImport("rpcrt4.dll", SetLastError = true)]
-        private static extern int UuidCreateSequential(out Guid value);
+        public static extern int UuidCreateSequential(out Guid value);
 
         public JsonDocument Get(string key)
         {
@@ -111,7 +111,7 @@ namespace Raven.Database
             return document;
         }
 
-        public string Put(string key, JObject document, JObject metadata)
+        public string Put(string key, Guid etag, JObject document, JObject metadata)
         {
             if (string.IsNullOrEmpty(key))
             {
@@ -125,8 +125,7 @@ namespace Raven.Database
 
             TransactionalStorage.Batch(actions =>
             {
-                actions.DeleteDocument(key);
-                actions.AddDocument(key, document.ToString(), metadata.ToString());
+                actions.AddDocument(key, document.ToString(), etag, metadata.ToString());
                 actions.AddTask(new IndexDocumentTask { View = "*", Key = key });
                 actions.Commit();
             });
@@ -134,7 +133,7 @@ namespace Raven.Database
             return key;
         }
 
-        private void RemoveReservedProperties(JObject document)
+        private static void RemoveReservedProperties(JObject document)
         {
             var toRemove = new HashSet<string>();
             foreach (var property in document.Properties())
@@ -148,11 +147,11 @@ namespace Raven.Database
             }
         }
 
-        public void Delete(string key)
+        public void Delete(string key, Guid etag)
         {
             TransactionalStorage.Batch(actions =>
             {
-                actions.DeleteDocument(key);
+                actions.DeleteDocument(key, etag);
                 actions.AddTask(new RemoveFromIndexTask { View = "*", Keys = new[] { key } });
                 actions.Commit();
             });
@@ -175,12 +174,15 @@ namespace Raven.Database
             TransactionalStorage.Batch(actions =>
             {
                 var firstAndLast = actions.FirstAndLastDocumentKeys();
-                actions.AddTask(new IndexDocumentRangeTask
+                if (firstAndLast.First != 0 && firstAndLast.Second != 0)
                 {
-                    View = transformer.Name,
-                    FromKey = firstAndLast.First,
-                    ToKey = firstAndLast.Second
-                });
+                    actions.AddTask(new IndexDocumentRangeTask
+                    {
+                        View = transformer.Name,
+                        FromId = firstAndLast.First,
+                        ToId = firstAndLast.Second
+                    });
+                }
                 actions.Commit();
             });
             workContext.NotifyAboutWork();
@@ -229,20 +231,20 @@ namespace Raven.Database
             return attachment;
         }
 
-        public void PutStatic(string name, byte[] data, JObject metadata)
+        public void PutStatic(string name, Guid etag, byte[] data, JObject metadata)
         {
             TransactionalStorage.Batch(actions =>
             {
-                actions.AddAttachment(name, data, metadata.ToString(Formatting.None));
+                actions.AddAttachment(name, etag, data, metadata.ToString(Formatting.None));
                 actions.Commit();
             });
         }
 
-        public void DeleteStatic(string name)
+        public void DeleteStatic(string name, Guid etag)
         {
             TransactionalStorage.Batch(actions =>
             {
-                actions.DeleteAttachment(name);
+                actions.DeleteAttachment(name, etag);
                 actions.Commit();
             });
         }

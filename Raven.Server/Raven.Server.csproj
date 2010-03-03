@@ -57,9 +57,12 @@
       <HintPath>..\SharedLibs\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.Configuration.Install" />
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
+    <Reference Include="System.Management" />
+    <Reference Include="System.ServiceProcess" />
     <Reference Include="System.Xml.Linq">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
@@ -73,12 +76,27 @@
     <Compile Include="DivanServer.cs" />
     <Compile Include="HttpServer.cs" />
     <Compile Include="Program.cs" />
+    <Compile Include="ProjectInstaller.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="ProjectInstaller.Designer.cs">
+      <DependentUpon>ProjectInstaller.cs</DependentUpon>
+    </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Responders\DivanRootResponser.cs" />
-    <Compile Include="Responders\DivanUserInterfaceResponder.cs" />
+    <Compile Include="RavenService.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="RavenService.Designer.cs">
+      <DependentUpon>RavenService.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Responders\DivanRoot.cs" />
+    <Compile Include="Responders\DivanUI.cs" />
     <Compile Include="Responders\Docs.cs" />
     <Compile Include="Responders\Document.cs" />
+    <Compile Include="Responders\DocumentRenderer.cs" />
+    <Compile Include="Responders\Favicon.cs" />
     <Compile Include="Responders\HttpExtensions.cs" />
+    <Compile Include="Responders\Queries.cs" />
     <Compile Include="Responders\RequestResponder.cs" />
     <Compile Include="Responders\Index.cs" />
     <Compile Include="Responders\Indexes.cs" />
@@ -88,6 +106,8 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="WebUI\css\Pager.css" />
+    <Content Include="WebUI\css\rdb.css" />
+    <Content Include="WebUI\css\rdb.jsonEditor.css" />
     <Content Include="WebUI\css\smoothness\images\ui-bg_flat_0_aaaaaa_40x100.png" />
     <Content Include="WebUI\css\smoothness\images\ui-bg_flat_75_ffffff_40x100.png" />
     <Content Include="WebUI\css\smoothness\images\ui-bg_glass_55_fbf9ee_1x400.png" />
@@ -102,7 +122,6 @@
     <Content Include="WebUI\css\smoothness\images\ui-icons_888888_256x240.png" />
     <Content Include="WebUI\css\smoothness\images\ui-icons_cd0a0a_256x240.png" />
     <Content Include="WebUI\css\smoothness\jquery-ui-1.8rc2.custom.css" />
-    <Content Include="WebUI\css\style.css" />
     <Content Include="WebUI\documentation.html" />
     <Content Include="WebUI\documents.html" />
     <Content Include="WebUI\images\ajax-loader.gif" />
@@ -115,6 +134,8 @@
     <Content Include="WebUI\images\c2_i6.png" />
     <Content Include="WebUI\images\c3_i7.png" />
     <Content Include="WebUI\images\footerContainerBgR.png" />
+    <Content Include="WebUI\images\footer_bg.png" />
+    <Content Include="WebUI\images\header_bg.png" />
     <Content Include="WebUI\images\jsonEditor\doc.gif" />
     <Content Include="WebUI\images\jsonEditor\docNode.gif" />
     <Content Include="WebUI\images\jsonEditor\docNodeLast.gif" />
@@ -145,6 +166,7 @@
     <Content Include="WebUI\JSONTemplates\indexPage.html" />
     <Content Include="WebUI\JSONTemplates\quickStats.html" />
     <Content Include="WebUI\js\divan-ui.js" />
+    <Content Include="WebUI\js\divan-ui.documents.js" />
     <Content Include="WebUI\js\jquery-1.4.2.min.js" />
     <Content Include="WebUI\js\jquery-jtemplates.js" />
     <Content Include="WebUI\js\jquery-ui.js" />
@@ -153,6 +175,13 @@
     <Content Include="WebUI\js\jquery.simpletip.js" />
     <Content Include="WebUI\js\json2.js" />
     <Content Include="WebUI\js\JSONeditor.js" />
+    <Content Include="WebUI\js\jstree\jquery.tree.js" />
+    <Content Include="WebUI\js\jstree\themes\default\dot_for_ie.gif" />
+    <Content Include="WebUI\js\jstree\themes\default\icons.png" />
+    <Content Include="WebUI\js\jstree\themes\default\style.css" />
+    <Content Include="WebUI\js\jstree\themes\default\throbber.gif" />
+    <Content Include="WebUI\js\jstree\themes\icons\txt.png" />
+    <Content Include="WebUI\js\rdb.jsonEditor.js" />
     <Content Include="WebUI\statistics.html" />
   </ItemGroup>
   <ItemGroup>
@@ -177,6 +206,11 @@
       <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
       <Name>Raven.Database</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="ProjectInstaller.resx">
+      <DependentUpon>ProjectInstaller.cs</DependentUpon>
+    </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

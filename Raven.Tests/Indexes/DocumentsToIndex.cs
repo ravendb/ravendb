@@ -1,6 +1,8 @@
 using System;
+using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
+using Raven.Database.Json;
 using Raven.Tests.Storage;
 using Xunit;
 
@@ -25,7 +27,7 @@ namespace Raven.Tests.Indexes
                     where doc.type == ""page""
                     select new { doc.some };
                 ");
-            db.Put("1",JObject.Parse(@"{
+            db.Put("1", Guid.Empty, JObject.Parse(@"{
                 type: 'page', 
                 some: 'val', 
                 other: 'var', 
@@ -39,8 +41,33 @@ namespace Raven.Tests.Indexes
             do
             {
                 docs = db.Query("pagesByTitle2", "some:val",0,10);
+                if(docs.IsStale)
+                    Thread.Sleep(100);
             } while (docs.IsStale);
             Assert.Equal(1, docs.Results.Length);
+        }
+
+        [Fact]
+        public void Can_Read_Values_Using_Deep_Nesting()
+        {
+            db.PutIndex(@"DocsByProject", @"
+from doc in docs
+from prj in doc.projects
+select new{project_name = prj.name}
+");
+            var document = JObject.Parse("{'name':'ayende','email':'ayende@ayende.com','projects':[{'name':'raven'}], '@metadata': { '@id': 1}}");
+            db.Put("1", Guid.Empty, document, new JObject());
+
+            QueryResult docs;
+            do
+            {
+                docs = db.Query("DocsByProject", "project_name:raven", 0, 10);
+                if (docs.IsStale)
+                    Thread.Sleep(100);
+            } while (docs.IsStale);
+            Assert.Equal(1, docs.Results.Length);
+            var jProperty = docs.Results[0].Property("name");
+            Assert.Equal("ayende", jProperty.Value.Value<string>());
         }
 
         [Fact]
@@ -58,13 +85,15 @@ namespace Raven.Tests.Indexes
     where doc.type == ""page""
     select new { doc.some };
 ");
-            db.Put("1",JObject.Parse("{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"), new JObject());
+            db.Put("1", Guid.Empty, JObject.Parse("{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"), new JObject());
 
 
             QueryResult docs;
             do
             {
                 docs = db.Query("pagesByTitle2", "some:val",0,10);
+                if (docs.IsStale)
+                    Thread.Sleep(100);
             } while (docs.IsStale);
             Assert.Equal(1, docs.Results.Length);
         }
@@ -84,13 +113,15 @@ namespace Raven.Tests.Indexes
     where doc.type == ""page""
     select new { doc.other };
 ");
-            db.Put("1",JObject.Parse("{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"), new JObject());
+            db.Put("1", Guid.Empty, JObject.Parse("{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"), new JObject());
 
 
             QueryResult docs;
             do
             {
                 docs = db.Query("pagesByTitle", "other:var",0,10);
+                if (docs.IsStale)
+                    Thread.Sleep(100);
             } while (docs.IsStale);
             Assert.Equal(1, docs.Results.Length);
         }
@@ -98,7 +129,7 @@ namespace Raven.Tests.Indexes
         [Fact]
         public void Can_read_values_from_index_of_documents_already_in_db()
         {
-            db.Put("1",JObject.Parse("{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"), new JObject());
+            db.Put("1", Guid.Empty, JObject.Parse("{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"), new JObject());
 
             db.PutIndex("pagesByTitle",
                         @"
@@ -110,6 +141,8 @@ namespace Raven.Tests.Indexes
             do
             {
                 docs = db.Query("pagesByTitle", "other:var",0,10);
+                if (docs.IsStale)
+                    Thread.Sleep(100);
             } while (docs.IsStale);
             Assert.Equal(1, docs.Results.Length);
         }
@@ -117,8 +150,8 @@ namespace Raven.Tests.Indexes
         [Fact]
         public void Can_read_values_from_indexes_of_documents_already_in_db_when_multiple_docs_exists()
         {
-            db.Put(null,JObject.Parse("{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"), new JObject());
-            db.Put(null, JObject.Parse("{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"), new JObject());
+            db.Put(null, Guid.Empty, JObject.Parse("{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"), new JObject());
+            db.Put(null, Guid.Empty, JObject.Parse("{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"), new JObject());
 
             db.PutIndex("pagesByTitle",
                         @"
@@ -130,6 +163,8 @@ namespace Raven.Tests.Indexes
             do
             {
                 docs = db.Query("pagesByTitle", "other:var",0,10);
+                if (docs.IsStale)
+                    Thread.Sleep(100);
             } while (docs.IsStale);
             Assert.Equal(2, docs.Results.Length);
         }

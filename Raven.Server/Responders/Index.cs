@@ -1,3 +1,4 @@
+using System;
 using System.Net;
 
 namespace Raven.Server.Responders
@@ -41,15 +42,14 @@ namespace Raven.Server.Responders
 
         private void OnGet(HttpListenerContext context, string index)
         {
-            var query = context.Request.QueryString["query"];
-
-            if (query == null)
+            var definition = context.Request.QueryString["definition"];
+            if ("yes".Equals(definition, StringComparison.InvariantCultureIgnoreCase))
             {
                 context.WriteJson(new { index = Database.IndexDefinitionStorage.GetIndexDefinition(index) });
             }
             else
             {
-                context.WriteJson(Database.Query(index, query, context.GetStart(), context.GetPageSize()));
+                context.WriteJson(Database.Query(index, context.Request.QueryString["query"], context.GetStart(), context.GetPageSize()));
             }
         }
     }

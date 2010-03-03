@@ -30,6 +30,10 @@ namespace Raven.Server.Responders
             // very well change due to things like encoding,
             // adding metadata, etc
             "Content-Length",
+            
+            // Special things to ignore
+            "Keep-Alive",
+            "X-Requested-With",
 
             // Request headers
             "Accept-Charset",
@@ -99,6 +103,13 @@ namespace Raven.Server.Responders
                 return JObject.Load(jsonReader);
         }
 
+        public static JArray ReadJsonArray(this HttpListenerContext context)
+        {
+            using (var streamReader = new StreamReader(context.Request.InputStream))
+            using (var jsonReader = new JsonTextReader(streamReader))
+                return JArray.Load(jsonReader);
+        }
+
         public static string ReadString(this HttpListenerContext context)
         {
             using (var streamReader = new StreamReader(context.Request.InputStream))
@@ -126,7 +137,7 @@ namespace Raven.Server.Responders
             streamWriter.Flush();
         }
 
-        public static void WriteData(this HttpListenerContext context, byte[] data, JObject headers)
+        public static void WriteData(this HttpListenerContext context, byte[] data, JObject headers, Guid etag)
         {
             foreach (var header in headers.Properties())
             {
@@ -134,6 +145,7 @@ namespace Raven.Server.Responders
                     continue;
                 context.Response.Headers[header.Name] = StringQuotesIfNeeded(header.Value.ToString());
             }
+            context.Response.Headers["ETag"] = etag.ToString();
             context.Response.ContentLength64 = data.Length;
             context.Response.OutputStream.Write(data, 0, data.Length);
             context.Response.OutputStream.Flush();
@@ -229,6 +241,22 @@ namespace Raven.Server.Responders
             return pageSize;
         }
 
+        public static Guid GetEtag(this HttpListenerContext context)
+        {
+            var etagAsString = context.Request.Headers["etag"];
+            if (etagAsString != null)
+            {
+                try
+                {
+                    return new Guid(etagAsString);
+                }
+                catch
+                {
+             
+                }
+            } 
+            return Guid.Empty;
+        }
 
         #region Nested type: JsonToJsonConverter
 

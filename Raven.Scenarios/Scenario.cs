@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using ICSharpCode.SharpZipLib.Zip;
 using Raven.Database.Extensions;
@@ -18,6 +20,17 @@ namespace Raven.Scenarios
         private readonly string file;
         private int responseNumber;
         const int testPort = 58080;
+        private string lastEtag;
+
+        private readonly Regex[] etagFinders = new Regex[]
+        {
+            new Regex(
+                @",""expectedETag"":""(\{{0,1}([0-9a-fA-F]){8}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){12}\}{0,1})"",")
+            ,
+            new Regex(
+                @"""etag"":""(\{{0,1}([0-9a-fA-F]){8}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){12}\}{0,1})""")
+            ,
+        };
 
         public Scenario(string file)
         {
@@ -73,8 +86,9 @@ namespace Raven.Scenarios
                 Thread.Sleep(100);
             } while (count < 5);
 
+            lastEtag = actual.Second["ETag"];
+            responseNumber++;
             CompareResponses(
-                responseNumber++,
                 expectedResponse,
                 actual,
                 request);
@@ -85,7 +99,7 @@ namespace Raven.Scenarios
             using (var sr = new StringReader(request))
             {
                 string[] reqParts = sr.ReadLine().Split(' ');
-                var req = (HttpWebRequest)WebRequest.Create(reqParts[1].Replace(":8080/",":"+testPort+"/"));
+                var req = (HttpWebRequest)WebRequest.Create(reqParts[1].Replace(":8080/", ":" + testPort + "/"));
                 req.Method = reqParts[0];
 
                 string header;
@@ -94,14 +108,9 @@ namespace Raven.Scenarios
                     string[] headerParts = header.Split(new[] { ": " }, 2, StringSplitOptions.None);
                     if (new[] { "Host", "Content-Length", "User-Agent" }.Any(s => s.Equals(headerParts[0], StringComparison.InvariantCultureIgnoreCase)))
                         continue;
-                    try
-                    {
-                        req.Headers[headerParts[0]] = headerParts[1];
-                    }
-                    catch (Exception e)
-                    {
-                        throw new IndexOutOfRangeException(headerParts[0]);
-                    }
+                    if (headerParts[0] == "ETag")
+                        headerParts[1] = lastEtag;
+                    req.Headers[headerParts[0]] = headerParts[1];
                 }
 
                 if (req.Method != "GET")
@@ -128,7 +137,7 @@ namespace Raven.Scenarios
             }
         }
 
-        private HttpWebResponse GetResponse(HttpWebRequest req)
+        private static HttpWebResponse GetResponse(HttpWebRequest req)
         {
             HttpWebResponse webResponse;
             try
@@ -142,32 +151,42 @@ namespace Raven.Scenarios
             return webResponse;
         }
 
-        private bool IsStaleResponse(string response)
+        private static bool IsStaleResponse(string response)
         {
             return response.Contains("\"IsStale\":true");
         }
 
-        private static void CompareResponses(int responseNumber, byte[] response, Tuple<string, NameValueCollection, string> actual, string request)
+        private void CompareResponses(byte[] response, Tuple<string, NameValueCollection, string> actual, string request)
         {
-            var sr = new StringReader(HandleChunking(response));
+            var responseAsString = HandleChunking(response);
+            foreach (var etagFinder in etagFinders)
+            {
+                var actualEtag = etagFinder.Match(actual.First).Groups[1].Value;
+                var expectedEtag = etagFinder.Match(responseAsString).Groups[1].Value;
+                if (string.IsNullOrEmpty(expectedEtag) == false)
+                {
+                    responseAsString = responseAsString.Replace(expectedEtag, actualEtag);
+                }
+            }
+            var sr = new StringReader(responseAsString);
             string statusLine = sr.ReadLine();
             if (statusLine != actual.Third)
             {
                 throw new InvalidDataException(
-                    string.Format("Request {0} status differs. Expected {1}, Actual {2}\r\nRequest{3}",
+                    string.Format("Request {0} status differs. Expected {1}, Actual {2}\r\nRequest:\r\n{3}",
                                   responseNumber, statusLine, actual.Third, request));
             }
             string header;
             while (string.IsNullOrEmpty((header = sr.ReadLine())) == false)
             {
                 string[] parts = header.Split(new[] { ": " }, 2, StringSplitOptions.None);
-                if (parts[0] == "Date" || parts[0] == "Content-Length")
+                if (parts[0] == "Date" || parts[0] == "Content-Length" ||
+                    parts[0] == "ETag")
                     continue;
-                
                 if (actual.Second[parts[0]] != parts[1])
                 {
                     throw new InvalidDataException(
-                        string.Format("Request {0} header {1} differs. Expected {2}, Actual {3}\r\nRequest{4}",
+                        string.Format("Request {0} header {1} differs. Expected {2}, Actual {3}\r\nRequest:\r\n{4}",
                                       responseNumber, parts[0], parts[1], actual.Second[parts[0]], request));
                 }
             }
@@ -192,44 +211,53 @@ namespace Raven.Scenarios
         {
             var memoryStream = new MemoryStream(data);
             var streamReader = new StreamReader(memoryStream);
-            
+
             var sb = new StringBuilder();
             sb.AppendLine(streamReader.ReadLine());//status
             string line;
             while ((line = streamReader.ReadLine()) != "")
                 sb.AppendLine(line);// header
             sb.AppendLine();//separator line
-            if(sb.ToString().Contains("Transfer-Encoding: chunked") == false)
+            if (sb.ToString().Contains("Transfer-Encoding: chunked") == false)
             {
                 sb.Append(streamReader.ReadToEnd());
                 return sb.ToString();
             }
 
             string chunk;
-            while (((chunk = ReadChuck(memoryStream))) != null)
+            while (((chunk = ReadChuck(streamReader))) != null)
             {
                 sb.Append(chunk);
             }
             return sb.ToString();
         }
 
-        private static string ReadChuck(MemoryStream memoryStream)
+        private static string ReadChuck(StreamReader memoryStream)
         {
             var chunkSizeBytes = new List<byte>();
-            byte cur;
+            byte prev = 0;
+            byte cur = 0;
             do
             {
-                int readByte = memoryStream.ReadByte();
+                int readByte = memoryStream.Read();
                 if (readByte == -1)
                     return null;
+                prev = cur;
                 cur = (byte) readByte;
-            } while (cur != '\n' && chunkSizeBytes.LastOrDefault() != '\r');
-            chunkSizeBytes.RemoveAt(chunkSizeBytes.Count - 1);
-            int size = int.Parse(Encoding.UTF8.GetString(chunkSizeBytes.ToArray()));
+                chunkSizeBytes.Add(cur);
+            } while (!(prev == '\r' && cur == '\n')); // (cur != '\n' && chunkSizeBytes.LastOrDefault() != '\r');
 
-            var buffer = new byte[size];
+            chunkSizeBytes.RemoveAt(chunkSizeBytes.Count - 1);
+            chunkSizeBytes.RemoveAt(chunkSizeBytes.Count - 1);
+
+            if (chunkSizeBytes.Count == 0)
+                return null;
+
+            int size = Convert.ToInt32(Encoding.UTF8.GetString(chunkSizeBytes.ToArray()), 16);
+
+            var buffer = new char[size];
             memoryStream.Read(buffer, 0, size);//not doing repeated read because it is all in mem
-            return Encoding.UTF8.GetString(buffer);
+            return new string(buffer);
         }
     }
 }

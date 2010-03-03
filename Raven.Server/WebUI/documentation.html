@@ -2,14 +2,17 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
-    <title>The Raven Database</title>
-    <link href="css/style.css" rel="stylesheet" type="text/css" />
+    <title>Rhino DB</title>
+    <link href="css/rdb.css" rel="stylesheet" type="text/css" />
+    <link href="css/smoothness/jquery-ui-1.8rc2.custom.css" rel="Stylesheet" type="text/css" />
 
     <script type="text/javascript" src="js/jquery-1.4.2.min.js"></script>
+    <script type="text/javascript" src="js/jquery-ui.js"></script>
     <script type="text/javascript" src="js/jquery-jtemplates.js"></script>
     
     <script type="text/javascript" src="js/jquery.divanDB.js"></script>
     <script type="text/javascript" src="js/divan-ui.js"></script>
+
 
     <script type="text/javascript">
         $(document).ready(function () {
@@ -18,46 +21,41 @@
     </script>
 </head>
 <body>
-    <div id="wrapper">
-        <div id="branding">
-            <h1 class="logo">
-                <a href="index.html" title="&lt; Raven /&gt;">&lt; Raven /&gt;</a></h1>
-            <ul class="topNav">
-                <li><a href="index.html">HOME</a></li>
-                <li><a href="statistics.html">GLOBAL STATISTICS</a></li>
-                <li><a href="documents.html">DOCUMENTS</a></li>
-                <li><a href="indexes.html">INDEXES</a></li>
-                <li><a href="documentation.html" class="topNavAct">DOCUMENTATION</a></li>
+    <div id="header">
+        <div id="logo">
+            <a href="index.html" title="Home"><img src="images/logo.png" alt="RavenDB" style="border:none;" /></a>
+        </div>
+        <div id="nav">
+            <ul>
+                <li><a href="index.html">home</a></li>
+                <li><a href="statistics.html">global statistics</a></li>
+                <li><a href="documents.html">documents</a></li>
+                <li><a href="indexes.html">indexes</a></li>
+                <li><a href="documentation.html" class="nav_active">documentation</a></li>
             </ul>
-            <br class="clear" />
         </div>
-
-<!-- Content -->
+        <div class="clear"></div>
+    </div>    
+    <div id="body">
+        <div id="right">            
+        </div>
         <div id="content">
-            <div class="content_1">
-                <div class="content_1_left">
-                    <h2>
-                        Documentation
-                    </h2>
+            <h1>
+                Documentation
+            </h1>            
+        </div>           
+    </div>        
 
-                </div>
-            </div>        
-        </div>
-    </div>
 <!-- end content -->
-    
-    <br class="clear" />
 
-    <div id="footerContainer">
-        <p>
-            <label>
-                Initial Design by <a href="http://vectorart.org">VectorArt</a><br />
-                Modification by <a href="http://werul.com">Werül</a>
-            </label>
-
-            <span>Copyright 2010 <a href="http://hibernatingrhinos.com">Hibernating Rhinos</a>. All Rights Reserved</span>
-            <div style="clear:both;"></div>
-        </p>
+    <div id="footer">
+        <div style="float:left; margin-left:20px;">
+            Copyright 2010 <a href="http://hibernatingrhinos.com">Hibernating Rhinos</a>. All Rights Reserved.            
+        </div>
+        <div style="float:right; margin-right:20px;">
+            Web interface developed by <a href="http://werul.com">Werül</a>
+        </div>
+        <div style="clear:both;"></div>
     </div>
 </body>
 </html>

@@ -1,3 +1,4 @@
+using System;
 using System.Net;
 
 namespace Raven.Server.Responders
@@ -23,8 +24,8 @@ namespace Raven.Server.Responders
                     break;
                 case "POST":
                     var json = context.ReadJson();
-                    var id = Database.Put(null, json, context.Request.Headers.FilterHeaders());
-
+                    var id = Database.Put(null, Guid.NewGuid(), json, 
+                        context.Request.Headers.FilterHeaders());
                     context.SetStatusToCreated("/docs/" + id);
                     context.WriteJson(new { id });
                     break;

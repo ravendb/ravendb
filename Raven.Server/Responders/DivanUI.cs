@@ -4,7 +4,7 @@ using System.Net;
 
 namespace Raven.Server.Responders
 {
-    public class DivanUserInterfaceResponder : RequestResponder
+    public class DivanUI : RequestResponder
     {
         public string DivanPath
         {

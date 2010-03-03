@@ -2,9 +2,8 @@ using System;
 using System.Collections.Generic;
 using Xunit;
 
-namespace Rhino.DivanDB.Client.Tests
+namespace Raven.Client.Tests
 {
-
     public class DocumentStoreEmbeddedTests : BaseTest
     {
         private DocumentStore newDocumentStore()
@@ -96,7 +95,6 @@ namespace Rhino.DivanDB.Client.Tests
         }
     }
 
-
     public class Company
     {
         public string Id { get; set; }
@@ -115,6 +113,3 @@ namespace Rhino.DivanDB.Client.Tests
         public string Email { get; set; }
     }
 }
-
-
-

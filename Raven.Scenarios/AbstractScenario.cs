@@ -10,7 +10,7 @@ namespace Raven.Scenarios
         public void Execute()
         {
             new Scenario(
-                Path.Combine(AllScenariosWithoutExplicitScenario.ScenariosPath,GetType().Namespace.Split('.').Last())
+                Path.Combine(AllScenariosWithoutExplicitScenario.ScenariosPath,GetType().Name)+".saz"
                 ).Execute();
         }
     }

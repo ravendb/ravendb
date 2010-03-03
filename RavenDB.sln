@@ -3,10 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 10.00
 # Visual Studio 2008
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Database", "Raven.Database\Raven.Database.csproj", "{212823CD-25E1-41AC-92D1-D6DF4D53FC85}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Client", "Raven.Client\Raven.Client.csproj", "{9F92FD36-60B6-4655-B8C6-00125B46AB6A}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Client.Tests", "Raven.Client.Tests\Raven.Client.Tests.csproj", "{36B31D69-508B-4594-8F8E-85774BAA7D3F}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Importer", "Raven.Importer\Raven.Importer.csproj", "{D41ADD5B-B538-44BC-BC5B-131073C5C8C6}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Scenarios", "Raven.Scenarios\Raven.Scenarios.csproj", "{46DB852F-4E76-44BD-B46F-5E7DE7E4B3B7}"
@@ -27,14 +23,6 @@ Global
 		{212823CD-25E1-41AC-92D1-D6DF4D53FC85}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{212823CD-25E1-41AC-92D1-D6DF4D53FC85}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{212823CD-25E1-41AC-92D1-D6DF4D53FC85}.Release|Any CPU.Build.0 = Release|Any CPU
-		{9F92FD36-60B6-4655-B8C6-00125B46AB6A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{9F92FD36-60B6-4655-B8C6-00125B46AB6A}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{9F92FD36-60B6-4655-B8C6-00125B46AB6A}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{9F92FD36-60B6-4655-B8C6-00125B46AB6A}.Release|Any CPU.Build.0 = Release|Any CPU
-		{36B31D69-508B-4594-8F8E-85774BAA7D3F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{36B31D69-508B-4594-8F8E-85774BAA7D3F}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{36B31D69-508B-4594-8F8E-85774BAA7D3F}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{36B31D69-508B-4594-8F8E-85774BAA7D3F}.Release|Any CPU.Build.0 = Release|Any CPU
 		{D41ADD5B-B538-44BC-BC5B-131073C5C8C6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{D41ADD5B-B538-44BC-BC5B-131073C5C8C6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D41ADD5B-B538-44BC-BC5B-131073C5C8C6}.Release|Any CPU.ActiveCfg = Release|Any CPU

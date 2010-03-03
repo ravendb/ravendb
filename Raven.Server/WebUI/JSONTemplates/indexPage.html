@@ -3,7 +3,7 @@
         <div id="{$T.index.name}" class="searchListItem {#if $T.index$iteration % 2} alternate{#/if}">
             {$T.index.name}
             <div class="searchListItemValue" style="display:none;">
-                {$T.index.definition}
+                <pre>{$T.index.definition}</pre>
             </div>
         </div>
     {#/for}    

@@ -1,3 +1,4 @@
+using System;
 using System.Net;
 
 namespace Raven.Server.Responders
@@ -18,6 +19,7 @@ namespace Raven.Server.Responders
         {
             var match = urlMatcher.Match(context.Request.Url.LocalPath);
             var filename = match.Groups[1].Value;
+            var etag = context.GetEtag();
             switch (context.Request.HttpMethod)
             {
                 case "GET":
@@ -27,14 +29,15 @@ namespace Raven.Server.Responders
                         context.SetStatusToNotFound();
                         return;
                     }
-                    context.WriteData(attachmentAndHeaders.Data, attachmentAndHeaders.Metadata);
+                    context.WriteData(attachmentAndHeaders.Data, attachmentAndHeaders.Metadata, attachmentAndHeaders.Etag);
                     break;
                 case "PUT":
-                    Database.PutStatic(filename, context.Request.InputStream.ReadData(), context.Request.Headers.FilterHeaders());
+                    Database.PutStatic(filename, context.GetEtag(), context.Request.InputStream.ReadData(),
+                                       context.Request.Headers.FilterHeaders());
                     context.SetStatusToCreated("/static/"+filename);
                     break;
                 case "DELETE":
-                    Database.DeleteStatic(filename);
+                    Database.DeleteStatic(filename, etag);
                     context.SetStatusToDeleted();
                     break;
             }

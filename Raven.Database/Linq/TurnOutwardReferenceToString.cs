@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using ICSharpCode.NRefactory.Ast;
 using ICSharpCode.NRefactory.Visitors;
 
@@ -5,8 +6,6 @@ namespace Raven.Database.Linq
 {
     public class TurnOutwardReferenceToString : AbstractAstTransformer
     {
-        public string Identifier { get; set; }
-        
         public override object VisitIndexerExpression(IndexerExpression indexerExpression, object data)
         {
             if (indexerExpression.Parent is IndexerExpression )

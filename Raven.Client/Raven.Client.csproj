@@ -52,7 +52,9 @@
     <Compile Include="DocumentConvention.cs" />
     <Compile Include="DocumentSession.cs" />
     <Compile Include="DocumentStore.cs" />
+    <Compile Include="HttpJsonRequest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ServerClient.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Raven.Database\Raven.Database.csproj">

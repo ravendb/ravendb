@@ -1,3 +1,4 @@
+using System;
 using System.Net;
 
 namespace Raven.Server.Responders
@@ -21,17 +22,10 @@ namespace Raven.Server.Responders
             switch (context.Request.HttpMethod)
             {
                 case "GET":
-                    context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
-                    var doc = Database.Get(docId);
-                    if(doc==null)
-                    {
-                        context.SetStatusToNotFound();
-                        return;
-                    }
-                    context.WriteData(doc.Data, doc.Metadata);
+                    Get(context, docId);
                     break;
                 case "DELETE":
-                    Database.Delete(docId);
+                    Database.Delete(docId, context.GetEtag());
                     context.SetStatusToDeleted();
                     break;
                 case "PUT":
@@ -40,13 +34,25 @@ namespace Raven.Server.Responders
             }
         }
 
+        private void Get(HttpListenerContext context, string docId)
+        {
+            var doc = Database.Get(docId);
+
+            if (doc == null)
+            {
+                context.SetStatusToNotFound();
+                return;
+            }
+
+            new DocumentRenderer(doc, context, Database).Render();
+        }
+
         private void Put(HttpListenerContext context, string docId)
         {
             var json = context.ReadJson();
             context.SetStatusToCreated("/docs/" + docId);
-            context.WriteJson(new { id = Database.Put(docId, json, 
-                                                      context.Request.Headers.FilterHeaders()
-                                  ) });
+            var id = Database.Put(docId, context.GetEtag(), json, context.Request.Headers.FilterHeaders());
+            context.WriteJson(new { id });
         }
     }
 }

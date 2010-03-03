@@ -6,19 +6,23 @@ namespace Raven.Database.Linq
 {
     public class TransformVisitor : AbstractAstTransformer
     {
-        public string Identifier { get; set; }
+        public string FirstIdentifier { get; set; }
+        public HashSet<string> Identifiers { get; set; }
         public HashSet<string> FieldNames { get; set; }
 
         public string Name { get; set; }
 
         public TransformVisitor()
         {
+            Identifiers = new HashSet<string>();
             FieldNames = new HashSet<string>();
         }
 
         public override object VisitQueryExpressionFromClause(QueryExpressionFromClause queryExpressionFromClause, object data)
         {
-            Identifier = queryExpressionFromClause.Identifier;
+            if (FirstIdentifier == null)
+                FirstIdentifier = queryExpressionFromClause.Identifier;
+            Identifiers.Add(queryExpressionFromClause.Identifier);
             return base.VisitQueryExpressionFromClause(queryExpressionFromClause, data);
         }
 
@@ -30,7 +34,7 @@ namespace Raven.Database.Linq
                 createExpr.ObjectInitializer.CreateExpressions.Add(
                     new NamedArgumentExpression(
                         "__document_id",
-                        new IndexerExpression(new IndexerExpression(new IdentifierExpression(Identifier),
+                        new IndexerExpression(new IndexerExpression(new IdentifierExpression(FirstIdentifier),
                                                                     new List<Expression> { new PrimitiveExpression("@metadata", "@metadata") }),
                                               new List<Expression> { new PrimitiveExpression("@id", "@id") })
                         )
@@ -42,7 +46,7 @@ namespace Raven.Database.Linq
         public override object VisitMemberReferenceExpression(MemberReferenceExpression memberReferenceExpression, object data)
         {
             var identifierExpression = GetIdentifierExpression(memberReferenceExpression);
-            if (identifierExpression == null || identifierExpression.Identifier != Identifier)
+            if (identifierExpression == null || Identifiers.Contains(identifierExpression.Identifier) == false)
                 return base.VisitMemberReferenceExpression(memberReferenceExpression, data);
            
             var indexerExpression = new IndexerExpression(

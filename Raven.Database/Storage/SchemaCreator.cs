@@ -8,7 +8,7 @@ namespace Raven.Database.Storage
     public class SchemaCreator
     {
         private readonly Session session;
-        public const string SchemaVersion = "1.5";
+        public const string SchemaVersion = "1.6";
 
         public SchemaCreator(Session session)
         {
@@ -49,6 +49,13 @@ namespace Raven.Database.Storage
                 coltyp = JET_coltyp.Text,
                 cp = JET_CP.Unicode,
                 grbit = ColumndefGrbit.ColumnTagged
+            }, null, 0, out columnid);
+
+            Api.JetAddColumn(session, tableid, "etag", new JET_COLUMNDEF
+            {
+                cbMax = 16,
+                coltyp = JET_coltyp.Binary,
+                grbit = ColumndefGrbit.ColumnFixed|ColumndefGrbit.ColumnNotNULL,
             }, null, 0, out columnid);
 
             Api.JetAddColumn(session, tableid, "id", new JET_COLUMNDEF
@@ -133,6 +140,13 @@ namespace Raven.Database.Storage
             {
                 coltyp = JET_coltyp.LongBinary,
                 grbit = ColumndefGrbit.ColumnTagged
+            }, null, 0, out columnid);
+
+            Api.JetAddColumn(session, tableid, "etag", new JET_COLUMNDEF
+            {
+                cbMax = 16,
+                coltyp = JET_coltyp.Binary,
+                grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL,
             }, null, 0, out columnid);
 
             Api.JetAddColumn(session, tableid, "metadata", new JET_COLUMNDEF

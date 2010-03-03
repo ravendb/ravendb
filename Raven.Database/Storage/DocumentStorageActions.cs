@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Diagnostics;
 using System.Text;
 using log4net;
 using Microsoft.Isam.Esent.Interop;
 using Newtonsoft.Json.Linq;
+using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
 using Raven.Database.Tasks;
 
@@ -71,6 +73,7 @@ namespace Raven.Database.Storage
             return new JsonDocument
             {
                 Data = data,
+                Etag = new Guid(Api.RetrieveColumn(session, documents, documentsColumns["etag"])),
                 Key = Api.RetrieveColumnAsString(session, documents, documentsColumns["key"],Encoding.Unicode),
                 Metadata = JObject.Parse(Api.RetrieveColumnAsString(session, documents, documentsColumns["metadata"]))
             };
@@ -147,6 +150,8 @@ namespace Raven.Database.Storage
         {
             Api.JetSetCurrentIndex(session, documents, "by_id");
             Api.MakeKey(session, documents, startId, MakeKeyGrbit.NewKey);
+            // this sholdn't really happen, it means that the doc is missing
+            // probably deleted before we can get it?
             if (Api.TrySeek(session, documents, SeekGrbit.SeekGE) == false)
             {
                 logger.DebugFormat("Document with id {0} or higher was not found", startId);
@@ -174,6 +179,7 @@ namespace Raven.Database.Storage
                     {
                         Key = Api.RetrieveColumnAsString(session, documents, documentsColumns["key"],Encoding.Unicode),
                         Data = data,
+                        Etag = new Guid(Api.RetrieveColumn(session, documents, documentsColumns["etag"])),
                         Metadata = JObject.Parse(json)
                     },
                     Second = id
@@ -184,20 +190,41 @@ namespace Raven.Database.Storage
             hasMoreWork.Value = false;
         }
 
-        public void AddDocument(string key, string data, string metadata)
+        public void AddDocument(string key, string data, Guid etag, string metadata)
         {
-            using (var update = new Update(session, documents, JET_prep.Insert))
+            Api.JetSetCurrentIndex(session, documents, "by_key");
+            Api.MakeKey(session, documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            var isUpdate = Api.TrySeek(session, documents, SeekGrbit.SeekEQ);
+            if (isUpdate)
+            {
+                var existingEtag = new Guid(Api.RetrieveColumn(session, documents,documentsColumns["etag"]));
+                if (existingEtag != etag)
+                {
+                    throw new ConcurrencyException("PUT attempted on document '" + key +
+                                                   "' using a non current etag")
+                    {
+                        ActualETag = etag,
+                        ExpectedETag = existingEtag
+                    };
+                }
+            }
+
+            DocumentDatabase.UuidCreateSequential(out etag);
+
+            using (var update = new Update(session, documents, isUpdate ? JET_prep.Replace : JET_prep.Insert))
             {
                 Api.SetColumn(session, documents, documentsColumns["key"], key, Encoding.Unicode);
                 Api.SetColumn(session, documents, documentsColumns["data"], Encoding.UTF8.GetBytes(data));
+                Api.SetColumn(session, documents, documentsColumns["etag"], etag.ToByteArray());
                 Api.SetColumn(session, documents, documentsColumns["metadata"], metadata, Encoding.Unicode);
 
                 update.Save();
             }
-            logger.DebugFormat("Inserted a new document with key '{0}', doc length: {1}", key, data.Length);
+            logger.DebugFormat("Inserted a new document with key '{0}', doc length: {1}, update: {2}, ", 
+                key, data.Length, isUpdate);
         }
 
-        public void DeleteDocument(string key)
+        public void DeleteDocument(string key, Guid etag)
         {
             Api.JetSetCurrentIndex(session, documents, "by_key");
             Api.MakeKey(session, documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -205,6 +232,17 @@ namespace Raven.Database.Storage
             {
                 logger.DebugFormat("Document with key '{0}' was not found, and considered deleted", key);
                 return;
+            }
+
+            var rowEtag = new Guid(Api.RetrieveColumn(session, documents, documentsColumns["etag"]));
+            if(rowEtag!=etag)
+            {
+                throw new ConcurrencyException("DELETE attempted on document '" + key +
+                                               "' using a non current etag")
+                {
+                    ActualETag = etag,
+                    ExpectedETag = rowEtag
+                };
             }
 
             Api.JetDelete(session, documents);
@@ -224,17 +262,31 @@ namespace Raven.Database.Storage
                 logger.DebugFormat("New task '{0}'", task.AsString());
         }
 
-        public void AddAttachment(string key, byte[] data, string headers)
+        public void AddAttachment(string key, Guid etag, byte[] data, string headers)
         {
             Api.JetSetCurrentIndex(session, files, "by_name");
             Api.MakeKey(session, files, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
-            var prep = (Api.TrySeek(session, files, SeekGrbit.SeekEQ) == false)
-                           ? JET_prep.Insert
-                           : JET_prep.Replace;
-            using (var update = new Update(session, files, prep))
+            var isUpdate = Api.TrySeek(session, files, SeekGrbit.SeekEQ);
+            if(isUpdate)
+            {
+                var existingEtag = new Guid(Api.RetrieveColumn(session, files, filesColumns["etag"]));
+                if (existingEtag != etag)
+                {
+                    throw new ConcurrencyException("PUT attempted on attachment '" + key +
+                                                   "' using a non current etag")
+                    {
+                        ActualETag = etag,
+                        ExpectedETag = existingEtag
+                    };
+                }
+            
+            }
+            DocumentDatabase.UuidCreateSequential(out etag);
+            using (var update = new Update(session, files, isUpdate ? JET_prep.Replace : JET_prep.Insert))
             {
                 Api.SetColumn(session, files, filesColumns["name"], key, Encoding.Unicode);
                 Api.SetColumn(session, files, filesColumns["data"], data);
+                Api.SetColumn(session, files, filesColumns["etag"], etag.ToByteArray());
                 Api.SetColumn(session, files, filesColumns["metadata"], headers, Encoding.Unicode);
 
                 update.Save();
@@ -242,7 +294,7 @@ namespace Raven.Database.Storage
             logger.DebugFormat("Adding attachment {0}", key);
         }
 
-        public void DeleteAttachment(string key)
+        public void DeleteAttachment(string key, Guid etag)
         {
             Api.JetSetCurrentIndex(session, files, "by_name");
             Api.MakeKey(session, files, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -250,6 +302,16 @@ namespace Raven.Database.Storage
             {
                 logger.DebugFormat("Attachment with key '{0}' was not found, and considered deleted", key);
                 return;
+            }
+            var fileEtag = new Guid(Api.RetrieveColumn(session, files, filesColumns["etag"]));
+            if(fileEtag != etag)
+            {
+                throw new ConcurrencyException("DELETE attempted on attachment '" + key +
+                                               "' using a non current etag")
+                {
+                    ActualETag = etag,
+                    ExpectedETag = fileEtag
+                };
             }
 
             Api.JetDelete(session, files);
@@ -268,12 +330,11 @@ namespace Raven.Database.Storage
             var metadata = Api.RetrieveColumnAsString(session, files, filesColumns["metadata"], Encoding.Unicode);
             return new Attachment
             {
-                Data= Api.RetrieveColumn(session, files, filesColumns["data"]),
+                Data = Api.RetrieveColumn(session, files, filesColumns["data"]),
+                Etag = new Guid(Api.RetrieveColumn(session, files, filesColumns["etag"])),
                 Metadata = JObject.Parse(metadata)
             };
         }
-
-
 
         public string GetFirstTask()
         {
