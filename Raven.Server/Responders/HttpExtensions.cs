@@ -243,7 +243,7 @@ namespace Raven.Server.Responders
 
         public static Guid GetEtag(this HttpListenerContext context)
         {
-            var etagAsString = context.Request.Headers["etag"];
+            var etagAsString = context.Request.Headers["If-Match"];
             if (etagAsString != null)
             {
                 try

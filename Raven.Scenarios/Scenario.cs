@@ -108,7 +108,7 @@ namespace Raven.Scenarios
                     string[] headerParts = header.Split(new[] { ": " }, 2, StringSplitOptions.None);
                     if (new[] { "Host", "Content-Length", "User-Agent" }.Any(s => s.Equals(headerParts[0], StringComparison.InvariantCultureIgnoreCase)))
                         continue;
-                    if (headerParts[0] == "ETag")
+                    if (headerParts[0] == "If-Match")
                         headerParts[1] = lastEtag;
                     req.Headers[headerParts[0]] = headerParts[1];
                 }
