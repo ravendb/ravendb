@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -110,7 +109,8 @@ namespace Raven.Scenarios
                     string[] headerParts = header.Split(new[] { ": " }, 2, StringSplitOptions.None);
                     if (new[] { "Host", "Content-Length", "User-Agent" }.Any(s => s.Equals(headerParts[0], StringComparison.InvariantCultureIgnoreCase)))
                         continue;
-                    if (headerParts[0] == "If-Match")
+                    if (headerParts[0] == "If-Match" && 
+                        IsValidETag(headerParts))
                         headerParts[1] = lastEtag;
                     req.Headers[headerParts[0]] = headerParts[1];
                 }
@@ -136,6 +136,18 @@ namespace Raven.Scenarios
                             webResponse.StatusDescription
                     };
                 }
+            }
+        }
+
+        private static bool IsValidETag(string[] headerParts)
+        {
+            try
+            {
+                return new Guid(headerParts[1]) != Guid.Empty;
+            }
+            catch 
+            {
+                return false;   
             }
         }
 
