@@ -2,7 +2,7 @@ using System.Net;
 
 namespace Raven.Server.Responders
 {
-    public class FavIconResponder: RequestResponder
+    public class Favicon: RequestResponder
     {
         public override string UrlPattern
         {

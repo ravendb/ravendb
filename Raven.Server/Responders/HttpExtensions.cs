@@ -103,6 +103,13 @@ namespace Raven.Server.Responders
                 return JObject.Load(jsonReader);
         }
 
+        public static JArray ReadJsonArray(this HttpListenerContext context)
+        {
+            using (var streamReader = new StreamReader(context.Request.InputStream))
+            using (var jsonReader = new JsonTextReader(streamReader))
+                return JArray.Load(jsonReader);
+        }
+
         public static string ReadString(this HttpListenerContext context)
         {
             using (var streamReader = new StreamReader(context.Request.InputStream))

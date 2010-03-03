@@ -2,7 +2,7 @@ using System.Net;
 
 namespace Raven.Server.Responders
 {
-    public class DivanRootResponder : RequestResponder
+    public class DivanRoot : RequestResponder
     {
         public override string UrlPattern
         {

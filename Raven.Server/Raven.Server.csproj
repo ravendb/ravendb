@@ -74,12 +74,13 @@
     <Compile Include="HttpServer.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Responders\DivanRootResponder.cs" />
-    <Compile Include="Responders\DivanUserInterfaceResponder.cs" />
+    <Compile Include="Responders\DivanRoot.cs" />
+    <Compile Include="Responders\DivanUI.cs" />
     <Compile Include="Responders\Docs.cs" />
     <Compile Include="Responders\Document.cs" />
-    <Compile Include="Responders\FavIconResponder.cs" />
+    <Compile Include="Responders\Favicon.cs" />
     <Compile Include="Responders\HttpExtensions.cs" />
+    <Compile Include="Responders\Queries.cs" />
     <Compile Include="Responders\RequestResponder.cs" />
     <Compile Include="Responders\Index.cs" />
     <Compile Include="Responders\Indexes.cs" />
