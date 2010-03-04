@@ -198,3 +198,6 @@ div.clear
 
 .indexPreview { padding: 0px 20px 20px 20px; }
 .indexPreview h2 { background-color: #071C31; color: #fff; font-size: 18px; padding:10px 20px; margin: 0 0 10px -20px; width: 100%; }
+
+.jsonViewWrapper h2 { background-color: #071C31; color: #fff; font-size: 18px; padding:10px 10px; margin: 0 0 10px 0; }
+.jsonViewWrapper h3 { margin: 10px; }

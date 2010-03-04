@@ -74,7 +74,7 @@
 
         function getDisplayString(json) {
             var returnJSON = json;
-            delete returnJSON.@metadata;
+            delete returnJSON["@metadata"];
             var jsonString = JSON.stringify(returnJSON);
             if (jsonString.length > 90)
                 jsonString = jsonString.substring(0,90) + '...';
@@ -108,21 +108,22 @@
                     var width = $('#body').width() - x - 20;
                     var unParsedJSON = unescape($(this).children('.searchListItemValue').html());
                     var json = JSON.parse(unParsedJSON);
-                    if (json.@metadata)
-                        delete json.@metadata;
-                    var jsonPreview = $('<div class="jsonViewWrapper"></div>');
+                    if (json["@metadata"])
+                        delete json["@metadata"];
+                    var jsonPreview = $('<div class="jsonViewWrapper"></div>');                    
                     $(jsonPreview).html(JSONToViewHTML(json));
                     $(jsonPreview).find('.jsonObjectView:first').css('border', 'none').css('padding', '0').css('margin-left', '0');
+                    $(jsonPreview).prepend("<h2>Click to edit this document</h2><h3>Document Preview:</h3>");  
                     $('#documentPreview')
                         .css('width', width +'px')
                         .css('position', 'absolute')
                         .css('left', x + 'px')
-                        .css('top', y + 'px')
+                        .css('top', y + 'px')                        
                         .html(jsonPreview);
                     if ($('#documentPreview').is(":animated"))
-                            $('#documentPreview').stop().show().fadeTo("normal", 1.0);
+                            $('#documentPreview').stop().show().fadeTo("normal", 0.9);
                     else
-                        $('#documentPreview').is(':visible') ? $('#documentPreview').fadeTo("normal", 1.0) : $('#documentPreview').fadeIn();                        
+                        $('#documentPreview').is(':visible') ? $('#documentPreview').fadeTo("normal", 0.9) : $('#documentPreview').fadeIn();                        
                 }, function () {
                     $(this).css('background-color', previousBGColor);
                     if ($('#documentPreview').is(':animated'))

@@ -224,7 +224,7 @@ function LoadTree(json) {
         callback: {
             onselect: function (node, tree) {
                 if (tree.get_type(node) == 'jsonValue') {
-                    $('#selectedJSONname').val($(node).children('a').text().trim());
+                    $('#selectedJSONname').val($.trim($(node).children('a').text()));
                     $('#selectedJSONval').val(unescape($(node).attr('jsonvalue')));
                     $('#jsonArrayEditor').fadeOut('slow', function () {
                         $('#jsonEditor').fadeIn('slow');
