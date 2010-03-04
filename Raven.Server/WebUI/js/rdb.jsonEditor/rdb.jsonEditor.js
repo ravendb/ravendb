@@ -1,4 +1,15 @@
-﻿function InitializeJSONEditor(jsonToEdit) {
+﻿/*
+requires the following includes to be on page
+<link href="css/rdb.jsonEditor.css" rel="Stylesheet" type="text/css" />
+<link href="css/smoothness/jquery-ui-1.8rc2.custom.css" rel="Stylesheet" type="text/css" />
+<script type="text/javascript" src="js/jquery-1.4.2.min.js"></script>
+<script type="text/javascript" src="js/jquery-ui.js"></script>
+<script type="text/javascript" src="js/json2.js"></script>
+<script type="text/javascript" src="js/jstree/jquery.tree.js"></script>
+*/
+
+function InitializeJSONEditor(jsonToEdit) {
+    $('#editorContainer').hide().before($('<div id="editorLoading" style="width:600px;">Loading...</div>'));    
     $('#txtJSON').val(JSON.stringify(jsonToEdit));
 
     $('#editorTabs').tabs({
@@ -26,7 +37,7 @@
                     event.preventDefault();
                 }
             }
-        }
+        }       
     });
     
     $('#editorApplyChanges, #editorApplyChanges2').button({
@@ -40,7 +51,45 @@
         LoadJSONToTree(json);
     } else {
         $('#editorTabs').tabs('select', 1);
-    }
+    }    
+    $('#editorLoading').hide();
+    $('#editorContainer').show();
+}
+
+function ShowEditorForNewDocument(saveCallback) {
+    ShowEditorForDocument(null, { PropertyName : 'Value'}, null, 'Create New Document', function(id, etag, json, editor) {
+        saveCallback(json, editor);
+    });
+}
+
+function ShowEditorForDocument(id, doc, etag, title, saveCallback) {
+    var editorHtml = $('<div id="editorContainer"></div>');
+    $(editorHtml).load('/divan/js/rdb.jsonEditor/editor.html', function() {
+        $(editorHtml).css('position', 'relative').css('height', '500px');
+        $(editorHtml).dialog({
+        modal: true,
+        open: function(event, ui) {
+            InitializeJSONEditor(doc);
+        },
+        close: function() {
+            $('#editorContainer').dialog('destroy');
+            $('#editorContainer').remove();
+        },
+        buttons: {
+            Save: function () {
+                if (ValidateRawJSON()) {
+                    saveCallback(id, etag, GetJSONFromEditor(), editorHtml);
+                };
+            },
+            Cancel: function () {
+                $(this).dialog('close');
+            }
+        },
+        title: title,
+        width: 'auto'
+    });
+    
+});
 }
 
 function ValidateRawJSON() {
@@ -58,7 +107,7 @@ function ValidateRawJSON() {
                 modal: true,
                 buttons: { 
                     Ok: function() {
-                        $(this).dialog('close').dialog('destroy');
+                        $(this).dialog('close');
                     }
                 }
             });
@@ -213,7 +262,13 @@ function GetJSONFromTree() {
     var treeJSON = $.tree.focused().get(null, null, { outer_attrib: ["jsonvalue"] });
     var convertedTreeJSON = traverseTreeJSON(treeJSON);
     convertedTreeJSON = convertedTreeJSON.Document;
-    var jsonString = JSON.stringify(convertedTreeJSON);
+    var arrayAsJSON = {};
+    $(convertedTreeJSON).each(function() {
+        $.each(this, function(key, value) {
+            arrayAsJSON[key] = value;
+        });
+    });
+    var jsonString = JSON.stringify(arrayAsJSON, null, '\t');
     return jsonString;
 }
 
@@ -221,11 +276,13 @@ function GetJSONFromTree() {
 function traverseTreeJSON(json) {
     var retJSON = {};
     if (json.children) {
-        var childrenJSON = {};
+        var childrenJSON = [];
         $(json.children).each(function () {
             var childJSON = traverseTreeJSON(this);
             $.each(childJSON, function (key, value) {
-                childrenJSON[key] = value;
+                var childPair = {};
+                childPair[key] = value;
+                childrenJSON.push(childPair);
             });
         });
 
@@ -275,12 +332,14 @@ function JSONToViewHTML(jsonObj) {
 function JSONToTreeJSON(jsonObj) {
     if (typeof jsonObj == "object") {
         var jsonArr = [];
-        $.each(jsonObj, function (key, value) {
+        $.each(jsonObj, function (key, value) {            
             if (value) {
                 // key is either an array index or object key                    
                 var children = JSONToTreeJSON(value);
 
-                if (typeof children == "object") {
+                if (IsArray(jsonObj)) {
+                    jsonArr.push(children);
+                } else if (typeof children == "object") {
                     jsonArr.push({
                         data: key,
                         children: children
@@ -313,4 +372,11 @@ function UpdateSelectedNode() {
     } else {
         $.tree.focused().rename($.tree.focused().selected, $('#selectedJSONArrayName').val());
     }
+}
+
+function IsArray(obj) {
+   if (obj.constructor.toString().indexOf("Array") == -1)
+      return false;
+   else
+      return true;
 }

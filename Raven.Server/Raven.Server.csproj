@@ -182,7 +182,8 @@
     <Content Include="WebUI\js\jstree\themes\default\style.css" />
     <Content Include="WebUI\js\jstree\themes\default\throbber.gif" />
     <Content Include="WebUI\js\jstree\themes\icons\txt.png" />
-    <Content Include="WebUI\js\rdb.jsonEditor.js" />
+    <Content Include="WebUI\js\rdb.jsonEditor\editor.html" />
+    <Content Include="WebUI\js\rdb.jsonEditor\rdb.jsonEditor.js" />
     <Content Include="WebUI\statistics.html" />
   </ItemGroup>
   <ItemGroup>

@@ -135,54 +135,35 @@
         }
 
         function EditDocument(id) {
+            $('#ajaxSuccess, #ajaxError').fadeOut();            
             DivanUI.GetDocument(id, function (doc, etag) { 
-                $('#divEditor').dialog({
-                    modal: true,
-                    open: function(event, ui) {
-                        InitializeJSONEditor(doc);
-                    },
-                    buttons: {
-                        Save: function () {
-                            if (ValidateRawJSON()) {
-                                DivanUI.SaveDocument(id, etag, GetJSONFromEditor(), function () {
-                                    $('#divEditor').dialog('close');
-                                    //TODO: Update values in list/preview
-                                });
-                            };
-                        },
-                        Cancel: function () {
-                            $(this).dialog('close');
+                ShowEditorForDocument(id, doc, etag, 'Edit Document', function(id, etag, json, editor) {
+                    DivanUI.SaveDocument(id, etag, GetJSONFromEditor(), function () {
+                        $(editor).dialog('close');
+                        $('#ajaxSuccess').html('Your document has been updated. Click <a href="#" onclick="EditDocument(\'' + id + '\'); return false;">here</a> to see it again.').fadeIn('slow');
+                        if (!isInQueryMode) {
+                            getAllDocuments();
+                        } else {
+                            ExecuteQuery();
                         }
-                    },
-                    title: 'Edit Document',
-                    width: 'auto'
+                    });
                 });
-            });
+            });            
         }
 
         function CreateDocument() {
-            InitializeJSONEditor({ PropertyName : 'Value'})
-            $('#divEditor').dialog({
-                modal: true,
-                open: function(event, ui) {
-                    InitializeJSONEditor({ PropertyName : 'Value'});
-                },
-                buttons: {
-                    Save: function () {
-                        if (ValidateRawJSON()) {
-                            DivanUI.SaveDocument(null, null, GetJSONFromEditor(), function () {
-                                $('#divEditor').dialog('close');
-                                //TODO: Update values in list/preview
-                            });
-                        }
-                    },
-                    Cancel: function () {
-                        $(this).dialog('close');
+            $('#ajaxSuccess, #ajaxError').fadeOut();    
+            ShowEditorForNewDocument(function(json, editor) {
+                DivanUI.SaveDocument(null, null, json, function (data) {
+                    $(editor).dialog('close');
+                    $('#ajaxSuccess').html('Your document has been created. Click <a href="#" onclick="EditDocument(\'' + data.id + '\'); return false;">here</a> to see it again.').fadeIn('slow');
+                    if (!isInQueryMode) {
+                        getAllDocuments();
+                    } else {
+                        ExecuteQuery();
                     }
-                },
-                title: 'Create New Document',
-                width: 'auto'
-            });
+                });
+            });            
         }
 
         function SaveDocument(id, json) {

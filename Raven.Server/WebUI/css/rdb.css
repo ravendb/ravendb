@@ -70,6 +70,25 @@ div#nav a.nav_active
 	border: 1px solid #aaa;
 }
 
+#ajaxSuccess 
+{
+	display: none;
+	padding: 20px;
+	margin: 0;
+	background-color: #00C91E;
+	color: #fff;
+	font-size: 18px;
+}
+#ajaxError 
+{
+	display: none;
+	padding: 20px;
+	margin: 0;
+	background-color: #F73B3B;
+	color: #fff;
+	font-size: 18px;
+}
+#ajaxSuccess a, #ajaxError a { color: #ccc; }
 
 div#footer
 {
@@ -177,32 +196,5 @@ div.clear
 	background-color: #eee;
 }
 
-.tooltip
-{
-	display: none;
-	font-size: 12px;
-	padding: 10px 25px;
-	top: 0;
-	z-index: 3;
-	background-color: #1F5B75;
-	opacity: .9;
-	color: #fff;
-	position: absolute;
-	line-height: 20px;
-	width: 300px;
-	-moz-box-shadow: 3px 3px 5px 2px #444;
-	-webkit-box-shadow: 3px 3px 5px 2px #444;
-}
-.tooltipArrow
-{
-	width: 0;
-	height: 0;
-	border-bottom: 8px solid transparent;
-	border-top: 8px solid transparent;
-	border-right: 8px solid #1F5B75;
-	border-left: 0;
-	top: 0;
-	left: 0;
-	opacity: .9;
-	position: absolute;
-}
+.indexPreview { padding: 0px 20px 20px 20px; }
+.indexPreview h2 { background-color: #071C31; color: #fff; font-size: 18px; padding:10px 20px; margin: 0 0 10px -20px; width: 100%; }
