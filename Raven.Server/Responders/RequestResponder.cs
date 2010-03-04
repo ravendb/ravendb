@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Net;
 using System.Text.RegularExpressions;
@@ -14,6 +15,7 @@ namespace Raven.Server.Responders
         private readonly string[] supportedVerbsCached;
 
         public DocumentDatabase Database { get; set; }
+        public RavenConfiguration Settings { get; set; }
 
         protected RequestResponder()
         {

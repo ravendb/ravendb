@@ -20,7 +20,7 @@ namespace Raven.Server
 
         protected override void OnStart(string[] args)
         {
-            server = new DivanServer(@"..\..\..\Data", 8080);
+            server = new DivanServer(new RavenConfiguration());
         }
 
         protected override void OnStop()
