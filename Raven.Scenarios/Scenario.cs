@@ -11,6 +11,7 @@ using ICSharpCode.SharpZipLib.Zip;
 using Raven.Database.Extensions;
 using Raven.Server;
 using Raven.Server.Responders;
+using Xunit;
 
 namespace Raven.Scenarios
 {
@@ -21,7 +22,7 @@ namespace Raven.Scenarios
         const int testPort = 58080;
         private string lastEtag;
 
-        private readonly Regex[] etagFinders = new Regex[]
+        private readonly Regex[] guidFinders = new[]
         {
             new Regex(
                 @",""expectedETag"":""(\{{0,1}([0-9a-fA-F]){8}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){12}\}{0,1})"",")
@@ -29,6 +30,7 @@ namespace Raven.Scenarios
             new Regex(
                 @"""etag"":""(\{{0,1}([0-9a-fA-F]){8}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){12}\}{0,1})""")
             ,
+            new Regex(@"id"":""(\{{0,1}([0-9a-fA-F]){8}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){12}\}{0,1})"""), 
         };
 
         public Scenario(string file)
@@ -100,7 +102,9 @@ namespace Raven.Scenarios
             using (var sr = new StringReader(request))
             {
                 string[] reqParts = sr.ReadLine().Split(' ');
-                var req = (HttpWebRequest)WebRequest.Create(reqParts[1].Replace(":8080/", ":" + testPort + "/"));
+                var uriString = reqParts[1].Replace(":8080/", ":" + testPort + "/");
+                Uri uri = GetUri_WorkaroundForStrangeBug(uriString);
+                var req = (HttpWebRequest)WebRequest.Create(uri);
                 req.Method = reqParts[0];
 
                 string header;
@@ -139,6 +143,24 @@ namespace Raven.Scenarios
             }
         }
 
+        /// <summary>
+        /// No, I am not insane, working around a framework issue:
+        /// http://ayende.com/Blog/archive/2010/03/04/is-select-system.uri-broken.aspx
+        /// </summary>
+        private Uri GetUri_WorkaroundForStrangeBug(string uriString)
+        {
+            Uri uri;
+            try
+            {
+                uri = new Uri(uriString);
+            }
+            catch (Exception e)
+            {
+                uri = new Uri(uriString);
+            }
+            return uri;
+        }
+
         private static bool IsValidETag(string[] headerParts)
         {
             try
@@ -173,10 +195,10 @@ namespace Raven.Scenarios
         private void CompareResponses(byte[] response, Tuple<string, NameValueCollection, string> actual, string request)
         {
             var responseAsString = HandleChunking(response);
-            foreach (var etagFinder in etagFinders)
+            foreach (var finder in guidFinders)
             {
-                var actualEtag = etagFinder.Match(actual.First).Groups[1].Value;
-                var expectedEtag = etagFinder.Match(responseAsString).Groups[1].Value;
+                var actualEtag = finder.Match(actual.First).Groups[1].Value;
+                var expectedEtag = finder.Match(responseAsString).Groups[1].Value;
                 if (string.IsNullOrEmpty(expectedEtag) == false)
                 {
                     responseAsString = responseAsString.Replace(expectedEtag, actualEtag);
@@ -194,9 +216,13 @@ namespace Raven.Scenarios
             while (string.IsNullOrEmpty((header = sr.ReadLine())) == false)
             {
                 string[] parts = header.Split(new[] { ": " }, 2, StringSplitOptions.None);
-                if (parts[0] == "Date" || parts[0] == "Content-Length" ||
-                    parts[0] == "ETag")
+                if (parts[0] == "Content-Length")
                     continue;
+                if (parts[0] == "Date" || parts[0] == "ETag" || parts[0] == "Location")
+                {
+                    Assert.Contains(parts[0],actual.Second.AllKeys);
+                    continue;
+                }
                 if (actual.Second[parts[0]] != parts[1])
                 {
                     throw new InvalidDataException(
