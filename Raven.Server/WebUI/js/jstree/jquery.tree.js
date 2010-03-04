@@ -732,7 +732,6 @@
 
 				// SCROLL SELECTED NODE INTO VIEW
 				this.scroll_into_view(this.selected);
-
 				this.callback("onselect", [this.selected.get(0), _this]);
 				this.callback("onchange", [this.selected.get(0), _this]);
 			},

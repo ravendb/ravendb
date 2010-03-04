@@ -61,8 +61,10 @@
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
+    <Reference Include="System.Drawing" />
     <Reference Include="System.Management" />
     <Reference Include="System.ServiceProcess" />
+    <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml.Linq">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
@@ -162,7 +164,6 @@
     <Content Include="WebUI\images\topNavSep.png" />
     <Content Include="WebUI\index.html" />
     <Content Include="WebUI\indexes.html" />
-    <Content Include="WebUI\JSONTemplates\documentPage.html" />
     <Content Include="WebUI\JSONTemplates\globalStats.html" />
     <Content Include="WebUI\JSONTemplates\indexPage.html" />
     <Content Include="WebUI\JSONTemplates\quickStats.html" />
