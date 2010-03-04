@@ -55,7 +55,7 @@ namespace Raven.Client
                 .FirstOrDefault(q => documentStore.Conventions.FindIdentityProperty.Invoke(q));
 
             var key = (string)identityProperty.GetValue(entity, null);
-            key = database.Put(key, json, new JObject());
+            key = database.Put(key, null, json, new JObject());
 
             identityProperty.SetValue(entity, key, null);
         }
