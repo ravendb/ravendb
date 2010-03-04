@@ -65,6 +65,10 @@ DivanUI.SaveDocument = function (id, etag, json, successCallback) {
     $.divanDB.saveDocument(id, etag, json, successCallback);
 }
 
+DivanUI.DeleteDocument = function (id, etag, successCallback) {
+    $.divanDB.deleteDocument(id, etag, successCallback);
+}
+
 //indexes
 DivanUI.GetIndexCount = function (successCallback) {
     $.divanDB.getIndexCount(successCallback);
@@ -87,6 +91,10 @@ DivanUI.GetIndex = function (name, successCallback) {
 
 DivanUI.SaveIndex = function (name, def, successCallback, errorCallback) {
     $.divanDB.saveIndex(name, def, successCallback, errorCallback);
+}
+
+DivanUI.DeleteIndex = function (name, successCallback) {
+    $.divanDB.deleteIndex(name, successCallback);
 }
 
 DivanUI.SearchIndexes = function (name, successCallback) {

@@ -80,6 +80,19 @@
                 }
             });
         },
+        
+        deleteDocument: function(id, etag, successCallback) {
+            $.ajax({
+                type: 'DELETE',
+                url: settings.server + 'docs/' + id,
+                beforeSend: function(xhr) {
+                    xhr.setRequestHeader("If-Match", etag);        
+                },
+                success: function (data) {
+                    successCallback(data);
+                }
+            });
+        },
 
         getIndexCount: function (successCallback) {
             $.ajax({
@@ -128,6 +141,16 @@
                 },
                 error: function(request, textStatus, errorThrown) {
                     errorCallback();
+                }
+            });
+        },
+        
+        deleteIndex: function(name, successCallback) {
+            $.ajax({
+                type: 'DELETE',
+                url: settings.server + 'indexes/' + name,
+                success: function (data) {
+                    successCallback(data);
                 }
             });
         },

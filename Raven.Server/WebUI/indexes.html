@@ -43,6 +43,10 @@
             }).click(function () {
                 EditIndex($('#indexNameSearch').val());
             });
+            
+            $('#deleteIndex').button({
+                icons: { primary: 'ui-icon-trash' }
+            });
 
 
             $('#indexNameSearch').autocomplete({
@@ -113,6 +117,29 @@
                 $('#indexEditorName').val(name);
                 $('#indexEditorDef').val(index.index);
                 $('#saveError, #ajaxSuccess, #ajaxError').hide();
+                
+                $('#deleteIndex').show().click(function() {
+                    var deleteDialog = $('<div title="Delete Confirmation" class="ui-state-error ui-corner-all" style="padding:20px;"></div>');
+                    $(deleteDialog)
+                        .html('<p><span style="float: left; margin-right: 0.3em;" class="ui-icon ui-icon-alert"></span>Are you sure you want to delete this index?</p>')
+                        .dialog({
+                            modal: true,
+                            buttons: { 
+                                'Delete' : function() {
+                                    DivanUI.DeleteIndex(name, function(data) {
+                                        $(deleteDialog).dialog('close');
+                                        $('#divEditor').dialog('close');                       
+                                        $('#ajaxSuccess').html('Your index has been deleted.').fadeIn('slow');
+                                        getIndexPage();
+                                    });                                                             
+                                }, 
+                                Cancel: function() {
+                                    $(this).dialog('close');
+                                }
+                            },
+                            width: 'auto'
+                        });
+                });
                 $('#divEditor').dialog({
                     modal: true,
                     buttons: {
@@ -140,7 +167,8 @@
         function CreateIndex() {
             $('#indexEditorName').val('');
             $('#indexEditorDef').val('');
-            $('#saveError, #ajaxSuccess, #ajaxError').hide();            
+            $('#saveError, #ajaxSuccess, #ajaxError').hide(); 
+            $('#deleteIndex').hide();           
             $('#divEditor').dialog({
                 modal: true,
                 buttons: {
@@ -217,6 +245,7 @@
 
                 <label for="indexEditorDef">Definition</label><br />
                 <textarea style="width:100%; height:100px;" id="indexEditorDef" name="indexEditorDef"></textarea><br /><br />
+                <button id="deleteIndex" style="margin-bottom:20px;">Delete Index</button>
             </div>
             <p id="indexList">
                 <img src="images/ajax-loader.gif" /> Loading...

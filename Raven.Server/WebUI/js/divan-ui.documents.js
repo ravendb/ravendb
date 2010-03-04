@@ -147,6 +147,17 @@
                             ExecuteQuery();
                         }
                     });
+                }, function(id, etag, editor, deleteDialog) {
+                    DivanUI.DeleteDocument(id, etag, function(data) {
+                        $(deleteDialog).dialog('close');
+                        $(editor).dialog('close');                       
+                        $('#ajaxSuccess').html('Your document has been deleted.').fadeIn('slow');
+                        if (!isInQueryMode) {
+                            getAllDocuments();
+                        } else {
+                            ExecuteQuery();
+                        }
+                    });
                 });
             });            
         }

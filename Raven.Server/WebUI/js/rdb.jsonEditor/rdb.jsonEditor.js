@@ -39,6 +39,19 @@ function InitializeJSONEditor(jsonToEdit) {
             }
         }       
     });
+   
+    $('#createArray').button({
+        icons: { primary: 'ui-icon-folder-collapsed' },
+        text: false
+    });
+    $('#createValue').button({
+        icons: { primary: 'ui-icon-document' },
+        text: false
+    });
+    $('#deleteSelected').button({
+        icons: { primary: 'ui-icon-closethick' },
+        text: false
+    });
     
     $('#editorApplyChanges, #editorApplyChanges2').button({
         icons: { primary: 'ui-icon-disk' }
@@ -59,12 +72,34 @@ function InitializeJSONEditor(jsonToEdit) {
 function ShowEditorForNewDocument(saveCallback) {
     ShowEditorForDocument(null, { PropertyName : 'Value'}, null, 'Create New Document', function(id, etag, json, editor) {
         saveCallback(json, editor);
-    });
+    }, null);
 }
 
-function ShowEditorForDocument(id, doc, etag, title, saveCallback) {
+function ShowEditorForDocument(id, doc, etag, title, saveCallback, deleteCallback) {
     var editorHtml = $('<div id="editorContainer"></div>');
     $(editorHtml).load('/divan/js/rdb.jsonEditor/editor.html', function() {
+        if (id) {
+            var deleteButton = $('<button style="margin-top:10px;">Delete Document</button>');
+            $(deleteButton).button({
+                icons: { primary: 'ui-icon-trash' }
+            }).click(function() {
+                $('<div title="Delete Confirmation" class="ui-state-error ui-corner-all" style="padding:20px;"></div>')
+                    .html('<p><span style="float: left; margin-right: 0.3em;" class="ui-icon ui-icon-alert"></span>Are you sure you want to delete this document?</p>')
+                    .dialog({
+                        modal: true,
+                        buttons: { 
+                            'Delete' : function() {
+                                deleteCallback(id, etag, editorHtml, this);                                                              
+                            }, 
+                            Cancel: function() {
+                                $(this).dialog('close');
+                            }
+                        },
+                        width: 'auto'
+                    });
+            });
+            $(editorHtml).append(deleteButton);
+        }
         $(editorHtml).css('position', 'relative').css('height', '500px');
         $(editorHtml).dialog({
         modal: true,

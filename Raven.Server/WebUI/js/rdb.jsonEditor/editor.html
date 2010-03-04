@@ -5,13 +5,16 @@
         <li><a href="#jsonViewer">View</a></li>
     </ul>
 
-    <div style="background-color:#D6EEFA; padding:5px;" class="ui-corner-all" id="fancyJSONEditor">
+    <div style="padding:5px;" class="ui-corner-all" id="fancyJSONEditor">
         <div style="float:left; overflow:auto; background-color:#fff; padding:20px;" class="ui-corner-left">
             <div id="jsonTree"></div>
             <div class="clear"></div>
             <br />
-            <a href="#" onclick = "CreateArray(); return false;">+ Create New Array</a><br /><br />
-            <a href="#" onclick = "CreateValue(); return false;">+ Create New Value</a>
+            <div style="text-align:center;">
+                <button id="createArray" onclick="CreateArray();">New Array</button>
+                <button id="createValue" onclick="CreateValue();">New Value</button>
+                <button id="deleteSelected" onclick="DeleteSelected();">Delete Selected</button>
+            </div>
         </div>
         
         <div id="jsonEditor" style="float:left; padding:20px; display:none;">
