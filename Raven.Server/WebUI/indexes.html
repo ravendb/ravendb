@@ -9,7 +9,6 @@
 
     <script type="text/javascript" src="js/jquery-1.4.2.min.js"></script>
     <script type="text/javascript" src="js/jquery-ui.js"></script>
-    <script type="text/javascript" src="js/jquery.simpletip.js"></script>
     <script type="text/javascript" src="js/jquery-jtemplates.js"></script>
     <script type="text/javascript" src="js/jquery.pager.js"></script>
     <script type="text/javascript" src="js/json2.js"></script>
@@ -18,20 +17,16 @@
     <script type="text/javascript" src="js/divan-ui.js"></script>
 
     <script type="text/javascript">
-        var numPages;
+        var pageNumber = 1;
         var pageSize = 25;
+        var numPages;
 
         $(document).ready(function () {
             DivanUI.GetIndexCount(function (totalCount) {
+            numPages = Math.ceil(totalCount / pageSize);
                 var totalIndexes = totalCount;
-                if (totalIndexes != 0) {
-                    numPages = Math.ceil(totalIndexes / pageSize);
-                    $("#pager").pager({
-                        pagenumber: 1,
-                        pagecount: numPages,
-                        buttonClickCallback: pagerClick
-                    });
-                    getIndexPage(1, pageSize);
+                if (totalIndexes != 0) {                    
+                    getIndexPage();
                 } else {
                     $('#indexList').html('There are no indexes in your database');
                 }
@@ -67,32 +62,47 @@
             });
         });
 
-        function getIndexPage(pageNum, selectedPageSize) {
+        function getIndexPage() {
             $('#indexList').html('<img src="images/ajax-loader.gif" /> Loading...');
 
-            DivanUI.GetIndexPage(pageNum, selectedPageSize, '#indexList', function () {
+            DivanUI.GetIndexPage(pageNumber, pageSize, '#indexList', function () {
                 $('.searchListItem').each(function () {
-                    $(this).simpletip({
-                        content: "<strong>Click to edit this index</strong><br />Index Preview: <br />" + $(this).children('.searchListItemValue').html(),
-                        fixed: true,
-                        position: 'top right',
-                        offset: [322, 0],
-                        baseClass: 'tooltip ui-corner-all'
-                    });
-
                     $(this).click(function () {
                         EditIndex($(this).attr('id'));
                     });
-
+                    
+                    $("#pager").pager({
+                        pagenumber: pageNumber,
+                        pagecount: numPages,
+                        buttonClickCallback: pagerClick
+                    });
+                    
+                    var previousBGColor;
                     $(this).hover(function () {
-                        $(this).css('border', '1px solid #666').css('padding', '4px 9px');
-                        var tooltipArrow = $('<div class="tooltipArrow"> </div>');
-                        $(tooltipArrow).css('top', $(this).offset().top + 8);
-                        $(tooltipArrow).css('left', $(this).offset().left + $(this).outerWidth());
-                        $(this).append(tooltipArrow);
+                        previousBGColor =  $(this).css('background-color');
+                        $(this).css('background-color', '#94C2D8');
+                        var x = $(this).position().left + $(this).outerWidth();
+                        var y = $('.searchListWrapper').position().top;
+                        var width = $('#body').width() - x - 20;
+                        var previewText = unescape($(this).children('.searchListItemValue').html());                       
+                        var previewDiv = $('<div class="indexPreview"></div>');
+                        $(previewDiv).html("<h2>Click to edit this index</h2><h3>Index Preview:</h3>" + previewText);                        
+                        $('#indexPreview')
+                            .css('width', width +'px')
+                            .css('position', 'absolute')
+                            .css('left', x + 'px')
+                            .css('top', y + 'px')
+                            .html(previewDiv);
+                        if ($('#indexPreview').is(":animated"))
+                                $('#indexPreview').stop().show().fadeTo("normal",  0.9);
+                        else
+                            $('#indexPreview').is(':visible') ? $('#indexPreview').fadeTo("normal", 0.9) : $('#indexPreview').fadeIn();                        
                     }, function () {
-                        $(this).css('border', 'none').css('padding', '5px 10px');
-                        $(this).children('.tooltipArrow').remove();
+                        $(this).css('background-color', previousBGColor);
+                        if ($('#indexPreview').is(':animated'))
+                            $('#indexPreview').stop().fadeTo("normal", 0, function() { $(this).hide() });
+                        else
+                            $('#indexPreview').stop().fadeOut();
                     });
                 });
             });
@@ -102,6 +112,7 @@
             DivanUI.GetIndex(name, function (index) {
                 $('#indexEditorName').val(name);
                 $('#indexEditorDef').val(index.index);
+                $('#saveError, #ajaxSuccess, #ajaxError').hide();
                 $('#divEditor').dialog({
                     modal: true,
                     buttons: {
@@ -110,7 +121,10 @@
                             var def = $('#indexEditorDef').val();
                             DivanUI.SaveIndex(newName, def, function (data) {
                                 $('#divEditor').dialog('close');
-                                //TODO: Update values in list/preview
+                                $('#ajaxSuccess').html('Your index has been updated. Click <a href="#" onclick="EditIndex(\'' + newName + '\'); return false;">here</a> to see it again.').fadeIn('slow');
+                                getIndexPage();
+                            }, function() {
+                                $('#saveError').fadeIn();
                             });                                                        
                         },
                         Cancel: function () {
@@ -126,6 +140,7 @@
         function CreateIndex() {
             $('#indexEditorName').val('');
             $('#indexEditorDef').val('');
+            $('#saveError, #ajaxSuccess, #ajaxError').hide();            
             $('#divEditor').dialog({
                 modal: true,
                 buttons: {
@@ -134,7 +149,10 @@
                         var def = $('#indexEditorDef').val();
                         DivanUI.SaveIndex(newName, def, function (data) {
                             $('#divEditor').dialog('close');
-                            //TODO: Update values in list/preview
+                            getIndexPage();
+                            $('#ajaxSuccess').html('Your index has been created. Click <a href="#" onclick="EditIndex(\'' + newName + '\'); return false;">here</a> to see it again.').fadeIn('slow');
+                        }, function() {
+                            $('#saveError').fadeIn();
                         });
                     },
                     Cancel: function () {
@@ -148,12 +166,8 @@
 
 
         function pagerClick(newPageNumber) {
-            $("#pager").pager({
-                pagenumber: newPageNumber,
-                pagecount: numPages,
-                buttonClickCallback: pagerClick
-            });
-            getIndexPage(newPageNumber, pageSize);
+            pageNumber = newPageNumber;            
+            getIndexPage();
         }
     </script>
 </head>
@@ -173,25 +187,31 @@
         </div>
         <div class="clear"></div>
     </div>    
-    <div id="body">
-        <div id="right">
+    <div id="body" style="position:relative;">
+        <div id="ajaxSuccess"></div>
+        <div id="ajaxError"></div>
+        <div id="right" style="width:250px;">
             <div class="sideBarListBox">
                 <h3>Index Actions</h3>
                 <ul>
                     <li><button id="createNewIndex">Create New Index</button></li>
                     <li>
                         Search Indexes By Name<br />
-                        <input id="indexNameSearch" style="width:95%; margin: 10px 0;" /><br />
+                        <input id="indexNameSearch" style="width:200px; margin: 10px 0;" /><br />
                         <button id="editSearchedIndex" style="display:none;">Edit Index</button>
                     </li>
                 </ul>
             </div>
         </div>
-        <div id="content">
+        <div id="content" style="margin-right:350px;">
             <h2>
                 Indexes
             </h2>
             <div id="divEditor" style="display:none;">
+                <div id="saveError" style="font-weight:bold; color:Red; margin:20px 0; display:none;">
+                    There was an error saving your index.<br />
+                    Please ensure your syntax is correct and try again.
+                </div>
                 <label for="indexEditorName">Name</label><br />
                 <input type="text" style="width:100%;" id="indexEditorName" name="indexEditorName"></input><br /><br />
 
@@ -202,6 +222,9 @@
                 <img src="images/ajax-loader.gif" /> Loading...
             </p>
             <div id="pager"></div>
+            <div id="indexPreview" class="ui-corner-all" style="display:none; background-color: #fff; border:1px solid #000; opacity: 0.9;">
+            
+            </div>
         </div>                
     </div>
     <div id="footer">

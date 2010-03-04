@@ -85,8 +85,8 @@ DivanUI.GetIndex = function (name, successCallback) {
     $.divanDB.getIndex(name, successCallback);
 }
 
-DivanUI.SaveIndex = function (name, def, successCallback) {
-    $.divanDB.saveIndex(name, def, successCallback);
+DivanUI.SaveIndex = function (name, def, successCallback, errorCallback) {
+    $.divanDB.saveIndex(name, def, successCallback, errorCallback);
 }
 
 DivanUI.SearchIndexes = function (name, successCallback) {

@@ -118,13 +118,16 @@
             });
         },
 
-        saveIndex: function (name, def, successCallback) {
+        saveIndex: function (name, def, successCallback, errorCallback) {
             $.ajax({
                 type: 'PUT',
                 url: settings.server + 'indexes/' + name,
                 data: def,
                 success: function (data) {
                     successCallback(data);
+                },
+                error: function(request, textStatus, errorThrown) {
+                    errorCallback();
                 }
             });
         },

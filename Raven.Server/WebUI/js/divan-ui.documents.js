@@ -141,7 +141,11 @@
                     DivanUI.SaveDocument(id, etag, GetJSONFromEditor(), function () {
                         $(editor).dialog('close');
                         $('#ajaxSuccess').html('Your document has been updated. Click <a href="#" onclick="EditDocument(\'' + id + '\'); return false;">here</a> to see it again.').fadeIn('slow');
-                        //TODO: Update values in list/preview
+                        if (!isInQueryMode) {
+                            getAllDocuments();
+                        } else {
+                            ExecuteQuery();
+                        }
                     });
                 });
             });            
@@ -153,7 +157,11 @@
                 DivanUI.SaveDocument(null, null, json, function (data) {
                     $(editor).dialog('close');
                     $('#ajaxSuccess').html('Your document has been created. Click <a href="#" onclick="EditDocument(\'' + data.id + '\'); return false;">here</a> to see it again.').fadeIn('slow');
-                    //TODO: Update values in list/preview
+                    if (!isInQueryMode) {
+                        getAllDocuments();
+                    } else {
+                        ExecuteQuery();
+                    }
                 });
             });            
         }

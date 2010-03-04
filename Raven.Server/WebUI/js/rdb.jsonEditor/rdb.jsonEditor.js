@@ -262,7 +262,13 @@ function GetJSONFromTree() {
     var treeJSON = $.tree.focused().get(null, null, { outer_attrib: ["jsonvalue"] });
     var convertedTreeJSON = traverseTreeJSON(treeJSON);
     convertedTreeJSON = convertedTreeJSON.Document;
-    var jsonString = JSON.stringify(convertedTreeJSON);
+    var arrayAsJSON = {};
+    $(convertedTreeJSON).each(function() {
+        $.each(this, function(key, value) {
+            arrayAsJSON[key] = value;
+        });
+    });
+    var jsonString = JSON.stringify(arrayAsJSON, null, '\t');
     return jsonString;
 }
 
@@ -270,11 +276,13 @@ function GetJSONFromTree() {
 function traverseTreeJSON(json) {
     var retJSON = {};
     if (json.children) {
-        var childrenJSON = {};
+        var childrenJSON = [];
         $(json.children).each(function () {
             var childJSON = traverseTreeJSON(this);
             $.each(childJSON, function (key, value) {
-                childrenJSON[key] = value;
+                var childPair = {};
+                childPair[key] = value;
+                childrenJSON.push(childPair);
             });
         });
 
@@ -324,12 +332,14 @@ function JSONToViewHTML(jsonObj) {
 function JSONToTreeJSON(jsonObj) {
     if (typeof jsonObj == "object") {
         var jsonArr = [];
-        $.each(jsonObj, function (key, value) {
+        $.each(jsonObj, function (key, value) {            
             if (value) {
                 // key is either an array index or object key                    
                 var children = JSONToTreeJSON(value);
 
-                if (typeof children == "object") {
+                if (IsArray(jsonObj)) {
+                    jsonArr.push(children);
+                } else if (typeof children == "object") {
                     jsonArr.push({
                         data: key,
                         children: children
@@ -362,4 +372,11 @@ function UpdateSelectedNode() {
     } else {
         $.tree.focused().rename($.tree.focused().selected, $('#selectedJSONArrayName').val());
     }
+}
+
+function IsArray(obj) {
+   if (obj.constructor.toString().indexOf("Array") == -1)
+      return false;
+   else
+      return true;
 }
