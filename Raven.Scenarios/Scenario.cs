@@ -144,7 +144,7 @@ namespace Raven.Scenarios
         }
 
         /// <summary>
-        /// No, I am not insane
+        /// No, I am not insane, working around a framework issue:
         /// http://ayende.com/Blog/archive/2010/03/04/is-select-system.uri-broken.aspx
         /// </summary>
         private Uri GetUri_WorkaroundForStrangeBug(string uriString)
