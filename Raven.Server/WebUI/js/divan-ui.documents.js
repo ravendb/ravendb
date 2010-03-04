@@ -72,6 +72,14 @@
             });
         }
 
+        function getDisplayString(json) {
+            var returnJSON = json;
+            delete returnJSON.@metadata;
+            var jsonString = JSON.stringify(returnJSON);
+            if (jsonString.length > 90)
+                jsonString = jsonString.substring(0,90) + '...';
+            return jsonString;
+        }
 
         function processDocumentResults(results, totalCount) {
             numPages = Math.ceil(totalCount / pageSize);
@@ -83,7 +91,7 @@
 
             if (!$('#docList').hasTemplate()) {
                 $('#docList').setTemplateURL('JSONTemplates/documentPage.html');
-            }
+            }            
 
             $('#docList').processTemplate(results);
             $('.searchListItem').each(function () {
