@@ -77,7 +77,7 @@ namespace Raven.Server
         private static void RunInDebugMode()
         {
             DivanServer.EnsureCanListenToWhenInNonAdminContext(8080);
-            using (new DivanServer(@"..\..\..\Data", 8080))
+            using (new DivanServer(new RavenConfiguration()))
             {
                 Console.WriteLine("Raven is ready to process requests.");
                 Console.WriteLine("Press any key to stop the server");

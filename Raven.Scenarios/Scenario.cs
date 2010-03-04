@@ -45,7 +45,7 @@ namespace Raven.Scenarios
             try
             {
                 DivanServer.EnsureCanListenToWhenInNonAdminContext(testPort);
-                using (new DivanServer(tempFileName, testPort))
+                using (new DivanServer(new RavenConfiguration {DataDirectory = tempFileName, Port = testPort}))
                 {
                     using (var zipFile = new ZipFile(file))
                     {
