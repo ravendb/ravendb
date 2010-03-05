@@ -113,7 +113,7 @@ task Init -depends Clean {
 }
 
 task Compile -depends Init {
-    exec msbuild """$sln_file"" /p:OutDir=""$buildartifacts_dir\"""
+    exec C:\Windows\Microsoft.NET\Framework\v4.0.30128\MSBuild.exe """$sln_file"" /p:OutDir=""$buildartifacts_dir\"""
 }
 
 task Test -depends Compile {
