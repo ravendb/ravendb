@@ -27,8 +27,7 @@ namespace Raven.Database.Storage
                 var indexDef = File.ReadAllText(index);
                 try
                 {
-                    var transformer = CompileIndex(Path.GetFileNameWithoutExtension(index),indexDef);
-                    AddIndex(transformer);
+                    AddIndex(Path.GetFileNameWithoutExtension(index), indexDef);
                 }
                 catch (Exception e)
                 {
@@ -42,21 +41,15 @@ namespace Raven.Database.Storage
             get { return indexCache.Keys.ToArray(); }
         }
 
-        public string AddIndex(LinqTransformer transformer)
+        public string AddIndex(string name, string indexDef)
         {
-            var generator = (AbstractViewGenerator)Activator.CreateInstance(transformer.CompiledType);
+            var transformer = new DynamicQueryCompiler(name, indexDef);
+            var generator = transformer.CreateInstance();
             indexCache[transformer.Name] = generator.CompiledDefinition;
-            File.WriteAllText(Path.Combine(path,transformer.Name + ".index"), transformer.Source);
-            logger.InfoFormat("New index {0}:\r\n{1}\r\nCompiled to:\r\n{2}", transformer.Name, transformer.Source,
-                              transformer.ImplicitClassSource);
+            File.WriteAllText(Path.Combine(path,transformer.Name + ".index"), transformer.Query);
+            logger.InfoFormat("New index {0}:\r\n{1}\r\nCompiled to:\r\n{2}", transformer.Name, transformer.Query,
+                              transformer.CompiledQueryText);
             return transformer.Name;
-        }
-
-        private LinqTransformer CompileIndex(string name, string indexDef)
-        {
-            var transformer = new LinqTransformer(name, indexDef, "docs", path, typeof(JsonDynamicObject));
-            transformer.Compile();
-            return transformer;
         }
 
         public void RemoveIndex(string name)
@@ -92,12 +85,11 @@ namespace Raven.Database.Storage
             return value;
         }
 
-        public IndexCreationOptions FindIndexCreationOptionsOptions(string name, string indexDef, out LinqTransformer transformer)
+        public IndexCreationOptions FindIndexCreationOptionsOptions(string name, string indexDef)
         {
-            transformer = CompileIndex(name, indexDef);
-            if(indexCache.ContainsKey(transformer.Name))
+            if(indexCache.ContainsKey(name))
             {
-                return GetIndexDefinition(transformer.Name) == indexDef
+                return GetIndexDefinition(name) == indexDef
                            ? IndexCreationOptions.Noop
                            : IndexCreationOptions.Update;
             }

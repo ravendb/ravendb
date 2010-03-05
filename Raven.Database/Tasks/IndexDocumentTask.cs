@@ -23,7 +23,7 @@ namespace Raven.Database.Tasks
                     return;
                 }
 
-                var json = new JsonDynamicObject(doc.ToJson());
+                var json = JsonToExpando.Convert(doc.ToJson());
 
                 foreach (var viewName in context.IndexDefinitionStorage.IndexNames)
                 {

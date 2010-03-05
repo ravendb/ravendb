@@ -26,9 +26,8 @@ namespace Raven.Tests.Linq
 {'type':'page', title: 'there', content: 'foobar 2', size: 3, '@metadata': {'@id': 2} },
 {'type':'revision', size: 4, _id: 3}
 ]");
-            var transformer = new LinqTransformer("pagesByTitle", query, "docs", Path.GetTempPath(), typeof(JsonDynamicObject));
-            var compiled = transformer.CompiledType;
-            var compiledQuery = (AbstractViewGenerator)Activator.CreateInstance(compiled);
+            var transformer = new DynamicQueryCompiler("pagesByTitle", query);
+            var compiledQuery = transformer.CreateInstance();
             var actual = compiledQuery.Execute(documents)
                 .Cast<object>().ToArray();
             var expected = new[]
@@ -44,14 +43,9 @@ namespace Raven.Tests.Linq
             }
         }
 
-        private static IEnumerable<JsonDynamicObject> GetDocumentsFromString(string json)
+        public static IEnumerable<dynamic > GetDocumentsFromString(string json)
         {
-            var serializer = new JsonSerializer();
-            var docs = (JArray)serializer.Deserialize(
-                new JsonTextReader(
-                    new StringReader(
-                        json)));
-            return docs.Select(x => new JsonDynamicObject(x));
+            return JArray.Parse(json).Select(JsonToExpando.Convert);
         }
     }
 }

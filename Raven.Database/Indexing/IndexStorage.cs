@@ -9,7 +9,6 @@ using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
 using Raven.Database.Extensions;
-using Raven.Database.Json;
 using Raven.Database.Linq;
 using Directory = System.IO.Directory;
 
@@ -98,7 +97,7 @@ namespace Raven.Database.Indexing
             value.Remove(keys);
         }
 
-        public void Index(string index, IndexingFunc indexingFunc, IEnumerable<JsonDynamicObject> docs)
+        public void Index(string index, IndexingFunc indexingFunc, IEnumerable<dynamic > docs)
         {
             Index value;
             if (indexes.TryGetValue(index, out value) == false)

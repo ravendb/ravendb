@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="3.5" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
@@ -10,8 +10,28 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Raven.Database</RootNamespace>
     <AssemblyName>Raven.Database</AssemblyName>
-    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <FileUpgradeFlags>
+    </FileUpgradeFlags>
+    <OldToolsVersion>3.5</OldToolsVersion>
+    <UpgradeBackupLocation />
+    <PublishUrl>publish\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Disk</InstallFrom>
+    <UpdateEnabled>false</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <ApplicationRevision>0</ApplicationRevision>
+    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -22,6 +42,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <NoWarn>1607</NoWarn>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -30,6 +51,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Esent.Interop, Version=1.0.0.0, Culture=neutral, PublicKeyToken=b93b4ad6c4b80595, processorArchitecture=MSIL">
@@ -48,6 +70,7 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Lucene.Net.dll</HintPath>
     </Reference>
+    <Reference Include="Microsoft.CSharp" />
     <Reference Include="Newtonsoft.Json, Version=3.5.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Newtonsoft.Json.dll</HintPath>
@@ -78,17 +101,15 @@
     <Compile Include="Exceptions\ConcurrencyException.cs" />
     <Compile Include="Extensions\JsonExtensions.cs" />
     <Compile Include="Extensions\Reference.cs" />
-    <Compile Include="Extensions\Tuple.cs" />
     <Compile Include="IDatabaseCommands.cs" />
     <Compile Include="Indexing\Index.cs" />
     <Compile Include="Indexing\TaskExecuter.cs" />
     <Compile Include="Indexing\WorkContext.cs" />
     <Compile Include="Json\DynamicObjectExtensions.cs" />
-    <Compile Include="Json\JsonDynamicObject.cs" />
+    <Compile Include="Json\JsonToExpando.cs" />
     <Compile Include="Linq\AbstractViewGenerator.cs" />
-    <Compile Include="Linq\TurnOutwardReferenceToString.cs" />
-    <Compile Include="Linq\LinqTransformer.cs" />
-    <Compile Include="Linq\TransformVisitor.cs" />
+    <Compile Include="Linq\AddObjectCastToCallsToArray.cs" />
+    <Compile Include="Linq\DynamicQueryCompiler.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="QueryResult.cs" />
     <Compile Include="Storage\IndexCreationOptions.cs" />
@@ -102,6 +123,23 @@
     <Compile Include="Indexing\IndexStorage.cs" />
     <Compile Include="Storage\SchemaCreator.cs" />
     <Compile Include="Storage\IndexDefinitionStorage.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1 Client Profile</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Windows.Installer.3.1">
+      <Visible>False</Visible>
+      <ProductName>Windows Installer 3.1</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

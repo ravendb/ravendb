@@ -124,14 +124,16 @@ namespace Raven.Database.Storage
 
         public Tuple<int, int> FirstAndLastDocumentKeys()
         {
-            var result = new Tuple<int, int>();
+            int item1 = 0;
+            int item2 = 0;
             Api.MoveBeforeFirst(session, documents);
             if (Api.TryMoveNext(session, documents))
-                result.First = Api.RetrieveColumnAsInt32(session, documents, documentsColumns["id"]).Value;
+                item1 = Api.RetrieveColumnAsInt32(session, documents, documentsColumns["id"]).Value;
             Api.MoveAfterLast(session, documents);
             if (Api.TryMovePrevious(session, documents))
-                result.Second = Api.RetrieveColumnAsInt32(session, documents, documentsColumns["id"]).Value;
-            return result;
+                item2 = Api.RetrieveColumnAsInt32(session, documents, documentsColumns["id"]).Value;
+            return new Tuple<int, int>(item1, item2);
+
         }
 
         public bool DoesTasksExistsForIndex(string name)
@@ -173,17 +175,14 @@ namespace Raven.Database.Storage
                 var data = Api.RetrieveColumn(session, documents, documentsColumns["data"]);
                 logger.DebugFormat("Document with id '{0}' was found, doc length: {1}", id, data.Length);
                 var json = Api.RetrieveColumnAsString(session, documents, documentsColumns["metadata"],Encoding.Unicode);
-                yield return new Tuple<JsonDocument, int>
+                var doc = new JsonDocument
                 {
-                    First = new JsonDocument
-                    {
-                        Key = Api.RetrieveColumnAsString(session, documents, documentsColumns["key"],Encoding.Unicode),
-                        Data = data,
-                        Etag = new Guid(Api.RetrieveColumn(session, documents, documentsColumns["etag"])),
-                        Metadata = JObject.Parse(json)
-                    },
-                    Second = id
+                    Key = Api.RetrieveColumnAsString(session, documents, documentsColumns["key"], Encoding.Unicode),
+                    Data = data,
+                    Etag = new Guid(Api.RetrieveColumn(session, documents, documentsColumns["etag"])),
+                    Metadata = JObject.Parse(json)
                 };
+                yield return new Tuple<JsonDocument, int>(doc,id);
 
 
             } while (Api.TryMoveNext(session, documents));

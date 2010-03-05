@@ -52,7 +52,7 @@ namespace Raven.Tests.Indexes
         {
             db.PutIndex(@"DocsByProject", @"
 from doc in docs
-from prj in doc.projects
+from prj in Array(doc.projects)
 select new{project_name = prj.name}
 ");
             var document = JObject.Parse("{'name':'ayende','email':'ayende@ayende.com','projects':[{'name':'raven'}], '@metadata': { '@id': 1}}");

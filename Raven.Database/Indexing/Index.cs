@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -12,13 +11,13 @@ using Lucene.Net.QueryParsers;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Raven.Database.Extensions;
-using Raven.Database.Json;
 using Raven.Database.Linq;
 
 namespace Raven.Database.Indexing
 {
     public class Index : IDisposable
     {
+        private const string documentIdName = "__document_id";
         private ILog log = LogManager.GetLogger(typeof (Index));
 
         private class CurrentIndexSearcher
@@ -92,7 +91,7 @@ namespace Raven.Database.Indexing
                     totalSize.Value = search.Length();
                     for (int i = start; i < search.Length() && (i - start) < pageSize; i++)
                     {
-                        yield return search.Doc(i).GetField("__document_id").StringValue();
+                        yield return search.Doc(i).GetField(documentIdName).StringValue();
                     }
                 }
                 else
@@ -102,7 +101,7 @@ namespace Raven.Database.Indexing
                     totalSize.Value = maxDoc;
                     for (int i = start; i < maxDoc && (i - start) < pageSize; i++)
                     {
-                        yield return indexSearcher.Doc(i).GetField("__document_id").StringValue();
+                        yield return indexSearcher.Doc(i).GetField(documentIdName).StringValue();
                     }
                 }
             }
@@ -123,38 +122,15 @@ namespace Raven.Database.Indexing
                 RecreateSearcher();
         }
 
-        public IEnumerable<object> HandleErrorsGracefully(IndexingFunc func, IEnumerable<JsonDynamicObject> docs)
-        {
-            foreach (var doc in docs)
-            {
-                IEnumerable enumerable;
-                try
-                {
-                    enumerable = func(new[] {doc});
-                }
-                catch (Exception e)
-                {
-                    log.Warn("Could not process document: " + doc, e);
-                    continue;
-                }
-                foreach (var item in enumerable)
-                {
-                    yield return item;
-                }
-            }
-            
-        }
-
-        public void IndexDocuments(IndexingFunc func, IEnumerable<JsonDynamicObject> documents)
+        public void IndexDocuments(IndexingFunc func, IEnumerable<dynamic> documents)
         {
             int count = 0;
             Write(indexWriter =>
             {
-                var docs = HandleErrorsGracefully(func,documents);
                 var currentId = Guid.NewGuid().ToString();
                 var luceneDoc = new Document();
                 bool shouldRcreateSearcher = false;
-                foreach (var doc in docs)
+                foreach (var doc in func(documents))
                 {
                     count++;
                     var fields = new List<Field>();
@@ -163,12 +139,12 @@ namespace Raven.Database.Indexing
                     {
                         if (luceneDoc.GetFieldsCount() > 0)
                         {
-                            indexWriter.UpdateDocument(new Term("__document_id", docId), luceneDoc);
+                            indexWriter.UpdateDocument(new Term(documentIdName, docId), luceneDoc);
                             shouldRcreateSearcher = true;
                         }
                         luceneDoc = new Document();
                         currentId = docId;
-                        luceneDoc.Add(new Field("__document_id", docId, Field.Store.YES, Field.Index.UN_TOKENIZED));
+                        luceneDoc.Add(new Field(documentIdName, docId, Field.Store.YES, Field.Index.UN_TOKENIZED));
                     }
                     foreach (var field in fields)
                     {
@@ -177,7 +153,7 @@ namespace Raven.Database.Indexing
                 }
                 if (luceneDoc.GetFieldsCount() > 0)
                 {
-                    indexWriter.UpdateDocument(new Term("__document_id", currentId), luceneDoc);
+                    indexWriter.UpdateDocument(new Term(documentIdName, currentId), luceneDoc);
                     shouldRcreateSearcher = true;
                 }
                 return shouldRcreateSearcher;
@@ -197,31 +173,21 @@ namespace Raven.Database.Indexing
             }
         }
 
-        private static string AddValuesToDocument(ICollection<Field> fields, object val)
+        private static string AddValuesToDocument(ICollection<Field> fields, IDictionary<string,object> val)
         {
-            var properties = TypeDescriptor.GetProperties(val).Cast<PropertyDescriptor>().ToArray();
-            var id = properties.First(x => x.Name == "__document_id");
+            var id = val[documentIdName];
 
-            foreach (PropertyDescriptor property in properties)
+            foreach (var  kvp in val)
             {
-                if (property == id)
+                if (kvp.Key == documentIdName)
                     continue;
-                var value = property.GetValue(val);
-                if (value == null)
+                if (kvp.Value == null)
                     continue;
-                fields.Add(new Field(property.Name, ToIndexableString(value),
+                fields.Add(new Field(kvp.Key, kvp.Value.ToString(),
                                      Field.Store.YES,
                                      Field.Index.TOKENIZED));
             }
-            return (string)id.GetValue(val);
-        }
-
-        private static string ToIndexableString(object val)
-        {
-            if (val is DateTime)
-                return DateTools.DateToString((DateTime)val, DateTools.Resolution.DAY);
-
-            return val.ToString();
+            return (string)id;
         }
 
         public void Remove(string[] keys)
@@ -232,7 +198,7 @@ namespace Raven.Database.Indexing
                 {
                     log.DebugFormat("Deleting ({0}) from {1}", string.Format(", ", keys), name);
                 }
-                writer.DeleteDocuments(keys.Select(k => new Term("__document_id", k)).ToArray());
+                writer.DeleteDocuments(keys.Select(k => new Term(documentIdName, k)).ToArray());
                 return true;
             });
         }

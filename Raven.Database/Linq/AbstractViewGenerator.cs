@@ -1,40 +1,22 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq.Expressions;
-using Raven.Database.Json;
+﻿using System.Collections.Generic;
 
 namespace Raven.Database.Linq
 {
-    public delegate IEnumerable IndexingFunc(IEnumerable<JsonDynamicObject> source);
+    public delegate IEnumerable<dynamic> IndexingFunc(IEnumerable<dynamic> source);
 
     public class AbstractViewGenerator
     {
         public IndexingFunc CompiledDefinition { get; set; }
         public string ViewText { get; set; }
 
-        public Expression<IndexingFunc> IndexDefinition { get; protected set; }
-
-        public AbstractViewGenerator()
-        {
-            AccessedFields = new HashSet<string>();
-        }
-
-        public Type GeneratedType
-        {
-            get
-            {
-                return IndexDefinition.Body.Type.GetGenericArguments()[0];
-            }
-        }
-
-        public IEnumerable Execute(IEnumerable<JsonDynamicObject> source)
+        public IEnumerable<dynamic> Execute(IEnumerable<dynamic> source)
         {
             return CompiledDefinition(source);
         }
 
-
-        public HashSet<string> AccessedFields { get; set; }
-
+        protected IEnumerable<dynamic> Array(object[] self)
+        {
+            return self;
+        }
     }
 }
