@@ -1,14 +1,15 @@
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading;
+using log4net;
 using Newtonsoft.Json;
 using Raven.Database.Exceptions;
 using Raven.Server.Responders;
+using Raven.Database.Extensions;
 
 namespace Raven.Server
 {
@@ -17,6 +18,8 @@ namespace Raven.Server
         private readonly RequestResponder[] requestResponders;
         private readonly HttpListener listener;
         private int reqNum;
+
+        private ILog logger = LogManager.GetLogger(typeof (HttpServer));
 
         public HttpServer(IEnumerable<RequestResponder> requestResponders)
             : this(8080, requestResponders)
@@ -45,7 +48,6 @@ namespace Raven.Server
             try
             {
                 ctx = listener.EndGetContext(ar);
-
                 //setup waiting for the next request
                 listener.BeginGetContext(GetContext, null);
             }
@@ -56,23 +58,24 @@ namespace Raven.Server
                 return;
             }
 
+            var curReq = Interlocked.Increment(ref reqNum);
             try
             {
-                var curReq = Interlocked.Increment(ref reqNum);
-                Console.WriteLine("Request {0}: {1} {2}",
-                                  curReq,
-                                  ctx.Request.HttpMethod,
-                                  ctx.Request.Url.PathAndQuery
+                logger.DebugFormat("Request #{0}: {1} {2}",
+                                   curReq,
+                                   ctx.Request.HttpMethod,
+                                   ctx.Request.Url.PathAndQuery
                     );
                 var sw = Stopwatch.StartNew();
                 HandleRequest(ctx);
 
-                Console.WriteLine("Request {0}: {1}",
-                                  curReq, sw.Elapsed);
+                logger.DebugFormat("Request #{0}: {1}",
+                                   curReq, sw.Elapsed);
             }
             catch (Exception e)
             {
                 HandleException(ctx, e);
+                logger.WarnFormat(e, "Error on request #{0}", curReq);
             }
             finally
             {
