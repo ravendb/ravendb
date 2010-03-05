@@ -15,6 +15,11 @@ namespace Raven.Database.Json
             return DateTools.DateToString(self, DateTools.Resolution.HOUR);
         }
 
+        public static string Minutes(this DateTime self)
+        {
+            return DateTools.DateToString(self, DateTools.Resolution.MINUTE);
+        }
+
         public static string Secoonds(this DateTime self)
         {
             return DateTools.DateToString(self, DateTools.Resolution.SECOND);
