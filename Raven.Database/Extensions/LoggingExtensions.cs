@@ -17,7 +17,7 @@ namespace Raven.Database.Extensions
 
         public static void ErrorFormat(this ILog self, Exception e, string format, params object[] parameters)
         {
-            if(self.IsWarnEnabled == false)
+            if(self.IsErrorEnabled == false)
                 return;
             self.Logger.Log(typeof(LogImpl), Level.Error, new SystemStringFormat(CultureInfo.InvariantCulture, format, parameters), e);
         }
