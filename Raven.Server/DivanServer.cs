@@ -15,6 +15,8 @@ namespace Raven.Server
 
         public DivanServer(RavenConfiguration settings)
         {
+            settings.LoadLoggingSettings();
+
             database = new DocumentDatabase(settings.DataDirectory);
             database.SpinBackgroundWorkers();
             server = new HttpServer(settings.Port,
