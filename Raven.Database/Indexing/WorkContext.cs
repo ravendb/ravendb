@@ -1,4 +1,7 @@
+using System;
+using System.Collections.Concurrent;
 using System.Threading;
+using Raven.Database.Data;
 using Raven.Database.Storage;
 
 namespace Raven.Database.Indexing
@@ -7,6 +10,8 @@ namespace Raven.Database.Indexing
     {
         private volatile bool doWork = true;
         private readonly object waitForWork = new object();
+
+        private readonly ConcurrentStack<ServerError> serverErrors = new ConcurrentStack<ServerError>();
 
         public bool DoWork
         {
@@ -46,6 +51,29 @@ namespace Raven.Database.Indexing
             lock (waitForWork)
             {
                 Monitor.PulseAll(waitForWork);
+            }
+        }
+
+        public void AddError(string index, string key, string error)
+        {
+            serverErrors.Push(new ServerError
+            {
+                Document = key,
+                Error = error,
+                Index = index,
+                Timestamp = DateTime.Now
+            });
+            if (serverErrors.Count <= 50) 
+                return;
+            ServerError ignored;
+            serverErrors.TryPop(out ignored);
+        }
+
+        public ServerError[] Errors
+        {
+            get
+            {
+                return serverErrors.ToArray();
             }
         }
     }

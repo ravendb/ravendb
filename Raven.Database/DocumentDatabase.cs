@@ -63,7 +63,8 @@ namespace Raven.Database
             {
                 var result = new DatabaseStatistics
                 {
-                    CountOfIndexes = IndexStorage.Indexes.Length
+                    CountOfIndexes = IndexStorage.Indexes.Length,
+                    Errors = workContext.Errors
                 };
                 TransactionalStorage.Batch(actions =>
                 {

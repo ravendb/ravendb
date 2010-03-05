@@ -30,30 +30,30 @@ namespace Raven.Database.Tasks
 
                 var json = JsonToExpando.Convert(doc.ToJson());
 
-                foreach (var viewName in context.IndexDefinitionStorage.IndexNames)
+                foreach (var index in context.IndexDefinitionStorage.IndexNames)
                 {
-                    var viewFunc = context.IndexDefinitionStorage.GetIndexingFunction(viewName);
+                    var viewFunc = context.IndexDefinitionStorage.GetIndexingFunction(index);
                     if (viewFunc == null)
                     {
                         continue; // index was removed before we could index it
                     }
-                    var canSetStats = actions.TrySetCurrentIndexStatsTo(viewName);
+                    var canSetStats = actions.TrySetCurrentIndexStatsTo(index);
                     try
                     {
-                        logger.DebugFormat("Indexing document: '{0}' for index: {1}",doc.Key, viewName);
+                        logger.DebugFormat("Indexing document: '{0}' for index: {1}",doc.Key, index);
                         
                         if (canSetStats)
                             actions.IncrementIndexingAttempt();
 
-                        context.IndexStorage.Index(viewName, viewFunc, new[] {json,});
+                        context.IndexStorage.Index(index, viewFunc, new[] {json,});
                         
                         if (canSetStats)
                             actions.IncrementSuccessIndexing();
                     }
                     catch (Exception e)
                     {
-                        logger.WarnFormat(e, "Failed to index document '{0}' for index: {1}", doc.Key, viewName);
-                        
+                        logger.WarnFormat(e, "Failed to index document '{0}' for index: {1}", doc.Key, index);
+                        context.AddError(index, doc.Key, e.ToString());
                         if (canSetStats)
                             actions.IncrementIndexingFailure();
                     }
