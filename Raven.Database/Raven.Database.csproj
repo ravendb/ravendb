@@ -108,8 +108,8 @@
     <Compile Include="Json\DynamicObjectExtensions.cs" />
     <Compile Include="Json\JsonToExpando.cs" />
     <Compile Include="Linq\AbstractViewGenerator.cs" />
-    <Compile Include="Linq\AddObjectCastToCallsToArray.cs" />
     <Compile Include="Linq\DynamicQueryCompiler.cs" />
+    <Compile Include="Linq\PrivateExtensions\LinqOnDynamic.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="QueryResult.cs" />
     <Compile Include="Storage\IndexCreationOptions.cs" />

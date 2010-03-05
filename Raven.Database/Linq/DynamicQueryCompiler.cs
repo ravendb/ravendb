@@ -10,6 +10,7 @@ using ICSharpCode.NRefactory.Ast;
 using ICSharpCode.NRefactory.PrettyPrinter;
 using Microsoft.CSharp;
 using Microsoft.CSharp.RuntimeBinder;
+using Raven.Database.Linq.PrivateExtensions;
 
 namespace Raven.Database.Linq
 {
@@ -46,7 +47,7 @@ namespace Raven.Database.Linq
                    typeof (AbstractViewGenerator).Assembly.Location,
                    typeof (NameValueCollection).Assembly.Location,
                    typeof (Enumerable).Assembly.Location,
-                   typeof (Binder).Assembly.Location
+                   typeof (Binder).Assembly.Location,
                 },
             }, CompiledQueryText);
 
@@ -69,7 +70,6 @@ namespace Raven.Database.Linq
         {
             var parser = ParserFactory.CreateParser(SupportedLanguage.CSharp, new StringReader("var q = " + Query));
             var variableDeclaration = GetVariableDeclaration(parser.ParseBlock());
-            variableDeclaration.AcceptVisitor(new AddObjectCastToCallsToArray(), null);
             var queryExpression = ((QueryExpression)variableDeclaration.Initializer);
             var selectOrGroupClause = queryExpression.SelectOrGroupClause;
             var projection = ((QueryExpressionSelectClause)selectOrGroupClause).Projection;
@@ -132,6 +132,7 @@ namespace Raven.Database.Linq
             unit.AddChild(new Using(typeof(AbstractViewGenerator).Namespace));
             unit.AddChild(new Using(typeof(Enumerable).Namespace));
             unit.AddChild(new Using(typeof(int).Namespace));
+            unit.AddChild(new Using(typeof(LinqOnDynamic).Namespace));
             unit.AddChild(type);
 
             var output = new CSharpOutputVisitor();

@@ -13,10 +13,5 @@ namespace Raven.Database.Linq
         {
             return CompiledDefinition(source);
         }
-
-        protected IEnumerable<dynamic> Array(object[] self)
-        {
-            return self;
-        }
     }
 }
