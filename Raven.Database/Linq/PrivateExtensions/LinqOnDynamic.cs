@@ -24,27 +24,21 @@ namespace Raven.Database.Linq.PrivateExtensions
         }
 
         public static IEnumerable<dynamic> SelectMany(this object source,
-                                                                                    Func
-                                                                                        <dynamic, int,
-                                                                                        IEnumerable<dynamic>>
-                                                                                        collectionSelector,
-                                                                                    Func<dynamic, dynamic, dynamic>
-                                                                                        resultSelector)
+            Func<dynamic, int,IEnumerable<dynamic>> collectionSelector,
+            Func<dynamic, dynamic, dynamic> resultSelector)
         {
             return Enumerable.SelectMany(Select(source), collectionSelector, resultSelector);
         }
 
         public static IEnumerable<dynamic> SelectMany(this object source,
-                                                                                     Func<dynamic, IEnumerable<dynamic>>
-                                                                                         collectionSelector,
-                                                                                     Func<dynamic, dynamic, dynamic>
-                                                                                         resultSelector)
+            Func<dynamic, IEnumerable<dynamic>> collectionSelector,
+            Func<dynamic, dynamic, dynamic> resultSelector)
         {
             return Enumerable.SelectMany(Select(source), collectionSelector, resultSelector);
         }
 
         public static IEnumerable<dynamic> SelectMany(this object source,
-                                                                        Func<object, IEnumerable<dynamic>> selector)
+            Func<object, IEnumerable<dynamic>> selector)
         {
             return Enumerable.SelectMany<object, object>(Select(source), selector);
         }
