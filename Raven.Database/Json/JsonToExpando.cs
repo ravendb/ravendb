@@ -23,7 +23,7 @@ namespace Raven.Database.Json
             return child;
         }
 
-        private static object ConvertChild(JToken token)
+        private static object ConvertChild(IEnumerable<JToken> token)
         {
             var jValue = token as JValue;
             if (jValue != null)
@@ -40,19 +40,19 @@ namespace Raven.Database.Json
                 }
                 return expando;
             }
+            
             var jArray = token as JArray;
-            if (jArray != null)
+            if (jArray == null)
+                throw new ArgumentException("Unknown token type: " + token);
+
+            var array = new object[jArray.Count];
+            var index = 0;
+            foreach (JToken arrayItem in jArray)
             {
-                var array = new object[jArray.Count];
-                var index = 0;
-                foreach (JToken arrayItem in jArray)
-                {
-                    array[index] = ConvertChild(arrayItem);
-                    index++;
-                }
-                return array;
+                array[index] = ConvertChild(arrayItem);
+                index++;
             }
-            throw new ArgumentException("Unknown token type: " + token);
+            return array;
         }
     }
 }
