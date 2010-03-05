@@ -40,6 +40,16 @@ task Init -depends Clean {
 		-clsCompliant "false"
 
 	Generate-Assembly-Info `
+		-file "$base_dir\Raven.FileStorage\Properties\AssemblyInfo.cs" `
+		-title "Raven Database Client $version" `
+		-description "A linq enabled document database for .NET" `
+		-company "Hibernating Rhinos" `
+		-product "Raven Database $version" `
+		-version $version `
+		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2010" `
+		-clsCompliant "false"
+		
+	Generate-Assembly-Info `
 		-file "$base_dir\Raven.Client.Tests\Properties\AssemblyInfo.cs" `
 		-title "Raven Database Client $version" `
 		-description "A linq enabled document database for .NET" `
