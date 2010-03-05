@@ -1,8 +1,0 @@
-﻿<div class="searchListWrapper ui-corner-all">
-    {#foreach $T as doc}
-        <div id="{$T.doc['@metadata']['@id']}" class="searchListItem {#if $T.doc$iteration % 2} alternate{#/if}">
-            {getDisplayString($T.doc)}
-            <div class="searchListItemValue" style="display:none;">{escape(JSON.stringify($T.doc))}</div>
-        </div>
-    {#/for}    
-</div>

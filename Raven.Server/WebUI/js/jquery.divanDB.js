@@ -54,13 +54,14 @@
                     if (xhr.status == 200) {
                         var data = JSON.parse(xhr.responseText);
                         var etag = xhr.getResponseHeader("Etag");
-                        successCallback(data, etag);
+                        var template = xhr.getResponseHeader('Raven-View-Template');
+                        successCallback(data, etag, template);
                     }
                 }
             });
         },
 
-        saveDocument: function (id, etag, json, successCallback) {
+        saveDocument: function (id, etag, template, json, successCallback) {
             var idStr = '';
             var type = 'POST';
             if (id != null) {
@@ -73,7 +74,9 @@
                 data: json,
                 beforeSend: function(xhr) {
                     if (etag)
-                        xhr.setRequestHeader("If-Match", etag);        
+                        xhr.setRequestHeader("If-Match", etag); 
+                    if (template)
+                        xhr.setRequestHeader('Raven-View-Template', template);       
                 },
                 success: function (data) {
                     successCallback(data);
