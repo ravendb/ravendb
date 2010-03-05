@@ -5,6 +5,11 @@ using Raven.Database.Json;
 
 namespace Raven.Database.Tasks
 {
+    /// <summary>
+    /// Indexing a range of documents
+    /// A range of documents is a stable range, which can be queried even if document addition / removal
+    /// occured since the time that the range was taken to the time it was queried.
+    /// </summary>
     public class IndexDocumentRangeTask : Task
     {
         public int FromId { get; set; }
