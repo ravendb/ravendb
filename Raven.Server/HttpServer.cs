@@ -70,49 +70,9 @@ namespace Raven.Server
                 Console.WriteLine("Request {0}: {1}",
                                   curReq, sw.Elapsed);
             }
-            catch (ConcurrencyException e)
-            {
-                ctx.Response.StatusCode = 409;
-                ctx.Response.StatusDescription = "Conflict";
-                using (var sw = new StreamWriter(ctx.Response.OutputStream))
-                {
-                    new JsonSerializer().Serialize(sw,
-                                                   new
-                                                   {
-                                                       url = ctx.Request.RawUrl,
-                                                       actualETag = e.ActualETag,
-                                                       expectedETag = e.ExpectedETag,
-                                                       error = e.Message
-                                                   });
-                }
-            }
-            catch (BadRequestException e)
-            {
-                ctx.SetStatusToBadRequest();
-                using (var sw = new StreamWriter(ctx.Response.OutputStream))
-                {
-                    new JsonSerializer().Serialize(sw,
-                                                   new
-                                                   {
-                                                       url = ctx.Request.RawUrl,
-                                                       message = e.Message,
-                                                       error = e.Message
-                                                   });
-                }
-            }
             catch (Exception e)
             {
-                ctx.Response.StatusCode = 500;
-                ctx.Response.StatusDescription = "Internal Server Error";
-                using (var sw = new StreamWriter(ctx.Response.OutputStream))
-                {
-                    new JsonSerializer().Serialize(sw,
-                                                   new
-                                                   {
-                                                       url = ctx.Request.RawUrl,
-                                                       error = e.ToString()
-                                                   });
-                }
+                HandleException(ctx, e);
             }
             finally
             {
@@ -121,9 +81,72 @@ namespace Raven.Server
                     ctx.Response.OutputStream.Flush();
                     ctx.Response.Close();
                 }
-                catch (Exception)
+                catch
                 {
                 }
+            }
+        }
+
+        private void HandleException(HttpListenerContext ctx, Exception e)
+        {
+            try
+            {
+                if (e is BadRequestException)
+                    HandleBadRequest(ctx, (BadRequestException)e);
+                else if (e is ConcurrencyException)
+                    HandleConcurrencyException(ctx, (ConcurrencyException)e);
+                else
+                    HandleGenericException(ctx, e);
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+        }
+
+        private void HandleGenericException(HttpListenerContext ctx, Exception e)
+        {
+            ctx.Response.StatusCode = 500;
+            ctx.Response.StatusDescription = "Internal Server Error";
+            using (var sw = new StreamWriter(ctx.Response.OutputStream))
+            {
+                new JsonSerializer().Serialize(sw,
+                                               new
+                                               {
+                                                   url = ctx.Request.RawUrl,
+                                                   error = e.ToString()
+                                               });
+            }
+        }
+
+        private void HandleBadRequest(HttpListenerContext ctx, BadRequestException e)
+        {
+            ctx.SetStatusToBadRequest();
+            using (var sw = new StreamWriter(ctx.Response.OutputStream))
+            {
+                new JsonSerializer().Serialize(sw,
+                                               new
+                                               {
+                                                   url = ctx.Request.RawUrl,
+                                                   message = e.Message,
+                                                   error = e.Message
+                                               });
+            }
+        }
+
+        private void HandleConcurrencyException(HttpListenerContext ctx, ConcurrencyException e)
+        {
+            ctx.Response.StatusCode = 409;
+            ctx.Response.StatusDescription = "Conflict";
+            using (var sw = new StreamWriter(ctx.Response.OutputStream))
+            {
+                new JsonSerializer().Serialize(sw,
+                                               new
+                                               {
+                                                   url = ctx.Request.RawUrl,
+                                                   actualETag = e.ActualETag,
+                                                   expectedETag = e.ExpectedETag,
+                                                   error = e.Message
+                                               });
             }
         }
 
