@@ -99,6 +99,7 @@
     <Compile Include="Document.cs" />
     <Compile Include="DocumentDatabase.cs" />
     <Compile Include="Exceptions\ConcurrencyException.cs" />
+    <Compile Include="Extensions\LoggingExtensions.cs" />
     <Compile Include="Extensions\Reference.cs" />
     <Compile Include="IDatabaseCommands.cs" />
     <Compile Include="Indexing\Index.cs" />

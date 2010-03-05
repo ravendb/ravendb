@@ -2,6 +2,7 @@ using System;
 using log4net;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
+using Raven.Database.Extensions;
 
 namespace Raven.Database.Indexing
 {
@@ -54,15 +55,12 @@ namespace Raven.Database.Indexing
                 }
                 catch (Exception e)
                 {
-                    if (log.IsWarnEnabled)
-                    {
-                        log.Warn(string.Format("Task {0} has failed and was deletedwithout completing any work", taskAsJson), e);
-                    }
+                    log.WarnFormat(e, "Task {0} has failed and was deleted without completing any work", taskAsJson);
                 }
             }
             catch (Exception e)
             {
-                log.Error("Could not create instance of a task from " + taskAsJson, e);
+                log.ErrorFormat(e, "Could not create instance of a task: {0}", taskAsJson);
             }
         }
     }
