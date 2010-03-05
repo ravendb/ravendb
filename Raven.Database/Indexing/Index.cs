@@ -17,8 +17,7 @@ namespace Raven.Database.Indexing
 {
     public class Index : IDisposable
     {
-        private const string documentIdName = "__document_id";
-        private ILog log = LogManager.GetLogger(typeof (Index));
+        private readonly ILog log = LogManager.GetLogger(typeof (Index));
 
         private class CurrentIndexSearcher
         {
@@ -35,7 +34,7 @@ namespace Raven.Database.Indexing
 
             private class CleanUp : IDisposable
             {
-                private CurrentIndexSearcher parent;
+                private readonly CurrentIndexSearcher parent;
 
                 public CleanUp(CurrentIndexSearcher parent)
                 {
@@ -91,7 +90,7 @@ namespace Raven.Database.Indexing
                     totalSize.Value = search.Length();
                     for (int i = start; i < search.Length() && (i - start) < pageSize; i++)
                     {
-                        yield return search.Doc(i).GetField(documentIdName).StringValue();
+                        yield return search.Doc(i).GetField("__document_id").StringValue();
                     }
                 }
                 else
@@ -101,7 +100,7 @@ namespace Raven.Database.Indexing
                     totalSize.Value = maxDoc;
                     for (int i = start; i < maxDoc && (i - start) < pageSize; i++)
                     {
-                        yield return indexSearcher.Doc(i).GetField(documentIdName).StringValue();
+                        yield return indexSearcher.Doc(i).GetField("__document_id").StringValue();
                     }
                 }
             }
@@ -122,15 +121,16 @@ namespace Raven.Database.Indexing
                 RecreateSearcher();
         }
 
-        public void IndexDocuments(IndexingFunc func, IEnumerable<dynamic> documents)
+        public void IndexDocuments(IndexingFunc func, IEnumerable<object> documents)
         {
             int count = 0;
             Write(indexWriter =>
             {
+                var docs = func(documents);
                 var currentId = Guid.NewGuid().ToString();
                 var luceneDoc = new Document();
                 bool shouldRcreateSearcher = false;
-                foreach (var doc in func(documents))
+                foreach (var doc in docs)
                 {
                     count++;
                     var fields = new List<Field>();
@@ -139,12 +139,12 @@ namespace Raven.Database.Indexing
                     {
                         if (luceneDoc.GetFieldsCount() > 0)
                         {
-                            indexWriter.UpdateDocument(new Term(documentIdName, docId), luceneDoc);
+                            indexWriter.UpdateDocument(new Term("__document_id", docId), luceneDoc);
                             shouldRcreateSearcher = true;
                         }
                         luceneDoc = new Document();
                         currentId = docId;
-                        luceneDoc.Add(new Field(documentIdName, docId, Field.Store.YES, Field.Index.UN_TOKENIZED));
+                        luceneDoc.Add(new Field("__document_id", docId, Field.Store.YES, Field.Index.UN_TOKENIZED));
                     }
                     foreach (var field in fields)
                     {
@@ -153,7 +153,7 @@ namespace Raven.Database.Indexing
                 }
                 if (luceneDoc.GetFieldsCount() > 0)
                 {
-                    indexWriter.UpdateDocument(new Term(documentIdName, currentId), luceneDoc);
+                    indexWriter.UpdateDocument(new Term("__document_id", currentId), luceneDoc);
                     shouldRcreateSearcher = true;
                 }
                 return shouldRcreateSearcher;
@@ -173,21 +173,31 @@ namespace Raven.Database.Indexing
             }
         }
 
-        private static string AddValuesToDocument(ICollection<Field> fields, IDictionary<string,object> val)
+        private static string AddValuesToDocument(ICollection<Field> fields, object val)
         {
-            var id = val[documentIdName];
+            var properties = TypeDescriptor.GetProperties(val).Cast<PropertyDescriptor>().ToArray();
+            var id = properties.First(x => x.Name == "__document_id");
 
-            foreach (var  kvp in val)
+            foreach (PropertyDescriptor property in properties)
             {
-                if (kvp.Key == documentIdName)
+                if (property == id)
                     continue;
-                if (kvp.Value == null)
+                var value = property.GetValue(val);
+                if (value == null)
                     continue;
-                fields.Add(new Field(kvp.Key, kvp.Value.ToString(),
+                fields.Add(new Field(property.Name, ToIndexableString(value),
                                      Field.Store.YES,
                                      Field.Index.TOKENIZED));
             }
-            return (string)id;
+            return (string)id.GetValue(val);
+        }
+
+        private static string ToIndexableString(object val)
+        {
+            if (val is DateTime)
+                return DateTools.DateToString((DateTime)val, DateTools.Resolution.DAY);
+
+            return val.ToString();
         }
 
         public void Remove(string[] keys)
@@ -198,7 +208,7 @@ namespace Raven.Database.Indexing
                 {
                     log.DebugFormat("Deleting ({0}) from {1}", string.Format(", ", keys), name);
                 }
-                writer.DeleteDocuments(keys.Select(k => new Term(documentIdName, k)).ToArray());
+                writer.DeleteDocuments(keys.Select(k => new Term("__document_id", k)).ToArray());
                 return true;
             });
         }
