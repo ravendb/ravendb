@@ -14,6 +14,9 @@ using Directory = System.IO.Directory;
 
 namespace Raven.Database.Indexing
 {
+    /// <summary>
+    /// Thread safe, single instance for the entire application
+    /// </summary>
     public class IndexStorage : CriticalFinalizerObject, IDisposable
     {
         private readonly string path;

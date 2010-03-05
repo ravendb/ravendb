@@ -15,6 +15,9 @@ using Raven.Database.Linq;
 
 namespace Raven.Database.Indexing
 {
+    /// <summary>
+    /// This is a thread safe, single instance for a particular index.
+    /// </summary>
     public class Index : IDisposable
     {
         private readonly ILog log = LogManager.GetLogger(typeof (Index));
@@ -178,6 +181,7 @@ namespace Raven.Database.Indexing
                 {
                     Searcher = new IndexSearcher(directory)
                 };
+                Thread.MemoryBarrier();// force other threads to see this write
             }
         }
 
