@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
 using System.Threading;
 using log4net;
@@ -134,43 +133,26 @@ namespace Raven.Database.Indexing
 
         public void IndexDocuments(IndexingFunc func, IEnumerable<object> documents)
         {
-            int count = 0;
+            JsonToLuceneDocumentConverter converter = null;
             Write(indexWriter =>
             {
                 var docs = func(documents);
-                var currentId = Guid.NewGuid().ToString();
-                var luceneDoc = new Document();
-                bool shouldRcreateSearcher = false;
+
+                converter = new JsonToLuceneDocumentConverter(indexWriter);
+
                 foreach (var doc in docs)
                 {
-                    count++;
-                    var fields = new List<Field>();
-                    var docId = AddValuesToDocument(fields, doc);
-                    if (docId != currentId)
-                    {
-                        if (luceneDoc.GetFieldsCount() > 0)
-                        {
-                            indexWriter.UpdateDocument(new Term("__document_id", docId), luceneDoc);
-                            shouldRcreateSearcher = true;
-                        }
-                        luceneDoc = new Document();
-                        currentId = docId;
-                        luceneDoc.Add(new Field("__document_id", docId, Field.Store.YES, Field.Index.UN_TOKENIZED));
-                    }
-                    foreach (var field in fields)
-                    {
-                        luceneDoc.Add(field);
-                    }
+                    converter.Index(doc);
                 }
-                if (luceneDoc.GetFieldsCount() > 0)
-                {
-                    indexWriter.UpdateDocument(new Term("__document_id", currentId), luceneDoc);
-                    shouldRcreateSearcher = true;
-                }
-                return shouldRcreateSearcher;
+                converter.FlushDocumentIfNeeded();
+
+                return converter.ShouldRcreateSearcher;
             });
-            log.InfoFormat("Indexed {0} documents for {1}", count, name);
+            if (converter == null)
+                return;
+            log.InfoFormat("Indexed {0} documents for {1}", converter.Count, name);
         }
+
 
         private void RecreateSearcher()
         {
@@ -183,33 +165,6 @@ namespace Raven.Database.Indexing
                 };
                 Thread.MemoryBarrier();// force other threads to see this write
             }
-        }
-
-        private static string AddValuesToDocument(ICollection<Field> fields, object val)
-        {
-            var properties = TypeDescriptor.GetProperties(val).Cast<PropertyDescriptor>().ToArray();
-            var id = properties.First(x => x.Name == "__document_id");
-
-            foreach (PropertyDescriptor property in properties)
-            {
-                if (property == id)
-                    continue;
-                var value = property.GetValue(val);
-                if (value == null)
-                    continue;
-                fields.Add(new Field(property.Name, ToIndexableString(value),
-                                     Field.Store.YES,
-                                     Field.Index.TOKENIZED));
-            }
-            return (string)id.GetValue(val);
-        }
-
-        private static string ToIndexableString(object val)
-        {
-            if (val is DateTime)
-                return DateTools.DateToString((DateTime)val, DateTools.Resolution.DAY);
-
-            return val.ToString();
         }
 
         public void Remove(string[] keys)

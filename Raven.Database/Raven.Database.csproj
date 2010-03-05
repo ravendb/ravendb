@@ -104,6 +104,7 @@
     <Compile Include="Extensions\LoggingExtensions.cs" />
     <Compile Include="Extensions\Reference.cs" />
     <Compile Include="Indexing\Index.cs" />
+    <Compile Include="Indexing\JsonToLuceneDocumentConverter.cs" />
     <Compile Include="Indexing\TaskExecuter.cs" />
     <Compile Include="Indexing\WorkContext.cs" />
     <Compile Include="Json\DynamicObjectExtensions.cs" />
