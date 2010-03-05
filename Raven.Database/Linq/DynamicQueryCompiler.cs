@@ -14,6 +14,11 @@ using Raven.Database.Linq.PrivateExtensions;
 
 namespace Raven.Database.Linq
 {
+    /// <summary>
+    /// Takes a query expression as a string, and compile it
+    /// Along the way we apply some minimal transofrmations, the end result is an instance
+    /// of AbstractViewGenerator, representing the indexing function
+    /// </summary>
     public class DynamicQueryCompiler
     {
         const string viewTextToken = "96E65595-1C9E-4BFB-A0E5-80BF2D6FC185";
@@ -34,7 +39,7 @@ namespace Raven.Database.Linq
             Query = query;
         }
 
-        public void Compile()
+        private void Compile()
         {
             var provider = new CSharpCodeProvider(new Dictionary<string, string> { { "CompilerVersion", "v4.0" } });
             var results = provider.CompileAssemblyFromSource(new CompilerParameters
@@ -66,7 +71,7 @@ namespace Raven.Database.Linq
             GeneratedType = results.CompiledAssembly.GetType(Name);
         }
 
-        public void TransformQueryToClass()
+        private void TransformQueryToClass()
         {
             var parser = ParserFactory.CreateParser(SupportedLanguage.CSharp, new StringReader("var q = " + Query));
             var variableDeclaration = GetVariableDeclaration(parser.ParseBlock());
