@@ -69,6 +69,10 @@
     </Reference>
     <Reference Include="System.Drawing" />
     <Reference Include="System.Management" />
+    <Reference Include="System.Management.Automation, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SharedLibs\System.Management.Automation.dll</HintPath>
+    </Reference>
     <Reference Include="System.ServiceProcess" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml.Linq">
@@ -83,6 +87,12 @@
   <ItemGroup>
     <Compile Include="DivanServer.cs" />
     <Compile Include="HttpServer.cs" />
+    <Compile Include="PowerShellProvider\RavenDBContentReader.cs" />
+    <Compile Include="PowerShellProvider\RavenDBProvider.cs" />
+    <Compile Include="PowerShellProvider\RavenDBPSDriveInfo.cs" />
+    <Compile Include="PowerShellProvider\RavenDBSnapIn.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="ProjectInstaller.cs">
       <SubType>Component</SubType>
@@ -114,6 +124,7 @@
     <Compile Include="Responders\Statistics.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="PowerShellProvider\RavenDBProvider.help.xml" />
     <Content Include="WebUI\view.html" />
     <Content Include="WebUI\css\Pager.css" />
     <Content Include="WebUI\css\rdb.css" />
