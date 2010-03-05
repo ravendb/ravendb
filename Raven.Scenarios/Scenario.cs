@@ -144,14 +144,14 @@ namespace Raven.Scenarios
         /// No, I am not insane, working around a framework issue:
         /// http://ayende.com/Blog/archive/2010/03/04/is-select-system.uri-broken.aspx
         /// </summary>
-        private Uri GetUri_WorkaroundForStrangeBug(string uriString)
+        private static Uri GetUri_WorkaroundForStrangeBug(string uriString)
         {
             Uri uri;
             try
             {
                 uri = new Uri(uriString);
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 uri = new Uri(uriString);
             }
