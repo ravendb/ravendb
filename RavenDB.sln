@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Tests", "Raven.Tests\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Tryouts", "Raven.Tryouts\Raven.Tryouts.csproj", "{68BC3141-C2EF-487A-B4A6-A0AD7E754FB1}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.FileStorage", "Raven.FileStorage\Raven.FileStorage.csproj", "{F87F8FA0-1020-42A1-83BD-BC3B47191881}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -43,6 +45,10 @@ Global
 		{68BC3141-C2EF-487A-B4A6-A0AD7E754FB1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{68BC3141-C2EF-487A-B4A6-A0AD7E754FB1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{68BC3141-C2EF-487A-B4A6-A0AD7E754FB1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F87F8FA0-1020-42A1-83BD-BC3B47191881}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F87F8FA0-1020-42A1-83BD-BC3B47191881}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F87F8FA0-1020-42A1-83BD-BC3B47191881}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F87F8FA0-1020-42A1-83BD-BC3B47191881}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
