@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Diagnostics;
 using System.Text;
 using log4net;
 using Microsoft.Isam.Esent.Interop;
 using Newtonsoft.Json.Linq;
+using Raven.Database.Data;
 using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
 using Raven.Database.Tasks;
@@ -387,9 +387,9 @@ namespace Raven.Database.Storage
 
         public bool TrySetCurrentIndexStatsTo(string viewName)
         {
-            Api.JetSetCurrentIndex(session, files, "key");
-            Api.MakeKey(session, files, viewName, Encoding.Unicode, MakeKeyGrbit.NewKey);
-            return Api.TrySeek(session, files, SeekGrbit.SeekEQ);
+            Api.JetSetCurrentIndex(session, indexesStats, "by_key");
+            Api.MakeKey(session, indexesStats, viewName, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            return Api.TrySeek(session, indexesStats, SeekGrbit.SeekEQ);
         }
 
         public void IncrementIndexingAttempt()
@@ -405,6 +405,21 @@ namespace Raven.Database.Storage
         public void IncrementIndexingFailure()
         {
             Api.EscrowUpdate(session, indexesStats, indexesStatsColumns["errors"], 1);
+        }
+
+        public IEnumerable<IndexStats> GetIndexesStats()
+        {
+            Api.MoveBeforeFirst(session, indexesStats);
+            while(Api.TryMoveNext(session, indexesStats))
+            {
+                yield return new IndexStats
+                {
+                    Name = Api.RetrieveColumnAsString(session, indexesStats, indexesStatsColumns["key"]),
+                    IndexingAttempts = Api.RetrieveColumnAsInt32(session, indexesStats, indexesStatsColumns["attempts"]).Value,
+                    IndexingSuccesses = Api.RetrieveColumnAsInt32(session, indexesStats, indexesStatsColumns["successes"]).Value,
+                    IndexingErrors = Api.RetrieveColumnAsInt32(session, indexesStats, indexesStatsColumns["errors"]).Value,
+                };
+            }
         }
     }
 }

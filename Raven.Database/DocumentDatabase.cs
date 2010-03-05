@@ -6,6 +6,7 @@ using System.Security;
 using System.Threading;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Database.Storage;
@@ -70,6 +71,7 @@ namespace Raven.Database
                     result.StaleIndexes = IndexStorage.Indexes
                         .Where(actions.DoesTasksExistsForIndex)
                         .ToArray();
+                    result.Indexes = actions.GetIndexesStats().ToArray();
                     actions.Commit();
                 });
                 return result;
