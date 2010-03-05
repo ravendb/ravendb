@@ -56,13 +56,13 @@ namespace Raven.Database.Indexing
             }
         }
 
-        private readonly FSDirectory directory;
+        private readonly Directory directory;
         private CurrentIndexSearcher searcher;
         private readonly string name;
 
-        public Index(FSDirectory directory)
+        public Index(Directory directory, string name)
         {
-            name = directory.GetFile().Name;
+            this.name = name;
             log.DebugFormat("Creating index for {0}", name);
             this.directory = directory;
             searcher = new CurrentIndexSearcher
