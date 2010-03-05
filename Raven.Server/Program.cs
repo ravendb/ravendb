@@ -5,6 +5,10 @@ using System.Security.Principal;
 using System.ServiceProcess;
 using System.Configuration.Install;
 using System.Reflection;
+using log4net.Appender;
+using log4net.Config;
+using log4net.Filter;
+using log4net.Layout;
 
 namespace Raven.Server
 {
@@ -76,8 +80,18 @@ namespace Raven.Server
 
         private static void RunInDebugMode()
         {
+            var consoleAppender = new ConsoleAppender
+            {
+                Layout = new PatternLayout(PatternLayout.DefaultConversionPattern),
+            };
+            consoleAppender.AddFilter(new LoggerMatchFilter
+            {
+                AcceptOnMatch = true,
+                LoggerToMatch = typeof(HttpServer).FullName
+            });
+            BasicConfigurator.Configure(consoleAppender);
             DivanServer.EnsureCanListenToWhenInNonAdminContext(8080);
-            using (new DivanServer(@"..\..\..\Data", 8080))
+            using (new DivanServer(new RavenConfiguration()))
             {
                 Console.WriteLine("Raven is ready to process requests.");
                 Console.WriteLine("Press any key to stop the server");

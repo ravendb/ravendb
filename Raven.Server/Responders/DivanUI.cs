@@ -10,7 +10,7 @@ namespace Raven.Server.Responders
         {
             get
             {
-                return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\WebUI");
+                return Settings.WebDir;
             }
         }
 

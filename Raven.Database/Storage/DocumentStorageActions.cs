@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Diagnostics;
 using System.Text;
 using log4net;
 using Microsoft.Isam.Esent.Interop;
 using Newtonsoft.Json.Linq;
+using Raven.Database.Data;
 using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
 using Raven.Database.Tasks;
@@ -15,6 +15,7 @@ namespace Raven.Database.Storage
     [CLSCompliant(false)]
     public class DocumentStorageActions : IDisposable
     {
+        private readonly IDictionary<string, JET_COLUMNID> indexesStatsColumns;
         protected readonly ILog logger = LogManager.GetLogger(typeof(DocumentStorageActions));
         private int innerTxCount;
 
@@ -27,6 +28,7 @@ namespace Raven.Database.Storage
         protected readonly IDictionary<string, JET_COLUMNID> tasksColumns;
         protected readonly Table files;
         protected readonly IDictionary<string, JET_COLUMNID> filesColumns;
+        private Table indexesStats;
 
         public bool CommitCalled { get; set; }
 
@@ -36,7 +38,8 @@ namespace Raven.Database.Storage
                                       string database,
                                       IDictionary<string, JET_COLUMNID> documentsColumns,
                                       IDictionary<string, JET_COLUMNID> tasksColumns,
-                                      IDictionary<string, JET_COLUMNID> filesColumns
+                                      IDictionary<string, JET_COLUMNID> filesColumns,
+                                      IDictionary<string, JET_COLUMNID> indexesStatsColumns
             )
         {
             try
@@ -48,9 +51,11 @@ namespace Raven.Database.Storage
                 documents = new Table(session, dbid, "documents", OpenTableGrbit.None);
                 tasks = new Table(session, dbid, "tasks", OpenTableGrbit.None);
                 files = new Table(session, dbid, "files", OpenTableGrbit.None);
+                indexesStats = new Table(session, dbid, "indexes_stats", OpenTableGrbit.None);
                 this.documentsColumns = documentsColumns;
                 this.tasksColumns = tasksColumns;
                 this.filesColumns = filesColumns;
+                this.indexesStatsColumns = indexesStatsColumns;
             }
             catch (Exception)
             {
@@ -81,6 +86,9 @@ namespace Raven.Database.Storage
 
         public void Dispose()
         {
+            if(indexesStats != null)
+                indexesStats.Dispose();
+
             if (files != null)
                 files.Dispose();
 
@@ -124,14 +132,16 @@ namespace Raven.Database.Storage
 
         public Tuple<int, int> FirstAndLastDocumentKeys()
         {
-            var result = new Tuple<int, int>();
+            int item1 = 0;
+            int item2 = 0;
             Api.MoveBeforeFirst(session, documents);
             if (Api.TryMoveNext(session, documents))
-                result.First = Api.RetrieveColumnAsInt32(session, documents, documentsColumns["id"]).Value;
+                item1 = Api.RetrieveColumnAsInt32(session, documents, documentsColumns["id"]).Value;
             Api.MoveAfterLast(session, documents);
             if (Api.TryMovePrevious(session, documents))
-                result.Second = Api.RetrieveColumnAsInt32(session, documents, documentsColumns["id"]).Value;
-            return result;
+                item2 = Api.RetrieveColumnAsInt32(session, documents, documentsColumns["id"]).Value;
+            return new Tuple<int, int>(item1, item2);
+
         }
 
         public bool DoesTasksExistsForIndex(string name)
@@ -173,17 +183,14 @@ namespace Raven.Database.Storage
                 var data = Api.RetrieveColumn(session, documents, documentsColumns["data"]);
                 logger.DebugFormat("Document with id '{0}' was found, doc length: {1}", id, data.Length);
                 var json = Api.RetrieveColumnAsString(session, documents, documentsColumns["metadata"],Encoding.Unicode);
-                yield return new Tuple<JsonDocument, int>
+                var doc = new JsonDocument
                 {
-                    First = new JsonDocument
-                    {
-                        Key = Api.RetrieveColumnAsString(session, documents, documentsColumns["key"],Encoding.Unicode),
-                        Data = data,
-                        Etag = new Guid(Api.RetrieveColumn(session, documents, documentsColumns["etag"])),
-                        Metadata = JObject.Parse(json)
-                    },
-                    Second = id
+                    Key = Api.RetrieveColumnAsString(session, documents, documentsColumns["key"], Encoding.Unicode),
+                    Data = data,
+                    Etag = new Guid(Api.RetrieveColumn(session, documents, documentsColumns["etag"])),
+                    Metadata = JObject.Parse(json)
                 };
+                yield return new Tuple<JsonDocument, int>(doc,id);
 
 
             } while (Api.TryMoveNext(session, documents));
@@ -376,6 +383,62 @@ namespace Raven.Database.Storage
             int val;
             Api.JetIndexRecordCount(session, documents, out val, 0);
             return val;
+        }
+
+        public bool TrySetCurrentIndexStatsTo(string viewName)
+        {
+            Api.JetSetCurrentIndex(session, indexesStats, "by_key");
+            Api.MakeKey(session, indexesStats, viewName, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            return Api.TrySeek(session, indexesStats, SeekGrbit.SeekEQ);
+        }
+
+        public void IncrementIndexingAttempt()
+        {
+            Api.EscrowUpdate(session, indexesStats, indexesStatsColumns["attempts"], 1);
+        }
+
+        public void IncrementSuccessIndexing()
+        {
+            Api.EscrowUpdate(session, indexesStats, indexesStatsColumns["successes"], 1);
+        }
+
+        public void IncrementIndexingFailure()
+        {
+            Api.EscrowUpdate(session, indexesStats, indexesStatsColumns["errors"], 1);
+        }
+
+        public IEnumerable<IndexStats> GetIndexesStats()
+        {
+            Api.MoveBeforeFirst(session, indexesStats);
+            while(Api.TryMoveNext(session, indexesStats))
+            {
+                yield return new IndexStats
+                {
+                    Name = Api.RetrieveColumnAsString(session, indexesStats, indexesStatsColumns["key"]),
+                    IndexingAttempts = Api.RetrieveColumnAsInt32(session, indexesStats, indexesStatsColumns["attempts"]).Value,
+                    IndexingSuccesses = Api.RetrieveColumnAsInt32(session, indexesStats, indexesStatsColumns["successes"]).Value,
+                    IndexingErrors = Api.RetrieveColumnAsInt32(session, indexesStats, indexesStatsColumns["errors"]).Value,
+                };
+            }
+        }
+
+        public void AddIndex(string name)
+        {
+            using (var update = new Update(session, indexesStats, JET_prep.Insert))
+            {
+                Api.SetColumn(session, indexesStats, indexesStatsColumns["key"], name, Encoding.Unicode);
+
+                update.Save();
+            }
+        }
+
+        public void DeleteIndex(string name)
+        {
+            Api.JetSetCurrentIndex(session, indexesStats, "by_key");
+            Api.MakeKey(session, indexesStats, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, indexesStats, SeekGrbit.SeekEQ) == false)
+                return;
+            Api.JetDelete(session, indexesStats);
         }
     }
 }

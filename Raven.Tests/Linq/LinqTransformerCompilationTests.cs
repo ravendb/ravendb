@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using Newtonsoft.Json.Linq;
 using Raven.Database.Json;
 using Raven.Database.Linq;
 using Xunit;
@@ -16,41 +18,30 @@ namespace Raven.Tests.Linq
         [Fact]
         public void Will_compile_query_successfully()
         {
-            var compiled = new LinqTransformer("pagesByTitle", query, "docs", System.IO.Path.GetTempPath(), typeof(JsonDynamicObject)).CompiledType;
+            var dynamicQueryCompiler = new DynamicQueryCompiler("pagesByTitle", query);
+            dynamicQueryCompiler.CreateInstance();
+            var compiled = dynamicQueryCompiler.GeneratedType;
             Assert.NotNull(compiled);
         }
 
         [Fact]
         public void Can_create_new_instance_from_query()
         {
-            var compiled = new LinqTransformer("pagesByTitle", query, "docs", System.IO.Path.GetTempPath(), typeof(JsonDynamicObject)).CompiledType;
+            var dynamicQueryCompiler = new DynamicQueryCompiler("pagesByTitle", query);
+            dynamicQueryCompiler.CreateInstance();
+            var compiled = dynamicQueryCompiler.GeneratedType;
             Activator.CreateInstance(compiled);
-        }
-
-        [Fact]
-        public void Can_get_type_of_result_from_query()
-        {
-            var compiled = new LinqTransformer("pagesByTitle", query, "docs", System.IO.Path.GetTempPath(), typeof(JsonDynamicObject)).CompiledType;
-            var instance = (AbstractViewGenerator)Activator.CreateInstance(compiled);
-            var argument = instance.IndexDefinition.Body.Type.GetGenericArguments()[0];
-            
-            Assert.NotNull(argument.GetProperty("Key"));
-            Assert.NotNull(argument.GetProperty("Value"));
-            Assert.NotNull(argument.GetProperty("Size"));
-
-            Assert.Equal(typeof(string), argument.GetProperty("Key").PropertyType);
-            Assert.Equal(typeof(string), argument.GetProperty("Value").PropertyType);
-            Assert.Equal(typeof(string), argument.GetProperty("Size").PropertyType);
         }
 
         [Fact]
         public void Can_execute_query()
         {
-            var compiled = new LinqTransformer("pagesByTitle", query, "docs", System.IO.Path.GetTempPath(), typeof(JsonDynamicObject)).CompiledType;
-            var generator = (AbstractViewGenerator)Activator.CreateInstance(compiled);
+            var dynamicQueryCompiler = new DynamicQueryCompiler("pagesByTitle", query);
+            dynamicQueryCompiler.CreateInstance();
+            var generator= dynamicQueryCompiler.GeneratedInstance;
             var results = generator.Execute(new[]
             {
-                new JsonDynamicObject(@"
+                GetDocumentFromString(@"
                 {
                     '@metadata': {'@id': 1},
                     'Type': 'page',
@@ -58,12 +49,12 @@ namespace Raven.Tests.Linq
                     'Content': 'Foobar',
                     'Size': 31
                 }"),
-                new JsonDynamicObject(@"
+                GetDocumentFromString(@"
                 {
                     '@metadata': {'@id': 2},
                     'Type': 'not a page',
                 }"),
-                new JsonDynamicObject(@"
+                GetDocumentFromString(@"
                 {
                     '@metadata': {'@id': 3},
                     'Type': 'page',
@@ -83,6 +74,11 @@ namespace Raven.Tests.Linq
             {
                 Assert.Equal(expected[i], results[i].ToString());
             }
+        }
+
+        public static dynamic GetDocumentFromString(string json)
+        {
+            return JsonToExpando.Convert(JObject.Parse(json));
         }
     }
 }

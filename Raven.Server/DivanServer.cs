@@ -13,11 +13,13 @@ namespace Raven.Server
         private readonly HttpServer server;
         private readonly DocumentDatabase database;
 
-        public DivanServer(string directory, int port)
+        public DivanServer(RavenConfiguration settings)
         {
-            database = new DocumentDatabase(directory);
+            settings.LoadLoggingSettings();
+
+            database = new DocumentDatabase(settings.DataDirectory);
             database.SpinBackgroundWorkers();
-            server = new HttpServer(port,
+            server = new HttpServer(settings.Port,
                                     typeof(RequestResponder).Assembly.GetTypes()
                                         .Where(t => typeof(RequestResponder).IsAssignableFrom(t) && t.IsAbstract == false)
 
@@ -30,6 +32,7 @@ namespace Raven.Server
                                         .Select(r =>
                                         {
                                             r.Database = database;
+                                            r.Settings = settings;
                                             return r;
                                         })
                 );

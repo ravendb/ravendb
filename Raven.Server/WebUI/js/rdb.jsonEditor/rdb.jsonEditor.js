@@ -14,25 +14,31 @@ function InitializeJSONEditor(jsonToEdit) {
 
     $('#editorTabs').tabs({
         select: function (event, ui) {
-            if (ui.index == 1) { //raw 
+            if (ui.index == 2) { //raw 
                 if ($('#editorTabs').find(".ui-tabs-panel:visible").attr('id') == 'fancyJSONEditor') {
                     var treeJSON = GetJSONFromTree();
                     $('#txtJSON').val(treeJSON);
                 }
-            } else if (ui.index == 0) { //edit
+            } else if (ui.index == 1) { //edit
                 if (ValidateRawJSON()) {
                     var json = JSON.parse($('#txtJSON').val());
                     LoadJSONToTree(json);
                 } else {
                     event.preventDefault();
                 }
-            } else if (ui.index == 2) { //view
+            } else if (ui.index == 3) { //view template
+                //update json in json editor
+                if ($('#editorTabs').find(".ui-tabs-panel:visible").attr('id') == 'fancyJSONEditor') {
+                    var json = GetJSONFromTree();
+                    $('#txtJSON').val(json);
+                }            
+            } else if (ui.index == 0) { //view
                 if ($('#editorTabs').find(".ui-tabs-panel:visible").attr('id') == 'fancyJSONEditor') {
                     var json = GetJSONFromTree();
                     $('#txtJSON').val(json);
                 }
                 if (ValidateRawJSON()) {
-                    LoadJSONView(JSON.parse($('#txtJSON').val()));
+                    $('#jsonViewer').html(GetDocumentViewHTML(JSON.parse($('#txtJSON').val()), $('#txtJSONViewTemplate').val()));
                 } else {
                     event.preventDefault();
                 }
@@ -60,8 +66,7 @@ function InitializeJSONEditor(jsonToEdit) {
     });
     
     if (ValidateRawJSON()) {
-        var json = JSON.parse($('#txtJSON').val());
-        LoadJSONToTree(json);
+        $('#jsonViewer').html(GetDocumentViewHTML(JSON.parse($('#txtJSON').val()), $('#txtJSONViewTemplate').val()));
     } else {
         $('#editorTabs').tabs('select', 1);
     }    
@@ -70,12 +75,12 @@ function InitializeJSONEditor(jsonToEdit) {
 }
 
 function ShowEditorForNewDocument(saveCallback) {
-    ShowEditorForDocument(null, { PropertyName : 'Value'}, null, 'Create New Document', function(id, etag, json, editor) {
-        saveCallback(json, editor);
+    ShowEditorForDocument(null, { PropertyName : ''}, null, null, 'Create New Document', function(id, etag, template, json, editor) {
+        saveCallback(template, json, editor);
     }, null);
 }
 
-function ShowEditorForDocument(id, doc, etag, title, saveCallback, deleteCallback) {
+function ShowEditorForDocument(id, doc, etag, viewTemplate, title, saveCallback, deleteCallback) {
     var editorHtml = $('<div id="editorContainer"></div>');
     $(editorHtml).load('/divan/js/rdb.jsonEditor/editor.html', function() {
         if (id) {
@@ -99,6 +104,9 @@ function ShowEditorForDocument(id, doc, etag, title, saveCallback, deleteCallbac
                     });
             });
             $(editorHtml).append(deleteButton);
+            
+            if (viewTemplate) 
+                $(editorHtml).find('#txtJSONViewTemplate').val(viewTemplate);
         }
         $(editorHtml).css('position', 'relative').css('height', '500px');
         $(editorHtml).dialog({
@@ -113,7 +121,7 @@ function ShowEditorForDocument(id, doc, etag, title, saveCallback, deleteCallbac
         buttons: {
             Save: function () {
                 if (ValidateRawJSON()) {
-                    saveCallback(id, etag, GetJSONFromEditor(), editorHtml);
+                    saveCallback(id, etag, $('#txtJSONViewTemplate').val(), GetJSONFromEditor(), editorHtml);
                 };
             },
             Cancel: function () {
@@ -159,34 +167,6 @@ function GetJSONFromEditor() {
     } 
 }
 
-function LoadJSONView(json) {
-    var view = $('<div class="jsonViewWrapper"></div>');
-    $(view).html(JSONToViewHTML(json));
-    $('#jsonViewer').html(view);
-
-    $('#jsonViewer').find('.jsonObjectView:first').css('border', 'none').css('padding', '0').css('margin-left', '0');
-
-    $('#jsonViewer').find('.arrayNameView').click(function () {
-        $(this).next().slideToggle();
-        var current = $(this).children('div').html();
-        if (current == 'hide')
-            $(this).children('div').html('show');
-        else
-            $(this).children('div').html('hide'); 
-    }).hover(function () {
-        var text;
-        if ($(this).next().is(':visible')) {
-            text = 'hide';
-        } else {
-            text = 'show';
-        }
-        $(this).append('<div style="position:absolute; right: 5px; top: 8px; font-size: 10px; color: #ccc;">' + text + '</div>');
-    }, function () {
-        $(this).children('div').remove();
-    });
-
-}
-
 function LoadTree(json) {
     $('#jsonTree').tree({
         data: {
@@ -224,27 +204,40 @@ function LoadTree(json) {
         callback: {
             onselect: function (node, tree) {
                 if (tree.get_type(node) == 'jsonValue') {
-                    $('#selectedJSONname').val($(node).children('a').text().trim());
+                    $('#selectedJSONname').val($.trim($(node).children('a').text()));
                     $('#selectedJSONval').val(unescape($(node).attr('jsonvalue')));
-                    $('#jsonArrayEditor').fadeOut('slow', function () {
-                        $('#jsonEditor').fadeIn('slow');
-                    });
+                    if ($('#jsonArrayEditor').is(':visible')) {
+                        $('#jsonArrayEditor').fadeOut('slow', function () {
+                            $('#jsonEditor').fadeIn('slow', function() {
+                                $('#selectedJSONname').focus().select();
+                            });
+                        });
+                    } else {
+                        $('#jsonEditor').fadeIn('fast', function() {
+                            $('#selectedJSONname').focus().select();
+                        });
+                    }
 
                 } else {
                     $('#selectedJSONArrayName').val($(node).children('a').text().trim());
-                    $('#jsonEditor').fadeOut('slow', function () {
-                        $('#jsonArrayEditor').fadeIn('slow');
-                    });
+                    if ($('#jsonEditor').is(':visible')) {
+                        $('#jsonEditor').fadeOut('slow', function () {
+                            $('#jsonArrayEditor').fadeIn('slow', function() {
+                                $('#selectedJSONArrayName').focus().select();
+                            });
+                        });
+                    } else {
+                        $('#jsonArrayEditor').fadeIn('fast', function() {
+                            $('#selectedJSONArrayName').focus().select();
+                        });
+                    }
                 }
             },
             onload: function (tree) {
+                $.tree.focused().select_branch($.tree.focused().container.find('.leaf:first a:first'));
             }
         }
     });
-    $('#jsonArrayEditor').hide();
-    $('#jsonEditor').hide();    
-    $.tree.focused().container.find('li:first').click();
-    $.tree.focused().container.find('.leaf:first a:first').click();
 }
 
 function CreateArray() {
@@ -330,38 +323,6 @@ function traverseTreeJSON(json) {
         }
     }
     return retJSON;
-}
-
-function JSONToViewHTML(jsonObj) {
-    if (typeof jsonObj == "object") {
-        var jsonDiv = $('<div class="jsonObjectView"></div>');
-        $.each(jsonObj, function (key, value) {
-            if (value) {
-                // key is either an array index or object key                    
-                var children = JSONToViewHTML(value);
-
-                if (typeof children == "object") {
-                    $(jsonDiv).append('<span class="arrayNameView">' + key + '</span>');
-                    $(jsonDiv).append(children);
-                } else {
-                        var childDiv = $('<div class="jsonObjectMemberView"></div>');
-                        $(childDiv).append('<span class="memberNameView">' + key + '</span>');
-                        $(childDiv).append('<span class="memberValueView">' +  children + '</span>');
-                        $(jsonDiv).append(childDiv);
-                }
-            } else {
-                var childDiv = $('<div class="jsonObjectMemberView"></div>');
-                $(childDiv).append('<span class="memberNameView">' + key + '</span>');
-                $(childDiv).append('<span class="memberValueView"></span>');
-                $(jsonDiv).append(childDiv);
-            }
-        });
-        return jsonDiv;
-    }
-    else {
-        // jsonOb is a number or string
-        return jsonObj;                
-    }
 }
 
 function JSONToTreeJSON(jsonObj) {

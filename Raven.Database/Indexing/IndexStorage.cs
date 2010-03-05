@@ -9,12 +9,14 @@ using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
 using Raven.Database.Extensions;
-using Raven.Database.Json;
 using Raven.Database.Linq;
 using Directory = System.IO.Directory;
 
 namespace Raven.Database.Indexing
 {
+    /// <summary>
+    /// Thread safe, single instance for the entire application
+    /// </summary>
     public class IndexStorage : CriticalFinalizerObject, IDisposable
     {
         private readonly string path;
@@ -30,8 +32,9 @@ namespace Raven.Database.Indexing
             foreach (var index in Directory.GetDirectories(this.path))
             {
                 log.DebugFormat("Loading saved index {0}", index);
-                indexes.Add(Path.GetFileName(index),
-                            new Index(FSDirectory.GetDirectory(index, false)));
+                var name = Path.GetFileName(index);
+                indexes.Add(name,
+                            new Index(FSDirectory.GetDirectory(index, false), name));
             }
         }
 
@@ -64,7 +67,7 @@ namespace Raven.Database.Indexing
             new IndexWriter(directory, new StandardAnalyzer()).Close();//creating index structure
             indexes = new Dictionary<string, Index>(indexes)
             {
-                {name, new Index(directory)}
+                {name, new Index(directory, name)}
             };
         }
 
@@ -98,7 +101,7 @@ namespace Raven.Database.Indexing
             value.Remove(keys);
         }
 
-        public void Index(string index, IndexingFunc indexingFunc, IEnumerable<JsonDynamicObject> docs)
+        public void Index(string index, IndexingFunc indexingFunc, IEnumerable<dynamic > docs)
         {
             Index value;
             if (indexes.TryGetValue(index, out value) == false)

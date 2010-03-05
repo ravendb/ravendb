@@ -8,7 +8,7 @@ namespace Raven.Database.Storage
     public class SchemaCreator
     {
         private readonly Session session;
-        public const string SchemaVersion = "1.6";
+        public const string SchemaVersion = "1.7";
 
         public SchemaCreator(Session session)
         {
@@ -26,6 +26,7 @@ namespace Raven.Database.Storage
                     CreateDetailsTable(dbid);
                     CreateDocumentsTable(dbid);
                     CreateTasksTable(dbid);
+                    CreateIndexingStatsTable(dbid);
                     CreateFilesTable(dbid);
 
                     tx.Commit(CommitTransactionGrbit.None);
@@ -35,6 +36,45 @@ namespace Raven.Database.Storage
             {
                 Api.JetCloseDatabase(session, dbid, CloseDatabaseGrbit.None);
             }
+        }
+
+        private void CreateIndexingStatsTable(JET_DBID dbid)
+        {
+            JET_TABLEID tableid;
+            Api.JetCreateTable(session, dbid, "indexes_stats", 16, 100, out tableid);
+            JET_COLUMNID columnid;
+
+            Api.JetAddColumn(session, tableid, "key", new JET_COLUMNDEF
+            {
+                cbMax = 255,
+                coltyp = JET_coltyp.Text,
+                cp = JET_CP.Unicode,
+                grbit = ColumndefGrbit.ColumnTagged
+            }, null, 0, out columnid);
+
+            var defaultValue = BitConverter.GetBytes(0);
+            Api.JetAddColumn(session, tableid, "successes", new JET_COLUMNDEF
+            {
+                coltyp = JET_coltyp.Long,
+                grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnEscrowUpdate
+            }, defaultValue, defaultValue.Length, out columnid);
+
+
+            Api.JetAddColumn(session, tableid, "attempts", new JET_COLUMNDEF
+            {
+                coltyp = JET_coltyp.Long,
+                grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnEscrowUpdate | ColumndefGrbit.ColumnNotNULL
+            }, defaultValue, defaultValue.Length, out columnid);
+
+            Api.JetAddColumn(session, tableid, "errors", new JET_COLUMNDEF
+            {
+                coltyp = JET_coltyp.Long,
+                grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnEscrowUpdate | ColumndefGrbit.ColumnNotNULL
+            }, defaultValue, defaultValue.Length, out columnid);
+
+            const string indexDef = "+key\0\0";
+            Api.JetCreateIndex(session, tableid, "by_key", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
+                               100);
         }
 
         private void CreateDocumentsTable(JET_DBID dbid)

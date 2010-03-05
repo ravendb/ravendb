@@ -1,6 +1,6 @@
 using Newtonsoft.Json.Linq;
 
-namespace Raven.Database
+namespace Raven.Database.Data
 {
     public class QueryResult
     {

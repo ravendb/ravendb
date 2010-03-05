@@ -5,19 +5,24 @@ namespace Raven.Database.Json
 {
     public static class DynamicObjectExtensions
     {
-        public static string ToIndexableString(this JsonDynamicObject self)
+        public static string Days(this DateTime self)
         {
-            if(self == null)
-                return null;
+            return DateTools.DateToString(self, DateTools.Resolution.DAY);
+        }
 
-            var val = self.Value;
-            if (val is DateTime)
-                return DateTools.DateToString((DateTime)val, DateTools.Resolution.DAY);
+        public static string Hours(this DateTime self)
+        {
+            return DateTools.DateToString(self, DateTools.Resolution.HOUR);
+        }
 
-            if (val is int)
-                return NumberTools.LongToString((int)val);
+        public static string Minutes(this DateTime self)
+        {
+            return DateTools.DateToString(self, DateTools.Resolution.MINUTE);
+        }
 
-            return val.ToString();
+        public static string Secoonds(this DateTime self)
+        {
+            return DateTools.DateToString(self, DateTools.Resolution.SECOND);
         }
     }
 }

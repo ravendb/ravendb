@@ -5,6 +5,11 @@ using Raven.Database.Json;
 
 namespace Raven.Database.Tasks
 {
+    /// <summary>
+    /// Indexing a range of documents
+    /// A range of documents is a stable range, which can be queried even if document addition / removal
+    /// occured since the time that the range was taken to the time it was queried.
+    /// </summary>
     public class IndexDocumentRangeTask : Task
     {
         public int FromId { get; set; }
@@ -28,11 +33,11 @@ namespace Raven.Database.Tasks
                 var docsToIndex = actions.DocumentsById(hasMoreItems, FromId, ToId, 100)
                     .Select(d =>
                     {
-                        lastId = d.Second;
-                        return d.First;
+                        lastId = d.Item2;
+                        return d.Item1;
                     })
                     .Where(x => x != null)
-                    .Select(s => new JsonDynamicObject(s.ToJson()));
+                    .Select(s => JsonToExpando.Convert(s.ToJson()));
                 context.IndexStorage.Index(View, viewFunc, docsToIndex);
                 actions.Commit();
             });

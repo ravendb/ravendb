@@ -45,7 +45,7 @@ namespace Raven.Scenarios
             try
             {
                 DivanServer.EnsureCanListenToWhenInNonAdminContext(testPort);
-                using (new DivanServer(tempFileName, testPort))
+                using (new DivanServer(new RavenConfiguration {DataDirectory = tempFileName, Port = testPort}))
                 {
                     using (var zipFile = new ZipFile(file))
                     {
@@ -82,14 +82,14 @@ namespace Raven.Scenarios
             {
                 actual = SendRequest(request);
                 count++;
-                if (!IsStaleResponse(actual.First))
+                if (!IsStaleResponse(actual.Item1))
                     break;
                 Thread.Sleep(100);
             } while (count < 50);
-            if (IsStaleResponse(actual.First))
+            if (IsStaleResponse(actual.Item1))
                 throw new InvalidOperationException("Request remained stale for too long");
 
-            lastEtag = actual.Second["ETag"];
+            lastEtag = actual.Item2["ETag"];
             responseNumber++;
             CompareResponses(
                 expectedResponse,
@@ -131,14 +131,11 @@ namespace Raven.Scenarios
 
                 var webResponse = GetResponse(req);
                 {
-                    return new Tuple<string, NameValueCollection, string>
-                    {
-                        First = new StreamReader(webResponse.GetResponseStream()).ReadToEnd(),
-                        Second = webResponse.Headers,
-                        Third =
-                            "HTTP/" + webResponse.ProtocolVersion + " " + (int)webResponse.StatusCode + " " +
-                            webResponse.StatusDescription
-                    };
+                    return new Tuple<string, NameValueCollection, string>(
+                        new StreamReader(webResponse.GetResponseStream()).ReadToEnd(),
+                        webResponse.Headers,
+                        "HTTP/" + webResponse.ProtocolVersion + " " + (int)webResponse.StatusCode + " " +
+                            webResponse.StatusDescription);
                 }
             }
         }
@@ -147,14 +144,14 @@ namespace Raven.Scenarios
         /// No, I am not insane, working around a framework issue:
         /// http://ayende.com/Blog/archive/2010/03/04/is-select-system.uri-broken.aspx
         /// </summary>
-        private Uri GetUri_WorkaroundForStrangeBug(string uriString)
+        private static Uri GetUri_WorkaroundForStrangeBug(string uriString)
         {
             Uri uri;
             try
             {
                 uri = new Uri(uriString);
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 uri = new Uri(uriString);
             }
@@ -197,7 +194,7 @@ namespace Raven.Scenarios
             var responseAsString = HandleChunking(response);
             foreach (var finder in guidFinders)
             {
-                var actualEtag = finder.Match(actual.First).Groups[1].Value;
+                var actualEtag = finder.Match(actual.Item1).Groups[1].Value;
                 var expectedEtag = finder.Match(responseAsString).Groups[1].Value;
                 if (string.IsNullOrEmpty(expectedEtag) == false)
                 {
@@ -206,11 +203,11 @@ namespace Raven.Scenarios
             }
             var sr = new StringReader(responseAsString);
             string statusLine = sr.ReadLine();
-            if (statusLine != actual.Third)
+            if (statusLine != actual.Item3)
             {
                 throw new InvalidDataException(
                     string.Format("Request {0} status differs. Expected {1}, Actual {2}\r\nRequest:\r\n{3}",
-                                  responseNumber, statusLine, actual.Third, request));
+                                  responseNumber, statusLine, actual.Item3, request));
             }
             string header;
             while (string.IsNullOrEmpty((header = sr.ReadLine())) == false)
@@ -220,19 +217,19 @@ namespace Raven.Scenarios
                     continue;
                 if (parts[0] == "Date" || parts[0] == "ETag" || parts[0] == "Location")
                 {
-                    Assert.Contains(parts[0],actual.Second.AllKeys);
+                    Assert.Contains(parts[0],actual.Item2.AllKeys);
                     continue;
                 }
-                if (actual.Second[parts[0]] != parts[1])
+                if (actual.Item2[parts[0]] != parts[1])
                 {
                     throw new InvalidDataException(
                         string.Format("Request {0} header {1} differs. Expected {2}, Actual {3}\r\nRequest:\r\n{4}",
-                                      responseNumber, parts[0], parts[1], actual.Second[parts[0]], request));
+                                      responseNumber, parts[0], parts[1], actual.Item2[parts[0]], request));
                 }
             }
 
             string expectedLine;
-            var rr = new StringReader(actual.First);
+            var rr = new StringReader(actual.Item1);
             int line = 0;
             while (string.IsNullOrEmpty((expectedLine = sr.ReadLine())) == false)
             {

@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -12,14 +11,16 @@ using Lucene.Net.QueryParsers;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Raven.Database.Extensions;
-using Raven.Database.Json;
 using Raven.Database.Linq;
 
 namespace Raven.Database.Indexing
 {
+    /// <summary>
+    /// This is a thread safe, single instance for a particular index.
+    /// </summary>
     public class Index : IDisposable
     {
-        private ILog log = LogManager.GetLogger(typeof (Index));
+        private readonly ILog log = LogManager.GetLogger(typeof (Index));
 
         private class CurrentIndexSearcher
         {
@@ -36,7 +37,7 @@ namespace Raven.Database.Indexing
 
             private class CleanUp : IDisposable
             {
-                private CurrentIndexSearcher parent;
+                private readonly CurrentIndexSearcher parent;
 
                 public CleanUp(CurrentIndexSearcher parent)
                 {
@@ -58,13 +59,13 @@ namespace Raven.Database.Indexing
             }
         }
 
-        private readonly FSDirectory directory;
+        private readonly Directory directory;
         private CurrentIndexSearcher searcher;
         private readonly string name;
 
-        public Index(FSDirectory directory)
+        public Index(Directory directory, string name)
         {
-            name = directory.GetFile().Name;
+            this.name = name;
             log.DebugFormat("Creating index for {0}", name);
             this.directory = directory;
             searcher = new CurrentIndexSearcher
@@ -86,27 +87,35 @@ namespace Raven.Database.Indexing
                 var indexSearcher = searcher.Searcher;
                 if(string.IsNullOrEmpty(query) == false)
                 {
-                    log.DebugFormat("Issuing query on index {0} for: {1}", name, query);
-                    var luceneQuery = new QueryParser("", new StandardAnalyzer()).Parse(query);
-                    var search = indexSearcher.Search(luceneQuery);
-                    totalSize.Value = search.Length();
-                    for (int i = start; i < search.Length() && (i - start) < pageSize; i++)
-                    {
-                        yield return search.Doc(i).GetField("__document_id").StringValue();
-                    }
+                    return SearchIndex(query, indexSearcher, totalSize, start, pageSize);
                 }
-                else
-                {
-                    log.DebugFormat("Browsing index {0}", name);
-                    var maxDoc = indexSearcher.MaxDoc();
-                    totalSize.Value = maxDoc;
-                    for (int i = start; i < maxDoc && (i - start) < pageSize; i++)
-                    {
-                        yield return indexSearcher.Doc(i).GetField("__document_id").StringValue();
-                    }
-                }
+                return BrowseIndex(indexSearcher, totalSize, start, pageSize);
             }
         }
+
+        private IEnumerable<string> BrowseIndex(IndexSearcher indexSearcher, Reference<int> totalSize, int start, int pageSize)
+        {
+            log.DebugFormat("Browsing index {0}", name);
+            var maxDoc = indexSearcher.MaxDoc();
+            totalSize.Value = maxDoc;
+            for (int i = start; i < maxDoc && (i - start) < pageSize; i++)
+            {
+                yield return indexSearcher.Doc(i).GetField("__document_id").StringValue();
+            }
+        }
+
+        private IEnumerable<string> SearchIndex(string query, IndexSearcher indexSearcher, Reference<int> totalSize, int start, int pageSize)
+        {
+            log.DebugFormat("Issuing query on index {0} for: {1}", name, query);
+            var luceneQuery = new QueryParser("", new StandardAnalyzer()).Parse(query);
+            var search = indexSearcher.Search(luceneQuery);
+            totalSize.Value = search.Length();
+            for (int i = start; i < search.Length() && (i - start) < pageSize; i++)
+            {
+                yield return search.Doc(i).GetField("__document_id").StringValue();
+            }
+        }
+
         private void Write(Func<IndexWriter, bool> action)
         {
             var indexWriter = new IndexWriter(directory, new StandardAnalyzer());
@@ -123,34 +132,12 @@ namespace Raven.Database.Indexing
                 RecreateSearcher();
         }
 
-        public IEnumerable<object> HandleErrorsGracefully(IndexingFunc func, IEnumerable<JsonDynamicObject> docs)
-        {
-            foreach (var doc in docs)
-            {
-                IEnumerable enumerable;
-                try
-                {
-                    enumerable = func(new[] {doc});
-                }
-                catch (Exception e)
-                {
-                    log.Warn("Could not process document: " + doc, e);
-                    continue;
-                }
-                foreach (var item in enumerable)
-                {
-                    yield return item;
-                }
-            }
-            
-        }
-
-        public void IndexDocuments(IndexingFunc func, IEnumerable<JsonDynamicObject> documents)
+        public void IndexDocuments(IndexingFunc func, IEnumerable<object> documents)
         {
             int count = 0;
             Write(indexWriter =>
             {
-                var docs = HandleErrorsGracefully(func,documents);
+                var docs = func(documents);
                 var currentId = Guid.NewGuid().ToString();
                 var luceneDoc = new Document();
                 bool shouldRcreateSearcher = false;
@@ -194,6 +181,7 @@ namespace Raven.Database.Indexing
                 {
                     Searcher = new IndexSearcher(directory)
                 };
+                Thread.MemoryBarrier();// force other threads to see this write
             }
         }
 

@@ -2,6 +2,7 @@ using Raven.Database.Indexing;
 
 namespace Raven.Database.Tasks
 {
+
     public class RemoveFromIndexTask : Task
     {
         public string[] Keys { get; set; }

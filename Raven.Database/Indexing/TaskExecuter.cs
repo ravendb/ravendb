@@ -2,6 +2,7 @@ using System;
 using log4net;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
+using Raven.Database.Extensions;
 
 namespace Raven.Database.Indexing
 {
@@ -33,32 +34,33 @@ namespace Raven.Database.Indexing
                     log.DebugFormat("Executing {0}", taskAsJson);
                     foundWork = true;
 
-                    Task task;
-                    try
-                    {
-                        task = Task.ToTask(taskAsJson);
-                        try
-                        {
-                            task.Execute(context);
-                        }
-                        catch (Exception e)
-                        {
-                            if (log.IsWarnEnabled)
-                            {
-                                log.Warn(string.Format("Task {0} has failed and was deletedwithout completing any work", taskAsJson), e);
-                            }
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        log.Error("Could not create instance of a task from " + taskAsJson, e);
-                    }
+                    ExecuteTask(taskAsJson);
 
                     actions.CompleteCurrentTask();
                     actions.Commit();
                 });
                 if(foundWork == false)
                     context.WaitForWork();
+            }
+        }
+
+        private void ExecuteTask(string taskAsJson)
+        {
+            try
+            {
+                Task task = Task.ToTask(taskAsJson);
+                try
+                {
+                    task.Execute(context);
+                }
+                catch (Exception e)
+                {
+                    log.WarnFormat(e, "Task {0} has failed and was deleted without completing any work", taskAsJson);
+                }
+            }
+            catch (Exception e)
+            {
+                log.ErrorFormat(e, "Could not create instance of a task: {0}", taskAsJson);
             }
         }
     }

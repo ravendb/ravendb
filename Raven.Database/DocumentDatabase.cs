@@ -6,9 +6,9 @@ using System.Security;
 using System.Threading;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
-using Raven.Database.Linq;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
 
@@ -71,6 +71,7 @@ namespace Raven.Database
                     result.StaleIndexes = IndexStorage.Indexes
                         .Where(actions.DoesTasksExistsForIndex)
                         .ToArray();
+                    result.Indexes = actions.GetIndexesStats().ToArray();
                     actions.Commit();
                 });
                 return result;
@@ -160,33 +161,33 @@ namespace Raven.Database
 
         public string PutIndex(string name, string indexDef)
         {
-            LinqTransformer transformer;
-            switch (IndexDefinitionStorage.FindIndexCreationOptionsOptions(name, indexDef, out transformer))
+            switch (IndexDefinitionStorage.FindIndexCreationOptionsOptions(name, indexDef))
             {
                 case IndexCreationOptions.Noop:
-                    return transformer.Name;
+                    return name;
                 case IndexCreationOptions.Update:
-                    DeleteIndex(transformer.Name);
+                    DeleteIndex(name);
                     break;
             }
-            IndexDefinitionStorage.AddIndex(transformer);
-            IndexStorage.CreateIndex(transformer.Name);
+            IndexDefinitionStorage.AddIndex(name, indexDef);
+            IndexStorage.CreateIndex(name);
             TransactionalStorage.Batch(actions =>
             {
+                actions.AddIndex(name);
                 var firstAndLast = actions.FirstAndLastDocumentKeys();
-                if (firstAndLast.First != 0 && firstAndLast.Second != 0)
+                if (firstAndLast.Item1 != 0 && firstAndLast.Item2 != 0)
                 {
                     actions.AddTask(new IndexDocumentRangeTask
                     {
-                        View = transformer.Name,
-                        FromId = firstAndLast.First,
-                        ToId = firstAndLast.Second
+                        View = name,
+                        FromId = firstAndLast.Item1,
+                        ToId = firstAndLast.Item2
                     });
                 }
                 actions.Commit();
             });
             workContext.NotifyAboutWork();
-            return transformer.Name;
+            return name;
         }
 
         public QueryResult Query(string index, string query, int start, int pageSize)
@@ -217,6 +218,12 @@ namespace Raven.Database
         {
             IndexDefinitionStorage.RemoveIndex(name);
             IndexStorage.DeleteIndex(name);
+            TransactionalStorage.Batch(action=>
+            {
+                action.DeleteIndex(name);
+
+                action.Commit();
+            });
             workContext.NotifyAboutWork();
         }
 
@@ -256,8 +263,8 @@ namespace Raven.Database
             {
                 foreach (var documentAndId in actions.DocumentsById(new Reference<bool>(), start, int.MaxValue, pageSize))
                 {
-                    var doc = documentAndId.First;
-                    documentAndId.First.Metadata.Add("@docNum", new JValue(documentAndId.Second));
+                    var doc = documentAndId.Item1;
+                    doc.Metadata.Add("@docNum", new JValue(documentAndId.Item2));
 
                     list.Add(doc.ToJson());
                 }

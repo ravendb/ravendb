@@ -100,9 +100,8 @@ namespace Raven.Client
 
             return result.Results.Select(q =>
                                              {
-                                                 var entity = JsonConvert.DeserializeObject(q.ToString(), typeof(T));
-                                                 var id = q.Value<string>("_id");
-                                                 ConvertToEntity<T>(id, q.ToString());
+                                                 var id = q.Last.First.Value<string>("@id");
+                                                 var entity = ConvertToEntity<T>(id, q.ToString());
                                                  return (T)entity;
                                              }).ToList();
         }

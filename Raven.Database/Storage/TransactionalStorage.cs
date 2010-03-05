@@ -21,6 +21,7 @@ namespace Raven.Database.Storage
         private IDictionary<string, JET_COLUMNID> documentsColumns;
         private IDictionary<string, JET_COLUMNID> tasksColumns;
         private IDictionary<string, JET_COLUMNID> filesColumns;
+        private IDictionary<string, JET_COLUMNID> indexStatsColumns;
 
         public JET_INSTANCE Instance
         {
@@ -78,6 +79,8 @@ namespace Raven.Database.Storage
                         tasksColumns = Api.GetColumnDictionary(session, tasks);
                     using (var files = new Table(session, dbid, "files", OpenTableGrbit.None))
                         filesColumns = Api.GetColumnDictionary(session, files);
+                    using (var files = new Table(session, dbid, "indexes_stats", OpenTableGrbit.None))
+                        indexStatsColumns = Api.GetColumnDictionary(session, files);
                 }
                 finally
                 {
@@ -227,7 +230,7 @@ namespace Raven.Database.Storage
             disposerLock.EnterReadLock();
             try
             {
-                using (var pht = new DocumentStorageActions(instance, database,documentsColumns, tasksColumns, filesColumns))
+                using (var pht = new DocumentStorageActions(instance, database,documentsColumns, tasksColumns, filesColumns, indexStatsColumns))
                 {
                     current = pht;
                     action(pht);

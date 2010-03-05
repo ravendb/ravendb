@@ -1,10 +1,11 @@
 ﻿<div style="margin: 0 auto; width:600px;" id="editorTabs">
     <ul>
+        <li><a href="#jsonViewer">View</a></li>
         <li><a href="#fancyJSONEditor">JSON Editor</a></li>
         <li><a href="#rawJSONEditor">Raw JSON</a></li>
-        <li><a href="#jsonViewer">View</a></li>
+        <li><a href="#jsonViewTemplate">View Template</a></li>
     </ul>
-
+    <div id="jsonViewer"></div>
     <div style="padding:5px;" class="ui-corner-all" id="fancyJSONEditor">
         <div style="float:left; overflow:auto; background-color:#fff; padding:20px;" class="ui-corner-left">
             <div id="jsonTree"></div>
@@ -35,5 +36,8 @@
         Raw JSON<br />
         <textarea style="width:100%; height: 200px;" id="txtJSON"></textarea>
     </div>
-    <div id="jsonViewer"></div>
+    <div id="jsonViewTemplate">
+        <textarea style="width:100%; height: 200px;" id="txtJSONViewTemplate"></textarea>
+    </div>
+
 </div>
