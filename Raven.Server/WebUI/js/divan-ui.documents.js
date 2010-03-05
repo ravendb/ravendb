@@ -195,7 +195,7 @@
         function GetDocumentViewHTML(json, template) {
             if (template && template != '') {
                 var view = $('<div style="padding:10px;"></div>');
-                $(view).setTemplate(template);
+                $(view).setTemplateURL(template);
                 $(view).processTemplate(json);
             } else {
                 var view = $('<div class="jsonViewWrapper"></div>');
