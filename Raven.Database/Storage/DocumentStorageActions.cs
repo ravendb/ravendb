@@ -399,7 +399,7 @@ namespace Raven.Database.Storage
 
         public void IncrementSuccessIndexing()
         {
-            Api.EscrowUpdate(session, indexesStats, indexesStatsColumns["success"], 1);
+            Api.EscrowUpdate(session, indexesStats, indexesStatsColumns["successes"], 1);
         }
 
         public void IncrementIndexingFailure()
@@ -420,6 +420,25 @@ namespace Raven.Database.Storage
                     IndexingErrors = Api.RetrieveColumnAsInt32(session, indexesStats, indexesStatsColumns["errors"]).Value,
                 };
             }
+        }
+
+        public void AddIndex(string name)
+        {
+            using (var update = new Update(session, indexesStats, JET_prep.Insert))
+            {
+                Api.SetColumn(session, indexesStats, indexesStatsColumns["key"], name, Encoding.Unicode);
+
+                update.Save();
+            }
+        }
+
+        public void DeleteIndex(string name)
+        {
+            Api.JetSetCurrentIndex(session, indexesStats, "by_key");
+            Api.MakeKey(session, indexesStats, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, indexesStats, SeekGrbit.SeekEQ) == false)
+                return;
+            Api.JetDelete(session, indexesStats);
         }
     }
 }

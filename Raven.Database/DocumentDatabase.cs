@@ -173,6 +173,7 @@ namespace Raven.Database
             IndexStorage.CreateIndex(name);
             TransactionalStorage.Batch(actions =>
             {
+                actions.AddIndex(name);
                 var firstAndLast = actions.FirstAndLastDocumentKeys();
                 if (firstAndLast.Item1 != 0 && firstAndLast.Item2 != 0)
                 {
@@ -217,6 +218,12 @@ namespace Raven.Database
         {
             IndexDefinitionStorage.RemoveIndex(name);
             IndexStorage.DeleteIndex(name);
+            TransactionalStorage.Batch(action=>
+            {
+                action.DeleteIndex(name);
+
+                action.Commit();
+            });
             workContext.NotifyAboutWork();
         }
 
