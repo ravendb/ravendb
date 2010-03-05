@@ -70,6 +70,18 @@ namespace Raven.Database.Linq
             var parser = ParserFactory.CreateParser(SupportedLanguage.CSharp, new StringReader("var q = " + Query));
             var variableDeclaration = GetVariableDeclaration(parser.ParseBlock());
             variableDeclaration.AcceptVisitor(new AddObjectCastToCallsToArray(), null);
+            var queryExpression = ((QueryExpression)variableDeclaration.Initializer);
+            var selectOrGroupClause = queryExpression.SelectOrGroupClause;
+            var projection = ((QueryExpressionSelectClause)selectOrGroupClause).Projection;
+            var objectInitializer = ((ObjectCreateExpression)projection).ObjectInitializer;
+
+            var identifierExpression = new IdentifierExpression(queryExpression.FromClause.Identifier);
+            objectInitializer.CreateExpressions.Add(
+                new NamedArgumentExpression
+                {
+                    Name = "__document_id",
+                    Expression = new MemberReferenceExpression(identifierExpression, "__document_id")
+                });
 
             var type = new TypeDeclaration(Modifiers.Public, new List<AttributeSection>())
             {
@@ -144,6 +156,20 @@ namespace Raven.Database.Linq
 
             if (variable.Initializer == null)
                 throw new InvalidOperationException("Variable declaration must have an initializer");
+
+            var queryExpression = (variable.Initializer as QueryExpression);
+            if (queryExpression == null)
+                throw new InvalidOperationException("Variable initializer must be a query expression");
+
+            var selectClause = queryExpression.SelectOrGroupClause as QueryExpressionSelectClause;
+            if(selectClause == null)
+                throw new InvalidOperationException("Variable initializer must be a select query expression");
+
+            var createExpression = selectClause.Projection as ObjectCreateExpression;
+            if(createExpression == null || createExpression.IsAnonymousType == false)
+                throw new InvalidOperationException(
+                    "Variable initializer must be a select query expression returning an anonymous object");
+
             return variable;
         }
 

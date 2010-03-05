@@ -10,6 +10,21 @@ namespace Raven.Database.Json
     {
         public static object Convert(JToken token)
         {
+            dynamic child = ConvertChild(token);
+            var metadata = token["@metadata"];
+            if (metadata != null)
+            {
+                var id = metadata["@id"];
+                if(id != null)
+                {
+                    child.__document_id = id.Value<string>();
+                }
+            }
+            return child;
+        }
+
+        private static object ConvertChild(JToken token)
+        {
             var jValue = token as JValue;
             if (jValue != null)
             {
@@ -21,7 +36,7 @@ namespace Raven.Database.Json
                 var expando = new ExpandoObject() as IDictionary<string, object>;
                 foreach (var property in (from childToken in token where childToken is JProperty select childToken as JProperty))
                 {
-                    expando.Add(property.Name, Convert(property.Value));
+                    expando.Add(property.Name, ConvertChild(property.Value));
                 }
                 return expando;
             }
@@ -32,7 +47,7 @@ namespace Raven.Database.Json
                 var index = 0;
                 foreach (JToken arrayItem in jArray)
                 {
-                    array[index] = Convert(arrayItem);
+                    array[index] = ConvertChild(arrayItem);
                     index++;
                 }
                 return array;
