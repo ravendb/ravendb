@@ -37,14 +37,25 @@ namespace Raven.Database.Tasks
                     {
                         continue; // index was removed before we could index it
                     }
+                    var canSetStats = actions.TrySetCurrentIndexStatsTo(viewName);
                     try
                     {
                         logger.DebugFormat("Indexing document: '{0}' for index: {1}",doc.Key, viewName);
+                        
+                        if (canSetStats)
+                            actions.IncrementIndexingAttempt();
+
                         context.IndexStorage.Index(viewName, viewFunc, new[] {json,});
+                        
+                        if (canSetStats)
+                            actions.IncrementSuccessIndexing();
                     }
                     catch (Exception e)
                     {
                         logger.WarnFormat(e, "Failed to index document '{0}' for index: {1}", doc.Key, viewName);
+                        
+                        if (canSetStats)
+                            actions.IncrementIndexingFailure();
                     }
                 }
                 actions.Commit();

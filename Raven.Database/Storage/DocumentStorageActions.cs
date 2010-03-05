@@ -15,6 +15,7 @@ namespace Raven.Database.Storage
     [CLSCompliant(false)]
     public class DocumentStorageActions : IDisposable
     {
+        private readonly IDictionary<string, JET_COLUMNID> indexesStatsColumns;
         protected readonly ILog logger = LogManager.GetLogger(typeof(DocumentStorageActions));
         private int innerTxCount;
 
@@ -27,6 +28,7 @@ namespace Raven.Database.Storage
         protected readonly IDictionary<string, JET_COLUMNID> tasksColumns;
         protected readonly Table files;
         protected readonly IDictionary<string, JET_COLUMNID> filesColumns;
+        private Table indexesStats;
 
         public bool CommitCalled { get; set; }
 
@@ -36,7 +38,8 @@ namespace Raven.Database.Storage
                                       string database,
                                       IDictionary<string, JET_COLUMNID> documentsColumns,
                                       IDictionary<string, JET_COLUMNID> tasksColumns,
-                                      IDictionary<string, JET_COLUMNID> filesColumns
+                                      IDictionary<string, JET_COLUMNID> filesColumns,
+                                      IDictionary<string, JET_COLUMNID> indexesStatsColumns
             )
         {
             try
@@ -48,9 +51,11 @@ namespace Raven.Database.Storage
                 documents = new Table(session, dbid, "documents", OpenTableGrbit.None);
                 tasks = new Table(session, dbid, "tasks", OpenTableGrbit.None);
                 files = new Table(session, dbid, "files", OpenTableGrbit.None);
+                indexesStats = new Table(session, dbid, "indexes_stats", OpenTableGrbit.None);
                 this.documentsColumns = documentsColumns;
                 this.tasksColumns = tasksColumns;
                 this.filesColumns = filesColumns;
+                this.indexesStatsColumns = indexesStatsColumns;
             }
             catch (Exception)
             {
@@ -81,6 +86,9 @@ namespace Raven.Database.Storage
 
         public void Dispose()
         {
+            if(indexesStats != null)
+                indexesStats.Dispose();
+
             if (files != null)
                 files.Dispose();
 
@@ -375,6 +383,28 @@ namespace Raven.Database.Storage
             int val;
             Api.JetIndexRecordCount(session, documents, out val, 0);
             return val;
+        }
+
+        public bool TrySetCurrentIndexStatsTo(string viewName)
+        {
+            Api.JetSetCurrentIndex(session, files, "key");
+            Api.MakeKey(session, files, viewName, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            return Api.TrySeek(session, files, SeekGrbit.SeekEQ);
+        }
+
+        public void IncrementIndexingAttempt()
+        {
+            Api.EscrowUpdate(session, indexesStats, indexesStatsColumns["attempts"], 1);
+        }
+
+        public void IncrementSuccessIndexing()
+        {
+            Api.EscrowUpdate(session, indexesStats, indexesStatsColumns["success"], 1);
+        }
+
+        public void IncrementIndexingFailure()
+        {
+            Api.EscrowUpdate(session, indexesStats, indexesStatsColumns["errors"], 1);
         }
     }
 }
