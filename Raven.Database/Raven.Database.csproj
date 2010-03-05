@@ -108,6 +108,7 @@
     <Compile Include="Json\JsonToExpando.cs" />
     <Compile Include="Linq\AbstractViewGenerator.cs" />
     <Compile Include="Linq\DynamicQueryCompiler.cs" />
+    <Compile Include="Linq\IndexingFunc.cs" />
     <Compile Include="Linq\PrivateExtensions\LinqOnDynamic.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="QueryResult.cs" />

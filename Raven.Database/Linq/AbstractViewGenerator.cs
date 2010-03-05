@@ -2,8 +2,9 @@
 
 namespace Raven.Database.Linq
 {
-    public delegate IEnumerable<dynamic> IndexingFunc(IEnumerable<dynamic> source);
-
+    /// <summary>
+    /// Abstract class to use for the compilation of all the indexes
+    /// </summary>
     public class AbstractViewGenerator
     {
         public IndexingFunc CompiledDefinition { get; set; }
