@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -21,7 +22,7 @@ namespace Raven.Database.Indexing
     public class IndexStorage : CriticalFinalizerObject, IDisposable
     {
         private readonly string path;
-        private IDictionary<string, Index> indexes = new Dictionary<string, Index>();
+        private ConcurrentDictionary<string, Index> indexes = new ConcurrentDictionary<string, Index>();
         private readonly ILog log = LogManager.GetLogger(typeof(IndexStorage));
 
         public IndexStorage(string path)
@@ -34,8 +35,7 @@ namespace Raven.Database.Indexing
             {
                 log.DebugFormat("Loading saved index {0}", index);
                 var name = Path.GetFileName(index);
-                indexes.Add(name,
-                            new Index(FSDirectory.GetDirectory(index, false), name));
+                indexes.TryAdd(name, new Index(FSDirectory.GetDirectory(index, false), name));
             }
         }
 
@@ -44,7 +44,6 @@ namespace Raven.Database.Indexing
             get { return indexes.Keys.ToArray(); }
         }
 
-        [MethodImpl(MethodImplOptions.Synchronized)]
         public void DeleteIndex(string name)
         {
             Index value;
@@ -55,21 +54,25 @@ namespace Raven.Database.Indexing
             }
             log.InfoFormat("Deleting index {0}", name);
             value.Dispose();
-            indexes = indexes.Where(x => x.Key != name)
-                .ToDictionary(x => x.Key, y => y.Value);
-            Directory.Delete(Path.Combine(path, name), true);
+            Index ignored;
+            var indexDir = Path.Combine(path, name);
+            if (indexes.TryRemove(name, out ignored) && Directory.Exists(indexDir))
+            {
+                Directory.Delete(indexDir, true);
+            }
         }
 
-        [MethodImpl(MethodImplOptions.Synchronized)]
         public void CreateIndex(string name)
         {
             log.InfoFormat("Creating index {0}", name);
+            indexes.AddOrUpdate(name, BuildIndex, (s, index) => index);
+        }
+
+        private Index BuildIndex(string name)
+        {
             var directory = FSDirectory.GetDirectory(Path.Combine(path, name), true);
             new IndexWriter(directory, new StandardAnalyzer()).Close();//creating index structure
-            indexes = new Dictionary<string, Index>(indexes)
-            {
-                {name, new Index(directory, name)}
-            };
+            return new Index(directory, name);
         }
 
         public void Dispose()
