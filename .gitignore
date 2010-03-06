@@ -9,4 +9,8 @@ build/
 _ReSharper.*/
 AssemblyInfo.cs
 *.user
-[Dd]ata/
+/Data/Data
+/Data/IndexDefinitions/
+/Data/Index/
+/Data/logs/
+/Data/system/
