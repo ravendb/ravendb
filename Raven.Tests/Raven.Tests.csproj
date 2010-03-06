@@ -83,6 +83,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Indexes\Statistics.cs" />
     <Compile Include="Linq\LinqTransformerCompilationTests.cs" />
     <Compile Include="Linq\PerformingQueries.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
