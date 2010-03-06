@@ -11,8 +11,13 @@ namespace Raven.Database
         public string Key { get; set; }
         public Guid Etag { get; set; }
 
+        public JObject DataAsJosn { get; set; }
+
         public JObject ToJson()
         {
+            if (DataAsJosn != null)
+                return DataAsJosn;
+
             var doc = JObject.Parse(Encoding.UTF8.GetString(Data));
             var etagProp = Metadata.Property("@etag");
             if (etagProp == null)

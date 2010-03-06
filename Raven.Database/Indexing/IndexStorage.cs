@@ -8,6 +8,7 @@ using log4net;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
+using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
@@ -86,7 +87,7 @@ namespace Raven.Database.Indexing
             return new Index(directory, name);
         }
 
-        public IEnumerable<string> Query(string index, string query, int start, int pageSize, Reference<int> totalSize)
+        public IEnumerable<IndexQueryResult> Query(string index, string query, int start, int pageSize, Reference<int> totalSize, string[] fieldsToFetch)
         {
             Index value;
             if (indexes.TryGetValue(index, out value) == false)
@@ -94,7 +95,7 @@ namespace Raven.Database.Indexing
                 log.DebugFormat("Query on non existing index {0}", index);
                 throw new InvalidOperationException("Index " + index + " does not exists");
             }
-            return value.Query(query, start, pageSize, totalSize);
+            return value.Query(query, start, pageSize, totalSize, fieldsToFetch);
         }
 
         public void RemoveFromIndex(string index, string[] keys)

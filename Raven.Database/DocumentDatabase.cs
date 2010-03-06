@@ -191,8 +191,13 @@ namespace Raven.Database
             workContext.NotifyAboutWork();
             return name;
         }
-
+        
         public QueryResult Query(string index, string query, int start, int pageSize)
+        {
+            return Query(index, query, start, pageSize, new string[0]);
+        }
+
+        public QueryResult Query(string index, string query, int start, int pageSize, string[] fieldsToFetch)
         {
             var list = new List<JObject>();
             var stale = false;
@@ -206,8 +211,8 @@ namespace Raven.Database
                     {
                         throw new IndexDisabledException(indexFailureInformation);
                     }
-                    list.AddRange(from key in IndexStorage.Query(index, query, start, pageSize, totalSize)
-                                  select actions.DocumentByKey(key)
+                    list.AddRange(from queryResult in IndexStorage.Query(index, query, start, pageSize, totalSize, fieldsToFetch)
+                                  select RetrieveDocument(actions, queryResult)
                                       into doc
                                       where doc != null
                                       select doc.ToJson());
@@ -218,6 +223,18 @@ namespace Raven.Database
                 Results = list.ToArray(),
                 IsStale = stale,
                 TotalResults = totalSize.Value
+            };
+        }
+
+        private static JsonDocument RetrieveDocument(DocumentStorageActions actions, IndexQueryResult queryResult)
+        {
+            if(queryResult.Projection == null)
+                return actions.DocumentByKey(queryResult.Key);
+
+            return new JsonDocument
+            {
+                Key = queryResult.Key,
+                DataAsJosn = queryResult.Projection,
             };
         }
 

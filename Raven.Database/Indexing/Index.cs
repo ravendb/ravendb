@@ -10,6 +10,8 @@ using Lucene.Net.Index;
 using Lucene.Net.QueryParsers;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
+using Newtonsoft.Json.Linq;
+using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
@@ -22,7 +24,7 @@ namespace Raven.Database.Indexing
     public class Index : IDisposable
     {
         private readonly Directory directory;
-        private readonly ILog log = LogManager.GetLogger(typeof (Index));
+        private readonly ILog log = LogManager.GetLogger(typeof(Index));
         private readonly string name;
         private CurrentIndexSearcher searcher;
 
@@ -47,21 +49,21 @@ namespace Raven.Database.Indexing
 
         #endregion
 
-        public IEnumerable<string> Query(string query, int start, int pageSize, Reference<int> totalSize)
+        public IEnumerable<IndexQueryResult> Query(string query, int start, int pageSize, Reference<int> totalSize, string[] fieldsToFetch)
         {
             using (searcher.Use())
             {
                 var indexSearcher = searcher.Searcher;
                 if (string.IsNullOrEmpty(query) == false)
                 {
-                    return SearchIndex(query, indexSearcher, totalSize, start, pageSize);
+                    return SearchIndex(query, indexSearcher, totalSize, start, pageSize, fieldsToFetch);
                 }
-                return BrowseIndex(indexSearcher, totalSize, start, pageSize);
+                return BrowseIndex(indexSearcher, totalSize, start, pageSize, fieldsToFetch);
             }
         }
 
-        private IEnumerable<string> BrowseIndex(IndexSearcher indexSearcher, Reference<int> totalSize, int start,
-                                                int pageSize)
+        private IEnumerable<IndexQueryResult> BrowseIndex(IndexSearcher indexSearcher, Reference<int> totalSize, int start,
+                                                int pageSize, string[] fieldsToFetch)
         {
             log.DebugFormat("Browsing index {0}", name);
             var indexReader = indexSearcher.Reader;
@@ -71,12 +73,37 @@ namespace Raven.Database.Indexing
             {
                 if (indexReader.IsDeleted(i))
                     continue;
-                yield return indexReader.Document(i).GetField("__document_id").StringValue();
+                var document = indexReader.Document(i);
+                yield return RetrieveDocument(document, fieldsToFetch);
             }
         }
 
-        private IEnumerable<string> SearchIndex(string query, IndexSearcher indexSearcher, Reference<int> totalSize,
-                                                int start, int pageSize)
+        private static IndexQueryResult RetrieveDocument(Document document, string[] fieldsToFetch)
+        {
+            return new IndexQueryResult
+            {
+                Key = document.Get("__document_id"),
+                Projection = fieldsToFetch == null || fieldsToFetch.Length == 0 ? null :
+                    new JObject(
+                        fieldsToFetch.Concat(new[] { "__document_id" }).Distinct()
+                            .SelectMany(name => document.GetFields(name) ?? new Field[0])
+                            .Where(x => x != null)
+                            .Select(fld => new JProperty(fld.Name(), fld.StringValue()))
+                            .GroupBy(x => x.Name)
+                            .Select(g =>
+                            {
+                                if (g.Count() == 1)
+                                    return g.First();
+                                return new JProperty(g.Key,
+                                    g.Select(x => x.Value)
+                                    );
+                            })
+                        )
+            };
+        }
+
+        private IEnumerable<IndexQueryResult> SearchIndex(string query, IndexSearcher indexSearcher, Reference<int> totalSize,
+                                                int start, int pageSize, string[] fieldsToFetch)
         {
             log.DebugFormat("Issuing query on index {0} for: {1}", name, query);
             var luceneQuery = new QueryParser("", new StandardAnalyzer()).Parse(query);
@@ -84,7 +111,8 @@ namespace Raven.Database.Indexing
             totalSize.Value = search.Length();
             for (var i = start; i < search.Length() && (i - start) < pageSize; i++)
             {
-                yield return search.Doc(i).GetField("__document_id").StringValue();
+                var document = search.Doc(i);
+                yield return RetrieveDocument(document, fieldsToFetch);
             }
         }
 
@@ -123,6 +151,15 @@ namespace Raven.Database.Indexing
                     currentId = newDocId;
                     foreach (var field in fields)
                     {
+                        var valueAlreadyExisting = false;
+                        var existingFields = luceneDoc.GetFields(field.Name());
+                        if (existingFields != null)
+                        {
+                            var fieldCopy = field;
+                            valueAlreadyExisting = existingFields.Any(existingField => existingField.StringValue() == fieldCopy.StringValue());
+                        }
+                        if (valueAlreadyExisting)
+                            continue;
                         luceneDoc.Add(field);
                     }
 

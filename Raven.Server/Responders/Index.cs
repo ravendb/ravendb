@@ -50,7 +50,8 @@ namespace Raven.Server.Responders
             else
             {
                 context.WriteJson(Database.Query(index, context.Request.QueryString["query"], context.GetStart(),
-                                                 context.GetPageSize()));
+                                                 context.GetPageSize(),
+                                                 context.Request.QueryString.GetValues("fetch")));
             }
         }
     }
