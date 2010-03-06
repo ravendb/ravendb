@@ -1,15 +1,16 @@
 using System.Collections.Generic;
+using System.Linq;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Json;
 using Raven.Database.Linq;
 using Xunit;
-using System.Linq;
 
 namespace Raven.Tests.Linq
 {
     public class PerformingQueries
     {
-        const string query = @"
+        private const string query =
+            @"
     from doc in docs
     where doc.type == ""page""
     select new { Key = doc.title, Value = doc.content, Size = doc.size };
@@ -18,7 +19,9 @@ namespace Raven.Tests.Linq
         [Fact]
         public void Can_query_json()
         {
-            var documents = GetDocumentsFromString(@"[
+            var documents =
+                GetDocumentsFromString(
+                    @"[
 {'type':'page', title: 'hello', content: 'foobar', size: 2, '@metadata': {'@id': 1}},
 {'type':'page', title: 'there', content: 'foobar 2', size: 3, '@metadata': {'@id': 2} },
 {'type':'revision', size: 4, _id: 3}
@@ -40,7 +43,7 @@ namespace Raven.Tests.Linq
             }
         }
 
-        public static IEnumerable<dynamic > GetDocumentsFromString(string json)
+        public static IEnumerable<dynamic> GetDocumentsFromString(string json)
         {
             return JArray.Parse(json).Select(JsonToExpando.Convert);
         }

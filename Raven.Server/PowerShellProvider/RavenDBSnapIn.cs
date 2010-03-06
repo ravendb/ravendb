@@ -1,5 +1,5 @@
-﻿using System.Management.Automation;
-using System.ComponentModel;
+﻿using System.ComponentModel;
+using System.Management.Automation;
 
 namespace Raven.Server.PowerShellProvider
 {
@@ -10,10 +10,12 @@ namespace Raven.Server.PowerShellProvider
         {
             get { return "RavenDB Powershell Provider"; }
         }
+
         public override string Name
         {
             get { return "RavenDB"; }
         }
+
         public override string Vendor
         {
             get { return "Hibernating Rhinos"; }

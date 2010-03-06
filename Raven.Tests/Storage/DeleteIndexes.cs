@@ -13,6 +13,15 @@ namespace Raven.Tests.Storage
             db = new DocumentDatabase("divan.db.test.esent");
         }
 
+        #region IDisposable Members
+
+        public void Dispose()
+        {
+            db.Dispose();
+        }
+
+        #endregion
+
         [Fact]
         public void Can_remove_index()
         {
@@ -30,7 +39,8 @@ namespace Raven.Tests.Storage
         [Fact]
         public void Removing_index_remove_it_from_index_storage()
         {
-            const string definition = @"
+            const string definition =
+                @"
     from doc in docs
     where doc.type == ""page""
     select new { Key = doc.title, Value = doc.content, Size = doc.size };
@@ -39,11 +49,6 @@ namespace Raven.Tests.Storage
             db.DeleteIndex("pagesByTitle");
             var actualDefinition = db.IndexStorage.Indexes;
             Assert.Empty(actualDefinition);
-        }
-
-        public void Dispose()
-        {
-            db.Dispose();
         }
     }
 }

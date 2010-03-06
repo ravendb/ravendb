@@ -1,18 +1,18 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Collections;
+using System.IO;
 using System.Linq;
-using System.Text;
 using System.Management.Automation.Provider;
-using Raven.Database;
 using Newtonsoft.Json.Linq;
+using Raven.Database;
 
 namespace Raven.Server.PowerShellProvider
 {
     public class RavenDBContentReader : IContentReader
     {
-        private bool _typeIsDocument;
+        private readonly DocumentDatabase _db;
+        private readonly bool _typeIsDocument;
         private int _currentOffset;
-        private DocumentDatabase _db;
 
         public RavenDBContentReader(DocumentDatabase db, bool typeIsDocument)
         {
@@ -27,7 +27,7 @@ namespace Raven.Server.PowerShellProvider
             Dispose();
         }
 
-        public System.Collections.IList Read(long readCount)
+        public IList Read(long readCount)
         {
             JArray retVal;
             if (this._typeIsDocument)
@@ -42,7 +42,7 @@ namespace Raven.Server.PowerShellProvider
             return retVal.ToList();
         }
 
-        public void Seek(long offset, System.IO.SeekOrigin origin)
+        public void Seek(long offset, SeekOrigin origin)
         {
             int totalCount;
             if (this._typeIsDocument)
@@ -50,23 +50,22 @@ namespace Raven.Server.PowerShellProvider
             else
                 totalCount = this._db.Statistics.CountOfIndexes;
 
-               
 
             if (offset > totalCount)
             {
                 throw new
-                       ArgumentException(
-                           "Offset cannot be greater than the number of " + (_typeIsDocument ? "documents" : "indexes")
-                                        );
+                    ArgumentException(
+                    "Offset cannot be greater than the number of " + (_typeIsDocument ? "documents" : "indexes")
+                    );
             }
 
-            if (origin == System.IO.SeekOrigin.Begin)
+            if (origin == SeekOrigin.Begin)
             {
                 // starting from Beginning with an index 0, the current offset
                 // has to be advanced to offset - 1
                 _currentOffset = _currentOffset - 1;
             }
-            else if (origin == System.IO.SeekOrigin.End)
+            else if (origin == SeekOrigin.End)
             {
                 // starting from the end which is numRows - 1, the current
                 // offset is so much less than numRows - 1
@@ -80,13 +79,8 @@ namespace Raven.Server.PowerShellProvider
             }
         }
 
-        #endregion
-
-        #region IDisposable Members
-
         public void Dispose()
         {
-            
         }
 
         #endregion

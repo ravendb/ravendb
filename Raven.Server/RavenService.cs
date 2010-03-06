@@ -1,17 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Diagnostics;
-using System.Linq;
-using System.ServiceProcess;
-using System.Text;
+﻿using System.ServiceProcess;
 
 namespace Raven.Server
 {
-    partial class RavenService : ServiceBase
+    internal partial class RavenService : ServiceBase
     {
-        DivanServer server;
+        private DivanServer server;
 
         public RavenService()
         {

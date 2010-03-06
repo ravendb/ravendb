@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Configuration.Install;
-using System.Linq;
-
+using System.ServiceProcess;
 
 namespace Raven.Server
 {
@@ -19,9 +15,9 @@ namespace Raven.Server
 
             this.serviceInstaller1.DisplayName = SERVICE_NAME;
             this.serviceInstaller1.ServiceName = SERVICE_NAME;
-            this.serviceInstaller1.StartType = System.ServiceProcess.ServiceStartMode.Automatic;
+            this.serviceInstaller1.StartType = ServiceStartMode.Automatic;
 
-            this.serviceProcessInstaller1.Account = System.ServiceProcess.ServiceAccount.LocalSystem;
+            this.serviceProcessInstaller1.Account = ServiceAccount.LocalSystem;
         }
     }
 }

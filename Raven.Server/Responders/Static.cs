@@ -1,4 +1,3 @@
-using System;
 using System.Net;
 
 namespace Raven.Server.Responders
@@ -24,17 +23,18 @@ namespace Raven.Server.Responders
             {
                 case "GET":
                     var attachmentAndHeaders = Database.GetStatic(filename);
-                    if(attachmentAndHeaders == null)
+                    if (attachmentAndHeaders == null)
                     {
                         context.SetStatusToNotFound();
                         return;
                     }
-                    context.WriteData(attachmentAndHeaders.Data, attachmentAndHeaders.Metadata, attachmentAndHeaders.Etag);
+                    context.WriteData(attachmentAndHeaders.Data, attachmentAndHeaders.Metadata,
+                                      attachmentAndHeaders.Etag);
                     break;
                 case "PUT":
                     Database.PutStatic(filename, context.GetEtag(), context.Request.InputStream.ReadData(),
                                        context.Request.Headers.FilterHeaders());
-                    context.SetStatusToCreated("/static/"+filename);
+                    context.SetStatusToCreated("/static/" + filename);
                     break;
                 case "DELETE":
                     Database.DeleteStatic(filename, etag);

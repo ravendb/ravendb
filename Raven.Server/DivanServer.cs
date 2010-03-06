@@ -10,8 +10,8 @@ namespace Raven.Server
 {
     public class DivanServer : IDisposable
     {
-        private readonly HttpServer server;
         private readonly DocumentDatabase database;
+        private readonly HttpServer server;
 
         public DivanServer(RavenConfiguration settings)
         {
@@ -20,15 +20,15 @@ namespace Raven.Server
             database = new DocumentDatabase(settings.DataDirectory);
             database.SpinBackgroundWorkers();
             server = new HttpServer(settings.Port,
-                                    typeof(RequestResponder).Assembly.GetTypes()
-                                        .Where(t => typeof(RequestResponder).IsAssignableFrom(t) && t.IsAbstract == false)
+                                    typeof (RequestResponder).Assembly.GetTypes()
+                                        .Where(
+                                            t => typeof (RequestResponder).IsAssignableFrom(t) && t.IsAbstract == false)
 
                                         // to ensure that we would get consistent order, so we would always 
                                         // have the responders using the same order, otherwise we get possibly
                                         // random ordering, and that might cause issues
                                         .OrderBy(x => x.Name)
-
-                                        .Select(t => (RequestResponder)Activator.CreateInstance(t))
+                                        .Select(t => (RequestResponder) Activator.CreateInstance(t))
                                         .Select(r =>
                                         {
                                             r.Database = database;
@@ -39,11 +39,15 @@ namespace Raven.Server
             server.Start();
         }
 
+        #region IDisposable Members
+
         public void Dispose()
         {
             server.Dispose();
             database.Dispose();
         }
+
+        #endregion
 
         public static void EnsureCanListenToWhenInNonAdminContext(int port)
         {
@@ -61,12 +65,14 @@ namespace Raven.Server
             if (Environment.OSVersion.Version.Major > 5)
             {
                 cmd = "netsh";
-                args = string.Format(@"http add urlacl url=http://+:{0}/ user={1}", port, WindowsIdentity.GetCurrent().Name);
+                args = string.Format(@"http add urlacl url=http://+:{0}/ user={1}", port,
+                                     WindowsIdentity.GetCurrent().Name);
             }
             else
             {
                 cmd = "httpcfg";
-                args = string.Format("set urlacl /u http://+:{0}/ /a D:(A;;GX;;;{1})", port, WindowsIdentity.GetCurrent().User);
+                args = string.Format("set urlacl /u http://+:{0}/ /a D:(A;;GX;;;{1})", port,
+                                     WindowsIdentity.GetCurrent().User);
             }
         }
 
@@ -82,7 +88,7 @@ namespace Raven.Server
             }
             catch (HttpListenerException e)
             {
-                if (e.ErrorCode != 5)//access denies
+                if (e.ErrorCode != 5) //access denies
                     throw;
             }
             return false;
@@ -90,7 +96,6 @@ namespace Raven.Server
 
         private static int TryGrantingHttpPrivileges(int port)
         {
-
             string args;
             string cmd;
             GetArgsForHttpAclCmd(port, out args, out cmd);
@@ -99,7 +104,7 @@ namespace Raven.Server
             try
             {
                 Console.WriteLine("runas {0} {1}", cmd, args);
-                var process = Process.Start(new ProcessStartInfo()
+                var process = Process.Start(new ProcessStartInfo
                 {
                     Verb = "runas",
                     Arguments = args,

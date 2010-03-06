@@ -1,15 +1,15 @@
 using System;
 using System.Diagnostics;
 using System.IO;
-using Newtonsoft.Json.Linq;
 using System.Linq;
+using Newtonsoft.Json.Linq;
 using Raven.Database;
 
 namespace Raven.Importer
 {
-    class Program
+    internal class Program
     {
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             if (args.Length != 2)
             {
@@ -21,7 +21,7 @@ namespace Raven.Importer
             var array = files.Select(x => JObject.Parse(File.ReadAllText(x))).ToArray();
             Console.WriteLine("Inserting {0:#,#} docs", files.Length);
             var sw = Stopwatch.StartNew();
-            int count = 0;
+            var count = 0;
             using (var db = new DocumentDatabase(args[0]))
             {
                 foreach (var doc in array)
@@ -34,5 +34,3 @@ namespace Raven.Importer
         }
     }
 }
-
-

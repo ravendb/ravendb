@@ -1,4 +1,3 @@
-using System;
 using System.Net;
 
 namespace Raven.Server.Responders
@@ -12,7 +11,7 @@ namespace Raven.Server.Responders
 
         public override string[] SupportedVerbs
         {
-            get { return new[] { "GET", "DELETE", "PUT" }; }
+            get { return new[] {"GET", "DELETE", "PUT"}; }
         }
 
         public override void Respond(HttpListenerContext context)
@@ -24,12 +23,12 @@ namespace Raven.Server.Responders
                 case "GET":
                     context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
                     var doc = Database.Get(docId);
-                    if(doc == null)
+                    if (doc == null)
                     {
                         context.SetStatusToNotFound();
                         return;
                     }
-                    context.WriteData(doc.Data, doc.Metadata,doc.Etag);
+                    context.WriteData(doc.Data, doc.Metadata, doc.Etag);
                     break;
                 case "DELETE":
                     Database.Delete(docId, context.GetEtag());
@@ -46,7 +45,7 @@ namespace Raven.Server.Responders
             var json = context.ReadJson();
             context.SetStatusToCreated("/docs/" + docId);
             var id = Database.Put(docId, context.GetEtag(), json, context.Request.Headers.FilterHeaders());
-            context.WriteJson(new { id });
+            context.WriteJson(new {id});
         }
     }
 }

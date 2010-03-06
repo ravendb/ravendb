@@ -2,11 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
+using System.Linq;
 using System.Net;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using System.Linq;
-using Raven.Database.Exceptions;
 
 namespace Raven.Server.Responders
 {
@@ -31,11 +30,9 @@ namespace Raven.Server.Responders
             // very well change due to things like encoding,
             // adding metadata, etc
             "Content-Length",
-            
             // Special things to ignore
             "Keep-Alive",
             "X-Requested-With",
-
             // Request headers
             "Accept-Charset",
             "Accept-Encoding",
@@ -55,7 +52,6 @@ namespace Raven.Server.Responders
             "Referer",
             "TE",
             "User-Agent",
-
             //Response headers
             "Accept-Ranges",
             "Age",
@@ -68,7 +64,6 @@ namespace Raven.Server.Responders
             "Set-Cookie",
             "Vary",
             "Www-Authenticate",
-
             // General
             "Cache-Control",
             "Connection",
@@ -123,7 +118,7 @@ namespace Raven.Server.Responders
             var streamWriter = new StreamWriter(context.Response.OutputStream);
             new JsonSerializer
             {
-                Converters = { new JsonToJsonConverter() }
+                Converters = {new JsonToJsonConverter()}
             }.Serialize(streamWriter, obj);
             streamWriter.Flush();
         }
@@ -192,15 +187,15 @@ namespace Raven.Server.Responders
         }
 
         /// <summary>
-        /// Reads the entire request buffer to memory and
-        /// return it as a byte array.
+        ///   Reads the entire request buffer to memory and
+        ///   return it as a byte array.
         /// </summary>
         public static byte[] ReadData(this Stream steram)
         {
             var list = new List<byte[]>();
-            const int defaultBufferSize = 1024 * 16;
+            const int defaultBufferSize = 1024*16;
             var buffer = new byte[defaultBufferSize];
-            int offset = 0;
+            var offset = 0;
             int read;
             while ((read = steram.Read(buffer, offset, buffer.Length - offset)) != 0)
             {
@@ -212,7 +207,7 @@ namespace Raven.Server.Responders
                     offset = 0;
                 }
             }
-            int totalSize = list.Sum(x => x.Length) + offset;
+            var totalSize = list.Sum(x => x.Length) + offset;
             var result = new byte[totalSize];
             var resultOffset = 0;
             foreach (var partial in list)
@@ -267,7 +262,7 @@ namespace Raven.Server.Responders
                 void WriteJson
                 (JsonWriter writer, object value)
             {
-                ((JObject)value).WriteTo(writer);
+                ((JObject) value).WriteTo(writer);
             }
 
             public override
@@ -282,7 +277,7 @@ namespace Raven.Server.Responders
                 (Type
                      objectType)
             {
-                return objectType == typeof(JObject);
+                return objectType == typeof (JObject);
             }
         }
 

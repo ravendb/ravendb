@@ -1,15 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Management.Automation;
+﻿using System.Management.Automation;
+using Raven.Database;
 
 namespace Raven.Server.PowerShellProvider
 {
     internal class RavenDBPSDriveInfo : PSDriveInfo
     {
-        public RavenDBPSDriveInfo(PSDriveInfo driveInfo) : base(driveInfo) { }
+        public RavenDBPSDriveInfo(PSDriveInfo driveInfo) : base(driveInfo)
+        {
+        }
 
-        public Database.DocumentDatabase Database { get; set; }
+        public DocumentDatabase Database { get; set; }
     }
 }

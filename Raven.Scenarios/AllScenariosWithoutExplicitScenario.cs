@@ -6,19 +6,13 @@ namespace Raven.Scenarios
 {
     public class AllScenariosWithoutExplicitScenario
     {
-        [Theory]
-        [PropertyData("ScenariosWithoutExplicitScenario")]
-        public void Execute(string file)
-        {
-            new Scenario(Path.Combine(ScenariosPath, file+".saz")).Execute();
-        }
-
         public static string ScenariosPath
         {
             get
             {
                 return Directory.Exists(@"..\..\bin") // running in VS
-                           ? @"..\..\Scenarios" : @"..\Raven.Scenarios\Scenarios";
+                           ? @"..\..\Scenarios"
+                           : @"..\Raven.Scenarios\Scenarios";
             }
         }
 
@@ -26,13 +20,23 @@ namespace Raven.Scenarios
         {
             get
             {
-                foreach (var file in Directory.GetFiles(ScenariosPath,"*.saz"))
+                foreach (var file in Directory.GetFiles(ScenariosPath, "*.saz"))
                 {
-                    if (typeof(Scenario).Assembly.GetType("Raven.Scenarios." + Path.GetFileNameWithoutExtension(file) +"Scenario") != null)
+                    if (
+                        typeof (Scenario).Assembly.GetType("Raven.Scenarios." + Path.GetFileNameWithoutExtension(file) +
+                                                           "Scenario") != null)
                         continue;
                     yield return new object[] {Path.GetFileNameWithoutExtension(file)};
-                };
+                }
+                ;
             }
+        }
+
+        [Theory]
+        [PropertyData("ScenariosWithoutExplicitScenario")]
+        public void Execute(string file)
+        {
+            new Scenario(Path.Combine(ScenariosPath, file + ".saz")).Execute();
         }
     }
 }

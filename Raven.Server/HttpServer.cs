@@ -8,23 +8,22 @@ using System.Threading;
 using log4net;
 using Newtonsoft.Json;
 using Raven.Database.Exceptions;
-using Raven.Server.Responders;
 using Raven.Database.Extensions;
+using Raven.Server.Responders;
 
 namespace Raven.Server
 {
     public class HttpServer : IDisposable
     {
-        private readonly RequestResponder[] requestResponders;
         private readonly HttpListener listener;
-        private int reqNum;
 
-        private ILog logger = LogManager.GetLogger(typeof (HttpServer));
+        private readonly ILog logger = LogManager.GetLogger(typeof (HttpServer));
+        private readonly RequestResponder[] requestResponders;
+        private int reqNum;
 
         public HttpServer(IEnumerable<RequestResponder> requestResponders)
             : this(8080, requestResponders)
         {
-
         }
 
         public HttpServer(
@@ -35,6 +34,15 @@ namespace Raven.Server
             listener = new HttpListener();
             listener.Prefixes.Add("http://+:" + port + "/");
         }
+
+        #region IDisposable Members
+
+        public void Dispose()
+        {
+            listener.Stop();
+        }
+
+        #endregion
 
         public void Start()
         {
@@ -95,9 +103,9 @@ namespace Raven.Server
             try
             {
                 if (e is BadRequestException)
-                    HandleBadRequest(ctx, (BadRequestException)e);
+                    HandleBadRequest(ctx, (BadRequestException) e);
                 else if (e is ConcurrencyException)
-                    HandleConcurrencyException(ctx, (ConcurrencyException)e);
+                    HandleConcurrencyException(ctx, (ConcurrencyException) e);
                 else
                     HandleGenericException(ctx, e);
             }
@@ -173,11 +181,6 @@ namespace Raven.Server
     </body>
 </html>
 ");
-        }
-
-        public void Dispose()
-        {
-            listener.Stop();
         }
     }
 }

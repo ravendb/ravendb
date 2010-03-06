@@ -1,4 +1,3 @@
-using System;
 using System.IO;
 using System.Net;
 
@@ -8,10 +7,7 @@ namespace Raven.Server.Responders
     {
         public string DivanPath
         {
-            get
-            {
-                return Settings.WebDir;
-            }
+            get { return Settings.WebDir; }
         }
 
         public override string UrlPattern
@@ -21,7 +17,7 @@ namespace Raven.Server.Responders
 
         public override string[] SupportedVerbs
         {
-            get { return new[]{"GET"}; }
+            get { return new[] {"GET"}; }
         }
 
         public override void Respond(HttpListenerContext context)
@@ -29,8 +25,8 @@ namespace Raven.Server.Responders
             var docPath = context.Request.Url.LocalPath.Replace("/divan/", "");
             var filePath = Path.Combine(DivanPath, docPath);
             var bytes = File.ReadAllBytes(filePath);
-            context.Response.OutputStream.Write(bytes,0,bytes.Length);
-            context.Response.OutputStream.Flush();  
+            context.Response.OutputStream.Write(bytes, 0, bytes.Length);
+            context.Response.OutputStream.Flush();
         }
     }
 }

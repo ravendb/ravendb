@@ -1,6 +1,5 @@
 using System.IO;
 using Xunit;
-using System.Linq;
 
 namespace Raven.Scenarios
 {
@@ -10,7 +9,7 @@ namespace Raven.Scenarios
         public void Execute()
         {
             new Scenario(
-                Path.Combine(AllScenariosWithoutExplicitScenario.ScenariosPath,GetType().Name)+".saz"
+                Path.Combine(AllScenariosWithoutExplicitScenario.ScenariosPath, GetType().Name) + ".saz"
                 ).Execute();
         }
     }

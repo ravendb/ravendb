@@ -8,7 +8,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using ICSharpCode.SharpZipLib.Zip;
-using Raven.Database.Extensions;
 using Raven.Server;
 using Raven.Server.Responders;
 using Xunit;
@@ -17,10 +16,8 @@ namespace Raven.Scenarios
 {
     public class Scenario
     {
+        private const int testPort = 58080;
         private readonly string file;
-        private int responseNumber;
-        const int testPort = 58080;
-        private string lastEtag;
 
         private readonly Regex[] guidFinders = new[]
         {
@@ -30,10 +27,17 @@ namespace Raven.Scenarios
             new Regex(
                 @"""etag"":""(\{{0,1}([0-9a-fA-F]){8}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){12}\}{0,1})""")
             ,
-            new Regex(@"id"":""(\{{0,1}([0-9a-fA-F]){8}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){12}\}{0,1})"""), 
-            new Regex(@"id"":""(\{{0,1}([0-9a-fA-F]){8}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){12}\}{0,1})"""), 
-            new Regex(@"Timestamp"":""\\/Date(\(\d\d\d\d\d\d\d\d\d\d\d\d\d\+\d\d\d\d\))\\/"""), 
+            new Regex(
+                @"id"":""(\{{0,1}([0-9a-fA-F]){8}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){12}\}{0,1})""")
+            ,
+            new Regex(
+                @"id"":""(\{{0,1}([0-9a-fA-F]){8}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){12}\}{0,1})""")
+            ,
+            new Regex(@"Timestamp"":""\\/Date(\(\d\d\d\d\d\d\d\d\d\d\d\d\d\+\d\d\d\d\))\\/"""),
         };
+
+        private string lastEtag;
+        private int responseNumber;
 
         public Scenario(string file)
         {
@@ -42,7 +46,7 @@ namespace Raven.Scenarios
 
         public void Execute()
         {
-            string tempFileName = Path.GetTempFileName();
+            var tempFileName = Path.GetTempFileName();
             File.Delete(tempFileName);
             try
             {
@@ -55,7 +59,7 @@ namespace Raven.Scenarios
                             .Where(x => x.Name.StartsWith("raw/"))
                             .Where(x => Path.GetExtension(x.Name) == ".txt")
                             .GroupBy(x => x.Name.Split('_').First())
-                            .Select(x => new { Request = x.First(), Response = x.Last() })
+                            .Select(x => new {Request = x.First(), Response = x.Last()})
                             .ToArray();
 
                         foreach (var pair in zipEntries)
@@ -75,11 +79,10 @@ namespace Raven.Scenarios
         }
 
 
-
         private void TestSingleRequest(string request, byte[] expectedResponse)
         {
             Tuple<string, NameValueCollection, string> actual;
-            int count = 0;
+            var count = 0;
             do
             {
                 actual = SendRequest(request);
@@ -103,19 +106,21 @@ namespace Raven.Scenarios
         {
             using (var sr = new StringReader(request))
             {
-                string[] reqParts = sr.ReadLine().Split(' ');
+                var reqParts = sr.ReadLine().Split(' ');
                 var uriString = reqParts[1].Replace(":8080/", ":" + testPort + "/");
-                Uri uri = GetUri_WorkaroundForStrangeBug(uriString);
-                var req = (HttpWebRequest)WebRequest.Create(uri);
+                var uri = GetUri_WorkaroundForStrangeBug(uriString);
+                var req = (HttpWebRequest) WebRequest.Create(uri);
                 req.Method = reqParts[0];
 
                 string header;
                 while (string.IsNullOrEmpty((header = sr.ReadLine())) == false)
                 {
-                    string[] headerParts = header.Split(new[] { ": " }, 2, StringSplitOptions.None);
-                    if (new[] { "Host", "Content-Length", "User-Agent" }.Any(s => s.Equals(headerParts[0], StringComparison.InvariantCultureIgnoreCase)))
+                    var headerParts = header.Split(new[] {": "}, 2, StringSplitOptions.None);
+                    if (
+                        new[] {"Host", "Content-Length", "User-Agent"}.Any(
+                            s => s.Equals(headerParts[0], StringComparison.InvariantCultureIgnoreCase)))
                         continue;
-                    if (headerParts[0] == "If-Match" && 
+                    if (headerParts[0] == "If-Match" &&
                         IsValidETag(headerParts))
                         headerParts[1] = lastEtag;
                     req.Headers[headerParts[0]] = headerParts[1];
@@ -136,15 +141,15 @@ namespace Raven.Scenarios
                     return new Tuple<string, NameValueCollection, string>(
                         new StreamReader(webResponse.GetResponseStream()).ReadToEnd(),
                         webResponse.Headers,
-                        "HTTP/" + webResponse.ProtocolVersion + " " + (int)webResponse.StatusCode + " " +
-                            webResponse.StatusDescription);
+                        "HTTP/" + webResponse.ProtocolVersion + " " + (int) webResponse.StatusCode + " " +
+                        webResponse.StatusDescription);
                 }
             }
         }
 
         /// <summary>
-        /// No, I am not insane, working around a framework issue:
-        /// http://ayende.com/Blog/archive/2010/03/04/is-select-system.uri-broken.aspx
+        ///   No, I am not insane, working around a framework issue:
+        ///   http://ayende.com/Blog/archive/2010/03/04/is-select-system.uri-broken.aspx
         /// </summary>
         private static Uri GetUri_WorkaroundForStrangeBug(string uriString)
         {
@@ -166,9 +171,9 @@ namespace Raven.Scenarios
             {
                 return new Guid(headerParts[1]) != Guid.Empty;
             }
-            catch 
+            catch
             {
-                return false;   
+                return false;
             }
         }
 
@@ -177,11 +182,11 @@ namespace Raven.Scenarios
             HttpWebResponse webResponse;
             try
             {
-                webResponse = (HttpWebResponse)req.GetResponse();
+                webResponse = (HttpWebResponse) req.GetResponse();
             }
             catch (WebException e)
             {
-                webResponse = (HttpWebResponse)e.Response;
+                webResponse = (HttpWebResponse) e.Response;
             }
             return webResponse;
         }
@@ -204,7 +209,7 @@ namespace Raven.Scenarios
                 }
             }
             var sr = new StringReader(responseAsString);
-            string statusLine = sr.ReadLine();
+            var statusLine = sr.ReadLine();
             if (statusLine != actual.Item3)
             {
                 throw new InvalidDataException(
@@ -214,12 +219,12 @@ namespace Raven.Scenarios
             string header;
             while (string.IsNullOrEmpty((header = sr.ReadLine())) == false)
             {
-                string[] parts = header.Split(new[] { ": " }, 2, StringSplitOptions.None);
+                var parts = header.Split(new[] {": "}, 2, StringSplitOptions.None);
                 if (parts[0] == "Content-Length")
                     continue;
                 if (parts[0] == "Date" || parts[0] == "ETag" || parts[0] == "Location")
                 {
-                    Assert.Contains(parts[0],actual.Item2.AllKeys);
+                    Assert.Contains(parts[0], actual.Item2.AllKeys);
                     continue;
                 }
                 if (actual.Item2[parts[0]] != parts[1])
@@ -232,11 +237,11 @@ namespace Raven.Scenarios
 
             string expectedLine;
             var rr = new StringReader(actual.Item1);
-            int line = 0;
+            var line = 0;
             while (string.IsNullOrEmpty((expectedLine = sr.ReadLine())) == false)
             {
                 line++;
-                string actualLine = rr.ReadLine();
+                var actualLine = rr.ReadLine();
                 if (expectedLine != actualLine)
                 {
                     throw new InvalidDataException(
@@ -252,11 +257,11 @@ namespace Raven.Scenarios
             var streamReader = new StreamReader(memoryStream);
 
             var sb = new StringBuilder();
-            sb.AppendLine(streamReader.ReadLine());//status
+            sb.AppendLine(streamReader.ReadLine()); //status
             string line;
             while ((line = streamReader.ReadLine()) != "")
-                sb.AppendLine(line);// header
-            sb.AppendLine();//separator line
+                sb.AppendLine(line); // header
+            sb.AppendLine(); //separator line
             if (sb.ToString().Contains("Transfer-Encoding: chunked") == false)
             {
                 sb.Append(streamReader.ReadToEnd());
@@ -278,7 +283,7 @@ namespace Raven.Scenarios
             byte cur = 0;
             do
             {
-                int readByte = memoryStream.Read();
+                var readByte = memoryStream.Read();
                 if (readByte == -1)
                     return null;
                 prev = cur;
@@ -292,10 +297,10 @@ namespace Raven.Scenarios
             if (chunkSizeBytes.Count == 0)
                 return null;
 
-            int size = Convert.ToInt32(Encoding.UTF8.GetString(chunkSizeBytes.ToArray()), 16);
+            var size = Convert.ToInt32(Encoding.UTF8.GetString(chunkSizeBytes.ToArray()), 16);
 
             var buffer = new char[size];
-            memoryStream.Read(buffer, 0, size);//not doing repeated read because it is all in mem
+            memoryStream.Read(buffer, 0, size); //not doing repeated read because it is all in mem
             return new string(buffer);
         }
     }

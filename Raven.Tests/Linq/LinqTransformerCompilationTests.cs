@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Json;
@@ -10,11 +9,13 @@ namespace Raven.Tests.Linq
 {
     public class LinqTransformerCompilationTests
     {
-        const string query = @"
+        private const string query =
+            @"
     from doc in docs
     where doc.Type == ""page""
     select new { Key = doc.Title, Value = doc.Content, Size = doc.Size };
 ";
+
         [Fact]
         public void Will_compile_query_successfully()
         {
@@ -38,30 +39,36 @@ namespace Raven.Tests.Linq
         {
             var dynamicQueryCompiler = new DynamicQueryCompiler("pagesByTitle", query);
             dynamicQueryCompiler.CreateInstance();
-            var generator= dynamicQueryCompiler.GeneratedInstance;
+            var generator = dynamicQueryCompiler.GeneratedInstance;
             var results = generator.Execute(new[]
             {
-                GetDocumentFromString(@"
+                GetDocumentFromString(
+                    @"
                 {
                     '@metadata': {'@id': 1},
                     'Type': 'page',
                     'Title': 'doc1',
                     'Content': 'Foobar',
                     'Size': 31
-                }"),
-                GetDocumentFromString(@"
+                }")
+                ,
+                GetDocumentFromString(
+                    @"
                 {
                     '@metadata': {'@id': 2},
                     'Type': 'not a page',
-                }"),
-                GetDocumentFromString(@"
+                }")
+                ,
+                GetDocumentFromString(
+                    @"
                 {
                     '@metadata': {'@id': 3},
                     'Type': 'page',
                     'Title': 'doc2',
                     'Content': 'Foobar',
                     'Size': 31
-                }"),
+                }")
+                ,
             }).Cast<object>().ToArray();
 
             var expected = new[]
@@ -70,7 +77,7 @@ namespace Raven.Tests.Linq
                 "{ Key = doc2, Value = Foobar, Size = 31, __document_id = 3 }"
             };
 
-            for (int i = 0; i < results.Length; i++)
+            for (var i = 0; i < results.Length; i++)
             {
                 Assert.Equal(expected[i], results[i].ToString());
             }

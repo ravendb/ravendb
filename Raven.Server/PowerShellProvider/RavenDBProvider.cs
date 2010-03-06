@@ -1,24 +1,17 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Management.Automation.Provider;
 using System.Management.Automation;
-using System.IO;
-using Raven.Database;
+using System.Management.Automation.Provider;
+using System.Text;
 using Newtonsoft.Json.Linq;
-using System.ComponentModel;
+using Raven.Database;
 
 namespace Raven.Server.PowerShellProvider
 {
     [CmdletProvider("RavenDB", ProviderCapabilities.None)]
     public class RavenDBProvider : ContainerCmdletProvider, IContentCmdletProvider
     {
-        #region Private Members
-
         private string pathSeparator = "\\";
-
-        #endregion
 
         #region Public Enumerations
 
@@ -30,19 +23,18 @@ namespace Raven.Server.PowerShellProvider
             Indexes,
             Index,
             Invalid
-        };
-
+        } ;
 
         #endregion
 
         #region Drive Manipulation
 
         /// <summary>
-        /// Create a new drive.  Create a connection to the database and set
-        /// the Database property in the PSDriveInfo.
+        ///   Create a new drive.  Create a connection to the database and set
+        ///   the Database property in the PSDriveInfo.
         /// </summary>
-        /// <param name="drive">
-        /// The path to the RavenDB data directory.
+        /// <param name = "drive">
+        ///   The path to the RavenDB data directory.
         /// </param>
         /// <returns>The added drive.</returns>
         protected override PSDriveInfo NewDrive(PSDriveInfo drive)
@@ -51,11 +43,11 @@ namespace Raven.Server.PowerShellProvider
             if (drive == null)
             {
                 WriteError(new ErrorRecord(
-                    new ArgumentNullException("drive"),
-                    "NullDrive",
-                    ErrorCategory.InvalidArgument,
-                    null)
-                );
+                               new ArgumentNullException("drive"),
+                               "NullDrive",
+                               ErrorCategory.InvalidArgument,
+                               null)
+                    );
 
                 return null;
             }
@@ -64,28 +56,30 @@ namespace Raven.Server.PowerShellProvider
             if (String.IsNullOrEmpty(drive.Root))
             {
                 WriteError(new ErrorRecord(
-                    new ArgumentException("drive.Root"),
-                    "NoRoot",
-                    ErrorCategory.InvalidArgument,
-                    drive)
-                );
+                               new ArgumentException("drive.Root"),
+                               "NoRoot",
+                               ErrorCategory.InvalidArgument,
+                               drive)
+                    );
 
                 return null;
             }
 
 
-            RavenDBPSDriveInfo ravenDBPSDriveInfo = new RavenDBPSDriveInfo(drive);
-            DocumentDatabase db = new DocumentDatabase(drive.Root);
+            var ravenDBPSDriveInfo = new RavenDBPSDriveInfo(drive);
+            var db = new DocumentDatabase(drive.Root);
 
             ravenDBPSDriveInfo.Database = db;
 
             return ravenDBPSDriveInfo;
-        } // NewDrive
+        }
+
+        // NewDrive
 
         /// <summary>
-        /// Removes a drive from the provider.
+        ///   Removes a drive from the provider.
         /// </summary>
-        /// <param name="drive">The drive to remove.</param>
+        /// <param name = "drive">The drive to remove.</param>
         /// <returns>The drive removed.</returns>
         protected override PSDriveInfo RemoveDrive(PSDriveInfo drive)
         {
@@ -93,17 +87,17 @@ namespace Raven.Server.PowerShellProvider
             if (drive == null)
             {
                 WriteError(new ErrorRecord(
-                    new ArgumentNullException("drive"),
-                    "NullDrive",
-                    ErrorCategory.InvalidArgument,
-                    drive)
-                );
+                               new ArgumentNullException("drive"),
+                               "NullDrive",
+                               ErrorCategory.InvalidArgument,
+                               drive)
+                    );
 
                 return null;
             }
 
             // dispose database on drive
-            RavenDBPSDriveInfo ravenDBPSDriveInfo = drive as RavenDBPSDriveInfo;
+            var ravenDBPSDriveInfo = drive as RavenDBPSDriveInfo;
 
             if (ravenDBPSDriveInfo == null)
             {
@@ -113,16 +107,18 @@ namespace Raven.Server.PowerShellProvider
             ravenDBPSDriveInfo.Database.Dispose();
 
             return ravenDBPSDriveInfo;
-        } // RemoveDrive
+        }
+
+        // RemoveDrive
 
         #endregion Drive Manipulation
 
         #region Item Methods
 
         /// <summary>
-        /// Retrieves an item using the specified path.
+        ///   Retrieves an item using the specified path.
         /// </summary>
-        /// <param name="path">The path to the item to return.</param>
+        /// <param name = "path">The path to the item to return.</param>
         protected override void GetItem(string path)
         {
             // check if the path represented is a drive
@@ -136,24 +132,24 @@ namespace Raven.Server.PowerShellProvider
             string pathTypeValue;
             Guid? etag;
 
-            PathType type = GetNamesFromPath(path, out pathTypeValue, out etag);
+            var type = GetNamesFromPath(path, out pathTypeValue, out etag);
 
             if (type == PathType.Document)
             {
-                RavenDBPSDriveInfo db = this.PSDriveInfo as RavenDBPSDriveInfo;
+                var db = this.PSDriveInfo as RavenDBPSDriveInfo;
                 JsonDocument document;
                 if (db == null)
                     document = null;
                 else
                     document = db.Database.Get(pathTypeValue);
-                System.Text.ASCIIEncoding enc = new System.Text.ASCIIEncoding();
-                string str = enc.GetString(document.Data);
+                var enc = new ASCIIEncoding();
+                var str = enc.GetString(document.Data);
 
                 WriteItemObject(str, path, true);
             }
             else if (type == PathType.Index)
             {
-                RavenDBPSDriveInfo db = this.PSDriveInfo as RavenDBPSDriveInfo;
+                var db = this.PSDriveInfo as RavenDBPSDriveInfo;
                 string index;
                 if (db == null)
                     index = null;
@@ -168,17 +164,17 @@ namespace Raven.Server.PowerShellProvider
         }
 
         /// <summary>
-        /// Set the content of a document or an index based on the path parameter
+        ///   Set the content of a document or an index based on the path parameter
         /// </summary>
-        /// <param name="path">Specifies the path to the document or index whose values are to be set.</param>
-        /// <param name="values">The value to be set</param>
+        /// <param name = "path">Specifies the path to the document or index whose values are to be set.</param>
+        /// <param name = "values">The value to be set</param>
         protected override void SetItem(string path, object value)
         {
             // Get path type and document id/index name if applicable
             string pathTypeValue;
             Guid? etag;
 
-            PathType type = GetNamesFromPath(path, out pathTypeValue, out etag);
+            var type = GetNamesFromPath(path, out pathTypeValue, out etag);
 
             if (type == PathType.Document)
             {
@@ -187,59 +183,63 @@ namespace Raven.Server.PowerShellProvider
                 {
                     doc = JObject.Parse(value.ToString());
                 }
-                catch (Exception) { }
+                catch (Exception)
+                {
+                }
 
                 if (doc == null)
                 {
                     WriteError(new ErrorRecord(new ArgumentException(
-                        "Invalid JSON"), "",
-                        ErrorCategory.InvalidArgument, path));
+                                                   "Invalid JSON"), "",
+                                               ErrorCategory.InvalidArgument, path));
                     return;
                 }
 
                 if (!string.IsNullOrEmpty(pathTypeValue) && etag.HasValue)
                 {
-                    RavenDBPSDriveInfo db = this.PSDriveInfo as RavenDBPSDriveInfo;
+                    var db = this.PSDriveInfo as RavenDBPSDriveInfo;
                     db.Database.Put(pathTypeValue, etag, doc, new JObject());
                 }
                 else
                 {
                     WriteError(new ErrorRecord(new ArgumentException(
-                      "Document path must have an ID and an ETag"), "",
-                   ErrorCategory.InvalidArgument, path));
+                                                   "Document path must have an ID and an ETag"), "",
+                                               ErrorCategory.InvalidArgument, path));
                 }
             }
             else if (type == PathType.Index)
             {
                 if (!string.IsNullOrEmpty(pathTypeValue))
                 {
-                    RavenDBPSDriveInfo db = this.PSDriveInfo as RavenDBPSDriveInfo;
+                    var db = this.PSDriveInfo as RavenDBPSDriveInfo;
                     if (db.Database.IndexDefinitionStorage.IndexNames.Contains(pathTypeValue))
                         db.Database.PutIndex(pathTypeValue, value.ToString());
                     else
                         WriteError(new ErrorRecord(new ArgumentException(
-                            "Index does not exist."), "",
-                            ErrorCategory.InvalidArgument, path));
+                                                       "Index does not exist."), "",
+                                                   ErrorCategory.InvalidArgument, path));
                 }
                 else
                 {
                     WriteError(new ErrorRecord(new ArgumentException(
-                        "Index path must have a name"), "",
-                        ErrorCategory.InvalidArgument, path));
+                                                   "Index path must have a name"), "",
+                                               ErrorCategory.InvalidArgument, path));
                 }
             }
             else
             {
                 WriteError(new ErrorRecord(new NotSupportedException(
-                    "SetNotSupported"), "",
-                    ErrorCategory.InvalidOperation, path));
+                                               "SetNotSupported"), "",
+                                           ErrorCategory.InvalidOperation, path));
             }
-        } // SetItem
+        }
+
+        // SetItem
 
         /// <summary>
-        /// Test to see if the specified item exists.
+        ///   Test to see if the specified item exists.
         /// </summary>
-        /// <param name="path">The path to the item to verify.</param>
+        /// <param name = "path">The path to the item to verify.</param>
         /// <returns>True if the item is found.</returns>
         protected override bool ItemExists(string path)
         {
@@ -252,11 +252,11 @@ namespace Raven.Server.PowerShellProvider
             string pathTypeValue;
             Guid? etag;
 
-            PathType type = GetNamesFromPath(path, out pathTypeValue, out etag);
+            var type = GetNamesFromPath(path, out pathTypeValue, out etag);
 
             if (type == PathType.Document)
             {
-                RavenDBPSDriveInfo db = this.PSDriveInfo as RavenDBPSDriveInfo;
+                var db = this.PSDriveInfo as RavenDBPSDriveInfo;
                 JsonDocument document;
                 if (db == null)
                     document = null;
@@ -269,7 +269,7 @@ namespace Raven.Server.PowerShellProvider
                 return true;
             else if (type == PathType.Index)
             {
-                RavenDBPSDriveInfo db = this.PSDriveInfo as RavenDBPSDriveInfo;
+                var db = this.PSDriveInfo as RavenDBPSDriveInfo;
                 string index;
                 if (db == null)
                     index = null;
@@ -286,17 +286,18 @@ namespace Raven.Server.PowerShellProvider
             }
 
             return false;
+        }
 
-        } // ItemExists
+        // ItemExists
 
         /// <summary>
-        /// Test to see if the specified path is syntactically valid.
+        ///   Test to see if the specified path is syntactically valid.
         /// </summary>
-        /// <param name="path">The path to validate.</param>
+        /// <param name = "path">The path to validate.</param>
         /// <returns>True if the specified path is valid.</returns>
         protected override bool IsValidPath(string path)
         {
-            bool result = true;
+            var result = true;
 
             // check if the path is null or empty
             if (String.IsNullOrEmpty(path))
@@ -308,9 +309,9 @@ namespace Raven.Server.PowerShellProvider
             path = NormalizePath(path);
 
             // split the path into individual chunks
-            string[] pathChunks = path.Split(pathSeparator.ToCharArray());
+            var pathChunks = path.Split(pathSeparator.ToCharArray());
 
-            foreach (string pathChunk in pathChunks)
+            foreach (var pathChunk in pathChunks)
             {
                 if (pathChunk.Length == 0)
                 {
@@ -318,21 +319,23 @@ namespace Raven.Server.PowerShellProvider
                 }
             }
             return result;
-        } // IsValidPath
+        }
+
+        // IsValidPath
 
         #endregion Item Overloads
 
         #region Container Overloads
 
         /// <summary>
-        /// Return either the documents or indexes in the database 
+        ///   Return either the documents or indexes in the database
         /// </summary>
-        /// <param name="path">The path to the parent</param>
-        /// <param name="recurse">Ignored
+        /// <param name = "path">The path to the parent</param>
+        /// <param name = "recurse">Ignored
         /// </param>
         protected override void GetChildItems(string path, bool recurse)
         {
-            RavenDBPSDriveInfo db = this.PSDriveInfo as RavenDBPSDriveInfo;
+            var db = this.PSDriveInfo as RavenDBPSDriveInfo;
 
             // If path represented is a drive then the children will be all indexes and tables
             if (PathIsDrive(path))
@@ -340,12 +343,12 @@ namespace Raven.Server.PowerShellProvider
                 WriteItemObject("documents\\", "documents", true);
                 foreach (JObject doc in db.Database.GetDocuments(0, int.MaxValue))
                 {
-                    WriteItemObject('\t'+ doc["@metadata"]["@id"].Value<string>(), path, false);
+                    WriteItemObject('\t' + doc["@metadata"]["@id"].Value<string>(), path, false);
                 }
                 WriteItemObject("indexes\\", "indexes", true);
                 foreach (JObject index in db.Database.GetIndexes(0, int.MaxValue))
-                {                    
-                    WriteItemObject('\t'+ index["name"].Value<string>(), path, false);
+                {
+                    WriteItemObject('\t' + index["name"].Value<string>(), path, false);
                 }
             }
             else
@@ -353,7 +356,7 @@ namespace Raven.Server.PowerShellProvider
                 string pathTypeValue;
                 Guid? etag;
 
-                PathType type = GetNamesFromPath(path, out pathTypeValue, out etag);
+                var type = GetNamesFromPath(path, out pathTypeValue, out etag);
 
                 if (type == PathType.Documents)
                 {
@@ -381,13 +384,13 @@ namespace Raven.Server.PowerShellProvider
         }
 
         /// <summary>
-        /// Return the keys/names of documents and/or indexes
+        ///   Return the keys/names of documents and/or indexes
         /// </summary>
-        /// <param name="path">The root path.</param>
-        /// <param name="returnContainers">Not used.</param>
+        /// <param name = "path">The root path.</param>
+        /// <param name = "returnContainers">Not used.</param>
         protected override void GetChildNames(string path, ReturnContainers returnContainers)
         {
-            RavenDBPSDriveInfo db = this.PSDriveInfo as RavenDBPSDriveInfo;
+            var db = this.PSDriveInfo as RavenDBPSDriveInfo;
 
             // If path represented is a drive then the children will be all indexes and tables
             if (PathIsDrive(path))
@@ -406,7 +409,7 @@ namespace Raven.Server.PowerShellProvider
                 string pathTypeValue;
                 Guid? etag;
 
-                PathType type = GetNamesFromPath(path, out pathTypeValue, out etag);
+                var type = GetNamesFromPath(path, out pathTypeValue, out etag);
 
                 if (type == PathType.Documents)
                 {
@@ -425,20 +428,22 @@ namespace Raven.Server.PowerShellProvider
                 else
                 {
                     // In this case, the path specified is not valid
-                    StringBuilder message = new StringBuilder("Path must represent either documents or indexes.");
+                    var message = new StringBuilder("Path must represent either documents or indexes.");
                     message.Append(path);
 
                     throw new ArgumentException(message.ToString());
                 }
             }
-        } // GetChildNames
+        }
+
+        // GetChildNames
 
         /// <summary>
-        /// Determines if the specified path has child items.
+        ///   Determines if the specified path has child items.
         /// </summary>
-        /// <param name="path">The path to examine.</param>
+        /// <param name = "path">The path to examine.</param>
         /// <returns>
-        /// True if the specified path has child items.
+        ///   True if the specified path has child items.
         /// </returns>
         protected override bool HasChildItems(string path)
         {
@@ -448,22 +453,21 @@ namespace Raven.Server.PowerShellProvider
             }
 
             return (ChunkPath(path).Length == 1);
-        } // HasChildItems
+        }
+
+        // HasChildItems
 
         /// <summary>
-        /// Creates a new item at the specified path.
+        ///   Creates a new item at the specified path.
         /// </summary>
-        /// 
-        /// <param name="path">
-        /// The path to the new item.
+        /// <param name = "path">
+        ///   The path to the new item.
         /// </param>
-        /// 
-        /// <param name="type">
-        /// Type for the object to create. "Document" or "Index"
+        /// <param name = "type">
+        ///   Type for the object to create. "Document" or "Index"
         /// </param>
-        /// 
-        /// <param name="newItemValue">
-        /// Object for creating new instance of a type at the specified path.
+        /// <param name = "newItemValue">
+        ///   Object for creating new instance of a type at the specified path.
         /// </param>
         protected override void NewItem(string path, string type, object newItemValue)
         {
@@ -471,169 +475,165 @@ namespace Raven.Server.PowerShellProvider
             string pathTypeValue;
             Guid? etag;
 
-            PathType pathType = GetNamesFromPath(path, out pathTypeValue, out etag);
+            var pathType = GetNamesFromPath(path, out pathTypeValue, out etag);
 
             if (type.ToLower() != "index" && type.ToLower() != "document")
             {
                 WriteError(new ErrorRecord
-                                  (new ArgumentException("Type must be either a document or index"),
-                                      "CannotCreateSpecifiedObject",
-                                         ErrorCategory.InvalidArgument,
-                                              path
-                             )
-                          );
+                               (new ArgumentException("Type must be either a document or index"),
+                                "CannotCreateSpecifiedObject",
+                                ErrorCategory.InvalidArgument,
+                                path
+                               )
+                    );
 
                 throw new ArgumentException("This provider can only create items of type \"document\" or \"index\"");
             }
             if (pathType == PathType.Database)
             {
-
             }
-            else if ((pathType == PathType.Documents && type.ToLower() == "document") || (pathType == PathType.Database && type.ToLower() == "document"))
+            else if ((pathType == PathType.Documents && type.ToLower() == "document") ||
+                     (pathType == PathType.Database && type.ToLower() == "document"))
             {
                 JObject doc = null;
                 try
                 {
                     doc = JObject.Parse(newItemValue.ToString());
                 }
-                catch (Exception) { }
+                catch (Exception)
+                {
+                }
 
                 if (doc == null)
                 {
                     WriteError(new ErrorRecord(new ArgumentException(
-                        "Invalid JSON"), "",
-                        ErrorCategory.InvalidArgument, path));
+                                                   "Invalid JSON"), "",
+                                               ErrorCategory.InvalidArgument, path));
                     return;
                 }
 
-                RavenDBPSDriveInfo db = this.PSDriveInfo as RavenDBPSDriveInfo;
+                var db = this.PSDriveInfo as RavenDBPSDriveInfo;
                 db.Database.Put(null, Guid.Empty, doc, new JObject());
-
             }
             else if (pathType == PathType.Index && type.ToLower() == "index")
             {
                 if (!string.IsNullOrEmpty(pathTypeValue))
                 {
-                    RavenDBPSDriveInfo db = this.PSDriveInfo as RavenDBPSDriveInfo;
+                    var db = this.PSDriveInfo as RavenDBPSDriveInfo;
                     if (!db.Database.IndexDefinitionStorage.IndexNames.Contains(pathTypeValue))
                         db.Database.PutIndex(pathTypeValue, newItemValue.ToString());
                     else
                         WriteError(new ErrorRecord(new ArgumentException(
-                            "Index already exists."), "",
-                            ErrorCategory.InvalidArgument, path));
+                                                       "Index already exists."), "",
+                                                   ErrorCategory.InvalidArgument, path));
                 }
                 else
                 {
                     WriteError(new ErrorRecord(new ArgumentException(
-                        "Index path must have a name"), "",
-                        ErrorCategory.InvalidArgument, path));
+                                                   "Index path must have a name"), "",
+                                               ErrorCategory.InvalidArgument, path));
                 }
             }
             else
             {
                 WriteError(new ErrorRecord(new NotSupportedException(
-                    "Create not supported for the specified path"), "",
-                    ErrorCategory.InvalidOperation, path));
+                                               "Create not supported for the specified path"), "",
+                                           ErrorCategory.InvalidOperation, path));
             }
+        }
 
-        } // NewItem
+        // NewItem
 
         /// <summary>
-        /// Copies an item at the specified path to the location specified
+        ///   Copies an item at the specified path to the location specified
         /// </summary>
-        /// 
-        /// <param name="path">
-        /// Path of the item to copy
+        /// <param name = "path">
+        ///   Path of the item to copy
         /// </param>
-        /// 
-        /// <param name="copyPath">
-        /// Path of the item to copy to
+        /// <param name = "copyPath">
+        ///   Path of the item to copy to
         /// </param>
-        /// 
-        /// <param name="recurse">
-        /// Tells the provider to recurse subcontainers when copying
+        /// <param name = "recurse">
+        ///   Tells the provider to recurse subcontainers when copying
         /// </param>
-        /// 
         protected override void CopyItem(string path, string copyPath, bool recurse)
         {
             throw new NotImplementedException();
+        }
 
-        } //CopyItem
+        //CopyItem
 
         /// <summary>
-        /// Removes (deletes) the item at the specified path
+        ///   Removes (deletes) the item at the specified path
         /// </summary>
-        /// 
-        /// <param name="path">
-        /// The path to the item to remove.
+        /// <param name = "path">
+        ///   The path to the item to remove.
         /// </param>
-        /// 
-        /// <param name="recurse">
-        /// Ignored
+        /// <param name = "recurse">
+        ///   Ignored
         /// </param>
-        /// 
         /// <remarks>
-        /// There are no elements in this store which are hidden from the user.
-        /// Hence this method will not check for the presence of the Force
-        /// parameter
+        ///   There are no elements in this store which are hidden from the user.
+        ///   Hence this method will not check for the presence of the Force
+        ///   parameter
         /// </remarks>
-        /// 
         protected override void RemoveItem(string path, bool recurse)
         {
             // Get path type and document id/index name if applicable
             string pathTypeValue;
             Guid? etag;
 
-            PathType type = GetNamesFromPath(path, out pathTypeValue, out etag);
+            var type = GetNamesFromPath(path, out pathTypeValue, out etag);
 
             if (type == PathType.Document)
             {
                 if (!string.IsNullOrEmpty(pathTypeValue) && etag.HasValue)
                 {
-                    RavenDBPSDriveInfo db = this.PSDriveInfo as RavenDBPSDriveInfo;
+                    var db = this.PSDriveInfo as RavenDBPSDriveInfo;
                     db.Database.Delete(pathTypeValue, etag);
                 }
                 else
                 {
                     WriteError(new ErrorRecord(new ArgumentException(
-                      "Document path must have an ID and an ETag"), "",
-                   ErrorCategory.InvalidArgument, path));
+                                                   "Document path must have an ID and an ETag"), "",
+                                               ErrorCategory.InvalidArgument, path));
                 }
             }
             else if (type == PathType.Index)
             {
                 if (!string.IsNullOrEmpty(pathTypeValue))
                 {
-                    RavenDBPSDriveInfo db = this.PSDriveInfo as RavenDBPSDriveInfo;
+                    var db = this.PSDriveInfo as RavenDBPSDriveInfo;
                     db.Database.DeleteIndex(pathTypeValue);
                 }
                 else
                 {
                     WriteError(new ErrorRecord(new ArgumentException(
-                        "Index path must have a name"), "",
-                        ErrorCategory.InvalidArgument, path));
+                                                   "Index path must have a name"), "",
+                                               ErrorCategory.InvalidArgument, path));
                 }
             }
             else
             {
                 WriteError(new ErrorRecord(new NotSupportedException(
-                    "DeleteNotSupported"), "",
-                    ErrorCategory.InvalidOperation, path));
+                                               "DeleteNotSupported"), "",
+                                           ErrorCategory.InvalidOperation, path));
             }
+        }
 
-        } // RemoveItem
+        // RemoveItem
 
         #endregion Container Overloads
 
         #region Content Methods
 
         /// <summary>
-        /// Clear the contents at the specified location.
+        ///   Clear the contents at the specified location.
         /// </summary>
-        /// <param name="path">The path to the content to clear.</param>
+        /// <param name = "path">The path to the content to clear.</param>
         public void ClearContent(string path)
         {
-            RavenDBPSDriveInfo db = this.PSDriveInfo as RavenDBPSDriveInfo;
+            var db = this.PSDriveInfo as RavenDBPSDriveInfo;
 
             // If path represented is a drive then the children will be all indexes and tables
             if (PathIsDrive(path))
@@ -652,13 +652,14 @@ namespace Raven.Server.PowerShellProvider
                 string pathTypeValue;
                 Guid? etag;
 
-                PathType type = GetNamesFromPath(path, out pathTypeValue, out etag);
+                var type = GetNamesFromPath(path, out pathTypeValue, out etag);
 
                 if (type == PathType.Documents)
                 {
                     foreach (JObject doc in db.Database.GetDocuments(0, int.MaxValue))
                     {
-                        db.Database.Delete(doc["@metadata"]["@id"].Value<string>(), doc["@metadata"]["@etag"].Value<Guid?>());
+                        db.Database.Delete(doc["@metadata"]["@id"].Value<string>(),
+                                           doc["@metadata"]["@etag"].Value<Guid?>());
                     }
                 }
                 else if (type == PathType.Indexes)
@@ -671,19 +672,20 @@ namespace Raven.Server.PowerShellProvider
                 else
                 {
                     // In this case, the path specified is not valid
-                    StringBuilder message = new StringBuilder("Path must represent either documents or indexes.");
+                    var message = new StringBuilder("Path must represent either documents or indexes.");
                     message.Append(path);
 
                     throw new ArgumentException(message.ToString());
                 }
             }
+        }
 
-        } // ClearContent
+        // ClearContent
 
         /// <summary>
-        /// Not implemented.
+        ///   Not implemented.
         /// </summary>
-        /// <param name="path"></param>
+        /// <param name = "path"></param>
         /// <returns></returns>
         public object ClearContentDynamicParameters(string path)
         {
@@ -691,33 +693,35 @@ namespace Raven.Server.PowerShellProvider
         }
 
         /// <summary>
-        /// Get a reader at the path specified.
+        ///   Get a reader at the path specified.
         /// </summary>
-        /// <param name="path">The path from which to read.</param>
+        /// <param name = "path">The path from which to read.</param>
         /// <returns>A content reader used to read the data.</returns>
         public IContentReader GetContentReader(string path)
         {
             string pathTypeValue;
             Guid? etag;
 
-            PathType type = GetNamesFromPath(path, out pathTypeValue, out etag);
+            var type = GetNamesFromPath(path, out pathTypeValue, out etag);
 
             if (type == PathType.Documents)
             {
-                return new RavenDBContentReader(((RavenDBPSDriveInfo)this.PSDriveInfo).Database, true);
+                return new RavenDBContentReader(((RavenDBPSDriveInfo) this.PSDriveInfo).Database, true);
             }
             else if (type == PathType.Indexes)
             {
-                return new RavenDBContentReader(((RavenDBPSDriveInfo)this.PSDriveInfo).Database, false);
+                return new RavenDBContentReader(((RavenDBPSDriveInfo) this.PSDriveInfo).Database, false);
             }
 
             throw new InvalidOperationException("Contents can be obtained only for documents and indexes");
-        } // GetContentReader
+        }
+
+        // GetContentReader
 
         /// <summary>
-        /// Not implemented.
+        ///   Not implemented.
         /// </summary>
-        /// <param name="path"></param>
+        /// <param name = "path"></param>
         /// <returns></returns>
         public object GetContentReaderDynamicParameters(string path)
         {
@@ -725,9 +729,9 @@ namespace Raven.Server.PowerShellProvider
         }
 
         /// <summary>
-        /// Get an object used to write content.
+        ///   Get an object used to write content.
         /// </summary>
-        /// <param name="path">The root path at which to write.</param>
+        /// <param name = "path">The root path at which to write.</param>
         /// <returns>A content writer for writing.</returns>
         public IContentWriter GetContentWriter(string path)
         {
@@ -735,9 +739,9 @@ namespace Raven.Server.PowerShellProvider
         }
 
         /// <summary>
-        /// Not implemented.
+        ///   Not implemented.
         /// </summary>
-        /// <param name="path"></param>
+        /// <param name = "path"></param>
         /// <returns></returns>
         public object GetContentWriterDynamicParameters(string path)
         {
@@ -749,11 +753,11 @@ namespace Raven.Server.PowerShellProvider
         #region Helper Methods
 
         /// <summary>
-        /// Checks if a given path is actually a drive name.
+        ///   Checks if a given path is actually a drive name.
         /// </summary>
-        /// <param name="path">The path to check.</param>
+        /// <param name = "path">The path to check.</param>
         /// <returns>
-        /// True if the path given represents a drive, false otherwise.
+        ///   True if the path given represents a drive, false otherwise.
         /// </returns>
         private bool PathIsDrive(string path)
         {
@@ -761,11 +765,10 @@ namespace Raven.Server.PowerShellProvider
             // path is reduced to nothing, it is a drive. Also if its
             // just a drive then there wont be any path separators
             if (String.IsNullOrEmpty(
-                        path.Replace(this.PSDriveInfo.Root, "")) ||
+                path.Replace(this.PSDriveInfo.Root, "")) ||
                 String.IsNullOrEmpty(
-                        path.Replace(this.PSDriveInfo.Root + pathSeparator, ""))
-
-               )
+                    path.Replace(this.PSDriveInfo.Root + pathSeparator, ""))
+                )
             {
                 return true;
             }
@@ -773,16 +776,18 @@ namespace Raven.Server.PowerShellProvider
             {
                 return false;
             }
-        } // PathIsDrive
+        }
+
+        // PathIsDrive
         /// <summary>
-        /// Chunks the path and returns the path type & document id or index name mentioned in the path
+        ///   Chunks the path and returns the path type & document id or index name mentioned in the path
         /// </summary>
-        /// <param name="path">Path to chunk and obtain information</param>
-        /// <param name="pathTypeName">Name of the document or index defined by the path</param>
+        /// <param name = "path">Path to chunk and obtain information</param>
+        /// <param name = "pathTypeName">Name of the document or index defined by the path</param>
         /// <returns>what the path represents</returns>
         public PathType GetNamesFromPath(string path, out string pathTypeValue, out Guid? etag)
         {
-            PathType retVal = PathType.Invalid;
+            var retVal = PathType.Invalid;
             pathTypeValue = null;
             etag = null;
 
@@ -793,13 +798,13 @@ namespace Raven.Server.PowerShellProvider
             }
 
             // chunk the path into parts
-            string[] pathChunks = ChunkPath(path);
+            var pathChunks = ChunkPath(path);
 
             switch (pathChunks.Length)
             {
                 case 1:
                     {
-                        string name = pathChunks[0];
+                        var name = pathChunks[0];
                         if (name.ToLower() == "documents")
                             retVal = PathType.Documents;
                         else if (name.ToLower() == "indexes")
@@ -814,7 +819,7 @@ namespace Raven.Server.PowerShellProvider
 
                 case 2:
                     {
-                        string name = pathChunks[0];
+                        var name = pathChunks[0];
                         if (name.ToLower() == "documents")
                             retVal = PathType.Document;
                         else if (name.ToLower() == "indexes")
@@ -825,7 +830,7 @@ namespace Raven.Server.PowerShellProvider
                     break;
                 case 3:
                     {
-                        string name = pathChunks[0];
+                        var name = pathChunks[0];
                         if (name.ToLower() == "documents")
                         {
                             retVal = PathType.Document;
@@ -838,10 +843,10 @@ namespace Raven.Server.PowerShellProvider
                             else
                             {
                                 WriteError(new ErrorRecord(
-                                    new ArgumentException("Invalid ETag"),
-                                    "PathNotValid",
-                                    ErrorCategory.InvalidArgument,
-                                    path));
+                                               new ArgumentException("Invalid ETag"),
+                                               "PathNotValid",
+                                               ErrorCategory.InvalidArgument,
+                                               path));
                             }
                         }
                         break;
@@ -849,43 +854,47 @@ namespace Raven.Server.PowerShellProvider
                 default:
                     {
                         WriteError(new ErrorRecord(
-                            new ArgumentException("The path supplied has too many segments"),
-                            "PathNotValid",
-                            ErrorCategory.InvalidArgument,
-                            path));
+                                       new ArgumentException("The path supplied has too many segments"),
+                                       "PathNotValid",
+                                       ErrorCategory.InvalidArgument,
+                                       path));
                     }
                     break;
             }
             return retVal;
-        } // GetNamesFromPath
+        }
+
+        // GetNamesFromPath
 
         /// <summary>
-        /// Breaks up the path into individual elements.
+        ///   Breaks up the path into individual elements.
         /// </summary>
-        /// <param name="path">The path to split.</param>
+        /// <param name = "path">The path to split.</param>
         /// <returns>An array of path segments.</returns>
         private string[] ChunkPath(string path)
         {
             // Normalize the path before splitting
-            string normalPath = NormalizePath(path);
+            var normalPath = NormalizePath(path);
 
             // Return the path with the drive name and first path 
             // separator character removed, split by the path separator.
-            string pathNoDrive = normalPath.Replace(this.PSDriveInfo.Root
-                                           + pathSeparator, "");
+            var pathNoDrive = normalPath.Replace(this.PSDriveInfo.Root
+                                                 + pathSeparator, "");
 
             return pathNoDrive.Split(pathSeparator.ToCharArray());
-        } // ChunkPath
+        }
+
+        // ChunkPath
 
         /// <summary>
-        /// Adapts the path, making sure the correct path separator
-        /// character is used.
+        ///   Adapts the path, making sure the correct path separator
+        ///   character is used.
         /// </summary>
-        /// <param name="path"></param>
+        /// <param name = "path"></param>
         /// <returns></returns>
         private string NormalizePath(string path)
         {
-            string result = path;
+            var result = path;
 
             if (!String.IsNullOrEmpty(path))
             {
@@ -893,16 +902,18 @@ namespace Raven.Server.PowerShellProvider
             }
 
             return result;
-        } // NormalizePath
+        }
+
+        // NormalizePath
 
         /// <summary>
-        /// Throws an argument exception stating that the specified path does
-        /// not represent either a document or an index
+        ///   Throws an argument exception stating that the specified path does
+        ///   not represent either a document or an index
         /// </summary>
-        /// <param name="path">path which is invalid</param>
+        /// <param name = "path">path which is invalid</param>
         private void ThrowTerminatingInvalidPathException(string path)
         {
-            StringBuilder message = new StringBuilder("Path must represent either a document or an index:");
+            var message = new StringBuilder("Path must represent either a document or an index:");
             message.Append(path);
 
             throw new ArgumentException(message.ToString());
@@ -910,7 +921,7 @@ namespace Raven.Server.PowerShellProvider
 
         private string RemoveDriveFromPath(string path)
         {
-            string result = path;
+            var result = path;
             string root;
 
             if (this.PSDriveInfo == null)

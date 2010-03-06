@@ -13,6 +13,15 @@ namespace Raven.Tests.Storage
             db = new DocumentDatabase("divan.db.test.esent");
         }
 
+        #region IDisposable Members
+
+        public void Dispose()
+        {
+            db.Dispose();
+        }
+
+        #endregion
+
         [Fact]
         public void Index_with_same_name_can_be_added_twice()
         {
@@ -48,7 +57,8 @@ namespace Raven.Tests.Storage
         [Fact]
         public void Can_list_index_definition()
         {
-            const string definition = @" 
+            const string definition =
+                @" 
     from doc in docs
     where doc.type == ""page""
     select new { Key = doc.title, Value = doc.content, Size = doc.size };
@@ -56,11 +66,6 @@ namespace Raven.Tests.Storage
             db.PutIndex("pagesByTitle", definition);
             var actualDefinition = db.IndexDefinitionStorage.GetIndexDefinition("pagesByTitle");
             Assert.Equal(definition, actualDefinition);
-        }
-
-        public void Dispose()
-        {
-            db.Dispose();
         }
     }
 }

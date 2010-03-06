@@ -12,7 +12,7 @@ namespace Raven.Server.Responders
 
         public override string[] SupportedVerbs
         {
-            get { return new[] { "GET","PUT","DELETE" }; }
+            get { return new[] {"GET", "PUT", "DELETE"}; }
         }
 
         public override void Respond(HttpListenerContext context)
@@ -35,7 +35,7 @@ namespace Raven.Server.Responders
                 case "DELETE":
                     context.SetStatusToDeleted();
                     Database.DeleteIndex(index);
-                    context.WriteJson(new { index });
+                    context.WriteJson(new {index});
                     break;
             }
         }
@@ -45,11 +45,12 @@ namespace Raven.Server.Responders
             var definition = context.Request.QueryString["definition"];
             if ("yes".Equals(definition, StringComparison.InvariantCultureIgnoreCase))
             {
-                context.WriteJson(new { index = Database.IndexDefinitionStorage.GetIndexDefinition(index) });
+                context.WriteJson(new {index = Database.IndexDefinitionStorage.GetIndexDefinition(index)});
             }
             else
             {
-                context.WriteJson(Database.Query(index, context.Request.QueryString["query"], context.GetStart(), context.GetPageSize()));
+                context.WriteJson(Database.Query(index, context.Request.QueryString["query"], context.GetStart(),
+                                                 context.GetPageSize()));
             }
         }
     }

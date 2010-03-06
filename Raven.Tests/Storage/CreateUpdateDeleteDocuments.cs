@@ -14,25 +14,38 @@ namespace Raven.Tests.Storage
             db = new DocumentDatabase("divan.db.test.esent");
         }
 
+        #region IDisposable Members
+
+        public void Dispose()
+        {
+            db.Dispose();
+        }
+
+        #endregion
+
         [Fact]
         public void When_creating_document_with_id_specified_will_return_specified_id()
         {
-            string documentId = db.Put("1", Guid.Empty, JObject.Parse("{ first_name: 'ayende', last_name: 'rahien'}"), new JObject());
+            var documentId = db.Put("1", Guid.Empty, JObject.Parse("{ first_name: 'ayende', last_name: 'rahien'}"),
+                                    new JObject());
             Assert.Equal("1", documentId);
         }
 
         [Fact]
         public void When_creating_document_with_no_id_specified_will_return_guid_as_id()
         {
-            string documentId = db.Put(null, Guid.Empty, JObject.Parse("{ first_name: 'ayende', last_name: 'rahien'}"), new JObject());
+            var documentId = db.Put(null, Guid.Empty, JObject.Parse("{ first_name: 'ayende', last_name: 'rahien'}"),
+                                    new JObject());
             Assert.DoesNotThrow(() => new Guid(documentId));
         }
 
         [Fact]
         public void When_creating_documents_with_no_id_specified_will_return_guids_in_sequencal_order()
         {
-            string documentId1 = db.Put(null, Guid.Empty, JObject.Parse("{ first_name: 'ayende', last_name: 'rahien'}"), new JObject());
-            string documentId2 = db.Put(null, Guid.Empty, JObject.Parse("{ first_name: 'ayende', last_name: 'rahien'}"), new JObject());
+            var documentId1 = db.Put(null, Guid.Empty, JObject.Parse("{ first_name: 'ayende', last_name: 'rahien'}"),
+                                     new JObject());
+            var documentId2 = db.Put(null, Guid.Empty, JObject.Parse("{ first_name: 'ayende', last_name: 'rahien'}"),
+                                     new JObject());
             Assert.Equal(1, new Guid(documentId2).CompareTo(new Guid(documentId1)));
         }
 
@@ -40,7 +53,7 @@ namespace Raven.Tests.Storage
         public void Can_create_and_read_document()
         {
             db.Put("1", Guid.Empty, JObject.Parse("{  first_name: 'ayende', last_name: 'rahien'}"), new JObject());
-            JObject document = db.Get("1").ToJson();
+            var document = db.Get("1").ToJson();
 
             Assert.Equal("ayende", document.Value<string>("first_name"));
             Assert.Equal("rahien", document.Value<string>("last_name"));
@@ -63,7 +76,7 @@ namespace Raven.Tests.Storage
         {
             db.Put("1", Guid.Empty, JObject.Parse("{ first_name: 'ayende', last_name: 'rahien'}"), new JObject());
             var document = db.Get("1");
-            db.Delete("1",document.Etag);
+            db.Delete("1", document.Etag);
 
             Assert.Null(db.Get("1"));
         }
@@ -73,7 +86,7 @@ namespace Raven.Tests.Storage
         {
             db.Put("1", Guid.Empty, JObject.Parse("{ first_name: 'ayende', last_name: 'rahien'}"), new JObject());
             db.Put("21", Guid.Empty, JObject.Parse("{ first_name: 'ayende2', last_name: 'rahien2'}"), new JObject());
-            JObject document = db.Get("21").ToJson();
+            var document = db.Get("21").ToJson();
 
             Assert.Equal("ayende2", document.Value<string>("first_name"));
             Assert.Equal("rahien2", document.Value<string>("last_name"));
@@ -83,11 +96,6 @@ namespace Raven.Tests.Storage
         public void Querying_by_non_existant_document_returns_null()
         {
             Assert.Null(db.Get("1"));
-        }
-
-        public void Dispose()
-        {
-            db.Dispose();
         }
     }
 }

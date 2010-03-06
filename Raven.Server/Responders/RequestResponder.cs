@@ -1,4 +1,3 @@
-using System;
 using System.Linq;
 using System.Net;
 using System.Text.RegularExpressions;
@@ -8,20 +7,20 @@ namespace Raven.Server.Responders
 {
     public abstract class RequestResponder
     {
-        public abstract string UrlPattern { get; }
-        public abstract string[] SupportedVerbs { get; }
-
-        protected readonly Regex urlMatcher;
         private readonly string[] supportedVerbsCached;
-
-        public DocumentDatabase Database { get; set; }
-        public RavenConfiguration Settings { get; set; }
+        protected readonly Regex urlMatcher;
 
         protected RequestResponder()
         {
             urlMatcher = new Regex(UrlPattern);
             supportedVerbsCached = SupportedVerbs;
         }
+
+        public abstract string UrlPattern { get; }
+        public abstract string[] SupportedVerbs { get; }
+
+        public DocumentDatabase Database { get; set; }
+        public RavenConfiguration Settings { get; set; }
 
         public bool WillRespond(HttpListenerContext context)
         {

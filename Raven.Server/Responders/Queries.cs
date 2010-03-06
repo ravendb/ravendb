@@ -1,7 +1,5 @@
-using System.Collections.Generic;
 using System.Net;
 using Newtonsoft.Json.Linq;
-using Raven.Database;
 
 namespace Raven.Server.Responders
 {
@@ -14,7 +12,7 @@ namespace Raven.Server.Responders
 
         public override string[] SupportedVerbs
         {
-            get { return new[] { "POST" }; }
+            get { return new[] {"POST"}; }
         }
 
         public override void Respond(HttpListenerContext context)

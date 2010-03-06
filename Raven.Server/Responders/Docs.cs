@@ -12,7 +12,7 @@ namespace Raven.Server.Responders
 
         public override string[] SupportedVerbs
         {
-            get { return new[]{"GET", "POST"}; }
+            get { return new[] {"GET", "POST"}; }
         }
 
         public override void Respond(HttpListenerContext context)
@@ -24,10 +24,10 @@ namespace Raven.Server.Responders
                     break;
                 case "POST":
                     var json = context.ReadJson();
-                    var id = Database.Put(null, Guid.NewGuid(), json, 
-                        context.Request.Headers.FilterHeaders());
+                    var id = Database.Put(null, Guid.NewGuid(), json,
+                                          context.Request.Headers.FilterHeaders());
                     context.SetStatusToCreated("/docs/" + id);
-                    context.WriteJson(new { id });
+                    context.WriteJson(new {id});
                     break;
             }
         }

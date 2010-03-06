@@ -15,16 +15,18 @@ namespace Raven.Server
 
             DataDirectory = ConfigurationManager.AppSettings["RavenDataDir"] ?? @"..\..\..\Data";
 
-            WebDir = ConfigurationManager.AppSettings["RavenWebDir"] ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\WebUI");
+            WebDir = ConfigurationManager.AppSettings["RavenWebDir"] ??
+                     Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\WebUI");
         }
 
-        public string DataDirectory { get; set;}
-        public int Port { get; set;}
-        public string WebDir{ get; set;}
+        public string DataDirectory { get; set; }
+        public int Port { get; set; }
+        public string WebDir { get; set; }
 
         public void LoadLoggingSettings()
         {
-            XmlConfigurator.ConfigureAndWatch(new FileInfo(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"log4net.config")));
+            XmlConfigurator.ConfigureAndWatch(
+                new FileInfo(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "log4net.config")));
         }
     }
 }

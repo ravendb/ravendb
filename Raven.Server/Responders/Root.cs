@@ -11,7 +11,7 @@ namespace Raven.Server.Responders
 
         public override string[] SupportedVerbs
         {
-            get { return new[]{"GET"}; }
+            get { return new[] {"GET"}; }
         }
 
         public override void Respond(HttpListenerContext context)

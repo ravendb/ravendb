@@ -1,10 +1,10 @@
 using System;
+using System.Configuration.Install;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using System.Security.Principal;
 using System.ServiceProcess;
-using System.Configuration.Install;
-using System.Reflection;
 using log4net.Appender;
 using log4net.Config;
 using log4net.Filter;
@@ -12,16 +12,16 @@ using log4net.Layout;
 
 namespace Raven.Server
 {
-    class Program
+    internal class Program
     {
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             if (Environment.UserInteractive)
             {
                 switch (GetArgument(args))
                 {
                     case "install":
-                        AdminRequired(InstallAndStart,"/install");
+                        AdminRequired(InstallAndStart, "/install");
                         break;
                     case "uninstall":
                         AdminRequired(EnsureStoppedAndUninstall, "/uninstall");
@@ -93,7 +93,7 @@ namespace Raven.Server
             consoleAppender.AddFilter(new LoggerMatchFilter
             {
                 AcceptOnMatch = true,
-                LoggerToMatch = typeof(HttpServer).FullName
+                LoggerToMatch = typeof (HttpServer).FullName
             });
             BasicConfigurator.Configure(consoleAppender);
             DivanServer.EnsureCanListenToWhenInNonAdminContext(8080);
@@ -107,7 +107,8 @@ namespace Raven.Server
 
         private static void PrintUsage()
         {
-            Console.WriteLine(@"
+            Console.WriteLine(
+                @"
 Raven DB
 Document Database for the .Net Platform
 ----------------------------------------
@@ -135,7 +136,7 @@ Enjoy...
                 if (stopController.Status == ServiceControllerStatus.Running)
                     stopController.Stop();
 
-                ManagedInstallerClass.InstallHelper(new string[] { "/u", Assembly.GetExecutingAssembly().Location });
+                ManagedInstallerClass.InstallHelper(new[] {"/u", Assembly.GetExecutingAssembly().Location});
             }
         }
 
@@ -164,7 +165,7 @@ Enjoy...
             }
             else
             {
-                ManagedInstallerClass.InstallHelper(new[] { Assembly.GetExecutingAssembly().Location });
+                ManagedInstallerClass.InstallHelper(new[] {Assembly.GetExecutingAssembly().Location});
                 var startController = new ServiceController(ProjectInstaller.SERVICE_NAME);
                 startController.Start();
             }
