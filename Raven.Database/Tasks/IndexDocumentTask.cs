@@ -40,6 +40,15 @@ namespace Raven.Database.Tasks
                     {
                         logger.DebugFormat("Indexing document: '{0}' for index: {1}", doc.Key, index);
 
+                        var failureRate = actions.GetFailureRate(index);
+                        if(failureRate.IsInvalidIndex)
+                        {
+                            logger.InfoFormat("Skipped indexing document: '{0}' for index: {1} because failure rate is too high: {2}", doc.Key, index, 
+                                failureRate.FailureRate);
+                            continue;
+                        }
+                        
+
                         context.IndexStorage.Index(index, viewFunc, new[] {json,},
                                                    context, actions);
                     }

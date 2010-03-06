@@ -204,10 +204,10 @@ namespace Raven.Scenarios
             {
                 var actuals = finder.Matches(actual.Item1);
                 var expected = finder.Matches(responseAsString);
-                if (actuals.Count != expected.Count)
-                    throw new InvalidOperationException("Count of matches for " + finder + " was different in request " +
-                                                        responseNumber);
-                for (var i = 0;  i < actuals.Count; i++)
+                if (actuals.Count != expected.Count) 
+                    continue;
+
+                for (var i = 0; i < actuals.Count; i++)
                 {
                     var actualMatch = actuals[i];
                     var expectedMatch = expected[i];

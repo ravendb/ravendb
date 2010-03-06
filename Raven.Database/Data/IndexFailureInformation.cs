@@ -22,14 +22,21 @@ namespace Raven.Database.Data
         public int Errors { get; set; }
         public int Successes { get; set; }
 
+        public float FailureRate
+        {
+            get
+            {
+                if (Errors == 0)
+                    return 0;
+                return (Attempts / (float)Errors);
+            }
+        }
+
         public string GetErrorMessage()
         {
-            if(IsInvalidIndex== false)
-                return null;
-            return
-                string.Format(
-                    "Index {0} is invalid, out of {1} indexing attempts, {2} has failed.\r\nError rate of {3:#.##%} exceeds allowed 15% error rate",
-                    Name, Attempts, Errors, (Attempts/(float) Errors));
+            const string msg = "Index {0} is invalid, out of {1} indexing attempts, {2} has failed.\r\nError rate of {3:#.##%} exceeds allowed 15% error rate";
+            return string.Format(msg,
+                Name, Attempts, Errors, FailureRate);
         }
     }
 }
