@@ -10,3 +10,4 @@ _ReSharper.*/
 AssemblyInfo.cs
 *.user
 [Dd]ata/
+*.InstallLog

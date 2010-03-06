@@ -337,13 +337,15 @@ namespace Raven.Server.PowerShellProvider
             // If path represented is a drive then the children will be all indexes and tables
             if (PathIsDrive(path))
             {
+                WriteItemObject("documents\\", "documents", true);
                 foreach (JObject doc in db.Database.GetDocuments(0, int.MaxValue))
                 {
-                    WriteItemObject(doc["@metadata"]["@id"].Value<string>(), path, false);
+                    WriteItemObject('\t'+ doc["@metadata"]["@id"].Value<string>(), path, false);
                 }
+                WriteItemObject("indexes\\", "indexes", true);
                 foreach (JObject index in db.Database.GetIndexes(0, int.MaxValue))
                 {                    
-                    WriteItemObject(index["name"].Value<string>(), path, false);
+                    WriteItemObject('\t'+ index["name"].Value<string>(), path, false);
                 }
             }
             else
@@ -370,7 +372,7 @@ namespace Raven.Server.PowerShellProvider
                 else
                 {
                     // In this case, the path specified is not valid
-                    StringBuilder message = new StringBuilder("Path must represent either documents or indexes.");
+                    var message = new StringBuilder("Path must represent either a document or an index.");
                     message.Append(path);
 
                     throw new ArgumentException(message.ToString());
@@ -802,6 +804,11 @@ namespace Raven.Server.PowerShellProvider
                             retVal = PathType.Documents;
                         else if (name.ToLower() == "indexes")
                             retVal = PathType.Indexes;
+                        else
+                        {
+                            retVal = PathType.Document;
+                            pathTypeValue = pathChunks[0];
+                        }
                     }
                     break;
 
