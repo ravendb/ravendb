@@ -26,6 +26,12 @@ namespace Raven.Server
                     case "uninstall":
                         AdminRequired(EnsureStoppedAndUninstall, "/uninstall");
                         break;
+                    case "start":
+                        AdminRequired(StartService, "/uninstall");
+                        break;
+                    case "stop":
+                        AdminRequired(StopService, "/uninstall");
+                        break;
                     case "debug":
                         RunInDebugMode();
                         break;
@@ -131,6 +137,23 @@ Enjoy...
 
                 ManagedInstallerClass.InstallHelper(new string[] { "/u", Assembly.GetExecutingAssembly().Location });
             }
+        }
+
+        private static void StopService()
+        {
+            var stopController = new ServiceController(ProjectInstaller.SERVICE_NAME);
+
+            if (stopController.Status == ServiceControllerStatus.Running)
+                stopController.Stop();
+        }
+
+
+        private static void StartService()
+        {
+            var stopController = new ServiceController(ProjectInstaller.SERVICE_NAME);
+
+            if (stopController.Status != ServiceControllerStatus.Running)
+                stopController.Start();
         }
 
         private static void InstallAndStart()
