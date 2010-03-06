@@ -31,6 +31,8 @@ namespace Raven.Scenarios
                 @"""etag"":""(\{{0,1}([0-9a-fA-F]){8}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){12}\}{0,1})""")
             ,
             new Regex(@"id"":""(\{{0,1}([0-9a-fA-F]){8}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){12}\}{0,1})"""), 
+            new Regex(@"id"":""(\{{0,1}([0-9a-fA-F]){8}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){12}\}{0,1})"""), 
+            new Regex(@"Timestamp"":""\\/Date(\(\d\d\d\d\d\d\d\d\d\d\d\d\d\+\d\d\d\d\))\\/"""), 
         };
 
         public Scenario(string file)
