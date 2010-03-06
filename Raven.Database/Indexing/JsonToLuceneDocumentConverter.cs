@@ -4,77 +4,54 @@ using System.ComponentModel;
 using System.Linq;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
+using Raven.Database.Storage;
 
 namespace Raven.Database.Indexing
 {
     public class JsonToLuceneDocumentConverter
     {
         private readonly IndexWriter indexWriter;
-        private Document luceneDoc;
+        private readonly DocumentStorageActions actions;
 
-        public JsonToLuceneDocumentConverter(IndexWriter indexWriter)
+        public JsonToLuceneDocumentConverter(IndexWriter indexWriter, DocumentStorageActions actions)
         {
-            CurrentId = Guid.NewGuid().ToString();
             this.indexWriter = indexWriter;
+            this.actions = actions;
         }
 
         public int Count { get; private set; }
         public bool ShouldRcreateSearcher { get; set; }
 
-        public string CurrentId { get; private set; }
-
         public void Index(dynamic doc)
         {
             Count++;
-            var fields = new List<Field>();
-            string docId = AddValuesToDocument(fields, doc);
-            if (docId != CurrentId)
-            {
-                FlushDocumentToLuceneIndex(docId);
-                CurrentId = docId;
-                luceneDoc = new Document();
-                luceneDoc.Add(new Field("__document_id", docId, Field.Store.YES, Field.Index.UN_TOKENIZED));
-            }
-            foreach (var field in fields)
-            {
-                luceneDoc.Add(field);
-            }
+            AddValuesToDocument(doc);
+            actions.IncrementSuccessIndexing();
         }
 
-        public void FlushDocumentIfNeeded()
+        private void AddValuesToDocument(object val)
         {
-            FlushDocumentToLuceneIndex(CurrentId);
-        }
+            var properties = TypeDescriptor.GetProperties(val).Cast<PropertyDescriptor>().ToArray();
+            var id = properties.First(x => x.Name == "__document_id");
 
-        private void FlushDocumentToLuceneIndex(string docId)
-        {
-            if (luceneDoc == null)
-                return;
+            var docId = id.GetValue(val).ToString();
 
-            if (luceneDoc.GetFieldsCount() <= 0) 
-                return;
+            var luceneDoc = new Document();
+            luceneDoc.Add(new Field("__document_id", docId, 
+                Field.Store.YES, Field.Index.UN_TOKENIZED));
             
+            var fields = (from property in properties
+                                         where property != id
+                                         let value = property.GetValue(val)
+                                         where value != null
+                                         select new Field(property.Name, ToIndexableString(value), Field.Store.YES, Field.Index.TOKENIZED));
+
+            foreach (var l in fields)
+            {
+                luceneDoc.Add(l);
+            }
             indexWriter.UpdateDocument(new Term("__document_id", docId), luceneDoc);
             ShouldRcreateSearcher = true;
-        }
-
-        private static string AddValuesToDocument(ICollection<Field> fields, object val)
-        {
-            PropertyDescriptor[] properties = TypeDescriptor.GetProperties(val).Cast<PropertyDescriptor>().ToArray();
-            PropertyDescriptor id = properties.First(x => x.Name == "__document_id");
-
-            foreach (PropertyDescriptor property in properties)
-            {
-                if (property == id)
-                    continue;
-                object value = property.GetValue(val);
-                if (value == null)
-                    continue;
-                fields.Add(new Field(property.Name, ToIndexableString(value),
-                                     Field.Store.YES,
-                                     Field.Index.TOKENIZED));
-            }
-            return (string) id.GetValue(val);
         }
 
 
