@@ -7,6 +7,7 @@ using System.Threading;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
+using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Database.Storage;
@@ -200,9 +201,14 @@ namespace Raven.Database
                 actions =>
                 {
                     stale = actions.DoesTasksExistsForIndex(index);
+                    var indexFailureInformation = actions.GetFailureRate(index);
+                    if (indexFailureInformation.IsInvalidIndex)
+                    {
+                        throw new IndexDisabledException(indexFailureInformation);
+                    }
                     list.AddRange(from key in IndexStorage.Query(index, query, start, pageSize, totalSize)
                                   select actions.DocumentByKey(key)
-                                  into doc
+                                      into doc
                                       where doc != null
                                       select doc.ToJson());
                     actions.Commit();

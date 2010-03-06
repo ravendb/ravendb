@@ -452,5 +452,17 @@ namespace Raven.Database.Storage
         {
             Api.EscrowUpdate(session, indexesStats, indexesStatsColumns["attempts"], -1);
         }
+
+        public IndexFailureInformation GetFailureRate(string index)
+        {
+            SetCurrentIndexStatsTo(index);
+            return new IndexFailureInformation
+            {
+                Name = index,
+                Attempts = Api.RetrieveColumnAsInt32(session, indexesStats, indexesStatsColumns["attempts"]).Value,
+                Errors = Api.RetrieveColumnAsInt32(session, indexesStats, indexesStatsColumns["errors"]).Value,
+                Successes = Api.RetrieveColumnAsInt32(session, indexesStats, indexesStatsColumns["successes"]).Value
+            };
+        }
     }
 }

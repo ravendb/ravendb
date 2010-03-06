@@ -103,9 +103,11 @@ namespace Raven.Server
             try
             {
                 if (e is BadRequestException)
-                    HandleBadRequest(ctx, (BadRequestException) e);
+                    HandleBadRequest(ctx, (BadRequestException)e);
                 else if (e is ConcurrencyException)
-                    HandleConcurrencyException(ctx, (ConcurrencyException) e);
+                    HandleConcurrencyException(ctx, (ConcurrencyException)e);
+                else if (e is IndexDisabledException)
+                    HandleIndexDisabledException(ctx, (IndexDisabledException) e);
                 else
                     HandleGenericException(ctx, e);
             }
@@ -114,7 +116,23 @@ namespace Raven.Server
             }
         }
 
-        private void HandleGenericException(HttpListenerContext ctx, Exception e)
+        private static void HandleIndexDisabledException(HttpListenerContext ctx, IndexDisabledException e)
+        {
+            ctx.Response.StatusCode = 503;
+            ctx.Response.StatusDescription = "ervice Unavailable";
+            using (var sw = new StreamWriter(ctx.Response.OutputStream))
+            {
+                new JsonSerializer().Serialize(sw,
+                                               new
+                                               {
+                                                   url = ctx.Request.RawUrl,
+                                                   error = e.Information.GetErrorMessage(),
+                                                   index = e.Information.Name,
+                                               });
+            }
+        }
+
+        private static void HandleGenericException(HttpListenerContext ctx, Exception e)
         {
             ctx.Response.StatusCode = 500;
             ctx.Response.StatusDescription = "Internal Server Error";
@@ -129,7 +147,7 @@ namespace Raven.Server
             }
         }
 
-        private void HandleBadRequest(HttpListenerContext ctx, BadRequestException e)
+        private static void HandleBadRequest(HttpListenerContext ctx, BadRequestException e)
         {
             ctx.SetStatusToBadRequest();
             using (var sw = new StreamWriter(ctx.Response.OutputStream))
@@ -144,7 +162,7 @@ namespace Raven.Server
             }
         }
 
-        private void HandleConcurrencyException(HttpListenerContext ctx, ConcurrencyException e)
+        private static void HandleConcurrencyException(HttpListenerContext ctx, ConcurrencyException e)
         {
             ctx.Response.StatusCode = 409;
             ctx.Response.StatusDescription = "Conflict";

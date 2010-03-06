@@ -96,9 +96,11 @@
   <ItemGroup>
     <Compile Include="Data\Attachment.cs" />
     <Compile Include="Data\DatabaseStatistics.cs" />
+    <Compile Include="Data\IndexFailureInformation.cs" />
     <Compile Include="Data\ServerError.cs" />
     <Compile Include="Data\IndexStats.cs" />
     <Compile Include="Data\QueryResult.cs" />
+    <Compile Include="Exceptions\IndexDisabledException.cs" />
     <Compile Include="JsonDocument.cs" />
     <Compile Include="DocumentDatabase.cs" />
     <Compile Include="Exceptions\ConcurrencyException.cs" />
