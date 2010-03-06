@@ -11,7 +11,7 @@ namespace Raven.Database.Indexing
         private volatile bool doWork = true;
         private readonly object waitForWork = new object();
 
-        private readonly ConcurrentStack<ServerError> serverErrors = new ConcurrentStack<ServerError>();
+        private readonly ConcurrentQueue<ServerError> serverErrors = new ConcurrentQueue<ServerError>();
 
         public bool DoWork
         {
@@ -56,7 +56,7 @@ namespace Raven.Database.Indexing
 
         public void AddError(string index, string key, string error)
         {
-            serverErrors.Push(new ServerError
+            serverErrors.Enqueue(new ServerError
             {
                 Document = key,
                 Error = error,
@@ -66,7 +66,7 @@ namespace Raven.Database.Indexing
             if (serverErrors.Count <= 50) 
                 return;
             ServerError ignored;
-            serverErrors.TryPop(out ignored);
+            serverErrors.TryDequeue(out ignored);
         }
 
         public ServerError[] Errors
