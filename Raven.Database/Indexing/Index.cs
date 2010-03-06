@@ -97,11 +97,14 @@ namespace Raven.Database.Indexing
         private IEnumerable<string> BrowseIndex(IndexSearcher indexSearcher, Reference<int> totalSize, int start, int pageSize)
         {
             log.DebugFormat("Browsing index {0}", name);
-            var maxDoc = indexSearcher.MaxDoc();
-            totalSize.Value = maxDoc;
-            for (int i = start; i < maxDoc && (i - start) < pageSize; i++)
+            var indexReader = indexSearcher.Reader;
+            var maxDoc = indexReader.MaxDoc();
+            totalSize.Value = Enumerable.Range(0, maxDoc).Count(i => indexReader.IsDeleted(i) == false);
+            for (int i = start; i < maxDoc&& (i - start) < pageSize; i++)
             {
-                yield return indexSearcher.Doc(i).GetField("__document_id").StringValue();
+                if(indexReader.IsDeleted(i))
+                    continue;
+                yield return indexReader.Document(i).GetField("__document_id").StringValue();
             }
         }
 
@@ -139,47 +142,48 @@ namespace Raven.Database.Indexing
             var count = 0;
             Write(indexWriter =>
             {
-                var currentBatch = new List<Document>();
                 string currentId = null;
                 var converter = new JsonToLuceneDocumentConverter();
-                var shouldRecreateIndex = false;
+                Document luceneDoc = null;
                 foreach (var doc in RobustEnumeration(documents, func, actions, context))
                 {
                     count++;
                     string newDocId;
-                    var document = converter.Index(doc, out newDocId);
-
-                    if(newDocId != currentId)
+                    var fields = converter.Index(doc, out newDocId);
+                    luceneDoc = FlushLuceneDocument(newDocId, currentId, luceneDoc, indexWriter);
+                    currentId = newDocId;
+                    foreach (var field in fields)
                     {
-                        shouldRecreateIndex = FlushToIndex(indexWriter, currentId, currentBatch);
-                        currentBatch.Clear();
-                        currentId = newDocId;
+                        luceneDoc.Add(field);
                     }
-                    currentBatch.Add(document);
 
                     actions.IncrementSuccessIndexing();
-
                 }
 
-                shouldRecreateIndex |= FlushToIndex(indexWriter, currentId, currentBatch);
+                if (luceneDoc != null)
+                    indexWriter.UpdateDocument(new Term("__document_id", currentId), luceneDoc);
 
-                return shouldRecreateIndex;
+                indexWriter.UpdateDocument(new Term("__document_id", currentId), luceneDoc);
+
+
+                return luceneDoc != null;
             });
             log.InfoFormat("Indexed {0} documents for {1}", count, name);
         }
 
-        private static bool FlushToIndex(IndexWriter indexWriter, string currentId, IEnumerable<Document> currentBatch)
+        private static Document FlushLuceneDocument(string newDocId, string currentId, Document luceneDoc, IndexWriter indexWriter)
         {
-            if (currentId == null)
-                return false;
-
-            indexWriter.DeleteDocuments(new Term("__document_id", currentId));
-            foreach (var document in currentBatch)
+            if(newDocId != currentId)
             {
-                indexWriter.AddDocument(document);
+                if (luceneDoc != null)
+                    indexWriter.UpdateDocument(new Term("__document_id", currentId), luceneDoc);
+
+                luceneDoc = new Document();
+                luceneDoc.Add(new Field("__document_id", newDocId, Field.Store.YES, Field.Index.UN_TOKENIZED));
             }
-            return true;
+            return luceneDoc;
         }
+
 
         private IEnumerable<object> RobustEnumeration(IEnumerable<object> input, IndexingFunc func, DocumentStorageActions actions, WorkContext context)
         {
