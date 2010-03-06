@@ -10,6 +10,7 @@ using Lucene.Net.Index;
 using Lucene.Net.Store;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
+using Raven.Database.Storage;
 using Directory = System.IO.Directory;
 
 namespace Raven.Database.Indexing
@@ -101,7 +102,7 @@ namespace Raven.Database.Indexing
             value.Remove(keys);
         }
 
-        public void Index(string index, IndexingFunc indexingFunc, IEnumerable<dynamic > docs)
+        public void Index(string index, IndexingFunc indexingFunc, IEnumerable<dynamic > docs, WorkContext context, DocumentStorageActions actions)
         {
             Index value;
             if (indexes.TryGetValue(index, out value) == false)
@@ -109,7 +110,7 @@ namespace Raven.Database.Indexing
                 log.DebugFormat("Tried to index on a non existant index {0}, ignoring", index);
                 return;
             }
-            value.IndexDocuments(indexingFunc, docs);
+            value.IndexDocuments(indexingFunc, docs, context, actions);
         }
     }
 }
