@@ -145,7 +145,6 @@ task Release -depends Test {
     $build_dir\Esent.Interop.xml `
     $build_dir\log4net.dll `
     $build_dir\log4net.xml `
-    $build_dir\Kayak.dll `
     $build_dir\Lucene.Net.dll `
     $build_dir\ICSharpCode.NRefactory.dll `
     $build_dir\Newtonsoft.Json.dll `
