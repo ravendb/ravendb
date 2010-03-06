@@ -121,7 +121,7 @@ namespace Raven.Tests.Indexes
 
             Assert.Equal("1", db.Statistics.Errors[0].Document);
             Assert.Equal("pagesByTitle2", db.Statistics.Errors[0].Index);
-            Assert.Contains("System.DivideByZeroException: Attempted to divide by zero.", db.Statistics.Errors[0].Error);
+            Assert.Contains("Attempted to divide by zero.", db.Statistics.Errors[0].Error);
         }
 
         public void Dispose()
