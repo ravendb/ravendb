@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -201,11 +202,21 @@ namespace Raven.Scenarios
             var responseAsString = HandleChunking(response);
             foreach (var finder in guidFinders)
             {
-                var actualEtag = finder.Match(actual.Item1).Groups[1].Value;
-                var expectedEtag = finder.Match(responseAsString).Groups[1].Value;
-                if (string.IsNullOrEmpty(expectedEtag) == false)
+                var actuals = finder.Matches(actual.Item1);
+                var expected = finder.Matches(responseAsString);
+                if (actuals.Count != expected.Count)
+                    throw new InvalidOperationException("Count of matches for " + finder + " was different in request " +
+                                                        responseNumber);
+                for (var i = 0;  i < actuals.Count; i++)
                 {
-                    responseAsString = responseAsString.Replace(expectedEtag, actualEtag);
+                    var actualMatch = actuals[i];
+                    var expectedMatch = expected[i];
+
+                    var expectedEtag = expectedMatch.Groups[1].Value;
+                    if (string.IsNullOrEmpty(expectedEtag) == false)
+                    {
+                        responseAsString = responseAsString.Replace(expectedEtag, actualMatch.Groups[1].Value);
+                    }
                 }
             }
             var sr = new StringReader(responseAsString);
@@ -301,6 +312,8 @@ namespace Raven.Scenarios
 
             var buffer = new char[size];
             memoryStream.Read(buffer, 0, size); //not doing repeated read because it is all in mem
+            memoryStream.Read(); // read next \r
+            memoryStream.Read(); // read next \n
             return new string(buffer);
         }
     }
