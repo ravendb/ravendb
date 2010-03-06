@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -11,6 +12,7 @@ using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
+using Raven.Database.Storage;
 
 namespace Raven.Database.Indexing
 {
@@ -19,11 +21,11 @@ namespace Raven.Database.Indexing
     /// </summary>
     public class Index : IDisposable
     {
-        private readonly ILog log = LogManager.GetLogger(typeof (Index));
+        private readonly ILog log = LogManager.GetLogger(typeof(Index));
 
         private class CurrentIndexSearcher
         {
-            public IndexSearcher Searcher{ get; set;}
+            public IndexSearcher Searcher { get; set; }
             private int useCount;
             private bool shouldDisposeWhenThereAreNoUsages;
 
@@ -84,7 +86,7 @@ namespace Raven.Database.Indexing
             using (searcher.Use())
             {
                 var indexSearcher = searcher.Searcher;
-                if(string.IsNullOrEmpty(query) == false)
+                if (string.IsNullOrEmpty(query) == false)
                 {
                     return SearchIndex(query, indexSearcher, totalSize, start, pageSize);
                 }
@@ -131,20 +133,18 @@ namespace Raven.Database.Indexing
                 RecreateSearcher();
         }
 
-        public void IndexDocuments(IndexingFunc func, IEnumerable<object> documents)
+        public void IndexDocuments(IndexingFunc func, IEnumerable<object> documents, WorkContext context, DocumentStorageActions actions)
         {
+            actions.SetCurrentIndexStatsTo(name);
             JsonToLuceneDocumentConverter converter = null;
             Write(indexWriter =>
             {
-                var docs = func(documents);
+                converter = new JsonToLuceneDocumentConverter(indexWriter, actions);
 
-                converter = new JsonToLuceneDocumentConverter(indexWriter);
-
-                foreach (var doc in docs)
+                foreach (var doc in RobustEnumeration(documents, func, actions,context))
                 {
                     converter.Index(doc);
                 }
-                converter.FlushDocumentIfNeeded();
 
                 return converter.ShouldRcreateSearcher;
             });
@@ -153,6 +153,66 @@ namespace Raven.Database.Indexing
             log.InfoFormat("Indexed {0} documents for {1}", converter.Count, name);
         }
 
+        private IEnumerable<object> RobustEnumeration(IEnumerable<object> input, IndexingFunc func, DocumentStorageActions actions, WorkContext context)
+        {
+            var wrapped = new StatefulEnumerableWrapper<dynamic>(input.GetEnumerator());
+            var en = func(wrapped).GetEnumerator();
+            do
+            {
+                var moveSuccessful = MoveNext(en, wrapped, context, actions);
+                if (moveSuccessful == false)
+                    yield break;
+                if (moveSuccessful == true)
+                    yield return en.Current;
+                else
+                    en = func(wrapped).GetEnumerator();
+            } while (true);
+        }
+
+        private bool? MoveNext(IEnumerator en, StatefulEnumerableWrapper<object> innerEnumerator, WorkContext context, DocumentStorageActions actions)
+        {
+            try
+            {
+                actions.IncrementIndexingAttempt();
+                var moveNext = en.MoveNext();
+                if (moveNext == false)
+                    actions.DecrementIndexingAttempt();
+                return moveNext;
+            }
+            catch (Exception e)
+            {
+                actions.IncrementIndexingFailure();
+                context.AddError(name,
+                    TryGetDocKey(innerEnumerator.Current),
+                    e.Message
+                    );
+                log.WarnFormat(e, "Failed to execute indexing function on {0} on {1}", name,
+                    GetDocId(innerEnumerator));
+            }
+            return null;
+        }
+
+        private static string TryGetDocKey(object current)
+        {
+            var dic = current as IDictionary<string, object>;
+            if (dic == null)
+                return null;
+            object value;
+            dic.TryGetValue("__document_id", out value);
+            if (value == null)
+                return null;
+            return value.ToString();
+        }
+
+        private static object GetDocId(StatefulEnumerableWrapper<object> currentInnerEnumerator)
+        {
+            var dictionary = currentInnerEnumerator.Current as IDictionary<string, object>;
+            if (dictionary == null)
+                return null;
+            object docId;
+            dictionary.TryGetValue("__document_id", out docId);
+            return docId;
+        }
 
         private void RecreateSearcher()
         {
@@ -171,7 +231,7 @@ namespace Raven.Database.Indexing
         {
             Write(writer =>
             {
-                if(log.IsDebugEnabled)
+                if (log.IsDebugEnabled)
                 {
                     log.DebugFormat("Deleting ({0}) from {1}", string.Format(", ", keys), name);
                 }
