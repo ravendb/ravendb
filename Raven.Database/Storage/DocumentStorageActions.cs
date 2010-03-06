@@ -385,11 +385,12 @@ namespace Raven.Database.Storage
             return val;
         }
 
-        public bool TrySetCurrentIndexStatsTo(string viewName)
+        public void SetCurrentIndexStatsTo(string index)
         {
             Api.JetSetCurrentIndex(session, indexesStats, "by_key");
-            Api.MakeKey(session, indexesStats, viewName, Encoding.Unicode, MakeKeyGrbit.NewKey);
-            return Api.TrySeek(session, indexesStats, SeekGrbit.SeekEQ);
+            Api.MakeKey(session, indexesStats, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            if(Api.TrySeek(session, indexesStats, SeekGrbit.SeekEQ) == false)
+                throw new InvalidOperationException("There is no index named: " + index);
         }
 
         public void IncrementIndexingAttempt()
@@ -439,6 +440,11 @@ namespace Raven.Database.Storage
             if (Api.TrySeek(session, indexesStats, SeekGrbit.SeekEQ) == false)
                 return;
             Api.JetDelete(session, indexesStats);
+        }
+
+        public void DecrementIndexingAttempt()
+        {
+            Api.EscrowUpdate(session, indexesStats, indexesStatsColumns["attempts"], -1);
         }
     }
 }
