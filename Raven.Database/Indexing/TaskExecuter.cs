@@ -1,16 +1,16 @@
 using System;
 using log4net;
+using Raven.Database.Extensions;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
-using Raven.Database.Extensions;
 
 namespace Raven.Database.Indexing
 {
     public class TaskExecuter
     {
-        private readonly TransactionalStorage transactionalStorage;
         private readonly WorkContext context;
         private readonly ILog log = LogManager.GetLogger(typeof (TaskExecuter));
+        private readonly TransactionalStorage transactionalStorage;
 
         public TaskExecuter(TransactionalStorage transactionalStorage, WorkContext context)
         {
@@ -20,9 +20,9 @@ namespace Raven.Database.Indexing
 
         public void Execute()
         {
-            while(context.DoWork)
+            while (context.DoWork)
             {
-                bool foundWork = false;
+                var foundWork = false;
                 transactionalStorage.Batch(actions =>
                 {
                     var taskAsJson = actions.GetFirstTask();
@@ -39,7 +39,7 @@ namespace Raven.Database.Indexing
                     actions.CompleteCurrentTask();
                     actions.Commit();
                 });
-                if(foundWork == false)
+                if (foundWork == false)
                     context.WaitForWork();
             }
         }
@@ -48,7 +48,7 @@ namespace Raven.Database.Indexing
         {
             try
             {
-                Task task = Task.ToTask(taskAsJson);
+                var task = Task.ToTask(taskAsJson);
                 try
                 {
                     task.Execute(context);

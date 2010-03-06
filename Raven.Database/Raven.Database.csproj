@@ -99,7 +99,7 @@
     <Compile Include="Data\ServerError.cs" />
     <Compile Include="Data\IndexStats.cs" />
     <Compile Include="Data\QueryResult.cs" />
-    <Compile Include="Document.cs" />
+    <Compile Include="JsonDocument.cs" />
     <Compile Include="DocumentDatabase.cs" />
     <Compile Include="Exceptions\ConcurrencyException.cs" />
     <Compile Include="Extensions\LoggingExtensions.cs" />

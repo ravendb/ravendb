@@ -3,7 +3,7 @@
 namespace Raven.Database.Linq
 {
     /// <summary>
-    /// Abstract class to use for the compilation of all the indexes
+    ///   Abstract class to use for the compilation of all the indexes
     /// </summary>
     public class AbstractViewGenerator
     {

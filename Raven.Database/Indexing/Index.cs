@@ -17,52 +17,14 @@ using Raven.Database.Storage;
 namespace Raven.Database.Indexing
 {
     /// <summary>
-    /// This is a thread safe, single instance for a particular index.
+    ///   This is a thread safe, single instance for a particular index.
     /// </summary>
     public class Index : IDisposable
     {
-        private readonly ILog log = LogManager.GetLogger(typeof(Index));
-
-        private class CurrentIndexSearcher
-        {
-            public IndexSearcher Searcher { get; set; }
-            private int useCount;
-            private bool shouldDisposeWhenThereAreNoUsages;
-
-
-            public IDisposable Use()
-            {
-                Interlocked.Increment(ref useCount);
-                return new CleanUp(this);
-            }
-
-            private class CleanUp : IDisposable
-            {
-                private readonly CurrentIndexSearcher parent;
-
-                public CleanUp(CurrentIndexSearcher parent)
-                {
-                    this.parent = parent;
-                }
-
-                public void Dispose()
-                {
-                    var uses = Interlocked.Decrement(ref parent.useCount);
-                    if (parent.shouldDisposeWhenThereAreNoUsages && uses == 0)
-                        parent.Searcher.Close();
-
-                }
-            }
-
-            public void MarkForDispoal()
-            {
-                shouldDisposeWhenThereAreNoUsages = true;
-            }
-        }
-
         private readonly Directory directory;
-        private CurrentIndexSearcher searcher;
+        private readonly ILog log = LogManager.GetLogger(typeof (Index));
         private readonly string name;
+        private CurrentIndexSearcher searcher;
 
         public Index(Directory directory, string name)
         {
@@ -75,11 +37,15 @@ namespace Raven.Database.Indexing
             };
         }
 
+        #region IDisposable Members
+
         public void Dispose()
         {
             searcher.Searcher.Close();
             directory.Close();
         }
+
+        #endregion
 
         public IEnumerable<string> Query(string query, int start, int pageSize, Reference<int> totalSize)
         {
@@ -94,27 +60,29 @@ namespace Raven.Database.Indexing
             }
         }
 
-        private IEnumerable<string> BrowseIndex(IndexSearcher indexSearcher, Reference<int> totalSize, int start, int pageSize)
+        private IEnumerable<string> BrowseIndex(IndexSearcher indexSearcher, Reference<int> totalSize, int start,
+                                                int pageSize)
         {
             log.DebugFormat("Browsing index {0}", name);
             var indexReader = indexSearcher.Reader;
             var maxDoc = indexReader.MaxDoc();
             totalSize.Value = Enumerable.Range(0, maxDoc).Count(i => indexReader.IsDeleted(i) == false);
-            for (int i = start; i < maxDoc&& (i - start) < pageSize; i++)
+            for (var i = start; i < maxDoc && (i - start) < pageSize; i++)
             {
-                if(indexReader.IsDeleted(i))
+                if (indexReader.IsDeleted(i))
                     continue;
                 yield return indexReader.Document(i).GetField("__document_id").StringValue();
             }
         }
 
-        private IEnumerable<string> SearchIndex(string query, IndexSearcher indexSearcher, Reference<int> totalSize, int start, int pageSize)
+        private IEnumerable<string> SearchIndex(string query, IndexSearcher indexSearcher, Reference<int> totalSize,
+                                                int start, int pageSize)
         {
             log.DebugFormat("Issuing query on index {0} for: {1}", name, query);
             var luceneQuery = new QueryParser("", new StandardAnalyzer()).Parse(query);
             var search = indexSearcher.Search(luceneQuery);
             totalSize.Value = search.Length();
-            for (int i = start; i < search.Length() && (i - start) < pageSize; i++)
+            for (var i = start; i < search.Length() && (i - start) < pageSize; i++)
             {
                 yield return search.Doc(i).GetField("__document_id").StringValue();
             }
@@ -136,7 +104,8 @@ namespace Raven.Database.Indexing
                 RecreateSearcher();
         }
 
-        public void IndexDocuments(IndexingFunc func, IEnumerable<object> documents, WorkContext context, DocumentStorageActions actions)
+        public void IndexDocuments(IndexingFunc func, IEnumerable<object> documents, WorkContext context,
+                                   DocumentStorageActions actions)
         {
             actions.SetCurrentIndexStatsTo(name);
             var count = 0;
@@ -171,9 +140,10 @@ namespace Raven.Database.Indexing
             log.InfoFormat("Indexed {0} documents for {1}", count, name);
         }
 
-        private static Document FlushLuceneDocument(string newDocId, string currentId, Document luceneDoc, IndexWriter indexWriter)
+        private static Document FlushLuceneDocument(string newDocId, string currentId, Document luceneDoc,
+                                                    IndexWriter indexWriter)
         {
-            if(newDocId != currentId)
+            if (newDocId != currentId)
             {
                 if (luceneDoc != null)
                     indexWriter.UpdateDocument(new Term("__document_id", currentId), luceneDoc);
@@ -185,10 +155,11 @@ namespace Raven.Database.Indexing
         }
 
 
-        private IEnumerable<object> RobustEnumeration(IEnumerable<object> input, IndexingFunc func, DocumentStorageActions actions, WorkContext context)
+        private IEnumerable<object> RobustEnumeration(IEnumerable<object> input, IndexingFunc func,
+                                                      DocumentStorageActions actions, WorkContext context)
         {
             var wrapped = new StatefulEnumerableWrapper<dynamic>(input.GetEnumerator());
-            var en = func(wrapped).GetEnumerator();
+            IEnumerator<object> en = func(wrapped).GetEnumerator();
             do
             {
                 var moveSuccessful = MoveNext(en, wrapped, context, actions);
@@ -201,7 +172,8 @@ namespace Raven.Database.Indexing
             } while (true);
         }
 
-        private bool? MoveNext(IEnumerator en, StatefulEnumerableWrapper<object> innerEnumerator, WorkContext context, DocumentStorageActions actions)
+        private bool? MoveNext(IEnumerator en, StatefulEnumerableWrapper<object> innerEnumerator, WorkContext context,
+                               DocumentStorageActions actions)
         {
             try
             {
@@ -215,11 +187,11 @@ namespace Raven.Database.Indexing
             {
                 actions.IncrementIndexingFailure();
                 context.AddError(name,
-                    TryGetDocKey(innerEnumerator.Current),
-                    e.Message
+                                 TryGetDocKey(innerEnumerator.Current),
+                                 e.Message
                     );
                 log.WarnFormat(e, "Failed to execute indexing function on {0} on {1}", name,
-                    GetDocId(innerEnumerator));
+                               GetDocId(innerEnumerator));
             }
             return null;
         }
@@ -255,7 +227,7 @@ namespace Raven.Database.Indexing
                 {
                     Searcher = new IndexSearcher(directory)
                 };
-                Thread.MemoryBarrier();// force other threads to see this write
+                Thread.MemoryBarrier(); // force other threads to see this write
             }
         }
 
@@ -271,5 +243,53 @@ namespace Raven.Database.Indexing
                 return true;
             });
         }
+
+        #region Nested type: CurrentIndexSearcher
+
+        private class CurrentIndexSearcher
+        {
+            private bool shouldDisposeWhenThereAreNoUsages;
+            private int useCount;
+            public IndexSearcher Searcher { get; set; }
+
+
+            public IDisposable Use()
+            {
+                Interlocked.Increment(ref useCount);
+                return new CleanUp(this);
+            }
+
+            public void MarkForDispoal()
+            {
+                shouldDisposeWhenThereAreNoUsages = true;
+            }
+
+            #region Nested type: CleanUp
+
+            private class CleanUp : IDisposable
+            {
+                private readonly CurrentIndexSearcher parent;
+
+                public CleanUp(CurrentIndexSearcher parent)
+                {
+                    this.parent = parent;
+                }
+
+                #region IDisposable Members
+
+                public void Dispose()
+                {
+                    var uses = Interlocked.Decrement(ref parent.useCount);
+                    if (parent.shouldDisposeWhenThereAreNoUsages && uses == 0)
+                        parent.Searcher.Close();
+                }
+
+                #endregion
+            }
+
+            #endregion
+        }
+
+        #endregion
     }
 }

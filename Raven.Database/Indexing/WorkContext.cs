@@ -8,17 +8,13 @@ namespace Raven.Database.Indexing
 {
     public class WorkContext
     {
-        private volatile bool doWork = true;
-        private readonly object waitForWork = new object();
-
         private readonly ConcurrentQueue<ServerError> serverErrors = new ConcurrentQueue<ServerError>();
+        private readonly object waitForWork = new object();
+        private volatile bool doWork = true;
 
         public bool DoWork
         {
-            get
-            {
-                return doWork;
-            }
+            get { return doWork; }
         }
 
         public IndexStorage IndexStorage { get; set; }
@@ -27,9 +23,14 @@ namespace Raven.Database.Indexing
 
         public TransactionalStorage TransactionaStorage { get; set; }
 
+        public ServerError[] Errors
+        {
+            get { return serverErrors.ToArray(); }
+        }
+
         public void WaitForWork()
         {
-            if (!doWork) 
+            if (!doWork)
                 return;
             lock (waitForWork)
             {
@@ -63,18 +64,10 @@ namespace Raven.Database.Indexing
                 Index = index,
                 Timestamp = DateTime.Now
             });
-            if (serverErrors.Count <= 50) 
+            if (serverErrors.Count <= 50)
                 return;
             ServerError ignored;
             serverErrors.TryDequeue(out ignored);
-        }
-
-        public ServerError[] Errors
-        {
-            get
-            {
-                return serverErrors.ToArray();
-            }
         }
     }
 }

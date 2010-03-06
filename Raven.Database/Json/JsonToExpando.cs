@@ -15,7 +15,7 @@ namespace Raven.Database.Json
             if (metadata != null)
             {
                 var id = metadata["@id"];
-                if(id != null)
+                if (id != null)
                 {
                     child.__document_id = id.Value<string>();
                 }
@@ -34,13 +34,15 @@ namespace Raven.Database.Json
             if (jObject != null)
             {
                 var expando = new ExpandoObject() as IDictionary<string, object>;
-                foreach (var property in (from childToken in token where childToken is JProperty select childToken as JProperty))
+                foreach (
+                    var property in
+                        (from childToken in token where childToken is JProperty select childToken as JProperty))
                 {
                     expando.Add(property.Name, ConvertChild(property.Value));
                 }
                 return expando;
             }
-            
+
             var jArray = token as JArray;
             if (jArray == null)
                 throw new ArgumentException("Unknown token type: " + token);

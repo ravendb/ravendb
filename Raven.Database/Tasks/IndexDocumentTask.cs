@@ -1,16 +1,15 @@
 using System;
 using log4net;
+using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
-using Raven.Database.Extensions;
 
 namespace Raven.Database.Tasks
 {
     public class IndexDocumentTask : Task
     {
-        public string Key { get; set; }
-
         private readonly ILog logger = LogManager.GetLogger(typeof (IndexDocumentTask));
+        public string Key { get; set; }
 
         public override string ToString()
         {
@@ -39,15 +38,15 @@ namespace Raven.Database.Tasks
                     }
                     try
                     {
-                        logger.DebugFormat("Indexing document: '{0}' for index: {1}",doc.Key, index);
-                        
+                        logger.DebugFormat("Indexing document: '{0}' for index: {1}", doc.Key, index);
+
                         context.IndexStorage.Index(index, viewFunc, new[] {json,},
-                            context,actions);
+                                                   context, actions);
                     }
                     catch (Exception e)
                     {
                         logger.WarnFormat(e, "Failed to index document '{0}' for index: {1}", doc.Key, index);
-                     }
+                    }
                 }
                 actions.Commit();
             });

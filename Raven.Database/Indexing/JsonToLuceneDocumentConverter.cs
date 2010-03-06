@@ -20,8 +20,6 @@ namespace Raven.Database.Indexing
                     let value = property.GetValue(val)
                     where value != null
                     select new Field(property.Name, ToIndexableString(value), Field.Store.YES, Field.Index.TOKENIZED));
-
-            
         }
 
 

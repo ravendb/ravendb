@@ -16,6 +16,9 @@ namespace Raven.Database
 {
     public class DocumentDatabase : IDisposable
     {
+        private readonly WorkContext workContext;
+        private Thread[] backgroundWorkers = new Thread[0];
+
         public DocumentDatabase(string path)
         {
             TransactionalStorage = new TransactionalStorage(path);
@@ -39,24 +42,6 @@ namespace Raven.Database
             };
         }
 
-        public void SpinBackgroundWorkers()
-        {
-            const int threadCount = 1;// Environment.ProcessorCount;
-            backgroundWorkers = new Thread[threadCount];
-            for (int i = 0; i < threadCount; i++)
-            {
-                backgroundWorkers[i] = new Thread(new TaskExecuter(TransactionalStorage, workContext).Execute)
-                {
-                    IsBackground = true,
-                    Name = "RDB Background Worker #" + i,
-                };
-                backgroundWorkers[i].Start();
-            }
-        }
-
-        private Thread[] backgroundWorkers = new Thread[0];
-        private readonly WorkContext workContext;
-
         public DatabaseStatistics Statistics
         {
             get
@@ -78,10 +63,10 @@ namespace Raven.Database
                 return result;
             }
         }
+
         public TransactionalStorage TransactionalStorage { get; private set; }
         public IndexDefinitionStorage IndexDefinitionStorage { get; private set; }
         public IndexStorage IndexStorage { get; private set; }
-
 
         #region IDisposable Members
 
@@ -97,6 +82,21 @@ namespace Raven.Database
         }
 
         #endregion
+
+        public void SpinBackgroundWorkers()
+        {
+            const int threadCount = 1; // Environment.ProcessorCount;
+            backgroundWorkers = new Thread[threadCount];
+            for (var i = 0; i < threadCount; i++)
+            {
+                backgroundWorkers[i] = new Thread(new TaskExecuter(TransactionalStorage, workContext).Execute)
+                {
+                    IsBackground = true,
+                    Name = "RDB Background Worker #" + i,
+                };
+                backgroundWorkers[i].Start();
+            }
+        }
 
         [SuppressUnmanagedCodeSecurity]
         [DllImport("rpcrt4.dll", SetLastError = true)]
@@ -128,7 +128,7 @@ namespace Raven.Database
             TransactionalStorage.Batch(actions =>
             {
                 actions.AddDocument(key, document.ToString(), etag, metadata.ToString());
-                actions.AddTask(new IndexDocumentTask { View = "*", Key = key });
+                actions.AddTask(new IndexDocumentTask {View = "*", Key = key});
                 actions.Commit();
             });
             workContext.NotifyAboutWork();
@@ -154,7 +154,7 @@ namespace Raven.Database
             TransactionalStorage.Batch(actions =>
             {
                 actions.DeleteDocument(key, etag);
-                actions.AddTask(new RemoveFromIndexTask { View = "*", Keys = new[] { key } });
+                actions.AddTask(new RemoveFromIndexTask {View = "*", Keys = new[] {key}});
                 actions.Commit();
             });
             workContext.NotifyAboutWork();
@@ -219,7 +219,7 @@ namespace Raven.Database
         {
             IndexDefinitionStorage.RemoveIndex(name);
             IndexStorage.DeleteIndex(name);
-            TransactionalStorage.Batch(action=>
+            TransactionalStorage.Batch(action =>
             {
                 action.DeleteIndex(name);
 
@@ -262,7 +262,8 @@ namespace Raven.Database
             var list = new JArray();
             TransactionalStorage.Batch(actions =>
             {
-                foreach (var documentAndId in actions.DocumentsById(new Reference<bool>(), start, int.MaxValue, pageSize))
+                foreach (
+                    var documentAndId in actions.DocumentsById(new Reference<bool>(), start, int.MaxValue, pageSize))
                 {
                     var doc = documentAndId.Item1;
                     doc.Metadata.Add("@docNum", new JValue(documentAndId.Item2));

@@ -6,9 +6,6 @@ namespace Raven.Database.Exceptions
     [Serializable]
     public class ConcurrencyException : Exception
     {
-        public Guid ExpectedETag { get; set; }
-        public Guid ActualETag { get; set; }
-
         public ConcurrencyException()
         {
         }
@@ -26,5 +23,8 @@ namespace Raven.Database.Exceptions
             StreamingContext context) : base(info, context)
         {
         }
+
+        public Guid ExpectedETag { get; set; }
+        public Guid ActualETag { get; set; }
     }
 }

@@ -2,10 +2,9 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.CompilerServices;
+using System.Linq;
 using System.Runtime.ConstrainedExecution;
 using log4net;
-using System.Linq;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
@@ -17,13 +16,13 @@ using Directory = System.IO.Directory;
 namespace Raven.Database.Indexing
 {
     /// <summary>
-    /// Thread safe, single instance for the entire application
+    ///   Thread safe, single instance for the entire application
     /// </summary>
     public class IndexStorage : CriticalFinalizerObject, IDisposable
     {
+        private readonly ConcurrentDictionary<string, Index> indexes = new ConcurrentDictionary<string, Index>();
+        private readonly ILog log = LogManager.GetLogger(typeof (IndexStorage));
         private readonly string path;
-        private ConcurrentDictionary<string, Index> indexes = new ConcurrentDictionary<string, Index>();
-        private readonly ILog log = LogManager.GetLogger(typeof(IndexStorage));
 
         public IndexStorage(string path)
         {
@@ -43,6 +42,18 @@ namespace Raven.Database.Indexing
         {
             get { return indexes.Keys.ToArray(); }
         }
+
+        #region IDisposable Members
+
+        public void Dispose()
+        {
+            foreach (var index in indexes.Values)
+            {
+                index.Dispose();
+            }
+        }
+
+        #endregion
 
         public void DeleteIndex(string name)
         {
@@ -71,16 +82,8 @@ namespace Raven.Database.Indexing
         private Index BuildIndex(string name)
         {
             var directory = FSDirectory.GetDirectory(Path.Combine(path, name), true);
-            new IndexWriter(directory, new StandardAnalyzer()).Close();//creating index structure
+            new IndexWriter(directory, new StandardAnalyzer()).Close(); //creating index structure
             return new Index(directory, name);
-        }
-
-        public void Dispose()
-        {
-            foreach (var index in indexes.Values)
-            {
-                index.Dispose();
-            }
         }
 
         public IEnumerable<string> Query(string index, string query, int start, int pageSize, Reference<int> totalSize)
@@ -105,7 +108,8 @@ namespace Raven.Database.Indexing
             value.Remove(keys);
         }
 
-        public void Index(string index, IndexingFunc indexingFunc, IEnumerable<dynamic > docs, WorkContext context, DocumentStorageActions actions)
+        public void Index(string index, IndexingFunc indexingFunc, IEnumerable<dynamic> docs, WorkContext context,
+                          DocumentStorageActions actions)
         {
             Index value;
             if (indexes.TryGetValue(index, out value) == false)

@@ -15,7 +15,7 @@ namespace Raven.Database
         {
             var doc = JObject.Parse(Encoding.UTF8.GetString(Data));
             var etagProp = Metadata.Property("@etag");
-            if(etagProp == null)
+            if (etagProp == null)
             {
                 etagProp = new JProperty("etag");
                 Metadata.Add(etagProp);

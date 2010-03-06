@@ -6,9 +6,9 @@ using Raven.Database.Json;
 namespace Raven.Database.Tasks
 {
     /// <summary>
-    /// Indexing a range of documents
-    /// A range of documents is a stable range, which can be queried even if document addition / removal
-    /// occured since the time that the range was taken to the time it was queried.
+    ///   Indexing a range of documents
+    ///   A range of documents is a stable range, which can be queried even if document addition / removal
+    ///   occured since the time that the range was taken to the time it was queried.
     /// </summary>
     public class IndexDocumentRangeTask : Task
     {
@@ -17,8 +17,8 @@ namespace Raven.Database.Tasks
 
         public override string ToString()
         {
-            return string.Format("IndexDocumentRangeTask - View: {0}, FromId: {1}, ToId: {2}", 
-                View, FromId, ToId);
+            return string.Format("IndexDocumentRangeTask - View: {0}, FromId: {1}, ToId: {2}",
+                                 View, FromId, ToId);
         }
 
         public override void Execute(WorkContext context)
@@ -26,7 +26,7 @@ namespace Raven.Database.Tasks
             var viewFunc = context.IndexDefinitionStorage.GetIndexingFunction(View);
             if (viewFunc == null)
                 return; // view was deleted, probably
-            int lastId = FromId;
+            var lastId = FromId;
             var hasMoreItems = new Reference<bool>();
             context.TransactionaStorage.Batch(actions =>
             {

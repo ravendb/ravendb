@@ -7,8 +7,8 @@ namespace Raven.Database.Storage
     [CLSCompliant(false)]
     public class SchemaCreator
     {
-        private readonly Session session;
         public const string SchemaVersion = "1.7";
+        private readonly Session session;
 
         public SchemaCreator(Session session)
         {
@@ -95,7 +95,7 @@ namespace Raven.Database.Storage
             {
                 cbMax = 16,
                 coltyp = JET_coltyp.Binary,
-                grbit = ColumndefGrbit.ColumnFixed|ColumndefGrbit.ColumnNotNULL,
+                grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL,
             }, null, 0, out columnid);
 
             Api.JetAddColumn(session, tableid, "id", new JET_COLUMNDEF
@@ -117,7 +117,7 @@ namespace Raven.Database.Storage
             }, null, 0, out columnid);
 
 
-            string indexDef = "+key\0\0";
+            var indexDef = "+key\0\0";
             Api.JetCreateIndex(session, tableid, "by_key", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
                                100);
 
@@ -135,7 +135,7 @@ namespace Raven.Database.Storage
             Api.JetAddColumn(session, tableid, "id", new JET_COLUMNDEF
             {
                 coltyp = JET_coltyp.Long,
-                grbit = ColumndefGrbit.ColumnFixed|ColumndefGrbit.ColumnAutoincrement|ColumndefGrbit.ColumnNotNULL
+                grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnAutoincrement | ColumndefGrbit.ColumnNotNULL
             }, null, 0, out columnid);
 
             Api.JetAddColumn(session, tableid, "task", new JET_COLUMNDEF
@@ -153,7 +153,7 @@ namespace Raven.Database.Storage
             }, null, 0, out columnid);
 
 
-            string indexDef = "+id\0\0";
+            var indexDef = "+id\0\0";
             Api.JetCreateIndex(session, tableid, "by_id", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
                                100);
             indexDef = "+for_index\0\0";

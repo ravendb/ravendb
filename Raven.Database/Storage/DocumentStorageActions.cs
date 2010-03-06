@@ -15,22 +15,19 @@ namespace Raven.Database.Storage
     [CLSCompliant(false)]
     public class DocumentStorageActions : IDisposable
     {
-        private readonly IDictionary<string, JET_COLUMNID> indexesStatsColumns;
-        protected readonly ILog logger = LogManager.GetLogger(typeof(DocumentStorageActions));
-        private int innerTxCount;
-
-        protected readonly Session session;
         protected readonly JET_DBID dbid;
-        private readonly Transaction transaction;
         protected readonly Table documents;
         protected readonly IDictionary<string, JET_COLUMNID> documentsColumns;
-        protected readonly Table tasks;
-        protected readonly IDictionary<string, JET_COLUMNID> tasksColumns;
         protected readonly Table files;
         protected readonly IDictionary<string, JET_COLUMNID> filesColumns;
-        private Table indexesStats;
-
-        public bool CommitCalled { get; set; }
+        private readonly Table indexesStats;
+        private readonly IDictionary<string, JET_COLUMNID> indexesStatsColumns;
+        protected readonly ILog logger = LogManager.GetLogger(typeof (DocumentStorageActions));
+        protected readonly Session session;
+        protected readonly Table tasks;
+        protected readonly IDictionary<string, JET_COLUMNID> tasksColumns;
+        private readonly Transaction transaction;
+        private int innerTxCount;
 
         [CLSCompliant(false)]
         [DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
@@ -64,29 +61,26 @@ namespace Raven.Database.Storage
             }
         }
 
-        public JsonDocument DocumentByKey(string key)
+        public bool CommitCalled { get; set; }
+
+        public IEnumerable<string> DocumentKeys
         {
-            Api.JetSetCurrentIndex(session, documents, "by_key");
-            Api.MakeKey(session, documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
-            if (Api.TrySeek(session, documents, SeekGrbit.SeekEQ) == false)
+            get
             {
-                logger.DebugFormat("Document with key '{0}' was not found", key);
-                return null;
+                Api.MoveBeforeFirst(session, documents);
+                while (Api.TryMoveNext(session, documents))
+                {
+                    yield return
+                        Api.RetrieveColumnAsString(session, documents, documentsColumns["key"], Encoding.Unicode);
+                }
             }
-            var data = Api.RetrieveColumn(session, documents, documentsColumns["data"]);
-            logger.DebugFormat("Document with key '{0}' was found", key);
-            return new JsonDocument
-            {
-                Data = data,
-                Etag = new Guid(Api.RetrieveColumn(session, documents, documentsColumns["etag"])),
-                Key = Api.RetrieveColumnAsString(session, documents, documentsColumns["key"],Encoding.Unicode),
-                Metadata = JObject.Parse(Api.RetrieveColumnAsString(session, documents, documentsColumns["metadata"]))
-            };
         }
+
+        #region IDisposable Members
 
         public void Dispose()
         {
-            if(indexesStats != null)
+            if (indexesStats != null)
                 indexesStats.Dispose();
 
             if (files != null)
@@ -108,6 +102,28 @@ namespace Raven.Database.Storage
                 session.Dispose();
         }
 
+        #endregion
+
+        public JsonDocument DocumentByKey(string key)
+        {
+            Api.JetSetCurrentIndex(session, documents, "by_key");
+            Api.MakeKey(session, documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, documents, SeekGrbit.SeekEQ) == false)
+            {
+                logger.DebugFormat("Document with key '{0}' was not found", key);
+                return null;
+            }
+            var data = Api.RetrieveColumn(session, documents, documentsColumns["data"]);
+            logger.DebugFormat("Document with key '{0}' was found", key);
+            return new JsonDocument
+            {
+                Data = data,
+                Etag = new Guid(Api.RetrieveColumn(session, documents, documentsColumns["etag"])),
+                Key = Api.RetrieveColumnAsString(session, documents, documentsColumns["key"], Encoding.Unicode),
+                Metadata = JObject.Parse(Api.RetrieveColumnAsString(session, documents, documentsColumns["metadata"]))
+            };
+        }
+
         public void Commit()
         {
             if (innerTxCount != 0)
@@ -117,23 +133,11 @@ namespace Raven.Database.Storage
             transaction.Commit(CommitTransactionGrbit.None);
         }
 
-        public IEnumerable<string> DocumentKeys
-        {
-            get
-            {
-                Api.MoveBeforeFirst(session, documents);
-                while (Api.TryMoveNext(session, documents))
-                {
-                    yield return Api.RetrieveColumnAsString(session, documents, documentsColumns["key"], Encoding.Unicode);
-                }
-            }
-        }
-
 
         public Tuple<int, int> FirstAndLastDocumentKeys()
         {
-            int item1 = 0;
-            int item2 = 0;
+            var item1 = 0;
+            var item2 = 0;
             Api.MoveBeforeFirst(session, documents);
             if (Api.TryMoveNext(session, documents))
                 item1 = Api.RetrieveColumnAsInt32(session, documents, documentsColumns["id"]).Value;
@@ -141,7 +145,6 @@ namespace Raven.Database.Storage
             if (Api.TryMovePrevious(session, documents))
                 item2 = Api.RetrieveColumnAsInt32(session, documents, documentsColumns["id"]).Value;
             return new Tuple<int, int>(item1, item2);
-
         }
 
         public bool DoesTasksExistsForIndex(string name)
@@ -156,7 +159,8 @@ namespace Raven.Database.Storage
             return true;
         }
 
-        public IEnumerable<Tuple<JsonDocument, int>> DocumentsById(Reference<bool> hasMoreWork, int startId, int endId, int limit)
+        public IEnumerable<Tuple<JsonDocument, int>> DocumentsById(Reference<bool> hasMoreWork, int startId, int endId,
+                                                                   int limit)
         {
             Api.JetSetCurrentIndex(session, documents, "by_id");
             Api.MakeKey(session, documents, startId, MakeKeyGrbit.NewKey);
@@ -167,7 +171,7 @@ namespace Raven.Database.Storage
                 logger.DebugFormat("Document with id {0} or higher was not found", startId);
                 yield break;
             }
-            int count = 0;
+            var count = 0;
             do
             {
                 if ((++count) > limit)
@@ -182,7 +186,8 @@ namespace Raven.Database.Storage
 
                 var data = Api.RetrieveColumn(session, documents, documentsColumns["data"]);
                 logger.DebugFormat("Document with id '{0}' was found, doc length: {1}", id, data.Length);
-                var json = Api.RetrieveColumnAsString(session, documents, documentsColumns["metadata"],Encoding.Unicode);
+                var json = Api.RetrieveColumnAsString(session, documents, documentsColumns["metadata"],
+                                                      Encoding.Unicode);
                 var doc = new JsonDocument
                 {
                     Key = Api.RetrieveColumnAsString(session, documents, documentsColumns["key"], Encoding.Unicode),
@@ -190,9 +195,7 @@ namespace Raven.Database.Storage
                     Etag = new Guid(Api.RetrieveColumn(session, documents, documentsColumns["etag"])),
                     Metadata = JObject.Parse(json)
                 };
-                yield return new Tuple<JsonDocument, int>(doc,id);
-
-
+                yield return new Tuple<JsonDocument, int>(doc, id);
             } while (Api.TryMoveNext(session, documents));
             hasMoreWork.Value = false;
         }
@@ -204,7 +207,7 @@ namespace Raven.Database.Storage
             var isUpdate = Api.TrySeek(session, documents, SeekGrbit.SeekEQ);
             if (isUpdate)
             {
-                var existingEtag = new Guid(Api.RetrieveColumn(session, documents,documentsColumns["etag"]));
+                var existingEtag = new Guid(Api.RetrieveColumn(session, documents, documentsColumns["etag"]));
                 if (existingEtag != etag && etag != null)
                 {
                     throw new ConcurrencyException("PUT attempted on document '" + key +
@@ -227,8 +230,8 @@ namespace Raven.Database.Storage
 
                 update.Save();
             }
-            logger.DebugFormat("Inserted a new document with key '{0}', doc length: {1}, update: {2}, ", 
-                key, data.Length, isUpdate);
+            logger.DebugFormat("Inserted a new document with key '{0}', doc length: {1}, update: {2}, ",
+                               key, data.Length, isUpdate);
         }
 
         public void DeleteDocument(string key, Guid? etag)
@@ -242,7 +245,7 @@ namespace Raven.Database.Storage
             }
 
             var rowEtag = new Guid(Api.RetrieveColumn(session, documents, documentsColumns["etag"]));
-            if(rowEtag!=etag && etag != null)
+            if (rowEtag != etag && etag != null)
             {
                 throw new ConcurrencyException("DELETE attempted on document '" + key +
                                                "' using a non current etag")
@@ -274,7 +277,7 @@ namespace Raven.Database.Storage
             Api.JetSetCurrentIndex(session, files, "by_name");
             Api.MakeKey(session, files, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
             var isUpdate = Api.TrySeek(session, files, SeekGrbit.SeekEQ);
-            if(isUpdate)
+            if (isUpdate)
             {
                 var existingEtag = new Guid(Api.RetrieveColumn(session, files, filesColumns["etag"]));
                 if (existingEtag != etag && etag != null)
@@ -312,7 +315,7 @@ namespace Raven.Database.Storage
                 return;
             }
             var fileEtag = new Guid(Api.RetrieveColumn(session, files, filesColumns["etag"]));
-            if(fileEtag != etag && etag != null)
+            if (fileEtag != etag && etag != null)
             {
                 throw new ConcurrencyException("DELETE attempted on attachment '" + key +
                                                "' using a non current etag")
@@ -389,7 +392,7 @@ namespace Raven.Database.Storage
         {
             Api.JetSetCurrentIndex(session, indexesStats, "by_key");
             Api.MakeKey(session, indexesStats, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
-            if(Api.TrySeek(session, indexesStats, SeekGrbit.SeekEQ) == false)
+            if (Api.TrySeek(session, indexesStats, SeekGrbit.SeekEQ) == false)
                 throw new InvalidOperationException("There is no index named: " + index);
         }
 
@@ -411,14 +414,17 @@ namespace Raven.Database.Storage
         public IEnumerable<IndexStats> GetIndexesStats()
         {
             Api.MoveBeforeFirst(session, indexesStats);
-            while(Api.TryMoveNext(session, indexesStats))
+            while (Api.TryMoveNext(session, indexesStats))
             {
                 yield return new IndexStats
                 {
                     Name = Api.RetrieveColumnAsString(session, indexesStats, indexesStatsColumns["key"]),
-                    IndexingAttempts = Api.RetrieveColumnAsInt32(session, indexesStats, indexesStatsColumns["attempts"]).Value,
-                    IndexingSuccesses = Api.RetrieveColumnAsInt32(session, indexesStats, indexesStatsColumns["successes"]).Value,
-                    IndexingErrors = Api.RetrieveColumnAsInt32(session, indexesStats, indexesStatsColumns["errors"]).Value,
+                    IndexingAttempts =
+                        Api.RetrieveColumnAsInt32(session, indexesStats, indexesStatsColumns["attempts"]).Value,
+                    IndexingSuccesses =
+                        Api.RetrieveColumnAsInt32(session, indexesStats, indexesStatsColumns["successes"]).Value,
+                    IndexingErrors =
+                        Api.RetrieveColumnAsInt32(session, indexesStats, indexesStatsColumns["errors"]).Value,
                 };
             }
         }

@@ -12,6 +12,27 @@ namespace Raven.Database.Indexing
             this.inner = inner;
         }
 
+        public T Current
+        {
+            get { return inner.Current; }
+        }
+
+        #region IEnumerable<T> Members
+
+        public IEnumerator<T> GetEnumerator()
+        {
+            return new StatefulbEnumeratorWrapper(inner);
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
+
+        #endregion
+
+        #region Nested type: StatefulbEnumeratorWrapper
+
         public class StatefulbEnumeratorWrapper : IEnumerator<T>
         {
             private readonly IEnumerator<T> inner;
@@ -20,6 +41,8 @@ namespace Raven.Database.Indexing
             {
                 this.inner = inner;
             }
+
+            #region IEnumerator<T> Members
 
             public void Dispose()
             {
@@ -45,21 +68,10 @@ namespace Raven.Database.Indexing
             {
                 get { return Current; }
             }
+
+            #endregion
         }
 
-        public T Current
-        {
-            get { return inner.Current; }
-        }
-
-        public IEnumerator<T> GetEnumerator()
-        {
-            return new StatefulbEnumeratorWrapper(inner);
-        }
-
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return GetEnumerator();
-        }
+        #endregion
     }
 }

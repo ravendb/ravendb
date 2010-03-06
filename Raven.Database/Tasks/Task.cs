@@ -11,10 +11,7 @@ namespace Raven.Database.Tasks
 
         public string Type
         {
-            get
-            {
-                return GetType().FullName;
-            }
+            get { return GetType().FullName; }
         }
 
         public string AsString()
@@ -29,14 +26,14 @@ namespace Raven.Database.Tasks
             var json = JObject.Parse(task);
             var typename = json.Property("Type").Value.Value<string>();
             var type = typeof (Task).Assembly.GetType(typename);
-            return (Task)new JsonSerializer().Deserialize(new StringReader(task), type);
+            return (Task) new JsonSerializer().Deserialize(new StringReader(task), type);
         }
 
         /// <summary>
-        /// Tasks may NOT perform any writes operations on the TransactionalStorage!
-        /// That is required because a failed task still commit  the TransactionalStorage 
-        /// (to remove from the tasks).
-        /// Another requirement is that executing task MUST be idempotent.
+        ///   Tasks may NOT perform any writes operations on the TransactionalStorage!
+        ///   That is required because a failed task still commit  the TransactionalStorage 
+        ///   (to remove from the tasks).
+        ///   Another requirement is that executing task MUST be idempotent.
         /// </summary>
         public abstract void Execute(WorkContext context);
     }

@@ -1,27 +1,36 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.ConstrainedExecution;
 using System.Threading;
 using Microsoft.Isam.Esent.Interop;
-using System.Diagnostics;
 
 namespace Raven.Database.Storage
 {
     public class TransactionalStorage : CriticalFinalizerObject, IDisposable
     {
-        private JET_INSTANCE instance;
+        [ThreadStatic] private static DocumentStorageActions current;
         private readonly string database;
-        private readonly string path;
         private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
+        private readonly string path;
         private bool disposed;
-        [ThreadStatic]
-        private static DocumentStorageActions current;
 
         private IDictionary<string, JET_COLUMNID> documentsColumns;
-        private IDictionary<string, JET_COLUMNID> tasksColumns;
         private IDictionary<string, JET_COLUMNID> filesColumns;
         private IDictionary<string, JET_COLUMNID> indexStatsColumns;
+        private JET_INSTANCE instance;
+        private IDictionary<string, JET_COLUMNID> tasksColumns;
+
+        public TransactionalStorage(string database)
+        {
+            this.database = database;
+            path = database;
+            if (Path.IsPathRooted(database) == false)
+                path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, database);
+            this.database = Path.Combine(path, Path.GetFileName(database));
+            Api.JetCreateInstance(out instance, database + Guid.NewGuid());
+        }
 
         public JET_INSTANCE Instance
         {
@@ -35,15 +44,26 @@ namespace Raven.Database.Storage
 
         public Guid Id { get; private set; }
 
-        public TransactionalStorage(string database)
+        #region IDisposable Members
+
+        public void Dispose()
         {
-            this.database = database;
-            path = database;
-            if (Path.IsPathRooted(database) == false)
-                path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, database);
-            this.database = Path.Combine(path, Path.GetFileName(database));
-            Api.JetCreateInstance(out instance, database + Guid.NewGuid());
+            disposerLock.EnterWriteLock();
+            try
+            {
+                if (disposed)
+                    return;
+                GC.SuppressFinalize(this);
+                Api.JetTerm2(instance, TermGrbit.Complete);
+            }
+            finally
+            {
+                disposed = true;
+                disposerLock.ExitWriteLock();
+            }
         }
+
+        #endregion
 
         public void Initialize()
         {
@@ -55,7 +75,7 @@ namespace Raven.Database.Storage
                 EnsureDatabaseIsCreatedAndAttachToDatabase();
 
                 SetIdFromDb();
-                
+
                 InitColumDictionaries();
             }
             catch (Exception e)
@@ -69,7 +89,7 @@ namespace Raven.Database.Storage
         {
             using (var session = new Session(instance))
             {
-                JET_DBID dbid=JET_DBID.Nil;
+                var dbid = JET_DBID.Nil;
                 try
                 {
                     Api.JetOpenDatabase(session, database, null, out dbid, OpenDatabaseGrbit.None);
@@ -118,15 +138,20 @@ namespace Raven.Database.Storage
                         Id = new Guid(column);
                         var schemaVersion = Api.RetrieveColumnAsString(session, details, columnids["schema_version"]);
                         if (schemaVersion != SchemaCreator.SchemaVersion)
-                            throw new InvalidOperationException("The version on disk (" + schemaVersion + ") is different that the version supported by this library: " + SchemaCreator.SchemaVersion + Environment.NewLine +
+                            throw new InvalidOperationException("The version on disk (" + schemaVersion +
+                                                                ") is different that the version supported by this library: " +
+                                                                SchemaCreator.SchemaVersion + Environment.NewLine +
                                                                 "You need to migrate the disk version to the library version, alternatively, if the data isn't important, you can delete the file and it will be re-created (with no data) with the library version.");
                     }
                 });
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException("Could not read db details from disk. It is likely that there is a version difference between the library and the db on the disk." + Environment.NewLine +
-                                                    "You need to migrate the disk version to the library version, alternatively, if the data isn't important, you can delete the file and it will be re-created (with no data) with the library version.", e);
+                throw new InvalidOperationException(
+                    "Could not read db details from disk. It is likely that there is a version difference between the library and the db on the disk." +
+                    Environment.NewLine +
+                    "You need to migrate the disk version to the library version, alternatively, if the data isn't important, you can delete the file and it will be re-created (with no data) with the library version.",
+                    e);
             }
         }
 
@@ -173,23 +198,6 @@ namespace Raven.Database.Storage
             }
         }
 
-        public void Dispose()
-        {
-            disposerLock.EnterWriteLock();
-            try
-            {
-                if (disposed)
-                    return; 
-                GC.SuppressFinalize(this);
-                Api.JetTerm2(instance, TermGrbit.Complete);
-            }
-            finally
-            {
-                disposed = true;
-                disposerLock.ExitWriteLock();
-            }
-        }
-
         ~TransactionalStorage()
         {
             try
@@ -221,7 +229,7 @@ namespace Raven.Database.Storage
                     current.PushTx();
                     action(current);
                 }
-                finally 
+                finally
                 {
                     current.PopTx();
                 }
@@ -230,11 +238,13 @@ namespace Raven.Database.Storage
             disposerLock.EnterReadLock();
             try
             {
-                using (var pht = new DocumentStorageActions(instance, database,documentsColumns, tasksColumns, filesColumns, indexStatsColumns))
+                using (
+                    var pht = new DocumentStorageActions(instance, database, documentsColumns, tasksColumns,
+                                                         filesColumns, indexStatsColumns))
                 {
                     current = pht;
                     action(pht);
-                    if(pht.CommitCalled == false)
+                    if (pht.CommitCalled == false)
                         throw new InvalidOperationException("You forgot to call commit!");
                 }
             }
