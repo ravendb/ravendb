@@ -87,6 +87,7 @@
     <Compile Include="Linq\LinqTransformerCompilationTests.cs" />
     <Compile Include="Linq\PerformingQueries.cs" />
     <Compile Include="Patching\ArrayPatching.cs" />
+    <Compile Include="Patching\NestedPatching.cs" />
     <Compile Include="Patching\SimplePatchApplication.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Storage\AbstractDocumentStorageTest.cs" />
