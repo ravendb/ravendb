@@ -136,21 +136,49 @@ namespace Raven.Database.Indexing
         public void IndexDocuments(IndexingFunc func, IEnumerable<object> documents, WorkContext context, DocumentStorageActions actions)
         {
             actions.SetCurrentIndexStatsTo(name);
-            JsonToLuceneDocumentConverter converter = null;
+            var count = 0;
             Write(indexWriter =>
             {
-                converter = new JsonToLuceneDocumentConverter(indexWriter, actions);
-
-                foreach (var doc in RobustEnumeration(documents, func, actions,context))
+                var currentBatch = new List<Document>();
+                string currentId = null;
+                var converter = new JsonToLuceneDocumentConverter();
+                var shouldRecreateIndex = false;
+                foreach (var doc in RobustEnumeration(documents, func, actions, context))
                 {
-                    converter.Index(doc);
+                    count++;
+                    string newDocId;
+                    var document = converter.Index(doc, out newDocId);
+
+                    if(newDocId != currentId)
+                    {
+                        shouldRecreateIndex = FlushToIndex(indexWriter, currentId, currentBatch);
+                        currentBatch.Clear();
+                        currentId = newDocId;
+                    }
+                    currentBatch.Add(document);
+
+                    actions.IncrementSuccessIndexing();
+
                 }
 
-                return converter.ShouldRcreateSearcher;
+                shouldRecreateIndex |= FlushToIndex(indexWriter, currentId, currentBatch);
+
+                return shouldRecreateIndex;
             });
-            if (converter == null)
-                return;
-            log.InfoFormat("Indexed {0} documents for {1}", converter.Count, name);
+            log.InfoFormat("Indexed {0} documents for {1}", count, name);
+        }
+
+        private static bool FlushToIndex(IndexWriter indexWriter, string currentId, IEnumerable<Document> currentBatch)
+        {
+            if (currentId == null)
+                return false;
+
+            indexWriter.DeleteDocuments(new Term("__document_id", currentId));
+            foreach (var document in currentBatch)
+            {
+                indexWriter.AddDocument(document);
+            }
+            return true;
         }
 
         private IEnumerable<object> RobustEnumeration(IEnumerable<object> input, IndexingFunc func, DocumentStorageActions actions, WorkContext context)

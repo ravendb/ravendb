@@ -1,40 +1,18 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using Lucene.Net.Documents;
-using Lucene.Net.Index;
-using Raven.Database.Storage;
 
 namespace Raven.Database.Indexing
 {
     public class JsonToLuceneDocumentConverter
     {
-        private readonly IndexWriter indexWriter;
-        private readonly DocumentStorageActions actions;
-
-        public JsonToLuceneDocumentConverter(IndexWriter indexWriter, DocumentStorageActions actions)
-        {
-            this.indexWriter = indexWriter;
-            this.actions = actions;
-        }
-
-        public int Count { get; private set; }
-        public bool ShouldRcreateSearcher { get; set; }
-
-        public void Index(dynamic doc)
-        {
-            Count++;
-            AddValuesToDocument(doc);
-            actions.IncrementSuccessIndexing();
-        }
-
-        private void AddValuesToDocument(object val)
+        public Document Index(object val, out string docId)
         {
             var properties = TypeDescriptor.GetProperties(val).Cast<PropertyDescriptor>().ToArray();
             var id = properties.First(x => x.Name == "__document_id");
 
-            var docId = id.GetValue(val).ToString();
+            docId = id.GetValue(val).ToString();
 
             var luceneDoc = new Document();
             luceneDoc.Add(new Field("__document_id", docId, 
@@ -50,8 +28,7 @@ namespace Raven.Database.Indexing
             {
                 luceneDoc.Add(l);
             }
-            indexWriter.UpdateDocument(new Term("__document_id", docId), luceneDoc);
-            ShouldRcreateSearcher = true;
+            return luceneDoc;
         }
 
 
