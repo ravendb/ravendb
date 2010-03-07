@@ -10,7 +10,7 @@ namespace Raven.Tests.Storage
 
         public DeleteIndexes()
         {
-            db = new DocumentDatabase("divan.db.test.esent");
+            db = new DocumentDatabase(new RavenConfiguration { DataDirectory = "divan.db.test.esent" });
         }
 
         #region IDisposable Members

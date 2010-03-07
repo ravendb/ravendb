@@ -22,7 +22,7 @@ namespace Raven.Importer
             Console.WriteLine("Inserting {0:#,#} docs", files.Length);
             var sw = Stopwatch.StartNew();
             var count = 0;
-            using (var db = new DocumentDatabase(args[0]))
+            using (var db = new DocumentDatabase(new RavenConfiguration { DataDirectory = args[0] }))
             {
                 foreach (var doc in array)
                 {

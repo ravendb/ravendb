@@ -17,7 +17,7 @@ namespace Raven.Server
         {
             settings.LoadLoggingSettings();
 
-            database = new DocumentDatabase(settings.DataDirectory);
+            database = new DocumentDatabase(settings);
             database.SpinBackgroundWorkers();
             server = new HttpServer(settings.Port,
                                     typeof (RequestResponder).Assembly.GetTypes()

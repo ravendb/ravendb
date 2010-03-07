@@ -67,7 +67,7 @@ namespace Raven.Server.PowerShellProvider
 
 
             var ravenDBPSDriveInfo = new RavenDBPSDriveInfo(drive);
-            var db = new DocumentDatabase(drive.Root);
+            var db = new DocumentDatabase(new RavenConfiguration { DataDirectory = drive.Root });
 
             ravenDBPSDriveInfo.Database = db;
 

@@ -14,7 +14,7 @@ namespace Raven.Tests.Indexes
 
         public Statistics()
         {
-            db = new DocumentDatabase("divan.db.test.esent");
+            db = new DocumentDatabase(new RavenConfiguration { DataDirectory = "divan.db.test.esent" });
             db.SpinBackgroundWorkers();
 
             db.PutIndex("pagesByTitle2",

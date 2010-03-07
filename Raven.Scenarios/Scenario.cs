@@ -9,6 +9,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using ICSharpCode.SharpZipLib.Zip;
+using Raven.Database;
 using Raven.Server;
 using Raven.Server.Responders;
 using Xunit;

@@ -101,7 +101,6 @@
       <DependentUpon>ProjectInstaller.cs</DependentUpon>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="RavenConfiguration.cs" />
     <Compile Include="RavenService.cs">
       <SubType>Component</SubType>
     </Compile>

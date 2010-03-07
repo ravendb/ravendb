@@ -1,4 +1,5 @@
 ﻿using System.ServiceProcess;
+using Raven.Database;
 
 namespace Raven.Server
 {
