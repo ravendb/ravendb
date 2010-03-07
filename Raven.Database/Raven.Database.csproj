@@ -125,7 +125,6 @@
     <Compile Include="Storage\IndexCreationOptions.cs" />
     <Compile Include="Tasks\IndexDocumentRangeTask.cs" />
     <Compile Include="Tasks\IndexDocumentTask.cs" />
-    <Compile Include="Tasks\MapTask.cs" />
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
     <Compile Include="Tasks\Task.cs" />
     <Compile Include="Storage\TransactionalStorage.cs" />
