@@ -26,35 +26,15 @@ namespace Raven.Database.Tasks
             var viewFunc = context.IndexDefinitionStorage.GetIndexingFunction(View);
             if (viewFunc == null)
                 return; // view was deleted, probably
-            var lastId = FromId;
-            var hasMoreItems = new Reference<bool>();
             context.TransactionaStorage.Batch(actions =>
             {
-                var docsToIndex = actions.DocumentsById(hasMoreItems, FromId, ToId, 100)
-                    .Select(d =>
-                    {
-                        lastId = d.Item2;
-                        return d.Item1;
-                    })
+                var docsToIndex = actions.DocumentsById(new Reference<bool>(), FromId, ToId, 100)
+                    .Select(d => d.Item1)
                     .Where(x => x != null)
                     .Select(s => JsonToExpando.Convert(s.ToJson()));
                 context.IndexStorage.Index(View, viewFunc, docsToIndex, context, actions);
                 actions.Commit();
             });
-
-            if (hasMoreItems.Value)
-            {
-                context.TransactionaStorage.Batch(actions =>
-                {
-                    actions.AddTask(new IndexDocumentRangeTask
-                    {
-                        FromId = lastId,
-                        ToId = ToId,
-                        View = View
-                    });
-                    actions.Commit();
-                });
-            }
         }
     }
 }

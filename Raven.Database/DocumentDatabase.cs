@@ -17,12 +17,14 @@ namespace Raven.Database
 {
     public class DocumentDatabase : IDisposable
     {
+        private readonly RavenConfiguration configuration;
         private readonly WorkContext workContext;
         private Thread[] backgroundWorkers = new Thread[0];
 
-        public DocumentDatabase(string path)
+        public DocumentDatabase(RavenConfiguration configuration)
         {
-            TransactionalStorage = new TransactionalStorage(path);
+            this.configuration = configuration;
+            TransactionalStorage = new TransactionalStorage(configuration.DataDirectory);
             try
             {
                 TransactionalStorage.Initialize();
@@ -33,8 +35,8 @@ namespace Raven.Database
                 throw;
             }
 
-            IndexDefinitionStorage = new IndexDefinitionStorage(path);
-            IndexStorage = new IndexStorage(path);
+            IndexDefinitionStorage = new IndexDefinitionStorage(configuration.DataDirectory);
+            IndexStorage = new IndexStorage(configuration.DataDirectory);
             workContext = new WorkContext
             {
                 IndexStorage = IndexStorage,
@@ -179,12 +181,15 @@ namespace Raven.Database
                 var firstAndLast = actions.FirstAndLastDocumentKeys();
                 if (firstAndLast.Item1 != 0 && firstAndLast.Item2 != 0)
                 {
-                    actions.AddTask(new IndexDocumentRangeTask
+                    for (var i = firstAndLast.Item1; i <= firstAndLast.Item2; i += configuration.IndexingBatchSize)
                     {
-                        View = name,
-                        FromId = firstAndLast.Item1,
-                        ToId = firstAndLast.Item2
-                    });
+                        actions.AddTask(new IndexDocumentRangeTask
+                        {
+                            FromId = i,
+                            ToId = Math.Min(i + configuration.IndexingBatchSize, firstAndLast.Item2),
+                            View = name
+                        });
+                    }
                 }
                 actions.Commit();
             });

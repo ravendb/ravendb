@@ -3,7 +3,7 @@ using System.Configuration;
 using System.IO;
 using log4net.Config;
 
-namespace Raven.Server
+namespace Raven.Database
 {
     public class RavenConfiguration
     {
@@ -12,6 +12,10 @@ namespace Raven.Server
             var portStr = ConfigurationManager.AppSettings["RavenPort"];
 
             Port = portStr != null ? int.Parse(portStr) : 8080;
+
+            var indexBatchSizeStr = ConfigurationManager.AppSettings["IndexingBatchSize"];
+
+            IndexingBatchSize = indexBatchSizeStr != null ? int.Parse(indexBatchSizeStr) : 100;
 
             DataDirectory = ConfigurationManager.AppSettings["RavenDataDir"] ?? @"..\..\..\Data";
 
@@ -22,6 +26,7 @@ namespace Raven.Server
         public string DataDirectory { get; set; }
         public int Port { get; set; }
         public string WebDir { get; set; }
+        public int IndexingBatchSize { get; set; }
 
         public void LoadLoggingSettings()
         {
