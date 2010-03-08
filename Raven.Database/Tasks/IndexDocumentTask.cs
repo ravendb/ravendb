@@ -31,8 +31,8 @@ namespace Raven.Database.Tasks
 
                 foreach (var index in context.IndexDefinitionStorage.IndexNames)
                 {
-                    var viewFunc = context.IndexDefinitionStorage.GetIndexingFunction(index);
-                    if (viewFunc == null)
+                    var indexingFunc = context.IndexDefinitionStorage.GetIndexingFunction(index);
+                    if (indexingFunc == null)
                     {
                         continue; // index was removed before we could index it
                     }
@@ -49,7 +49,7 @@ namespace Raven.Database.Tasks
                         }
                         
 
-                        context.IndexStorage.Index(index, viewFunc, new[] {json,},
+                        context.IndexStorage.Index(index, indexingFunc, new[] {json,},
                                                    context, actions);
                     }
                     catch (Exception e)

@@ -32,8 +32,8 @@ namespace Raven.Tests.Storage
     select new { Key = doc.title, Value = doc.content, Size = doc.size };
 ");
             db.DeleteIndex("pagesByTitle");
-            var views = db.IndexDefinitionStorage.IndexNames;
-            Assert.Equal(0, views.Length);
+            var indexNames = db.IndexDefinitionStorage.IndexNames;
+            Assert.Equal(0, indexNames.Length);
         }
 
         [Fact]

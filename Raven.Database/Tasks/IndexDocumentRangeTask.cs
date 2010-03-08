@@ -23,16 +23,16 @@ namespace Raven.Database.Tasks
 
         public override void Execute(WorkContext context)
         {
-            var viewFunc = context.IndexDefinitionStorage.GetIndexingFunction(Index);
-            if (viewFunc == null)
-                return; // view was deleted, probably
+            var indexingFunc = context.IndexDefinitionStorage.GetIndexingFunction(Index);
+            if (indexingFunc == null)
+                return; // index was deleted, probably
             context.TransactionaStorage.Batch(actions =>
             {
                 var docsToIndex = actions.DocumentsById(new Reference<bool>(), FromId, ToId, 100)
                     .Select(d => d.Item1)
                     .Where(x => x != null)
                     .Select(s => JsonToExpando.Convert(s.ToJson()));
-                context.IndexStorage.Index(Index, viewFunc, docsToIndex, context, actions);
+                context.IndexStorage.Index(Index, indexingFunc, docsToIndex, context, actions);
                 actions.Commit();
             });
         }
