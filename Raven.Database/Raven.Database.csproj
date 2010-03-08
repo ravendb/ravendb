@@ -116,7 +116,7 @@
     <Compile Include="Json\DynamicObjectExtensions.cs" />
     <Compile Include="Json\JsonPatcher.cs" />
     <Compile Include="Json\JsonToExpando.cs" />
-    <Compile Include="Linq\AbstractViewGenerator.cs" />
+    <Compile Include="Linq\AbstractIndexGenerator.cs" />
     <Compile Include="Linq\DynamicQueryCompiler.cs" />
     <Compile Include="Linq\IndexingFunc.cs" />
     <Compile Include="Linq\PrivateExtensions\LinqOnDynamic.cs" />

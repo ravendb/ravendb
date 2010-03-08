@@ -17,7 +17,7 @@ namespace Raven.Database.Linq
     /// <summary>
     ///   Takes a query expression as a string, and compile it
     ///   Along the way we apply some minimal transofrmations, the end result is an instance
-    ///   of AbstractViewGenerator, representing the indexing function
+    ///   of AbstractIndexGenerator, representing the indexing function
     /// </summary>
     public class DynamicQueryCompiler
     {
@@ -33,7 +33,7 @@ namespace Raven.Database.Linq
 
         public string CompiledQueryText { get; private set; }
 
-        public AbstractViewGenerator GeneratedInstance { get; private set; }
+        public AbstractIndexGenerator GeneratedInstance { get; private set; }
 
         public string Name { get; private set; }
 
@@ -49,7 +49,7 @@ namespace Raven.Database.Linq
                 IncludeDebugInformation = true,
                 ReferencedAssemblies =
                                                                  {
-                                                                     typeof (AbstractViewGenerator).Assembly
+                                                                     typeof (AbstractIndexGenerator).Assembly
                                                                  .Location,
                                                                      typeof (NameValueCollection).Assembly.
                                                                  Location,
@@ -94,7 +94,7 @@ namespace Raven.Database.Linq
             {
                 BaseTypes =
                     {
-                        new TypeReference("AbstractViewGenerator")
+                        new TypeReference("AbstractIndexGenerator")
                     },
                 Name = Name,
                 Type = ClassType.Class
@@ -135,7 +135,7 @@ namespace Raven.Database.Linq
         private static string GenerateText(TypeDeclaration type)
         {
             var unit = new CompilationUnit();
-            unit.AddChild(new Using(typeof (AbstractViewGenerator).Namespace));
+            unit.AddChild(new Using(typeof (AbstractIndexGenerator).Namespace));
             unit.AddChild(new Using(typeof (Enumerable).Namespace));
             unit.AddChild(new Using(typeof (int).Namespace));
             unit.AddChild(new Using(typeof (LinqOnDynamic).Namespace));
@@ -180,11 +180,11 @@ namespace Raven.Database.Linq
             return variable;
         }
 
-        public AbstractViewGenerator CreateInstance()
+        public AbstractIndexGenerator CreateInstance()
         {
             TransformQueryToClass();
             Compile();
-            GeneratedInstance = (AbstractViewGenerator) Activator.CreateInstance(GeneratedType);
+            GeneratedInstance = (AbstractIndexGenerator) Activator.CreateInstance(GeneratedType);
             return GeneratedInstance;
         }
     }
