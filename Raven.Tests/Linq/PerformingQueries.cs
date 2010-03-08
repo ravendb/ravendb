@@ -26,7 +26,7 @@ namespace Raven.Tests.Linq
 {'type':'page', title: 'there', content: 'foobar 2', size: 3, '@metadata': {'@id': 2} },
 {'type':'revision', size: 4, _id: 3}
 ]");
-            var transformer = new DynamicQueryCompiler("pagesByTitle", query);
+            var transformer = new DynamicIndexCompiler("pagesByTitle", query);
             var compiledQuery = transformer.CreateInstance();
             var actual = compiledQuery.Execute(documents)
                 .Cast<object>().ToArray();

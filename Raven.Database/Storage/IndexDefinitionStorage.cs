@@ -42,7 +42,7 @@ namespace Raven.Database.Storage
 
         public string AddIndex(string name, string indexDef)
         {
-            var transformer = new DynamicQueryCompiler(name, indexDef);
+            var transformer = new DynamicIndexCompiler(name, indexDef);
             var generator = transformer.CreateInstance();
             indexCache[transformer.Name] = generator.CompiledDefinition;
             File.WriteAllText(Path.Combine(path, transformer.Name + ".index"), transformer.Query);

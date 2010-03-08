@@ -19,11 +19,11 @@ namespace Raven.Database.Linq
     ///   Along the way we apply some minimal transofrmations, the end result is an instance
     ///   of AbstractIndexGenerator, representing the indexing function
     /// </summary>
-    public class DynamicQueryCompiler
+    public class DynamicIndexCompiler
     {
         private const string indexTextToken = "96E65595-1C9E-4BFB-A0E5-80BF2D6FC185";
 
-        public DynamicQueryCompiler(string name, string query)
+        public DynamicIndexCompiler(string name, string query)
         {
             Name = name;
             Query = query;
@@ -75,8 +75,7 @@ namespace Raven.Database.Linq
 
         private void TransformQueryToClass()
         {
-            var parser = ParserFactory.CreateParser(SupportedLanguage.CSharp, new StringReader("var q = " + Query));
-            var variableDeclaration = GetVariableDeclaration(parser.ParseBlock());
+            var variableDeclaration = QueryParsingUtils.GetVariableDeclaration(Query);
             var queryExpression = ((QueryExpression) variableDeclaration.Initializer);
             var selectOrGroupClause = queryExpression.SelectOrGroupClause;
             var projection = ((QueryExpressionSelectClause) selectOrGroupClause).Projection;
@@ -145,39 +144,6 @@ namespace Raven.Database.Linq
             unit.AcceptVisitor(output, null);
 
             return output.Text;
-        }
-
-        private static VariableDeclaration GetVariableDeclaration(INode block)
-        {
-            if (block.Children.Count != 1)
-                throw new InvalidOperationException("Only one statement is allowed");
-
-            var declaration = block.Children[0] as LocalVariableDeclaration;
-            if (declaration == null)
-                throw new InvalidOperationException("Only local variable decleration are allowed");
-
-            if (declaration.Variables.Count != 1)
-                throw new InvalidOperationException("Only one variable declaration is allowed");
-
-            var variable = declaration.Variables[0];
-
-            if (variable.Initializer == null)
-                throw new InvalidOperationException("Variable declaration must have an initializer");
-
-            var queryExpression = (variable.Initializer as QueryExpression);
-            if (queryExpression == null)
-                throw new InvalidOperationException("Variable initializer must be a query expression");
-
-            var selectClause = queryExpression.SelectOrGroupClause as QueryExpressionSelectClause;
-            if (selectClause == null)
-                throw new InvalidOperationException("Variable initializer must be a select query expression");
-
-            var createExpression = selectClause.Projection as ObjectCreateExpression;
-            if (createExpression == null || createExpression.IsAnonymousType == false)
-                throw new InvalidOperationException(
-                    "Variable initializer must be a select query expression returning an anonymous object");
-
-            return variable;
         }
 
         public AbstractIndexGenerator CreateInstance()
