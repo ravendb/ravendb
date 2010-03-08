@@ -1,7 +1,6 @@
 using System.IO;
 using System.Net;
 using System.Text;
-using Raven.Database.Json;
 
 namespace Raven.Client
 {
@@ -26,11 +25,6 @@ namespace Raven.Client
                 reader.Close();
                 return text;
             }
-        }
-
-        public JsonDynamicObject ReadResponse()
-        {
-            return new JsonDynamicObject(ReadResponseString());
         }
 
         public void Write(string data)

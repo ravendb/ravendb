@@ -1,4 +1,5 @@
 using System;
+using Raven.Database;
 using Raven.Server;
 using Xunit;
 
@@ -10,7 +11,7 @@ namespace Raven.Client.Tests
         public void Should_insert_into_db_and_set_id()
         {
             DivanServer.EnsureCanListenToWhenInNonAdminContext(8080);
-            using (var server = new DivanServer(DbName, 8080))
+            using (var server = new DivanServer(new RavenConfiguration { Port = 8080 }))
             {
                 var documentStore = new DocumentStore("localhost", 8080);
                 documentStore.Initialise();
@@ -27,7 +28,7 @@ namespace Raven.Client.Tests
         public void Should_update_stored_entity()
         {
             DivanServer.EnsureCanListenToWhenInNonAdminContext(8080);
-            using (var server = new DivanServer(DbName, 8080))
+            using (var server = new DivanServer(new RavenConfiguration { Port = 8080 }))
             {
                 var documentStore = new DocumentStore("localhost", 8080);
                 documentStore.Initialise();
@@ -48,7 +49,7 @@ namespace Raven.Client.Tests
         public void Should_update_retrieved_entity()
         {
             DivanServer.EnsureCanListenToWhenInNonAdminContext(8080);
-            using (var server = new DivanServer(DbName, 8080))
+            using (var server = new DivanServer(new RavenConfiguration { Port = 8080 }))
             {
                 var documentStore = new DocumentStore("localhost", 8080);
                 documentStore.Initialise();
@@ -71,7 +72,7 @@ namespace Raven.Client.Tests
         public void Should_retrieve_all_entities()
         {
             DivanServer.EnsureCanListenToWhenInNonAdminContext(8080);
-            using (var server = new DivanServer(DbName, 8080))
+            using (var server = new DivanServer(new RavenConfiguration { Port = 8080 }))
             {
                 var documentStore = new DocumentStore("localhost", 8080);
                 documentStore.Initialise();

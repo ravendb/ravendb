@@ -2,9 +2,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Raven.Database;
-using JObject=Newtonsoft.Json.Linq.JObject;
-using JToken=Newtonsoft.Json.Linq.JToken;
+using Raven.Database.Data;
 
 namespace Raven.Client
 {

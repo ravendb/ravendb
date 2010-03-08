@@ -39,7 +39,7 @@ namespace Raven.Client
         {
             if (String.IsNullOrEmpty(localhost))
             {
-                var embeddedDatabase = new DocumentDatabase(Database);
+                var embeddedDatabase = new DocumentDatabase(new RavenConfiguration());
                 embeddedDatabase.SpinBackgroundWorkers();
                 database = embeddedDatabase;
             }

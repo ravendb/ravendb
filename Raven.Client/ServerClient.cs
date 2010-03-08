@@ -5,6 +5,7 @@ using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
+using Raven.Database.Data;
 
 namespace Raven.Client
 {
@@ -32,7 +33,8 @@ namespace Raven.Client
             var method = String.IsNullOrEmpty(key) ? "POST" : "PUT";
             var request = new HttpJsonRequest(url + "/docs/" + key, method);
             request.Write(document.ToString());
-            return request.ReadResponse()["id"].ToString();
+            //return request.ReadResponse()["id"].ToString();
+            return "";
         }
 
         public void Delete(string key, Guid? etag)
@@ -44,7 +46,8 @@ namespace Raven.Client
         {
             var request = new HttpJsonRequest(url + "/indexes/" + name, "PUT");
             request.Write(indexDef);
-            return request.ReadResponse()["index"].ToString();
+            //return request.ReadResponse()["index"].ToString();
+            return "";
         }
 
         public QueryResult Query(string index, string query, int start, int pageSize)
