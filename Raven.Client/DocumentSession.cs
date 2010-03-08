@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
@@ -96,6 +97,7 @@ namespace Raven.Client
             do
             {
                 result = database.Query("getByType", "type:" + typeof(T), 0, int.MaxValue); // To be replaced with real paging
+                Thread.Sleep(100);
             } while (result.IsStale);
 
             return result.Results.Select(q =>
