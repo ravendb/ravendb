@@ -28,7 +28,7 @@ namespace Raven.Server.Responders
                         context.SetStatusToNotFound();
                         return;
                     }
-                    if (context.Request.Headers["If-None-Match"] == doc.Etag.ToString())
+                    if (context.MatchEtag(doc.Etag))
                     {
                         context.SetStatusToNotModified();
                         return;

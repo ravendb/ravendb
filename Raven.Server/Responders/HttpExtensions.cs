@@ -260,6 +260,11 @@ namespace Raven.Server.Responders
             return null;
         }
 
+        public static bool MatchEtag(this HttpListenerContext context, Guid etag)
+        {
+            return context.Request.Headers["If-None-Match"] == etag.ToString();
+        }
+
         #region Nested type: JsonToJsonConverter
 
         public class JsonToJsonConverter : JsonConverter

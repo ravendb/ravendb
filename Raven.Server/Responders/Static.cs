@@ -28,6 +28,11 @@ namespace Raven.Server.Responders
                         context.SetStatusToNotFound();
                         return;
                     }
+                    if (context.MatchEtag(attachmentAndHeaders.Etag))
+                    {
+                        context.SetStatusToNotModified();
+                        return;
+                    }
                     context.WriteData(attachmentAndHeaders.Data, attachmentAndHeaders.Metadata,
                                       attachmentAndHeaders.Etag);
                     break;
