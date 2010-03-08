@@ -1,17 +1,28 @@
 using System;
+using System.IO;
+using System.Reflection;
+using System.Threading;
 using Raven.Database;
 using Raven.Server;
 using Xunit;
 
 namespace Raven.Client.Tests
 {
-    public class DocumentStoreServerTests : BaseTest
+    public class DocumentStoreServerTests : BaseTest , IDisposable
     {
+        private string path;
+
+        public DocumentStoreServerTests()
+        {
+            path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
+            path = Path.Combine(path, "TestDb").Substring(6);
+        }
+
         [Fact]
         public void Should_insert_into_db_and_set_id()
         {
             DivanServer.EnsureCanListenToWhenInNonAdminContext(8080);
-            using (var server = new DivanServer(new RavenConfiguration { Port = 8080 }))
+            using (var server = new DivanServer(new RavenConfiguration { Port = 8080, DataDirectory = path}))
             {
                 var documentStore = new DocumentStore("localhost", 8080);
                 documentStore.Initialise();
@@ -28,7 +39,7 @@ namespace Raven.Client.Tests
         public void Should_update_stored_entity()
         {
             DivanServer.EnsureCanListenToWhenInNonAdminContext(8080);
-            using (var server = new DivanServer(new RavenConfiguration { Port = 8080 }))
+            using (var server = new DivanServer(new RavenConfiguration { Port = 8080, DataDirectory = path }))
             {
                 var documentStore = new DocumentStore("localhost", 8080);
                 documentStore.Initialise();
@@ -49,7 +60,7 @@ namespace Raven.Client.Tests
         public void Should_update_retrieved_entity()
         {
             DivanServer.EnsureCanListenToWhenInNonAdminContext(8080);
-            using (var server = new DivanServer(new RavenConfiguration { Port = 8080 }))
+            using (var server = new DivanServer(new RavenConfiguration { Port = 8080, DataDirectory = path }))
             {
                 var documentStore = new DocumentStore("localhost", 8080);
                 documentStore.Initialise();
@@ -72,7 +83,7 @@ namespace Raven.Client.Tests
         public void Should_retrieve_all_entities()
         {
             DivanServer.EnsureCanListenToWhenInNonAdminContext(8080);
-            using (var server = new DivanServer(new RavenConfiguration { Port = 8080 }))
+            using (var server = new DivanServer(new RavenConfiguration { Port = 8080, DataDirectory = path }))
             {
                 var documentStore = new DocumentStore("localhost", 8080);
                 documentStore.Initialise();
@@ -86,6 +97,13 @@ namespace Raven.Client.Tests
 
                 Assert.Equal(2, companyFound.Count);
             }
+        }
+
+
+        public void Dispose()
+        {
+            Thread.Sleep(100);
+            Directory.Delete(path, true);
         }
     }
 }

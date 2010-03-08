@@ -33,8 +33,10 @@ namespace Raven.Client
             var method = String.IsNullOrEmpty(key) ? "POST" : "PUT";
             var request = new HttpJsonRequest(url + "/docs/" + key, method);
             request.Write(document.ToString());
-            //return request.ReadResponse()["id"].ToString();
-            return "";
+
+            var obj = new { id = "" };
+            obj = JsonConvert.DeserializeAnonymousType(request.ReadResponseString(), obj);
+            return obj.id;
         }
 
         public void Delete(string key, Guid? etag)
@@ -46,8 +48,10 @@ namespace Raven.Client
         {
             var request = new HttpJsonRequest(url + "/indexes/" + name, "PUT");
             request.Write(indexDef);
-            //return request.ReadResponse()["index"].ToString();
-            return "";
+
+            var obj = new { index = "" };
+            obj = JsonConvert.DeserializeAnonymousType(request.ReadResponseString(), obj);
+            return obj.index;
         }
 
         public QueryResult Query(string index, string query, int start, int pageSize)

@@ -1,6 +1,10 @@
+using System;
 using System.IO;
 using System.Net;
 using System.Text;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Raven.Database;
 
 namespace Raven.Client
 {
