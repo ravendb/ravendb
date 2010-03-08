@@ -27,7 +27,7 @@ namespace Raven.Client
             };
         }
 
-        public string Put(string key, JObject document, JObject metadata)
+        public string Put(string key, Guid? etag, JObject document, JObject metadata)
         {
             var method = String.IsNullOrEmpty(key) ? "POST" : "PUT";
             var request = new HttpJsonRequest(url + "/docs/" + key, method);
@@ -35,7 +35,7 @@ namespace Raven.Client
             return request.ReadResponse()["id"].ToString();
         }
 
-        public void Delete(string key)
+        public void Delete(string key, Guid? etag)
         {
             throw new NotImplementedException();
         }

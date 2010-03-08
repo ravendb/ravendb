@@ -55,7 +55,7 @@ namespace Raven.Client
 
         public void Delete(Guid id)
         {
-            database.Delete(id.ToString());
+            database.Delete(id.ToString(), null);
         }
     }
 }

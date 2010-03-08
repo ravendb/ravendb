@@ -55,7 +55,7 @@ namespace Raven.Client
                 .FirstOrDefault(q => documentStore.Conventions.FindIdentityProperty.Invoke(q));
 
             var key = (string)identityProperty.GetValue(entity, null);
-            key = database.Put(key, json, new JObject());
+            key = database.Put(key, null, json, new JObject());
 
             identityProperty.SetValue(entity, key, null);
         }
@@ -100,9 +100,8 @@ namespace Raven.Client
 
             return result.Results.Select(q =>
                                              {
-                                                 var entity = JsonConvert.DeserializeObject(q.ToString(), typeof(T));
-                                                 var id = q.Value<string>("_id");
-                                                 ConvertToEntity<T>(id, q.ToString());
+                                                 var id = q.Last.First.Value<string>("@id");
+                                                 var entity = ConvertToEntity<T>(id, q.ToString());
                                                  return (T)entity;
                                              }).ToList();
         }
