@@ -7,7 +7,7 @@ namespace Raven.Database.Tasks
 {
     public abstract class Task
     {
-        public string View { get; set; }
+        public string Index { get; set; }
 
         public string Type
         {

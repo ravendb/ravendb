@@ -131,7 +131,7 @@ namespace Raven.Database
             TransactionalStorage.Batch(actions =>
             {
                 actions.AddDocument(key, document.ToString(), etag, metadata.ToString());
-                actions.AddTask(new IndexDocumentTask {View = "*", Key = key});
+                actions.AddTask(new IndexDocumentTask {Index = "*", Key = key});
                 actions.Commit();
             });
             workContext.NotifyAboutWork();
@@ -157,7 +157,7 @@ namespace Raven.Database
             TransactionalStorage.Batch(actions =>
             {
                 actions.DeleteDocument(key, etag);
-                actions.AddTask(new RemoveFromIndexTask {View = "*", Keys = new[] {key}});
+                actions.AddTask(new RemoveFromIndexTask {Index = "*", Keys = new[] {key}});
                 actions.Commit();
             });
             workContext.NotifyAboutWork();
@@ -187,7 +187,7 @@ namespace Raven.Database
                         {
                             FromId = i,
                             ToId = Math.Min(i + configuration.IndexingBatchSize, firstAndLast.Item2),
-                            View = name
+                            Index = name
                         });
                     }
                 }

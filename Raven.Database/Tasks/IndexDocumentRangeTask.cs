@@ -17,13 +17,13 @@ namespace Raven.Database.Tasks
 
         public override string ToString()
         {
-            return string.Format("IndexDocumentRangeTask - View: {0}, FromId: {1}, ToId: {2}",
-                                 View, FromId, ToId);
+            return string.Format("IndexDocumentRangeTask - Index: {0}, FromId: {1}, ToId: {2}",
+                                 Index, FromId, ToId);
         }
 
         public override void Execute(WorkContext context)
         {
-            var viewFunc = context.IndexDefinitionStorage.GetIndexingFunction(View);
+            var viewFunc = context.IndexDefinitionStorage.GetIndexingFunction(Index);
             if (viewFunc == null)
                 return; // view was deleted, probably
             context.TransactionaStorage.Batch(actions =>
@@ -32,7 +32,7 @@ namespace Raven.Database.Tasks
                     .Select(d => d.Item1)
                     .Where(x => x != null)
                     .Select(s => JsonToExpando.Convert(s.ToJson()));
-                context.IndexStorage.Index(View, viewFunc, docsToIndex, context, actions);
+                context.IndexStorage.Index(Index, viewFunc, docsToIndex, context, actions);
                 actions.Commit();
             });
         }

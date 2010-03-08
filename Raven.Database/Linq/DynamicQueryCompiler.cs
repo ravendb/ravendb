@@ -21,7 +21,7 @@ namespace Raven.Database.Linq
     /// </summary>
     public class DynamicQueryCompiler
     {
-        private const string viewTextToken = "96E65595-1C9E-4BFB-A0E5-80BF2D6FC185";
+        private const string indexTextToken = "96E65595-1C9E-4BFB-A0E5-80BF2D6FC185";
 
         public DynamicQueryCompiler(string name, string query)
         {
@@ -106,12 +106,12 @@ namespace Raven.Database.Linq
             type.Children.Add(ctor);
             ctor.Body = new BlockStatement();
 
-            // this.ViewText = "96E65595-1C9E-4BFB-A0E5-80BF2D6FC185"; // Will be replaced later
+            // this.IndexText = "96E65595-1C9E-4BFB-A0E5-80BF2D6FC185"; // Will be replaced later
             ctor.Body.AddChild(new ExpressionStatement(
                                    new AssignmentExpression(
-                                       new MemberReferenceExpression(new ThisReferenceExpression(), "ViewText"),
+                                       new MemberReferenceExpression(new ThisReferenceExpression(), "IndexText"),
                                        AssignmentOperatorType.Assign,
-                                       new PrimitiveExpression(viewTextToken, viewTextToken))));
+                                       new PrimitiveExpression(indexTextToken, indexTextToken))));
 
             // this.CompiledDefinition = from doc in docs ...;
             ctor.Body.AddChild(new ExpressionStatement(
@@ -128,7 +128,7 @@ namespace Raven.Database.Linq
                                        })));
 
             CompiledQueryText = GenerateText(type);
-            CompiledQueryText = CompiledQueryText.Replace("\"" + viewTextToken + "\"",
+            CompiledQueryText = CompiledQueryText.Replace("\"" + indexTextToken + "\"",
                                                           "@\"" + Query.Replace("\"", "\"\"") + "\"");
         }
 

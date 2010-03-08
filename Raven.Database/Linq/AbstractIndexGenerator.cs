@@ -8,7 +8,7 @@ namespace Raven.Database.Linq
     public class AbstractIndexGenerator
     {
         public IndexingFunc CompiledDefinition { get; set; }
-        public string ViewText { get; set; }
+        public string IndexText { get; set; }
 
         public IEnumerable<dynamic> Execute(IEnumerable<dynamic> source)
         {

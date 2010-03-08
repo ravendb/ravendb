@@ -70,10 +70,10 @@ namespace Raven.Database.Storage
 
         public string GetIndexDefinition(string name)
         {
-            var viewFile = GetIndexPath(name);
-            if (File.Exists(viewFile) == false)
+            var indexPath = GetIndexPath(name);
+            if (File.Exists(indexPath) == false)
                 throw new InvalidOperationException("Index file does not exists");
-            return File.ReadAllText(viewFile);
+            return File.ReadAllText(indexPath);
         }
 
         public IndexingFunc GetIndexingFunction(string name)

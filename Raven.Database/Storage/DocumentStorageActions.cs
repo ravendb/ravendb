@@ -264,7 +264,7 @@ namespace Raven.Database.Storage
             using (var update = new Update(session, tasks, JET_prep.Insert))
             {
                 Api.SetColumn(session, tasks, tasksColumns["task"], task.AsString(), Encoding.Unicode);
-                Api.SetColumn(session, tasks, tasksColumns["for_index"], task.View, Encoding.Unicode);
+                Api.SetColumn(session, tasks, tasksColumns["for_index"], task.Index, Encoding.Unicode);
 
                 update.Save();
             }

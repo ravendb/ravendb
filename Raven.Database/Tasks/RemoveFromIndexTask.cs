@@ -8,12 +8,12 @@ namespace Raven.Database.Tasks
 
         public override string ToString()
         {
-            return string.Format("View: {0}, Keys: {1}", View, string.Join(", ", Keys));
+            return string.Format("Index: {0}, Keys: {1}", Index, string.Join(", ", Keys));
         }
 
         public override void Execute(WorkContext context)
         {
-            context.IndexStorage.RemoveFromIndex(View, Keys);
+            context.IndexStorage.RemoveFromIndex(Index, Keys);
         }
     }
 }
