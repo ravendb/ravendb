@@ -173,6 +173,12 @@ namespace Raven.Server.Responders
             context.Response.StatusDescription = "Not Found";
         }
 
+        public static void SetStatusToNotModified(this HttpListenerContext context)
+        {
+            context.Response.StatusCode = 304;
+            context.Response.StatusDescription = "Not Modified";
+        }
+
         public static void SetStatusToBadRequest(this HttpListenerContext context)
         {
             context.Response.StatusCode = 400;

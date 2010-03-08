@@ -28,6 +28,11 @@ namespace Raven.Server.Responders
                         context.SetStatusToNotFound();
                         return;
                     }
+                    if (context.Request.Headers["If-None-Match"] == doc.Etag.ToString())
+                    {
+                        context.SetStatusToNotModified();
+                        return;
+                    }
                     context.WriteData(doc.Data, doc.Metadata, doc.Etag);
                     break;
                 case "DELETE":

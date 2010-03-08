@@ -122,7 +122,7 @@ namespace Raven.Scenarios
                         new[] {"Host", "Content-Length", "User-Agent"}.Any(
                             s => s.Equals(headerParts[0], StringComparison.InvariantCultureIgnoreCase)))
                         continue;
-                    if (headerParts[0] == "If-Match" &&
+                    if (( headerParts[0] == "If-Match"  || headerParts[0] == "If-None-Match")&&
                         IsValidETag(headerParts))
                         headerParts[1] = lastEtag;
                     req.Headers[headerParts[0]] = headerParts[1];
