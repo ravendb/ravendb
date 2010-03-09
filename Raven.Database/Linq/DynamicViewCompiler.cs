@@ -73,24 +73,36 @@ namespace Raven.Database.Linq
                                        })));
 
 
-            var reduceDefiniton = QueryParsingUtils.GetVariableDeclaration(reduce);
-            // this.ReduceDefinition = from result in results...;
-            ctor.Body.AddChild(new ExpressionStatement(
-                                   new AssignmentExpression(
-                                       new MemberReferenceExpression(new ThisReferenceExpression(), "ReduceDefinition "),
-                                       AssignmentOperatorType.Assign,
-                                       new LambdaExpression
-                                       {
-                                           Parameters =
+            if (reduce != null)
+            {
+                var reduceDefiniton = QueryParsingUtils.GetVariableDeclaration(reduce);
+                // this.ReduceDefinition = from result in results...;
+                ctor.Body.AddChild(new ExpressionStatement(
+                                       new AssignmentExpression(
+                                           new MemberReferenceExpression(new ThisReferenceExpression(),
+                                                                         "ReduceDefinition "),
+                                           AssignmentOperatorType.Assign,
+                                           new LambdaExpression
                                            {
-                                               new ParameterDeclarationExpression(null, "results")
-                                           },
-                                           ExpressionBody = reduceDefiniton.Initializer
-                                       })));
+                                               Parameters =
+                                               {
+                                                   new ParameterDeclarationExpression(null, "results")
+                                               },
+                                               ExpressionBody = reduceDefiniton.Initializer
+                                           })));
+
+            }
 
             CompiledQueryText = QueryParsingUtils.GenerateText(type);
+            var compiledQueryText = "@\"" + map.Replace("\"", "\"\"") ;
+            if(reduce!=null)
+            {
+                compiledQueryText += Environment.NewLine + reduce.Replace("\"", "\"\"");
+            }
+
+            compiledQueryText += "\"";
             CompiledQueryText = CompiledQueryText.Replace("\"" + mapReduceTextToken + "\"",
-                                                          "@\"" + map.Replace("\"", "\"\"") + Environment.NewLine + reduce.Replace("\"", "\"\"") + "\"");
+                                                          compiledQueryText);
         }
 
         private VariableDeclaration TransformMapDefinition()

@@ -19,8 +19,8 @@ namespace Raven.Tests.Linq
         [Fact]
         public void Will_compile_query_successfully()
         {
-            var dynamicQueryCompiler = new DynamicIndexCompiler("pagesByTitle", query);
-            dynamicQueryCompiler.CreateInstance();
+            var dynamicQueryCompiler = new DynamicViewCompiler("pagesByTitle", query, null);
+            dynamicQueryCompiler.GenerateInstance();
             var compiled = dynamicQueryCompiler.GeneratedType;
             Assert.NotNull(compiled);
         }
@@ -28,8 +28,8 @@ namespace Raven.Tests.Linq
         [Fact]
         public void Can_create_new_instance_from_query()
         {
-            var dynamicQueryCompiler = new DynamicIndexCompiler("pagesByTitle", query);
-            dynamicQueryCompiler.CreateInstance();
+            var dynamicQueryCompiler = new DynamicViewCompiler("pagesByTitle", query, null);
+            dynamicQueryCompiler.GenerateInstance();
             var compiled = dynamicQueryCompiler.GeneratedType;
             Activator.CreateInstance(compiled);
         }
@@ -37,9 +37,8 @@ namespace Raven.Tests.Linq
         [Fact]
         public void Can_execute_query()
         {
-            var dynamicQueryCompiler = new DynamicIndexCompiler("pagesByTitle", query);
-            dynamicQueryCompiler.CreateInstance();
-            var generator = dynamicQueryCompiler.GeneratedInstance;
+            var dynamicQueryCompiler = new DynamicViewCompiler("pagesByTitle", query, null);
+            var generator = dynamicQueryCompiler.GenerateInstance();
             var results = generator.MapDefinition(new[]
             {
                 GetDocumentFromString(
