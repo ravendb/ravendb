@@ -99,7 +99,6 @@
     </Compile>
     <Compile Include="Indexes\DocumentsToIndex.cs" />
     <Compile Include="Storage\WithDebugging.cs" />
-    <Compile Include="Views\Test.cs" />
     <Compile Include="Views\ViewCompilation.cs" />
   </ItemGroup>
   <ItemGroup>
