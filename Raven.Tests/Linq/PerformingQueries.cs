@@ -28,7 +28,7 @@ namespace Raven.Tests.Linq
 ]");
             var transformer = new DynamicIndexCompiler("pagesByTitle", query);
             var compiledQuery = transformer.CreateInstance();
-            var actual = compiledQuery.Execute(documents)
+            var actual = compiledQuery.MapDefinition(documents)
                 .Cast<object>().ToArray();
             var expected = new[]
             {

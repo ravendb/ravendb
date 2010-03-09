@@ -13,7 +13,7 @@ namespace Raven.Database.Linq
     /// <summary>
     ///   Takes a query expression as a string, and compile it
     ///   Along the way we apply some minimal transofrmations, the end result is an instance
-    ///   of AbstractIndexGenerator, representing the indexing function
+    ///   of AbstractViewGenerator, representing the indexing function
     /// </summary>
     public class DynamicIndexCompiler
     {
@@ -29,7 +29,7 @@ namespace Raven.Database.Linq
 
         public string CompiledQueryText { get; private set; }
 
-        public AbstractIndexGenerator GeneratedInstance { get; private set; }
+        public AbstractViewGenerator GeneratedInstance { get; private set; }
 
         public string Name { get; private set; }
 
@@ -55,7 +55,7 @@ namespace Raven.Database.Linq
             {
                 BaseTypes =
                     {
-                        new TypeReference("AbstractIndexGenerator")
+                        new TypeReference("AbstractViewGenerator")
                     },
                 Name = Name,
                 Type = ClassType.Class
@@ -67,17 +67,17 @@ namespace Raven.Database.Linq
             type.Children.Add(ctor);
             ctor.Body = new BlockStatement();
 
-            // this.IndexText = "96E65595-1C9E-4BFB-A0E5-80BF2D6FC185"; // Will be replaced later
+            // this.ViewText = "96E65595-1C9E-4BFB-A0E5-80BF2D6FC185"; // Will be replaced later
             ctor.Body.AddChild(new ExpressionStatement(
                                    new AssignmentExpression(
-                                       new MemberReferenceExpression(new ThisReferenceExpression(), "IndexText"),
+                                       new MemberReferenceExpression(new ThisReferenceExpression(), "ViewText"),
                                        AssignmentOperatorType.Assign,
                                        new PrimitiveExpression(indexTextToken, indexTextToken))));
 
             // this.CompiledDefinition = from doc in docs ...;
             ctor.Body.AddChild(new ExpressionStatement(
                                    new AssignmentExpression(
-                                       new MemberReferenceExpression(new ThisReferenceExpression(), "CompiledDefinition"),
+                                       new MemberReferenceExpression(new ThisReferenceExpression(), "MapDefinition"),
                                        AssignmentOperatorType.Assign,
                                        new LambdaExpression
                                        {
@@ -95,11 +95,11 @@ namespace Raven.Database.Linq
 
        
 
-        public AbstractIndexGenerator CreateInstance()
+        public AbstractViewGenerator CreateInstance()
         {
             TransformQueryToClass();
             GeneratedType = QueryParsingUtils.Compile(Name, CompiledQueryText);
-            GeneratedInstance = (AbstractIndexGenerator) Activator.CreateInstance(GeneratedType);
+            GeneratedInstance = (AbstractViewGenerator)Activator.CreateInstance(GeneratedType);
             return GeneratedInstance;
         }
     }

@@ -19,7 +19,7 @@ namespace Raven.Database.Linq
         public static string GenerateText(TypeDeclaration type)
         {
             var unit = new CompilationUnit();
-            unit.AddChild(new Using(typeof(AbstractIndexGenerator).Namespace));
+            unit.AddChild(new Using(typeof(AbstractViewGenerator).Namespace));
             unit.AddChild(new Using(typeof(Enumerable).Namespace));
             unit.AddChild(new Using(typeof(int).Namespace));
             unit.AddChild(new Using(typeof(LinqOnDynamic).Namespace));
@@ -77,7 +77,7 @@ namespace Raven.Database.Linq
                 IncludeDebugInformation = true,
                 ReferencedAssemblies =
                 {
-                    typeof (AbstractIndexGenerator).Assembly.Location,
+                    typeof (AbstractViewGenerator).Assembly.Location,
                     typeof (NameValueCollection).Assembly.Location,
                     typeof (Enumerable).Assembly.Location,typeof (Binder).Assembly.Location,
                 },

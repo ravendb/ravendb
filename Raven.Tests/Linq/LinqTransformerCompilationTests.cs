@@ -40,7 +40,7 @@ namespace Raven.Tests.Linq
             var dynamicQueryCompiler = new DynamicIndexCompiler("pagesByTitle", query);
             dynamicQueryCompiler.CreateInstance();
             var generator = dynamicQueryCompiler.GeneratedInstance;
-            var results = generator.Execute(new[]
+            var results = generator.MapDefinition(new[]
             {
                 GetDocumentFromString(
                     @"

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -10,7 +11,7 @@ namespace Raven.Database.Storage
     public class IndexDefinitionStorage
     {
         private const string IndexDefDir = "IndexDefinitions";
-        private readonly IDictionary<string, IndexingFunc> indexCache = new Dictionary<string, IndexingFunc>();
+        private readonly ConcurrentDictionary<string,AbstractViewGenerator> indexCache = new ConcurrentDictionary<string, AbstractViewGenerator>();
         private readonly ILog logger = LogManager.GetLogger(typeof (IndexDefinitionStorage));
         private readonly string path;
 
@@ -44,7 +45,7 @@ namespace Raven.Database.Storage
         {
             var transformer = new DynamicIndexCompiler(name, indexDef);
             var generator = transformer.CreateInstance();
-            indexCache[transformer.Name] = generator.CompiledDefinition;
+            indexCache.AddOrUpdate(name, generator, (s, viewGenerator) => generator);
             File.WriteAllText(Path.Combine(path, transformer.Name + ".index"), transformer.Query);
             logger.InfoFormat("New index {0}:\r\n{1}\r\nCompiled to:\r\n{2}", transformer.Name, transformer.Query,
                               transformer.CompiledQueryText);
@@ -53,7 +54,8 @@ namespace Raven.Database.Storage
 
         public void RemoveIndex(string name)
         {
-            indexCache.Remove(name);
+            AbstractViewGenerator _;
+            indexCache.TryRemove(name, out _);
             File.Delete(GetIndexPath(name));
             File.Delete(GetIndexSourcePath(name));
         }
@@ -78,10 +80,10 @@ namespace Raven.Database.Storage
 
         public IndexingFunc GetIndexingFunction(string name)
         {
-            IndexingFunc value;
+            AbstractViewGenerator value;
             if (indexCache.TryGetValue(name, out value) == false)
                 return null;
-            return value;
+            return value.MapDefinition;
         }
 
         public IndexCreationOptions FindIndexCreationOptionsOptions(string name, string indexDef)
