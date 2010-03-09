@@ -99,6 +99,31 @@ namespace Raven.Client.Tests
             }
         }
 
+//        [Fact]
+//        public void Should_query_db()
+//        {
+//            DivanServer.EnsureCanListenToWhenInNonAdminContext(8080);
+//            using (var server = new DivanServer(new RavenConfiguration { Port = 8080, DataDirectory = path }))
+//            {
+//                var documentStore = new DocumentStore("localhost", 8080);
+//                documentStore.Initialise();
+//                documentStore.DatabaseCommands.PutIndex("getByName", "from entity in docs select new { entity.type, entity.Name };");
+//
+//                var session = documentStore.OpenSession();
+//                
+//                session.Store(new Company { Name = "Company" });
+//                session.Store(new Company { Name = "Company" });
+//                session.Store(new Company { Name = "Bobs Builders" });
+//
+//
+//
+//
+//                session.Query<Company>("getByName").
+//
+//
+//            }
+//        }
+
 
         public void Dispose()
         {
