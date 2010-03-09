@@ -80,7 +80,7 @@ namespace Raven.Database.Linq
                 ctor.Body.AddChild(new ExpressionStatement(
                                        new AssignmentExpression(
                                            new MemberReferenceExpression(new ThisReferenceExpression(),
-                                                                         "ReduceDefinition "),
+                                                                         "ReduceDefinition"),
                                            AssignmentOperatorType.Assign,
                                            new LambdaExpression
                                            {
@@ -90,6 +90,15 @@ namespace Raven.Database.Linq
                                                },
                                                ExpressionBody = reduceDefiniton.Initializer
                                            })));
+                var sourceSelect = (QueryExpression)((QueryExpression) reduceDefiniton.Initializer).FromClause.InExpression;
+                var groupBySource = ((QueryExpressionGroupClause) sourceSelect.SelectOrGroupClause).GroupBy;
+                var groupByField = ((MemberReferenceExpression) groupBySource).MemberName; 
+                ctor.Body.AddChild(new ExpressionStatement(
+                                       new AssignmentExpression(
+                                           new MemberReferenceExpression(new ThisReferenceExpression(),
+                                                                         "GroupByField"),
+                                           AssignmentOperatorType.Assign,
+                                           new PrimitiveExpression(groupByField, groupByField))));
 
             }
 

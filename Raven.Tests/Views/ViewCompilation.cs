@@ -1,4 +1,4 @@
-using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Dynamic;
@@ -44,6 +44,12 @@ select new {
   blog_id = g.Key, 
   comments_length = g.Sum(x=>x.comments_length) 
   }";
+        [Fact]
+        public void CanDetectGroupByTarget()
+        {
+            var abstractViewGenerator = new DynamicViewCompiler("test", map, reduce).GenerateInstance();
+            Assert.Equal("blog_id", abstractViewGenerator.GroupByField);
+        }
 
         [Fact]
         public void CanCompileQuery()
