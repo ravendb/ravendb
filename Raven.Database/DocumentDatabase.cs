@@ -216,8 +216,9 @@ namespace Raven.Database
                     {
                         throw new IndexDisabledException(indexFailureInformation);
                     }
+                    var loadedIds = new HashSet<string>();
                     list.AddRange(from queryResult in IndexStorage.Query(index, query, start, pageSize, totalSize, fieldsToFetch)
-                                  select RetrieveDocument(actions, queryResult)
+                                  select RetrieveDocument(actions, queryResult, loadedIds)
                                       into doc
                                       where doc != null
                                       select doc.ToJson());
@@ -231,10 +232,14 @@ namespace Raven.Database
             };
         }
 
-        private static JsonDocument RetrieveDocument(DocumentStorageActions actions, IndexQueryResult queryResult)
+        private static JsonDocument RetrieveDocument(DocumentStorageActions actions, IndexQueryResult queryResult, HashSet<string> loadedIds)
         {
             if(queryResult.Projection == null)
-                return actions.DocumentByKey(queryResult.Key);
+            {
+                if (loadedIds.Add(queryResult.Key))
+                    return actions.DocumentByKey(queryResult.Key);
+                return null;
+            }
 
             return new JsonDocument
             {

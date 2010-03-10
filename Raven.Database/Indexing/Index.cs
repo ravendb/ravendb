@@ -141,13 +141,18 @@ namespace Raven.Database.Indexing
             {
                 string currentId = null;
                 var converter = new JsonToLuceneDocumentConverter();
-                Document luceneDoc = null;
                 foreach (var doc in RobustEnumeration(documents, func, actions, context))
                 {
                     count++;
                     string newDocId;
                     var fields = converter.Index(doc, out newDocId);
-                    luceneDoc = FlushLuceneDocument(newDocId, currentId, luceneDoc, indexWriter);
+                    if(currentId != newDocId) // new document id, so delete all old values matching it
+                    {
+                        indexWriter.DeleteDocuments(new Term("__document_id", newDocId));
+                    }
+                    var luceneDoc = new Document();
+                    luceneDoc.Add(new Field("__document_id", newDocId, Field.Store.YES, Field.Index.UN_TOKENIZED));
+
                     currentId = newDocId;
                     foreach (var field in fields)
                     {
@@ -163,34 +168,14 @@ namespace Raven.Database.Indexing
                         luceneDoc.Add(field);
                     }
 
+                    indexWriter.AddDocument(luceneDoc);
                     actions.IncrementSuccessIndexing();
                 }
 
-                if (luceneDoc != null)
-                    indexWriter.UpdateDocument(new Term("__document_id", currentId), luceneDoc);
-
-                indexWriter.UpdateDocument(new Term("__document_id", currentId), luceneDoc);
-
-
-                return luceneDoc != null;
+                return currentId != null;
             });
             log.InfoFormat("Indexed {0} documents for {1}", count, name);
         }
-
-        private static Document FlushLuceneDocument(string newDocId, string currentId, Document luceneDoc,
-                                                    IndexWriter indexWriter)
-        {
-            if (newDocId != currentId)
-            {
-                if (luceneDoc != null)
-                    indexWriter.UpdateDocument(new Term("__document_id", currentId), luceneDoc);
-
-                luceneDoc = new Document();
-                luceneDoc.Add(new Field("__document_id", newDocId, Field.Store.YES, Field.Index.UN_TOKENIZED));
-            }
-            return luceneDoc;
-        }
-
 
         private IEnumerable<object> RobustEnumeration(IEnumerable<object> input, IndexingFunc func,
                                                       DocumentStorageActions actions, WorkContext context)

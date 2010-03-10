@@ -86,6 +86,30 @@ select new{project_name = prj.name}
         }
 
         [Fact]
+        public void Can_Read_Values_Using_MultipleValues_From_Deep_Nesting()
+        {
+            db.PutIndex(@"DocsByProject",
+                        @"
+from doc in docs
+from prj in doc.projects
+select new{project_name = prj.name, project_num = prj.num}
+");
+            var document =
+                JObject.Parse(
+                    "{'name':'ayende','email':'ayende@ayende.com','projects':[{'name':'raven', 'num': 5}, {'name':'crow', 'num': 6}], '@metadata': { '@id': 1}}");
+            db.Put("1", Guid.Empty, document, new JObject());
+
+            QueryResult docs;
+            do
+            {
+                docs = db.Query("DocsByProject", "+project_name:raven +project_num:6", 0, 10);
+                if (docs.IsStale)
+                    Thread.Sleep(100);
+            } while (docs.IsStale);
+            Assert.Equal(0, docs.Results.Length);
+        }
+
+        [Fact]
         public void Can_Read_values_when_two_indexes_exist()
         {
             db.PutIndex("pagesByTitle",
