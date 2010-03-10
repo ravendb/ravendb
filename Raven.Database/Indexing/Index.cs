@@ -51,30 +51,29 @@ namespace Raven.Database.Indexing
 
         public IEnumerable<IndexQueryResult> Query(string query, int start, int pageSize, Reference<int> totalSize, string[] fieldsToFetch)
         {
-            using (searcher.Use())
+            if (string.IsNullOrEmpty(query) == false)
             {
-                var indexSearcher = searcher.Searcher;
-                if (string.IsNullOrEmpty(query) == false)
-                {
-                    return SearchIndex(query, indexSearcher, totalSize, start, pageSize, fieldsToFetch);
-                }
-                return BrowseIndex(indexSearcher, totalSize, start, pageSize, fieldsToFetch);
+                return SearchIndex(query, totalSize, start, pageSize, fieldsToFetch);
             }
+            return BrowseIndex(totalSize, start, pageSize, fieldsToFetch);
         }
 
-        private IEnumerable<IndexQueryResult> BrowseIndex(IndexSearcher indexSearcher, Reference<int> totalSize, int start,
+        private IEnumerable<IndexQueryResult> BrowseIndex(Reference<int> totalSize, int start,
                                                 int pageSize, string[] fieldsToFetch)
         {
-            log.DebugFormat("Browsing index {0}", name);
-            var indexReader = indexSearcher.Reader;
-            var maxDoc = indexReader.MaxDoc();
-            totalSize.Value = Enumerable.Range(0, maxDoc).Count(i => indexReader.IsDeleted(i) == false);
-            for (var i = start; i < maxDoc && (i - start) < pageSize; i++)
+            using (searcher.Use())
             {
-                if (indexReader.IsDeleted(i))
-                    continue;
-                var document = indexReader.Document(i);
-                yield return RetrieveDocument(document, fieldsToFetch);
+                log.DebugFormat("Browsing index {0}", name);
+                var indexReader = searcher.Searcher.Reader;
+                var maxDoc = indexReader.MaxDoc();
+                totalSize.Value = Enumerable.Range(0, maxDoc).Count(i => indexReader.IsDeleted(i) == false);
+                for (var i = start; i < maxDoc && (i - start) < pageSize; i++)
+                {
+                    if (indexReader.IsDeleted(i))
+                        continue;
+                    var document = indexReader.Document(i);
+                    yield return RetrieveDocument(document, fieldsToFetch);
+                }
             }
         }
 
@@ -102,18 +101,21 @@ namespace Raven.Database.Indexing
             };
         }
 
-        private IEnumerable<IndexQueryResult> SearchIndex(string query, IndexSearcher indexSearcher, Reference<int> totalSize,
+        private IEnumerable<IndexQueryResult> SearchIndex(string query, Reference<int> totalSize,
                                                 int start, int pageSize, string[] fieldsToFetch)
         {
-            log.DebugFormat("Issuing query on index {0} for: {1}", name, query);
-            var luceneQuery = new QueryParser("", new StandardAnalyzer()).Parse(query);
-            var search = indexSearcher.Search(luceneQuery);
-            totalSize.Value = search.Length();
-            for (var i = start; i < search.Length() && (i - start) < pageSize; i++)
-            {
-                var document = search.Doc(i);
-                yield return RetrieveDocument(document, fieldsToFetch);
-            }
+           using(searcher.Use())
+           {
+               log.DebugFormat("Issuing query on index {0} for: {1}", name, query);
+               var luceneQuery = new QueryParser("", new StandardAnalyzer()).Parse(query);
+               var search = searcher.Searcher.Search(luceneQuery);
+               totalSize.Value = search.Length();
+               for (var i = start; i < search.Length() && (i - start) < pageSize; i++)
+               {
+                   var document = search.Doc(i);
+                   yield return RetrieveDocument(document, fieldsToFetch);
+               }
+           }
         }
 
         private void Write(Func<IndexWriter, bool> action)
