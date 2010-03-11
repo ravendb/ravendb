@@ -67,14 +67,24 @@ namespace Raven.Database.Indexing
                 var indexReader = searcher.Searcher.Reader;
                 var maxDoc = indexReader.MaxDoc();
                 totalSize.Value = Enumerable.Range(0, maxDoc).Count(i => indexReader.IsDeleted(i) == false);
+                var previousDocuments = new HashSet<string>();
                 for (var i = start; i < maxDoc && (i - start) < pageSize; i++)
                 {
                     if (indexReader.IsDeleted(i))
                         continue;
                     var document = indexReader.Document(i);
+                    if (IsDuplicateDocument(document, fieldsToFetch, previousDocuments))
+                        continue;
                     yield return RetrieveDocument(document, fieldsToFetch);
                 }
             }
+        }
+
+        private static bool IsDuplicateDocument(Document document, string[] fieldsToFetch, HashSet<string> previousDocuments)
+        {
+            if (fieldsToFetch != null && fieldsToFetch.Length > 1)
+                return false;
+            return previousDocuments.Add(document.Get("__document_id")) == false;
         }
 
         private static IndexQueryResult RetrieveDocument(Document document, string[] fieldsToFetch)
@@ -110,9 +120,12 @@ namespace Raven.Database.Indexing
                var luceneQuery = new QueryParser("", new StandardAnalyzer()).Parse(query);
                var search = searcher.Searcher.Search(luceneQuery);
                totalSize.Value = search.Length();
+               var previousDocuments = new HashSet<string>();
                for (var i = start; i < search.Length() && (i - start) < pageSize; i++)
                {
                    var document = search.Doc(i);
+                   if (IsDuplicateDocument(document, fieldsToFetch, previousDocuments))
+                       continue;
                    yield return RetrieveDocument(document, fieldsToFetch);
                }
            }
