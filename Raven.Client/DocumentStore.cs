@@ -19,18 +19,18 @@ namespace Raven.Client
             Conventions = new DocumentConvention();
         }
 
-        public string Database { get; set; }
+        public string DataDirectory { get; set; }
 
         public DocumentConvention Conventions { get; set; }
 
         public DocumentSession OpenSession()
         {
-            return new DocumentSession(this, database);
+            return new DocumentSession(this, DatabaseCommands);
         }
 
         public void Dispose()
         {
-            var disposable = database as IDisposable;
+            var disposable = DatabaseCommands as IDisposable;
             if (disposable != null)
                 disposable.Dispose();
         }
@@ -39,23 +39,23 @@ namespace Raven.Client
         {
             if (String.IsNullOrEmpty(localhost))
             {
-                var embeddedDatabase = new DocumentDatabase(Database);
+                var embeddedDatabase = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDirectory });
                 embeddedDatabase.SpinBackgroundWorkers();
-                database = embeddedDatabase;
+                DatabaseCommands = embeddedDatabase;
             }
             else
             {
-                database = new ServerClient(localhost, port);
+                DatabaseCommands = new ServerClient(localhost, port);
             }
             //NOTE: this should be done contitionally, index creation is expensive
-            database.PutIndex("getByType", "from entity in docs select new { entity.type };");
+            DatabaseCommands.PutIndex("getByType", "from entity in docs select new { entity.type };");
         }
 
-        private IDatabaseCommands database;
+        public IDatabaseCommands DatabaseCommands;
 
         public void Delete(Guid id)
         {
-            database.Delete(id.ToString());
+            DatabaseCommands.Delete(id.ToString(), null);
         }
     }
 }

@@ -1,10 +1,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Raven.Database;
-using JObject=Newtonsoft.Json.Linq.JObject;
-using JToken=Newtonsoft.Json.Linq.JToken;
+using Raven.Database.Data;
 
 namespace Raven.Client
 {
@@ -55,7 +56,7 @@ namespace Raven.Client
                 .FirstOrDefault(q => documentStore.Conventions.FindIdentityProperty.Invoke(q));
 
             var key = (string)identityProperty.GetValue(entity, null);
-            key = database.Put(key, json, new JObject());
+            key = database.Put(key, null, json, new JObject());
 
             identityProperty.SetValue(entity, key, null);
         }
@@ -96,13 +97,13 @@ namespace Raven.Client
             do
             {
                 result = database.Query("getByType", "type:" + typeof(T), 0, int.MaxValue); // To be replaced with real paging
+                Thread.Sleep(100);
             } while (result.IsStale);
 
             return result.Results.Select(q =>
                                              {
-                                                 var entity = JsonConvert.DeserializeObject(q.ToString(), typeof(T));
-                                                 var id = q.Value<string>("_id");
-                                                 ConvertToEntity<T>(id, q.ToString());
+                                                 var id = q.Last.First.Value<string>("@id");
+                                                 var entity = ConvertToEntity<T>(id, q.ToString());
                                                  return (T)entity;
                                              }).ToList();
         }

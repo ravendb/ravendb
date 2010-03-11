@@ -15,6 +15,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Tryouts", "Raven.Tryo
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.FileStorage", "Raven.FileStorage\Raven.FileStorage.csproj", "{F87F8FA0-1020-42A1-83BD-BC3B47191881}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Client", "Raven.Client\Raven.Client.csproj", "{9F92FD36-60B6-4655-B8C6-00125B46AB6A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Client.Tests", "Raven.Client.Tests\Raven.Client.Tests.csproj", "{36B31D69-508B-4594-8F8E-85774BAA7D3F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -49,6 +53,14 @@ Global
 		{F87F8FA0-1020-42A1-83BD-BC3B47191881}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F87F8FA0-1020-42A1-83BD-BC3B47191881}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F87F8FA0-1020-42A1-83BD-BC3B47191881}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9F92FD36-60B6-4655-B8C6-00125B46AB6A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9F92FD36-60B6-4655-B8C6-00125B46AB6A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9F92FD36-60B6-4655-B8C6-00125B46AB6A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9F92FD36-60B6-4655-B8C6-00125B46AB6A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{36B31D69-508B-4594-8F8E-85774BAA7D3F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{36B31D69-508B-4594-8F8E-85774BAA7D3F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{36B31D69-508B-4594-8F8E-85774BAA7D3F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{36B31D69-508B-4594-8F8E-85774BAA7D3F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

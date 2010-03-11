@@ -5,6 +5,7 @@ using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
+using Raven.Database.Data;
 
 namespace Raven.Client
 {
@@ -27,15 +28,18 @@ namespace Raven.Client
             };
         }
 
-        public string Put(string key, JObject document, JObject metadata)
+        public string Put(string key, Guid? etag, JObject document, JObject metadata)
         {
             var method = String.IsNullOrEmpty(key) ? "POST" : "PUT";
             var request = new HttpJsonRequest(url + "/docs/" + key, method);
             request.Write(document.ToString());
-            return request.ReadResponse()["id"].ToString();
+
+            var obj = new { id = "" };
+            obj = JsonConvert.DeserializeAnonymousType(request.ReadResponseString(), obj);
+            return obj.id;
         }
 
-        public void Delete(string key)
+        public void Delete(string key, Guid? etag)
         {
             throw new NotImplementedException();
         }
@@ -44,7 +48,10 @@ namespace Raven.Client
         {
             var request = new HttpJsonRequest(url + "/indexes/" + name, "PUT");
             request.Write(indexDef);
-            return request.ReadResponse()["index"].ToString();
+
+            var obj = new { index = "" };
+            obj = JsonConvert.DeserializeAnonymousType(request.ReadResponseString(), obj);
+            return obj.index;
         }
 
         public QueryResult Query(string index, string query, int start, int pageSize)

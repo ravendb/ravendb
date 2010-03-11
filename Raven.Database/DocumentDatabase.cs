@@ -15,7 +15,7 @@ using Raven.Database.Tasks;
 
 namespace Raven.Database
 {
-    public class DocumentDatabase : IDisposable
+    public class DocumentDatabase : IDatabaseCommands, IDisposable
     {
         private readonly RavenConfiguration configuration;
         private readonly WorkContext workContext;

@@ -1,15 +1,22 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Reflection;
+using System.Threading;
 using Xunit;
 
 namespace Raven.Client.Tests
 {
-    public class DocumentStoreEmbeddedTests : BaseTest
+    public class DocumentStoreEmbeddedTests : BaseTest, IDisposable
     {
+        private string path;
+
         private DocumentStore newDocumentStore()
         {
+            path = Path.GetDirectoryName(Assembly.GetAssembly(typeof (DocumentStoreServerTests)).CodeBase);
+            path = Path.Combine(path, "TestDb").Substring(6);
             var documentStore = new DocumentStore();
-            documentStore.Database = DbName;
+            documentStore.DataDirectory = path;
             documentStore.Conventions.FindIdentityProperty = q => q.Name == "Id";
             documentStore.Initialise();
             return documentStore;
@@ -92,6 +99,12 @@ namespace Raven.Client.Tests
 
                 Assert.Equal(2, companyFound.Count);
             }
+        }
+
+        public void Dispose()
+        {
+            Thread.Sleep(100);
+            Directory.Delete(path, true);
         }
     }
 
