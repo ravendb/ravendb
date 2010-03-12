@@ -15,6 +15,7 @@ namespace Raven.Database.Storage
     [CLSCompliant(false)]
     public class DocumentStorageActions : IDisposable
     {
+        private readonly IDictionary<string, JET_COLUMNID> mappedResultsColumns;
         protected readonly JET_DBID dbid;
         protected readonly Table documents;
         protected readonly IDictionary<string, JET_COLUMNID> documentsColumns;
@@ -28,6 +29,7 @@ namespace Raven.Database.Storage
         protected readonly IDictionary<string, JET_COLUMNID> tasksColumns;
         private readonly Transaction transaction;
         private int innerTxCount;
+        private Table mappedResults;
 
         [CLSCompliant(false)]
         [DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
@@ -36,7 +38,8 @@ namespace Raven.Database.Storage
                                       IDictionary<string, JET_COLUMNID> documentsColumns,
                                       IDictionary<string, JET_COLUMNID> tasksColumns,
                                       IDictionary<string, JET_COLUMNID> filesColumns,
-                                      IDictionary<string, JET_COLUMNID> indexesStatsColumns
+                                      IDictionary<string, JET_COLUMNID> indexesStatsColumns,
+                                      IDictionary<string, JET_COLUMNID> mappedResultsColumns
             )
         {
             try
@@ -49,10 +52,13 @@ namespace Raven.Database.Storage
                 tasks = new Table(session, dbid, "tasks", OpenTableGrbit.None);
                 files = new Table(session, dbid, "files", OpenTableGrbit.None);
                 indexesStats = new Table(session, dbid, "indexes_stats", OpenTableGrbit.None);
+                mappedResults = new Table(session, dbid, "mapped_results", OpenTableGrbit.None);
+
                 this.documentsColumns = documentsColumns;
                 this.tasksColumns = tasksColumns;
                 this.filesColumns = filesColumns;
                 this.indexesStatsColumns = indexesStatsColumns;
+                this.mappedResultsColumns = mappedResultsColumns;
             }
             catch (Exception)
             {
@@ -80,6 +86,9 @@ namespace Raven.Database.Storage
 
         public void Dispose()
         {
+            if(mappedResults != null)
+                mappedResults.Dispose();
+
             if (indexesStats != null)
                 indexesStats.Dispose();
 

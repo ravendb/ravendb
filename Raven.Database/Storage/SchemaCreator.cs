@@ -7,7 +7,7 @@ namespace Raven.Database.Storage
     [CLSCompliant(false)]
     public class SchemaCreator
     {
-        public const string SchemaVersion = "1.7";
+        public const string SchemaVersion = "1.8";
         private readonly Session session;
 
         public SchemaCreator(Session session)
@@ -26,6 +26,7 @@ namespace Raven.Database.Storage
                     CreateDetailsTable(dbid);
                     CreateDocumentsTable(dbid);
                     CreateTasksTable(dbid);
+                    CreateMapResultsTable(dbid);
                     CreateIndexingStatsTable(dbid);
                     CreateFilesTable(dbid);
 
@@ -123,6 +124,48 @@ namespace Raven.Database.Storage
 
             indexDef = "+id\0\0";
             Api.JetCreateIndex(session, tableid, "by_id", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
+                               100);
+        }
+
+        private void CreateMapResultsTable(JET_DBID dbid)
+        {
+            JET_TABLEID tableid;
+            Api.JetCreateTable(session, dbid, "mapped_results", 16, 100, out tableid);
+            JET_COLUMNID columnid;
+
+            Api.JetAddColumn(session, tableid, "document_key", new JET_COLUMNDEF
+            {
+                cbMax = 255,
+                coltyp = JET_coltyp.Text,
+                cp = JET_CP.Unicode,
+                grbit = ColumndefGrbit.ColumnNotNULL
+            }, null, 0, out columnid);
+
+            Api.JetAddColumn(session, tableid, "reduce_key", new JET_COLUMNDEF
+            {
+                cbMax = 255,
+                coltyp = JET_coltyp.Text,
+                cp = JET_CP.Unicode,
+                grbit = ColumndefGrbit.ColumnNotNULL
+            }, null, 0, out columnid);
+
+            Api.JetAddColumn(session, tableid, "data", new JET_COLUMNDEF
+            {
+                coltyp = JET_coltyp.LongBinary,
+                grbit = ColumndefGrbit.ColumnTagged
+            }, null, 0, out columnid);
+
+
+            var indexDef = "+document_key\0reduce_key\0\0";
+            Api.JetCreateIndex(session, tableid, "by_pk", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
+                               100);
+
+            indexDef = "+document_key\0\0";
+            Api.JetCreateIndex(session, tableid, "by_doc_key", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
+                               100);
+
+            indexDef = "+reduce_key\0\0";
+            Api.JetCreateIndex(session, tableid, "by_reduce_key", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
                                100);
         }
 
