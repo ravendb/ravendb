@@ -2,15 +2,11 @@
 using System.CodeDom.Compiler;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.IO;
 using System.Linq;
 using System.Text;
-using ICSharpCode.NRefactory;
 using ICSharpCode.NRefactory.Ast;
-using ICSharpCode.NRefactory.PrettyPrinter;
 using Microsoft.CSharp;
 using Microsoft.CSharp.RuntimeBinder;
-using Raven.Database.Linq.PrivateExtensions;
 
 namespace Raven.Database.Linq
 {
@@ -38,40 +34,6 @@ namespace Raven.Database.Linq
         public string Name { get; private set; }
 
         public string Query { get; private set; }
-
-        private void Compile()
-        {
-            var provider = new CSharpCodeProvider(new Dictionary<string, string> {{"CompilerVersion", "v4.0"}});
-            var results = provider.CompileAssemblyFromSource(new CompilerParameters
-            {
-                GenerateExecutable = false,
-                GenerateInMemory = false,
-                IncludeDebugInformation = true,
-                ReferencedAssemblies =
-                                                                 {
-                                                                     typeof (AbstractIndexGenerator).Assembly
-                                                                 .Location,
-                                                                     typeof (NameValueCollection).Assembly.
-                                                                 Location,
-                                                                     typeof (Enumerable).Assembly.Location,
-                                                                     typeof (Binder).Assembly.Location,
-                                                                 },
-            }, CompiledQueryText);
-
-            if (results.Errors.HasErrors)
-            {
-                var sb = new StringBuilder()
-                    .AppendLine("Source code:")
-                    .AppendLine(CompiledQueryText)
-                    .AppendLine();
-                foreach (CompilerError error in results.Errors)
-                {
-                    sb.AppendLine(error.ToString());
-                }
-                throw new InvalidOperationException(sb.ToString());
-            }
-            GeneratedType = results.CompiledAssembly.GetType(Name);
-        }
 
         private void TransformQueryToClass()
         {
@@ -126,30 +88,17 @@ namespace Raven.Database.Linq
                                            ExpressionBody = variableDeclaration.Initializer
                                        })));
 
-            CompiledQueryText = GenerateText(type);
+            CompiledQueryText = QueryParsingUtils.GenerateText(type);
             CompiledQueryText = CompiledQueryText.Replace("\"" + indexTextToken + "\"",
                                                           "@\"" + Query.Replace("\"", "\"\"") + "\"");
         }
 
-        private static string GenerateText(TypeDeclaration type)
-        {
-            var unit = new CompilationUnit();
-            unit.AddChild(new Using(typeof (AbstractIndexGenerator).Namespace));
-            unit.AddChild(new Using(typeof (Enumerable).Namespace));
-            unit.AddChild(new Using(typeof (int).Namespace));
-            unit.AddChild(new Using(typeof (LinqOnDynamic).Namespace));
-            unit.AddChild(type);
-
-            var output = new CSharpOutputVisitor();
-            unit.AcceptVisitor(output, null);
-
-            return output.Text;
-        }
+       
 
         public AbstractIndexGenerator CreateInstance()
         {
             TransformQueryToClass();
-            Compile();
+            GeneratedType = QueryParsingUtils.Compile(Name, CompiledQueryText);
             GeneratedInstance = (AbstractIndexGenerator) Activator.CreateInstance(GeneratedType);
             return GeneratedInstance;
         }

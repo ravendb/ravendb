@@ -1,12 +1,35 @@
 ﻿using System;
+using System.CodeDom.Compiler;
+using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.IO;
+using System.Linq;
+using System.Text;
 using ICSharpCode.NRefactory;
 using ICSharpCode.NRefactory.Ast;
+using ICSharpCode.NRefactory.PrettyPrinter;
+using Microsoft.CSharp;
+using Microsoft.CSharp.RuntimeBinder;
+using Raven.Database.Linq.PrivateExtensions;
 
 namespace Raven.Database.Linq
 {
     public class QueryParsingUtils
     {
+        public static string GenerateText(TypeDeclaration type)
+        {
+            var unit = new CompilationUnit();
+            unit.AddChild(new Using(typeof(AbstractIndexGenerator).Namespace));
+            unit.AddChild(new Using(typeof(Enumerable).Namespace));
+            unit.AddChild(new Using(typeof(int).Namespace));
+            unit.AddChild(new Using(typeof(LinqOnDynamic).Namespace));
+            unit.AddChild(type);
+
+            var output = new CSharpOutputVisitor();
+            unit.AcceptVisitor(output, null);
+
+            return output.Text;
+        }
         public static VariableDeclaration GetVariableDeclaration(string query)
         {
             var parser = ParserFactory.CreateParser(SupportedLanguage.CSharp, new StringReader("var q = " + query));
@@ -43,6 +66,37 @@ namespace Raven.Database.Linq
 
             return variable;
         }
-        
+
+        public static Type Compile(string name, string queryText)
+        {
+            var provider = new CSharpCodeProvider(new Dictionary<string, string> { { "CompilerVersion", "v4.0" } });
+            var results = provider.CompileAssemblyFromSource(new CompilerParameters
+            {
+                GenerateExecutable = false,
+                GenerateInMemory = false,
+                IncludeDebugInformation = true,
+                ReferencedAssemblies =
+                {
+                    typeof (AbstractIndexGenerator).Assembly.Location,
+                    typeof (NameValueCollection).Assembly.Location,
+                    typeof (Enumerable).Assembly.Location,typeof (Binder).Assembly.Location,
+                },
+            }, queryText);
+
+            if (results.Errors.HasErrors)
+            {
+                var sb = new StringBuilder()
+                    .AppendLine("Source code:")
+                    .AppendLine(queryText)
+                    .AppendLine();
+                foreach (CompilerError error in results.Errors)
+                {
+                    sb.AppendLine(error.ToString());
+                }
+                throw new InvalidOperationException(sb.ToString());
+            }
+            return results.CompiledAssembly.GetType(name);
+        }
+       
     }
 }
