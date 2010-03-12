@@ -147,7 +147,7 @@ namespace Raven.Database.Indexing
                 RecreateSearcher();
         }
 
-        public void IndexDocuments(IndexingFunc func, IEnumerable<object> documents, WorkContext context,
+        public void IndexDocuments(AbstractViewGenerator viewGenerator, IEnumerable<object> documents, WorkContext context,
                                    DocumentStorageActions actions)
         {
             actions.SetCurrentIndexStatsTo(name);
@@ -156,7 +156,7 @@ namespace Raven.Database.Indexing
             {
                 string currentId = null;
                 var converter = new JsonToLuceneDocumentConverter();
-                foreach (var doc in RobustEnumeration(documents, func, actions, context))
+                foreach (var doc in RobustEnumeration(documents, viewGenerator.MapDefinition, actions, context))
                 {
                     count++;
                     string newDocId;

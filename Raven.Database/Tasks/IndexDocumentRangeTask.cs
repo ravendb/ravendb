@@ -23,8 +23,8 @@ namespace Raven.Database.Tasks
 
         public override void Execute(WorkContext context)
         {
-            var indexingFunc = context.IndexDefinitionStorage.GetIndexingFunction(Index);
-            if (indexingFunc == null)
+            var viewGenerator = context.IndexDefinitionStorage.GetViewGenerator(Index);
+            if (viewGenerator == null)
                 return; // index was deleted, probably
             context.TransactionaStorage.Batch(actions =>
             {
@@ -32,7 +32,7 @@ namespace Raven.Database.Tasks
                     .Select(d => d.Item1)
                     .Where(x => x != null)
                     .Select(s => JsonToExpando.Convert(s.ToJson()));
-                context.IndexStorage.Index(Index, indexingFunc, docsToIndex, context, actions);
+                context.IndexStorage.Index(Index, viewGenerator, docsToIndex, context, actions);
                 actions.Commit();
             });
         }

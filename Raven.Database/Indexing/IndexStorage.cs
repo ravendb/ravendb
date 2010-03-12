@@ -109,7 +109,7 @@ namespace Raven.Database.Indexing
             value.Remove(keys);
         }
 
-        public void Index(string index, IndexingFunc indexingFunc, IEnumerable<dynamic> docs, WorkContext context,
+        public void Index(string index, AbstractViewGenerator viewGenerator, IEnumerable<dynamic> docs, WorkContext context,
                           DocumentStorageActions actions)
         {
             Index value;
@@ -118,7 +118,7 @@ namespace Raven.Database.Indexing
                 log.DebugFormat("Tried to index on a non existant index {0}, ignoring", index);
                 return;
             }
-            value.IndexDocuments(indexingFunc, docs, context, actions);
+            value.IndexDocuments(viewGenerator, docs, context, actions);
         }
     }
 }

@@ -31,11 +31,9 @@ namespace Raven.Database.Tasks
 
                 foreach (var index in context.IndexDefinitionStorage.IndexNames)
                 {
-                    var indexingFunc = context.IndexDefinitionStorage.GetIndexingFunction(index);
-                    if (indexingFunc == null)
-                    {
-                        continue; // index was removed before we could index it
-                    }
+                    var viewGenerator = context.IndexDefinitionStorage.GetViewGenerator(index);
+                    if (viewGenerator == null)
+                        continue; // index was deleted, probably
                     try
                     {
                         logger.DebugFormat("Indexing document: '{0}' for index: {1}", doc.Key, index);
@@ -49,7 +47,7 @@ namespace Raven.Database.Tasks
                         }
                         
 
-                        context.IndexStorage.Index(index, indexingFunc, new[] {json,},
+                        context.IndexStorage.Index(index, viewGenerator, new[] {json,},
                                                    context, actions);
                     }
                     catch (Exception e)

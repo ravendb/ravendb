@@ -78,12 +78,12 @@ namespace Raven.Database.Storage
             return File.ReadAllText(indexPath);
         }
 
-        public IndexingFunc GetIndexingFunction(string name)
+        public AbstractViewGenerator GetViewGenerator(string name)
         {
             AbstractViewGenerator value;
             if (indexCache.TryGetValue(name, out value) == false)
                 return null;
-            return value.MapDefinition;
+            return value;
         }
 
         public IndexCreationOptions FindIndexCreationOptionsOptions(string name, string indexDef)
