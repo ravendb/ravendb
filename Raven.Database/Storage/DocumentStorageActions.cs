@@ -473,5 +473,73 @@ namespace Raven.Database.Storage
                 Successes = Api.RetrieveColumnAsInt32(session, indexesStats, indexesStatsColumns["successes"]).Value
             };
         }
+
+        public void PutMappedResult(string view, string docId, string reduceKey, string data)
+        {
+            Api.JetSetCurrentIndex(session, mappedResults, "by_pk");
+            Api.MakeKey(session, mappedResults, view, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            Api.MakeKey(session, mappedResults, docId, Encoding.Unicode, MakeKeyGrbit.None);
+            Api.MakeKey(session, mappedResults, reduceKey, Encoding.Unicode, MakeKeyGrbit.None);
+            bool isUpdate = Api.TrySeek(session, mappedResults, SeekGrbit.SeekEQ);
+
+            using (var update = new Update(session, mappedResults, isUpdate ? JET_prep.Replace : JET_prep.Insert))
+            {
+                Api.SetColumn(session, mappedResults, mappedResultsColumns["view"], view, Encoding.Unicode);
+                Api.SetColumn(session, mappedResults, mappedResultsColumns["document_key"], docId, Encoding.Unicode);
+                Api.SetColumn(session, mappedResults, mappedResultsColumns["reduce_key"], reduceKey, Encoding.Unicode);
+                Api.SetColumn(session, mappedResults, mappedResultsColumns["data"], Encoding.UTF8.GetBytes(data));
+
+                update.Save();
+            }
+        }
+
+        public IEnumerable<string> GetMappedResults(string view, string reduceKey)
+        {
+            Api.JetSetCurrentIndex(session, mappedResults, "by_view_and_reduce_key");
+            Api.MakeKey(session, mappedResults, view, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            Api.MakeKey(session, mappedResults, reduceKey, Encoding.Unicode, MakeKeyGrbit.None);
+            if (Api.TrySeek(session, mappedResults, SeekGrbit.SeekEQ) == false)
+                yield break;
+
+            Api.MakeKey(session, mappedResults, view, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            Api.MakeKey(session, mappedResults, reduceKey, Encoding.Unicode, MakeKeyGrbit.None);
+            Api.JetSetIndexRange(session, mappedResults, SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive);
+
+            do
+            {
+                byte[] bytes = Api.RetrieveColumn(session, mappedResults, mappedResultsColumns["data"]);
+                yield return Encoding.UTF8.GetString(bytes);
+            } while (Api.TryMoveNext(session, mappedResults));
+        }
+
+        public void DeleteMappedResultsForDocumentId(string documentId)
+        {
+            Api.JetSetCurrentIndex(session, mappedResults, "by_doc_key");
+            Api.MakeKey(session, mappedResults, documentId, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, mappedResults, SeekGrbit.SeekEQ) == false)
+                return;
+
+            Api.MakeKey(session, mappedResults, documentId, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            Api.JetSetIndexRange(session, mappedResults, SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive);
+            do
+            {
+                Api.JetDelete(session, mappedResults);
+            } while (Api.TryMoveNext(session, mappedResults));
+        }
+
+        public void DeleteMappedResultsForView(string view)
+        {
+            Api.JetSetCurrentIndex(session, mappedResults, "by_view");
+            Api.MakeKey(session, mappedResults, view, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, mappedResults, SeekGrbit.SeekEQ) == false)
+                return;
+            Api.MakeKey(session, mappedResults, view, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            Api.JetSetIndexRange(session, mappedResults, SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive);
+            
+            do
+            {
+                Api.JetDelete(session, mappedResults);
+            } while (Api.TryMoveNext(session, mappedResults));
+        }
     }
 }

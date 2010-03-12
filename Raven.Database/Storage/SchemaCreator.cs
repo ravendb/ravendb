@@ -133,6 +133,15 @@ namespace Raven.Database.Storage
             Api.JetCreateTable(session, dbid, "mapped_results", 16, 100, out tableid);
             JET_COLUMNID columnid;
 
+
+            Api.JetAddColumn(session, tableid, "view", new JET_COLUMNDEF
+            {
+                cbMax = 255,
+                coltyp = JET_coltyp.Text,
+                cp = JET_CP.Unicode,
+                grbit = ColumndefGrbit.ColumnNotNULL
+            }, null, 0, out columnid);
+
             Api.JetAddColumn(session, tableid, "document_key", new JET_COLUMNDEF
             {
                 cbMax = 255,
@@ -156,7 +165,7 @@ namespace Raven.Database.Storage
             }, null, 0, out columnid);
 
 
-            var indexDef = "+document_key\0reduce_key\0\0";
+            var indexDef = "+view\0+document_key\0+reduce_key\0\0";
             Api.JetCreateIndex(session, tableid, "by_pk", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
                                100);
 
@@ -164,8 +173,12 @@ namespace Raven.Database.Storage
             Api.JetCreateIndex(session, tableid, "by_doc_key", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
                                100);
 
-            indexDef = "+reduce_key\0\0";
-            Api.JetCreateIndex(session, tableid, "by_reduce_key", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
+            indexDef = "+view\0\0";
+            Api.JetCreateIndex(session, tableid, "by_view", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
+                               100);
+
+            indexDef = "+view\0+reduce_key\0\0";
+            Api.JetCreateIndex(session, tableid, "by_view_and_reduce_key", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
                                100);
         }
 

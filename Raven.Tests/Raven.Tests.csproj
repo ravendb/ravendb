@@ -100,6 +100,7 @@
     <Compile Include="Indexes\DocumentsToIndex.cs" />
     <Compile Include="Storage\WithDebugging.cs" />
     <Compile Include="Views\ViewCompilation.cs" />
+    <Compile Include="Views\ViewStorage.cs" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
