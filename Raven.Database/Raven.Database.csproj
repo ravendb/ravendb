@@ -103,7 +103,6 @@
     <Compile Include="Data\IndexStats.cs" />
     <Compile Include="Data\QueryResult.cs" />
     <Compile Include="Exceptions\IndexDisabledException.cs" />
-    <Compile Include="IDatabaseCommands.cs" />
     <Compile Include="JsonDocument.cs" />
     <Compile Include="DocumentDatabase.cs" />
     <Compile Include="Exceptions\ConcurrencyException.cs" />

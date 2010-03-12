@@ -75,7 +75,9 @@
     <Compile Include="DocumentConvention.cs" />
     <Compile Include="DocumentSession.cs" />
     <Compile Include="DocumentStore.cs" />
+    <Compile Include="EmbededDatabaseCommands.cs" />
     <Compile Include="HttpJsonRequest.cs" />
+    <Compile Include="IDatabaseCommands.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ServerClient.cs" />
   </ItemGroup>

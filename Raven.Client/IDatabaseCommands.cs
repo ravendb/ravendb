@@ -1,8 +1,9 @@
 using System;
 using Newtonsoft.Json.Linq;
+using Raven.Database;
 using Raven.Database.Data;
 
-namespace Raven.Database
+namespace Raven.Client
 {
     public interface IDatabaseCommands
     {

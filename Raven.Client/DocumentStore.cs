@@ -41,7 +41,7 @@ namespace Raven.Client
             {
                 var embeddedDatabase = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDirectory });
                 embeddedDatabase.SpinBackgroundWorkers();
-                DatabaseCommands = embeddedDatabase;
+                DatabaseCommands = new EmbededDatabaseCommands(embeddedDatabase);
             }
             else
             {
