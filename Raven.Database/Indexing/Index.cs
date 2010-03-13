@@ -21,11 +21,11 @@ namespace Raven.Database.Indexing
     /// <summary>
     ///   This is a thread safe, single instance for a particular index.
     /// </summary>
-    public class Index : IDisposable
+    public abstract class Index : IDisposable
     {
         private readonly Directory directory;
-        private readonly ILog log = LogManager.GetLogger(typeof(Index));
-        private readonly string name;
+        protected readonly ILog log = LogManager.GetLogger(typeof(Index));
+        protected readonly string name;
         private CurrentIndexSearcher searcher;
 
         public Index(Directory directory, string name)
@@ -87,6 +87,10 @@ namespace Raven.Database.Indexing
             return previousDocuments.Add(document.Get("__document_id")) == false;
         }
 
+        public abstract void IndexDocuments(AbstractViewGenerator viewGenerator, IEnumerable<object> documents,
+                                            WorkContext context,
+                                            DocumentStorageActions actions);
+
         private static IndexQueryResult RetrieveDocument(Document document, string[] fieldsToFetch)
         {
             return new IndexQueryResult
@@ -131,7 +135,7 @@ namespace Raven.Database.Indexing
            }
         }
 
-        private void Write(Func<IndexWriter, bool> action)
+        protected void Write(Func<IndexWriter, bool> action)
         {
             var indexWriter = new IndexWriter(directory, new StandardAnalyzer());
             bool shouldRcreateSearcher;
@@ -147,52 +151,8 @@ namespace Raven.Database.Indexing
                 RecreateSearcher();
         }
 
-        public void IndexDocuments(AbstractViewGenerator viewGenerator, IEnumerable<object> documents, WorkContext context,
-                                   DocumentStorageActions actions)
-        {
-            actions.SetCurrentIndexStatsTo(name);
-            var count = 0;
-            Write(indexWriter =>
-            {
-                string currentId = null;
-                var converter = new JsonToLuceneDocumentConverter();
-                foreach (var doc in RobustEnumeration(documents, viewGenerator.MapDefinition, actions, context))
-                {
-                    count++;
-                    string newDocId;
-                    var fields = converter.Index(doc, out newDocId);
-                    if(currentId != newDocId) // new document id, so delete all old values matching it
-                    {
-                        indexWriter.DeleteDocuments(new Term("__document_id", newDocId));
-                    }
-                    var luceneDoc = new Document();
-                    luceneDoc.Add(new Field("__document_id", newDocId, Field.Store.YES, Field.Index.UN_TOKENIZED));
 
-                    currentId = newDocId;
-                    foreach (var field in fields)
-                    {
-                        var valueAlreadyExisting = false;
-                        var existingFields = luceneDoc.GetFields(field.Name());
-                        if (existingFields != null)
-                        {
-                            var fieldCopy = field;
-                            valueAlreadyExisting = existingFields.Any(existingField => existingField.StringValue() == fieldCopy.StringValue());
-                        }
-                        if (valueAlreadyExisting)
-                            continue;
-                        luceneDoc.Add(field);
-                    }
-
-                    indexWriter.AddDocument(luceneDoc);
-                    actions.IncrementSuccessIndexing();
-                }
-
-                return currentId != null;
-            });
-            log.InfoFormat("Indexed {0} documents for {1}", count, name);
-        }
-
-        private IEnumerable<object> RobustEnumeration(IEnumerable<object> input, IndexingFunc func,
+        protected IEnumerable<object> RobustEnumeration(IEnumerable<object> input, IndexingFunc func,
                                                       DocumentStorageActions actions, WorkContext context)
         {
             var wrapped = new StatefulEnumerableWrapper<dynamic>(input.GetEnumerator());

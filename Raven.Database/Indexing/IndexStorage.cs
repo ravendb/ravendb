@@ -35,7 +35,7 @@ namespace Raven.Database.Indexing
             {
                 log.DebugFormat("Loading saved index {0}", index);
                 var name = Path.GetFileName(index);
-                indexes.TryAdd(name, new Index(FSDirectory.GetDirectory(index, false), name));
+                indexes.TryAdd(name, new SimpleIndex(FSDirectory.GetDirectory(index, false), name));
             }
         }
 
@@ -84,7 +84,7 @@ namespace Raven.Database.Indexing
         {
             var directory = FSDirectory.GetDirectory(Path.Combine(path, name), true);
             new IndexWriter(directory, new StandardAnalyzer()).Close(); //creating index structure
-            return new Index(directory, name);
+            return new SimpleIndex(directory, name);
         }
 
         public IEnumerable<IndexQueryResult> Query(string index, string query, int start, int pageSize, Reference<int> totalSize, string[] fieldsToFetch)

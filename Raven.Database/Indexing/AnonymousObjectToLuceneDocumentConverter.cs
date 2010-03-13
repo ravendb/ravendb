@@ -6,7 +6,7 @@ using Lucene.Net.Documents;
 
 namespace Raven.Database.Indexing
 {
-    public class JsonToLuceneDocumentConverter
+    public class AnonymousObjectToLuceneDocumentConverter
     {
         public IEnumerable<Field> Index(object val, out string docId)
         {
