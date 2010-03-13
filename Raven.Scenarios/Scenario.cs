@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -256,11 +255,27 @@ namespace Raven.Scenarios
                 var actualLine = rr.ReadLine();
                 if (expectedLine != actualLine)
                 {
+                    int firstDiff = FindFirstDiff(expectedLine, actualLine);
+                    string outputName = Path.GetFileNameWithoutExtension(file) + " request #" +  responseNumber + ".txt";
+                    File.WriteAllText(outputName, expectedLine + Environment.NewLine);
+                    File.AppendAllText(outputName, actualLine + Environment.NewLine);
+                    File.AppendAllText(outputName, new string(' ', firstDiff) + "^");
+           
                     throw new InvalidDataException(
-                        string.Format("Request {0} line {1} differs. Expected\r\n{2}\r\nActual\r\n{3}\r\nRequest{4}",
-                                      responseNumber, line, expectedLine, actualLine, request));
+                        string.Format("Request {0} line {1} differs. Request:\r\n{2}, output written to: {3}",
+                                      responseNumber, line, request, outputName));
                 }
             }
+        }
+
+        private static int FindFirstDiff(string expectedLine, string actualLine)
+        {
+            for (int i = 0; i < Math.Min(expectedLine.Length, actualLine.Length); i++)
+            {
+                if (expectedLine[i] != actualLine[i])
+                    return i;
+            }
+            return Math.Min(expectedLine.Length, actualLine.Length);
         }
 
         private static string HandleChunking(byte[] data)
