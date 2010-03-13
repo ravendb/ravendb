@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using log4net;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Raven.Database.Linq;
 
 namespace Raven.Database.Storage
@@ -24,10 +26,12 @@ namespace Raven.Database.Storage
 
             foreach (var index in Directory.GetFiles(this.path, "*.index"))
             {
-                var indexDef = File.ReadAllText(index);
+                var indexDef = JObject.Parse(File.ReadAllText(index));
                 try
                 {
-                    AddIndex(Path.GetFileNameWithoutExtension(index), indexDef, null);
+                    AddIndex(Path.GetFileNameWithoutExtension(index), 
+                        indexDef.Property("Map").Value.Value<string>(),
+                        indexDef.Property("Reduce   ").Value.Value<string>());
                 }
                 catch (Exception e)
                 {
@@ -46,7 +50,11 @@ namespace Raven.Database.Storage
             var transformer = new DynamicViewCompiler(name, mapDef, reduceDef);
             var generator = transformer.GenerateInstance();
             indexCache.AddOrUpdate(name, generator, (s, viewGenerator) => generator);
-            File.WriteAllText(Path.Combine(path, transformer.Name + ".index"), mapDef);
+            File.WriteAllText(Path.Combine(path, transformer.Name + ".index"), JObject.FromObject(new
+            {
+                Map = mapDef, 
+                Reduce = reduceDef
+            }).ToString(Formatting.Indented));
             logger.InfoFormat("New index {0}:\r\n{1}\r\nCompiled to:\r\n{2}", transformer.Name, transformer.CompiledQueryText,
                               transformer.CompiledQueryText);
             return transformer.Name;

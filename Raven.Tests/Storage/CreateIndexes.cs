@@ -1,4 +1,5 @@
 using System;
+using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Xunit;
 
@@ -65,7 +66,7 @@ namespace Raven.Tests.Storage
 ";
             db.PutIndex("pagesByTitle", definition);
             var actualDefinition = db.IndexDefinitionStorage.GetIndexDefinition("pagesByTitle");
-            Assert.Equal(definition, actualDefinition);
+            Assert.Equal(definition, JObject.Parse(actualDefinition).Property("Map").Value.Value<string>());
         }
     }
 }
