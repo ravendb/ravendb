@@ -96,5 +96,18 @@ namespace Raven.Database.Indexing
                         )
             };
         }
+
+        public override void Remove(string[] keys, WorkContext context)
+        {
+            Write(writer =>
+            {
+                if (log.IsDebugEnabled)
+                {
+                    log.DebugFormat("Deleting ({0}) from {1}", string.Format(", ", keys), name);
+                }
+                writer.DeleteDocuments(keys.Select(k => new Term("__document_id", k)).ToArray());
+                return true;
+            });
+        }
     }
 }

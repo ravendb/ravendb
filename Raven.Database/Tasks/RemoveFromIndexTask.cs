@@ -13,7 +13,10 @@ namespace Raven.Database.Tasks
 
         public override void Execute(WorkContext context)
         {
-            context.IndexStorage.RemoveFromIndex(Index, Keys);
+            foreach (var indexName in context.IndexDefinitionStorage.IndexNames)
+            {
+                context.IndexStorage.RemoveFromIndex(indexName, Keys, context);
+            }
         }
     }
 }

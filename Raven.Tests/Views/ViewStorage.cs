@@ -102,10 +102,10 @@ namespace Raven.Tests.Views
                 actions.Commit();
             });
 
-
             transactionalStorage.Batch(actions =>
             {
-                actions.DeleteMappedResultsForDocumentId("123");
+                actions.DeleteMappedResultsForDocumentId("123", "CommentCountsByBlog2");
+                actions.DeleteMappedResultsForDocumentId("123", "CommentCountsByBlog1");
                 actions.Commit();
             });
 

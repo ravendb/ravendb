@@ -206,19 +206,8 @@ namespace Raven.Database.Indexing
             }
         }
 
-        public void Remove(string[] keys)
-        {
-            Write(writer =>
-            {
-                if (log.IsDebugEnabled)
-                {
-                    log.DebugFormat("Deleting ({0}) from {1}", string.Format(", ", keys), name);
-                }
-                writer.DeleteDocuments(keys.Select(k => new Term("__document_id", k)).ToArray());
-                return true;
-            });
-        }
-
+        public abstract void Remove(string[] keys, WorkContext context);
+        
         #region Nested type: CurrentIndexSearcher
 
         private class CurrentIndexSearcher

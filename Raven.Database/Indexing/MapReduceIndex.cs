@@ -98,6 +98,42 @@ namespace Raven.Database.Indexing
             };
         }
 
+        public override void Remove(string[] keys, WorkContext context)
+        {
+            context.TransactionaStorage.Batch(actions =>
+            {
+                var reduceKeys = new HashSet<string>();
+                foreach (var key in keys)
+                {
+                    var reduceKeysFromDocuments = actions.DeleteMappedResultsForDocumentId(key, name);
+                    foreach (var reduceKey in reduceKeysFromDocuments)
+                    {
+                        reduceKeys.Add(reduceKey);
+                    }
+                }
+
+                foreach (var reduceKey in reduceKeys)
+                {
+                    actions.AddTask(new ReduceTask
+                    {
+                        Index = name,
+                        ReduceKey = reduceKey,
+                    });
+                }
+
+                actions.Commit();
+            });
+            Write(writer =>
+            {
+                if (log.IsDebugEnabled)
+                {
+                    log.DebugFormat("Deleting ({0}) from {1}", string.Format(", ", keys), name);
+                }
+                writer.DeleteDocuments(keys.Select(k => new Term("__document_id", k)).ToArray());
+                return true;
+            });
+        }
+
         public void ReduceDocuments(AbstractViewGenerator viewGenerator,
             IEnumerable<object> mappedResults, 
             WorkContext context, 
@@ -130,7 +166,7 @@ namespace Raven.Database.Indexing
                     actions.IncrementSuccessIndexing();
                 }
 
-                return count > 0;
+                return true;
             });
             log.DebugFormat("Reduce resulted in {0} entires for {1} for reduce key {2}", count, name, reduceKey);
         }

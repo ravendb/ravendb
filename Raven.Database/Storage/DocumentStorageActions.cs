@@ -512,19 +512,26 @@ namespace Raven.Database.Storage
             } while (Api.TryMoveNext(session, mappedResults));
         }
 
-        public void DeleteMappedResultsForDocumentId(string documentId)
+        public IEnumerable<string> DeleteMappedResultsForDocumentId(string documentId, string view)
         {
-            Api.JetSetCurrentIndex(session, mappedResults, "by_doc_key");
-            Api.MakeKey(session, mappedResults, documentId, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            Api.JetSetCurrentIndex(session, mappedResults, "by_view_and_doc_key");
+            Api.MakeKey(session, mappedResults, view, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            Api.MakeKey(session, mappedResults, documentId, Encoding.Unicode, MakeKeyGrbit.None);
             if (Api.TrySeek(session, mappedResults, SeekGrbit.SeekEQ) == false)
-                return;
+                return new string[0];
 
-            Api.MakeKey(session, mappedResults, documentId, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            var reduceKeys = new HashSet<string>();
+            Api.MakeKey(session, mappedResults, view, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            Api.MakeKey(session, mappedResults, documentId, Encoding.Unicode, MakeKeyGrbit.None);
             Api.JetSetIndexRange(session, mappedResults, SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive);
             do
             {
+                var reduceKey = Api.RetrieveColumnAsString(session, mappedResults, mappedResultsColumns["reduce_key"],
+                                                           Encoding.Unicode);
+                reduceKeys.Add(reduceKey);
                 Api.JetDelete(session, mappedResults);
             } while (Api.TryMoveNext(session, mappedResults));
+            return reduceKeys;
         }
 
         public void DeleteMappedResultsForView(string view)

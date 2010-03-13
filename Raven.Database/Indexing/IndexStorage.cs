@@ -100,7 +100,7 @@ namespace Raven.Database.Indexing
             return value.Query(query, start, pageSize, totalSize, fieldsToFetch);
         }
 
-        public void RemoveFromIndex(string index, string[] keys)
+        public void RemoveFromIndex(string index, string[] keys, WorkContext context)
         {
             Index value;
             if (indexes.TryGetValue(index, out value) == false)
@@ -108,7 +108,7 @@ namespace Raven.Database.Indexing
                 log.DebugFormat("Removing from non existing index {0}, ignoring", index);
                 return;
             }
-            value.Remove(keys);
+            value.Remove(keys, context);
         }
 
         public void Index(string index, AbstractViewGenerator viewGenerator, IEnumerable<dynamic> docs, WorkContext context,
