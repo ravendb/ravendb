@@ -19,7 +19,7 @@ namespace Raven.Server
 
             database = new DocumentDatabase(settings);
             database.SpinBackgroundWorkers();
-            server = new HttpServer(settings.Port,
+            server = new HttpServer(settings,
                                     typeof (RequestResponder).Assembly.GetTypes()
                                         .Where(
                                             t => typeof (RequestResponder).IsAssignableFrom(t) && t.IsAbstract == false)

@@ -192,6 +192,12 @@ namespace Raven.Server.Responders
             context.Response.StatusDescription = "Bad Request";
         }
 
+        public static void SetStatusToUnauthorized(this HttpListenerContext context)
+        {
+            context.Response.StatusCode = 401;
+            context.Response.StatusDescription = "Unauthorized";
+        }
+
         public static void Write(this HttpListenerContext context, string str)
         {
             var sw = new StreamWriter(context.Response.OutputStream);

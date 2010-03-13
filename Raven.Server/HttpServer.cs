@@ -7,6 +7,7 @@ using System.Net;
 using System.Threading;
 using log4net;
 using Newtonsoft.Json;
+using Raven.Database;
 using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
 using Raven.Server.Responders;
@@ -15,24 +16,31 @@ namespace Raven.Server
 {
     public class HttpServer : IDisposable
     {
+        private readonly RavenConfiguration configuration;
         private readonly HttpListener listener;
 
         private readonly ILog logger = LogManager.GetLogger(typeof (HttpServer));
         private readonly RequestResponder[] requestResponders;
         private int reqNum;
 
-        public HttpServer(IEnumerable<RequestResponder> requestResponders)
-            : this(8080, requestResponders)
-        {
-        }
-
         public HttpServer(
-            int port,
+            RavenConfiguration configuration,
             IEnumerable<RequestResponder> requestResponders)
         {
+            this.configuration = configuration;
             this.requestResponders = requestResponders.ToArray();
             listener = new HttpListener();
-            listener.Prefixes.Add("http://+:" + port + "/");
+            listener.Prefixes.Add("http://+:" + configuration.Port + "/");
+            switch (configuration.AnonymousUserAccessMode)
+            {
+                case AnonymousUserAccessMode.None:
+                    listener.AuthenticationSchemes = AuthenticationSchemes.IntegratedWindowsAuthentication ;
+                    break;
+                default:
+                    listener.AuthenticationSchemes = AuthenticationSchemes.IntegratedWindowsAuthentication |
+                                                     AuthenticationSchemes.Anonymous;
+                    break;
+            }
         }
 
         #region IDisposable Members
@@ -181,6 +189,15 @@ namespace Raven.Server
 
         private void HandleRequest(HttpListenerContext ctx)
         {
+            if (configuration.AnonymousUserAccessMode ==AnonymousUserAccessMode.Get && 
+                (ctx.User == null || ctx.User.Identity == null || ctx.User.Identity.IsAuthenticated == false)  && 
+                ctx.Request.HttpMethod != "GET"
+                )
+            {
+                ctx.SetStatusToUnauthorized();
+                return;
+            }
+
             foreach (var requestResponder in requestResponders)
             {
                 if (requestResponder.WillRespond(ctx))

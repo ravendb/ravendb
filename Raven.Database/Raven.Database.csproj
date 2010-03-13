@@ -95,6 +95,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AnonymousUserAccessMode.cs" />
     <Compile Include="Data\Attachment.cs" />
     <Compile Include="Data\DatabaseStatistics.cs" />
     <Compile Include="Data\IndexFailureInformation.cs" />

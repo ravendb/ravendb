@@ -21,12 +21,17 @@ namespace Raven.Database
 
             WebDir = ConfigurationManager.AppSettings["RavenWebDir"] ??
                      Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\WebUI");
+
+            AnonymousUserAccessMode = ConfigurationManager.AppSettings["AnonymousAccess"] != null ? 
+                (AnonymousUserAccessMode)Enum.Parse(typeof(AnonymousUserAccessMode), ConfigurationManager.AppSettings["AnonymousAccess"]) : 
+                AnonymousUserAccessMode.Get;
         }
 
         public string DataDirectory { get; set; }
         public int Port { get; set; }
         public string WebDir { get; set; }
         public int IndexingBatchSize { get; set; }
+        public AnonymousUserAccessMode AnonymousUserAccessMode { get; set; }
 
         public void LoadLoggingSettings()
         {
