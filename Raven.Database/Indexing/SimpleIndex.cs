@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
@@ -23,11 +24,17 @@ namespace Raven.Database.Indexing
             {
                 string currentId = null;
                 var converter = new AnonymousObjectToLuceneDocumentConverter();
+                PropertyDescriptorCollection properties = null;
                 foreach (var doc in RobustEnumeration(documents, viewGenerator.MapDefinition, actions, context))
                 {
                     count++;
-                    string newDocId;
-                    var fields = converter.Index(doc, out newDocId);
+                    
+                    if (properties == null)
+                    {
+                        properties = TypeDescriptor.GetProperties(doc);
+                    }
+                    var newDocId = properties.Find("__document_id", false).GetValue(doc) as string;
+                    var fields = converter.Index(doc, properties);
                     if (currentId != newDocId) // new document id, so delete all old values matching it
                     {
                         indexWriter.DeleteDocuments(new Term("__document_id", newDocId));
@@ -44,7 +51,7 @@ namespace Raven.Database.Indexing
 
                 return currentId != null;
             });
-            log.InfoFormat("Indexed {0} documents for {1}", count, name);
+            log.DebugFormat("Indexed {0} documents for {1}", count, name);
         }
 
         private static void CopyFieldsToDocumentButRemoveDuplicateValues(Document luceneDoc, IEnumerable<Field> fields)

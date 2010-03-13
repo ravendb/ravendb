@@ -8,15 +8,10 @@ namespace Raven.Database.Indexing
 {
     public class AnonymousObjectToLuceneDocumentConverter
     {
-        public IEnumerable<Field> Index(object val, out string docId)
+        public IEnumerable<Field> Index(object val, PropertyDescriptorCollection properties)
         {
-            var properties = TypeDescriptor.GetProperties(val).Cast<PropertyDescriptor>().ToArray();
-            var id = properties.First(x => x.Name == "__document_id");
-
-            docId = id.GetValue(val).ToString();
-
-            return (from property in properties
-                    where property != id
+            return (from property in properties.Cast<PropertyDescriptor>()
+                    where property.Name != "__document_id"
                     let value = property.GetValue(val)
                     where value != null
                     select new Field(property.Name, ToIndexableString(value), Field.Store.YES, Field.Index.TOKENIZED));

@@ -120,5 +120,22 @@ namespace Raven.Database.Indexing
             }
             value.IndexDocuments(viewGenerator, docs, context, actions);
         }
+
+        public void Reduce(string index, AbstractViewGenerator viewGenerator, IEnumerable<object> mappedResults, WorkContext context, DocumentStorageActions actions, string reduceKey)
+        {
+            Index value;
+            if (indexes.TryGetValue(index, out value) == false)
+            {
+                log.DebugFormat("Tried to index on a non existant index {0}, ignoring", index);
+                return;
+            }
+            var mapReduceIndex = value as MapReduceIndex;
+            if(mapReduceIndex == null)
+            {
+                log.WarnFormat("Tried to reduce on an index that is not a map/reduce index: {0}, ignoring", index);
+                return;
+            }
+            mapReduceIndex.ReduceDocuments(viewGenerator, mappedResults, context, actions, reduceKey);
+        }
     }
 }
