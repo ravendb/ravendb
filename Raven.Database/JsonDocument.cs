@@ -22,7 +22,7 @@ namespace Raven.Database
             var etagProp = Metadata.Property("@etag");
             if (etagProp == null)
             {
-                etagProp = new JProperty("etag");
+                etagProp = new JProperty("@etag");
                 Metadata.Add(etagProp);
             }
             etagProp.Value = new JValue(Etag.ToString());
