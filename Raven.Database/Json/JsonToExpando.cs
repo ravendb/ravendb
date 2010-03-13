@@ -28,15 +28,27 @@ namespace Raven.Database.Json
             var jValue = token as JValue;
             if (jValue != null)
             {
-                return jValue.Value;
+                var value = jValue.Value;
+                var str = value as string;
+                if (str != null)
+                {
+                    int iResult;
+                    if (int.TryParse(str, out iResult))
+                        return iResult;
+                    double dblResult;
+                    if (double.TryParse(str, out dblResult))
+                        return dblResult;
+                    bool bResult;
+                    if (bool.TryParse(str, out bResult))
+                        return bResult;
+                }
+                return value;
             }
             var jObject = token as JObject;
             if (jObject != null)
             {
                 var expando = new ExpandoObject() as IDictionary<string, object>;
-                foreach (
-                    var property in
-                        (from childToken in token where childToken is JProperty select childToken as JProperty))
+                foreach (var property in token.OfType<JProperty>())
                 {
                     expando.Add(property.Name, ConvertChild(property.Value));
                 }

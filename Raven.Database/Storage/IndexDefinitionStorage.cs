@@ -27,7 +27,7 @@ namespace Raven.Database.Storage
                 var indexDef = File.ReadAllText(index);
                 try
                 {
-                    AddIndex(Path.GetFileNameWithoutExtension(index), indexDef);
+                    AddIndex(Path.GetFileNameWithoutExtension(index), indexDef, null);
                 }
                 catch (Exception e)
                 {
@@ -41,12 +41,12 @@ namespace Raven.Database.Storage
             get { return indexCache.Keys.ToArray(); }
         }
 
-        public string AddIndex(string name, string indexDef)
+        public string AddIndex(string name, string mapDef, string reduceDef)
         {
-            var transformer = new DynamicViewCompiler(name, indexDef, null);
+            var transformer = new DynamicViewCompiler(name, mapDef, reduceDef);
             var generator = transformer.GenerateInstance();
             indexCache.AddOrUpdate(name, generator, (s, viewGenerator) => generator);
-            File.WriteAllText(Path.Combine(path, transformer.Name + ".index"), indexDef);
+            File.WriteAllText(Path.Combine(path, transformer.Name + ".index"), mapDef);
             logger.InfoFormat("New index {0}:\r\n{1}\r\nCompiled to:\r\n{2}", transformer.Name, transformer.CompiledQueryText,
                               transformer.CompiledQueryText);
             return transformer.Name;

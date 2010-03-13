@@ -74,16 +74,18 @@ namespace Raven.Database.Indexing
             }
         }
 
-        public void CreateIndex(string name)
+        public void CreateIndex(string name, bool isMapReduce)
         {
             log.InfoFormat("Creating index {0}", name);
-            indexes.AddOrUpdate(name, BuildIndex, (s, index) => index);
+            indexes.AddOrUpdate(name, n => BuildIndex(name, isMapReduce), (s, index) => index);
         }
 
-        private Index BuildIndex(string name)
+        private Index BuildIndex(string name, bool isMapReduce)
         {
             var directory = FSDirectory.GetDirectory(Path.Combine(path, name), true);
             new IndexWriter(directory, new StandardAnalyzer()).Close(); //creating index structure
+            if (isMapReduce)
+                return new MapReduceIndex(directory, name);
             return new SimpleIndex(directory, name);
         }
 

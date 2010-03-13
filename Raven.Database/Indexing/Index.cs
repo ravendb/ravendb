@@ -91,29 +91,7 @@ namespace Raven.Database.Indexing
                                             WorkContext context,
                                             DocumentStorageActions actions);
 
-        private static IndexQueryResult RetrieveDocument(Document document, string[] fieldsToFetch)
-        {
-            return new IndexQueryResult
-            {
-                Key = document.Get("__document_id"),
-                Projection = fieldsToFetch == null || fieldsToFetch.Length == 0 ? null :
-                    new JObject(
-                        fieldsToFetch.Concat(new[] { "__document_id" }).Distinct()
-                            .SelectMany(name => document.GetFields(name) ?? new Field[0])
-                            .Where(x => x != null)
-                            .Select(fld => new JProperty(fld.Name(), fld.StringValue()))
-                            .GroupBy(x => x.Name)
-                            .Select(g =>
-                            {
-                                if (g.Count() == 1)
-                                    return g.First();
-                                return new JProperty(g.Key,
-                                    g.Select(x => x.Value)
-                                    );
-                            })
-                        )
-            };
-        }
+        protected abstract IndexQueryResult RetrieveDocument(Document document, string[] fieldsToFetch);
 
         private IEnumerable<IndexQueryResult> SearchIndex(string query, Reference<int> totalSize,
                                                 int start, int pageSize, string[] fieldsToFetch)

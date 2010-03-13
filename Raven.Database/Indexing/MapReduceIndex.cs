@@ -1,15 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
-using Lucene.Net.Store;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Database.Data;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
+using Directory = Lucene.Net.Store.Directory;
 
 namespace Raven.Database.Indexing
 {
@@ -41,8 +43,15 @@ namespace Raven.Database.Indexing
                     documentIdPropertyDescriptor = props.Find("__document_id", false);
                 }
 
-                var reduceKey = groupByPropertyDescriptor.GetValue(doc) as string;
-                var docId = documentIdPropertyDescriptor.GetValue(doc) as string;
+                var reduceValue = groupByPropertyDescriptor.GetValue(doc);
+                if(reduceValue == null)
+                    throw new InvalidOperationException("Field " + viewGenerator.GroupByField +
+                                                        " is used as the reduce key and cannot be null");
+                var reduceKey = reduceValue.ToString();
+                var docIdValue = documentIdPropertyDescriptor.GetValue(doc);
+                if(docIdValue == null)
+                    throw new InvalidOperationException("Could not find document id for this document");
+                var docId = docIdValue.ToString();
 
                 reduceKeys.Add(reduceKey);
 
@@ -61,6 +70,32 @@ namespace Raven.Database.Indexing
             }
 
             log.DebugFormat("Mapped {0} documents for {1}", count, name);
+        }
+
+        protected override IndexQueryResult RetrieveDocument(Document document, string[] fieldsToFetch)
+        {
+            if (fieldsToFetch == null || fieldsToFetch.Length == 0)
+                fieldsToFetch = document.GetFields().OfType<Fieldable>().Select(x => x.Name()).ToArray();
+            return new IndexQueryResult
+            {
+                Key = null,
+                Projection = 
+                    new JObject(
+                        fieldsToFetch.Concat(new[] { "__document_id" }).Distinct()
+                            .SelectMany(name => document.GetFields(name) ?? new Field[0])
+                            .Where(x => x != null)
+                            .Select(fld => new JProperty(fld.Name(), fld.StringValue()))
+                            .GroupBy(x => x.Name)
+                            .Select(g =>
+                            {
+                                if (g.Count() == 1)
+                                    return g.First();
+                                return new JProperty(g.Key,
+                                    g.Select(x => x.Value)
+                                    );
+                            })
+                        )
+            };
         }
 
         public void ReduceDocuments(AbstractViewGenerator viewGenerator,
