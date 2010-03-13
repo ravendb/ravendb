@@ -189,14 +189,8 @@ namespace Raven.Server
 
         private void HandleRequest(HttpListenerContext ctx)
         {
-            if (configuration.AnonymousUserAccessMode ==AnonymousUserAccessMode.Get && 
-                (ctx.User == null || ctx.User.Identity == null || ctx.User.Identity.IsAuthenticated == false)  && 
-                ctx.Request.HttpMethod != "GET"
-                )
-            {
-                ctx.SetStatusToUnauthorized();
+            if (AssertSecurityRights(ctx) == false)
                 return;
-            }
 
             foreach (var requestResponder in requestResponders)
             {
@@ -216,6 +210,19 @@ namespace Raven.Server
     </body>
 </html>
 ");
+        }
+
+        private bool AssertSecurityRights(HttpListenerContext ctx)
+        {
+            if (configuration.AnonymousUserAccessMode ==AnonymousUserAccessMode.Get && 
+                (ctx.User == null || ctx.User.Identity == null || ctx.User.Identity.IsAuthenticated == false)  && 
+                ctx.Request.HttpMethod != "GET"
+                )
+            {
+                ctx.SetStatusToUnauthorized();
+                return false;
+            }
+            return true;
         }
     }
 }
