@@ -26,7 +26,7 @@ namespace Raven.Scenarios
                 @",""expectedETag"":""(\{{0,1}([0-9a-fA-F]){8}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){12}\}{0,1})"",")
             ,
             new Regex(
-                @"""etag"":""(\{{0,1}([0-9a-fA-F]){8}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){12}\}{0,1})""")
+                @"etag"":""(\{{0,1}([0-9a-fA-F]){8}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){12}\}{0,1})""")
             ,
             new Regex(
                 @"id"":""(\{{0,1}([0-9a-fA-F]){8}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){12}\}{0,1})""")
@@ -270,6 +270,8 @@ namespace Raven.Scenarios
 
         private static int FindFirstDiff(string expectedLine, string actualLine)
         {
+            if (actualLine == null || expectedLine == null)
+                return 0;
             for (int i = 0; i < Math.Min(expectedLine.Length, actualLine.Length); i++)
             {
                 if (expectedLine[i] != actualLine[i])

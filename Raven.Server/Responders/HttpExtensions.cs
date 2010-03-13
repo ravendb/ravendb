@@ -167,6 +167,13 @@ namespace Raven.Server.Responders
             context.Response.Headers["Location"] = location;
         }
 
+
+        public static void SetStatusToWriteConflict(this HttpListenerContext context)
+        {
+            context.Response.StatusCode = 409;
+            context.Response.StatusDescription = "Conflict";
+        }
+
         public static void SetStatusToNotFound(this HttpListenerContext context)
         {
             context.Response.StatusCode = 404;

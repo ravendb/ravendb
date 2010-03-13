@@ -1,4 +1,7 @@
+using System;
 using System.Net;
+using Raven.Database;
+using Raven.Database.Json;
 
 namespace Raven.Server.Responders
 {
@@ -11,7 +14,7 @@ namespace Raven.Server.Responders
 
         public override string[] SupportedVerbs
         {
-            get { return new[] {"GET", "DELETE", "PUT"}; }
+            get { return new[] {"GET", "DELETE", "PUT", "PATCH"}; }
         }
 
         public override void Respond(HttpListenerContext context)
@@ -41,6 +44,24 @@ namespace Raven.Server.Responders
                     break;
                 case "PUT":
                     Put(context, docId);
+                    break;
+                case "PATCH":
+                    var patchDoc = context.ReadJsonArray();
+                    var patchResult = Database.ApplyPatch(docId, context.GetEtag(),patchDoc);
+                    switch (patchResult)
+                    {
+                        case PatchResult.DocumentDoesNotExists:
+                            context.SetStatusToNotFound();
+                            break;
+                        case PatchResult.WriteConflict:
+                            context.SetStatusToWriteConflict();
+                            break;
+                        case PatchResult.Patched:
+                            context.WriteJson(new {patched = true});
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException("Value " + patchResult + " is not understood");
+                    }
                     break;
             }
         }

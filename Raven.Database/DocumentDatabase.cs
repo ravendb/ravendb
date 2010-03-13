@@ -10,6 +10,7 @@ using Raven.Database.Data;
 using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
+using Raven.Database.Json;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
 
@@ -332,6 +333,34 @@ namespace Raven.Database
                             {"definition", new JValue(IndexDefinitionStorage.GetIndexDefinition(indexName))}
                         })
                 );
+        }
+
+        public PatchResult ApplyPatch(string docId, Guid? etag, JArray patchDoc)
+        {
+            var result = PatchResult.Patched;
+            TransactionalStorage.Batch(actions =>
+            {
+                var doc = actions.DocumentByKey(docId);
+                if(doc == null)
+                {
+                    result = PatchResult.DocumentDoesNotExists;
+                }
+                else if(etag != null && doc.Etag != etag.Value)
+                {
+                    result = PatchResult.WriteConflict;
+                }
+                else
+                {
+                    var jsonDoc = doc.ToJson();
+                    new JsonPatcher(jsonDoc).Apply(patchDoc);
+                    Put(doc.Key, doc.Etag, jsonDoc, doc.Metadata);
+                    result = PatchResult.Patched;
+                }
+
+                actions.Commit();
+            });
+
+            return result;
         }
     }
 }
