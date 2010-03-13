@@ -1,5 +1,6 @@
 using System;
 using System.Net;
+using Newtonsoft.Json.Linq;
 
 namespace Raven.Server.Responders
 {
@@ -26,11 +27,7 @@ namespace Raven.Server.Responders
                     OnGet(context, index);
                     break;
                 case "PUT":
-                    context.SetStatusToCreated("/indexes/" + index);
-                    context.WriteJson(new
-                    {
-                        index = Database.PutIndex(index, context.ReadString())
-                    });
+                    Put(context, index);
                     break;
                 case "DELETE":
                     context.SetStatusToDeleted();
@@ -38,6 +35,31 @@ namespace Raven.Server.Responders
                     context.WriteJson(new {index});
                     break;
             }
+        }
+
+        private void Put(HttpListenerContext context, string index)
+        {
+            var data = context.ReadJson();
+            var mapProp = data.Property("Map");
+            if(mapProp == null)
+            {
+                context.SetStatusToBadRequest();
+                context.Write("Expected json document with 'Map' property");
+                return;
+            }
+            var mapDef = mapProp.Value.Value<string>();
+            string reduceDef = null;
+            if (data.Property("Reduce") != null)
+                reduceDef = data.Property("Reduce").Value.Value<string>();
+          
+            context.SetStatusToCreated("/indexes/" + index);
+            context.WriteJson(new
+            {
+                index = Database.PutIndex(index, 
+                                          mapDef, 
+                                          reduceDef 
+                                  )
+            });
         }
 
         private void OnGet(HttpListenerContext context, string index)
