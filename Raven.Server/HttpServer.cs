@@ -189,13 +189,13 @@ namespace Raven.Server
                     return;
                 }
             }
-            ctx.SetStatusToNotFound();
+            ctx.SetStatusToBadRequest();
             ctx.Write(
                 @"
 <html>
     <body>
-        <h1>Not Found</h1>
-        <p>Could not find a matching document on the server</p>
+        <h1>Could not figure out what to do</h1>
+        <p>Your request didn't match anything that Raven knows to do, sorry...</p>
     </body>
 </html>
 ");
