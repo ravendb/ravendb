@@ -38,5 +38,14 @@ namespace Raven.Database
             XmlConfigurator.ConfigureAndWatch(
                 new FileInfo(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "log4net.config")));
         }
+
+    	public void RaiseDatabaseCreatedFromScratch(DocumentDatabase documentDatabase)
+    	{
+    		var onDatabaseCreatedFromScratch = DatabaseCreatedFromScratch;
+    		if(onDatabaseCreatedFromScratch != null)
+				onDatabaseCreatedFromScratch(documentDatabase);
+    	}
+
+    	public event Action<DocumentDatabase> DatabaseCreatedFromScratch;
     }
 }

@@ -68,7 +68,7 @@ namespace Raven.Database.Storage
 
         #endregion
 
-        public void Initialize()
+        public bool Initialize()
         {
             try
             {
@@ -81,8 +81,7 @@ namespace Raven.Database.Storage
 
                 InitColumDictionaries();
 
-				if (newDb)
-					AddDefaults();
+            	return newDb;
             }
             catch (Exception e)
             {
@@ -90,31 +89,6 @@ namespace Raven.Database.Storage
                 throw new InvalidOperationException("Could not open transactional storage: " + database, e);
             }
         }
-
-    	private void AddDefaults()
-    	{
-			JArray array;
-			const string name = "Raven.Database.Defaults.default.json";
-    		using(var defaultDocuments = typeof(TransactionalStorage).Assembly.GetManifestResourceStream(name))
-    		{
-    			array = JArray.Load(new JsonTextReader(new StreamReader(defaultDocuments)));
-    		}
-
-    		Batch(actions=>
-    		{
-				foreach (JObject document in array)
-				{
-					actions.AddDocument(
-						document["DocId"].Value<string>(),
-						document["Document"].Value<JObject>().ToString(),
-						null, 
-						document["Metadata"].Value<JObject>().ToString()
-						);
-				}
-
-				actions.Commit();
-    		});
-    	}
 
     	private void InitColumDictionaries()
         {

@@ -1,8 +1,11 @@
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Security.Principal;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Server.Responders;
 
@@ -16,7 +19,7 @@ namespace Raven.Server
         public RavenDbServer(RavenConfiguration settings)
         {
             settings.LoadLoggingSettings();
-
+			settings.DatabaseCreatedFromScratch+=OnDatabaseCreatedFromScratch;
             database = new DocumentDatabase(settings);
             database.SpinBackgroundWorkers();
             server = new HttpServer(settings,
@@ -39,7 +42,32 @@ namespace Raven.Server
             server.Start();
         }
 
-        #region IDisposable Members
+    	private void OnDatabaseCreatedFromScratch(DocumentDatabase documentDatabase)
+    	{
+			JArray array;
+			const string name = "Raven.Server.Defaults.default.json";
+			using (var defaultDocuments = GetType().Assembly.GetManifestResourceStream(name))
+			{
+				array = JArray.Load(new JsonTextReader(new StreamReader(defaultDocuments)));
+			}
+
+			documentDatabase.TransactionalStorage.Batch(actions =>
+			{
+				foreach (JObject document in array)
+				{
+					actions.AddDocument(
+						document["DocId"].Value<string>(),
+						document["Document"].Value<JObject>().ToString(),
+						null,
+						document["Metadata"].Value<JObject>().ToString()
+						);
+				}
+
+				actions.Commit();
+			});
+    	}
+
+    	#region IDisposable Members
 
         public void Dispose()
         {

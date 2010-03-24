@@ -6,7 +6,7 @@
       "Name": "Index"
     },
     "Metadata": {
-      "Raven-View-Template": "/static/raven/documentation.template"
+      "Raven-View-Template": "/raven/JSONTemplates/documentation.html"
     }
   },
   {
@@ -16,17 +16,17 @@
       "Name": "Http Api - Creating a Document"
     },
     "Metadata": {
-      "Raven-View-Template": "/static/raven/documentation.template"
+      "Raven-View-Template": "/raven/JSONTemplates/documentation.html"
     }
   },
   {
-    "DocId": "raven_documentation/docs_http_api_read",
+    "DocId": "raven_documentation/docs_http_api_get",
     "Document": {
       "Html": "<div class=\"layoutregion\"><div id=\"g_body\" style=\"overflow: auto;\"><h2>Http Api - Reading a Document</h2><p>\nUse the Read API to get a JSON document from RavenDB based on its id. For example, to get the JSON document for Bob's address, with an id value of \"bobs_address\":\n</p><pre>&gt; curl -X GET http://localhost:8080/docs/bobs_address\n</pre>\nThe RavenDB HTTP server will respond with:\n<pre>HTTP/1.1 200 OK\n\n{\n  \"FirstName\": \"Bob\",\n  \"LastName\": \"Smith\",\n  \"Address\": \"5 Elm St.\"\n}\n</pre><h4><br /></h4><h4>Urls and GET in Http</h4><p>\nIf you're reading this on a web page, chances are you familiar with URLs or Uniform Resource Locators.\n</p><p><br /></p><p>\nIn HTTP, URLs uniquely identify resources such as web pages (http://www.google.com/index.html).\n</p><p><br /></p><p>\nURLs aren't limited to pointing at just web pages; in RavenDB, every JSON document that RavenDB stores is reachable over HTTP by a URL.\n</p><p><br /></p><p>\nThis URL is composed of the RavenDB server name, the \"docs\" collection name and the id of the document.\n</p><p><br /></p><p>\nSo in the previous example, the URL of the document for Bob's address was http://locahost:8080 (the RavenDB server) + \"/docs\" + \"bobs_address\" (the document id).\n</p><h4><br /></h4><h4>Reading Something That's Not There</h4><p>\nRavenDB follows HTTP conventions and responds with a \"HTTP/1.1 404 Not Found\" if the URL specified points a JSON document that does not exist in RavenDB.\n</p><wbr></wbr></div><div class=\"clear\"></div></div>",
       "Name": "Http Api - Reading a Document"
     },
     "Metadata": {
-      "Raven-View-Template": "/static/raven/documentation.template"
+      "Raven-View-Template": "/raven/JSONTemplates/documentation.html"
     }
   },
   {
@@ -36,7 +36,7 @@
       "Name": "Http Api - Updating a Document"
     },
     "Metadata": {
-      "Raven-View-Template": "/static/raven/documentation.template"
+      "Raven-View-Template": "/raven/JSONTemplates/documentation.html"
     }
   },
   {
@@ -46,7 +46,17 @@
       "Name": "Http Api - Deleting a Document"
     },
     "Metadata": {
-      "Raven-View-Template": "/static/raven/documentation.template"
+      "Raven-View-Template": "/raven/JSONTemplates/documentation.html"
+    }
+  },
+  {
+    "DocId": "raven_documentation/docs_security",
+    "Document": {
+      "Html": "<div class=\"layoutregion\"><div id=\"g_body\" style=\"overflow: auto;\"><h2>Security - Anonymous Users</h2><p>\nIn RavenDB, you can control the privileges of unauthenticated or anonymous users. By default such anonymous uses can retrieve any documents they want (or to put it in terms of the Http Api, they can GET any document.) The other options are to grant anonymous users total control of the database (\"All\") or no access at all (\"None\"). These values are listed in the AnonymousUserAccessMode enumerator in the RavenDB source code. You can set which option you prefer in the app.config as follows:\n</p><pre>  &lt;appSettings&gt;\n    &lt;add key=\"AnonymousAccess\" value=\"All\"/&gt;\n  &lt;/appSettings&gt;</pre><wbr></wbr></div><div class=\"clear\"></div></div>",
+      "Name": "Security - Anonymous Users"
+    },
+    "Metadata": {
+      "Raven-View-Template": "/raven/JSONTemplates/documentation.html"
     }
   },
   {
@@ -56,7 +66,7 @@
       "Name": "Http Api - Indexes & Map / Reduce"
     },
     "Metadata": {
-      "Raven-View-Template": "/static/raven/documentation.template"
+      "Raven-View-Template": "/raven/JSONTemplates/documentation.html"
     }
   },
   {
@@ -66,7 +76,7 @@
       "Name": "Http Api - Is the RavenDB Http Api RESTful?"
     },
     "Metadata": {
-      "Raven-View-Template": "/static/raven/documentation.template"
+      "Raven-View-Template": "/raven/JSONTemplates/documentation.html"
     }
   },
   {
@@ -76,7 +86,7 @@
       "Name": "Http Api - Optimistic Concurrency and E-Tags"
     },
     "Metadata": {
-      "Raven-View-Template": "/static/raven/documentation.template"
+      "Raven-View-Template": "/raven/JSONTemplates/documentation.html"
     }
   }
 ]

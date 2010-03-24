@@ -26,9 +26,10 @@ namespace Raven.Database
         {
             this.configuration = configuration;
             TransactionalStorage = new TransactionalStorage(configuration.DataDirectory);
-            try
+			bool newDb;
+			try
             {
-                TransactionalStorage.Initialize();
+            	newDb = TransactionalStorage.Initialize();
             }
             catch (Exception)
             {
@@ -44,6 +45,9 @@ namespace Raven.Database
                 TransactionaStorage = TransactionalStorage,
                 IndexDefinitionStorage = IndexDefinitionStorage
             };
+
+			if (newDb)
+				configuration.RaiseDatabaseCreatedFromScratch(this);
         }
 
         public DatabaseStatistics Statistics
