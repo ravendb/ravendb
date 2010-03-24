@@ -9,7 +9,7 @@ namespace Raven.Server.Responders
     {
         public override string UrlPattern
         {
-            get { return @"/docs/([\w\d_-]+)"; }
+			get { return @"/docs/(.+)"; }
         }
 
         public override string[] SupportedVerbs
