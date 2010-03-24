@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using Xunit.Extensions;
 
@@ -10,9 +12,9 @@ namespace Raven.Scenarios
         {
             get
             {
-                return Directory.Exists(@"..\..\bin") // running in VS
-                           ? @"..\..\Scenarios"
-                           : @"..\Raven.Scenarios\Scenarios";
+                return Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,@"..\debug")) // running in VS
+						   ? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\Scenarios")
+                           : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\Raven.Scenarios\Scenarios");
             }
         }
 
