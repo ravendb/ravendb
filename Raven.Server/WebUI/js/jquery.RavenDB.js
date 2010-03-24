@@ -46,15 +46,16 @@
             });
         },
 
-        getDocument: function (id, successCallback) {
+        getDocument: function (id, operation, successCallback) {
             $.ajax({
                 url: settings.server + 'docs/' + id,
                 dataType: 'json',
                 complete: function(xhr) {
+					debugger;
                     if (xhr.status == 200) {
                         var data = JSON.parse(xhr.responseText);
                         var etag = xhr.getResponseHeader("Etag");
-                        var template = xhr.getResponseHeader('Raven-View-Template');
+                        var template = xhr.getResponseHeader('Raven-' + operation + '-Template');
                         successCallback(data, etag, template);
                     }
                 }

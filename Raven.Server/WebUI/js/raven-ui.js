@@ -57,8 +57,8 @@ RavenUI.GetDocumentPage = function (pageNum, pageSize, successCallback) {
     });
 }
 
-RavenUI.GetDocument = function (id, successCallback) {
-    $.ravenDB.getDocument(id, successCallback);
+RavenUI.GetDocument = function (id, operation, successCallback) {
+	$.ravenDB.getDocument(id, operation, successCallback);
 }
 
 RavenUI.SaveDocument = function (id, etag, template, json, successCallback) {
@@ -111,8 +111,7 @@ RavenUI.ShowTemplatedDocument = function(docId, operation, elementName) {
         $(elementName).html('No document id specified.');
         return;
     }
-    RavenUI.GetDocument(docId, function(data, xhr) {
-        var template = xhr.getResponseHeader('Raven-' + operation + '-Template');
+    RavenUI.GetDocument(docId, operation, function(data, etag, template) {
         if (template == null) {
             $(elementName).html('No ' + operation + ' template was specified for this document.');
             return;

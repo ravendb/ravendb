@@ -8,19 +8,19 @@
     <script type="text/javascript" src="js/jquery-1.4.2.min.js"></script>
     <script type="text/javascript" src="js/jquery-ui.js"></script>
     <script type="text/javascript" src="js/jquery-jtemplates.js"></script>
-    <script type="text/javascript" src="js/jquery.querystring.js"></script>
+	<script type="text/javascript" src="js/jquery.query-2.1.7.js"></script>
     
     <script type="text/javascript" src="js/jquery.RavenDB.js"></script>
     <script type="text/javascript" src="js/raven-ui.js"></script>
 
     <script type="text/javascript">
-        $(document).ready(function() {
-            var docId = $.query.get('docId');
-            var operation = $.query.get('op');
-            if (operation == null || operation.length == 0)
-                operation = 'View';
-            RavenUI.ShowTemplatedDocument(docId, operation, 'p#results')
-        });
+    	$(document).ready(function () {
+    		var docId = $.query.get('docId');
+    		var operation = $.query.get('op');
+    		if (operation == null || operation.length == 0)
+    			operation = 'View';
+    		RavenUI.ShowTemplatedDocument(docId, operation, 'p#results')
+    	});
     </script>
 </head>
 <body>
