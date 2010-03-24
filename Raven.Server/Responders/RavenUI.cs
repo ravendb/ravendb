@@ -24,6 +24,11 @@ namespace Raven.Server.Responders
         {
             var docPath = context.Request.Url.LocalPath.Replace("/raven/", "");
             var filePath = Path.Combine(RavenPath, docPath);
+			if(File.Exists(filePath) == false)
+			{
+				context.SetStatusToNotFound();
+				return;
+			}
             var bytes = File.ReadAllBytes(filePath);
             context.Response.OutputStream.Write(bytes, 0, bytes.Length);
             context.Response.OutputStream.Flush();
