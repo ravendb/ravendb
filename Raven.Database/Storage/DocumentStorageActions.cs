@@ -147,6 +147,7 @@ namespace Raven.Database.Storage
         {
             var item1 = 0;
             var item2 = 0;
+			Api.JetSetCurrentIndex(session, documents, "by_id");
             Api.MoveBeforeFirst(session, documents);
             if (Api.TryMoveNext(session, documents))
                 item1 = Api.RetrieveColumnAsInt32(session, documents, documentsColumns["id"]).Value;
