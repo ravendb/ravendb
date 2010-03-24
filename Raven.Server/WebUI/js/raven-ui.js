@@ -106,17 +106,17 @@ RavenUI.QueryIndex = function (name, queryValues, pageNumber, pageSize, successC
 }
 
 // View
-RavenUI.ShowTemplatedDocument = function(docId, operation, elementName) {
-    if ($.query.get('docId').length == 0) {
-        $(elementName).html('No document id specified.');
-        return;
-    }
-    RavenUI.GetDocument(docId, operation, function(data, etag, template) {
-        if (template == null) {
-            $(elementName).html('No ' + operation + ' template was specified for this document.');
-            return;
-        }
-        $(elementName).setTemplateURL(template);
-        $(elementName).processTemplate(JSON.parse(data));
-    })
+RavenUI.ShowTemplatedDocument = function (docId, operation, elementName) {
+	if ($.query.get('docId').length == 0) {
+		$(elementName).html('No document id specified.');
+		return;
+	}
+	RavenUI.GetDocument(docId, operation, function (data, etag, template) {
+		if (template == null) {
+			$(elementName).html('No ' + operation + ' template was specified for this document.');
+			return;
+		}
+		$(elementName).setTemplateURL(template, null, { filter_data: false } );
+		$(elementName).processTemplate(data);
+	})
 }
