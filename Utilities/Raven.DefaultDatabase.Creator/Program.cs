@@ -2,18 +2,15 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Xml;
-using ICSharpCode.SharpZipLib.Zip;
 using Newtonsoft.Json.Linq;
-using Raven.Database;
 using Sgml;
-using System.Linq;
 using Formatting = Newtonsoft.Json.Formatting;
 
 namespace Raven.DefaultDatabase.Creator
 {
 	class Program
 	{
-		static void Main()
+		static void Main(string[] args)
 		{
 			var array = new JArray();
 			var crawled = new HashSet<string>();
@@ -40,7 +37,7 @@ namespace Raven.DefaultDatabase.Creator
 
 			AddDocumentsFromLinks(array, crawled, layout.SelectNodes(".//a"));
 
-			File.WriteAllText(@"..\..\..\Raven.Server\Defaults\default.json", array.ToString(Formatting.Indented));
+			File.WriteAllText(args[0], array.ToString(Formatting.Indented));
 		}
 
 		private static void AddDocumentsFromLinks(JArray array, HashSet<string> crawled, XmlNodeList list)
