@@ -127,7 +127,7 @@ namespace Raven.Server
         private static void HandleIndexDisabledException(HttpListenerContext ctx, IndexDisabledException e)
         {
             ctx.Response.StatusCode = 503;
-            ctx.Response.StatusDescription = "ervice Unavailable";
+            ctx.Response.StatusDescription = "Service Unavailable";
             using (var sw = new StreamWriter(ctx.Response.OutputStream))
             {
                 new JsonSerializer().Serialize(sw,
