@@ -31,7 +31,7 @@ namespace Raven.Database.Storage
                 {
                     AddIndex(Path.GetFileNameWithoutExtension(index), 
                         indexDef.Property("Map").Value.Value<string>(),
-                        indexDef.Property("Reduce   ").Value.Value<string>());
+                        indexDef.Property("Reduce").Value.Value<string>());
                 }
                 catch (Exception e)
                 {
