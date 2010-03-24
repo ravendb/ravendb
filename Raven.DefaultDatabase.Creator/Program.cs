@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Xml;
 using ICSharpCode.SharpZipLib.Zip;
@@ -15,12 +16,12 @@ namespace Raven.DefaultDatabase.Creator
 		static void Main()
 		{
 			var array = new JArray();
-
+			var crawled = new HashSet<string>();
 			var sgmlReader = new SgmlReader
 			{
 				Href = "http://groups.google.com/group/ravendb/web/docs-http-api-index"
 			};
-
+			crawled.Add(sgmlReader.Href);
 			var doc = new XmlDocument();
 			doc.Load(sgmlReader);
 
@@ -33,16 +34,21 @@ namespace Raven.DefaultDatabase.Creator
 			          	new JProperty("DocId", "raven_documentation/index"),
 			          	new JProperty("Document", index),
 			          	new JProperty("Metadata",
-			          	              new JObject(new JProperty("Raven-View-Template", "/static/raven/documentation.template")))
+			          	              new JObject(new JProperty("Raven-View-Template", "/raven/JSONTemplates/documentation.html")))
 			          	));
 
 
-			foreach (XmlNode link in layout.SelectNodes(".//a"))
-			{
-				ExportDocument(array, link.Attributes["href"].Value);
-			}
+			AddDocumentsFromLinks(array, crawled, layout.SelectNodes(".//a"));
 
-			File.WriteAllText("default.json", array.ToString(Formatting.Indented));
+			File.WriteAllText(@"..\..\..\Raven.Server\Defaults\default.json", array.ToString(Formatting.Indented));
+		}
+
+		private static void AddDocumentsFromLinks(JArray array, HashSet<string> crawled, XmlNodeList list)
+		{
+			foreach (XmlNode link in list)
+			{
+				ExportDocument(array, crawled, link.Attributes["href"].Value);
+			}
 		}
 
 		private static string FixLinks(string xml)
@@ -57,24 +63,34 @@ namespace Raven.DefaultDatabase.Creator
 				link.Attributes["href"].Value = link.Attributes["href"].Value
 					.Replace("/group/ravendb/web/", "/raven/view.html?docId=raven_documentation/")
 					.Replace("-", "_");
+
 			}
+			
 			return doc.OuterXml;
 		}
 
-		private static void ExportDocument(JArray array,string href)
+		private static void ExportDocument(JArray array, HashSet<string> crawled, string href)
 		{
+			if (crawled.Add(href) == false)
+				return;
+
 			Console.WriteLine("Reading {0}", href);
+			var uri = new UriBuilder("http", "groups.google.com", 80, href).Uri;
 			var linkReader = new SgmlReader
 								{
-									Href = new UriBuilder("http", "groups.google.com", 80, href).Uri.ToString()
+									Href = uri.ToString()
 								};
-
+			
 			var linkDoc = new XmlDocument();
 			linkDoc.Load(linkReader);
 
+
 			var layout = linkDoc.SelectSingleNode("//div[@class='layout']");
 			var title = layout.SelectSingleNode(".//h2").InnerText;
-			var name = linkDoc.SelectSingleNode("/html/head/title").InnerText.Split('-').First().Trim();
+			var name = Path.GetFileName(uri.LocalPath).Replace("-", "_");
+
+			AddDocumentsFromLinks(array, crawled, layout.SelectNodes(".//a"));
+
 
 			Console.WriteLine("Writing {0}", title);
 
@@ -83,7 +99,7 @@ namespace Raven.DefaultDatabase.Creator
 						new JProperty("DocId", "raven_documentation/" + name),
 						new JProperty("Document", index),
 						new JProperty("Metadata",
-									  new JObject(new JProperty("Raven-View-Template", "/static/raven/documentation.template")))
+									  new JObject(new JProperty("Raven-View-Template", "/raven/JSONTemplates/documentation.html")))
 						));
 		}
 	}

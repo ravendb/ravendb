@@ -124,6 +124,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="PowerShellProvider\RavenDBProvider.help.xml" />
+    <Content Include="WebUI\JSONTemplates\documentation.html" />
     <Content Include="WebUI\js\jquery.query-2.1.7.js" />
     <Content Include="WebUI\view.html" />
     <Content Include="WebUI\css\Pager.css" />
@@ -230,6 +231,9 @@
     <EmbeddedResource Include="ProjectInstaller.resx">
       <DependentUpon>ProjectInstaller.cs</DependentUpon>
     </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Defaults\default.json" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
