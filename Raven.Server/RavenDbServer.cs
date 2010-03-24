@@ -8,12 +8,12 @@ using Raven.Server.Responders;
 
 namespace Raven.Server
 {
-    public class DivanServer : IDisposable
+    public class RavenDbServer : IDisposable
     {
         private readonly DocumentDatabase database;
         private readonly HttpServer server;
 
-        public DivanServer(RavenConfiguration settings)
+        public RavenDbServer(RavenConfiguration settings)
         {
             settings.LoadLoggingSettings();
 

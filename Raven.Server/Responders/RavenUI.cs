@@ -3,16 +3,16 @@ using System.Net;
 
 namespace Raven.Server.Responders
 {
-    public class DivanUI : RequestResponder
+    public class RavenUI : RequestResponder
     {
-        public string DivanPath
+        public string RavenPath
         {
             get { return Settings.WebDir; }
         }
 
         public override string UrlPattern
         {
-            get { return "^/divan/"; }
+            get { return "^/raven/"; }
         }
 
         public override string[] SupportedVerbs
@@ -22,8 +22,8 @@ namespace Raven.Server.Responders
 
         public override void Respond(HttpListenerContext context)
         {
-            var docPath = context.Request.Url.LocalPath.Replace("/divan/", "");
-            var filePath = Path.Combine(DivanPath, docPath);
+            var docPath = context.Request.Url.LocalPath.Replace("/raven/", "");
+            var filePath = Path.Combine(RavenPath, docPath);
             var bytes = File.ReadAllBytes(filePath);
             context.Response.OutputStream.Write(bytes, 0, bytes.Length);
             context.Response.OutputStream.Flush();

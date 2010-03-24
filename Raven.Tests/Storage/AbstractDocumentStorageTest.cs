@@ -6,8 +6,8 @@ namespace Raven.Tests.Storage
     {
         public AbstractDocumentStorageTest()
         {
-            if (Directory.Exists("divan.db.test.esent"))
-                Directory.Delete("divan.db.test.esent", true);
+            if (Directory.Exists("raven.db.test.esent"))
+                Directory.Delete("raven.db.test.esent", true);
         }
     }
 }

@@ -1,7 +1,7 @@
 ﻿var indexSearchCache = null;
 
 (function ($) {
-    $.divanDB = {
+    $.ravenDB = {
         settings: null,
 
         init: function (options) {

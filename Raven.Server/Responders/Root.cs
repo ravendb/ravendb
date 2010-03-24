@@ -16,7 +16,7 @@ namespace Raven.Server.Responders
 
         public override void Respond(HttpListenerContext context)
         {
-            context.Response.Redirect("/divan/index.html");
+            context.Response.Redirect("/raven/index.html");
         }
     }
 }

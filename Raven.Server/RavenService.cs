@@ -5,7 +5,7 @@ namespace Raven.Server
 {
     internal partial class RavenService : ServiceBase
     {
-        private DivanServer server;
+        private RavenDbServer server;
 
         public RavenService()
         {
@@ -14,7 +14,7 @@ namespace Raven.Server
 
         protected override void OnStart(string[] args)
         {
-            server = new DivanServer(new RavenConfiguration());
+            server = new RavenDbServer(new RavenConfiguration());
         }
 
         protected override void OnStop()

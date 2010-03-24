@@ -1,5 +1,5 @@
 ﻿$(document).ready(function () {
-    $.divanDB.init();
+    $.ravenDB.init();
     
     var windowSize = $(window).height();
     var minBodySize = Math.floor(windowSize*.75);
@@ -20,98 +20,98 @@
     });
 });
 
-function DivanUI() { }
+function RavenUI() { }
 
 //home page
 
-DivanUI.UpdateQuickStats = function (targetSelector) {
+RavenUI.UpdateQuickStats = function (targetSelector) {
     if (!$(targetSelector).hasTemplate()) {
         $(targetSelector).setTemplateURL('JSONTemplates/quickStats.html');
     }
 
-    $.divanDB.getStatistics(function (stats) {
+    $.ravenDB.getStatistics(function (stats) {
         $(targetSelector).processTemplate(stats);
     });
 }
 
 //global statistics
 
-DivanUI.GetGlobalStatistics = function (targetSelector) {
+RavenUI.GetGlobalStatistics = function (targetSelector) {
     if (!$(targetSelector).hasTemplate()) {
         $(targetSelector).setTemplateURL('JSONTemplates/globalStats.html');
     }
 
-    $.divanDB.getStatistics(function (stats) {
+    $.ravenDB.getStatistics(function (stats) {
         $(targetSelector).processTemplate(stats);
     });
 }
 
 //Documents
-DivanUI.GetDocumentCount = function (successCallback) {
-    $.divanDB.getDocumentCount(successCallback);
+RavenUI.GetDocumentCount = function (successCallback) {
+    $.ravenDB.getDocumentCount(successCallback);
 }
 
-DivanUI.GetDocumentPage = function (pageNum, pageSize, successCallback) {
-    $.divanDB.getDocumentPage(pageNum, pageSize, function (docs) {
+RavenUI.GetDocumentPage = function (pageNum, pageSize, successCallback) {
+    $.ravenDB.getDocumentPage(pageNum, pageSize, function (docs) {
         successCallback(docs);
     });
 }
 
-DivanUI.GetDocument = function (id, successCallback) {
-    $.divanDB.getDocument(id, successCallback);
+RavenUI.GetDocument = function (id, successCallback) {
+    $.ravenDB.getDocument(id, successCallback);
 }
 
-DivanUI.SaveDocument = function (id, etag, template, json, successCallback) {
-    $.divanDB.saveDocument(id, etag, template, json, successCallback);
+RavenUI.SaveDocument = function (id, etag, template, json, successCallback) {
+    $.ravenDB.saveDocument(id, etag, template, json, successCallback);
 }
 
-DivanUI.DeleteDocument = function (id, etag, successCallback) {
-    $.divanDB.deleteDocument(id, etag, successCallback);
+RavenUI.DeleteDocument = function (id, etag, successCallback) {
+    $.ravenDB.deleteDocument(id, etag, successCallback);
 }
 
 //indexes
-DivanUI.GetIndexCount = function (successCallback) {
-    $.divanDB.getIndexCount(successCallback);
+RavenUI.GetIndexCount = function (successCallback) {
+    $.ravenDB.getIndexCount(successCallback);
 }
 
-DivanUI.GetIndexPage = function (pageNum, pageSize, targetSelector, successCallback) {
+RavenUI.GetIndexPage = function (pageNum, pageSize, targetSelector, successCallback) {
     if (!$(targetSelector).hasTemplate()) {
         $(targetSelector).setTemplateURL('JSONTemplates/indexPage.html');
     }
 
-    $.divanDB.getIndexPage(pageNum, pageSize, function (indexes) {
+    $.ravenDB.getIndexPage(pageNum, pageSize, function (indexes) {
         $(targetSelector).processTemplate(indexes);
         successCallback();
     });
 }
 
-DivanUI.GetIndex = function (name, successCallback) {
-    $.divanDB.getIndex(name, successCallback);
+RavenUI.GetIndex = function (name, successCallback) {
+    $.ravenDB.getIndex(name, successCallback);
 }
 
-DivanUI.SaveIndex = function (name, def, successCallback, errorCallback) {
-    $.divanDB.saveIndex(name, def, successCallback, errorCallback);
+RavenUI.SaveIndex = function (name, def, successCallback, errorCallback) {
+    $.ravenDB.saveIndex(name, def, successCallback, errorCallback);
 }
 
-DivanUI.DeleteIndex = function (name, successCallback) {
-    $.divanDB.deleteIndex(name, successCallback);
+RavenUI.DeleteIndex = function (name, successCallback) {
+    $.ravenDB.deleteIndex(name, successCallback);
 }
 
-DivanUI.SearchIndexes = function (name, successCallback) {
-    $.divanDB.searchIndexes(name, successCallback);
+RavenUI.SearchIndexes = function (name, successCallback) {
+    $.ravenDB.searchIndexes(name, successCallback);
 }
 
-DivanUI.QueryIndex = function (name, queryValues, pageNumber, pageSize, successCallback) {
-    $.divanDB.queryIndex(name, queryValues, pageNumber, pageSize, successCallback);
+RavenUI.QueryIndex = function (name, queryValues, pageNumber, pageSize, successCallback) {
+    $.ravenDB.queryIndex(name, queryValues, pageNumber, pageSize, successCallback);
 }
 
 // View
-DivanUI.ShowTemplatedDocument = function(docId, operation, elementName) {
+RavenUI.ShowTemplatedDocument = function(docId, operation, elementName) {
     if ($.query.get('docId').length == 0) {
         $(elementName).html('No document id specified.');
         return;
     }
-    DivanUI.GetDocument(docId, function(data, xhr) {
+    RavenUI.GetDocument(docId, function(data, xhr) {
         var template = xhr.getResponseHeader('Raven-' + operation + '-Template');
         if (template == null) {
             $(elementName).html('No ' + operation + ' template was specified for this document.');

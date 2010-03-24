@@ -51,8 +51,8 @@ namespace Raven.Scenarios
             File.Delete(tempFileName);
             try
             {
-                DivanServer.EnsureCanListenToWhenInNonAdminContext(testPort);
-                using (new DivanServer(new RavenConfiguration
+                RavenDbServer.EnsureCanListenToWhenInNonAdminContext(testPort);
+                using (new RavenDbServer(new RavenConfiguration
                 {
                     DataDirectory = tempFileName, 
                     Port = testPort,

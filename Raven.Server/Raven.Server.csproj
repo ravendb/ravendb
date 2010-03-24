@@ -85,7 +85,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="DivanServer.cs" />
+    <Compile Include="RavenDbServer.cs" />
     <Compile Include="HttpServer.cs" />
     <Compile Include="PowerShellProvider\RavenDBContentReader.cs" />
     <Compile Include="PowerShellProvider\RavenDBProvider.cs" />
@@ -108,8 +108,8 @@
       <DependentUpon>RavenService.cs</DependentUpon>
     </Compile>
     <Compile Include="Responders\BadRequestException.cs" />
-    <Compile Include="Responders\DivanRoot.cs" />
-    <Compile Include="Responders\DivanUI.cs" />
+    <Compile Include="Responders\RavenRoot.cs" />
+    <Compile Include="Responders\RavenUI.cs" />
     <Compile Include="Responders\Docs.cs" />
     <Compile Include="Responders\Document.cs" />
     <Compile Include="Responders\Favicon.cs" />
@@ -184,14 +184,13 @@
     <Content Include="WebUI\JSONTemplates\globalStats.html" />
     <Content Include="WebUI\JSONTemplates\indexPage.html" />
     <Content Include="WebUI\JSONTemplates\quickStats.html" />
-    <Content Include="WebUI\js\divan-ui.js" />
-    <Content Include="WebUI\js\divan-ui.documents.js" />
+    <Content Include="WebUI\js\raven-ui.js" />
+    <Content Include="WebUI\js\raven-ui.documents.js" />
     <Content Include="WebUI\js\jquery-1.4.2.min.js" />
     <Content Include="WebUI\js\jquery-jtemplates.js" />
     <Content Include="WebUI\js\jquery-ui.js" />
-    <Content Include="WebUI\js\jquery.divanDB.js" />
+    <Content Include="WebUI\js\jquery.RavenDB.js" />
     <Content Include="WebUI\js\jquery.pager.js" />
-    <Content Include="WebUI\js\jquery.querystring.js" />
     <Content Include="WebUI\js\json2.js" />
     <Content Include="WebUI\js\jstree\jquery.tree.js" />
     <Content Include="WebUI\js\jstree\themes\default\dot_for_ie.gif" />

@@ -21,8 +21,8 @@ namespace Raven.Client.Tests
         [Fact]
         public void Should_insert_into_db_and_set_id()
         {
-            DivanServer.EnsureCanListenToWhenInNonAdminContext(8080);
-            using (var server = new DivanServer(new RavenConfiguration { Port = 8080, DataDirectory = path}))
+            RavenDbServer.EnsureCanListenToWhenInNonAdminContext(8080);
+            using (var server = new RavenDbServer(new RavenConfiguration { Port = 8080, DataDirectory = path}))
             {
                 var documentStore = new DocumentStore("localhost", 8080);
                 documentStore.Initialise();
@@ -38,8 +38,8 @@ namespace Raven.Client.Tests
         [Fact]
         public void Should_update_stored_entity()
         {
-            DivanServer.EnsureCanListenToWhenInNonAdminContext(8080);
-            using (var server = new DivanServer(new RavenConfiguration { Port = 8080, DataDirectory = path }))
+            RavenDbServer.EnsureCanListenToWhenInNonAdminContext(8080);
+            using (var server = new RavenDbServer(new RavenConfiguration { Port = 8080, DataDirectory = path }))
             {
                 var documentStore = new DocumentStore("localhost", 8080);
                 documentStore.Initialise();
@@ -59,8 +59,8 @@ namespace Raven.Client.Tests
         [Fact]
         public void Should_update_retrieved_entity()
         {
-            DivanServer.EnsureCanListenToWhenInNonAdminContext(8080);
-            using (var server = new DivanServer(new RavenConfiguration { Port = 8080, DataDirectory = path }))
+            RavenDbServer.EnsureCanListenToWhenInNonAdminContext(8080);
+            using (var server = new RavenDbServer(new RavenConfiguration { Port = 8080, DataDirectory = path }))
             {
                 var documentStore = new DocumentStore("localhost", 8080);
                 documentStore.Initialise();
@@ -82,8 +82,8 @@ namespace Raven.Client.Tests
         [Fact]
         public void Should_retrieve_all_entities()
         {
-            DivanServer.EnsureCanListenToWhenInNonAdminContext(8080);
-            using (var server = new DivanServer(new RavenConfiguration { Port = 8080, DataDirectory = path }))
+            RavenDbServer.EnsureCanListenToWhenInNonAdminContext(8080);
+            using (var server = new RavenDbServer(new RavenConfiguration { Port = 8080, DataDirectory = path }))
             {
                 var documentStore = new DocumentStore("localhost", 8080);
                 documentStore.Initialise();
@@ -98,32 +98,6 @@ namespace Raven.Client.Tests
                 Assert.Equal(2, companyFound.Count);
             }
         }
-
-//        [Fact]
-//        public void Should_query_db()
-//        {
-//            DivanServer.EnsureCanListenToWhenInNonAdminContext(8080);
-//            using (var server = new DivanServer(new RavenConfiguration { Port = 8080, DataDirectory = path }))
-//            {
-//                var documentStore = new DocumentStore("localhost", 8080);
-//                documentStore.Initialise();
-//                documentStore.DatabaseCommands.PutIndex("getByName", "from entity in docs select new { entity.type, entity.Name };");
-//
-//                var session = documentStore.OpenSession();
-//                
-//                session.Store(new Company { Name = "Company" });
-//                session.Store(new Company { Name = "Company" });
-//                session.Store(new Company { Name = "Bobs Builders" });
-//
-//
-//
-//
-//                session.Query<Company>("getByName").
-//
-//
-//            }
-//        }
-
 
         public void Dispose()
         {

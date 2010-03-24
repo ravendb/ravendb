@@ -97,8 +97,8 @@ namespace Raven.Server
                 LoggerToMatch = typeof (HttpServer).FullName
             });
             BasicConfigurator.Configure(consoleAppender);
-            DivanServer.EnsureCanListenToWhenInNonAdminContext(8080);
-            using (new DivanServer(new RavenConfiguration()))
+            RavenDbServer.EnsureCanListenToWhenInNonAdminContext(8080);
+            using (new RavenDbServer(new RavenConfiguration()))
             {
                 Console.WriteLine("Raven is ready to process requests.");
                 Console.WriteLine("Press any key to stop the server");

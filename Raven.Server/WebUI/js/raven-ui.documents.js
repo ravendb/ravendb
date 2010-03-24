@@ -7,7 +7,7 @@
         var isInQueryMode = false;
 
         $(document).ready(function () {
-            DivanUI.GetDocumentCount(function (count) {
+            RavenUI.GetDocumentCount(function (count) {
                 allDocsTotalCount = count;
                 getAllDocuments();
             });            
@@ -28,7 +28,7 @@
 
             $('#txtIndexName').autocomplete({
                 source: function (request, response) {
-                    DivanUI.SearchIndexes(request.term, function (searchResult) {
+                    RavenUI.SearchIndexes(request.term, function (searchResult) {
                         response(searchResult);
                     });
                 },
@@ -45,7 +45,7 @@
 
         function getAllDocuments() {
             $('#docList').show().html('<img src="images/ajax-loader.gif" /> Loading...');
-            DivanUI.GetDocumentPage(pageNumber, pageSize, function (docs) {
+            RavenUI.GetDocumentPage(pageNumber, pageSize, function (docs) {
                 if (docs.length == 0) {
                     $('#docList').html('There are no documents in your database.');
                     $('#pager').hide();
@@ -60,7 +60,7 @@
 
             $('#docList').show().html('<img src="images/ajax-loader.gif" /> Loading...');
 
-            DivanUI.QueryIndex(indexName, indexValues, pageNumber, pageSize, function (data) {
+            RavenUI.QueryIndex(indexName, indexValues, pageNumber, pageSize, function (data) {
                 if (data.Results.length == 0) {
                     $('#docList').html('No documents matched your query.');
                     $('#pager').hide();
@@ -151,9 +151,9 @@
 
         function EditDocument(id) {
             $('#ajaxSuccess, #ajaxError').fadeOut();            
-            DivanUI.GetDocument(id, function (doc, etag, template) { 
+            RavenUI.GetDocument(id, function (doc, etag, template) { 
                 ShowEditorForDocument(id, doc, etag, template, 'Edit Document', function(id, etag, template, json, editor) {
-                    DivanUI.SaveDocument(id, etag, template, GetJSONFromEditor(), function () {
+                    RavenUI.SaveDocument(id, etag, template, GetJSONFromEditor(), function () {
                         $(editor).dialog('close');
                         $('#ajaxSuccess').html('Your document has been updated. Click <a href="#" onclick="EditDocument(\'' + id + '\'); return false;">here</a> to see it again.').fadeIn('slow');
                         if (!isInQueryMode) {
@@ -163,7 +163,7 @@
                         }
                     });
                 }, function(id, etag, editor, deleteDialog) {
-                    DivanUI.DeleteDocument(id, etag, null, function(data) {
+                    RavenUI.DeleteDocument(id, etag, null, function(data) {
                         $(deleteDialog).dialog('close');
                         $(editor).dialog('close');                       
                         $('#ajaxSuccess').html('Your document has been deleted.').fadeIn('slow');
@@ -180,7 +180,7 @@
         function CreateDocument() {
             $('#ajaxSuccess, #ajaxError').fadeOut();    
             ShowEditorForNewDocument(function(template, json, editor) {
-                DivanUI.SaveDocument(null, null, template, json, function (data) {
+                RavenUI.SaveDocument(null, null, template, json, function (data) {
                     $(editor).dialog('close');
                     $('#ajaxSuccess').html('Your document has been created. Click <a href="#" onclick="EditDocument(\'' + data.id + '\'); return false;">here</a> to see it again.').fadeIn('slow');
                     if (!isInQueryMode) {

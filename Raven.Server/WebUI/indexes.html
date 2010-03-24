@@ -13,8 +13,8 @@
     <script type="text/javascript" src="js/jquery.pager.js"></script>
     <script type="text/javascript" src="js/json2.js"></script>
 
-    <script type="text/javascript" src="js/jquery.divanDB.js"></script>
-    <script type="text/javascript" src="js/divan-ui.js"></script>
+    <script type="text/javascript" src="js/jquery.RavenDB.js"></script>
+    <script type="text/javascript" src="js/raven-ui.js"></script>
 
     <script type="text/javascript">
         var pageNumber = 1;
@@ -22,7 +22,7 @@
         var numPages;
 
         $(document).ready(function () {
-            DivanUI.GetIndexCount(function (totalCount) {
+            RavenUI.GetIndexCount(function (totalCount) {
             numPages = Math.ceil(totalCount / pageSize);
                 var totalIndexes = totalCount;
                 if (totalIndexes != 0) {                    
@@ -51,7 +51,7 @@
 
             $('#indexNameSearch').autocomplete({
                 source: function (request, response) {
-                    DivanUI.SearchIndexes(request.term, function (searchResult) {
+                    RavenUI.SearchIndexes(request.term, function (searchResult) {
                         response(searchResult);
                     });
                 },
@@ -69,7 +69,7 @@
         function getIndexPage() {
             $('#indexList').html('<img src="images/ajax-loader.gif" /> Loading...');
 
-            DivanUI.GetIndexPage(pageNumber, pageSize, '#indexList', function () {
+            RavenUI.GetIndexPage(pageNumber, pageSize, '#indexList', function () {
                 $('.searchListItem').each(function () {
                     $(this).click(function () {
                         EditIndex($(this).attr('id'));
@@ -113,7 +113,7 @@
         }
 
         function EditIndex(name) {
-            DivanUI.GetIndex(name, function (index) {
+            RavenUI.GetIndex(name, function (index) {
                 $('#indexEditorName').val(name);
                 $('#indexEditorDef').val(index.index);
                 $('#saveError, #ajaxSuccess, #ajaxError').hide();
@@ -126,7 +126,7 @@
                             modal: true,
                             buttons: { 
                                 'Delete' : function() {
-                                    DivanUI.DeleteIndex(name, function(data) {
+                                    RavenUI.DeleteIndex(name, function(data) {
                                         $(deleteDialog).dialog('close');
                                         $('#divEditor').dialog('close');                       
                                         $('#ajaxSuccess').html('Your index has been deleted.').fadeIn('slow');
@@ -146,7 +146,7 @@
                         Save: function () {
                             var newName = $('#indexEditorName').val();
                             var def = $('#indexEditorDef').val();
-                            DivanUI.SaveIndex(newName, def, function (data) {
+                            RavenUI.SaveIndex(newName, def, function (data) {
                                 $('#divEditor').dialog('close');
                                 $('#ajaxSuccess').html('Your index has been updated. Click <a href="#" onclick="EditIndex(\'' + newName + '\'); return false;">here</a> to see it again.').fadeIn('slow');
                                 getIndexPage();
@@ -175,7 +175,7 @@
                     Save: function () {
                         var newName = $('#indexEditorName').val();
                         var def = $('#indexEditorDef').val();
-                        DivanUI.SaveIndex(newName, def, function (data) {
+                        RavenUI.SaveIndex(newName, def, function (data) {
                             $('#divEditor').dialog('close');
                             getIndexPage();
                             $('#ajaxSuccess').html('Your index has been created. Click <a href="#" onclick="EditIndex(\'' + newName + '\'); return false;">here</a> to see it again.').fadeIn('slow');

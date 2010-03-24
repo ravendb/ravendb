@@ -82,7 +82,7 @@ function ShowEditorForNewDocument(saveCallback) {
 
 function ShowEditorForDocument(id, doc, etag, viewTemplate, title, saveCallback, deleteCallback) {
     var editorHtml = $('<div id="editorContainer"></div>');
-    $(editorHtml).load('/divan/js/rdb.jsonEditor/editor.html', function() {
+    $(editorHtml).load('/raven/js/rdb.jsonEditor/editor.html', function() {
         if (id) {
             var deleteButton = $('<button style="margin-top:10px;">Delete Document</button>');
             $(deleteButton).button({
