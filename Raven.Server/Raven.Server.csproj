@@ -124,6 +124,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="PowerShellProvider\RavenDBProvider.help.xml" />
+    <Content Include="WebUI\js\jquery.query-2.1.7.js" />
     <Content Include="WebUI\view.html" />
     <Content Include="WebUI\css\Pager.css" />
     <Content Include="WebUI\css\rdb.css" />

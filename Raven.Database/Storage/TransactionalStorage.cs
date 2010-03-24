@@ -5,6 +5,8 @@ using System.IO;
 using System.Runtime.ConstrainedExecution;
 using System.Threading;
 using Microsoft.Isam.Esent.Interop;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Raven.Database.Storage
 {
@@ -73,11 +75,14 @@ namespace Raven.Database.Storage
                 ConfigureInstance(instance);
                 Api.JetInit(ref instance);
 
-                EnsureDatabaseIsCreatedAndAttachToDatabase();
+                bool newDb = EnsureDatabaseIsCreatedAndAttachToDatabase();
 
                 SetIdFromDb();
 
                 InitColumDictionaries();
+
+				if (newDb)
+					AddDefaults();
             }
             catch (Exception e)
             {
@@ -86,7 +91,32 @@ namespace Raven.Database.Storage
             }
         }
 
-        private void InitColumDictionaries()
+    	private void AddDefaults()
+    	{
+			JArray array;
+			const string name = "Raven.Database.Defaults.default.json";
+    		using(var defaultDocuments = typeof(TransactionalStorage).Assembly.GetManifestResourceStream(name))
+    		{
+    			array = JArray.Load(new JsonTextReader(new StreamReader(defaultDocuments)));
+    		}
+
+    		Batch(actions=>
+    		{
+				foreach (JObject document in array)
+				{
+					actions.AddDocument(
+						document["DocId"].Value<string>(),
+						document["Document"].Value<JObject>().ToString(),
+						null, 
+						document["Metadata"].Value<JObject>().ToString()
+						);
+				}
+
+				actions.Commit();
+    		});
+    	}
+
+    	private void InitColumDictionaries()
         {
             using (var session = new Session(instance))
             {
@@ -158,14 +188,14 @@ namespace Raven.Database.Storage
             }
         }
 
-        private void EnsureDatabaseIsCreatedAndAttachToDatabase()
+        private bool EnsureDatabaseIsCreatedAndAttachToDatabase()
         {
             using (var session = new Session(instance))
             {
                 try
                 {
                     Api.JetAttachDatabase(session, database, AttachDatabaseGrbit.None);
-                    return;
+					return false;
                 }
                 catch (EsentErrorException e)
                 {
@@ -190,7 +220,7 @@ namespace Raven.Database.Storage
                         }
 
                         Api.JetAttachDatabase(session, database, AttachDatabaseGrbit.None);
-                        return;
+                    	return false;
                     }
                     if (e.Error != JET_err.FileNotFound)
                         throw;
@@ -198,6 +228,7 @@ namespace Raven.Database.Storage
 
                 new SchemaCreator(session).Create(database);
                 Api.JetAttachDatabase(session, database, AttachDatabaseGrbit.None);
+            	return true;
             }
         }
 
