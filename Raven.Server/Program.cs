@@ -34,8 +34,11 @@ namespace Raven.Server
                         AdminRequired(StopService, "/uninstall");
                         break;
                     case "debug":
-                        RunInDebugMode();
+                        RunInDebugMode(createDefaultDatabase:true);
                         break;
+					case "test":
+						RunInDebugMode(createDefaultDatabase:false);
+						break;
                     default:
                         PrintUsage();
                         break;
@@ -85,7 +88,7 @@ namespace Raven.Server
             return args[0].Substring(1);
         }
 
-        private static void RunInDebugMode()
+        private static void RunInDebugMode(bool createDefaultDatabase)
         {
             var consoleAppender = new ConsoleAppender
             {
@@ -98,7 +101,7 @@ namespace Raven.Server
             });
             BasicConfigurator.Configure(consoleAppender);
             RavenDbServer.EnsureCanListenToWhenInNonAdminContext(8080);
-            using (new RavenDbServer(new RavenConfiguration()))
+			using (new RavenDbServer(new RavenConfiguration { CreateDatabaseFromScratch = createDefaultDatabase }))
             {
                 Console.WriteLine("Raven is ready to process requests.");
                 Console.WriteLine("Press any key to stop the server");
