@@ -28,10 +28,10 @@ namespace Raven.Server
                         AdminRequired(EnsureStoppedAndUninstall, "/uninstall");
                         break;
                     case "start":
-                        AdminRequired(StartService, "/uninstall");
+                        AdminRequired(StartService, "/start");
                         break;
                     case "stop":
-                        AdminRequired(StopService, "/uninstall");
+                        AdminRequired(StopService, "/stop");
                         break;
                     case "debug":
                         RunInDebugMode(createDefaultDatabase:true);
