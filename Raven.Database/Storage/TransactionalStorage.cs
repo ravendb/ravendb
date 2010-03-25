@@ -10,7 +10,7 @@ namespace Raven.Database.Storage
 {
 	public class TransactionalStorage : CriticalFinalizerObject, IDisposable
 	{
-		[ThreadStatic] private static DocumentStorageActions current;
+		private readonly ThreadLocal<DocumentStorageActions> current = new ThreadLocal<DocumentStorageActions>();
 		private readonly string database;
 		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
 		private readonly string path;
@@ -228,27 +228,26 @@ namespace Raven.Database.Storage
 		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
 		public void Batch(Action<DocumentStorageActions> action)
 		{
-			if (current != null)
+			if (current.Value != null)
 			{
 				try
 				{
-					current.PushTx();
-					action(current);
+					current.Value.PushTx();
+					action(current.Value);
 				}
 				finally
 				{
-					current.PopTx();
+					current.Value.PopTx();
 				}
 				return;
 			}
 			disposerLock.EnterReadLock();
 			try
 			{
-				using (
-					var pht = new DocumentStorageActions(instance, database, documentsColumns, tasksColumns,
+				using (var pht = new DocumentStorageActions(instance, database, documentsColumns, tasksColumns,
 					                                     filesColumns, indexStatsColumns, mappedResultsColumns))
 				{
-					current = pht;
+					current.Value = pht;
 					action(pht);
 					if (pht.CommitCalled == false)
 						throw new InvalidOperationException("You forgot to call commit!");
@@ -257,7 +256,7 @@ namespace Raven.Database.Storage
 			finally
 			{
 				disposerLock.ExitReadLock();
-				current = null;
+				current.Value = null;
 			}
 		}
 	}
