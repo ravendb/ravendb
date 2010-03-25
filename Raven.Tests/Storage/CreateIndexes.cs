@@ -5,68 +5,68 @@ using Xunit;
 
 namespace Raven.Tests.Storage
 {
-    public class CreateIndexes : AbstractDocumentStorageTest, IDisposable
-    {
-        private readonly DocumentDatabase db;
+	public class CreateIndexes : AbstractDocumentStorageTest, IDisposable
+	{
+		private readonly DocumentDatabase db;
 
-        public CreateIndexes()
-        {
-            db = new DocumentDatabase(new RavenConfiguration { DataDirectory = "raven.db.test.esent" });
-        }
+		public CreateIndexes()
+		{
+			db = new DocumentDatabase(new RavenConfiguration {DataDirectory = "raven.db.test.esent"});
+		}
 
-        #region IDisposable Members
+		#region IDisposable Members
 
-        public void Dispose()
-        {
-            db.Dispose();
-        }
+		public void Dispose()
+		{
+			db.Dispose();
+		}
 
-        #endregion
+		#endregion
 
-        [Fact]
-        public void Index_with_same_name_can_be_added_twice()
-        {
-            db.PutIndex("pagesByTitle",
-                        @"
+		[Fact]
+		public void Index_with_same_name_can_be_added_twice()
+		{
+			db.PutIndex("pagesByTitle",
+			            @"
     from doc in docs
     where doc.type == ""page""
     select new { Key = doc.title, Value = doc.content, Size = doc.size };
 ");
 
-            db.PutIndex("pagesByTitle",
-                        @"
+			db.PutIndex("pagesByTitle",
+			            @"
     from doc in docs
     where doc.type == ""page""
     select new { Key = doc.title, Value = doc.content, Size = doc.size };
 ");
-        }
+		}
 
-        [Fact]
-        public void Can_add_index()
-        {
-            db.PutIndex("pagesByTitle",
-                        @"
+		[Fact]
+		public void Can_add_index()
+		{
+			db.PutIndex("pagesByTitle",
+			            @"
     from doc in docs
     where doc.type == ""page""
     select new { Key = doc.title, Value = doc.content, Size = doc.size };
 ");
-            var indexNames = db.IndexDefinitionStorage.IndexNames;
-            Assert.Equal(1, indexNames.Length);
-            Assert.Equal("pagesByTitle", indexNames[0]);
-        }
+			var indexNames = db.IndexDefinitionStorage.IndexNames;
+			Assert.Equal(1, indexNames.Length);
+			Assert.Equal("pagesByTitle", indexNames[0]);
+		}
 
-        [Fact]
-        public void Can_list_index_definition()
-        {
-            const string definition =
-                @" 
+		[Fact]
+		public void Can_list_index_definition()
+		{
+			const string definition =
+				@" 
     from doc in docs
     where doc.type == ""page""
     select new { Key = doc.title, Value = doc.content, Size = doc.size };
 ";
-            db.PutIndex("pagesByTitle", definition);
-            var actualDefinition = db.IndexDefinitionStorage.GetIndexDefinition("pagesByTitle");
-            Assert.Equal(definition, JObject.Parse(actualDefinition).Property("Map").Value.Value<string>());
-        }
-    }
+			db.PutIndex("pagesByTitle", definition);
+			var actualDefinition = db.IndexDefinitionStorage.GetIndexDefinition("pagesByTitle");
+			Assert.Equal(definition, JObject.Parse(actualDefinition).Property("Map").Value.Value<string>());
+		}
+	}
 }
