@@ -1,9 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.DefaultDatabase.Creator", "Raven.DefaultDatabase.Creator.csproj", "{A743716A-EEBE-49FD-BD4B-EA4AC16D32FB}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.DefaultDatabase.Creator", "Raven.DefaultDatabase.Creator\Raven.DefaultDatabase.Creator.csproj", "{A743716A-EEBE-49FD-BD4B-EA4AC16D32FB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Merger", "..\Raven.Merger\Raven.Merger.csproj", "{42FFC01C-64D5-41CA-B29C-FA576B3E8034}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Merger", "Raven.Merger\Raven.Merger.csproj", "{42FFC01C-64D5-41CA-B29C-FA576B3E8034}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

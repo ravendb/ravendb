@@ -44,7 +44,9 @@ namespace Raven.DefaultDatabase.Creator
 		{
 			foreach (XmlNode link in list)
 			{
-				ExportDocument(array, crawled, link.Attributes["href"].Value);
+				var href = link.Attributes["href"].Value;
+				if (href.StartsWith("http://groups.google.com/group/ravendb/web/", StringComparison.InvariantCultureIgnoreCase))
+					ExportDocument(array, crawled, href);
 			}
 		}
 
