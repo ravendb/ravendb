@@ -144,7 +144,6 @@
     <Content Include="WebUI\css\smoothness\images\ui-icons_888888_256x240.png" />
     <Content Include="WebUI\css\smoothness\images\ui-icons_cd0a0a_256x240.png" />
     <Content Include="WebUI\css\smoothness\jquery-ui-1.8rc2.custom.css" />
-    <Content Include="WebUI\documentation.html" />
     <Content Include="WebUI\documents.html" />
     <Content Include="WebUI\images\ajax-loader.gif" />
     <Content Include="WebUI\images\bgR.png" />
