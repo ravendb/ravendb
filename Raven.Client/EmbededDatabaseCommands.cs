@@ -7,108 +7,112 @@ using Raven.Database.Storage;
 
 namespace Raven.Client
 {
-    public class EmbededDatabaseCommands : IDatabaseCommands
-    {
-        private readonly DocumentDatabase database;
+	public class EmbededDatabaseCommands : IDatabaseCommands
+	{
+		private readonly DocumentDatabase database;
 
-        public DatabaseStatistics Statistics
-        {
-            get { return database.Statistics; }
-        }
+		public EmbededDatabaseCommands(DocumentDatabase database)
+		{
+			this.database = database;
+		}
 
-        public TransactionalStorage TransactionalStorage
-        {
-            get { return database.TransactionalStorage; }
-        }
+		public DatabaseStatistics Statistics
+		{
+			get { return database.Statistics; }
+		}
 
-        public IndexDefinitionStorage IndexDefinitionStorage
-        {
-            get { return database.IndexDefinitionStorage; }
-        }
+		public TransactionalStorage TransactionalStorage
+		{
+			get { return database.TransactionalStorage; }
+		}
 
-        public IndexStorage IndexStorage
-        {
-            get { return database.IndexStorage; }
-        }
+		public IndexDefinitionStorage IndexDefinitionStorage
+		{
+			get { return database.IndexDefinitionStorage; }
+		}
 
-        public void Dispose()
-        {
-            database.Dispose();
-        }
+		public IndexStorage IndexStorage
+		{
+			get { return database.IndexStorage; }
+		}
 
-        public void SpinBackgroundWorkers()
-        {
-            database.SpinBackgroundWorkers();
-        }
+		#region IDatabaseCommands Members
 
-        public JsonDocument Get(string key)
-        {
-            return database.Get(key);
-        }
+		public JsonDocument Get(string key)
+		{
+			return database.Get(key);
+		}
 
-        public string Put(string key, Guid? etag, JObject document, JObject metadata)
-        {
-            return database.Put(key, etag, document, metadata);
-        }
+		public string Put(string key, Guid? etag, JObject document, JObject metadata)
+		{
+			return database.Put(key, etag, document, metadata);
+		}
 
-        public void Delete(string key, Guid? etag)
-        {
-            database.Delete(key, etag);
-        }
+		public void Delete(string key, Guid? etag)
+		{
+			database.Delete(key, etag);
+		}
 
-        public string PutIndex(string name, string indexDef)
-        {
-            return database.PutIndex(name, indexDef);
-        }
+		public string PutIndex(string name, string indexDef)
+		{
+			return database.PutIndex(name, indexDef);
+		}
 
-        public QueryResult Query(string index, string query, int start, int pageSize)
-        {
-            return database.Query(index, query, start, pageSize);
-        }
+		public QueryResult Query(string index, string query, int start, int pageSize)
+		{
+			return database.Query(index, query, start, pageSize);
+		}
 
-        public QueryResult Query(string index, string query, int start, int pageSize, string[] fieldsToFetch)
-        {
-            return database.Query(index, query, start, pageSize, fieldsToFetch);
-        }
+		public void DeleteIndex(string name)
+		{
+			database.DeleteIndex(name);
+		}
 
-        public void DeleteIndex(string name)
-        {
-            database.DeleteIndex(name);
-        }
+		public JArray GetDocuments(int start, int pageSize)
+		{
+			return database.GetDocuments(start, pageSize);
+		}
 
-        public Attachment GetStatic(string name)
-        {
-            return database.GetStatic(name);
-        }
+		public JArray GetIndexNames(int start, int pageSize)
+		{
+			return database.GetIndexNames(start, pageSize);
+		}
 
-        public void PutStatic(string name, Guid? etag, byte[] data, JObject metadata)
-        {
-            database.PutStatic(name, etag, data, metadata);
-        }
+		public JArray GetIndexes(int start, int pageSize)
+		{
+			return database.GetIndexes(start, pageSize);
+		}
 
-        public void DeleteStatic(string name, Guid? etag)
-        {
-            database.DeleteStatic(name, etag);
-        }
+		#endregion
 
-        public JArray GetDocuments(int start, int pageSize)
-        {
-            return database.GetDocuments(start, pageSize);
-        }
+		public void Dispose()
+		{
+			database.Dispose();
+		}
 
-        public JArray GetIndexNames(int start, int pageSize)
-        {
-            return database.GetIndexNames(start, pageSize);
-        }
+		public void SpinBackgroundWorkers()
+		{
+			database.SpinBackgroundWorkers();
+		}
 
-        public JArray GetIndexes(int start, int pageSize)
-        {
-            return database.GetIndexes(start, pageSize);
-        }
+		public QueryResult Query(string index, string query, int start, int pageSize, string[] fieldsToFetch)
+		{
+			return database.Query(index, query, start, pageSize, fieldsToFetch);
+		}
 
-        public EmbededDatabaseCommands(DocumentDatabase database)
-        {
-            this.database = database;
-        }
-    }
+		public Attachment GetStatic(string name)
+		{
+			return database.GetStatic(name);
+		}
+
+		public void PutStatic(string name, Guid? etag, byte[] data, JObject metadata)
+		{
+			database.PutStatic(name, etag, data, metadata);
+		}
+
+		public void DeleteStatic(string name, Guid? etag)
+		{
+			database.DeleteStatic(name, etag);
+		}
+	}
 }

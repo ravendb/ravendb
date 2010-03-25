@@ -8,101 +8,105 @@ using Xunit;
 
 namespace Raven.Client.Tests
 {
-    public class DocumentStoreServerTests : BaseTest , IDisposable
-    {
-        private string path;
+	public class DocumentStoreServerTests : BaseTest, IDisposable
+	{
+		private readonly string path;
 
-        public DocumentStoreServerTests()
-        {
-            path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
-            path = Path.Combine(path, "TestDb").Substring(6);
-        }
+		public DocumentStoreServerTests()
+		{
+			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof (DocumentStoreServerTests)).CodeBase);
+			path = Path.Combine(path, "TestDb").Substring(6);
+		}
 
-        [Fact]
-        public void Should_insert_into_db_and_set_id()
-        {
-            RavenDbServer.EnsureCanListenToWhenInNonAdminContext(8080);
-            using (var server = new RavenDbServer(new RavenConfiguration { Port = 8080, DataDirectory = path}))
-            {
-                var documentStore = new DocumentStore("localhost", 8080);
-                documentStore.Initialise();
+		#region IDisposable Members
 
-                var session = documentStore.OpenSession();
-                var entity = new Company { Name = "Company" };
-                session.Store(entity);
+		public void Dispose()
+		{
+			Thread.Sleep(100);
+			Directory.Delete(path, true);
+		}
 
-                Assert.NotEqual(Guid.Empty.ToString(), entity.Id);
-            }
-        }
+		#endregion
 
-        [Fact]
-        public void Should_update_stored_entity()
-        {
-            RavenDbServer.EnsureCanListenToWhenInNonAdminContext(8080);
-            using (var server = new RavenDbServer(new RavenConfiguration { Port = 8080, DataDirectory = path }))
-            {
-                var documentStore = new DocumentStore("localhost", 8080);
-                documentStore.Initialise();
+		[Fact]
+		public void Should_insert_into_db_and_set_id()
+		{
+			RavenDbServer.EnsureCanListenToWhenInNonAdminContext(8080);
+			using (var server = new RavenDbServer(new RavenConfiguration {Port = 8080, DataDirectory = path}))
+			{
+				var documentStore = new DocumentStore("localhost", 8080);
+				documentStore.Initialise();
 
-                var session = documentStore.OpenSession();
-                var company = new Company { Name = "Company 1" };
-                session.Store(company);
-                var id = company.Id;
-                company.Name = "Company 2";
-                session.SaveChanges();
-                var companyFound = session.Load<Company>(company.Id);
-                Assert.Equal("Company 2", companyFound.Name);
-                Assert.Equal(id, company.Id);
-            }
-        }
+				var session = documentStore.OpenSession();
+				var entity = new Company {Name = "Company"};
+				session.Store(entity);
 
-        [Fact]
-        public void Should_update_retrieved_entity()
-        {
-            RavenDbServer.EnsureCanListenToWhenInNonAdminContext(8080);
-            using (var server = new RavenDbServer(new RavenConfiguration { Port = 8080, DataDirectory = path }))
-            {
-                var documentStore = new DocumentStore("localhost", 8080);
-                documentStore.Initialise();
+				Assert.NotEqual(Guid.Empty.ToString(), entity.Id);
+			}
+		}
 
-                var session1 = documentStore.OpenSession();
-                var company = new Company { Name = "Company 1" };
-                session1.Store(company);
-                var companyId = company.Id;
+		[Fact]
+		public void Should_update_stored_entity()
+		{
+			RavenDbServer.EnsureCanListenToWhenInNonAdminContext(8080);
+			using (var server = new RavenDbServer(new RavenConfiguration {Port = 8080, DataDirectory = path}))
+			{
+				var documentStore = new DocumentStore("localhost", 8080);
+				documentStore.Initialise();
 
-                var session2 = documentStore.OpenSession();
-                var companyFound = session2.Load<Company>(companyId);
-                companyFound.Name = "New Name";
-                session2.SaveChanges();
+				var session = documentStore.OpenSession();
+				var company = new Company {Name = "Company 1"};
+				session.Store(company);
+				var id = company.Id;
+				company.Name = "Company 2";
+				session.SaveChanges();
+				var companyFound = session.Load<Company>(company.Id);
+				Assert.Equal("Company 2", companyFound.Name);
+				Assert.Equal(id, company.Id);
+			}
+		}
 
-                Assert.Equal("New Name", session2.Load<Company>(companyId).Name);
-            }
-        }
+		[Fact]
+		public void Should_update_retrieved_entity()
+		{
+			RavenDbServer.EnsureCanListenToWhenInNonAdminContext(8080);
+			using (var server = new RavenDbServer(new RavenConfiguration {Port = 8080, DataDirectory = path}))
+			{
+				var documentStore = new DocumentStore("localhost", 8080);
+				documentStore.Initialise();
 
-        [Fact]
-        public void Should_retrieve_all_entities()
-        {
-            RavenDbServer.EnsureCanListenToWhenInNonAdminContext(8080);
-            using (var server = new RavenDbServer(new RavenConfiguration { Port = 8080, DataDirectory = path }))
-            {
-                var documentStore = new DocumentStore("localhost", 8080);
-                documentStore.Initialise();
+				var session1 = documentStore.OpenSession();
+				var company = new Company {Name = "Company 1"};
+				session1.Store(company);
+				var companyId = company.Id;
 
-                var session1 = documentStore.OpenSession();
-                session1.Store(new Company { Name = "Company 1" });
-                session1.Store(new Company { Name = "Company 2" });
+				var session2 = documentStore.OpenSession();
+				var companyFound = session2.Load<Company>(companyId);
+				companyFound.Name = "New Name";
+				session2.SaveChanges();
 
-                var session2 = documentStore.OpenSession();
-                var companyFound = session2.GetAll<Company>();
+				Assert.Equal("New Name", session2.Load<Company>(companyId).Name);
+			}
+		}
 
-                Assert.Equal(2, companyFound.Count);
-            }
-        }
+		[Fact]
+		public void Should_retrieve_all_entities()
+		{
+			RavenDbServer.EnsureCanListenToWhenInNonAdminContext(8080);
+			using (var server = new RavenDbServer(new RavenConfiguration {Port = 8080, DataDirectory = path}))
+			{
+				var documentStore = new DocumentStore("localhost", 8080);
+				documentStore.Initialise();
 
-        public void Dispose()
-        {
-            Thread.Sleep(100);
-            Directory.Delete(path, true);
-        }
-    }
+				var session1 = documentStore.OpenSession();
+				session1.Store(new Company {Name = "Company 1"});
+				session1.Store(new Company {Name = "Company 2"});
+
+				var session2 = documentStore.OpenSession();
+				var companyFound = session2.GetAll<Company>();
+
+				Assert.Equal(2, companyFound.Count);
+			}
+		}
+	}
 }
