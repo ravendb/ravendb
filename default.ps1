@@ -119,7 +119,7 @@ task Init -depends Clean {
 		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2010" `
 		-clsCompliant "false"
 		
-	#.\Utilities\Binaries\Raven.DefaultDatabase.Creator .\Raven.Server\Defaults\default.json
+	.\Utilities\Binaries\Raven.DefaultDatabase.Creator .\Raven.Server\Defaults\default.json
 		
 	new-item $release_dir -itemType directory
 	new-item $buildartifacts_dir -itemType directory
