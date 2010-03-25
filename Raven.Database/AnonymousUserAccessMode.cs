@@ -1,9 +1,9 @@
 ﻿namespace Raven.Database
 {
-    public enum AnonymousUserAccessMode
-    {
-        All,
-        Get,
-        None
-    }
+	public enum AnonymousUserAccessMode
+	{
+		All,
+		Get,
+		None
+	}
 }

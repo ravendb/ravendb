@@ -5,51 +5,54 @@ using log4net.Config;
 
 namespace Raven.Database
 {
-    public class RavenConfiguration
-    {
-        public RavenConfiguration()
-        {
-            var portStr = ConfigurationManager.AppSettings["RavenPort"];
+	public class RavenConfiguration
+	{
+		public RavenConfiguration()
+		{
+			var portStr = ConfigurationManager.AppSettings["RavenPort"];
 
-            Port = portStr != null ? int.Parse(portStr) : 8080;
+			Port = portStr != null ? int.Parse(portStr) : 8080;
 
-            var indexBatchSizeStr = ConfigurationManager.AppSettings["IndexingBatchSize"];
+			var indexBatchSizeStr = ConfigurationManager.AppSettings["IndexingBatchSize"];
 
-            IndexingBatchSize = indexBatchSizeStr != null ? int.Parse(indexBatchSizeStr) : 100;
+			IndexingBatchSize = indexBatchSizeStr != null ? int.Parse(indexBatchSizeStr) : 100;
 
-            DataDirectory = ConfigurationManager.AppSettings["RavenDataDir"] ?? @"..\..\..\Data";
+			DataDirectory = ConfigurationManager.AppSettings["RavenDataDir"] ?? @"..\..\..\Data";
 
-            WebDir = ConfigurationManager.AppSettings["RavenWebDir"] ??
-                     Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\WebUI");
+			WebDir = ConfigurationManager.AppSettings["RavenWebDir"] ??
+				Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\WebUI");
 
-            AnonymousUserAccessMode = ConfigurationManager.AppSettings["AnonymousAccess"] != null ? 
-                (AnonymousUserAccessMode)Enum.Parse(typeof(AnonymousUserAccessMode), ConfigurationManager.AppSettings["AnonymousAccess"]) : 
-                AnonymousUserAccessMode.Get;
+			AnonymousUserAccessMode = ConfigurationManager.AppSettings["AnonymousAccess"] != null
+				?
+					(AnonymousUserAccessMode)
+						Enum.Parse(typeof (AnonymousUserAccessMode), ConfigurationManager.AppSettings["AnonymousAccess"])
+				:
+					AnonymousUserAccessMode.Get;
 
-        	CreateDatabaseFromScratch = true;
-        }
+			CreateDatabaseFromScratch = true;
+		}
 
-        public string DataDirectory { get; set; }
-        public int Port { get; set; }
-        public string WebDir { get; set; }
-        public int IndexingBatchSize { get; set; }
-        public AnonymousUserAccessMode AnonymousUserAccessMode { get; set; }
+		public string DataDirectory { get; set; }
+		public int Port { get; set; }
+		public string WebDir { get; set; }
+		public int IndexingBatchSize { get; set; }
+		public AnonymousUserAccessMode AnonymousUserAccessMode { get; set; }
 
-    	public bool CreateDatabaseFromScratch { get; set; }
+		public bool CreateDatabaseFromScratch { get; set; }
 
-    	public void LoadLoggingSettings()
-        {
-            XmlConfigurator.ConfigureAndWatch(
-                new FileInfo(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "log4net.config")));
-        }
+		public void LoadLoggingSettings()
+		{
+			XmlConfigurator.ConfigureAndWatch(
+				new FileInfo(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "log4net.config")));
+		}
 
-    	public void RaiseDatabaseCreatedFromScratch(DocumentDatabase documentDatabase)
-    	{
-    		var onDatabaseCreatedFromScratch = DatabaseCreatedFromScratch;
-    		if(onDatabaseCreatedFromScratch != null)
+		public void RaiseDatabaseCreatedFromScratch(DocumentDatabase documentDatabase)
+		{
+			var onDatabaseCreatedFromScratch = DatabaseCreatedFromScratch;
+			if (onDatabaseCreatedFromScratch != null)
 				onDatabaseCreatedFromScratch(documentDatabase);
-    	}
+		}
 
-    	public event Action<DocumentDatabase> DatabaseCreatedFromScratch;
-    }
+		public event Action<DocumentDatabase> DatabaseCreatedFromScratch;
+	}
 }

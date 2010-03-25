@@ -1,7 +1,6 @@
-using System;
 using System.Dynamic;
-using Newtonsoft.Json.Linq;
 using System.Linq;
+using Newtonsoft.Json.Linq;
 
 namespace Raven.Database.Linq
 {
@@ -25,7 +24,7 @@ namespace Raven.Database.Linq
 			switch (jToken.Type)
 			{
 				case JsonTokenType.Object:
-					return new DynamicJsonObject((JObject)jToken);
+					return new DynamicJsonObject((JObject) jToken);
 				case JsonTokenType.Array:
 					return jToken.Select(TransformToValue).ToArray();
 				default:

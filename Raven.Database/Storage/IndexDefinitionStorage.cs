@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using log4net;
@@ -10,99 +9,102 @@ using Raven.Database.Linq;
 
 namespace Raven.Database.Storage
 {
-    public class IndexDefinitionStorage
-    {
-        private const string IndexDefDir = "IndexDefinitions";
-        private readonly ConcurrentDictionary<string,AbstractViewGenerator> indexCache = new ConcurrentDictionary<string, AbstractViewGenerator>();
-        private readonly ILog logger = LogManager.GetLogger(typeof (IndexDefinitionStorage));
-        private readonly string path;
+	public class IndexDefinitionStorage
+	{
+		private const string IndexDefDir = "IndexDefinitions";
 
-        public IndexDefinitionStorage(string path)
-        {
-            this.path = Path.Combine(path, IndexDefDir);
+		private readonly ConcurrentDictionary<string, AbstractViewGenerator> indexCache =
+			new ConcurrentDictionary<string, AbstractViewGenerator>();
 
-            if (Directory.Exists(this.path) == false)
-                Directory.CreateDirectory(this.path);
+		private readonly ILog logger = LogManager.GetLogger(typeof (IndexDefinitionStorage));
+		private readonly string path;
 
-            foreach (var index in Directory.GetFiles(this.path, "*.index"))
-            {
-                var indexDef = JObject.Parse(File.ReadAllText(index));
-                try
-                {
-                    AddIndex(Path.GetFileNameWithoutExtension(index), 
-                        indexDef.Property("Map").Value.Value<string>(),
-                        indexDef.Property("Reduce").Value.Value<string>());
-                }
-                catch (Exception e)
-                {
-                    logger.Warn("Could not compile index " + index + ", skipping bad index", e);
-                }
-            }
-        }
+		public IndexDefinitionStorage(string path)
+		{
+			this.path = Path.Combine(path, IndexDefDir);
 
-        public string[] IndexNames
-        {
-            get { return indexCache.Keys.ToArray(); }
-        }
+			if (Directory.Exists(this.path) == false)
+				Directory.CreateDirectory(this.path);
 
-        public string AddIndex(string name, string mapDef, string reduceDef)
-        {
-            var transformer = new DynamicViewCompiler(name, mapDef, reduceDef);
-            var generator = transformer.GenerateInstance();
-            indexCache.AddOrUpdate(name, generator, (s, viewGenerator) => generator);
-            File.WriteAllText(Path.Combine(path, transformer.Name + ".index"), JObject.FromObject(new
-            {
-                Map = mapDef, 
-                Reduce = reduceDef
-            }).ToString(Formatting.Indented));
-            logger.InfoFormat("New index {0}:\r\n{1}\r\nCompiled to:\r\n{2}", transformer.Name, transformer.CompiledQueryText,
-                              transformer.CompiledQueryText);
-            return transformer.Name;
-        }
+			foreach (var index in Directory.GetFiles(this.path, "*.index"))
+			{
+				var indexDef = JObject.Parse(File.ReadAllText(index));
+				try
+				{
+					AddIndex(Path.GetFileNameWithoutExtension(index),
+					         indexDef.Property("Map").Value.Value<string>(),
+					         indexDef.Property("Reduce").Value.Value<string>());
+				}
+				catch (Exception e)
+				{
+					logger.Warn("Could not compile index " + index + ", skipping bad index", e);
+				}
+			}
+		}
 
-        public void RemoveIndex(string name)
-        {
-            AbstractViewGenerator _;
-            indexCache.TryRemove(name, out _);
-            File.Delete(GetIndexPath(name));
-            File.Delete(GetIndexSourcePath(name));
-        }
+		public string[] IndexNames
+		{
+			get { return indexCache.Keys.ToArray(); }
+		}
 
-        private string GetIndexSourcePath(string name)
-        {
-            return Path.Combine(path, name + ".index.cs");
-        }
+		public string AddIndex(string name, string mapDef, string reduceDef)
+		{
+			var transformer = new DynamicViewCompiler(name, mapDef, reduceDef);
+			var generator = transformer.GenerateInstance();
+			indexCache.AddOrUpdate(name, generator, (s, viewGenerator) => generator);
+			File.WriteAllText(Path.Combine(path, transformer.Name + ".index"), JObject.FromObject(new
+			{
+				Map = mapDef,
+				Reduce = reduceDef
+			}).ToString(Formatting.Indented));
+			logger.InfoFormat("New index {0}:\r\n{1}\r\nCompiled to:\r\n{2}", transformer.Name, transformer.CompiledQueryText,
+			                  transformer.CompiledQueryText);
+			return transformer.Name;
+		}
 
-        private string GetIndexPath(string name)
-        {
-            return Path.Combine(path, name + ".index");
-        }
+		public void RemoveIndex(string name)
+		{
+			AbstractViewGenerator _;
+			indexCache.TryRemove(name, out _);
+			File.Delete(GetIndexPath(name));
+			File.Delete(GetIndexSourcePath(name));
+		}
 
-        public string GetIndexDefinition(string name)
-        {
-            var indexPath = GetIndexPath(name);
-            if (File.Exists(indexPath) == false)
-                throw new InvalidOperationException("Index file does not exists");
-            return File.ReadAllText(indexPath);
-        }
+		private string GetIndexSourcePath(string name)
+		{
+			return Path.Combine(path, name + ".index.cs");
+		}
 
-        public AbstractViewGenerator GetViewGenerator(string name)
-        {
-            AbstractViewGenerator value;
-            if (indexCache.TryGetValue(name, out value) == false)
-                return null;
-            return value;
-        }
+		private string GetIndexPath(string name)
+		{
+			return Path.Combine(path, name + ".index");
+		}
 
-        public IndexCreationOptions FindIndexCreationOptionsOptions(string name, string indexDef)
-        {
-            if (indexCache.ContainsKey(name))
-            {
-                return GetIndexDefinition(name) == indexDef
-                           ? IndexCreationOptions.Noop
-                           : IndexCreationOptions.Update;
-            }
-            return IndexCreationOptions.Create;
-        }
-    }
+		public string GetIndexDefinition(string name)
+		{
+			var indexPath = GetIndexPath(name);
+			if (File.Exists(indexPath) == false)
+				throw new InvalidOperationException("Index file does not exists");
+			return File.ReadAllText(indexPath);
+		}
+
+		public AbstractViewGenerator GetViewGenerator(string name)
+		{
+			AbstractViewGenerator value;
+			if (indexCache.TryGetValue(name, out value) == false)
+				return null;
+			return value;
+		}
+
+		public IndexCreationOptions FindIndexCreationOptionsOptions(string name, string indexDef)
+		{
+			if (indexCache.ContainsKey(name))
+			{
+				return GetIndexDefinition(name) == indexDef
+					? IndexCreationOptions.Noop
+					: IndexCreationOptions.Update;
+			}
+			return IndexCreationOptions.Create;
+		}
+	}
 }
