@@ -34,10 +34,10 @@ namespace Raven.Server
 						AdminRequired(StopService, "/stop");
 						break;
 					case "debug":
-						RunInDebugMode(createDefaultDatabase: true);
+						RunInDebugMode(createDefaultDatabase: true, anonymousUserAccessMode: null);
 						break;
 					case "test":
-						RunInDebugMode(createDefaultDatabase: false);
+						RunInDebugMode(createDefaultDatabase: false, anonymousUserAccessMode: AnonymousUserAccessMode.All);
 						break;
 					default:
 						PrintUsage();
@@ -88,7 +88,7 @@ namespace Raven.Server
 			return args[0].Substring(1);
 		}
 
-		private static void RunInDebugMode(bool createDefaultDatabase)
+		private static void RunInDebugMode(bool createDefaultDatabase, AnonymousUserAccessMode? anonymousUserAccessMode)
 		{
 			var consoleAppender = new ConsoleAppender
 			{
@@ -101,7 +101,13 @@ namespace Raven.Server
 			});
 			BasicConfigurator.Configure(consoleAppender);
 			RavenDbServer.EnsureCanListenToWhenInNonAdminContext(8080);
-			using (new RavenDbServer(new RavenConfiguration {CreateDatabaseFromScratch = createDefaultDatabase}))
+			var ravenConfiguration = new RavenConfiguration
+			{
+				CreateDatabaseFromScratch = createDefaultDatabase,
+			};
+			if (anonymousUserAccessMode.HasValue)
+				ravenConfiguration.AnonymousUserAccessMode = anonymousUserAccessMode.Value;
+			using (new RavenDbServer(ravenConfiguration))
 			{
 				Console.WriteLine("Raven is ready to process requests.");
 				Console.WriteLine("Press any key to stop the server");
