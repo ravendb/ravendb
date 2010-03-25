@@ -52,6 +52,9 @@
     <WarningLevel>4</WarningLevel>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>WebUI\favicon.ico</ApplicationIcon>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="log4net, Version=1.2.10.0, Culture=neutral, PublicKeyToken=1b44e1d426115821, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -123,6 +126,7 @@
     <Compile Include="Responders\Statistics.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="favicon.ico" />
     <Content Include="PowerShellProvider\RavenDBProvider.help.xml" />
     <Content Include="WebUI\JSONTemplates\documentation.html" />
     <Content Include="WebUI\js\jquery.query-2.1.7.js" />
@@ -235,10 +239,9 @@
     <EmbeddedResource Include="Defaults\default.json" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-
-	<Target Name="BeforeBuild">
-		<CreateItem Include="WebUI\**\*.*">
-			<Output ItemName="EmbeddedResource" TaskParameter="Include" />
-		</CreateItem>
-	</Target>
+  <Target Name="BeforeBuild">
+    <CreateItem Include="WebUI\**\*.*">
+      <Output ItemName="EmbeddedResource" TaskParameter="Include" />
+    </CreateItem>
+  </Target>
 </Project>
