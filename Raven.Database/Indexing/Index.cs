@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Linq;
 using System.Threading;
 using log4net;
@@ -173,11 +174,10 @@ namespace Raven.Database.Indexing
 
         private static string TryGetDocKey(object current)
         {
-            var dic = current as IDictionary<string, object>;
-            if (dic == null)
-                return null;
-            object value;
-            dic.TryGetValue("__document_id", out value);
+            var dic = current as DynamicJsonObject;
+			if (dic == null)
+				return null;
+        	var value = dic.GetValue("__document_id");
             if (value == null)
                 return null;
             return value.ToString();

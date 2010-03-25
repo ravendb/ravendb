@@ -1,7 +1,5 @@
-using System.Collections;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Dynamic;
+using Newtonsoft.Json.Linq;
 using Raven.Database.Linq;
 using Xunit;
 using System.Linq;
@@ -10,7 +8,7 @@ namespace Raven.Tests.Views
 {
     public class ViewCompilation
     {
-        private readonly IEnumerable<ExpandoObject> source;
+		private readonly IEnumerable<DynamicJsonObject> source;
 
         public ViewCompilation()
         {
@@ -73,17 +71,9 @@ select new {
             Assert.Equal("{ blog_id = 4, comments_length = 3 }", results[5].ToString());
         }
 
-        private static IEnumerable<ExpandoObject> ConvertToExpando(object[] objects)
-        {
-            foreach (var obj in objects)
-            {
-                var expando = new ExpandoObject();
-                foreach (PropertyDescriptor property in TypeDescriptor.GetProperties(obj))
-                {
-                    ((IDictionary<string, object>) expando).Add(property.Name, property.GetValue(obj));
-                }
-                yield return expando;
-            }
-        }
+		private static IEnumerable<DynamicJsonObject> ConvertToExpando(IEnumerable<object> objects)
+		{
+			return objects.Select(obj => new DynamicJsonObject(JObject.FromObject(obj)));
+		}
     }
 }

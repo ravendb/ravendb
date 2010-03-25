@@ -120,6 +120,7 @@
     <Compile Include="Json\JsonPatcher.cs" />
     <Compile Include="Json\JsonToExpando.cs" />
     <Compile Include="Linq\AbstractViewGenerator.cs" />
+    <Compile Include="Linq\DynamicExpandoObject.cs" />
     <Compile Include="Linq\QueryParsingUtils.cs" />
     <Compile Include="Linq\DynamicViewCompiler.cs" />
     <Compile Include="Linq\IndexingFunc.cs" />

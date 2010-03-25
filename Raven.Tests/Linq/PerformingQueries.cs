@@ -45,7 +45,7 @@ namespace Raven.Tests.Linq
 
         public static IEnumerable<dynamic> GetDocumentsFromString(string json)
         {
-            return JArray.Parse(json).Select(JsonToExpando.Convert);
+            return JArray.Parse(json).Cast<JObject>().Select(JsonToExpando.Convert);
         }
     }
 }
