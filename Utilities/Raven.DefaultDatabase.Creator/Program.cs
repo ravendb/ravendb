@@ -30,6 +30,7 @@ namespace Raven.DefaultDatabase.Creator
 			array.Add(new JObject(
 			          	new JProperty("DocId", "raven_documentation/index"),
 			          	new JProperty("Document", index),
+						new JProperty("Type", "raven documentation"),
 			          	new JProperty("Metadata",
 			          	              new JObject(new JProperty("Raven-View-Template", "/raven/JSONTemplates/documentation.html")))
 			          	));
@@ -97,6 +98,7 @@ namespace Raven.DefaultDatabase.Creator
 			array.Add(new JObject(
 						new JProperty("DocId", "raven_documentation/" + name),
 						new JProperty("Document", index),
+						new JProperty("Type", "raven documentation"),
 						new JProperty("Metadata",
 									  new JObject(new JProperty("Raven-View-Template", "/raven/JSONTemplates/documentation.html")))
 						));
