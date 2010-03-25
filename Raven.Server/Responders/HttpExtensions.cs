@@ -278,6 +278,31 @@ namespace Raven.Server.Responders
 			return context.Request.Headers["If-None-Match"] == etag.ToString();
 		}
 
+		public static void WriteEmbeddedFile(this HttpListenerContext context, string ravenPath, string docPath)
+		{
+			var filePath = Path.Combine(ravenPath, docPath);
+			byte[] bytes;
+			if (File.Exists(filePath) == false)
+			{
+				string resourceName = "Raven.Server.WebUI." + docPath.Replace("/", ".");
+				using (var resource = typeof(HttpExtensions).Assembly.GetManifestResourceStream(resourceName))
+				{
+					if (resource == null)
+					{
+						context.SetStatusToNotFound();
+						return;
+					}
+					bytes = resource.ReadData();
+				}
+			}
+			else
+			{
+				bytes = File.ReadAllBytes(filePath);
+			}
+			context.Response.OutputStream.Write(bytes, 0, bytes.Length);
+			context.Response.OutputStream.Flush();
+		}
+
 		#region Nested type: JsonToJsonConverter
 
 		public class JsonToJsonConverter : JsonConverter
