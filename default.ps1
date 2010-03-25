@@ -118,9 +118,9 @@ task Init -depends Clean {
 		-version $version `
 		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2010" `
 		-clsCompliant "false"
-        
-    .\Utilities\Binaries\Raven.DefaultDatabase.Creator .\Raven.Server\Defaults\default.json
-        
+		
+	#.\Utilities\Binaries\Raven.DefaultDatabase.Creator .\Raven.Server\Defaults\default.json
+		
 	new-item $release_dir -itemType directory
 	new-item $buildartifacts_dir -itemType directory
 }
@@ -138,19 +138,43 @@ task Test -depends Compile {
   cd $old
 }
 
+task Merge -depends Compile {
+	$old = pwd
+	cd $build_dir
+	
+	Remove-Item Raven.Server.Partial.exe -ErrorAction SilentlyContinue 
+	Remove-Item Raven.Server.Partial.pdb -ErrorAction SilentlyContinue 
+	Rename-Item $build_dir\Raven.Server.exe Raven.Server.Partial.exe
+	Rename-Item $build_dir\Raven.Server.pdb Raven.Server.Partial.pdb
+	
+	& $tools_dir\ILMerge.exe Raven.Server.partial `
+		$build_dir\Raven.Database.dll `
+		$build_dir\Esent.Interop.dll `
+		$build_dir\log4net.dll `
+		$build_dir\Lucene.Net.dll `
+		$build_dir\ICSharpCode.NRefactory.dll `
+		$build_dir\Newtonsoft.Json.dll `
+		/out:Raven.Server.exe `
+		/t:exe 
+		
+	if ($lastExitCode -ne 0) {
+        throw "Error: Failed to merge assemblies!"
+    }
+	cd $old
+}
 
-task Release -depends Test {
+task Release -depends Test{
 	& $tools_dir\zip.exe -9 -A -j `
 		$release_dir\Raven.zip `
 		$build_dir\Raven.Database.dll `
 		$build_dir\Raven.Server.exe `
-    $build_dir\Esent.Interop.dll `
-    $build_dir\Esent.Interop.xml `
-    $build_dir\log4net.dll `
-    $build_dir\log4net.xml `
-    $build_dir\Lucene.Net.dll `
-    $build_dir\ICSharpCode.NRefactory.dll `
-    $build_dir\Newtonsoft.Json.dll `
+		$build_dir\Esent.Interop.dll `
+		$build_dir\Esent.Interop.xml `
+		$build_dir\log4net.dll `
+		$build_dir\log4net.xml `
+		$build_dir\Lucene.Net.dll `
+		$build_dir\ICSharpCode.NRefactory.dll `
+		$build_dir\Newtonsoft.Json.dll `
 		license.txt `
 		acknowledgements.txt
 	if ($lastExitCode -ne 0) {
