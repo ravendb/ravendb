@@ -36,9 +36,11 @@ namespace Raven.Server
 					case "debug":
 						RunInDebugMode(createDefaultDatabase: true, anonymousUserAccessMode: null);
 						break;
+#if DEBUG
 					case "test":
 						RunInDebugMode(createDefaultDatabase: false, anonymousUserAccessMode: AnonymousUserAccessMode.All);
 						break;
+#endif
 					default:
 						PrintUsage();
 						break;
