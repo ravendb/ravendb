@@ -19,7 +19,8 @@ namespace Raven.Server
         public RavenDbServer(RavenConfiguration settings)
         {
             settings.LoadLoggingSettings();
-			settings.DatabaseCreatedFromScratch+=OnDatabaseCreatedFromScratch;
+			if(settings.CreateDatabaseFromScratch)
+				settings.DatabaseCreatedFromScratch+=OnDatabaseCreatedFromScratch;
             database = new DocumentDatabase(settings);
             database.SpinBackgroundWorkers();
             server = new HttpServer(settings,

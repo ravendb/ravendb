@@ -25,6 +25,8 @@ namespace Raven.Database
             AnonymousUserAccessMode = ConfigurationManager.AppSettings["AnonymousAccess"] != null ? 
                 (AnonymousUserAccessMode)Enum.Parse(typeof(AnonymousUserAccessMode), ConfigurationManager.AppSettings["AnonymousAccess"]) : 
                 AnonymousUserAccessMode.Get;
+
+        	CreateDatabaseFromScratch = true;
         }
 
         public string DataDirectory { get; set; }
@@ -33,7 +35,9 @@ namespace Raven.Database
         public int IndexingBatchSize { get; set; }
         public AnonymousUserAccessMode AnonymousUserAccessMode { get; set; }
 
-        public void LoadLoggingSettings()
+    	public bool CreateDatabaseFromScratch { get; set; }
+
+    	public void LoadLoggingSettings()
         {
             XmlConfigurator.ConfigureAndWatch(
                 new FileInfo(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "log4net.config")));
