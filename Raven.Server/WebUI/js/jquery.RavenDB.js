@@ -51,11 +51,17 @@
                 url: settings.server + 'docs/' + id,
                 dataType: 'json',
                 complete: function(xhr) {
-                    if (xhr.status == 200) {
-                        var data = JSON.parse(xhr.responseText);
-                        var etag = xhr.getResponseHeader("Etag");
-                        var template = xhr.getResponseHeader('Raven-' + operation + '-Template');
-                        successCallback(data, etag, template);
+                    switch(xhr.status) 
+                    {
+                        case 200:
+                            var data = JSON.parse(xhr.responseText);
+                            var etag = xhr.getResponseHeader("Etag");
+                            var template = xhr.getResponseHeader('Raven-' + operation + '-Template');
+                            successCallback(data, etag, template);
+                            break;
+                        case 404:
+                            successCallback(null, null, null);
+                            break;
                     }
                 }
             });
