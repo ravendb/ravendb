@@ -102,11 +102,11 @@ namespace Raven.Server
 				LoggerToMatch = typeof (HttpServer).FullName
 			});
 			BasicConfigurator.Configure(consoleAppender);
-			RavenDbServer.EnsureCanListenToWhenInNonAdminContext(8080);
-			var ravenConfiguration = new RavenConfiguration
-			{
-				CreateDatabaseFromScratch = createDefaultDatabase,
-			};
+            var ravenConfiguration = new RavenConfiguration
+            {
+                CreateDatabaseFromScratch = createDefaultDatabase,
+            };
+            RavenDbServer.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Port);
 			if (anonymousUserAccessMode.HasValue)
 				ravenConfiguration.AnonymousUserAccessMode = anonymousUserAccessMode.Value;
 			using (new RavenDbServer(ravenConfiguration))

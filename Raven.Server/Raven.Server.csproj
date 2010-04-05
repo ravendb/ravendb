@@ -238,6 +238,9 @@
   <ItemGroup>
     <EmbeddedResource Include="Defaults\default.json" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="BeforeBuild">
     <CreateItem Include="WebUI\**\*.*">
