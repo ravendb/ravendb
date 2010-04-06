@@ -7,7 +7,7 @@ using Raven.Database.Storage;
 
 namespace Raven.Client
 {
-	public class EmbededDatabaseCommands : IDatabaseCommands
+	public class EmbededDatabaseCommands : IDatabaseCommands, IDisposable
 	{
 		private readonly DocumentDatabase database;
 
@@ -55,7 +55,12 @@ namespace Raven.Client
 
 		public string PutIndex(string name, string indexDef)
 		{
-			return database.PutIndex(name, indexDef);
+			var indexDefJson = JObject.Parse(indexDef);
+			var reduceDef = indexDefJson.Property("Reduce") != null
+				? indexDefJson.Property("Reduce").Value.Value<string>()
+				: null;
+			return database.PutIndex(name, indexDefJson.Property("Map").Value.Value<string>(),
+			                         reduceDef);
 		}
 
 		public QueryResult Query(string index, string query, int start, int pageSize)

@@ -16,6 +16,7 @@ namespace Raven.Client.Tests
 		{
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof (DocumentStoreServerTests)).CodeBase);
 			path = Path.Combine(path, "TestDb").Substring(6);
+			RavenDbServer.EnsureCanListenToWhenInNonAdminContext(8080);
 		}
 
 		#region IDisposable Members
@@ -31,8 +32,7 @@ namespace Raven.Client.Tests
 		[Fact]
 		public void Should_insert_into_db_and_set_id()
 		{
-			RavenDbServer.EnsureCanListenToWhenInNonAdminContext(8080);
-			using (var server = new RavenDbServer(new RavenConfiguration {Port = 8080, DataDirectory = path}))
+			using (var server = new RavenDbServer(new RavenConfiguration {Port = 8080, DataDirectory = path, AnonymousUserAccessMode = AnonymousUserAccessMode.All}))
 			{
 				var documentStore = new DocumentStore("localhost", 8080);
 				documentStore.Initialise();
@@ -48,8 +48,7 @@ namespace Raven.Client.Tests
 		[Fact]
 		public void Should_update_stored_entity()
 		{
-			RavenDbServer.EnsureCanListenToWhenInNonAdminContext(8080);
-			using (var server = new RavenDbServer(new RavenConfiguration {Port = 8080, DataDirectory = path}))
+			using (var server = new RavenDbServer(new RavenConfiguration { Port = 8080, DataDirectory = path, AnonymousUserAccessMode = AnonymousUserAccessMode.All }))
 			{
 				var documentStore = new DocumentStore("localhost", 8080);
 				documentStore.Initialise();
@@ -69,8 +68,7 @@ namespace Raven.Client.Tests
 		[Fact]
 		public void Should_update_retrieved_entity()
 		{
-			RavenDbServer.EnsureCanListenToWhenInNonAdminContext(8080);
-			using (var server = new RavenDbServer(new RavenConfiguration {Port = 8080, DataDirectory = path}))
+			using (var server = new RavenDbServer(new RavenConfiguration { Port = 8080, DataDirectory = path, AnonymousUserAccessMode = AnonymousUserAccessMode.All }))
 			{
 				var documentStore = new DocumentStore("localhost", 8080);
 				documentStore.Initialise();
@@ -92,8 +90,7 @@ namespace Raven.Client.Tests
 		[Fact]
 		public void Should_retrieve_all_entities()
 		{
-			RavenDbServer.EnsureCanListenToWhenInNonAdminContext(8080);
-			using (var server = new RavenDbServer(new RavenConfiguration {Port = 8080, DataDirectory = path}))
+			using (var server = new RavenDbServer(new RavenConfiguration { Port = 8080, DataDirectory = path, AnonymousUserAccessMode = AnonymousUserAccessMode.All }))
 			{
 				var documentStore = new DocumentStore("localhost", 8080);
 				documentStore.Initialise();

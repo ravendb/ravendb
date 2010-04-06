@@ -42,18 +42,26 @@ namespace Raven.Client
 
 		public void Initialise()
 		{
-			if (String.IsNullOrEmpty(localhost))
+			try
 			{
-				var embeddedDatabase = new DocumentDatabase(new RavenConfiguration {DataDirectory = DataDirectory});
-				embeddedDatabase.SpinBackgroundWorkers();
-				DatabaseCommands = new EmbededDatabaseCommands(embeddedDatabase);
+				if (String.IsNullOrEmpty(localhost))
+				{
+					var embeddedDatabase = new DocumentDatabase(new RavenConfiguration {DataDirectory = DataDirectory});
+					embeddedDatabase.SpinBackgroundWorkers();
+					DatabaseCommands = new EmbededDatabaseCommands(embeddedDatabase);
+				}
+				else
+				{
+					DatabaseCommands = new ServerClient(localhost, port);
+				}
+				//NOTE: this should be done contitionally, index creation is expensive
+				DatabaseCommands.PutIndex("getByType", "{Map: 'from entity in docs select new { entity.type };' }");
 			}
-			else
+			catch (Exception e)
 			{
-				DatabaseCommands = new ServerClient(localhost, port);
+				Dispose();
+				throw;
 			}
-			//NOTE: this should be done contitionally, index creation is expensive
-			DatabaseCommands.PutIndex("getByType", "from entity in docs select new { entity.type };");
 		}
 
 		public void Delete(Guid id)

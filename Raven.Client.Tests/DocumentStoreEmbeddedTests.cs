@@ -15,7 +15,6 @@ namespace Raven.Client.Tests
 
 		public void Dispose()
 		{
-			Thread.Sleep(100);
 			Directory.Delete(path, true);
 		}
 
