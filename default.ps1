@@ -126,7 +126,8 @@ task Init -depends Clean {
 }
 
 task Compile -depends Init {
-    exec C:\Windows\Microsoft.NET\Framework\v4.0.30128\MSBuild.exe """$sln_file"" /p:OutDir=""$buildartifacts_dir\"""
+	$v4_net_version = (ls "C:\Windows\Microsoft.NET\Framework\v4.0*").Name
+    exec "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" """$sln_file"" /p:OutDir=""$buildartifacts_dir\"""
 }
 
 task Test -depends Compile {
@@ -134,7 +135,7 @@ task Test -depends Compile {
   cd $build_dir
   exec "$tools_dir\xUnit\xunit.console.exe" "$build_dir\Raven.Tests.dll"
   exec "$tools_dir\xUnit\xunit.console.exe" "$build_dir\Raven.Scenarios.dll"
-  #exec "$tools_dir\xUnit\xunit.console.exe" "$build_dir\Raven.Client.Tests.dll"
+  exec "$tools_dir\xUnit\xunit.console.exe" "$build_dir\Raven.Client.Tests.dll"
   cd $old
 }
 
