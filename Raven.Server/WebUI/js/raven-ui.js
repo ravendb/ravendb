@@ -112,11 +112,15 @@ RavenUI.ShowTemplatedDocument = function (docId, operation, elementName) {
 		return;
 	}
 	RavenUI.GetDocument(docId, operation, function (data, etag, template) {
-		if (template == null) {
-			$(elementName).html('No ' + operation + ' template was specified for this document.');
+		if (data == null) {
+			$(elementName).html('The document "' + docId +'" could not be found');
 			return;
 		}
-		$(elementName).setTemplateURL(template, null, { filter_data: false } );
+		if (template == null) {
+			$(elementName).html('No ' + operation.toLowerCase() + ' template was specified for this document.');
+			return;
+		}
+		$(elementName).setTemplateURL(template, null, { filter_data: false });
 		$(elementName).processTemplate(data);
 	})
 }
