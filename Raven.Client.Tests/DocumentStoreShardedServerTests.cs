@@ -43,17 +43,6 @@ namespace Raven.Client.Tests
             }
         }
 
-        private RavenDbServer GetNewServer(int port, string path)
-        {
-            return new RavenDbServer(new RavenConfiguration { Port = port, DataDirectory = path, AnonymousUserAccessMode = AnonymousUserAccessMode.All });
-        }
-
-        private string GetPath(string subFolderName)
-        {
-            string retPath = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
-            return Path.Combine(retPath, subFolderName).Substring(6); //remove leading file://
-        }
-
         #region IDisposable Members
 
         public void Dispose()
