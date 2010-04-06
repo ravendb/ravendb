@@ -126,8 +126,8 @@
     <Compile Include="Responders\Statistics.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="favicon.ico" />
     <Content Include="PowerShellProvider\RavenDBProvider.help.xml" />
+    <Content Include="WebUI\favicon.ico" />
     <Content Include="WebUI\JSONTemplates\documentation.html" />
     <Content Include="WebUI\js\jquery.query-2.1.7.js" />
     <Content Include="WebUI\view.html" />
