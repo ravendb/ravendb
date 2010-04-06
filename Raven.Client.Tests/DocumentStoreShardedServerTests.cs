@@ -5,18 +5,22 @@ using System.Threading;
 using Raven.Database;
 using Raven.Server;
 using Xunit;
+using System.Collections.Generic;
 
 namespace Raven.Client.Tests
 {
 	public class DocumentStoreShardedServerTests : BaseTest, IDisposable
 	{
-		private readonly string path1;
+        private readonly string path1;
         private readonly string path2;
         private readonly int port1;
         private readonly int port2;
+        private readonly string server;
 
         public DocumentStoreShardedServerTests()
 		{
+            server = "localhost";
+
             port1 = 8080;
             port2 = 8081;
 
@@ -30,21 +34,27 @@ namespace Raven.Client.Tests
         [Fact]
         public void Can_insert_into_two_servers_running_simultaneously_without_sharding()
         {
+            var serversStoredUpon = new List<int>();
+
             using (var server1 = GetNewServer(port1, path1))
             using (var server2 = GetNewServer(port2, path2))
             {
                 foreach (var port in new[] { port1, port2 })
                 {
-                    using(var documentStore = new DocumentStore("localhost", port).Initialise())
+                    using (var documentStore = new DocumentStore(server, port).Initialise())
+                    using (var session = documentStore.OpenSession())
                     {
-                        var session = documentStore.OpenSession();
+                        documentStore.Stored += (storeServer, storePort, storeEntity) => serversStoredUpon.Add(storePort);
+
                         var entity = new Company { Name = "Company" };
                         session.Store(entity);
-
                         Assert.NotEqual(Guid.Empty.ToString(), entity.Id);
                     }
                 }
             }
+
+            Assert.Equal(port1, serversStoredUpon[0]);
+            Assert.Equal(port2, serversStoredUpon[1]);
         }
 
         #region IDisposable Members

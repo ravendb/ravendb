@@ -5,13 +5,15 @@ namespace Raven.Client
 {
 	public class DocumentStore : IDisposable, IDocumentStore
 	{
-		private readonly string localhost;
+		private readonly string server;
 		private readonly int port;
 		public IDatabaseCommands DatabaseCommands;
 
-		public DocumentStore(string localhost, int port) : this()
+        public event Action<string, int, object> Stored;
+
+		public DocumentStore(string server, int port) : this()
 		{
-			this.localhost = localhost;
+			this.server = server;
 			this.port = port;
 		}
 
@@ -28,22 +30,26 @@ namespace Raven.Client
 
 		public void Dispose()
 		{
+            Stored = null;
+
             if (DatabaseCommands != null)
                 DatabaseCommands.Dispose();
 		}
 
 		#endregion
 
-		public IDocumentSession OpenSession()
-		{
-			return new DocumentSession(this, DatabaseCommands);
-		}
+        public IDocumentSession OpenSession()
+        {
+            var session = new DocumentSession(this, DatabaseCommands);
+            session.Stored += entity => { if (Stored != null) Stored(server, port, entity); };
+            return session;
+        }
 
         public IDocumentStore Initialise()
 		{
 			try
 			{
-				if (String.IsNullOrEmpty(localhost))
+				if (String.IsNullOrEmpty(server))
 				{
 					var embeddedDatabase = new DocumentDatabase(new RavenConfiguration {DataDirectory = DataDirectory});
 					embeddedDatabase.SpinBackgroundWorkers();
@@ -51,7 +57,7 @@ namespace Raven.Client
 				}
 				else
 				{
-					DatabaseCommands = new ServerClient(localhost, port);
+					DatabaseCommands = new ServerClient(server, port);
 				}
 				//NOTE: this should be done contitionally, index creation is expensive
 				DatabaseCommands.PutIndex("getByType", "{Map: 'from entity in docs select new { entity.type };' }");

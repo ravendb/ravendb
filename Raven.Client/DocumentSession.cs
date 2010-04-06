@@ -5,6 +5,7 @@ using System.Threading;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
+using System;
 
 namespace Raven.Client
 {
@@ -13,6 +14,8 @@ namespace Raven.Client
 		private readonly IDatabaseCommands database;
 		private readonly DocumentStore documentStore;
 		private readonly HashSet<object> entities = new HashSet<object>();
+
+        public event Action<object> Stored;
 
 		public DocumentSession(DocumentStore documentStore, IDatabaseCommands database)
 		{
@@ -46,6 +49,9 @@ namespace Raven.Client
 		{
 			storeEntity(entity);
 			entities.Add(entity);
+
+            if (Stored != null)
+                Stored(entity);
 		}
 
 		private void storeEntity<T>(T entity)
@@ -107,5 +113,17 @@ namespace Raven.Client
 			}).ToList();
 		}
 
+
+        #region IDisposable Members
+
+        public void Dispose()
+        {
+            //DocumentStore owns IDatabaseCommands, allow it to dispose in case multiple sessions in play
+
+            //dereference all event listeners
+            Stored = null;
+        }
+
+        #endregion
     }
 }
