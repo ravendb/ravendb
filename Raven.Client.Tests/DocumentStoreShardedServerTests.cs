@@ -49,15 +49,14 @@ namespace Raven.Client.Tests
         {
             Thread.Sleep(100);
 
-            try
+            foreach (var path in new[] { path1, path2 })
             {
-                Directory.Delete(path1, true);
-            } catch (Exception) { }
-
-            try
-            {
-                Directory.Delete(path2, true);
-            } catch (Exception) { }
+                try
+                {
+                    Directory.Delete(path, true);
+                }
+                catch (Exception) { }
+            }
         }
 
         #endregion
