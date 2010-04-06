@@ -13,9 +13,9 @@ namespace Raven.Client
 	{
 		private readonly string url;
 
-		public ServerClient(string localhost, int port)
+		public ServerClient(string server, int port)
 		{
-			url = String.Format("http://{0}:{1}", localhost, port);
+			url = String.Format("http://{0}:{1}", server, port);
 		}
 
 		#region IDatabaseCommands Members

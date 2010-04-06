@@ -16,6 +16,7 @@ namespace Raven.Client
 		private readonly HashSet<object> entities = new HashSet<object>();
 
         public event Action<object> Stored;
+        public string StoreIdentifier { get { return documentStore.Identifier; } }
 
 		public DocumentSession(DocumentStore documentStore, IDatabaseCommands database)
 		{
@@ -44,6 +45,14 @@ namespace Raven.Client
 			}
 			return entity;
 		}
+
+        public void StoreAll<T>(IEnumerable<T> entities)
+        {
+            foreach (var entity in entities)
+            {
+                Store(entity);
+            }
+        }
 
 		public void Store<T>(T entity)
 		{
@@ -125,5 +134,6 @@ namespace Raven.Client
         }
 
         #endregion
+
     }
 }

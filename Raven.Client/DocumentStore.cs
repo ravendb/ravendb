@@ -22,6 +22,8 @@ namespace Raven.Client
 			Conventions = new DocumentConvention();
 		}
 
+        public string Identifier { get; set; }
+
 		public string DataDirectory { get; set; }
 
 		public DocumentConvention Conventions { get; set; }
@@ -62,7 +64,7 @@ namespace Raven.Client
 				//NOTE: this should be done contitionally, index creation is expensive
 				DatabaseCommands.PutIndex("getByType", "{Map: 'from entity in docs select new { entity.type };' }");
 			}
-			catch (Exception)
+			catch (Exception ex)
 			{
 				Dispose();
 				throw;

@@ -3,10 +3,9 @@ namespace Raven.Client
 {
     public interface IDocumentStore : IDisposable
     {
+        string Identifier { get; set; }
         event Action<string, int, object> Stored;
-        void Delete(Guid id);
         IDocumentStore Initialise();
         IDocumentSession OpenSession();
-        DocumentConvention Conventions { get; set; }
     }
 }
