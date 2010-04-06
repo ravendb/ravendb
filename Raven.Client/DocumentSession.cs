@@ -8,7 +8,7 @@ using Raven.Database.Data;
 
 namespace Raven.Client
 {
-	public class DocumentSession
+	public class DocumentSession : IDocumentSession
 	{
 		private readonly IDatabaseCommands database;
 		private readonly DocumentStore documentStore;
@@ -106,5 +106,6 @@ namespace Raven.Client
 				return (T) entity;
 			}).ToList();
 		}
-	}
+
+    }
 }

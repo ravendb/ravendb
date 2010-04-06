@@ -93,5 +93,13 @@ namespace Raven.Client
 		}
 
 		#endregion
-	}
+
+        #region IDisposable Members
+
+        public void Dispose()
+        {
+        }
+
+        #endregion
+    }
 }

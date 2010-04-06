@@ -3,7 +3,7 @@ using Raven.Database;
 
 namespace Raven.Client
 {
-	public class DocumentStore : IDisposable
+	public class DocumentStore : IDisposable, IDocumentStore
 	{
 		private readonly string localhost;
 		private readonly int port;
@@ -28,19 +28,18 @@ namespace Raven.Client
 
 		public void Dispose()
 		{
-			var disposable = DatabaseCommands as IDisposable;
-			if (disposable != null)
-				disposable.Dispose();
+            if (DatabaseCommands != null)
+                DatabaseCommands.Dispose();
 		}
 
 		#endregion
 
-		public DocumentSession OpenSession()
+		public IDocumentSession OpenSession()
 		{
 			return new DocumentSession(this, DatabaseCommands);
 		}
 
-		public void Initialise()
+        public IDocumentStore Initialise()
 		{
 			try
 			{
@@ -57,11 +56,13 @@ namespace Raven.Client
 				//NOTE: this should be done contitionally, index creation is expensive
 				DatabaseCommands.PutIndex("getByType", "{Map: 'from entity in docs select new { entity.type };' }");
 			}
-			catch (Exception e)
+			catch (Exception)
 			{
 				Dispose();
 				throw;
 			}
+
+            return this;
 		}
 
 		public void Delete(Guid id)

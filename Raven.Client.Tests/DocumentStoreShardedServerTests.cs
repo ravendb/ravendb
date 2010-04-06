@@ -12,33 +12,37 @@ namespace Raven.Client.Tests
 	{
 		private readonly string path1;
         private readonly string path2;
-        private readonly int port1 = 8080;
-        private readonly int port2 = 8081;
+        private readonly int port1;
+        private readonly int port2;
 
         public DocumentStoreShardedServerTests()
 		{
+            port1 = 8080;
+            port2 = 8081;
+
             path1 = GetPath("TestDb1");
             path2 = GetPath("TestDb2");
-		}
+
+            RavenDbServer.EnsureCanListenToWhenInNonAdminContext(port1);
+            RavenDbServer.EnsureCanListenToWhenInNonAdminContext(port2);
+        }
 
         [Fact]
         public void Can_insert_into_two_servers_running_simultaneously_without_sharding()
         {
-            RavenDbServer.EnsureCanListenToWhenInNonAdminContext(port1);
-            RavenDbServer.EnsureCanListenToWhenInNonAdminContext(port2);
             using (var server1 = GetNewServer(port1, path1))
             using (var server2 = GetNewServer(port2, path2))
             {
                 foreach (var port in new[] { port1, port2 })
                 {
-                    var documentStore = new DocumentStore("localhost", port);
-                    documentStore.Initialise();
+                    using(var documentStore = new DocumentStore("localhost", port).Initialise())
+                    {
+                        var session = documentStore.OpenSession();
+                        var entity = new Company { Name = "Company" };
+                        session.Store(entity);
 
-                    var session = documentStore.OpenSession();
-                    var entity = new Company { Name = "Company" };
-                    session.Store(entity);
-
-                    Assert.NotEqual(Guid.Empty.ToString(), entity.Id);
+                        Assert.NotEqual(Guid.Empty.ToString(), entity.Id);
+                    }
                 }
             }
         }
