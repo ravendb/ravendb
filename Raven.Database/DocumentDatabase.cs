@@ -188,7 +188,7 @@ namespace Raven.Database
 			TransactionalStorage.Batch(actions =>
 			{
 				actions.AddIndex(name);
-				var firstAndLast = actions.FirstAndLastDocumentKeys();
+				var firstAndLast = actions.FirstAndLastDocumentIds();
 				if (firstAndLast.Item1 != 0 && firstAndLast.Item2 != 0)
 				{
 					for (var i = firstAndLast.Item1; i <= firstAndLast.Item2; i += configuration.IndexingBatchSize)

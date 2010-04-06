@@ -143,7 +143,7 @@ namespace Raven.Database.Storage
 		}
 
 
-		public Tuple<int, int> FirstAndLastDocumentKeys()
+		public Tuple<int, int> FirstAndLastDocumentIds()
 		{
 			var item1 = 0;
 			var item2 = 0;
