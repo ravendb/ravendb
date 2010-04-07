@@ -77,7 +77,7 @@
     <Compile Include="Document\DocumentStore.cs" />
     <Compile Include="Client\EmbededDatabaseCommands.cs" />
     <Compile Include="Client\HttpJsonRequest.cs" />
-    <Compile Include="Document\IDatabaseCommands.cs" />
+    <Compile Include="Client\IDatabaseCommands.cs" />
     <Compile Include="Document\IDocumentSession.cs" />
     <Compile Include="Document\IDocumentStore.cs" />
     <Compile Include="Shard\IShardSelectionStrategy.cs" />
