@@ -83,7 +83,7 @@ namespace Raven.Client.Tests
         }
 
         [Fact]
-        public void Can_get_entity_from_correct_sharded_server()
+        public void Can_get_single_entity_from_correct_sharded_server()
         {
             using (var documentStore = new ShardedDocumentStore(shardStrategy, shards).Initialise())
             using (var session = documentStore.OpenSession())
@@ -98,9 +98,29 @@ namespace Raven.Client.Tests
                 Assert.NotNull(loadedCompany);
                 Assert.Equal(company2.Name, loadedCompany.Name);
             }
-
-
         }
+
+        [Fact]
+        public void Can_get_all_sharded_entities()
+        {
+            using (var documentStore = new ShardedDocumentStore(shardStrategy, shards).Initialise())
+            using (var session = documentStore.OpenSession())
+            {
+                //store 2 items in 2 shards
+                session.StoreAll(new[] { company1, company2 });
+
+                //get them in simple single threaded sequence for this test
+                shardStrategy.Stub(x => x.ShardAccessStrategy).Return(new SequentialShardAccessStrategy());
+
+                //get all, should automagically retrieve from each shard
+                var allCompanies = session.GetAll<Company>();
+
+                Assert.NotNull(allCompanies);
+                Assert.Equal(company1.Name, allCompanies[0].Name);
+                Assert.Equal(company2.Name, allCompanies[1].Name);
+            }
+        }
+
 
         #region IDisposable Members
 

@@ -73,17 +73,25 @@ namespace Raven.Client.Shard
 
 		public void SaveChanges()
 		{
+            //I don't really understand what the point of this is, given that store sends
+            //info to the server and this resends it.. wouldn't that duplicate it?
             throw new NotImplementedException();
         }
 
-		public IQueryable<T> Query<T>()
+        public IQueryable<T> Query<T>()
 		{
-            throw new NotImplementedException();
+            //probably need an expression as a parm that can be passed through to each session for this to be useful
+            return 
+                shardStrategy
+                .ShardAccessStrategy
+                .Apply<T>(shardSessions, x => x.Query<T>().ToList())
+                .AsQueryable()
+            ;
         }
 
-		public IList<T> GetAll<T>() // NOTE: We probably need to ask the user if they can accept stale results
+		public IList<T> GetAll<T>() 
 		{
-            throw new NotImplementedException();
+            return shardStrategy.ShardAccessStrategy.Apply<T>(shardSessions, x => x.GetAll<T>());
         }
 
         public string StoreIdentifier { get { return "ShardedSession"; } }

@@ -77,7 +77,9 @@ namespace Raven.Client
 
 		public void SaveChanges()
 		{
-			foreach (var entity in entities)
+            //I don't really understand what the point of this is, given that store sends
+            //info to the server and this resends it.. wouldn't that duplicate it?
+            foreach (var entity in entities)
 			{
 				//TODO: Switch to more the batch version when it becomes available#
 				storeEntity(entity);

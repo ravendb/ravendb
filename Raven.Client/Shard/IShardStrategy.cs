@@ -9,5 +9,6 @@ namespace Raven.Client.Shard
     {
         IShardSelectionStrategy ShardSelectionStrategy { get; }
         IShardResolutionStrategy ShardResolutionStrategy { get; }
+        IShardAccessStrategy ShardAccessStrategy { get; }
     }
 }

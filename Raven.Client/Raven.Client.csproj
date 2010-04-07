@@ -80,11 +80,13 @@
     <Compile Include="Client\IDatabaseCommands.cs" />
     <Compile Include="Document\IDocumentSession.cs" />
     <Compile Include="Document\IDocumentStore.cs" />
+    <Compile Include="Shard\IShardAccessStrategy.cs" />
     <Compile Include="Shard\IShardResolutionStrategy.cs" />
     <Compile Include="Shard\IShardSelectionStrategy.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Client\ServerClient.cs" />
     <Compile Include="Shard\IShardStrategy.cs" />
+    <Compile Include="Shard\SequentialShardAccessStrategy.cs" />
     <Compile Include="Shard\ShardedDocumentSession.cs" />
     <Compile Include="Shard\ShardedDocumentStore.cs" />
     <Compile Include="Shard\ShardResolutionStrategyData.cs" />
