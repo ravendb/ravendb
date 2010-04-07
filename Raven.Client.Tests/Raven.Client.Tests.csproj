@@ -76,6 +76,7 @@
   <ItemGroup>
     <Compile Include="BaseTest.cs" />
     <Compile Include="Document\When_Using_Multiple_Unsharded_Servers.cs" />
+    <Compile Include="Shard\When_Using_Parallel_Access_Strategy.cs" />
     <Compile Include="Shard\When_Using_Sharded_Servers.cs" />
     <Compile Include="Document\DocumentStoreEmbeddedTests.cs" />
     <Compile Include="Document\DocumentStoreServerTests.cs" />
