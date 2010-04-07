@@ -9,9 +9,9 @@ namespace Raven.Client.Shard
 	{
         public event Action<string, int, object> Stored;
 
-        public ShardedDocumentStore(IShardSelectionStrategy shardSelectionStrategy, params IDocumentStore[] shards)
+        public ShardedDocumentStore(IShardSelectionStrategy shardSelectionStrategy, Shards shards)
         {
-            if (shards == null || shards.Length == 0) throw new ApplicationException("Must have one or more shards");
+            if (shards == null || shards.Count == 0) throw new ApplicationException("Must have one or more shards");
             if (shardSelectionStrategy == null) throw new ApplicationException("Must have shard selection strategy");
 
             this.shardSelectionStrategy = shardSelectionStrategy;
@@ -19,7 +19,7 @@ namespace Raven.Client.Shard
         }
 
         IShardSelectionStrategy shardSelectionStrategy;
-        IDocumentStore[] shards;
+        Shards shards;
 
         public string Identifier { get; set; }
         

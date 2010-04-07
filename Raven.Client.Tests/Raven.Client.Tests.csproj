@@ -75,9 +75,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BaseTest.cs" />
-    <Compile Include="DocumentStoreShardedServerTests.cs" />
-    <Compile Include="DocumentStoreEmbeddedTests.cs" />
-    <Compile Include="DocumentStoreServerTests.cs" />
+    <Compile Include="Shard\DocumentStoreShardedServerTests.cs" />
+    <Compile Include="Document\DocumentStoreEmbeddedTests.cs" />
+    <Compile Include="Document\DocumentStoreServerTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -72,19 +72,20 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="DocumentConvention.cs" />
-    <Compile Include="DocumentSession.cs" />
-    <Compile Include="DocumentStore.cs" />
-    <Compile Include="EmbededDatabaseCommands.cs" />
-    <Compile Include="HttpJsonRequest.cs" />
-    <Compile Include="Interface\IDatabaseCommands.cs" />
-    <Compile Include="Interface\IDocumentSession.cs" />
-    <Compile Include="Interface\IDocumentStore.cs" />
-    <Compile Include="Interface\IShardSelectionStrategy.cs" />
+    <Compile Include="Document\DocumentConvention.cs" />
+    <Compile Include="Document\DocumentSession.cs" />
+    <Compile Include="Document\DocumentStore.cs" />
+    <Compile Include="Client\EmbededDatabaseCommands.cs" />
+    <Compile Include="Client\HttpJsonRequest.cs" />
+    <Compile Include="Document\IDatabaseCommands.cs" />
+    <Compile Include="Document\IDocumentSession.cs" />
+    <Compile Include="Document\IDocumentStore.cs" />
+    <Compile Include="Shard\IShardSelectionStrategy.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ServerClient.cs" />
+    <Compile Include="Client\ServerClient.cs" />
     <Compile Include="Shard\ShardedDocumentSession.cs" />
     <Compile Include="Shard\ShardedDocumentStore.cs" />
+    <Compile Include="Shard\Shards.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Raven.Database\Raven.Database.csproj">

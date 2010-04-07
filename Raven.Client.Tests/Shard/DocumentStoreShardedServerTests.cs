@@ -71,7 +71,7 @@ namespace Raven.Client.Tests
             using (var server1 = GetNewServer(port1, path1))
             using (var server2 = GetNewServer(port2, path2))
             {
-                var shardStores = new[] { 
+                var shards = new Shards { 
                     new DocumentStore(server, port1) { Identifier="Shard1" }, 
                     new DocumentStore(server, port2) { Identifier="Shard2" } 
                 };
@@ -80,7 +80,7 @@ namespace Raven.Client.Tests
                 shardSelection.Stub(x => x.SelectShardIdForNewObject(company1)).Return("Shard1");
                 shardSelection.Stub(x => x.SelectShardIdForNewObject(company2)).Return("Shard2");
 
-                using (var documentStore = new ShardedDocumentStore(shardSelection, shardStores))
+                using (var documentStore = new ShardedDocumentStore(shardSelection, shards))
                 {
                     documentStore.Stored += (storeServer, storePort, storeEntity) => serversStoredUpon.Add(storePort);
                     documentStore.Initialise();
