@@ -8,7 +8,6 @@ using Xunit;
 using System.Collections.Generic;
 using Raven.Client.Shard;
 using Rhino.Mocks;
-using Raven.Client.Interface;
 
 namespace Raven.Client.Tests
 {

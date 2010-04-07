@@ -5,8 +5,8 @@ using System.Text;
 
 namespace Raven.Client.Shard
 {
-    public interface IShardSelectionStrategy
+    public interface IShardResolutionStrategy
     {
-        string SelectShardIdForNewObject(object obj);
+        IList<string> SelectShardIdsFromData(ShardResolutionStrategyData srsd);
     }
 }

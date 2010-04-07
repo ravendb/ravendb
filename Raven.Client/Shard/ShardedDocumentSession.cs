@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
 using System;
-using Raven.Client.Interface;
+using Raven.Client.Shard;
 
 namespace Raven.Client.Shard
 {
@@ -14,9 +14,9 @@ namespace Raven.Client.Shard
 	{
         public event Action<object> Stored;
 
-        public ShardedDocumentSession(IShardSelectionStrategy shardSelectionStrategy, params IDocumentSession[] shardSessions)
+        public ShardedDocumentSession(IShardStrategy shardStrategy, params IDocumentSession[] shardSessions)
 		{
-            this.shardSelectionStrategy = shardSelectionStrategy;
+            this.shardStrategy = shardStrategy;
             this.shardSessions = shardSessions;
 
             foreach (var shardSession in shardSessions)
@@ -25,12 +25,20 @@ namespace Raven.Client.Shard
             }
 		}
 
-        IShardSelectionStrategy shardSelectionStrategy = null;
+        IShardStrategy shardStrategy = null;
         IDocumentSession[] shardSessions = null;
 
 		public T Load<T>(string id)
 		{
-            throw new NotImplementedException();
+            var shardIds = shardStrategy.ShardResolutionStrategy.SelectShardIdsFromData(ShardResolutionStrategyData.BuildFrom(typeof(T)));
+
+            if (shardIds == null || shardIds.Count == 0) throw new ApplicationException("Unable to resolve shard from type " + typeof(T).Name);
+
+            if (shardIds.Count > 1) throw new ApplicationException("Can't resolve type " + typeof(T).Name + " for single entity load, resolved multiple shards");
+
+            var shardSession = GetSingleShardSession(shardIds[0]);
+
+            return shardSession.Load<T>(id);
 		}
 
         public void StoreAll<T>(IEnumerable<T> entities)
@@ -43,13 +51,19 @@ namespace Raven.Client.Shard
 
         private void SingleShardAction<T>(T entity, Action<IDocumentSession> action)
         {
-            string shardId = shardSelectionStrategy.SelectShardIdForNewObject(entity);
+            string shardId = shardStrategy.ShardSelectionStrategy.SelectShardIdForNewObject(entity);
             if (String.IsNullOrEmpty(shardId)) throw new ApplicationException("Can't find single shard to use for entity: " + entity.ToString());
 
-            var shardSession = shardSessions.Where(x => x.StoreIdentifier == shardId).FirstOrDefault();
-            if (shardSession == null) throw new ApplicationException("Can't find single shard with identifier: " + shardId);
+            var shardSession = GetSingleShardSession(shardId);
 
             action(shardSession);
+        }
+
+        private IDocumentSession GetSingleShardSession(string shardId)
+        {
+            var shardSession = shardSessions.Where(x => x.StoreIdentifier == shardId).FirstOrDefault();
+            if (shardSession == null) throw new ApplicationException("Can't find single shard with identifier: " + shardId);
+            return shardSession;
         }
 
 		public void Store<T>(T entity)

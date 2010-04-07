@@ -8,7 +8,6 @@ using Xunit;
 using System.Collections.Generic;
 using Raven.Client.Shard;
 using Rhino.Mocks;
-using Raven.Client.Interface;
 
 namespace Raven.Client.Tests
 {
@@ -41,6 +40,12 @@ namespace Raven.Client.Tests
             shardSelection = MockRepository.GenerateStub<IShardSelectionStrategy>();
             shardSelection.Stub(x => x.SelectShardIdForNewObject(company1)).Return("Shard1");
             shardSelection.Stub(x => x.SelectShardIdForNewObject(company2)).Return("Shard2");
+
+            shardResolution = MockRepository.GenerateStub<IShardResolutionStrategy>();
+
+            shardStrategy = MockRepository.GenerateStub<IShardStrategy>();
+            shardStrategy.Stub(x => x.ShardSelectionStrategy).Return(shardSelection);
+            shardStrategy.Stub(x => x.ShardResolutionStrategy).Return(shardResolution);
         }
 
         string path1;
@@ -54,13 +59,15 @@ namespace Raven.Client.Tests
         Company company2;
         Shards shards;
         IShardSelectionStrategy shardSelection;
+        IShardResolutionStrategy shardResolution;
+        IShardStrategy shardStrategy;
 
         [Fact]
         public void Can_insert_into_two_sharded_servers()
         {
             var serverPortsStoredUpon = new List<int>();
 
-            using (var documentStore = new ShardedDocumentStore(shardSelection, shards))
+            using (var documentStore = new ShardedDocumentStore(shardStrategy, shards))
             {
                 documentStore.Stored += (storeServer, storePort, storeEntity) => serverPortsStoredUpon.Add(storePort);
                 documentStore.Initialise();
@@ -73,6 +80,26 @@ namespace Raven.Client.Tests
 
             Assert.Equal(port1, serverPortsStoredUpon[0]);
             Assert.Equal(port2, serverPortsStoredUpon[1]);
+        }
+
+        [Fact]
+        public void Can_get_entity_from_correct_sharded_server()
+        {
+            using (var documentStore = new ShardedDocumentStore(shardStrategy, shards).Initialise())
+            using (var session = documentStore.OpenSession())
+            {
+                //store item that goes in 2nd shard
+                session.Store(company2);
+
+                //get it, should automagically retrieve from 2nd shard
+                shardResolution.Stub(x => x.SelectShardIdsFromData(null)).IgnoreArguments().Return(new[] { "Shard2" });
+                var loadedCompany = session.Load<Company>(company2.Id);
+
+                Assert.NotNull(loadedCompany);
+                Assert.Equal(company2.Name, loadedCompany.Name);
+            }
+
+
         }
 
         #region IDisposable Members

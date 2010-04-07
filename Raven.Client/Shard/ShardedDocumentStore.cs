@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
 using Raven.Database;
-using Raven.Client.Interface;
+using Raven.Client.Shard;
 
 namespace Raven.Client.Shard
 {
@@ -9,16 +9,16 @@ namespace Raven.Client.Shard
 	{
         public event Action<string, int, object> Stored;
 
-        public ShardedDocumentStore(IShardSelectionStrategy shardSelectionStrategy, Shards shards)
+        public ShardedDocumentStore(IShardStrategy shardStrategy, Shards shards)
         {
             if (shards == null || shards.Count == 0) throw new ApplicationException("Must have one or more shards");
-            if (shardSelectionStrategy == null) throw new ApplicationException("Must have shard selection strategy");
+            if (shardStrategy == null) throw new ApplicationException("Must have shard strategy");
 
-            this.shardSelectionStrategy = shardSelectionStrategy;
+            this.shardStrategy = shardStrategy;
             this.shards = shards;
         }
 
-        IShardSelectionStrategy shardSelectionStrategy;
+        IShardStrategy shardStrategy;
         Shards shards;
 
         public string Identifier { get; set; }
@@ -37,7 +37,7 @@ namespace Raven.Client.Shard
 
         public IDocumentSession OpenSession()
         {
-            return new ShardedDocumentSession(shardSelectionStrategy, shards.Select(x => x.OpenSession()).ToArray());
+            return new ShardedDocumentSession(shardStrategy, shards.Select(x => x.OpenSession()).ToArray());
         }
 
         public IDocumentStore Initialise()

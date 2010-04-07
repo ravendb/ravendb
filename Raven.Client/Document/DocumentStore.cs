@@ -64,7 +64,7 @@ namespace Raven.Client
 				//NOTE: this should be done contitionally, index creation is expensive
 				DatabaseCommands.PutIndex("getByType", "{Map: 'from entity in docs select new { entity.type };' }");
 			}
-			catch (Exception ex)
+			catch (Exception)
 			{
 				Dispose();
 				throw;
