@@ -6,6 +6,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
 using System;
+using Raven.Database;
 
 namespace Raven.Client
 {
@@ -26,7 +27,21 @@ namespace Raven.Client
 
 		public T Load<T>(string id)
 		{
-			var documentFound = database.Get(id);
+            JsonDocument documentFound = null;
+
+            try
+            {
+                documentFound = database.Get(id);
+            }
+            catch (System.Net.WebException ex)
+            {
+                //Status is ProtocolError, couldn't find a better way to trap 404 which shouldn't be an exception
+                if (ex.Message == "The remote server returned an error: (404) Not Found.")
+                    return default(T);
+                else
+                    throw;
+            }
+
 			var jsonString = Encoding.UTF8.GetString(documentFound.Data);
 			var entity = ConvertToEntity<T>(id, jsonString);
 			entities.Add(entity);

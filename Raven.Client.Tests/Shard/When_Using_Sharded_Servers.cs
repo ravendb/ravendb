@@ -101,6 +101,25 @@ namespace Raven.Client.Tests
         }
 
         [Fact]
+        public void Can_get_single_entity_from_correct_sharded_server_when_location_is_unknown()
+        {
+            using (var documentStore = new ShardedDocumentStore(shardStrategy, shards).Initialise())
+            using (var session = documentStore.OpenSession())
+            {
+                //store item that goes in 2nd shard
+                session.Store(company2);
+
+                //get it, should try all shards and find it
+                shardResolution.Stub(x => x.SelectShardIdsFromData(null)).IgnoreArguments().Return(null);
+                shardStrategy.Stub(x => x.ShardAccessStrategy).Return(new SequentialShardAccessStrategy());
+                var loadedCompany = session.Load<Company>(company2.Id);
+
+                Assert.NotNull(loadedCompany);
+                Assert.Equal(company2.Name, loadedCompany.Name);
+            }
+        }
+
+        [Fact]
         public void Can_get_all_sharded_entities()
         {
             using (var documentStore = new ShardedDocumentStore(shardStrategy, shards).Initialise())

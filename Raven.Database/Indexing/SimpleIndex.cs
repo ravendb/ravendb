@@ -42,13 +42,18 @@ namespace Raven.Database.Indexing
 					{
 						indexWriter.DeleteDocuments(new Term("__document_id", newDocId));
 					}
-					var luceneDoc = new Document();
-					luceneDoc.Add(new Field("__document_id", newDocId, Field.Store.YES, Field.Index.UN_TOKENIZED));
 
-					currentId = newDocId;
-					CopyFieldsToDocumentButRemoveDuplicateValues(luceneDoc, fields);
+                    if (newDocId != null)
+                    {
+                        var luceneDoc = new Document();
+                        luceneDoc.Add(new Field("__document_id", newDocId, Field.Store.YES, Field.Index.UN_TOKENIZED));
 
-					indexWriter.AddDocument(luceneDoc);
+                        currentId = newDocId;
+                        CopyFieldsToDocumentButRemoveDuplicateValues(luceneDoc, fields);
+
+                        indexWriter.AddDocument(luceneDoc);
+                    }
+
 					actions.IncrementSuccessIndexing();
 				}
 
