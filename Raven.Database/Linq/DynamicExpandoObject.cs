@@ -19,6 +19,17 @@ namespace Raven.Database.Linq
 			return true;
 		}
 
+		public override bool TryGetIndex(GetIndexBinder binder, object[] indexes, out object result)
+		{
+			if (indexes.Length != 1 || indexes[0] is string == false)
+			{
+				result = null;
+				return false;
+			}
+			result = GetValue((string)indexes[0]);
+			return true;
+		}
+
 		private static object TransformToValue(JToken jToken)
 		{
 			switch (jToken.Type)
