@@ -376,36 +376,9 @@ namespace Raven.Database
             {
                 foreach(var command in commands)
                 {
-                	if (command is PutCommandData)
-                    {
-                        var putData = command as PutCommandData;
-                        if (string.IsNullOrEmpty(putData.Key))
-                        {
-                            Guid value;
-                            UuidCreateSequential(out value);
-                            putData.Key = value.ToString();
-                        }
-                        RemoveReservedProperties(putData.Document);
-                        RemoveReservedProperties(putData.Metadata);
-                        putData.Metadata.Add("@id", new JValue(putData.Key));
-
-                        actions.AddDocument(putData.Key, putData.Document.ToString(), putData.Etag, putData.Metadata.ToString());
-                        actions.AddTask(new IndexDocumentTask { Index = "*", Key = putData.Key });
-
-                    	results.Add(new {Method = "PUT", Key = putData.Key});
-                        continue;
-                    }
-
-                    if (command is DeleteCommandData)
-                    {
-                        var deleteData = command as DeleteCommandData;
-                        actions.DeleteDocument(deleteData.Key, deleteData.Etag);
-                        actions.AddTask(new RemoveFromIndexTask { Index = "*", Keys = new[] { deleteData.Key } });
-                    	results.Add(new {Method = "DELETE", Key = deleteData.Key});
-                        continue;
-                    }
+                	command.Execute(this);
+                	results.Add(new {command.Method, command.Key});
                 }
-
                 actions.Commit();
             });
 

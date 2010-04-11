@@ -7,5 +7,8 @@ namespace Raven.Database.Data
 {
     public interface ICommandData
     {
+		string Key { get; }
+		string Method { get; }
+    	void Execute(DocumentDatabase database);
     }
 }
