@@ -53,6 +53,9 @@
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Rhino.Mocks">
+      <HintPath>..\SharedLibs\Rhino.Mocks.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
@@ -72,9 +75,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BaseTest.cs" />
-    <Compile Include="DocumentStoreShardedServerTests.cs" />
-    <Compile Include="DocumentStoreEmbeddedTests.cs" />
-    <Compile Include="DocumentStoreServerTests.cs" />
+    <Compile Include="Document\When_Using_Multiple_Unsharded_Servers.cs" />
+    <Compile Include="Shard\When_Using_Parallel_Access_Strategy.cs" />
+    <Compile Include="Shard\When_Using_Sharded_Servers.cs" />
+    <Compile Include="Document\DocumentStoreEmbeddedTests.cs" />
+    <Compile Include="Document\DocumentStoreServerTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

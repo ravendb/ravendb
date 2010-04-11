@@ -11,11 +11,12 @@ namespace Raven.Client.Tests
 	public class DocumentStoreServerTests : BaseTest, IDisposable
 	{
 		private readonly string path;
+        private readonly int port;
 
 		public DocumentStoreServerTests()
 		{
-			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof (DocumentStoreServerTests)).CodeBase);
-			path = Path.Combine(path, "TestDb").Substring(6);
+            port = 8080;
+            path = GetPath("TestDb");
 			RavenDbServer.EnsureCanListenToWhenInNonAdminContext(8080);
 		}
 
@@ -32,9 +33,9 @@ namespace Raven.Client.Tests
 		[Fact]
 		public void Should_insert_into_db_and_set_id()
 		{
-			using (var server = new RavenDbServer(new RavenConfiguration {Port = 8080, DataDirectory = path, AnonymousUserAccessMode = AnonymousUserAccessMode.All}))
+			using (var server = GetNewServer(port, path))
 			{
-				var documentStore = new DocumentStore("localhost", 8080);
+				var documentStore = new DocumentStore("localhost", port);
 				documentStore.Initialise();
 
 				var session = documentStore.OpenSession();
@@ -48,9 +49,9 @@ namespace Raven.Client.Tests
 		[Fact]
 		public void Should_update_stored_entity()
 		{
-			using (var server = new RavenDbServer(new RavenConfiguration { Port = 8080, DataDirectory = path, AnonymousUserAccessMode = AnonymousUserAccessMode.All }))
+			using (var server = GetNewServer(port, path))
 			{
-				var documentStore = new DocumentStore("localhost", 8080);
+				var documentStore = new DocumentStore("localhost", port);
 				documentStore.Initialise();
 
 				var session = documentStore.OpenSession();
@@ -68,9 +69,9 @@ namespace Raven.Client.Tests
 		[Fact]
 		public void Should_update_retrieved_entity()
 		{
-			using (var server = new RavenDbServer(new RavenConfiguration { Port = 8080, DataDirectory = path, AnonymousUserAccessMode = AnonymousUserAccessMode.All }))
+			using (var server = GetNewServer(port, path))
 			{
-				var documentStore = new DocumentStore("localhost", 8080);
+				var documentStore = new DocumentStore("localhost", port);
 				documentStore.Initialise();
 
 				var session1 = documentStore.OpenSession();
@@ -90,9 +91,9 @@ namespace Raven.Client.Tests
 		[Fact]
 		public void Should_retrieve_all_entities()
 		{
-			using (var server = new RavenDbServer(new RavenConfiguration { Port = 8080, DataDirectory = path, AnonymousUserAccessMode = AnonymousUserAccessMode.All }))
+			using (var server = GetNewServer(port, path))
 			{
-				var documentStore = new DocumentStore("localhost", 8080);
+				var documentStore = new DocumentStore("localhost", port);
 				documentStore.Initialise();
 
 				var session1 = documentStore.OpenSession();

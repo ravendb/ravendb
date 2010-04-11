@@ -5,7 +5,7 @@ using Raven.Database.Data;
 
 namespace Raven.Client
 {
-	public interface IDatabaseCommands
+    public interface IDatabaseCommands : IDisposable
 	{
 		JsonDocument Get(string key);
 		string Put(string key, Guid? etag, JObject document, JObject metadata);

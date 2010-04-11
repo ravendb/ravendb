@@ -5,14 +5,19 @@ using System.Threading;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
+using System;
+using Raven.Database;
 
 namespace Raven.Client
 {
-	public class DocumentSession
+	public class DocumentSession : IDocumentSession
 	{
 		private readonly IDatabaseCommands database;
 		private readonly DocumentStore documentStore;
 		private readonly HashSet<object> entities = new HashSet<object>();
+
+        public event Action<object> Stored;
+        public string StoreIdentifier { get { return documentStore.Identifier; } }
 
 		public DocumentSession(DocumentStore documentStore, IDatabaseCommands database)
 		{
@@ -22,7 +27,21 @@ namespace Raven.Client
 
 		public T Load<T>(string id)
 		{
-			var documentFound = database.Get(id);
+            JsonDocument documentFound = null;
+
+            try
+            {
+                documentFound = database.Get(id);
+            }
+            catch (System.Net.WebException ex)
+            {
+                //Status is ProtocolError, couldn't find a better way to trap 404 which shouldn't be an exception
+                if (ex.Message == "The remote server returned an error: (404) Not Found.")
+                    return default(T);
+                else
+                    throw;
+            }
+
 			var jsonString = Encoding.UTF8.GetString(documentFound.Data);
 			var entity = ConvertToEntity<T>(id, jsonString);
 			entities.Add(entity);
@@ -42,10 +61,21 @@ namespace Raven.Client
 			return entity;
 		}
 
+        public void StoreAll<T>(IEnumerable<T> entities)
+        {
+            foreach (var entity in entities)
+            {
+                Store(entity);
+            }
+        }
+
 		public void Store<T>(T entity)
 		{
 			storeEntity(entity);
 			entities.Add(entity);
+
+            if (Stored != null)
+                Stored(entity);
 		}
 
 		private void storeEntity<T>(T entity)
@@ -62,7 +92,9 @@ namespace Raven.Client
 
 		public void SaveChanges()
 		{
-			foreach (var entity in entities)
+            //I don't really understand what the point of this is, given that store sends
+            //info to the server and this resends it.. wouldn't that duplicate it?
+            foreach (var entity in entities)
 			{
 				//TODO: Switch to more the batch version when it becomes available#
 				storeEntity(entity);
@@ -106,5 +138,19 @@ namespace Raven.Client
 				return (T) entity;
 			}).ToList();
 		}
-	}
+
+
+        #region IDisposable Members
+
+        public void Dispose()
+        {
+            //DocumentStore owns IDatabaseCommands, allow it to dispose in case multiple sessions in play
+
+            //dereference all event listeners
+            Stored = null;
+        }
+
+        #endregion
+
+    }
 }
