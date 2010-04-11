@@ -37,28 +37,28 @@ namespace Raven.Server.Responders
 
 			foreach (JObject jsonCommand in jsonCommandArray)
         	{
-            	if (jsonCommand["method"].Value<string>() == "PUT")
-                {
-                    commands.Add(new PutCommandData
-                    {
-                        Key = jsonCommand["key"].Value<string>(),
-						Etag = GetEtagFromCommand(jsonCommand),
-                        Document = jsonCommand["document"] as JObject,
-                        Metadata = jsonCommand["@meta"] as JObject,
-                    });
-                    continue;
-                }
-                 if (jsonCommand["method"].Value<string>() == "DELETE")
-                {
-                    commands.Add(new DeleteCommandData
-                    {
-                        Key = jsonCommand["key"].Value<string>(),
-						Etag = GetEtagFromCommand(jsonCommand),
-                    });
-                    continue;
-                }
-
-                throw new ArgumentException("Batching only supports PUT and DELETE.");
+        		var key = jsonCommand["key"];
+        		switch (jsonCommand["method"].Value<string>())
+        		{
+        			case "PUT":
+        				commands.Add(new PutCommandData
+        				{
+        					Key = key.Value<string>(),
+        					Etag = GetEtagFromCommand(jsonCommand),
+        					Document = jsonCommand["document"] as JObject,
+        					Metadata = jsonCommand["@meta"] as JObject,
+        				});
+        				break;
+        			case "DELETE":
+        				commands.Add(new DeleteCommandData
+        				{
+        					Key = key.Value<string>(),
+        					Etag = GetEtagFromCommand(jsonCommand),
+        				});
+        				continue;
+        			default:
+        				throw new ArgumentException("Batching only supports PUT and DELETE.");
+        		}
             }
 
             var batchResult = Database.Batch(commands);
