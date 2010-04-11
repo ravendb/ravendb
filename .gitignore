@@ -7,7 +7,6 @@ build/
 *.suo
 *.sln.cache
 _ReSharper.*/
-AssemblyInfo.cs
 *.user
 /Data/Data
 /Data/IndexDefinitions/
