@@ -367,5 +367,50 @@ namespace Raven.Database
 
 			return result;
 		}
+
+        public object[] Batch(ICommandData[] commandData)
+        {
+            object[] result = new object[commandData.Count()];
+
+            TransactionalStorage.Batch(actions =>
+            {
+                for (int commandIndex = 0; commandIndex < commandData.Count(); commandIndex++)
+                {
+                    if (commandData[commandIndex] is PutCommandData)
+                    {
+                        PutCommandData putData = commandData[commandIndex] as PutCommandData;
+                        if (string.IsNullOrEmpty(putData.Key))
+                        {
+                            Guid value;
+                            UuidCreateSequential(out value);
+                            putData.Key = value.ToString();
+                        }
+                        RemoveReservedProperties(putData.Document);
+                        RemoveReservedProperties(putData.Metadata);
+                        putData.Metadata.Add("@id", new JValue(putData.Key));
+
+                        actions.AddDocument(putData.Key, putData.Document.ToString(), putData.Etag, putData.Metadata.ToString());
+                        actions.AddTask(new IndexDocumentTask { Index = "*", Key = putData.Key });
+
+                        result[commandIndex] = new { Method = "PUT", Key = putData.Key };
+                        continue;
+                    }
+
+                    if (commandData[commandIndex] is DeleteCommandData)
+                    {
+                        DeleteCommandData deleteData = commandData[commandIndex] as DeleteCommandData;
+                        actions.DeleteDocument(deleteData.Key, deleteData.Etag);
+                        actions.AddTask(new RemoveFromIndexTask { Index = "*", Keys = new[] { deleteData.Key } });
+                        result[commandIndex] = new { Method = "DELETE", Key = deleteData.Key };
+                        continue;
+                    }
+                }
+
+                actions.Commit();
+            });
+
+            workContext.NotifyAboutWork();
+            return result;
+        }
 	}
 }

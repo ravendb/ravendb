@@ -303,6 +303,12 @@ namespace Raven.Server.Responders
 			context.Response.OutputStream.Flush();
 		}
 
+        public static void SetStatusToOperationsSucceeded(this HttpListenerContext context)
+        {
+            context.Response.StatusCode = 200;
+            context.Response.StatusDescription = "Operations succeeded";
+        }
+
 		#region Nested type: JsonToJsonConverter
 
 		public class JsonToJsonConverter : JsonConverter
