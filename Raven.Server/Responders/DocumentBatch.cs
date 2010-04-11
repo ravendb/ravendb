@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Collections.Generic;
+using System.Net;
 using Newtonsoft.Json.Linq;
 using System;
 using Raven.Database.Data;
@@ -32,37 +33,35 @@ namespace Raven.Server.Responders
         private void Batch(HttpListenerContext context)
         {
             var jsonCommandArray = context.ReadJsonArray();
-            ICommandData[] commandData = new ICommandData[jsonCommandArray.Count];
+        	var commands = new List<ICommandData>();
 
-            for (int commandIndex = 0; commandIndex < jsonCommandArray.Count; commandIndex++)
-            {
-
-                if (jsonCommandArray[commandIndex]["method"].Value<string>() == "PUT")
+			foreach (JObject jsonCommand in jsonCommandArray)
+        	{
+            	if (jsonCommand["method"].Value<string>() == "PUT")
                 {
-                    commandData[commandIndex] = new PutCommandData
+                    commands.Add(new PutCommandData
                     {
-                        Key = jsonCommandArray[commandIndex]["key"].Value<string>(),
-						Etag = GetEtagFromCommand(jsonCommandArray[commandIndex]),
-                        Document = jsonCommandArray[commandIndex]["document"] as JObject,
-                        Metadata = jsonCommandArray[commandIndex]["@meta"] as JObject,
-                    };
+                        Key = jsonCommand["key"].Value<string>(),
+						Etag = GetEtagFromCommand(jsonCommand),
+                        Document = jsonCommand["document"] as JObject,
+                        Metadata = jsonCommand["@meta"] as JObject,
+                    });
                     continue;
                 }
-
-                if (jsonCommandArray[commandIndex]["method"].Value<string>() == "DELETE")
+                 if (jsonCommand["method"].Value<string>() == "DELETE")
                 {
-                    commandData[commandIndex] = new DeleteCommandData
+                    commands.Add(new DeleteCommandData
                     {
-                        Key = jsonCommandArray[commandIndex]["key"].Value<string>(),
-						Etag = GetEtagFromCommand(jsonCommandArray[commandIndex]),
-                    };
+                        Key = jsonCommand["key"].Value<string>(),
+						Etag = GetEtagFromCommand(jsonCommand),
+                    });
                     continue;
                 }
 
                 throw new ArgumentException("Batching only supports PUT and DELETE.");
             }
 
-            var batchResult = Database.Batch(commandData);
+            var batchResult = Database.Batch(commands);
             context.WriteJson(batchResult);
         }
 

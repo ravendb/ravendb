@@ -368,7 +368,7 @@ namespace Raven.Database
 			return result;
 		}
 
-        public object[] Batch(ICommandData[] commandData)
+        public object[] Batch(IEnumerable<ICommandData> commandData)
         {
             object[] result = new object[commandData.Count()];
 
