@@ -62,7 +62,6 @@ namespace Raven.Server.Responders
                 throw new ArgumentException("Batching only supports PUT and DELETE.");
             }
 
-            context.SetStatusToOperationsSucceeded();
             var batchResult = Database.Batch(commandData);
             context.WriteJson(batchResult);
         }
