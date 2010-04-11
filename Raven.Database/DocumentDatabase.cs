@@ -368,17 +368,17 @@ namespace Raven.Database
 			return result;
 		}
 
-        public object[] Batch(IEnumerable<ICommandData> commandData)
+        public object[] Batch(IEnumerable<ICommandData> commands)
         {
-            object[] result = new object[commandData.Count()];
+        	var results = new List<object>();
 
             TransactionalStorage.Batch(actions =>
             {
-                for (int commandIndex = 0; commandIndex < commandData.Count(); commandIndex++)
+                foreach(var command in commands)
                 {
-                    if (commandData[commandIndex] is PutCommandData)
+                	if (command is PutCommandData)
                     {
-                        PutCommandData putData = commandData[commandIndex] as PutCommandData;
+                        var putData = command as PutCommandData;
                         if (string.IsNullOrEmpty(putData.Key))
                         {
                             Guid value;
@@ -392,16 +392,16 @@ namespace Raven.Database
                         actions.AddDocument(putData.Key, putData.Document.ToString(), putData.Etag, putData.Metadata.ToString());
                         actions.AddTask(new IndexDocumentTask { Index = "*", Key = putData.Key });
 
-                        result[commandIndex] = new { Method = "PUT", Key = putData.Key };
+                    	results.Add(new {Method = "PUT", Key = putData.Key});
                         continue;
                     }
 
-                    if (commandData[commandIndex] is DeleteCommandData)
+                    if (command is DeleteCommandData)
                     {
-                        DeleteCommandData deleteData = commandData[commandIndex] as DeleteCommandData;
+                        var deleteData = command as DeleteCommandData;
                         actions.DeleteDocument(deleteData.Key, deleteData.Etag);
                         actions.AddTask(new RemoveFromIndexTask { Index = "*", Keys = new[] { deleteData.Key } });
-                        result[commandIndex] = new { Method = "DELETE", Key = deleteData.Key };
+                    	results.Add(new {Method = "DELETE", Key = deleteData.Key});
                         continue;
                     }
                 }
@@ -410,7 +410,7 @@ namespace Raven.Database
             });
 
             workContext.NotifyAboutWork();
-            return result;
+            return results.ToArray();
         }
 	}
 }
