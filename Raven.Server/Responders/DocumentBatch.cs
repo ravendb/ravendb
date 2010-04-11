@@ -39,22 +39,22 @@ namespace Raven.Server.Responders
 
                 if (jsonCommandArray[commandIndex]["method"].Value<string>() == "PUT")
                 {
-                    commandData[commandIndex] = new PutCommandData()
+                    commandData[commandIndex] = new PutCommandData
                     {
                         Key = jsonCommandArray[commandIndex]["key"].Value<string>(),
-                        Etag = context.GetEtag(),
+						Etag = GetEtagFromCommand(jsonCommandArray[commandIndex]),
                         Document = jsonCommandArray[commandIndex]["document"] as JObject,
-                        Metadata = jsonCommandArray[commandIndex]["metadata"] as JObject,
+                        Metadata = jsonCommandArray[commandIndex]["@meta"] as JObject,
                     };
                     continue;
                 }
 
                 if (jsonCommandArray[commandIndex]["method"].Value<string>() == "DELETE")
                 {
-                    commandData[commandIndex] = new DeleteCommandData()
+                    commandData[commandIndex] = new DeleteCommandData
                     {
                         Key = jsonCommandArray[commandIndex]["key"].Value<string>(),
-                        Etag = context.GetEtag()
+						Etag = GetEtagFromCommand(jsonCommandArray[commandIndex]),
                     };
                     continue;
                 }
@@ -65,5 +65,10 @@ namespace Raven.Server.Responders
             var batchResult = Database.Batch(commandData);
             context.WriteJson(batchResult);
         }
+
+    	private static Guid? GetEtagFromCommand(JToken jsonCommand)
+    	{
+    		return jsonCommand["etag"] != null ? new Guid(jsonCommand["etag"].Value<string>()) : (Guid?)null;
+    	}
     }
 }
