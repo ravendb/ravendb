@@ -367,5 +367,23 @@ namespace Raven.Database
 
 			return result;
 		}
+
+        public object[] Batch(IEnumerable<ICommandData> commands)
+        {
+        	var results = new List<object>();
+
+            TransactionalStorage.Batch(actions =>
+            {
+                foreach(var command in commands)
+                {
+                	command.Execute(this);
+                	results.Add(new {command.Method, command.Key});
+                }
+                actions.Commit();
+            });
+
+            workContext.NotifyAboutWork();
+            return results.ToArray();
+        }
 	}
 }
