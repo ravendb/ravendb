@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using ICSharpCode.NRefactory.Ast;
 
 namespace Raven.Database.Linq
@@ -19,7 +20,7 @@ namespace Raven.Database.Linq
 
 		public DynamicViewCompiler(string name, string map, string reduce)
 		{
-			this.name = name;
+			this.name = Regex.Replace(name, @"[^\w\d]","_");
 			this.map = map;
 			this.reduce = reduce;
 		}
