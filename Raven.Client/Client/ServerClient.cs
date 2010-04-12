@@ -22,6 +22,8 @@ namespace Raven.Client.Client
 
 		public JsonDocument Get(string key)
 		{
+			EnsureIsNotNullOrEmpty(key, "key");
+
 			var request = new HttpJsonRequest(url + "/docs/" + key, "GET");
 			return new JsonDocument
 			{
@@ -30,10 +32,16 @@ namespace Raven.Client.Client
 			};
 		}
 
+		private static void EnsureIsNotNullOrEmpty(string key, string argName)
+		{
+			if(string.IsNullOrEmpty(key))
+				throw new ArgumentException("Key cannot be null or empty", argName);
+		}
+
 		public string Put(string key, Guid? etag, JObject document, JObject metadata)
 		{
 			var method = String.IsNullOrEmpty(key) ? "POST" : "PUT";
-			var request = new HttpJsonRequest(url + "/docs/" + key, method);
+			var request = new HttpJsonRequest(url + "/docs/" + key, method, metadata);
 			request.Write(document.ToString());
 
 			var obj = new {id = ""};
@@ -43,11 +51,13 @@ namespace Raven.Client.Client
 
 		public void Delete(string key, Guid? etag)
 		{
+			EnsureIsNotNullOrEmpty(key, "key");
 			throw new NotImplementedException();
 		}
 
 		public string PutIndex(string name, string indexDef)
 		{
+			EnsureIsNotNullOrEmpty(name, "name");
 			var request = new HttpJsonRequest(url + "/indexes/" + name, "PUT");
 			request.Write(indexDef);
 
@@ -58,6 +68,7 @@ namespace Raven.Client.Client
 
 		public QueryResult Query(string index, string query, int start, int pageSize)
 		{
+			EnsureIsNotNullOrEmpty(index, "index");
 			var path = url + "/indexes/" + index + "?query=" + query + "&start=" + start + "&pageSize=" + pageSize;
 			var request = new HttpJsonRequest(path, "GET");
 			var serializer = new JsonSerializer();
@@ -74,6 +85,7 @@ namespace Raven.Client.Client
 
 		public void DeleteIndex(string name)
 		{
+			EnsureIsNotNullOrEmpty(name, "name");
 			throw new NotImplementedException();
 		}
 
