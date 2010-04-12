@@ -57,7 +57,7 @@ namespace Raven.Scenarios
 					DataDirectory = tempFileName,
 					Port = testPort,
 					AnonymousUserAccessMode = AnonymousUserAccessMode.All,
-					CreateDatabaseFromScratch = false
+					ShouldCreateDefaultsWhenBuildingNewDatabaseFromScratch = false
 				}))
 				{
 					using (var zipFile = new ZipFile(file))
