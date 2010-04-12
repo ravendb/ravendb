@@ -19,7 +19,7 @@ namespace Raven.Server
 		public RavenDbServer(RavenConfiguration settings)
 		{
 			settings.LoadLoggingSettings();
-			if (settings.CreateDatabaseFromScratch)
+			if (settings.ShouldCreateDefaultsWhenBuildingNewDatabaseFromScratch)
 				settings.DatabaseCreatedFromScratch += OnDatabaseCreatedFromScratch;
 			database = new DocumentDatabase(settings);
 			database.SpinBackgroundWorkers();

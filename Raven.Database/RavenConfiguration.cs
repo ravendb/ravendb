@@ -29,7 +29,7 @@ namespace Raven.Database
 				:
 					AnonymousUserAccessMode.Get;
 
-			CreateDatabaseFromScratch = true;
+			ShouldCreateDefaultsWhenBuildingNewDatabaseFromScratch = true;
 		}
 
 		public string DataDirectory { get; set; }
@@ -38,7 +38,7 @@ namespace Raven.Database
 		public int IndexingBatchSize { get; set; }
 		public AnonymousUserAccessMode AnonymousUserAccessMode { get; set; }
 
-		public bool CreateDatabaseFromScratch { get; set; }
+		public bool ShouldCreateDefaultsWhenBuildingNewDatabaseFromScratch { get; set; }
 
 		public void LoadLoggingSettings()
 		{

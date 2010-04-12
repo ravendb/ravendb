@@ -46,8 +46,20 @@ namespace Raven.Database
 				IndexDefinitionStorage = IndexDefinitionStorage
 			};
 
-			if (newDb)
-				configuration.RaiseDatabaseCreatedFromScratch(this);
+			if (!newDb) 
+				return;
+
+			if(configuration.ShouldCreateDefaultsWhenBuildingNewDatabaseFromScratch)
+			{
+				PutIndex("Raven/DocumentsByTag",
+						 @"
+	from doc in docs 
+	where doc[""@metadata""][""Raven-Entity-Tag""] != null 
+	select new { Tag = doc[""@metadata""][""Raven-Entity-Tag""] };
+");
+			}
+	
+			configuration.RaiseDatabaseCreatedFromScratch(this);
 		}
 
 		public DatabaseStatistics Statistics
