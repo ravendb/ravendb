@@ -27,7 +27,7 @@ namespace Raven.Database.Indexing
 		protected readonly string name;
 		private CurrentIndexSearcher searcher;
 
-		public Index(Directory directory, string name)
+		protected Index(Directory directory, string name)
 		{
 			this.name = name;
 			log.DebugFormat("Creating index for {0}", name);
