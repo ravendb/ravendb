@@ -1,5 +1,6 @@
 using System;
 using System.Reflection;
+using Raven.Client.Util;
 
 namespace Raven.Client.Document
 {
@@ -8,8 +9,10 @@ namespace Raven.Client.Document
 		public DocumentConvention()
 		{
 			FindIdentityProperty = q => q.Name == "Id";
+			FindTypeTagName = t => Inflector.Pluralize(t.Name);
 		}
 
+		public Func<Type, string> FindTypeTagName { get; set; }
 		public Func<PropertyInfo, bool> FindIdentityProperty { get; set; }
 	}
 }
