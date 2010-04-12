@@ -7,7 +7,7 @@ using Raven.Client.Shard;
 
 namespace Raven.Client.Shard
 {
-	public class ShardedDocumentStore : IDisposable, IDocumentStore
+	public class ShardedDocumentStore : IDocumentStore
 	{
         public event Action<string, int, object> Stored;
 
@@ -20,8 +20,8 @@ namespace Raven.Client.Shard
             this.shards = shards;
         }
 
-        IShardStrategy shardStrategy;
-        Shards shards;
+		private readonly IShardStrategy shardStrategy;
+		private readonly Shards shards;
 
         public string Identifier { get; set; }
         
@@ -48,7 +48,7 @@ namespace Raven.Client.Shard
 			{
                 foreach (var shard in shards)
                 {
-                    shard.Stored += this.Stored;
+                    shard.Stored += Stored;
                     shard.Initialise();
                 }
 			}

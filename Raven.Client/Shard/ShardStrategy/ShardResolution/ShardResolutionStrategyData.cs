@@ -6,7 +6,8 @@ namespace Raven.Client.Shard.ShardStrategy.ShardResolution
     {
         public static ShardResolutionStrategyData BuildFrom(Type type) 
         {
-            if (type == null) throw new ArgumentNullException("type");
+            if (type == null) 
+				throw new ArgumentNullException("type");
 
             return new ShardResolutionStrategyData
             {
