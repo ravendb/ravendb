@@ -42,14 +42,17 @@ namespace Raven.Database.Indexing
 					documentIdPropertyDescriptor = props.Find("__document_id", false);
 				}
 
-				var reduceValue = groupByPropertyDescriptor.GetValue(doc);
-				if (reduceValue == null)
-					throw new InvalidOperationException("Field " + viewGenerator.GroupByField +
-						" is used as the reduce key and cannot be null");
-				var reduceKey = reduceValue.ToString();
 				var docIdValue = documentIdPropertyDescriptor.GetValue(doc);
 				if (docIdValue == null)
 					throw new InvalidOperationException("Could not find document id for this document");
+				
+				var reduceValue = groupByPropertyDescriptor.GetValue(doc);
+				if (reduceValue == null)
+				{
+					log.DebugFormat("Field {0} is used as the reduce key and cannot be null, skipping document {1}", viewGenerator.GroupByField, docIdValue);
+					continue;
+				}
+				var reduceKey = reduceValue.ToString();
 				var docId = docIdValue.ToString();
 
 				reduceKeys.Add(reduceKey);
