@@ -1,4 +1,6 @@
 using System.Linq;
+using System.Net;
+using Raven.Client.Document;
 using Raven.Client.Shard.ShardStrategy;
 using Raven.Client.Shard.ShardStrategy.ShardResolution;
 using System;
@@ -46,7 +48,20 @@ namespace Raven.Client.Shard
             {
                 return shardsToUse[0].Load<T>(id);
             }
-			var results = shardStrategy.ShardAccessStrategy.Apply(shardsToUse, x => new[] { x.Load<T>(id) });
+			var results = shardStrategy.ShardAccessStrategy.Apply(shardsToUse, x =>
+			{
+				try
+				{
+					return new[] {x.Load<T>(id)};
+				}
+				catch (WebException e)
+				{
+					var httpWebResponse = e.Response as HttpWebResponse; // we ignore 404, it is expected
+					if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.NotFound)
+						throw;
+					return null;
+				}
+			});
 
 			return results
 				.Where(x => ReferenceEquals(null, x) == false)
@@ -82,22 +97,20 @@ namespace Raven.Client.Shard
 			SingleShardAction(entity, session => session.Evict(entity));
 		}
 
+		/// <summary>
+		/// Note that while we can assume a transaction for a single shard, cross shard transactions will NOT work.
+		/// </summary>
 		public void SaveChanges()
 		{
-            //I don't really understand what the point of this is, given that store sends
-            //info to the server and this resends it.. wouldn't that duplicate it?
-            throw new NotImplementedException();
+			foreach (var shardSession in shardSessions)
+			{
+				shardSession.SaveChanges();
+			}
         }
 
-        public IQueryable<T> Query<T>()
+        public IDocumentQuery<T> Query<T>(string indexName)
 		{
-            //probably need an expression as a parm that can be passed through to each session for this to be useful
-            return 
-                shardStrategy
-                .ShardAccessStrategy
-                .Apply(shardSessions, x => x.Query<T>().ToList())
-                .AsQueryable()
-            ;
+        	return new ShardedDocumentQuery<T>(indexName, shardSessions);
         }
 
 		public string StoreIdentifier
