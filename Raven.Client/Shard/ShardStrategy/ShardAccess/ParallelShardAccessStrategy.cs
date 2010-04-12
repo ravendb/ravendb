@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -10,37 +13,28 @@ namespace Raven.Client.Shard.ShardStrategy.ShardAccess
     {
         public IList<T> Apply<T>(IList<IDocumentSession> shardSessions, Func<IDocumentSession, IList<T>> operation)
         {
-            var returnList = new List<T>();
+        	var returnList = new ConcurrentStack<T>();
 
-            //List.AddRange not threadsafe, make sure addrange calls don't happen concurrently
-            object lockObject = new object();
+			shardSessions
+				.Select(shardSession =>
+					Task.Factory
+						.StartNew(() => operation(shardSession))
+						.ContinueWith(task =>
+						{
+							if (task.Result == null)
+								return;
+							returnList.PushRange(task.Result.ToArray());
+						})
+				)
+				.WaitAll()
+			;
 
-            shardSessions
-                .Select(shardSession => 
-                    Task.Factory
-                        .StartNew(() => operation(shardSession))
-                        .AddToListOnComplete(lockObject, returnList)
-                )
-                .WaitAll()
-            ;
-
-            return returnList;
+            return returnList.ToArray();
         }
     }
 
     internal static class ParallelExtensions
     {
-        public static Task AddToListOnComplete<T>(this Task<IList<T>> task, object lockObject, List<T> returnList)
-        {
-            return task.ContinueWith(x => {
-                lock (lockObject)
-                {
-                    if (x.Result != null)
-                        returnList.AddRange(x.Result);
-                }
-            });
-        }
-
         public static void WaitAll(this IEnumerable<Task> tasks)
         {
             try
@@ -53,12 +47,20 @@ namespace Raven.Client.Shard.ShardStrategy.ShardAccess
                 //then could be double wrapped, etc. This should always get us the original
                 while (true)
                 {
-                    if (ex.InnerException == null || !(ex is AggregateException))
-                        throw ex;
-                    else
-                        ex = ex.InnerException;
+                	if (ex.InnerException == null || !(ex is AggregateException))
+                	{
+						throw PreserveStackTrace(ex);
+                	}
+                	ex = ex.InnerException;
                 }
             }
         }
+
+    	private static Exception PreserveStackTrace(Exception exception)
+    	{
+    		typeof (Exception).InvokeMember("InternalPreserveStackTrace", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.InvokeMethod, null,
+    		                                exception, null);
+    		return exception;
+    	}
     }
 }

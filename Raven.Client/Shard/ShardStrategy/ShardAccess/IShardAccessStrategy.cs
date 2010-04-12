@@ -7,6 +7,9 @@ namespace Raven.Client.Shard
 {
     public interface IShardAccessStrategy
     {
-        IList<T> Apply<T>(IList<IDocumentSession> shardSessions, Func<IDocumentSession, IList<T>> operation);
+        IList<T> Apply<T>(
+			IList<IDocumentSession> shardSessions, 
+			Func<IDocumentSession, IList<T>> operation
+			);
     }
 }
