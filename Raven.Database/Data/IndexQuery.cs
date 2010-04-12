@@ -1,6 +1,6 @@
 ﻿using Raven.Database.Extensions;
 
-namespace Raven.Database.Indexing
+namespace Raven.Database.Data
 {
 	public class IndexQuery
 	{
