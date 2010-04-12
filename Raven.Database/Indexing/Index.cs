@@ -48,41 +48,39 @@ namespace Raven.Database.Indexing
 
 		#endregion
 
-		public IEnumerable<IndexQueryResult> Query(string query, int start, int pageSize, Reference<int> totalSize,
-		                                           string[] fieldsToFetch)
+		public IEnumerable<IndexQueryResult> Query(IndexQuery query)
 		{
-			if (string.IsNullOrEmpty(query) == false)
+			if (string.IsNullOrEmpty(query.Query) == false)
 			{
-				return SearchIndex(query, totalSize, start, pageSize, fieldsToFetch);
+				return SearchIndex(query);
 			}
-			return BrowseIndex(totalSize, start, pageSize, fieldsToFetch);
+			return BrowseIndex(query);
 		}
 
-		private IEnumerable<IndexQueryResult> BrowseIndex(Reference<int> totalSize, int start,
-		                                                  int pageSize, string[] fieldsToFetch)
+		private IEnumerable<IndexQueryResult> BrowseIndex(IndexQuery query)
 		{
 			using (searcher.Use())
 			{
 				log.DebugFormat("Browsing index {0}", name);
 				var indexReader = searcher.Searcher.Reader;
 				var maxDoc = indexReader.MaxDoc();
-				totalSize.Value = Enumerable.Range(0, maxDoc).Count(i => indexReader.IsDeleted(i) == false);
+				query.TotalSize.Value = Enumerable.Range(0, maxDoc).Count(i => indexReader.IsDeleted(i) == false);
 				var previousDocuments = new HashSet<string>();
-				for (var i = start; i < maxDoc && (i - start) < pageSize; i++)
+				for (var i = query.Start; i < maxDoc && (i - query.Start) < query.PageSize; i++)
 				{
 					if (indexReader.IsDeleted(i))
 						continue;
 					var document = indexReader.Document(i);
-					if (IsDuplicateDocument(document, fieldsToFetch, previousDocuments))
+					if (IsDuplicateDocument(document, query.FieldsToFetch, previousDocuments))
 						continue;
-					yield return RetrieveDocument(document, fieldsToFetch);
+					yield return RetrieveDocument(document, query.FieldsToFetch);
 				}
 			}
 		}
 
-		private static bool IsDuplicateDocument(Document document, string[] fieldsToFetch, HashSet<string> previousDocuments)
+		private static bool IsDuplicateDocument(Document document, ICollection<string> fieldsToFetch, ISet<string> previousDocuments)
 		{
-			if (fieldsToFetch != null && fieldsToFetch.Length > 1)
+			if (fieldsToFetch != null && fieldsToFetch.Count > 1)
 				return false;
 			return previousDocuments.Add(document.Get("__document_id")) == false;
 		}
@@ -93,22 +91,21 @@ namespace Raven.Database.Indexing
 
 		protected abstract IndexQueryResult RetrieveDocument(Document document, string[] fieldsToFetch);
 
-		private IEnumerable<IndexQueryResult> SearchIndex(string query, Reference<int> totalSize,
-		                                                  int start, int pageSize, string[] fieldsToFetch)
+		private IEnumerable<IndexQueryResult> SearchIndex(IndexQuery indexQuery)
 		{
 			using (searcher.Use())
 			{
-				log.DebugFormat("Issuing query on index {0} for: {1}", name, query);
-				var luceneQuery = new QueryParser("", new StandardAnalyzer()).Parse(query);
-				var search = searcher.Searcher.Search(luceneQuery);
-				totalSize.Value = search.Length();
+				log.DebugFormat("Issuing query on index {0} for: {1}", name, indexQuery.Query);
+				var luceneQuery = new QueryParser("", new StandardAnalyzer()).Parse(indexQuery.Query);
+				var search = searcher.Searcher.Search(luceneQuery, new Sort());
+				indexQuery.TotalSize.Value = search.Length();
 				var previousDocuments = new HashSet<string>();
-				for (var i = start; i < search.Length() && (i - start) < pageSize; i++)
+				for (var i = indexQuery.Start; i < search.Length() && (i - indexQuery.Start) < indexQuery.PageSize; i++)
 				{
 					var document = search.Doc(i);
-					if (IsDuplicateDocument(document, fieldsToFetch, previousDocuments))
+					if (IsDuplicateDocument(document, indexQuery.FieldsToFetch, previousDocuments))
 						continue;
-					yield return RetrieveDocument(document, fieldsToFetch);
+					yield return RetrieveDocument(document, indexQuery.FieldsToFetch);
 				}
 			}
 		}

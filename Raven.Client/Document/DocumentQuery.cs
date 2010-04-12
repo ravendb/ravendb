@@ -2,6 +2,7 @@
 using System.Threading;
 using Raven.Client.Client;
 using Raven.Database.Data;
+using Raven.Database.Indexing;
 
 namespace Raven.Client.Document
 {
@@ -19,7 +20,7 @@ namespace Raven.Client.Document
 		{
 			while (true) 
 			{
-				var result = databaseCommands.Query(indexName, query, start, pageSize);
+				var result = databaseCommands.Query(indexName, new IndexQuery(query, start, pageSize));
 				if(waitForNonStaleResults && result.IsStale)
 				{
 					Thread.Sleep(100);

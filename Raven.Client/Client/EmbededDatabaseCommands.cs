@@ -7,7 +7,7 @@ using Raven.Database.Storage;
 
 namespace Raven.Client.Client
 {
-	public class EmbededDatabaseCommands : IDatabaseCommands, IDisposable
+	public class EmbededDatabaseCommands : IDatabaseCommands
 	{
 		private readonly DocumentDatabase database;
 
@@ -63,9 +63,9 @@ namespace Raven.Client.Client
 			                         reduceDef);
 		}
 
-		public QueryResult Query(string index, string query, int start, int pageSize)
+		public QueryResult Query(string index, IndexQuery query)
 		{
-			return database.Query(index, query, start, pageSize);
+			return database.Query(index, query);
 		}
 
 		public void DeleteIndex(string name)
@@ -98,11 +98,6 @@ namespace Raven.Client.Client
 		public void SpinBackgroundWorkers()
 		{
 			database.SpinBackgroundWorkers();
-		}
-
-		public QueryResult Query(string index, string query, int start, int pageSize, string[] fieldsToFetch)
-		{
-			return database.Query(index, query, start, pageSize, fieldsToFetch);
 		}
 
 		public Attachment GetStatic(string name)

@@ -6,6 +6,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Data;
+using Raven.Database.Indexing;
 
 namespace Raven.Client.Client
 {
@@ -66,10 +67,10 @@ namespace Raven.Client.Client
 			return obj.index;
 		}
 
-		public QueryResult Query(string index, string query, int start, int pageSize)
+		public QueryResult Query(string index, IndexQuery query)
 		{
 			EnsureIsNotNullOrEmpty(index, "index");
-			var path = url + "/indexes/" + index + "?query=" + query + "&start=" + start + "&pageSize=" + pageSize;
+			var path = url + "/indexes/" + index + "?query=" + query.Query + "&start=" + query.Start + "&pageSize=" + query.PageSize;
 			var request = new HttpJsonRequest(path, "GET");
 			var serializer = new JsonSerializer();
 			JToken json;

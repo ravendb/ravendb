@@ -2,6 +2,7 @@ using System;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Data;
+using Raven.Database.Indexing;
 
 namespace Raven.Client.Client
 {
@@ -11,7 +12,7 @@ namespace Raven.Client.Client
 		string Put(string key, Guid? etag, JObject document, JObject metadata);
 		void Delete(string key, Guid? etag);
 		string PutIndex(string name, string indexDef);
-		QueryResult Query(string index, string query, int start, int pageSize);
+		QueryResult Query(string index, IndexQuery query);
 		void DeleteIndex(string name);
 		JArray GetDocuments(int start, int pageSize);
 		JArray GetIndexNames(int start, int pageSize);

@@ -3,6 +3,7 @@ using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Data;
+using Raven.Database.Indexing;
 using Raven.Tests.Storage;
 using Xunit;
 using System.Linq;
@@ -63,7 +64,7 @@ namespace Raven.Tests.Indexes
 			QueryResult docs;
 			do
 			{
-				docs = db.Query("pagesByTitle2", "some:val", 0, 10);
+				docs = db.Query("pagesByTitle2", new IndexQuery("some:val", 0, 10));
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);
@@ -104,7 +105,7 @@ namespace Raven.Tests.Indexes
 			QueryResult docs;
 			do
 			{
-				docs = db.Query("pagesByTitle2", "some:val", 0, 10);
+				docs = db.Query("pagesByTitle2", new IndexQuery("some:val", 0, 10));
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);
@@ -134,7 +135,7 @@ namespace Raven.Tests.Indexes
 			QueryResult docs;
 			do
 			{
-				docs = db.Query("pagesByTitle2", "some:val", 0, 10);
+				docs = db.Query("pagesByTitle2", new IndexQuery("some:val", 0, 10));
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);

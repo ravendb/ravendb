@@ -89,8 +89,7 @@ namespace Raven.Database.Indexing
 			return new SimpleIndex(directory, name);
 		}
 
-		public IEnumerable<IndexQueryResult> Query(string index, string query, int start, int pageSize,
-		                                           Reference<int> totalSize, string[] fieldsToFetch)
+		public IEnumerable<IndexQueryResult> Query(string index, IndexQuery query)
 		{
 			Index value;
 			if (indexes.TryGetValue(index, out value) == false)
@@ -98,7 +97,7 @@ namespace Raven.Database.Indexing
 				log.DebugFormat("Query on non existing index {0}", index);
 				throw new InvalidOperationException("Index " + index + " does not exists");
 			}
-			return value.Query(query, start, pageSize, totalSize, fieldsToFetch);
+			return value.Query(query);
 		}
 
 		public void RemoveFromIndex(string index, string[] keys, WorkContext context)

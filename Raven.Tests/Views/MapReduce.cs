@@ -7,6 +7,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Data;
+using Raven.Database.Indexing;
 using Raven.Tests.Storage;
 using Xunit;
 
@@ -82,7 +83,7 @@ select new {
 			{
 				do
 				{
-					q = db.Query("CommentsCountPerBlog", "blog_id:3", 0, 10);
+					q = db.Query("CommentsCountPerBlog", new IndexQuery("blog_id:3", 0, 10));
 					Thread.Sleep(100);
 				} while (q.IsStale);
 			}

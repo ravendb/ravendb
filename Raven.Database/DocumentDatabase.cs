@@ -219,16 +219,10 @@ namespace Raven.Database
 			return name;
 		}
 
-		public QueryResult Query(string index, string query, int start, int pageSize)
-		{
-			return Query(index, query, start, pageSize, new string[0]);
-		}
-
-		public QueryResult Query(string index, string query, int start, int pageSize, string[] fieldsToFetch)
+		public QueryResult Query(string index, IndexQuery query)
 		{
 			var list = new List<JObject>();
 			var stale = false;
-			var totalSize = new Reference<int>();
 			TransactionalStorage.Batch(
 				actions =>
 				{
@@ -239,18 +233,19 @@ namespace Raven.Database
 						throw new IndexDisabledException(indexFailureInformation);
 					}
 					var loadedIds = new HashSet<string>();
-					list.AddRange(from queryResult in IndexStorage.Query(index, query, start, pageSize, totalSize, fieldsToFetch)
-					select RetrieveDocument(actions, queryResult, loadedIds)
-					into doc
-					              	where doc != null
-					              	select doc.ToJson());
+					var collection = from queryResult in IndexStorage.Query(index, query)
+					                 select RetrieveDocument(actions, queryResult, loadedIds)
+					                 into doc
+					                 where doc != null
+					                 select doc.ToJson();
+					list.AddRange(collection);
 					actions.Commit();
 				});
 			return new QueryResult
 			{
 				Results = list.ToArray(),
 				IsStale = stale,
-				TotalResults = totalSize.Value
+				TotalResults = query.TotalSize.Value
 			};
 		}
 

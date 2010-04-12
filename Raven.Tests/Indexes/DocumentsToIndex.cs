@@ -3,6 +3,7 @@ using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Data;
+using Raven.Database.Indexing;
 using Raven.Tests.Storage;
 using Xunit;
 
@@ -53,7 +54,7 @@ namespace Raven.Tests.Indexes
 			QueryResult docs;
 			do
 			{
-				docs = db.Query("pagesByTitle2", "some:val", 0, 10);
+				docs = db.Query("pagesByTitle2", new IndexQuery("some:val", 0, 10));
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);
@@ -77,7 +78,7 @@ select new{project_name = prj.name}
 			QueryResult docs;
 			do
 			{
-				docs = db.Query("DocsByProject", "project_name:raven", 0, 10);
+				docs = db.Query("DocsByProject", new IndexQuery("project_name:raven", 0, 10));
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);
@@ -103,7 +104,7 @@ select new{project_name = prj.name, project_num = prj.num}
 			QueryResult docs;
 			do
 			{
-				docs = db.Query("DocsByProject", "+project_name:raven +project_num:6", 0, 10);
+				docs = db.Query("DocsByProject", new IndexQuery("+project_name:raven +project_num:6", 0, 10));
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);
@@ -134,7 +135,7 @@ select new{project_name = prj.name, project_num = prj.num}
 			QueryResult docs;
 			do
 			{
-				docs = db.Query("pagesByTitle2", "some:val", 0, 10);
+				docs = db.Query("pagesByTitle2", new IndexQuery("some:val", 0, 10));
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);
@@ -165,7 +166,7 @@ select new{project_name = prj.name, project_num = prj.num}
 			QueryResult docs;
 			do
 			{
-				docs = db.Query("pagesByTitle", "other:var", 0, 10);
+				docs = db.Query("pagesByTitle", new IndexQuery("other:var", 0, 10));
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);
@@ -189,7 +190,7 @@ select new{project_name = prj.name, project_num = prj.num}
 			QueryResult docs;
 			do
 			{
-				docs = db.Query("pagesByTitle", "other:var", 0, 10);
+				docs = db.Query("pagesByTitle", new IndexQuery("other:var", 0, 10));
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);
@@ -217,7 +218,7 @@ select new{project_name = prj.name, project_num = prj.num}
 			QueryResult docs;
 			do
 			{
-				docs = db.Query("pagesByTitle", "other:var", 0, 10);
+				docs = db.Query("pagesByTitle", new IndexQuery("other:var", 0, 10));
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);

@@ -1,6 +1,7 @@
 using System;
 using System.Net;
 using Newtonsoft.Json.Linq;
+using Raven.Database.Indexing;
 
 namespace Raven.Server.Responders
 {
@@ -70,9 +71,11 @@ namespace Raven.Server.Responders
 			}
 			else
 			{
-				context.WriteJson(Database.Query(index, context.Request.QueryString["query"], context.GetStart(),
-				                                 context.GetPageSize(),
-				                                 context.Request.QueryString.GetValues("fetch")));
+				context.WriteJson(Database.Query(index, new IndexQuery(
+				                                        	context.Request.QueryString["query"], 
+															context.GetStart(),
+				                                        	context.GetPageSize(),
+				                                        	context.Request.QueryString.GetValues("fetch"))));
 			}
 		}
 	}
