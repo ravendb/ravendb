@@ -4,7 +4,7 @@ using Raven.Database;
 
 namespace Raven.Client.Document
 {
-	public class DocumentStore : IDisposable, IDocumentStore
+	public class DocumentStore : IDocumentStore
 	{
 		private readonly string server;
 		private readonly int port;

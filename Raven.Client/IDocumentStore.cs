@@ -7,6 +7,7 @@ namespace Raven.Client
 		event Action<string, int, object> Stored;
 		
 		string Identifier { get; set; }
+
         IDocumentStore Initialise();
         IDocumentSession OpenSession();
     }
