@@ -104,7 +104,7 @@ namespace Raven.Server
 			BasicConfigurator.Configure(consoleAppender);
             var ravenConfiguration = new RavenConfiguration
             {
-                CreateDatabaseFromScratch = createDefaultDatabase,
+                ShouldCreateDefaultsWhenBuildingNewDatabaseFromScratch = createDefaultDatabase,
             };
             RavenDbServer.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Port);
 			if (anonymousUserAccessMode.HasValue)
