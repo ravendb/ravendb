@@ -46,7 +46,7 @@ namespace Raven.Server.Responders
         					Key = key.Value<string>(),
         					Etag = GetEtagFromCommand(jsonCommand),
         					Document = jsonCommand["document"] as JObject,
-        					Metadata = jsonCommand["@meta"] as JObject,
+        					Metadata = jsonCommand["@metadata"] as JObject,
         				});
         				break;
         			case "DELETE":
