@@ -1,13 +1,12 @@
 using System;
 using System.IO;
-using System.Reflection;
 using System.Threading;
 using Raven.Client.Document;
 using Raven.Client.Shard.ShardStrategy;
 using Raven.Client.Shard.ShardStrategy.ShardAccess;
 using Raven.Client.Shard.ShardStrategy.ShardResolution;
 using Raven.Client.Shard.ShardStrategy.ShardSelection;
-using Raven.Database;
+using Raven.Client.Tests.Document;
 using Raven.Server;
 using Xunit;
 using System.Collections.Generic;
@@ -15,7 +14,7 @@ using Raven.Client.Shard;
 using Rhino.Mocks;
 using System.Linq;
 
-namespace Raven.Client.Tests
+namespace Raven.Client.Tests.Shard
 {
     public class When_Using_Sharded_Servers : BaseTest, IDisposable
 	{

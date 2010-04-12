@@ -1,13 +1,11 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
-using System.Threading;
 using Raven.Client.Document;
 using Xunit;
 using System.Linq;
 
-namespace Raven.Client.Tests
+namespace Raven.Client.Tests.Document
 {
 	public class DocumentStoreEmbeddedTests : BaseTest, IDisposable
 	{
@@ -111,23 +109,5 @@ namespace Raven.Client.Tests
 				Assert.Equal(2, companyFound.Length);
 			}
 		}
-	}
-
-	public class Company
-	{
-		public string Id { get; set; }
-		public string Name { get; set; }
-		public string Address1 { get; set; }
-		public string Address2 { get; set; }
-		public string Address3 { get; set; }
-		public List<Contact> Contacts { get; set; }
-		public int Phone { get; set; }
-	}
-
-	public class Contact
-	{
-		public string FirstName { get; set; }
-		public string Surname { get; set; }
-		public string Email { get; set; }
 	}
 }

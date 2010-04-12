@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Raven.Client.Tests.Document;
 using Raven.Server;
 using Raven.Database;
 using System.Reflection;

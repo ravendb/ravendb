@@ -1,18 +1,13 @@
 using System;
-using System.IO;
-using System.Reflection;
-using System.Threading;
 using Raven.Client.Document;
-using Raven.Database;
-using Raven.Server;
+using Raven.Client.Tests.Document;
 using Xunit;
 using System.Collections.Generic;
-using Raven.Client.Shard;
 using Rhino.Mocks;
 using Raven.Client.Shard.ShardStrategy.ShardAccess;
 using System.Linq;
 
-namespace Raven.Client.Tests
+namespace Raven.Client.Tests.Shard
 {
     public class When_Using_Parallel_Access_Strategy : BaseTest
 	{

@@ -1,14 +1,12 @@
 using System;
 using System.IO;
-using System.Reflection;
 using System.Threading;
 using Raven.Client.Document;
-using Raven.Database;
 using Raven.Server;
 using Xunit;
 using System.Linq;
 
-namespace Raven.Client.Tests
+namespace Raven.Client.Tests.Document
 {
 	public class DocumentStoreServerTests : BaseTest, IDisposable
 	{

@@ -1,16 +1,12 @@
 using System;
 using System.IO;
-using System.Reflection;
 using System.Threading;
 using Raven.Client.Document;
-using Raven.Database;
 using Raven.Server;
 using Xunit;
 using System.Collections.Generic;
-using Raven.Client.Shard;
-using Rhino.Mocks;
 
-namespace Raven.Client.Tests
+namespace Raven.Client.Tests.Document
 {
     public class When_Using_Multiple_Unsharded_Servers : BaseTest, IDisposable
 	{
