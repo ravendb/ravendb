@@ -66,7 +66,8 @@ namespace Raven.Client.Shard
         private void SingleShardAction<T>(T entity, Action<IDocumentSession> action)
         {
             string shardId = shardStrategy.ShardSelectionStrategy.SelectShardIdForNewObject(entity);
-            if (String.IsNullOrEmpty(shardId)) throw new ApplicationException("Can't find single shard to use for entity: " + entity);
+            if (String.IsNullOrEmpty(shardId))
+				throw new ApplicationException("Can't find a shard to use for entity: " + entity);
 
             var shardSession = GetSingleShardSession(shardId);
 
