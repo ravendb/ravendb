@@ -21,10 +21,8 @@ namespace Raven.Sample.ShardClient
             using (var session = documentStore.OpenSession())
             {
                 //store 2 items in the 2 shards
-                session.StoreAll(new[] { 
-                    new Company { Name = "Company 1", Region="A" }, 
-                    new Company { Name = "Company 2", Region="B" }, 
-                });
+            	session.Store(new Company {Name = "Company 1", Region = "A"});
+            	session.Store(new Company {Name = "Company 2", Region = "B"});
 
                 //get all, should automagically retrieve from each shard
                 var allCompanies = session.Query<Company>().ToArray();
