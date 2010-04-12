@@ -2,10 +2,11 @@ using System;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Xunit;
+using System.Linq;
 
 namespace Raven.Tests.Storage
 {
-	public class CreateIndexes : AbstractDocumentStorageTest, IDisposable
+	public class CreateIndexes : AbstractDocumentStorageTest
 	{
 		private readonly DocumentDatabase db;
 
@@ -16,9 +17,10 @@ namespace Raven.Tests.Storage
 
 		#region IDisposable Members
 
-		public void Dispose()
+		public override void Dispose()
 		{
 			db.Dispose();
+			base.Dispose();
 		}
 
 		#endregion
@@ -50,7 +52,7 @@ namespace Raven.Tests.Storage
     where doc.type == ""page""
     select new { Key = doc.title, Value = doc.content, Size = doc.size };
 ");
-			var indexNames = db.IndexDefinitionStorage.IndexNames;
+			var indexNames = db.IndexDefinitionStorage.IndexNames.Where(x=>x.StartsWith("Raven") == false).ToArray();
 			Assert.Equal(1, indexNames.Length);
 			Assert.Equal("pagesByTitle", indexNames[0]);
 		}

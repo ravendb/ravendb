@@ -1,10 +1,11 @@
 using System;
 using Raven.Database;
 using Xunit;
+using System.Linq;
 
 namespace Raven.Tests.Storage
 {
-	public class DeleteIndexes : AbstractDocumentStorageTest, IDisposable
+	public class DeleteIndexes : AbstractDocumentStorageTest
 	{
 		private readonly DocumentDatabase db;
 
@@ -15,9 +16,10 @@ namespace Raven.Tests.Storage
 
 		#region IDisposable Members
 
-		public void Dispose()
+		public override void Dispose()
 		{
 			db.Dispose();
+			base.Dispose();
 		}
 
 		#endregion
@@ -32,7 +34,7 @@ namespace Raven.Tests.Storage
     select new { Key = doc.title, Value = doc.content, Size = doc.size };
 ");
 			db.DeleteIndex("pagesByTitle");
-			var indexNames = db.IndexDefinitionStorage.IndexNames;
+			var indexNames = db.IndexDefinitionStorage.IndexNames.Where(x => x.StartsWith("Raven") == false).ToArray();
 			Assert.Equal(0, indexNames.Length);
 		}
 
@@ -47,7 +49,7 @@ namespace Raven.Tests.Storage
 ";
 			db.PutIndex("pagesByTitle", definition);
 			db.DeleteIndex("pagesByTitle");
-			var actualDefinition = db.IndexStorage.Indexes;
+			var actualDefinition = db.IndexStorage.Indexes.Where(x=>x.StartsWith("Raven") == false);
 			Assert.Empty(actualDefinition);
 		}
 	}

@@ -12,7 +12,7 @@ using Xunit;
 
 namespace Raven.Tests.Views
 {
-	public class MapReduce : AbstractDocumentStorageTest, IDisposable
+	public class MapReduce : AbstractDocumentStorageTest
 	{
 		private const string map =
 			@"from post in docs
@@ -47,9 +47,10 @@ select new {
 
 		#region IDisposable Members
 
-		public void Dispose()
+		public override void Dispose()
 		{
 			db.Dispose();
+			base.Dispose();
 		}
 
 		#endregion

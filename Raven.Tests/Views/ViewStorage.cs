@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Raven.Tests.Views
 {
-	public class ViewStorage : AbstractDocumentStorageTest, IDisposable
+	public class ViewStorage : AbstractDocumentStorageTest
 	{
 		private readonly TransactionalStorage transactionalStorage;
 
@@ -18,9 +18,10 @@ namespace Raven.Tests.Views
 
 		#region IDisposable Members
 
-		public void Dispose()
+		public override void Dispose()
 		{
 			transactionalStorage.Dispose();
+			base.Dispose();
 		}
 
 		#endregion

@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Raven.Tests.Storage
 {
-	public class CreateUpdateDeleteDocuments : AbstractDocumentStorageTest, IDisposable
+	public class CreateUpdateDeleteDocuments : AbstractDocumentStorageTest
 	{
 		private readonly DocumentDatabase db;
 
@@ -16,9 +16,10 @@ namespace Raven.Tests.Storage
 
 		#region IDisposable Members
 
-		public void Dispose()
+		public override void Dispose()
 		{
 			db.Dispose();
+			base.Dispose();
 		}
 
 		#endregion

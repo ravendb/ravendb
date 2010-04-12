@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Raven.Tests.Indexes
 {
-	public class DocumentsToIndex : AbstractDocumentStorageTest, IDisposable
+	public class DocumentsToIndex : AbstractDocumentStorageTest
 	{
 		private readonly DocumentDatabase db;
 
@@ -20,9 +20,10 @@ namespace Raven.Tests.Indexes
 
 		#region IDisposable Members
 
-		public void Dispose()
+		public override void Dispose()
 		{
 			db.Dispose();
+			base.Dispose();
 		}
 
 		#endregion

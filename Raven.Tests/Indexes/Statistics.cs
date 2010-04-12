@@ -5,10 +5,11 @@ using Raven.Database;
 using Raven.Database.Data;
 using Raven.Tests.Storage;
 using Xunit;
+using System.Linq;
 
 namespace Raven.Tests.Indexes
 {
-	public class Statistics : AbstractDocumentStorageTest, IDisposable
+	public class Statistics : AbstractDocumentStorageTest
 	{
 		private readonly DocumentDatabase db;
 
@@ -27,9 +28,10 @@ namespace Raven.Tests.Indexes
 
 		#region IDisposable Members
 
-		public void Dispose()
+		public override void Dispose()
 		{
 			db.Dispose();
+			base.Dispose();
 		}
 
 		#endregion
@@ -37,9 +39,9 @@ namespace Raven.Tests.Indexes
 		[Fact]
 		public void Can_get_stats_for_indexing_without_any_indexing()
 		{
-			Assert.Equal(1, db.Statistics.Indexes.Length);
-			Assert.Equal("pagesByTitle2", db.Statistics.Indexes[0].Name);
-			Assert.Equal(0, db.Statistics.Indexes[0].IndexingAttempts);
+			Assert.Equal(1, db.Statistics.Indexes.Count(x=>x.Name.StartsWith("Raven") == false));
+			Assert.True(db.Statistics.Indexes.Any(x => x.Name == "pagesByTitle2"));
+			Assert.Equal(0, db.Statistics.Indexes.First((x => x.Name == "pagesByTitle2")).IndexingAttempts);
 		}
 
 		[Fact]
