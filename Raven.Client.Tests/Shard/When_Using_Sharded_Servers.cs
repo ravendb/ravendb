@@ -81,6 +81,7 @@ namespace Raven.Client.Tests.Shard
                 {
                 	session.Store(company1);
 					session.Store(company2);
+					session.SaveChanges();
                 }
             }
 
@@ -96,6 +97,7 @@ namespace Raven.Client.Tests.Shard
             {
                 //store item that goes in 2nd shard
                 session.Store(company2);
+				session.SaveChanges();
 
                 //get it, should automagically retrieve from 2nd shard
                 shardResolution.Stub(x => x.SelectShardIdsFromData(null)).IgnoreArguments().Return(new[] { "Shard2" });
@@ -109,15 +111,18 @@ namespace Raven.Client.Tests.Shard
         [Fact]
         public void Can_get_single_entity_from_correct_sharded_server_when_location_is_unknown()
         {
-            using (var documentStore = new ShardedDocumentStore(shardStrategy, shards).Initialise())
+			shardStrategy.Stub(x => x.ShardAccessStrategy).Return(new SequentialShardAccessStrategy());
+			
+			using (var documentStore = new ShardedDocumentStore(shardStrategy, shards).Initialise())
             using (var session = documentStore.OpenSession())
             {
                 //store item that goes in 2nd shard
                 session.Store(company2);
 
+				session.SaveChanges();
+
                 //get it, should try all shards and find it
                 shardResolution.Stub(x => x.SelectShardIdsFromData(null)).IgnoreArguments().Return(null);
-                shardStrategy.Stub(x => x.ShardAccessStrategy).Return(new SequentialShardAccessStrategy());
                 var loadedCompany = session.Load<Company>(company2.Id);
 
                 Assert.NotNull(loadedCompany);
@@ -128,6 +133,9 @@ namespace Raven.Client.Tests.Shard
         [Fact]
         public void Can_get_all_sharded_entities()
         {
+			//get them in simple single threaded sequence for this test
+			shardStrategy.Stub(x => x.ShardAccessStrategy).Return(new SequentialShardAccessStrategy());
+
             using (var documentStore = new ShardedDocumentStore(shardStrategy, shards).Initialise())
             using (var session = documentStore.OpenSession())
             {
@@ -135,11 +143,13 @@ namespace Raven.Client.Tests.Shard
 				session.Store(company1);
 				session.Store(company2);
 
-                //get them in simple single threaded sequence for this test
-                shardStrategy.Stub(x => x.ShardAccessStrategy).Return(new SequentialShardAccessStrategy());
+				session.SaveChanges();
 
+             
                 //get all, should automagically retrieve from each shard
-                var allCompanies = session.Query<Company>().ToArray();
+                var allCompanies = session.Query<Company>()
+					.WaitForNonStaleResults()
+					.ToArray();
 
                 Assert.NotNull(allCompanies);
                 Assert.Equal(company1.Name, allCompanies[0].Name);

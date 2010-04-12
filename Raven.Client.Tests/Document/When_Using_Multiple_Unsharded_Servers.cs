@@ -47,6 +47,7 @@ namespace Raven.Client.Tests.Document
 
                         var entity = new Company { Name = "Company" };
                         session.Store(entity);
+						session.SaveChanges();
                         Assert.NotEqual(Guid.Empty.ToString(), entity.Id);
                     }
                 }

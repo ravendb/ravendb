@@ -15,12 +15,13 @@ namespace Raven.Client.Tests.Shard
         public void Can_get_complete_result_list()
         {
             var shard1 = MockRepository.GenerateStub<IDocumentSession>();
-            shard1.Stub(x => x.Query<Company>())
-                .Return(new[] { new Company { Name = "Company1" } }.AsQueryable());
+        	var documentQuery1 = MockRepository.GenerateStub<IDocumentQuery<Company>>();
+        	shard1.Stub(x => x.Query<Company>().GetEnumerator())
+				.Return(new List<Company> { new Company { Name = "Company1" } }.GetEnumerator());
 
-            var shard2 = MockRepository.GenerateStub<IDocumentSession>();
-			shard2.Stub(x => x.Query<Company>())
-				.Return(new[] { new Company { Name = "Company2" } }.AsQueryable());
+			var shard2 = MockRepository.GenerateStub<IDocumentSession>();
+			shard2.Stub(x => x.Query<Company>().GetEnumerator())
+				.Return(new List<Company> { new Company { Name = "Company2" } }.GetEnumerator());
 
 			var results = new ParallelShardAccessStrategy().Apply(new[] { shard1, shard2 }, x => x.Query<Company>().ToArray());
 

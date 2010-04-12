@@ -41,7 +41,7 @@ namespace Raven.Client.Tests.Document
 				var session = documentStore.OpenSession();
 				var entity = new Company {Name = "Company"};
 				session.Store(entity);
-
+				session.SaveChanges();
 				Assert.NotEqual(Guid.Empty.ToString(), entity.Id);
 			}
 		}
@@ -57,6 +57,9 @@ namespace Raven.Client.Tests.Document
 				var session = documentStore.OpenSession();
 				var company = new Company {Name = "Company 1"};
 				session.Store(company);
+
+				session.SaveChanges();
+
 				var id = company.Id;
 				company.Name = "Company 2";
 				session.SaveChanges();
@@ -77,6 +80,8 @@ namespace Raven.Client.Tests.Document
 				var session1 = documentStore.OpenSession();
 				var company = new Company {Name = "Company 1"};
 				session1.Store(company);
+				session1.SaveChanges();
+
 				var companyId = company.Id;
 
 				var session2 = documentStore.OpenSession();
@@ -100,8 +105,12 @@ namespace Raven.Client.Tests.Document
 				session1.Store(new Company {Name = "Company 1"});
 				session1.Store(new Company {Name = "Company 2"});
 
+				session1.SaveChanges();
+
 				var session2 = documentStore.OpenSession();
-				var companyFound = session2.Query<Company>().ToArray();
+				var companyFound = session2.Query<Company>()
+					.WaitForNonStaleResults()
+					.ToArray();
 
 				Assert.Equal(2, companyFound.Length);
 			}
