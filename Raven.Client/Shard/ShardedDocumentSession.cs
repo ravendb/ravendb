@@ -1,6 +1,4 @@
-using System.Collections.Generic;
 using System.Linq;
-using Raven.Client.Document;
 using Raven.Client.Shard.ShardStrategy;
 using Raven.Client.Shard.ShardStrategy.ShardResolution;
 using System;
@@ -9,7 +7,15 @@ namespace Raven.Client.Shard
 {
 	public class ShardedDocumentSession : IDocumentSession
 	{
-        public event Action<object> Stored;
+		public void Clear()
+		{
+			foreach (var shardSession in shardSessions)
+			{
+				shardSession.Clear();
+			}
+		}
+
+		public event Action<object> Stored;
 
         public ShardedDocumentSession(IShardStrategy shardStrategy, params IDocumentSession[] shardSessions)
 		{
@@ -69,6 +75,11 @@ namespace Raven.Client.Shard
 		public void Store<T>(T entity)
 		{
             SingleShardAction(entity, shard => shard.Store(entity));
+		}
+
+		public void Evict<T>(T entity)
+		{
+			SingleShardAction(entity, session => session.Evict(entity));
 		}
 
 		public void SaveChanges()

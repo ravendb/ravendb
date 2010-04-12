@@ -13,7 +13,11 @@ namespace Raven.Client
 		void SaveChanges();
         
 		void Store<T>(T entity);
-        
+
+    	void Evict<T>(T entity);
+
+    	void Clear();
+
 		event Action<object> Stored;
     }
 }

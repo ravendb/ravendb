@@ -1,11 +1,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Client;
-using Raven.Database.Data;
 using System;
 using Raven.Database;
 
@@ -17,7 +15,7 @@ namespace Raven.Client.Document
 		private readonly DocumentStore documentStore;
 		private readonly HashSet<object> entities = new HashSet<object>();
 
-        public event Action<object> Stored;
+		public event Action<object> Stored;
         public string StoreIdentifier { get { return documentStore.Identifier; } }
 
 		public DocumentSession(DocumentStore documentStore, IDatabaseCommands database)
@@ -64,12 +62,12 @@ namespace Raven.Client.Document
 
 		public void Store<T>(T entity)
 		{
-			StoreEntity(entity);
 			entities.Add(entity);
+		}
 
-			var stored = Stored;
-			if (stored != null)
-                stored(entity);
+		public void Evict<T>(T entity)
+		{
+			entities.Remove(entity);
 		}
 
 		private void StoreEntity<T>(T entity)
@@ -85,15 +83,17 @@ namespace Raven.Client.Document
 			key = database.Put(key, null, json, new JObject());
 
 			identityProperty.SetValue(entity, key, null);
+
+			var stored = Stored;
+			if (stored != null)
+				stored(entity);
 		}
 
 		public void SaveChanges()
 		{
-            //I don't really understand what the point of this is, given that store sends
-            //info to the server and this resends it.. wouldn't that duplicate it?
             foreach (var entity in entities)
 			{
-				//TODO: Switch to more the batch version when it becomes available#
+				//TODO: Switch to more the batch version when it becomes available
 				StoreEntity(entity);
 			}
 		}
@@ -111,6 +111,11 @@ namespace Raven.Client.Document
 
 			objectAsJson.Add("type", JToken.FromObject(entity.GetType().FullName));
 			return objectAsJson;
+		}
+
+		public void Clear()
+		{
+			entities.Clear();
 		}
 
 		public IQueryable<T> Query<T>()
