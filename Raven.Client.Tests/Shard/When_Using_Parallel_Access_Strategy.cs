@@ -36,9 +36,8 @@ namespace Raven.Client.Tests
         public void Null_result_is_not_an_exception()
         {
             var shard1 = MockRepository.GenerateStub<IDocumentSession>();
-			shard1.Stub(x => x.Query<Company>()).Return(null);
 
-			var results = new ParallelShardAccessStrategy().Apply(new[] { shard1 }, x => x.Query<Company>().ToArray());
+			var results = new ParallelShardAccessStrategy().Apply(new[] { shard1 }, x => (IList<Company>)null);
 
             Assert.Equal(0, results.Count);
         }
