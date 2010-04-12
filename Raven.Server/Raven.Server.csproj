@@ -112,6 +112,7 @@
     </Compile>
     <Compile Include="Responders\BadRequestException.cs" />
     <Compile Include="Responders\DocumentBatch.cs" />
+    <Compile Include="Responders\EnumerableExtensions.cs" />
     <Compile Include="Responders\RavenRoot.cs" />
     <Compile Include="Responders\RavenUI.cs" />
     <Compile Include="Responders\Docs.cs" />

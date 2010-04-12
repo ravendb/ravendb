@@ -48,34 +48,53 @@ namespace Raven.Database.Indexing
 
 		#endregion
 
-		public IEnumerable<IndexQueryResult> Query(IndexQuery query)
-		{
-			if (string.IsNullOrEmpty(query.Query) == false)
-			{
-				return SearchIndex(query);
-			}
-			return BrowseIndex(query);
-		}
-
-		private IEnumerable<IndexQueryResult> BrowseIndex(IndexQuery query)
+		public IEnumerable<IndexQueryResult> Query(IndexQuery indexQuery)
 		{
 			using (searcher.Use())
 			{
-				log.DebugFormat("Browsing index {0}", name);
-				var indexReader = searcher.Searcher.Reader;
-				var maxDoc = indexReader.MaxDoc();
-				query.TotalSize.Value = Enumerable.Range(0, maxDoc).Count(i => indexReader.IsDeleted(i) == false);
+				var search = ExecuteQuery(indexQuery, GetLuceneQuery(indexQuery));
+				indexQuery.TotalSize.Value = search.Length();
 				var previousDocuments = new HashSet<string>();
-				for (var i = query.Start; i < maxDoc && (i - query.Start) < query.PageSize; i++)
+				for (var i = indexQuery.Start; i < search.Length() && (i - indexQuery.Start) < indexQuery.PageSize; i++)
 				{
-					if (indexReader.IsDeleted(i))
+					var document = search.Doc(i);
+					if (IsDuplicateDocument(document, indexQuery.FieldsToFetch, previousDocuments))
 						continue;
-					var document = indexReader.Document(i);
-					if (IsDuplicateDocument(document, query.FieldsToFetch, previousDocuments))
-						continue;
-					yield return RetrieveDocument(document, query.FieldsToFetch);
+					yield return RetrieveDocument(document, indexQuery.FieldsToFetch);
 				}
 			}
+		}
+
+		private Hits ExecuteQuery(IndexQuery indexQuery, Query luceneQuery)
+		{
+			Hits search;
+			if (indexQuery.SortedFields != null)
+			{
+				var sort = new Sort(indexQuery.SortedFields.Select(x => x.ToLuceneSortField()).ToArray());
+				search = searcher.Searcher.Search(luceneQuery, sort);
+			}
+			else
+			{
+				search = searcher.Searcher.Search(luceneQuery);
+			}
+			return search;
+		}
+
+		private Query GetLuceneQuery(IndexQuery indexQuery)
+		{
+			var query = indexQuery.Query;
+			Query luceneQuery;
+			if(string.IsNullOrEmpty(query))
+			{
+				log.DebugFormat("Issuing query on index {0} for all documents", name);
+				luceneQuery = new MatchAllDocsQuery();	
+			}
+			else
+			{
+				log.DebugFormat("Issuing query on index {0} for: {1}", name, query);
+				luceneQuery = new QueryParser("", new StandardAnalyzer()).Parse(query);
+			}
+			return luceneQuery;
 		}
 
 		private static bool IsDuplicateDocument(Document document, ICollection<string> fieldsToFetch, ISet<string> previousDocuments)
@@ -90,25 +109,6 @@ namespace Raven.Database.Indexing
 		                                    DocumentStorageActions actions);
 
 		protected abstract IndexQueryResult RetrieveDocument(Document document, string[] fieldsToFetch);
-
-		private IEnumerable<IndexQueryResult> SearchIndex(IndexQuery indexQuery)
-		{
-			using (searcher.Use())
-			{
-				log.DebugFormat("Issuing query on index {0} for: {1}", name, indexQuery.Query);
-				var luceneQuery = new QueryParser("", new StandardAnalyzer()).Parse(indexQuery.Query);
-				var search = searcher.Searcher.Search(luceneQuery, new Sort());
-				indexQuery.TotalSize.Value = search.Length();
-				var previousDocuments = new HashSet<string>();
-				for (var i = indexQuery.Start; i < search.Length() && (i - indexQuery.Start) < indexQuery.PageSize; i++)
-				{
-					var document = search.Doc(i);
-					if (IsDuplicateDocument(document, indexQuery.FieldsToFetch, previousDocuments))
-						continue;
-					yield return RetrieveDocument(document, indexQuery.FieldsToFetch);
-				}
-			}
-		}
 
 		protected void Write(Func<IndexWriter, bool> action)
 		{

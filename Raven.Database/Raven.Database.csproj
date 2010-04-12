@@ -106,6 +106,7 @@
     <Compile Include="Data\ServerError.cs" />
     <Compile Include="Data\IndexStats.cs" />
     <Compile Include="Data\QueryResult.cs" />
+    <Compile Include="Data\SortedField.cs" />
     <Compile Include="Exceptions\IndexDisabledException.cs" />
     <Compile Include="Data\IndexQuery.cs" />
     <Compile Include="Indexing\MapReduceIndex.cs" />

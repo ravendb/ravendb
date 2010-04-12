@@ -3,6 +3,7 @@ using System.Net;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
+using System.Linq;
 
 namespace Raven.Server.Responders
 {
@@ -73,10 +74,17 @@ namespace Raven.Server.Responders
 			else
 			{
 				context.WriteJson(Database.Query(index, new IndexQuery(
-				                                        	context.Request.QueryString["query"], 
-															context.GetStart(),
-				                                        	context.GetPageSize(),
-				                                        	context.Request.QueryString.GetValues("fetch"))));
+				                                        	context.Request.QueryString["query"],
+				                                        	context.GetStart(),
+				                                        	context.GetPageSize()
+				                                        	)
+				{
+					FieldsToFetch = context.Request.QueryString.GetValues("fetch"),
+					SortedFields = context.Request.QueryString.GetValues("sort")
+						.EmptyIfNull()
+						.Select(x=>new SortedField(x))
+						.ToArray()
+				}));
 			}
 		}
 	}
