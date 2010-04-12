@@ -62,14 +62,6 @@ namespace Raven.Client.Document
 			return entity;
 		}
 
-        public void StoreAll<T>(IEnumerable<T> entities)
-        {
-            foreach (var entity in entities)
-            {
-                Store(entity);
-            }
-        }
-
 		public void Store<T>(T entity)
 		{
 			StoreEntity(entity);

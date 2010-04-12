@@ -78,8 +78,8 @@
     <Compile Include="Client\EmbededDatabaseCommands.cs" />
     <Compile Include="Client\HttpJsonRequest.cs" />
     <Compile Include="Client\IDatabaseCommands.cs" />
-    <Compile Include="Document\IDocumentSession.cs" />
-    <Compile Include="Document\IDocumentStore.cs" />
+    <Compile Include="IDocumentSession.cs" />
+    <Compile Include="IDocumentStore.cs" />
     <Compile Include="Shard\ShardStrategy\ShardAccess\IShardAccessStrategy.cs" />
     <Compile Include="Shard\ShardStrategy\ShardAccess\ParallelExtensions.cs" />
     <Compile Include="Shard\ShardStrategy\ShardAccess\ParallelShardAccessStrategy.cs" />

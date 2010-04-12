@@ -55,14 +55,6 @@ namespace Raven.Client.Shard
             return shardSession;
         }
 
-        public void StoreAll<T>(IEnumerable<T> entities)
-        {
-            foreach (var entity in entities)
-            {
-                Store(entity);
-            }
-        }
-
         private void SingleShardAction<T>(T entity, Action<IDocumentSession> action)
         {
             string shardId = shardStrategy.ShardSelectionStrategy.SelectShardIdForNewObject(entity);

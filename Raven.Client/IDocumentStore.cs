@@ -1,11 +1,12 @@
 ﻿using System;
 
-namespace Raven.Client.Document
+namespace Raven.Client
 {
     public interface IDocumentStore : IDisposable
     {
-        string Identifier { get; set; }
-        event Action<string, int, object> Stored;
+		event Action<string, int, object> Stored;
+		
+		string Identifier { get; set; }
         IDocumentStore Initialise();
         IDocumentSession OpenSession();
     }

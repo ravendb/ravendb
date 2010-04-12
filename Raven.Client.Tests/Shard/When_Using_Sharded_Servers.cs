@@ -79,7 +79,8 @@ namespace Raven.Client.Tests.Shard
 
                 using (var session = documentStore.OpenSession())
                 {
-                    session.StoreAll(new[] { company1, company2 });
+                	session.Store(company1);
+					session.Store(company2);
                 }
             }
 
@@ -131,7 +132,8 @@ namespace Raven.Client.Tests.Shard
             using (var session = documentStore.OpenSession())
             {
                 //store 2 items in 2 shards
-                session.StoreAll(new[] { company1, company2 });
+				session.Store(company1);
+				session.Store(company2);
 
                 //get them in simple single threaded sequence for this test
                 shardStrategy.Stub(x => x.ShardAccessStrategy).Return(new SequentialShardAccessStrategy());
