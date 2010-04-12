@@ -81,6 +81,7 @@
     <Compile Include="Document\IDocumentSession.cs" />
     <Compile Include="Document\IDocumentStore.cs" />
     <Compile Include="Shard\ShardStrategy\ShardAccess\IShardAccessStrategy.cs" />
+    <Compile Include="Shard\ShardStrategy\ShardAccess\ParallelExtensions.cs" />
     <Compile Include="Shard\ShardStrategy\ShardAccess\ParallelShardAccessStrategy.cs" />
     <Compile Include="Shard\ShardStrategy\ShardResolution\AllShardsResolutionStrategy.cs" />
     <Compile Include="Shard\ShardStrategy\ShardResolution\IShardResolutionStrategy.cs" />
