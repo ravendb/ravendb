@@ -124,26 +124,9 @@ namespace Raven.Client.Document
 		public IQueryable<T> Query<T>()
 		{
 			// Todo implement Linq to Lucene here instead of the horrible list all below.
-			return GetAll<T>().AsQueryable();
+			//return GetAll<T>().AsQueryable();
+			throw new InvalidOperationException();
 		}
-
-		public IList<T> GetAll<T>() // NOTE: We probably need to ask the user if they can accept stale results
-		{
-			QueryResult result;
-			do
-			{
-				result = database.Query("getByType", "type:" + typeof (T), 0, int.MaxValue); // To be replaced with real paging
-				Thread.Sleep(100);
-			} while (result.IsStale);
-
-			return result.Results.Select(q =>
-			{
-				var id = q.Last.First.Value<string>("@id");
-				var entity = ConvertToEntity<T>(id, q.ToString());
-				return (T) entity;
-			}).ToList();
-		}
-
 
         #region IDisposable Members
 

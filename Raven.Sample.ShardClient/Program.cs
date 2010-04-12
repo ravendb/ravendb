@@ -27,7 +27,7 @@ namespace Raven.Sample.ShardClient
                 });
 
                 //get all, should automagically retrieve from each shard
-                var allCompanies = session.GetAll<Company>();
+                var allCompanies = session.Query<Company>().ToArray();
 
                 foreach(var company in allCompanies)
                     Console.WriteLine(company.Name);

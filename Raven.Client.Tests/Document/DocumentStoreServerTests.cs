@@ -6,6 +6,7 @@ using Raven.Client.Document;
 using Raven.Database;
 using Raven.Server;
 using Xunit;
+using System.Linq;
 
 namespace Raven.Client.Tests
 {
@@ -102,9 +103,9 @@ namespace Raven.Client.Tests
 				session1.Store(new Company {Name = "Company 2"});
 
 				var session2 = documentStore.OpenSession();
-				var companyFound = session2.GetAll<Company>();
+				var companyFound = session2.Query<Company>().ToArray();
 
-				Assert.Equal(2, companyFound.Count);
+				Assert.Equal(2, companyFound.Length);
 			}
 		}
 	}

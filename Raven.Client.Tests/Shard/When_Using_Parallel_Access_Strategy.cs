@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using Raven.Client.Shard;
 using Rhino.Mocks;
 using Raven.Client.Shard.ShardStrategy.ShardAccess;
+using System.Linq;
 
 namespace Raven.Client.Tests
 {
@@ -19,16 +20,14 @@ namespace Raven.Client.Tests
         public void Can_get_complete_result_list()
         {
             var shard1 = MockRepository.GenerateStub<IDocumentSession>();
-            shard1.Stub(x => x.GetAll<Company>())
-                //.Callback(() => { Thread.Sleep(500); return true; })
-                .Return(new[] { new Company { Name = "Company1" } });
+            shard1.Stub(x => x.Query<Company>())
+                .Return(new[] { new Company { Name = "Company1" } }.AsQueryable());
 
             var shard2 = MockRepository.GenerateStub<IDocumentSession>();
-            shard2.Stub(x => x.GetAll<Company>())
-                //.Callback(() => { Thread.Sleep(100); return true; })
-                .Return(new[] { new Company { Name = "Company2" } });
+			shard2.Stub(x => x.Query<Company>())
+				.Return(new[] { new Company { Name = "Company2" } }.AsQueryable());
 
-            var results = new ParallelShardAccessStrategy().Apply(new[] { shard1, shard2 }, x => x.GetAll<Company>());
+			var results = new ParallelShardAccessStrategy().Apply(new[] { shard1, shard2 }, x => x.Query<Company>().ToArray());
 
             Assert.Equal(2, results.Count);
         }
@@ -37,9 +36,9 @@ namespace Raven.Client.Tests
         public void Null_result_is_not_an_exception()
         {
             var shard1 = MockRepository.GenerateStub<IDocumentSession>();
-            shard1.Stub(x => x.GetAll<Company>()).Return(null);
+			shard1.Stub(x => x.Query<Company>()).Return(null);
 
-            var results = new ParallelShardAccessStrategy().Apply(new[] { shard1 }, x => x.GetAll<Company>());
+			var results = new ParallelShardAccessStrategy().Apply(new[] { shard1 }, x => x.Query<Company>().ToArray());
 
             Assert.Equal(0, results.Count);
         }
@@ -48,11 +47,11 @@ namespace Raven.Client.Tests
         public void Execution_exceptions_are_rethrown()
         {
             var shard1 = MockRepository.GenerateStub<IDocumentSession>();
-            shard1.Stub(x => x.GetAll<Company>()).Throw(new ApplicationException("Oh noes!"));
+			shard1.Stub(x => x.Query<Company>()).Throw(new ApplicationException("Oh noes!"));
 
             Assert.Throws(typeof(ApplicationException), () =>
             {
-                new ParallelShardAccessStrategy().Apply(new[] { shard1 }, x => x.GetAll<Company>());
+                new ParallelShardAccessStrategy().Apply(new[] { shard1 }, x => x.Query<Company>().ToArray());
             });
         }
     }

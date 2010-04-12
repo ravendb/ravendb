@@ -97,11 +97,6 @@ namespace Raven.Client.Shard
             ;
         }
 
-		public IList<T> GetAll<T>() 
-		{
-            return shardStrategy.ShardAccessStrategy.Apply(shardSessions, x => x.GetAll<T>());
-        }
-
 		public string StoreIdentifier
 		{
 			get

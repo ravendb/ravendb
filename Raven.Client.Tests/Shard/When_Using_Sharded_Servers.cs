@@ -13,6 +13,7 @@ using Xunit;
 using System.Collections.Generic;
 using Raven.Client.Shard;
 using Rhino.Mocks;
+using System.Linq;
 
 namespace Raven.Client.Tests
 {
@@ -137,7 +138,7 @@ namespace Raven.Client.Tests
                 shardStrategy.Stub(x => x.ShardAccessStrategy).Return(new SequentialShardAccessStrategy());
 
                 //get all, should automagically retrieve from each shard
-                var allCompanies = session.GetAll<Company>();
+                var allCompanies = session.Query<Company>().ToArray();
 
                 Assert.NotNull(allCompanies);
                 Assert.Equal(company1.Name, allCompanies[0].Name);
