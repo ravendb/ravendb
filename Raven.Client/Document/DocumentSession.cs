@@ -27,7 +27,7 @@ namespace Raven.Client
 
 		public T Load<T>(string id)
 		{
-            JsonDocument documentFound = null;
+            JsonDocument documentFound;
 
             try
             {
@@ -71,18 +71,22 @@ namespace Raven.Client
 
 		public void Store<T>(T entity)
 		{
-			storeEntity(entity);
+			StoreEntity(entity);
 			entities.Add(entity);
 
-            if (Stored != null)
-                Stored(entity);
+			var stored = Stored;
+			if (stored != null)
+                stored(entity);
 		}
 
-		private void storeEntity<T>(T entity)
+		private void StoreEntity<T>(T entity)
 		{
 			var json = ConvertEntityToJson(entity);
 			var identityProperty = entity.GetType().GetProperties()
 				.FirstOrDefault(q => documentStore.Conventions.FindIdentityProperty.Invoke(q));
+
+			if(identityProperty == null)
+				throw new InvalidOperationException("Could not find id proeprty for " + typeof (T).Name);
 
 			var key = (string) identityProperty.GetValue(entity, null);
 			key = database.Put(key, null, json, new JObject());
@@ -97,7 +101,7 @@ namespace Raven.Client
             foreach (var entity in entities)
 			{
 				//TODO: Switch to more the batch version when it becomes available#
-				storeEntity(entity);
+				StoreEntity(entity);
 			}
 		}
 
