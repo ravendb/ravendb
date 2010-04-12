@@ -13,23 +13,23 @@ namespace Raven.Client.Shard.ShardStrategy.ShardAccess
     {
         public IList<T> Apply<T>(IList<IDocumentSession> shardSessions, Func<IDocumentSession, IList<T>> operation)
         {
-        	var returnList = new ConcurrentStack<T>();
+        	var returnedLists = new IList<T>[shardSessions.Count];
 
 			shardSessions
-				.Select(shardSession =>
+				.Select((shardSession,i) =>
 					Task.Factory
 						.StartNew(() => operation(shardSession))
 						.ContinueWith(task =>
 						{
-							if (task.Result == null)
-								return;
-							returnList.PushRange(task.Result.ToArray());
+							returnedLists[i] = task.Result;
 						})
 				)
-				.WaitAll()
-			;
+				.WaitAll();
 
-            return returnList.ToArray();
+        	return returnedLists
+				.Where(x => x != null)
+        		.SelectMany(x => x)
+				.ToArray();
         }
     }
 }
