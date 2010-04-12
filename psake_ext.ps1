@@ -30,7 +30,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyProductAttribute(""$product"")]
 [assembly: AssemblyCopyrightAttribute(""$copyright"")]
 [assembly: AssemblyVersionAttribute(""$version"")]
-[assembly: AssemblyInformationalVersionAttribute(""$version / $commit"")]
+[assembly: AssemblyInformationalVersionAttribute(""$version"")]
 [assembly: AssemblyFileVersionAttribute(""$version"")]
 [assembly: AssemblyDelaySignAttribute(false)]
 "
