@@ -7,8 +7,8 @@ namespace Raven.Client
         string StoreIdentifier { get; }
         
 		T Load<T>(string id);
-        
-		System.Linq.IQueryable<T> Query<T>();
+
+		IDocumentQuery<T> Query<T>(string indexName);
         
 		void SaveChanges();
         
