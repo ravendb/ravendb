@@ -8,7 +8,7 @@ namespace Raven.Server.Responders
 	{
 		public override string UrlPattern
 		{
-			get { return @"/indexes/([\w\d_-]+)"; }
+			get { return @"/indexes/(.+)"; }
 		}
 
 		public override string[] SupportedVerbs
