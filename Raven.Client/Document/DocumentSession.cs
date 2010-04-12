@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Reflection;
 using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -13,7 +15,7 @@ namespace Raven.Client.Document
 	{
 		private readonly IDatabaseCommands database;
 		private readonly DocumentStore documentStore;
-		private readonly HashSet<object> entities = new HashSet<object>();
+		private readonly Dictionary<object, JObject> entitiesAndMetadata = new Dictionary<object, JObject>();
 
 		public event Action<object> Stored;
         public string StoreIdentifier { get { return documentStore.Identifier; } }
@@ -32,18 +34,19 @@ namespace Raven.Client.Document
             {
                 documentFound = database.Get(id);
             }
-            catch (System.Net.WebException ex)
+            catch (WebException ex)
             {
-                //Status is ProtocolError, couldn't find a better way to trap 404 which shouldn't be an exception
-                if (ex.Message == "The remote server returned an error: (404) Not Found.")
+            	var httpWebResponse = ex.Response as HttpWebResponse;
+            	if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.NotFound)
                     return default(T);
-                else
-                    throw;
+            	throw;
             }
+			if (documentFound == null)
+				return default(T);
 
 			var jsonString = Encoding.UTF8.GetString(documentFound.Data);
 			var entity = ConvertToEntity<T>(id, jsonString);
-			entities.Add(entity);
+			entitiesAndMetadata.Add(entity, documentFound.Metadata);
 			return (T) entity;
 		}
 
@@ -62,36 +65,44 @@ namespace Raven.Client.Document
 
 		public void Store<T>(T entity)
 		{
-			entities.Add(entity);
+			var tag = documentStore.Conventions.FindTypeTagName(typeof(T));
+			entitiesAndMetadata.Add(entity, new JObject(new JProperty("Raven-Entity-Tag", new JValue(tag))));
 		}
 
 		public void Evict<T>(T entity)
 		{
-			entities.Remove(entity);
+			entitiesAndMetadata.Remove(entity);
 		}
 
-		private void StoreEntity<T>(T entity)
+		private void StoreEntity(KeyValuePair<object, JObject> entityAndMetadata)
 		{
-			var json = ConvertEntityToJson(entity);
-			var identityProperty = entity.GetType().GetProperties()
-				.FirstOrDefault(q => documentStore.Conventions.FindIdentityProperty.Invoke(q));
+			var json = ConvertEntityToJson(entityAndMetadata.Key);
+			var entityType = entityAndMetadata.Key.GetType();
+			PropertyInfo identityProperty = GetIdentityProperty(entityType);
 
-			if(identityProperty == null)
-				throw new InvalidOperationException("Could not find id proeprty for " + typeof (T).Name);
+			var key = (string)identityProperty.GetValue(entityAndMetadata.Key, null);
+			key = database.Put(key, null, json, entityAndMetadata.Value);
 
-			var key = (string) identityProperty.GetValue(entity, null);
-			key = database.Put(key, null, json, new JObject());
-
-			identityProperty.SetValue(entity, key, null);
+			identityProperty.SetValue(entityAndMetadata.Key, key, null);
 
 			var stored = Stored;
 			if (stored != null)
-				stored(entity);
+				stored(entityAndMetadata.Key);
+		}
+
+		private PropertyInfo GetIdentityProperty(Type entityType)
+		{
+			var identityProperty = entityType.GetProperties()
+				.FirstOrDefault(q => documentStore.Conventions.FindIdentityProperty(q));
+
+			if(identityProperty == null)
+				throw new InvalidOperationException("Could not find id proeprty for " + entityType.Name);
+			return identityProperty;
 		}
 
 		public void SaveChanges()
 		{
-            foreach (var entity in entities)
+			foreach (var entity in entitiesAndMetadata)
 			{
 				//TODO: Switch to more the batch version when it becomes available
 				StoreEntity(entity);
@@ -115,22 +126,18 @@ namespace Raven.Client.Document
 
 		public void Clear()
 		{
-			entities.Clear();
+			entitiesAndMetadata.Clear();
 		}
 
-		public IQueryable<T> Query<T>()
+		public IDocumentQuery<T> Query<T>(string indexName)
 		{
-			// Todo implement Linq to Lucene here instead of the horrible list all below.
-			//return GetAll<T>().AsQueryable();
-			throw new InvalidOperationException();
+			return new DocumentQuery<T>(database, indexName);
 		}
 
         #region IDisposable Members
 
         public void Dispose()
         {
-            //DocumentStore owns IDatabaseCommands, allow it to dispose in case multiple sessions in play
-
             //dereference all event listeners
             Stored = null;
         }
