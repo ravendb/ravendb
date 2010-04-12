@@ -72,14 +72,19 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Document\AbstractDocumentQuery.cs" />
     <Compile Include="Document\DocumentConvention.cs" />
+    <Compile Include="Document\DocumentQuery.cs" />
     <Compile Include="Document\DocumentSession.cs" />
     <Compile Include="Document\DocumentStore.cs" />
     <Compile Include="Client\EmbededDatabaseCommands.cs" />
     <Compile Include="Client\HttpJsonRequest.cs" />
     <Compile Include="Client\IDatabaseCommands.cs" />
+    <Compile Include="Document\ShardedDocumentQuery.cs" />
+    <Compile Include="IDocumentQuery.cs" />
     <Compile Include="IDocumentSession.cs" />
     <Compile Include="IDocumentStore.cs" />
+    <Compile Include="RavenExtensions.cs" />
     <Compile Include="Shard\ShardStrategy\ShardAccess\IShardAccessStrategy.cs" />
     <Compile Include="Shard\ShardStrategy\ShardAccess\ParallelExtensions.cs" />
     <Compile Include="Shard\ShardStrategy\ShardAccess\ParallelShardAccessStrategy.cs" />
