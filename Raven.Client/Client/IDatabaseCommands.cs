@@ -3,7 +3,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Data;
 
-namespace Raven.Client
+namespace Raven.Client.Client
 {
     public interface IDatabaseCommands : IDisposable
 	{

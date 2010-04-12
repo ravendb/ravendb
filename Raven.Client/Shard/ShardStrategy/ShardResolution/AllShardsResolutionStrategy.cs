@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Collections.Generic;
 
-namespace Raven.Client.Shard
+namespace Raven.Client.Shard.ShardStrategy.ShardResolution
 {
     public class AllShardsResolutionStrategy : IShardResolutionStrategy
     {

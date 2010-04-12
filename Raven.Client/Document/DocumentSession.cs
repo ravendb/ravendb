@@ -4,11 +4,12 @@ using System.Text;
 using System.Threading;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Client.Client;
 using Raven.Database.Data;
 using System;
 using Raven.Database;
 
-namespace Raven.Client
+namespace Raven.Client.Document
 {
 	public class DocumentSession : IDocumentSession
 	{

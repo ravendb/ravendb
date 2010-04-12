@@ -1,5 +1,8 @@
 using Raven.Client.Shard;
+using Raven.Client.Shard.ShardStrategy;
 using Raven.Client.Shard.ShardStrategy.ShardAccess;
+using Raven.Client.Shard.ShardStrategy.ShardResolution;
+using Raven.Client.Shard.ShardStrategy.ShardSelection;
 
 namespace Raven.Sample.ShardClient
 {

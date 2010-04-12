@@ -2,7 +2,7 @@ using System.IO;
 using System.Net;
 using System.Text;
 
-namespace Raven.Client
+namespace Raven.Client.Client
 {
 	public class HttpJsonRequest
 	{

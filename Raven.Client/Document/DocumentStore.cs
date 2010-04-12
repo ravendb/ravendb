@@ -1,7 +1,8 @@
 using System;
+using Raven.Client.Client;
 using Raven.Database;
 
-namespace Raven.Client
+namespace Raven.Client.Document
 {
 	public class DocumentStore : IDisposable, IDocumentStore
 	{

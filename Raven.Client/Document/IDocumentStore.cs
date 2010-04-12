@@ -1,5 +1,6 @@
 ﻿using System;
-namespace Raven.Client
+
+namespace Raven.Client.Document
 {
     public interface IDocumentStore : IDisposable
     {

@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Reflection;
 using System.Threading;
+using Raven.Client.Document;
 using Raven.Database;
 using Raven.Server;
 using Xunit;

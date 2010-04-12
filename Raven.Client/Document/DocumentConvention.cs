@@ -1,7 +1,7 @@
 using System;
 using System.Reflection;
 
-namespace Raven.Client
+namespace Raven.Client.Document
 {
 	public class DocumentConvention
 	{

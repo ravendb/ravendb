@@ -7,7 +7,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Data;
 
-namespace Raven.Client
+namespace Raven.Client.Client
 {
 	public class ServerClient : IDatabaseCommands
 	{

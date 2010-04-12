@@ -1,5 +1,7 @@
 using System;
 using System.Linq;
+using Raven.Client.Document;
+using Raven.Client.Shard.ShardStrategy;
 using Raven.Database;
 using Raven.Client.Shard;
 

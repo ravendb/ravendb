@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Threading;
+using Raven.Client.Document;
 using Xunit;
 
 namespace Raven.Client.Tests

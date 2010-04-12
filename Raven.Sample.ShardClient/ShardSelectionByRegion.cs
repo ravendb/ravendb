@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using Raven.Client.Shard;
 using Raven.Client;
+using Raven.Client.Shard.ShardStrategy.ShardSelection;
 
 namespace Raven.Sample.ShardClient
 {

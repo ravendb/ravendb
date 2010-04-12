@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using Raven.Client.Document;
 
-namespace Raven.Client.Shard
+namespace Raven.Client.Shard.ShardStrategy.ShardAccess
 {
     public interface IShardAccessStrategy
     {

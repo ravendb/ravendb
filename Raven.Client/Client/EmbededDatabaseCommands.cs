@@ -5,7 +5,7 @@ using Raven.Database.Data;
 using Raven.Database.Indexing;
 using Raven.Database.Storage;
 
-namespace Raven.Client
+namespace Raven.Client.Client
 {
 	public class EmbededDatabaseCommands : IDatabaseCommands, IDisposable
 	{
