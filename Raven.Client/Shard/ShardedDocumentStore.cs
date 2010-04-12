@@ -2,8 +2,6 @@ using System;
 using System.Linq;
 using Raven.Client.Document;
 using Raven.Client.Shard.ShardStrategy;
-using Raven.Database;
-using Raven.Client.Shard;
 
 namespace Raven.Client.Shard
 {
@@ -13,8 +11,10 @@ namespace Raven.Client.Shard
 
         public ShardedDocumentStore(IShardStrategy shardStrategy, Shards shards)
         {
-            if (shards == null || shards.Count == 0) throw new ApplicationException("Must have one or more shards");
-            if (shardStrategy == null) throw new ApplicationException("Must have shard strategy");
+            if (shards == null || shards.Count == 0) 
+				throw new ArgumentException("Must have one or more shards", "shards");
+            if (shardStrategy == null)
+				throw new ArgumentException("Must have shard strategy", "shardStrategy");
 
             this.shardStrategy = shardStrategy;
             this.shards = shards;

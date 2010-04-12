@@ -49,8 +49,9 @@ namespace Raven.Client.Shard
 
         private IDocumentSession GetSingleShardSession(string shardId)
         {
-            var shardSession = shardSessions.Where(x => x.StoreIdentifier == shardId).FirstOrDefault();
-            if (shardSession == null) throw new ApplicationException("Can't find single shard with identifier: " + shardId);
+			var shardSession = shardSessions.FirstOrDefault(x => x.StoreIdentifier == shardId);
+            if (shardSession == null) 
+				throw new ApplicationException("Can't find a shard with identifier: " + shardId);
             return shardSession;
         }
 

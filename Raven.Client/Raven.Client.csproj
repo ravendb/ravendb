@@ -94,6 +94,7 @@
     <Compile Include="Shard\ShardedDocumentStore.cs" />
     <Compile Include="Shard\ShardStrategy\ShardResolution\ShardResolutionStrategyData.cs" />
     <Compile Include="Shard\Shards.cs" />
+    <Compile Include="Util\Inflector.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Raven.Database\Raven.Database.csproj">
