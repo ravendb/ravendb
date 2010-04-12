@@ -32,7 +32,6 @@ namespace Raven.Server.Responders
 				case "DELETE":
 					context.SetStatusToDeleted();
 					Database.DeleteIndex(index);
-					context.WriteJson(new {index});
 					break;
 			}
 		}
