@@ -200,6 +200,11 @@ namespace Raven.Database.Storage
                 grbit = ColumndefGrbit.ColumnTagged
             }, null, 0, out columnid);
 
+            Api.JetAddColumn(session, tableid, "delete_document", new JET_COLUMNDEF
+            {
+                coltyp = JET_coltyp.Bit,
+                grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
+            }, null, 0, out columnid);
 
             var indexDef = "+key\0\0";
             Api.JetCreateIndex(session, tableid, "by_key", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,

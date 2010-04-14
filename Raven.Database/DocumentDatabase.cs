@@ -147,9 +147,17 @@ namespace Raven.Database
 
 			TransactionalStorage.Batch(actions =>
 			{
-				actions.AddDocument(key, document.ToString(), etag, metadata.ToString());
-				actions.AddTask(new IndexDocumentTask {Index = "*", Key = key});
-				actions.Commit();
+                if (transactionInformation == null)
+                {
+                    actions.AddDocument(key, document.ToString(), etag, metadata.ToString());
+                    actions.AddTask(new IndexDocumentTask {Index = "*", Key = key});
+                }
+                else
+                {
+                    actions.AddDocumentInTransaction(transactionInformation, key, document.ToString(), etag,
+                                                     metadata.ToString());
+                }
+			    actions.Commit();
 			});
 			workContext.NotifyAboutWork();
 			return key;
@@ -173,12 +181,45 @@ namespace Raven.Database
 		{
 			TransactionalStorage.Batch(actions =>
 			{
-				actions.DeleteDocument(key, etag);
-				actions.AddTask(new RemoveFromIndexTask {Index = "*", Keys = new[] {key}});
-				actions.Commit();
+                if (transactionInformation == null)
+                {
+                    actions.DeleteDocument(key, etag);
+                    actions.AddTask(new RemoveFromIndexTask {Index = "*", Keys = new[] {key}});
+                }
+                else
+                {
+                    actions.DeleteDocumentInTransaction(transactionInformation, key, etag);
+                }
+			    actions.Commit();
 			});
 			workContext.NotifyAboutWork();
 		}
+
+        public void Commit(TransactionInformation transactionInformation)
+        {
+            TransactionalStorage.Batch(actions =>
+            {
+                actions.CompleteTransaction(transactionInformation.Id, doc =>
+                {
+                    if (doc.Delete)
+                        Delete(doc.Key, doc.Etag, null);
+                    else
+                        Put(doc.Key, doc.Etag, JObject.Parse(doc.Data), JObject.Parse(doc.Metadata), null);
+                });
+                actions.Commit();
+            });
+            workContext.NotifyAboutWork();
+        }
+
+        public void Rollback(TransactionInformation transactionInformation)
+        {
+            TransactionalStorage.Batch(actions =>
+            {
+                actions.RollbackTransaction(transactionInformation.Id);
+                actions.Commit();
+            });
+            workContext.NotifyAboutWork();
+        }
 
 		public string PutIndex(string name, string mapDef)
 		{

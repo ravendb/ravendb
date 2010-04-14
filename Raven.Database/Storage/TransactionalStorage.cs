@@ -22,8 +22,10 @@ namespace Raven.Database.Storage
 		private JET_INSTANCE instance;
 		private IDictionary<string, JET_COLUMNID> mappedResultsColumns;
 		private IDictionary<string, JET_COLUMNID> tasksColumns;
+	    private IDictionary<string, JET_COLUMNID> documentsModifiedByTransactionsColumns;
+	    private IDictionary<string, JET_COLUMNID> transactionsColumns;
 
-		public TransactionalStorage(string database)
+	    public TransactionalStorage(string database)
 		{
 			this.database = database;
 			path = database;
@@ -106,6 +108,12 @@ namespace Raven.Database.Storage
 						indexStatsColumns = Api.GetColumnDictionary(session, indexStats);
 					using (var mappedResults = new Table(session, dbid, "mapped_results", OpenTableGrbit.None))
 						mappedResultsColumns = Api.GetColumnDictionary(session, mappedResults);
+                    using (var documentsModifiedByTransactions = new Table(session, dbid, "documents_modified_by_transaction", OpenTableGrbit.None))
+                        documentsModifiedByTransactionsColumns = Api.GetColumnDictionary(session, documentsModifiedByTransactions);
+                    using (var transactions = new Table(session, dbid, "transactions", OpenTableGrbit.None))
+                        transactionsColumns = Api.GetColumnDictionary(session, transactions);
+
+			
 				}
 				finally
 				{
@@ -245,7 +253,9 @@ namespace Raven.Database.Storage
 			try
 			{
 				using (var pht = new DocumentStorageActions(instance, database, documentsColumns, tasksColumns,
-					                                     filesColumns, indexStatsColumns, mappedResultsColumns))
+					                                     filesColumns, indexStatsColumns, mappedResultsColumns,
+                                                         documentsModifiedByTransactionsColumns,
+                                                         transactionsColumns))
 				{
 					current.Value = pht;
 					action(pht);
