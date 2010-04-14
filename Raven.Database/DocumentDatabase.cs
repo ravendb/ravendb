@@ -133,7 +133,7 @@ namespace Raven.Database
 			return document;
 		}
 
-		public string Put(string key, Guid? etag, JObject document, JObject metadata)
+		public string Put(string key, Guid? etag, JObject document, JObject metadata, TransactionInformation transactionInformation)
 		{
 			if (string.IsNullOrEmpty(key))
 			{
@@ -169,7 +169,7 @@ namespace Raven.Database
 			}
 		}
 
-		public void Delete(string key, Guid? etag)
+        public void Delete(string key, Guid? etag, TransactionInformation transactionInformation)
 		{
 			TransactionalStorage.Batch(actions =>
 			{
