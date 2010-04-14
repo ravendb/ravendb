@@ -14,7 +14,7 @@ namespace Raven.Server.Responders
 
         public override string[] SupportedVerbs
         {
-            get { return new[] {"GET", "DELETE", "PUT", "PATCH"}; }
+            get { return new[] {"GET", "DELETE", "PUT"}; }
         }
 
         public override void Respond(HttpListenerContext context)

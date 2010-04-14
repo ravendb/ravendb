@@ -7,7 +7,8 @@ namespace Raven.Tests.Patching
 {
     public class SimplePatchApplication
     {
-        private readonly JObject doc = JObject.Parse(@"{ title: ""A Blog Post"", body: ""html markup"", comments: [ {author: ""ayende"", text:""good post""}] }");
+        private readonly JObject doc = 
+            JObject.Parse(@"{ title: ""A Blog Post"", body: ""html markup"", comments: [ {author: ""ayende"", text:""good post""}] }");
 
         [Fact]
         public void PropertyAddition()
@@ -16,7 +17,8 @@ namespace Raven.Tests.Patching
                 JArray.Parse(@"[{  ""type"":""set"",""name"": ""blog_id"", ""value"": 1 }]")
                 );
 
-            Assert.Equal(@"{""title"":""A Blog Post"",""body"":""html markup"",""comments"":[{""author"":""ayende"",""text"":""good post""}],""blog_id"":1}", patchedDoc.ToString(Formatting.None));
+            Assert.Equal(@"{""title"":""A Blog Post"",""body"":""html markup"",""comments"":[{""author"":""ayende"",""text"":""good post""}],""blog_id"":1}",
+                patchedDoc.ToString(Formatting.None));
         }
 
         [Fact]
