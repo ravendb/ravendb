@@ -66,7 +66,7 @@ namespace Raven.Client.Document
 		public void Store<T>(T entity)
 		{
 			var tag = documentStore.Conventions.FindTypeTagName(typeof(T));
-			entitiesAndMetadata.Add(entity, new JObject(new JProperty("Raven-Entity-Tag", new JValue(tag))));
+			entitiesAndMetadata.Add(entity, new JObject(new JProperty("Raven-Entity-Name", new JValue(tag))));
 		}
 
 		public void Evict<T>(T entity)

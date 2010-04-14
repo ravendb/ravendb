@@ -51,11 +51,11 @@ namespace Raven.Database
 
 			if(configuration.ShouldCreateDefaultsWhenBuildingNewDatabaseFromScratch)
 			{
-				PutIndex("Raven/DocumentsByTag",
-						 @"
+				PutIndex("Raven/DocumentsByEntityName",
+                         @"
 	from doc in docs 
-	where doc[""@metadata""][""Raven-Entity-Tag""] != null 
-	select new { Tag = doc[""@metadata""][""Raven-Entity-Tag""] };
+	where doc[""@metadata""][""Raven-Entity-Name""] != null 
+	select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 ");
 			}
 	
