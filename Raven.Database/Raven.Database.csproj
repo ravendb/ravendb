@@ -143,6 +143,7 @@
     <Compile Include="Indexing\IndexStorage.cs" />
     <Compile Include="Storage\SchemaCreator.cs" />
     <Compile Include="Storage\IndexDefinitionStorage.cs" />
+    <Compile Include="TransactionInformation.cs" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
