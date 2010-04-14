@@ -1,7 +1,6 @@
 using System;
 using System.Net;
 using Raven.Database;
-using Raven.Database.Json;
 
 namespace Raven.Server.Responders
 {
@@ -14,7 +13,7 @@ namespace Raven.Server.Responders
 
         public override string[] SupportedVerbs
         {
-            get { return new[] {"GET", "DELETE", "PUT"}; }
+            get { return new[] {"GET", "DELETE", "PUT", "PATCH"}; }
         }
 
         public override void Respond(HttpListenerContext context)

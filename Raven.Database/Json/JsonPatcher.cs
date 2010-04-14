@@ -1,5 +1,6 @@
 using System;
 using Newtonsoft.Json.Linq;
+using Raven.Database.Exceptions;
 
 namespace Raven.Database.Json
 {
@@ -34,7 +35,7 @@ namespace Raven.Database.Json
                     AddProperty(patchCmd, patchCmd["name"].Value<string>());
                     break;
                 case "unset":
-                    RemoveProperty(patchCmd["name"].Value<string>());
+                    RemoveProperty(patchCmd, patchCmd["name"].Value<string>());
                     break;
                 case "add":
                     AddValue(patchCmd, patchCmd["name"].Value<string>());
@@ -56,6 +57,7 @@ namespace Raven.Database.Json
         private void ModifyValue(JObject patchCmd, string propName)
         {
             var property = document.Property(propName);
+            EnsurePreviousValueMatchCurrentValue(patchCmd, property);
             if (property == null)
                 throw new InvalidOperationException("Cannot modify value from  '" + propName + "' because it was not found");
 
@@ -95,6 +97,7 @@ namespace Raven.Database.Json
         private void RemoveValue(JObject patchCmd, string propName)
         {
             var property = document.Property(propName);
+            EnsurePreviousValueMatchCurrentValue(patchCmd, property);
             if (property == null)
             {
                 property = new JProperty(propName, new JArray());
@@ -116,6 +119,7 @@ namespace Raven.Database.Json
         private void InsertValue(JObject patchCmd, string propName)
         {
             var property = document.Property(propName);
+            EnsurePreviousValueMatchCurrentValue(patchCmd, property);
             if (property == null)
             {
                 property = new JProperty(propName, new JArray());
@@ -137,6 +141,7 @@ namespace Raven.Database.Json
         private void AddValue(JObject patchCmd, string propName)
         {
             var property = document.Property(propName);
+            EnsurePreviousValueMatchCurrentValue(patchCmd, property);
             if (property == null)
             {
                 property = new JProperty(propName, new JArray());
@@ -149,9 +154,11 @@ namespace Raven.Database.Json
             array.Add(patchCmd["value"]);
         }
 
-        private void RemoveProperty(string propName)
+        private void RemoveProperty(JObject patchCmd,string propName)
         {
             var property = document.Property(propName);
+            EnsurePreviousValueMatchCurrentValue(patchCmd, property);
+            EnsurePreviousValueMatchCurrentValue(patchCmd, property);
             if (property != null)
                 property.Remove();
         }
@@ -159,12 +166,34 @@ namespace Raven.Database.Json
         private void AddProperty(JObject patchCmd, string propName)
         {
             var property = document.Property(propName);
+            EnsurePreviousValueMatchCurrentValue(patchCmd, property);
             if (property == null)
             {
                 property = new JProperty(propName);
                 document.Add(property);
             }
             property.Value = patchCmd["value"];
+        }
+
+        private static void EnsurePreviousValueMatchCurrentValue(JObject patchCmd, JProperty property)
+        {
+            var prevVal = patchCmd["prevVal"];
+            if (prevVal == null)
+                return;
+            switch (prevVal.Type)
+            {
+                case JsonTokenType.Undefined:
+                    if (property != null)
+                        throw new ConcurrencyException();
+                    break;
+                default:
+                    if(property == null)
+                        throw new ConcurrencyException();
+                    var equalityComparer = new JTokenEqualityComparer();
+                    if (equalityComparer.Equals(property.Value, prevVal) == false)
+                        throw new ConcurrencyException();
+                    break;
+            }
         }
     }
 }

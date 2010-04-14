@@ -1,5 +1,6 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Database.Exceptions;
 using Raven.Database.Json;
 using Xunit;
 
@@ -20,6 +21,28 @@ namespace Raven.Tests.Patching
             Assert.Equal(@"{""title"":""A Blog Post"",""body"":""html markup"",""comments"":[{""author"":""ayende"",""text"":""good post 1""},{""author"":""ayende"",""text"":""good post 2""}],""user"":{""name"":""rahien"",""id"":13}}",
                 patchedDoc.ToString(Formatting.None));
         }
+
+        [Fact]
+        public void SetValueInNestedElement_WithConcurrency_Ok()
+        {
+            var patchedDoc = new JsonPatcher(doc).Apply(
+                JArray.Parse(
+                    @"[{ ""type"": ""modify"" , ""name"": ""user"", ""value"": [{ ""type"":""set"",""name"":""name"",""value"":""rahien""} ], ""prevVal"": { ""name"": ""ayende"", ""id"": 13}}]")
+                );
+
+            Assert.Equal(@"{""title"":""A Blog Post"",""body"":""html markup"",""comments"":[{""author"":""ayende"",""text"":""good post 1""},{""author"":""ayende"",""text"":""good post 2""}],""user"":{""name"":""rahien"",""id"":13}}",
+                patchedDoc.ToString(Formatting.None));
+        }
+
+        [Fact]
+        public void SetValueInNestedElement_WithConcurrency_Error()
+        {
+            Assert.Throws<ConcurrencyException>(() => new JsonPatcher(doc).Apply(
+                JArray.Parse(
+                    @"[{ ""type"": ""modify"" , ""name"": ""user"", ""value"": [{ ""type"":""set"",""name"":""name"",""value"":""rahien""} ], ""prevVal"": { ""name"": ""ayende"", ""id"": 14}}]")
+                                                            ));
+        }
+
 
         [Fact]
         public void RemoveValueInNestedElement()
