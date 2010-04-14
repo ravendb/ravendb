@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Transactions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
@@ -41,7 +42,8 @@ namespace Raven.Client.Client
 		public string Put(string key, Guid? etag, JObject document, JObject metadata)
 		{
 			var method = String.IsNullOrEmpty(key) ? "POST" : "PUT";
-			var request = new HttpJsonRequest(url + "/docs/" + key, method, metadata);
+            AddTransactionInformation(metadata);
+		    var request = new HttpJsonRequest(url + "/docs/" + key, method, metadata);
 			request.Write(document.ToString());
 
 			var obj = new {id = ""};
@@ -49,7 +51,17 @@ namespace Raven.Client.Client
 			return obj.id;
 		}
 
-		public void Delete(string key, Guid? etag)
+	    private static void AddTransactionInformation(JObject metadata)
+	    {
+	        if (Transaction.Current == null) 
+                return;
+
+	        string txInfo = Transaction.Current.TransactionInformation.DistributedIdentifier + ", " +
+	                        TransactionManager.DefaultTimeout.ToString("c");
+	        metadata["Raven-Transaction-Information"] = new JValue(txInfo);
+	    }
+
+	    public void Delete(string key, Guid? etag)
 		{
 			EnsureIsNotNullOrEmpty(key, "key");
 			throw new NotImplementedException();

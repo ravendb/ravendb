@@ -1,14 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-namespace Raven.Database.Data
+﻿namespace Raven.Database.Data
 {
     public interface ICommandData
     {
 		string Key { get; }
 		string Method { get; }
+        TransactionInformation TransactionInformation { get; }
     	void Execute(DocumentDatabase database);
     }
 }

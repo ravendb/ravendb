@@ -48,7 +48,7 @@ namespace Raven.Tests.Indexes
                 size: 5,
                 '@metadata': {'@id': 1}
             }"),
-			       new JObject());
+                   new JObject(), null);
 
 			QueryResult docs;
 			do
@@ -72,7 +72,7 @@ select new{project_name = prj.name}
 			var document =
 				JObject.Parse(
 					"{'name':'ayende','email':'ayende@ayende.com','projects':[{'name':'raven'}], '@metadata': { '@id': 1}}");
-			db.Put("1", Guid.Empty, document, new JObject());
+            db.Put("1", Guid.Empty, document, new JObject(), null);
 
 			QueryResult docs;
 			do
@@ -98,7 +98,7 @@ select new{project_name = prj.name, project_num = prj.num}
 			var document =
 				JObject.Parse(
 					"{'name':'ayende','email':'ayende@ayende.com','projects':[{'name':'raven', 'num': 5}, {'name':'crow', 'num': 6}], '@metadata': { '@id': 1}}");
-			db.Put("1", Guid.Empty, document, new JObject());
+            db.Put("1", Guid.Empty, document, new JObject(), null);
 
 			QueryResult docs;
 			do
@@ -128,7 +128,7 @@ select new{project_name = prj.name, project_num = prj.num}
 			db.Put("1", Guid.Empty,
 			       JObject.Parse(
 			       	"{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"),
-			       new JObject());
+                   new JObject(), null);
 
 
 			QueryResult docs;
@@ -159,7 +159,7 @@ select new{project_name = prj.name, project_num = prj.num}
 			db.Put("1", Guid.Empty,
 			       JObject.Parse(
 			       	"{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"),
-			       new JObject());
+                   new JObject(), null);
 
 
 			QueryResult docs;
@@ -178,7 +178,7 @@ select new{project_name = prj.name, project_num = prj.num}
 			db.Put("1", Guid.Empty,
 			       JObject.Parse(
 			       	"{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"),
-			       new JObject());
+                   new JObject(), null);
 
 			db.PutIndex("pagesByTitle",
 			            @"
@@ -202,11 +202,11 @@ select new{project_name = prj.name, project_num = prj.num}
 			db.Put(null, Guid.Empty,
 			       JObject.Parse(
 			       	"{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"),
-			       new JObject());
+                   new JObject(), null);
 			db.Put(null, Guid.Empty,
 			       JObject.Parse(
 			       	"{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"),
-			       new JObject());
+                   new JObject(), null);
 
 			db.PutIndex("pagesByTitle",
 			            @"

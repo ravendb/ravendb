@@ -27,7 +27,7 @@ namespace Raven.Importer
 				foreach (var doc in array)
 				{
 					count++;
-					db.Put(null, Guid.Empty, doc, new JObject());
+                    db.Put(null, Guid.Empty, doc, new JObject(), null);
 				}
 			}
 			Console.WriteLine("{0} doc inserts in {1}", count, sw.Elapsed);

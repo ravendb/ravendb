@@ -58,7 +58,7 @@ namespace Raven.Tests.Indexes
                 size: 1,
                 '@metadata': {'@id': 1}
             }"),
-			       new JObject());
+                   new JObject(), null);
 
 			QueryResult docs;
 			do
@@ -87,7 +87,7 @@ namespace Raven.Tests.Indexes
                 size: 0,
                 '@metadata': {'@id': 1}
             }"),
-			       new JObject());
+                   new JObject(), null);
 			db.Put("2", Guid.Empty,
 			       JObject.Parse(
 			       	@"{
@@ -99,7 +99,7 @@ namespace Raven.Tests.Indexes
                 size: 1,
                 '@metadata': {'@id': 1}
             }"),
-			       new JObject());
+                   new JObject(), null);
 
 			QueryResult docs;
 			do
@@ -129,7 +129,7 @@ namespace Raven.Tests.Indexes
                 size: 0,
                 '@metadata': {'@id': 1}
             }"),
-			       new JObject());
+                   new JObject(), null);
 
 			QueryResult docs;
 			do

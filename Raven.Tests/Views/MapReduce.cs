@@ -74,7 +74,7 @@ select new {
 			};
 			foreach (var value in values)
 			{
-				db.Put(Guid.NewGuid().ToString(), null, JObject.Parse(value), new JObject());
+                db.Put(Guid.NewGuid().ToString(), null, JObject.Parse(value), new JObject(), null);
 			}
 
 			QueryResult q = null;

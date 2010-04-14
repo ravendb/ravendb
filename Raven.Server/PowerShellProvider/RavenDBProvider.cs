@@ -198,7 +198,8 @@ namespace Raven.Server.PowerShellProvider
 				if (!string.IsNullOrEmpty(pathTypeValue) && etag.HasValue)
 				{
 					var db = this.PSDriveInfo as RavenDBPSDriveInfo;
-					db.Database.Put(pathTypeValue, etag, doc, new JObject());
+                    db.Database.Put(pathTypeValue, etag, doc, new JObject(),
+                                           null);
 				}
 				else
 				{
@@ -513,7 +514,8 @@ namespace Raven.Server.PowerShellProvider
 				}
 
 				var db = this.PSDriveInfo as RavenDBPSDriveInfo;
-				db.Database.Put(null, Guid.Empty, doc, new JObject());
+                db.Database.Put(null, Guid.Empty, doc, new JObject(),
+                                           null);
 			}
 			else if (pathType == PathType.Index && type.ToLower() == "index")
 			{
@@ -590,7 +592,8 @@ namespace Raven.Server.PowerShellProvider
 				if (!string.IsNullOrEmpty(pathTypeValue) && etag.HasValue)
 				{
 					var db = this.PSDriveInfo as RavenDBPSDriveInfo;
-					db.Database.Delete(pathTypeValue, etag);
+                    db.Database.Delete(pathTypeValue, etag,
+                                           null);
 				}
 				else
 				{
@@ -640,7 +643,8 @@ namespace Raven.Server.PowerShellProvider
 			{
 				foreach (JObject doc in db.Database.GetDocuments(0, int.MaxValue))
 				{
-					db.Database.Delete(doc["@metadata"]["@id"].Value<string>(), doc["@metadata"]["@etag"].Value<Guid?>());
+                    db.Database.Delete(doc["@metadata"]["@id"].Value<string>(), doc["@metadata"]["@etag"].Value<Guid?>(),
+                                           null);
 				}
 				foreach (JObject index in db.Database.GetIndexes(0, int.MaxValue))
 				{
@@ -659,7 +663,8 @@ namespace Raven.Server.PowerShellProvider
 					foreach (JObject doc in db.Database.GetDocuments(0, int.MaxValue))
 					{
 						db.Database.Delete(doc["@metadata"]["@id"].Value<string>(),
-						                   doc["@metadata"]["@etag"].Value<Guid?>());
+						                   doc["@metadata"]["@etag"].Value<Guid?>(),
+                                           null);
 					}
 				}
 				else if (type == PathType.Indexes)

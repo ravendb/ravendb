@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Transactions;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
 using Raven.Database.Storage;
+using TransactionInformation = Raven.Database.TransactionInformation;
 
 namespace Raven.Client.Client
 {
@@ -45,12 +47,23 @@ namespace Raven.Client.Client
 
 		public string Put(string key, Guid? etag, JObject document, JObject metadata)
 		{
-			return database.Put(key, etag, document, metadata);
+            return database.Put(key, etag, document, metadata, GetTransactionInformation());
 		}
 
-		public void Delete(string key, Guid? etag)
+	    private static TransactionInformation GetTransactionInformation()
+	    {
+            if (Transaction.Current == null)
+                return null;
+            return new TransactionInformation
+            {
+                Id = Transaction.Current.TransactionInformation.DistributedIdentifier,
+                Timeout = TransactionManager.DefaultTimeout
+            };
+	    }
+
+	    public void Delete(string key, Guid? etag)
 		{
-			database.Delete(key, etag);
+            database.Delete(key, etag, GetTransactionInformation());
 		}
 
 		public string PutIndex(string name, string indexDef)

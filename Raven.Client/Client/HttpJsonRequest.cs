@@ -13,7 +13,6 @@ namespace Raven.Client.Client
 		public HttpJsonRequest(string url, string method)
 			: this(url, method, new JObject())
 		{
-			
 		}
 
 		public HttpJsonRequest(string url, string method, JObject metadata)

@@ -352,7 +352,7 @@ namespace Raven.Database
 				);
 		}
 
-		public PatchResult ApplyPatch(string docId, Guid? etag, JArray patchDoc)
+		public PatchResult ApplyPatch(string docId, Guid? etag, JArray patchDoc, TransactionInformation transactionInformation)
 		{
 			var result = PatchResult.Patched;
 			TransactionalStorage.Batch(actions =>
@@ -370,7 +370,7 @@ namespace Raven.Database
 				{
 					var jsonDoc = doc.ToJson();
 					new JsonPatcher(jsonDoc).Apply(patchDoc);
-					Put(doc.Key, doc.Etag, jsonDoc, doc.Metadata);
+					Put(doc.Key, doc.Etag, jsonDoc, doc.Metadata, transactionInformation);
 					result = PatchResult.Patched;
 				}
 
