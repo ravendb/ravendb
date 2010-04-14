@@ -98,8 +98,11 @@
     <Compile Include="AnonymousUserAccessMode.cs" />
     <Compile Include="Data\Attachment.cs" />
     <Compile Include="Data\DatabaseStatistics.cs" />
+    <Compile Include="Data\DeleteCommandData.cs" />
+    <Compile Include="Data\ICommandData.cs" />
     <Compile Include="Data\IndexFailureInformation.cs" />
     <Compile Include="Data\IndexQueryResult.cs" />
+    <Compile Include="Data\PutCommandData.cs" />
     <Compile Include="Data\ServerError.cs" />
     <Compile Include="Data\IndexStats.cs" />
     <Compile Include="Data\QueryResult.cs" />
@@ -120,6 +123,7 @@
     <Compile Include="Json\JsonPatcher.cs" />
     <Compile Include="Json\JsonToExpando.cs" />
     <Compile Include="Linq\AbstractViewGenerator.cs" />
+    <Compile Include="Linq\DynamicExpandoObject.cs" />
     <Compile Include="Linq\QueryParsingUtils.cs" />
     <Compile Include="Linq\DynamicViewCompiler.cs" />
     <Compile Include="Linq\IndexingFunc.cs" />

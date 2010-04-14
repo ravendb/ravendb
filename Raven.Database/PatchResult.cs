@@ -1,9 +1,9 @@
 ﻿namespace Raven.Database
 {
-    public enum PatchResult
-    {
-        DocumentDoesNotExists,
-        WriteConflict,
-        Patched
-    }
+	public enum PatchResult
+	{
+		DocumentDoesNotExists,
+		WriteConflict,
+		Patched
+	}
 }

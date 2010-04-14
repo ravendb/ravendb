@@ -1,54 +1,56 @@
 using System;
 using Raven.Database;
 using Xunit;
+using System.Linq;
 
 namespace Raven.Tests.Storage
 {
-    public class DeleteIndexes : AbstractDocumentStorageTest, IDisposable
-    {
-        private readonly DocumentDatabase db;
+	public class DeleteIndexes : AbstractDocumentStorageTest
+	{
+		private readonly DocumentDatabase db;
 
-        public DeleteIndexes()
-        {
-            db = new DocumentDatabase(new RavenConfiguration { DataDirectory = "divan.db.test.esent" });
-        }
+		public DeleteIndexes()
+		{
+			db = new DocumentDatabase(new RavenConfiguration {DataDirectory = "raven.db.test.esent"});
+		}
 
-        #region IDisposable Members
+		#region IDisposable Members
 
-        public void Dispose()
-        {
-            db.Dispose();
-        }
+		public override void Dispose()
+		{
+			db.Dispose();
+			base.Dispose();
+		}
 
-        #endregion
+		#endregion
 
-        [Fact]
-        public void Can_remove_index()
-        {
-            db.PutIndex("pagesByTitle",
-                        @"
+		[Fact]
+		public void Can_remove_index()
+		{
+			db.PutIndex("pagesByTitle",
+			            @"
     from doc in docs
     where doc.type == ""page""
     select new { Key = doc.title, Value = doc.content, Size = doc.size };
 ");
-            db.DeleteIndex("pagesByTitle");
-            var indexNames = db.IndexDefinitionStorage.IndexNames;
-            Assert.Equal(0, indexNames.Length);
-        }
+			db.DeleteIndex("pagesByTitle");
+			var indexNames = db.IndexDefinitionStorage.IndexNames.Where(x => x.StartsWith("Raven") == false).ToArray();
+			Assert.Equal(0, indexNames.Length);
+		}
 
-        [Fact]
-        public void Removing_index_remove_it_from_index_storage()
-        {
-            const string definition =
-                @"
+		[Fact]
+		public void Removing_index_remove_it_from_index_storage()
+		{
+			const string definition =
+				@"
     from doc in docs
     where doc.type == ""page""
     select new { Key = doc.title, Value = doc.content, Size = doc.size };
 ";
-            db.PutIndex("pagesByTitle", definition);
-            db.DeleteIndex("pagesByTitle");
-            var actualDefinition = db.IndexStorage.Indexes;
-            Assert.Empty(actualDefinition);
-        }
-    }
+			db.PutIndex("pagesByTitle", definition);
+			db.DeleteIndex("pagesByTitle");
+			var actualDefinition = db.IndexStorage.Indexes.Where(x=>x.StartsWith("Raven") == false);
+			Assert.Empty(actualDefinition);
+		}
+	}
 }

@@ -3,12 +3,12 @@ using Raven.Database;
 
 namespace Raven.Server.PowerShellProvider
 {
-    internal class RavenDBPSDriveInfo : PSDriveInfo
-    {
-        public RavenDBPSDriveInfo(PSDriveInfo driveInfo) : base(driveInfo)
-        {
-        }
+	internal class RavenDBPSDriveInfo : PSDriveInfo
+	{
+		public RavenDBPSDriveInfo(PSDriveInfo driveInfo) : base(driveInfo)
+		{
+		}
 
-        public DocumentDatabase Database { get; set; }
-    }
+		public DocumentDatabase Database { get; set; }
+	}
 }

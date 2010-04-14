@@ -3,75 +3,75 @@ using System.Collections.Generic;
 
 namespace Raven.Database.Indexing
 {
-    public class StatefulEnumerableWrapper<T> : IEnumerable<T>
-    {
-        private readonly IEnumerator<T> inner;
+	public class StatefulEnumerableWrapper<T> : IEnumerable<T>
+	{
+		private readonly IEnumerator<T> inner;
 
-        public StatefulEnumerableWrapper(IEnumerator<T> inner)
-        {
-            this.inner = inner;
-        }
+		public StatefulEnumerableWrapper(IEnumerator<T> inner)
+		{
+			this.inner = inner;
+		}
 
-        public T Current
-        {
-            get { return inner.Current; }
-        }
+		public T Current
+		{
+			get { return inner.Current; }
+		}
 
-        #region IEnumerable<T> Members
+		#region IEnumerable<T> Members
 
-        public IEnumerator<T> GetEnumerator()
-        {
-            return new StatefulbEnumeratorWrapper(inner);
-        }
+		public IEnumerator<T> GetEnumerator()
+		{
+			return new StatefulbEnumeratorWrapper(inner);
+		}
 
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return GetEnumerator();
-        }
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return GetEnumerator();
+		}
 
-        #endregion
+		#endregion
 
-        #region Nested type: StatefulbEnumeratorWrapper
+		#region Nested type: StatefulbEnumeratorWrapper
 
-        public class StatefulbEnumeratorWrapper : IEnumerator<T>
-        {
-            private readonly IEnumerator<T> inner;
+		public class StatefulbEnumeratorWrapper : IEnumerator<T>
+		{
+			private readonly IEnumerator<T> inner;
 
-            public StatefulbEnumeratorWrapper(IEnumerator<T> inner)
-            {
-                this.inner = inner;
-            }
+			public StatefulbEnumeratorWrapper(IEnumerator<T> inner)
+			{
+				this.inner = inner;
+			}
 
-            #region IEnumerator<T> Members
+			#region IEnumerator<T> Members
 
-            public void Dispose()
-            {
-                inner.Dispose();
-            }
+			public void Dispose()
+			{
+				inner.Dispose();
+			}
 
-            public bool MoveNext()
-            {
-                return inner.MoveNext();
-            }
+			public bool MoveNext()
+			{
+				return inner.MoveNext();
+			}
 
-            public void Reset()
-            {
-                inner.Reset();
-            }
+			public void Reset()
+			{
+				inner.Reset();
+			}
 
-            public T Current
-            {
-                get { return inner.Current; }
-            }
+			public T Current
+			{
+				get { return inner.Current; }
+			}
 
-            object IEnumerator.Current
-            {
-                get { return Current; }
-            }
+			object IEnumerator.Current
+			{
+				get { return Current; }
+			}
 
-            #endregion
-        }
+			#endregion
+		}
 
-        #endregion
-    }
+		#endregion
+	}
 }

@@ -4,32 +4,32 @@ using Raven.Database.Data;
 
 namespace Raven.Database.Exceptions
 {
-    [Serializable]
-    public class IndexDisabledException : Exception
-    {
-        public IndexFailureInformation Information { get; set; }
+	[Serializable]
+	public class IndexDisabledException : Exception
+	{
+		public IndexDisabledException()
+		{
+		}
 
-        public IndexDisabledException()
-        {
-        }
+		public IndexDisabledException(IndexFailureInformation information)
+		{
+			Information = information;
+		}
 
-        public IndexDisabledException(IndexFailureInformation information)
-        {
-            Information = information;
-        }
+		public IndexDisabledException(string message) : base(message)
+		{
+		}
 
-        public IndexDisabledException(string message) : base(message)
-        {
-        }
+		public IndexDisabledException(string message, Exception inner) : base(message, inner)
+		{
+		}
 
-        public IndexDisabledException(string message, Exception inner) : base(message, inner)
-        {
-        }
+		protected IndexDisabledException(
+			SerializationInfo info,
+			StreamingContext context) : base(info, context)
+		{
+		}
 
-        protected IndexDisabledException(
-            SerializationInfo info,
-            StreamingContext context) : base(info, context)
-        {
-        }
-    }
+		public IndexFailureInformation Information { get; set; }
+	}
 }

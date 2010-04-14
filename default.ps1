@@ -28,6 +28,16 @@ task Init -depends Clean {
 		-version $version `
 		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2010" `
 		-clsCompliant "false"
+		
+	Generate-Assembly-Info `
+		-file "$base_dir\Raven.Sample.ShardClient\Properties\AssemblyInfo.cs" `
+		-title "Raven Sample Shard Client $version" `
+		-description "A linq enabled document database for .NET" `
+		-company "Hibernating Rhinos" `
+		-product "Raven Sample Shard Client $version" `
+		-version $version `
+		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2010" `
+		-clsCompliant "false"
 
 	Generate-Assembly-Info `
 		-file "$base_dir\Raven.Client\Properties\AssemblyInfo.cs" `
@@ -118,12 +128,16 @@ task Init -depends Clean {
 		-version $version `
 		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2010" `
 		-clsCompliant "false"
+		
+	.\Utilities\Binaries\Raven.DefaultDatabase.Creator .\Raven.Server\Defaults\default.json
+		
 	new-item $release_dir -itemType directory
 	new-item $buildartifacts_dir -itemType directory
 }
 
 task Compile -depends Init {
-    exec C:\Windows\Microsoft.NET\Framework\v4.0.30128\MSBuild.exe """$sln_file"" /p:OutDir=""$buildartifacts_dir\"""
+	$v4_net_version = (ls "C:\Windows\Microsoft.NET\Framework\v4.0*").Name
+    exec "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" """$sln_file"" /p:OutDir=""$buildartifacts_dir\"""
 }
 
 task Test -depends Compile {
@@ -131,23 +145,30 @@ task Test -depends Compile {
   cd $build_dir
   exec "$tools_dir\xUnit\xunit.console.exe" "$build_dir\Raven.Tests.dll"
   exec "$tools_dir\xUnit\xunit.console.exe" "$build_dir\Raven.Scenarios.dll"
-  #exec "$tools_dir\xUnit\xunit.console.exe" "$build_dir\Raven.Client.Tests.dll"
+  exec "$tools_dir\xUnit\xunit.console.exe" "$build_dir\Raven.Client.Tests.dll"
   cd $old
 }
 
+task Merge -depends Compile {
+	$old = pwd
+	cd $build_dir
+	
+	remove-item $build_dir\RavenDb.exe  -ErrorAction SilentlyContinue
+	
+	exec "..\Utilities\Binaries\Raven.Merger.exe"
+	
+	cd $old
+}
 
-task Release -depends Test {
+task Release -depends Test, Merge {
 	& $tools_dir\zip.exe -9 -A -j `
 		$release_dir\Raven.zip `
-		$build_dir\Raven.Database.dll `
-		$build_dir\Raven.Server.exe `
-    $build_dir\Esent.Interop.dll `
-    $build_dir\Esent.Interop.xml `
-    $build_dir\log4net.dll `
-    $build_dir\log4net.xml `
-    $build_dir\Lucene.Net.dll `
-    $build_dir\ICSharpCode.NRefactory.dll `
-    $build_dir\Newtonsoft.Json.dll `
+		$build_dir\RavenDb.exe `
+		$build_dir\RavenDb.pdb `
+		$build_dir\RavenDb.xml `
+		$build_dir\Raven.Client.dll `
+		$build_dir\Raven.Client.pdb `
+		$build_dir\Raven.Client.xml `
 		license.txt `
 		acknowledgements.txt
 	if ($lastExitCode -ne 0) {

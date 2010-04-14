@@ -1,0 +1,126 @@
+using System;
+using System.IO;
+using System.Reflection;
+using System.Threading;
+using Raven.Client.Document;
+using Xunit;
+using System.Linq;
+
+namespace Raven.Client.Tests.Document
+{
+	public class DocumentStoreEmbeddedTests : BaseTest, IDisposable
+	{
+		private string path;
+
+		#region IDisposable Members
+
+		public void Dispose()
+		{
+			Directory.Delete(path, true);
+		}
+
+		#endregion
+
+		private DocumentStore NewDocumentStore()
+		{
+			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof (DocumentStoreServerTests)).CodeBase);
+			path = Path.Combine(path, "TestDb").Substring(6);
+			var documentStore = new DocumentStore
+			{
+				DataDirectory = path,
+				Conventions = {FindIdentityProperty = q => q.Name == "Id"}
+			};
+			documentStore.Initialise();
+			return documentStore;
+		}
+
+		[Fact]
+		public void Should_Load_entity_back_with_document_Id_mapped_to_Id()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				var company = new Company {Name = "Company Name"};
+				var session = documentStore.OpenSession();
+				session.Store(company);
+
+				session.SaveChanges();
+
+				var companyFound = session.Load<Company>(company.Id);
+
+				Assert.Equal(companyFound.Id, company.Id);
+			}
+		}
+
+		[Fact]
+		public void Should_map_Entity_Id_to_document_after_save_changes()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				var session = documentStore.OpenSession();
+				var company = new Company {Name = "Company 1"};
+				session.Store(company);
+
+				session.SaveChanges();
+
+				Assert.NotEqual(Guid.Empty.ToString(), company.Id);
+			}
+		}
+
+		[Fact]
+		public void Should_update_stored_entity()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				var session = documentStore.OpenSession();
+				var company = new Company {Name = "Company 1"};
+				session.Store(company);
+				session.SaveChanges();
+				var id = company.Id;
+				company.Name = "Company 2";
+				session.SaveChanges();
+				var companyFound = session.Load<Company>(company.Id);
+				Assert.Equal("Company 2", companyFound.Name);
+				Assert.Equal(id, company.Id);
+			}
+		}
+
+		[Fact]
+		public void Should_update_retrieved_entity()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				var session1 = documentStore.OpenSession();
+				var company = new Company {Name = "Company 1"};
+				session1.Store(company);
+				session1.SaveChanges();
+				var companyId = company.Id;
+
+				var session2 = documentStore.OpenSession();
+				var companyFound = session2.Load<Company>(companyId);
+				companyFound.Name = "New Name";
+				session2.SaveChanges();
+
+				Assert.Equal("New Name", session2.Load<Company>(companyId).Name);
+			}
+		}
+
+		[Fact]
+		public void Should_retrieve_all_entities()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				var session1 = documentStore.OpenSession();
+				session1.Store(new Company {Name = "Company 1"});
+				session1.Store(new Company {Name = "Company 2"});
+			
+				session1.SaveChanges();
+				var session2 = documentStore.OpenSession();
+				var companyFound = session2.Query<Company>()
+					.WaitForNonStaleResults()
+					.ToArray();
+
+				Assert.Equal(2, companyFound.Length);
+			}
+		}
+	}
+}
