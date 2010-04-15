@@ -124,8 +124,36 @@ namespace Raven.Database.Storage
 
 		#endregion
 
-		public JsonDocument DocumentByKey(string key)
+		public JsonDocument DocumentByKey(string key, TransactionInformation transactionInformation)
 		{
+		    byte[] data;
+		    if (transactionInformation != null)
+            {
+                Api.JetSetCurrentIndex(session, documentsModifiedByTransactions, "by_key");
+                Api.MakeKey(session, documentsModifiedByTransactions, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+                if(Api.TrySeek(session, documentsModifiedByTransactions,SeekGrbit.SeekEQ))
+                {
+                    var txId = Api.RetrieveColumn(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["locked_by_transaction"]);
+                    if(new Guid(txId) == transactionInformation.Id)
+                    {
+                        if (Api.RetrieveColumnAsBoolean(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["delete_document"]) == true)
+                        {
+                            logger.DebugFormat("Document with key '{0}' was deleted in transaction: {1}", key, transactionInformation.Id);
+                            return null;
+                        }
+                        data = Api.RetrieveColumn(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["data"]);
+                        logger.DebugFormat("Document with key '{0}' was found in transaction: {1}", key, transactionInformation.Id);
+                        return new JsonDocument
+                        {
+                            Data = data,
+                            Etag = new Guid(Api.RetrieveColumn(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["etag"])),
+                            Key = Api.RetrieveColumnAsString(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["key"], Encoding.Unicode),
+                            Metadata = JObject.Parse(Api.RetrieveColumnAsString(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["metadata"]))
+                        };
+                    }
+                }
+            }
+
 			Api.JetSetCurrentIndex(session, documents, "by_key");
 			Api.MakeKey(session, documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, documents, SeekGrbit.SeekEQ) == false)
@@ -133,7 +161,7 @@ namespace Raven.Database.Storage
 				logger.DebugFormat("Document with key '{0}' was not found", key);
 				return null;
 			}
-			var data = Api.RetrieveColumn(session, documents, documentsColumns["data"]);
+			data = Api.RetrieveColumn(session, documents, documentsColumns["data"]);
 			logger.DebugFormat("Document with key '{0}' was found", key);
 			return new JsonDocument
 			{
@@ -268,7 +296,7 @@ namespace Raven.Database.Storage
             Guid existingEtag;
             if (Api.TrySeek(session, documentsModifiedByTransactions, SeekGrbit.SeekEQ))
             {
-                if (Api.RetrieveColumnAsBoolean(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["delete"]) == true)
+                if (Api.RetrieveColumnAsBoolean(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["delete_document"]) == true)
                     return; // we ignore etags on deleted documents
                 existingEtag = new Guid(Api.RetrieveColumn(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["etag"]));
             }
@@ -349,7 +377,7 @@ namespace Raven.Database.Storage
 	        var isUpdate = Api.TrySeek(session, transactions, SeekGrbit.SeekEQ);
             using(var update = new Update(session, transactions, isUpdate ? JET_prep.Replace : JET_prep.Insert))
             {
-                Api.SetColumn(session, transactions,transactionsColumns["tx_ix"], transactionInformation.Id.ToByteArray());
+                Api.SetColumn(session, transactions,transactionsColumns["tx_id"], transactionInformation.Id.ToByteArray());
                 Api.SetColumn(session, transactions, transactionsColumns["timeout"],
                               DateTime.UtcNow + transactionInformation.Timeout);
                 update.Save();
@@ -434,6 +462,7 @@ namespace Raven.Database.Storage
                 //This is a bug, probably... because it means that we have a missing
                 // transaction, we are going to reset it
                 ResetTransactionOnCurrentDocument();
+                return;
             }
 	        var timeout = Api.RetrieveColumnAsDateTime(session, transactions, transactionsColumns["timeout"]);
             if(DateTime.UtcNow > timeout)// the timeout for the transaction has passed
@@ -476,7 +505,7 @@ namespace Raven.Database.Storage
 	            perDocumentModified(new DocumentInTransactionData
 	            {
                     Data = Encoding.UTF8.GetString(Api.RetrieveColumn(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["data"])),
-                    Delete = Api.RetrieveColumnAsBoolean(session,documentsModifiedByTransactions,documentsModifiedByTransactionsColumns["delete"]).Value,
+                    Delete = Api.RetrieveColumnAsBoolean(session,documentsModifiedByTransactions,documentsModifiedByTransactionsColumns["delete_document"]).Value,
                     Etag = new Guid(Api.RetrieveColumn(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["etag"])),
                     Key = Api.RetrieveColumnAsString(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["key"],Encoding.Unicode),
                     Metadata = Api.RetrieveColumnAsString(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["metadata"], Encoding.Unicode),

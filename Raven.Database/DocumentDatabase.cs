@@ -122,12 +122,12 @@ namespace Raven.Database
 		[DllImport("rpcrt4.dll", SetLastError = true)]
 		public static extern int UuidCreateSequential(out Guid value);
 
-		public JsonDocument Get(string key)
+		public JsonDocument Get(string key, TransactionInformation transactionInformation)
 		{
 			JsonDocument document = null;
 			TransactionalStorage.Batch(actions =>
 			{
-				document = actions.DocumentByKey(key);
+				document = actions.DocumentByKey(key, transactionInformation);
 				actions.Commit();
 			});
 			return document;
@@ -201,10 +201,12 @@ namespace Raven.Database
             {
                 actions.CompleteTransaction(transactionInformation.Id, doc =>
                 {
+                    // doc.Etag - represent the _modified_ document etag, and we already
+                    // checked etags on previous PUT/DELETE, so we don't pass it here
                     if (doc.Delete)
-                        Delete(doc.Key, doc.Etag, null);
+                        Delete(doc.Key, null, null);
                     else
-                        Put(doc.Key, doc.Etag, JObject.Parse(doc.Data), JObject.Parse(doc.Metadata), null);
+                        Put(doc.Key, null, JObject.Parse(doc.Data), JObject.Parse(doc.Metadata), null);
                 });
                 actions.Commit();
             });
@@ -301,7 +303,7 @@ namespace Raven.Database
 			if (queryResult.Projection == null)
 			{
 				if (loadedIds.Add(queryResult.Key))
-					return actions.DocumentByKey(queryResult.Key);
+					return actions.DocumentByKey(queryResult.Key, null);
 				return null;
 			}
 
@@ -398,7 +400,7 @@ namespace Raven.Database
 			var result = PatchResult.Patched;
 			TransactionalStorage.Batch(actions =>
 			{
-				var doc = actions.DocumentByKey(docId);
+				var doc = actions.DocumentByKey(docId, transactionInformation);
 				if (doc == null)
 				{
 					result = PatchResult.DocumentDoesNotExists;

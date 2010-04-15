@@ -42,7 +42,7 @@ namespace Raven.Client.Client
 
 		public JsonDocument Get(string key)
 		{
-			return database.Get(key);
+			return database.Get(key,GetTransactionInformation());
 		}
 
 		public string Put(string key, Guid? etag, JObject document, JObject metadata)

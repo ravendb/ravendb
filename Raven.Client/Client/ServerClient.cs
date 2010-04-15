@@ -25,7 +25,9 @@ namespace Raven.Client.Client
 		{
 			EnsureIsNotNullOrEmpty(key, "key");
 
-			var request = new HttpJsonRequest(url + "/docs/" + key, "GET");
+		    var metadata = new JObject();
+		    AddTransactionInformation(metadata);
+			var request = new HttpJsonRequest(url + "/docs/" + key, "GET", metadata);
 			return new JsonDocument
 			{
 				Data = Encoding.UTF8.GetBytes(request.ReadResponseString()),
