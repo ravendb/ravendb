@@ -259,6 +259,10 @@ namespace Raven.Database.Storage
 			    EnsureNotLockedByTransaction(key, null);
 			    EnsureDocumentEtagMatch(key, etag, "PUT");
 			}
+			else
+			{
+                EnsureDocumentIsNotCreatedInAnotherTransaction(key, Guid.NewGuid());
+			}
 		    Guid newEtag;
 			DocumentDatabase.UuidCreateSequential(out newEtag);
 
@@ -502,15 +506,16 @@ namespace Raven.Database.Storage
 
 	        do
 	        {
-	            perDocumentModified(new DocumentInTransactionData
+	            var documentInTransactionData = new DocumentInTransactionData
 	            {
-                    Data = Encoding.UTF8.GetString(Api.RetrieveColumn(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["data"])),
-                    Delete = Api.RetrieveColumnAsBoolean(session,documentsModifiedByTransactions,documentsModifiedByTransactionsColumns["delete_document"]).Value,
-                    Etag = new Guid(Api.RetrieveColumn(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["etag"])),
-                    Key = Api.RetrieveColumnAsString(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["key"],Encoding.Unicode),
-                    Metadata = Api.RetrieveColumnAsString(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["metadata"], Encoding.Unicode),
-	            });
-	            Api.JetDelete(session, documentsModifiedByTransactions);
+	                Data = Encoding.UTF8.GetString(Api.RetrieveColumn(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["data"])),
+	                Delete = Api.RetrieveColumnAsBoolean(session,documentsModifiedByTransactions,documentsModifiedByTransactionsColumns["delete_document"]).Value,
+	                Etag = new Guid(Api.RetrieveColumn(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["etag"])),
+	                Key = Api.RetrieveColumnAsString(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["key"],Encoding.Unicode),
+	                Metadata = Api.RetrieveColumnAsString(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["metadata"], Encoding.Unicode),
+	            };
+                Api.JetDelete(session, documentsModifiedByTransactions);
+                perDocumentModified(documentInTransactionData);
 	        } while (Api.TryMoveNext(session, documentsModifiedByTransactions));
 	    }
 
