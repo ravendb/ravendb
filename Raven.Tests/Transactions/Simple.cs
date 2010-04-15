@@ -49,7 +49,7 @@ namespace Raven.Tests.Transactions
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
             db.Put("ayende", null, JObject.Parse("{ayende:'rahien'}"), new JObject(), transactionInformation);
 
-            Assert.Null(db.Get("ayende", transactionInformation));
+            Assert.NotNull(db.Get("ayende", transactionInformation));
         }
 
         [Fact]
