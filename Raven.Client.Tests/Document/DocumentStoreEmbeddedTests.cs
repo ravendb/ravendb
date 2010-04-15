@@ -48,7 +48,8 @@ namespace Raven.Client.Tests.Document
 
                     using (new TransactionScope(TransactionScopeOption.Suppress))
                     {
-                        Assert.Null(session.Load<Company>(company.Id));
+                        using (var session2 = documentStore.OpenSession())
+                            Assert.Null(session2.Load<Company>(company.Id));
 
                         tx.Complete();
                     }
@@ -74,12 +75,14 @@ namespace Raven.Client.Tests.Document
 
                     using (new TransactionScope(TransactionScopeOption.Suppress))
                     {
-                        Assert.NotNull(session.Load<Company>(company.Id));
+                        using(var session2 = documentStore.OpenSession())
+                            Assert.NotNull(session2.Load<Company>(company.Id));
 
                         tx.Complete();
                     }
                 }
-                Assert.Null(session.Load<Company>(company.Id));
+                using (var session2 = documentStore.OpenSession())
+                    Assert.Null(session2.Load<Company>(company.Id));
             }
         }
 
@@ -114,7 +117,8 @@ namespace Raven.Client.Tests.Document
                     session.SaveChanges();
 
                 }
-                Assert.Null(session.Load<Company>(company.Id));
+                using (var session2 = documentStore.OpenSession())
+                    Assert.Null(session2.Load<Company>(company.Id));
             }
         }
 
@@ -187,6 +191,25 @@ namespace Raven.Client.Tests.Document
 				Assert.Equal("New Name", session2.Load<Company>(companyId).Name);
 			}
 		}
+
+        [Fact]
+        public void Session_implements_unit_of_work()
+        {
+            using (var documentStore = NewDocumentStore())
+            {
+                var session1 = documentStore.OpenSession();
+                var company = new Company { Name = "Company 1" };
+                session1.Store(company);
+                session1.SaveChanges();
+
+                Assert.Same(company, session1.Load<Company>(company.Id));
+
+                var companyId = company.Id;
+
+                var session2 = documentStore.OpenSession();
+                Assert.Same(session2.Load<Company>(companyId), session2.Load<Company>(companyId));
+            }
+        }
 
 		[Fact]
 		public void Should_retrieve_all_entities()
