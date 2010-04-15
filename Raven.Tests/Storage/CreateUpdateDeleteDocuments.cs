@@ -54,7 +54,7 @@ namespace Raven.Tests.Storage
 		public void Can_create_and_read_document()
 		{
             db.Put("1", Guid.Empty, JObject.Parse("{  first_name: 'ayende', last_name: 'rahien'}"), new JObject(), null);
-			var document = db.Get("1").ToJson();
+            var document = db.Get("1", null).ToJson();
 
 			Assert.Equal("ayende", document.Value<string>("first_name"));
 			Assert.Equal("rahien", document.Value<string>("last_name"));
@@ -65,8 +65,8 @@ namespace Raven.Tests.Storage
 		{
             db.Put("1", Guid.Empty, JObject.Parse("{ first_name: 'ayende', last_name: 'rahien'}"), new JObject(), null);
 
-            db.Put("1", db.Get("1").Etag, JObject.Parse("{ first_name: 'ayende2', last_name: 'rahien2'}"), new JObject(), null);
-			var document = db.Get("1").ToJson();
+            db.Put("1", db.Get("1", null).Etag, JObject.Parse("{ first_name: 'ayende2', last_name: 'rahien2'}"), new JObject(), null);
+            var document = db.Get("1", null).ToJson();
 
 			Assert.Equal("ayende2", document.Value<string>("first_name"));
 			Assert.Equal("rahien2", document.Value<string>("last_name"));
@@ -76,10 +76,10 @@ namespace Raven.Tests.Storage
 		public void Can_delete_document()
 		{
             db.Put("1", Guid.Empty, JObject.Parse("{ first_name: 'ayende', last_name: 'rahien'}"), new JObject(), null);
-			var document = db.Get("1");
+            var document = db.Get("1", null);
             db.Delete("1", document.Etag, null);
 
-			Assert.Null(db.Get("1"));
+            Assert.Null(db.Get("1", null));
 		}
 
 		[Fact]
@@ -87,7 +87,7 @@ namespace Raven.Tests.Storage
 		{
             db.Put("1", Guid.Empty, JObject.Parse("{ first_name: 'ayende', last_name: 'rahien'}"), new JObject(), null);
             db.Put("21", Guid.Empty, JObject.Parse("{ first_name: 'ayende2', last_name: 'rahien2'}"), new JObject(), null);
-			var document = db.Get("21").ToJson();
+            var document = db.Get("21", null).ToJson();
 
 			Assert.Equal("ayende2", document.Value<string>("first_name"));
 			Assert.Equal("rahien2", document.Value<string>("last_name"));
@@ -96,7 +96,7 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void Querying_by_non_existant_document_returns_null()
 		{
-			Assert.Null(db.Get("1"));
+            Assert.Null(db.Get("1", null));
 		}
 	}
 }

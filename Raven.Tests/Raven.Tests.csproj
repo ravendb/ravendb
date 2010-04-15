@@ -100,6 +100,11 @@
     </Compile>
     <Compile Include="Indexes\DocumentsToIndex.cs" />
     <Compile Include="Storage\WithDebugging.cs" />
+    <Compile Include="Transactions\Deletes.cs" />
+    <Compile Include="Transactions\Etags.cs" />
+    <Compile Include="Transactions\MuiltipleDocuments.cs" />
+    <Compile Include="Transactions\Simple.cs" />
+    <Compile Include="Transactions\WriteConflicts.cs" />
     <Compile Include="Views\MapReduce.cs" />
     <Compile Include="Views\ViewCompilation.cs" />
     <Compile Include="Views\ViewStorage.cs" />

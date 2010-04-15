@@ -20,7 +20,7 @@ namespace Raven.Database.Tasks
 		{
 			context.TransactionaStorage.Batch(actions =>
 			{
-				var doc = actions.DocumentByKey(Key);
+				var doc = actions.DocumentByKey(Key, null);
 				if (doc == null)
 				{
 					actions.Commit();

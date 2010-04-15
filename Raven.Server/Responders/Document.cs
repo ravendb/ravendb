@@ -24,7 +24,7 @@ namespace Raven.Server.Responders
 			{
 				case "GET":
 					context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
-					var doc = Database.Get(docId);
+					var doc = Database.Get(docId,GetRequestTransaction(context));
 					if (doc == null)
 					{
 						context.SetStatusToNotFound();
