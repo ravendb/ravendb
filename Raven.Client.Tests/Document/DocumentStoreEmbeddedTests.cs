@@ -3,6 +3,7 @@ using System.IO;
 using System.Reflection;
 using System.Transactions;
 using Raven.Client.Document;
+using Raven.Database.Exceptions;
 using Xunit;
 using System.Linq;
 
@@ -166,11 +167,36 @@ namespace Raven.Client.Tests.Document
 				var id = company.Id;
 				company.Name = "Company 2";
 				session.SaveChanges();
-				var companyFound = session.Load<Company>(company.Id);
-				Assert.Equal("Company 2", companyFound.Name);
-				Assert.Equal(id, company.Id);
+                using (var session2 = documentStore.OpenSession())
+                {
+                    var companyFound = session2.Load<Company>(company.Id);
+                    Assert.Equal("Company 2", companyFound.Name);
+                    Assert.Equal(id, company.Id);
+                }
 			}
 		}
+
+        [Fact]
+        public void Optimistic_concurrency()
+        {
+            using (var documentStore = NewDocumentStore())
+            {
+                var session = documentStore.OpenSession();
+                var company = new Company { Name = "Company 1" };
+                session.Store(company);
+                session.SaveChanges();
+
+                using(var session2 = documentStore.OpenSession())
+                {
+                    var company2 = session2.Load<Company>(company.Id);
+                    company2.Name = "foo";
+                    session2.SaveChanges();
+                }
+
+                company.Name = "Company 2";
+                Assert.Throws<ConcurrencyException>(() => session.SaveChanges());
+            }
+        }
 
 		[Fact]
 		public void Should_update_retrieved_entity()
