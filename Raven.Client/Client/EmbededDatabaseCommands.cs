@@ -45,7 +45,7 @@ namespace Raven.Client.Client
 			return database.Get(key,GetTransactionInformation());
 		}
 
-		public string Put(string key, Guid? etag, JObject document, JObject metadata)
+		public PutResult Put(string key, Guid? etag, JObject document, JObject metadata)
 		{
             return database.Put(key, etag, document, metadata, GetTransactionInformation());
 		}

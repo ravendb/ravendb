@@ -1,12 +1,14 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Transactions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Data;
+using Raven.Database.Exceptions;
 
 namespace Raven.Client.Client
 {
@@ -32,6 +34,8 @@ namespace Raven.Client.Client
 			{
 				Data = Encoding.UTF8.GetBytes(request.ReadResponseString()),
 				Key = key,
+                Etag = new Guid(request.ResponseHeaders["ETag"]),
+                Metadata = request.ResponseHeaders.FilterHeaders()
 			};
 		}
 
@@ -41,16 +45,31 @@ namespace Raven.Client.Client
 				throw new ArgumentException("Key cannot be null or empty", argName);
 		}
 
-		public string Put(string key, Guid? etag, JObject document, JObject metadata)
+		public PutResult Put(string key, Guid? etag, JObject document, JObject metadata)
 		{
+            if (metadata == null)
+                metadata = new JObject();
 			var method = String.IsNullOrEmpty(key) ? "POST" : "PUT";
             AddTransactionInformation(metadata);
+            if (etag != null)
+                metadata["ETag"] = new JValue(etag.Value.ToString());
 		    var request = new HttpJsonRequest(url + "/docs/" + key, method, metadata);
 			request.Write(document.ToString());
 
-			var obj = new {id = ""};
-			obj = JsonConvert.DeserializeAnonymousType(request.ReadResponseString(), obj);
-			return obj.id;
+		    string readResponseString;
+		    try
+		    {
+		        readResponseString = request.ReadResponseString();
+		    }
+		    catch (WebException e)
+		    {
+                var httpWebResponse = e.Response as HttpWebResponse;
+                if (httpWebResponse == null ||
+                    httpWebResponse.StatusCode != HttpStatusCode.Conflict)
+                    throw;
+                throw ThrowConcurrencyException(e);
+		    }
+		    return JsonConvert.DeserializeObject<PutResult>(readResponseString);
 		}
 
 	    private static void AddTransactionInformation(JObject metadata)
@@ -71,10 +90,41 @@ namespace Raven.Client.Client
                 metadata.Add("ETag", new JValue(etag.Value.ToString()));
 	        AddTransactionInformation(metadata);
 	        var httpJsonRequest = new HttpJsonRequest(url + "/docs/" + key, "DELETE", metadata);
-	        httpJsonRequest.ReadResponseString();
+	        try
+	        {
+	            httpJsonRequest.ReadResponseString();
+	        }
+	        catch (WebException e)
+	        {
+	            var httpWebResponse = e.Response as HttpWebResponse;
+                if (httpWebResponse == null ||
+                    httpWebResponse.StatusCode != HttpStatusCode.Conflict)
+                    throw;
+                 throw ThrowConcurrencyException(e);
+	        }
 		}
 
-		public string PutIndex(string name, string indexDef)
+	    private static Exception ThrowConcurrencyException(WebException e)
+	    {
+	        using (var sr = new StreamReader(e.Response.GetResponseStream()))
+	        {
+	            var text = sr.ReadToEnd();
+	            var errorResults = JsonConvert.DeserializeAnonymousType(text, new
+	            {
+	                url = (string) null,
+	                actualETag = Guid.Empty,
+	                expectedETag = Guid.Empty,
+	                error = (string) null
+	            });
+	            return new ConcurrencyException(errorResults.error)
+	            {
+	                ActualETag = errorResults.actualETag,
+	                ExpectedETag = errorResults.expectedETag
+	            };
+	        }
+	    }
+
+	    public string PutIndex(string name, string indexDef)
 		{
 			EnsureIsNotNullOrEmpty(name, "name");
 			var request = new HttpJsonRequest(url + "/indexes/" + name, "PUT");

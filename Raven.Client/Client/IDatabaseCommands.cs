@@ -8,7 +8,7 @@ namespace Raven.Client.Client
     public interface IDatabaseCommands : IDisposable
 	{
 		JsonDocument Get(string key);
-		string Put(string key, Guid? etag, JObject document, JObject metadata);
+		PutResult Put(string key, Guid? etag, JObject document, JObject metadata);
 		void Delete(string key, Guid? etag);
 		string PutIndex(string name, string indexDef);
 		QueryResult Query(string index, string query, int start, int pageSize);
