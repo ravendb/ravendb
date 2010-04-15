@@ -133,7 +133,7 @@ namespace Raven.Database
 			return document;
 		}
 
-		public string Put(string key, Guid? etag, JObject document, JObject metadata, TransactionInformation transactionInformation)
+		public PutResult Put(string key, Guid? etag, JObject document, JObject metadata, TransactionInformation transactionInformation)
 		{
 			if (string.IsNullOrEmpty(key))
 			{
@@ -144,23 +144,26 @@ namespace Raven.Database
 			RemoveReservedProperties(document);
 			RemoveReservedProperties(metadata);
 			metadata.Add("@id", new JValue(key));
-
 			TransactionalStorage.Batch(actions =>
 			{
                 if (transactionInformation == null)
                 {
-                    actions.AddDocument(key, document.ToString(), etag, metadata.ToString());
+                    etag = actions.AddDocument(key, document.ToString(), etag, metadata.ToString());
                     actions.AddTask(new IndexDocumentTask {Index = "*", Key = key});
                 }
                 else
                 {
-                    actions.AddDocumentInTransaction(transactionInformation, key, document.ToString(), etag,
+                    etag = actions.AddDocumentInTransaction(transactionInformation, key, document.ToString(), etag,
                                                      metadata.ToString());
                 }
 			    actions.Commit();
 			});
 			workContext.NotifyAboutWork();
-			return key;
+		    return new PutResult
+		    {
+		        Key = key,
+		        ETag = (Guid)etag
+		    };
 		}
 
 		private static void RemoveReservedProperties(JObject document)

@@ -255,7 +255,7 @@ namespace Raven.Database.Storage
 			hasMoreWork.Value = false;
 		}
 
-		public void AddDocument(string key, string data, Guid? etag, string metadata)
+		public Guid AddDocument(string key, string data, Guid? etag, string metadata)
 		{
 			Api.JetSetCurrentIndex(session, documents, "by_key");
 			Api.MakeKey(session, documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -283,6 +283,8 @@ namespace Raven.Database.Storage
 			}
 			logger.DebugFormat("Inserted a new document with key '{0}', doc length: {1}, update: {2}, ",
 			                   key, data.Length, isUpdate);
+
+		    return newEtag;
 		}
 
 	    private void EnsureDocumentEtagMatch(string key, Guid? etag, string method)
@@ -325,7 +327,7 @@ namespace Raven.Database.Storage
             }
         }
 
-	    public void AddDocumentInTransaction(TransactionInformation transactionInformation, string key, string data, Guid? etag, string metadata)
+	    public Guid AddDocumentInTransaction(TransactionInformation transactionInformation, string key, string data, Guid? etag, string metadata)
         {
             Api.JetSetCurrentIndex(session, documents, "by_key");
             Api.MakeKey(session, documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -365,6 +367,8 @@ namespace Raven.Database.Storage
             }
 	        logger.DebugFormat("Inserted a new document with key '{0}', doc length: {1}, update: {2}, in transaction: {3}",
 	                           key, data.Length, isUpdate, transactionInformation.Id);
+
+	        return newEtag;
         }
 
 	    private void EnsureDocumentIsNotCreatedInAnotherTransaction(string key, Guid txId)
