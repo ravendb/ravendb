@@ -121,9 +121,11 @@ namespace Raven.Client.Document
                 entitiesByKey.Remove(key);
                 key = null;
             }
-            key = database.Put(key, documentMetadata.ETag, json, documentMetadata.Metadata);
-		    entitiesByKey[key] = entity;
-			identityProperty.SetValue(entity, key, null);
+            var result = database.Put(key, documentMetadata.ETag, json, documentMetadata.Metadata);
+		    entitiesByKey[result.Key] = entity;
+		    documentMetadata.ETag = result.ETag;
+		    documentMetadata.Key = result.Key;
+			identityProperty.SetValue(entity, result.Key, null);
 
 			var stored = Stored;
 			if (stored != null)
