@@ -1,6 +1,7 @@
 using System;
 using System.Net;
 using Raven.Database;
+using Raven.Database.Data;
 
 namespace Raven.Server.Responders
 {
@@ -69,8 +70,8 @@ namespace Raven.Server.Responders
 		{
 			var json = context.ReadJson();
 			context.SetStatusToCreated("/docs/" + docId);
-			var id = Database.Put(docId, context.GetEtag(), json, context.Request.Headers.FilterHeaders(), GetRequestTransaction(context));
-			context.WriteJson(new {id});
+			var putResult = Database.Put(docId, context.GetEtag(), json, context.Request.Headers.FilterHeaders(), GetRequestTransaction(context));
+            context.WriteJson(putResult);
 		}
 	}
 }

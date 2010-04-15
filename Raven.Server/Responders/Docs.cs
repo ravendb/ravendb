@@ -1,5 +1,6 @@
 using System;
 using System.Net;
+using Raven.Database.Data;
 
 namespace Raven.Server.Responders
 {
@@ -28,7 +29,7 @@ namespace Raven.Server.Responders
 					                      context.Request.Headers.FilterHeaders(),
                                           GetRequestTransaction(context));
 					context.SetStatusToCreated("/docs/" + id);
-					context.WriteJson(new {id});
+					context.WriteJson(id);
 					break;
 			}
 		}
