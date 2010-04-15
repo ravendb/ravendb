@@ -67,6 +67,8 @@ namespace Raven.Client.Client
 		{
 			EnsureIsNotNullOrEmpty(key, "key");
 	        var metadata = new JObject();
+            if (etag != null)
+                metadata.Add("ETag", new JValue(etag.Value.ToString()));
 	        AddTransactionInformation(metadata);
 	        var httpJsonRequest = new HttpJsonRequest(url + "/docs/" + key, "DELETE", metadata);
 	        httpJsonRequest.ReadResponseString();

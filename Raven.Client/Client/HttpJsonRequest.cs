@@ -59,10 +59,14 @@ namespace Raven.Client.Client
 				if(prop.Value == null)
 					continue;
 					
-				if (prop.Value.Type == JsonTokenType.Object || prop.Value.Type == JsonTokenType.Array)
+				if (prop.Value.Type == JsonTokenType.Object || 
+                    prop.Value.Type == JsonTokenType.Array)
 					continue;
 
-				webRequest.Headers[prop.Name] = prop.Value.Value<object>().ToString();
+			    var headerName = prop.Name;
+                if (headerName == "ETag")
+                    headerName = "If-Match";
+			    webRequest.Headers[headerName] = prop.Value.Value<object>().ToString();
 			}
 		}
 
