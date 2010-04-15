@@ -31,7 +31,7 @@ namespace Raven.Client.Document
 		{
 			this.documentStore = documentStore;
 			this.database = database;
-		    UseOptimisticConcurrency = true;
+		    UseOptimisticConcurrency = false;
 		}
 
 		public T Load<T>(string id)

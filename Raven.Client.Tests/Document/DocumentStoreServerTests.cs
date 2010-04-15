@@ -80,6 +80,7 @@ namespace Raven.Client.Tests.Document
                 documentStore.Initialise();
 
                 var session = documentStore.OpenSession();
+                session.UseOptimisticConcurrency = true;
                 var company = new Company { Name = "Company 1" };
                 session.Store(company);
                 session.SaveChanges();
