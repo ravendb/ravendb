@@ -155,28 +155,14 @@ namespace Raven.Client.Client
 		public void DeleteIndex(string name)
 		{
 			EnsureIsNotNullOrEmpty(name, "name");
-			throw new NotImplementedException();
+            var request = new HttpJsonRequest(url + "/indexes/" + name, "DELETE");
+		    request.ReadResponseString();
 		}
 
 	    public JsonDocument[] Get(string[] ids)
 	    {
 	        throw new NotImplementedException();
 	    }
-
-	    public JArray GetDocuments(int start, int pageSize)
-		{
-			throw new NotImplementedException();
-		}
-
-		public JArray GetIndexNames(int start, int pageSize)
-		{
-			throw new NotImplementedException();
-		}
-
-		public JArray GetIndexes(int start, int pageSize)
-		{
-			throw new NotImplementedException();
-		}
 
 	    public void Commit(Guid txId)
 	    {

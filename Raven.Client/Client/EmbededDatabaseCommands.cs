@@ -96,21 +96,6 @@ namespace Raven.Client.Client
                 .ToArray();
 	    }
 
-	    public JArray GetDocuments(int start, int pageSize)
-		{
-			return database.GetDocuments(start, pageSize);
-		}
-
-		public JArray GetIndexNames(int start, int pageSize)
-		{
-			return database.GetIndexNames(start, pageSize);
-		}
-
-		public JArray GetIndexes(int start, int pageSize)
-		{
-			return database.GetIndexes(start, pageSize);
-		}
-
 	    public void Commit(Guid txId)
 	    {
 	        database.Commit(txId);
