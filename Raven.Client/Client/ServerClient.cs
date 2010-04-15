@@ -161,7 +161,21 @@ namespace Raven.Client.Client
 
 	    public JsonDocument[] Get(string[] ids)
 	    {
-	        throw new NotImplementedException();
+            var request = new HttpJsonRequest(url + "/queries/", "DELETE");
+            request.Write(new JArray(ids).ToString(Formatting.None));
+            var responses = JArray.Parse(request.ReadResponseString());
+
+	        return (from doc in responses.Cast<JObject>()
+	                let metadata = (JObject) doc["@metadata"]
+	                let _ = doc.Remove("@metadata")
+	                select new JsonDocument
+	                {
+	                    Key = metadata["@id"].Value<string>(),
+	                    Etag = new Guid(metadata["@etag"].Value<string>()),
+	                    Metadata = metadata,
+	                    Data = Encoding.UTF8.GetBytes(doc.ToString(Formatting.None)),
+	                })
+	            .ToArray();
 	    }
 
 	    public void Commit(Guid txId)
