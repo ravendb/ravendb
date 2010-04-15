@@ -13,7 +13,7 @@ using Raven.Database;
 
 namespace Raven.Client.Document
 {
-	public class DocumentSession : IDocumentSessionImpl
+	public class DocumentSession : IDocumentSession
 	{
 	    private const string TemporaryIdPrefix = "Temporary Id: ";
 	    private readonly IDatabaseCommands database;
@@ -58,17 +58,28 @@ namespace Raven.Client.Document
 			if (documentFound == null)
 				return default(T);
 
-			var jsonString = Encoding.UTF8.GetString(documentFound.Data);
-			var entity = ConvertToEntity<T>(id, jsonString);
-			entitiesAndMetadata.Add(entity, new DocumentMetadata
-			{
-                Metadata = documentFound.Metadata,
-                ETag = documentFound.Etag,
-                Key = documentFound.Key
-			});
-		    entitiesByKey[id] = entity;
-			return (T) entity;
+			return TrackEntity<T>(documentFound);
 		}
+
+	    private T TrackEntity<T>(JsonDocument documentFound)
+	    {
+	        var jsonString = Encoding.UTF8.GetString(documentFound.Data);
+	        var entity = ConvertToEntity<T>(documentFound.Key, jsonString);
+	        entitiesAndMetadata.Add(entity, new DocumentMetadata
+	        {
+	            Metadata = documentFound.Metadata,
+	            ETag = documentFound.Etag,
+	            Key = documentFound.Key
+	        });
+	        entitiesByKey[documentFound.Key] = entity;
+	        return (T) entity;
+	    }
+
+	    public T[] Load<T>(params string[] ids)
+	    {
+	        return documentStore.DatabaseCommands.Get(ids)
+                .Select(TrackEntity<T>).ToArray();
+	    }
 
 	    public void Delete<T>(T entity)
 	    {

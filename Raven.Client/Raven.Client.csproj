@@ -85,7 +85,6 @@
     <Compile Include="Document\ShardedDocumentQuery.cs" />
     <Compile Include="IDocumentQuery.cs" />
     <Compile Include="IDocumentSession.cs" />
-    <Compile Include="IDocumentSessionImpl.cs" />
     <Compile Include="IDocumentStore.cs" />
     <Compile Include="RavenExtensions.cs" />
     <Compile Include="Shard\ShardStrategy\ShardAccess\IShardAccessStrategy.cs" />

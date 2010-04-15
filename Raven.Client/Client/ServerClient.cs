@@ -158,7 +158,12 @@ namespace Raven.Client.Client
 			throw new NotImplementedException();
 		}
 
-		public JArray GetDocuments(int start, int pageSize)
+	    public JsonDocument[] Get(string[] ids)
+	    {
+	        throw new NotImplementedException();
+	    }
+
+	    public JArray GetDocuments(int start, int pageSize)
 		{
 			throw new NotImplementedException();
 		}
@@ -175,12 +180,14 @@ namespace Raven.Client.Client
 
 	    public void Commit(Guid txId)
 	    {
-	        throw new NotImplementedException();
+	        var httpJsonRequest = new HttpJsonRequest("/transaction/commit?tx=" + txId, "POST");
+	        httpJsonRequest.ReadResponseString();
 	    }
 
 	    public void Rollback(Guid txId)
 	    {
-	        throw new NotImplementedException();
+            var httpJsonRequest = new HttpJsonRequest("/transaction/rollback?tx=" + txId, "POST");
+            httpJsonRequest.ReadResponseString();
 	    }
 
 	    #endregion

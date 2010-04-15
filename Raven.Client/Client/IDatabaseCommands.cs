@@ -13,6 +13,7 @@ namespace Raven.Client.Client
 		string PutIndex(string name, string indexDef);
 		QueryResult Query(string index, string query, int start, int pageSize);
 		void DeleteIndex(string name);
+        JsonDocument[] Get(string[] ids);
 		JArray GetDocuments(int start, int pageSize);
 		JArray GetIndexNames(int start, int pageSize);
 		JArray GetIndexes(int start, int pageSize);

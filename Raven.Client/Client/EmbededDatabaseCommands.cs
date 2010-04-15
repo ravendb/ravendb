@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Transactions;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
@@ -86,7 +88,15 @@ namespace Raven.Client.Client
 			database.DeleteIndex(name);
 		}
 
-		public JArray GetDocuments(int start, int pageSize)
+        public JsonDocument[] Get(string[] ids)
+	    {
+            return ids
+                .Select(id => database.Get(id, GetTransactionInformation()))
+                .Where(document => document != null)
+                .ToArray();
+	    }
+
+	    public JArray GetDocuments(int start, int pageSize)
 		{
 			return database.GetDocuments(start, pageSize);
 		}

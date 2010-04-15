@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using Raven.Client.Document;
@@ -83,6 +84,11 @@ namespace Raven.Client.Shard
 				.FirstOrDefault();
 		}
 
+	    public T[] Load<T>(params string[] ids)
+	    {
+	        return shardStrategy.ShardAccessStrategy.Apply(shardSessions, sessions => sessions.Load<T>(ids)).ToArray();
+	    }
+
 	    public void Delete<T>(T entity)
 	    {
             if(ReferenceEquals(entity,null))
@@ -164,6 +170,23 @@ namespace Raven.Client.Shard
         }
 
         #endregion
- 
-    }
+
+	    public void Commit(Guid txId)
+	    {
+	        shardStrategy.ShardAccessStrategy.Apply(shardSessions, session =>
+	        {
+                session.Commit(txId);
+	            return new List<int>();
+	        });
+	    }
+
+	    public void Rollback(Guid txId)
+	    {
+	        shardStrategy.ShardAccessStrategy.Apply(shardSessions, session =>
+	        {
+	            session.Rollback(txId);
+                return new List<int>();
+	        });
+	    }
+	}
 }
