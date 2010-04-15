@@ -40,7 +40,7 @@ namespace Raven.Client.Document
 		{
 			while (true) 
 			{
-				var result = databaseCommands.Query(indexName, query, start, pageSize);
+				var result = databaseCommands.Query(indexName, query, start, pageSize, projectionFields);
 				if(waitForNonStaleResults && result.IsStale)
 				{
 					Thread.Sleep(100);

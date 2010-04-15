@@ -200,6 +200,29 @@ namespace Raven.Client.Tests.Document
         }
 
         [Fact]
+        public void Can_sort_from_index()
+        {
+            using (var documentStore = NewDocumentStore())
+            {
+                var session = documentStore.OpenSession();
+                session.Store(new Company { Name = "Company 1", Phone = 5 });
+                session.Store(new Company { Name = "Company 2", Phone = 3 });
+                session.SaveChanges();
+
+                documentStore.DatabaseCommands.PutIndex("company_by_name",
+                                                        @"{ ""Map"": ""from doc in docs select new { doc.Name, doc.Phone}""} ");
+
+                var companies = session.Query<Company>("company_by_name")
+                    .OrderBy("Phone")
+                    .WaitForNonStaleResults()
+                    .ToArray();
+
+                Assert.Equal("Company 2", companies[0].Name);
+                Assert.Equal("Company 1", companies[1].Name);
+            }
+        }
+
+        [Fact]
         public void Optimistic_concurrency()
         {
             using (var documentStore = NewDocumentStore())

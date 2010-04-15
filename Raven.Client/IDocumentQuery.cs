@@ -5,7 +5,7 @@ using Raven.Database.Data;
 
 namespace Raven.Client
 {
-	public interface IDocumentQuery<T> : IEnumerable<T>
+	public interface IDocumentQuery<out T> : IEnumerable<T>
 	{
 		IDocumentQuery<T> Take(int count);
 		IDocumentQuery<T> Skip(int count);
