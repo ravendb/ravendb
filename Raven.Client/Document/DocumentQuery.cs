@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Linq.Expressions;
+using System.Reflection;
 using System.Threading;
 using Raven.Client.Client;
 using Raven.Database.Data;
+using System.Linq;
 
 namespace Raven.Client.Document
 {
@@ -9,13 +12,31 @@ namespace Raven.Client.Document
 	{
 		private readonly IDatabaseCommands databaseCommands;
 
-		public DocumentQuery(IDatabaseCommands databaseCommands, string indexName)
+	    public DocumentQuery(IDatabaseCommands databaseCommands, string indexName, string[] projectionFields)
 		{
 			this.databaseCommands = databaseCommands;
-			this.indexName = indexName;
+		    this.projectionFields = projectionFields;
+		    this.indexName = indexName;
 		}
 
-		protected override QueryResult GetQueryResult()
+	    public override IDocumentQuery<TProjection> Select<TProjection>(Func<T, TProjection> projectionExpression)
+	    {
+	        return new DocumentQuery<TProjection>(databaseCommands, indexName,
+	                                              projectionExpression
+	                                                  .Method
+	                                                  .ReturnType
+	                                                  .GetProperties(BindingFlags.Instance | BindingFlags.Public)
+	                                                  .Select(x => x.Name).ToArray()
+	            )
+	        {
+	            pageSize = pageSize,
+	            query = query,
+	            start = start,
+	            waitForNonStaleResults = waitForNonStaleResults
+	        };
+	    }
+
+	    protected override QueryResult GetQueryResult()
 		{
 			while (true) 
 			{

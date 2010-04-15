@@ -177,6 +177,29 @@ namespace Raven.Client.Tests.Document
 		}
 
         [Fact]
+        public void Can_project_from_index()
+        {
+            using (var documentStore = NewDocumentStore())
+            {
+                var session = documentStore.OpenSession();
+                var company = new Company { Name = "Company 1", Phone = 5};
+                session.Store(company);
+                session.SaveChanges();
+
+                documentStore.DatabaseCommands.PutIndex("company_by_name",
+                                                        @"{ ""Map"": ""from doc in docs select new { doc.Name, doc.Phone}""} ");
+
+                var q = from doc in session
+                            .Query<Company>("company_by_name")
+                            .WaitForNonStaleResults()
+                        select new {doc.Name, doc.Phone};
+                var single = q.Single();
+                Assert.Equal("Company 1", single.Name);
+                Assert.Equal(5, single.Phone);
+            }
+        }
+
+        [Fact]
         public void Optimistic_concurrency()
         {
             using (var documentStore = NewDocumentStore())

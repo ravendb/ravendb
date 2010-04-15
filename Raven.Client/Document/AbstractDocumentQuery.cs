@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
@@ -16,9 +17,12 @@ namespace Raven.Client.Document
 		protected int start;
 		protected int pageSize = 128;
 		protected bool waitForNonStaleResults;
-		private QueryResult queryResult;
+        protected string[] projectionFields;
+        private QueryResult queryResult;
 
-		public QueryResult QueryResult
+	    public abstract IDocumentQuery<TProjection> Select<TProjection>(Func<T, TProjection> projectionExpression);
+
+	    public QueryResult QueryResult
 		{
 			get { return queryResult ?? (queryResult = GetQueryResult()); }
 		}

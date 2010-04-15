@@ -57,9 +57,6 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Newtonsoft.Json.dll</HintPath>
     </Reference>
-    <Reference Include="Remotion.Data.Linq">
-      <HintPath>..\SharedLibs\Remotion.Data.Linq.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
