@@ -125,6 +125,8 @@
     <Compile Include="Responders\Root.cs" />
     <Compile Include="Responders\Static.cs" />
     <Compile Include="Responders\Statistics.cs" />
+    <Compile Include="Responders\TransactionCommit.cs" />
+    <Compile Include="Responders\TransactionRollback.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="PowerShellProvider\RavenDBProvider.help.xml" />
