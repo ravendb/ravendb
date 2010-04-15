@@ -106,7 +106,13 @@ namespace Raven.Client.Document
 
 		public void Evict<T>(T entity)
 		{
-			entitiesAndMetadata.Remove(entity);
+		    DocumentMetadata value;
+		    if(entitiesAndMetadata.TryGetValue(entity, out value))
+		    {
+		        entitiesAndMetadata.Remove(entity);
+		        entitiesByKey.Remove(value.Key);
+		    }
+		    deletedEntities.Remove(entity);
 		}
 
 		private void StoreEntity(object entity, DocumentMetadata documentMetadata)
