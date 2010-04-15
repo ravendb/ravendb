@@ -199,7 +199,7 @@ namespace Raven.Client.Tests.Document
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Not yet implemented")]
         public void Can_sort_from_index()
         {
             using (var documentStore = NewDocumentStore())
