@@ -195,11 +195,11 @@ namespace Raven.Database
 			workContext.NotifyAboutWork();
 		}
 
-        public void Commit(TransactionInformation transactionInformation)
+        public void Commit(Guid txId)
         {
             TransactionalStorage.Batch(actions =>
             {
-                actions.CompleteTransaction(transactionInformation.Id, doc =>
+                actions.CompleteTransaction(txId, doc =>
                 {
                     // doc.Etag - represent the _modified_ document etag, and we already
                     // checked etags on previous PUT/DELETE, so we don't pass it here
@@ -213,11 +213,11 @@ namespace Raven.Database
             workContext.NotifyAboutWork();
         }
 
-        public void Rollback(TransactionInformation transactionInformation)
+        public void Rollback(Guid txId)
         {
             TransactionalStorage.Batch(actions =>
             {
-                actions.RollbackTransaction(transactionInformation.Id);
+                actions.RollbackTransaction(txId);
                 actions.Commit();
             });
             workContext.NotifyAboutWork();

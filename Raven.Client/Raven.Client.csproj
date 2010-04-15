@@ -81,9 +81,11 @@
     <Compile Include="Client\EmbededDatabaseCommands.cs" />
     <Compile Include="Client\HttpJsonRequest.cs" />
     <Compile Include="Client\IDatabaseCommands.cs" />
+    <Compile Include="Document\RavenClientEnlistment.cs" />
     <Compile Include="Document\ShardedDocumentQuery.cs" />
     <Compile Include="IDocumentQuery.cs" />
     <Compile Include="IDocumentSession.cs" />
+    <Compile Include="IDocumentSessionImpl.cs" />
     <Compile Include="IDocumentStore.cs" />
     <Compile Include="RavenExtensions.cs" />
     <Compile Include="Shard\ShardStrategy\ShardAccess\IShardAccessStrategy.cs" />

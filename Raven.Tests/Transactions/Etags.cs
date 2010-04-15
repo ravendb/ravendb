@@ -29,7 +29,7 @@ namespace Raven.Tests.Transactions
             var doc = db.Get("ayende", null);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
             db.Put("ayende", doc.Etag, JObject.Parse("{ayende:'rahien'}"), new JObject(), transactionInformation);
-            db.Commit(transactionInformation);
+            db.Commit(transactionInformation.Id);
 
 
             Assert.Equal("rahien", db.Get("ayende", null).ToJson()["ayende"].Value<string>());
@@ -57,7 +57,7 @@ namespace Raven.Tests.Transactions
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
             db.Put("ayende", doc.Etag, JObject.Parse("{ayende:'rahien'}"), new JObject(), transactionInformation);
             var docInTx = db.Get("ayende", transactionInformation);
-            db.Commit(transactionInformation);
+            db.Commit(transactionInformation.Id);
             var docAfterTx = db.Get("ayende", null);
 
             Assert.NotEqual(docAfterTx.Etag, docInTx.Etag);

@@ -118,7 +118,17 @@ namespace Raven.Client.Client
 			throw new NotImplementedException();
 		}
 
-		#endregion
+	    public void Commit(Guid txId)
+	    {
+	        throw new NotImplementedException();
+	    }
+
+	    public void Rollback(Guid txId)
+	    {
+	        throw new NotImplementedException();
+	    }
+
+	    #endregion
 
         #region IDisposable Members
 

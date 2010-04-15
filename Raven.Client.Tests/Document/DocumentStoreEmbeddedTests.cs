@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 using System.Reflection;
-using System.Threading;
+using System.Transactions;
 using Raven.Client.Document;
 using Xunit;
 using System.Linq;
@@ -33,6 +33,64 @@ namespace Raven.Client.Tests.Document
 			documentStore.Initialise();
 			return documentStore;
 		}
+
+        [Fact]
+        public void Can_use_transactions_to_isolate_saves()
+        {
+            using (var documentStore = NewDocumentStore())
+            {
+                var company = new Company { Name = "Company Name" };
+                var session = documentStore.OpenSession();
+                using (var tx = new TransactionScope())
+                {
+                    session.Store(company);
+                    session.SaveChanges();
+
+                    using (new TransactionScope(TransactionScopeOption.Suppress))
+                    {
+                        Assert.Null(session.Load<Company>(company.Id));
+
+                        tx.Complete();
+                    }
+                }
+                Assert.NotNull(session.Load<Company>(company.Id));
+            }  
+        }
+
+        [Fact]
+        public void While_in_transaction_can_read_values_private_for_the_Transaction()
+        {
+            using (var documentStore = NewDocumentStore())
+            {
+                var company = new Company { Name = "Company Name" };
+                var session = documentStore.OpenSession();
+                using (var tx = new TransactionScope())
+                {
+                    session.Store(company);
+                    session.SaveChanges();
+
+                    Assert.NotNull(session.Load<Company>(company.Id));
+                }
+            }
+        }
+
+
+        [Fact]
+        public void After_tx_rollback_value_will_not_be_in_the_database()
+        {
+            using (var documentStore = NewDocumentStore())
+            {
+                var company = new Company { Name = "Company Name" };
+                var session = documentStore.OpenSession();
+                using (var tx = new TransactionScope())
+                {
+                    session.Store(company);
+                    session.SaveChanges();
+
+                }
+                Assert.Null(session.Load<Company>(company.Id));
+            }
+        }
 
 		[Fact]
 		public void Should_Load_entity_back_with_document_Id_mapped_to_Id()

@@ -3,6 +3,7 @@ using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Text;
+using System.Transactions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Client;
@@ -11,11 +12,12 @@ using Raven.Database;
 
 namespace Raven.Client.Document
 {
-	public class DocumentSession : IDocumentSession
+	public class DocumentSession : IDocumentSessionImpl
 	{
 		private readonly IDatabaseCommands database;
 		private readonly DocumentStore documentStore;
 		private readonly Dictionary<object, JObject> entitiesAndMetadata = new Dictionary<object, JObject>();
+	    private RavenClientEnlistment enlistment;
 
 		public event Action<object> Stored;
         public string StoreIdentifier { get { return documentStore.Identifier; } }
@@ -102,7 +104,12 @@ namespace Raven.Client.Document
 
 		public void SaveChanges()
 		{
-			foreach (var entity in entitiesAndMetadata)
+            if(enlistment == null && Transaction.Current != null)
+            {
+                enlistment = new RavenClientEnlistment(this, Transaction.Current.TransactionInformation.DistributedIdentifier);
+                Transaction.Current.EnlistPromotableSinglePhase(enlistment);
+            }
+		    foreach (var entity in entitiesAndMetadata)
 			{
 				//TODO: Switch to more the batch version when it becomes available
 				StoreEntity(entity);
@@ -144,5 +151,16 @@ namespace Raven.Client.Document
 
         #endregion
 
-    }
+	    public void Commit(Guid txId)
+	    {
+	        documentStore.DatabaseCommands.Commit(txId);
+	        enlistment = null;
+	    }
+
+	    public void Rollback(Guid txId)
+	    {
+	        documentStore.DatabaseCommands.Rollback(txId);
+            enlistment = null;
+	    }
+	}
 }

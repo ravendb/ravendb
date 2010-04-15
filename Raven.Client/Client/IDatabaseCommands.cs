@@ -16,5 +16,8 @@ namespace Raven.Client.Client
 		JArray GetDocuments(int start, int pageSize);
 		JArray GetIndexNames(int start, int pageSize);
 		JArray GetIndexes(int start, int pageSize);
+
+        void Commit(Guid txId);
+        void Rollback(Guid txId);
 	}
 }

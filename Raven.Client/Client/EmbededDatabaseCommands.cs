@@ -101,7 +101,17 @@ namespace Raven.Client.Client
 			return database.GetIndexes(start, pageSize);
 		}
 
-		#endregion
+	    public void Commit(Guid txId)
+	    {
+	        database.Commit(txId);
+	    }
+
+	    public void Rollback(Guid txId)
+	    {
+	        database.Rollback(txId);
+	    }
+
+	    #endregion
 
 		public void Dispose()
 		{

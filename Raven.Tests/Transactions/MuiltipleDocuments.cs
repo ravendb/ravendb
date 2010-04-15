@@ -28,7 +28,7 @@ namespace Raven.Tests.Transactions
             db.Put("ayende1", null, JObject.Parse("{ayende:'rahien'}"), new JObject(), transactionInformation);
             db.Put("ayende2", null, JObject.Parse("{ayende:'rahien'}"), new JObject(), transactionInformation);
 
-            db.Commit(transactionInformation);
+            db.Commit(transactionInformation.Id);
 
             Assert.NotNull(db.Get("ayende1", null));
             Assert.NotNull(db.Get("ayende2", null));
@@ -44,7 +44,7 @@ namespace Raven.Tests.Transactions
             db.Put("ayende2", null, JObject.Parse("{ayende:'rahien'}"), new JObject(), transactionInformation);
             Assert.Null(db.Get("ayende1", null));
             Assert.Null(db.Get("ayende2", null));
-            db.Commit(transactionInformation);
+            db.Commit(transactionInformation.Id);
 
             Assert.NotNull(db.Get("ayende1", null));
             Assert.NotNull(db.Get("ayende2", null));

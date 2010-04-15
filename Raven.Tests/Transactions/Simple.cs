@@ -28,7 +28,7 @@ namespace Raven.Tests.Transactions
             var transactionInformation = new TransactionInformation{Id = Guid.NewGuid(),Timeout = TimeSpan.FromMinutes(1)};
             db.Put("ayende", null, JObject.Parse("{ayende:'rahien'}"), new JObject(), transactionInformation);
 
-            db.Commit(transactionInformation);
+            db.Commit(transactionInformation.Id);
 
             Assert.NotNull(db.Get("ayende", null));
         }
@@ -59,7 +59,7 @@ namespace Raven.Tests.Transactions
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
             db.Put("ayende", null, JObject.Parse("{ayende:'rahien'}"), new JObject(), transactionInformation);
 
-            db.Commit(transactionInformation);
+            db.Commit(transactionInformation.Id);
 
             Assert.NotNull(db.Get("ayende", null));
             Assert.Equal("rahien", db.Get("ayende", null).ToJson()["ayende"].Value<string>());
@@ -100,7 +100,7 @@ namespace Raven.Tests.Transactions
 
             Assert.Equal("oren", db.Get("ayende", null).ToJson()["ayende"].Value<string>());
             Assert.Equal("rahien3", db.Get("ayende", transactionInformation).ToJson()["ayende"].Value<string>());
-            db.Commit(transactionInformation);
+            db.Commit(transactionInformation.Id);
 
             Assert.Equal("rahien3", db.Get("ayende", null).ToJson()["ayende"].Value<string>());
         }
