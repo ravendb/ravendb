@@ -152,11 +152,17 @@ namespace Raven.Client.Document
                                  select identityProperty.GetValue(deletedEntity, null))
                                  .OfType<string>())
             {
+                Guid? etag = null;
                 object existingEntity;
                 if (entitiesByKey.TryGetValue(key, out existingEntity))
+                {
+                    DocumentMetadata metadata;
+                    if (entitiesAndMetadata.TryGetValue(existingEntity, out metadata))
+                        etag = metadata.ETag;
                     entitiesAndMetadata.Remove(existingEntity);
+                }
 
-                documentStore.DatabaseCommands.Delete(key, null);
+                documentStore.DatabaseCommands.Delete(key, etag);
             }
             deletedEntities.Clear();
 		    foreach (var entity in entitiesAndMetadata)
