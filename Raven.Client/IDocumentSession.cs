@@ -20,6 +20,8 @@ namespace Raven.Client
 
     	void Clear();
 
+        bool UseOptimisticConcurrency { get; set; }
+
 		event Action<object> Stored;
     }
 }

@@ -17,7 +17,22 @@ namespace Raven.Client.Shard
 			}
 		}
 
-		public event Action<object> Stored;
+        public bool UseOptimisticConcurrency
+        {
+            get
+            {
+                return shardSessions.All(x => x.UseOptimisticConcurrency);
+            }
+            set
+            {
+                foreach (var shardSession in shardSessions)
+                {
+                    shardSession.UseOptimisticConcurrency = value;
+                }
+            }
+        }
+
+	    public event Action<object> Stored;
 
         public ShardedDocumentSession(IShardStrategy shardStrategy, params IDocumentSession[] shardSessions)
 		{

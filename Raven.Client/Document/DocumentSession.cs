@@ -31,6 +31,7 @@ namespace Raven.Client.Document
 		{
 			this.documentStore = documentStore;
 			this.database = database;
+		    UseOptimisticConcurrency = true;
 		}
 
 		public T Load<T>(string id)
@@ -127,7 +128,8 @@ namespace Raven.Client.Document
                 entitiesByKey.Remove(key);
                 key = null;
             }
-            var result = database.Put(key, documentMetadata.ETag, json, documentMetadata.Metadata);
+		    var etag = UseOptimisticConcurrency ? documentMetadata.ETag : null;
+		    var result = database.Put(key, etag, json, documentMetadata.Metadata);
 		    entitiesByKey[result.Key] = entity;
 		    documentMetadata.ETag = result.ETag;
 		    documentMetadata.Key = result.Key;
@@ -170,6 +172,7 @@ namespace Raven.Client.Document
                     entitiesAndMetadata.Remove(existingEntity);
                 }
 
+                etag = UseOptimisticConcurrency ? etag : null;
                 documentStore.DatabaseCommands.Delete(key, etag);
             }
             deletedEntities.Clear();
@@ -201,7 +204,12 @@ namespace Raven.Client.Document
 			entitiesAndMetadata.Clear();
 		}
 
-		public IDocumentQuery<T> Query<T>(string indexName)
+	    public bool UseOptimisticConcurrency
+	    {
+	        get; set;
+	    }
+
+	    public IDocumentQuery<T> Query<T>(string indexName)
 		{
 			return new DocumentQuery<T>(database, indexName);
 		}
