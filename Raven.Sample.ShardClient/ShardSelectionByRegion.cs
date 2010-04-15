@@ -26,5 +26,10 @@ namespace Raven.Sample.ShardClient
 
             return null;
         }
+
+        public string SelectShardIdForExistingObject(object obj)
+        {
+            return SelectShardIdForExistingObject(obj);
+        }
     }
 }

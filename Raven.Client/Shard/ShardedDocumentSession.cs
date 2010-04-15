@@ -68,7 +68,23 @@ namespace Raven.Client.Shard
 				.FirstOrDefault();
 		}
 
-        private IDocumentSession GetSingleShardSession(string shardId)
+	    public void Delete<T>(T entity)
+	    {
+            if(ReferenceEquals(entity,null))
+                throw new ArgumentNullException("entity");
+
+            var shardIds = shardStrategy.ShardSelectionStrategy.SelectShardIdForExistingObject(entity);
+
+	        var shardToUse =
+	            shardSessions.Where(x => shardIds.Contains(x.StoreIdentifier)).FirstOrDefault();
+
+            if(shardToUse == null)
+                throw new InvalidOperationException("Could not find shard id for: " + entity);
+
+            shardToUse.Delete(entity);
+	    }
+
+	    private IDocumentSession GetSingleShardSession(string shardId)
         {
 			var shardSession = shardSessions.FirstOrDefault(x => x.StoreIdentifier == shardId);
             if (shardSession == null) 

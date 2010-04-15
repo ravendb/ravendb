@@ -17,6 +17,7 @@ namespace Raven.Client.Document
 		private readonly IDatabaseCommands database;
 		private readonly DocumentStore documentStore;
 		private readonly Dictionary<object, JObject> entitiesAndMetadata = new Dictionary<object, JObject>();
+	    private readonly ISet<object> deletedEntities = new HashSet<object>();
 	    private RavenClientEnlistment enlistment;
 
 		public event Action<object> Stored;
@@ -52,7 +53,13 @@ namespace Raven.Client.Document
 			return (T) entity;
 		}
 
-		private object ConvertToEntity<T>(string id, string documentFound)
+	    public void Delete<T>(T entity)
+	    {
+	        entitiesAndMetadata.Remove(entity);
+	        deletedEntities.Add(entity);
+	    }
+
+	    private object ConvertToEntity<T>(string id, string documentFound)
 		{
 			var entity = JsonConvert.DeserializeObject(documentFound, typeof (T));
 
@@ -109,11 +116,20 @@ namespace Raven.Client.Document
                 enlistment = new RavenClientEnlistment(this, Transaction.Current.TransactionInformation.DistributedIdentifier);
                 Transaction.Current.EnlistPromotableSinglePhase(enlistment);
             }
+            foreach (var key in (from deletedEntity in deletedEntities
+                                 let identityProperty = GetIdentityProperty(deletedEntity.GetType())
+                                 select identityProperty.GetValue(deletedEntity, null))
+                                 .OfType<string>())
+            {
+                documentStore.DatabaseCommands.Delete(key, null);
+            }
+            deletedEntities.Clear();
 		    foreach (var entity in entitiesAndMetadata)
 			{
 				//TODO: Switch to more the batch version when it becomes available
 				StoreEntity(entity);
 			}
+		    
 		}
 
 		private JObject ConvertEntityToJson(object entity)

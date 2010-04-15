@@ -8,6 +8,8 @@ namespace Raven.Client
         
 		T Load<T>(string id);
 
+        void Delete<T>(T entity);
+
 		IDocumentQuery<T> Query<T>(string indexName);
         
 		void SaveChanges();

@@ -58,13 +58,39 @@ namespace Raven.Client.Tests.Document
         }
 
         [Fact]
+        public void Can_use_transactions_to_isolate_delete()
+        {
+            using (var documentStore = NewDocumentStore())
+            {
+                var company = new Company { Name = "Company Name" };
+                var session = documentStore.OpenSession();
+                session.Store(company);
+                session.SaveChanges();
+                
+                using (var tx = new TransactionScope())
+                {
+                    session.Delete(company);
+                    session.SaveChanges();
+
+                    using (new TransactionScope(TransactionScopeOption.Suppress))
+                    {
+                        Assert.NotNull(session.Load<Company>(company.Id));
+
+                        tx.Complete();
+                    }
+                }
+                Assert.Null(session.Load<Company>(company.Id));
+            }
+        }
+
+        [Fact]
         public void While_in_transaction_can_read_values_private_for_the_Transaction()
         {
             using (var documentStore = NewDocumentStore())
             {
                 var company = new Company { Name = "Company Name" };
                 var session = documentStore.OpenSession();
-                using (var tx = new TransactionScope())
+                using (new TransactionScope())
                 {
                     session.Store(company);
                     session.SaveChanges();
@@ -82,7 +108,7 @@ namespace Raven.Client.Tests.Document
             {
                 var company = new Company { Name = "Company Name" };
                 var session = documentStore.OpenSession();
-                using (var tx = new TransactionScope())
+                using (new TransactionScope())
                 {
                     session.Store(company);
                     session.SaveChanges();
