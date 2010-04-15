@@ -11,11 +11,16 @@ namespace Raven.Database.Data
 			get { return "DELETE"; }
     	}
 
-    	public virtual Guid? Etag { get; set; }
+        public TransactionInformation TransactionInformation
+        {
+            get; set;
+        }
+
+        public virtual Guid? Etag { get; set; }
 
     	public void Execute(DocumentDatabase database)
     	{
-    		database.Delete(Key, Etag);
+    		database.Delete(Key, Etag, TransactionInformation);
     	}
     }
 }

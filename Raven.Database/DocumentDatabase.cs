@@ -51,11 +51,11 @@ namespace Raven.Database
 
 			if(configuration.ShouldCreateDefaultsWhenBuildingNewDatabaseFromScratch)
 			{
-				PutIndex("Raven/DocumentsByTag",
-						 @"
+				PutIndex("Raven/DocumentsByEntityName",
+                         @"
 	from doc in docs 
-	where doc[""@metadata""][""Raven-Entity-Tag""] != null 
-	select new { Tag = doc[""@metadata""][""Raven-Entity-Tag""] };
+	where doc[""@metadata""][""Raven-Entity-Name""] != null 
+	select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 ");
 			}
 	
@@ -122,18 +122,18 @@ namespace Raven.Database
 		[DllImport("rpcrt4.dll", SetLastError = true)]
 		public static extern int UuidCreateSequential(out Guid value);
 
-		public JsonDocument Get(string key)
+		public JsonDocument Get(string key, TransactionInformation transactionInformation)
 		{
 			JsonDocument document = null;
 			TransactionalStorage.Batch(actions =>
 			{
-				document = actions.DocumentByKey(key);
+				document = actions.DocumentByKey(key, transactionInformation);
 				actions.Commit();
 			});
 			return document;
 		}
 
-		public string Put(string key, Guid? etag, JObject document, JObject metadata)
+		public PutResult Put(string key, Guid? etag, JObject document, JObject metadata, TransactionInformation transactionInformation)
 		{
 			if (string.IsNullOrEmpty(key))
 			{
@@ -144,15 +144,26 @@ namespace Raven.Database
 			RemoveReservedProperties(document);
 			RemoveReservedProperties(metadata);
 			metadata.Add("@id", new JValue(key));
-
 			TransactionalStorage.Batch(actions =>
 			{
-				actions.AddDocument(key, document.ToString(), etag, metadata.ToString());
-				actions.AddTask(new IndexDocumentTask {Index = "*", Key = key});
-				actions.Commit();
+                if (transactionInformation == null)
+                {
+                    etag = actions.AddDocument(key, document.ToString(), etag, metadata.ToString());
+                    actions.AddTask(new IndexDocumentTask {Index = "*", Key = key});
+                }
+                else
+                {
+                    etag = actions.AddDocumentInTransaction(transactionInformation, key, document.ToString(), etag,
+                                                     metadata.ToString());
+                }
+			    actions.Commit();
 			});
 			workContext.NotifyAboutWork();
-			return key;
+		    return new PutResult
+		    {
+		        Key = key,
+		        ETag = (Guid)etag
+		    };
 		}
 
 		private static void RemoveReservedProperties(JObject document)
@@ -169,16 +180,51 @@ namespace Raven.Database
 			}
 		}
 
-		public void Delete(string key, Guid? etag)
+        public void Delete(string key, Guid? etag, TransactionInformation transactionInformation)
 		{
 			TransactionalStorage.Batch(actions =>
 			{
-				actions.DeleteDocument(key, etag);
-				actions.AddTask(new RemoveFromIndexTask {Index = "*", Keys = new[] {key}});
-				actions.Commit();
+                if (transactionInformation == null)
+                {
+                    actions.DeleteDocument(key, etag);
+                    actions.AddTask(new RemoveFromIndexTask {Index = "*", Keys = new[] {key}});
+                }
+                else
+                {
+                    actions.DeleteDocumentInTransaction(transactionInformation, key, etag);
+                }
+			    actions.Commit();
 			});
 			workContext.NotifyAboutWork();
 		}
+
+        public void Commit(Guid txId)
+        {
+            TransactionalStorage.Batch(actions =>
+            {
+                actions.CompleteTransaction(txId, doc =>
+                {
+                    // doc.Etag - represent the _modified_ document etag, and we already
+                    // checked etags on previous PUT/DELETE, so we don't pass it here
+                    if (doc.Delete)
+                        Delete(doc.Key, null, null);
+                    else
+                        Put(doc.Key, null, JObject.Parse(doc.Data), JObject.Parse(doc.Metadata), null);
+                });
+                actions.Commit();
+            });
+            workContext.NotifyAboutWork();
+        }
+
+        public void Rollback(Guid txId)
+        {
+            TransactionalStorage.Batch(actions =>
+            {
+                actions.RollbackTransaction(txId);
+                actions.Commit();
+            });
+            workContext.NotifyAboutWork();
+        }
 
 		public string PutIndex(string name, string mapDef)
 		{
@@ -255,7 +301,7 @@ namespace Raven.Database
 			if (queryResult.Projection == null)
 			{
 				if (loadedIds.Add(queryResult.Key))
-					return actions.DocumentByKey(queryResult.Key);
+					return actions.DocumentByKey(queryResult.Key, null);
 				return null;
 			}
 
@@ -347,12 +393,12 @@ namespace Raven.Database
 				);
 		}
 
-		public PatchResult ApplyPatch(string docId, Guid? etag, JArray patchDoc)
+		public PatchResult ApplyPatch(string docId, Guid? etag, JArray patchDoc, TransactionInformation transactionInformation)
 		{
 			var result = PatchResult.Patched;
 			TransactionalStorage.Batch(actions =>
 			{
-				var doc = actions.DocumentByKey(docId);
+				var doc = actions.DocumentByKey(docId, transactionInformation);
 				if (doc == null)
 				{
 					result = PatchResult.DocumentDoesNotExists;
@@ -365,7 +411,7 @@ namespace Raven.Database
 				{
 					var jsonDoc = doc.ToJson();
 					new JsonPatcher(jsonDoc).Apply(patchDoc);
-					Put(doc.Key, doc.Etag, jsonDoc, doc.Metadata);
+					Put(doc.Key, doc.Etag, jsonDoc, doc.Metadata, transactionInformation);
 					result = PatchResult.Patched;
 				}
 

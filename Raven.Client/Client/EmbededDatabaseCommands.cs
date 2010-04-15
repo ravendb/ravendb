@@ -1,9 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Transactions;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
 using Raven.Database.Storage;
+using TransactionInformation = Raven.Database.TransactionInformation;
 
 namespace Raven.Client.Client
 {
@@ -40,17 +44,28 @@ namespace Raven.Client.Client
 
 		public JsonDocument Get(string key)
 		{
-			return database.Get(key);
+			return database.Get(key,GetTransactionInformation());
 		}
 
-		public string Put(string key, Guid? etag, JObject document, JObject metadata)
+		public PutResult Put(string key, Guid? etag, JObject document, JObject metadata)
 		{
-			return database.Put(key, etag, document, metadata);
+            return database.Put(key, etag, document, metadata, GetTransactionInformation());
 		}
 
-		public void Delete(string key, Guid? etag)
+	    private static TransactionInformation GetTransactionInformation()
+	    {
+            if (Transaction.Current == null)
+                return null;
+            return new TransactionInformation
+            {
+                Id = Transaction.Current.TransactionInformation.DistributedIdentifier,
+                Timeout = TransactionManager.DefaultTimeout
+            };
+	    }
+
+	    public void Delete(string key, Guid? etag)
 		{
-			database.Delete(key, etag);
+            database.Delete(key, etag, GetTransactionInformation());
 		}
 
 		public string PutIndex(string name, string indexDef)
@@ -73,22 +88,25 @@ namespace Raven.Client.Client
 			database.DeleteIndex(name);
 		}
 
-		public JArray GetDocuments(int start, int pageSize)
-		{
-			return database.GetDocuments(start, pageSize);
-		}
+        public JsonDocument[] Get(string[] ids)
+	    {
+            return ids
+                .Select(id => database.Get(id, GetTransactionInformation()))
+                .Where(document => document != null)
+                .ToArray();
+	    }
 
-		public JArray GetIndexNames(int start, int pageSize)
-		{
-			return database.GetIndexNames(start, pageSize);
-		}
+	    public void Commit(Guid txId)
+	    {
+	        database.Commit(txId);
+	    }
 
-		public JArray GetIndexes(int start, int pageSize)
-		{
-			return database.GetIndexes(start, pageSize);
-		}
+	    public void Rollback(Guid txId)
+	    {
+	        database.Rollback(txId);
+	    }
 
-		#endregion
+	    #endregion
 
 		public void Dispose()
 		{

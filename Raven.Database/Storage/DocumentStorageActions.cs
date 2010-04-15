@@ -18,7 +18,14 @@ namespace Raven.Database.Storage
 		protected readonly JET_DBID dbid;
 		protected readonly Table documents;
 		protected readonly IDictionary<string, JET_COLUMNID> documentsColumns;
-		protected readonly Table files;
+        protected readonly Table transactions;
+        protected readonly IDictionary<string, JET_COLUMNID> transactionsColumns;
+        
+      
+        protected readonly Table documentsModifiedByTransactions;
+        protected readonly IDictionary<string, JET_COLUMNID> documentsModifiedByTransactionsColumns;
+        
+        protected readonly Table files;
 		protected readonly IDictionary<string, JET_COLUMNID> filesColumns;
 		private readonly Table indexesStats;
 		private readonly IDictionary<string, JET_COLUMNID> indexesStatsColumns;
@@ -34,15 +41,15 @@ namespace Raven.Database.Storage
 		[CLSCompliant(false)]
 		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
 		public DocumentStorageActions(JET_INSTANCE instance,
-		                              string database,
-		                              IDictionary<string, JET_COLUMNID> documentsColumns,
-		                              IDictionary<string, JET_COLUMNID> tasksColumns,
-		                              IDictionary<string, JET_COLUMNID> filesColumns,
-		                              IDictionary<string, JET_COLUMNID> indexesStatsColumns,
-		                              IDictionary<string, JET_COLUMNID> mappedResultsColumns
-			)
+		    string database,
+		    IDictionary<string, JET_COLUMNID> documentsColumns,
+		    IDictionary<string, JET_COLUMNID> tasksColumns,
+		    IDictionary<string, JET_COLUMNID> filesColumns,
+		    IDictionary<string, JET_COLUMNID> indexesStatsColumns,
+		    IDictionary<string, JET_COLUMNID> mappedResultsColumns, 
+            IDictionary<string, JET_COLUMNID> documentsModifiedByTransactionsColumns, IDictionary<string, JET_COLUMNID> transactionsColumns)
 		{
-			try
+		    try
 			{
 				session = new Session(instance);
 				transaction = new Transaction(session);
@@ -53,13 +60,17 @@ namespace Raven.Database.Storage
 				files = new Table(session, dbid, "files", OpenTableGrbit.None);
 				indexesStats = new Table(session, dbid, "indexes_stats", OpenTableGrbit.None);
 				mappedResults = new Table(session, dbid, "mapped_results", OpenTableGrbit.None);
+                documentsModifiedByTransactions = new Table(session, dbid, "documents_modified_by_transaction", OpenTableGrbit.None);
+			    transactions = new Table(session, dbid, "transactions", OpenTableGrbit.None);
 
 				this.documentsColumns = documentsColumns;
 				this.tasksColumns = tasksColumns;
 				this.filesColumns = filesColumns;
 				this.indexesStatsColumns = indexesStatsColumns;
 				this.mappedResultsColumns = mappedResultsColumns;
-			}
+                this.documentsModifiedByTransactionsColumns = documentsModifiedByTransactionsColumns;
+                this.transactionsColumns = transactionsColumns;
+            }
 			catch (Exception)
 			{
 				Dispose();
@@ -67,7 +78,7 @@ namespace Raven.Database.Storage
 			}
 		}
 
-		public bool CommitCalled { get; set; }
+	    public bool CommitCalled { get; set; }
 
 		public IEnumerable<string> DocumentKeys
 		{
@@ -86,6 +97,12 @@ namespace Raven.Database.Storage
 
 		public void Dispose()
 		{
+            if(transactions != null)
+                transactions.Dispose();
+
+            if (documentsModifiedByTransactions!=null)
+                documentsModifiedByTransactions.Dispose();
+
 			if (mappedResults != null)
 				mappedResults.Dispose();
 
@@ -113,8 +130,36 @@ namespace Raven.Database.Storage
 
 		#endregion
 
-		public JsonDocument DocumentByKey(string key)
+		public JsonDocument DocumentByKey(string key, TransactionInformation transactionInformation)
 		{
+		    byte[] data;
+		    if (transactionInformation != null)
+            {
+                Api.JetSetCurrentIndex(session, documentsModifiedByTransactions, "by_key");
+                Api.MakeKey(session, documentsModifiedByTransactions, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+                if(Api.TrySeek(session, documentsModifiedByTransactions,SeekGrbit.SeekEQ))
+                {
+                    var txId = Api.RetrieveColumn(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["locked_by_transaction"]);
+                    if(new Guid(txId) == transactionInformation.Id)
+                    {
+                        if (Api.RetrieveColumnAsBoolean(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["delete_document"]) == true)
+                        {
+                            logger.DebugFormat("Document with key '{0}' was deleted in transaction: {1}", key, transactionInformation.Id);
+                            return null;
+                        }
+                        data = Api.RetrieveColumn(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["data"]);
+                        logger.DebugFormat("Document with key '{0}' was found in transaction: {1}", key, transactionInformation.Id);
+                        return new JsonDocument
+                        {
+                            Data = data,
+                            Etag = new Guid(Api.RetrieveColumn(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["etag"])),
+                            Key = Api.RetrieveColumnAsString(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["key"], Encoding.Unicode),
+                            Metadata = JObject.Parse(Api.RetrieveColumnAsString(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["metadata"]))
+                        };
+                    }
+                }
+            }
+
 			Api.JetSetCurrentIndex(session, documents, "by_key");
 			Api.MakeKey(session, documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, documents, SeekGrbit.SeekEQ) == false)
@@ -122,7 +167,7 @@ namespace Raven.Database.Storage
 				logger.DebugFormat("Document with key '{0}' was not found", key);
 				return null;
 			}
-			var data = Api.RetrieveColumn(session, documents, documentsColumns["data"]);
+			data = Api.RetrieveColumn(session, documents, documentsColumns["data"]);
 			logger.DebugFormat("Document with key '{0}' was found", key);
 			return new JsonDocument
 			{
@@ -210,25 +255,21 @@ namespace Raven.Database.Storage
 			hasMoreWork.Value = false;
 		}
 
-		public void AddDocument(string key, string data, Guid? etag, string metadata)
+		public Guid AddDocument(string key, string data, Guid? etag, string metadata)
 		{
 			Api.JetSetCurrentIndex(session, documents, "by_key");
 			Api.MakeKey(session, documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			var isUpdate = Api.TrySeek(session, documents, SeekGrbit.SeekEQ);
 			if (isUpdate)
 			{
-				var existingEtag = new Guid(Api.RetrieveColumn(session, documents, documentsColumns["etag"]));
-				if (existingEtag != etag && etag != null)
-				{
-					throw new ConcurrencyException("PUT attempted on document '" + key +
-						"' using a non current etag")
-					{
-						ActualETag = etag.Value,
-						ExpectedETag = existingEtag
-					};
-				}
+			    EnsureNotLockedByTransaction(key, null);
+			    EnsureDocumentEtagMatch(key, etag, "PUT");
 			}
-			Guid newEtag;
+			else
+			{
+                EnsureDocumentIsNotCreatedInAnotherTransaction(key, Guid.NewGuid());
+			}
+		    Guid newEtag;
 			DocumentDatabase.UuidCreateSequential(out newEtag);
 
 			using (var update = new Update(session, documents, isUpdate ? JET_prep.Replace : JET_prep.Insert))
@@ -242,9 +283,122 @@ namespace Raven.Database.Storage
 			}
 			logger.DebugFormat("Inserted a new document with key '{0}', doc length: {1}, update: {2}, ",
 			                   key, data.Length, isUpdate);
+
+		    return newEtag;
 		}
 
-		public void DeleteDocument(string key, Guid? etag)
+	    private void EnsureDocumentEtagMatch(string key, Guid? etag, string method)
+	    {
+	        var existingEtag = new Guid(Api.RetrieveColumn(session, documents, documentsColumns["etag"]));
+	        if (existingEtag != etag && etag != null)
+	        {
+	            throw new ConcurrencyException(method + " attempted on document '" + key +
+	                                           "' using a non current etag")
+	            {
+	                ActualETag = etag.Value,
+	                ExpectedETag = existingEtag
+	            };
+	        }
+	    }
+
+        private void EnsureDocumentEtagMatchInTransaction(string key, Guid? etag)
+        {
+            Api.JetSetCurrentIndex(session, documentsModifiedByTransactions, "by_key");
+            Api.MakeKey(session, documentsModifiedByTransactions, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            Guid existingEtag;
+            if (Api.TrySeek(session, documentsModifiedByTransactions, SeekGrbit.SeekEQ))
+            {
+                if (Api.RetrieveColumnAsBoolean(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["delete_document"]) == true)
+                    return; // we ignore etags on deleted documents
+                existingEtag = new Guid(Api.RetrieveColumn(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["etag"]));
+            }
+            else
+            {
+                existingEtag = new Guid(Api.RetrieveColumn(session, documents, documentsColumns["etag"]));
+            }
+            if (existingEtag != etag && etag != null)
+            {
+                throw new ConcurrencyException("PUT attempted on document '" + key +
+                                               "' using a non current etag")
+                {
+                    ActualETag = etag.Value,
+                    ExpectedETag = existingEtag
+                };
+            }
+        }
+
+	    public Guid AddDocumentInTransaction(TransactionInformation transactionInformation, string key, string data, Guid? etag, string metadata)
+        {
+            Api.JetSetCurrentIndex(session, documents, "by_key");
+            Api.MakeKey(session, documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            var isUpdate = Api.TrySeek(session, documents, SeekGrbit.SeekEQ);
+            if (isUpdate)
+            {
+                EnsureNotLockedByTransaction(key, transactionInformation.Id);
+                EnsureDocumentEtagMatchInTransaction(key, etag);
+                using(var update = new Update(session, documents,JET_prep.Replace))
+                {
+                    Api.SetColumn(session, documents, documentsColumns["locked_by_transaction"], transactionInformation.Id.ToByteArray()); 
+                    update.Save();
+                }
+            }
+            else
+            {
+                EnsureDocumentIsNotCreatedInAnotherTransaction(key, transactionInformation.Id);
+            }
+            EnsureTransactionExists(transactionInformation);
+            Guid newEtag;
+            DocumentDatabase.UuidCreateSequential(out newEtag);
+
+            Api.JetSetCurrentIndex(session, documentsModifiedByTransactions, "by_key");
+            Api.MakeKey(session, documentsModifiedByTransactions, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+	        var isUpdateInTransaction = Api.TrySeek(session, documentsModifiedByTransactions, SeekGrbit.SeekEQ);
+
+            using (var update = new Update(session, documentsModifiedByTransactions, isUpdateInTransaction ? JET_prep.Replace : JET_prep.Insert))
+            {
+                Api.SetColumn(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["key"], key, Encoding.Unicode);
+                Api.SetColumn(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["data"], Encoding.UTF8.GetBytes(data));
+                Api.SetColumn(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["etag"], newEtag.ToByteArray());
+                Api.SetColumn(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["metadata"], metadata, Encoding.Unicode);
+                Api.SetColumn(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["delete_document"], false);
+                Api.SetColumn(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["locked_by_transaction"], transactionInformation.Id.ToByteArray());
+
+                update.Save();
+            }
+	        logger.DebugFormat("Inserted a new document with key '{0}', doc length: {1}, update: {2}, in transaction: {3}",
+	                           key, data.Length, isUpdate, transactionInformation.Id);
+
+	        return newEtag;
+        }
+
+	    private void EnsureDocumentIsNotCreatedInAnotherTransaction(string key, Guid txId)
+	    {
+	        Api.JetSetCurrentIndex(session, documentsModifiedByTransactions,"by_key");
+	        Api.MakeKey(session,documentsModifiedByTransactions, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, documentsModifiedByTransactions, SeekGrbit.SeekEQ) == false)
+                return;
+	        byte[] docTxId = Api.RetrieveColumn(session, documentsModifiedByTransactions,documentsModifiedByTransactionsColumns["locked_by_transaction"]);
+            if(new Guid(docTxId) != txId)
+	        {
+	            throw new ConcurrencyException("A document with key: '" + key+"' is currently created in another transaction");
+	        }
+	    }
+
+	    private void EnsureTransactionExists(TransactionInformation transactionInformation)
+	    {
+            Api.JetSetCurrentIndex(session, transactions, "by_tx_id");
+            Api.MakeKey(session, transactions, transactionInformation.Id.ToByteArray(), MakeKeyGrbit.NewKey);
+	        var isUpdate = Api.TrySeek(session, transactions, SeekGrbit.SeekEQ);
+            using(var update = new Update(session, transactions, isUpdate ? JET_prep.Replace : JET_prep.Insert))
+            {
+                Api.SetColumn(session, transactions,transactionsColumns["tx_id"], transactionInformation.Id.ToByteArray());
+                Api.SetColumn(session, transactions, transactionsColumns["timeout"],
+                              DateTime.UtcNow + transactionInformation.Timeout);
+                update.Save();
+            }
+	    }
+
+	    public void DeleteDocument(string key, Guid? etag)
 		{
 			Api.JetSetCurrentIndex(session, documents, "by_key");
 			Api.MakeKey(session, documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -254,22 +408,137 @@ namespace Raven.Database.Storage
 				return;
 			}
 
-			var rowEtag = new Guid(Api.RetrieveColumn(session, documents, documentsColumns["etag"]));
-			if (rowEtag != etag && etag != null)
-			{
-				throw new ConcurrencyException("DELETE attempted on document '" + key +
-					"' using a non current etag")
-				{
-					ActualETag = etag.Value,
-					ExpectedETag = rowEtag
-				};
-			}
+			EnsureDocumentEtagMatch(key, etag,"DELETE");
+		    EnsureNotLockedByTransaction(key, null);
 
-			Api.JetDelete(session, documents);
+		    Api.JetDelete(session, documents);
 			logger.DebugFormat("Document with key '{0}' was deleted", key);
 		}
 
-		public void AddTask(Task task)
+
+        public void DeleteDocumentInTransaction(TransactionInformation transactionInformation, string key, Guid? etag)
+        {
+            Api.JetSetCurrentIndex(session, documents, "by_key");
+            Api.MakeKey(session, documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, documents, SeekGrbit.SeekEQ) == false)
+            {
+                logger.DebugFormat("Document with key '{0}' was not found, and considered deleted", key);
+                return;
+            }
+
+            EnsureNotLockedByTransaction(key, transactionInformation.Id);
+            EnsureDocumentEtagMatchInTransaction(key, etag);
+
+            using (var update = new Update(session, documents, JET_prep.Replace))
+            {
+                Api.SetColumn(session, documents, documentsColumns["locked_by_transaction"], transactionInformation.Id.ToByteArray());
+                update.Save();
+            }
+            EnsureTransactionExists(transactionInformation);
+
+            Guid newEtag;
+            DocumentDatabase.UuidCreateSequential(out newEtag);
+
+            Api.JetSetCurrentIndex(session, documentsModifiedByTransactions, "by_key");
+            Api.MakeKey(session, documentsModifiedByTransactions, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            var isUpdateInTransaction = Api.TrySeek(session, documentsModifiedByTransactions, SeekGrbit.SeekEQ);
+
+            using (var update = new Update(session, documentsModifiedByTransactions, isUpdateInTransaction ? JET_prep.Replace : JET_prep.Insert))
+            {
+                Api.SetColumn(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["key"], key, Encoding.Unicode);
+                Api.SetColumn(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["data"], 
+                    Api.RetrieveColumn(session,documents, documentsColumns["data"]));
+                Api.SetColumn(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["etag"], newEtag.ToByteArray());
+                Api.SetColumn(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["metadata"],
+                    Api.RetrieveColumnAsString(session, documents, documentsColumns["metadata"],Encoding.Unicode), Encoding.Unicode);
+                Api.SetColumn(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["delete_document"], true);
+                Api.SetColumn(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["locked_by_transaction"], transactionInformation.Id.ToByteArray());
+
+                update.Save();
+            }
+        }
+
+	    private void EnsureNotLockedByTransaction(string key, Guid? currentTransaction)
+	    {
+	        byte[] txId = Api.RetrieveColumn(session, documents, documentsColumns["locked_by_transaction"]);
+	        if (txId == null)
+	        {
+	            return;
+	        }
+	        var guid = new Guid(txId);
+            if (currentTransaction != null && guid == currentTransaction.Value)
+                return;
+
+	        Api.JetSetCurrentIndex(session, transactions, "by_tx_id");
+            Api.MakeKey(session, transactions, txId,MakeKeyGrbit.NewKey);
+            if(Api.TrySeek(session, transactions, SeekGrbit.SeekEQ)==false)
+            {
+                //This is a bug, probably... because it means that we have a missing
+                // transaction, we are going to reset it
+                ResetTransactionOnCurrentDocument();
+                return;
+            }
+	        var timeout = Api.RetrieveColumnAsDateTime(session, transactions, transactionsColumns["timeout"]);
+            if(DateTime.UtcNow > timeout)// the timeout for the transaction has passed
+            {
+                RollbackTransaction(guid);
+                return;
+            }
+	        throw new ConcurrencyException("Document '" + key + "' is locked by transacton: " + guid);
+	    }
+
+	    public void RollbackTransaction(Guid txId)
+	    {
+	        CompleteTransaction(txId, doc =>
+	        {
+	            Api.MakeKey(session, documents, doc.Key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+	            if (Api.TrySeek(session, documents, SeekGrbit.SeekEQ))
+	            {
+	                ResetTransactionOnCurrentDocument();
+	            }
+	        });
+	    }
+
+	    public void CompleteTransaction(Guid txId, Action<DocumentInTransactionData> perDocumentModified)
+	    {
+	        Api.JetSetCurrentIndex(session, transactions, "by_tx_id");
+	        Api.MakeKey(session, transactions, txId, MakeKeyGrbit.NewKey);
+	        if (Api.TrySeek(session, transactions, SeekGrbit.SeekEQ))
+	            Api.JetDelete(session, transactions);
+            
+	        Api.JetSetCurrentIndex(session, documentsModifiedByTransactions, "by_tx");
+	        Api.MakeKey(session, documentsModifiedByTransactions, txId.ToByteArray(), MakeKeyGrbit.NewKey);
+	        if (Api.TrySeek(session, documentsModifiedByTransactions, SeekGrbit.SeekEQ) == false)
+	            return;
+	        Api.MakeKey(session, documentsModifiedByTransactions, txId.ToByteArray(), MakeKeyGrbit.NewKey);
+	        Api.JetSetIndexRange(session, documentsModifiedByTransactions,
+	                             SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
+
+	        do
+	        {
+	            var documentInTransactionData = new DocumentInTransactionData
+	            {
+	                Data = Encoding.UTF8.GetString(Api.RetrieveColumn(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["data"])),
+	                Delete = Api.RetrieveColumnAsBoolean(session,documentsModifiedByTransactions,documentsModifiedByTransactionsColumns["delete_document"]).Value,
+	                Etag = new Guid(Api.RetrieveColumn(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["etag"])),
+	                Key = Api.RetrieveColumnAsString(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["key"],Encoding.Unicode),
+	                Metadata = Api.RetrieveColumnAsString(session, documentsModifiedByTransactions, documentsModifiedByTransactionsColumns["metadata"], Encoding.Unicode),
+	            };
+                Api.JetDelete(session, documentsModifiedByTransactions);
+                perDocumentModified(documentInTransactionData);
+	        } while (Api.TryMoveNext(session, documentsModifiedByTransactions));
+	    }
+
+	    private void ResetTransactionOnCurrentDocument()
+	    {
+	        using(var update = new Update(session, documents, JET_prep.Replace))
+	        {
+	            Api.SetColumn(session, documents, documentsColumns["locked_by_transaction"], null);
+	            update.Save();
+	        }
+	    }
+
+	    public void AddTask(Task task)
 		{
 			using (var update = new Update(session, tasks, JET_prep.Insert))
 			{
@@ -549,5 +818,6 @@ namespace Raven.Database.Storage
 				Api.JetDelete(session, mappedResults);
 			} while (Api.TryMoveNext(session, mappedResults));
 		}
+
 	}
 }

@@ -8,6 +8,10 @@ namespace Raven.Client
         
 		T Load<T>(string id);
 
+        T[] Load<T>(params string[] ids);
+
+        void Delete<T>(T entity);
+
 		IDocumentQuery<T> Query<T>(string indexName);
         
 		void SaveChanges();
@@ -18,6 +22,12 @@ namespace Raven.Client
 
     	void Clear();
 
+        bool UseOptimisticConcurrency { get; set; }
+
+        void Commit(Guid txId);
+ 
+        void Rollback(Guid txId);
+ 
 		event Action<object> Stored;
     }
 }

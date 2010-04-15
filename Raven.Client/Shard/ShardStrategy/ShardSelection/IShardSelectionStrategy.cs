@@ -3,5 +3,6 @@
     public interface IShardSelectionStrategy
     {
         string SelectShardIdForNewObject(object obj);
+        string SelectShardIdForExistingObject(object obj);
     }
 }

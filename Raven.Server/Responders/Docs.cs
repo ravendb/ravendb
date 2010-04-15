@@ -1,5 +1,6 @@
 using System;
 using System.Net;
+using Raven.Database.Data;
 
 namespace Raven.Server.Responders
 {
@@ -25,9 +26,10 @@ namespace Raven.Server.Responders
 				case "POST":
 					var json = context.ReadJson();
 					var id = Database.Put(null, Guid.NewGuid(), json,
-					                      context.Request.Headers.FilterHeaders());
+					                      context.Request.Headers.FilterHeaders(),
+                                          GetRequestTransaction(context));
 					context.SetStatusToCreated("/docs/" + id);
-					context.WriteJson(new {id});
+					context.WriteJson(id);
 					break;
 			}
 		}

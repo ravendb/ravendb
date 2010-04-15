@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using Raven.Client.Document;
@@ -17,7 +18,22 @@ namespace Raven.Client.Shard
 			}
 		}
 
-		public event Action<object> Stored;
+        public bool UseOptimisticConcurrency
+        {
+            get
+            {
+                return shardSessions.All(x => x.UseOptimisticConcurrency);
+            }
+            set
+            {
+                foreach (var shardSession in shardSessions)
+                {
+                    shardSession.UseOptimisticConcurrency = value;
+                }
+            }
+        }
+
+	    public event Action<object> Stored;
 
         public ShardedDocumentSession(IShardStrategy shardStrategy, params IDocumentSession[] shardSessions)
 		{
@@ -68,7 +84,28 @@ namespace Raven.Client.Shard
 				.FirstOrDefault();
 		}
 
-        private IDocumentSession GetSingleShardSession(string shardId)
+	    public T[] Load<T>(params string[] ids)
+	    {
+	        return shardStrategy.ShardAccessStrategy.Apply(shardSessions, sessions => sessions.Load<T>(ids)).ToArray();
+	    }
+
+	    public void Delete<T>(T entity)
+	    {
+            if(ReferenceEquals(entity,null))
+                throw new ArgumentNullException("entity");
+
+            var shardIds = shardStrategy.ShardSelectionStrategy.SelectShardIdForExistingObject(entity);
+
+	        var shardToUse =
+	            shardSessions.Where(x => shardIds.Contains(x.StoreIdentifier)).FirstOrDefault();
+
+            if(shardToUse == null)
+                throw new InvalidOperationException("Could not find shard id for: " + entity);
+
+            shardToUse.Delete(entity);
+	    }
+
+	    private IDocumentSession GetSingleShardSession(string shardId)
         {
 			var shardSession = shardSessions.FirstOrDefault(x => x.StoreIdentifier == shardId);
             if (shardSession == null) 
@@ -133,6 +170,23 @@ namespace Raven.Client.Shard
         }
 
         #endregion
- 
-    }
+
+	    public void Commit(Guid txId)
+	    {
+	        shardStrategy.ShardAccessStrategy.Apply(shardSessions, session =>
+	        {
+                session.Commit(txId);
+	            return new List<int>();
+	        });
+	    }
+
+	    public void Rollback(Guid txId)
+	    {
+	        shardStrategy.ShardAccessStrategy.Apply(shardSessions, session =>
+	        {
+	            session.Rollback(txId);
+                return new List<int>();
+	        });
+	    }
+	}
 }

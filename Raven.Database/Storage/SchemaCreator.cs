@@ -7,7 +7,7 @@ namespace Raven.Database.Storage
 	[CLSCompliant(false)]
 	public class SchemaCreator
 	{
-		public const string SchemaVersion = "1.8";
+		public const string SchemaVersion = "1.9";
 		private readonly Session session;
 
 		public SchemaCreator(Session session)
@@ -25,6 +25,8 @@ namespace Raven.Database.Storage
 				{
 					CreateDetailsTable(dbid);
 					CreateDocumentsTable(dbid);
+                    CreateDocumentsBeingModifiedByTransactionsTable(dbid);
+				    CreateTransactionsTable(dbid);
 					CreateTasksTable(dbid);
 					CreateMapResultsTable(dbid);
 					CreateIndexingStatsTable(dbid);
@@ -78,7 +80,31 @@ namespace Raven.Database.Storage
 			                   100);
 		}
 
-		private void CreateDocumentsTable(JET_DBID dbid)
+        private void CreateTransactionsTable(JET_DBID dbid)
+        {
+            JET_TABLEID tableid;
+            Api.JetCreateTable(session, dbid, "transactions", 16, 100, out tableid);
+            JET_COLUMNID columnid;
+
+            Api.JetAddColumn(session, tableid, "tx_id", new JET_COLUMNDEF
+            {
+                cbMax = 16,
+                coltyp = JET_coltyp.Binary,
+                grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL,
+            }, null, 0, out columnid);
+
+            Api.JetAddColumn(session, tableid, "timeout", new JET_COLUMNDEF
+            {
+                coltyp = JET_coltyp.DateTime,
+                grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL,
+            }, null, 0, out columnid);
+
+            const string indexDef = "+tx_id\0\0";
+            Api.JetCreateIndex(session, tableid, "by_tx_id", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
+                               100);
+        }
+
+	    private void CreateDocumentsTable(JET_DBID dbid)
 		{
 			JET_TABLEID tableid;
 			Api.JetCreateTable(session, dbid, "documents", 16, 100, out tableid);
@@ -98,6 +124,13 @@ namespace Raven.Database.Storage
 				coltyp = JET_coltyp.Binary,
 				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL,
 			}, null, 0, out columnid);
+
+            Api.JetAddColumn(session, tableid, "locked_by_transaction", new JET_COLUMNDEF
+            {
+                cbMax = 16,
+                coltyp = JET_coltyp.Binary,
+                grbit = ColumndefGrbit.ColumnTagged,
+            }, null, 0, out columnid);
 
 			Api.JetAddColumn(session, tableid, "id", new JET_COLUMNDEF
 			{
@@ -126,6 +159,61 @@ namespace Raven.Database.Storage
 			Api.JetCreateIndex(session, tableid, "by_id", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
 			                   100);
 		}
+
+        private void CreateDocumentsBeingModifiedByTransactionsTable(JET_DBID dbid)
+        {
+            JET_TABLEID tableid;
+            Api.JetCreateTable(session, dbid, "documents_modified_by_transaction", 16, 100, out tableid);
+            JET_COLUMNID columnid;
+
+            Api.JetAddColumn(session, tableid, "key", new JET_COLUMNDEF
+            {
+                cbMax = 255,
+                coltyp = JET_coltyp.Text,
+                cp = JET_CP.Unicode,
+                grbit = ColumndefGrbit.ColumnTagged
+            }, null, 0, out columnid);
+
+            Api.JetAddColumn(session, tableid, "etag", new JET_COLUMNDEF
+            {
+                cbMax = 16,
+                coltyp = JET_coltyp.Binary,
+                grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL,
+            }, null, 0, out columnid);
+
+            Api.JetAddColumn(session, tableid, "locked_by_transaction", new JET_COLUMNDEF
+            {
+                cbMax = 16,
+                coltyp = JET_coltyp.Binary,
+                grbit = ColumndefGrbit.ColumnFixed,
+            }, null, 0, out columnid);
+
+            Api.JetAddColumn(session, tableid, "data", new JET_COLUMNDEF
+            {
+                coltyp = JET_coltyp.LongBinary,
+                grbit = ColumndefGrbit.ColumnTagged
+            }, null, 0, out columnid);
+
+            Api.JetAddColumn(session, tableid, "metadata", new JET_COLUMNDEF
+            {
+                coltyp = JET_coltyp.LongText,
+                grbit = ColumndefGrbit.ColumnTagged
+            }, null, 0, out columnid);
+
+            Api.JetAddColumn(session, tableid, "delete_document", new JET_COLUMNDEF
+            {
+                coltyp = JET_coltyp.Bit,
+                grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
+            }, null, 0, out columnid);
+
+            var indexDef = "+key\0\0";
+            Api.JetCreateIndex(session, tableid, "by_key", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
+                               100);
+
+            indexDef = "+locked_by_transaction\0\0";
+            Api.JetCreateIndex(session, tableid, "by_tx", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
+                               100);
+        }
 
 		private void CreateMapResultsTable(JET_DBID dbid)
 		{

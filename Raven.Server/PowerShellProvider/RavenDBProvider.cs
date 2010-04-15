@@ -141,7 +141,7 @@ namespace Raven.Server.PowerShellProvider
 				if (db == null)
 					document = null;
 				else
-					document = db.Database.Get(pathTypeValue);
+				    document = db.Database.Get(pathTypeValue, null);
 				var enc = new ASCIIEncoding();
 				var str = enc.GetString(document.Data);
 
@@ -198,7 +198,8 @@ namespace Raven.Server.PowerShellProvider
 				if (!string.IsNullOrEmpty(pathTypeValue) && etag.HasValue)
 				{
 					var db = this.PSDriveInfo as RavenDBPSDriveInfo;
-					db.Database.Put(pathTypeValue, etag, doc, new JObject());
+                    db.Database.Put(pathTypeValue, etag, doc, new JObject(),
+                                           null);
 				}
 				else
 				{
@@ -261,31 +262,28 @@ namespace Raven.Server.PowerShellProvider
 				if (db == null)
 					document = null;
 				else
-					document = db.Database.Get(pathTypeValue);
+				    document = db.Database.Get(pathTypeValue, null);
 
 				return document != null;
 			}
-			else if (type == PathType.Documents)
-				return true;
-			else if (type == PathType.Index)
-			{
-				var db = this.PSDriveInfo as RavenDBPSDriveInfo;
-				string index;
-				if (db == null)
-					index = null;
-				else
-					index = db.Database.IndexDefinitionStorage.GetIndexDefinition(pathTypeValue);
+		    if (type == PathType.Documents)
+		        return true;
+		    if (type == PathType.Index)
+		    {
+		        var db = this.PSDriveInfo as RavenDBPSDriveInfo;
+		        string index;
+		        if (db == null)
+		            index = null;
+		        else
+		            index = db.Database.IndexDefinitionStorage.GetIndexDefinition(pathTypeValue);
 
-				return index != null;
-			}
-			else if (type == PathType.Indexes)
-				return true;
-			else
-			{
-				ThrowTerminatingInvalidPathException(path);
-			}
+		        return index != null;
+		    }
+		    if (type == PathType.Indexes)
+		        return true;
+		    ThrowTerminatingInvalidPathException(path);
 
-			return false;
+		    return false;
 		}
 
 		// ItemExists
@@ -513,7 +511,8 @@ namespace Raven.Server.PowerShellProvider
 				}
 
 				var db = this.PSDriveInfo as RavenDBPSDriveInfo;
-				db.Database.Put(null, Guid.Empty, doc, new JObject());
+                db.Database.Put(null, Guid.Empty, doc, new JObject(),
+                                           null);
 			}
 			else if (pathType == PathType.Index && type.ToLower() == "index")
 			{
@@ -590,7 +589,8 @@ namespace Raven.Server.PowerShellProvider
 				if (!string.IsNullOrEmpty(pathTypeValue) && etag.HasValue)
 				{
 					var db = this.PSDriveInfo as RavenDBPSDriveInfo;
-					db.Database.Delete(pathTypeValue, etag);
+                    db.Database.Delete(pathTypeValue, etag,
+                                           null);
 				}
 				else
 				{
@@ -640,7 +640,8 @@ namespace Raven.Server.PowerShellProvider
 			{
 				foreach (JObject doc in db.Database.GetDocuments(0, int.MaxValue))
 				{
-					db.Database.Delete(doc["@metadata"]["@id"].Value<string>(), doc["@metadata"]["@etag"].Value<Guid?>());
+                    db.Database.Delete(doc["@metadata"]["@id"].Value<string>(), doc["@metadata"]["@etag"].Value<Guid?>(),
+                                           null);
 				}
 				foreach (JObject index in db.Database.GetIndexes(0, int.MaxValue))
 				{
@@ -659,7 +660,8 @@ namespace Raven.Server.PowerShellProvider
 					foreach (JObject doc in db.Database.GetDocuments(0, int.MaxValue))
 					{
 						db.Database.Delete(doc["@metadata"]["@id"].Value<string>(),
-						                   doc["@metadata"]["@etag"].Value<Guid?>());
+						                   doc["@metadata"]["@etag"].Value<Guid?>(),
+                                           null);
 					}
 				}
 				else if (type == PathType.Indexes)

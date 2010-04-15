@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Threading;
 using Raven.Client.Document;
+using Raven.Database.Exceptions;
 using Raven.Server;
 using Xunit;
 using System.Linq;
@@ -45,6 +46,80 @@ namespace Raven.Client.Tests.Document
 				Assert.NotEqual(Guid.Empty.ToString(), entity.Id);
 			}
 		}
+
+        [Fact]
+        public void Can_get_two_documents_in_one_call()
+        {
+            using (var server = GetNewServer(port, path))
+            {
+                var documentStore = new DocumentStore("localhost", port);
+                documentStore.Initialise();
+
+                var session = documentStore.OpenSession();
+                session.Store(new Company { Name = "Company A", Id = "1"});
+                session.Store(new Company { Name = "Company B", Id = "2" });
+                session.SaveChanges();
+
+
+                var session2 = documentStore.OpenSession();
+
+                var companies = session2.Load<Company>("1","2");
+                Assert.Equal(2, companies.Length);
+                Assert.Equal("Company A", companies[0].Name);
+                Assert.Equal("Company B", companies[1].Name);
+            }
+        }
+
+
+        [Fact]
+        public void Can_delete_document()
+        {
+            using (var server = GetNewServer(port, path))
+            {
+                var documentStore = new DocumentStore("localhost", port);
+                documentStore.Initialise();
+
+                var session = documentStore.OpenSession();
+                var entity = new Company { Name = "Company" };
+                session.Store(entity);
+                session.SaveChanges();
+
+                using(var session2 = documentStore.OpenSession())
+                    Assert.NotNull(session2.Load<Company>(entity.Id));
+
+                session.Delete(entity);
+                session.SaveChanges();
+
+                using (var session3 = documentStore.OpenSession())
+                    Assert.Null(session3.Load<Company>(entity.Id));
+            }
+        }
+
+        [Fact]
+        public void Optimistic_concurrency()
+        {
+            using (var server = GetNewServer(port, path))
+            {
+                var documentStore = new DocumentStore("localhost", port);
+                documentStore.Initialise();
+
+                var session = documentStore.OpenSession();
+                session.UseOptimisticConcurrency = true;
+                var company = new Company { Name = "Company 1" };
+                session.Store(company);
+                session.SaveChanges();
+
+                using (var session2 = documentStore.OpenSession())
+                {
+                    var company2 = session2.Load<Company>(company.Id);
+                    company2.Name = "foo";
+                    session2.SaveChanges();
+                }
+
+                company.Name = "Company 2";
+                Assert.Throws<ConcurrencyException>(() => session.SaveChanges());
+            }
+        }
 
 		[Fact]
 		public void Should_update_stored_entity()

@@ -20,8 +20,6 @@ namespace Raven.Server.Responders
 
         public override void Respond(HttpListenerContext context)
         {
-            var match = urlMatcher.Match(context.Request.Url.LocalPath);
-            var docId = match.Groups[1].Value;
             switch (context.Request.HttpMethod)
             {                
                 case "POST":
@@ -47,6 +45,7 @@ namespace Raven.Server.Responders
         					Etag = GetEtagFromCommand(jsonCommand),
         					Document = jsonCommand["document"] as JObject,
         					Metadata = jsonCommand["@metadata"] as JObject,
+                            TransactionInformation = GetRequestTransaction(context)
         				});
         				break;
         			case "DELETE":
@@ -54,6 +53,7 @@ namespace Raven.Server.Responders
         				{
         					Key = key.Value<string>(),
         					Etag = GetEtagFromCommand(jsonCommand),
+                            TransactionInformation = GetRequestTransaction(context)
         				});
         				continue;
         			default:

@@ -1,4 +1,5 @@
 using System.Net;
+using Raven.Database.Data;
 
 namespace Raven.Server.Responders
 {

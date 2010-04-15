@@ -8,7 +8,7 @@ namespace Raven.Client.Document
 	{
 		private readonly string server;
 		private readonly int port;
-		public IDatabaseCommands DatabaseCommands;
+		public IDatabaseCommands DatabaseCommands{ get; set;}
 
         public event Action<string, int, object> Stored;
 

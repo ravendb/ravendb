@@ -1,6 +1,7 @@
 using System;
 using System.Net;
 using Raven.Database;
+using Raven.Database.Data;
 
 namespace Raven.Server.Responders
 {
@@ -24,7 +25,7 @@ namespace Raven.Server.Responders
 			{
 				case "GET":
 					context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
-					var doc = Database.Get(docId);
+					var doc = Database.Get(docId,GetRequestTransaction(context));
 					if (doc == null)
 					{
 						context.SetStatusToNotFound();
@@ -38,7 +39,7 @@ namespace Raven.Server.Responders
 					context.WriteData(doc.Data, doc.Metadata, doc.Etag);
 					break;
 				case "DELETE":
-					Database.Delete(docId, context.GetEtag());
+					Database.Delete(docId, context.GetEtag(), GetRequestTransaction(context));
 					context.SetStatusToDeleted();
 					break;
 				case "PUT":
@@ -46,7 +47,7 @@ namespace Raven.Server.Responders
 					break;
 				case "PATCH":
 					var patchDoc = context.ReadJsonArray();
-					var patchResult = Database.ApplyPatch(docId, context.GetEtag(), patchDoc);
+					var patchResult = Database.ApplyPatch(docId, context.GetEtag(), patchDoc, GetRequestTransaction(context));
 					switch (patchResult)
 					{
 						case PatchResult.DocumentDoesNotExists:
@@ -69,8 +70,8 @@ namespace Raven.Server.Responders
 		{
 			var json = context.ReadJson();
 			context.SetStatusToCreated("/docs/" + docId);
-			var id = Database.Put(docId, context.GetEtag(), json, context.Request.Headers.FilterHeaders());
-			context.WriteJson(new {id});
+			var putResult = Database.Put(docId, context.GetEtag(), json, context.Request.Headers.FilterHeaders(), GetRequestTransaction(context));
+            context.WriteJson(putResult);
 		}
 	}
 }
