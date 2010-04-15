@@ -161,7 +161,7 @@ namespace Raven.Client.Client
 
 	    public JsonDocument[] Get(string[] ids)
 	    {
-            var request = new HttpJsonRequest(url + "/queries/", "DELETE");
+            var request = new HttpJsonRequest(url + "/queries/", "POST");
             request.Write(new JArray(ids).ToString(Formatting.None));
             var responses = JArray.Parse(request.ReadResponseString());
 

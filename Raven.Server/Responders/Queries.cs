@@ -28,9 +28,9 @@ namespace Raven.Server.Responders
 					if (documentByKey == null)
 						continue;
 					results.Add(documentByKey.ToJson());
-					actions.Commit();
 				}
-			});
+                actions.Commit();
+            });
 			context.WriteJson(results);
 		}
 	}
