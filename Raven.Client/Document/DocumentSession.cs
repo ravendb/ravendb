@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reflection;
@@ -14,9 +15,12 @@ namespace Raven.Client.Document
 {
 	public class DocumentSession : IDocumentSessionImpl
 	{
-		private readonly IDatabaseCommands database;
+	    private const string TemporaryIdPrefix = "Temporary Id: ";
+	    private readonly IDatabaseCommands database;
 		private readonly DocumentStore documentStore;
 		private readonly Dictionary<object, JObject> entitiesAndMetadata = new Dictionary<object, JObject>();
+        private readonly Dictionary<string, object> entitiesByKey = new Dictionary<string, object>();
+
 	    private readonly ISet<object> deletedEntities = new HashSet<object>();
 	    private RavenClientEnlistment enlistment;
 
@@ -31,6 +35,12 @@ namespace Raven.Client.Document
 
 		public T Load<T>(string id)
 		{
+		    object existingEntity;
+		    if(entitiesByKey.TryGetValue(id, out existingEntity))
+		    {
+		        return (T)existingEntity;
+		    }
+
             JsonDocument documentFound;
 
             try
@@ -50,12 +60,12 @@ namespace Raven.Client.Document
 			var jsonString = Encoding.UTF8.GetString(documentFound.Data);
 			var entity = ConvertToEntity<T>(id, jsonString);
 			entitiesAndMetadata.Add(entity, documentFound.Metadata);
+		    entitiesByKey[id] = entity;
 			return (T) entity;
 		}
 
 	    public void Delete<T>(T entity)
 	    {
-	        entitiesAndMetadata.Remove(entity);
 	        deletedEntities.Add(entity);
 	    }
 
@@ -76,6 +86,9 @@ namespace Raven.Client.Document
 		{
 			var tag = documentStore.Conventions.FindTypeTagName(typeof(T));
 			entitiesAndMetadata.Add(entity, new JObject(new JProperty("Raven-Entity-Name", new JValue(tag))));
+		    var identityProperty = GetIdentityProperty(typeof(T));
+		    var id = identityProperty.GetValue(entity, null) as string ?? TemporaryIdPrefix + Guid.NewGuid();
+		    entitiesByKey[id] = entity;
 		}
 
 		public void Evict<T>(T entity)
@@ -89,9 +102,14 @@ namespace Raven.Client.Document
 			var entityType = entityAndMetadata.Key.GetType();
 			PropertyInfo identityProperty = GetIdentityProperty(entityType);
 
-			var key = (string)identityProperty.GetValue(entityAndMetadata.Key, null);
-			key = database.Put(key, null, json, entityAndMetadata.Value);
-
+            var key = (string)identityProperty.GetValue(entityAndMetadata.Key, null);
+            if (key != null && key.StartsWith(TemporaryIdPrefix))
+            {
+                entitiesByKey.Remove(key);
+                key = null;
+            }
+            key = database.Put(key, null, json, entityAndMetadata.Value);
+		    entitiesByKey[key] = entityAndMetadata.Key;
 			identityProperty.SetValue(entityAndMetadata.Key, key, null);
 
 			var stored = Stored;
@@ -121,6 +139,10 @@ namespace Raven.Client.Document
                                  select identityProperty.GetValue(deletedEntity, null))
                                  .OfType<string>())
             {
+                object existingEntity;
+                if (entitiesByKey.TryGetValue(key, out existingEntity))
+                    entitiesAndMetadata.Remove(existingEntity);
+
                 documentStore.DatabaseCommands.Delete(key, null);
             }
             deletedEntities.Clear();
