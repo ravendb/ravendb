@@ -97,6 +97,12 @@ namespace Raven.Database.Storage
 
 		public void Dispose()
 		{
+            if(transactions != null)
+                transactions.Dispose();
+
+            if (documentsModifiedByTransactions!=null)
+                documentsModifiedByTransactions.Dispose();
+
 			if (mappedResults != null)
 				mappedResults.Dispose();
 
