@@ -46,6 +46,30 @@ namespace Raven.Client.Tests.Document
 			}
 		}
 
+        [Fact]
+        public void Can_delete_document()
+        {
+            using (var server = GetNewServer(port, path))
+            {
+                var documentStore = new DocumentStore("localhost", port);
+                documentStore.Initialise();
+
+                var session = documentStore.OpenSession();
+                var entity = new Company { Name = "Company" };
+                session.Store(entity);
+                session.SaveChanges();
+
+                using(var session2 = documentStore.OpenSession())
+                    Assert.NotNull(session2.Load<Company>(entity.Id));
+
+                session.Delete(entity);
+                session.SaveChanges();
+
+                using (var session3 = documentStore.OpenSession())
+                    Assert.Null(session3.Load<Company>(entity.Id));
+            }
+        }
+
 		[Fact]
 		public void Should_update_stored_entity()
 		{

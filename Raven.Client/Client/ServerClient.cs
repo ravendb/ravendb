@@ -66,7 +66,10 @@ namespace Raven.Client.Client
 	    public void Delete(string key, Guid? etag)
 		{
 			EnsureIsNotNullOrEmpty(key, "key");
-			throw new NotImplementedException();
+	        var metadata = new JObject();
+	        AddTransactionInformation(metadata);
+	        var httpJsonRequest = new HttpJsonRequest(url + "/docs/" + key, "DELETE", metadata);
+	        httpJsonRequest.ReadResponseString();
 		}
 
 		public string PutIndex(string name, string indexDef)
