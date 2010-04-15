@@ -29,7 +29,7 @@ namespace Raven.Tests.Storage
 		{
 			var documentId = db.Put("1", Guid.Empty, JObject.Parse("{ first_name: 'ayende', last_name: 'rahien'}"),
 			                        new JObject(), null);
-			Assert.Equal("1", documentId);
+			Assert.Equal("1", documentId.Key);
 		}
 
 		[Fact]
@@ -37,7 +37,7 @@ namespace Raven.Tests.Storage
 		{
 			var documentId = db.Put(null, Guid.Empty, JObject.Parse("{ first_name: 'ayende', last_name: 'rahien'}"),
                                     new JObject(), null);
-			Assert.DoesNotThrow(() => new Guid(documentId));
+			Assert.DoesNotThrow(() => new Guid(documentId.Key));
 		}
 
 		[Fact]
@@ -47,7 +47,7 @@ namespace Raven.Tests.Storage
                                      new JObject(), null);
 			var documentId2 = db.Put(null, Guid.Empty, JObject.Parse("{ first_name: 'ayende', last_name: 'rahien'}"),
                                      new JObject(), null);
-			Assert.Equal(1, new Guid(documentId2).CompareTo(new Guid(documentId1)));
+            Assert.Equal(1, new Guid(documentId2.Key).CompareTo(new Guid(documentId1.Key)));
 		}
 
 		[Fact]
