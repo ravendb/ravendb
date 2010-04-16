@@ -60,5 +60,11 @@ namespace Raven.Database.Indexing
 					throw new ArgumentOutOfRangeException();
 			}
 		}
+
+		public IndexDefinition()
+		{
+			Indexes = new Dictionary<string, FieldIndexing>();
+			Stores = new Dictionary<string, FieldStorage>();
+		}
 	}
 }
