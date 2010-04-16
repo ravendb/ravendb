@@ -1,6 +1,4 @@
-using System;
 using System.Collections.Generic;
-using Lucene.Net.Documents;
 
 namespace Raven.Database.Indexing
 {
@@ -14,5 +12,9 @@ namespace Raven.Database.Indexing
 		{
 			get { return Reduce != null; }
 		}
+
+		public Dictionary<string, FieldStorage> Stores { get; set; }
+
+		public Dictionary<string, FieldIndexing> Indexes { get; set; }
 	}
 }

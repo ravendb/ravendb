@@ -6,6 +6,7 @@ using log4net;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Indexing;
+using Raven.Database.Json;
 using Raven.Database.Linq;
 
 namespace Raven.Database.Storage
@@ -32,8 +33,8 @@ namespace Raven.Database.Storage
 				try
 				{
 					AddIndex(Path.GetFileNameWithoutExtension(index),
-						JsonConvert.DeserializeObject<IndexDefinition>(File.ReadAllText(index))
-					         );
+						JsonConvert.DeserializeObject<IndexDefinition>(File.ReadAllText(index), new JsonEnumConverter())
+						);
 				}
 				catch (Exception e)
 				{
@@ -52,7 +53,7 @@ namespace Raven.Database.Storage
 			var transformer = new DynamicViewCompiler(name, indexDefinition);
 			var generator = transformer.GenerateInstance();
 			indexCache.AddOrUpdate(name, generator, (s, viewGenerator) => generator);
-			File.WriteAllText(Path.Combine(path, transformer.Name + ".index"), JsonConvert.SerializeObject(indexDefinition,Formatting.Indented));
+			File.WriteAllText(Path.Combine(path, transformer.Name + ".index"), JsonConvert.SerializeObject(indexDefinition,Formatting.Indented, new JsonEnumConverter()));
 			logger.InfoFormat("New index {0}:\r\n{1}\r\nCompiled to:\r\n{2}", transformer.Name, transformer.CompiledQueryText,
 			                  transformer.CompiledQueryText);
 			return transformer.Name;
@@ -81,7 +82,7 @@ namespace Raven.Database.Storage
 			var indexPath = GetIndexPath(name);
 			if (File.Exists(indexPath) == false)
 				throw new InvalidOperationException("Index file does not exists");
-			return JsonConvert.DeserializeObject<IndexDefinition>(File.ReadAllText(indexPath));
+			return JsonConvert.DeserializeObject<IndexDefinition>(File.ReadAllText(indexPath), new JsonEnumConverter());
 		}
 
 		public AbstractViewGenerator GetViewGenerator(string name)

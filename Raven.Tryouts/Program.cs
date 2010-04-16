@@ -1,31 +1,30 @@
 using System;
-using Newtonsoft.Json.Linq;
+using System.Collections.Generic;
+using Newtonsoft.Json;
 using Raven.Database.Indexing;
-using Raven.Database.Linq;
-using System.Linq;
+using Raven.Database.Json;
 
 namespace Raven.Tryouts
 {
 	internal class Program
 	{
-		private const string query =
-			@"
-    from doc in docs
-	where doc[""@meta""][""@type""] == ""Posts""
-    select new { Key = doc.title, Value = doc.content, Size = doc.size };
-";
+	
 
 		public static void Main()
 		{
-			try
+			var serializeObject = JsonConvert.SerializeObject(new IndexDefinition
 			{
-				var abstractViewGenerator = new DynamicViewCompiler("a", new IndexDefinition{Map = query}).GenerateInstance();
-				var objects = abstractViewGenerator.MapDefinition(new[] {new DynamicJsonObject(JObject.Parse("{'@meta': {'@type': 'Posts'}}"))}).ToArray<object>();
-			}
-			catch (Exception e)
-			{
-				Console.WriteLine(e);
-			}
+				Map = "abc",
+				Reduce = "def",
+				Stores = new Dictionary<string, FieldStorage>
+				{
+					{"ee", FieldStorage.Compress}
+				}
+			},Formatting.Indented,new JsonEnumConverter());
+			Console.WriteLine(serializeObject);
+			var definition = JsonConvert.DeserializeObject<IndexDefinition>(serializeObject, new JsonEnumConverter());
+			Console.WriteLine(definition.Stores["ee"]);
 		}
 	}
+
 }

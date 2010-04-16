@@ -10,6 +10,7 @@ using Raven.Database;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
 using Raven.Database.Indexing;
+using Raven.Database.Json;
 
 namespace Raven.Client.Client
 {
@@ -70,7 +71,7 @@ namespace Raven.Client.Client
                     throw;
                 throw ThrowConcurrencyException(e);
 		    }
-		    return JsonConvert.DeserializeObject<PutResult>(readResponseString);
+			return JsonConvert.DeserializeObject<PutResult>(readResponseString, new JsonEnumConverter());
 		}
 
 	    private static void AddTransactionInformation(JObject metadata)
@@ -129,7 +130,7 @@ namespace Raven.Client.Client
 		{
 			EnsureIsNotNullOrEmpty(name, "name");
 			var request = new HttpJsonRequest(url + "/indexes/" + name, "PUT");
-			request.Write(JsonConvert.SerializeObject(definition));
+			request.Write(JsonConvert.SerializeObject(definition, new JsonEnumConverter()));
 
 			var obj = new {index = ""};
 			obj = JsonConvert.DeserializeAnonymousType(request.ReadResponseString(), obj);

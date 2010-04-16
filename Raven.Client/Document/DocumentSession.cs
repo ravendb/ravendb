@@ -10,6 +10,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Client.Client;
 using System;
 using Raven.Database;
+using Raven.Database.Json;
 
 namespace Raven.Client.Document
 {
@@ -88,7 +89,7 @@ namespace Raven.Client.Document
 
 	    private object ConvertToEntity<T>(string id, string documentFound)
 		{
-			var entity = JsonConvert.DeserializeObject(documentFound, typeof (T));
+			var entity = JsonConvert.DeserializeObject(documentFound, typeof(T), new JsonEnumConverter());
 
 			foreach (var property in entity.GetType().GetProperties())
 			{
