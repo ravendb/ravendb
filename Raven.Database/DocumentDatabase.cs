@@ -38,7 +38,7 @@ namespace Raven.Database
 			}
 
 			IndexDefinitionStorage = new IndexDefinitionStorage(configuration.DataDirectory);
-			IndexStorage = new IndexStorage(configuration.DataDirectory);
+			IndexStorage = new IndexStorage(configuration.DataDirectory, IndexDefinitionStorage);
 			workContext = new WorkContext
 			{
 				IndexStorage = IndexStorage,
@@ -241,7 +241,7 @@ namespace Raven.Database
 					break;
 			}
 			IndexDefinitionStorage.AddIndex(name, definition);
-			IndexStorage.CreateIndex(name, definition.IsMapReduce);
+			IndexStorage.CreateIndexImplementation(name, definition);
 			TransactionalStorage.Batch(actions =>
 			{
 				actions.AddIndex(name);

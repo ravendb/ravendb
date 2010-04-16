@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using Lucene.Net.Documents;
 
 namespace Raven.Database.Indexing
 {
@@ -16,5 +18,47 @@ namespace Raven.Database.Indexing
 		public Dictionary<string, FieldStorage> Stores { get; set; }
 
 		public Dictionary<string, FieldIndexing> Indexes { get; set; }
+
+		public Field.Store GetStorage(string name)
+		{
+			if(Stores == null)
+				return Field.Store.YES;
+			FieldStorage value;
+			if (Stores.TryGetValue(name, out value) == false)
+				return Field.Store.YES;
+			switch (value)
+			{
+				case FieldStorage.Yes:
+					return Field.Store.YES;
+				case FieldStorage.No:
+					return Field.Store.NO;
+				case FieldStorage.Compress:
+					return Field.Store.COMPRESS;
+				default:
+					throw new ArgumentOutOfRangeException();
+			}
+		}
+
+		public Field.Index GetIndex(string name)
+		{
+			if (Indexes == null)
+				return Field.Index.TOKENIZED;
+			FieldIndexing value;
+			if (Indexes.TryGetValue(name, out value) == false)
+				return Field.Index.TOKENIZED;
+			switch (value)
+			{
+				case FieldIndexing.No:
+					return Field.Index.NO;
+				case FieldIndexing.NoNorms:
+					return Field.Index.NO_NORMS;
+				case FieldIndexing.Tokenized:
+					return Field.Index.TOKENIZED;
+				case FieldIndexing.Untokenized:
+					return Field.Index.UN_TOKENIZED;
+				default:
+					throw new ArgumentOutOfRangeException();
+			}
+		}
 	}
 }

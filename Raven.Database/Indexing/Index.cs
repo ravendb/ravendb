@@ -25,11 +25,13 @@ namespace Raven.Database.Indexing
 		private readonly Directory directory;
 		protected readonly ILog log = LogManager.GetLogger(typeof (Index));
 		protected readonly string name;
+		protected readonly IndexDefinition indexDefinition;
 		private CurrentIndexSearcher searcher;
 
-		protected Index(Directory directory, string name)
+		protected Index(Directory directory, string name,IndexDefinition indexDefinition)
 		{
 			this.name = name;
+			this.indexDefinition = indexDefinition;
 			log.DebugFormat("Creating index for {0}", name);
 			this.directory = directory;
 			searcher = new CurrentIndexSearcher

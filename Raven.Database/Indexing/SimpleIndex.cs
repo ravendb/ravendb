@@ -13,7 +13,8 @@ namespace Raven.Database.Indexing
 {
 	public class SimpleIndex : Index
 	{
-		public SimpleIndex(Directory directory, string name) : base(directory, name)
+		public SimpleIndex(Directory directory, string name, IndexDefinition indexDefinition)
+			: base(directory, name, indexDefinition)
 		{
 		}
 
@@ -39,7 +40,7 @@ namespace Raven.Database.Indexing
 						properties = TypeDescriptor.GetProperties(doc);
 					}
 					var newDocId = properties.Find("__document_id", false).GetValue(doc) as string;
-					var fields = converter.Index(doc, properties);
+					var fields = converter.Index(doc, properties, indexDefinition);
 					if (currentId != newDocId) // new document id, so delete all old values matching it
 					{
 						indexWriter.DeleteDocuments(new Term("__document_id", newDocId));
