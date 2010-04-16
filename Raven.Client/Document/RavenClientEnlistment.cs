@@ -3,7 +3,7 @@ using System.Transactions;
 
 namespace Raven.Client.Document
 {
-    public class RavenClientEnlistment : IPromotableSinglePhaseNotification
+    public class RavenClientEnlistment : ISinglePhaseNotification
     {
         private readonly IDocumentSession sessionImpl;
         private readonly Guid txId;
@@ -51,11 +51,6 @@ namespace Raven.Client.Document
         {
             sessionImpl.Rollback(txId);
             singlePhaseEnlistment.Aborted();
-        }
-
-        public byte[] Promote()
-        {
-            return txId.ToByteArray();
         }
     }
 }

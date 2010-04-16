@@ -167,7 +167,7 @@ namespace Raven.Client.Document
             if(enlistment == null && Transaction.Current != null)
             {
                 enlistment = new RavenClientEnlistment(this, Transaction.Current.TransactionInformation.DistributedIdentifier);
-                Transaction.Current.EnlistPromotableSinglePhase(enlistment);
+                Transaction.Current.EnlistVolatile(enlistment,EnlistmentOptions.None);
             }
             foreach (var key in (from deletedEntity in deletedEntities
                                  let identityProperty = GetIdentityProperty(deletedEntity.GetType())
