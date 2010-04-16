@@ -20,11 +20,14 @@ namespace Raven.Tests.Indexes
 			db.SpinBackgroundWorkers();
 
 			db.PutIndex("pagesByTitle2",
-			            @"
+			            new IndexDefinition
+			            {
+							Map = @"
                     from doc in docs
                     where doc.type == ""page""
                     select new {  f = 2 / doc.size };
-                ");
+                "
+			            });
 		}
 
 		#region IDisposable Members

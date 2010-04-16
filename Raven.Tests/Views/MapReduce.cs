@@ -36,7 +36,7 @@ select new {
 		public MapReduce()
 		{
 			db = new DocumentDatabase(new RavenConfiguration {DataDirectory = "raven.db.test.esent"});
-			db.PutIndex("CommentsCountPerBlog", map, reduce);
+			db.PutIndex("CommentsCountPerBlog", new IndexDefinition{Map = map, Reduce = reduce});
 			db.SpinBackgroundWorkers();
 
 			BasicConfigurator.Configure(

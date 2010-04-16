@@ -125,11 +125,11 @@ namespace Raven.Client.Client
 	        }
 	    }
 
-	    public string PutIndex(string name, string indexDef)
+	    public string PutIndex(string name, IndexDefinition definition)
 		{
 			EnsureIsNotNullOrEmpty(name, "name");
 			var request = new HttpJsonRequest(url + "/indexes/" + name, "PUT");
-			request.Write(indexDef);
+			request.Write(JsonConvert.SerializeObject(definition));
 
 			var obj = new {index = ""};
 			obj = JsonConvert.DeserializeAnonymousType(request.ReadResponseString(), obj);

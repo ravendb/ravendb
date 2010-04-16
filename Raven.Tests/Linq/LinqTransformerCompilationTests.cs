@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using Newtonsoft.Json.Linq;
+using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Database.Linq;
 using Xunit;
@@ -19,7 +20,7 @@ namespace Raven.Tests.Linq
 		[Fact]
 		public void Will_compile_query_successfully()
 		{
-			var dynamicQueryCompiler = new DynamicViewCompiler("pagesByTitle", query, null);
+			var dynamicQueryCompiler = new DynamicViewCompiler("pagesByTitle", new IndexDefinition { Map = query });
 			dynamicQueryCompiler.GenerateInstance();
 			var compiled = dynamicQueryCompiler.GeneratedType;
 			Assert.NotNull(compiled);
@@ -28,7 +29,7 @@ namespace Raven.Tests.Linq
 		[Fact]
 		public void Can_create_new_instance_from_query()
 		{
-			var dynamicQueryCompiler = new DynamicViewCompiler("pagesByTitle", query, null);
+			var dynamicQueryCompiler = new DynamicViewCompiler("pagesByTitle", new IndexDefinition { Map = query });
 			dynamicQueryCompiler.GenerateInstance();
 			var compiled = dynamicQueryCompiler.GeneratedType;
 			Activator.CreateInstance(compiled);
@@ -37,7 +38,7 @@ namespace Raven.Tests.Linq
 		[Fact]
 		public void Can_execute_query()
 		{
-			var dynamicQueryCompiler = new DynamicViewCompiler("pagesByTitle", query, null);
+			var dynamicQueryCompiler = new DynamicViewCompiler("pagesByTitle", new IndexDefinition { Map = query });
 			var generator = dynamicQueryCompiler.GenerateInstance();
 			var results = generator.MapDefinition(new[]
 			{

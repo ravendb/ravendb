@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using ICSharpCode.NRefactory.Ast;
+using Raven.Database.Indexing;
 
 namespace Raven.Database.Linq
 {
@@ -12,17 +13,15 @@ namespace Raven.Database.Linq
 	/// </summary>
 	public class DynamicViewCompiler
 	{
+		private readonly IndexDefinition indexDefinition;
 		private const string mapReduceTextToken = "96E65595-1C9E-4BFB-A0E5-80BF2D6FC185";
 
-		private readonly string map;
 		private readonly string name;
-		private readonly string reduce;
 
-		public DynamicViewCompiler(string name, string map, string reduce)
+		public DynamicViewCompiler(string name, IndexDefinition indexDefinition)
 		{
+			this.indexDefinition = indexDefinition;
 			this.name = Regex.Replace(name, @"[^\w\d]","_");
-			this.map = map;
-			this.reduce = reduce;
 		}
 
 		public string CompiledQueryText { get; set; }
@@ -75,9 +74,9 @@ namespace Raven.Database.Linq
 			                   		})));
 
 
-			if (reduce != null)
+			if (indexDefinition.IsMapReduce)
 			{
-				var reduceDefiniton = QueryParsingUtils.GetVariableDeclaration(reduce);
+				var reduceDefiniton = QueryParsingUtils.GetVariableDeclaration(indexDefinition.Reduce);
 				// this.ReduceDefinition = from result in results...;
 				ctor.Body.AddChild(new ExpressionStatement(
 				                   	new AssignmentExpression(
@@ -104,10 +103,10 @@ namespace Raven.Database.Linq
 			}
 
 			CompiledQueryText = QueryParsingUtils.GenerateText(type);
-			var compiledQueryText = "@\"" + map.Replace("\"", "\"\"");
-			if (reduce != null)
+			var compiledQueryText = "@\"" + indexDefinition.Map.Replace("\"", "\"\"");
+			if (indexDefinition.Reduce != null)
 			{
-				compiledQueryText += Environment.NewLine + reduce.Replace("\"", "\"\"");
+				compiledQueryText += Environment.NewLine + indexDefinition.Reduce.Replace("\"", "\"\"");
 			}
 
 			compiledQueryText += "\"";
@@ -117,7 +116,7 @@ namespace Raven.Database.Linq
 
 		private VariableDeclaration TransformMapDefinition()
 		{
-			var variableDeclaration = QueryParsingUtils.GetVariableDeclaration(map);
+			var variableDeclaration = QueryParsingUtils.GetVariableDeclaration(indexDefinition.Map);
 			var queryExpression = ((QueryExpression) variableDeclaration.Initializer);
 			var selectOrGroupClause = queryExpression.SelectOrGroupClause;
 			var projection = ((QueryExpressionSelectClause) selectOrGroupClause).Projection;

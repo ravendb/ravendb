@@ -68,14 +68,9 @@ namespace Raven.Client.Client
             database.Delete(key, etag, GetTransactionInformation());
 		}
 
-		public string PutIndex(string name, string indexDef)
+		public string PutIndex(string name, IndexDefinition definition)
 		{
-			var indexDefJson = JObject.Parse(indexDef);
-			var reduceDef = indexDefJson.Property("Reduce") != null
-				? indexDefJson.Property("Reduce").Value.Value<string>()
-				: null;
-			return database.PutIndex(name, indexDefJson.Property("Map").Value.Value<string>(),
-			                         reduceDef);
+			return database.PutIndex(name, definition);
 		}
 
 		public QueryResult Query(string index, IndexQuery query)

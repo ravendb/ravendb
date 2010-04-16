@@ -1,5 +1,6 @@
 using System;
 using Newtonsoft.Json.Linq;
+using Raven.Database.Indexing;
 using Raven.Database.Linq;
 using System.Linq;
 
@@ -18,7 +19,7 @@ namespace Raven.Tryouts
 		{
 			try
 			{
-				var abstractViewGenerator = new DynamicViewCompiler("a", query, null).GenerateInstance();
+				var abstractViewGenerator = new DynamicViewCompiler("a", new IndexDefinition{Map = query}).GenerateInstance();
 				var objects = abstractViewGenerator.MapDefinition(new[] {new DynamicJsonObject(JObject.Parse("{'@meta': {'@type': 'Posts'}}"))}).ToArray<object>();
 			}
 			catch (Exception e)

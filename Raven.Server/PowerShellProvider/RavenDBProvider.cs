@@ -5,6 +5,7 @@ using System.Management.Automation.Provider;
 using System.Text;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
+using Raven.Database.Indexing;
 
 namespace Raven.Server.PowerShellProvider
 {
@@ -136,7 +137,7 @@ namespace Raven.Server.PowerShellProvider
 
 			if (type == PathType.Document)
 			{
-				var db = this.PSDriveInfo as RavenDBPSDriveInfo;
+				var db = PSDriveInfo as RavenDBPSDriveInfo;
 				JsonDocument document;
 				if (db == null)
 					document = null;
@@ -154,7 +155,13 @@ namespace Raven.Server.PowerShellProvider
 				if (db == null)
 					index = null;
 				else
-					index = db.Database.IndexDefinitionStorage.GetIndexDefinition(pathTypeValue);
+				{
+					var indexDefinition = db.Database.IndexDefinitionStorage.GetIndexDefinition(pathTypeValue);
+					if (indexDefinition != null)
+						index = indexDefinition.Map + Environment.NewLine + indexDefinition.Reduce;
+					else
+						index = null;
+				}
 				WriteItemObject(index, path, true);
 			}
 			else
@@ -214,7 +221,7 @@ namespace Raven.Server.PowerShellProvider
 				{
 					var db = this.PSDriveInfo as RavenDBPSDriveInfo;
 					if (db.Database.IndexDefinitionStorage.IndexNames.Contains(pathTypeValue))
-						db.Database.PutIndex(pathTypeValue, value.ToString());
+						db.Database.PutIndex(pathTypeValue, (IndexDefinition)value);
 					else
 						WriteError(new ErrorRecord(new ArgumentException(
 						                           	"Index does not exist."), "",
@@ -275,9 +282,15 @@ namespace Raven.Server.PowerShellProvider
 		        if (db == null)
 		            index = null;
 		        else
-		            index = db.Database.IndexDefinitionStorage.GetIndexDefinition(pathTypeValue);
+		        {
+		        	var indexDefinition = db.Database.IndexDefinitionStorage.GetIndexDefinition(pathTypeValue);
+					if (indexDefinition != null)
+						index = indexDefinition.Map + Environment.NewLine + indexDefinition.Reduce;
+					else
+						index = null;
+		        }
 
-		        return index != null;
+		    	return index != null;
 		    }
 		    if (type == PathType.Indexes)
 		        return true;
@@ -520,7 +533,7 @@ namespace Raven.Server.PowerShellProvider
 				{
 					var db = this.PSDriveInfo as RavenDBPSDriveInfo;
 					if (!db.Database.IndexDefinitionStorage.IndexNames.Contains(pathTypeValue))
-						db.Database.PutIndex(pathTypeValue, newItemValue.ToString());
+						db.Database.PutIndex(pathTypeValue, (IndexDefinition)newItemValue);
 					else
 						WriteError(new ErrorRecord(new ArgumentException(
 						                           	"Index already exists."), "",

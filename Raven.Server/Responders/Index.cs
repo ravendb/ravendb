@@ -41,27 +41,15 @@ namespace Raven.Server.Responders
 
 		private void Put(HttpListenerContext context, string index)
 		{
-			var data = context.ReadJson();
-			var mapProp = data.Property("Map");
-			if (mapProp == null)
+			var data = context.ReadJsonObject<IndexDefinition>();
+			if (data.Map == null)
 			{
 				context.SetStatusToBadRequest();
 				context.Write("Expected json document with 'Map' property");
 				return;
 			}
-			var mapDef = mapProp.Value.Value<string>();
-			string reduceDef = null;
-			if (data.Property("Reduce") != null)
-				reduceDef = data.Property("Reduce").Value.Value<string>();
-
 			context.SetStatusToCreated("/indexes/" + index);
-			context.WriteJson(new
-			{
-				index = Database.PutIndex(index,
-				                          mapDef,
-				                          reduceDef
-			                  	)
-			});
+			context.WriteJson(new { index = Database.PutIndex(index, data) });
 		}
 
 		private void OnGet(HttpListenerContext context, string index)

@@ -11,7 +11,7 @@ namespace Raven.Client.Client
 		JsonDocument Get(string key);
 		PutResult Put(string key, Guid? etag, JObject document, JObject metadata);
 		void Delete(string key, Guid? etag);
-		string PutIndex(string name, string indexDef);
+		string PutIndex(string name, IndexDefinition indexDef);
 		QueryResult Query(string index, IndexQuery query);
 		void DeleteIndex(string name);
         JsonDocument[] Get(string[] ids);

@@ -1,5 +1,6 @@
 using System;
 using Raven.Database;
+using Raven.Database.Indexing;
 using Xunit;
 using System.Linq;
 
@@ -28,11 +29,14 @@ namespace Raven.Tests.Storage
 		public void Can_remove_index()
 		{
 			db.PutIndex("pagesByTitle",
-			            @"
+					   new IndexDefinition
+					   {
+						   Map = @"
     from doc in docs
     where doc.type == ""page""
     select new { Key = doc.title, Value = doc.content, Size = doc.size };
-");
+"
+					   });
 			db.DeleteIndex("pagesByTitle");
 			var indexNames = db.IndexDefinitionStorage.IndexNames.Where(x => x.StartsWith("Raven") == false).ToArray();
 			Assert.Equal(0, indexNames.Length);
@@ -47,7 +51,7 @@ namespace Raven.Tests.Storage
     where doc.type == ""page""
     select new { Key = doc.title, Value = doc.content, Size = doc.size };
 ";
-			db.PutIndex("pagesByTitle", definition);
+			db.PutIndex("pagesByTitle", new IndexDefinition{Map = definition});
 			db.DeleteIndex("pagesByTitle");
 			var actualDefinition = db.IndexStorage.Indexes.Where(x=>x.StartsWith("Raven") == false);
 			Assert.Empty(actualDefinition);

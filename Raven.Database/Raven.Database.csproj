@@ -110,6 +110,7 @@
     <Compile Include="Data\SortedField.cs" />
     <Compile Include="Exceptions\IndexDisabledException.cs" />
     <Compile Include="Data\IndexQuery.cs" />
+    <Compile Include="Indexing\IndexDefinition.cs" />
     <Compile Include="Indexing\MapReduceIndex.cs" />
     <Compile Include="Indexing\SimpleIndex.cs" />
     <Compile Include="JsonDocument.cs" />

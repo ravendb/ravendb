@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json.Linq;
+using Raven.Database.Indexing;
 using Raven.Database.Linq;
 using Xunit;
 
@@ -47,21 +48,21 @@ select new {
 		[Fact]
 		public void CanDetectGroupByTarget()
 		{
-			var abstractViewGenerator = new DynamicViewCompiler("test", map, reduce).GenerateInstance();
+			var abstractViewGenerator = new DynamicViewCompiler("test", new IndexDefinition { Map = map, Reduce = reduce }).GenerateInstance();
 			Assert.Equal("blog_id", abstractViewGenerator.GroupByField);
 		}
 
 		[Fact]
 		public void CanCompileQuery()
 		{
-			var abstractViewGenerator = new DynamicViewCompiler("test", map, reduce).GenerateInstance();
+			var abstractViewGenerator = new DynamicViewCompiler("test", new IndexDefinition { Map = map, Reduce = reduce }).GenerateInstance();
 			Assert.NotNull(abstractViewGenerator);
 		}
 
 		[Fact]
 		public void CanExecuteQuery()
 		{
-			var dynamicViewCompiler = new DynamicViewCompiler("test", map, reduce);
+			var dynamicViewCompiler = new DynamicViewCompiler("test", new IndexDefinition { Map = map, Reduce = reduce });
 			var abstractViewGenerator = dynamicViewCompiler.GenerateInstance();
 			var mapResults = abstractViewGenerator.MapDefinition(source).ToArray();
 			var results = abstractViewGenerator.ReduceDefinition(mapResults).ToArray();

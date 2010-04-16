@@ -5,6 +5,7 @@ using System.Linq;
 using log4net;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Database.Indexing;
 using Raven.Database.Linq;
 
 namespace Raven.Database.Storage
@@ -28,12 +29,11 @@ namespace Raven.Database.Storage
 
 			foreach (var index in Directory.GetFiles(this.path, "*.index"))
 			{
-				var indexDef = JObject.Parse(File.ReadAllText(index));
 				try
 				{
 					AddIndex(Path.GetFileNameWithoutExtension(index),
-					         indexDef.Property("Map").Value.Value<string>(),
-					         indexDef.Property("Reduce").Value.Value<string>());
+						JsonConvert.DeserializeObject<IndexDefinition>(File.ReadAllText(index))
+					         );
 				}
 				catch (Exception e)
 				{
@@ -47,16 +47,12 @@ namespace Raven.Database.Storage
 			get { return indexCache.Keys.ToArray(); }
 		}
 
-		public string AddIndex(string name, string mapDef, string reduceDef)
+		public string AddIndex(string name, IndexDefinition indexDefinition)
 		{
-			var transformer = new DynamicViewCompiler(name, mapDef, reduceDef);
+			var transformer = new DynamicViewCompiler(name, indexDefinition);
 			var generator = transformer.GenerateInstance();
 			indexCache.AddOrUpdate(name, generator, (s, viewGenerator) => generator);
-			File.WriteAllText(Path.Combine(path, transformer.Name + ".index"), JObject.FromObject(new
-			{
-				Map = mapDef,
-				Reduce = reduceDef
-			}).ToString(Formatting.Indented));
+			File.WriteAllText(Path.Combine(path, transformer.Name + ".index"), JsonConvert.SerializeObject(indexDefinition,Formatting.Indented));
 			logger.InfoFormat("New index {0}:\r\n{1}\r\nCompiled to:\r\n{2}", transformer.Name, transformer.CompiledQueryText,
 			                  transformer.CompiledQueryText);
 			return transformer.Name;
@@ -80,12 +76,12 @@ namespace Raven.Database.Storage
 			return Path.Combine(path, name + ".index");
 		}
 
-		public string GetIndexDefinition(string name)
+		public IndexDefinition GetIndexDefinition(string name)
 		{
 			var indexPath = GetIndexPath(name);
 			if (File.Exists(indexPath) == false)
 				throw new InvalidOperationException("Index file does not exists");
-			return File.ReadAllText(indexPath);
+			return JsonConvert.DeserializeObject<IndexDefinition>(File.ReadAllText(indexPath));
 		}
 
 		public AbstractViewGenerator GetViewGenerator(string name)
@@ -96,7 +92,7 @@ namespace Raven.Database.Storage
 			return value;
 		}
 
-		public IndexCreationOptions FindIndexCreationOptionsOptions(string name, string indexDef)
+		public IndexCreationOptions FindIndexCreationOptionsOptions(string name, IndexDefinition indexDef)
 		{
 			if (indexCache.ContainsKey(name))
 			{

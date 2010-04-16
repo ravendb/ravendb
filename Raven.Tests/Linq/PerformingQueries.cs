@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json.Linq;
+using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Database.Linq;
 using Xunit;
@@ -26,7 +27,7 @@ namespace Raven.Tests.Linq
 {'type':'page', title: 'there', content: 'foobar 2', size: 3, '@metadata': {'@id': 2} },
 {'type':'revision', size: 4, _id: 3}
 ]");
-			var transformer = new DynamicViewCompiler("pagesByTitle", query, null);
+			var transformer = new DynamicViewCompiler("pagesByTitle", new IndexDefinition { Map = query });
 			var compiledQuery = transformer.GenerateInstance();
 			var actual = compiledQuery.MapDefinition(documents)
 				.Cast<object>().ToArray();

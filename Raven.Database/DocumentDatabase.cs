@@ -52,11 +52,15 @@ namespace Raven.Database
 			if(configuration.ShouldCreateDefaultsWhenBuildingNewDatabaseFromScratch)
 			{
 				PutIndex("Raven/DocumentsByEntityName",
-                         @"
+				         new IndexDefinition
+				         {
+				         	Map =
+				         		@"
 	from doc in docs 
 	where doc[""@metadata""][""Raven-Entity-Name""] != null 
 	select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
-");
+"
+				         });
 			}
 	
 			configuration.RaiseDatabaseCreatedFromScratch(this);
@@ -226,14 +230,9 @@ namespace Raven.Database
             workContext.NotifyAboutWork();
         }
 
-		public string PutIndex(string name, string mapDef)
+		public string PutIndex(string name, IndexDefinition definition)
 		{
-			return PutIndex(name, mapDef, null);
-		}
-
-		public string PutIndex(string name, string mapDef, string reduceDef)
-		{
-			switch (IndexDefinitionStorage.FindIndexCreationOptionsOptions(name, mapDef))
+			switch (IndexDefinitionStorage.FindIndexCreationOptionsOptions(name, definition))
 			{
 				case IndexCreationOptions.Noop:
 					return name;
@@ -241,8 +240,8 @@ namespace Raven.Database
 					DeleteIndex(name);
 					break;
 			}
-			IndexDefinitionStorage.AddIndex(name, mapDef, reduceDef);
-			IndexStorage.CreateIndex(name, isMapReduce: reduceDef != null);
+			IndexDefinitionStorage.AddIndex(name, definition);
+			IndexStorage.CreateIndex(name, definition.IsMapReduce);
 			TransactionalStorage.Batch(actions =>
 			{
 				actions.AddIndex(name);
