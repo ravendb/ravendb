@@ -23,6 +23,12 @@ namespace Raven.Database.Indexing
 			if (val is DateTime)
 				return DateTools.DateToString((DateTime) val, DateTools.Resolution.DAY);
 
+			if (val is int)
+				return NumberTools.LongToString((int) val);
+
+			if (val is long)
+				return NumberTools.LongToString((long) val);
+
 			return val.ToString();
 		}
 	}
