@@ -12,7 +12,7 @@ namespace Raven.Client.Document
 	{
 		protected string indexName;
 		protected string query = "";
-		private string[] orderByFields = new string[0];
+		protected string[] orderByFields = new string[0];
 		protected int start;
 		protected int pageSize = 128;
 		protected bool waitForNonStaleResults;

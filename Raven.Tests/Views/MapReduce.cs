@@ -83,7 +83,12 @@ select new {
 			{
 				do
 				{
-					q = db.Query("CommentsCountPerBlog", new IndexQuery("blog_id:3", 0, 10));
+					q = db.Query("CommentsCountPerBlog", new IndexQuery
+					{
+						Query = "blog_id:3",
+						Start = 0,
+						PageSize = 10
+					});
 					Thread.Sleep(100);
 				} while (q.IsStale);
 			}

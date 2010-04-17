@@ -67,7 +67,12 @@ namespace Raven.Tests.Indexes
 			QueryResult docs;
 			do
 			{
-				docs = db.Query("pagesByTitle2", new IndexQuery("some:val", 0, 10));
+				docs = db.Query("pagesByTitle2", new IndexQuery
+				{
+					Query = "some:val",
+					Start = 0,
+					PageSize = 10
+				});
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);
@@ -108,7 +113,12 @@ namespace Raven.Tests.Indexes
 			QueryResult docs;
 			do
 			{
-				docs = db.Query("pagesByTitle2", new IndexQuery("some:val", 0, 10));
+				docs = db.Query("pagesByTitle2", new IndexQuery
+				{
+					Query = "some:val",
+					Start = 0,
+					PageSize = 10
+				});
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);
@@ -138,7 +148,12 @@ namespace Raven.Tests.Indexes
 			QueryResult docs;
 			do
 			{
-				docs = db.Query("pagesByTitle2", new IndexQuery("some:val", 0, 10));
+				docs = db.Query("pagesByTitle2", new IndexQuery
+				{
+					Query = "some:val",
+					Start = 0,
+					PageSize = 10
+				});
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);

@@ -61,16 +61,15 @@ namespace Raven.Server.Responders
 			}
 			else
 			{
-				context.WriteJson(Database.Query(index, new IndexQuery(
-				                                        	context.Request.QueryString["query"],
-				                                        	context.GetStart(),
-				                                        	context.GetPageSize()
-				                                        	)
+				context.WriteJson(Database.Query(index, new IndexQuery
 				{
+					Query = context.Request.QueryString["query"],
+					Start = context.GetStart(),
+					PageSize = context.GetPageSize(),
 					FieldsToFetch = context.Request.QueryString.GetValues("fetch"),
 					SortedFields = context.Request.QueryString.GetValues("sort")
 						.EmptyIfNull()
-						.Select(x=>new SortedField(x))
+						.Select(x => new SortedField(x))
 						.ToArray()
 				}));
 			}
