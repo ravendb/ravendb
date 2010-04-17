@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Transactions;
+using System.Web;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
@@ -152,7 +153,7 @@ namespace Raven.Client.Client
             {
                 path = query.SortedFields.Aggregate(
                         new StringBuilder(path),
-                        (sb, field) => sb.Append("&sort=").Append(field.Descending ? "-" : "+").Append(field.Field)
+						(sb, field) => sb.Append("&sort=").Append(HttpUtility.UrlEncode(field.Descending ? "-" : "+")).Append(field.Field)
                     ).ToString();
             }
             var request = new HttpJsonRequest(path, "GET");
