@@ -94,7 +94,8 @@
             var wrapper = $('<div class="searchListWrapper ui-corner-all"></div>');
             var alternate = false;
             $(results).each(function() {
-                var docID = this['@metadata']['@id'];
+            	debugger;
+            	var docID = this['@metadata']['@id'];
                 var previewHTML = GetDocumentViewHTML(this);
                 if (alternate) {
                     var searchResult = $('<div id="' + docID + '" class="searchListItem alternate"></div>');
@@ -152,30 +153,30 @@
         }
 
         function EditDocument(id) {
-            $('#ajaxSuccess, #ajaxError').fadeOut();            
-            RavenUI.GetDocument(id, function (doc, etag, template) { 
-                ShowEditorForDocument(id, doc, etag, template, 'Edit Document', function(id, etag, template, json, editor) {
-                    RavenUI.SaveDocument(id, etag, template, GetJSONFromEditor(), function () {
-                        $(editor).dialog('close');
-                        $('#ajaxSuccess').html('Your document has been updated. Click <a href="#" onclick="EditDocument(\'' + id + '\'); return false;">here</a> to see it again.').fadeIn('slow');
-                        if (!isInQueryMode) {
-                            getAllDocuments();
-                        } else {
-                            ExecuteQuery();
-                        }
-                    });
-                }, function(id, etag, editor, deleteDialog) {
-                    RavenUI.DeleteDocument(id, etag, null, function(data) {
-                        $(deleteDialog).dialog('close');
-                        $(editor).dialog('close');                       
-                        $('#ajaxSuccess').html('Your document has been deleted.').fadeIn('slow');
-                        if (!isInQueryMode) {
-                            getAllDocuments();
-                        } else {
-                            ExecuteQuery();
-                        }
-                    });
-                });
+            $('#ajaxSuccess, #ajaxError').fadeOut();
+            RavenUI.GetDocument(id, 'Edit', function (doc, etag, template) {
+            	ShowEditorForDocument(id, doc, etag, template, 'Edit Document', function (id, etag, template, json, editor) {
+            		RavenUI.SaveDocument(id, etag, template, GetJSONFromEditor(), function () {
+            			$(editor).dialog('close');
+            			$('#ajaxSuccess').html('Your document has been updated. Click <a href="#" onclick="EditDocument(\'' + id + '\'); return false;">here</a> to see it again.').fadeIn('slow');
+            			if (!isInQueryMode) {
+            				getAllDocuments();
+            			} else {
+            				ExecuteQuery();
+            			}
+            		});
+            	}, function (id, etag, editor, deleteDialog) {
+            		RavenUI.DeleteDocument(id, etag, function (data) {
+            			$(deleteDialog).dialog('close');
+            			$(editor).dialog('close');
+            			$('#ajaxSuccess').html('Your document has been deleted.').fadeIn('slow');
+            			if (!isInQueryMode) {
+            				getAllDocuments();
+            			} else {
+            				ExecuteQuery();
+            			}
+            		});
+            	});
             });            
         }
 
