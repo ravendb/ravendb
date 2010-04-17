@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Raven.Database.Data;
 
 namespace Raven.Client
@@ -10,6 +11,8 @@ namespace Raven.Client
 		IDocumentQuery<T> Where(string whereClause);
 		IDocumentQuery<T> OrderBy(params string[] fields);
 		IDocumentQuery<T> WaitForNonStaleResults();
+
+	    IDocumentQuery<TProjection> Select<TProjection>(Func<T, TProjection> projectionExpression);
 
 		QueryResult QueryResult { get; }
 	}

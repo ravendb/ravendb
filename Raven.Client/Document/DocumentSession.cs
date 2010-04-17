@@ -223,7 +223,7 @@ namespace Raven.Client.Document
 
 	    public IDocumentQuery<T> Query<T>(string indexName)
 		{
-			return new DocumentQuery<T>(database, indexName);
+	        return new DocumentQuery<T>(database, indexName, null);
 		}
 
         #region IDisposable Members

@@ -22,7 +22,12 @@ namespace Raven.Client.Document
 			}
 		}
 
-		protected QueryResult GetQueryResult()
+	    private ShardedDocumentQuery(IDocumentQuery<T>[] queries)
+	    {
+	        this.queries = queries;
+	    }
+
+	    protected QueryResult GetQueryResult()
 		{
 			var queryResults = queries.Select(x => x.QueryResult).ToArray();
 			return new QueryResult
@@ -85,7 +90,14 @@ namespace Raven.Client.Document
 			return this;
 		}
 
-		public QueryResult QueryResult
+	    public IDocumentQuery<TProjection> Select<TProjection>(Func<T, TProjection> projectionExpression)
+	    {
+	        return new ShardedDocumentQuery<TProjection>(
+	            queries.Select(x => x.Select(projectionExpression)).ToArray()
+	            );
+	    }
+
+	    public QueryResult QueryResult
 		{
 			get { return queryResult ?? (queryResult = GetQueryResult()); }
 		}
