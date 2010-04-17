@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading;
 using Raven.Client.Client;
 using Raven.Database.Data;
-using System.Linq;
 using System.Linq;
 
 namespace Raven.Client.Document

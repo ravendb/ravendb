@@ -26,6 +26,14 @@ namespace Raven.Client.Tests
 
 		public BaseTest()
 		{
+			try
+			{
+				new Uri("http://fail/first/time?only=%2bplus");
+			}
+			catch (Exception)
+			{
+			}
+
 			if (Directory.Exists(DbDirectory))
 				Directory.Delete(DbDirectory, true);
 

@@ -219,5 +219,41 @@ namespace Raven.Client.Tests.Document
 				Assert.Equal(2, companyFound.Length);
 			}
 		}
+
+		[Fact]
+		public void Can_sort_from_index()
+		{
+			using (var server = GetNewServer(port, path))
+			{
+				var documentStore = new DocumentStore("localhost", port);
+				documentStore.Initialise();
+
+				var session = documentStore.OpenSession();
+				
+				session.Store(new Company { Name = "Company 1", Phone = 5 });
+				session.Store(new Company { Name = "Company 2", Phone = 3 });
+				session.SaveChanges();
+
+				documentStore.DatabaseCommands.PutIndex("company_by_name",
+														new IndexDefinition
+														{
+															Map = "from doc in docs select new { doc.Name, doc.Phone}",
+															Indexes = { { "Phone", FieldIndexing.Tokenized } }
+														});
+
+				// Wait until the index is built
+				session.Query<Company>("company_by_name")
+					.WaitForNonStaleResults()
+					.ToArray();
+
+				var companies = session.Query<Company>("company_by_name")
+					.OrderBy("Phone")
+					.WaitForNonStaleResults()
+					.ToArray();
+
+				Assert.Equal("Company 2", companies[0].Name);
+				Assert.Equal("Company 1", companies[1].Name);
+			}
+		}
 	}
 }

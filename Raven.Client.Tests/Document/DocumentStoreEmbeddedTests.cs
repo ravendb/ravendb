@@ -203,7 +203,7 @@ namespace Raven.Client.Tests.Document
             }
         }
 
-        [Fact(Skip = "Not yet implemented")]
+        [Fact]
         public void Can_sort_from_index()
         {
             using (var documentStore = NewDocumentStore())
@@ -213,11 +213,17 @@ namespace Raven.Client.Tests.Document
                 session.Store(new Company { Name = "Company 2", Phone = 3 });
                 session.SaveChanges();
 
-                documentStore.DatabaseCommands.PutIndex("company_by_name",
-                                                        new IndexDefinition
-                                                        {
-                                                            Map = "from doc in docs select new { doc.Name, doc.Phone}"
-                                                        });
+            	documentStore.DatabaseCommands.PutIndex("company_by_name",
+            	                                        new IndexDefinition
+            	                                        {
+            	                                        	Map = "from doc in docs select new { doc.Name, doc.Phone}",
+            	                                        	Indexes = {{"Phone", FieldIndexing.Tokenized}}
+            	                                        });
+
+				// Wait until the index is built
+				session.Query<Company>("company_by_name")
+					.WaitForNonStaleResults()
+					.ToArray();
 
                 var companies = session.Query<Company>("company_by_name")
                     .OrderBy("Phone")
