@@ -1,6 +1,7 @@
 using System;
 using System.Configuration.Install;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Security.Principal;
@@ -38,6 +39,10 @@ namespace Raven.Server
 						break;
 #if DEBUG
 					case "test":
+						var dataDirectory = new RavenConfiguration().DataDirectory;
+						if (Directory.Exists(dataDirectory))
+							Directory.Delete(dataDirectory, true);
+
 						RunInDebugMode(createDefaultDatabase: false, anonymousUserAccessMode: AnonymousUserAccessMode.All);
 						break;
 #endif
