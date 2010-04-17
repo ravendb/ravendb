@@ -140,11 +140,11 @@
             });
         },
 
-        saveIndex: function (name, def, successCallback, errorCallback) {
+        saveIndex: function (name, mapDef, successCallback, errorCallback) {
             $.ajax({
                 type: 'PUT',
                 url: settings.server + 'indexes/' + name,
-                data: def,
+                data: JSON.stringify({Map: mapDef}),
                 success: function (data) {
                     successCallback(data);
                 },

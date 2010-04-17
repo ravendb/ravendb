@@ -115,7 +115,7 @@
         function EditIndex(name) {
             RavenUI.GetIndex(name, function (index) {
                 $('#indexEditorName').val(name);
-                $('#indexEditorDef').val(index.index);
+                $('#indexEditorMapDef').val(index.index.Map);
                 $('#saveError, #ajaxSuccess, #ajaxError').hide();
                 
                 $('#deleteIndex').show().click(function() {
@@ -145,8 +145,8 @@
                     buttons: {
                         Save: function () {
                             var newName = $('#indexEditorName').val();
-                            var def = $('#indexEditorDef').val();
-                            RavenUI.SaveIndex(newName, def, function (data) {
+                            var mapDef = $('#indexEditorMapDef').val();
+                            RavenUI.SaveIndex(newName, mapDef, function (data) {
                                 $('#divEditor').dialog('close');
                                 $('#ajaxSuccess').html('Your index has been updated. Click <a href="#" onclick="EditIndex(\'' + newName + '\'); return false;">here</a> to see it again.').fadeIn('slow');
                                 getIndexPage();
@@ -166,7 +166,7 @@
 
         function CreateIndex() {
             $('#indexEditorName').val('');
-            $('#indexEditorDef').val('');
+            $('#indexEditorMapDef').val('');
             $('#saveError, #ajaxSuccess, #ajaxError').hide(); 
             $('#deleteIndex').hide();           
             $('#divEditor').dialog({
@@ -174,8 +174,8 @@
                 buttons: {
                     Save: function () {
                         var newName = $('#indexEditorName').val();
-                        var def = $('#indexEditorDef').val();
-                        RavenUI.SaveIndex(newName, def, function (data) {
+                        var mapDef = $('#indexEditorMapDef').val();
+                        RavenUI.SaveIndex(newName, mapDef, function (data) {
                             $('#divEditor').dialog('close');
                             getIndexPage();
                             $('#ajaxSuccess').html('Your index has been created. Click <a href="#" onclick="EditIndex(\'' + newName + '\'); return false;">here</a> to see it again.').fadeIn('slow');
@@ -243,8 +243,8 @@
                 <label for="indexEditorName">Name</label><br />
                 <input type="text" style="width:100%;" id="indexEditorName" name="indexEditorName"></input><br /><br />
 
-                <label for="indexEditorDef">Definition</label><br />
-                <textarea style="width:100%; height:100px;" id="indexEditorDef" name="indexEditorDef"></textarea><br /><br />
+                <label for="indexEditorMapDef">Map:</label><br />
+                <textarea style="width:100%; height:100px;" id="indexEditorMapDef" name="indexEditorMapDef"></textarea><br /><br />
                 <button id="deleteIndex" style="margin-bottom:20px;">Delete Index</button>
             </div>
             <p id="indexList">
