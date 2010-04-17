@@ -30,7 +30,7 @@ namespace Raven.Server
 			this.configuration = configuration;
 			this.requestResponders = requestResponders.ToArray();
 			listener = new HttpListener();
-			listener.Prefixes.Add("http://+:" + configuration.Port + "/");
+			listener.Prefixes.Add("http://+:" + configuration.Port + "/" + configuration.VirtualDirectory);
 			switch (configuration.AnonymousUserAccessMode)
 			{
 				case AnonymousUserAccessMode.None:

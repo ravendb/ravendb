@@ -19,17 +19,29 @@ namespace Raven.Database
 
 			DataDirectory = ConfigurationManager.AppSettings["RavenDataDir"] ?? @"..\..\..\Data";
 
-			WebDir = ConfigurationManager.AppSettings["RavenWebDir"] ??
-				Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\WebUI");
+			WebDir = ConfigurationManager.AppSettings["RavenWebDir"] ?? GetDefaultWebDir();
 
-			AnonymousUserAccessMode = ConfigurationManager.AppSettings["AnonymousAccess"] != null
-				?
-					(AnonymousUserAccessMode)
-						Enum.Parse(typeof (AnonymousUserAccessMode), ConfigurationManager.AppSettings["AnonymousAccess"])
-				:
-					AnonymousUserAccessMode.Get;
+			VirtualDirectory = ConfigurationManager.AppSettings["VirtualDirectory"];
+
+
+			AnonymousUserAccessMode = GetAnonymousUserAccessMode();
 
 			ShouldCreateDefaultsWhenBuildingNewDatabaseFromScratch = true;
+		}
+
+		private static AnonymousUserAccessMode GetAnonymousUserAccessMode()
+		{
+			if (string.IsNullOrEmpty(ConfigurationManager.AppSettings["AnonymousAccess"]) == false)
+			{
+				var val = Enum.Parse(typeof (AnonymousUserAccessMode), ConfigurationManager.AppSettings["AnonymousAccess"]);
+				return (AnonymousUserAccessMode) val;
+			}
+			return AnonymousUserAccessMode.Get;
+		}
+
+		private static string GetDefaultWebDir()
+		{
+			return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\WebUI");
 		}
 
 		public string DataDirectory { get; set; }
@@ -39,6 +51,8 @@ namespace Raven.Database
 		public AnonymousUserAccessMode AnonymousUserAccessMode { get; set; }
 
 		public bool ShouldCreateDefaultsWhenBuildingNewDatabaseFromScratch { get; set; }
+
+		public string VirtualDirectory { get; set; }
 
 		public void LoadLoggingSettings()
 		{
