@@ -75,7 +75,9 @@
         function getDisplayString(json) {
             var returnJSON = json;
             delete returnJSON["@metadata"];
-            var jsonString = JSON.stringify(returnJSON);
+            var jsonString = JSON.stringify(returnJSON)
+				.replace(/</g, '&lt;')
+				.replace(/>/g, '&gt;');
             if (jsonString.length > 90)
                 jsonString = jsonString.substring(0,90) + '...';
             return jsonString;
@@ -93,7 +95,7 @@
             var alternate = false;
             $(results).each(function() {
                 var docID = this['@metadata']['@id'];
-                var previewHTML = GetDocumentViewHTML(this, this['@metadata']['Raven-View-Template']);
+                var previewHTML = GetDocumentViewHTML(this);
                 if (alternate) {
                     var searchResult = $('<div id="' + docID + '" class="searchListItem alternate"></div>');
                 } else {
@@ -193,37 +195,32 @@
         }
         
         function GetDocumentViewHTML(json, template) {
-            if (template && template != '') {
-                var view = $('<div style="padding:10px;"></div>');
-                $(view).setTemplateURL(template);
-                $(view).processTemplate(json);
-            } else {
-                var view = $('<div class="jsonViewWrapper"></div>');
-                if (json["@metadata"])
-                    delete json["@metadata"];
-                $(view).html(GetHTMLForDefaultView(json));
+            
+            var view = $('<div class="jsonViewWrapper"></div>');
+            if (json["@metadata"])
+                delete json["@metadata"];
+            $(view).html(GetHTMLForDefaultView(json));
 
-                $(view).find('.jsonObjectView:first').css('border', 'none').css('padding', '0').css('margin-left', '0');
+            $(view).find('.jsonObjectView:first').css('border', 'none').css('padding', '0').css('margin-left', '0');
 
-                $(view).find('.arrayNameView').click(function () {
-                    $(this).next().slideToggle();
-                    var current = $(this).children('div').html();
-                    if (current == 'hide')
-                        $(this).children('div').html('show');
-                    else
-                        $(this).children('div').html('hide'); 
-                }).hover(function () {
-                    var text;
-                    if ($(this).next().is(':visible')) {
-                        text = 'hide';
-                    } else {
-                        text = 'show';
-                    }
-                    $(this).append('<div style="position:absolute; right: 5px; top: 8px; font-size: 10px; color: #ccc;">' + text + '</div>');
-                }, function () {
-                    $(this).children('div').remove();
-                });
-            }
+            $(view).find('.arrayNameView').click(function () {
+                $(this).next().slideToggle();
+                var current = $(this).children('div').html();
+                if (current == 'hide')
+                    $(this).children('div').html('show');
+                else
+                    $(this).children('div').html('hide'); 
+            }).hover(function () {
+                var text;
+                if ($(this).next().is(':visible')) {
+                    text = 'hide';
+                } else {
+                    text = 'show';
+                }
+                $(this).append('<div style="position:absolute; right: 5px; top: 8px; font-size: 10px; color: #ccc;">' + text + '</div>');
+            }, function () {
+                $(this).children('div').remove();
+            });
             
             return view;
         }
