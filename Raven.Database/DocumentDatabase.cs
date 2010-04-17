@@ -387,7 +387,7 @@ namespace Raven.Database
 						indexName => new JObject
 						{
 							{"name", new JValue(indexName)},
-							{"definition", new JValue(IndexDefinitionStorage.GetIndexDefinition(indexName))}
+							{"definition", JObject.FromObject(IndexDefinitionStorage.GetIndexDefinition(indexName))}
 						})
 				);
 		}
