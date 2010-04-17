@@ -33,6 +33,14 @@ namespace Raven.Tests.Storage
 		}
 
 		[Fact]
+		public void Can_get_id_from_document_metadata()
+		{
+			db.Put("1", Guid.Empty, JObject.Parse("{ first_name: 'ayende', last_name: 'rahien'}"),
+			       new JObject(), null);
+			Assert.Equal("1", db.Get("1", null).Metadata["@id"].Value<string>());
+		}
+
+		[Fact]
 		public void When_creating_document_with_no_id_specified_will_return_guid_as_id()
 		{
 			var documentId = db.Put(null, Guid.Empty, JObject.Parse("{ first_name: 'ayende', last_name: 'rahien'}"),
