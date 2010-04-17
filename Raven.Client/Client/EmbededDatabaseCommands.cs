@@ -11,7 +11,7 @@ using TransactionInformation = Raven.Database.TransactionInformation;
 
 namespace Raven.Client.Client
 {
-	public class EmbededDatabaseCommands : IDatabaseCommands, IDisposable
+	public class EmbededDatabaseCommands : IDatabaseCommands
 	{
 		private readonly DocumentDatabase database;
 
@@ -68,19 +68,14 @@ namespace Raven.Client.Client
             database.Delete(key, etag, GetTransactionInformation());
 		}
 
-		public string PutIndex(string name, string indexDef)
+		public string PutIndex(string name, IndexDefinition definition)
 		{
-			var indexDefJson = JObject.Parse(indexDef);
-			var reduceDef = indexDefJson.Property("Reduce") != null
-				? indexDefJson.Property("Reduce").Value.Value<string>()
-				: null;
-			return database.PutIndex(name, indexDefJson.Property("Map").Value.Value<string>(),
-			                         reduceDef);
+			return database.PutIndex(name, definition);
 		}
 
-		public QueryResult Query(string index, string query, int start, int pageSize)
+		public QueryResult Query(string index, IndexQuery query)
 		{
-			return database.Query(index, query, start, pageSize);
+			return database.Query(index, query);
 		}
 
 		public void DeleteIndex(string name)
@@ -116,11 +111,6 @@ namespace Raven.Client.Client
 		public void SpinBackgroundWorkers()
 		{
 			database.SpinBackgroundWorkers();
-		}
-
-		public QueryResult Query(string index, string query, int start, int pageSize, string[] fieldsToFetch)
-		{
-			return database.Query(index, query, start, pageSize, fieldsToFetch);
 		}
 
 		public Attachment GetStatic(string name)

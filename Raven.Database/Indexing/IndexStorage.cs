@@ -25,18 +25,29 @@ namespace Raven.Database.Indexing
 		private readonly ILog log = LogManager.GetLogger(typeof (IndexStorage));
 		private readonly string path;
 
-		public IndexStorage(string path)
+		public IndexStorage(string path, IndexDefinitionStorage indexDefinitionStorage)
 		{
 			this.path = Path.Combine(path, "Index");
 			if (Directory.Exists(this.path) == false)
 				Directory.CreateDirectory(this.path);
 			log.DebugFormat("Initializing index storage at {0}", this.path);
-			foreach (var index in Directory.GetDirectories(this.path))
+			foreach (var indexDirectory in Directory.GetDirectories(this.path))
 			{
-				log.DebugFormat("Loading saved index {0}", index);
-				var name = Path.GetFileName(index);
-				indexes.TryAdd(name, new SimpleIndex(FSDirectory.GetDirectory(index, false), name));
+				log.DebugFormat("Loading saved index {0}", indexDirectory);
+				var name = Path.GetFileName(indexDirectory);
+				var indexDefinition = indexDefinitionStorage.GetIndexDefinition(name);
+				if(indexDefinition == null)
+					continue;
+				var fsDirectory = FSDirectory.GetDirectory(indexDirectory, false);
+				indexes.TryAdd(name, CreateIndexImplementation(name, indexDefinition, fsDirectory));
 			}
+		}
+
+		private static Index CreateIndexImplementation(string name, IndexDefinition indexDefinition, FSDirectory fsDirectory)
+		{
+			return indexDefinition.IsMapReduce
+				? (Index) new MapReduceIndex(fsDirectory, name, indexDefinition)
+				: new SimpleIndex(fsDirectory, name, indexDefinition);
 		}
 
 		public string[] Indexes
@@ -74,23 +85,19 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		public void CreateIndex(string name, bool isMapReduce)
+		public void CreateIndexImplementation(string name, IndexDefinition indexDefinition)
 		{
 			log.InfoFormat("Creating index {0}", name);
-			indexes.AddOrUpdate(name, n => BuildIndex(name, isMapReduce), (s, index) => index);
+
+			indexes.AddOrUpdate(name, n =>
+			{
+				var directory = FSDirectory.GetDirectory(Path.Combine(path, name), true);
+				new IndexWriter(directory, new StandardAnalyzer()).Close(); //creating index structure
+				return CreateIndexImplementation(name, indexDefinition, directory);
+			}, (s, index) => index);
 		}
 
-		private Index BuildIndex(string name, bool isMapReduce)
-		{
-			var directory = FSDirectory.GetDirectory(Path.Combine(path, name), true);
-			new IndexWriter(directory, new StandardAnalyzer()).Close(); //creating index structure
-			if (isMapReduce)
-				return new MapReduceIndex(directory, name);
-			return new SimpleIndex(directory, name);
-		}
-
-		public IEnumerable<IndexQueryResult> Query(string index, string query, int start, int pageSize,
-		                                           Reference<int> totalSize, string[] fieldsToFetch)
+		public IEnumerable<IndexQueryResult> Query(string index, IndexQuery query)
 		{
 			Index value;
 			if (indexes.TryGetValue(index, out value) == false)
@@ -98,7 +105,7 @@ namespace Raven.Database.Indexing
 				log.DebugFormat("Query on non existing index {0}", index);
 				throw new InvalidOperationException("Index " + index + " does not exists");
 			}
-			return value.Query(query, start, pageSize, totalSize, fieldsToFetch);
+			return value.Query(query);
 		}
 
 		public void RemoveFromIndex(string index, string[] keys, WorkContext context)

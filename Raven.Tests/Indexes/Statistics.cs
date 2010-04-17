@@ -3,6 +3,7 @@ using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Data;
+using Raven.Database.Indexing;
 using Raven.Tests.Storage;
 using Xunit;
 using System.Linq;
@@ -19,11 +20,14 @@ namespace Raven.Tests.Indexes
 			db.SpinBackgroundWorkers();
 
 			db.PutIndex("pagesByTitle2",
-			            @"
+			            new IndexDefinition
+			            {
+							Map = @"
                     from doc in docs
                     where doc.type == ""page""
                     select new {  f = 2 / doc.size };
-                ");
+                "
+			            });
 		}
 
 		#region IDisposable Members
@@ -63,7 +67,7 @@ namespace Raven.Tests.Indexes
 			QueryResult docs;
 			do
 			{
-				docs = db.Query("pagesByTitle2", "some:val", 0, 10);
+				docs = db.Query("pagesByTitle2", new IndexQuery("some:val", 0, 10));
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);
@@ -104,7 +108,7 @@ namespace Raven.Tests.Indexes
 			QueryResult docs;
 			do
 			{
-				docs = db.Query("pagesByTitle2", "some:val", 0, 10);
+				docs = db.Query("pagesByTitle2", new IndexQuery("some:val", 0, 10));
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);
@@ -134,7 +138,7 @@ namespace Raven.Tests.Indexes
 			QueryResult docs;
 			do
 			{
-				docs = db.Query("pagesByTitle2", "some:val", 0, 10);
+				docs = db.Query("pagesByTitle2", new IndexQuery("some:val", 0, 10));
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);

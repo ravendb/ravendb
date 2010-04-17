@@ -18,6 +18,13 @@ namespace Raven.Server.Responders
 				return JObject.Load(jsonReader);
 		}
 
+		public static T ReadJsonObject<T>(this HttpListenerContext context)
+		{
+			using (var streamReader = new StreamReader(context.Request.InputStream))
+			using (var jsonReader = new JsonTextReader(streamReader))
+				return (T)new JsonSerializer().Deserialize(jsonReader, typeof(T));
+		}
+
 		public static JArray ReadJsonArray(this HttpListenerContext context)
 		{
 			using (var streamReader = new StreamReader(context.Request.InputStream))

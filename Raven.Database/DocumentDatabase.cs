@@ -38,7 +38,7 @@ namespace Raven.Database
 			}
 
 			IndexDefinitionStorage = new IndexDefinitionStorage(configuration.DataDirectory);
-			IndexStorage = new IndexStorage(configuration.DataDirectory);
+			IndexStorage = new IndexStorage(configuration.DataDirectory, IndexDefinitionStorage);
 			workContext = new WorkContext
 			{
 				IndexStorage = IndexStorage,
@@ -52,11 +52,15 @@ namespace Raven.Database
 			if(configuration.ShouldCreateDefaultsWhenBuildingNewDatabaseFromScratch)
 			{
 				PutIndex("Raven/DocumentsByEntityName",
-                         @"
+				         new IndexDefinition
+				         {
+				         	Map =
+				         		@"
 	from doc in docs 
 	where doc[""@metadata""][""Raven-Entity-Name""] != null 
 	select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
-");
+"
+				         });
 			}
 	
 			configuration.RaiseDatabaseCreatedFromScratch(this);
@@ -226,14 +230,9 @@ namespace Raven.Database
             workContext.NotifyAboutWork();
         }
 
-		public string PutIndex(string name, string mapDef)
+		public string PutIndex(string name, IndexDefinition definition)
 		{
-			return PutIndex(name, mapDef, null);
-		}
-
-		public string PutIndex(string name, string mapDef, string reduceDef)
-		{
-			switch (IndexDefinitionStorage.FindIndexCreationOptionsOptions(name, mapDef))
+			switch (IndexDefinitionStorage.FindIndexCreationOptionsOptions(name, definition))
 			{
 				case IndexCreationOptions.Noop:
 					return name;
@@ -241,8 +240,8 @@ namespace Raven.Database
 					DeleteIndex(name);
 					break;
 			}
-			IndexDefinitionStorage.AddIndex(name, mapDef, reduceDef);
-			IndexStorage.CreateIndex(name, isMapReduce: reduceDef != null);
+			IndexDefinitionStorage.AddIndex(name, definition);
+			IndexStorage.CreateIndexImplementation(name, definition);
 			TransactionalStorage.Batch(actions =>
 			{
 				actions.AddIndex(name);
@@ -265,16 +264,10 @@ namespace Raven.Database
 			return name;
 		}
 
-		public QueryResult Query(string index, string query, int start, int pageSize)
-		{
-			return Query(index, query, start, pageSize, new string[0]);
-		}
-
-		public QueryResult Query(string index, string query, int start, int pageSize, string[] fieldsToFetch)
+		public QueryResult Query(string index, IndexQuery query)
 		{
 			var list = new List<JObject>();
 			var stale = false;
-			var totalSize = new Reference<int>();
 			TransactionalStorage.Batch(
 				actions =>
 				{
@@ -285,18 +278,19 @@ namespace Raven.Database
 						throw new IndexDisabledException(indexFailureInformation);
 					}
 					var loadedIds = new HashSet<string>();
-					list.AddRange(from queryResult in IndexStorage.Query(index, query, start, pageSize, totalSize, fieldsToFetch)
-					select RetrieveDocument(actions, queryResult, loadedIds)
-					into doc
-					              	where doc != null
-					              	select doc.ToJson());
+					var collection = from queryResult in IndexStorage.Query(index, query)
+					                 select RetrieveDocument(actions, queryResult, loadedIds)
+					                 into doc
+					                 where doc != null
+					                 select doc.ToJson();
+					list.AddRange(collection);
 					actions.Commit();
 				});
 			return new QueryResult
 			{
 				Results = list.ToArray(),
 				IsStale = stale,
-				TotalResults = totalSize.Value
+				TotalResults = query.TotalSize.Value
 			};
 		}
 

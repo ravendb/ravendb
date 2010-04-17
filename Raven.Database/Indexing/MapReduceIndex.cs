@@ -16,7 +16,8 @@ namespace Raven.Database.Indexing
 {
 	public class MapReduceIndex : Index
 	{
-		public MapReduceIndex(Directory directory, string name) : base(directory, name)
+		public MapReduceIndex(Directory directory, string name, IndexDefinition indexDefinition)
+			: base(directory, name, indexDefinition)
 		{
 		}
 
@@ -156,7 +157,7 @@ namespace Raven.Database.Indexing
 					{
 						properties = TypeDescriptor.GetProperties(doc);
 					}
-					var fields = converter.Index(doc, properties);
+					var fields = converter.Index(doc, properties, indexDefinition);
 
 					var luceneDoc = new Document();
 					foreach (var field in fields)

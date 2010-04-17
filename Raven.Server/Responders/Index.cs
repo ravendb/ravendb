@@ -1,6 +1,9 @@
 using System;
 using System.Net;
 using Newtonsoft.Json.Linq;
+using Raven.Database.Data;
+using Raven.Database.Indexing;
+using System.Linq;
 
 namespace Raven.Server.Responders
 {
@@ -38,27 +41,15 @@ namespace Raven.Server.Responders
 
 		private void Put(HttpListenerContext context, string index)
 		{
-			var data = context.ReadJson();
-			var mapProp = data.Property("Map");
-			if (mapProp == null)
+			var data = context.ReadJsonObject<IndexDefinition>();
+			if (data.Map == null)
 			{
 				context.SetStatusToBadRequest();
 				context.Write("Expected json document with 'Map' property");
 				return;
 			}
-			var mapDef = mapProp.Value.Value<string>();
-			string reduceDef = null;
-			if (data.Property("Reduce") != null)
-				reduceDef = data.Property("Reduce").Value.Value<string>();
-
 			context.SetStatusToCreated("/indexes/" + index);
-			context.WriteJson(new
-			{
-				index = Database.PutIndex(index,
-				                          mapDef,
-				                          reduceDef
-			                  	)
-			});
+			context.WriteJson(new { index = Database.PutIndex(index, data) });
 		}
 
 		private void OnGet(HttpListenerContext context, string index)
@@ -70,9 +61,18 @@ namespace Raven.Server.Responders
 			}
 			else
 			{
-				context.WriteJson(Database.Query(index, context.Request.QueryString["query"], context.GetStart(),
-				                                 context.GetPageSize(),
-				                                 context.Request.QueryString.GetValues("fetch")));
+				context.WriteJson(Database.Query(index, new IndexQuery(
+				                                        	context.Request.QueryString["query"],
+				                                        	context.GetStart(),
+				                                        	context.GetPageSize()
+				                                        	)
+				{
+					FieldsToFetch = context.Request.QueryString.GetValues("fetch"),
+					SortedFields = context.Request.QueryString.GetValues("sort")
+						.EmptyIfNull()
+						.Select(x=>new SortedField(x))
+						.ToArray()
+				}));
 			}
 		}
 	}

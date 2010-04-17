@@ -7,6 +7,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Data;
+using Raven.Database.Indexing;
 using Raven.Tests.Storage;
 using Xunit;
 
@@ -35,7 +36,7 @@ select new {
 		public MapReduce()
 		{
 			db = new DocumentDatabase(new RavenConfiguration {DataDirectory = "raven.db.test.esent"});
-			db.PutIndex("CommentsCountPerBlog", map, reduce);
+			db.PutIndex("CommentsCountPerBlog", new IndexDefinition{Map = map, Reduce = reduce, Indexes = {{"blog_id", FieldIndexing.Untokenized}}});
 			db.SpinBackgroundWorkers();
 
 			BasicConfigurator.Configure(
@@ -82,11 +83,11 @@ select new {
 			{
 				do
 				{
-					q = db.Query("CommentsCountPerBlog", "blog_id:3", 0, 10);
+					q = db.Query("CommentsCountPerBlog", new IndexQuery("blog_id:3", 0, 10));
 					Thread.Sleep(100);
 				} while (q.IsStale);
 			}
-			Assert.Equal(@"{""blog_id"":""3"",""comments_length"":""14""}", q.Results[0].ToString(Formatting.None));
+			Assert.Equal(@"{""blog_id"":""3"",""comments_length"":""0000000000000e""}", q.Results[0].ToString(Formatting.None));
 		}
 	}
 }

@@ -107,7 +107,12 @@
     <Compile Include="Data\ServerError.cs" />
     <Compile Include="Data\IndexStats.cs" />
     <Compile Include="Data\QueryResult.cs" />
+    <Compile Include="Data\SortedField.cs" />
     <Compile Include="Exceptions\IndexDisabledException.cs" />
+    <Compile Include="Data\IndexQuery.cs" />
+    <Compile Include="Indexing\FieldIndexing.cs" />
+    <Compile Include="Indexing\FieldStorage.cs" />
+    <Compile Include="Indexing\IndexDefinition.cs" />
     <Compile Include="Indexing\MapReduceIndex.cs" />
     <Compile Include="Indexing\SimpleIndex.cs" />
     <Compile Include="JsonDocument.cs" />
@@ -121,6 +126,7 @@
     <Compile Include="Indexing\TaskExecuter.cs" />
     <Compile Include="Indexing\WorkContext.cs" />
     <Compile Include="Json\DynamicObjectExtensions.cs" />
+    <Compile Include="Json\JsonEnumConverter.cs" />
     <Compile Include="Json\JsonPatcher.cs" />
     <Compile Include="Json\JsonToExpando.cs" />
     <Compile Include="Linq\AbstractViewGenerator.cs" />

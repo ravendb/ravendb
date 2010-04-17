@@ -9,6 +9,8 @@ using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
+using Raven.Database.Indexing;
+using Raven.Database.Json;
 
 namespace Raven.Client.Client
 {
@@ -69,7 +71,7 @@ namespace Raven.Client.Client
                     throw;
                 throw ThrowConcurrencyException(e);
 		    }
-		    return JsonConvert.DeserializeObject<PutResult>(readResponseString);
+			return JsonConvert.DeserializeObject<PutResult>(readResponseString, new JsonEnumConverter());
 		}
 
 	    private static void AddTransactionInformation(JObject metadata)
@@ -124,20 +126,32 @@ namespace Raven.Client.Client
 	        }
 	    }
 
-	    public string PutIndex(string name, string indexDef)
+	    public string PutIndex(string name, IndexDefinition definition)
 		{
 			EnsureIsNotNullOrEmpty(name, "name");
 			var request = new HttpJsonRequest(url + "/indexes/" + name, "PUT");
-			request.Write(indexDef);
+			request.Write(JsonConvert.SerializeObject(definition, new JsonEnumConverter()));
 
 			var obj = new {index = ""};
 			obj = JsonConvert.DeserializeAnonymousType(request.ReadResponseString(), obj);
 			return obj.index;
 		}
 
-		public QueryResult Query(string index, string query, int start, int pageSize)
+		public QueryResult Query(string index, IndexQuery query)
 		{
-		    return Query(index, query, start, pageSize, new string[0]);
+			EnsureIsNotNullOrEmpty(index, "index");
+			var path = url + "/indexes/" + index + "?query=" + query.Query + "&start=" + query.Start + "&pageSize=" + query.PageSize;
+			var request = new HttpJsonRequest(path, "GET");
+			var serializer = new JsonSerializer();
+			JToken json;
+			using (var reader = new JsonTextReader(new StringReader(request.ReadResponseString())))
+				json = (JToken) serializer.Deserialize(reader);
+
+			return new QueryResult
+			{
+				IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
+				Results = json["Results"].Children().Cast<JObject>().ToArray(),
+			};
 		}
 
 	    public QueryResult Query(string index, string query, int start, int pageSize, string[] fieldsToFetch)

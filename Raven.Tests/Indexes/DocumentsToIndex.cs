@@ -3,6 +3,7 @@ using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Data;
+using Raven.Database.Indexing;
 using Raven.Tests.Storage;
 using Xunit;
 
@@ -32,11 +33,14 @@ namespace Raven.Tests.Indexes
 		public void Can_Read_values_from_index()
 		{
 			db.PutIndex("pagesByTitle2",
-			            @"
+					   new IndexDefinition
+					   {
+						   Map = @"
                     from doc in docs
                     where doc.type == ""page""
                     select new { doc.some };
-                ");
+                "
+					   });
 			db.Put("1", Guid.Empty,
 			       JObject.Parse(
 			       	@"{
@@ -53,7 +57,7 @@ namespace Raven.Tests.Indexes
 			QueryResult docs;
 			do
 			{
-				docs = db.Query("pagesByTitle2", "some:val", 0, 10);
+				docs = db.Query("pagesByTitle2", new IndexQuery("some:val", 0, 10));
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);
@@ -64,11 +68,15 @@ namespace Raven.Tests.Indexes
 		public void Can_Read_Values_Using_Deep_Nesting()
 		{
 			db.PutIndex(@"DocsByProject",
-			            @"
+						new IndexDefinition
+						{
+							Map = @"
 from doc in docs
 from prj in doc.projects
 select new{project_name = prj.name}
-");
+"
+						});
+
 			var document =
 				JObject.Parse(
 					"{'name':'ayende','email':'ayende@ayende.com','projects':[{'name':'raven'}], '@metadata': { '@id': 1}}");
@@ -77,7 +85,7 @@ select new{project_name = prj.name}
 			QueryResult docs;
 			do
 			{
-				docs = db.Query("DocsByProject", "project_name:raven", 0, 10);
+				docs = db.Query("DocsByProject", new IndexQuery("project_name:raven", 0, 10));
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);
@@ -90,11 +98,14 @@ select new{project_name = prj.name}
 		public void Can_Read_Values_Using_MultipleValues_From_Deep_Nesting()
 		{
 			db.PutIndex(@"DocsByProject",
-			            @"
+						new IndexDefinition
+						{
+							Map = @"
 from doc in docs
 from prj in doc.projects
 select new{project_name = prj.name, project_num = prj.num}
-");
+"
+						});
 			var document =
 				JObject.Parse(
 					"{'name':'ayende','email':'ayende@ayende.com','projects':[{'name':'raven', 'num': 5}, {'name':'crow', 'num': 6}], '@metadata': { '@id': 1}}");
@@ -103,7 +114,7 @@ select new{project_name = prj.name, project_num = prj.num}
 			QueryResult docs;
 			do
 			{
-				docs = db.Query("DocsByProject", "+project_name:raven +project_num:6", 0, 10);
+				docs = db.Query("DocsByProject", new IndexQuery("+project_name:raven +project_num:6", 0, 10));
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);
@@ -114,17 +125,23 @@ select new{project_name = prj.name, project_num = prj.num}
 		public void Can_Read_values_when_two_indexes_exist()
 		{
 			db.PutIndex("pagesByTitle",
-			            @" 
+						new IndexDefinition
+						{
+							Map = @" 
     from doc in docs
     where doc.type == ""page""
     select new { doc.other};
-");
+"
+						});
 			db.PutIndex("pagesByTitle2",
-			            @"
+					   new IndexDefinition
+					   {
+						   Map = @"
     from doc in docs
     where doc.type == ""page""
     select new { doc.some };
-");
+"
+					   });
 			db.Put("1", Guid.Empty,
 			       JObject.Parse(
 			       	"{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"),
@@ -134,7 +151,7 @@ select new{project_name = prj.name, project_num = prj.num}
 			QueryResult docs;
 			do
 			{
-				docs = db.Query("pagesByTitle2", "some:val", 0, 10);
+				docs = db.Query("pagesByTitle2", new IndexQuery("some:val", 0, 10));
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);
@@ -145,17 +162,23 @@ select new{project_name = prj.name, project_num = prj.num}
 		public void Updating_an_index_will_result_in_new_values()
 		{
 			db.PutIndex("pagesByTitle",
-			            @"
+					   new IndexDefinition
+					   {
+						   Map = @"
     from doc in docs
     where doc.type == ""page""
     select new { doc.other};
-");
+"
+					   });
 			db.PutIndex("pagesByTitle",
-			            @"
+					   new IndexDefinition
+					   {
+						   Map = @"
     from doc in docs
     where doc.type == ""page""
     select new { doc.other };
-");
+"
+					   });
 			db.Put("1", Guid.Empty,
 			       JObject.Parse(
 			       	"{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"),
@@ -165,7 +188,7 @@ select new{project_name = prj.name, project_num = prj.num}
 			QueryResult docs;
 			do
 			{
-				docs = db.Query("pagesByTitle", "other:var", 0, 10);
+				docs = db.Query("pagesByTitle", new IndexQuery("other:var", 0, 10));
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);
@@ -181,15 +204,18 @@ select new{project_name = prj.name, project_num = prj.num}
                    new JObject(), null);
 
 			db.PutIndex("pagesByTitle",
-			            @"
+					   new IndexDefinition
+					   {
+						   Map = @"
     from doc in docs
     where doc.type == ""page""
     select new { doc.other };
-");
+"
+					   });
 			QueryResult docs;
 			do
 			{
-				docs = db.Query("pagesByTitle", "other:var", 0, 10);
+				docs = db.Query("pagesByTitle", new IndexQuery("other:var", 0, 10));
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);
@@ -209,15 +235,18 @@ select new{project_name = prj.name, project_num = prj.num}
                    new JObject(), null);
 
 			db.PutIndex("pagesByTitle",
-			            @"
+						new IndexDefinition
+						{
+							Map = @"
     from doc in docs
     where doc.type == ""page""
     select new { doc.other };
-");
+"
+						});
 			QueryResult docs;
 			do
 			{
-				docs = db.Query("pagesByTitle", "other:var", 0, 10);
+				docs = db.Query("pagesByTitle", new IndexQuery("other:var", 0, 10));
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);
