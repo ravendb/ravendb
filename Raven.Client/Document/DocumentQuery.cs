@@ -5,7 +5,6 @@ using System.Threading;
 using Raven.Client.Client;
 using Raven.Database.Data;
 using System.Linq;
-using Raven.Database.Indexing;
 
 namespace Raven.Client.Document
 {

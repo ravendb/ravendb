@@ -139,30 +139,20 @@ namespace Raven.Client.Client
 
 		public QueryResult Query(string index, IndexQuery query)
 		{
-			EnsureIsNotNullOrEmpty(index, "index");
-			var path = url + "/indexes/" + index + "?query=" + query.Query + "&start=" + query.Start + "&pageSize=" + query.PageSize;
-			var request = new HttpJsonRequest(path, "GET");
-			var serializer = new JsonSerializer();
-			JToken json;
-			using (var reader = new JsonTextReader(new StringReader(request.ReadResponseString())))
-				json = (JToken) serializer.Deserialize(reader);
-
-			return new QueryResult
-			{
-				IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
-				Results = json["Results"].Children().Cast<JObject>().ToArray(),
-			};
-		}
-
-	    public QueryResult Query(string index, string query, int start, int pageSize, string[] fieldsToFetch)
-	    {
             EnsureIsNotNullOrEmpty(index, "index");
-            var path = string.Format("{0}/indexes/{1}?query={2}&start={3}&pageSize={4}", url, index, query, start, pageSize);
-            if (fieldsToFetch != null && fieldsToFetch.Length > 0)
+            var path = string.Format("{0}/indexes/{1}?query={2}&start={3}&pageSize={4}", url, index, query.Query, query.Start, query.PageSize);
+            if (query.FieldsToFetch != null && query.FieldsToFetch.Length > 0)
             {
-                path = fieldsToFetch.Aggregate(
+                path = query.FieldsToFetch.Aggregate(
                         new StringBuilder(path),
                         (sb, field) => sb.Append("&fetch=").Append(field)
+                    ).ToString();
+            }
+            if(query.SortedFields!=null && query.SortedFields.Length>0)
+            {
+                path = query.SortedFields.Aggregate(
+                        new StringBuilder(path),
+                        (sb, field) => sb.Append("&sort=").Append(field.Descending ? "-" : "+").Append(field.Field)
                     ).ToString();
             }
             var request = new HttpJsonRequest(path, "GET");

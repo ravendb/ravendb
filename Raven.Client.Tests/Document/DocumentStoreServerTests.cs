@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading;
 using Raven.Client.Document;
 using Raven.Database.Exceptions;
+using Raven.Database.Indexing;
 using Raven.Server;
 using Xunit;
 using System.Linq;
@@ -108,7 +109,10 @@ namespace Raven.Client.Tests.Document
                 session.SaveChanges();
 
                 documentStore.DatabaseCommands.PutIndex("company_by_name",
-                                                        @"{ ""Map"": ""from doc in docs select new { doc.Name, doc.Phone}""} ");
+                                                        new IndexDefinition
+                                                        {
+                                                            Map = "from doc in docs select new { doc.Name, doc.Phone}"
+                                                        });
 
                 var q = from doc in session
                             .Query<Company>("company_by_name")
