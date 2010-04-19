@@ -363,6 +363,8 @@ namespace Raven.Database
 				{
 					var doc = documentAndId.Item1;
 					doc.Metadata.Add("@docNum", new JValue(documentAndId.Item2));
+					if (doc.Metadata.Property("@id") == null)
+						doc.Metadata.Add("@id", new JValue(doc.Key));
 
 					list.Add(doc.ToJson());
 				}
