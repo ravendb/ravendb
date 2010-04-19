@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.ConstrainedExecution;
+using System.Web;
 using log4net;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Index;
@@ -35,6 +36,7 @@ namespace Raven.Database.Indexing
 			{
 				log.DebugFormat("Loading saved index {0}", indexDirectory);
 				var name = Path.GetFileName(indexDirectory);
+				name = HttpUtility.UrlDecode(name);
 				var indexDefinition = indexDefinitionStorage.GetIndexDefinition(name);
 				if(indexDefinition == null)
 					continue;
@@ -78,7 +80,8 @@ namespace Raven.Database.Indexing
 			log.InfoFormat("Deleting index {0}", name);
 			value.Dispose();
 			Index ignored;
-			var indexDir = Path.Combine(path, name);
+			var nameOnDisk = HttpUtility.UrlEncode(name);
+			var indexDir = Path.Combine(path, nameOnDisk);
 			if (indexes.TryRemove(name, out ignored) && Directory.Exists(indexDir))
 			{
 				Directory.Delete(indexDir, true);
@@ -91,7 +94,8 @@ namespace Raven.Database.Indexing
 
 			indexes.AddOrUpdate(name, n =>
 			{
-				var directory = FSDirectory.GetDirectory(Path.Combine(path, name), true);
+				var nameOnDisk = HttpUtility.UrlEncode(name);
+				var directory = FSDirectory.GetDirectory(Path.Combine(path, nameOnDisk), true);
 				new IndexWriter(directory, new StandardAnalyzer()).Close(); //creating index structure
 				return CreateIndexImplementation(name, indexDefinition, directory);
 			}, (s, index) => index);

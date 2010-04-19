@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using System.Web;
 using ICSharpCode.NRefactory.Ast;
 using Raven.Database.Indexing;
 
@@ -21,7 +22,7 @@ namespace Raven.Database.Linq
 		public DynamicViewCompiler(string name, IndexDefinition indexDefinition)
 		{
 			this.indexDefinition = indexDefinition;
-			this.name = Regex.Replace(name, @"[^\w\d]","_");
+			this.name = HttpUtility.UrlEncode(name);
 		}
 
 		public string CompiledQueryText { get; set; }
@@ -32,21 +33,24 @@ namespace Raven.Database.Linq
 			get { return name; }
 		}
 
+		public string CSharpSafeName { get; set; }
+
 		private void TransformQueryToClass()
 		{
 			var mapDefinition = TransformMapDefinition();
 
+			CSharpSafeName = Regex.Replace(Name, @"[^\w\d]", "_");
 			var type = new TypeDeclaration(Modifiers.Public, new List<AttributeSection>())
 			{
 				BaseTypes =
 					{
 						new TypeReference("AbstractViewGenerator")
 					},
-				Name = Name,
+				Name = CSharpSafeName,
 				Type = ClassType.Class
 			};
 
-			var ctor = new ConstructorDeclaration(Name,
+			var ctor = new ConstructorDeclaration(CSharpSafeName,
 			                                      Modifiers.Public,
 			                                      new List<ParameterDeclarationExpression>(), null);
 			type.Children.Add(ctor);
@@ -135,7 +139,7 @@ namespace Raven.Database.Linq
 		public AbstractViewGenerator GenerateInstance()
 		{
 			TransformQueryToClass();
-			GeneratedType = QueryParsingUtils.Compile(name, CompiledQueryText);
+			GeneratedType = QueryParsingUtils.Compile(CSharpSafeName, CompiledQueryText);
 			return (AbstractViewGenerator) Activator.CreateInstance(GeneratedType);
 		}
 	}

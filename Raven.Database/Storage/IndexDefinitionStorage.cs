@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
+using System.Web;
 using log4net;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -69,12 +70,12 @@ namespace Raven.Database.Storage
 
 		private string GetIndexSourcePath(string name)
 		{
-			return Path.Combine(path, name + ".index.cs");
+			return Path.Combine(path, HttpUtility.UrlEncode(name) + ".index.cs");
 		}
 
 		private string GetIndexPath(string name)
 		{
-			return Path.Combine(path, name + ".index");
+			return Path.Combine(path, HttpUtility.UrlEncode(name) + ".index");
 		}
 
 		public IndexDefinition GetIndexDefinition(string name)
