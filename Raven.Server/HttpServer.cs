@@ -119,8 +119,9 @@ namespace Raven.Server
 				else
 					HandleGenericException(ctx, e);
 			}
-			catch (ObjectDisposedException)
+			catch (Exception)
 			{
+				logger.Error("Failed to properly handle error, further error handling is ignored", e);
 			}
 		}
 
