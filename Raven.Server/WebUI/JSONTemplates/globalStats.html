@@ -8,7 +8,7 @@
             {#/foreach}
         </ul>
         {#/if} </li>
-    <li><strong>Indices</strong>: {#if $T.Indexes.length == 0} None {#else} {#foreach $T.Indexes
+    <li><strong>Indexes</strong>: {#if $T.Indexes.length == 0} None {#else} {#foreach $T.Indexes
         as i}
         <ul class="indexDescription">
             <li class="indexHeader">{$T.i.Name}<ul>

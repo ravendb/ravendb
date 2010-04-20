@@ -67,7 +67,7 @@
             });
         },
 
-        saveDocument: function (id, etag, template, json, successCallback) {
+        saveDocument: function (id, etag, template, json, successCallback, errorCallback) {
             var idStr = '';
             var type = 'POST';
             if (id != null) {
@@ -86,6 +86,12 @@
                 },
                 success: function (data) {
                     successCallback(data);
+                },
+                error: function(data){
+                    var m = JSON.parse(data.responseText);
+                    if(errorCallback != undefined){
+                        errorCallback(m.error);
+                    }
                 }
             });
         },
