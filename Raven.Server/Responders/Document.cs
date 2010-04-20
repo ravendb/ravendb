@@ -53,9 +53,6 @@ namespace Raven.Server.Responders
 						case PatchResult.DocumentDoesNotExists:
 							context.SetStatusToNotFound();
 							break;
-						case PatchResult.WriteConflict:
-							context.SetStatusToWriteConflict();
-							break;
 						case PatchResult.Patched:
 							context.WriteJson(new {patched = true});
 							break;
