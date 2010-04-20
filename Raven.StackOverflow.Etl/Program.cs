@@ -1,0 +1,50 @@
+﻿using System;
+using System.Diagnostics;
+using System.IO;
+using log4net.Appender;
+using log4net.Config;
+using log4net.Core;
+using log4net.Layout;
+using Raven.Database;
+using Rhino.Etl.Core;
+using System.Linq;
+
+namespace Raven.StackOverflow.Etl
+{
+	class Program
+	{
+		static void Main(string[] args)
+		{
+			const string path = @"C:\Users\Ayende\Downloads\Stack Overflow Data Dump - Mar 10\Content\Export-030110\032010 SO";
+
+			if(Directory.Exists("Data"))
+				Directory.Delete("Data", true);
+
+			Console.WriteLine("Starting...");
+			var sp = Stopwatch.StartNew();
+			using(var documentDatabase = new DocumentDatabase(new RavenConfiguration
+			{
+				DataDirectory = "Data",
+			}))
+			{
+				Execute(new UsersProcess(path, documentDatabase));
+				Execute(new BadgesProcess(path, documentDatabase));
+			}
+			Console.WriteLine("Total execution time {0}", sp.Elapsed);
+		}
+
+		private static void Execute(EtlProcess process)
+		{
+			var sp = Stopwatch.StartNew();
+			process.Execute();
+			Console.WriteLine("Executed {0} in {1}", process, sp.Elapsed);
+			var allErrors = process.GetAllErrors().ToArray();
+			foreach (var exception in allErrors)
+			{
+				Console.WriteLine(exception);
+			}
+			if (allErrors.Length > 0)
+				throw new InvalidOperationException("Failed to execute process: " + process);
+		}
+	}
+}

@@ -1,0 +1,432 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Rhino.Etl.Dsl</name>
+    </assembly>
+    <members>
+        <member name="T:Rhino.Etl.Dsl.CompilerSteps.UseModuleNameAsNamespaceIfMissing">
+            <summary>
+            This adds the module name as a namespace for the module, if it doesn't have one already.
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.CompilerSteps.UseModuleNameAsNamespaceIfMissing.Run">
+            <summary>
+            Runs this instance.
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.CompilerSteps.UseModuleNameAsNamespaceIfMissing.OnModule(Boo.Lang.Compiler.Ast.Module)">
+            <summary>
+            Inspect a module to check if we need to add a namespace
+            </summary>
+            <param name="node">The node.</param>
+        </member>
+        <member name="T:Rhino.Etl.Dsl.CompilerSteps.CorrelateTypesToModuleName">
+            <summary>
+            Correlate between the types defined in a module and their module.
+            This is required to get batch compilation working.
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.CompilerSteps.CorrelateTypesToModuleName.#ctor(System.Collections.Generic.IDictionary{System.String,System.Collections.Generic.IList{System.String}})">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Dsl.CompilerSteps.CorrelateTypesToModuleName"/> class.
+            </summary>
+            <param name="moduleNameToContainedTypes">The module name to contained types.</param>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.CompilerSteps.CorrelateTypesToModuleName.Run">
+            <summary>
+            Runs this instance.
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.CompilerSteps.CorrelateTypesToModuleName.EnterModule(Boo.Lang.Compiler.Ast.Module)">
+            <summary>
+            Enters the module.
+            </summary>
+            <param name="node">The node.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.CompilerSteps.CorrelateTypesToModuleName.OnClassDefinition(Boo.Lang.Compiler.Ast.ClassDefinition)">
+            <summary>
+            Called when a class definition node is found
+            </summary>
+            <param name="node">The node.</param>
+        </member>
+        <member name="T:Rhino.Etl.Dsl.EtlDslEngine">
+            <summary>
+            The Etl DSL engine
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.EtlDslEngine.Compile(System.String[])">
+            <summary>
+            Compile the DSL and return the resulting context
+            </summary>
+            <param name="urls">The files to compile</param>
+            <returns>The resulting compiler context</returns>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.EtlDslEngine.GetFileName(System.Collections.Generic.IEnumerable{System.String})">
+            <summary>
+            Gets the name of the file.
+            </summary>
+            <param name="urls">The urls.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.EtlDslEngine.GetTypeForUrl(System.Reflection.Assembly,System.String)">
+            <summary>
+            Get a type from the assembly according to the URL.
+            Here we are making the assumption that we will have only a single class
+            inheriting from EtlProcess in the assembly
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.EtlDslEngine.CustomizeCompiler(Boo.Lang.Compiler.BooCompiler,Boo.Lang.Compiler.CompilerPipeline,System.String[])">
+            <summary>
+            Customise the compiler to fit the etl engine
+            </summary>
+        </member>
+        <member name="P:Rhino.Etl.Dsl.EtlDslEngine.Factory">
+            <summary>
+            Creates the DSL facotry
+            </summary>
+        </member>
+        <member name="T:Rhino.Etl.Dsl.Macros.AbstractChildMacro">
+            <summary>
+            Base class for child macros, also handle validating the parents of a macro
+            </summary>
+        </member>
+        <member name="F:Rhino.Etl.Dsl.Macros.AbstractChildMacro.parent">
+            <summary>
+            The parent macro statement
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.Macros.AbstractChildMacro.#ctor(System.String[])">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Dsl.Macros.AbstractChildMacro"/> class.
+            </summary>
+            <param name="allowedParents">The allowed parents.</param>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.Macros.AbstractChildMacro.Expand(Boo.Lang.Compiler.Ast.MacroStatement)">
+            <summary>
+            Expands the specified macro, validate that the parent is a valid parent, 
+            leave the actual processing to a base class
+            </summary>
+            <param name="macro">The macro.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.Macros.AbstractChildMacro.DoExpand(Boo.Lang.Compiler.Ast.MacroStatement)">
+            <summary>
+            Perform the actual expansion of the macro
+            </summary>
+            <param name="macro">The macro.</param>
+            <returns></returns>
+        </member>
+        <member name="P:Rhino.Etl.Dsl.Macros.AbstractChildMacro.ParentMethods">
+            <summary>
+            Gets the parent methods collection
+            </summary>
+            <value>The parent methods.</value>
+        </member>
+        <member name="T:Rhino.Etl.Dsl.Macros.AbstractClassGeneratorMacro`1">
+            <summary>
+            Allow to easily generate a class from the DSL file
+            </summary>
+            <typeparam name="T">Base class</typeparam>
+        </member>
+        <member name="F:Rhino.Etl.Dsl.Macros.AbstractClassGeneratorMacro`1.argumentStartIndex">
+            <summary>
+            Gets the start index of the arguments collection.
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.Macros.AbstractClassGeneratorMacro`1.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Dsl.Macros.AbstractClassGeneratorMacro`1"/> class.
+            </summary>
+            <param name="blockMethodName">Name of the method to move the block to, null if this is not permitted</param>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.Macros.AbstractClassGeneratorMacro`1.Expand(Boo.Lang.Compiler.Ast.MacroStatement)">
+            <summary>
+            Expands the specified macro
+            </summary>
+            <param name="macro">The macro.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.Macros.AbstractClassGeneratorMacro`1.GetMethodToOverride(Boo.Lang.Compiler.Ast.Node)">
+            <summary>
+            Gets the method to override.
+            </summary>
+            <param name="macro">The macro.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.Macros.AbstractClassGeneratorMacro`1.GetClassName(Boo.Lang.Compiler.Ast.MacroStatement)">
+            <summary>
+            Gets the name of the class that we will generate
+            </summary>
+            <param name="macro">The macro.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.Macros.AbstractClassGeneratorMacro`1.GetAnonymousClassName(Boo.Lang.Compiler.Ast.MacroStatement)">
+            <summary>
+            Gets the name of the anonymous class.
+            </summary>
+            <param name="macro">The macro.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.Macros.AbstractClassGeneratorMacro`1.MoveConstructorArguments(Boo.Lang.Compiler.Ast.Constructor,Boo.Lang.Compiler.Ast.MethodInvocationExpression,Boo.Lang.Compiler.Ast.MacroStatement)">
+            <summary>
+            Moves the constructor arguments from the macro to the superInvocation method invocation
+            </summary>
+            <param name="constructor">The constructor.</param>
+            <param name="superInvocation">The create.</param>
+            <param name="macro">The macro.</param>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.Macros.AbstractClassGeneratorMacro`1.TryGetAssignment(Boo.Lang.Compiler.Ast.Expression,Boo.Lang.Compiler.Ast.BinaryExpression@)">
+            <summary>
+            Tries to get an assignment from the expression
+            </summary>
+            <param name="expression">The expression.</param>
+            <param name="assign">The assign.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.Macros.AbstractClassGeneratorMacro`1.Members(Boo.Lang.Compiler.Ast.MacroStatement)">
+            <summary>
+            Get the members collection from this macro
+            </summary>
+            <param name="macro">The macro.</param>
+            <returns></returns>
+        </member>
+        <member name="P:Rhino.Etl.Dsl.Macros.AbstractClassGeneratorMacro`1.MacroName">
+            <summary>
+            Gets the name of the macro.
+            </summary>
+            <value>The name of the macro.</value>
+        </member>
+        <member name="T:Rhino.Etl.Dsl.Macros.AccumulateMacro">
+            <summary>
+            Generate the <see cref="M:Rhino.Etl.Core.Operations.AbstractAggregationOperation.Accumulate(Rhino.Etl.Core.Row,Rhino.Etl.Core.Row)"/> method
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.Macros.AccumulateMacro.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Dsl.Macros.AccumulateMacro"/> class.
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.Macros.AccumulateMacro.DoExpand(Boo.Lang.Compiler.Ast.MacroStatement)">
+            <summary>
+            Perform the actual expansion of the macro
+            </summary>
+            <param name="macro">The macro.</param>
+            <returns></returns>
+        </member>
+        <member name="T:Rhino.Etl.Dsl.Macros.AggregateMacro">
+            <summary>
+            Create a class based on <see cref="T:Rhino.Etl.Core.Operations.AbstractAggregationOperation"/>
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.Macros.AggregateMacro.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Dsl.Macros.AggregateMacro"/> class.
+            </summary>
+        </member>
+        <member name="T:Rhino.Etl.Dsl.Macros.FinishedProcessingMacro">
+            <summary>
+            Generate the <see cref="M:Rhino.Etl.Core.EtlProcess.OnFinishedProcessing(Rhino.Etl.Core.Operations.IOperation)"/> method
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.Macros.FinishedProcessingMacro.#ctor">
+            <summary>
+             Initializes a new instance of the <see cref="T:Rhino.Etl.Dsl.Macros.FinishedProcessingMacro"/> class.
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.Macros.FinishedProcessingMacro.DoExpand(Boo.Lang.Compiler.Ast.MacroStatement)">
+            <summary>
+            Perform the actual expansion of the macro
+            </summary>
+            <param name="macro">The macro.</param>
+            <returns></returns>
+        </member>
+        <member name="T:Rhino.Etl.Dsl.Macros.GroupByMacro">
+            <summary>
+            Creates the <see cref="M:Rhino.Etl.Core.Operations.AbstractAggregationOperation.GetColumnsToGroupBy"/> method from the reference
+            expressions
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.Macros.GroupByMacro.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Dsl.Macros.GroupByMacro"/> class.
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.Macros.GroupByMacro.DoExpand(Boo.Lang.Compiler.Ast.MacroStatement)">
+            <summary>
+            Perform the actual expansion of the macro
+            </summary>
+            <param name="macro">The macro.</param>
+            <returns></returns>
+        </member>
+        <member name="T:Rhino.Etl.Dsl.Macros.InputMacro">
+            <summary>
+            Create a new <see cref="T:Rhino.Etl.Core.Operations.InputCommandOperation"/> and instantiate it in place of the
+            macro
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.Macros.InputMacro.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Dsl.Macros.InputMacro"/> class.
+            </summary>
+        </member>
+        <member name="T:Rhino.Etl.Dsl.Macros.JoinMacro">
+            <summary>
+            Create a class based on <see cref="T:Rhino.Etl.Core.Operations.JoinOperation"/> and tranform the code
+            into a join condition
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.Macros.JoinMacro.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Dsl.Macros.JoinMacro"/> class.
+            </summary>
+        </member>
+        <member name="T:Rhino.Etl.Dsl.Macros.JoinSectionMacro">
+            <summary>
+            A part of a join
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.Macros.JoinSectionMacro.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Dsl.Macros.JoinSectionMacro"/> class.
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.Macros.JoinSectionMacro.DoExpand(Boo.Lang.Compiler.Ast.MacroStatement)">
+            <summary>
+            Perform the actual expansion of the macro
+            </summary>
+            <param name="macro">The macro.</param>
+            <returns></returns>
+        </member>
+        <member name="T:Rhino.Etl.Dsl.Macros.LeftMacro">
+            <summary>
+            The left part of a join
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.Macros.LeftMacro.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Dsl.Macros.LeftMacro"/> class.
+            </summary>
+        </member>
+        <member name="T:Rhino.Etl.Dsl.Macros.OnMacro">
+            <summary>
+            The on part of a join, split into two parts, the first is the condition, the second
+            is the merge
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.Macros.OnMacro.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Dsl.Macros.OnMacro"/> class.
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.Macros.OnMacro.DoExpand(Boo.Lang.Compiler.Ast.MacroStatement)">
+            <summary>
+            Perform the actual expansion of the macro
+            </summary>
+            <param name="macro">The macro.</param>
+            <returns></returns>
+        </member>
+        <member name="T:Rhino.Etl.Dsl.Macros.OperationMacro">
+            <summary>
+            Generate a class dervied from <see cref="T:Rhino.Etl.Core.Operations.AbstractOperation"/> with the 
+            required initialization
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.Macros.OperationMacro.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Dsl.Macros.OperationMacro"/> class.
+            </summary>
+        </member>
+        <member name="T:Rhino.Etl.Dsl.Macros.OutputMacro">
+            <summary>
+            Create a new <see cref="T:Rhino.Etl.Core.Operations.OutputCommandOperation"/> and instantiate it in place of the 
+            macro
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.Macros.OutputMacro.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Dsl.Macros.OutputMacro"/> class.
+            </summary>
+        </member>
+        <member name="T:Rhino.Etl.Dsl.Macros.ProcessMacro">
+            <summary>
+            Generate a clsas derived from <see cref="T:Rhino.Etl.Core.EtlProcess"/> with the 
+            required initialization
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.Macros.ProcessMacro.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Dsl.Macros.ProcessMacro"/> class.
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.Macros.ProcessMacro.Expand(Boo.Lang.Compiler.Ast.MacroStatement)">
+            <summary>
+            Expands the macro, create a new class and transform all the expression statements in the 
+            macro block to Register() calls.
+            </summary>
+            <param name="macro">The macro.</param>
+            <returns></returns>
+        </member>
+        <member name="T:Rhino.Etl.Dsl.Macros.RightMacro">
+            <summary>
+            The right part of a join
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.Macros.RightMacro.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Dsl.Macros.RightMacro"/> class.
+            </summary>
+        </member>
+        <member name="T:Rhino.Etl.Dsl.Macros.RowProcessedMacro">
+            <summary>
+            Generate the <see cref="M:Rhino.Etl.Core.EtlProcess.OnRowProcessed(Rhino.Etl.Core.Operations.IOperation,Rhino.Etl.Core.Row)"/> method
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.Macros.RowProcessedMacro.#ctor">
+            <summary>
+             Initializes a new instance of the <see cref="T:Rhino.Etl.Dsl.Macros.RowProcessedMacro"/> class.
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.Macros.RowProcessedMacro.DoExpand(Boo.Lang.Compiler.Ast.MacroStatement)">
+            <summary>
+            Perform the actual expansion of the macro
+            </summary>
+            <param name="macro">The macro.</param>
+            <returns></returns>
+        </member>
+        <member name="T:Rhino.Etl.Dsl.Macros.SqlBulkInsertMacro">
+            <summary>
+            Create a new <see cref="T:Rhino.Etl.Core.ConventionOperations.ConventionSqlBulkInsertOperation"/> and instantiate it in place of the 
+            macro
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.Macros.SqlBulkInsertMacro.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Dsl.Macros.SqlBulkInsertMacro"/> class.
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.Macros.SqlBulkInsertMacro.Expand(Boo.Lang.Compiler.Ast.MacroStatement)">
+            <summary>Expands the macro and replaces calls to map with calls to MapColumn</summary>
+            <param name="macro">The macro to expand</param>
+            <returns>The expanded macro statement</returns>
+            <remarks>This prohibits using the builtin map macro!</remarks>
+        </member>
+        <member name="T:Rhino.Etl.Dsl.Macros.TerminateMacro">
+            <summary>
+            Generate the <see cref="M:Rhino.Etl.Core.Operations.AbstractAggregationOperation.FinishAggregation(Rhino.Etl.Core.Row)"/> method
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.Macros.TerminateMacro.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Dsl.Macros.TerminateMacro"/> class.
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Dsl.Macros.TerminateMacro.DoExpand(Boo.Lang.Compiler.Ast.MacroStatement)">
+            <summary>
+            Perform the actual expansion of the macro
+            </summary>
+            <param name="macro">The macro.</param>
+            <returns></returns>
+        </member>
+    </members>
+</doc>
