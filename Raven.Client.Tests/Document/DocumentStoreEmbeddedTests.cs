@@ -2,7 +2,9 @@ using System;
 using System.IO;
 using System.Reflection;
 using System.Transactions;
+using Newtonsoft.Json.Linq;
 using Raven.Client.Document;
+using Raven.Database.Data;
 using Raven.Database.Exceptions;
 using Raven.Database.Indexing;
 using Xunit;
@@ -180,6 +182,44 @@ namespace Raven.Client.Tests.Document
 				c2.Phone = 1;
 				sessions2.SaveChanges();
 				Assert.Equal(1, stored);
+			}
+		}
+
+		[Fact]
+		public void Can_store_using_batch()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				var batchResults = documentStore
+					.DatabaseCommands
+					.Batch(new ICommandData[]
+					{
+						new PutCommandData
+						{
+							Document = JObject.FromObject(new Company{Name = "Hibernating Rhinos"}),
+							Etag = null,
+							Key = "rhino1",
+							Metadata = new JObject(),
+						},
+						new PutCommandData
+						{
+							Document = JObject.FromObject(new Company{Name = "Hibernating Rhinos"}),
+							Etag = null,
+							Key = "rhino2",
+							Metadata = new JObject(),
+						},
+						new DeleteCommandData
+						{
+							Etag = null,
+							Key = "rhino2"
+						}
+					});
+
+				Assert.Equal("rhino1", batchResults[0].Key);
+				Assert.Equal("rhino2", batchResults[1].Key);
+
+				Assert.Null(documentStore.DatabaseCommands.Get("rhino2"));
+				Assert.NotNull(documentStore.DatabaseCommands.Get("rhino1"));
 			}
 		}
 

@@ -426,16 +426,21 @@ namespace Raven.Database
 			return result;
 		}
 
-        public object[] Batch(IEnumerable<ICommandData> commands)
+		public BatchResult[] Batch(IEnumerable<ICommandData> commands)
         {
-        	var results = new List<object>();
+			var results = new List<BatchResult>();
 
             TransactionalStorage.Batch(actions =>
             {
                 foreach(var command in commands)
                 {
                 	command.Execute(this);
-                	results.Add(new {command.Method, command.Key});
+                	results.Add(new BatchResult
+                	{
+                		Method = command.Method,
+                		Key = command.Key,
+                		Etag = command.Etag
+                	});
                 }
                 actions.Commit();
             });

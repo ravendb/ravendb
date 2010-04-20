@@ -67,7 +67,7 @@ namespace Raven.Server.Responders
 
     	private static Guid? GetEtagFromCommand(JToken jsonCommand)
     	{
-    		return jsonCommand["etag"] != null ? new Guid(jsonCommand["etag"].Value<string>()) : (Guid?)null;
+			return jsonCommand["etag"] != null && jsonCommand["etag"].Value<string>() != null ? new Guid(jsonCommand["etag"].Value<string>()) : (Guid?)null;
     	}
     }
 }
