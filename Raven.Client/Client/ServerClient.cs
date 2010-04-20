@@ -33,13 +33,24 @@ namespace Raven.Client.Client
 		    var metadata = new JObject();
 		    AddTransactionInformation(metadata);
 			var request = new HttpJsonRequest(url + "/docs/" + key, "GET", metadata);
-			return new JsonDocument
+			try
 			{
-				Data = Encoding.UTF8.GetBytes(request.ReadResponseString()),
-				Key = key,
-                Etag = new Guid(request.ResponseHeaders["ETag"]),
-                Metadata = request.ResponseHeaders.FilterHeaders()
-			};
+				return new JsonDocument
+				{
+					Data = Encoding.UTF8.GetBytes(request.ReadResponseString()),
+					Key = key,
+					Etag = new Guid(request.ResponseHeaders["ETag"]),
+					Metadata = request.ResponseHeaders.FilterHeaders()
+				};
+			}
+			catch (WebException e)
+			{
+				var httpWebResponse = e.Response as HttpWebResponse;
+				if (httpWebResponse == null ||
+					httpWebResponse.StatusCode != HttpStatusCode.NotFound)
+					throw;
+				return null;
+			}
 		}
 
 		private static void EnsureIsNotNullOrEmpty(string key, string argName)
@@ -195,7 +206,17 @@ namespace Raven.Client.Client
 	            .ToArray();
 	    }
 
-	    public void Commit(Guid txId)
+		public BatchResult[] Batch(ICommandData[] commandDatas)
+		{
+			var req = new HttpJsonRequest(url + "/bulk_docs", "POST");
+			var jArray = new JArray(commandDatas.Select(x=>x.ToJson()));
+			req.Write(jArray.ToString(Formatting.None));
+
+			var response = req.ReadResponseString();
+			return JsonConvert.DeserializeObject<BatchResult[]>(response);
+		}
+
+		public void Commit(Guid txId)
 	    {
 	        var httpJsonRequest = new HttpJsonRequest("/transaction/commit?tx=" + txId, "POST");
 	        httpJsonRequest.ReadResponseString();
