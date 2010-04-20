@@ -7,7 +7,7 @@ namespace Raven.Database.Storage
 	[CLSCompliant(false)]
 	public class SchemaCreator
 	{
-		public const string SchemaVersion = "1.9";
+		public const string SchemaVersion = "1.95";
 		private readonly Session session;
 
 		public SchemaCreator(Session session)
@@ -31,6 +31,7 @@ namespace Raven.Database.Storage
 					CreateMapResultsTable(dbid);
 					CreateIndexingStatsTable(dbid);
 					CreateFilesTable(dbid);
+					CreateIdentityTable(dbid);
 
 					tx.Commit(CommitTransactionGrbit.None);
 				}
@@ -39,6 +40,33 @@ namespace Raven.Database.Storage
 			{
 				Api.JetCloseDatabase(session, dbid, CloseDatabaseGrbit.None);
 			}
+		}
+
+		private void CreateIdentityTable(JET_DBID dbid)
+		{
+			JET_TABLEID tableid;
+			Api.JetCreateTable(session, dbid, "identity_table", 16, 100, out tableid);
+			JET_COLUMNID columnid;
+
+			Api.JetAddColumn(session, tableid, "key", new JET_COLUMNDEF
+			{
+				cbMax = 255,
+				coltyp = JET_coltyp.Text,
+				cp = JET_CP.Unicode,
+				grbit = ColumndefGrbit.ColumnTagged
+			}, null, 0, out columnid);
+
+
+			var defaultValue = BitConverter.GetBytes(0);
+			Api.JetAddColumn(session, tableid, "val", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.Long,
+				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnEscrowUpdate | ColumndefGrbit.ColumnNotNULL
+			}, defaultValue, defaultValue.Length, out columnid);
+
+			const string indexDef = "+key\0\0";
+			Api.JetCreateIndex(session, tableid, "by_key", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
+							   100);
 		}
 
 		private void CreateIndexingStatsTable(JET_DBID dbid)

@@ -99,6 +99,7 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Indexes\DocumentsToIndex.cs" />
+    <Compile Include="Storage\Identity.cs" />
     <Compile Include="Storage\WithDebugging.cs" />
     <Compile Include="Transactions\Deletes.cs" />
     <Compile Include="Transactions\Etags.cs" />

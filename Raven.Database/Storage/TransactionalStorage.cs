@@ -24,6 +24,7 @@ namespace Raven.Database.Storage
 		private IDictionary<string, JET_COLUMNID> tasksColumns;
 	    private IDictionary<string, JET_COLUMNID> documentsModifiedByTransactionsColumns;
 	    private IDictionary<string, JET_COLUMNID> transactionsColumns;
+		private IDictionary<string, JET_COLUMNID> identityColumns;
 
 	    public TransactionalStorage(string database)
 		{
@@ -112,8 +113,8 @@ namespace Raven.Database.Storage
                         documentsModifiedByTransactionsColumns = Api.GetColumnDictionary(session, documentsModifiedByTransactions);
                     using (var transactions = new Table(session, dbid, "transactions", OpenTableGrbit.None))
                         transactionsColumns = Api.GetColumnDictionary(session, transactions);
-
-			
+					using (var identity = new Table(session, dbid, "identity_table", OpenTableGrbit.None))
+						identityColumns = Api.GetColumnDictionary(session, identity);
 				}
 				finally
 				{
@@ -252,10 +253,17 @@ namespace Raven.Database.Storage
 			disposerLock.EnterReadLock();
 			try
 			{
-				using (var pht = new DocumentStorageActions(instance, database, documentsColumns, tasksColumns,
-					                                     filesColumns, indexStatsColumns, mappedResultsColumns,
-                                                         documentsModifiedByTransactionsColumns,
-                                                         transactionsColumns))
+				using (var pht = new DocumentStorageActions(
+					instance, 
+					database, 
+					documentsColumns, 
+					tasksColumns,
+					filesColumns, 
+					indexStatsColumns, 
+					mappedResultsColumns,
+					documentsModifiedByTransactionsColumns,
+					transactionsColumns, 
+					identityColumns))
 				{
 					current.Value = pht;
 					action(pht);
