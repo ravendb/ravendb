@@ -63,13 +63,13 @@
   <ItemGroup>
     <Compile Include="AddBadgeToUser.cs" />
     <Compile Include="BadgesProcess.cs" />
-    <Compile Include="EnumerablExtensions.cs" />
+    <Compile Include="Generic\EnumerablExtensions.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="RowToDatabase.cs" />
-    <Compile Include="TryConvert.cs" />
+    <Compile Include="Generic\RowToDatabase.cs" />
+    <Compile Include="Generic\TryConvert.cs" />
     <Compile Include="UsersProcess.cs" />
-    <Compile Include="XmlRowOperationFile.cs" />
+    <Compile Include="Generic\XmlRowOperationFile.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config">

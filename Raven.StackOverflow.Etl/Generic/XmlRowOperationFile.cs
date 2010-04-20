@@ -3,7 +3,7 @@ using System.Xml;
 using System.Xml.Linq;
 using Rhino.Etl.Core;
 
-namespace Raven.StackOverflow.Etl
+namespace Raven.StackOverflow.Etl.Generic
 {
 	public class XmlRowOperationFile : Rhino.Etl.Core.Operations.AbstractOperation
 	{

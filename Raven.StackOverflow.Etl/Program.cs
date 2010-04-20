@@ -6,6 +6,7 @@ using log4net.Config;
 using log4net.Core;
 using log4net.Layout;
 using Raven.Database;
+using Raven.StackOverflow.Etl.Users;
 using Rhino.Etl.Core;
 using System.Linq;
 
@@ -16,6 +17,12 @@ namespace Raven.StackOverflow.Etl
 		static void Main(string[] args)
 		{
 			const string path = @"C:\Users\Ayende\Downloads\Stack Overflow Data Dump - Mar 10\Content\Export-030110\032010 SO";
+
+			BasicConfigurator.Configure(new ConsoleAppender
+			{
+				Layout = new SimpleLayout(),
+				Threshold = Level.Notice
+			});
 
 			if(Directory.Exists("Data"))
 				Directory.Delete("Data", true);

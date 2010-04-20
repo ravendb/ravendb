@@ -1,9 +1,10 @@
 ﻿using System;
 using System.IO;
 using Raven.Database;
+using Raven.StackOverflow.Etl.Generic;
 using Rhino.Etl.Core;
 
-namespace Raven.StackOverflow.Etl
+namespace Raven.StackOverflow.Etl.Users
 {
 	public class BadgesProcess : EtlProcess
 	{

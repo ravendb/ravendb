@@ -4,7 +4,7 @@ using System.Linq;
 using Rhino.Etl.Core;
 using Rhino.Etl.Core.Operations;
 
-namespace Raven.StackOverflow.Etl
+namespace Raven.StackOverflow.Etl.Generic
 {
 	public class TryConvert<T> : AbstractOperation 
 	{

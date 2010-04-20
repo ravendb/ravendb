@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Raven.StackOverflow.Etl
+namespace Raven.StackOverflow.Etl.Generic
 {
 	public static class EnumerablExtensions
 	{

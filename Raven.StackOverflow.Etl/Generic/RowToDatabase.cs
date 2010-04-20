@@ -8,7 +8,7 @@ using Rhino.Etl.Core.Operations;
 using System.Linq;
 using System;
 
-namespace Raven.StackOverflow.Etl
+namespace Raven.StackOverflow.Etl.Generic
 {
 	public class RowToDatabase : AbstractOperation
 	{
