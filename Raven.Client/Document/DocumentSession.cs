@@ -18,7 +18,8 @@ namespace Raven.Client.Document
 	public class DocumentSession : IDocumentSession
 	{
 	    private const string TemporaryIdPrefix = "Temporary Id: ";
-	    private readonly IDatabaseCommands database;
+		private const string RavenEntityName = "Raven-Entity-Name";
+		private readonly IDatabaseCommands database;
 		private readonly DocumentStore documentStore;
         private readonly Dictionary<object, DocumentMetadata> entitiesAndMetadata = new Dictionary<object, DocumentMetadata>();
         private readonly Dictionary<string, object> entitiesByKey = new Dictionary<string, object>();
@@ -105,19 +106,20 @@ namespace Raven.Client.Document
 		public void Store<T>(T entity)
 		{
             var identityProperty = GetIdentityProperty(typeof(T));
-            var id = identityProperty.GetValue(entity, null) as string ?? TemporaryIdPrefix + Guid.NewGuid();
-            if (entitiesByKey.ContainsKey(id))
+            var id = identityProperty.GetValue(entity, null) as string;
+            if (id != null && entitiesByKey.ContainsKey(id))
                 return;//already in unit of work
 
 			var tag = documentStore.Conventions.FindTypeTagName(typeof(T));
 			entitiesAndMetadata.Add(entity, new DocumentMetadata
 			{
                 Key = id,
-                Metadata = new JObject(new JProperty("Raven-Entity-Name", new JValue(tag))),
+                Metadata = new JObject(new JProperty(RavenEntityName, new JValue(tag))),
                 ETag = null,
 				OriginalValue = new JObject()
 			});
-		    entitiesByKey[id] = entity;
+			if (id != null)
+				entitiesByKey[id] = entity;
 		}
 
 		public void Evict<T>(T entity)
@@ -138,10 +140,11 @@ namespace Raven.Client.Document
 			var identityProperty = GetIdentityProperty(entityType);
 
             var key = (string)identityProperty.GetValue(entity, null);
-            if (key != null && key.StartsWith(TemporaryIdPrefix))
+            if (key == null || key.StartsWith(TemporaryIdPrefix))
             {
-                entitiesByKey.Remove(key);
-                key = null;
+				if (key != null)
+					entitiesByKey.Remove(key);
+				key = documentStore.Conventions.FindTypeTagName(entityType) + "/";
             }
 		    var etag = UseOptimisticConcurrency ? documentMetadata.ETag : null;
 
@@ -199,8 +202,9 @@ namespace Raven.Client.Document
             deletedEntities.Clear();
 		    foreach (var entity in entitiesAndMetadata.Where(EntityChanged))
 			{
-				entities.Add(entity.Key); 
-				entitiesByKey.Remove(entity.Value.Key);
+				entities.Add(entity.Key);
+				if (entity.Value.Key != null)
+					entitiesByKey.Remove(entity.Value.Key);
 				cmds.Add(CreatePutEntityCommand(entity.Key, entity.Value));
 			}
 

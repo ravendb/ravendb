@@ -148,14 +148,14 @@ namespace Raven.Database
 			}
 			RemoveReservedProperties(document);
 			RemoveReservedProperties(metadata);
-			metadata.Add("@id", new JValue(key));
 			TransactionalStorage.Batch(actions =>
 			{
 				if (key.EndsWith("/"))
 				{
 					key += actions.GetNextIdentityValue(key);
 				}
-                if (transactionInformation == null)
+				metadata.Add("@id", new JValue(key));
+				if (transactionInformation == null)
                 {
                     etag = actions.AddDocument(key, document.ToString(), etag, metadata.ToString());
                     actions.AddTask(new IndexDocumentTask {Index = "*", Key = key});

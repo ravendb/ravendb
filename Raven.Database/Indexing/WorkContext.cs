@@ -12,7 +12,8 @@ namespace Raven.Database.Indexing
 		private readonly ConcurrentQueue<ServerError> serverErrors = new ConcurrentQueue<ServerError>();
 		private readonly object waitForWork = new object();
 		private volatile bool doWork = true;
-		private ILog log = LogManager.GetLogger(typeof (WorkContext));
+		private readonly ILog log = LogManager.GetLogger(typeof (WorkContext));
+		private ThreadLocal<bool> shouldNotifyOnWork = new ThreadLocal<bool>();
 
 		public bool DoWork
 		{
@@ -40,8 +41,16 @@ namespace Raven.Database.Indexing
 			}
 		}
 
+		public void ShouldNotifyAboutWork()
+		{
+			shouldNotifyOnWork.Value = true;
+		}
+
 		public void NotifyAboutWork()
 		{
+			if (shouldNotifyOnWork.Value == false)
+				return;
+			shouldNotifyOnWork.Value = false;
 			lock (waitForWork)
 			{
 				log.Debug("Notifying background workers about work");

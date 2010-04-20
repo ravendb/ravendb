@@ -90,6 +90,20 @@ namespace Raven.Client.Tests.Document
             }
         }
 
+		[Fact]
+		public void Will_use_identity_for_document_key()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				var company = new Company { Name = "Company Name" };
+				var session = documentStore.OpenSession();
+				session.Store(company);
+				session.SaveChanges();
+
+				Assert.Equal("Companies/1", company.Id);
+			}
+		}
+
         [Fact]
         public void While_in_transaction_can_read_values_private_for_the_Transaction()
         {
