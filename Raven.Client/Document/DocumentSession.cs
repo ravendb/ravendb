@@ -68,6 +68,7 @@ namespace Raven.Client.Document
 	        var entity = ConvertToEntity<T>(documentFound.Key, jsonString);
 	        entitiesAndMetadata.Add(entity, new DocumentMetadata
 	        {
+				OriginalValue = JObject.Parse(jsonString),
 	            Metadata = documentFound.Metadata,
 	            ETag = documentFound.Etag,
 	            Key = documentFound.Key
@@ -112,7 +113,8 @@ namespace Raven.Client.Document
 			{
                 Key = id,
                 Metadata = new JObject(new JProperty("Raven-Entity-Name", new JValue(tag))),
-                ETag = null
+                ETag = null,
+				OriginalValue = new JObject()
 			});
 		    entitiesByKey[id] = entity;
 		}
@@ -145,6 +147,7 @@ namespace Raven.Client.Document
 		    entitiesByKey[result.Key] = entity;
 		    documentMetadata.ETag = result.ETag;
 		    documentMetadata.Key = result.Key;
+			documentMetadata.OriginalValue = json;
 			identityProperty.SetValue(entity, result.Key, null);
 
 			var stored = Stored;
@@ -188,12 +191,20 @@ namespace Raven.Client.Document
                 documentStore.DatabaseCommands.Delete(key, etag);
             }
             deletedEntities.Clear();
-		    foreach (var entity in entitiesAndMetadata)
+		    foreach (var entity in entitiesAndMetadata.Where(EntityChanged))
 			{
 				//TODO: Switch to more the batch version when it becomes available
 				StoreEntity(entity.Key, entity.Value);
 			}
 		    
+		}
+
+		private bool EntityChanged(KeyValuePair<object, DocumentMetadata> kvp)
+		{
+			var newObj = ConvertEntityToJson(kvp.Key);
+			if (kvp.Value == null)
+				return true;
+			return new JTokenEqualityComparer().Equals(newObj, kvp.Value.OriginalValue) == false;
 		}
 
 		private JObject ConvertEntityToJson(object entity)
@@ -250,6 +261,7 @@ namespace Raven.Client.Document
 
         public class DocumentMetadata
         {
+			public JObject OriginalValue { get; set; }
             public JObject Metadata { get; set; }
             public Guid? ETag { get; set; }
             public string Key { get; set; }

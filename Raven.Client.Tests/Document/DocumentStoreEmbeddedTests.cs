@@ -141,6 +141,48 @@ namespace Raven.Client.Tests.Document
 			}
 		}
 
+
+		[Fact]
+		public void Will_not_store_if_entity_did_not_change()
+		{
+			var stored = 0;
+			using (var documentStore = NewDocumentStore())
+			{
+				var company = new Company { Name = "Company Name" };
+				var session = documentStore.OpenSession();
+				session.Stored += o => stored++;
+				session.Store(company);
+				Assert.Equal(0, stored);
+				session.SaveChanges();
+				Assert.Equal(1, stored);
+				session.SaveChanges();
+				Assert.Equal(1, stored);
+			}
+		}
+
+		[Fact]
+		public void Will_store_if_entity_changed()
+		{
+			var stored = 0;
+			using (var documentStore = NewDocumentStore())
+			{
+				var company = new Company { Name = "Company Name" };
+				var session = documentStore.OpenSession();
+				session.Store(company);
+				Assert.Equal(0, stored);
+				session.SaveChanges();
+
+				var sessions2 = documentStore.OpenSession();
+				sessions2.Stored += o => stored++;
+				var c2 = sessions2.Load<Company>(company.Id);
+				sessions2.SaveChanges();
+				Assert.Equal(0, stored);
+				c2.Phone = 1;
+				sessions2.SaveChanges();
+				Assert.Equal(1, stored);
+			}
+		}
+
 		[Fact]
 		public void Should_map_Entity_Id_to_document_after_save_changes()
 		{
