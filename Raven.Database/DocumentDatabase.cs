@@ -165,7 +165,8 @@ namespace Raven.Database
                     etag = actions.AddDocumentInTransaction(transactionInformation, key, document.ToString(), etag,
                                                      metadata.ToString());
                 }
-			    actions.Commit();
+				workContext.ShouldNotifyAboutWork();
+				actions.Commit();
 			});
 		    return new PutResult
 		    {
@@ -201,7 +202,8 @@ namespace Raven.Database
                 {
                     actions.DeleteDocumentInTransaction(transactionInformation, key, etag);
                 }
-			    actions.Commit();
+				workContext.ShouldNotifyAboutWork();
+				actions.Commit();
 			});
 		}
 
@@ -218,7 +220,8 @@ namespace Raven.Database
                     else
                         Put(doc.Key, null, JObject.Parse(doc.Data), JObject.Parse(doc.Metadata), null);
                 });
-                actions.Commit();
+				workContext.ShouldNotifyAboutWork();
+				actions.Commit();
             });
         }
 
@@ -227,7 +230,8 @@ namespace Raven.Database
             TransactionalStorage.Batch(actions =>
             {
                 actions.RollbackTransaction(txId);
-                actions.Commit();
+				workContext.ShouldNotifyAboutWork();
+				actions.Commit();
             });
         }
 
@@ -259,6 +263,7 @@ namespace Raven.Database
 						});
 					}
 				}
+				workContext.ShouldNotifyAboutWork();
 				actions.Commit();
 			});
 			return name;
@@ -319,6 +324,7 @@ namespace Raven.Database
 			{
 				action.DeleteIndex(name);
 
+				workContext.ShouldNotifyAboutWork();
 				action.Commit();
 			});
 		}
@@ -415,6 +421,7 @@ namespace Raven.Database
 					result = PatchResult.Patched;
 				}
 
+				workContext.ShouldNotifyAboutWork();
 				actions.Commit();
 			});
 
@@ -438,7 +445,8 @@ namespace Raven.Database
                 		Etag = command.Etag
                 	});
                 }
-                actions.Commit();
+				workContext.ShouldNotifyAboutWork();
+				actions.Commit();
             });
 			log.DebugFormat("Successfully executed {0} commands", commands.Count);
             return results.ToArray();
