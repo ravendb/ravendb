@@ -3,6 +3,8 @@ using log4net.Appender;
 using log4net.Config;
 using log4net.Layout;
 using Raven.Client.Tests.Document;
+using Raven.Database.Indexing;
+using Raven.Database.Linq;
 
 namespace Raven.Tryouts
 {
@@ -18,8 +20,16 @@ namespace Raven.Tryouts
 			});
 			try
 			{
-				new DocumentStoreEmbeddedTests().Should_retrieve_all_entities();
-				Console.WriteLine("done");
+				var dynamicViewCompiler = new DynamicViewCompiler("a", new IndexDefinition
+				{
+					Map = @"
+from post in docs.Posts
+where post.Published == 'aasds'
+select new {post.PostedAt }
+"
+				});
+				dynamicViewCompiler.GenerateInstance();
+				Console.WriteLine(dynamicViewCompiler.CompiledQueryText);
 			}
 			catch (Exception e)
 			{
