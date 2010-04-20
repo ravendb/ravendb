@@ -1,8 +1,8 @@
 using System;
-using System.Collections.Generic;
-using Newtonsoft.Json;
-using Raven.Database.Indexing;
-using Raven.Database.Json;
+using log4net.Appender;
+using log4net.Config;
+using log4net.Layout;
+using Raven.Client.Tests.Document;
 
 namespace Raven.Tryouts
 {
@@ -12,18 +12,19 @@ namespace Raven.Tryouts
 
 		public static void Main()
 		{
-			var serializeObject = JsonConvert.SerializeObject(new IndexDefinition
+			BasicConfigurator.Configure(new ConsoleAppender
 			{
-				Map = "abc",
-				Reduce = "def",
-				Stores = new Dictionary<string, FieldStorage>
-				{
-					{"ee", FieldStorage.Compress}
-				}
-			},Formatting.Indented,new JsonEnumConverter());
-			Console.WriteLine(serializeObject);
-			var definition = JsonConvert.DeserializeObject<IndexDefinition>(serializeObject, new JsonEnumConverter());
-			Console.WriteLine(definition.Stores["ee"]);
+				Layout = new SimpleLayout()
+			});
+			try
+			{
+				new DocumentStoreEmbeddedTests().Should_retrieve_all_entities();
+				Console.WriteLine("done");
+			}
+			catch (Exception e)
+			{
+				Console.WriteLine(e);
+			}
 		}
 	}
 

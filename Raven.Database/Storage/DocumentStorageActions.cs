@@ -101,6 +101,7 @@ namespace Raven.Database.Storage
 
 		#region IDisposable Members
 
+		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
 		public void Dispose()
 		{
 			if (Identity != null)

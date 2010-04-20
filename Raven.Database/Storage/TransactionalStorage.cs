@@ -12,6 +12,7 @@ namespace Raven.Database.Storage
 	{
 		private readonly ThreadLocal<DocumentStorageActions> current = new ThreadLocal<DocumentStorageActions>();
 		private readonly string database;
+		private readonly Action onCommit;
 		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
 		private readonly string path;
 		private bool disposed;
@@ -26,10 +27,11 @@ namespace Raven.Database.Storage
 	    private IDictionary<string, JET_COLUMNID> transactionsColumns;
 		private IDictionary<string, JET_COLUMNID> identityColumns;
 
-	    public TransactionalStorage(string database)
+	    public TransactionalStorage(string database, Action onCommit)
 		{
 			this.database = database;
-			path = database;
+	    	this.onCommit = onCommit;
+	    	path = database;
 			if (Path.IsPathRooted(database) == false)
 				path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, database);
 			this.database = Path.Combine(path, Path.GetFileName(database));
@@ -269,6 +271,7 @@ namespace Raven.Database.Storage
 					action(pht);
 					if (pht.CommitCalled == false)
 						throw new InvalidOperationException("You forgot to call commit!");
+					onCommit();
 				}
 			}
 			finally

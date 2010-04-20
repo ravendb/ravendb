@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security;
 using System.Threading;
+using log4net;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
@@ -21,11 +22,13 @@ namespace Raven.Database
 		private readonly RavenConfiguration configuration;
 		private readonly WorkContext workContext;
 		private Thread[] backgroundWorkers = new Thread[0];
+		private ILog log = LogManager.GetLogger(typeof (DocumentDatabase));
 
 		public DocumentDatabase(RavenConfiguration configuration)
 		{
 			this.configuration = configuration;
-			TransactionalStorage = new TransactionalStorage(configuration.DataDirectory);
+			workContext = new WorkContext();
+			TransactionalStorage = new TransactionalStorage(configuration.DataDirectory, workContext.NotifyAboutWork);
 			bool newDb;
 			try
 			{
@@ -39,12 +42,10 @@ namespace Raven.Database
 
 			IndexDefinitionStorage = new IndexDefinitionStorage(configuration.DataDirectory);
 			IndexStorage = new IndexStorage(configuration.DataDirectory, IndexDefinitionStorage);
-			workContext = new WorkContext
-			{
-				IndexStorage = IndexStorage,
-				TransactionaStorage = TransactionalStorage,
-				IndexDefinitionStorage = IndexDefinitionStorage
-			};
+
+			workContext.IndexStorage = IndexStorage;
+			workContext.TransactionaStorage = TransactionalStorage;
+			workContext.IndexDefinitionStorage = IndexDefinitionStorage;
 
 			if (!newDb) 
 				return;
@@ -166,7 +167,6 @@ namespace Raven.Database
                 }
 			    actions.Commit();
 			});
-			workContext.NotifyAboutWork();
 		    return new PutResult
 		    {
 		        Key = key,
@@ -203,7 +203,6 @@ namespace Raven.Database
                 }
 			    actions.Commit();
 			});
-			workContext.NotifyAboutWork();
 		}
 
         public void Commit(Guid txId)
@@ -221,7 +220,6 @@ namespace Raven.Database
                 });
                 actions.Commit();
             });
-            workContext.NotifyAboutWork();
         }
 
         public void Rollback(Guid txId)
@@ -231,7 +229,6 @@ namespace Raven.Database
                 actions.RollbackTransaction(txId);
                 actions.Commit();
             });
-            workContext.NotifyAboutWork();
         }
 
 		public string PutIndex(string name, IndexDefinition definition)
@@ -264,7 +261,6 @@ namespace Raven.Database
 				}
 				actions.Commit();
 			});
-			workContext.NotifyAboutWork();
 			return name;
 		}
 
@@ -325,7 +321,6 @@ namespace Raven.Database
 
 				action.Commit();
 			});
-			workContext.NotifyAboutWork();
 		}
 
 		public Attachment GetStatic(string name)
@@ -426,10 +421,11 @@ namespace Raven.Database
 			return result;
 		}
 
-		public BatchResult[] Batch(IEnumerable<ICommandData> commands)
+		public BatchResult[] Batch(ICollection<ICommandData> commands)
         {
 			var results = new List<BatchResult>();
 
+			log.DebugFormat("Executing {0} batched commands in a single transaction", commands.Count);
             TransactionalStorage.Batch(actions =>
             {
                 foreach(var command in commands)
@@ -444,8 +440,7 @@ namespace Raven.Database
                 }
                 actions.Commit();
             });
-
-            workContext.NotifyAboutWork();
+			log.DebugFormat("Successfully executed {0} commands", commands.Count);
             return results.ToArray();
         }
 	}

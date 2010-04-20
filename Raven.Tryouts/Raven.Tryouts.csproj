@@ -53,6 +53,10 @@
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="log4net, Version=1.2.10.0, Culture=neutral, PublicKeyToken=1b44e1d426115821, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SharedLibs\log4net.dll</HintPath>
+    </Reference>
     <Reference Include="Lucene.Net, Version=2.3.2.1, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Lucene.Net.dll</HintPath>
@@ -79,6 +83,10 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Raven.Client.Tests\Raven.Client.Tests.csproj">
+      <Project>{36B31D69-508B-4594-8F8E-85774BAA7D3F}</Project>
+      <Name>Raven.Client.Tests</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Client\Raven.Client.csproj">
       <Project>{9F92FD36-60B6-4655-B8C6-00125B46AB6A}</Project>
       <Name>Raven.Client</Name>

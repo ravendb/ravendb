@@ -12,7 +12,7 @@ namespace Raven.Tests.Views
 
 		public ViewStorage()
 		{
-			transactionalStorage = new TransactionalStorage("raven.db.test.esent");
+			transactionalStorage = new TransactionalStorage("raven.db.test.esent", () => { });
 			transactionalStorage.Initialize();
 		}
 
