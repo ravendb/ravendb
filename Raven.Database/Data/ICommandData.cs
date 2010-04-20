@@ -8,7 +8,7 @@ namespace Raven.Database.Data
 		string Key { get; }
 		string Method { get; }
 		Guid? Etag { get; }
-        TransactionInformation TransactionInformation { get; }
+		TransactionInformation TransactionInformation { get; set; }
     	void Execute(DocumentDatabase database);
     	JObject ToJson();
     }

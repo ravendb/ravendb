@@ -208,11 +208,25 @@ namespace Raven.Client.Client
 
 		public BatchResult[] Batch(ICommandData[] commandDatas)
 		{
-			var req = new HttpJsonRequest(url + "/bulk_docs", "POST");
-			var jArray = new JArray(commandDatas.Select(x=>x.ToJson()));
+			var metadata = new JObject();
+			AddTransactionInformation(metadata);
+			var req = new HttpJsonRequest(url + "/bulk_docs", "POST",metadata);
+			var jArray = new JArray(commandDatas.Select(x => x.ToJson()));
 			req.Write(jArray.ToString(Formatting.None));
 
-			var response = req.ReadResponseString();
+			string response;
+			try
+			{
+				response = req.ReadResponseString();
+			}
+			catch (WebException e)
+			{
+				var httpWebResponse = e.Response as HttpWebResponse;
+				if (httpWebResponse == null ||
+					httpWebResponse.StatusCode != HttpStatusCode.Conflict)
+					throw;
+				throw ThrowConcurrencyException(e);
+			}
 			return JsonConvert.DeserializeObject<BatchResult[]>(response);
 		}
 

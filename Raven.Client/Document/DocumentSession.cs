@@ -10,6 +10,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Client.Client;
 using System;
 using Raven.Database;
+using Raven.Database.Data;
 using Raven.Database.Json;
 
 namespace Raven.Client.Document
@@ -130,11 +131,11 @@ namespace Raven.Client.Document
 		    deletedEntities.Remove(entity);
 		}
 
-		private void StoreEntity(object entity, DocumentMetadata documentMetadata)
+		private ICommandData CreatePutEntityCommand(object entity, DocumentMetadata documentMetadata)
 		{
 			var json = ConvertEntityToJson(entity);
 			var entityType = entity.GetType();
-			PropertyInfo identityProperty = GetIdentityProperty(entityType);
+			var identityProperty = GetIdentityProperty(entityType);
 
             var key = (string)identityProperty.GetValue(entity, null);
             if (key != null && key.StartsWith(TemporaryIdPrefix))
@@ -143,16 +144,14 @@ namespace Raven.Client.Document
                 key = null;
             }
 		    var etag = UseOptimisticConcurrency ? documentMetadata.ETag : null;
-		    var result = database.Put(key, etag, json, documentMetadata.Metadata);
-		    entitiesByKey[result.Key] = entity;
-		    documentMetadata.ETag = result.ETag;
-		    documentMetadata.Key = result.Key;
-			documentMetadata.OriginalValue = json;
-			identityProperty.SetValue(entity, result.Key, null);
 
-			var stored = Stored;
-			if (stored != null)
-				stored(entity);
+			return new PutCommandData
+			{
+				Document = json,
+				Etag = etag,
+				Key = key,
+				Metadata = documentMetadata.Metadata,
+			};
 		}
 
 		private PropertyInfo GetIdentityProperty(Type entityType)
@@ -172,6 +171,8 @@ namespace Raven.Client.Document
                 enlistment = new RavenClientEnlistment(this, Transaction.Current.TransactionInformation.DistributedIdentifier);
                 Transaction.Current.EnlistVolatile(enlistment,EnlistmentOptions.None);
             }
+			var entities = new List<object>();
+			var cmds = new List<ICommandData>();
             foreach (var key in (from deletedEntity in deletedEntities
                                  let identityProperty = GetIdentityProperty(deletedEntity.GetType())
                                  select identityProperty.GetValue(deletedEntity, null))
@@ -188,15 +189,49 @@ namespace Raven.Client.Document
                 }
 
                 etag = UseOptimisticConcurrency ? etag : null;
-                documentStore.DatabaseCommands.Delete(key, etag);
+            	entities.Add(existingEntity);
+                cmds.Add(new DeleteCommandData
+                {
+                	Etag = etag,
+					Key = key,
+                });
             }
             deletedEntities.Clear();
 		    foreach (var entity in entitiesAndMetadata.Where(EntityChanged))
 			{
-				//TODO: Switch to more the batch version when it becomes available
-				StoreEntity(entity.Key, entity.Value);
+				entities.Add(entity.Key); 
+				entitiesByKey.Remove(entity.Value.Key);
+				cmds.Add(CreatePutEntityCommand(entity.Key, entity.Value));
 			}
-		    
+
+			UpdateBatchResults(database.Batch(cmds.ToArray()), entities);
+		}
+
+		private void UpdateBatchResults(IList<BatchResult> batchResults, IList<object> entities)
+		{
+			var stored = Stored;
+			for (int i = 0; i < batchResults.Count; i++)
+			{
+				var batchResult = batchResults[i];
+				if (batchResult.Method != "PUT")
+					continue;
+
+				var entity = entities[i];
+				DocumentMetadata documentMetadata;
+				if (entitiesAndMetadata.TryGetValue(entity, out documentMetadata) == false)
+					continue;
+
+				entitiesByKey[batchResult.Key] = entity;
+				documentMetadata.ETag = batchResult.Etag;
+				documentMetadata.Key = batchResult.Key;
+				documentMetadata.OriginalValue = ConvertEntityToJson(entity);
+
+				GetIdentityProperty(entity.GetType())
+					.SetValue(entity, batchResult.Key, null);
+
+				if (stored != null)
+					stored(entity);
+			}
 		}
 
 		private bool EntityChanged(KeyValuePair<object, DocumentMetadata> kvp)

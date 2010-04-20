@@ -32,7 +32,7 @@ namespace Raven.Database.Data
     	public JObject ToJson()
     	{
     		return new JObject(
-				new JProperty("key", new JValue(Key)),
+				new JProperty("key", new JValue((object)Key)),
     			new JProperty("etag", new JValue(Etag != null ? (object)Etag.ToString() : null)),
     			new JProperty("method", new JValue(Method)),
 				new JProperty("document", Document),

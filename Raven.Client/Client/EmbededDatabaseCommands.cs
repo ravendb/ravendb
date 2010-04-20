@@ -93,6 +93,10 @@ namespace Raven.Client.Client
 
 		public BatchResult[] Batch(ICommandData[] commandDatas)
 		{
+			foreach (var commandData in commandDatas)
+			{
+				commandData.TransactionInformation = GetTransactionInformation();
+			}
 			return database.Batch(commandDatas);
 		}
 
