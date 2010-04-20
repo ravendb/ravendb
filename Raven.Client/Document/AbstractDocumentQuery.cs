@@ -16,10 +16,18 @@ namespace Raven.Client.Document
 		protected int start;
 		protected int pageSize = 128;
 		protected bool waitForNonStaleResults;
+		protected TimeSpan timeout;
         protected string[] projectionFields;
         private QueryResult queryResult;
 
-	    public abstract IDocumentQuery<TProjection> Select<TProjection>(Func<T, TProjection> projectionExpression);
+		public IDocumentQuery<T> WaitForNonStaleResults(TimeSpan waitTimeout)
+		{
+			waitForNonStaleResults = true;
+			timeout = waitTimeout;
+			return this;
+		}
+
+		public abstract IDocumentQuery<TProjection> Select<TProjection>(Func<T, TProjection> projectionExpression);
 
 	    public QueryResult QueryResult
 		{
@@ -71,6 +79,7 @@ namespace Raven.Client.Document
 		public IDocumentQuery<T> WaitForNonStaleResults()
 		{
 			waitForNonStaleResults = true;
+			timeout = TimeSpan.FromSeconds(5);
 			return this;
 		}
 	}
