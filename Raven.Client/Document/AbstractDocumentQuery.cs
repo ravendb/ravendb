@@ -79,7 +79,7 @@ namespace Raven.Client.Document
 		public IDocumentQuery<T> WaitForNonStaleResults()
 		{
 			waitForNonStaleResults = true;
-			timeout = TimeSpan.FromSeconds(5);
+			timeout = TimeSpan.FromSeconds(15);
 			return this;
 		}
 	}
