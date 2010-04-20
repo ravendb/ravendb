@@ -61,8 +61,8 @@ RavenUI.GetDocument = function (id, operation, successCallback) {
 	$.ravenDB.getDocument(id, operation, successCallback);
 }
 
-RavenUI.SaveDocument = function (id, etag, template, json, successCallback) {
-    $.ravenDB.saveDocument(id, etag, template, json, successCallback);
+RavenUI.SaveDocument = function (id, etag, template, json, successCallback, errorCallback) {
+    $.ravenDB.saveDocument(id, etag, template, json, successCallback,errorCallback);
 }
 
 RavenUI.DeleteDocument = function (id, etag, successCallback) {
