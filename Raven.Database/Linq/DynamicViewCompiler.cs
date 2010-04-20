@@ -122,6 +122,27 @@ namespace Raven.Database.Linq
 		{
 			var variableDeclaration = QueryParsingUtils.GetVariableDeclaration(indexDefinition.Map);
 			var queryExpression = ((QueryExpression) variableDeclaration.Initializer);
+			var expression = queryExpression.FromClause.InExpression;
+			if(expression is MemberReferenceExpression) // collection
+			{
+				var mre = (MemberReferenceExpression)expression;
+				queryExpression.FromClause.InExpression = mre.TargetObject;
+				//doc["@metadata"]["Raven-Entity-Name"]
+				var metadata = new IndexerExpression(
+					new IndexerExpression(new IdentifierExpression(queryExpression.FromClause.Identifier), new List<Expression> { new PrimitiveExpression("@metadata", "@metadata") }),
+					new List<Expression> { new PrimitiveExpression("Raven-Entity-Name", "Raven-Entity-Name") }
+					);
+				queryExpression.MiddleClauses.Insert(0, 
+					new QueryExpressionWhereClause
+					{
+						Condition = 
+							new BinaryOperatorExpression(
+								metadata,
+								BinaryOperatorType.Equality,
+								new PrimitiveExpression(mre.MemberName, mre.MemberName)
+								)
+					});
+			}
 			var selectOrGroupClause = queryExpression.SelectOrGroupClause;
 			var projection = ((QueryExpressionSelectClause) selectOrGroupClause).Projection;
 			var objectInitializer = ((ObjectCreateExpression) projection).ObjectInitializer;
