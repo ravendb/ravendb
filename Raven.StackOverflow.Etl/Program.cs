@@ -1,11 +1,15 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using log4net.Appender;
 using log4net.Config;
 using log4net.Core;
 using log4net.Layout;
+using Newtonsoft.Json.Linq;
 using Raven.Database;
+using Raven.StackOverflow.Etl.Generic;
+using Raven.StackOverflow.Etl.Posts;
 using Raven.StackOverflow.Etl.Users;
 using Rhino.Etl.Core;
 using System.Linq;
@@ -24,20 +28,24 @@ namespace Raven.StackOverflow.Etl
 				Threshold = Level.Notice
 			});
 
-			if(Directory.Exists("Data"))
+			if (Directory.Exists("Data"))
 				Directory.Delete("Data", true);
 
 			Console.WriteLine("Starting...");
 			var sp = Stopwatch.StartNew();
-			using(var documentDatabase = new DocumentDatabase(new RavenConfiguration
+			using (var documentDatabase = new DocumentDatabase(new RavenConfiguration
 			{
 				DataDirectory = "Data",
 			}))
 			{
 				Execute(new UsersProcess(path, documentDatabase));
 				Execute(new BadgesProcess(path, documentDatabase));
+				Execute(new PostsProcess(path, documentDatabase));
+				Execute(new VotesProcess(path, documentDatabase));
+				Execute(new CommentsProcess(path, documentDatabase));
 			}
 			Console.WriteLine("Total execution time {0}", sp.Elapsed);
+
 		}
 
 		private static void Execute(EtlProcess process)
@@ -51,7 +59,10 @@ namespace Raven.StackOverflow.Etl
 				Console.WriteLine(exception);
 			}
 			if (allErrors.Length > 0)
+			{
+				Debugger.Launch();
 				throw new InvalidOperationException("Failed to execute process: " + process);
+			}
 		}
 	}
 }

@@ -10,11 +10,11 @@ using System.Linq;
 
 namespace Raven.StackOverflow.Etl.Users
 {
-	public class AddBadgeToUser : AbstractOperation
+	public class AddBadgesToUser : AbstractOperation
 	{
 		private readonly DocumentDatabase database;
 
-		public AddBadgeToUser(DocumentDatabase database)
+		public AddBadgesToUser(DocumentDatabase database)
 		{
 			this.database = database;
 		}

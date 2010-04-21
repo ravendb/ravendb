@@ -4,14 +4,14 @@ using Raven.Database;
 using Raven.StackOverflow.Etl.Generic;
 using Rhino.Etl.Core;
 
-namespace Raven.StackOverflow.Etl.Users
+namespace Raven.StackOverflow.Etl.Posts
 {
-	public class BadgesProcess : EtlProcess
+	public class VotesProcess : EtlProcess
 	{
 		private readonly string path;
 		private readonly DocumentDatabase database;
 
-		public BadgesProcess(string path, DocumentDatabase database)
+		public VotesProcess(string path, DocumentDatabase database)
 		{
 			this.path = path;
 			this.database = database;
@@ -19,10 +19,10 @@ namespace Raven.StackOverflow.Etl.Users
 
 		protected override void Initialize()
 		{
-			Register(new XmlRowOperationFile(Path.Combine(path, "badges.xml")));
+			Register(new XmlRowOperationFile(Path.Combine(path, "votes.xml")));
 			Register(new TryConvert<DateTime>(DateTime.TryParse));
 			Register(new TryConvert<long>(long.TryParse));
-			Register(new AddBadgesToUser(database));
+			Register(new AddVotesToPost(database));
 		}
 	}
 }

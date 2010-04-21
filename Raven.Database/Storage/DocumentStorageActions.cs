@@ -193,7 +193,7 @@ namespace Raven.Database.Storage
 				return;
 
 			CommitCalled = true;
-			transaction.Commit(CommitTransactionGrbit.None);
+			transaction.Commit(CommitTransactionGrbit.LazyFlush);
 		}
 
 		public int GetNextIdentityValue(string name)

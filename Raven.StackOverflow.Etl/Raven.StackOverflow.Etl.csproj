@@ -16,7 +16,7 @@
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
-    <PlatformTarget>x86</PlatformTarget>
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -45,7 +45,8 @@
     <Reference Include="Newtonsoft.Json">
       <HintPath>..\SharedLibs\Newtonsoft.Json.dll</HintPath>
     </Reference>
-    <Reference Include="Raven.Database">
+    <Reference Include="Raven.Database, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\Raven.Database\bin\Debug\Raven.Database.dll</HintPath>
     </Reference>
     <Reference Include="Rhino.Etl.Core, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
@@ -61,14 +62,19 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AddBadgeToUser.cs" />
-    <Compile Include="BadgesProcess.cs" />
+    <Compile Include="Posts\AddVotesToPost.cs" />
+    <Compile Include="Posts\AddCommentsToPost.cs" />
+    <Compile Include="Posts\CommentsProcess.cs" />
+    <Compile Include="Posts\VotesProcess.cs" />
+    <Compile Include="Posts\PostsProcess.cs" />
+    <Compile Include="Users\AddBadgesToUser.cs" />
+    <Compile Include="Users\BadgesProcess.cs" />
     <Compile Include="Generic\EnumerablExtensions.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Generic\RowToDatabase.cs" />
     <Compile Include="Generic\TryConvert.cs" />
-    <Compile Include="UsersProcess.cs" />
+    <Compile Include="Users\UsersProcess.cs" />
     <Compile Include="Generic\XmlRowOperationFile.cs" />
   </ItemGroup>
   <ItemGroup>
