@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
+using System.Threading;
 using log4net;
 using Microsoft.Isam.Esent.Interop;
 using Newtonsoft.Json.Linq;
@@ -9,6 +10,7 @@ using Raven.Database.Data;
 using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
 using Raven.Database.Tasks;
+using System.Linq;
 
 namespace Raven.Database.Storage
 {
@@ -110,8 +112,12 @@ namespace Raven.Database.Storage
 		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
 		public void Dispose()
 		{
+			if(Details != null)
+				Details.Dispose();
+
 			if (Identity != null)
 				Identity.Dispose();
+
             if(Transactions != null)
                 Transactions.Dispose();
 
@@ -577,10 +583,54 @@ namespace Raven.Database.Storage
 
 	    public void AddTask(Task task)
 		{
+			if(task.SupportsMerging == false)
+			{
+				InsertNewTask(task);
+				return;
+			}
+
+			Api.JetSetCurrentIndex(session, Tasks, "by_task_type");
+			Api.MakeKey(session, Tasks, task.Type, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			// there are no tasks matching the current one, just insert it
+			if(Api.TrySeek(session, Tasks, SeekGrbit.SeekEQ) == false)
+			{
+				InsertNewTask(task);
+				return;
+			}
+			Api.MakeKey(session, Tasks, task.Type, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.JetSetIndexRange(session, Tasks, SetIndexRangeGrbit.RangeInclusive);
+			do
+			{
+				try
+				{
+					var taskAsString = Api.RetrieveColumnAsString(session, Tasks, tasksColumns["task"],Encoding.Unicode);
+					var existingTask = Task.ToTask(taskAsString);
+					if (existingTask.TryMerge(task) == false) // failed to merge :-(
+						continue;
+					using(var update = new Update(session, Tasks, JET_prep.Replace))
+					{
+						Api.SetColumn(session,Tasks, tasksColumns["task"], existingTask.AsString(), Encoding.Unicode);
+						update.Save();
+					}
+				}
+				catch (EsentErrorException e)
+				{
+					if (e.Error == JET_err.WriteConflict)
+						continue;
+				}
+				return;
+			} while (Api.TryMoveNext(session, Tasks));
+			// nothing that we could merge into, need to insert a new one
+	    	InsertNewTask(task);
+		}
+
+		private void InsertNewTask(Task task)
+		{
 			using (var update = new Update(session, Tasks, JET_prep.Insert))
 			{
 				Api.SetColumn(session, Tasks, tasksColumns["task"], task.AsString(), Encoding.Unicode);
 				Api.SetColumn(session, Tasks, tasksColumns["for_index"], task.Index, Encoding.Unicode);
+				Api.SetColumn(session, Tasks, tasksColumns["task_type"], task.Type, Encoding.Unicode);
 
 				update.Save();
 			}
@@ -683,23 +733,20 @@ namespace Raven.Database.Storage
 			Api.MoveBeforeFirst(session, Tasks);
 			while (Api.TryMoveNext(session, Tasks))
 			{
+				var task = Api.RetrieveColumnAsString(session, Tasks, tasksColumns["task"], Encoding.Unicode);
 				try
 				{
-					Api.JetGetLock(session, Tasks, GetLockGrbit.Write);
+					Api.JetDelete(session, Tasks);
 				}
 				catch (EsentErrorException e)
 				{
 					if (e.Error != JET_err.WriteConflict)
 						throw;
 				}
-				return Api.RetrieveColumnAsString(session, Tasks, tasksColumns["task"], Encoding.Unicode);
+
+				return task;
 			}
 			return null;
-		}
-
-		public void CompleteCurrentTask()
-		{
-			Api.JetDelete(session, Tasks);
 		}
 
 		public void PushTx()
@@ -870,6 +917,5 @@ namespace Raven.Database.Storage
 				Api.JetDelete(session, MappedResults);
 			} while (Api.TryMoveNext(session, MappedResults));
 		}
-
 	}
 }
