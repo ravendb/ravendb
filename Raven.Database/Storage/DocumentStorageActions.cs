@@ -290,8 +290,6 @@ namespace Raven.Database.Storage
 
 		public Guid AddDocument(string key, string data, Guid? etag, string metadata)
 		{
-			if (Api.TryMoveFirst(session, Details))
-				Api.EscrowUpdate(session, Details, detailsColumns["document_count"], 1);
 			Api.JetSetCurrentIndex(session, Documents, "by_key");
 			Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			var isUpdate = Api.TrySeek(session, Documents, SeekGrbit.SeekEQ);
@@ -303,6 +301,8 @@ namespace Raven.Database.Storage
 			else
 			{
                 EnsureDocumentIsNotCreatedInAnotherTransaction(key, Guid.NewGuid());
+				if (Api.TryMoveFirst(session, Details))
+					Api.EscrowUpdate(session, Details, detailsColumns["document_count"], 1);
 			}
 		    Guid newEtag;
 			DocumentDatabase.UuidCreateSequential(out newEtag);
@@ -590,8 +590,6 @@ namespace Raven.Database.Storage
 
 		public void AddAttachment(string key, Guid? etag, byte[] data, string headers)
 		{
-			if (Api.TryMoveFirst(session, Details))
-				Api.EscrowUpdate(session, Details, detailsColumns["attachment_count"], 1);
 			Api.JetSetCurrentIndex(session, Files, "by_name");
 			Api.MakeKey(session, Files, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			var isUpdate = Api.TrySeek(session, Files, SeekGrbit.SeekEQ);
@@ -607,6 +605,11 @@ namespace Raven.Database.Storage
 						ExpectedETag = existingEtag
 					};
 				}
+			}
+			else
+			{
+				if (Api.TryMoveFirst(session, Details))
+					Api.EscrowUpdate(session, Details, detailsColumns["attachment_count"], 1);
 			}
 
 			Guid newETag;

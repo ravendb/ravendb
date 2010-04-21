@@ -50,6 +50,36 @@ namespace Raven.Tests.Storage
 		}
 
 		[Fact]
+		public void UpdatingDocumentWillKeepSameCount()
+		{
+			db.TransactionalStorage.Batch(actions =>
+			{
+				Assert.Equal(0, actions.GetDocumentsCount());
+
+				actions.AddDocument("a", "b", null, "a");
+
+				actions.Commit();
+			});
+
+			db.TransactionalStorage.Batch(actions =>
+			{
+				Assert.Equal(1, actions.GetDocumentsCount());
+
+				actions.AddDocument("a", "b", null, "a");
+
+				actions.Commit();
+			});
+
+
+			db.TransactionalStorage.Batch(actions =>
+			{
+				Assert.Equal(1, actions.GetDocumentsCount());
+
+				actions.Commit();
+			});
+		}
+
+		[Fact]
 		public void CanGetNewIdentityValues()
 		{
 			db.TransactionalStorage.Batch(actions=>
