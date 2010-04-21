@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
 using log4net.Appender;
 using log4net.Config;
 using log4net.Core;
@@ -38,14 +39,34 @@ namespace Raven.StackOverflow.Etl
 				DataDirectory = "Data",
 			}))
 			{
+				//documentDatabase.SpinBackgroundWorkers();
+
 				Execute(new UsersProcess(path, documentDatabase));
 				Execute(new BadgesProcess(path, documentDatabase));
 				Execute(new PostsProcess(path, documentDatabase));
 				Execute(new VotesProcess(path, documentDatabase));
 				Execute(new CommentsProcess(path, documentDatabase));
+
+				//WaitForIndexingToComplete(documentDatabase);
 			}
 			Console.WriteLine("Total execution time {0}", sp.Elapsed);
 
+		}
+
+		private static void WaitForIndexingToComplete(DocumentDatabase documentDatabase)
+		{
+			Console.WriteLine("Waiting for indexing to complete");
+			var sp2 = Stopwatch.StartNew();
+			var left = Console.CursorLeft;
+			var top = Console.CursorTop;
+			while(documentDatabase.HasTasks)
+			{
+				Console.SetCursorPosition(left, top);
+				Console.WriteLine("                                                                         ");
+				Console.SetCursorPosition(left, top);
+				Console.WriteLine("Waiting {0} for indexing", sp2.Elapsed);
+				Thread.Sleep(1000);
+			}
 		}
 
 		private static void Execute(EtlProcess process)
