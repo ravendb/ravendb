@@ -158,7 +158,7 @@ namespace Raven.Database
 				if (transactionInformation == null)
                 {
                     etag = actions.AddDocument(key, document.ToString(), etag, metadata.ToString());
-					actions.AddTask(new IndexDocumentTask { Index = "*", Keys = new[] { key } });
+					actions.AddTask(new IndexDocumentsTask { Index = "*", Keys = new[] { key } });
                 }
                 else
                 {

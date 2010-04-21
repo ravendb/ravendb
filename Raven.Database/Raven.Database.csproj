@@ -143,7 +143,7 @@
     <Compile Include="Storage\IndexCreationOptions.cs" />
     <Compile Include="Storage\DocumentInTransactionData.cs" />
     <Compile Include="Tasks\IndexDocumentRangeTask.cs" />
-    <Compile Include="Tasks\IndexDocumentTask.cs" />
+    <Compile Include="Tasks\IndexDocumentsTask.cs" />
     <Compile Include="Tasks\ReduceTask.cs" />
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
     <Compile Include="Tasks\Task.cs" />
