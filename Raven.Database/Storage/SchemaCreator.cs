@@ -7,7 +7,7 @@ namespace Raven.Database.Storage
 	[CLSCompliant(false)]
 	public class SchemaCreator
 	{
-		public const string SchemaVersion = "2.0";
+		public const string SchemaVersion = "2.1";
 		private readonly Session session;
 
 		public SchemaCreator(Session session)
@@ -315,7 +315,15 @@ namespace Raven.Database.Storage
 			Api.JetAddColumn(session, tableid, "task", new JET_COLUMNDEF
 			{
 				coltyp = JET_coltyp.LongText,
-				grbit = ColumndefGrbit.ColumnTagged
+				grbit = ColumndefGrbit.ColumnNotNULL
+			}, null, 0, out columnid);
+
+			Api.JetAddColumn(session, tableid, "task_type", new JET_COLUMNDEF
+			{
+				cbMax = 255,
+				coltyp = JET_coltyp.Text,
+				cp = JET_CP.Unicode,
+				grbit = ColumndefGrbit.ColumnNotNULL
 			}, null, 0, out columnid);
 
 			Api.JetAddColumn(session, tableid, "for_index", new JET_COLUMNDEF
@@ -323,7 +331,7 @@ namespace Raven.Database.Storage
 				cbMax = 255,
 				coltyp = JET_coltyp.Text,
 				cp = JET_CP.Unicode,
-				grbit = ColumndefGrbit.ColumnTagged
+				grbit = ColumndefGrbit.ColumnNotNULL
 			}, null, 0, out columnid);
 
 
@@ -333,6 +341,10 @@ namespace Raven.Database.Storage
 			indexDef = "+for_index\0\0";
 			Api.JetCreateIndex(session, tableid, "by_index", CreateIndexGrbit.IndexIgnoreNull, indexDef, indexDef.Length,
 			                   100);
+
+			indexDef = "+task_type\0\0";
+			Api.JetCreateIndex(session, tableid, "by_task_type", CreateIndexGrbit.IndexIgnoreNull, indexDef, indexDef.Length,
+							   100);
 		}
 
 		private void CreateFilesTable(JET_DBID dbid)
