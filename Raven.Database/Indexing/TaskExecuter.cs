@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using log4net;
 using Raven.Database.Extensions;
 using Raven.Database.Storage;
@@ -23,24 +24,36 @@ namespace Raven.Database.Indexing
 			while (context.DoWork)
 			{
 				var foundWork = false;
-				transactionalStorage.Batch(actions =>
+				string taskAsJson = null;
+				try
 				{
-					log.Debug("Trying to find a task to execute");
-					var taskAsJson = actions.GetFirstTask();
-					if (taskAsJson == null)
+					transactionalStorage.Batch(actions =>
 					{
-						log.Debug("Could not find any task to execute, will wait for more work");
+						log.Debug("Trying to find a task to execute");
+						var taskAndBookMark = actions.GetFirstTask();
+						if (taskAndBookMark == null)
+						{
+							log.Debug("Could not find any task to execute, will wait for more work");
+							actions.Commit();
+							return;
+						}
+						taskAsJson = taskAndBookMark.Item1;
+						log.DebugFormat("Executing {0}", taskAsJson);
+						foundWork = true;
+
+						ExecuteTask(taskAsJson);
+
+						actions.CompleteCurrentTask(taskAndBookMark.Item2);
 						actions.Commit();
-						return;
-					}
-					log.DebugFormat("Executing {0}", taskAsJson);
-					foundWork = true;
-
-					ExecuteTask(taskAsJson);
-
-					actions.CompleteCurrentTask();
-					actions.Commit();
-				});
+					});
+				}
+				catch (Exception e)
+				{
+#if DEBUG
+					Debugger.Launch();
+#endif
+					log.Error("Failed to execute task: " + taskAsJson, e);
+				}
 				if (foundWork == false)
 					context.WaitForWork();
 			}
