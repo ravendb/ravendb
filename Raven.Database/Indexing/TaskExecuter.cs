@@ -30,20 +30,18 @@ namespace Raven.Database.Indexing
 					transactionalStorage.Batch(actions =>
 					{
 						log.Debug("Trying to find a task to execute");
-						var taskAndBookMark = actions.GetFirstTask();
-						if (taskAndBookMark == null)
+						taskAsJson = actions.GetFirstTask();
+						if (taskAsJson == null)
 						{
 							log.Debug("Could not find any task to execute, will wait for more work");
 							actions.Commit();
 							return;
 						}
-						taskAsJson = taskAndBookMark.Item1;
 						log.DebugFormat("Executing {0}", taskAsJson);
 						foundWork = true;
 
 						ExecuteTask(taskAsJson);
 
-						actions.CompleteCurrentTask(taskAndBookMark.Item2);
 						actions.Commit();
 					});
 				}
