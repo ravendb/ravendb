@@ -455,5 +455,19 @@ namespace Raven.Database
 			log.DebugFormat("Successfully executed {0} commands", commands.Count);
             return results.ToArray();
         }
+
+		public bool HasTasks
+		{
+			get
+			{
+				bool hasTasks = false;
+				TransactionalStorage.Batch(actions =>
+				{
+					hasTasks = actions.HasTasks;
+					actions.Commit();
+				});
+				return hasTasks;
+			}
+		}
 	}
 }

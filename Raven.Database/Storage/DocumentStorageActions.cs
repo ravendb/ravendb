@@ -667,6 +667,14 @@ namespace Raven.Database.Storage
 			};
 		}
 
+		public bool HasTasks
+		{
+			get
+			{
+				return Api.TryMoveFirst(session, Tasks);
+			}
+		}
+
 		public string GetFirstTask()
 		{
 			Api.MoveBeforeFirst(session, Tasks);
