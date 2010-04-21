@@ -136,6 +136,8 @@ task Init -depends Clean {
 		
 	new-item $release_dir -itemType directory
 	new-item $buildartifacts_dir -itemType directory
+	
+	copy $tools_dir\xUnit\*.* $build_dir
 }
 
 task Compile -depends Init {
@@ -146,9 +148,9 @@ task Compile -depends Init {
 task Test -depends Compile {
   $old = pwd
   cd $build_dir
-  exec "$tools_dir\xUnit\xunit.console.exe" "$build_dir\Raven.Tests.dll"
-  exec "$tools_dir\xUnit\xunit.console.exe" "$build_dir\Raven.Scenarios.dll"
-  exec "$tools_dir\xUnit\xunit.console.exe" "$build_dir\Raven.Client.Tests.dll"
+  exec "$build_dir\xunit.console.exe" "$build_dir\Raven.Tests.dll"
+  exec "$build_dir\xunit.console.exe" "$build_dir\Raven.Scenarios.dll"
+  exec "$build_dirxunit.console.exe" "$build_dir\Raven.Client.Tests.dll"
   cd $old
 }
 
