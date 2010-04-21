@@ -106,6 +106,7 @@ namespace Raven.Server
 				AcceptOnMatch = true,
 				LoggerToMatch = typeof (HttpServer).FullName
 			});
+			consoleAppender.AddFilter(new DenyAllFilter());
 			BasicConfigurator.Configure(consoleAppender);
             var ravenConfiguration = new RavenConfiguration
             {
