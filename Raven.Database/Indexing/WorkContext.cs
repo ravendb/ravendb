@@ -13,7 +13,7 @@ namespace Raven.Database.Indexing
 		private readonly object waitForWork = new object();
 		private volatile bool doWork = true;
 		private readonly ILog log = LogManager.GetLogger(typeof (WorkContext));
-		private ThreadLocal<bool> shouldNotifyOnWork = new ThreadLocal<bool>();
+		private readonly ThreadLocal<bool> shouldNotifyOnWork = new ThreadLocal<bool>();
 
 		public bool DoWork
 		{
