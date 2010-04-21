@@ -15,29 +15,31 @@ namespace Raven.Database.Storage
 	[CLSCompliant(false)]
 	public class DocumentStorageActions : IDisposable
 	{
+		private readonly IDictionary<string, JET_COLUMNID> detailsColumns;
 		protected readonly JET_DBID dbid;
-		public Table Documents { get; set; }
+		protected Table Documents { get; set; }
 		protected readonly IDictionary<string, JET_COLUMNID> documentsColumns;
-		public Table Transactions { get; set; }
+		protected Table Transactions { get; set; }
 		protected readonly IDictionary<string, JET_COLUMNID> transactionsColumns;
 
-		public Table DocumentsModifiedByTransactions { get; set; }
+		protected Table DocumentsModifiedByTransactions { get; set; }
 		protected readonly IDictionary<string, JET_COLUMNID> documentsModifiedByTransactionsColumns;
 
-		public Table Files { get; set; }
+		protected Table Files { get; set; }
 		protected readonly IDictionary<string, JET_COLUMNID> filesColumns;
-		public Table IndexesStats { get; private set; }
+		protected Table IndexesStats { get; set; }
 		private readonly IDictionary<string, JET_COLUMNID> indexesStatsColumns;
 		protected readonly ILog logger = LogManager.GetLogger(typeof (DocumentStorageActions));
-		public Table MappedResults { get; private set; }
+		protected Table MappedResults { get; set; }
 		private readonly IDictionary<string, JET_COLUMNID> mappedResultsColumns;
 		protected readonly Session session;
-		public Table Tasks { get; set; }
+		protected Table Tasks { get; set; }
 		protected readonly IDictionary<string, JET_COLUMNID> tasksColumns;
 		private readonly Transaction transaction;
 		private int innerTxCount;
-		public Table Identity { get; set; }
+		protected Table Identity { get; set; }
 		protected readonly IDictionary<string, JET_COLUMNID> identityColumns;
+		protected Table Details { get; set; }
 		
 		[CLSCompliant(false)]
 		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
@@ -51,7 +53,8 @@ namespace Raven.Database.Storage
 		    IDictionary<string, JET_COLUMNID> mappedResultsColumns, 
             IDictionary<string, JET_COLUMNID> documentsModifiedByTransactionsColumns, 
 			IDictionary<string, JET_COLUMNID> transactionsColumns, 
-			IDictionary<string, JET_COLUMNID> identityColumns)
+			IDictionary<string, JET_COLUMNID> identityColumns,
+			IDictionary<string, JET_COLUMNID> detailsColumns)
 		{
 			try
 			{
@@ -67,6 +70,7 @@ namespace Raven.Database.Storage
                 DocumentsModifiedByTransactions = new Table(session, dbid, "documents_modified_by_transaction", OpenTableGrbit.None);
 			    Transactions = new Table(session, dbid, "transactions", OpenTableGrbit.None);
 				Identity = new Table(session, dbid, "identity_table", OpenTableGrbit.None);
+				Details = new Table(session, dbid, "details", OpenTableGrbit.None);
 
 				this.documentsColumns = documentsColumns;
 				this.tasksColumns = tasksColumns;
@@ -76,6 +80,7 @@ namespace Raven.Database.Storage
                 this.documentsModifiedByTransactionsColumns = documentsModifiedByTransactionsColumns;
                 this.transactionsColumns = transactionsColumns;
 				this.identityColumns = identityColumns;
+				this.detailsColumns = detailsColumns;
 			}
 			catch (Exception)
 			{
@@ -83,6 +88,7 @@ namespace Raven.Database.Storage
 				throw;
 			}
 		}
+
 
 		public bool CommitCalled { get; set; }
 
@@ -284,6 +290,8 @@ namespace Raven.Database.Storage
 
 		public Guid AddDocument(string key, string data, Guid? etag, string metadata)
 		{
+			if (Api.TryMoveFirst(session, Details))
+				Api.EscrowUpdate(session, Details, detailsColumns["document_count"], 1);
 			Api.JetSetCurrentIndex(session, Documents, "by_key");
 			Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			var isUpdate = Api.TrySeek(session, Documents, SeekGrbit.SeekEQ);
@@ -427,6 +435,8 @@ namespace Raven.Database.Storage
 
 	    public void DeleteDocument(string key, Guid? etag)
 		{
+			if (Api.TryMoveFirst(session, Details))
+				Api.EscrowUpdate(session, Details, detailsColumns["document_count"], -1);
 			Api.JetSetCurrentIndex(session, Documents, "by_key");
 			Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Documents, SeekGrbit.SeekEQ) == false)
@@ -580,6 +590,8 @@ namespace Raven.Database.Storage
 
 		public void AddAttachment(string key, Guid? etag, byte[] data, string headers)
 		{
+			if (Api.TryMoveFirst(session, Details))
+				Api.EscrowUpdate(session, Details, detailsColumns["attachment_count"], 1);
 			Api.JetSetCurrentIndex(session, Files, "by_name");
 			Api.MakeKey(session, Files, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			var isUpdate = Api.TrySeek(session, Files, SeekGrbit.SeekEQ);
@@ -613,6 +625,8 @@ namespace Raven.Database.Storage
 
 		public void DeleteAttachment(string key, Guid? etag)
 		{
+			if (Api.TryMoveFirst(session, Details))
+				Api.EscrowUpdate(session, Details, detailsColumns["attachment_count"], -1);
 			Api.JetSetCurrentIndex(session, Files, "by_name");
 			Api.MakeKey(session, Files, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Files, SeekGrbit.SeekEQ) == false)
@@ -689,9 +703,9 @@ namespace Raven.Database.Storage
 
 		public int GetDocumentsCount()
 		{
-			int val;
-			Api.JetIndexRecordCount(session, Documents, out val, 0);
-			return val;
+			if (Api.TryMoveFirst(session, Details))
+				return Api.RetrieveColumnAsInt32(session, Details, detailsColumns["document_count"]).Value;
+			return 0;
 		}
 
 		public void SetCurrentIndexStatsTo(string index)

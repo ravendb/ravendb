@@ -3,12 +3,12 @@ using Xunit;
 
 namespace Raven.Tests.Storage
 {
-	public class Identity : AbstractDocumentStorageTest
+	public class GeneralStorage : AbstractDocumentStorageTest
 	{
 
 		private readonly DocumentDatabase db;
 
-		public Identity()
+		public GeneralStorage()
 		{
 			db = new DocumentDatabase(new RavenConfiguration {DataDirectory = "raven.db.test.esent"});
 		}
@@ -17,6 +17,36 @@ namespace Raven.Tests.Storage
 		{
 			db.Dispose();
 			base.Dispose();
+		}
+
+		[Fact]
+		public void CanGetDocumentCounts()
+		{
+			db.TransactionalStorage.Batch(actions =>
+			{
+				Assert.Equal(0, actions.GetDocumentsCount());
+
+				actions.AddDocument("a", "b", null, "a");
+
+				actions.Commit();
+			});
+
+			db.TransactionalStorage.Batch(actions =>
+			{
+				Assert.Equal(1, actions.GetDocumentsCount());
+
+				actions.DeleteDocument("a", null);
+
+				actions.Commit();
+			});
+
+
+			db.TransactionalStorage.Batch(actions =>
+			{
+				Assert.Equal(0, actions.GetDocumentsCount());
+
+				actions.Commit();
+			});
 		}
 
 		[Fact]

@@ -7,7 +7,7 @@ namespace Raven.Database.Storage
 	[CLSCompliant(false)]
 	public class SchemaCreator
 	{
-		public const string SchemaVersion = "1.95";
+		public const string SchemaVersion = "2.0";
 		private readonly Session session;
 
 		public SchemaCreator(Session session)
@@ -395,11 +395,28 @@ namespace Raven.Database.Storage
 				grbit = ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnFixed
 			}, null, 0, out schemaVersion);
 
+			JET_COLUMNID documentCount;
+			var bytes = BitConverter.GetBytes(0);
+			Api.JetAddColumn(session, tableid, "document_count", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.Long,
+				grbit = ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnEscrowUpdate
+			}, bytes, bytes.Length, out documentCount);
+
+
+			JET_COLUMNID attachmentCount;
+			Api.JetAddColumn(session, tableid, "attachment_count", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.Long,
+				grbit = ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnEscrowUpdate
+			}, bytes, bytes.Length, out attachmentCount);
 
 			using (var update = new Update(session, tableid, JET_prep.Insert))
 			{
 				Api.SetColumn(session, tableid, id, Guid.NewGuid().ToByteArray());
 				Api.SetColumn(session, tableid, schemaVersion, SchemaVersion, Encoding.Unicode);
+				Api.SetColumn(session, tableid, documentCount, 0);
+				Api.SetColumn(session, tableid, attachmentCount, 0);
 				update.Save();
 			}
 		}

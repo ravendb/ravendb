@@ -26,8 +26,9 @@ namespace Raven.Database.Storage
 	    private IDictionary<string, JET_COLUMNID> documentsModifiedByTransactionsColumns;
 	    private IDictionary<string, JET_COLUMNID> transactionsColumns;
 		private IDictionary<string, JET_COLUMNID> identityColumns;
+		private IDictionary<string, JET_COLUMNID> detailsColumns;
 
-	    public TransactionalStorage(string database, Action onCommit)
+		public TransactionalStorage(string database, Action onCommit)
 		{
 			this.database = database;
 	    	this.onCommit = onCommit;
@@ -117,6 +118,8 @@ namespace Raven.Database.Storage
                         transactionsColumns = Api.GetColumnDictionary(session, transactions);
 					using (var identity = new Table(session, dbid, "identity_table", OpenTableGrbit.None))
 						identityColumns = Api.GetColumnDictionary(session, identity);
+					using (var details = new Table(session, dbid, "details", OpenTableGrbit.None))
+						detailsColumns = Api.GetColumnDictionary(session, details);
 				}
 				finally
 				{
@@ -265,7 +268,8 @@ namespace Raven.Database.Storage
 					mappedResultsColumns,
 					documentsModifiedByTransactionsColumns,
 					transactionsColumns, 
-					identityColumns))
+					identityColumns,
+					detailsColumns))
 				{
 					current.Value = pht;
 					action(pht);
