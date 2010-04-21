@@ -1,4 +1,6 @@
+using System;
 using Raven.Database.Indexing;
+using System.Linq;
 
 namespace Raven.Database.Tasks
 {
@@ -9,6 +11,13 @@ namespace Raven.Database.Tasks
 		public override string ToString()
 		{
 			return string.Format("Index: {0}, Keys: {1}", Index, string.Join(", ", Keys));
+		}
+
+		public override bool TryMerge(Task task)
+		{
+			var removeFromIndexTask = ((RemoveFromIndexTask)task);
+			Keys = Keys.Union(removeFromIndexTask.Keys).ToArray();
+			return true;
 		}
 
 		public override void Execute(WorkContext context)

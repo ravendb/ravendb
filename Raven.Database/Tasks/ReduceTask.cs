@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Indexing;
@@ -8,6 +9,13 @@ namespace Raven.Database.Tasks
 	public class ReduceTask : Task
 	{
 		public string ReduceKey { get; set; }
+
+		public override bool TryMerge(Task task)
+		{
+			var reduceTask = ((ReduceTask)task);
+			// if the reduce key is the same, either task will have the same effect
+			return reduceTask.ReduceKey == ReduceKey; 
+		}
 
 		public override void Execute(WorkContext context)
 		{

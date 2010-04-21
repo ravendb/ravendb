@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
@@ -19,6 +20,12 @@ namespace Raven.Database.Tasks
 		{
 			return string.Format("IndexDocumentRangeTask - Index: {0}, FromId: {1}, ToId: {2}",
 			                     Index, FromId, ToId);
+		}
+
+		public override bool TryMerge(Task task)
+		{
+			// we don't merge index ranges, since they are already paritioned on index creation
+			return false;
 		}
 
 		public override void Execute(WorkContext context)

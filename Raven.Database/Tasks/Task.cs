@@ -14,6 +14,8 @@ namespace Raven.Database.Tasks
 			get { return GetType().FullName; }
 		}
 
+		public abstract bool TryMerge(Task task);
+
 		public string AsString()
 		{
 			var stringWriter = new StringWriter();
