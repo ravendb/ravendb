@@ -28,6 +28,14 @@ namespace Raven.Database.Tasks
 			return false;
 		}
 
+		public override bool SupportsMerging
+		{
+			get
+			{
+				return false;
+			}
+		}
+
 		public override void Execute(WorkContext context)
 		{
 			var viewGenerator = context.IndexDefinitionStorage.GetViewGenerator(Index);

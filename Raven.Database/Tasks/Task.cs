@@ -14,6 +14,14 @@ namespace Raven.Database.Tasks
 			get { return GetType().FullName; }
 		}
 
+		public virtual bool SupportsMerging
+		{
+			get
+			{
+				return true;
+			}
+		}
+
 		public abstract bool TryMerge(Task task);
 
 		public string AsString()
