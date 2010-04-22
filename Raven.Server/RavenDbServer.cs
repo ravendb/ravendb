@@ -16,6 +16,16 @@ namespace Raven.Server
 		private readonly DocumentDatabase database;
 		private readonly HttpServer server;
 
+		public DocumentDatabase Database
+		{
+			get { return database; }
+		}
+
+		public HttpServer Server
+		{
+			get { return server; }
+		}
+
 		public RavenDbServer(RavenConfiguration settings)
 		{
 			settings.LoadLoggingSettings();
