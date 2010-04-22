@@ -10,7 +10,7 @@ namespace Raven.Sample.ShardClient
 {
     class Program
     {
-        static void Main2(string[] args)
+        static void Main(string[] args)
         {
             var shards = new Shards { 
                 new DocumentStore("localhost", 8080) { Identifier="Shard1" }, 
@@ -33,7 +33,7 @@ namespace Raven.Sample.ShardClient
             }
         }
 
-        static void Main(string[] args)
+        static void Main2(string[] args)
         {
             using (var documentStore = new DocumentStore("localhost", 8080).Initialise())
             using (var session = documentStore.OpenSession())
