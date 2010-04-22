@@ -589,15 +589,19 @@ namespace Raven.Database.Storage
 				return;
 			}
 
-			Api.JetSetCurrentIndex(session, Tasks, "by_task_type");
-			Api.MakeKey(session, Tasks, task.Type, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.JetSetCurrentIndex(session, Tasks, "mergables_by_task_type");
+			Api.MakeKey(session, Tasks, true, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, Tasks, task.Index, Encoding.Unicode, MakeKeyGrbit.None);
+			Api.MakeKey(session, Tasks, task.Type, Encoding.Unicode, MakeKeyGrbit.None);
 			// there are no tasks matching the current one, just insert it
 			if(Api.TrySeek(session, Tasks, SeekGrbit.SeekEQ) == false)
 			{
 				InsertNewTask(task);
 				return;
 			}
-			Api.MakeKey(session, Tasks, task.Type, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, Tasks, true, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, Tasks, task.Index, Encoding.Unicode, MakeKeyGrbit.None);
+			Api.MakeKey(session, Tasks, task.Type, Encoding.Unicode, MakeKeyGrbit.None);
 			Api.JetSetIndexRange(session, Tasks, SetIndexRangeGrbit.RangeInclusive);
 			do
 			{
@@ -605,11 +609,12 @@ namespace Raven.Database.Storage
 				{
 					var taskAsString = Api.RetrieveColumnAsString(session, Tasks, tasksColumns["task"],Encoding.Unicode);
 					var existingTask = Task.ToTask(taskAsString);
-					if (existingTask.TryMerge(task) == false) // failed to merge :-(
+					if (existingTask.TryMerge(task) == false)
 						continue;
 					using(var update = new Update(session, Tasks, JET_prep.Replace))
 					{
 						Api.SetColumn(session,Tasks, tasksColumns["task"], existingTask.AsString(), Encoding.Unicode);
+						Api.SetColumn(session, Tasks, tasksColumns["supports_merging"], existingTask.SupportsMerging);
 						update.Save();
 					}
 				}
@@ -631,6 +636,7 @@ namespace Raven.Database.Storage
 				Api.SetColumn(session, Tasks, tasksColumns["task"], task.AsString(), Encoding.Unicode);
 				Api.SetColumn(session, Tasks, tasksColumns["for_index"], task.Index, Encoding.Unicode);
 				Api.SetColumn(session, Tasks, tasksColumns["task_type"], task.Type, Encoding.Unicode);
+				Api.SetColumn(session, Tasks, tasksColumns["supports_merging"], task.SupportsMerging);
 
 				update.Save();
 			}

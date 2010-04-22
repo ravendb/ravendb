@@ -318,6 +318,12 @@ namespace Raven.Database.Storage
 				grbit = ColumndefGrbit.ColumnNotNULL
 			}, null, 0, out columnid);
 
+			Api.JetAddColumn(session, tableid, "supports_merging", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.Bit,
+				grbit = ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnFixed
+			}, null, 0, out columnid);
+
 			Api.JetAddColumn(session, tableid, "task_type", new JET_COLUMNDEF
 			{
 				cbMax = 255,
@@ -342,8 +348,8 @@ namespace Raven.Database.Storage
 			Api.JetCreateIndex(session, tableid, "by_index", CreateIndexGrbit.IndexIgnoreNull, indexDef, indexDef.Length,
 			                   100);
 
-			indexDef = "+task_type\0\0";
-			Api.JetCreateIndex(session, tableid, "by_task_type", CreateIndexGrbit.IndexIgnoreNull, indexDef, indexDef.Length,
+			indexDef = "+supports_merging\0+for_index\0+task_type\0\0";
+			Api.JetCreateIndex(session, tableid, "mergables_by_task_type", CreateIndexGrbit.IndexIgnoreNull, indexDef, indexDef.Length,
 							   100);
 		}
 

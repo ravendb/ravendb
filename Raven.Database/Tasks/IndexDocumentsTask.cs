@@ -17,10 +17,16 @@ namespace Raven.Database.Tasks
 			return string.Format("IndexDocumentsTask - Keys: {0}", string.Join(", ", Keys));
 		}
 
+		public override bool SupportsMerging
+		{
+			get
+			{
+				return Keys.Length < 100;
+			}
+		}
+
 		public override bool TryMerge(Task task)
 		{
-			if (Keys.Length > 100)
-				return false;
 			var indexDocumentTask = ((IndexDocumentsTask)task);
 			Keys = Keys.Union(indexDocumentTask.Keys).ToArray();
 			return true;
