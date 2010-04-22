@@ -3,7 +3,6 @@
 	public enum PatchResult
 	{
 		DocumentDoesNotExists,
-		WriteConflict,
 		Patched
 	}
 }

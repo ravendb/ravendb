@@ -100,7 +100,7 @@ namespace Raven.Client.Tests.Document
 				session.Store(company);
 				session.SaveChanges();
 
-				Assert.Equal("Companies/1", company.Id);
+				Assert.Equal("companies/1", company.Id);
 			}
 		}
 

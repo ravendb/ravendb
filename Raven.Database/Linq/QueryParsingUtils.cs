@@ -38,7 +38,7 @@ namespace Raven.Database.Linq
 			var block = parser.ParseBlock();
 
 			if (block.Children.Count != 1)
-				throw new InvalidOperationException("Only one statement is allowed");
+				throw new InvalidOperationException("Could not understand query: \r\n" + parser.Errors.ErrorOutput);
 
 			var declaration = block.Children[0] as LocalVariableDeclaration;
 			if (declaration == null)

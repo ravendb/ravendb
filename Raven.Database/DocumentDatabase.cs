@@ -411,7 +411,11 @@ namespace Raven.Database
 				}
 				else if (etag != null && doc.Etag != etag.Value)
 				{
-					result = PatchResult.WriteConflict;
+					throw new ConcurrencyException("Could not patch document '" + docId+ "' because non current etag was used")
+					{
+						ActualETag = doc.Etag,
+						ExpectedETag = etag.Value,
+					};
 				}
 				else
 				{
