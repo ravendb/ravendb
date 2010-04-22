@@ -34,6 +34,12 @@ namespace Raven.Database.Indexing
 			this.indexDefinition = indexDefinition;
 			log.DebugFormat("Creating index for {0}", name);
 			this.directory = directory;
+
+			// clear any locks that are currently held
+			// this may happen if the server crashed while
+			// writing to the index
+			this.directory.ClearLock("write.lock");
+
 			searcher = new CurrentIndexSearcher
 			{
 				Searcher = new IndexSearcher(directory)
