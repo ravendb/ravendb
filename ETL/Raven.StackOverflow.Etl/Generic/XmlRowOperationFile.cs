@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Xml;
 using System.Xml.Linq;
 using Rhino.Etl.Core;
@@ -23,7 +24,6 @@ namespace Raven.StackOverflow.Etl.Generic
 					yield return row;
 				}
 			}
-
 			using(var reader = XmlReader.Create(file))
 			{
 				reader.MoveToContent();
@@ -33,13 +33,21 @@ namespace Raven.StackOverflow.Etl.Generic
 						reader.LocalName != "row")
 						continue;
 
-					var element = (XElement)XNode.ReadFrom(reader);
-
 					var row = new Row();
-					foreach (var attr in element.Attributes())
+					if (reader.MoveToFirstAttribute() == false)
+						continue;
+					do
 					{
-						row[attr.Name.LocalName] = attr.Value;
-					}
+						object val = reader.Value;
+						long longValue;
+						DateTime dateTime;
+						if (DateTime.TryParse(reader.Value, out dateTime))
+							val = dateTime;
+						else if (long.TryParse(reader.Value, out longValue))
+							val = longValue;
+						row[reader.Name] = val;
+						
+					} while (reader.MoveToNextAttribute());
 					yield return row;
 				}
 			}
