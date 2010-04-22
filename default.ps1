@@ -150,7 +150,7 @@ task Test -depends Compile {
   cd $build_dir
   exec "$build_dir\xunit.console.exe" "$build_dir\Raven.Tests.dll"
   exec "$build_dir\xunit.console.exe" "$build_dir\Raven.Scenarios.dll"
-  exec "$build_dirxunit.console.exe" "$build_dir\Raven.Client.Tests.dll"
+  exec "$build_dir\xunit.console.exe" "$build_dir\Raven.Client.Tests.dll"
   cd $old
 }
 
