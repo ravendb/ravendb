@@ -39,7 +39,7 @@ namespace Raven.StackOverflow.Etl
 				DataDirectory = "Data",
 			}))
 			{
-				//documentDatabase.SpinBackgroundWorkers();
+				documentDatabase.SpinBackgroundWorkers();
 
 				Execute(new UsersProcess(path, documentDatabase));
 				Execute(new BadgesProcess(path, documentDatabase));
@@ -47,7 +47,7 @@ namespace Raven.StackOverflow.Etl
 				Execute(new VotesProcess(path, documentDatabase));
 				Execute(new CommentsProcess(path, documentDatabase));
 
-				//WaitForIndexingToComplete(documentDatabase);
+				WaitForIndexingToComplete(documentDatabase);
 			}
 			Console.WriteLine("Total execution time {0}", sp.Elapsed);
 
@@ -57,14 +57,19 @@ namespace Raven.StackOverflow.Etl
 		{
 			Console.WriteLine("Waiting for indexing to complete");
 			var sp2 = Stopwatch.StartNew();
-			var left = Console.CursorLeft;
-			var top = Console.CursorTop;
 			while(documentDatabase.HasTasks)
 			{
-				Console.SetCursorPosition(left, top);
-				Console.WriteLine("                                                                         ");
-				Console.SetCursorPosition(left, top);
-				Console.WriteLine("Waiting {0} for indexing", sp2.Elapsed);
+				documentDatabase.TransactionalStorage.Batch(actions =>
+				{
+					var indexesStat = actions.GetIndexesStats().First();
+					Console.WriteLine("{0} - {1:#,#} - {2:#,#} - {3}", indexesStat.Name, 
+						indexesStat.IndexingSuccesses, 
+						actions.GetDocumentsCount(),
+						sp2.Elapsed);
+
+					actions.Commit();
+				});
+
 				Thread.Sleep(1000);
 			}
 		}

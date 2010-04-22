@@ -73,7 +73,6 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Generic\RowToDatabase.cs" />
-    <Compile Include="Generic\TryConvert.cs" />
     <Compile Include="Users\UsersProcess.cs" />
     <Compile Include="Generic\XmlRowOperationFile.cs" />
   </ItemGroup>
