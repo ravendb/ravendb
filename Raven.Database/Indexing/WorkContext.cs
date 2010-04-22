@@ -37,7 +37,7 @@ namespace Raven.Database.Indexing
 				return;
 			lock (waitForWork)
 			{
-				Monitor.Wait(waitForWork);
+				Monitor.Wait(waitForWork, TimeSpan.FromSeconds(1));
 			}
 		}
 

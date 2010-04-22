@@ -29,11 +29,9 @@ namespace Raven.Database.Indexing
 				{
 					transactionalStorage.Batch(actions =>
 					{
-						log.Debug("Trying to find a task to execute");
 						taskAsJson = actions.GetFirstTask();
 						if (taskAsJson == null)
 						{
-							log.Debug("Could not find any task to execute, will wait for more work");
 							actions.Commit();
 							return;
 						}
