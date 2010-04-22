@@ -52,7 +52,7 @@ namespace Raven.Scenarios
 			try
 			{
 				RavenDbServer.EnsureCanListenToWhenInNonAdminContext(testPort);
-				using (new RavenDbServer(new RavenConfiguration
+				using (var ravenDbServer = new RavenDbServer(new RavenConfiguration
 				{
 					DataDirectory = tempFileName,
 					Port = testPort,
@@ -71,6 +71,11 @@ namespace Raven.Scenarios
 
 						foreach (var pair in zipEntries)
 						{
+							// wait until we are finished executing
+							// make scenario executing predictable
+							while (ravenDbServer.Database.HasTasks)
+								Thread.Sleep(50);
+
 							TestSingleRequest(
 								new StreamReader(zipFile.GetInputStream(pair.Request)).ReadToEnd(),
 								zipFile.GetInputStream(pair.Response).ReadData()
