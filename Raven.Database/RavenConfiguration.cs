@@ -15,7 +15,7 @@ namespace Raven.Database
 
 			var indexBatchSizeStr = ConfigurationManager.AppSettings["IndexingBatchSize"];
 
-			IndexingBatchSize = indexBatchSizeStr != null ? int.Parse(indexBatchSizeStr) : 100;
+			IndexingBatchSize = indexBatchSizeStr != null ? int.Parse(indexBatchSizeStr) : 1000;
 
 			DataDirectory = ConfigurationManager.AppSettings["RavenDataDir"] ?? @"..\..\..\Data";
 
