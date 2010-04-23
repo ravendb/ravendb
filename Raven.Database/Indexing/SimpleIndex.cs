@@ -40,7 +40,7 @@ namespace Raven.Database.Indexing
 						properties = TypeDescriptor.GetProperties(doc);
 					}
 					var newDocId = properties.Find("__document_id", false).GetValue(doc) as string;
-					var fields = converter.Index(doc, properties, indexDefinition);
+					var fields = converter.Index(doc, properties, indexDefinition, Field.Store.NO);
 					if (currentId != newDocId) // new document id, so delete all old values matching it
 					{
 						indexWriter.DeleteDocuments(new Term("__document_id", newDocId));

@@ -19,13 +19,13 @@ namespace Raven.Database.Indexing
 
 		public Dictionary<string, FieldIndexing> Indexes { get; set; }
 
-		public Field.Store GetStorage(string name)
+		public Field.Store GetStorage(string name, Field.Store defaultStorage)
 		{
 			if(Stores == null)
-				return Field.Store.NO;
+				return defaultStorage;
 			FieldStorage value;
 			if (Stores.TryGetValue(name, out value) == false)
-				return Field.Store.NO;
+				return defaultStorage;
 			switch (value)
 			{
 				case FieldStorage.Yes:

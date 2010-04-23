@@ -157,7 +157,7 @@ namespace Raven.Database.Indexing
 					{
 						properties = TypeDescriptor.GetProperties(doc);
 					}
-					var fields = converter.Index(doc, properties, indexDefinition);
+					var fields = converter.Index(doc, properties, indexDefinition, Field.Store.YES);
 
 					var luceneDoc = new Document();
 					foreach (var field in fields)
