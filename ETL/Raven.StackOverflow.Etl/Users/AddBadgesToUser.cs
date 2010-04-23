@@ -19,7 +19,7 @@ namespace Raven.StackOverflow.Etl.Users
 			int count = 0;
 			foreach (var badgesForUsers in rows
 				.GroupBy(row => row["UserId"])
-				.Partition(100))
+				.Partition(Constants.BatchSize))
 			{
 				var cmds = new List<ICommandData>();
 				foreach (var badgesForUser in badgesForUsers)

@@ -62,6 +62,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Constants.cs" />
     <Compile Include="Posts\AddVotesToPost.cs" />
     <Compile Include="Posts\AddCommentsToPost.cs" />
     <Compile Include="Posts\CommentsProcess.cs" />

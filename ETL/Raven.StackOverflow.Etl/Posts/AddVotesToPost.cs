@@ -20,7 +20,7 @@ namespace Raven.StackOverflow.Etl.Posts
 		public override IEnumerable<Row> Execute(IEnumerable<Row> rows)
 		{
 			int count = 0;
-			foreach (var votesForPosts in rows.Partition(100))
+			foreach (var votesForPosts in rows.Partition(Constants.BatchSize))
 			{
 				var cmds = new List<ICommandData>();
 				foreach (var row in votesForPosts)

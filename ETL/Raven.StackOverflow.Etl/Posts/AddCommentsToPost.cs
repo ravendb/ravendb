@@ -19,7 +19,7 @@ namespace Raven.StackOverflow.Etl.Posts
 		public override IEnumerable<Row> Execute(IEnumerable<Row> rows)
 		{
 			int count = 0;
-			foreach (var commentsForPosts in rows.Partition(100))
+			foreach (var commentsForPosts in rows.Partition(Constants.BatchSize))
 			{
 				var cmds = new List<ICommandData>(
 					commentsForPosts.Select(row => new PatchCommandData()

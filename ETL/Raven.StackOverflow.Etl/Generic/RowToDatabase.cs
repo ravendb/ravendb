@@ -27,8 +27,8 @@ namespace Raven.StackOverflow.Etl.Generic
 
 		public override IEnumerable<Row> Execute(IEnumerable<Row> rows)
 		{
-		 int count = 0;
-			foreach (var partitionedRows in rows.Partition(100))
+			int count = 0;
+			foreach (var partitionedRows in rows.Partition(Constants.BatchSize))
 			{
 				var jsons = partitionedRows.Select(row =>
 					  new JObject(row.Cast<DictionaryEntry>()
@@ -44,7 +44,7 @@ namespace Raven.StackOverflow.Etl.Generic
 
 				count++;
 				File.WriteAllText(Path.Combine("Docs", collection + " #" + count + ".json"),
-								  new JArray(putCommandDatas.Select(x=>x.ToJson())).ToString(Formatting.Indented));
+								  new JArray(putCommandDatas.Select(x => x.ToJson())).ToString(Formatting.Indented));
 
 			}
 			yield break;
