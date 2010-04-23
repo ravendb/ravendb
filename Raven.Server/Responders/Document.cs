@@ -1,7 +1,10 @@
 using System;
 using System.Net;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Data;
+using Raven.Database.Json;
 
 namespace Raven.Server.Responders
 {
@@ -47,7 +50,8 @@ namespace Raven.Server.Responders
 					break;
 				case "PATCH":
 					var patchDoc = context.ReadJsonArray();
-					var patchResult = Database.ApplyPatch(docId, context.GetEtag(), patchDoc, GetRequestTransaction(context));
+					var patchRequest = (PatchRequest[])new JsonSerializer().Deserialize(new JsonTokenReader(patchDoc), typeof(PatchRequest[]));
+					var patchResult = Database.ApplyPatch(docId, context.GetEtag(), patchRequest, GetRequestTransaction(context));
 					switch (patchResult)
 					{
 						case PatchResult.DocumentDoesNotExists:

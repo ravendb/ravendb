@@ -14,9 +14,16 @@ namespace Raven.Tests.Patching
         [Fact]
         public void PropertyAddition()
         {
-            var patchedDoc = new JsonPatcher(doc).Apply(
-                JArray.Parse(@"[{  ""type"":""set"",""name"": ""blog_id"", ""value"": 1 }]")
-                );
+        	var patchedDoc = new JsonPatcher(doc).Apply(
+        		new[]
+        		{
+        			new PatchRequest
+        			{
+        				Type = "set",
+        				Name = "blog_id",
+        				Value = new JValue(1)
+        			},
+        		});
 
             Assert.Equal(@"{""title"":""A Blog Post"",""body"":""html markup"",""comments"":[{""author"":""ayende"",""text"":""good post""}],""blog_id"":1}",
                 patchedDoc.ToString(Formatting.None));
@@ -26,8 +33,16 @@ namespace Raven.Tests.Patching
         public void PropertyAddition_WithConcurrenty_MissingProp()
         {
             var patchedDoc = new JsonPatcher(doc).Apply(
-                JArray.Parse(@"[{  ""type"":""set"",""name"": ""blog_id"", ""value"": 1, ""prevVal"": undefined }]")
-                );
+               new[]
+        		{
+        			new PatchRequest
+        			{
+        				Type = "set",
+        				Name = "blog_id",
+        				Value = new JValue(1),
+						PrevVal = JObject.Parse("{'a': undefined}").Property("a").Value
+        			},
+        		});
 
             Assert.Equal(@"{""title"":""A Blog Post"",""body"":""html markup"",""comments"":[{""author"":""ayende"",""text"":""good post""}],""blog_id"":1}",
                 patchedDoc.ToString(Formatting.None));
@@ -37,24 +52,49 @@ namespace Raven.Tests.Patching
         public void PropertyAddition_WithConcurrenty_NullValueOnMissingPropShouldThrow()
         {
             Assert.Throws<ConcurrencyException>(() => new JsonPatcher(doc).Apply(
-                JArray.Parse(@"[{  ""type"":""set"",""name"": ""blog_id"", ""value"": 1, ""prevVal"": null }]")
-                ));
+               new[]
+        		{
+        			new PatchRequest
+        			{
+        				Type = "set",
+        				Name = "blog_id",
+        				Value = new JValue(1),
+        				PrevVal = new JValue((object)null)
+        			},
+        		}));
         }
 
         [Fact]
         public void PropertyAddition_WithConcurrenty_BadValueOnMissingPropShouldThrow()
         {
             Assert.Throws<ConcurrencyException>(() => new JsonPatcher(doc).Apply(
-                JArray.Parse(@"[{  ""type"":""set"",""name"": ""blog_id"", ""value"": 1, ""prevVal"": 2 }]")
-                ));
+				new[]
+        		{
+        			new PatchRequest
+        			{
+        				Type = "set",
+        				Name = "blog_id",
+        				Value = new JValue(1),
+        				PrevVal =  new JValue(2)
+        			},
+        		}));
         }
 
         [Fact]
         public void PropertyAddition_WithConcurrenty_ExistingValueOn_Ok()
         {
             JObject apply = new JsonPatcher(doc).Apply(
-                JArray.Parse(@"[{  ""type"":""set"",""name"": ""body"", ""value"": ""differnt markup"", ""prevVal"": ""html markup"" }]")
-                );
+                new[]
+        		{
+        			new PatchRequest
+        			{
+        				Type = "set",
+        				Name = "body",
+        				Value = new JValue("differnt markup"),
+        				PrevVal = new JValue("html markup")
+        			},
+        		});
+
             Assert.Equal(@"{""title"":""A Blog Post"",""body"":""differnt markup"",""comments"":[{""author"":""ayende"",""text"":""good post""}]}", apply.ToString(Formatting.None));
         }
 
@@ -63,8 +103,15 @@ namespace Raven.Tests.Patching
         public void PropertySet()
         {
             var patchedDoc = new JsonPatcher(doc).Apply(
-                JArray.Parse(@"[{ ""type"":""set"", ""name"": ""title"", ""value"": ""another"" }]")
-                );
+				 new[]
+        		{
+        			new PatchRequest
+        			{
+        				Type = "set",
+        				Name = "title",
+        				Value = new JValue("another")
+        			},
+        		});
 
             Assert.Equal(@"{""title"":""another"",""body"":""html markup"",""comments"":[{""author"":""ayende"",""text"":""good post""}]}", patchedDoc.ToString(Formatting.None));
         }
@@ -73,8 +120,15 @@ namespace Raven.Tests.Patching
         public void PropertySetToNull()
         {
             var patchedDoc = new JsonPatcher(doc).Apply(
-                JArray.Parse(@"[{ ""type"":""set"", ""name"": ""title"", ""value"": null }]")
-                );
+				 new[]
+        		{
+        			new PatchRequest
+        			{
+        				Type = "set",
+        				Name = "title",
+        				Value = new JValue((object)null)
+        			},
+        		});
 
             Assert.Equal(@"{""title"":null,""body"":""html markup"",""comments"":[{""author"":""ayende"",""text"":""good post""}]}", patchedDoc.ToString(Formatting.None));
         }
@@ -83,8 +137,14 @@ namespace Raven.Tests.Patching
         public void PropertyRemoval()
         {
             var patchedDoc = new JsonPatcher(doc).Apply(
-                JArray.Parse(@"[{ ""type"":""unset"" , ""name"": ""body"" }]")
-                );
+                 new[]
+        		{
+        			new PatchRequest
+        			{
+        				Type = "unset",
+        				Name = "body",
+        			},
+        		});
 
             Assert.Equal(@"{""title"":""A Blog Post"",""comments"":[{""author"":""ayende"",""text"":""good post""}]}", patchedDoc.ToString(Formatting.None));
         }
@@ -93,8 +153,15 @@ namespace Raven.Tests.Patching
         public void PropertyRemoval_WithConcurrency_Ok()
         {
             var patchedDoc = new JsonPatcher(doc).Apply(
-                JArray.Parse(@"[{ ""type"":""unset"" , ""name"": ""body"", ""prevVal"":""html markup"" }]")
-                );
+				 new[]
+        		{
+        			new PatchRequest
+        			{
+        				Type = "unset",
+        				Name = "body",
+						PrevVal = new JValue("html markup")
+        			},
+        		});
 
             Assert.Equal(@"{""title"":""A Blog Post"",""comments"":[{""author"":""ayende"",""text"":""good post""}]}", patchedDoc.ToString(Formatting.None));
         }
@@ -103,16 +170,29 @@ namespace Raven.Tests.Patching
         public void PropertyRemoval_WithConcurrency_OnError()
         {
             Assert.Throws<ConcurrencyException>(() => new JsonPatcher(doc).Apply(
-                JArray.Parse(@"[{ ""type"":""unset"" , ""name"": ""body"", ""prevVal"":""bad markup"" }]")
-                ));
+                 new[]
+        		{
+        			new PatchRequest
+        			{
+        				Type = "unset",
+        				Name = "body",
+						PrevVal = new JValue("bad markup")
+        			},
+        		}));
         }
 
         [Fact]
         public void PropertyRemovalPropertyDoesNotExists()
         {
             var patchedDoc = new JsonPatcher(doc).Apply(
-                JArray.Parse(@"[{ ""type"": ""unset"", ""name"": ""ip"" }]")
-                );
+                new[]
+        		{
+        			new PatchRequest
+        			{
+        				Type = "unset",
+        				Name = "ip",
+        			},
+        		});
 
             Assert.Equal(@"{""title"":""A Blog Post"",""body"":""html markup"",""comments"":[{""author"":""ayende"",""text"":""good post""}]}", patchedDoc.ToString(Formatting.None));
         }

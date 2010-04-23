@@ -399,7 +399,7 @@ namespace Raven.Database
 				);
 		}
 
-		public PatchResult ApplyPatch(string docId, Guid? etag, JArray patchDoc, TransactionInformation transactionInformation)
+		public PatchResult ApplyPatch(string docId, Guid? etag, PatchRequest[] patchDoc, TransactionInformation transactionInformation)
 		{
 			var result = PatchResult.Patched;
 			TransactionalStorage.Batch(actions =>

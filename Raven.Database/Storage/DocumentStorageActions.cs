@@ -609,8 +609,18 @@ namespace Raven.Database.Storage
 				{
 					var taskAsString = Api.RetrieveColumnAsString(session, Tasks, tasksColumns["task"],Encoding.Unicode);
 					var existingTask = Task.ToTask(taskAsString);
-					if (existingTask.TryMerge(task) == false)
-						continue;
+					try
+					{
+						if (existingTask.TryMerge(task) == false)
+							continue;
+					}
+					catch (Exception e)
+					{
+#if DEBUG
+						Debugger.Launch();
+#endif
+						throw;
+					}
 					using(var update = new Update(session, Tasks, JET_prep.Replace))
 					{
 						Api.SetColumn(session,Tasks, tasksColumns["task"], existingTask.AsString(), Encoding.Unicode);
