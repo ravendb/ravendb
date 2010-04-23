@@ -21,7 +21,7 @@ namespace Raven.Database.Tasks
 		{
 			get
 			{
-				return Keys.Length < 100;
+				return Keys.Length < 1000;
 			}
 		}
 
