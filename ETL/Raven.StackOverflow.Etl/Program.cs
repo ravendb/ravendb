@@ -28,29 +28,25 @@ namespace Raven.StackOverflow.Etl
 				Layout = new SimpleLayout(),
 				Threshold = Level.Notice
 			});
+			//GenerateDocumentsToFile(path);
 
-			if (Directory.Exists("Data"))
-				Directory.Delete("Data", true);
+		}
+
+		private static void GenerateDocumentsToFile(string path)
+		{
+			if (Directory.Exists("Docs"))
+				Directory.Delete("Docs", true);
+			Directory.CreateDirectory("Docs");
 
 			Console.WriteLine("Starting...");
 			var sp = Stopwatch.StartNew();
-			using (var documentDatabase = new DocumentDatabase(new RavenConfiguration
-			{
-				DataDirectory = "Data",
-			}))
-			{
-				documentDatabase.SpinBackgroundWorkers();
 
-				Execute(new UsersProcess(path, documentDatabase));
-				Execute(new BadgesProcess(path, documentDatabase));
-				Execute(new PostsProcess(path, documentDatabase));
-				Execute(new VotesProcess(path, documentDatabase));
-				Execute(new CommentsProcess(path, documentDatabase));
-
-				WaitForIndexingToComplete(documentDatabase);
-			}
+			Execute(new UsersProcess(path));
+			Execute(new BadgesProcess(path));
+			Execute(new PostsProcess(path));
+			Execute(new VotesProcess(path));
+			Execute(new CommentsProcess(path));
 			Console.WriteLine("Total execution time {0}", sp.Elapsed);
-
 		}
 
 		private static void WaitForIndexingToComplete(DocumentDatabase documentDatabase)
@@ -86,7 +82,6 @@ namespace Raven.StackOverflow.Etl
 			}
 			if (allErrors.Length > 0)
 			{
-				Debugger.Launch();
 				throw new InvalidOperationException("Failed to execute process: " + process);
 			}
 		}

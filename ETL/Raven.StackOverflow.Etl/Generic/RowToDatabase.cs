@@ -1,5 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.IO;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Data;
@@ -12,22 +14,20 @@ namespace Raven.StackOverflow.Etl.Generic
 {
 	public class RowToDatabase : AbstractOperation
 	{
-		private readonly DocumentDatabase database;
 		private readonly string collection;
 		private readonly Func<JObject, string> generateKey;
 
 		public RowToDatabase(
-			DocumentDatabase database, 
 			string collection,
 			Func<JObject, string> generateKey)
 		{
-			this.database = database;
 			this.collection = collection;
 			this.generateKey = generateKey;
 		}
 
 		public override IEnumerable<Row> Execute(IEnumerable<Row> rows)
 		{
+		 int count = 0;
 			foreach (var partitionedRows in rows.Partition(100))
 			{
 				var jsons = partitionedRows.Select(row =>
@@ -41,7 +41,11 @@ namespace Raven.StackOverflow.Etl.Generic
 					Metadata = new JObject(new JProperty("Raven-Entity-Name", new JValue(collection))),
 					Key = generateKey(document)
 				}).ToArray();
-				database.Batch(putCommandDatas);
+
+				count++;
+				File.WriteAllText(Path.Combine("Docs", collection + " #" + count + ".json"),
+								  new JArray(putCommandDatas.Select(x=>x.ToJson())).ToString(Formatting.Indented));
+
 			}
 			yield break;
 		}

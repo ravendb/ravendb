@@ -10,19 +10,17 @@ namespace Raven.StackOverflow.Etl.Posts
 	public class CommentsProcess : EtlProcess
 	{
 		private readonly string path;
-		private readonly DocumentDatabase database;
 
-		public CommentsProcess(string path, DocumentDatabase database)
+		public CommentsProcess(string path)
 		{
 			this.path = path;
-			this.database = database;
 		}
 
 		protected override void Initialize()
 		{
 			PipelineExecuter = new SingleThreadedPipelineExecuter();
 			Register(new XmlRowOperationFile(Path.Combine(path, "comments.xml")));
-			Register(new AddCommentsToPost(database));
+			Register(new AddCommentsToPost());
 		}
 	}
 }
