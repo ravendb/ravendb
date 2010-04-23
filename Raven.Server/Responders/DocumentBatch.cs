@@ -3,6 +3,8 @@ using System.Net;
 using Newtonsoft.Json.Linq;
 using System;
 using Raven.Database.Data;
+using System.Linq;
+using Raven.Database.Json;
 
 namespace Raven.Server.Responders
 {
@@ -35,29 +37,42 @@ namespace Raven.Server.Responders
 
 			foreach (JObject jsonCommand in jsonCommandArray)
         	{
-        		var key = jsonCommand["key"];
-        		switch (jsonCommand["method"].Value<string>())
+        		var key = jsonCommand["Key"].Value<string>();
+        		switch (jsonCommand.Value<string>("Method"))
         		{
         			case "PUT":
         				commands.Add(new PutCommandData
         				{
-        					Key = key.Value<string>(),
+        					Key = key,
         					Etag = GetEtagFromCommand(jsonCommand),
-        					Document = jsonCommand["document"] as JObject,
-        					Metadata = jsonCommand["@metadata"] as JObject,
+        					Document = jsonCommand["Document"] as JObject,
+        					Metadata = jsonCommand["Metadata"] as JObject,
                             TransactionInformation = GetRequestTransaction(context)
         				});
         				break;
         			case "DELETE":
         				commands.Add(new DeleteCommandData
         				{
-        					Key = key.Value<string>(),
+        					Key = key,
         					Etag = GetEtagFromCommand(jsonCommand),
                             TransactionInformation = GetRequestTransaction(context)
         				});
-        				continue;
+        				break;
+					case "PATCH":
+						commands.Add(new PatchCommandData
+						{
+							Key = key,
+							Etag = GetEtagFromCommand(jsonCommand),
+							TransactionInformation = GetRequestTransaction(context),
+							Patches = jsonCommand
+								.Value<JArray>("Patches")
+								.Cast<JObject>()
+								.Select(PatchRequest.FromJson)
+								.ToArray()
+						});
+        				break;
         			default:
-        				throw new ArgumentException("Batching only supports PUT and DELETE.");
+        				throw new ArgumentException("Batching only supports PUT, PATCH and DELETE.");
         		}
             }
 
