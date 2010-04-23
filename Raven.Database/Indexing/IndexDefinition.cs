@@ -22,10 +22,10 @@ namespace Raven.Database.Indexing
 		public Field.Store GetStorage(string name)
 		{
 			if(Stores == null)
-				return Field.Store.YES;
+				return Field.Store.NO;
 			FieldStorage value;
 			if (Stores.TryGetValue(name, out value) == false)
-				return Field.Store.YES;
+				return Field.Store.NO;
 			switch (value)
 			{
 				case FieldStorage.Yes:
