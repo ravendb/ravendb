@@ -85,8 +85,8 @@ namespace Raven.Server
 				var sw = Stopwatch.StartNew();
 				HandleRequest(ctx);
 
-				logger.DebugFormat("Request #{0}: {1}",
-				                   curReq, sw.Elapsed);
+				logger.DebugFormat("Request #{0}: {1} {2} - {3}",
+				                   curReq, ctx.Request.HttpMethod, ctx.Request.Url.PathAndQuery, sw.Elapsed);
 			}
 			catch (Exception e)
 			{
