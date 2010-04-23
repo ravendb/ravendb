@@ -119,7 +119,13 @@ namespace Raven.Server
 			{
 				Console.WriteLine("Raven is ready to process requests.");
 				Console.WriteLine("Press any key to stop the server");
-				Console.ReadLine();
+				while(true)
+				{
+					var readLine = Console.ReadLine();
+					if (!"CLS".Equals(readLine, StringComparison.InvariantCultureIgnoreCase))
+						break;
+					Console.Clear();
+				}
 			}
 		}
 
