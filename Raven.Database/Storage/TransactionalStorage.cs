@@ -139,7 +139,12 @@ namespace Raven.Database.Storage
 				TempDirectory = Path.Combine(path, "temp"),
 				SystemDirectory = Path.Combine(path, "system"),
 				LogFileDirectory = Path.Combine(path, "logs"),
-				MaxVerPages = 8192
+				MaxVerPages = 16384,// Raven can use roughly 1 GB of version store
+				BaseName = "RVN",
+				EventSource = "Raven",
+				LogBuffers = 256,
+				LogFileSize = 16384,
+				MaxSessions = 64,
 			};
 		}
 
