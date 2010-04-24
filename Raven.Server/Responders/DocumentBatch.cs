@@ -2,6 +2,7 @@
 using System.Net;
 using Newtonsoft.Json.Linq;
 using System;
+using Raven.Database;
 using Raven.Database.Data;
 using System.Linq;
 using Raven.Database.Json;
@@ -35,54 +36,14 @@ namespace Raven.Server.Responders
             var jsonCommandArray = context.ReadJsonArray();
         	var commands = new List<ICommandData>();
 
+			var transactionInformation = GetRequestTransaction(context);
 			foreach (JObject jsonCommand in jsonCommandArray)
-        	{
-        		var key = jsonCommand["Key"].Value<string>();
-        		switch (jsonCommand.Value<string>("Method"))
-        		{
-        			case "PUT":
-        				commands.Add(new PutCommandData
-        				{
-        					Key = key,
-        					Etag = GetEtagFromCommand(jsonCommand),
-        					Document = jsonCommand["Document"] as JObject,
-        					Metadata = jsonCommand["Metadata"] as JObject,
-                            TransactionInformation = GetRequestTransaction(context)
-        				});
-        				break;
-        			case "DELETE":
-        				commands.Add(new DeleteCommandData
-        				{
-        					Key = key,
-        					Etag = GetEtagFromCommand(jsonCommand),
-                            TransactionInformation = GetRequestTransaction(context)
-        				});
-        				break;
-					case "PATCH":
-						commands.Add(new PatchCommandData
-						{
-							Key = key,
-							Etag = GetEtagFromCommand(jsonCommand),
-							TransactionInformation = GetRequestTransaction(context),
-							Patches = jsonCommand
-								.Value<JArray>("Patches")
-								.Cast<JObject>()
-								.Select(PatchRequest.FromJson)
-								.ToArray()
-						});
-        				break;
-        			default:
-        				throw new ArgumentException("Batching only supports PUT, PATCH and DELETE.");
-        		}
-            }
+			{
+				commands.Add(CommandDataFactory.CreateCommand(jsonCommand, transactionInformation));
+			}
 
-            var batchResult = Database.Batch(commands);
+        	var batchResult = Database.Batch(commands);
             context.WriteJson(batchResult);
         }
-
-    	private static Guid? GetEtagFromCommand(JToken jsonCommand)
-    	{
-			return jsonCommand["Etag"] != null && jsonCommand["Etag"].Value<string>() != null ? new Guid(jsonCommand["Etag"].Value<string>()) : (Guid?)null;
-    	}
     }
 }
