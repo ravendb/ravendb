@@ -54,7 +54,7 @@ namespace Raven.StackOverflow.Etl.Users
 
 				count++;
 
-				File.WriteAllText(Path.Combine("Docs", "Badges #" + count + ".json"),
+				File.WriteAllText(Path.Combine("Docs", "Badges #" + count.ToString("00000") + ".json"),
 								  new JArray(cmds.Select(x=>x.ToJson())).ToString(Formatting.Indented));
 
 			}

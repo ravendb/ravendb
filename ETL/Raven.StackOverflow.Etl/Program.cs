@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Net;
 using System.Threading;
 using log4net.Appender;
 using log4net.Config;
@@ -9,6 +10,7 @@ using log4net.Core;
 using log4net.Layout;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
+using Raven.Server;
 using Raven.StackOverflow.Etl.Generic;
 using Raven.StackOverflow.Etl.Posts;
 using Raven.StackOverflow.Etl.Users;
@@ -28,8 +30,50 @@ namespace Raven.StackOverflow.Etl
 				Layout = new SimpleLayout(),
 				Threshold = Level.Notice
 			});
+			Console.WriteLine("Starting...");
+			var sp = Stopwatch.StartNew();
+
 			//GenerateDocumentsToFile(path);
 
+			if (Directory.Exists("Data"))
+				Directory.Delete("Data", true);
+
+			using (new RavenDbServer(new RavenConfiguration
+			{
+				DataDirectory = "Data",
+				Port = 8080,
+				AnonymousUserAccessMode = AnonymousUserAccessMode.All
+			}))
+			{
+				LoadDataFor("Users*.json");
+				//LoadDataFor("Badges*.json");
+				//LoadDataFor("Posts*.json");
+				//LoadDataFor("Votes*.json");
+				//LoadDataFor("Comments*.json");
+			}
+
+			Console.WriteLine("Total execution time {0}", sp.Elapsed);
+		}
+
+		private static void LoadDataFor(string searchPattern)
+		{
+			var durations = new List<TimeSpan>();
+			foreach (var file in Directory.GetFiles("Docs", searchPattern).OrderBy(x=>x))
+			{
+				var sp = Stopwatch.StartNew();
+				var httpWebRequest = (HttpWebRequest)WebRequest.Create("http://localhost:8080/bulk_docs");
+				httpWebRequest.Method = "POST";
+				using(var requestStream = httpWebRequest.GetRequestStream())
+				{
+					var readAllBytes = File.ReadAllBytes(file);
+					requestStream.Write(readAllBytes, 0, readAllBytes.Length);
+				}
+				var webResponse = (HttpWebResponse)httpWebRequest.GetResponse();
+				var timeSpan = sp.Elapsed;
+				durations.Add(timeSpan);
+				Console.WriteLine("{0} - {1} - {2}", Path.GetFileName(file), timeSpan, webResponse.StatusCode);
+			}
+			Console.WriteLine("For {0} took avg: {1}ms", searchPattern, durations.Average(x => x.TotalMilliseconds));
 		}
 
 		private static void GenerateDocumentsToFile(string path)
@@ -38,15 +82,12 @@ namespace Raven.StackOverflow.Etl
 				Directory.Delete("Docs", true);
 			Directory.CreateDirectory("Docs");
 
-			Console.WriteLine("Starting...");
-			var sp = Stopwatch.StartNew();
 
 			Execute(new UsersProcess(path));
-			Execute(new BadgesProcess(path));
-			Execute(new PostsProcess(path));
-			Execute(new VotesProcess(path));
-			Execute(new CommentsProcess(path));
-			Console.WriteLine("Total execution time {0}", sp.Elapsed);
+			//Execute(new BadgesProcess(path));
+			//Execute(new PostsProcess(path));
+			//Execute(new VotesProcess(path));
+			//Execute(new CommentsProcess(path));
 		}
 
 		private static void WaitForIndexingToComplete(DocumentDatabase documentDatabase)

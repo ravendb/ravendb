@@ -49,6 +49,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\Raven.Database\bin\Debug\Raven.Database.dll</HintPath>
     </Reference>
+    <Reference Include="Raven.Server">
+      <HintPath>..\..\Raven.Server\bin\Debug\Raven.Server.exe</HintPath>
+    </Reference>
     <Reference Include="Rhino.Etl.Core, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\rhino etl\build\Rhino.Etl.Core.dll</HintPath>

@@ -43,7 +43,7 @@ namespace Raven.StackOverflow.Etl.Posts
 				
 				count++;
 
-				File.WriteAllText(Path.Combine("Docs", "Comments #" + count + ".json"),
+				File.WriteAllText(Path.Combine("Docs", "Comments #" + count.ToString("00000") + ".json"),
 								  new JArray(cmds.Select(x => x.ToJson())).ToString(Formatting.Indented));
 
 				

@@ -43,7 +43,7 @@ namespace Raven.StackOverflow.Etl.Generic
 				}).ToArray();
 
 				count++;
-				File.WriteAllText(Path.Combine("Docs", collection + " #" + count + ".json"),
+				File.WriteAllText(Path.Combine("Docs", collection + " #" + count.ToString("00000") + ".json"),
 								  new JArray(putCommandDatas.Select(x => x.ToJson())).ToString(Formatting.Indented));
 
 			}
