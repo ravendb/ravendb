@@ -174,7 +174,7 @@ namespace Raven.Database.Storage
 
 			Api.JetAddColumn(session, tableid, "metadata", new JET_COLUMNDEF
 			{
-				coltyp = JET_coltyp.LongText,
+				coltyp = JET_coltyp.LongBinary,
 				grbit = ColumndefGrbit.ColumnTagged
 			}, null, 0, out columnid);
 
@@ -224,7 +224,7 @@ namespace Raven.Database.Storage
 
             Api.JetAddColumn(session, tableid, "metadata", new JET_COLUMNDEF
             {
-                coltyp = JET_coltyp.LongText,
+				coltyp = JET_coltyp.LongBinary,
                 grbit = ColumndefGrbit.ColumnTagged
             }, null, 0, out columnid);
 
@@ -280,6 +280,12 @@ namespace Raven.Database.Storage
 				grbit = ColumndefGrbit.ColumnTagged
 			}, null, 0, out columnid);
 
+			Api.JetAddColumn(session, tableid, "etag", new JET_COLUMNDEF
+			{
+				cbMax = 16,
+				coltyp = JET_coltyp.Binary,
+				grbit = ColumndefGrbit.ColumnNotNULL|ColumndefGrbit.ColumnFixed
+			}, null, 0, out columnid);
 
 			var indexDef = "+view\0+document_key\0+reduce_key\0\0";
 			Api.JetCreateIndex(session, tableid, "by_pk", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
