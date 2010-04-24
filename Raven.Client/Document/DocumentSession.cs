@@ -66,11 +66,11 @@ namespace Raven.Client.Document
 
 	    private T TrackEntity<T>(JsonDocument documentFound)
 	    {
-	        var jsonString = Encoding.UTF8.GetString(documentFound.Data);
-	        var entity = ConvertToEntity<T>(documentFound.Key, jsonString);
+	        var jobject = JsonCache.ParseDocument(documentFound.Etag, documentFound.Data);
+	        var entity = ConvertToEntity<T>(documentFound.Key, jobject);
 	        entitiesAndMetadata.Add(entity, new DocumentMetadata
 	        {
-				OriginalValue = JObject.Parse(jsonString),
+				OriginalValue = jobject,
 	            Metadata = documentFound.Metadata,
 	            ETag = documentFound.Etag,
 	            Key = documentFound.Key
@@ -90,9 +90,9 @@ namespace Raven.Client.Document
 	        deletedEntities.Add(entity);
 	    }
 
-	    private object ConvertToEntity<T>(string id, string documentFound)
+	    private object ConvertToEntity<T>(string id, JObject documentFound)
 		{
-			var entity = JsonConvert.DeserializeObject(documentFound, typeof(T), new JsonEnumConverter());
+	    	var entity = documentFound.Deserialize<T>();
 
 			foreach (var property in entity.GetType().GetProperties())
 			{

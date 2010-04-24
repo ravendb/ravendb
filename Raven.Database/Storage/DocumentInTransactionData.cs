@@ -6,8 +6,8 @@ namespace Raven.Database.Storage
     {
         public Guid Etag { get; set; }
         public bool Delete { get; set; }
-        public string Metadata { get; set; }
-        public string Data { get; set; }
+        public byte[] Metadata { get; set; }
+		public byte[] Data { get; set; }
         public string Key { get; set; }
 
     }

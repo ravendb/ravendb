@@ -1,6 +1,7 @@
 using System;
 using System.Text;
 using Newtonsoft.Json.Linq;
+using Raven.Database.Json;
 
 namespace Raven.Database
 {
@@ -11,14 +12,14 @@ namespace Raven.Database
 		public string Key { get; set; }
 		public Guid Etag { get; set; }
 
-		public JObject DataAsJosn { get; set; }
+		public JObject Projection { get; set; }
 
 		public JObject ToJson()
 		{
-			if (DataAsJosn != null)
-				return DataAsJosn;
+			if (Projection != null)
+				return Projection;
 
-			var doc = JObject.Parse(Encoding.UTF8.GetString(Data));
+			var doc = JsonCache.ParseDocument(Etag, Data);
 			var etagProp = Metadata.Property("@etag");
 			if (etagProp == null)
 			{

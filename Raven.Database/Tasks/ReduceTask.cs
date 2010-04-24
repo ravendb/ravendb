@@ -26,7 +26,6 @@ namespace Raven.Database.Tasks
 			context.TransactionaStorage.Batch(actions =>
 			{
 				var mappedResults = actions.GetMappedResults(Index, ReduceKey)
-					.Select(JObject.Parse)
 					.Select(JsonToExpando.Convert);
 
 				context.IndexStorage.Reduce(Index, viewGenerator, mappedResults, context, actions, ReduceKey);

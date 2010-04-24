@@ -129,7 +129,9 @@
     <Compile Include="Indexing\TaskExecuter.cs" />
     <Compile Include="Indexing\WorkContext.cs" />
     <Compile Include="Json\DynamicObjectExtensions.cs" />
+    <Compile Include="Json\JsonCache.cs" />
     <Compile Include="Json\JsonEnumConverter.cs" />
+    <Compile Include="Json\JsonExtensions.cs" />
     <Compile Include="Json\JsonPatcher.cs" />
     <Compile Include="Json\JsonToExpando.cs" />
     <Compile Include="Json\PatchRequest.cs" />

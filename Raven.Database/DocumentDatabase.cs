@@ -218,7 +218,9 @@ namespace Raven.Database
                     if (doc.Delete)
                         Delete(doc.Key, null, null);
                     else
-                        Put(doc.Key, null, JObject.Parse(doc.Data), JObject.Parse(doc.Metadata), null);
+                        Put(doc.Key, null, 
+							JsonCache.ParseDocument(doc.Etag,doc.Data),
+							JsonCache.ParseMetadata(doc.Etag, doc.Metadata), null);
                 });
 				workContext.ShouldNotifyAboutWork();
 				actions.Commit();
@@ -312,7 +314,7 @@ namespace Raven.Database
 			return new JsonDocument
 			{
 				Key = queryResult.Key,
-				DataAsJosn = queryResult.Projection,
+				Projection = queryResult.Projection,
 			};
 		}
 
