@@ -38,7 +38,7 @@ namespace Raven.Database.Data
 							.Value<JArray>("Patches")
 							.Cast<JObject>()
 							.Select(PatchRequest.FromJson)
-							.ToArray<PatchRequest>()
+							.ToArray()
 					};
 				default:
 					throw new ArgumentException("Batching only supports PUT, PATCH and DELETE.");
