@@ -35,21 +35,32 @@ namespace Raven.StackOverflow.Etl
 
 			//GenerateDocumentsToFile(path);
 
-			if (Directory.Exists("Data"))
-				Directory.Delete("Data", true);
+			const string dataDirectory = @"C:\Work\ravendb\ETL\Raven.StackOverflow.Etl\bin\Debug\Data";
+			if (Directory.Exists(dataDirectory))
+				Directory.Delete(dataDirectory, true);
 
-			using (new RavenDbServer(new RavenConfiguration
+			using (var ravenDbServer = new RavenDbServer(new RavenConfiguration
 			{
-				DataDirectory = "Data",
+				DataDirectory = dataDirectory,
 				Port = 8080,
 				AnonymousUserAccessMode = AnonymousUserAccessMode.All
 			}))
 			{
 				LoadDataFor("Users*.json");
-				//LoadDataFor("Badges*.json");
-				//LoadDataFor("Posts*.json");
-				//LoadDataFor("Votes*.json");
-				//LoadDataFor("Comments*.json");
+				LoadDataFor("Badges*.json");
+				LoadDataFor("Posts*.json");
+				LoadDataFor("Votes*.json");
+				LoadDataFor("Comments*.json");
+
+				var indexing = Stopwatch.StartNew();
+				Console.WriteLine("Waiting for indexing");
+				while(ravenDbServer.Database.HasTasks)
+				{
+					Console.Write(".");
+					Thread.Sleep(50);
+				}
+				Console.WriteLine();
+				Console.WriteLine("Finishing indexing took: {0}", indexing.Elapsed);
 			}
 
 			Console.WriteLine("Total execution time {0}", sp.Elapsed);
@@ -58,7 +69,7 @@ namespace Raven.StackOverflow.Etl
 		private static void LoadDataFor(string searchPattern)
 		{
 			var durations = new List<TimeSpan>();
-			foreach (var file in Directory.GetFiles("Docs", searchPattern).OrderBy(x=>x))
+			foreach (var file in Directory.GetFiles(@"C:\Work\ravendb\ETL\Raven.StackOverflow.Etl\bin\Debug\Docs", searchPattern).OrderBy(x => x))
 			{
 				var sp = Stopwatch.StartNew();
 				var httpWebRequest = (HttpWebRequest)WebRequest.Create("http://localhost:8080/bulk_docs");
