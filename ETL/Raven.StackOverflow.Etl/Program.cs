@@ -8,10 +8,8 @@ using log4net.Appender;
 using log4net.Config;
 using log4net.Core;
 using log4net.Layout;
-using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Server;
-using Raven.StackOverflow.Etl.Generic;
 using Raven.StackOverflow.Etl.Posts;
 using Raven.StackOverflow.Etl.Users;
 using Rhino.Etl.Core;
@@ -79,7 +77,17 @@ namespace Raven.StackOverflow.Etl
 					var readAllBytes = File.ReadAllBytes(file);
 					requestStream.Write(readAllBytes, 0, readAllBytes.Length);
 				}
-				var webResponse = (HttpWebResponse)httpWebRequest.GetResponse();
+				HttpWebResponse webResponse;
+				try
+				{
+					webResponse = (HttpWebResponse)httpWebRequest.GetResponse();
+				}
+				catch (WebException e)
+				{
+					Console.WriteLine(new StreamReader(e.Response.GetResponseStream()).ReadToEnd());
+					Environment.Exit(1);
+					return;
+				}
 				var timeSpan = sp.Elapsed;
 				durations.Add(timeSpan);
 				Console.WriteLine("{0} - {1} - {2}", Path.GetFileName(file), timeSpan, webResponse.StatusCode);
@@ -95,10 +103,10 @@ namespace Raven.StackOverflow.Etl
 
 
 			Execute(new UsersProcess(path));
-			//Execute(new BadgesProcess(path));
-			//Execute(new PostsProcess(path));
-			//Execute(new VotesProcess(path));
-			//Execute(new CommentsProcess(path));
+			Execute(new BadgesProcess(path));
+			Execute(new PostsProcess(path));
+			Execute(new VotesProcess(path));
+			Execute(new CommentsProcess(path));
 		}
 
 		private static void WaitForIndexingToComplete(DocumentDatabase documentDatabase)
