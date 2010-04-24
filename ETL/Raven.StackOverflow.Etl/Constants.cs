@@ -2,6 +2,6 @@ namespace Raven.StackOverflow.Etl
 {
 	public class Constants
 	{
-		public const int BatchSize = 1024;
+		public const int BatchSize = 128;
 	}
 }
