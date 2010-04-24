@@ -29,7 +29,7 @@ namespace Raven.Database.Json
                 throw new InvalidOperationException("Patch property must have a type property");
             if (patchCmd.Name == null)
                 throw new InvalidOperationException("Patch property must have a name property");
-        	switch (patchCmd.Type)
+        	switch (patchCmd.Type.ToLowerInvariant())
             {
                 case "set":
                     AddProperty(patchCmd, patchCmd.Name);

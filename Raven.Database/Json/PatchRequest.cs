@@ -15,22 +15,24 @@ namespace Raven.Database.Json
 
 		public JObject ToJson()
 		{
-			return new JObject(
+			var jObject = new JObject(
 				new JProperty("Type", new JValue(Type)),
-				new JProperty("PrevVal", PrevVal),
 				new JProperty("Value", Value),
 				new JProperty("Name", new JValue(Name)),
 				new JProperty("Position", Position== null ? null : new JValue(Position.Value)),
 				new JProperty("Nested", Nested == null ? null : new JArray(Nested.Select(x=>x.ToJson())))
 				);
+			if(PrevVal!=null)
+				jObject.Add(new JProperty("PrevVal", PrevVal));
+			return jObject;
 		}
 
 		public static PatchRequest FromJson(JObject patchRequestJson)
 		{
 			PatchRequest[] nested = null;
-			var nestedJson = patchRequestJson.Value<JArray>("Nested");
-			if (nestedJson != null)
-				nested = nestedJson.Cast<JObject>().Select(FromJson).ToArray();
+			var nestedJson = patchRequestJson.Value<JValue>("Nested");
+			if (nestedJson != null && nestedJson.Value != null)
+				nested = nestedJson.Value<JArray>().Cast<JObject>().Select(FromJson).ToArray();
 
 			return new PatchRequest
 			{
