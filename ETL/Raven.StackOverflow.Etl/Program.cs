@@ -91,6 +91,7 @@ namespace Raven.StackOverflow.Etl
 				var timeSpan = sp.Elapsed;
 				durations.Add(timeSpan);
 				Console.WriteLine("{0} - {1} - {2}", Path.GetFileName(file), timeSpan, webResponse.StatusCode);
+				webResponse.Close();
 			}
 			Console.WriteLine("For {0} took avg: {1}ms", searchPattern, durations.Average(x => x.TotalMilliseconds));
 		}
