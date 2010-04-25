@@ -34,7 +34,6 @@ namespace Raven.Tests.Views
 				actions.PutMappedResult("CommentCountsByBlog", "123", "1", "{'a': 'abc'}");
 				actions.PutMappedResult("CommentCountsByBlog", "324", "2", "{'a': 'def'}");
 				actions.PutMappedResult("CommentCountsByBlog", "321", "1", "{'a': 'ijg'}");
-				actions.Commit();
 			});
 		}
 
@@ -44,14 +43,12 @@ namespace Raven.Tests.Views
 			transactionalStorage.Batch(actions =>
 			{
 				actions.PutMappedResult("CommentCountsByBlog", "123", "1", "{'a': 'abc'}");
-				actions.Commit();
 			});
 
 
 			transactionalStorage.Batch(actions =>
 			{
 				actions.PutMappedResult("CommentCountsByBlog", "123", "1", "{'a': 'def'}");
-				actions.Commit();
 			});
 		}
 
@@ -63,7 +60,6 @@ namespace Raven.Tests.Views
 				actions.PutMappedResult("CommentCountsByBlog", "123", "1", "{'a': 'abc'}");
 				actions.PutMappedResult("CommentCountsByBlog", "324", "2", "{'a': 'def'}");
 				actions.PutMappedResult("CommentCountsByBlog", "321", "1", "{'a': 'ijg'}");
-				actions.Commit();
 			});
 
 
@@ -73,7 +69,6 @@ namespace Raven.Tests.Views
 				Assert.Equal(2, vals.Length);
 				Assert.Contains("abc", vals[0].ToString());
 				Assert.Contains("ijg", vals[1].ToString());
-				actions.Commit();
 			});
 		}
 
@@ -84,21 +79,18 @@ namespace Raven.Tests.Views
 			transactionalStorage.Batch(actions =>
 			{
 				actions.PutMappedResult("CommentCountsByBlog", "123", "1", "{'a': 'abc'}");
-				actions.Commit();
 			});
 
 
 			transactionalStorage.Batch(actions =>
 			{
 				actions.PutMappedResult("CommentCountsByBlog", "123", "1", "{'a': 'def'}");
-				actions.Commit();
 			});
 
 			transactionalStorage.Batch(actions =>
 			{
 				var strings = actions.GetMappedResults("CommentCountsByBlog", "1").Select(x => x.ToString()).ToArray();
 				Assert.Contains("def", strings[0]);
-				actions.Commit();
 			});
 		}
 
@@ -109,21 +101,18 @@ namespace Raven.Tests.Views
 			{
 				actions.PutMappedResult("CommentCountsByBlog1", "123", "1", "{'a': 'abc'}");
 				actions.PutMappedResult("CommentCountsByBlog2", "123", "1", "{'a': 'abc'}");
-				actions.Commit();
 			});
 
 			transactionalStorage.Batch(actions =>
 			{
 				actions.DeleteMappedResultsForDocumentId("123", "CommentCountsByBlog2");
 				actions.DeleteMappedResultsForDocumentId("123", "CommentCountsByBlog1");
-				actions.Commit();
 			});
 
 			transactionalStorage.Batch(actions =>
 			{
 				Assert.Empty(actions.GetMappedResults("CommentCountsByBlog1", "1"));
 				Assert.Empty(actions.GetMappedResults("CommentCountsByBlog2", "1"));
-				actions.Commit();
 			});
 		}
 
@@ -134,21 +123,18 @@ namespace Raven.Tests.Views
 			{
 				actions.PutMappedResult("CommentCountsByBlog1", "123", "1", "{'a': 'abc'}");
 				actions.PutMappedResult("CommentCountsByBlog2", "123", "1", "{'a': 'abc'}");
-				actions.Commit();
 			});
 
 
 			transactionalStorage.Batch(actions =>
 			{
 				actions.DeleteMappedResultsForView("CommentCountsByBlog2");
-				actions.Commit();
 			});
 
 			transactionalStorage.Batch(actions =>
 			{
 				Assert.NotEmpty(actions.GetMappedResults("CommentCountsByBlog1", "1"));
 				Assert.Empty(actions.GetMappedResults("CommentCountsByBlog2", "1"));
-				actions.Commit();
 			});
 		}
 	}

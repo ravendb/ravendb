@@ -27,8 +27,6 @@ namespace Raven.Tests.Storage
 				Assert.Equal(0, actions.GetDocumentsCount());
 
 				actions.AddDocument("a", "b", null, "a");
-
-				actions.Commit();
 			});
 
 			db.TransactionalStorage.Batch(actions =>
@@ -36,16 +34,12 @@ namespace Raven.Tests.Storage
 				Assert.Equal(1, actions.GetDocumentsCount());
 
 				actions.DeleteDocument("a", null);
-
-				actions.Commit();
 			});
 
 
 			db.TransactionalStorage.Batch(actions =>
 			{
 				Assert.Equal(0, actions.GetDocumentsCount());
-
-				actions.Commit();
 			});
 		}
 
@@ -58,7 +52,6 @@ namespace Raven.Tests.Storage
 
 				actions.AddDocument("a", "b", null, "a");
 
-				actions.Commit();
 			});
 
 			db.TransactionalStorage.Batch(actions =>
@@ -66,16 +59,12 @@ namespace Raven.Tests.Storage
 				Assert.Equal(1, actions.GetDocumentsCount());
 
 				actions.AddDocument("a", "b", null, "a");
-
-				actions.Commit();
 			});
 
 
 			db.TransactionalStorage.Batch(actions =>
 			{
 				Assert.Equal(1, actions.GetDocumentsCount());
-
-				actions.Commit();
 			});
 		}
 
@@ -92,7 +81,6 @@ namespace Raven.Tests.Storage
 
 				Assert.Equal(2, nextIdentityValue);
 
-				actions.Commit();
 			});
 
 			db.TransactionalStorage.Batch(actions =>
@@ -105,7 +93,6 @@ namespace Raven.Tests.Storage
 
 				Assert.Equal(4, nextIdentityValue);
 
-				actions.Commit();
 			});
 		}
 
@@ -122,7 +109,6 @@ namespace Raven.Tests.Storage
 
 				Assert.Equal(1, nextIdentityValue);
 
-				actions.Commit();
 			});
 
 			db.TransactionalStorage.Batch(actions =>
@@ -135,7 +121,6 @@ namespace Raven.Tests.Storage
 
 				Assert.Equal(2, nextIdentityValue);
 
-				actions.Commit();
 			});
 		}
 	}

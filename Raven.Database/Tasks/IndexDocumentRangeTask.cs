@@ -48,7 +48,6 @@ namespace Raven.Database.Tasks
 					.Where(x => x != null)
 					.Select(s => JsonToExpando.Convert(s.ToJson()));
 				context.IndexStorage.Index(Index, viewGenerator, docsToIndex, context, actions);
-				actions.Commit();
 			});
 		}
 	}

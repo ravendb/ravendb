@@ -84,7 +84,6 @@ namespace Raven.Server
 						);
 				}
 
-				actions.Commit();
 			});
 		}
 

@@ -83,7 +83,6 @@ namespace Raven.Database
 						.Where(actions.DoesTasksExistsForIndex)
 						.ToArray();
 					result.Indexes = actions.GetIndexesStats().ToArray();
-					actions.Commit();
 				});
 				return result;
 			}
@@ -133,7 +132,6 @@ namespace Raven.Database
 			TransactionalStorage.Batch(actions =>
 			{
 				document = actions.DocumentByKey(key, transactionInformation);
-				actions.Commit();
 			});
 			return document;
 		}
@@ -166,7 +164,6 @@ namespace Raven.Database
                                                      metadata.ToString());
                 }
 				workContext.ShouldNotifyAboutWork();
-				actions.Commit();
 			});
 		    return new PutResult
 		    {
@@ -203,7 +200,6 @@ namespace Raven.Database
                     actions.DeleteDocumentInTransaction(transactionInformation, key, etag);
                 }
 				workContext.ShouldNotifyAboutWork();
-				actions.Commit();
 			});
 		}
 
@@ -223,7 +219,6 @@ namespace Raven.Database
 							JsonCache.ParseMetadata(doc.Etag, doc.Metadata), null);
                 });
 				workContext.ShouldNotifyAboutWork();
-				actions.Commit();
             });
         }
 
@@ -233,7 +228,6 @@ namespace Raven.Database
             {
                 actions.RollbackTransaction(txId);
 				workContext.ShouldNotifyAboutWork();
-				actions.Commit();
             });
         }
 
@@ -266,7 +260,6 @@ namespace Raven.Database
 					}
 				}
 				workContext.ShouldNotifyAboutWork();
-				actions.Commit();
 			});
 			return name;
 		}
@@ -291,7 +284,6 @@ namespace Raven.Database
 					                 where doc != null
 					                 select doc.ToJson();
 					list.AddRange(collection);
-					actions.Commit();
 				});
 			return new QueryResult
 			{
@@ -327,7 +319,6 @@ namespace Raven.Database
 				action.DeleteIndex(name);
 
 				workContext.ShouldNotifyAboutWork();
-				action.Commit();
 			});
 		}
 
@@ -337,7 +328,6 @@ namespace Raven.Database
 			TransactionalStorage.Batch(actions =>
 			{
 				attachment = actions.GetAttachment(name);
-				actions.Commit();
 			});
 			return attachment;
 		}
@@ -347,7 +337,6 @@ namespace Raven.Database
 			TransactionalStorage.Batch(actions =>
 			{
 				actions.AddAttachment(name, etag, data, metadata.ToString(Formatting.None));
-				actions.Commit();
 			});
 		}
 
@@ -356,7 +345,6 @@ namespace Raven.Database
 			TransactionalStorage.Batch(actions =>
 			{
 				actions.DeleteAttachment(name, etag);
-				actions.Commit();
 			});
 		}
 
@@ -375,7 +363,6 @@ namespace Raven.Database
 
 					list.Add(doc.ToJson());
 				}
-				actions.Commit();
 			});
 			return list;
 		}
@@ -428,7 +415,6 @@ namespace Raven.Database
 				}
 
 				workContext.ShouldNotifyAboutWork();
-				actions.Commit();
 			});
 
 			return result;
@@ -452,7 +438,6 @@ namespace Raven.Database
                 	});
                 }
 				workContext.ShouldNotifyAboutWork();
-				actions.Commit();
             });
 			log.DebugFormat("Successfully executed {0} commands", commands.Count);
             return results.ToArray();
@@ -466,7 +451,6 @@ namespace Raven.Database
 				TransactionalStorage.Batch(actions =>
 				{
 					hasTasks = actions.HasTasks;
-					actions.Commit();
 				});
 				return hasTasks;
 			}

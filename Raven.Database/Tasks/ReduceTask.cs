@@ -29,8 +29,6 @@ namespace Raven.Database.Tasks
 					.Select(JsonToExpando.Convert);
 
 				context.IndexStorage.Reduce(Index, viewGenerator, mappedResults, context, actions, ReduceKey);
-
-				actions.Commit();
 			});
 		}
 	}

@@ -29,7 +29,6 @@ namespace Raven.Server.Responders
 						continue;
 					results.Add(documentByKey.ToJson());
 				}
-                actions.Commit();
             });
 			context.WriteJson(results);
 		}

@@ -31,16 +31,12 @@ namespace Raven.Database.Indexing
 					{
 						taskAsJson = actions.GetFirstTask();
 						if (taskAsJson == null)
-						{
-							actions.Commit();
 							return;
-						}
+
 						log.DebugFormat("Executing {0}", taskAsJson);
 						foundWork = true;
 
 						ExecuteTask(taskAsJson);
-
-						actions.Commit();
 					});
 				}
 				catch (Exception e)

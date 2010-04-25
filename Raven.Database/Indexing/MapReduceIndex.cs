@@ -124,7 +124,6 @@ namespace Raven.Database.Indexing
 					});
 				}
 
-				actions.Commit();
 			});
 			Write(writer =>
 			{

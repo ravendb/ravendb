@@ -249,15 +249,7 @@ namespace Raven.Database.Storage
 		{
 			if (current.Value != null)
 			{
-				try
-				{
-					current.Value.PushTx();
-					action(current.Value);
-				}
-				finally
-				{
-					current.Value.PopTx();
-				}
+				action(current.Value);
 				return;
 			}
 			disposerLock.EnterReadLock();
@@ -278,8 +270,7 @@ namespace Raven.Database.Storage
 				{
 					current.Value = pht;
 					action(pht);
-					if (pht.CommitCalled == false)
-						throw new InvalidOperationException("You forgot to call commit!");
+					pht.Commit();
 					onCommit();
 				}
 			}

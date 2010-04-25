@@ -68,7 +68,6 @@ namespace Raven.Database.Tasks
 						logger.WarnFormat(e, "Failed to index document  [{0}] for index: {1}", keysAsString, index);
 					}
 				}
-				actions.Commit();
 			});
 		}
 	}

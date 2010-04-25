@@ -39,7 +39,6 @@ namespace Raven.Database.Storage
 		protected Table Tasks { get; set; }
 		protected readonly IDictionary<string, JET_COLUMNID> tasksColumns;
 		private readonly Transaction transaction;
-		private int innerTxCount;
 		protected Table Identity { get; set; }
 		protected readonly IDictionary<string, JET_COLUMNID> identityColumns;
 		protected Table Details { get; set; }
@@ -91,9 +90,6 @@ namespace Raven.Database.Storage
 				throw;
 			}
 		}
-
-
-		public bool CommitCalled { get; set; }
 
 		public IEnumerable<string> DocumentKeys
 		{
@@ -204,11 +200,7 @@ namespace Raven.Database.Storage
 
 		public void Commit()
 		{
-			if (innerTxCount != 0)
-				return;
-
-			CommitCalled = true;
-			transaction.Commit(CommitTransactionGrbit.LazyFlush);
+			transaction.Commit(CommitTransactionGrbit.None);
 		}
 
 		public int GetNextIdentityValue(string name)
@@ -756,16 +748,6 @@ namespace Raven.Database.Storage
 				return task;
 			}
 			return null;
-		}
-
-		public void PushTx()
-		{
-			innerTxCount++;
-		}
-
-		public void PopTx()
-		{
-			innerTxCount--;
 		}
 
 		public int GetDocumentsCount()
