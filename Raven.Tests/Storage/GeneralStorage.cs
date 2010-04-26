@@ -1,4 +1,5 @@
-﻿using Raven.Database;
+﻿using Newtonsoft.Json.Linq;
+using Raven.Database;
 using Xunit;
 
 namespace Raven.Tests.Storage
@@ -26,7 +27,7 @@ namespace Raven.Tests.Storage
 			{
 				Assert.Equal(0, actions.GetDocumentsCount());
 
-				actions.AddDocument("a", "b", null, "a");
+				actions.AddDocument("a", null, new JObject(), new JObject());
 			});
 
 			db.TransactionalStorage.Batch(actions =>
@@ -37,10 +38,7 @@ namespace Raven.Tests.Storage
 			});
 
 
-			db.TransactionalStorage.Batch(actions =>
-			{
-				Assert.Equal(0, actions.GetDocumentsCount());
-			});
+			db.TransactionalStorage.Batch(actions => Assert.Equal(0, actions.GetDocumentsCount()));
 		}
 
 		[Fact]
@@ -50,7 +48,7 @@ namespace Raven.Tests.Storage
 			{
 				Assert.Equal(0, actions.GetDocumentsCount());
 
-				actions.AddDocument("a", "b", null, "a");
+				actions.AddDocument("a", null, new JObject(), new JObject());
 
 			});
 
@@ -58,14 +56,11 @@ namespace Raven.Tests.Storage
 			{
 				Assert.Equal(1, actions.GetDocumentsCount());
 
-				actions.AddDocument("a", "b", null, "a");
+				actions.AddDocument("a", null, new JObject(), new JObject());
 			});
 
 
-			db.TransactionalStorage.Batch(actions =>
-			{
-				Assert.Equal(1, actions.GetDocumentsCount());
-			});
+			db.TransactionalStorage.Batch(actions => Assert.Equal(1, actions.GetDocumentsCount()));
 		}
 
 		[Fact]

@@ -22,13 +22,14 @@ namespace Raven.Database
 		private readonly RavenConfiguration configuration;
 		private readonly WorkContext workContext;
 		private Thread[] backgroundWorkers = new Thread[0];
-		private ILog log = LogManager.GetLogger(typeof (DocumentDatabase));
+		private readonly ILog log = LogManager.GetLogger(typeof (DocumentDatabase));
+		private readonly SemaphoreSlim semaphore = new SemaphoreSlim(TransactionalStorage.MaxSessions);
 
 		public DocumentDatabase(RavenConfiguration configuration)
 		{
 			this.configuration = configuration;
 			workContext = new WorkContext();
-			TransactionalStorage = new TransactionalStorage(configuration.DataDirectory, workContext.NotifyAboutWork);
+			TransactionalStorage = new TransactionalStorage(configuration.DataDirectory, semaphore, workContext.NotifyAboutWork);
 			bool newDb;
 			try
 			{
@@ -155,7 +156,7 @@ namespace Raven.Database
 				metadata.Add("@id", new JValue(key));
 				if (transactionInformation == null)
                 {
-                    etag = actions.AddDocument(key, document.ToString(), etag, metadata.ToString());
+                    etag = actions.AddDocument(key, etag, document, metadata);
 					actions.AddTask(new IndexDocumentsTask { Index = "*", Keys = new[] { key } });
                 }
                 else

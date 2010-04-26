@@ -111,11 +111,13 @@ namespace Raven.Server
 			try
 			{
 				if (e is BadRequestException)
-					HandleBadRequest(ctx, (BadRequestException) e);
+					HandleBadRequest(ctx, (BadRequestException)e);
 				else if (e is ConcurrencyException)
-					HandleConcurrencyException(ctx, (ConcurrencyException) e);
+					HandleConcurrencyException(ctx, (ConcurrencyException)e);
 				else if (e is IndexDisabledException)
-					HandleIndexDisabledException(ctx, (IndexDisabledException) e);
+					HandleIndexDisabledException(ctx, (IndexDisabledException)e);
+				else if (e is TooBusyException)
+					HandleTooBudyException(ctx);
 				else
 					HandleGenericException(ctx, e);
 			}
@@ -125,66 +127,72 @@ namespace Raven.Server
 			}
 		}
 
+		private static void HandleTooBudyException(HttpListenerContext ctx)
+		{
+			ctx.Response.StatusCode = 503;
+			ctx.Response.StatusDescription = "Service Unavailable";
+			SerializeError(ctx, new
+			{
+				Url = ctx.Request.RawUrl,
+				Error = "The server is too busy, could not acquire transactional access"
+			});
+		}
+
 		private static void HandleIndexDisabledException(HttpListenerContext ctx, IndexDisabledException e)
 		{
 			ctx.Response.StatusCode = 503;
 			ctx.Response.StatusDescription = "Service Unavailable";
-			using (var sw = new StreamWriter(ctx.Response.OutputStream))
+			SerializeError(ctx, new
 			{
-				new JsonSerializer().Serialize(sw,
-				                               new
-				                               {
-				                               	url = ctx.Request.RawUrl,
-				                               	error = e.Information.GetErrorMessage(),
-				                               	index = e.Information.Name,
-				                               });
-			}
+				Url = ctx.Request.RawUrl,
+				Error = e.Information.GetErrorMessage(),
+				Index = e.Information.Name,
+			});
 		}
 
 		private static void HandleGenericException(HttpListenerContext ctx, Exception e)
 		{
 			ctx.Response.StatusCode = 500;
 			ctx.Response.StatusDescription = "Internal Server Error";
-			using (var sw = new StreamWriter(ctx.Response.OutputStream))
+			SerializeError(ctx, new
 			{
-				new JsonSerializer().Serialize(sw,
-				                               new
-				                               {
-				                               	url = ctx.Request.RawUrl,
-				                               	error = e.ToString()
-				                               });
-			}
+				Url = ctx.Request.RawUrl,
+				Error = e.ToString()
+			});
 		}
 
 		private static void HandleBadRequest(HttpListenerContext ctx, BadRequestException e)
 		{
 			ctx.SetStatusToBadRequest();
-			using (var sw = new StreamWriter(ctx.Response.OutputStream))
+			SerializeError(ctx, new
 			{
-				new JsonSerializer().Serialize(sw,
-				                               new
-				                               {
-				                               	url = ctx.Request.RawUrl,
-				                               	message = e.Message,
-				                               	error = e.Message
-				                               });
-			}
+				Url = ctx.Request.RawUrl,
+				e.Message,
+				Error = e.Message
+			});
 		}
 
 		private static void HandleConcurrencyException(HttpListenerContext ctx, ConcurrencyException e)
 		{
 			ctx.Response.StatusCode = 409;
 			ctx.Response.StatusDescription = "Conflict";
+			SerializeError(ctx, new
+			{
+				Url = ctx.Request.RawUrl,
+				e.ActualETag,
+				e.ExpectedETag,
+				Error = e.Message
+			});
+		}
+
+		private static void SerializeError(HttpListenerContext ctx, object error)
+		{
 			using (var sw = new StreamWriter(ctx.Response.OutputStream))
 			{
-				new JsonSerializer().Serialize(sw,
-				                               new
-				                               {
-				                               	url = ctx.Request.RawUrl,
-				                               	actualETag = e.ActualETag,
-				                               	expectedETag = e.ExpectedETag,
-				                               	error = e.Message
-				                               });
+				new JsonSerializer().Serialize(new JsonTextWriter(sw)
+				{
+					Formatting = Formatting.Indented,
+				}, error);
 			}
 		}
 

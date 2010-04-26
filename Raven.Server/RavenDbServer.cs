@@ -78,10 +78,8 @@ namespace Raven.Server
 				{
 					actions.AddDocument(
 						document["DocId"].Value<string>(),
-						document["Document"].Value<JObject>().ToString(),
 						null,
-						document["Metadata"].Value<JObject>().ToString()
-						);
+						document["Document"].Value<JObject>(), document["Metadata"].Value<JObject>());
 				}
 
 			});

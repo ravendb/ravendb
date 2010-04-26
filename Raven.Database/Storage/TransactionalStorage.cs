@@ -5,13 +5,16 @@ using System.IO;
 using System.Runtime.ConstrainedExecution;
 using System.Threading;
 using Microsoft.Isam.Esent.Interop;
+using Raven.Database.Exceptions;
 
 namespace Raven.Database.Storage
 {
 	public class TransactionalStorage : CriticalFinalizerObject, IDisposable
 	{
+		public const int MaxSessions = 256;
 		private readonly ThreadLocal<DocumentStorageActions> current = new ThreadLocal<DocumentStorageActions>();
 		private readonly string database;
+		private readonly SemaphoreSlim semaphore;
 		private readonly Action onCommit;
 		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
 		private readonly string path;
@@ -23,16 +26,17 @@ namespace Raven.Database.Storage
 		private JET_INSTANCE instance;
 		private IDictionary<string, JET_COLUMNID> mappedResultsColumns;
 		private IDictionary<string, JET_COLUMNID> tasksColumns;
-	    private IDictionary<string, JET_COLUMNID> documentsModifiedByTransactionsColumns;
-	    private IDictionary<string, JET_COLUMNID> transactionsColumns;
+		private IDictionary<string, JET_COLUMNID> documentsModifiedByTransactionsColumns;
+		private IDictionary<string, JET_COLUMNID> transactionsColumns;
 		private IDictionary<string, JET_COLUMNID> identityColumns;
 		private IDictionary<string, JET_COLUMNID> detailsColumns;
 
-		public TransactionalStorage(string database, Action onCommit)
+		public TransactionalStorage(string database, SemaphoreSlim semaphore, Action onCommit)
 		{
 			this.database = database;
-	    	this.onCommit = onCommit;
-	    	path = database;
+			this.semaphore = semaphore;
+			this.onCommit = onCommit;
+			path = database;
 			if (Path.IsPathRooted(database) == false)
 				path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, database);
 			this.database = Path.Combine(path, Path.GetFileName(database));
@@ -112,10 +116,10 @@ namespace Raven.Database.Storage
 						indexStatsColumns = Api.GetColumnDictionary(session, indexStats);
 					using (var mappedResults = new Table(session, dbid, "mapped_results", OpenTableGrbit.None))
 						mappedResultsColumns = Api.GetColumnDictionary(session, mappedResults);
-                    using (var documentsModifiedByTransactions = new Table(session, dbid, "documents_modified_by_transaction", OpenTableGrbit.None))
-                        documentsModifiedByTransactionsColumns = Api.GetColumnDictionary(session, documentsModifiedByTransactions);
-                    using (var transactions = new Table(session, dbid, "transactions", OpenTableGrbit.None))
-                        transactionsColumns = Api.GetColumnDictionary(session, transactions);
+					using (var documentsModifiedByTransactions = new Table(session, dbid, "documents_modified_by_transaction", OpenTableGrbit.None))
+						documentsModifiedByTransactionsColumns = Api.GetColumnDictionary(session, documentsModifiedByTransactions);
+					using (var transactions = new Table(session, dbid, "transactions", OpenTableGrbit.None))
+						transactionsColumns = Api.GetColumnDictionary(session, transactions);
 					using (var identity = new Table(session, dbid, "identity_table", OpenTableGrbit.None))
 						identityColumns = Api.GetColumnDictionary(session, identity);
 					using (var details = new Table(session, dbid, "details", OpenTableGrbit.None))
@@ -131,7 +135,7 @@ namespace Raven.Database.Storage
 
 		private void ConfigureInstance(JET_INSTANCE jetInstance)
 		{
-			SystemParameters.CacheSizeMax = 1024*1024*1024 / SystemParameters.DatabasePageSize; // 1 GB
+			SystemParameters.CacheSizeMax = 1024 * 1024 * 1024 / SystemParameters.DatabasePageSize; // 1 GB
 			new InstanceParameters(jetInstance)
 			{
 				CircularLog = true,
@@ -144,9 +148,9 @@ namespace Raven.Database.Storage
 				BaseName = "RVN",
 				EventSource = "Raven",
 				LogBuffers = 256,
-				MaxCursors = 512,
 				LogFileSize = 16384,
-				MaxSessions = 64,
+				MaxSessions = MaxSessions,
+				MaxCursors = 2048,
 			};
 		}
 
@@ -203,7 +207,7 @@ namespace Raven.Database.Storage
 								{
 									ConfigureInstance(recoverInstance.JetInstance);
 									Api.JetAttachDatabase(recoverSession, database,
-									                      AttachDatabaseGrbit.DeleteCorruptIndexes);
+														  AttachDatabaseGrbit.DeleteCorruptIndexes);
 									Api.JetDetachDatabase(recoverSession, database);
 								}
 							}
@@ -257,16 +261,33 @@ namespace Raven.Database.Storage
 			disposerLock.EnterReadLock();
 			try
 			{
+				LimitToMaxSessionConcurrency(action);
+			}
+			finally
+			{
+				disposerLock.ExitReadLock();
+				current.Value = null;
+			}
+		}
+
+		private void LimitToMaxSessionConcurrency(Action<DocumentStorageActions> action)
+		{
+			if (semaphore.Wait(TimeSpan.FromSeconds(5)) == false)
+			{
+				throw new TooBusyException();
+			}
+			try
+			{
 				using (var pht = new DocumentStorageActions(
-					instance, 
-					database, 
-					documentsColumns, 
+					instance,
+					database,
+					documentsColumns,
 					tasksColumns,
-					filesColumns, 
-					indexStatsColumns, 
+					filesColumns,
+					indexStatsColumns,
 					mappedResultsColumns,
 					documentsModifiedByTransactionsColumns,
-					transactionsColumns, 
+					transactionsColumns,
 					identityColumns,
 					detailsColumns))
 				{
@@ -278,9 +299,9 @@ namespace Raven.Database.Storage
 			}
 			finally
 			{
-				disposerLock.ExitReadLock();
-				current.Value = null;
+				semaphore.Release();
 			}
+
 		}
 	}
 }
