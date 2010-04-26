@@ -131,7 +131,7 @@ namespace Raven.Database.Storage
 
 		private void ConfigureInstance(JET_INSTANCE jetInstance)
 		{
-			SystemParameters.CacheSizeMax = 65536; // 256 MB
+			SystemParameters.CacheSizeMax = 1024*1024*1024 / SystemParameters.DatabasePageSize; // 1 GB
 			new InstanceParameters(jetInstance)
 			{
 				CircularLog = true,
@@ -144,6 +144,7 @@ namespace Raven.Database.Storage
 				BaseName = "RVN",
 				EventSource = "Raven",
 				LogBuffers = 256,
+				MaxCursors = 512,
 				LogFileSize = 16384,
 				MaxSessions = 64,
 			};
