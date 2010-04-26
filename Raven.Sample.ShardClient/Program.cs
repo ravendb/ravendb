@@ -21,15 +21,37 @@ namespace Raven.Sample.ShardClient
             using (var session = documentStore.OpenSession())
             {
                 //store 2 items in the 2 shards
-            	session.Store(new Company {Name = "Company 1", Region = "A"});
-            	session.Store(new Company {Name = "Company 2", Region = "B"});
+                session.Store(new Company { Name = "Company 1", Region = "A" });
+                session.Store(new Company { Name = "Company 2", Region = "B" });
+                session.SaveChanges();
 
                 //get all, should automagically retrieve from each shard
-                var allCompanies = session.Query<Company>().ToArray();
+                var allCompanies = session.Query<Company>().WaitForNonStaleResults().ToArray();
 
-                foreach(var company in allCompanies)
+                foreach (var company in allCompanies)
                     Console.WriteLine(company.Name);
             }
         }
+
+        static void Main2(string[] args)
+        {
+            using (var documentStore = new DocumentStore("localhost", 8080).Initialise())
+            using (var session = documentStore.OpenSession())
+            {
+                //session.Store(new Company { Name = "Company 1", Region = "A" });
+                //session.Store(new Company { Name = "Company 2", Region = "B" });
+                //session.SaveChanges();
+
+                var allCompanies = session
+                    .Query<Company>("regionIndex")
+                    .Where("Region:A")
+                    .WaitForNonStaleResults()
+                    .ToArray();
+
+                foreach (var company in allCompanies)
+                    Console.WriteLine(company.Name);
+            }
+        }
+
     }
 }
