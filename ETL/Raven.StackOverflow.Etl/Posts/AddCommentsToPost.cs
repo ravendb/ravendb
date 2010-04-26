@@ -19,28 +19,38 @@ namespace Raven.StackOverflow.Etl.Posts
 		public override IEnumerable<Row> Execute(IEnumerable<Row> rows)
 		{
 			int count = 0;
-			foreach (var commentsForPosts in rows.Partition(Constants.BatchSize))
+			foreach (var commentsForPosts in rows.GroupBy(row => row["PostId"]).Partition(Constants.BatchSize))
 			{
-				var cmds = new List<ICommandData>(
-					commentsForPosts.Select(row => new PatchCommandData()
+				var cmds = new List<ICommandData>();
+
+				foreach (var commentsForPost in commentsForPosts)
+				{
+					var comments = new JArray();
+					foreach (var row in commentsForPost)
 					{
-						Key = "posts/" + row["PostId"],
+						comments.Add(new JObject(
+						             	new JProperty("Score", new JValue(row["Score"])),
+						             	new JProperty("CreationDate", new JValue(row["CreationDate"])),
+						             	new JProperty("Text", new JValue(row["Text"])),
+						             	new JProperty("UserId", new JValue("users/" + row["UserId"]))
+						             	));
+
+					}
+					cmds.Add(new PatchCommandData
+					{
+						Key = "posts/" + commentsForPost.Key,
 						Patches = new[]
 						{
 							new PatchRequest
 							{
 								Name = "Comments",
-								Type = "Add",
-								Value = new JObject(
-									new JProperty("Score", new JValue(row["Score"])),
-									new JProperty("CreationDate", new JValue(row["CreationDate"])),
-									new JProperty("Text", new JValue(row["Text"])),
-									new JProperty("UserId", new JValue("users/" + row["UserId"]))
-									)
+								Type = "Set",
+								Value = comments
 							},
 						}
-					}));
-				
+					});
+				}
+
 				count++;
 
 				File.WriteAllText(Path.Combine("Docs", "Comments #" + count.ToString("00000") + ".json"),

@@ -20,37 +20,41 @@ namespace Raven.StackOverflow.Etl.Posts
 		public override IEnumerable<Row> Execute(IEnumerable<Row> rows)
 		{
 			int count = 0;
-			foreach (var votesForPosts in rows.Partition(Constants.BatchSize))
+			foreach (var votesForPosts in rows.GroupBy(row => row["PostId"]).Partition(Constants.BatchSize))
 			{
 				var cmds = new List<ICommandData>();
-				foreach (var row in votesForPosts)
+				foreach (var votesForPost in votesForPosts)
 				{
-					var vote = new JObject(
-						new JProperty("VoteTypeId", new JValue(row["VoteTypeId"])),
-						new JProperty("CreationDate", new JValue(row["CreationDate"]))
-						);
-					switch ((long) row["VoteTypeId"])
+					var votes = new JArray();
+					foreach (var row in votesForPost)
 					{
-						case 5L:
-							vote.Add("UserId", new JValue("users/" + row["UserId"]));
-							break;
-						case 9L:
-							vote.Add("BountyAmount", new JValue(row["BountyAmount"]));
-							break;
-					}
-
-					cmds.Add(new PatchCommandData()
-					{
-						Key = "posts/" + row["PostId"],
-						Patches = new[]
+						var vote = new JObject(
+							new JProperty("VoteTypeId", new JValue(row["VoteTypeId"])),
+							new JProperty("CreationDate", new JValue(row["CreationDate"]))
+							);
+						switch ((long)row["VoteTypeId"])
 						{
-							new PatchRequest
-							{
-								Name = "Votes",
-								Type = "Add",
-								Value = vote
-							},
+							case 5L:
+								vote.Add("UserId", new JValue("users/" + row["UserId"]));
+								break;
+							case 9L:
+								vote.Add("BountyAmount", new JValue(row["BountyAmount"]));
+								break;
 						}
+						votes.Add(vote);
+					}
+					cmds.Add(new PatchCommandData
+					{
+						Key = "posts/" + votesForPost.Key,
+						Patches = new[]
+							{
+								new PatchRequest
+								{
+									Name = "Votes",
+									Type = "Set",
+									Value = votes
+								},
+							}
 					});
 				}
 

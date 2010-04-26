@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Threading;
+using System.Threading.Tasks;
 using log4net.Appender;
 using log4net.Config;
 using log4net.Core;
@@ -19,9 +21,13 @@ namespace Raven.StackOverflow.Etl
 {
 	class Program
 	{
-		static void Main(string[] args)
+		private static readonly ConcurrentBag<Tuple<string, TimeSpan>> durations = new ConcurrentBag<Tuple<string, TimeSpan>>();
+
+		static void Main()
 		{
 			const string path = @"C:\Users\Ayende\Downloads\Stack Overflow Data Dump - Mar 10\Content\Export-030110\032010 SO";
+
+			ServicePointManager.DefaultConnectionLimit = int.MaxValue;
 
 			BasicConfigurator.Configure(new ConsoleAppender
 			{
@@ -31,11 +37,12 @@ namespace Raven.StackOverflow.Etl
 			Console.WriteLine("Starting...");
 			var sp = Stopwatch.StartNew();
 
-			//GenerateDocumentsToFile(path);
+			GenerateDocumentsToFile(path);
 
 			const string dataDirectory = @"C:\Work\ravendb\ETL\Raven.StackOverflow.Etl\bin\Debug\Data";
 			if (Directory.Exists(dataDirectory))
 				Directory.Delete(dataDirectory, true);
+
 
 			using (var ravenDbServer = new RavenDbServer(new RavenConfiguration
 			{
@@ -44,11 +51,15 @@ namespace Raven.StackOverflow.Etl
 				AnonymousUserAccessMode = AnonymousUserAccessMode.All
 			}))
 			{
-				LoadDataFor("Users*.json");
-				LoadDataFor("Badges*.json");
-				LoadDataFor("Posts*.json");
-				LoadDataFor("Votes*.json");
-				LoadDataFor("Comments*.json");
+				ExecuteAndWaitAll(
+					LoadDataFor("Users*.json"),
+					LoadDataFor("Posts*.json")
+					);
+				ExecuteAndWaitAll(
+					LoadDataFor("Badges*.json"),
+					LoadDataFor("Votes*.json"),
+					LoadDataFor("Comments*.json")
+					);
 
 				var indexing = Stopwatch.StartNew();
 				Console.WriteLine("Waiting for indexing");
@@ -62,38 +73,75 @@ namespace Raven.StackOverflow.Etl
 			}
 
 			Console.WriteLine("Total execution time {0}", sp.Elapsed);
+
+			foreach (var duration in durations.GroupBy(x=>x.Item1))
+			{
+				Console.WriteLine("{0} {1}", duration.Key, duration.Average(x=>x.Item2.TotalMilliseconds));
+			}
 		}
 
-		private static void LoadDataFor(string searchPattern)
+		private static void ExecuteAndWaitAll(params IEnumerable<Action>[] taskGenerators)
 		{
-			var durations = new List<TimeSpan>();
-			foreach (var file in Directory.GetFiles(@"C:\Work\ravendb\ETL\Raven.StackOverflow.Etl\bin\Debug\Docs", searchPattern).OrderBy(x => x))
+			Parallel.ForEach(from generator in taskGenerators
+							 from action in generator
+							 select action, action => action());
+
+			//foreach (var act in from generator in taskGenerators
+			//                              from action in generator
+			//                              select action)
+			//{
+			//    act();
+			//}
+		}
+
+		private static IEnumerable<Action> LoadDataFor(string searchPattern)
+		{
+			Console.WriteLine("Loading for {0}", searchPattern);
+			var timeSpans = new List<TimeSpan>();
+			foreach (var fileModifable in Directory.GetFiles(@"C:\Work\ravendb\ETL\Raven.StackOverflow.Etl\bin\Debug\Docs", searchPattern))
 			{
-				var sp = Stopwatch.StartNew();
-				var httpWebRequest = (HttpWebRequest)WebRequest.Create("http://localhost:8080/bulk_docs");
-				httpWebRequest.Method = "POST";
-				using(var requestStream = httpWebRequest.GetRequestStream())
+				var file = fileModifable;
+				yield return () =>
 				{
-					var readAllBytes = File.ReadAllBytes(file);
-					requestStream.Write(readAllBytes, 0, readAllBytes.Length);
-				}
-				HttpWebResponse webResponse;
-				try
-				{
-					webResponse = (HttpWebResponse)httpWebRequest.GetResponse();
-				}
-				catch (WebException e)
-				{
-					Console.WriteLine(new StreamReader(e.Response.GetResponseStream()).ReadToEnd());
-					Environment.Exit(1);
-					return;
-				}
-				var timeSpan = sp.Elapsed;
-				durations.Add(timeSpan);
-				Console.WriteLine("{0} - {1} - {2}", Path.GetFileName(file), timeSpan, webResponse.StatusCode);
-				webResponse.Close();
+					var sp = Stopwatch.StartNew();
+					HttpWebResponse webResponse;
+					while (true)
+					{
+						var httpWebRequest = (HttpWebRequest)WebRequest.Create("http://localhost:8080/bulk_docs");
+						httpWebRequest.Method = "POST";
+						using (var requestStream = httpWebRequest.GetRequestStream())
+						{
+							var readAllBytes = File.ReadAllBytes(file);
+							requestStream.Write(readAllBytes, 0, readAllBytes.Length);
+						}
+						try
+						{
+							webResponse = (HttpWebResponse)httpWebRequest.GetResponse();
+							webResponse.Close();
+							break;
+						}
+						catch (WebException e)
+						{
+							webResponse = e.Response as HttpWebResponse;
+							if (webResponse != null &&
+								webResponse.StatusCode == HttpStatusCode.Conflict)
+							{
+								Console.WriteLine("{0} - {1} - {2} - {3}", Path.GetFileName(file), sp.Elapsed, webResponse.StatusCode,
+									Thread.CurrentThread.ManagedThreadId); 
+								continue;
+							}
+
+							Console.WriteLine(new StreamReader(e.Response.GetResponseStream()).ReadToEnd());
+							throw;
+						}
+					}
+					var timeSpan = sp.Elapsed;
+					timeSpans.Add(timeSpan);
+					durations.Add(new Tuple<string, TimeSpan>(searchPattern, timeSpan));
+					Console.WriteLine("{0} - {1} - {2} - {3}", Path.GetFileName(file), timeSpan, webResponse.StatusCode,
+						Thread.CurrentThread.ManagedThreadId);
+				};
 			}
-			Console.WriteLine("For {0} took avg: {1}ms", searchPattern, durations.Average(x => x.TotalMilliseconds));
 		}
 
 		private static void GenerateDocumentsToFile(string path)
@@ -102,12 +150,15 @@ namespace Raven.StackOverflow.Etl
 				Directory.Delete("Docs", true);
 			Directory.CreateDirectory("Docs");
 
-
-			Execute(new UsersProcess(path));
-			Execute(new BadgesProcess(path));
-			Execute(new PostsProcess(path));
-			Execute(new VotesProcess(path));
-			Execute(new CommentsProcess(path));
+			var processes = new EtlProcess[]
+			{
+				new UsersProcess(path),
+				new BadgesProcess(path),
+				new PostsProcess(path),
+				new VotesProcess(path),
+				new CommentsProcess(path)
+			};
+			Parallel.ForEach(processes, GenerateJsonDocuments);
 		}
 
 		private static void WaitForIndexingToComplete(DocumentDatabase documentDatabase)
@@ -131,7 +182,7 @@ namespace Raven.StackOverflow.Etl
 			}
 		}
 
-		private static void Execute(EtlProcess process)
+		private static void GenerateJsonDocuments(EtlProcess process)
 		{
 			var sp = Stopwatch.StartNew();
 			process.Execute();

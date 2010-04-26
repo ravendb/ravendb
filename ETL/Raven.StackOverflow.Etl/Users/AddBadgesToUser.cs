@@ -40,15 +40,18 @@ namespace Raven.StackOverflow.Etl.Users
 						((JArray)badge["Dates"]).Add(new JValue(row["Date"]));
 					}
 
-					cmds.Add(new PatchCommandData()
+					cmds.Add(new PatchCommandData
 					{
 						Key = "users/" + badgesForUser.Key,
-						Patches = badgesByName.Values.Select(o => new PatchRequest
+						Patches = new[]
 						{
-							Name = "Badges",
-							Type = "Add",
-							Value = o
-						}).ToArray()
+							new PatchRequest
+							{
+								Name = "Badges",
+								Type = "Set",
+								Value = new JArray(badgesByName.Values)
+							},
+						}
 					});
 				}
 
