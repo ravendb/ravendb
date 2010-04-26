@@ -100,7 +100,7 @@ namespace Raven.Database.Indexing
 			else
 			{
 				log.DebugFormat("Issuing query on index {0} for: {1}", name, query);
-				luceneQuery = new QueryParser("", new StandardAnalyzer()).Parse(query);
+				luceneQuery = QueryBuilder.BuildQuery(query);
 			}
 			return luceneQuery;
 		}

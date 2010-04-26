@@ -289,20 +289,20 @@ select new{project_name = prj.name, project_num = prj.num}
 		}
 
         [Fact]
-        public void Can_query_by_arbitrary_property()
+        public void Can_query_by_stop_words()
         {
             db.PutIndex("regionIndex", new IndexDefinition
             {
                 Map = @"
                     from doc in docs 
                     select new { doc.Region };
-                    "
+                    ",
+				Indexes = {{"Region", FieldIndexing.Untokenized}}
             });
 
             db.Put("1", Guid.Empty, JObject.Parse(
             @"{
                 Region: 'A', 
-                '@metadata': {'@id': 1}
             }"),
             new JObject(), null);
 
@@ -311,7 +311,7 @@ select new{project_name = prj.name, project_num = prj.num}
             {
                 docs = db.Query("regionIndex", new IndexQuery
                 {
-                    Query = "Region:A",
+					Query = "Region:`A`",
                     Start = 0,
                     PageSize = 10
                 });
