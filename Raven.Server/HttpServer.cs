@@ -10,6 +10,7 @@ using Newtonsoft.Json;
 using Raven.Database;
 using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
+using Raven.Database.Storage;
 using Raven.Server.Responders;
 
 namespace Raven.Server
@@ -23,6 +24,10 @@ namespace Raven.Server
 		private readonly RequestResponder[] requestResponders;
 		private int reqNum;
 
+		// concurrent requests
+		// we set 1/4 aside for handling background tasks
+		private SemaphoreSlim concurretRequestSemaphore =
+			new SemaphoreSlim(TransactionalStorage.MaxSessions - (TransactionalStorage.MaxSessions/4));
 		public HttpServer(
 			RavenConfiguration configuration,
 			IEnumerable<RequestResponder> requestResponders)
@@ -74,6 +79,23 @@ namespace Raven.Server
 				return;
 			}
 
+			if (concurretRequestSemaphore.Wait(TimeSpan.FromSeconds(5)) == false)
+			{
+				HandleTooBusyError(ctx);
+				return;
+			}
+			try
+			{
+				HandleActualRequest(ctx);
+			}
+			finally
+			{
+				concurretRequestSemaphore.Release();
+			}
+		}
+
+		private void HandleActualRequest(HttpListenerContext ctx)
+		{
 			var curReq = Interlocked.Increment(ref reqNum);
 			try
 			{
@@ -83,8 +105,7 @@ namespace Raven.Server
 				                   ctx.Request.Url.PathAndQuery
 					);
 				var sw = Stopwatch.StartNew();
-				HandleRequest(ctx);
-
+				DispatchRequest(ctx);
 				logger.DebugFormat("Request #{0}: {1} {2} - {3}",
 				                   curReq, ctx.Request.HttpMethod, ctx.Request.Url.PathAndQuery, sw.Elapsed);
 			}
@@ -116,8 +137,6 @@ namespace Raven.Server
 					HandleConcurrencyException(ctx, (ConcurrencyException)e);
 				else if (e is IndexDisabledException)
 					HandleIndexDisabledException(ctx, (IndexDisabledException)e);
-				else if (e is TooBusyException)
-					HandleTooBudyException(ctx);
 				else
 					HandleGenericException(ctx, e);
 			}
@@ -127,7 +146,7 @@ namespace Raven.Server
 			}
 		}
 
-		private static void HandleTooBudyException(HttpListenerContext ctx)
+		private static void HandleTooBusyError(HttpListenerContext ctx)
 		{
 			ctx.Response.StatusCode = 503;
 			ctx.Response.StatusDescription = "Service Unavailable";
@@ -196,7 +215,7 @@ namespace Raven.Server
 			}
 		}
 
-		private void HandleRequest(HttpListenerContext ctx)
+		private void DispatchRequest(HttpListenerContext ctx)
 		{
 			if (AssertSecurityRights(ctx) == false)
 				return;

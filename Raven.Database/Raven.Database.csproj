@@ -113,7 +113,6 @@
     <Compile Include="Data\SortedField.cs" />
     <Compile Include="Exceptions\IndexDisabledException.cs" />
     <Compile Include="Data\IndexQuery.cs" />
-    <Compile Include="Exceptions\TooBusyException.cs" />
     <Compile Include="Indexing\FieldIndexing.cs" />
     <Compile Include="Indexing\FieldStorage.cs" />
     <Compile Include="Indexing\IndexDefinition.cs" />

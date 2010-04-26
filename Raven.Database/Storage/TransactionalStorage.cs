@@ -14,7 +14,6 @@ namespace Raven.Database.Storage
 		public const int MaxSessions = 256;
 		private readonly ThreadLocal<DocumentStorageActions> current = new ThreadLocal<DocumentStorageActions>();
 		private readonly string database;
-		private readonly SemaphoreSlim semaphore;
 		private readonly Action onCommit;
 		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
 		private readonly string path;
@@ -31,10 +30,9 @@ namespace Raven.Database.Storage
 		private IDictionary<string, JET_COLUMNID> identityColumns;
 		private IDictionary<string, JET_COLUMNID> detailsColumns;
 
-		public TransactionalStorage(string database, SemaphoreSlim semaphore, Action onCommit)
+		public TransactionalStorage(string database, Action onCommit)
 		{
 			this.database = database;
-			this.semaphore = semaphore;
 			this.onCommit = onCommit;
 			path = database;
 			if (Path.IsPathRooted(database) == false)
@@ -261,7 +259,7 @@ namespace Raven.Database.Storage
 			disposerLock.EnterReadLock();
 			try
 			{
-				LimitToMaxSessionConcurrency(action);
+				ExecuteBatch(action);
 			}
 			finally
 			{
@@ -270,38 +268,26 @@ namespace Raven.Database.Storage
 			}
 		}
 
-		private void LimitToMaxSessionConcurrency(Action<DocumentStorageActions> action)
+		private void ExecuteBatch(Action<DocumentStorageActions> action)
 		{
-			if (semaphore.Wait(TimeSpan.FromSeconds(5)) == false)
+			using (var pht = new DocumentStorageActions(
+				instance,
+				database,
+				documentsColumns,
+				tasksColumns,
+				filesColumns,
+				indexStatsColumns,
+				mappedResultsColumns,
+				documentsModifiedByTransactionsColumns,
+				transactionsColumns,
+				identityColumns,
+				detailsColumns))
 			{
-				throw new TooBusyException();
+				current.Value = pht;
+				action(pht);
+				pht.Commit();
+				onCommit();
 			}
-			try
-			{
-				using (var pht = new DocumentStorageActions(
-					instance,
-					database,
-					documentsColumns,
-					tasksColumns,
-					filesColumns,
-					indexStatsColumns,
-					mappedResultsColumns,
-					documentsModifiedByTransactionsColumns,
-					transactionsColumns,
-					identityColumns,
-					detailsColumns))
-				{
-					current.Value = pht;
-					action(pht);
-					pht.Commit();
-					onCommit();
-				}
-			}
-			finally
-			{
-				semaphore.Release();
-			}
-
 		}
 	}
 }

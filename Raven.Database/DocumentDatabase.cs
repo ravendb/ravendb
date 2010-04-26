@@ -23,13 +23,12 @@ namespace Raven.Database
 		private readonly WorkContext workContext;
 		private Thread[] backgroundWorkers = new Thread[0];
 		private readonly ILog log = LogManager.GetLogger(typeof (DocumentDatabase));
-		private readonly SemaphoreSlim semaphore = new SemaphoreSlim(TransactionalStorage.MaxSessions);
 
 		public DocumentDatabase(RavenConfiguration configuration)
 		{
 			this.configuration = configuration;
 			workContext = new WorkContext();
-			TransactionalStorage = new TransactionalStorage(configuration.DataDirectory, semaphore, workContext.NotifyAboutWork);
+			TransactionalStorage = new TransactionalStorage(configuration.DataDirectory, workContext.NotifyAboutWork);
 			bool newDb;
 			try
 			{

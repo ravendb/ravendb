@@ -13,7 +13,7 @@ namespace Raven.Tests.Views
 
 		public ViewStorage()
 		{
-			transactionalStorage = new TransactionalStorage("raven.db.test.esent", new SemaphoreSlim(TransactionalStorage.MaxSessions), () => { });
+			transactionalStorage = new TransactionalStorage("raven.db.test.esent", () => { });
 			transactionalStorage.Initialize();
 		}
 
