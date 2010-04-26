@@ -11,6 +11,7 @@ using log4net.Config;
 using log4net.Core;
 using log4net.Layout;
 using Raven.Database;
+using Raven.Database.Storage;
 using Raven.Server;
 using Raven.StackOverflow.Etl.Posts;
 using Raven.StackOverflow.Etl.Users;
@@ -29,25 +30,28 @@ namespace Raven.StackOverflow.Etl
 
 			ServicePointManager.DefaultConnectionLimit = int.MaxValue;
 
-			BasicConfigurator.Configure(new ConsoleAppender
-			{
-				Layout = new SimpleLayout(),
-				Threshold = Level.Notice
-			});
-			Console.WriteLine("Starting...");
+			Trace.Listeners.Add(new TextWriterTraceListener(Console.Out));
+			Trace.WriteLine("Starting...");
 			var sp = Stopwatch.StartNew();
 
-			GenerateDocumentsToFile(path);
+			//GenerateDocumentsToFile(path);
 
+			LoadIntoRaven();
+
+			Console.WriteLine("Total execution time {0}", sp.Elapsed);
+		}
+
+		private static void LoadIntoRaven()
+		{
 			const string dataDirectory = @"C:\Work\ravendb\ETL\Raven.StackOverflow.Etl\bin\Debug\Data";
 			if (Directory.Exists(dataDirectory))
 				Directory.Delete(dataDirectory, true);
 
-
+			RavenDbServer.EnsureCanListenToWhenInNonAdminContext(9090);
 			using (var ravenDbServer = new RavenDbServer(new RavenConfiguration
 			{
 				DataDirectory = dataDirectory,
-				Port = 8080,
+				Port = 9090,
 				AnonymousUserAccessMode = AnonymousUserAccessMode.All
 			}))
 			{
@@ -63,7 +67,7 @@ namespace Raven.StackOverflow.Etl
 
 				var indexing = Stopwatch.StartNew();
 				Console.WriteLine("Waiting for indexing");
-				while(ravenDbServer.Database.HasTasks)
+				while (ravenDbServer.Database.HasTasks)
 				{
 					Console.Write(".");
 					Thread.Sleep(50);
@@ -72,11 +76,10 @@ namespace Raven.StackOverflow.Etl
 				Console.WriteLine("Finishing indexing took: {0}", indexing.Elapsed);
 			}
 
-			Console.WriteLine("Total execution time {0}", sp.Elapsed);
 
-			foreach (var duration in durations.GroupBy(x=>x.Item1))
+			foreach (var duration in durations.GroupBy(x => x.Item1))
 			{
-				Console.WriteLine("{0} {1}", duration.Key, duration.Average(x=>x.Item2.TotalMilliseconds));
+				Console.WriteLine("{0} {1}", duration.Key, duration.Average(x => x.Item2.TotalMilliseconds));
 			}
 		}
 
@@ -84,7 +87,21 @@ namespace Raven.StackOverflow.Etl
 		{
 			Parallel.ForEach(from generator in taskGenerators
 							 from action in generator
-							 select action, action => action());
+							 select action,
+							 new ParallelOptions { MaxDegreeOfParallelism = 10 },
+							 action =>
+							 {
+								 try
+								 {
+									 action();
+								 }
+								 catch (WebException e)
+								 {
+									 var readToEnd = new StreamReader(e.Response.GetResponseStream()).ReadToEnd();
+									 Console.WriteLine(readToEnd);
+									 throw;
+								 }
+							 });
 
 			//foreach (var act in from generator in taskGenerators
 			//                              from action in generator
@@ -107,7 +124,7 @@ namespace Raven.StackOverflow.Etl
 					HttpWebResponse webResponse;
 					while (true)
 					{
-						var httpWebRequest = (HttpWebRequest)WebRequest.Create("http://localhost:8080/bulk_docs");
+						var httpWebRequest = (HttpWebRequest)WebRequest.Create("http://localhost:9090/bulk_docs");
 						httpWebRequest.Method = "POST";
 						using (var requestStream = httpWebRequest.GetRequestStream())
 						{
@@ -127,7 +144,7 @@ namespace Raven.StackOverflow.Etl
 								webResponse.StatusCode == HttpStatusCode.Conflict)
 							{
 								Console.WriteLine("{0} - {1} - {2} - {3}", Path.GetFileName(file), sp.Elapsed, webResponse.StatusCode,
-									Thread.CurrentThread.ManagedThreadId); 
+									Thread.CurrentThread.ManagedThreadId);
 								continue;
 							}
 
@@ -146,6 +163,7 @@ namespace Raven.StackOverflow.Etl
 
 		private static void GenerateDocumentsToFile(string path)
 		{
+
 			if (Directory.Exists("Docs"))
 				Directory.Delete("Docs", true);
 			Directory.CreateDirectory("Docs");
@@ -165,13 +183,13 @@ namespace Raven.StackOverflow.Etl
 		{
 			Console.WriteLine("Waiting for indexing to complete");
 			var sp2 = Stopwatch.StartNew();
-			while(documentDatabase.HasTasks)
+			while (documentDatabase.HasTasks)
 			{
 				documentDatabase.TransactionalStorage.Batch(actions =>
 				{
 					var indexesStat = actions.GetIndexesStats().First();
-					Console.WriteLine("{0} - {1:#,#} - {2:#,#} - {3}", indexesStat.Name, 
-						indexesStat.IndexingSuccesses, 
+					Console.WriteLine("{0} - {1:#,#} - {2:#,#} - {3}", indexesStat.Name,
+						indexesStat.IndexingSuccesses,
 						actions.GetDocumentsCount(),
 						sp2.Elapsed);
 
@@ -184,6 +202,7 @@ namespace Raven.StackOverflow.Etl
 
 		private static void GenerateJsonDocuments(EtlProcess process)
 		{
+			Console.WriteLine("Executing {0}", process);
 			var sp = Stopwatch.StartNew();
 			process.Execute();
 			Console.WriteLine("Executed {0} in {1}", process, sp.Elapsed);
