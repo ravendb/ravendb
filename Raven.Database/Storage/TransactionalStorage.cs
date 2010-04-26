@@ -131,6 +131,7 @@ namespace Raven.Database.Storage
 
 		private void ConfigureInstance(JET_INSTANCE jetInstance)
 		{
+			SystemParameters.CacheSizeMax = 65536; // 256 MB
 			new InstanceParameters(jetInstance)
 			{
 				CircularLog = true,
@@ -139,7 +140,7 @@ namespace Raven.Database.Storage
 				TempDirectory = Path.Combine(path, "temp"),
 				SystemDirectory = Path.Combine(path, "system"),
 				LogFileDirectory = Path.Combine(path, "logs"),
-				MaxVerPages = 16384,// Raven can use roughly 1 GB of version store
+				MaxVerPages = 4096, // 256 MB
 				BaseName = "RVN",
 				EventSource = "Raven",
 				LogBuffers = 256,
