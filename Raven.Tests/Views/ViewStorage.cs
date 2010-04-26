@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Threading;
 using Raven.Database.Storage;
 using Raven.Tests.Storage;
 using Xunit;
@@ -12,7 +13,7 @@ namespace Raven.Tests.Views
 
 		public ViewStorage()
 		{
-			transactionalStorage = new TransactionalStorage("raven.db.test.esent", () => { });
+			transactionalStorage = new TransactionalStorage("raven.db.test.esent", new SemaphoreSlim(TransactionalStorage.MaxSessions), () => { });
 			transactionalStorage.Initialize();
 		}
 
