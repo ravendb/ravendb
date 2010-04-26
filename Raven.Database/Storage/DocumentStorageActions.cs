@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
-using System.Threading;
 using log4net;
 using Microsoft.Isam.Esent.Interop;
 using Newtonsoft.Json.Linq;
@@ -11,7 +10,6 @@ using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
 using Raven.Database.Json;
 using Raven.Database.Tasks;
-using System.Linq;
 
 namespace Raven.Database.Storage
 {
@@ -20,29 +18,78 @@ namespace Raven.Database.Storage
 	{
 		private readonly IDictionary<string, JET_COLUMNID> detailsColumns;
 		protected readonly JET_DBID dbid;
-		protected Table Documents { get; set; }
+		private Table documents;
+		protected Table Documents
+		{
+			get { return documents ?? (documents = new Table(session, dbid, "documents", OpenTableGrbit.None)); }
+		}
+
 		protected readonly IDictionary<string, JET_COLUMNID> documentsColumns;
-		protected Table Transactions { get; set; }
+		private Table transactions;
+		protected Table Transactions
+		{
+			get { return transactions ?? (transactions = new Table(session, dbid, "transactions", OpenTableGrbit.None)); }
+		}
+
 		protected readonly IDictionary<string, JET_COLUMNID> transactionsColumns;
 
-		protected Table DocumentsModifiedByTransactions { get; set; }
+		private Table documentsModifiedByTransactions;
+		protected Table DocumentsModifiedByTransactions
+		{
+			get {
+				return documentsModifiedByTransactions ??
+					(documentsModifiedByTransactions =
+						new Table(session, dbid, "documents_modified_by_transaction", OpenTableGrbit.None));
+			}
+		}
+
 		protected readonly IDictionary<string, JET_COLUMNID> documentsModifiedByTransactionsColumns;
 
-		protected Table Files { get; set; }
+		private Table files;
+		protected Table Files
+		{
+			get { return files ?? (files = new Table(session, dbid, "files", OpenTableGrbit.None)); }
+		}
+
 		protected readonly IDictionary<string, JET_COLUMNID> filesColumns;
-		protected Table IndexesStats { get; set; }
+		private Table indexesStats;
+		protected Table IndexesStats
+		{
+			get { return indexesStats ?? (indexesStats = new Table(session, dbid, "indexes_stats", OpenTableGrbit.None)); }
+		}
+
 		private readonly IDictionary<string, JET_COLUMNID> indexesStatsColumns;
 		protected readonly ILog logger = LogManager.GetLogger(typeof (DocumentStorageActions));
-		protected Table MappedResults { get; set; }
+		private Table mappedResults;
+		protected Table MappedResults
+		{
+			get { return mappedResults ?? (mappedResults = new Table(session, dbid, "mapped_results", OpenTableGrbit.None)); }
+		}
+
 		private readonly IDictionary<string, JET_COLUMNID> mappedResultsColumns;
 		protected readonly Session session;
-		protected Table Tasks { get; set; }
+		private Table tasks;
+		
+		protected Table Tasks
+		{
+			get { return tasks ?? (tasks = new Table(session, dbid, "tasks", OpenTableGrbit.None)); }
+		}
+
 		protected readonly IDictionary<string, JET_COLUMNID> tasksColumns;
 		private readonly Transaction transaction;
-		protected Table Identity { get; set; }
+		private Table identity;
+		protected Table Identity
+		{
+			get { return identity ?? (identity = new Table(session, dbid, "identity_table", OpenTableGrbit.None)); }
+		}
+
 		protected readonly IDictionary<string, JET_COLUMNID> identityColumns;
-		protected Table Details { get; set; }
-		
+		private Table details;
+		protected Table Details
+		{
+			get { return details ?? (details = new Table(session, dbid, "details", OpenTableGrbit.None)); }
+		}
+
 		[CLSCompliant(false)]
 		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
 		public DocumentStorageActions(
@@ -63,16 +110,6 @@ namespace Raven.Database.Storage
 				session = new Session(instance);
 				transaction = new Transaction(session);
 				Api.JetOpenDatabase(session, database, null, out dbid, OpenDatabaseGrbit.None);
-
-				Documents = new Table(session, dbid, "documents", OpenTableGrbit.None);
-				Tasks = new Table(session, dbid, "tasks", OpenTableGrbit.None);
-				Files = new Table(session, dbid, "files", OpenTableGrbit.None);
-				IndexesStats = new Table(session, dbid, "indexes_stats", OpenTableGrbit.None);
-				MappedResults = new Table(session, dbid, "mapped_results", OpenTableGrbit.None);
-                DocumentsModifiedByTransactions = new Table(session, dbid, "documents_modified_by_transaction", OpenTableGrbit.None);
-			    Transactions = new Table(session, dbid, "transactions", OpenTableGrbit.None);
-				Identity = new Table(session, dbid, "identity_table", OpenTableGrbit.None);
-				Details = new Table(session, dbid, "details", OpenTableGrbit.None);
 
 				this.documentsColumns = documentsColumns;
 				this.tasksColumns = tasksColumns;
