@@ -1,7 +1,5 @@
 using System;
-using System.Text;
 using Newtonsoft.Json.Linq;
-using Raven.Database.Cache;
 using Raven.Database.Json;
 
 namespace Raven.Database
@@ -20,7 +18,7 @@ namespace Raven.Database
 			if (Projection != null)
 				return Projection;
 
-			var doc = JsonCache.ParseDocument(Etag, Data);
+			var doc = Data.ToJObject();
 			var etagProp = Metadata.Property("@etag");
 			if (etagProp == null)
 			{

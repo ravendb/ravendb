@@ -53,7 +53,7 @@ namespace Raven.Database.Indexing
 
                         currentId = newDocId;
                         CopyFieldsToDocumentButRemoveDuplicateValues(luceneDoc, fields);
-                    	log.DebugFormat("Indexing document {0}", luceneDoc);
+                    	log.DebugFormat("Index '{0}' resulted in: {1}", name, luceneDoc);
                         indexWriter.AddDocument(luceneDoc);
                     }
 

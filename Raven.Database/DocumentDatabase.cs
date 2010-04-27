@@ -7,7 +7,6 @@ using System.Threading;
 using log4net;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Raven.Database.Cache;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
@@ -215,9 +214,9 @@ namespace Raven.Database
                     if (doc.Delete)
                         Delete(doc.Key, null, null);
                     else
-                        Put(doc.Key, null, 
-							JsonCache.ParseDocument(doc.Etag,doc.Data),
-							JsonCache.ParseMetadata(doc.Etag, doc.Metadata), null);
+                        Put(doc.Key, null,
+							doc.Data.ToJObject(),
+							doc.Metadata.ToJObject(), null);
                 });
 				workContext.ShouldNotifyAboutWork();
             });

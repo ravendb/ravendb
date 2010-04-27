@@ -2,16 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
-using System.Threading;
 using log4net;
 using Microsoft.Isam.Esent.Interop;
 using Newtonsoft.Json.Linq;
-using Raven.Database.Cache;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
-using Raven.Database.Json;
 using Raven.Database.Tasks;
+using Raven.Database.Json;
 
 namespace Raven.Database.Storage
 {
@@ -92,8 +90,6 @@ namespace Raven.Database.Storage
 		{
 			get { return details ?? (details = new Table(session, dbid, "details", OpenTableGrbit.None)); }
 		}
-
-		private readonly IList<Action> onCommitActions = new List<Action>();
 
 		[CLSCompliant(false)]
 		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
@@ -216,7 +212,7 @@ namespace Raven.Database.Storage
 							Data = data,
 							Etag = etag,
 							Key = Api.RetrieveColumnAsString(session, DocumentsModifiedByTransactions, documentsModifiedByTransactionsColumns["key"], Encoding.Unicode),
-							Metadata = JsonCache.ParseMetadata(etag, Api.RetrieveColumn(session, DocumentsModifiedByTransactions, documentsModifiedByTransactionsColumns["metadata"]))
+							Metadata = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, documentsModifiedByTransactionsColumns["metadata"]).ToJObject()
 						};
 					}
 				}
@@ -237,17 +233,13 @@ namespace Raven.Database.Storage
 				Data = data,
 				Etag = existingEtag,
 				Key = Api.RetrieveColumnAsString(session, Documents, documentsColumns["key"], Encoding.Unicode),
-				Metadata = JsonCache.ParseMetadata(existingEtag, Api.RetrieveColumn(session, Documents, documentsColumns["metadata"]))
+				Metadata = Api.RetrieveColumn(session, Documents, documentsColumns["metadata"]).ToJObject()
 			};
 		}
 
 		public void Commit()
 		{
 			transaction.Commit(CommitTransactionGrbit.None);
-			foreach (var action in onCommitActions)
-			{
-				action();
-			}
 		}
 
 		public int GetNextIdentityValue(string name)
@@ -328,7 +320,7 @@ namespace Raven.Database.Storage
 					Key = Api.RetrieveColumnAsString(session, Documents, documentsColumns["key"], Encoding.Unicode),
 					Data = data,
 					Etag = etag,
-					Metadata = JsonCache.ParseMetadata(etag, Api.RetrieveColumn(session, Documents, documentsColumns["metadata"]))
+					Metadata = Api.RetrieveColumn(session, Documents, documentsColumns["metadata"]).ToJObject()
 				};
 				yield return new Tuple<JsonDocument, int>(doc, id);
 			} while (Api.TryMoveNext(session, Documents));
@@ -363,11 +355,7 @@ namespace Raven.Database.Storage
 
 				update.Save();
 			}
-			onCommitActions.Add(() =>
-			{
-				JsonCache.RememberMetadata(newEtag, metadata);
-				JsonCache.RememberDocument(newEtag, data);
-			});
+
 			logger.DebugFormat("Inserted a new document with key '{0}', update: {1}, ",
 							   key, isUpdate);
 
@@ -652,19 +640,18 @@ namespace Raven.Database.Storage
 			{
 				try
 				{
-					var taskId = Api.RetrieveColumnAsInt32(session, Tasks, tasksColumns["id"]);
 					var taskAsString = Api.RetrieveColumnAsString(session, Tasks, tasksColumns["task"], Encoding.Unicode);
-					var existingTask = TaskCache.ParseTask(taskId.Value, taskAsString);
+					var existingTask = Task.ToTask(taskAsString);
 					if (existingTask.TryMerge(task) == false)
 						continue;
-
+					taskAsString = existingTask.AsString();
 					using (var update = new Update(session, Tasks, JET_prep.Replace))
 					{
-						Api.SetColumn(session, Tasks, tasksColumns["task"], existingTask.AsString(), Encoding.Unicode);
+						Api.SetColumn(session, Tasks, tasksColumns["task"], taskAsString, Encoding.Unicode);
 						Api.SetColumn(session, Tasks, tasksColumns["supports_merging"], existingTask.SupportsMerging);
 						update.Save();
 					}
-					onCommitActions.Add(() => TaskCache.RememberTask(taskId.Value, task));
+					logger.DebugFormat("Updating task '{0}'", taskAsString);
 				}
 				catch (EsentErrorException e)
 				{
@@ -693,7 +680,6 @@ namespace Raven.Database.Storage
 			}
 			Api.JetGotoBookmark(session, Tasks, bookmark, actualBookmarkSize);
 			var taskId = Api.RetrieveColumnAsInt32(session, Tasks, tasksColumns["id"]);
-			onCommitActions.Add(() => TaskCache.RememberTask(taskId.Value, task));
 			if (logger.IsDebugEnabled)
 				logger.DebugFormat("New task '{0}'", task.AsString());
 		}
@@ -794,7 +780,7 @@ namespace Raven.Database.Storage
 			{
 				if (Api.TryMoveFirst(session, Tasks) == false)
 					return 0;
-				var first = (int)Api.RetrieveColumnAsInt32(session, Tasks,tasksColumns["id"]);
+				var first = (int)Api.RetrieveColumnAsInt32(session, Tasks, tasksColumns["id"]);
 				if (Api.TryMoveLast(session, Tasks) == false)
 					return 0;
 				var last = (int)Api.RetrieveColumnAsInt32(session, Tasks, tasksColumns["id"]);
@@ -944,9 +930,7 @@ namespace Raven.Database.Storage
 
 			do
 			{
-				var bytes = Api.RetrieveColumn(session, MappedResults, mappedResultsColumns["data"]);
-				var etag = new Guid(Api.RetrieveColumn(session, MappedResults, mappedResultsColumns["etag"]));
-				yield return JsonCache.ParseDocument(etag, bytes);
+				yield return Api.RetrieveColumn(session, MappedResults, mappedResultsColumns["data"]).ToJObject();
 			} while (Api.TryMoveNext(session, MappedResults));
 		}
 

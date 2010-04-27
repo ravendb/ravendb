@@ -38,12 +38,6 @@ select new {
 			db = new DocumentDatabase(new RavenConfiguration {DataDirectory = "raven.db.test.esent"});
 			db.PutIndex("CommentsCountPerBlog", new IndexDefinition{Map = map, Reduce = reduce, Indexes = {{"blog_id", FieldIndexing.Untokenized}}});
 			db.SpinBackgroundWorkers();
-
-			BasicConfigurator.Configure(
-				new OutputDebugStringAppender
-				{
-					Layout = new SimpleLayout()
-				});
 		}
 
 		#region IDisposable Members
@@ -55,6 +49,7 @@ select new {
 		}
 
 		#endregion
+
 
 		[Fact]
 		public void CanGetReducedValues()
@@ -73,9 +68,9 @@ select new {
 				"{blog_id: 3, comments: [{},{},{}]}",
 				"{blog_id: 5, comments: [{}]}",
 			};
-			foreach (var value in values)
+			for (int i = 0; i < values.Length; i++)
 			{
-                db.Put(Guid.NewGuid().ToString(), null, JObject.Parse(value), new JObject(), null);
+                db.Put("docs/"+i, null, JObject.Parse(values[i]), new JObject(), null);
 			}
 
 			QueryResult q = null;

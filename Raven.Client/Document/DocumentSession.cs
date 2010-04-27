@@ -1,16 +1,12 @@
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reflection;
-using System.Text;
 using System.Transactions;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Client;
 using System;
 using Raven.Database;
-using Raven.Database.Cache;
 using Raven.Database.Data;
 using Raven.Database.Json;
 
@@ -67,7 +63,7 @@ namespace Raven.Client.Document
 
 	    private T TrackEntity<T>(JsonDocument documentFound)
 	    {
-	        var jobject = JsonCache.ParseDocument(documentFound.Etag, documentFound.Data);
+	        var jobject = documentFound.Data.ToJObject();
 	        var entity = ConvertToEntity<T>(documentFound.Key, jobject);
 	        entitiesAndMetadata.Add(entity, new DocumentMetadata
 	        {

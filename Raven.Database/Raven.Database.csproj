@@ -97,7 +97,6 @@
   <ItemGroup>
     <Compile Include="AnonymousUserAccessMode.cs" />
     <Compile Include="BatchResult.cs" />
-    <Compile Include="Cache\CacheBuildingBlock.cs" />
     <Compile Include="Data\Attachment.cs" />
     <Compile Include="Data\CommandDataFactory.cs" />
     <Compile Include="Data\DatabaseStatistics.cs" />
@@ -131,13 +130,11 @@
     <Compile Include="Indexing\TaskExecuter.cs" />
     <Compile Include="Indexing\WorkContext.cs" />
     <Compile Include="Json\DynamicObjectExtensions.cs" />
-    <Compile Include="Cache\JsonCache.cs" />
     <Compile Include="Json\JsonEnumConverter.cs" />
     <Compile Include="Json\JsonExtensions.cs" />
     <Compile Include="Json\JsonPatcher.cs" />
     <Compile Include="Json\JsonToExpando.cs" />
     <Compile Include="Json\PatchRequest.cs" />
-    <Compile Include="Cache\TaskCache.cs" />
     <Compile Include="Linq\AbstractViewGenerator.cs" />
     <Compile Include="Linq\DynamicExpandoObject.cs" />
     <Compile Include="Linq\QueryParsingUtils.cs" />

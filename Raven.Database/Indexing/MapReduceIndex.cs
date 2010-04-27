@@ -58,7 +58,11 @@ namespace Raven.Database.Indexing
 
 				reduceKeys.Add(reduceKey);
 
-				actions.PutMappedResult(name, docId, reduceKey, JObject.FromObject(doc).ToString(Formatting.None));
+				var data = JObject.FromObject(doc).ToString(Formatting.None);
+				
+				log.DebugFormat("Mapped result for '{0}': '{1}'", name, data);
+
+				actions.PutMappedResult(name, docId, reduceKey, data);
 
 				actions.IncrementSuccessIndexing();
 			}
@@ -163,14 +167,14 @@ namespace Raven.Database.Indexing
 					{
 						luceneDoc.Add(field);
 					}
-
+					log.DebugFormat("Reduce key {0} result in index {1} gave document: {2}", reduceKey, name, luceneDoc);
 					indexWriter.AddDocument(luceneDoc);
 					actions.IncrementSuccessIndexing();
 				}
 
 				return true;
 			});
-			log.DebugFormat("Reduce resulted in {0} entires for {1} for reduce key {2}", count, name, reduceKey);
+			log.DebugFormat("Reduce resulted in {0} entries for {1} for reduce key {2}", count, name, reduceKey);
 		}
 	}
 }
