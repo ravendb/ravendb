@@ -455,5 +455,18 @@ namespace Raven.Database
 				return hasTasks;
 			}
 		}
+
+		public int ApproximateTaskCount
+		{
+			get
+			{
+				int approximateTaskCount = 0;
+				TransactionalStorage.Batch(actions =>
+				{
+					approximateTaskCount = actions.ApproximateTaskCount;
+				});
+				return approximateTaskCount;
+			}
+		}
 	}
 }

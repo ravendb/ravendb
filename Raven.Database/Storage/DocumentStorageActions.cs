@@ -780,6 +780,20 @@ namespace Raven.Database.Storage
 			}
 		}
 
+		public int ApproximateTaskCount
+		{
+			get
+			{
+				if (Api.TryMoveFirst(session, Tasks) == false)
+					return 0;
+				var first = (int)Api.RetrieveColumnAsInt32(session, Tasks,tasksColumns["id"]);
+				if (Api.TryMoveLast(session, Tasks) == false)
+					return 0;
+				var last = (int)Api.RetrieveColumnAsInt32(session, Tasks, tasksColumns["id"]);
+				return last - first;
+			}
+		}
+
 		public string GetFirstTask()
 		{
 			Api.MoveBeforeFirst(session, Tasks);
