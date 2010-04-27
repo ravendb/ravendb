@@ -23,18 +23,18 @@ namespace Raven.Scenarios
 		private readonly Regex[] guidFinders = new[]
 		{
 			new Regex(
-				@",""expectedETag"":""(\{{0,1}([0-9a-fA-F]){8}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){12}\}{0,1})"",")
+				@",""ExpectedETag"": ?""(\{{0,1}([0-9a-fA-F]){8}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){12}\}{0,1})"",",RegexOptions.IgnoreCase)
 			,
 			new Regex(
-				@"etag"":""(\{{0,1}([0-9a-fA-F]){8}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){12}\}{0,1})""",RegexOptions.IgnoreCase)
+				@"etag"": ?""(\{{0,1}([0-9a-fA-F]){8}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){12}\}{0,1})""",RegexOptions.IgnoreCase)
 			,
 			new Regex(
-				@"Key"":""(\{{0,1}([0-9a-fA-F]){8}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){12}\}{0,1})""", RegexOptions.IgnoreCase)
+				@"Key"": ?""(\{{0,1}([0-9a-fA-F]){8}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){12}\}{0,1})""", RegexOptions.IgnoreCase)
 			,
 			new Regex(
-				@"id"":""(\{{0,1}([0-9a-fA-F]){8}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){12}\}{0,1})""")
+				@"id"": ?""(\{{0,1}([0-9a-fA-F]){8}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){12}\}{0,1})""")
 			,
-			new Regex(@"Timestamp"":""\\/Date(\(\d\d\d\d\d\d\d\d\d\d\d\d\d[+|-]\d\d\d\d\))\\/"""),
+			new Regex(@"Timestamp"": ?""\\/Date(\(\d\d\d\d\d\d\d\d\d\d\d\d\d[+|-]\d\d\d\d\))\\/"""),
 		};
 
 		private string lastEtag;
