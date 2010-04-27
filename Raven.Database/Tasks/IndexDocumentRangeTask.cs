@@ -50,5 +50,15 @@ namespace Raven.Database.Tasks
 				context.IndexStorage.Index(Index, viewGenerator, docsToIndex, context, actions);
 			});
 		}
+
+		public override Task Clone()
+		{
+			return new IndexDocumentRangeTask
+			{
+				FromId = FromId,
+				Index = Index,
+				ToId = ToId,
+			};
+		}
 	}
 }

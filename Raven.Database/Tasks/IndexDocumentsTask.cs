@@ -70,5 +70,14 @@ namespace Raven.Database.Tasks
 				}
 			});
 		}
+
+		public override Task Clone()
+		{
+			return new IndexDocumentsTask
+			{
+				Index = Index,
+				Keys = Keys.ToArray(),
+			};
+		}
 	}
 }

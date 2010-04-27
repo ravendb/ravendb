@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Linq;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Indexing;
@@ -30,6 +31,15 @@ namespace Raven.Database.Tasks
 
 				context.IndexStorage.Reduce(Index, viewGenerator, mappedResults, context, actions, ReduceKey);
 			});
+		}
+
+		public override Task Clone()
+		{
+			return new ReduceTask
+			{
+				Index = Index,
+				ReduceKey = ReduceKey
+			};
 		}
 	}
 }

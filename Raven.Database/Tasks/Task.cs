@@ -46,5 +46,7 @@ namespace Raven.Database.Tasks
 		/// 	Another requirement is that executing task MUST be idempotent.
 		/// </summary>
 		public abstract void Execute(WorkContext context);
+
+		public abstract Task Clone();
 	}
 }

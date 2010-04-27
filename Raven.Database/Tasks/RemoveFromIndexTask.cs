@@ -27,5 +27,14 @@ namespace Raven.Database.Tasks
 				context.IndexStorage.RemoveFromIndex(indexName, Keys, context);
 			}
 		}
+
+		public override Task Clone()
+		{
+			return new RemoveFromIndexTask
+			{
+				Keys = Keys.ToArray(),
+				Index = Index,
+			};
+		}
 	}
 }
