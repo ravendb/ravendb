@@ -24,50 +24,34 @@ namespace Raven.Database.Indexing
 			while (context.DoWork)
 			{
 				var foundWork = false;
-				string taskAsJson = null;
+				Task task = null;
 				try
 				{
 					transactionalStorage.Batch(actions =>
 					{
-						taskAsJson = actions.GetFirstTask();
-						if (taskAsJson == null)
+						task = actions.GetMergedTask();
+						if (task == null)
 							return;
 
-						log.DebugFormat("Executing {0}", taskAsJson);
+						log.DebugFormat("Executing {0}", task);
 						foundWork = true;
 
-						ExecuteTask(taskAsJson);
+						try
+						{
+							task.Execute(context);
+						}
+						catch (Exception e)
+						{
+							log.WarnFormat(e, "Task {0} has failed and was deleted without completing any work", task);
+						}
 					});
 				}
 				catch (Exception e)
 				{
-#if DEBUG
-					Debugger.Launch();
-#endif
-					log.Error("Failed to execute task: " + taskAsJson, e);
+					log.Error("Failed to execute task: " + task, e);
 				}
 				if (foundWork == false)
 					context.WaitForWork();
-			}
-		}
-
-		private void ExecuteTask(string taskAsJson)
-		{
-			try
-			{
-				var task = Task.ToTask(taskAsJson);
-				try
-				{
-					task.Execute(context);
-				}
-				catch (Exception e)
-				{
-					log.WarnFormat(e, "Task {0} has failed and was deleted without completing any work", taskAsJson);
-				}
-			}
-			catch (Exception e)
-			{
-				log.ErrorFormat(e, "Could not create instance of a task: {0}", taskAsJson);
 			}
 		}
 	}

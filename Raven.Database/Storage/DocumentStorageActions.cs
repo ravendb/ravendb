@@ -616,57 +616,6 @@ namespace Raven.Database.Storage
 
 		public void AddTask(Task task)
 		{
-			if (task.SupportsMerging == false)
-			{
-				InsertNewTask(task);
-				return;
-			}
-
-			Api.JetSetCurrentIndex(session, Tasks, "mergables_by_task_type");
-			Api.MakeKey(session, Tasks, true, MakeKeyGrbit.NewKey);
-			Api.MakeKey(session, Tasks, task.Index, Encoding.Unicode, MakeKeyGrbit.None);
-			Api.MakeKey(session, Tasks, task.Type, Encoding.Unicode, MakeKeyGrbit.None);
-			// there are no tasks matching the current one, just insert it
-			if (Api.TrySeek(session, Tasks, SeekGrbit.SeekEQ) == false)
-			{
-				InsertNewTask(task);
-				return;
-			}
-			Api.MakeKey(session, Tasks, true, MakeKeyGrbit.NewKey);
-			Api.MakeKey(session, Tasks, task.Index, Encoding.Unicode, MakeKeyGrbit.None);
-			Api.MakeKey(session, Tasks, task.Type, Encoding.Unicode, MakeKeyGrbit.None);
-			Api.JetSetIndexRange(session, Tasks, SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
-			do
-			{
-				try
-				{
-					var taskAsString = Api.RetrieveColumnAsString(session, Tasks, tasksColumns["task"], Encoding.Unicode);
-					var existingTask = Task.ToTask(taskAsString);
-					if (existingTask.TryMerge(task) == false)
-						continue;
-					taskAsString = existingTask.AsString();
-					using (var update = new Update(session, Tasks, JET_prep.Replace))
-					{
-						Api.SetColumn(session, Tasks, tasksColumns["task"], taskAsString, Encoding.Unicode);
-						Api.SetColumn(session, Tasks, tasksColumns["supports_merging"], existingTask.SupportsMerging);
-						update.Save();
-					}
-					logger.DebugFormat("Updating task '{0}'", taskAsString);
-				}
-				catch (EsentErrorException e)
-				{
-					if (e.Error == JET_err.WriteConflict)
-						continue;
-					throw;
-				}
-				return;
-			} while (Api.TryMoveNext(session, Tasks));
-			// nothing that we could merge into, need to insert a new one
-			InsertNewTask(task);
-		}
-
-		private void InsertNewTask(Task task)
-		{
 			int actualBookmarkSize;
 			var bookmark = new byte[SystemParameters.BookmarkMost];
 			using (var update = new Update(session, Tasks, JET_prep.Insert))
@@ -788,12 +737,12 @@ namespace Raven.Database.Storage
 			}
 		}
 
-		public string GetFirstTask()
+		public Task GetMergedTask()
 		{
 			Api.MoveBeforeFirst(session, Tasks);
 			while (Api.TryMoveNext(session, Tasks))
 			{
-				var task = Api.RetrieveColumnAsString(session, Tasks, tasksColumns["task"], Encoding.Unicode);
+				var taskAsString = Api.RetrieveColumnAsString(session, Tasks, tasksColumns["task"], Encoding.Unicode);
 				try
 				{
 					Api.JetDelete(session, Tasks);
@@ -803,10 +752,72 @@ namespace Raven.Database.Storage
 					if (e.Error != JET_err.WriteConflict)
 						throw;
 				}
+				Task task;
+				try
+				{
+					task = Task.ToTask(taskAsString);
+				}
+				catch (Exception e)
+				{
+					logger.ErrorFormat(e, "Could not create instance of a task: {0}", taskAsString);
+					continue;
+				}
 
+				MergeSimilarTasks(task);
 				return task;
 			}
 			return null;
+		}
+
+		private void MergeSimilarTasks(Task task)
+		{
+			if (task.SupportsMerging == false)
+				return;
+
+			Api.JetSetCurrentIndex(session, Tasks, "mergables_by_task_type");
+			Api.MakeKey(session, Tasks, true, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, Tasks, task.Index, Encoding.Unicode, MakeKeyGrbit.None);
+			Api.MakeKey(session, Tasks, task.Type, Encoding.Unicode, MakeKeyGrbit.None);
+			// there are no tasks matching the current one, just return
+			if (Api.TrySeek(session, Tasks, SeekGrbit.SeekEQ) == false)
+			{
+				return;
+			}
+
+			Api.MakeKey(session, Tasks, true, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, Tasks, task.Index, Encoding.Unicode, MakeKeyGrbit.None);
+			Api.MakeKey(session, Tasks, task.Type, Encoding.Unicode, MakeKeyGrbit.None);
+			Api.JetSetIndexRange(session, Tasks, SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
+			do
+			{
+				try
+				{
+					var taskAsString = Api.RetrieveColumnAsString(session, Tasks, tasksColumns["task"], Encoding.Unicode);
+					Task existingTask;
+					try
+					{
+						existingTask = Task.ToTask(taskAsString);
+					}
+					catch (Exception e)
+					{
+						logger.ErrorFormat(e, "Could not create instance of a task: {0}", taskAsString);
+						Api.JetDelete(session, Tasks);
+						continue;
+					}
+					if (task.TryMerge(existingTask) == false)
+						continue;
+					Api.JetDelete(session, Tasks);
+				}
+				catch (EsentErrorException e)
+				{
+					if (e.Error == JET_err.WriteConflict)
+						continue;
+					throw;
+				}
+			} while (
+					task.SupportsMerging &&
+					Api.TryMoveNext(session, Tasks)
+				);
 		}
 
 		public int GetDocumentsCount()
