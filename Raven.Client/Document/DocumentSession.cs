@@ -10,6 +10,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Client.Client;
 using System;
 using Raven.Database;
+using Raven.Database.Cache;
 using Raven.Database.Data;
 using Raven.Database.Json;
 

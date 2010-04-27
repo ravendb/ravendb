@@ -1,6 +1,7 @@
 using System;
 using System.Text;
 using Newtonsoft.Json.Linq;
+using Raven.Database.Cache;
 using Raven.Database.Json;
 
 namespace Raven.Database
