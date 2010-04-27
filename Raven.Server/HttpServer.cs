@@ -97,17 +97,10 @@ namespace Raven.Server
 		private void HandleActualRequest(HttpListenerContext ctx)
 		{
 			var curReq = Interlocked.Increment(ref reqNum);
+			var sw = Stopwatch.StartNew();
 			try
 			{
-				logger.DebugFormat("Request #{0}: {1} {2}",
-				                   curReq,
-				                   ctx.Request.HttpMethod,
-				                   ctx.Request.Url.PathAndQuery
-					);
-				var sw = Stopwatch.StartNew();
 				DispatchRequest(ctx);
-				logger.DebugFormat("Request #{0}: {1} {2} - {3}",
-				                   curReq, ctx.Request.HttpMethod, ctx.Request.Url.PathAndQuery, sw.Elapsed);
 			}
 			catch (Exception e)
 			{
@@ -124,6 +117,8 @@ namespace Raven.Server
 				catch
 				{
 				}
+				logger.DebugFormat("Request #{0}: {1} {2} - {3}",
+									   curReq, ctx.Request.HttpMethod, ctx.Request.Url.PathAndQuery, sw.Elapsed);
 			}
 		}
 
