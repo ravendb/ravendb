@@ -6,6 +6,7 @@ using System.Threading;
 using log4net;
 using Microsoft.Isam.Esent.Interop;
 using Newtonsoft.Json.Linq;
+using Raven.Database.Cache;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
@@ -92,7 +93,7 @@ namespace Raven.Database.Storage
 			get { return details ?? (details = new Table(session, dbid, "details", OpenTableGrbit.None)); }
 		}
 
-		IList<Action> onCommitActions = new List<Action>();
+		private readonly IList<Action> onCommitActions = new List<Action>();
 
 		[CLSCompliant(false)]
 		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
@@ -599,8 +600,7 @@ namespace Raven.Database.Storage
 			if (Api.TrySeek(session, DocumentsModifiedByTransactions, SeekGrbit.SeekEQ) == false)
 				return;
 			Api.MakeKey(session, DocumentsModifiedByTransactions, txId.ToByteArray(), MakeKeyGrbit.NewKey);
-			Api.JetSetIndexRange(session, DocumentsModifiedByTransactions,
-								 SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
+			Api.JetSetIndexRange(session, DocumentsModifiedByTransactions, SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
 
 			do
 			{
@@ -647,13 +647,14 @@ namespace Raven.Database.Storage
 			Api.MakeKey(session, Tasks, true, MakeKeyGrbit.NewKey);
 			Api.MakeKey(session, Tasks, task.Index, Encoding.Unicode, MakeKeyGrbit.None);
 			Api.MakeKey(session, Tasks, task.Type, Encoding.Unicode, MakeKeyGrbit.None);
-			Api.JetSetIndexRange(session, Tasks, SetIndexRangeGrbit.RangeInclusive);
+			Api.JetSetIndexRange(session, Tasks, SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
 			do
 			{
 				try
 				{
+					var taskId = Api.RetrieveColumnAsInt32(session, Tasks, tasksColumns["id"]);
 					var taskAsString = Api.RetrieveColumnAsString(session, Tasks, tasksColumns["task"], Encoding.Unicode);
-					var existingTask = Task.ToTask(taskAsString);
+					var existingTask = TaskCache.ParseTask(taskId.Value, taskAsString);
 					if (existingTask.TryMerge(task) == false)
 						continue;
 
@@ -663,11 +664,13 @@ namespace Raven.Database.Storage
 						Api.SetColumn(session, Tasks, tasksColumns["supports_merging"], existingTask.SupportsMerging);
 						update.Save();
 					}
+					onCommitActions.Add(() => TaskCache.RememberTask(taskId.Value, task));
 				}
 				catch (EsentErrorException e)
 				{
 					if (e.Error == JET_err.WriteConflict)
 						continue;
+					throw;
 				}
 				return;
 			} while (Api.TryMoveNext(session, Tasks));
@@ -677,6 +680,8 @@ namespace Raven.Database.Storage
 
 		private void InsertNewTask(Task task)
 		{
+			int actualBookmarkSize;
+			var bookmark = new byte[SystemParameters.BookmarkMost];
 			using (var update = new Update(session, Tasks, JET_prep.Insert))
 			{
 				Api.SetColumn(session, Tasks, tasksColumns["task"], task.AsString(), Encoding.Unicode);
@@ -684,8 +689,11 @@ namespace Raven.Database.Storage
 				Api.SetColumn(session, Tasks, tasksColumns["task_type"], task.Type, Encoding.Unicode);
 				Api.SetColumn(session, Tasks, tasksColumns["supports_merging"], task.SupportsMerging);
 
-				update.Save();
+				update.Save(bookmark, bookmark.Length, out actualBookmarkSize);
 			}
+			Api.JetGotoBookmark(session, Tasks, bookmark, actualBookmarkSize);
+			var taskId = Api.RetrieveColumnAsInt32(session, Tasks, tasksColumns["id"]);
+			onCommitActions.Add(() => TaskCache.RememberTask(taskId.Value, task));
 			if (logger.IsDebugEnabled)
 				logger.DebugFormat("New task '{0}'", task.AsString());
 		}
