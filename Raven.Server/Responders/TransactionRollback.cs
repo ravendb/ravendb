@@ -19,7 +19,7 @@ namespace Raven.Server.Responders
         {
             var txId = context.Request.QueryString["tx"];
             Database.Rollback(new Guid(txId));
-            context.WriteJson(new { rollbacked = txId });
+            context.WriteJson(new { Rollbacked = txId });
         }
     }
 }

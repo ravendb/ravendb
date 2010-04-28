@@ -19,7 +19,7 @@ namespace Raven.Server.Responders
         {
             var txId = context.Request.QueryString["tx"];
             Database.Commit(new Guid(txId));
-            context.WriteJson(new {committed = txId});
+            context.WriteJson(new {Committed = txId});
         }
     }
 }
