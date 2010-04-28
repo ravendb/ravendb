@@ -49,7 +49,7 @@ namespace Raven.Server.Responders
 				return;
 			}
 			context.SetStatusToCreated("/indexes/" + index);
-			context.WriteJson(new { index = Database.PutIndex(index, data) });
+			context.WriteJson(new { Index = Database.PutIndex(index, data) });
 		}
 
 		private void OnGet(HttpListenerContext context, string index)
@@ -57,7 +57,7 @@ namespace Raven.Server.Responders
 			var definition = context.Request.QueryString["definition"];
 			if ("yes".Equals(definition, StringComparison.InvariantCultureIgnoreCase))
 			{
-				context.WriteJson(new {index = Database.IndexDefinitionStorage.GetIndexDefinition(index)});
+				context.WriteJson(new {Index = Database.IndexDefinitionStorage.GetIndexDefinition(index)});
 			}
 			else
 			{

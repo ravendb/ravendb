@@ -1,7 +1,7 @@
 using System;
 using System.Runtime.Serialization;
 
-namespace Raven.Server.Responders
+namespace Raven.Server.Exceptions
 {
 	[Serializable]
 	public class BadRequestException : Exception

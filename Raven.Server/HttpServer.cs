@@ -11,6 +11,7 @@ using Raven.Database;
 using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
 using Raven.Database.Storage;
+using Raven.Server.Exceptions;
 using Raven.Server.Responders;
 
 namespace Raven.Server

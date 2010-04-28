@@ -110,7 +110,7 @@
     <Compile Include="RavenService.Designer.cs">
       <DependentUpon>RavenService.cs</DependentUpon>
     </Compile>
-    <Compile Include="Responders\BadRequestException.cs" />
+    <Compile Include="Exceptions\BadRequestException.cs" />
     <Compile Include="Responders\DocumentBatch.cs" />
     <Compile Include="Responders\EnumerableExtensions.cs" />
     <Compile Include="Responders\RavenRoot.cs" />

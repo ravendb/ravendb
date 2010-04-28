@@ -59,7 +59,8 @@ namespace Raven.Server.Responders
 							context.SetStatusToNotFound();
 							break;
 						case PatchResult.Patched:
-							context.WriteJson(new {patched = true});
+							context.SetStatusToCreated("/docs/" + docId);
+							context.WriteJson(new {Patched = true});
 							break;
 						default:
 							throw new ArgumentOutOfRangeException("Value " + patchResult + " is not understood");
