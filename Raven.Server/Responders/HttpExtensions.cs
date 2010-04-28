@@ -57,7 +57,10 @@ namespace Raven.Server.Responders
 		{
 			context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
 			var streamWriter = new StreamWriter(context.Response.OutputStream);
-			var jsonTextWriter = new JsonTextWriter(streamWriter);
+			var jsonTextWriter = new JsonTextWriter(streamWriter)
+			{
+				Formatting = Formatting.Indented
+			};
 			obj.WriteTo(jsonTextWriter);
 			jsonTextWriter.Flush();
 			streamWriter.Flush();
