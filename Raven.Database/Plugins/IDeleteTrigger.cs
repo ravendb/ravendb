@@ -1,11 +1,9 @@
-﻿using Newtonsoft.Json.Linq;
-
-namespace Raven.Database.Plugins
+﻿namespace Raven.Database.Plugins
 {
-	public interface IDeleteTrigger : IRavenPlugin
+	public interface IDeleteTrigger
 	{
 		VetoResult AllowDelete(string key);
 		void OnDelete(string key);
-		void AfterDelete(string key);
+		void AfterCommit(string key);
 	}
 }

@@ -124,7 +124,7 @@
     <Compile Include="Indexing\SimpleIndex.cs" />
     <Compile Include="Plugins\IDeleteTrigger.cs" />
     <Compile Include="Plugins\IPutTrigger.cs" />
-    <Compile Include="Plugins\IRavenPlugin.cs" />
+    <Compile Include="Plugins\IRequiresDocumentDatabaseInitialization.cs" />
     <Compile Include="JsonDocument.cs" />
     <Compile Include="DocumentDatabase.cs" />
     <Compile Include="Exceptions\ConcurrencyException.cs" />

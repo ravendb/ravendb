@@ -1,4 +1,6 @@
 ﻿using System;
+using System.ComponentModel.Composition.Hosting;
+using System.ComponentModel.Composition.Primitives;
 using System.Configuration;
 using System.IO;
 using log4net.Config;
@@ -28,9 +30,24 @@ namespace Raven.Database
 			AnonymousUserAccessMode = GetAnonymousUserAccessMode();
 
 			ShouldCreateDefaultsWhenBuildingNewDatabaseFromScratch = true;
+
 		}
 
-		public string PluginsDirectory { get; set; }
+		private string pluginsDirectory;
+		public string PluginsDirectory
+		{
+			get { return pluginsDirectory; }
+			set
+			{
+				if (Container != null && containerExternallySet == false)
+				{
+					Container.Dispose();
+					Container = null;
+				}
+				
+				pluginsDirectory = value;
+			}
+		}
 
 		private static AnonymousUserAccessMode GetAnonymousUserAccessMode()
 		{
@@ -57,6 +74,18 @@ namespace Raven.Database
 
 		public string VirtualDirectory { get; set; }
 
+		private bool containerExternallySet;
+		private CompositionContainer container;
+		public CompositionContainer Container
+		{
+			get { return container ?? (container = new CompositionContainer(CreateCatalogsForPlugins())); }
+			set
+			{
+				containerExternallySet = true;
+				container = value;
+			}
+		}
+
 		public void LoadLoggingSettings()
 		{
 			XmlConfigurator.ConfigureAndWatch(
@@ -71,5 +100,14 @@ namespace Raven.Database
 		}
 
 		public event Action<DocumentDatabase> DatabaseCreatedFromScratch;
+
+		private ComposablePartCatalog CreateCatalogsForPlugins()
+		{
+			if (Directory.Exists(PluginsDirectory))
+				return new AggregateCatalog(
+					new AssemblyCatalog(typeof(DocumentDatabase).Assembly),
+					new DirectoryCatalog(PluginsDirectory));
+			return new AssemblyCatalog(typeof(DocumentDatabase).Assembly);
+		}
 	}
 }

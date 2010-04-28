@@ -2,7 +2,7 @@ using Lucene.Net.Documents;
 
 namespace Raven.Database.Plugins
 {
-	public interface IRavenPlugin
+	public interface IRequiresDocumentDatabaseInitialization
 	{
 		void Initialize(DocumentDatabase database);
 	}

@@ -2,13 +2,23 @@
 {
 	public class VetoResult
 	{
-		public VetoResult(bool allowed, string reason)
+		public static VetoResult Allowed
 		{
-			Allowed = allowed;
+			get { return new VetoResult(true, "allowed"); }
+		}
+
+		public static VetoResult Deny(string reason)
+		{
+			return new VetoResult(false, reason);
+		}
+
+		private VetoResult(bool allowed, string reason)
+		{
+			IsAllowed = allowed;
 			Reason = reason;
 		}
 
-		public bool Allowed { get; private set; }
+		public bool IsAllowed { get; private set; }
 		public string Reason { get; private set; }
 	}
 }

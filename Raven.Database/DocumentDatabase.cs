@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
-using System.ComponentModel.Composition.Hosting;
-using System.ComponentModel.Composition.Primitives;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security;
@@ -18,7 +16,6 @@ using Raven.Database.Json;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
-using Directory = System.IO.Directory;
 
 namespace Raven.Database
 {
@@ -39,7 +36,7 @@ namespace Raven.Database
 		{
 			this.configuration = configuration;
 			
-			new CompositionContainer(CreateCatalogsForPlugins(), true).ComposeParts(this);
+			configuration.Container.ComposeParts(this);
 		
 			workContext = new WorkContext();
 			TransactionalStorage = new TransactionalStorage(configuration.DataDirectory, workContext.NotifyAboutWork);
@@ -80,15 +77,9 @@ namespace Raven.Database
 			}
 	
 			configuration.RaiseDatabaseCreatedFromScratch(this);
-		}
 
-		private ComposablePartCatalog CreateCatalogsForPlugins()
-		{
-			if (Directory.Exists(configuration.PluginsDirectory))
-				return new AggregateCatalog(
-					new AssemblyCatalog(typeof (DocumentDatabase).Assembly),
-					new DirectoryCatalog(configuration.PluginsDirectory));
-			return new AssemblyCatalog(typeof(DocumentDatabase).Assembly);
+			PutTriggers.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+			DeleteTriggers.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
 		}
 
 		public DatabaseStatistics Statistics
@@ -194,7 +185,7 @@ namespace Raven.Database
 			});
 
 			TransactionalStorage
-				.ExecuteImmediatelyOrRegisterForSyncronization(() => PutTriggers.Apply(trigger => trigger.AfterPut(key, document, metadata)));
+				.ExecuteImmediatelyOrRegisterForSyncronization(() => PutTriggers.Apply(trigger => trigger.AfterCommit(key, document, metadata)));
 	
 		    return new PutResult
 		    {
@@ -207,7 +198,7 @@ namespace Raven.Database
 		{
 			var vetoResult = PutTriggers
 				.Select(trigger => new{Trigger = trigger, VetoResult = trigger.AllowPut(key, document,metadata)})
-				.FirstOrDefault(x=>x.VetoResult.Allowed == false);
+				.FirstOrDefault(x=>x.VetoResult.IsAllowed == false);
 			if(vetoResult != null)
 			{
 				throw new OperationVetoedException("PUT vetoed by " + vetoResult.Trigger + " because: " + vetoResult.VetoResult.Reason);
@@ -218,7 +209,7 @@ namespace Raven.Database
 		{
 			var vetoResult = DeleteTriggers
 				.Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowDelete(key) })
-				.FirstOrDefault(x => x.VetoResult.Allowed == false);
+				.FirstOrDefault(x => x.VetoResult.IsAllowed == false);
 			if (vetoResult != null)
 			{
 				throw new OperationVetoedException("DELETE vetoed by " + vetoResult.Trigger + " because: " + vetoResult.VetoResult.Reason);
@@ -259,7 +250,7 @@ namespace Raven.Database
 				workContext.ShouldNotifyAboutWork();
 			});
         	TransactionalStorage
-        		.ExecuteImmediatelyOrRegisterForSyncronization(() => DeleteTriggers.Apply(trigger => trigger.AfterDelete(key)));
+        		.ExecuteImmediatelyOrRegisterForSyncronization(() => DeleteTriggers.Apply(trigger => trigger.AfterCommit(key)));
 		}
 
         public void Commit(Guid txId)

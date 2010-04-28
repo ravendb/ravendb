@@ -2,10 +2,10 @@
 
 namespace Raven.Database.Plugins
 {
-	public interface IPutTrigger : IRavenPlugin
+	public interface IPutTrigger 
 	{
 		VetoResult AllowPut(string key, JObject document, JObject metadata);
 		void OnPut(string key, JObject document, JObject metadata);
-		void AfterPut(string key, JObject document, JObject metadata);
+		void AfterCommit(string key, JObject document, JObject metadata);
 	}
 }
