@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.Composition.Hosting;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.ConstrainedExecution;
@@ -14,25 +15,19 @@ namespace Raven.Database.Storage
 		public const int MaxSessions = 256;
 		private readonly ThreadLocal<DocumentStorageActions> current = new ThreadLocal<DocumentStorageActions>();
 		private readonly string database;
+		private readonly CompositionContainer container;
 		private readonly Action onCommit;
 		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
 		private readonly string path;
 		private bool disposed;
 
-		private IDictionary<string, JET_COLUMNID> documentsColumns;
-		private IDictionary<string, JET_COLUMNID> filesColumns;
-		private IDictionary<string, JET_COLUMNID> indexStatsColumns;
 		private JET_INSTANCE instance;
-		private IDictionary<string, JET_COLUMNID> mappedResultsColumns;
-		private IDictionary<string, JET_COLUMNID> tasksColumns;
-		private IDictionary<string, JET_COLUMNID> documentsModifiedByTransactionsColumns;
-		private IDictionary<string, JET_COLUMNID> transactionsColumns;
-		private IDictionary<string, JET_COLUMNID> identityColumns;
-		private IDictionary<string, JET_COLUMNID> detailsColumns;
+		private readonly TableColumnsCache tableColumnsCache = new TableColumnsCache();
 
-		public TransactionalStorage(string database, Action onCommit)
+		public TransactionalStorage(string database, CompositionContainer container, Action onCommit)
 		{
 			this.database = database;
+			this.container = container;
 			this.onCommit = onCommit;
 			path = database;
 			if (Path.IsPathRooted(database) == false)
@@ -105,23 +100,23 @@ namespace Raven.Database.Storage
 				{
 					Api.JetOpenDatabase(session, database, null, out dbid, OpenDatabaseGrbit.None);
 					using (var documents = new Table(session, dbid, "documents", OpenTableGrbit.None))
-						documentsColumns = Api.GetColumnDictionary(session, documents);
+						tableColumnsCache .DocumentsColumns = Api.GetColumnDictionary(session, documents);
 					using (var tasks = new Table(session, dbid, "tasks", OpenTableGrbit.None))
-						tasksColumns = Api.GetColumnDictionary(session, tasks);
+						tableColumnsCache.TasksColumns = Api.GetColumnDictionary(session, tasks);
 					using (var files = new Table(session, dbid, "files", OpenTableGrbit.None))
-						filesColumns = Api.GetColumnDictionary(session, files);
+						tableColumnsCache.FilesColumns = Api.GetColumnDictionary(session, files);
 					using (var indexStats = new Table(session, dbid, "indexes_stats", OpenTableGrbit.None))
-						indexStatsColumns = Api.GetColumnDictionary(session, indexStats);
+						tableColumnsCache.IndexesStatsColumns = Api.GetColumnDictionary(session, indexStats);
 					using (var mappedResults = new Table(session, dbid, "mapped_results", OpenTableGrbit.None))
-						mappedResultsColumns = Api.GetColumnDictionary(session, mappedResults);
+						tableColumnsCache.MappedResultsColumns = Api.GetColumnDictionary(session, mappedResults);
 					using (var documentsModifiedByTransactions = new Table(session, dbid, "documents_modified_by_transaction", OpenTableGrbit.None))
-						documentsModifiedByTransactionsColumns = Api.GetColumnDictionary(session, documentsModifiedByTransactions);
+						tableColumnsCache.DocumentsModifiedByTransactionsColumns = Api.GetColumnDictionary(session, documentsModifiedByTransactions);
 					using (var transactions = new Table(session, dbid, "transactions", OpenTableGrbit.None))
-						transactionsColumns = Api.GetColumnDictionary(session, transactions);
+						tableColumnsCache.TransactionsColumns = Api.GetColumnDictionary(session, transactions);
 					using (var identity = new Table(session, dbid, "identity_table", OpenTableGrbit.None))
-						identityColumns = Api.GetColumnDictionary(session, identity);
+						tableColumnsCache.IdentityColumns = Api.GetColumnDictionary(session, identity);
 					using (var details = new Table(session, dbid, "details", OpenTableGrbit.None))
-						detailsColumns = Api.GetColumnDictionary(session, details);
+						tableColumnsCache.DetailsColumns = Api.GetColumnDictionary(session, details);
 				}
 				finally
 				{
@@ -270,18 +265,7 @@ namespace Raven.Database.Storage
 
 		private void ExecuteBatch(Action<DocumentStorageActions> action)
 		{
-			using (var pht = new DocumentStorageActions(
-				instance,
-				database,
-				documentsColumns,
-				tasksColumns,
-				filesColumns,
-				indexStatsColumns,
-				mappedResultsColumns,
-				documentsModifiedByTransactionsColumns,
-				transactionsColumns,
-				identityColumns,
-				detailsColumns))
+			using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache))
 			{
 				current.Value = pht;
 				action(pht);

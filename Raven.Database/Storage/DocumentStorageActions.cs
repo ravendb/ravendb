@@ -16,7 +16,7 @@ namespace Raven.Database.Storage
 	[CLSCompliant(false)]
 	public class DocumentStorageActions : IDisposable
 	{
-		private readonly IDictionary<string, JET_COLUMNID> detailsColumns;
+		private readonly TableColumnsCache tableColumnsCache;
 		protected readonly JET_DBID dbid;
 		private Table documents;
 		protected Table Documents
@@ -24,14 +24,11 @@ namespace Raven.Database.Storage
 			get { return documents ?? (documents = new Table(session, dbid, "documents", OpenTableGrbit.None)); }
 		}
 
-		protected readonly IDictionary<string, JET_COLUMNID> documentsColumns;
 		private Table transactions;
 		protected Table Transactions
 		{
 			get { return transactions ?? (transactions = new Table(session, dbid, "transactions", OpenTableGrbit.None)); }
 		}
-
-		protected readonly IDictionary<string, JET_COLUMNID> transactionsColumns;
 
 		private Table documentsModifiedByTransactions;
 		protected Table DocumentsModifiedByTransactions
@@ -44,7 +41,6 @@ namespace Raven.Database.Storage
 			}
 		}
 
-		protected readonly IDictionary<string, JET_COLUMNID> documentsModifiedByTransactionsColumns;
 
 		private Table files;
 		protected Table Files
@@ -52,14 +48,12 @@ namespace Raven.Database.Storage
 			get { return files ?? (files = new Table(session, dbid, "files", OpenTableGrbit.None)); }
 		}
 
-		protected readonly IDictionary<string, JET_COLUMNID> filesColumns;
 		private Table indexesStats;
 		protected Table IndexesStats
 		{
 			get { return indexesStats ?? (indexesStats = new Table(session, dbid, "indexes_stats", OpenTableGrbit.None)); }
 		}
 
-		private readonly IDictionary<string, JET_COLUMNID> indexesStatsColumns;
 		protected readonly ILog logger = LogManager.GetLogger(typeof(DocumentStorageActions));
 		private Table mappedResults;
 		protected Table MappedResults
@@ -67,7 +61,6 @@ namespace Raven.Database.Storage
 			get { return mappedResults ?? (mappedResults = new Table(session, dbid, "mapped_results", OpenTableGrbit.None)); }
 		}
 
-		private readonly IDictionary<string, JET_COLUMNID> mappedResultsColumns;
 		protected readonly Session session;
 		private Table tasks;
 
@@ -76,7 +69,6 @@ namespace Raven.Database.Storage
 			get { return tasks ?? (tasks = new Table(session, dbid, "tasks", OpenTableGrbit.None)); }
 		}
 
-		protected readonly IDictionary<string, JET_COLUMNID> tasksColumns;
 		private readonly Transaction transaction;
 		private Table identity;
 		protected Table Identity
@@ -84,7 +76,6 @@ namespace Raven.Database.Storage
 			get { return identity ?? (identity = new Table(session, dbid, "identity_table", OpenTableGrbit.None)); }
 		}
 
-		protected readonly IDictionary<string, JET_COLUMNID> identityColumns;
 		private Table details;
 		protected Table Details
 		{
@@ -93,34 +84,14 @@ namespace Raven.Database.Storage
 
 		[CLSCompliant(false)]
 		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
-		public DocumentStorageActions(
-			JET_INSTANCE instance,
-			string database,
-			IDictionary<string, JET_COLUMNID> documentsColumns,
-			IDictionary<string, JET_COLUMNID> tasksColumns,
-			IDictionary<string, JET_COLUMNID> filesColumns,
-			IDictionary<string, JET_COLUMNID> indexesStatsColumns,
-			IDictionary<string, JET_COLUMNID> mappedResultsColumns,
-			IDictionary<string, JET_COLUMNID> documentsModifiedByTransactionsColumns,
-			IDictionary<string, JET_COLUMNID> transactionsColumns,
-			IDictionary<string, JET_COLUMNID> identityColumns,
-			IDictionary<string, JET_COLUMNID> detailsColumns)
+		public DocumentStorageActions(JET_INSTANCE instance, string database, TableColumnsCache tableColumnsCache)
 		{
+			this.tableColumnsCache = tableColumnsCache;
 			try
 			{
 				session = new Session(instance);
 				transaction = new Transaction(session);
 				Api.JetOpenDatabase(session, database, null, out dbid, OpenDatabaseGrbit.None);
-
-				this.documentsColumns = documentsColumns;
-				this.tasksColumns = tasksColumns;
-				this.filesColumns = filesColumns;
-				this.indexesStatsColumns = indexesStatsColumns;
-				this.mappedResultsColumns = mappedResultsColumns;
-				this.documentsModifiedByTransactionsColumns = documentsModifiedByTransactionsColumns;
-				this.transactionsColumns = transactionsColumns;
-				this.identityColumns = identityColumns;
-				this.detailsColumns = detailsColumns;
 			}
 			catch (Exception)
 			{
@@ -137,7 +108,7 @@ namespace Raven.Database.Storage
 				while (Api.TryMoveNext(session, Documents))
 				{
 					yield return
-						Api.RetrieveColumnAsString(session, Documents, documentsColumns["key"], Encoding.Unicode);
+						Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode);
 				}
 			}
 		}
@@ -196,23 +167,23 @@ namespace Raven.Database.Storage
 				Api.MakeKey(session, DocumentsModifiedByTransactions, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 				if (Api.TrySeek(session, DocumentsModifiedByTransactions, SeekGrbit.SeekEQ))
 				{
-					var txId = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, documentsModifiedByTransactionsColumns["locked_by_transaction"]);
+					var txId = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["locked_by_transaction"]);
 					if (new Guid(txId) == transactionInformation.Id)
 					{
-						if (Api.RetrieveColumnAsBoolean(session, DocumentsModifiedByTransactions, documentsModifiedByTransactionsColumns["delete_document"]) == true)
+						if (Api.RetrieveColumnAsBoolean(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["delete_document"]) == true)
 						{
 							logger.DebugFormat("Document with key '{0}' was deleted in transaction: {1}", key, transactionInformation.Id);
 							return null;
 						}
-						data = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, documentsModifiedByTransactionsColumns["data"]);
+						data = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"]);
 						logger.DebugFormat("Document with key '{0}' was found in transaction: {1}", key, transactionInformation.Id);
-						var etag = new Guid(Api.RetrieveColumn(session, DocumentsModifiedByTransactions, documentsModifiedByTransactionsColumns["etag"]));
+						var etag = new Guid(Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["etag"]));
 						return new JsonDocument
 						{
 							Data = data,
 							Etag = etag,
-							Key = Api.RetrieveColumnAsString(session, DocumentsModifiedByTransactions, documentsModifiedByTransactionsColumns["key"], Encoding.Unicode),
-							Metadata = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, documentsModifiedByTransactionsColumns["metadata"]).ToJObject()
+							Key = Api.RetrieveColumnAsString(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["key"], Encoding.Unicode),
+							Metadata = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["metadata"]).ToJObject()
 						};
 					}
 				}
@@ -225,15 +196,15 @@ namespace Raven.Database.Storage
 				logger.DebugFormat("Document with key '{0}' was not found", key);
 				return null;
 			}
-			data = Api.RetrieveColumn(session, Documents, documentsColumns["data"]);
+			data = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["data"]);
 			logger.DebugFormat("Document with key '{0}' was found", key);
-			var existingEtag = new Guid(Api.RetrieveColumn(session, Documents, documentsColumns["etag"]));
+			var existingEtag = new Guid(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
 			return new JsonDocument
 			{
 				Data = data,
 				Etag = existingEtag,
-				Key = Api.RetrieveColumnAsString(session, Documents, documentsColumns["key"], Encoding.Unicode),
-				Metadata = Api.RetrieveColumn(session, Documents, documentsColumns["metadata"]).ToJObject()
+				Key = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode),
+				Metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject()
 			};
 		}
 
@@ -250,15 +221,15 @@ namespace Raven.Database.Storage
 			{
 				using (var update = new Update(session, Identity, JET_prep.Insert))
 				{
-					Api.SetColumn(session, Identity, identityColumns["key"], name, Encoding.Unicode);
-					Api.SetColumn(session, Identity, identityColumns["val"], 1);
+					Api.SetColumn(session, Identity, tableColumnsCache.IdentityColumns["key"], name, Encoding.Unicode);
+					Api.SetColumn(session, Identity, tableColumnsCache.IdentityColumns["val"], 1);
 
 					update.Save();
 				}
 				return 1;
 			}
 
-			return Api.EscrowUpdate(session, Identity, identityColumns["val"], 1) + 1;
+			return Api.EscrowUpdate(session, Identity, tableColumnsCache.IdentityColumns["val"], 1) + 1;
 		}
 
 		public Tuple<int, int> FirstAndLastDocumentIds()
@@ -268,10 +239,10 @@ namespace Raven.Database.Storage
 			Api.JetSetCurrentIndex(session, Documents, "by_id");
 			Api.MoveBeforeFirst(session, Documents);
 			if (Api.TryMoveNext(session, Documents))
-				item1 = Api.RetrieveColumnAsInt32(session, Documents, documentsColumns["id"]).Value;
+				item1 = Api.RetrieveColumnAsInt32(session, Documents, tableColumnsCache.DocumentsColumns["id"]).Value;
 			Api.MoveAfterLast(session, Documents);
 			if (Api.TryMovePrevious(session, Documents))
-				item2 = Api.RetrieveColumnAsInt32(session, Documents, documentsColumns["id"]).Value;
+				item2 = Api.RetrieveColumnAsInt32(session, Documents, tableColumnsCache.DocumentsColumns["id"]).Value;
 			return new Tuple<int, int>(item1, item2);
 		}
 
@@ -307,20 +278,20 @@ namespace Raven.Database.Storage
 					hasMoreWork.Value = true;
 					yield break;
 				}
-				var id = Api.RetrieveColumnAsInt32(session, Documents, documentsColumns["id"],
+				var id = Api.RetrieveColumnAsInt32(session, Documents, tableColumnsCache.DocumentsColumns["id"],
 												   RetrieveColumnGrbit.RetrieveFromIndex).Value;
 				if (id > endId)
 					break;
 
-				var data = Api.RetrieveColumn(session, Documents, documentsColumns["data"]);
+				var data = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["data"]);
 				logger.DebugFormat("Document with id '{0}' was found, doc length: {1}", id, data.Length);
-				var etag = new Guid(Api.RetrieveColumn(session, Documents, documentsColumns["etag"]));
+				var etag = new Guid(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
 				var doc = new JsonDocument
 				{
-					Key = Api.RetrieveColumnAsString(session, Documents, documentsColumns["key"], Encoding.Unicode),
+					Key = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode),
 					Data = data,
 					Etag = etag,
-					Metadata = Api.RetrieveColumn(session, Documents, documentsColumns["metadata"]).ToJObject()
+					Metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject()
 				};
 				yield return new Tuple<JsonDocument, int>(doc, id);
 			} while (Api.TryMoveNext(session, Documents));
@@ -341,17 +312,17 @@ namespace Raven.Database.Storage
 			{
 				EnsureDocumentIsNotCreatedInAnotherTransaction(key, Guid.NewGuid());
 				if (Api.TryMoveFirst(session, Details))
-					Api.EscrowUpdate(session, Details, detailsColumns["document_count"], 1);
+					Api.EscrowUpdate(session, Details, tableColumnsCache.DetailsColumns["document_count"], 1);
 			}
 			Guid newEtag;
 			DocumentDatabase.UuidCreateSequential(out newEtag);
 
 			using (var update = new Update(session, Documents, isUpdate ? JET_prep.Replace : JET_prep.Insert))
 			{
-				Api.SetColumn(session, Documents, documentsColumns["key"], key, Encoding.Unicode);
-				Api.SetColumn(session, Documents, documentsColumns["data"], Encoding.UTF8.GetBytes(data.ToString()));
-				Api.SetColumn(session, Documents, documentsColumns["etag"], newEtag.ToByteArray());
-				Api.SetColumn(session, Documents, documentsColumns["metadata"], Encoding.UTF8.GetBytes(metadata.ToString()));
+				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["key"], key, Encoding.Unicode);
+				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["data"], Encoding.UTF8.GetBytes(data.ToString()));
+				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"], newEtag.ToByteArray());
+				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"], Encoding.UTF8.GetBytes(metadata.ToString()));
 
 				update.Save();
 			}
@@ -364,7 +335,7 @@ namespace Raven.Database.Storage
 
 		private void EnsureDocumentEtagMatch(string key, Guid? etag, string method)
 		{
-			var existingEtag = new Guid(Api.RetrieveColumn(session, Documents, documentsColumns["etag"]));
+			var existingEtag = new Guid(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
 			if (existingEtag != etag && etag != null)
 			{
 				throw new ConcurrencyException(method + " attempted on document '" + key +
@@ -383,13 +354,13 @@ namespace Raven.Database.Storage
 			Guid existingEtag;
 			if (Api.TrySeek(session, DocumentsModifiedByTransactions, SeekGrbit.SeekEQ))
 			{
-				if (Api.RetrieveColumnAsBoolean(session, DocumentsModifiedByTransactions, documentsModifiedByTransactionsColumns["delete_document"]) == true)
+				if (Api.RetrieveColumnAsBoolean(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["delete_document"]) == true)
 					return; // we ignore etags on deleted documents
-				existingEtag = new Guid(Api.RetrieveColumn(session, DocumentsModifiedByTransactions, documentsModifiedByTransactionsColumns["etag"]));
+				existingEtag = new Guid(Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["etag"]));
 			}
 			else
 			{
-				existingEtag = new Guid(Api.RetrieveColumn(session, Documents, documentsColumns["etag"]));
+				existingEtag = new Guid(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
 			}
 			if (existingEtag != etag && etag != null)
 			{
@@ -413,7 +384,7 @@ namespace Raven.Database.Storage
 				EnsureDocumentEtagMatchInTransaction(key, etag);
 				using (var update = new Update(session, Documents, JET_prep.Replace))
 				{
-					Api.SetColumn(session, Documents, documentsColumns["locked_by_transaction"], transactionInformation.Id.ToByteArray());
+					Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["locked_by_transaction"], transactionInformation.Id.ToByteArray());
 					update.Save();
 				}
 			}
@@ -431,12 +402,12 @@ namespace Raven.Database.Storage
 
 			using (var update = new Update(session, DocumentsModifiedByTransactions, isUpdateInTransaction ? JET_prep.Replace : JET_prep.Insert))
 			{
-				Api.SetColumn(session, DocumentsModifiedByTransactions, documentsModifiedByTransactionsColumns["key"], key, Encoding.Unicode);
-				Api.SetColumn(session, DocumentsModifiedByTransactions, documentsModifiedByTransactionsColumns["data"], Encoding.UTF8.GetBytes(data));
-				Api.SetColumn(session, DocumentsModifiedByTransactions, documentsModifiedByTransactionsColumns["etag"], newEtag.ToByteArray());
-				Api.SetColumn(session, DocumentsModifiedByTransactions, documentsModifiedByTransactionsColumns["metadata"], Encoding.UTF8.GetBytes(metadata));
-				Api.SetColumn(session, DocumentsModifiedByTransactions, documentsModifiedByTransactionsColumns["delete_document"], false);
-				Api.SetColumn(session, DocumentsModifiedByTransactions, documentsModifiedByTransactionsColumns["locked_by_transaction"], transactionInformation.Id.ToByteArray());
+				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["key"], key, Encoding.Unicode);
+				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"], Encoding.UTF8.GetBytes(data));
+				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["etag"], newEtag.ToByteArray());
+				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["metadata"], Encoding.UTF8.GetBytes(metadata));
+				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["delete_document"], false);
+				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["locked_by_transaction"], transactionInformation.Id.ToByteArray());
 
 				update.Save();
 			}
@@ -452,7 +423,7 @@ namespace Raven.Database.Storage
 			Api.MakeKey(session, DocumentsModifiedByTransactions, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, DocumentsModifiedByTransactions, SeekGrbit.SeekEQ) == false)
 				return;
-			byte[] docTxId = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, documentsModifiedByTransactionsColumns["locked_by_transaction"]);
+			byte[] docTxId = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["locked_by_transaction"]);
 			if (new Guid(docTxId) != txId)
 			{
 				throw new ConcurrencyException("A document with key: '" + key + "' is currently created in another transaction");
@@ -466,8 +437,8 @@ namespace Raven.Database.Storage
 			var isUpdate = Api.TrySeek(session, Transactions, SeekGrbit.SeekEQ);
 			using (var update = new Update(session, Transactions, isUpdate ? JET_prep.Replace : JET_prep.Insert))
 			{
-				Api.SetColumn(session, Transactions, transactionsColumns["tx_id"], transactionInformation.Id.ToByteArray());
-				Api.SetColumn(session, Transactions, transactionsColumns["timeout"],
+				Api.SetColumn(session, Transactions, tableColumnsCache.TransactionsColumns["tx_id"], transactionInformation.Id.ToByteArray());
+				Api.SetColumn(session, Transactions, tableColumnsCache.TransactionsColumns["timeout"],
 							  DateTime.UtcNow + transactionInformation.Timeout);
 				update.Save();
 			}
@@ -476,7 +447,7 @@ namespace Raven.Database.Storage
 		public void DeleteDocument(string key, Guid? etag)
 		{
 			if (Api.TryMoveFirst(session, Details))
-				Api.EscrowUpdate(session, Details, detailsColumns["document_count"], -1);
+				Api.EscrowUpdate(session, Details, tableColumnsCache.DetailsColumns["document_count"], -1);
 			Api.JetSetCurrentIndex(session, Documents, "by_key");
 			Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Documents, SeekGrbit.SeekEQ) == false)
@@ -508,7 +479,7 @@ namespace Raven.Database.Storage
 
 			using (var update = new Update(session, Documents, JET_prep.Replace))
 			{
-				Api.SetColumn(session, Documents, documentsColumns["locked_by_transaction"], transactionInformation.Id.ToByteArray());
+				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["locked_by_transaction"], transactionInformation.Id.ToByteArray());
 				update.Save();
 			}
 			EnsureTransactionExists(transactionInformation);
@@ -522,14 +493,14 @@ namespace Raven.Database.Storage
 
 			using (var update = new Update(session, DocumentsModifiedByTransactions, isUpdateInTransaction ? JET_prep.Replace : JET_prep.Insert))
 			{
-				Api.SetColumn(session, DocumentsModifiedByTransactions, documentsModifiedByTransactionsColumns["key"], key, Encoding.Unicode);
-				Api.SetColumn(session, DocumentsModifiedByTransactions, documentsModifiedByTransactionsColumns["data"],
-					Api.RetrieveColumn(session, Documents, documentsColumns["data"]));
-				Api.SetColumn(session, DocumentsModifiedByTransactions, documentsModifiedByTransactionsColumns["etag"], newEtag.ToByteArray());
-				Api.SetColumn(session, DocumentsModifiedByTransactions, documentsModifiedByTransactionsColumns["metadata"],
-					Api.RetrieveColumnAsString(session, Documents, documentsColumns["metadata"], Encoding.Unicode), Encoding.Unicode);
-				Api.SetColumn(session, DocumentsModifiedByTransactions, documentsModifiedByTransactionsColumns["delete_document"], true);
-				Api.SetColumn(session, DocumentsModifiedByTransactions, documentsModifiedByTransactionsColumns["locked_by_transaction"], transactionInformation.Id.ToByteArray());
+				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["key"], key, Encoding.Unicode);
+				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"],
+					Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["data"]));
+				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["etag"], newEtag.ToByteArray());
+				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["metadata"],
+					Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["metadata"], Encoding.Unicode), Encoding.Unicode);
+				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["delete_document"], true);
+				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["locked_by_transaction"], transactionInformation.Id.ToByteArray());
 
 				update.Save();
 			}
@@ -537,7 +508,7 @@ namespace Raven.Database.Storage
 
 		private void EnsureNotLockedByTransaction(string key, Guid? currentTransaction)
 		{
-			byte[] txId = Api.RetrieveColumn(session, Documents, documentsColumns["locked_by_transaction"]);
+			byte[] txId = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["locked_by_transaction"]);
 			if (txId == null)
 			{
 				return;
@@ -555,7 +526,7 @@ namespace Raven.Database.Storage
 				ResetTransactionOnCurrentDocument();
 				return;
 			}
-			var timeout = Api.RetrieveColumnAsDateTime(session, Transactions, transactionsColumns["timeout"]);
+			var timeout = Api.RetrieveColumnAsDateTime(session, Transactions, tableColumnsCache.TransactionsColumns["timeout"]);
 			if (DateTime.UtcNow > timeout)// the timeout for the transaction has passed
 			{
 				RollbackTransaction(guid);
@@ -594,11 +565,11 @@ namespace Raven.Database.Storage
 			{
 				var documentInTransactionData = new DocumentInTransactionData
 				{
-					Data = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, documentsModifiedByTransactionsColumns["data"]),
-					Delete = Api.RetrieveColumnAsBoolean(session, DocumentsModifiedByTransactions, documentsModifiedByTransactionsColumns["delete_document"]).Value,
-					Etag = new Guid(Api.RetrieveColumn(session, DocumentsModifiedByTransactions, documentsModifiedByTransactionsColumns["etag"])),
-					Key = Api.RetrieveColumnAsString(session, DocumentsModifiedByTransactions, documentsModifiedByTransactionsColumns["key"], Encoding.Unicode),
-					Metadata = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, documentsModifiedByTransactionsColumns["metadata"]),
+					Data = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"]),
+					Delete = Api.RetrieveColumnAsBoolean(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["delete_document"]).Value,
+					Etag = new Guid(Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["etag"])),
+					Key = Api.RetrieveColumnAsString(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["key"], Encoding.Unicode),
+					Metadata = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["metadata"]),
 				};
 				Api.JetDelete(session, DocumentsModifiedByTransactions);
 				perDocumentModified(documentInTransactionData);
@@ -609,7 +580,7 @@ namespace Raven.Database.Storage
 		{
 			using (var update = new Update(session, Documents, JET_prep.Replace))
 			{
-				Api.SetColumn(session, Documents, documentsColumns["locked_by_transaction"], null);
+				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["locked_by_transaction"], null);
 				update.Save();
 			}
 		}
@@ -620,15 +591,15 @@ namespace Raven.Database.Storage
 			var bookmark = new byte[SystemParameters.BookmarkMost];
 			using (var update = new Update(session, Tasks, JET_prep.Insert))
 			{
-				Api.SetColumn(session, Tasks, tasksColumns["task"], task.AsString(), Encoding.Unicode);
-				Api.SetColumn(session, Tasks, tasksColumns["for_index"], task.Index, Encoding.Unicode);
-				Api.SetColumn(session, Tasks, tasksColumns["task_type"], task.Type, Encoding.Unicode);
-				Api.SetColumn(session, Tasks, tasksColumns["supports_merging"], task.SupportsMerging);
+				Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["task"], task.AsString(), Encoding.Unicode);
+				Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["for_index"], task.Index, Encoding.Unicode);
+				Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["task_type"], task.Type, Encoding.Unicode);
+				Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["supports_merging"], task.SupportsMerging);
 
 				update.Save(bookmark, bookmark.Length, out actualBookmarkSize);
 			}
 			Api.JetGotoBookmark(session, Tasks, bookmark, actualBookmarkSize);
-			var taskId = Api.RetrieveColumnAsInt32(session, Tasks, tasksColumns["id"]);
+			var taskId = Api.RetrieveColumnAsInt32(session, Tasks, tableColumnsCache.TasksColumns["id"]);
 			if (logger.IsDebugEnabled)
 				logger.DebugFormat("New task '{0}'", task.AsString());
 		}
@@ -640,7 +611,7 @@ namespace Raven.Database.Storage
 			var isUpdate = Api.TrySeek(session, Files, SeekGrbit.SeekEQ);
 			if (isUpdate)
 			{
-				var existingEtag = new Guid(Api.RetrieveColumn(session, Files, filesColumns["etag"]));
+				var existingEtag = new Guid(Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]));
 				if (existingEtag != etag && etag != null)
 				{
 					throw new ConcurrencyException("PUT attempted on attachment '" + key +
@@ -654,17 +625,17 @@ namespace Raven.Database.Storage
 			else
 			{
 				if (Api.TryMoveFirst(session, Details))
-					Api.EscrowUpdate(session, Details, detailsColumns["attachment_count"], 1);
+					Api.EscrowUpdate(session, Details, tableColumnsCache.DetailsColumns["attachment_count"], 1);
 			}
 
 			Guid newETag;
 			DocumentDatabase.UuidCreateSequential(out newETag);
 			using (var update = new Update(session, Files, isUpdate ? JET_prep.Replace : JET_prep.Insert))
 			{
-				Api.SetColumn(session, Files, filesColumns["name"], key, Encoding.Unicode);
-				Api.SetColumn(session, Files, filesColumns["data"], data);
-				Api.SetColumn(session, Files, filesColumns["etag"], newETag.ToByteArray());
-				Api.SetColumn(session, Files, filesColumns["metadata"], headers, Encoding.Unicode);
+				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["name"], key, Encoding.Unicode);
+				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["data"], data);
+				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["etag"], newETag.ToByteArray());
+				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["metadata"], headers, Encoding.Unicode);
 
 				update.Save();
 			}
@@ -674,7 +645,7 @@ namespace Raven.Database.Storage
 		public void DeleteAttachment(string key, Guid? etag)
 		{
 			if (Api.TryMoveFirst(session, Details))
-				Api.EscrowUpdate(session, Details, detailsColumns["attachment_count"], -1);
+				Api.EscrowUpdate(session, Details, tableColumnsCache.DetailsColumns["attachment_count"], -1);
 			Api.JetSetCurrentIndex(session, Files, "by_name");
 			Api.MakeKey(session, Files, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Files, SeekGrbit.SeekEQ) == false)
@@ -682,7 +653,7 @@ namespace Raven.Database.Storage
 				logger.DebugFormat("Attachment with key '{0}' was not found, and considered deleted", key);
 				return;
 			}
-			var fileEtag = new Guid(Api.RetrieveColumn(session, Files, filesColumns["etag"]));
+			var fileEtag = new Guid(Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]));
 			if (fileEtag != etag && etag != null)
 			{
 				throw new ConcurrencyException("DELETE attempted on attachment '" + key +
@@ -706,11 +677,11 @@ namespace Raven.Database.Storage
 				return null;
 			}
 
-			var metadata = Api.RetrieveColumnAsString(session, Files, filesColumns["metadata"], Encoding.Unicode);
+			var metadata = Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["metadata"], Encoding.Unicode);
 			return new Attachment
 			{
-				Data = Api.RetrieveColumn(session, Files, filesColumns["data"]),
-				Etag = new Guid(Api.RetrieveColumn(session, Files, filesColumns["etag"])),
+				Data = Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["data"]),
+				Etag = new Guid(Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"])),
 				Metadata = JObject.Parse(metadata)
 			};
 		}
@@ -729,10 +700,10 @@ namespace Raven.Database.Storage
 			{
 				if (Api.TryMoveFirst(session, Tasks) == false)
 					return 0;
-				var first = (int)Api.RetrieveColumnAsInt32(session, Tasks, tasksColumns["id"]);
+				var first = (int)Api.RetrieveColumnAsInt32(session, Tasks, tableColumnsCache.TasksColumns["id"]);
 				if (Api.TryMoveLast(session, Tasks) == false)
 					return 0;
-				var last = (int)Api.RetrieveColumnAsInt32(session, Tasks, tasksColumns["id"]);
+				var last = (int)Api.RetrieveColumnAsInt32(session, Tasks, tableColumnsCache.TasksColumns["id"]);
 				return last - first;
 			}
 		}
@@ -742,7 +713,7 @@ namespace Raven.Database.Storage
 			Api.MoveBeforeFirst(session, Tasks);
 			while (Api.TryMoveNext(session, Tasks))
 			{
-				var taskAsString = Api.RetrieveColumnAsString(session, Tasks, tasksColumns["task"], Encoding.Unicode);
+				var taskAsString = Api.RetrieveColumnAsString(session, Tasks, tableColumnsCache.TasksColumns["task"], Encoding.Unicode);
 				try
 				{
 					Api.JetDelete(session, Tasks);
@@ -792,7 +763,7 @@ namespace Raven.Database.Storage
 			{
 				try
 				{
-					var taskAsString = Api.RetrieveColumnAsString(session, Tasks, tasksColumns["task"], Encoding.Unicode);
+					var taskAsString = Api.RetrieveColumnAsString(session, Tasks, tableColumnsCache.TasksColumns["task"], Encoding.Unicode);
 					Task existingTask;
 					try
 					{
@@ -823,7 +794,7 @@ namespace Raven.Database.Storage
 		public int GetDocumentsCount()
 		{
 			if (Api.TryMoveFirst(session, Details))
-				return Api.RetrieveColumnAsInt32(session, Details, detailsColumns["document_count"]).Value;
+				return Api.RetrieveColumnAsInt32(session, Details, tableColumnsCache.DetailsColumns["document_count"]).Value;
 			return 0;
 		}
 
@@ -837,17 +808,17 @@ namespace Raven.Database.Storage
 
 		public void IncrementIndexingAttempt()
 		{
-			Api.EscrowUpdate(session, IndexesStats, indexesStatsColumns["attempts"], 1);
+			Api.EscrowUpdate(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["attempts"], 1);
 		}
 
 		public void IncrementSuccessIndexing()
 		{
-			Api.EscrowUpdate(session, IndexesStats, indexesStatsColumns["successes"], 1);
+			Api.EscrowUpdate(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["successes"], 1);
 		}
 
 		public void IncrementIndexingFailure()
 		{
-			Api.EscrowUpdate(session, IndexesStats, indexesStatsColumns["errors"], 1);
+			Api.EscrowUpdate(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["errors"], 1);
 		}
 
 		public IEnumerable<IndexStats> GetIndexesStats()
@@ -857,13 +828,13 @@ namespace Raven.Database.Storage
 			{
 				yield return new IndexStats
 				{
-					Name = Api.RetrieveColumnAsString(session, IndexesStats, indexesStatsColumns["key"]),
+					Name = Api.RetrieveColumnAsString(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["key"]),
 					IndexingAttempts =
-						Api.RetrieveColumnAsInt32(session, IndexesStats, indexesStatsColumns["attempts"]).Value,
+						Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["attempts"]).Value,
 					IndexingSuccesses =
-						Api.RetrieveColumnAsInt32(session, IndexesStats, indexesStatsColumns["successes"]).Value,
+						Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["successes"]).Value,
 					IndexingErrors =
-						Api.RetrieveColumnAsInt32(session, IndexesStats, indexesStatsColumns["errors"]).Value,
+						Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["errors"]).Value,
 				};
 			}
 		}
@@ -872,7 +843,7 @@ namespace Raven.Database.Storage
 		{
 			using (var update = new Update(session, IndexesStats, JET_prep.Insert))
 			{
-				Api.SetColumn(session, IndexesStats, indexesStatsColumns["key"], name, Encoding.Unicode);
+				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["key"], name, Encoding.Unicode);
 
 				update.Save();
 			}
@@ -889,7 +860,7 @@ namespace Raven.Database.Storage
 
 		public void DecrementIndexingAttempt()
 		{
-			Api.EscrowUpdate(session, IndexesStats, indexesStatsColumns["attempts"], -1);
+			Api.EscrowUpdate(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["attempts"], -1);
 		}
 
 		public IndexFailureInformation GetFailureRate(string index)
@@ -898,9 +869,9 @@ namespace Raven.Database.Storage
 			return new IndexFailureInformation
 			{
 				Name = index,
-				Attempts = Api.RetrieveColumnAsInt32(session, IndexesStats, indexesStatsColumns["attempts"]).Value,
-				Errors = Api.RetrieveColumnAsInt32(session, IndexesStats, indexesStatsColumns["errors"]).Value,
-				Successes = Api.RetrieveColumnAsInt32(session, IndexesStats, indexesStatsColumns["successes"]).Value
+				Attempts = Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["attempts"]).Value,
+				Errors = Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["errors"]).Value,
+				Successes = Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["successes"]).Value
 			};
 		}
 
@@ -917,11 +888,11 @@ namespace Raven.Database.Storage
 
 			using (var update = new Update(session, MappedResults, isUpdate ? JET_prep.Replace : JET_prep.Insert))
 			{
-				Api.SetColumn(session, MappedResults, mappedResultsColumns["view"], view, Encoding.Unicode);
-				Api.SetColumn(session, MappedResults, mappedResultsColumns["document_key"], docId, Encoding.Unicode);
-				Api.SetColumn(session, MappedResults, mappedResultsColumns["reduce_key"], reduceKey, Encoding.Unicode);
-				Api.SetColumn(session, MappedResults, mappedResultsColumns["data"], Encoding.UTF8.GetBytes(data));
-				Api.SetColumn(session, MappedResults, mappedResultsColumns["etag"], etag.ToByteArray());
+				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"], view, Encoding.Unicode);
+				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["document_key"], docId, Encoding.Unicode);
+				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"], reduceKey, Encoding.Unicode);
+				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["data"], Encoding.UTF8.GetBytes(data));
+				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"], etag.ToByteArray());
 
 				update.Save();
 			}
@@ -941,7 +912,7 @@ namespace Raven.Database.Storage
 
 			do
 			{
-				yield return Api.RetrieveColumn(session, MappedResults, mappedResultsColumns["data"]).ToJObject();
+				yield return Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["data"]).ToJObject();
 			} while (Api.TryMoveNext(session, MappedResults));
 		}
 
@@ -959,7 +930,7 @@ namespace Raven.Database.Storage
 			Api.JetSetIndexRange(session, MappedResults, SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive);
 			do
 			{
-				var reduceKey = Api.RetrieveColumnAsString(session, MappedResults, mappedResultsColumns["reduce_key"],
+				var reduceKey = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"],
 														   Encoding.Unicode);
 				reduceKeys.Add(reduceKey);
 				Api.JetDelete(session, MappedResults);
