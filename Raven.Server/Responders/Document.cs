@@ -59,7 +59,7 @@ namespace Raven.Server.Responders
 							context.SetStatusToNotFound();
 							break;
 						case PatchResult.Patched:
-							context.SetStatusToCreated("/docs/" + docId);
+							context.Response.Headers["Location"] = "/docs/" + docId;
 							context.WriteJson(new {Patched = true});
 							break;
 						default:
