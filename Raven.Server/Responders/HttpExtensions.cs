@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Server.Exceptions;
 
 namespace Raven.Server.Responders
 {
@@ -44,8 +45,11 @@ namespace Raven.Server.Responders
 			var streamWriter = new StreamWriter(context.Response.OutputStream);
 			new JsonSerializer
 			{
-				Converters = {new JsonToJsonConverter()}
-			}.Serialize(streamWriter, obj);
+				Converters = {new JsonToJsonConverter()},
+			}.Serialize(new JsonTextWriter(streamWriter)
+			{
+				Formatting = Formatting.Indented
+			}, obj);
 			streamWriter.Flush();
 		}
 
@@ -208,8 +212,14 @@ namespace Raven.Server.Responders
 		{
 			var filePath = Path.Combine(ravenPath, docPath);
 			byte[] bytes;
+			var etagValue = context.Request.Headers["If-Match"];
 			if (File.Exists(filePath) == false)
 			{
+				if(string.IsNullOrEmpty(etagValue))
+				{
+					context.SetStatusToNotModified();
+					return;
+				}
 				string resourceName = "Raven.Server.WebUI." + docPath.Replace("/", ".");
 				using (var resource = typeof(HttpExtensions).Assembly.GetManifestResourceStream(resourceName))
 				{
@@ -220,10 +230,18 @@ namespace Raven.Server.Responders
 					}
 					bytes = resource.ReadData();
 				}
+				context.Response.Headers["ETag"] = resourceName;
 			}
 			else
 			{
+				var fileEtag = File.GetLastWriteTimeUtc(filePath).ToString("G");
+				if (etagValue == fileEtag)
+				{
+					context.SetStatusToNotModified();
+					return;
+				}
 				bytes = File.ReadAllBytes(filePath);
+				context.Response.Headers["ETag"] = fileEtag;
 			}
 			context.Response.OutputStream.Write(bytes, 0, bytes.Length);
 			context.Response.OutputStream.Flush();
