@@ -8,6 +8,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using ICSharpCode.SharpZipLib.Zip;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Server;
 using Raven.Server.Responders;
@@ -66,7 +68,7 @@ namespace Raven.Scenarios
 							.Where(x => x.Name.StartsWith("raw/"))
 							.Where(x => Path.GetExtension(x.Name) == ".txt")
 							.GroupBy(x => x.Name.Split('_').First())
-							.Select(x => new {Request = x.First(), Response = x.Last()})
+							.Select(x => new { Request = x.First(), Response = x.Last() })
 							.ToArray();
 
 						foreach (var pair in zipEntries)
@@ -121,15 +123,15 @@ namespace Raven.Scenarios
 				var reqParts = sr.ReadLine().Split(' ');
 				var uriString = reqParts[1].Replace(":8080/", ":" + testPort + "/");
 				var uri = GetUri_WorkaroundForStrangeBug(uriString);
-				var req = (HttpWebRequest) WebRequest.Create(uri);
+				var req = (HttpWebRequest)WebRequest.Create(uri);
 				req.Method = reqParts[0];
 
 				string header;
 				while (string.IsNullOrEmpty((header = sr.ReadLine())) == false)
 				{
-					var headerParts = header.Split(new[] {": "}, 2, StringSplitOptions.None);
+					var headerParts = header.Split(new[] { ": " }, 2, StringSplitOptions.None);
 					if (
-						new[] {"Host", "Content-Length", "User-Agent"}.Any(
+						new[] { "Host", "Content-Length", "User-Agent" }.Any(
 							s => s.Equals(headerParts[0], StringComparison.InvariantCultureIgnoreCase)))
 						continue;
 					if ((headerParts[0] == "If-Match" || headerParts[0] == "If-None-Match") &&
@@ -153,7 +155,7 @@ namespace Raven.Scenarios
 					return new Tuple<string, NameValueCollection, string>(
 						new StreamReader(webResponse.GetResponseStream()).ReadToEnd(),
 						webResponse.Headers,
-						"HTTP/" + webResponse.ProtocolVersion + " " + (int) webResponse.StatusCode + " " +
+						"HTTP/" + webResponse.ProtocolVersion + " " + (int)webResponse.StatusCode + " " +
 							webResponse.StatusDescription);
 				}
 			}
@@ -194,11 +196,11 @@ namespace Raven.Scenarios
 			HttpWebResponse webResponse;
 			try
 			{
-				webResponse = (HttpWebResponse) req.GetResponse();
+				webResponse = (HttpWebResponse)req.GetResponse();
 			}
 			catch (WebException e)
 			{
-				webResponse = (HttpWebResponse) e.Response;
+				webResponse = (HttpWebResponse)e.Response;
 			}
 			return webResponse;
 		}
@@ -210,7 +212,111 @@ namespace Raven.Scenarios
 
 		private void CompareResponses(byte[] response, Tuple<string, NameValueCollection, string> actual, string request)
 		{
-			var responseAsString = HandleChunking(response);
+			var responseAsString = UpdateResponseToMatchCurrentEtags(actual, HandleChunking(response));
+			var sr = new StringReader(responseAsString);
+			CompareHttpStatus(actual, sr, request);
+			CompareHeaders(actual, sr, request);
+
+			if (actual.Item2["Content-Type"] != null && actual.Item2["Content-Type"].Contains("json"))
+			{
+				CompareContentByJson(actual, sr, request);
+			}
+			else
+			{
+				CompareContentLineByLine(actual, sr, request);
+			}
+		}
+
+		private void CompareContentByJson(Tuple<string, NameValueCollection, string> actual, StringReader sr, string request)
+		{
+			if(actual.Item1.Length == 0)
+			{
+				if(sr.ReadToEnd().Length != 0)
+					throw new InvalidDataException(
+						string.Format("Request {0} differs, expected no content, but response had content",
+							  responseNumber));
+				return;
+			}
+			var rr = new StringReader(actual.Item1);
+			var actualResponse = JToken.ReadFrom(new JsonTextReader(rr));
+			var expectedResponse = JToken.ReadFrom(new JsonTextReader(sr));
+			if (new JTokenEqualityComparer().Equals(expectedResponse, actualResponse) == false)
+			{
+				var outputName = Path.GetFileNameWithoutExtension(file) + " request #" + responseNumber + ".txt";
+				var expectedString = expectedResponse.ToString(Formatting.None);
+				var actualString = actualResponse.ToString(Formatting.None);
+
+				var firstDiff = FindFirstDiff(expectedString, actualString);
+
+				File.WriteAllText(outputName, expectedString + Environment.NewLine);
+				File.AppendAllText(outputName, actualString + Environment.NewLine);
+				File.AppendAllText(outputName, new string(' ', firstDiff) + "^");
+
+				throw new InvalidDataException(
+					string.Format("Request {0} differs. Request:\r\n{1}, output written to: {2}",
+								  responseNumber, request, outputName));
+			}
+		}
+
+		private void CompareContentLineByLine(Tuple<string, NameValueCollection, string> actual, StringReader sr, string request)
+		{
+			string expectedLine;
+			var rr = new StringReader(actual.Item1);
+			var line = 0;
+			while (string.IsNullOrEmpty((expectedLine = sr.ReadLine())) == false)
+			{
+				line++;
+				var actualLine = rr.ReadLine();
+				if (expectedLine != actualLine)
+				{
+					var firstDiff = FindFirstDiff(expectedLine, actualLine);
+					var outputName = Path.GetFileNameWithoutExtension(file) + " request #" + responseNumber + ".txt";
+					File.WriteAllText(outputName, expectedLine + Environment.NewLine);
+					File.AppendAllText(outputName, actualLine + Environment.NewLine);
+					File.AppendAllText(outputName, new string(' ', firstDiff) + "^");
+
+					throw new InvalidDataException(
+						string.Format("Request {0} line {1} differs. Request:\r\n{2}, output written to: {3}",
+									  responseNumber, line, request, outputName));
+				}
+			}
+		}
+
+		private void CompareHeaders(Tuple<string, NameValueCollection, string> actual, StringReader sr, string request)
+		{
+			string header;
+			while (string.IsNullOrEmpty((header = sr.ReadLine())) == false)
+			{
+				var parts = header.Split(new[] { ": " }, 2, StringSplitOptions.None);
+				if (parts[0] == "Content-Length")
+					continue;
+				if (parts[0] == "Date" || parts[0] == "ETag" || parts[0] == "Location")
+				{
+					Assert.Contains(parts[0], actual.Item2.AllKeys);
+					continue;
+				}
+				if (actual.Item2[parts[0]] != parts[1])
+				{
+					throw new InvalidDataException(
+						string.Format("Request {0} header {1} differs. Expected {2}, Actual {3}\r\nRequest:\r\n{4}",
+									  responseNumber, parts[0], parts[1], actual.Item2[parts[0]], request));
+				}
+			}
+		}
+
+		private void CompareHttpStatus(Tuple<string, NameValueCollection, string> actual, StringReader sr, string request)
+		{
+			var statusLine = sr.ReadLine();
+			if (statusLine != actual.Item3)
+			{
+				throw new InvalidDataException(
+					string.Format("Request {0} status differs. Expected {1}, Actual {2}\r\nRequest:\r\n{3}",
+								  responseNumber, statusLine, actual.Item3, request));
+			}
+		}
+
+		private string UpdateResponseToMatchCurrentEtags(Tuple<string, NameValueCollection, string> actual, string responseAsString)
+		{
 			foreach (var finder in guidFinders)
 			{
 				var actuals = finder.Matches(actual.Item1);
@@ -230,53 +336,7 @@ namespace Raven.Scenarios
 					}
 				}
 			}
-			var sr = new StringReader(responseAsString);
-			var statusLine = sr.ReadLine();
-			if (statusLine != actual.Item3)
-			{
-				throw new InvalidDataException(
-					string.Format("Request {0} status differs. Expected {1}, Actual {2}\r\nRequest:\r\n{3}",
-					              responseNumber, statusLine, actual.Item3, request));
-			}
-			string header;
-			while (string.IsNullOrEmpty((header = sr.ReadLine())) == false)
-			{
-				var parts = header.Split(new[] {": "}, 2, StringSplitOptions.None);
-				if (parts[0] == "Content-Length")
-					continue;
-				if (parts[0] == "Date" || parts[0] == "ETag" || parts[0] == "Location")
-				{
-					Assert.Contains(parts[0], actual.Item2.AllKeys);
-					continue;
-				}
-				if (actual.Item2[parts[0]] != parts[1])
-				{
-					throw new InvalidDataException(
-						string.Format("Request {0} header {1} differs. Expected {2}, Actual {3}\r\nRequest:\r\n{4}",
-						              responseNumber, parts[0], parts[1], actual.Item2[parts[0]], request));
-				}
-			}
-
-			string expectedLine;
-			var rr = new StringReader(actual.Item1);
-			var line = 0;
-			while (string.IsNullOrEmpty((expectedLine = sr.ReadLine())) == false)
-			{
-				line++;
-				var actualLine = rr.ReadLine();
-				if (expectedLine != actualLine)
-				{
-					var firstDiff = FindFirstDiff(expectedLine, actualLine);
-					var outputName = Path.GetFileNameWithoutExtension(file) + " request #" + responseNumber + ".txt";
-					File.WriteAllText(outputName, expectedLine + Environment.NewLine);
-					File.AppendAllText(outputName, actualLine + Environment.NewLine);
-					File.AppendAllText(outputName, new string(' ', firstDiff) + "^");
-
-					throw new InvalidDataException(
-						string.Format("Request {0} line {1} differs. Request:\r\n{2}, output written to: {3}",
-						              responseNumber, line, request, outputName));
-				}
-			}
+			return responseAsString;
 		}
 
 		private static int FindFirstDiff(string expectedLine, string actualLine)
@@ -327,7 +387,7 @@ namespace Raven.Scenarios
 				if (readByte == -1)
 					return null;
 				prev = cur;
-				cur = (byte) readByte;
+				cur = (byte)readByte;
 				chunkSizeBytes.Add(cur);
 			} while (!(prev == '\r' && cur == '\n')); // (cur != '\n' && chunkSizeBytes.LastOrDefault() != '\r');
 
