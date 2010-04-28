@@ -23,11 +23,14 @@ namespace Raven.Database
 
 			VirtualDirectory = ConfigurationManager.AppSettings["VirtualDirectory"];
 
+			PluginsDirectory = ConfigurationManager.AppSettings["PluginsDirectory"] ?? "Plugins";
 
 			AnonymousUserAccessMode = GetAnonymousUserAccessMode();
 
 			ShouldCreateDefaultsWhenBuildingNewDatabaseFromScratch = true;
 		}
+
+		public string PluginsDirectory { get; set; }
 
 		private static AnonymousUserAccessMode GetAnonymousUserAccessMode()
 		{

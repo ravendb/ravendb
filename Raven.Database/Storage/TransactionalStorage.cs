@@ -1,12 +1,9 @@
 using System;
-using System.Collections.Generic;
-using System.ComponentModel.Composition.Hosting;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.ConstrainedExecution;
 using System.Threading;
 using Microsoft.Isam.Esent.Interop;
-using Raven.Database.Exceptions;
 
 namespace Raven.Database.Storage
 {
@@ -15,7 +12,6 @@ namespace Raven.Database.Storage
 		public const int MaxSessions = 256;
 		private readonly ThreadLocal<DocumentStorageActions> current = new ThreadLocal<DocumentStorageActions>();
 		private readonly string database;
-		private readonly CompositionContainer container;
 		private readonly Action onCommit;
 		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
 		private readonly string path;
@@ -24,10 +20,9 @@ namespace Raven.Database.Storage
 		private JET_INSTANCE instance;
 		private readonly TableColumnsCache tableColumnsCache = new TableColumnsCache();
 
-		public TransactionalStorage(string database, CompositionContainer container, Action onCommit)
+		public TransactionalStorage(string database, Action onCommit)
 		{
 			this.database = database;
-			this.container = container;
 			this.onCommit = onCommit;
 			path = database;
 			if (Path.IsPathRooted(database) == false)
@@ -272,6 +267,16 @@ namespace Raven.Database.Storage
 				pht.Commit();
 				onCommit();
 			}
+		}
+
+		public void ExecuteImmediatelyOrRegisterForSyncronization(Action action)
+		{
+			if(current.Value == null)
+			{
+				action();
+				return;
+			}
+			current.Value.OnCommit += action;
 		}
 	}
 }

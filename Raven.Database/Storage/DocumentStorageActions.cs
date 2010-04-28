@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.Diagnostics;
 using System.Text;
 using log4net;
@@ -8,6 +9,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
+using Raven.Database.Plugins;
 using Raven.Database.Tasks;
 using Raven.Database.Json;
 
@@ -16,6 +18,7 @@ namespace Raven.Database.Storage
 	[CLSCompliant(false)]
 	public class DocumentStorageActions : IDisposable
 	{
+		public event Action OnCommit = delegate { }; 
 		private readonly TableColumnsCache tableColumnsCache;
 		protected readonly JET_DBID dbid;
 		private Table documents;
@@ -211,6 +214,7 @@ namespace Raven.Database.Storage
 		public void Commit()
 		{
 			transaction.Commit(CommitTransactionGrbit.None);
+			OnCommit();
 		}
 
 		public int GetNextIdentityValue(string name)

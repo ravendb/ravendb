@@ -76,6 +76,7 @@
       <HintPath>..\SharedLibs\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.configuration" />
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
@@ -113,12 +114,17 @@
     <Compile Include="Data\SortedField.cs" />
     <Compile Include="Exceptions\IndexDisabledException.cs" />
     <Compile Include="Data\IndexQuery.cs" />
+    <Compile Include="Exceptions\OperationVetoedException.cs" />
+    <Compile Include="Extensions\EnumerableExtensions.cs" />
     <Compile Include="Indexing\FieldIndexing.cs" />
     <Compile Include="Indexing\FieldStorage.cs" />
     <Compile Include="Indexing\IndexDefinition.cs" />
     <Compile Include="Indexing\MapReduceIndex.cs" />
     <Compile Include="Indexing\QueryBuilder.cs" />
     <Compile Include="Indexing\SimpleIndex.cs" />
+    <Compile Include="Plugins\IDeleteTrigger.cs" />
+    <Compile Include="Plugins\IPutTrigger.cs" />
+    <Compile Include="Plugins\IRavenPlugin.cs" />
     <Compile Include="JsonDocument.cs" />
     <Compile Include="DocumentDatabase.cs" />
     <Compile Include="Exceptions\ConcurrencyException.cs" />
@@ -142,11 +148,13 @@
     <Compile Include="Linq\IndexingFunc.cs" />
     <Compile Include="Linq\PrivateExtensions\LinqOnDynamic.cs" />
     <Compile Include="PatchResult.cs" />
+    <Compile Include="Plugins\VetoResult.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="PutResult.cs" />
     <Compile Include="RavenConfiguration.cs" />
     <Compile Include="Storage\IndexCreationOptions.cs" />
     <Compile Include="Storage\DocumentInTransactionData.cs" />
+    <Compile Include="Storage\TableColumnsCache.cs" />
     <Compile Include="Tasks\IndexDocumentRangeTask.cs" />
     <Compile Include="Tasks\IndexDocumentsTask.cs" />
     <Compile Include="Tasks\ReduceTask.cs" />

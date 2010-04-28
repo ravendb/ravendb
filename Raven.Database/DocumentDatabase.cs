@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.Composition;
+using System.ComponentModel.Composition.Hosting;
+using System.ComponentModel.Composition.Primitives;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security;
@@ -12,13 +15,21 @@ using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
+using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
+using Directory = System.IO.Directory;
 
 namespace Raven.Database
 {
 	public class DocumentDatabase : IDisposable
 	{
+		[ImportMany]
+		public IEnumerable<IPutTrigger> PutTriggers { get; set; }
+
+		[ImportMany]
+		public IEnumerable<IDeleteTrigger> DeleteTriggers { get; set; }
+
 		private readonly RavenConfiguration configuration;
 		private readonly WorkContext workContext;
 		private Thread[] backgroundWorkers = new Thread[0];
@@ -27,8 +38,12 @@ namespace Raven.Database
 		public DocumentDatabase(RavenConfiguration configuration)
 		{
 			this.configuration = configuration;
+			
+			new CompositionContainer(CreateCatalogsForPlugins(), true).ComposeParts(this);
+		
 			workContext = new WorkContext();
 			TransactionalStorage = new TransactionalStorage(configuration.DataDirectory, workContext.NotifyAboutWork);
+			;
 			bool newDb;
 			try
 			{
@@ -65,6 +80,15 @@ namespace Raven.Database
 			}
 	
 			configuration.RaiseDatabaseCreatedFromScratch(this);
+		}
+
+		private ComposablePartCatalog CreateCatalogsForPlugins()
+		{
+			if (Directory.Exists(configuration.PluginsDirectory))
+				return new AggregateCatalog(
+					new AssemblyCatalog(typeof (DocumentDatabase).Assembly),
+					new DirectoryCatalog(configuration.PluginsDirectory));
+			return new AssemblyCatalog(typeof(DocumentDatabase).Assembly);
 		}
 
 		public DatabaseStatistics Statistics
@@ -155,7 +179,10 @@ namespace Raven.Database
 				metadata.Add("@id", new JValue(key));
 				if (transactionInformation == null)
                 {
-                    etag = actions.AddDocument(key, etag, document, metadata);
+                	AssertPutOperationNotVetoed(key, metadata, document);
+                	PutTriggers.Apply(trigger => trigger.OnPut(key, document, metadata));
+
+					etag = actions.AddDocument(key, etag, document, metadata);
 					actions.AddTask(new IndexDocumentsTask { Index = "*", Keys = new[] { key } });
                 }
                 else
@@ -165,11 +192,37 @@ namespace Raven.Database
                 }
 				workContext.ShouldNotifyAboutWork();
 			});
+
+			TransactionalStorage
+				.ExecuteImmediatelyOrRegisterForSyncronization(() => PutTriggers.Apply(trigger => trigger.AfterPut(key, document, metadata)));
+	
 		    return new PutResult
 		    {
 		        Key = key,
 		        ETag = (Guid)etag
 		    };
+		}
+
+		private void AssertPutOperationNotVetoed(string key, JObject metadata, JObject document)
+		{
+			var vetoResult = PutTriggers
+				.Select(trigger => new{Trigger = trigger, VetoResult = trigger.AllowPut(key, document,metadata)})
+				.FirstOrDefault(x=>x.VetoResult.Allowed == false);
+			if(vetoResult != null)
+			{
+				throw new OperationVetoedException("PUT vetoed by " + vetoResult.Trigger + " because: " + vetoResult.VetoResult.Reason);
+			}
+		}
+
+		private void AssertDeleteOperationNotVetoed(string key)
+		{
+			var vetoResult = DeleteTriggers
+				.Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowDelete(key) })
+				.FirstOrDefault(x => x.VetoResult.Allowed == false);
+			if (vetoResult != null)
+			{
+				throw new OperationVetoedException("DELETE vetoed by " + vetoResult.Trigger + " because: " + vetoResult.VetoResult.Reason);
+			}
 		}
 
 		private static void RemoveReservedProperties(JObject document)
@@ -192,6 +245,10 @@ namespace Raven.Database
 			{
                 if (transactionInformation == null)
                 {
+					AssertDeleteOperationNotVetoed(key);
+
+                	DeleteTriggers.Apply(trigger => trigger.OnDelete(key));
+
                     actions.DeleteDocument(key, etag);
                     actions.AddTask(new RemoveFromIndexTask {Index = "*", Keys = new[] {key}});
                 }
@@ -201,6 +258,8 @@ namespace Raven.Database
                 }
 				workContext.ShouldNotifyAboutWork();
 			});
+        	TransactionalStorage
+        		.ExecuteImmediatelyOrRegisterForSyncronization(() => DeleteTriggers.Apply(trigger => trigger.AfterDelete(key)));
 		}
 
         public void Commit(Guid txId)
