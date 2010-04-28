@@ -4,7 +4,7 @@ namespace Raven.Client
 {
     public interface IDocumentStore : IDisposable
     {
-		event Action<string, int, object> Stored;
+		event Action<string, object> Stored;
 		
 		string Identifier { get; set; }
 

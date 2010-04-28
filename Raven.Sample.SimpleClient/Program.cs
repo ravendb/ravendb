@@ -11,7 +11,7 @@ namespace Raven.Sample.SimpleClient
     {
         static void Main(string[] args)
         {
-            using (var documentStore = new DocumentStore("localhost", 8080).Initialise())
+			using (var documentStore = new DocumentStore { Url = "http://localhost:8080" }.Initialise())
             using (var session = documentStore.OpenSession())
             {
                 //session.Store(new Company { Name = "Company 1", Region = "A" });

@@ -40,7 +40,7 @@ namespace Raven.Client.Tests.Document
 		{
 			using (var server = GetNewServer(port, path))
 			{
-				var documentStore = new DocumentStore("localhost", port);
+				var documentStore = new DocumentStore { Url = "http://localhost:"+ port };
 				documentStore.Initialise();
 
 				var session = documentStore.OpenSession();
@@ -56,7 +56,7 @@ namespace Raven.Client.Tests.Document
 		{
 			using (var server = GetNewServer(port, path))
 			{
-				var documentStore = new DocumentStore("localhost", port);
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
 				documentStore.Initialise();
 				var batchResults = documentStore
 					.DatabaseCommands
@@ -97,8 +97,8 @@ namespace Raven.Client.Tests.Document
         {
             using (var server = GetNewServer(port, path))
             {
-                var documentStore = new DocumentStore("localhost", port);
-                documentStore.Initialise();
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+				documentStore.Initialise();
 
                 var session = documentStore.OpenSession();
                 session.Store(new Company { Name = "Company A", Id = "1"});
@@ -121,8 +121,8 @@ namespace Raven.Client.Tests.Document
         {
             using (var server = GetNewServer(port, path))
             {
-                var documentStore = new DocumentStore("localhost", port);
-                documentStore.Initialise();
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+				documentStore.Initialise();
 
                 var session = documentStore.OpenSession();
                 var entity = new Company { Name = "Company" };
@@ -145,8 +145,8 @@ namespace Raven.Client.Tests.Document
         {
             using (var server = GetNewServer(port, path))
             {
-                var documentStore = new DocumentStore("localhost", port);
-                documentStore.Initialise();
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+				documentStore.Initialise();
                 var session = documentStore.OpenSession();
                 var company = new Company { Name = "Company 1", Phone = 5 };
                 session.Store(company);
@@ -173,8 +173,8 @@ namespace Raven.Client.Tests.Document
         {
             using (var server = GetNewServer(port, path))
             {
-                var documentStore = new DocumentStore("localhost", port);
-                documentStore.Initialise();
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+				documentStore.Initialise();
 
                 var session = documentStore.OpenSession();
                 session.UseOptimisticConcurrency = true;
@@ -199,7 +199,7 @@ namespace Raven.Client.Tests.Document
 		{
 			using (var server = GetNewServer(port, path))
 			{
-				var documentStore = new DocumentStore("localhost", port);
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
 				documentStore.Initialise();
 
 				var session = documentStore.OpenSession();
@@ -222,7 +222,7 @@ namespace Raven.Client.Tests.Document
 		{
 			using (var server = GetNewServer(port, path))
 			{
-				var documentStore = new DocumentStore("localhost", port);
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
 				documentStore.Initialise();
 
 				var session1 = documentStore.OpenSession();
@@ -246,7 +246,7 @@ namespace Raven.Client.Tests.Document
 		{
 			using (var server = GetNewServer(port, path))
 			{
-				var documentStore = new DocumentStore("localhost", port);
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
 				documentStore.Initialise();
 
 				var session1 = documentStore.OpenSession();
@@ -269,7 +269,7 @@ namespace Raven.Client.Tests.Document
 		{
 			using (var server = GetNewServer(port, path))
 			{
-				var documentStore = new DocumentStore("localhost", port);
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
 				documentStore.Initialise();
 
 				var session = documentStore.OpenSession();

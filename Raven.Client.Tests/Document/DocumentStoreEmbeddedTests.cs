@@ -32,7 +32,6 @@ namespace Raven.Client.Tests.Document
 			var documentStore = new DocumentStore
 			{
 				DataDirectory = path,
-				Conventions = {FindIdentityProperty = q => q.Name == "Id"}
 			};
 			documentStore.Initialise();
 			return documentStore;

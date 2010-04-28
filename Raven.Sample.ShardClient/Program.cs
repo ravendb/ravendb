@@ -13,8 +13,8 @@ namespace Raven.Sample.ShardClient
         static void Main(string[] args)
         {
             var shards = new Shards { 
-                new DocumentStore("localhost", 8080) { Identifier="Shard1" }, 
-                new DocumentStore("localhost", 8081) { Identifier="Shard2" } 
+                new DocumentStore { Identifier="Shard1", Url = "http://localhost:8080" }, 
+                new DocumentStore { Identifier="Shard2", Url = "http://localhost:8081" } 
             };
 
             using (var documentStore = new ShardedDocumentStore(new ShardStrategy(), shards).Initialise())
@@ -35,7 +35,7 @@ namespace Raven.Sample.ShardClient
 
         static void Main2(string[] args)
         {
-            using (var documentStore = new DocumentStore("localhost", 8080).Initialise())
+			using (var documentStore = new DocumentStore { Url = "http://localhost:8080" }.Initialise())
             using (var session = documentStore.OpenSession())
             {
                 //session.Store(new Company { Name = "Company 1", Region = "A" });

@@ -38,8 +38,8 @@ namespace Raven.Client.Tests.Shard
             server2 = GetNewServer(port2, path2);
  
             shards = new Shards { 
-                new DocumentStore(server, port1) { Identifier="Shard1" }, 
-                new DocumentStore(server, port2) { Identifier="Shard2" } 
+                new DocumentStore { Identifier="Shard1", Url = "http://" + server +":"+port1}, 
+                new DocumentStore { Identifier="Shard2", Url = "http://" + server +":"+port2} 
             };
 
             shardSelection = MockRepository.GenerateStub<IShardSelectionStrategy>();
@@ -70,11 +70,11 @@ namespace Raven.Client.Tests.Shard
         [Fact]
         public void Can_insert_into_two_sharded_servers()
         {
-            var serverPortsStoredUpon = new List<int>();
+            var serverPortsStoredUpon = new List<string>();
 
             using (var documentStore = new ShardedDocumentStore(shardStrategy, shards))
             {
-                documentStore.Stored += (storeServer, storePort, storeEntity) => serverPortsStoredUpon.Add(storePort);
+                documentStore.Stored += (storeServer, storeEntity) => serverPortsStoredUpon.Add(storeServer);
                 documentStore.Initialise();
 
                 using (var session = documentStore.OpenSession())
@@ -85,8 +85,8 @@ namespace Raven.Client.Tests.Shard
                 }
             }
 
-            Assert.Equal(port1, serverPortsStoredUpon[0]);
-            Assert.Equal(port2, serverPortsStoredUpon[1]);
+            Assert.Contains(port1.ToString(), serverPortsStoredUpon[0]);
+            Assert.Contains(port2.ToString(), serverPortsStoredUpon[1]);
         }
 
         [Fact]

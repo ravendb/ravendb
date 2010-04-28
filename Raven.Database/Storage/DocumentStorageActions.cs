@@ -213,7 +213,7 @@ namespace Raven.Database.Storage
 
 		public void Commit()
 		{
-			transaction.Commit(CommitTransactionGrbit.None);
+			transaction.Commit(CommitTransactionGrbit.LazyFlush);
 			OnCommit();
 		}
 
