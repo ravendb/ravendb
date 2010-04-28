@@ -141,7 +141,7 @@ namespace Raven.Client.Document
             {
 				if (key != null)
 					entitiesByKey.Remove(key);
-				key = documentStore.Conventions.FindTypeTagName(entityType).ToLowerInvariant() + "/";
+            	key = documentStore.Conventions.GenerateDocumentKey(entity);
             }
 		    var etag = UseOptimisticConcurrency ? documentMetadata.ETag : null;
 
