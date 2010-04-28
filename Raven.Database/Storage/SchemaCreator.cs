@@ -321,7 +321,7 @@ namespace Raven.Database.Storage
 			Api.JetAddColumn(session, tableid, "task", new JET_COLUMNDEF
 			{
 				coltyp = JET_coltyp.LongText,
-				grbit = ColumndefGrbit.ColumnNotNULL
+				grbit = ColumndefGrbit.None
 			}, null, 0, out columnid);
 
 			Api.JetAddColumn(session, tableid, "supports_merging", new JET_COLUMNDEF
