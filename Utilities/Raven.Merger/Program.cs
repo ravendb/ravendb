@@ -37,16 +37,16 @@ namespace Raven.Merger
 					@"Newtonsoft.Json.dll",
 				});
 
-				Merge("RavenClient.dll", new[]
-				{
-					@"Raven.Client.dll",
-					@"Raven.Database.dll",
-					@"Esent.Interop.dll",
-					@"ICSharpCode.NRefactory.dll",
-					@"Lucene.Net.dll",
-					@"log4net.dll",
-					@"Newtonsoft.Json.dll",
-				});
+				//Merge("RavenClient.dll", new[]
+				//{
+				//    @"Raven.Client.dll",
+				//    @"Raven.Database.dll",
+				//    @"Esent.Interop.dll",
+				//    @"ICSharpCode.NRefactory.dll",
+				//    @"Lucene.Net.dll",
+				//    @"log4net.dll",
+				//    @"Newtonsoft.Json.dll",
+				//});
 				return 0;
 			}
 			catch (Exception e)
@@ -63,7 +63,6 @@ namespace Raven.Merger
 				OutputFile = outputFile,
 				TargetKind = ILMerge.Kind.SameAsPrimaryAssembly,
 				Version = new Version(4, 0),
-				Internalize = true,
 			};
 			merge.SetInputAssemblies(inputAssemblies);
 			merge.SetTargetPlatform("4", Path.GetDirectoryName(typeof(object).Assembly.Location));
