@@ -121,7 +121,7 @@ task Init -depends Clean {
 		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2010" `
 		-clsCompliant "false"
 	
-	if ([System.IO.File]::Exists(".\Raven.Database\Defaults\default.json") -eq $false -or ([System.DateTime]::Now - (dir .\Raven.Database\Defaults\default.json).LastWriteTime).TotalHours -gt 1)
+	if (([System.DateTime]::Now - (dir .\Raven.Database\Defaults\default.json).LastWriteTime).TotalHours -gt 1)
 	{
 			.\Utilities\Binaries\Raven.DefaultDatabase.Creator .\Raven.Database\Defaults\default.json
 	}
@@ -159,7 +159,14 @@ task Merge -depends Compile {
 	cd $old
 }
 
-task Release -depends Test, Merge {
+task ReleaseNoTests -depends DoRelease {
+
+}
+
+task Release -depends Test,DoRelease { 
+}
+
+task DoRelease -depends Merge {
 	
 	remove-item $build_dir\Output -Recurse -Force  -ErrorAction SilentlyContinue
 	mkdir $build_dir\Output
@@ -167,14 +174,23 @@ task Release -depends Test, Merge {
 	mkdir $build_dir\Output\Server
 	mkdir $build_dir\Output\Client
 	
-	cp $build_dir\RavenClient.dll $build_dir\Output\Client
+	cp $build_dir\Raven.Client.dll $build_dir\Output\Client
+	cp $build_dir\Raven.Database.dll $build_dir\Output\Client
+	cp $build_dir\Esent.Interop.dll $build_dir\Output\Client
+	cp $build_dir\ICSharpCode.NRefactory.dll $build_dir\Output\Client
+	cp $build_dir\Lucene.Net.dll $build_dir\Output\Client
+	cp $build_dir\log4net.dll $build_dir\Output\Client
+	cp $build_dir\Newtonsoft.Json.dll $build_dir\Output\Client
+	
 	cp $build_dir\RavenWeb.dll $build_dir\Output\Web
+	cp $base_dir\DefaultConfigs\web.config $build_dir\Output\Web\web.config
+	
 	cp $build_dir\RavenDb.exe $build_dir\Output\Server
+	cp $base_dir\DefaultConfigs\RavenDb.exe.config $build_dir\Output\Server\RavenDb.exe.config
+	
 	cp $base_dir\license.txt $build_dir\Output\license.txt
 	cp $base_dir\readme.txt $build_dir\Output\readme.txt
 	cp $base_dir\acknowledgements.txt $build_dir\Output\acknowledgements.txt
-	cp $base_dir\DefaultConfigs\web.config $build_dir\Output\Web\web.config
-	cp $base_dir\DefaultConfigs\RavenDb.exe.config $build_dir\Output\Server\RavenDb.exe.config
 	
 	$old = pwd
 	
@@ -182,11 +198,9 @@ task Release -depends Test, Merge {
 	
 	& $tools_dir\zip.exe -9 -A `
 		$release_dir\Raven.zip `
-		Client\RavenClient.dll `
-		Web\RavenWeb.dll `
-		Web\web.config `
-		Server\RavenDb.exe `
-		Server\RavenDb.exe.config `
+		Client\*.* `
+		Web\*.* `
+		Server\*.* `
 		license.txt `
 		acknowledgements.txt `
 		readme.txt
