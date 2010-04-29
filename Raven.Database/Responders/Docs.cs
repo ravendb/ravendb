@@ -1,9 +1,8 @@
 using System;
-using System.Net;
+using Raven.Database.Abstractions;
 using Raven.Database.Data;
-using Raven.Server.Abstractions;
 
-namespace Raven.Server.Responders
+namespace Raven.Database.Responders
 {
 	public class Docs : RequestResponder
 	{

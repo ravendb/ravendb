@@ -1,8 +1,7 @@
-using System.Net;
 using Newtonsoft.Json.Linq;
-using Raven.Server.Abstractions;
+using Raven.Database.Abstractions;
 
-namespace Raven.Server.Responders
+namespace Raven.Database.Responders
 {
 	public class Queries : RequestResponder
 	{

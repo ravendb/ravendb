@@ -1,8 +1,7 @@
 ﻿using System;
-using System.Net;
-using Raven.Server.Abstractions;
+using Raven.Database.Abstractions;
 
-namespace Raven.Server.Responders
+namespace Raven.Database.Responders
 {
     public class TransactionRollback : RequestResponder
     {

@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using System.Security.Principal;
 
-namespace Raven.Server.Abstractions
+namespace Raven.Database.Abstractions
 {
 	public class HttpListenerContextAdpater : IHttpContext
 	{

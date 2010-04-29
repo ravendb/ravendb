@@ -9,12 +9,11 @@ using System.Threading;
 using log4net;
 using Newtonsoft.Json;
 using Raven.Database;
+using Raven.Database.Abstractions;
 using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
+using Raven.Database.Responders;
 using Raven.Database.Storage;
-using Raven.Server.Abstractions;
-using Raven.Server.Exceptions;
-using Raven.Server.Responders;
 
 namespace Raven.Server
 {

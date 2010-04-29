@@ -2,12 +2,10 @@ using System;
 using System.ComponentModel.Composition;
 using System.Globalization;
 using System.Linq;
-using System.Net;
 using System.Text.RegularExpressions;
-using Raven.Database;
-using Raven.Server.Abstractions;
+using Raven.Database.Abstractions;
 
-namespace Raven.Server.Responders
+namespace Raven.Database.Responders
 {
 	[InheritedExport]
 	public abstract class RequestResponder

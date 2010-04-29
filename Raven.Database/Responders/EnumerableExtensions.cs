@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Raven.Server.Responders
+namespace Raven.Database.Responders
 {
 	public static class EnumerableExtensions
 	{

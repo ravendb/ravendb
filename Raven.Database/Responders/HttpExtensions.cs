@@ -4,10 +4,10 @@ using System.IO;
 using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Raven.Server.Abstractions;
-using Raven.Server.Exceptions;
+using Raven.Database.Abstractions;
+using Raven.Database.Exceptions;
 
-namespace Raven.Server.Responders
+namespace Raven.Database.Responders
 {
 	public static class HttpExtensions
 	{

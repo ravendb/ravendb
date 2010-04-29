@@ -11,8 +11,8 @@ using ICSharpCode.SharpZipLib.Zip;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
+using Raven.Database.Responders;
 using Raven.Server;
-using Raven.Server.Responders;
 using Xunit;
 
 namespace Raven.Scenarios

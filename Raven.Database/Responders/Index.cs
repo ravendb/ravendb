@@ -1,12 +1,10 @@
 using System;
-using System.Net;
-using Newtonsoft.Json.Linq;
+using Raven.Database.Abstractions;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
 using System.Linq;
-using Raven.Server.Abstractions;
 
-namespace Raven.Server.Responders
+namespace Raven.Database.Responders
 {
 	public class Index : RequestResponder
 	{

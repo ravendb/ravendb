@@ -1,14 +1,9 @@
 ﻿using System.Collections.Generic;
-using System.Net;
 using Newtonsoft.Json.Linq;
-using System;
-using Raven.Database;
+using Raven.Database.Abstractions;
 using Raven.Database.Data;
-using System.Linq;
-using Raven.Database.Json;
-using Raven.Server.Abstractions;
 
-namespace Raven.Server.Responders
+namespace Raven.Database.Responders
 {
     public class DocumentBatch : RequestResponder
     {

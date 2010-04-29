@@ -3,7 +3,7 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Web;
 
-namespace Raven.Server.Abstractions
+namespace Raven.Database.Abstractions
 {
 	public class HttpRequestAdapter : IHttpRequest
 	{
