@@ -30,10 +30,11 @@ namespace Raven.DefaultDatabase.Creator
 			array.Add(new JObject(
 			          	new JProperty("DocId", "raven_documentation/index"),
 			          	new JProperty("Document", index),
-						new JProperty("Type", "raven documentation"),
+			          	new JProperty("Type", "raven documentation"),
 			          	new JProperty("Metadata",
-			          	              new JObject(new JProperty("Raven-View-Template", "/raven/JSONTemplates/documentation.html")))
-			          	));
+			          	              new JObject(new JProperty("Raven-View-Template", "/raven/JSONTemplates/documentation.html"),
+			          	                          new JProperty("Raven-Entity-Tag", "Documentation"))
+			          		)));
 
 
 			AddDocumentsFromLinks(array, crawled, layout.SelectNodes(".//a"));
@@ -46,6 +47,8 @@ namespace Raven.DefaultDatabase.Creator
 			foreach (XmlNode link in list)
 			{
 				var href = link.Attributes["href"].Value;
+				if (href.StartsWith("http"))
+					href = new Uri(href).PathAndQuery;
 				if (href.IndexOf("group/ravendb/web/", StringComparison.InvariantCultureIgnoreCase) != -1)
 					ExportDocument(array, crawled, href);
 			}
