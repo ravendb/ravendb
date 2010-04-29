@@ -1,5 +1,6 @@
 using System.Net;
 using Newtonsoft.Json.Linq;
+using Raven.Server.Abstractions;
 
 namespace Raven.Server.Responders
 {
@@ -15,7 +16,7 @@ namespace Raven.Server.Responders
 			get { return new[] {"POST"}; }
 		}
 
-		public override void Respond(HttpListenerContext context)
+		public override void Respond(IHttpContext context)
 		{
 			var itemsToLoad = context.ReadJsonArray();
 			var results = new JArray();

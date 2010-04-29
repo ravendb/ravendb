@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Text.RegularExpressions;
 using Raven.Database;
+using Raven.Server.Abstractions;
 
 namespace Raven.Server.Responders
 {
@@ -26,15 +27,15 @@ namespace Raven.Server.Responders
 		public DocumentDatabase Database { get; set; }
 		public RavenConfiguration Settings { get; set; }
 
-		public bool WillRespond(HttpListenerContext context)
+		public bool WillRespond(IHttpContext context)
 		{
 			var match = urlMatcher.Match(context.Request.Url.LocalPath);
 			return match.Success && supportedVerbsCached.Contains(context.Request.HttpMethod);
 		}
 
-        public abstract void Respond(HttpListenerContext context);
+        public abstract void Respond(IHttpContext context);
 
-        protected TransactionInformation GetRequestTransaction(HttpListenerContext context)
+        protected TransactionInformation GetRequestTransaction(IHttpContext context)
         {
             var txInfo = context.Request.Headers["Raven-Transaction-Information"];
             if (string.IsNullOrEmpty(txInfo))

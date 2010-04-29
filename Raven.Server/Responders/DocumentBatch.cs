@@ -6,6 +6,7 @@ using Raven.Database;
 using Raven.Database.Data;
 using System.Linq;
 using Raven.Database.Json;
+using Raven.Server.Abstractions;
 
 namespace Raven.Server.Responders
 {
@@ -21,7 +22,7 @@ namespace Raven.Server.Responders
             get { return new[] { "POST" }; }
         }
 
-        public override void Respond(HttpListenerContext context)
+        public override void Respond(IHttpContext context)
         {
             switch (context.Request.HttpMethod)
             {                
@@ -31,7 +32,7 @@ namespace Raven.Server.Responders
             }
         }
 
-        private void Batch(HttpListenerContext context)
+        private void Batch(IHttpContext context)
         {
             var jsonCommandArray = context.ReadJsonArray();
         	var commands = new List<ICommandData>();

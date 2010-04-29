@@ -1,6 +1,7 @@
 using System;
 using System.Net;
 using Raven.Database.Data;
+using Raven.Server.Abstractions;
 
 namespace Raven.Server.Responders
 {
@@ -16,7 +17,7 @@ namespace Raven.Server.Responders
 			get { return new[] {"GET", "POST"}; }
 		}
 
-		public override void Respond(HttpListenerContext context)
+		public override void Respond(IHttpContext context)
 		{
 			switch (context.Request.HttpMethod)
 			{

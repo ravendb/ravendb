@@ -1,4 +1,5 @@
 using System.Net;
+using Raven.Server.Abstractions;
 
 namespace Raven.Server.Responders
 {
@@ -14,7 +15,7 @@ namespace Raven.Server.Responders
 			get { return new[] {"GET"}; }
 		}
 
-		public override void Respond(HttpListenerContext context)
+		public override void Respond(IHttpContext context)
 		{
 			context.WriteJson(Database.Statistics);
 		}

@@ -1,45 +1,44 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
-using System.Net;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Server.Abstractions;
 using Raven.Server.Exceptions;
 
 namespace Raven.Server.Responders
 {
 	public static class HttpExtensions
 	{
-		public static JObject ReadJson(this HttpListenerContext context)
+		public static JObject ReadJson(this IHttpContext context)
 		{
 			using (var streamReader = new StreamReader(context.Request.InputStream))
 			using (var jsonReader = new JsonTextReader(streamReader))
 				return JObject.Load(jsonReader);
 		}
 
-		public static T ReadJsonObject<T>(this HttpListenerContext context)
+		public static T ReadJsonObject<T>(this IHttpContext context)
 		{
 			using (var streamReader = new StreamReader(context.Request.InputStream))
 			using (var jsonReader = new JsonTextReader(streamReader))
 				return (T)new JsonSerializer().Deserialize(jsonReader, typeof(T));
 		}
 
-		public static JArray ReadJsonArray(this HttpListenerContext context)
+		public static JArray ReadJsonArray(this IHttpContext context)
 		{
 			using (var streamReader = new StreamReader(context.Request.InputStream))
 			using (var jsonReader = new JsonTextReader(streamReader))
 				return JArray.Load(jsonReader);
 		}
 
-		public static string ReadString(this HttpListenerContext context)
+		public static string ReadString(this IHttpContext context)
 		{
 			using (var streamReader = new StreamReader(context.Request.InputStream))
 				return streamReader.ReadToEnd();
 		}
 
-		public static void WriteJson(this HttpListenerContext context, object obj)
+		public static void WriteJson(this IHttpContext context, object obj)
 		{
 			context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
 			var streamWriter = new StreamWriter(context.Response.OutputStream);
@@ -53,7 +52,7 @@ namespace Raven.Server.Responders
 			streamWriter.Flush();
 		}
 
-		public static void WriteJson(this HttpListenerContext context, JToken obj)
+		public static void WriteJson(this IHttpContext context, JToken obj)
 		{
 			context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
 			var streamWriter = new StreamWriter(context.Response.OutputStream);
@@ -66,7 +65,7 @@ namespace Raven.Server.Responders
 			streamWriter.Flush();
 		}
 
-		public static void WriteData(this HttpListenerContext context, byte[] data, JObject headers, Guid etag)
+		public static void WriteData(this IHttpContext context, byte[] data, JObject headers, Guid etag)
 		{
 			foreach (var header in headers.Properties())
 			{
@@ -87,13 +86,13 @@ namespace Raven.Server.Responders
 			return str;
 		}
 
-		public static void SetStatusToDeleted(this HttpListenerContext context)
+		public static void SetStatusToDeleted(this IHttpContext context)
 		{
 			context.Response.StatusCode = 204;
 			context.Response.StatusDescription = "No Content";
 		}
 
-		public static void SetStatusToCreated(this HttpListenerContext context, string location)
+		public static void SetStatusToCreated(this IHttpContext context, string location)
 		{
 			context.Response.StatusCode = 201;
 			context.Response.StatusDescription = "Created";
@@ -101,37 +100,37 @@ namespace Raven.Server.Responders
 		}
 
 
-		public static void SetStatusToWriteConflict(this HttpListenerContext context)
+		public static void SetStatusToWriteConflict(this IHttpContext context)
 		{
 			context.Response.StatusCode = 409;
 			context.Response.StatusDescription = "Conflict";
 		}
 
-		public static void SetStatusToNotFound(this HttpListenerContext context)
+		public static void SetStatusToNotFound(this IHttpContext context)
 		{
 			context.Response.StatusCode = 404;
 			context.Response.StatusDescription = "Not Found";
 		}
 
-		public static void SetStatusToNotModified(this HttpListenerContext context)
+		public static void SetStatusToNotModified(this IHttpContext context)
 		{
 			context.Response.StatusCode = 304;
 			context.Response.StatusDescription = "Not Modified";
 		}
 
-		public static void SetStatusToBadRequest(this HttpListenerContext context)
+		public static void SetStatusToBadRequest(this IHttpContext context)
 		{
 			context.Response.StatusCode = 400;
 			context.Response.StatusDescription = "Bad Request";
 		}
 
-		public static void SetStatusToUnauthorized(this HttpListenerContext context)
+		public static void SetStatusToUnauthorized(this IHttpContext context)
 		{
 			context.Response.StatusCode = 401;
 			context.Response.StatusDescription = "Unauthorized";
 		}
 
-		public static void Write(this HttpListenerContext context, string str)
+		public static void Write(this IHttpContext context, string str)
 		{
 			var sw = new StreamWriter(context.Response.OutputStream);
 			sw.Write(str);
@@ -171,14 +170,14 @@ namespace Raven.Server.Responders
 			return result;
 		}
 
-		public static int GetStart(this HttpListenerContext context)
+		public static int GetStart(this IHttpContext context)
 		{
 			int start;
 			int.TryParse(context.Request.QueryString["start"], out start);
 			return start;
 		}
 
-		public static int GetPageSize(this HttpListenerContext context)
+		public static int GetPageSize(this IHttpContext context)
 		{
 			int pageSize;
 			int.TryParse(context.Request.QueryString["pageSize"], out pageSize);
@@ -189,7 +188,7 @@ namespace Raven.Server.Responders
 			return pageSize;
 		}
 
-		public static Guid? GetEtag(this HttpListenerContext context)
+		public static Guid? GetEtag(this IHttpContext context)
 		{
 			var etagAsString = context.Request.Headers["If-Match"];
 			if (etagAsString != null)
@@ -206,12 +205,12 @@ namespace Raven.Server.Responders
 			return null;
 		}
 
-		public static bool MatchEtag(this HttpListenerContext context, Guid etag)
+		public static bool MatchEtag(this IHttpContext context, Guid etag)
 		{
 			return context.Request.Headers["If-None-Match"] == etag.ToString();
 		}
 
-		public static void WriteEmbeddedFile(this HttpListenerContext context, string ravenPath, string docPath)
+		public static void WriteEmbeddedFile(this IHttpContext context, string ravenPath, string docPath)
 		{
 			var filePath = Path.Combine(ravenPath, docPath);
 			byte[] bytes;

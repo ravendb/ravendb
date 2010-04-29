@@ -6,6 +6,7 @@ using Raven.Database;
 using Raven.Database.Data;
 using Raven.Database.Json;
 using System.Linq;
+using Raven.Server.Abstractions;
 
 namespace Raven.Server.Responders
 {
@@ -21,7 +22,7 @@ namespace Raven.Server.Responders
 			get { return new[] {"GET", "DELETE", "PUT", "PATCH"}; }
 		}
 
-		public override void Respond(HttpListenerContext context)
+		public override void Respond(IHttpContext context)
 		{
 			var match = urlMatcher.Match(context.Request.Url.LocalPath);
 			var docId = match.Groups[1].Value;
@@ -69,7 +70,7 @@ namespace Raven.Server.Responders
 			}
 		}
 
-		private void Put(HttpListenerContext context, string docId)
+		private void Put(IHttpContext context, string docId)
 		{
 			var json = context.ReadJson();
 			context.SetStatusToCreated("/docs/" + docId);

@@ -1,5 +1,6 @@
 using System;
 using System.Net;
+using Raven.Server.Abstractions;
 
 namespace Raven.Server.Responders
 {
@@ -15,7 +16,7 @@ namespace Raven.Server.Responders
             get { return new[] { "POST" }; }
         }
 
-        public override void Respond(HttpListenerContext context)
+        public override void Respond(IHttpContext context)
         {
             var txId = context.Request.QueryString["tx"];
             Database.Commit(new Guid(txId));

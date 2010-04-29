@@ -12,6 +12,7 @@ using Raven.Database;
 using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
 using Raven.Database.Storage;
+using Raven.Server.Abstractions;
 using Raven.Server.Exceptions;
 using Raven.Server.Responders;
 
@@ -76,10 +77,10 @@ namespace Raven.Server
 
 		private void GetContext(IAsyncResult ar)
 		{
-			HttpListenerContext ctx;
+			IHttpContext ctx;
 			try
 			{
-				ctx = listener.EndGetContext(ar);
+				ctx = new HttpListenerContextAdpater(listener.EndGetContext(ar));
 				//setup waiting for the next request
 				listener.BeginGetContext(GetContext, null);
 			}
@@ -105,7 +106,7 @@ namespace Raven.Server
 			}
 		}
 
-		private void HandleActualRequest(HttpListenerContext ctx)
+		private void HandleActualRequest(IHttpContext ctx)
 		{
 			var curReq = Interlocked.Increment(ref reqNum);
 			var sw = Stopwatch.StartNew();
@@ -133,7 +134,7 @@ namespace Raven.Server
 			}
 		}
 
-		private void HandleException(HttpListenerContext ctx, Exception e)
+		private void HandleException(IHttpContext ctx, Exception e)
 		{
 			try
 			{
@@ -152,7 +153,7 @@ namespace Raven.Server
 			}
 		}
 
-		private static void HandleTooBusyError(HttpListenerContext ctx)
+		private static void HandleTooBusyError(IHttpContext ctx)
 		{
 			ctx.Response.StatusCode = 503;
 			ctx.Response.StatusDescription = "Service Unavailable";
@@ -163,7 +164,7 @@ namespace Raven.Server
 			});
 		}
 
-		private static void HandleIndexDisabledException(HttpListenerContext ctx, IndexDisabledException e)
+		private static void HandleIndexDisabledException(IHttpContext ctx, IndexDisabledException e)
 		{
 			ctx.Response.StatusCode = 503;
 			ctx.Response.StatusDescription = "Service Unavailable";
@@ -175,7 +176,7 @@ namespace Raven.Server
 			});
 		}
 
-		private static void HandleGenericException(HttpListenerContext ctx, Exception e)
+		private static void HandleGenericException(IHttpContext ctx, Exception e)
 		{
 			ctx.Response.StatusCode = 500;
 			ctx.Response.StatusDescription = "Internal Server Error";
@@ -186,7 +187,7 @@ namespace Raven.Server
 			});
 		}
 
-		private static void HandleBadRequest(HttpListenerContext ctx, BadRequestException e)
+		private static void HandleBadRequest(IHttpContext ctx, BadRequestException e)
 		{
 			ctx.SetStatusToBadRequest();
 			SerializeError(ctx, new
@@ -197,7 +198,7 @@ namespace Raven.Server
 			});
 		}
 
-		private static void HandleConcurrencyException(HttpListenerContext ctx, ConcurrencyException e)
+		private static void HandleConcurrencyException(IHttpContext ctx, ConcurrencyException e)
 		{
 			ctx.Response.StatusCode = 409;
 			ctx.Response.StatusDescription = "Conflict";
@@ -210,7 +211,7 @@ namespace Raven.Server
 			});
 		}
 
-		private static void SerializeError(HttpListenerContext ctx, object error)
+		private static void SerializeError(IHttpContext ctx, object error)
 		{
 			using (var sw = new StreamWriter(ctx.Response.OutputStream))
 			{
@@ -221,7 +222,7 @@ namespace Raven.Server
 			}
 		}
 
-		private void DispatchRequest(HttpListenerContext ctx)
+		private void DispatchRequest(IHttpContext ctx)
 		{
 			if (AssertSecurityRights(ctx) == false)
 				return;
@@ -246,7 +247,7 @@ namespace Raven.Server
 ");
 		}
 
-		private bool AssertSecurityRights(HttpListenerContext ctx)
+		private bool AssertSecurityRights(IHttpContext ctx)
 		{
 			if (configuration.AnonymousUserAccessMode == AnonymousUserAccessMode.Get &&
 				(ctx.User == null || ctx.User.Identity == null || ctx.User.Identity.IsAuthenticated == false) &&

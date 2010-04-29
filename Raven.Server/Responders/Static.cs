@@ -1,5 +1,6 @@
 using System.Net;
 using Raven.Database.Data;
+using Raven.Server.Abstractions;
 
 namespace Raven.Server.Responders
 {
@@ -15,7 +16,7 @@ namespace Raven.Server.Responders
 			get { return new[] {"GET", "PUT", "DELETE"}; }
 		}
 
-		public override void Respond(HttpListenerContext context)
+		public override void Respond(IHttpContext context)
 		{
 			var match = urlMatcher.Match(context.Request.Url.LocalPath);
 			var filename = match.Groups[1].Value;

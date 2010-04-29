@@ -4,6 +4,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
 using System.Linq;
+using Raven.Server.Abstractions;
 
 namespace Raven.Server.Responders
 {
@@ -19,7 +20,7 @@ namespace Raven.Server.Responders
 			get { return new[] {"GET", "PUT", "DELETE"}; }
 		}
 
-		public override void Respond(HttpListenerContext context)
+		public override void Respond(IHttpContext context)
 		{
 			var match = urlMatcher.Match(context.Request.Url.LocalPath);
 			var index = match.Groups[1].Value;
@@ -39,7 +40,7 @@ namespace Raven.Server.Responders
 			}
 		}
 
-		private void Put(HttpListenerContext context, string index)
+		private void Put(IHttpContext context, string index)
 		{
 			var data = context.ReadJsonObject<IndexDefinition>();
 			if (data.Map == null)
@@ -52,7 +53,7 @@ namespace Raven.Server.Responders
 			context.WriteJson(new { Index = Database.PutIndex(index, data) });
 		}
 
-		private void OnGet(HttpListenerContext context, string index)
+		private void OnGet(IHttpContext context, string index)
 		{
 			var definition = context.Request.QueryString["definition"];
 			if ("yes".Equals(definition, StringComparison.InvariantCultureIgnoreCase))
