@@ -4,6 +4,7 @@ using System.ComponentModel.Composition.Primitives;
 using System.Configuration;
 using System.IO;
 using log4net.Config;
+using System.Linq;
 
 namespace Raven.Database
 {
@@ -11,6 +12,12 @@ namespace Raven.Database
 	{
 		public RavenConfiguration()
 		{
+			Catalog = new AggregateCatalog(
+				new AssemblyCatalog(typeof(DocumentDatabase).Assembly)
+				);
+
+			Catalog.Changed += (sender, args) => ResetContainer();
+
 			var portStr = ConfigurationManager.AppSettings["RavenPort"];
 
 			Port = portStr != null ? int.Parse(portStr) : 8080;
@@ -30,7 +37,6 @@ namespace Raven.Database
 			AnonymousUserAccessMode = GetAnonymousUserAccessMode();
 
 			ShouldCreateDefaultsWhenBuildingNewDatabaseFromScratch = true;
-
 		}
 
 		private string pluginsDirectory;
@@ -39,13 +45,29 @@ namespace Raven.Database
 			get { return pluginsDirectory; }
 			set
 			{
-				if (Container != null && containerExternallySet == false)
+				ResetContainer();
+				// remove old directory catalog
+				foreach (var directoryCatalogToRemove in Catalog.Catalogs.OfType<DirectoryCatalog>().Where(c=>c.Path == pluginsDirectory).ToArray())
 				{
-					Container.Dispose();
-					Container = null;
+					Catalog.Catalogs.Remove(directoryCatalogToRemove);
 				}
 				
 				pluginsDirectory = value;
+
+				// add new one
+				if(Directory.Exists(pluginsDirectory))
+				{
+					Catalog.Catalogs.Add(new DirectoryCatalog(pluginsDirectory));
+				}
+			}
+		}
+
+		private void ResetContainer()
+		{
+			if (Container != null && containerExternallySet == false)
+			{
+				Container.Dispose();
+				Container = null;
 			}
 		}
 
@@ -78,13 +100,15 @@ namespace Raven.Database
 		private CompositionContainer container;
 		public CompositionContainer Container
 		{
-			get { return container ?? (container = new CompositionContainer(CreateCatalogsForPlugins())); }
+			get { return container ?? (container = new CompositionContainer(Catalog)); }
 			set
 			{
 				containerExternallySet = true;
 				container = value;
 			}
 		}
+
+		public AggregateCatalog Catalog { get; set; }
 
 		public void LoadLoggingSettings()
 		{
@@ -100,14 +124,6 @@ namespace Raven.Database
 		}
 
 		public event Action<DocumentDatabase> DatabaseCreatedFromScratch;
-
-		private ComposablePartCatalog CreateCatalogsForPlugins()
-		{
-			if (Directory.Exists(PluginsDirectory))
-				return new AggregateCatalog(
-					new AssemblyCatalog(typeof(DocumentDatabase).Assembly),
-					new DirectoryCatalog(PluginsDirectory));
-			return new AssemblyCatalog(typeof(DocumentDatabase).Assembly);
-		}
+		
 	}
 }
