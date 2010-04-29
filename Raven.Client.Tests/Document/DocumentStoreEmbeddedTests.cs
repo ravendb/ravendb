@@ -61,6 +61,57 @@ namespace Raven.Client.Tests.Document
             }  
         }
 
+		[Fact]
+		public void Will_set_id_from_query()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				var company = new Company { Name = "Company Name" };
+				using(var session1 = documentStore.OpenSession())
+				{
+					session1.Store(company);
+					session1.SaveChanges();
+				}
+
+				using(var session2 = documentStore.OpenSession())
+				{
+					var companyFromRaven = session2.Query<Company>()
+						.WaitForNonStaleResults()
+						.First();
+					Assert.Equal(companyFromRaven.Id, company.Id);
+				}
+			}
+		}
+
+		[Fact]
+		public void Will_track_entities_from_query()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				var company = new Company { Name = "Company Name" };
+				using (var session1 = documentStore.OpenSession())
+				{
+					session1.Store(company);
+					session1.SaveChanges();
+				}
+
+				using (var session2 = documentStore.OpenSession())
+				{
+					var companyFromRaven = session2.Query<Company>()
+						.WaitForNonStaleResults()
+						.First();
+
+					companyFromRaven.Name = "Hibernating Rhinos";
+					session2.SaveChanges();
+				}
+				using (var session3 = documentStore.OpenSession())
+				{
+					var load = session3.Load<Company>(company.Id);
+					Assert.Equal("Hibernating Rhinos", load.Name);
+				}
+			}
+		}
+
         [Fact]
         public void Can_use_transactions_to_isolate_delete()
         {

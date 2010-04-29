@@ -12,16 +12,16 @@ namespace Raven.Client.Document
 	{
 		private readonly IDatabaseCommands databaseCommands;
 
-	    public DocumentQuery(IDatabaseCommands databaseCommands, string indexName, string[] projectionFields)
+	    public DocumentQuery(DocumentSession session, IDatabaseCommands databaseCommands, string indexName, string[] projectionFields):base(session)
 		{
-			this.databaseCommands = databaseCommands;
+	    	this.databaseCommands = databaseCommands;
 		    this.projectionFields = projectionFields;
 		    this.indexName = indexName;
 		}
 
 	    public override IDocumentQuery<TProjection> Select<TProjection>(Func<T, TProjection> projectionExpression)
 	    {
-	        return new DocumentQuery<TProjection>(databaseCommands, indexName,
+			return new DocumentQuery<TProjection>(session, databaseCommands, indexName,
 	                                              projectionExpression
 	                                                  .Method
 	                                                  .ReturnType

@@ -10,6 +10,7 @@ namespace Raven.Client.Document
 {
 	public abstract class AbstractDocumentQuery<T> : IDocumentQuery<T>
 	{
+		protected readonly DocumentSession session;
 		protected string indexName;
 		protected string query = "";
 		protected string[] orderByFields = new string[0];
@@ -19,6 +20,11 @@ namespace Raven.Client.Document
 		protected TimeSpan timeout;
         protected string[] projectionFields;
         private QueryResult queryResult;
+
+		protected AbstractDocumentQuery(DocumentSession session)
+		{
+			this.session = session;
+		}
 
 		public IDocumentQuery<T> WaitForNonStaleResults(TimeSpan waitTimeout)
 		{
@@ -36,10 +42,19 @@ namespace Raven.Client.Document
 
 		public IEnumerator<T> GetEnumerator()
 		{
-			var jsonSerializer = new JsonSerializer();
 			return QueryResult.Results
-				.Select(j => (T)jsonSerializer.Deserialize(new JsonTokenReader(j), typeof(T)))
+				.Select(Deserialize)
 				.GetEnumerator();
+		}
+
+		private T Deserialize(JObject result)
+		{
+			if (projectionFields != null && projectionFields.Length > 0)
+				return (T)new JsonSerializer().Deserialize(new JsonTokenReader(result), typeof(T));
+			var metadata = result.Value<JObject>("@metadata");
+			return session.TrackEntity<T>(metadata.Value<string>("@id"),
+			                              result,
+			                              metadata);
 		}
 
 		protected abstract QueryResult GetQueryResult();

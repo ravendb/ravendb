@@ -61,18 +61,26 @@ namespace Raven.Client.Document
 			return TrackEntity<T>(documentFound);
 		}
 
-	    private T TrackEntity<T>(JsonDocument documentFound)
+		private T TrackEntity<T>(JsonDocument documentFound)
+		{
+			if(documentFound.Metadata.Property("@etag") == null)
+			{
+				documentFound.Metadata.Add("@etag", new JValue(documentFound.Etag.ToString()));
+			}
+			return TrackEntity<T>(documentFound.Key, documentFound.Data.ToJObject(), documentFound.Metadata);
+		}
+
+		public T TrackEntity<T>(string key, JObject document, JObject metadata)
 	    {
-	        var jobject = documentFound.Data.ToJObject();
-	        var entity = ConvertToEntity<T>(documentFound.Key, jobject);
+			var entity = ConvertToEntity<T>(key, document);
 	        entitiesAndMetadata.Add(entity, new DocumentMetadata
 	        {
-				OriginalValue = jobject,
-	            Metadata = documentFound.Metadata,
-	            ETag = documentFound.Etag,
-	            Key = documentFound.Key
+				OriginalValue = document,
+	            Metadata = metadata,
+				ETag = new Guid(metadata.Value<string>("@etag")),
+	            Key = key
 	        });
-	        entitiesByKey[documentFound.Key] = entity;
+	        entitiesByKey[key] = entity;
 	        return (T) entity;
 	    }
 
@@ -270,7 +278,7 @@ namespace Raven.Client.Document
 
 	    public IDocumentQuery<T> Query<T>(string indexName)
 		{
-	        return new DocumentQuery<T>(database, indexName, null);
+	    	return new DocumentQuery<T>(this, database, indexName, null);
 		}
 
         #region IDisposable Members
