@@ -105,7 +105,9 @@ namespace Raven.DefaultDatabase.Creator
 						new JProperty("Document", index),
 						new JProperty("Type", "raven documentation"),
 						new JProperty("Metadata",
-									  new JObject(new JProperty("Raven-View-Template", "/raven/JSONTemplates/documentation.html")))
+									  new JObject(
+										  new JProperty("Raven-View-Template", "/raven/JSONTemplates/documentation.html"),
+										  new JProperty("Raven-Entity-Tag", "Documentation")))
 						));
 		}
 	}
