@@ -90,21 +90,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Abstractions\HttpListenerContextAdpater.cs" />
-    <Compile Include="Abstractions\HttpListenerRequestAdapter.cs" />
-    <Compile Include="Abstractions\HttpListenerResponseAdapter.cs" />
-    <Compile Include="Abstractions\IHttpContext.cs" />
-    <Compile Include="Abstractions\IHttpRequest.cs" />
-    <Compile Include="Abstractions\IHttpResponse.cs" />
     <Compile Include="RavenApplication.cs" />
     <Compile Include="RavenDbServer.cs" />
     <Compile Include="HttpServer.cs" />
-    <Compile Include="PowerShellProvider\RavenDBContentReader.cs" />
-    <Compile Include="PowerShellProvider\RavenDBProvider.cs" />
-    <Compile Include="PowerShellProvider\RavenDBPSDriveInfo.cs" />
-    <Compile Include="PowerShellProvider\RavenDBSnapIn.cs">
-      <SubType>Component</SubType>
-    </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="ProjectInstaller.cs">
       <SubType>Component</SubType>
@@ -139,7 +127,7 @@
     <Compile Include="Responders\TransactionRollback.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="PowerShellProvider\RavenDBProvider.help.xml" />
+    <Content Include="Global.asax" />
     <Content Include="WebUI\favicon.ico" />
     <Content Include="WebUI\JSONTemplates\documentation.html" />
     <Content Include="WebUI\js\jquery.query-2.1.7.js" />

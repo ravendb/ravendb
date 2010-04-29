@@ -1,7 +1,7 @@
 ﻿using System.Management.Automation;
 using Raven.Database;
 
-namespace Raven.Server.PowerShellProvider
+namespace Raven.PowerShellIntegration
 {
 	internal class RavenDBPSDriveInfo : PSDriveInfo
 	{

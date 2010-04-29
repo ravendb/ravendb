@@ -6,7 +6,7 @@ using System.Management.Automation.Provider;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 
-namespace Raven.Server.PowerShellProvider
+namespace Raven.PowerShellIntegration
 {
 	public class RavenDBContentReader : IContentReader
 	{

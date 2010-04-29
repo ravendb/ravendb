@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel;
 using System.Management.Automation;
 
-namespace Raven.Server.PowerShellProvider
+namespace Raven.PowerShellIntegration
 {
 	[RunInstaller(true)]
 	public class RavenDBSnapIn : PSSnapIn

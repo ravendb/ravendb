@@ -7,7 +7,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Indexing;
 
-namespace Raven.Server.PowerShellProvider
+namespace Raven.PowerShellIntegration
 {
 	[CmdletProvider("RavenDB", ProviderCapabilities.None)]
 	public class RavenDBProvider : ContainerCmdletProvider, IContentCmdletProvider
