@@ -50,5 +50,11 @@ namespace Raven.Database.Server.Abstractions
 		{
 			response.Close();
 		}
+
+		public string ContentType
+		{
+			get { return response.ContentType; }
+			set { response.ContentType = value; }
+		}
 	}
 }

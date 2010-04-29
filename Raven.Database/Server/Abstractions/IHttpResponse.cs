@@ -10,6 +10,7 @@ namespace Raven.Database.Server.Abstractions
 		long ContentLength64 { get; set; }
 		int StatusCode { get; set; }
 		string StatusDescription { get; set; }
+		string ContentType { get; set; }
 		void Redirect(string url);
 		void Close();
 	}

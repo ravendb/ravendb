@@ -215,6 +215,7 @@ namespace Raven.Database.Server.Responders
 			var filePath = Path.Combine(ravenPath, docPath);
 			byte[] bytes;
 			var etagValue = context.Request.Headers["If-Match"];
+			context.Response.ContentType = GetContentType(docPath);
 			if (File.Exists(filePath) == false)
 			{
 				string resourceName = "Raven.Database.Server.WebUI." + docPath.Replace("/", ".");
@@ -247,6 +248,30 @@ namespace Raven.Database.Server.Responders
 			}
 			context.Response.OutputStream.Write(bytes, 0, bytes.Length);
 			context.Response.OutputStream.Flush();
+		}
+
+		private static string GetContentType(string docPath)
+		{
+			switch (Path.GetExtension(docPath))
+			{
+				case ".html":
+				case ".htm":
+					return "text/html";
+				case ".css":
+					return "text/css";
+				case ".js":
+					return "text/javascript";
+				case ".ico":
+					return "image/vnd.microsoft.icon";
+				case ".jpg":
+					return "image/jpeg";
+				case ".gif":
+					return "image/gif";
+				case ".png":
+					return "image/png";
+				default:
+					return "text/plain";
+			}
 		}
 
 		#region Nested type: JsonToJsonConverter

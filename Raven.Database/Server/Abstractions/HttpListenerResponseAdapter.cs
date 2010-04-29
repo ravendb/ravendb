@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Specialized;
 using System.IO;
 using System.Net;
@@ -39,6 +40,12 @@ namespace Raven.Database.Server.Abstractions
 		{
 			get { return response.StatusDescription; }
 			set { response.StatusDescription = value; }
+		}
+
+		public string ContentType
+		{
+			get { return response.ContentType; }
+			set { response.ContentType = value; }
 		}
 
 		public void Redirect(string url)
