@@ -1,5 +1,8 @@
-﻿namespace Raven.Database.Plugins
+﻿using System.ComponentModel.Composition;
+
+namespace Raven.Database.Plugins
 {
+	[InheritedExport]
 	public interface IDeleteTrigger
 	{
 		VetoResult AllowDelete(string key);

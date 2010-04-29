@@ -28,7 +28,19 @@ namespace Raven.Database.Storage
 			if (Path.IsPathRooted(database) == false)
 				path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, database);
 			this.database = Path.Combine(path, Path.GetFileName(database));
+			
+			LimitSystemCache();
+
 			Api.JetCreateInstance(out instance, database + Guid.NewGuid());
+		}
+
+		private void LimitSystemCache()
+		{
+			var cacheSizeMax = 1024 * 1024 * 1024 / SystemParameters.DatabasePageSize;
+			if (SystemParameters.CacheSizeMax > cacheSizeMax)
+			{
+				SystemParameters.CacheSizeMax = cacheSizeMax; // 1 GB
+			}
 		}
 
 		public JET_INSTANCE Instance
@@ -123,7 +135,6 @@ namespace Raven.Database.Storage
 
 		private void ConfigureInstance(JET_INSTANCE jetInstance)
 		{
-			SystemParameters.CacheSizeMax = 1024 * 1024 * 1024 / SystemParameters.DatabasePageSize; // 1 GB
 			new InstanceParameters(jetInstance)
 			{
 				CircularLog = true,

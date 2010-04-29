@@ -1,11 +1,9 @@
-﻿using System.ComponentModel.Composition;
-using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json.Linq;
 using Raven.Database.Plugins;
 using System.Linq;
 
 namespace Raven.Tests.Triggers
 {
-	[Export(typeof(IPutTrigger))]
 	public class VetoCapitalNamesPutTrigger : IPutTrigger
 	{
 		public VetoResult AllowPut(string key, JObject document, JObject metadata)

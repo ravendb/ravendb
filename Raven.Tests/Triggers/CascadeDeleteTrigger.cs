@@ -1,11 +1,8 @@
-﻿using System;
-using System.ComponentModel.Composition;
-using Raven.Database;
+﻿using Raven.Database;
 using Raven.Database.Plugins;
 
 namespace Raven.Tests.Triggers
 {
-	[Export(typeof(IDeleteTrigger))]
 	public class CascadeDeleteTrigger : IDeleteTrigger, IRequiresDocumentDatabaseInitialization 
 	{
 		private DocumentDatabase docDb;
