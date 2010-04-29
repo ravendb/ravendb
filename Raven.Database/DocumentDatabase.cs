@@ -36,7 +36,7 @@ namespace Raven.Database
 		{
 			this.configuration = configuration;
 			
-			configuration.Container.ComposeParts(this);
+			configuration.Container.SatisfyImportsOnce(this);
 		
 			workContext = new WorkContext();
 			TransactionalStorage = new TransactionalStorage(configuration.DataDirectory, workContext.NotifyAboutWork);
