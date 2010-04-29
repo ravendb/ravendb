@@ -80,6 +80,17 @@ task Init -depends Clean {
 		-clsCompliant "false"
 
 	Generate-Assembly-Info `
+		-file "$base_dir\Raven.Web\Properties\AssemblyInfo.cs" `
+		-title "Raven Database $version" `
+		-description "A linq enabled document database for .NET" `
+		-company "Hibernating Rhinos" `
+		-product "Raven Database $version" `
+		-version $version `
+		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2010" `
+		-clsCompliant "false"
+
+
+	Generate-Assembly-Info `
 		-file "$base_dir\Raven.Scenarios\Properties\AssemblyInfo.cs" `
 		-title "Raven Database $version" `
 		-description "A linq enabled document database for .NET" `
@@ -140,6 +151,8 @@ task Merge -depends Compile {
 	cd $build_dir
 	
 	remove-item $build_dir\RavenDb.exe  -ErrorAction SilentlyContinue
+	remove-item $build_dir\RavenClient.dll -ErrorAction SilentlyContinue
+	remove-item $build_dir\RavenWeb.dll  -ErrorAction SilentlyContinue
 	
 	exec "..\Utilities\Binaries\Raven.Merger.exe"
 	
@@ -147,17 +160,40 @@ task Merge -depends Compile {
 }
 
 task Release -depends Test, Merge {
-	& $tools_dir\zip.exe -9 -A -j `
+	
+	remove-item $build_dir\Output -Recurse -Force  -ErrorAction SilentlyContinue
+	mkdir $build_dir\Output
+	mkdir $build_dir\Output\Web
+	mkdir $build_dir\Output\Server
+	mkdir $build_dir\Output\Client
+	
+	cp $build_dir\RavenClient.dll $build_dir\Output\Client
+	cp $build_dir\RavenWeb.dll $build_dir\Output\Web
+	cp $build_dir\RavenDb.exe $build_dir\Output\Server
+	cp $base_dir\license.txt $build_dir\Output\license.txt
+	cp $base_dir\readme.txt $build_dir\Output\readme.txt
+	cp $base_dir\acknowledgements.txt $build_dir\Output\acknowledgements.txt
+	cp $base_dir\DefaultConfigs\web.config $build_dir\Output\Web\web.config
+	cp $base_dir\DefaultConfigs\RavenDb.exe.config $build_dir\Output\Server\RavenDb.exe.config
+	
+	$old = pwd
+	
+	cd $build_dir\Output
+	
+	& $tools_dir\zip.exe -9 -A `
 		$release_dir\Raven.zip `
-		$build_dir\RavenDb.exe `
-		$build_dir\RavenDb.pdb `
-		$build_dir\RavenDb.xml `
-		$build_dir\Raven.Client.dll `
-		$build_dir\Raven.Client.pdb `
-		$build_dir\Raven.Client.xml `
+		Client\RavenClient.dll `
+		Web\RavenWeb.dll `
+		Web\web.config `
+		Server\RavenDb.exe `
+		Server\RavenDb.exe.config `
 		license.txt `
-		acknowledgements.txt
+		acknowledgements.txt `
+		readme.txt
+		
 	if ($lastExitCode -ne 0) {
         throw "Error: Failed to execute ZIP command"
     }
+    
+    cd $old
 }
