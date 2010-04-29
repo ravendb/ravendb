@@ -87,7 +87,7 @@ namespace Raven.Database
 
 		private static string GetDefaultWebDir()
 		{
-			return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\WebUI");
+			return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"WebUI");
 		}
 
 		public string DataDirectory { get; set; }
