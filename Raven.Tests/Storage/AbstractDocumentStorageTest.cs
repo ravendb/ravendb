@@ -13,8 +13,8 @@ namespace Raven.Tests.Storage
 
 		public virtual void Dispose()
 		{
-			if (Directory.Exists("raven.db.test.esent"))
-				Directory.Delete("raven.db.test.esent", true);
+			//if (Directory.Exists("raven.db.test.esent"))
+			//    Directory.Delete("raven.db.test.esent", true);
 		}
 	}
 }
