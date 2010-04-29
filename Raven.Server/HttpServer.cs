@@ -24,7 +24,7 @@ namespace Raven.Server
 		public IEnumerable<RequestResponder> RequestResponders { get; set; }
 		
 		private readonly RavenConfiguration configuration;
-		private readonly HttpListener listener;
+		private HttpListener listener;
 
 		private readonly ILog logger = LogManager.GetLogger(typeof (HttpServer));
 
@@ -45,7 +45,20 @@ namespace Raven.Server
 				requestResponder.Database = database;
 				requestResponder.Settings = configuration;
 			}
+		}
 
+		#region IDisposable Members
+
+		public void Dispose()
+		{
+			if (listener != null)
+				listener.Stop();
+		}
+
+		#endregion
+
+		public void Start()
+		{
 			listener = new HttpListener();
 			listener.Prefixes.Add("http://+:" + configuration.Port + "/" + configuration.VirtualDirectory);
 			switch (configuration.AnonymousUserAccessMode)
@@ -58,19 +71,7 @@ namespace Raven.Server
 						AuthenticationSchemes.Anonymous;
 					break;
 			}
-		}
 
-		#region IDisposable Members
-
-		public void Dispose()
-		{
-			listener.Stop();
-		}
-
-		#endregion
-
-		public void Start()
-		{
 			listener.Start();
 			listener.BeginGetContext(GetContext, null);
 		}
@@ -106,7 +107,7 @@ namespace Raven.Server
 			}
 		}
 
-		private void HandleActualRequest(IHttpContext ctx)
+		public void HandleActualRequest(IHttpContext ctx)
 		{
 			var curReq = Interlocked.Increment(ref reqNum);
 			var sw = Stopwatch.StartNew();
