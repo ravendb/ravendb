@@ -96,6 +96,15 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Abstractions\HttpContextAdapter.cs" />
+    <Compile Include="Abstractions\HttpListenerContextAdpater.cs" />
+    <Compile Include="Abstractions\HttpListenerRequestAdapter.cs" />
+    <Compile Include="Abstractions\HttpListenerResponseAdapter.cs" />
+    <Compile Include="Abstractions\HttpRequestAdapter.cs" />
+    <Compile Include="Abstractions\HttpResponseAdapter.cs" />
+    <Compile Include="Abstractions\IHttpContext.cs" />
+    <Compile Include="Abstractions\IHttpRequest.cs" />
+    <Compile Include="Abstractions\IHttpResponse.cs" />
     <Compile Include="AnonymousUserAccessMode.cs" />
     <Compile Include="BatchResult.cs" />
     <Compile Include="Data\Attachment.cs" />
