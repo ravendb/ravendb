@@ -29,8 +29,8 @@ namespace Raven.Database
 
 			DataDirectory = ConfigurationManager.AppSettings["RavenDataDir"] ?? @"~\Data";
 
-			if (DataDirectory.StartsWith("~"))
-				DataDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, DataDirectory.Substring(1));
+			if (DataDirectory.StartsWith(@"~\"))
+				DataDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, DataDirectory.Substring(2));
 
 			WebDir = ConfigurationManager.AppSettings["RavenWebDir"] ?? GetDefaultWebDir();
 

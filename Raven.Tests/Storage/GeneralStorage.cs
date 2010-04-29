@@ -6,12 +6,15 @@ namespace Raven.Tests.Storage
 {
 	public class GeneralStorage : AbstractDocumentStorageTest
 	{
-
 		private readonly DocumentDatabase db;
 
 		public GeneralStorage()
 		{
-			db = new DocumentDatabase(new RavenConfiguration {DataDirectory = "raven.db.test.esent"});
+			db = new DocumentDatabase(new RavenConfiguration
+			{
+				DataDirectory = "raven.db.test.esent",
+				ShouldCreateDefaultsWhenBuildingNewDatabaseFromScratch = false
+			});
 		}
 
 		public override void Dispose()
