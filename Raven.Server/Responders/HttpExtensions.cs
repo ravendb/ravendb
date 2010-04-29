@@ -218,12 +218,12 @@ namespace Raven.Server.Responders
 			var etagValue = context.Request.Headers["If-Match"];
 			if (File.Exists(filePath) == false)
 			{
-				if(string.IsNullOrEmpty(etagValue))
+				string resourceName = "Raven.Server.WebUI." + docPath.Replace("/", ".");
+				if (etagValue == resourceName)
 				{
 					context.SetStatusToNotModified();
 					return;
 				}
-				string resourceName = "Raven.Server.WebUI." + docPath.Replace("/", ".");
 				using (var resource = typeof(HttpExtensions).Assembly.GetManifestResourceStream(resourceName))
 				{
 					if (resource == null)
