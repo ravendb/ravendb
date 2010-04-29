@@ -16,7 +16,7 @@ namespace Raven.DefaultDatabase.Creator
 			var crawled = new HashSet<string>();
 			var sgmlReader = new SgmlReader
 			{
-				Href = "http://groups.google.com/group/ravendb/web/docs-http-api-index"
+				Href = "http://groups.google.com/group/ravendb/web/docs-index"
 			};
 			crawled.Add(sgmlReader.Href);
 			var doc = new XmlDocument();
@@ -49,6 +49,8 @@ namespace Raven.DefaultDatabase.Creator
 				var href = link.Attributes["href"].Value;
 				if (href.StartsWith("http"))
 					href = new Uri(href).PathAndQuery;
+				if (string.IsNullOrEmpty(Path.GetExtension(href)) == false)
+					continue;
 				if (href.IndexOf("group/ravendb/web/", StringComparison.InvariantCultureIgnoreCase) != -1)
 					ExportDocument(array, crawled, href);
 			}
