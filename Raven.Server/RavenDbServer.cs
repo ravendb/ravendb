@@ -1,13 +1,12 @@
 using System;
+using System.ComponentModel.Composition.Hosting;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Security.Principal;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
-using Raven.Server.Responders;
 
 namespace Raven.Server
 {
@@ -28,28 +27,14 @@ namespace Raven.Server
 
 		public RavenDbServer(RavenConfiguration settings)
 		{
+			settings.Catalog.Catalogs.Add(new AssemblyCatalog(typeof (RavenDbServer).Assembly));
+
 			settings.LoadLoggingSettings();
 			if (settings.ShouldCreateDefaultsWhenBuildingNewDatabaseFromScratch)
 				settings.DatabaseCreatedFromScratch += OnDatabaseCreatedFromScratch;
 			database = new DocumentDatabase(settings);
 			database.SpinBackgroundWorkers();
-			server = new HttpServer(settings,
-			                        typeof (RequestResponder).Assembly.GetTypes()
-			                        	.Where(
-			                        		t => typeof (RequestResponder).IsAssignableFrom(t) && t.IsAbstract == false)
-
-			                        	// to ensure that we would get consistent order, so we would always 
-			                        	// have the responders using the same order, otherwise we get possibly
-			                        	// random ordering, and that might cause issues
-			                        	.OrderBy(x => x.Name)
-			                        	.Select(t => (RequestResponder) Activator.CreateInstance(t))
-			                        	.Select(r =>
-			                        	{
-			                        		r.Database = database;
-			                        		r.Settings = settings;
-			                        		return r;
-			                        	})
-				);
+			server = new HttpServer(settings, database);
 			server.Start();
 		}
 

@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel.Composition;
 using System.Globalization;
 using System.Linq;
 using System.Net;
@@ -7,6 +8,7 @@ using Raven.Database;
 
 namespace Raven.Server.Responders
 {
+	[InheritedExport]
 	public abstract class RequestResponder
 	{
 		private readonly string[] supportedVerbsCached;

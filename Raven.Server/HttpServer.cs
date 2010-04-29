@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -18,23 +19,32 @@ namespace Raven.Server
 {
 	public class HttpServer : IDisposable
 	{
+		[ImportMany]
+		public IEnumerable<RequestResponder> RequestResponders { get; set; }
+		
 		private readonly RavenConfiguration configuration;
 		private readonly HttpListener listener;
 
 		private readonly ILog logger = LogManager.GetLogger(typeof (HttpServer));
-		private readonly RequestResponder[] requestResponders;
+
 		private int reqNum;
 
 		// concurrent requests
 		// we set 1/4 aside for handling background tasks
-		private SemaphoreSlim concurretRequestSemaphore =
-			new SemaphoreSlim(TransactionalStorage.MaxSessions - (TransactionalStorage.MaxSessions/4));
-		public HttpServer(
-			RavenConfiguration configuration,
-			IEnumerable<RequestResponder> requestResponders)
+		private readonly SemaphoreSlim concurretRequestSemaphore = new SemaphoreSlim(TransactionalStorage.MaxSessions - (TransactionalStorage.MaxSessions/4));
+
+		public HttpServer(RavenConfiguration configuration, DocumentDatabase database)
 		{
 			this.configuration = configuration;
-			this.requestResponders = requestResponders.ToArray();
+
+			configuration.Container.SatisfyImportsOnce(this);
+
+			foreach (var requestResponder in RequestResponders)
+			{
+				requestResponder.Database = database;
+				requestResponder.Settings = configuration;
+			}
+
 			listener = new HttpListener();
 			listener.Prefixes.Add("http://+:" + configuration.Port + "/" + configuration.VirtualDirectory);
 			switch (configuration.AnonymousUserAccessMode)
@@ -216,7 +226,7 @@ namespace Raven.Server
 			if (AssertSecurityRights(ctx) == false)
 				return;
 
-			foreach (var requestResponder in requestResponders)
+			foreach (var requestResponder in RequestResponders)
 			{
 				if (requestResponder.WillRespond(ctx))
 				{
