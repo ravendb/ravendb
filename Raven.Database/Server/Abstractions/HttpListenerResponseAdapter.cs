@@ -1,14 +1,14 @@
-﻿using System.Collections.Specialized;
+using System.Collections.Specialized;
 using System.IO;
-using System.Web;
+using System.Net;
 
-namespace Raven.Database.Abstractions
+namespace Raven.Database.Server.Abstractions
 {
-	public class HttpResponseAdapter : IHttpResponse
+	public class HttpListenerResponseAdapter : IHttpResponse
 	{
-		private readonly HttpResponse response;
+		private readonly HttpListenerResponse response;
 
-		public HttpResponseAdapter(HttpResponse response)
+		public HttpListenerResponseAdapter(HttpListenerResponse response)
 		{
 			this.response = response;
 		}
@@ -25,8 +25,8 @@ namespace Raven.Database.Abstractions
 
 		public long ContentLength64
 		{
-			get { return -1; }
-			set { }
+			get { return response.ContentLength64; }
+			set { response.ContentLength64 = value; }
 		}
 
 		public int StatusCode

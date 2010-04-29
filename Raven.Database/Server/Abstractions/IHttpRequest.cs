@@ -1,8 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.Specialized;
 using System.IO;
 
-namespace Raven.Database.Abstractions
+namespace Raven.Database.Server.Abstractions
 {
 	public interface IHttpRequest
 	{

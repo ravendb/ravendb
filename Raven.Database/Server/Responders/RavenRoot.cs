@@ -1,12 +1,12 @@
-using Raven.Database.Abstractions;
+using Raven.Database.Server.Abstractions;
 
-namespace Raven.Database.Responders
+namespace Raven.Database.Server.Responders
 {
-	public class Root : RequestResponder
+	public class RavenRoot : RequestResponder
 	{
 		public override string UrlPattern
 		{
-			get { return "/$"; }
+			get { return "^/raven$"; }
 		}
 
 		public override string[] SupportedVerbs

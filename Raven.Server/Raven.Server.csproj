@@ -53,7 +53,8 @@
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup>
-    <ApplicationIcon>WebUI\favicon.ico</ApplicationIcon>
+    <ApplicationIcon>
+    </ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="log4net, Version=1.2.10.0, Culture=neutral, PublicKeyToken=1b44e1d426115821, processorArchitecture=MSIL">
@@ -90,9 +91,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="RavenApplication.cs" />
     <Compile Include="RavenDbServer.cs" />
-    <Compile Include="HttpServer.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="ProjectInstaller.cs">
       <SubType>Component</SubType>
@@ -107,88 +106,6 @@
     <Compile Include="RavenService.Designer.cs">
       <DependentUpon>RavenService.cs</DependentUpon>
     </Compile>
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="Global.asax" />
-    <Content Include="WebUI\favicon.ico" />
-    <Content Include="WebUI\JSONTemplates\documentation.html" />
-    <Content Include="WebUI\js\jquery.query-2.1.7.js" />
-    <Content Include="WebUI\view.html" />
-    <Content Include="WebUI\css\Pager.css" />
-    <Content Include="WebUI\css\rdb.css" />
-    <Content Include="WebUI\css\rdb.jsonEditor.css" />
-    <Content Include="WebUI\css\smoothness\images\ui-bg_flat_0_aaaaaa_40x100.png" />
-    <Content Include="WebUI\css\smoothness\images\ui-bg_flat_75_ffffff_40x100.png" />
-    <Content Include="WebUI\css\smoothness\images\ui-bg_glass_55_fbf9ee_1x400.png" />
-    <Content Include="WebUI\css\smoothness\images\ui-bg_glass_65_ffffff_1x400.png" />
-    <Content Include="WebUI\css\smoothness\images\ui-bg_glass_75_dadada_1x400.png" />
-    <Content Include="WebUI\css\smoothness\images\ui-bg_glass_75_e6e6e6_1x400.png" />
-    <Content Include="WebUI\css\smoothness\images\ui-bg_glass_95_fef1ec_1x400.png" />
-    <Content Include="WebUI\css\smoothness\images\ui-bg_highlight-soft_75_cccccc_1x100.png" />
-    <Content Include="WebUI\css\smoothness\images\ui-icons_222222_256x240.png" />
-    <Content Include="WebUI\css\smoothness\images\ui-icons_2e83ff_256x240.png" />
-    <Content Include="WebUI\css\smoothness\images\ui-icons_454545_256x240.png" />
-    <Content Include="WebUI\css\smoothness\images\ui-icons_888888_256x240.png" />
-    <Content Include="WebUI\css\smoothness\images\ui-icons_cd0a0a_256x240.png" />
-    <Content Include="WebUI\css\smoothness\jquery-ui-1.8rc2.custom.css" />
-    <Content Include="WebUI\documents.html" />
-    <Content Include="WebUI\images\ajax-loader.gif" />
-    <Content Include="WebUI\images\bgR.png" />
-    <Content Include="WebUI\images\c1_i1.png" />
-    <Content Include="WebUI\images\c2_i2.png" />
-    <Content Include="WebUI\images\c2_i3.png" />
-    <Content Include="WebUI\images\c2_i4.png" />
-    <Content Include="WebUI\images\c2_i5.png" />
-    <Content Include="WebUI\images\c2_i6.png" />
-    <Content Include="WebUI\images\c3_i7.png" />
-    <Content Include="WebUI\images\footerContainerBgR.png" />
-    <Content Include="WebUI\images\footer_bg.png" />
-    <Content Include="WebUI\images\header_bg.png" />
-    <Content Include="WebUI\images\jsonEditor\doc.gif" />
-    <Content Include="WebUI\images\jsonEditor\docNode.gif" />
-    <Content Include="WebUI\images\jsonEditor\docNodeLast.gif" />
-    <Content Include="WebUI\images\jsonEditor\docNodeLastFirst.gif" />
-    <Content Include="WebUI\images\jsonEditor\folder.gif" />
-    <Content Include="WebUI\images\jsonEditor\folderNode.gif" />
-    <Content Include="WebUI\images\jsonEditor\folderNodeFirst.gif" />
-    <Content Include="WebUI\images\jsonEditor\folderNodeLast.gif" />
-    <Content Include="WebUI\images\jsonEditor\folderNodeLastFirst.gif" />
-    <Content Include="WebUI\images\jsonEditor\folderNodeOpen.gif" />
-    <Content Include="WebUI\images\jsonEditor\folderNodeOpenFirst.gif" />
-    <Content Include="WebUI\images\jsonEditor\folderNodeOpenLast.gif" />
-    <Content Include="WebUI\images\jsonEditor\folderNodeOpenLastFirst.gif" />
-    <Content Include="WebUI\images\jsonEditor\folderOpen.gif" />
-    <Content Include="WebUI\images\jsonEditor\vertLine.gif" />
-    <Content Include="WebUI\images\logo.png" />
-    <Content Include="WebUI\images\midBox1.png" />
-    <Content Include="WebUI\images\midBox2Arrow.png" />
-    <Content Include="WebUI\images\sideBarArrow.png" />
-    <Content Include="WebUI\images\sideBarListBoxBottom.png" />
-    <Content Include="WebUI\images\sideBarListBoxTop.png" />
-    <Content Include="WebUI\images\submit.png" />
-    <Content Include="WebUI\images\topNavSep.png" />
-    <Content Include="WebUI\index.html" />
-    <Content Include="WebUI\indexes.html" />
-    <Content Include="WebUI\JSONTemplates\globalStats.html" />
-    <Content Include="WebUI\JSONTemplates\indexPage.html" />
-    <Content Include="WebUI\JSONTemplates\quickStats.html" />
-    <Content Include="WebUI\js\raven-ui.js" />
-    <Content Include="WebUI\js\raven-ui.documents.js" />
-    <Content Include="WebUI\js\jquery-1.4.2.min.js" />
-    <Content Include="WebUI\js\jquery-jtemplates.js" />
-    <Content Include="WebUI\js\jquery-ui.js" />
-    <Content Include="WebUI\js\jquery.RavenDB.js" />
-    <Content Include="WebUI\js\jquery.pager.js" />
-    <Content Include="WebUI\js\json2.js" />
-    <Content Include="WebUI\js\jstree\jquery.tree.js" />
-    <Content Include="WebUI\js\jstree\themes\default\dot_for_ie.gif" />
-    <Content Include="WebUI\js\jstree\themes\default\icons.png" />
-    <Content Include="WebUI\js\jstree\themes\default\style.css" />
-    <Content Include="WebUI\js\jstree\themes\default\throbber.gif" />
-    <Content Include="WebUI\js\jstree\themes\icons\txt.png" />
-    <Content Include="WebUI\js\rdb.jsonEditor\editor.html" />
-    <Content Include="WebUI\js\rdb.jsonEditor\rdb.jsonEditor.js" />
-    <Content Include="WebUI\statistics.html" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
@@ -217,9 +134,6 @@
     <EmbeddedResource Include="ProjectInstaller.resx">
       <DependentUpon>ProjectInstaller.cs</DependentUpon>
     </EmbeddedResource>
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Defaults\default.json" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

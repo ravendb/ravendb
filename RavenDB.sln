@@ -23,6 +23,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Sample.SimpleClient",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.PowerShellIntegration", "Raven.PowerShellIntegration\Raven.PowerShellIntegration.csproj", "{39AEF13E-8F87-4976-B09A-13944F59C97E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Web", "Raven.Web\Raven.Web.csproj", "{F49C2ED0-1844-44B4-A595-5FD152853B9C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -133,6 +135,16 @@ Global
 		{39AEF13E-8F87-4976-B09A-13944F59C97E}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{39AEF13E-8F87-4976-B09A-13944F59C97E}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{39AEF13E-8F87-4976-B09A-13944F59C97E}.Release|x86.ActiveCfg = Release|Any CPU
+		{F49C2ED0-1844-44B4-A595-5FD152853B9C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F49C2ED0-1844-44B4-A595-5FD152853B9C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F49C2ED0-1844-44B4-A595-5FD152853B9C}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{F49C2ED0-1844-44B4-A595-5FD152853B9C}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{F49C2ED0-1844-44B4-A595-5FD152853B9C}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{F49C2ED0-1844-44B4-A595-5FD152853B9C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F49C2ED0-1844-44B4-A595-5FD152853B9C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F49C2ED0-1844-44B4-A595-5FD152853B9C}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{F49C2ED0-1844-44B4-A595-5FD152853B9C}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{F49C2ED0-1844-44B4-A595-5FD152853B9C}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

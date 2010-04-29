@@ -11,7 +11,7 @@ using ICSharpCode.SharpZipLib.Zip;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
-using Raven.Database.Responders;
+using Raven.Database.Server.Responders;
 using Raven.Server;
 using Xunit;
 

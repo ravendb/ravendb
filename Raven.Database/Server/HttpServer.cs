@@ -9,10 +9,10 @@ using System.Threading;
 using log4net;
 using Newtonsoft.Json;
 using Raven.Database;
-using Raven.Database.Abstractions;
 using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
-using Raven.Database.Responders;
+using Raven.Database.Server.Abstractions;
+using Raven.Database.Server.Responders;
 using Raven.Database.Storage;
 
 namespace Raven.Server
@@ -21,17 +21,17 @@ namespace Raven.Server
 	{
 		[ImportMany]
 		public IEnumerable<RequestResponder> RequestResponders { get; set; }
-		
+
 		private readonly RavenConfiguration configuration;
 		private HttpListener listener;
 
-		private readonly ILog logger = LogManager.GetLogger(typeof (HttpServer));
+		private readonly ILog logger = LogManager.GetLogger(typeof(HttpServer));
 
 		private int reqNum;
 
 		// concurrent requests
 		// we set 1/4 aside for handling background tasks
-		private readonly SemaphoreSlim concurretRequestSemaphore = new SemaphoreSlim(TransactionalStorage.MaxSessions - (TransactionalStorage.MaxSessions/4));
+		private readonly SemaphoreSlim concurretRequestSemaphore = new SemaphoreSlim(TransactionalStorage.MaxSessions - (TransactionalStorage.MaxSessions / 4));
 
 		public HttpServer(RavenConfiguration configuration, DocumentDatabase database)
 		{
@@ -121,14 +121,7 @@ namespace Raven.Server
 			}
 			finally
 			{
-				try
-				{
-					ctx.Response.OutputStream.Flush();
-					ctx.Response.Close();
-				}
-				catch
-				{
-				}
+				ctx.FinalizeResonse();
 				logger.DebugFormat("Request #{0}: {1} {2} - {3}",
 									   curReq, ctx.Request.HttpMethod, ctx.Request.Url.PathAndQuery, sw.Elapsed);
 			}

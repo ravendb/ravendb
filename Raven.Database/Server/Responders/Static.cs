@@ -1,7 +1,7 @@
-using Raven.Database.Abstractions;
 using Raven.Database.Data;
+using Raven.Database.Server.Abstractions;
 
-namespace Raven.Database.Responders
+namespace Raven.Database.Server.Responders
 {
 	public class Static : RequestResponder
 	{

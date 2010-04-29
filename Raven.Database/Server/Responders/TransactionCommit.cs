@@ -1,9 +1,9 @@
-﻿using System;
-using Raven.Database.Abstractions;
+using System;
+using Raven.Database.Server.Abstractions;
 
-namespace Raven.Database.Responders
+namespace Raven.Database.Server.Responders
 {
-    public class TransactionRollback : RequestResponder
+    public class TransactionCommit : RequestResponder
     {
         public override string UrlPattern
         {
@@ -18,8 +18,8 @@ namespace Raven.Database.Responders
         public override void Respond(IHttpContext context)
         {
             var txId = context.Request.QueryString["tx"];
-            Database.Rollback(new Guid(txId));
-            context.WriteJson(new { Rollbacked = txId });
+            Database.Commit(new Guid(txId));
+            context.WriteJson(new {Committed = txId});
         }
     }
 }

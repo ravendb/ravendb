@@ -6,11 +6,13 @@ using System.Linq;
 using System.Reflection;
 using System.Security.Principal;
 using System.ServiceProcess;
+using System.Xml.Linq;
 using log4net.Appender;
 using log4net.Config;
 using log4net.Filter;
 using log4net.Layout;
 using Raven.Database;
+using Raven.Database.Server.Responders;
 
 namespace Raven.Server
 {
@@ -22,6 +24,9 @@ namespace Raven.Server
 			{
 				switch (GetArgument(args))
 				{
+					case "web":
+						GenerateWebConfig();
+						break;
 					case "install":
 						AdminRequired(InstallAndStart, "/install");
 						break;
@@ -55,6 +60,27 @@ namespace Raven.Server
 			{
 				ServiceBase.Run(new RavenService());
 			}
+		}
+
+		private static void GenerateWebConfig()
+		{
+			var ravenConfiguration = new RavenConfiguration();
+			var requestResponders = ravenConfiguration.Container.GetExportedValues<RequestResponder>();
+			var config = new XElement("configuration", new XElement("system.webServer", new XElement("handlers", 
+				requestResponders.Select(x=> new XElement("add",
+					new XAttribute("name", x.GetType().Name),
+					new XAttribute("path", x.UrlPattern
+						.Replace("/?$", "")
+						.Replace("(.*)", "*")
+						.Replace("(.+)", "*")
+						.Replace("^", "")
+						.Replace("$","")
+						),
+					new XAttribute("verb", string.Join(",",x.SupportedVerbs)),
+					new XAttribute("type", x.GetType().FullName +", " + x.GetType().Assembly.GetName().Name)
+					)))));
+
+			Console.WriteLine(config);
 		}
 
 		private static void AdminRequired(Action actionThatMayRequiresAdminPrivileges, string cmdLine)

@@ -1,14 +1,14 @@
 ﻿using System.Collections.Specialized;
 using System.IO;
-using System.Net;
+using System.Web;
 
-namespace Raven.Database.Abstractions
+namespace Raven.Database.Server.Abstractions
 {
-	public class HttpListenerResponseAdapter : IHttpResponse
+	public class HttpResponseAdapter : IHttpResponse
 	{
-		private readonly HttpListenerResponse response;
+		private readonly HttpResponse response;
 
-		public HttpListenerResponseAdapter(HttpListenerResponse response)
+		public HttpResponseAdapter(HttpResponse response)
 		{
 			this.response = response;
 		}
@@ -25,8 +25,8 @@ namespace Raven.Database.Abstractions
 
 		public long ContentLength64
 		{
-			get { return response.ContentLength64; }
-			set { response.ContentLength64 = value; }
+			get { return -1; }
+			set { }
 		}
 
 		public int StatusCode
@@ -43,7 +43,7 @@ namespace Raven.Database.Abstractions
 
 		public void Redirect(string url)
 		{
-			response.Redirect(url);
+			response.Redirect(url, false);
 		}
 
 		public void Close()

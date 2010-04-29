@@ -4,10 +4,10 @@ using System.IO;
 using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Raven.Database.Abstractions;
 using Raven.Database.Exceptions;
+using Raven.Database.Server.Abstractions;
 
-namespace Raven.Database.Responders
+namespace Raven.Database.Server.Responders
 {
 	public static class HttpExtensions
 	{
@@ -217,7 +217,7 @@ namespace Raven.Database.Responders
 			var etagValue = context.Request.Headers["If-Match"];
 			if (File.Exists(filePath) == false)
 			{
-				string resourceName = "Raven.Server.WebUI." + docPath.Replace("/", ".");
+				string resourceName = "Raven.Database.Server.WebUI." + docPath.Replace("/", ".");
 				if (etagValue == resourceName)
 				{
 					context.SetStatusToNotModified();

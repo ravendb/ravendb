@@ -27,11 +27,7 @@ namespace Raven.Server
 
 		public RavenDbServer(RavenConfiguration settings)
 		{
-			settings.Catalog.Catalogs.Add(new AssemblyCatalog(typeof (RavenDbServer).Assembly));
-
 			settings.LoadLoggingSettings();
-			if (settings.ShouldCreateDefaultsWhenBuildingNewDatabaseFromScratch)
-				settings.DatabaseCreatedFromScratch += OnDatabaseCreatedFromScratch;
 			database = new DocumentDatabase(settings);
 			database.SpinBackgroundWorkers();
 			server = new HttpServer(settings, database);
@@ -48,28 +44,7 @@ namespace Raven.Server
 
 		#endregion
 
-		private void OnDatabaseCreatedFromScratch(DocumentDatabase documentDatabase)
-		{
-			JArray array;
-			const string name = "Raven.Server.Defaults.default.json";
-			using (var defaultDocuments = GetType().Assembly.GetManifestResourceStream(name))
-			{
-				array = JArray.Load(new JsonTextReader(new StreamReader(defaultDocuments)));
-			}
-
-			documentDatabase.TransactionalStorage.Batch(actions =>
-			{
-				foreach (JObject document in array)
-				{
-					actions.AddDocument(
-						document["DocId"].Value<string>(),
-						null,
-						document["Document"].Value<JObject>(),
-						document["Metadata"].Value<JObject>());
-				}
-
-			});
-		}
+		
 
 		public static void EnsureCanListenToWhenInNonAdminContext(int port)
 		{

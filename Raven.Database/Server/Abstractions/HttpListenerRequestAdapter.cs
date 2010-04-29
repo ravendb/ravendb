@@ -1,15 +1,15 @@
-﻿using System;
+using System;
 using System.Collections.Specialized;
 using System.IO;
-using System.Web;
+using System.Net;
 
-namespace Raven.Database.Abstractions
+namespace Raven.Database.Server.Abstractions
 {
-	public class HttpRequestAdapter : IHttpRequest
+	public class HttpListenerRequestAdapter : IHttpRequest
 	{
-		private readonly HttpRequest request;
+		private readonly HttpListenerRequest request;
 
-		public HttpRequestAdapter(HttpRequest request)
+		public HttpListenerRequestAdapter(HttpListenerRequest request)
 		{
 			this.request = request;
 		}

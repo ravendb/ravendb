@@ -1,7 +1,7 @@
 using System.Security.Principal;
 using System.Web;
 
-namespace Raven.Database.Abstractions
+namespace Raven.Database.Server.Abstractions
 {
 	public class HttpContextAdapter : IHttpContext
 	{
@@ -29,6 +29,11 @@ namespace Raven.Database.Abstractions
 		public IPrincipal User
 		{
 			get { return context.User; }
+		}
+
+		public void FinalizeResonse()
+		{
+			// here it is a no op
 		}
 	}
 }

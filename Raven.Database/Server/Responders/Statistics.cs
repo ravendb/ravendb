@@ -1,12 +1,12 @@
-using Raven.Database.Abstractions;
+using Raven.Database.Server.Abstractions;
 
-namespace Raven.Database.Responders
+namespace Raven.Database.Server.Responders
 {
-	public class Favicon : RequestResponder
+	public class Statistics : RequestResponder
 	{
 		public override string UrlPattern
 		{
-			get { return "^/favicon.ico$"; }
+			get { return "/stats"; }
 		}
 
 		public override string[] SupportedVerbs
@@ -16,7 +16,7 @@ namespace Raven.Database.Responders
 
 		public override void Respond(IHttpContext context)
 		{
-			context.WriteEmbeddedFile(Settings.WebDir,"favicon.ico");
+			context.WriteJson(Database.Statistics);
 		}
 	}
 }

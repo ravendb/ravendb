@@ -1,6 +1,6 @@
-using Raven.Database.Abstractions;
+using Raven.Database.Server.Abstractions;
 
-namespace Raven.Database.Responders
+namespace Raven.Database.Server.Responders
 {
 	public class Indexes : RequestResponder
 	{

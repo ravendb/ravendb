@@ -1,10 +1,11 @@
 ﻿using System;
 using System.ComponentModel.Composition.Hosting;
-using System.ComponentModel.Composition.Primitives;
 using System.Configuration;
 using System.IO;
 using log4net.Config;
 using System.Linq;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Raven.Database
 {
@@ -26,7 +27,10 @@ namespace Raven.Database
 
 			IndexingBatchSize = indexBatchSizeStr != null ? int.Parse(indexBatchSizeStr) : 1024;
 
-			DataDirectory = ConfigurationManager.AppSettings["RavenDataDir"] ?? @"..\..\..\Data";
+			DataDirectory = ConfigurationManager.AppSettings["RavenDataDir"] ?? @"~\Data";
+
+			if (DataDirectory.StartsWith("~"))
+				DataDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, DataDirectory.Substring(1));
 
 			WebDir = ConfigurationManager.AppSettings["RavenWebDir"] ?? GetDefaultWebDir();
 
@@ -92,7 +96,19 @@ namespace Raven.Database
 		public int IndexingBatchSize { get; set; }
 		public AnonymousUserAccessMode AnonymousUserAccessMode { get; set; }
 
-		public bool ShouldCreateDefaultsWhenBuildingNewDatabaseFromScratch { get; set; }
+		private bool shouldCreateDefaultsWhenBuildingNewDatabaseFromScratch;
+		public bool ShouldCreateDefaultsWhenBuildingNewDatabaseFromScratch
+		{
+			get { return shouldCreateDefaultsWhenBuildingNewDatabaseFromScratch; }
+			set
+			{
+				shouldCreateDefaultsWhenBuildingNewDatabaseFromScratch = value;
+				if(shouldCreateDefaultsWhenBuildingNewDatabaseFromScratch)
+					DatabaseCreatedFromScratch += OnDatabaseCreatedFromScratch;
+				else
+					DatabaseCreatedFromScratch -= OnDatabaseCreatedFromScratch;
+			}
+		}
 
 		public string VirtualDirectory { get; set; }
 
@@ -124,6 +140,28 @@ namespace Raven.Database
 		}
 
 		public event Action<DocumentDatabase> DatabaseCreatedFromScratch;
-		
+
+		private void OnDatabaseCreatedFromScratch(DocumentDatabase documentDatabase)
+		{
+			JArray array;
+			const string name = "Raven.Database.Defaults.default.json";
+			using (var defaultDocuments = GetType().Assembly.GetManifestResourceStream(name))
+			{
+				array = JArray.Load(new JsonTextReader(new StreamReader(defaultDocuments)));
+			}
+
+			documentDatabase.TransactionalStorage.Batch(actions =>
+			{
+				foreach (JObject document in array)
+				{
+					actions.AddDocument(
+						document["DocId"].Value<string>(),
+						null,
+						document["Document"].Value<JObject>(),
+						document["Metadata"].Value<JObject>());
+				}
+
+			});
+		}
 	}
 }
