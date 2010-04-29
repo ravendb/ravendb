@@ -107,24 +107,6 @@
     <Compile Include="RavenService.Designer.cs">
       <DependentUpon>RavenService.cs</DependentUpon>
     </Compile>
-    <Compile Include="Exceptions\BadRequestException.cs" />
-    <Compile Include="Responders\DocumentBatch.cs" />
-    <Compile Include="Responders\EnumerableExtensions.cs" />
-    <Compile Include="Responders\RavenRoot.cs" />
-    <Compile Include="Responders\RavenUI.cs" />
-    <Compile Include="Responders\Docs.cs" />
-    <Compile Include="Responders\Document.cs" />
-    <Compile Include="Responders\Favicon.cs" />
-    <Compile Include="Responders\HttpExtensions.cs" />
-    <Compile Include="Responders\Queries.cs" />
-    <Compile Include="Responders\RequestResponder.cs" />
-    <Compile Include="Responders\Index.cs" />
-    <Compile Include="Responders\Indexes.cs" />
-    <Compile Include="Responders\Root.cs" />
-    <Compile Include="Responders\Static.cs" />
-    <Compile Include="Responders\Statistics.cs" />
-    <Compile Include="Responders\TransactionCommit.cs" />
-    <Compile Include="Responders\TransactionRollback.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Global.asax" />
