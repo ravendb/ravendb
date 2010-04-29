@@ -121,7 +121,7 @@ task Init -depends Clean {
 		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2010" `
 		-clsCompliant "false"
 	
-	if (([System.DateTime]::Now - (dir .\Raven.Database\Defaults\default.json).LastWriteTime).TotalHours -gt 1)
+	if ([System.IO.File]::Exists(".\Raven.Database\Defaults\default.json") -eq $false -or ([System.DateTime]::Now - (dir .\Raven.Database\Defaults\default.json).LastWriteTime).TotalHours -gt 1)
 	{
 			.\Utilities\Binaries\Raven.DefaultDatabase.Creator .\Raven.Database\Defaults\default.json
 	}
