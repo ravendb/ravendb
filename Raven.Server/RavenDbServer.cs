@@ -1,11 +1,7 @@
 using System;
-using System.ComponentModel.Composition.Hosting;
 using System.Diagnostics;
-using System.IO;
 using System.Net;
 using System.Security.Principal;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Raven.Database;
 
 namespace Raven.Server
@@ -43,8 +39,6 @@ namespace Raven.Server
 		}
 
 		#endregion
-
-		
 
 		public static void EnsureCanListenToWhenInNonAdminContext(int port)
 		{
