@@ -29,7 +29,7 @@ task Init -depends Clean {
 		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2010" `
 		-clsCompliant "false"
 		
-		Generate-Assembly-Info `
+	Generate-Assembly-Info `
 		-file "$base_dir\Raven.Sample.SimpleClient\Properties\AssemblyInfo.cs" `
 		-title "Raven Database $version" `
 		-description "A linq enabled document database for .NET" `
@@ -39,6 +39,16 @@ task Init -depends Clean {
 		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2010" `
 		-clsCompliant "false"
 		
+	Generate-Assembly-Info `
+		-file "$base_dir\Raven.Sample.ComplexSharding\Properties\AssemblyInfo.cs" `
+		-title "Raven Database $version" `
+		-description "A linq enabled document database for .NET" `
+		-company "Hibernating Rhinos" `
+		-product "Raven Database $version" `
+		-version $version `
+		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2010" `
+		-clsCompliant "false"
+	
 	Generate-Assembly-Info `
 		-file "$base_dir\Raven.Sample.ShardClient\Properties\AssemblyInfo.cs" `
 		-title "Raven Sample Shard Client $version" `
