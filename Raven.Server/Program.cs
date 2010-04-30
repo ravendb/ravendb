@@ -24,9 +24,6 @@ namespace Raven.Server
 			{
 				switch (GetArgument(args))
 				{
-					case "web":
-						GenerateWebConfig();
-						break;
 					case "install":
 						AdminRequired(InstallAndStart, "/install");
 						break;
@@ -35,6 +32,9 @@ namespace Raven.Server
 						break;
 					case "start":
 						AdminRequired(StartService, "/start");
+						break;
+					case "restart":
+						AdminRequired(RestartService, "/restart");
 						break;
 					case "stop":
 						AdminRequired(StopService, "/stop");
@@ -60,27 +60,6 @@ namespace Raven.Server
 			{
 				ServiceBase.Run(new RavenService());
 			}
-		}
-
-		private static void GenerateWebConfig()
-		{
-			var ravenConfiguration = new RavenConfiguration();
-			var requestResponders = ravenConfiguration.Container.GetExportedValues<RequestResponder>();
-			var config = new XElement("configuration", new XElement("system.webServer", new XElement("handlers", 
-				requestResponders.Select(x=> new XElement("add",
-					new XAttribute("name", x.GetType().Name),
-					new XAttribute("path", x.UrlPattern
-						.Replace("/?$", "")
-						.Replace("(.*)", "*")
-						.Replace("(.+)", "*")
-						.Replace("^", "")
-						.Replace("$","")
-						),
-					new XAttribute("verb", string.Join(",",x.SupportedVerbs)),
-					new XAttribute("type", x.GetType().FullName +", " + x.GetType().Assembly.GetName().Name)
-					)))));
-
-			Console.WriteLine(config);
 		}
 
 		private static void AdminRequired(Action actionThatMayRequiresAdminPrivileges, string cmdLine)
@@ -165,9 +144,12 @@ Document Database for the .Net Platform
 Copyright (C) 2010 - Hibernating Rhinos
 ----------------------------------------
 Command line ptions:
-    raven             - with no args, starts Raven in local server mode
-    raven /install    - installs and starts the Raven service
-    raven /unisntall  - stops and uninstalls the Raven service
+    RavenDb             - with no args, starts Raven in local server mode
+    RavenDb /install    - installs and starts the Raven service
+    RavenDb /unisntall  - stops and uninstalls the Raven service
+    RavenDb /start		- starts the previously installed Raven service
+    RavenDb /stop		- stops the previously installed Raven service
+    RavenDb /restart	- restarts the previously installed Raven service
 
 Enjoy...
 ");
@@ -195,7 +177,10 @@ Enjoy...
 			var stopController = new ServiceController(ProjectInstaller.SERVICE_NAME);
 
 			if (stopController.Status == ServiceControllerStatus.Running)
+			{
 				stopController.Stop();
+				stopController.WaitForStatus(ServiceControllerStatus.Stopped);
+			}
 		}
 
 
@@ -204,7 +189,27 @@ Enjoy...
 			var stopController = new ServiceController(ProjectInstaller.SERVICE_NAME);
 
 			if (stopController.Status != ServiceControllerStatus.Running)
+			{
 				stopController.Start();
+				stopController.WaitForStatus(ServiceControllerStatus.Running);
+			}
+		}
+
+		private static void RestartService()
+		{
+			var stopController = new ServiceController(ProjectInstaller.SERVICE_NAME);
+
+			if (stopController.Status == ServiceControllerStatus.Running)
+			{
+				stopController.Stop();
+				stopController.WaitForStatus(ServiceControllerStatus.Stopped);
+			}
+			if (stopController.Status != ServiceControllerStatus.Running)
+			{
+				stopController.Start();
+				stopController.WaitForStatus(ServiceControllerStatus.Running);
+			}
+
 		}
 
 		private static void InstallAndStart()
