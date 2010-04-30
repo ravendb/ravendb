@@ -1,12 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using log4net.Appender;
+using log4net.Config;
+using log4net.Core;
+using log4net.Filter;
+using log4net.Layout;
 using Raven.Client.Document;
 using Raven.Client.Shard;
 using Raven.Client.Shard.ShardStrategy;
 using Raven.Client.Shard.ShardStrategy.ShardAccess;
 using Raven.Database;
 using Raven.Server;
+using System.Linq;
+using Raven.Client;
 
 namespace Raven.Sample.ComplexSharding
 {
@@ -14,6 +21,18 @@ namespace Raven.Sample.ComplexSharding
 	{
 		static void Main()
 		{
+			var consoleAppender = new ConsoleAppender
+			{
+				Layout = new SimpleLayout(),
+			};
+			consoleAppender.AddFilter(new LoggerMatchFilter
+			{
+				AcceptOnMatch = true,
+				LoggerToMatch = "Raven.Client"
+			});
+			consoleAppender.AddFilter(new DenyAllFilter());
+			BasicConfigurator.Configure(consoleAppender);
+
 			// start 5 instances of Raven's servers
 			Console.WriteLine("Starting...");
 			DeleteDirectories("Users", "Blogs", "Posts.1", "Posts.2", "Posts.3");
@@ -71,13 +90,14 @@ namespace Raven.Sample.ComplexSharding
 				}
 
 				session.SaveChanges();
-
-				foreach (var post in posts)
-				{
-					Console.WriteLine(post.Id);
-				}
 			}
 
+			using (var session = documentStore.OpenSession())
+			{
+				session.Query<User>().ToArray();
+				session.Query<Blog>().ToArray();
+				session.Query<Post>().ToArray();
+			}
 
 			documentStore.Dispose();
 
