@@ -122,8 +122,8 @@ namespace Raven.Server
 			finally
 			{
 				ctx.FinalizeResonse();
-				logger.DebugFormat("Request #{0}: {1} {2} - {3}",
-									   curReq, ctx.Request.HttpMethod, ctx.Request.Url.PathAndQuery, sw.Elapsed);
+				logger.DebugFormat("Request #{0,4:#,0}: {1} - {2,5:#,0} ms - {3} - {4}",
+									   curReq, ctx.Request.HttpMethod, sw.ElapsedMilliseconds, ctx.Response.StatusCode, ctx.Request.Url.PathAndQuery);
 			}
 		}
 
