@@ -92,11 +92,21 @@ namespace Raven.Sample.ComplexSharding
 				session.SaveChanges();
 			}
 
+			// queries
 			using (var session = documentStore.OpenSession())
 			{
 				session.Query<User>().ToArray();
 				session.Query<Blog>().ToArray();
 				session.Query<Post>().ToArray();
+			}
+
+			// loading
+			using (var session = documentStore.OpenSession())
+			{
+				session.Load<User>("users/ayende");
+				session.Load<Blog>("blogs/1");
+				session.Load<Post>("posts/1/2");
+				session.Load<Post>("posts/2/2");
 			}
 
 			documentStore.Dispose();

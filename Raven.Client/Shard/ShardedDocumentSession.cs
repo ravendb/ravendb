@@ -18,32 +18,32 @@ namespace Raven.Client.Shard
 			}
 		}
 
-        public bool UseOptimisticConcurrency
-        {
-            get
-            {
-                return shardSessions.All(x => x.UseOptimisticConcurrency);
-            }
-            set
-            {
-                foreach (var shardSession in shardSessions)
-                {
-                    shardSession.UseOptimisticConcurrency = value;
-                }
-            }
-        }
-
-	    public event Action<object> Stored;
-
-        public ShardedDocumentSession(IShardStrategy shardStrategy, params IDocumentSession[] shardSessions)
+		public bool UseOptimisticConcurrency
 		{
-            this.shardStrategy = shardStrategy;
-            this.shardSessions = shardSessions;
+			get
+			{
+				return shardSessions.All(x => x.UseOptimisticConcurrency);
+			}
+			set
+			{
+				foreach (var shardSession in shardSessions)
+				{
+					shardSession.UseOptimisticConcurrency = value;
+				}
+			}
+		}
 
-            foreach (var shardSession in shardSessions)
-            {
-                shardSession.Stored += Stored;
-            }
+		public event Action<object> Stored;
+
+		public ShardedDocumentSession(IShardStrategy shardStrategy, params IDocumentSession[] shardSessions)
+		{
+			this.shardStrategy = shardStrategy;
+			this.shardSessions = shardSessions;
+
+			foreach (var shardSession in shardSessions)
+			{
+				shardSession.Stored += Stored;
+			}
 		}
 
 		private readonly IShardStrategy shardStrategy;
@@ -51,24 +51,19 @@ namespace Raven.Client.Shard
 
 		public T Load<T>(string id)
 		{
-            var shardIds = shardStrategy.ShardResolutionStrategy.SelectShardIdsFromData(ShardResolutionStrategyData.BuildFrom(typeof(T))) ?? new string[] { };
 
-            IDocumentSession[] shardsToUse = shardSessions.Where(x => shardIds.Contains(x.StoreIdentifier)).ToArray();
+			var shardsToUse = GetAppropriateShardedSessions<T>(id);
 
-            //default to all sessions if none found to use
-            if (shardIds.Count == 0)
-                shardsToUse = shardSessions;
-
-            //if we can narrow down to single shard, explicitly call it
-            if (shardsToUse.Length == 1)
-            {
-                return shardsToUse[0].Load<T>(id);
-            }
+			//if we can narrow down to single shard, explicitly call it
+			if (shardsToUse.Length == 1)
+			{
+				return shardsToUse[0].Load<T>(id);
+			}
 			var results = shardStrategy.ShardAccessStrategy.Apply(shardsToUse, x =>
 			{
 				try
 				{
-					return new[] {x.Load<T>(id)};
+					return new[] { x.Load<T>(id) };
 				}
 				catch (WebException e)
 				{
@@ -84,28 +79,28 @@ namespace Raven.Client.Shard
 				.FirstOrDefault();
 		}
 
-	    public T[] Load<T>(params string[] ids)
-	    {
-	        return shardStrategy.ShardAccessStrategy.Apply(shardSessions, sessions => sessions.Load<T>(ids)).ToArray();
-	    }
+		public T[] Load<T>(params string[] ids)
+		{
+			return shardStrategy.ShardAccessStrategy.Apply(GetAppropriateShardedSessions<T>(null), sessions => sessions.Load<T>(ids)).ToArray();
+		}
 
-	    public void Delete<T>(T entity)
-	    {
-            if(ReferenceEquals(entity,null))
-                throw new ArgumentNullException("entity");
+		public void Delete<T>(T entity)
+		{
+			if (ReferenceEquals(entity, null))
+				throw new ArgumentNullException("entity");
 
-            var shardIds = shardStrategy.ShardSelectionStrategy.SelectShardIdForExistingObject(entity);
+			var shardIds = shardStrategy.ShardSelectionStrategy.SelectShardIdForExistingObject(entity);
 
-	    	GetSingleShardSession(shardIds).Delete(entity);
-	    }
+			GetSingleShardSession(shardIds).Delete(entity);
+		}
 
-	    private IDocumentSession GetSingleShardSession(string shardId)
-        {
+		private IDocumentSession GetSingleShardSession(string shardId)
+		{
 			var shardSession = shardSessions.FirstOrDefault(x => x.StoreIdentifier == shardId);
-            if (shardSession == null) 
+			if (shardSession == null)
 				throw new ApplicationException("Can't find a shard with identifier: " + shardId);
-            return shardSession;
-        }
+			return shardSession;
+		}
 
 		public void Store<T>(T entity)
 		{
@@ -134,15 +129,25 @@ namespace Raven.Client.Shard
 			{
 				shardSession.SaveChanges();
 			}
-        }
+		}
 
-        public IDocumentQuery<T> Query<T>(string indexName)
-        {
-        	var sessionIds = shardStrategy.ShardResolutionStrategy.SelectShardIdsFromData(new ShardResolutionStrategyData{EntityType = typeof(T)});
-        	return new ShardedDocumentQuery<T>(indexName,
-        	                                   shardSessions.Where(session => sessionIds.Contains(session.StoreIdentifier))
-        	                                   	.ToArray());
-        }
+		public IDocumentQuery<T> Query<T>(string indexName)
+		{
+			return new ShardedDocumentQuery<T>(indexName,
+											   GetAppropriateShardedSessions<T>(null));
+		}
+
+		private IDocumentSession[] GetAppropriateShardedSessions<T>(string key)
+		{
+			var sessionIds =
+				shardStrategy.ShardResolutionStrategy.SelectShardIdsFromData(ShardResolutionStrategyData.BuildFrom(typeof(T), key));
+			IDocumentSession[] documentSessions;
+			if (sessionIds != null)
+				documentSessions = shardSessions.Where(session => sessionIds.Contains(session.StoreIdentifier)).ToArray();
+			else
+				documentSessions = shardSessions;
+			return documentSessions;
+		}
 
 		public string StoreIdentifier
 		{
@@ -152,35 +157,35 @@ namespace Raven.Client.Shard
 			}
 		}
 
-        #region IDisposable Members
+		#region IDisposable Members
 
-        public void Dispose()
-        {
-            foreach (var shardSession in shardSessions)
-                shardSession.Dispose();
+		public void Dispose()
+		{
+			foreach (var shardSession in shardSessions)
+				shardSession.Dispose();
 
-            //dereference all event listeners
-            Stored = null;
-        }
+			//dereference all event listeners
+			Stored = null;
+		}
 
-        #endregion
+		#endregion
 
-	    public void Commit(Guid txId)
-	    {
-	        shardStrategy.ShardAccessStrategy.Apply(shardSessions, session =>
-	        {
-                session.Commit(txId);
-	            return new List<int>();
-	        });
-	    }
+		public void Commit(Guid txId)
+		{
+			shardStrategy.ShardAccessStrategy.Apply(shardSessions, session =>
+			{
+				session.Commit(txId);
+				return new List<int>();
+			});
+		}
 
-	    public void Rollback(Guid txId)
-	    {
-	        shardStrategy.ShardAccessStrategy.Apply(shardSessions, session =>
-	        {
-	            session.Rollback(txId);
-                return new List<int>();
-	        });
-	    }
+		public void Rollback(Guid txId)
+		{
+			shardStrategy.ShardAccessStrategy.Apply(shardSessions, session =>
+			{
+				session.Rollback(txId);
+				return new List<int>();
+			});
+		}
 	}
 }
