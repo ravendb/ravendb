@@ -5,6 +5,14 @@
             <div class="searchListItemValue" style="display:none;">
                 <pre>{$T.index.definition.Map}</pre>
             </div>
+            <div class="searchListItemValue" style="display:none;">
+                <pre>{$T.index.definition.Map}</pre>
+            </div>
+            {#if $T.index.definition.IsMapReduce}
+            <div class="searchListItemValue" style="display:none;">
+                <pre>{$T.index.definition.Reduce}</pre>
+            </div>
+            {#/if}
         </div>
     {#/for}    
 </div>
