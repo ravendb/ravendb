@@ -25,6 +25,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.PowerShellIntegration
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Web", "Raven.Web\Raven.Web.csproj", "{F49C2ED0-1844-44B4-A595-5FD152853B9C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Sample.ComplexSharding", "Raven.Sample.ComplexSharding\Raven.Sample.ComplexSharding.csproj", "{C7F492BF-8C5C-4080-85A0-A0C4A63D68F2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -145,6 +147,16 @@ Global
 		{F49C2ED0-1844-44B4-A595-5FD152853B9C}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{F49C2ED0-1844-44B4-A595-5FD152853B9C}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{F49C2ED0-1844-44B4-A595-5FD152853B9C}.Release|x86.ActiveCfg = Release|Any CPU
+		{C7F492BF-8C5C-4080-85A0-A0C4A63D68F2}.Debug|Any CPU.ActiveCfg = Debug|x86
+		{C7F492BF-8C5C-4080-85A0-A0C4A63D68F2}.Debug|Mixed Platforms.ActiveCfg = Debug|x86
+		{C7F492BF-8C5C-4080-85A0-A0C4A63D68F2}.Debug|Mixed Platforms.Build.0 = Debug|x86
+		{C7F492BF-8C5C-4080-85A0-A0C4A63D68F2}.Debug|x86.ActiveCfg = Debug|x86
+		{C7F492BF-8C5C-4080-85A0-A0C4A63D68F2}.Debug|x86.Build.0 = Debug|x86
+		{C7F492BF-8C5C-4080-85A0-A0C4A63D68F2}.Release|Any CPU.ActiveCfg = Release|x86
+		{C7F492BF-8C5C-4080-85A0-A0C4A63D68F2}.Release|Mixed Platforms.ActiveCfg = Release|x86
+		{C7F492BF-8C5C-4080-85A0-A0C4A63D68F2}.Release|Mixed Platforms.Build.0 = Release|x86
+		{C7F492BF-8C5C-4080-85A0-A0C4A63D68F2}.Release|x86.ActiveCfg = Release|x86
+		{C7F492BF-8C5C-4080-85A0-A0C4A63D68F2}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -153,5 +165,6 @@ Global
 		{68BC3141-C2EF-487A-B4A6-A0AD7E754FB1} = {4B80B6C6-EDC3-4FB0-A7AB-CB48F321543A}
 		{B40059BD-5E50-4855-8EE1-1576E007E5F4} = {4B80B6C6-EDC3-4FB0-A7AB-CB48F321543A}
 		{FAE55BF3-BC8D-47A9-9E32-305ED5C40EDF} = {4B80B6C6-EDC3-4FB0-A7AB-CB48F321543A}
+		{C7F492BF-8C5C-4080-85A0-A0C4A63D68F2} = {4B80B6C6-EDC3-4FB0-A7AB-CB48F321543A}
 	EndGlobalSection
 EndGlobal
