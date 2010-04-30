@@ -36,7 +36,9 @@ namespace Raven.Database
 
 			VirtualDirectory = ConfigurationManager.AppSettings["VirtualDirectory"];
 
-			PluginsDirectory = ConfigurationManager.AppSettings["PluginsDirectory"] ?? "Plugins";
+			PluginsDirectory = ConfigurationManager.AppSettings["PluginsDirectory"] ?? @"~\Plugins";
+			if (PluginsDirectory.StartsWith(@"~\"))
+				PluginsDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, PluginsDirectory.Substring(2));
 
 			AnonymousUserAccessMode = GetAnonymousUserAccessMode();
 
