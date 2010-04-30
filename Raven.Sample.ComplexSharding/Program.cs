@@ -1,14 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Threading;
 using Raven.Client.Document;
 using Raven.Client.Shard;
 using Raven.Client.Shard.ShardStrategy;
 using Raven.Client.Shard.ShardStrategy.ShardAccess;
-using Raven.Client.Shard.ShardStrategy.ShardResolution;
-using Raven.Client.Shard.ShardStrategy.ShardSelection;
 using Raven.Database;
 using Raven.Server;
 
@@ -136,93 +132,5 @@ namespace Raven.Sample.ComplexSharding
 					Directory.Delete(dir, true);
 			}
 		}
-	}
-
-	public class BlogShardResolutionStrategy : IShardResolutionStrategy
-	{
-		private readonly int numberOfShardsForPosts;
-		public BlogShardResolutionStrategy(int numberOfShardsForPosts)
-		{
-			this.numberOfShardsForPosts = numberOfShardsForPosts;
-		}public IList<string> SelectShardIdsFromData(ShardResolutionStrategyData srsd)
-		{
-			if (srsd.EntityType == typeof(User))
-				return new[] { "Users" };
-			if (srsd.EntityType == typeof(Blog))
-				return new[] { "Blogs" };
-			if (srsd.EntityType == typeof(Post))
-				return Enumerable.Range(0, numberOfShardsForPosts).Select(i => "Posts #" + (i + 1)).ToArray();
-
-			throw new ArgumentException("Cannot get shard id for '" + srsd.EntityType + "' because it is not a User, Blog or Post");
-		}
-	}
-
-	public class BlogShardSelectionStrategy : IShardSelectionStrategy
-	{
-		private readonly int numberOfShardsForPosts;
-		private int currentNewShardId;
-
-		public BlogShardSelectionStrategy(int numberOfShardsForPosts)
-		{
-			this.numberOfShardsForPosts = numberOfShardsForPosts;
-		}
-
-		public string SelectShardIdForNewObject(object obj)
-		{
-			var shardId = GetShardIdFromObjectType(obj);
-			if(obj is Post)
-			{
-				var nextPostShardId = Interlocked.Increment(ref currentNewShardId) % numberOfShardsForPosts;
-				nextPostShardId += 1;// to ensure base 1
-				((Post) obj).Id = "posts/" + nextPostShardId + "/"; // encode the shard id in the in the prefix.
-				shardId += nextPostShardId;
-			}
-			return shardId;
-		}
-
-		public string SelectShardIdForExistingObject(object obj)
-		{
-			var shardId = GetShardIdFromObjectType(obj);
-			if(obj is Post)
-			{
-				// the format of a post id is: 'posts' / 'shard id' / 'post id'
-				var id = ((Post)obj).Id.Split(new[]{'/'},StringSplitOptions.RemoveEmptyEntries);
-				shardId += id[1];// add shard id
-			}
-			return shardId;
-		}
-
-		private static string GetShardIdFromObjectType(object instance)
-		{
-			if (instance is User)
-				return "Users";
-			if (instance is Blog)
-				return "Blogs";
-			if (instance is Post)
-				return "Posts #";
-			throw new ArgumentException("Cannot get shard id for '" + instance + "' because it is not a User, Blog or Post");
-		}
-	}
-
-
-	public class User
-	{
-		public string Id { get; set; }
-		public string Name { get; set; }
-	}
-
-	public class Blog
-	{
-		public string Id { get; set; }
-		public string Name { get; set; }
-	}
-
-	public class Post
-	{
-		public string Id { get; set; }
-		public string Title { get; set; }
-		public string Content { get; set; }
-		public string BlogId { get; set; }
-		public string UserId { get; set; }
 	}
 }
