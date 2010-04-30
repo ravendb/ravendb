@@ -154,7 +154,7 @@ task Merge -depends Compile {
 	remove-item $build_dir\RavenClient.dll -ErrorAction SilentlyContinue
 	remove-item $build_dir\RavenWeb.dll  -ErrorAction SilentlyContinue
 	
-	exec "..\Utilities\Binaries\Raven.Merger.exe"
+	exec "..\Utilities\Binaries\Raven.Merger.exe" $build_dir
 	
 	cd $old
 }
