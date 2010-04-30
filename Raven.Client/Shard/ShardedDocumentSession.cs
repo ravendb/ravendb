@@ -137,8 +137,11 @@ namespace Raven.Client.Shard
         }
 
         public IDocumentQuery<T> Query<T>(string indexName)
-		{
-        	return new ShardedDocumentQuery<T>(indexName, shardSessions);
+        {
+        	var sessionIds = shardStrategy.ShardResolutionStrategy.SelectShardIdsFromData(new ShardResolutionStrategyData{EntityType = typeof(T)});
+        	return new ShardedDocumentQuery<T>(indexName,
+        	                                   shardSessions.Where(session => sessionIds.Contains(session.StoreIdentifier))
+        	                                   	.ToArray());
         }
 
 		public string StoreIdentifier
