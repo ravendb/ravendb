@@ -1,0 +1,2704 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Rhino.Etl.Core</name>
+    </assembly>
+    <members>
+        <member name="T:Rhino.Etl.Core.ConventionOperations.ConventionSqlBatchOpeartion">
+            <summary>
+            Convention class for sql batching.
+            </summary>
+        </member>
+        <member name="T:Rhino.Etl.Core.Operations.SqlBatchOperation">
+            <summary>
+            Perform a batch command against SQL server
+            </summary>
+        </member>
+        <member name="T:Rhino.Etl.Core.Operations.AbstractDatabaseOperation">
+            <summary>
+            Represent an operation that uses the database can occure during the ETL process
+            </summary>
+        </member>
+        <member name="T:Rhino.Etl.Core.Operations.AbstractOperation">
+            <summary>
+            Represent a single operation that can occure during the ETL process
+            </summary>
+        </member>
+        <member name="T:Rhino.Etl.Core.WithLoggingMixin">
+            <summary>
+            A base class that expose easily logging events
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.WithLoggingMixin.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.WithLoggingMixin"/> class.
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.WithLoggingMixin.Error(System.Exception,System.String,System.Object[])">
+            <summary>
+            Logs an error message
+            </summary>
+            <param name="exception">The exception.</param>
+            <param name="format">The format.</param>
+            <param name="args">The args.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.WithLoggingMixin.Warn(System.String,System.Object[])">
+            <summary>
+            Logs a warn message
+            </summary>
+            <param name="format">The format.</param>
+            <param name="args">The args.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.WithLoggingMixin.Debug(System.String,System.Object[])">
+            <summary>
+            Logs a debug message
+            </summary>
+            <param name="format">The format.</param>
+            <param name="args">The args.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.WithLoggingMixin.Notice(System.String,System.Object[])">
+            <summary>
+            Logs a notice message
+            </summary>
+            <param name="format">The format.</param>
+            <param name="args">The args.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.WithLoggingMixin.Info(System.String,System.Object[])">
+            <summary>
+            Logs an information message
+            </summary>
+            <param name="format">The format.</param>
+            <param name="args">The args.</param>
+        </member>
+        <member name="P:Rhino.Etl.Core.WithLoggingMixin.Errors">
+            <summary>
+            Gets all the errors
+            </summary>
+            <value>The errors.</value>
+        </member>
+        <member name="T:Rhino.Etl.Core.Operations.IOperation">
+            <summary>
+            A single operation in an etl process
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.IOperation.PrepareForExecution(Rhino.Etl.Core.IPipelineExecuter)">
+            <summary>
+            Initializes the current instance
+            </summary>
+            <param name="pipelineExecuter">The current pipeline executer.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.IOperation.Execute(System.Collections.Generic.IEnumerable{Rhino.Etl.Core.Row})">
+            <summary>
+            Executes this operation
+            </summary>
+            <param name="rows">The rows.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.IOperation.RaiseRowProcessed(Rhino.Etl.Core.Row)">
+            <summary>
+            Raises the row processed event
+            </summary>
+            <param name="dictionary">The dictionary.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.IOperation.RaiseFinishedProcessing">
+            <summary>
+            Raises the finished processing event
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.IOperation.GetAllErrors">
+            <summary>
+            Gets all errors that occured when running this operation
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="P:Rhino.Etl.Core.Operations.IOperation.Name">
+            <summary>
+            Gets the name.
+            </summary>
+            <value>The name.</value>
+        </member>
+        <member name="P:Rhino.Etl.Core.Operations.IOperation.Statistics">
+            <summary>
+            Gets the statistics for this operation
+            </summary>
+            <value>The statistics.</value>
+        </member>
+        <member name="E:Rhino.Etl.Core.Operations.IOperation.OnRowProcessed">
+            <summary>
+            Occurs when a row is processed.
+            </summary>
+        </member>
+        <member name="E:Rhino.Etl.Core.Operations.IOperation.OnFinishedProcessing">
+            <summary>
+            Occurs when all the rows has finished processing.
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.AbstractOperation.PrepareForExecution(Rhino.Etl.Core.IPipelineExecuter)">
+            <summary>
+            Initializes this instance
+            </summary>
+            <param name="pipelineExecuter">The current pipeline executer.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.AbstractOperation.Rhino#Etl#Core#Operations#IOperation#RaiseRowProcessed(Rhino.Etl.Core.Row)">
+            <summary>
+            Raises the row processed event
+            </summary>
+            <param name="dictionary">The dictionary.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.AbstractOperation.Rhino#Etl#Core#Operations#IOperation#RaiseFinishedProcessing">
+            <summary>
+            Raises the finished processing event
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.AbstractOperation.GetAllErrors">
+            <summary>
+            Gets all errors that occured when running this operation
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.AbstractOperation.Execute(System.Collections.Generic.IEnumerable{Rhino.Etl.Core.Row})">
+            <summary>
+            Executes this operation
+            </summary>
+            <param name="rows">The rows.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.AbstractOperation.Dispose">
+            <summary>
+            Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+            </summary>
+            <filterpriority>2</filterpriority>
+        </member>
+        <member name="P:Rhino.Etl.Core.Operations.AbstractOperation.PipelineExecuter">
+            <summary>
+            Gets the pipeline executer.
+            </summary>
+            <value>The pipeline executer.</value>
+        </member>
+        <member name="P:Rhino.Etl.Core.Operations.AbstractOperation.Name">
+            <summary>
+            Gets the name of this instance
+            </summary>
+            <value>The name.</value>
+        </member>
+        <member name="P:Rhino.Etl.Core.Operations.AbstractOperation.Statistics">
+            <summary>
+            Gets the statistics for this operation
+            </summary>
+            <value>The statistics.</value>
+        </member>
+        <member name="E:Rhino.Etl.Core.Operations.AbstractOperation.OnRowProcessed">
+            <summary>
+            Occurs when a row is processed.
+            </summary>
+        </member>
+        <member name="E:Rhino.Etl.Core.Operations.AbstractOperation.OnFinishedProcessing">
+            <summary>
+            Occurs when all the rows has finished processing.
+            </summary>
+        </member>
+        <member name="F:Rhino.Etl.Core.Operations.AbstractDatabaseOperation.paramPrefix">
+            <summary>
+            The parameter prefix to use when adding parameters
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.AbstractDatabaseOperation.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.Operations.AbstractDatabaseOperation"/> class.
+            </summary>
+            <param name="connectionStringName">Name of the connection string.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.AbstractDatabaseOperation.#ctor(System.Configuration.ConnectionStringSettings)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.Operations.AbstractDatabaseOperation"/> class.
+            </summary>
+            <param name="connectionStringSettings">Name of the connection string.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.AbstractDatabaseOperation.CopyRowValuesToCommandParameters(System.Data.IDbCommand,Rhino.Etl.Core.Row)">
+            <summary>
+            Copies the row values to command parameters.
+            </summary>
+            <param name="command">The command.</param>
+            <param name="row">The row.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.AbstractDatabaseOperation.AddParameter(System.Data.IDbCommand,System.String,System.Object)">
+            <summary>
+            Adds the parameter the specifed command
+            </summary>
+            <param name="command">The command.</param>
+            <param name="name">The name.</param>
+            <param name="val">The val.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.AbstractDatabaseOperation.CanUseAsParameter(System.Object)">
+            <summary>
+            Determines whether this value can be use as a parameter to ADO.Net provider.
+            This perform a simple heuristic 
+            </summary>
+            <param name="value">The value.</param>
+        </member>
+        <member name="P:Rhino.Etl.Core.Operations.AbstractDatabaseOperation.ConnectionStringSettings">
+            <summary>
+            Gets the connection string settings.
+            </summary>
+            <value>The connection string settings.</value>
+        </member>
+        <member name="P:Rhino.Etl.Core.Operations.AbstractDatabaseOperation.ConnectionStringName">
+            <summary>
+            Gets the name of the connection string.
+            </summary>
+            <value>The name of the connection string.</value>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.SqlBatchOperation.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.Operations.SqlBatchOperation"/> class.
+            </summary>
+            <param name="connectionStringName">Name of the connection string.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.SqlBatchOperation.#ctor(System.Configuration.ConnectionStringSettings)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.Operations.SqlBatchOperation"/> class.
+            </summary>
+            <param name="connectionStringSettings">The connection string settings to use.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.SqlBatchOperation.Execute(System.Collections.Generic.IEnumerable{Rhino.Etl.Core.Row})">
+            <summary>
+            Executes this operation
+            </summary>
+            <param name="rows">The rows.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.SqlBatchOperation.PrepareCommand(Rhino.Etl.Core.Row,System.Data.SqlClient.SqlCommand)">
+            <summary>
+            Prepares the command from the given row
+            </summary>
+            <param name="row">The row.</param>
+            <param name="command">The command.</param>
+        </member>
+        <member name="P:Rhino.Etl.Core.Operations.SqlBatchOperation.BatchSize">
+            <summary>
+            Gets or sets the size of the batch.
+            </summary>
+            <value>The size of the batch.</value>
+        </member>
+        <member name="M:Rhino.Etl.Core.ConventionOperations.ConventionSqlBatchOpeartion.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.ConventionOperations.ConventionSqlBatchOpeartion"/> class.
+            </summary>
+            <param name="connectionStringName">Name of the connection string.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.ConventionOperations.ConventionSqlBatchOpeartion.PrepareCommand(Rhino.Etl.Core.Row,System.Data.SqlClient.SqlCommand)">
+            <summary>
+            Prepares the command.
+            </summary>
+            <param name="row">The row.</param>
+            <param name="sqlCommand">The SQL command.</param>
+        </member>
+        <member name="P:Rhino.Etl.Core.ConventionOperations.ConventionSqlBatchOpeartion.Command">
+            <summary>
+            Gets or sets the command text to execute
+            </summary>
+            <value>The command.</value>
+        </member>
+        <member name="T:Rhino.Etl.Core.ConventionOperations.ConventionSqlBulkInsertOperation">
+            <summary>Convertion wrapper around the <see cref="T:Rhino.Etl.Core.Operations.SqlBulkInsertOperation"/>.</summary>
+        </member>
+        <member name="T:Rhino.Etl.Core.Operations.SqlBulkInsertOperation">
+            <summary>
+            Allows to execute an operation that perform a bulk insert into a sql server database
+            </summary>
+        </member>
+        <member name="F:Rhino.Etl.Core.Operations.SqlBulkInsertOperation._schema">
+            <summary>
+            The schema of the destination table
+            </summary>
+        </member>
+        <member name="F:Rhino.Etl.Core.Operations.SqlBulkInsertOperation.Mappings">
+            <summary>
+            The mapping of columns from the row to the database schema.
+            Important: The column name in the database is case sensitive!
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.SqlBulkInsertOperation.#ctor(System.String,System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.Operations.SqlBulkInsertOperation"/> class.
+            </summary>
+            <param name="connectionStringName">Name of the connection string.</param>
+            <param name="targetTable">The target table.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.SqlBulkInsertOperation.#ctor(System.Configuration.ConnectionStringSettings,System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.Operations.SqlBulkInsertOperation"/> class.
+            </summary>
+            <param name="connectionStringSettings">Connection string settings to use.</param>
+            <param name="targetTable">The target table.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.SqlBulkInsertOperation.#ctor(System.String,System.String,System.Int32)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.Operations.SqlBulkInsertOperation"/> class.
+            </summary>
+            <param name="connectionStringName">Name of the connection string.</param>
+            <param name="targetTable">The target table.</param>
+            <param name="timeout">The timeout.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.SqlBulkInsertOperation.#ctor(System.Configuration.ConnectionStringSettings,System.String,System.Int32)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.Operations.SqlBulkInsertOperation"/> class.
+            </summary>
+            <param name="connectionStringSettings">Connection string settings to use.</param>
+            <param name="targetTable">The target table.</param>
+            <param name="timeout">The timeout.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.SqlBulkInsertOperation.ToggleOption(System.Data.SqlClient.SqlBulkCopyOptions,System.Boolean)">
+            <summary>Turns a <see cref="F:Rhino.Etl.Core.Operations.SqlBulkInsertOperation.bulkCopyOptions"/> on or off depending on the value of <paramref name="on"/></summary>
+            <param name="option">The <see cref="T:System.Data.SqlClient.SqlBulkCopyOptions"/> to turn on or off.</param>
+            <param name="on"><c>true</c> to set the <see cref="T:System.Data.SqlClient.SqlBulkCopyOptions"/> <paramref name="option"/> on otherwise <c>false</c> to turn the <paramref name="option"/> off.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.SqlBulkInsertOperation.IsOptionOn(System.Data.SqlClient.SqlBulkCopyOptions)">
+            <summary>Returns <c>true</c> if the <paramref name="option"/> is turned on, otherwise <c>false</c></summary>
+            <param name="option">The <see cref="T:System.Data.SqlClient.SqlBulkCopyOptions"/> option to test for.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.SqlBulkInsertOperation.TurnOptionOn(System.Data.SqlClient.SqlBulkCopyOptions)">
+            <summary>Turns the <paramref name="option"/> on.</summary>
+            <param name="option"></param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.SqlBulkInsertOperation.TurnOptionOff(System.Data.SqlClient.SqlBulkCopyOptions)">
+            <summary>Turns the <paramref name="option"/> off.</summary>
+            <param name="option"></param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.SqlBulkInsertOperation.PrepareMapping">
+            <summary>
+            Prepares the mapping for use, by default, it uses the schema mapping.
+            This is the preferred appraoch
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.SqlBulkInsertOperation.CreateInputSchema">
+            <summary>Use the destination Schema and Mappings to create the
+            operations input schema so it can build the adapter for sending
+            to the WriteToServer method.</summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.SqlBulkInsertOperation.Execute(System.Collections.Generic.IEnumerable{Rhino.Etl.Core.Row})">
+            <summary>
+            Executes this operation
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.SqlBulkInsertOperation.PrepareSchema">
+            <summary>
+            Prepares the schema of the target table
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.SqlBulkInsertOperation.CreateSqlBulkCopy(System.Data.SqlClient.SqlConnection,System.Data.SqlClient.SqlTransaction)">
+            <summary>
+            Creates the SQL bulk copy instance
+            </summary>
+        </member>
+        <member name="P:Rhino.Etl.Core.Operations.SqlBulkInsertOperation.Timeout">
+            <summary>The timeout value of the bulk insert operation</summary>
+        </member>
+        <member name="P:Rhino.Etl.Core.Operations.SqlBulkInsertOperation.TargetTable">
+            <summary>The table or view to bulk load the data into.</summary>
+        </member>
+        <member name="P:Rhino.Etl.Core.Operations.SqlBulkInsertOperation.LockTable">
+            <summary><c>true</c> to turn the <see cref="F:System.Data.SqlClient.SqlBulkCopyOptions.TableLock"/> option on, otherwise <c>false</c>.</summary>
+        </member>
+        <member name="P:Rhino.Etl.Core.Operations.SqlBulkInsertOperation.KeepIdentity">
+            <summary><c>true</c> to turn the <see cref="F:System.Data.SqlClient.SqlBulkCopyOptions.KeepIdentity"/> option on, otherwise <c>false</c>.</summary>
+        </member>
+        <member name="P:Rhino.Etl.Core.Operations.SqlBulkInsertOperation.KeepNulls">
+            <summary><c>true</c> to turn the <see cref="F:System.Data.SqlClient.SqlBulkCopyOptions.KeepNulls"/> option on, otherwise <c>false</c>.</summary>
+        </member>
+        <member name="P:Rhino.Etl.Core.Operations.SqlBulkInsertOperation.CheckConstraints">
+            <summary><c>true</c> to turn the <see cref="F:System.Data.SqlClient.SqlBulkCopyOptions.CheckConstraints"/> option on, otherwise <c>false</c>.</summary>
+        </member>
+        <member name="P:Rhino.Etl.Core.Operations.SqlBulkInsertOperation.FireTriggers">
+            <summary><c>true</c> to turn the <see cref="F:System.Data.SqlClient.SqlBulkCopyOptions.FireTriggers"/> option on, otherwise <c>false</c>.</summary>
+        </member>
+        <member name="P:Rhino.Etl.Core.Operations.SqlBulkInsertOperation.Schema">
+            <summary>The table or view's schema information.</summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.ConventionOperations.ConventionSqlBulkInsertOperation.#ctor(System.String,System.String)">
+            <summary>Creates a new <see cref="T:Rhino.Etl.Core.ConventionOperations.ConventionSqlBulkInsertOperation"/></summary>
+            <param name="connectionStringName"></param>
+            <param name="targetTable"></param>
+        </member>
+        <member name="M:Rhino.Etl.Core.ConventionOperations.ConventionSqlBulkInsertOperation.#ctor(System.Configuration.ConnectionStringSettings,System.String)">
+            <summary>Creates a new <see cref="T:Rhino.Etl.Core.ConventionOperations.ConventionSqlBulkInsertOperation"/></summary>
+            <param name="connectionStringSettings">Connection string settings to use.</param>
+            <param name="targetTable"></param>
+        </member>
+        <member name="M:Rhino.Etl.Core.ConventionOperations.ConventionSqlBulkInsertOperation.PrepareSchema">
+            <summary>
+            Prepares the schema of the target table
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.ConventionOperations.ConventionSqlBulkInsertOperation.PrepareMapping">
+            <summary>
+            Prepares the mapping for use, by default, it uses the schema mapping.
+            This is the preferred appraoch
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.ConventionOperations.ConventionSqlBulkInsertOperation.MapColumn(System.String)">
+            <summary>Adds a column to the destination mapping.</summary>
+            <param name="destinationColumn">The name of column, this is case sensitive.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.ConventionOperations.ConventionSqlBulkInsertOperation.MapColumn(System.String,System.Type)">
+            <summary>Adds a column and specified type to the destination mapping.</summary>
+            <param name="destinationColumn">The name of the column</param>
+            <param name="columnType">The type of the column.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.ConventionOperations.ConventionSqlBulkInsertOperation.MapColumn(System.String,System.String,System.Type)">
+            <summary>Adds a column and the specified type to the destination mapping with the given sourceColumn mapping.</summary>
+            <param name="destinationColumn"></param>
+            <param name="columnType"></param>
+            <param name="sourceColumn"></param>
+        </member>
+        <member name="T:Rhino.Etl.Core.Enumerables.SingleRowEventRaisingEnumerator">
+            <summary>
+            An enumerator that will raise the events on the operation for each iterated item
+            </summary>
+        </member>
+        <member name="F:Rhino.Etl.Core.Enumerables.SingleRowEventRaisingEnumerator.operation">
+            <summary>
+            Represents the operation on which to raise events
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Enumerables.SingleRowEventRaisingEnumerator.#ctor(Rhino.Etl.Core.Operations.IOperation,System.Collections.Generic.IEnumerable{Rhino.Etl.Core.Row})">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.Enumerables.SingleRowEventRaisingEnumerator"/> class.
+            </summary>
+            <param name="operation">The operation.</param>
+            <param name="inner">The innerEnumerator.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Enumerables.SingleRowEventRaisingEnumerator.Dispose">
+            <summary>
+            Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+            </summary>
+            <filterpriority>2</filterpriority>
+        </member>
+        <member name="M:Rhino.Etl.Core.Enumerables.SingleRowEventRaisingEnumerator.MoveNext">
+            <summary>
+            Advances the enumerator to the next element of the collection.
+            </summary>
+            
+            <returns>
+            true if the enumerator was successfully advanced to the next element; false if the enumerator has passed the end of the collection.
+            </returns>
+            
+            <exception cref="T:System.InvalidOperationException">The collection was modified after the enumerator was created. </exception><filterpriority>2</filterpriority>
+        </member>
+        <member name="M:Rhino.Etl.Core.Enumerables.SingleRowEventRaisingEnumerator.Reset">
+            <summary>
+            Sets the enumerator to its initial position, which is before the first element in the collection.
+            </summary>
+            
+            <exception cref="T:System.InvalidOperationException">The collection was modified after the enumerator was created. </exception><filterpriority>2</filterpriority>
+        </member>
+        <member name="M:Rhino.Etl.Core.Enumerables.SingleRowEventRaisingEnumerator.System#Collections#Generic#IEnumerable{Rhino#Etl#Core#Row}#GetEnumerator">
+            <summary>
+            Returns an enumerator that iterates through the collection.
+            </summary>
+            
+            <returns>
+            A <see cref="T:System.Collections.Generic.IEnumerator`1"></see> that can be used to iterate through the collection.
+            </returns>
+            <filterpriority>1</filterpriority>
+        </member>
+        <member name="M:Rhino.Etl.Core.Enumerables.SingleRowEventRaisingEnumerator.GetEnumerator">
+            <summary>
+            Returns an enumerator that iterates through a collection.
+            </summary>
+            
+            <returns>
+            An <see cref="T:System.Collections.IEnumerator"></see> object that can be used to iterate through the collection.
+            </returns>
+            <filterpriority>2</filterpriority>
+        </member>
+        <member name="P:Rhino.Etl.Core.Enumerables.SingleRowEventRaisingEnumerator.Current">
+            <summary>
+            Gets the element in the collection at the current position of the enumerator.
+            </summary>
+            
+            <returns>
+            The element in the collection at the current position of the enumerator.
+            </returns>
+            
+        </member>
+        <member name="P:Rhino.Etl.Core.Enumerables.SingleRowEventRaisingEnumerator.System#Collections#IEnumerator#Current">
+            <summary>
+            Gets the current element in the collection.
+            </summary>
+            
+            <returns>
+            The current element in the collection.
+            </returns>
+            
+            <exception cref="T:System.InvalidOperationException">The enumerator is positioned before the first element of the collection or after the last element.-or- The collection was modified after the enumerator was created.</exception><filterpriority>2</filterpriority>
+        </member>
+        <member name="T:Rhino.Etl.Core.Enumerables.ThreadSafeEnumerator`1">
+            <summary>
+            This enumerator allows to safely move items between threads. It takes
+            care of all the syncronization.
+            </summary>
+            <typeparam name="T"></typeparam>
+        </member>
+        <member name="M:Rhino.Etl.Core.Enumerables.ThreadSafeEnumerator`1.GetEnumerator">
+            <summary>
+            Returns an enumerator that iterates through the collection.
+            </summary>
+            <returns>
+            A <see cref="T:System.Collections.Generic.IEnumerator`1"/> that can be used to iterate through the collection.
+            </returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.Enumerables.ThreadSafeEnumerator`1.System#Collections#IEnumerable#GetEnumerator">
+            <summary>
+            Returns an enumerator that iterates through a collection.
+            </summary>
+            <returns>
+            An <see cref="T:System.Collections.IEnumerator"/> object that can be used to iterate through the collection.
+            </returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.Enumerables.ThreadSafeEnumerator`1.Dispose">
+            <summary>
+            Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Enumerables.ThreadSafeEnumerator`1.MoveNext">
+            <summary>
+            Advances the enumerator to the next element of the collection.
+            </summary>
+            <returns>
+            true if the enumerator was successfully advanced to the next element; false if the enumerator has passed the end of the collection.
+            </returns>
+            <exception cref="T:System.InvalidOperationException">The collection was modified after the enumerator was created. </exception>
+        </member>
+        <member name="M:Rhino.Etl.Core.Enumerables.ThreadSafeEnumerator`1.Reset">
+            <summary>
+            Sets the enumerator to its initial position, which is before the first element in the collection.
+            </summary>
+            <exception cref="T:System.InvalidOperationException">The collection was modified after the enumerator was created. </exception>
+        </member>
+        <member name="M:Rhino.Etl.Core.Enumerables.ThreadSafeEnumerator`1.AddItem(`0)">
+            <summary>
+            Adds the item to the items this is enumerating on.
+            Will immediately release a waiting thread that can start working on itl
+            </summary>
+            <param name="item">The item.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Enumerables.ThreadSafeEnumerator`1.MarkAsFinished">
+            <summary>
+            Marks this instance as finished, so it will stop iterating
+            </summary>
+        </member>
+        <member name="P:Rhino.Etl.Core.Enumerables.ThreadSafeEnumerator`1.Current">
+            <summary>
+            Gets the element in the collection at the current position of the enumerator.
+            </summary>
+            <value></value>
+            <returns>The element in the collection at the current position of the enumerator.</returns>
+        </member>
+        <member name="P:Rhino.Etl.Core.Enumerables.ThreadSafeEnumerator`1.System#Collections#IEnumerator#Current">
+            <summary>
+            Gets the element in the collection at the current position of the enumerator.
+            </summary>
+            <value></value>
+            <returns>The element in the collection at the current position of the enumerator.</returns>
+        </member>
+        <member name="T:Rhino.Etl.Core.Guard">
+            <summary>
+            Helper class for guard statements, which allow prettier
+            code for guard clauses
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Guard.Against(System.Boolean,System.String)">
+            <summary>
+            Will throw a <see cref="T:System.InvalidOperationException"/> if the assertion
+            is true, with the specificied message.
+            </summary>
+            <param name="assertion">if set to <c>true</c> [assertion].</param>
+            <param name="message">The message.</param>
+            <example>
+            Sample usage:
+            <code>
+            Guard.Against(string.IsNullOrEmpty(name), "Name must have a value");
+            </code>
+            </example>
+        </member>
+        <member name="M:Rhino.Etl.Core.Guard.Against``1(System.Boolean,System.String)">
+            <summary>
+            Will throw exception of type <typeparamref name="TException"/>
+            with the specified message if the assertion is true
+            </summary>
+            <typeparam name="TException"></typeparam>
+            <param name="assertion">if set to <c>true</c> [assertion].</param>
+            <param name="message">The message.</param>
+            <example>
+            Sample usage:
+            <code>
+            <![CDATA[
+            Guard.Against<ArgumentException>(string.IsNullOrEmpty(name), "Name must have a value");
+            ]]>
+            </code>
+            </example>
+        </member>
+        <member name="T:Rhino.Etl.Core.Infrastructure.SqlCommandSet">
+            <summary>
+            Expose the batch functionality in ADO.Net 2.0
+            Microsoft in its wisdom decided to make my life hard and mark it internal.
+            Through the use of Reflection and some delegates magic, I opened up the functionality.
+            
+            There is NO documentation for this, and likely zero support.
+            Use at your own risk, etc...
+            
+            Observable performance benefits are 50%+ when used, so it is really worth it.
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Infrastructure.SqlCommandSet.#ctor">
+            <summary>
+            Creates a new instance of SqlCommandSet
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Infrastructure.SqlCommandSet.Append(System.Data.SqlClient.SqlCommand)">
+            <summary>
+            Append a command to the batch
+            </summary>
+            <param name="command"></param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Infrastructure.SqlCommandSet.AssertHasParameters(System.Data.SqlClient.SqlCommand)">
+            <summary>
+            This is required because SqlClient.SqlCommandSet will throw if 
+            the command has no parameters.
+            </summary>
+            <param name="command"></param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Infrastructure.SqlCommandSet.ExecuteNonQuery">
+            <summary>
+            Executes the batch
+            </summary>
+            <returns>
+            This seems to be returning the total number of affected rows in all queries
+            </returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.Infrastructure.SqlCommandSet.Dispose">
+            <summary>
+            Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+            </summary>
+            <filterpriority>2</filterpriority>
+        </member>
+        <member name="P:Rhino.Etl.Core.Infrastructure.SqlCommandSet.BatchCommand">
+            <summary>
+            Return the batch command to be executed
+            </summary>
+        </member>
+        <member name="P:Rhino.Etl.Core.Infrastructure.SqlCommandSet.CountOfCommands">
+            <summary>
+            The number of commands batched in this instance
+            </summary>
+        </member>
+        <member name="P:Rhino.Etl.Core.Infrastructure.SqlCommandSet.Connection">
+            <summary>
+             The connection the batch will use
+            </summary>
+        </member>
+        <member name="P:Rhino.Etl.Core.Infrastructure.SqlCommandSet.Transaction">
+            <summary>
+            The transaction the batch will run as part of
+            </summary>
+        </member>
+        <member name="T:Rhino.Etl.Core.Infrastructure.Use">
+            <summary>
+            Helper class to provide simple data access, when we want to access the ADO.Net
+            library directly. 
+            </summary>
+        </member>
+        <member name="F:Rhino.Etl.Core.Infrastructure.Use.ActiveConnection">
+            <summary>
+            Gets or sets the active connection.
+            </summary>
+            <value>The active connection.</value>
+        </member>
+        <member name="F:Rhino.Etl.Core.Infrastructure.Use.ActiveTransaction">
+            <summary>
+            Gets or sets the active transaction.
+            </summary>
+            <value>The active transaction.</value>
+        </member>
+        <member name="F:Rhino.Etl.Core.Infrastructure.Use.TransactionCounter">
+            <summary>
+            Gets or sets the transaction counter.
+            </summary>
+            <value>The transaction counter.</value>
+        </member>
+        <member name="M:Rhino.Etl.Core.Infrastructure.Use.Transaction``1(System.String,Rhino.Etl.Core.Infrastructure.Use.Func{``0})">
+            <summary>
+            Execute the specified delegate inside a transaction and return 
+            the result of the delegate.
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="connectionStringName">The name of the named connection string in the configuration file</param>
+            <param name="actionToExecute">The action to execute</param>
+            <returns></returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.Infrastructure.Use.Transaction``1(System.Configuration.ConnectionStringSettings,Rhino.Etl.Core.Infrastructure.Use.Func{``0})">
+            <summary>
+            Execute the specified delegate inside a transaction and return 
+            the result of the delegate.
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="connectionStringSettings">The connection string settings to use for the connection</param>
+            <param name="actionToExecute">The action to execute</param>
+            <returns></returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.Infrastructure.Use.Transaction(System.String,Rhino.Etl.Core.Infrastructure.Use.Proc)">
+            <summary>
+            Execute the specified delegate inside a transaction
+            </summary>
+            <param name="connectionStringName">Name of the connection string.</param>
+            <param name="actionToExecute">The action to execute.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Infrastructure.Use.Transaction(System.Configuration.ConnectionStringSettings,Rhino.Etl.Core.Infrastructure.Use.Proc)">
+            <summary>
+            Execute the specified delegate inside a transaction
+            </summary>
+            <param name="connectionStringSettings">The connection string settings to use for the connection</param>
+            <param name="actionToExecute">The action to execute.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Infrastructure.Use.Transaction(System.String,System.Data.IsolationLevel,Rhino.Etl.Core.Infrastructure.Use.Proc)">
+            <summary>
+            Execute the specified delegate inside a transaction with the specific
+            isolation level 
+            </summary>
+            <param name="connectionStringName">Name of the connection string.</param>
+            <param name="isolationLevel">The isolation level.</param>
+            <param name="actionToExecute">The action to execute.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Infrastructure.Use.Transaction(System.Configuration.ConnectionStringSettings,System.Data.IsolationLevel,Rhino.Etl.Core.Infrastructure.Use.Proc)">
+            <summary>
+            Execute the specified delegate inside a transaction with the specific
+            isolation level 
+            </summary>
+            <param name="connectionStringSettings">Connection string settings node to use for the connection</param>
+            <param name="isolationLevel">The isolation level.</param>
+            <param name="actionToExecute">The action to execute.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Infrastructure.Use.DisposeTransaction">
+            <summary>
+            Disposes the transaction.
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Infrastructure.Use.RollbackTransaction">
+            <summary>
+            Rollbacks the transaction.
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Infrastructure.Use.CommitTransaction">
+            <summary>
+            Commits the transaction.
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Infrastructure.Use.StartTransaction(System.Configuration.ConnectionStringSettings,System.Data.IsolationLevel)">
+            <summary>
+            Starts the transaction.
+            </summary>
+            <param name="connectionStringSettings">The connection string settings to use for the transaction</param>
+            <param name="isolation">The isolation.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Infrastructure.Use.Connection(System.String)">
+            <summary>
+            Creates an open connection for a given named connection string, using the provider name
+            to select the proper implementation
+            </summary>
+            <param name="name">The name.</param>
+            <returns>The open connection</returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.Infrastructure.Use.Connection(System.Configuration.ConnectionStringSettings)">
+            <summary>
+            Creates an open connection for a given connection string setting, using the provider
+            name of select the proper implementation
+            </summary>
+            <param name="connectionString">ConnectionStringSetting node</param>
+            <returns>The open connection</returns>
+        </member>
+        <member name="T:Rhino.Etl.Core.Infrastructure.Use.Func`1">
+            <summary>
+            Delegate to execute an action with a command
+            and return a result: <typeparam name="T"/>
+            </summary>
+        </member>
+        <member name="T:Rhino.Etl.Core.Infrastructure.Use.Proc">
+            <summary>
+            Delegate to execute an action with a command
+            </summary>
+        </member>
+        <member name="T:Rhino.Etl.Core.Operations.BranchingOperation">
+            <summary>
+            Branch the current pipeline flow into all its inputs
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.BranchingOperation.Add(Rhino.Etl.Core.Operations.IOperation)">
+            <summary>
+            Adds the specified operation to this branching operation
+            </summary>
+            <param name="operation">The operation.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.BranchingOperation.PrepareForExecution(Rhino.Etl.Core.IPipelineExecuter)">
+            <summary>
+            Initializes this instance
+            </summary>
+            <param name="pipelineExecuter">The current pipeline executer.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.BranchingOperation.Execute(System.Collections.Generic.IEnumerable{Rhino.Etl.Core.Row})">
+            <summary>
+            Executes this operation, sending the input of this operation
+            to all its child operations
+            </summary>
+            <param name="rows">The rows.</param>
+            <returns></returns>
+        </member>
+        <member name="T:Rhino.Etl.Core.Operations.JoinType">
+            <summary>
+            Define the supported join types
+            </summary>
+        </member>
+        <member name="F:Rhino.Etl.Core.Operations.JoinType.Inner">
+            <summary>
+            Inner join
+            </summary>
+        </member>
+        <member name="F:Rhino.Etl.Core.Operations.JoinType.Left">
+            <summary>
+            Left outer join
+            </summary>
+        </member>
+        <member name="F:Rhino.Etl.Core.Operations.JoinType.Right">
+            <summary>
+            Right outer join
+            </summary>
+        </member>
+        <member name="F:Rhino.Etl.Core.Operations.JoinType.Full">
+            <summary>
+            Full outer join
+            </summary>
+        </member>
+        <member name="T:Rhino.Etl.Core.Operations.NestedLoopsJoinOperation">
+            <summary>
+            Perform a join between two sources
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.NestedLoopsJoinOperation.Right(Rhino.Etl.Core.Operations.IOperation)">
+            <summary>
+            Sets the right part of the join
+            </summary>
+            <value>The right.</value>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.NestedLoopsJoinOperation.Left(Rhino.Etl.Core.Operations.IOperation)">
+            <summary>
+            Sets the left part of the join
+            </summary>
+            <value>The left.</value>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.NestedLoopsJoinOperation.Execute(System.Collections.Generic.IEnumerable{Rhino.Etl.Core.Row})">
+            <summary>
+            Executes this operation
+            </summary>
+            <param name="ignored">Ignored rows</param>
+            <returns></returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.NestedLoopsJoinOperation.RightOrphanRow(Rhino.Etl.Core.Row)">
+            <summary>
+            Called when a row on the right side was filtered by
+            the join condition, allow a derived class to perform 
+            logic associated to that, such as logging
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.NestedLoopsJoinOperation.LeftOrphanRow(Rhino.Etl.Core.Row)">
+            <summary>
+            Called when a row on the left side was filtered by
+            the join condition, allow a derived class to perform 
+            logic associated to that, such as logging
+            </summary>
+            <param name="row">The row.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.NestedLoopsJoinOperation.MergeRows(Rhino.Etl.Core.Row,Rhino.Etl.Core.Row)">
+            <summary>
+            Merges the two rows into a single row
+            </summary>
+            <param name="leftRow">The left row.</param>
+            <param name="rightRow">The right row.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.NestedLoopsJoinOperation.MatchJoinCondition(Rhino.Etl.Core.Row,Rhino.Etl.Core.Row)">
+            <summary>
+            Check if the two rows match to the join condition.
+            </summary>
+            <param name="leftRow">The left row.</param>
+            <param name="rightRow">The right row.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.NestedLoopsJoinOperation.Initialize">
+            <summary>
+            Initializes this instance.
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.NestedLoopsJoinOperation.Dispose">
+            <summary>
+            Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.NestedLoopsJoinOperation.PrepareForExecution(Rhino.Etl.Core.IPipelineExecuter)">
+            <summary>
+            Initializes this instance
+            </summary>
+            <param name="pipelineExecuter">The current pipeline executer.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.NestedLoopsJoinOperation.GetAllErrors">
+            <summary>
+            Gets all errors that occured when running this operation
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.NestedLoopsJoinOperation.InnerJoin(System.Object,System.Object)">
+            <summary>
+            Perform an inner join equality on the two objects.
+            Null values are not considered equal
+            </summary>
+            <param name="left">The left.</param>
+            <param name="right">The right.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.NestedLoopsJoinOperation.LeftJoin(System.Object,System.Object)">
+            <summary>
+            Perform an left join equality on the two objects.
+            Null values are not considered equal
+            An empty row on the right side
+            with a value on the left is considered equal
+            </summary>
+            <param name="left">The left.</param>
+            <param name="right">The right.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.NestedLoopsJoinOperation.RightJoin(System.Object,System.Object)">
+            <summary>
+            Perform an right join equality on the two objects.
+            Null values are not considered equal
+            An empty row on the left side
+            with a value on the right is considered equal
+            </summary>
+            <param name="left">The left.</param>
+            <param name="right">The right.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.NestedLoopsJoinOperation.FullJoin(System.Object,System.Object)">
+            <summary>
+            Perform an full join equality on the two objects.
+            Null values are not considered equal
+            An empty row on either side will satisfy this join
+            </summary>
+            <param name="left">The left.</param>
+            <param name="right">The right.</param>
+            <returns></returns>
+        </member>
+        <member name="T:Rhino.Etl.Core.Pipelines.AbstractPipelineExecuter">
+            <summary>
+            Base class for pipeline executers, handles all the details and leave the actual
+            pipeline execution to the 
+            </summary>
+        </member>
+        <member name="T:Rhino.Etl.Core.IPipelineExecuter">
+            <summary>
+            Interface that abastract the actual execution of the pipeline
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.IPipelineExecuter.Execute(System.String,System.Collections.Generic.ICollection{Rhino.Etl.Core.Operations.IOperation},System.Func{System.Collections.Generic.IEnumerable{Rhino.Etl.Core.Row},System.Collections.Generic.IEnumerable{Rhino.Etl.Core.Row}})">
+            <summary>
+            Executes the specified pipeline.
+            </summary>
+            <param name="pipelineName">The name.</param>
+            <param name="pipeline">The pipeline.</param>
+            <param name="translateRows">Translate the rows into another representation</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.IPipelineExecuter.PipelineToEnumerable(System.Collections.Generic.ICollection{Rhino.Etl.Core.Operations.IOperation},System.Collections.Generic.IEnumerable{Rhino.Etl.Core.Row},System.Func{System.Collections.Generic.IEnumerable{Rhino.Etl.Core.Row},System.Collections.Generic.IEnumerable{Rhino.Etl.Core.Row}})">
+            <summary>
+            Transform the pipeline to an enumerable
+            </summary>
+            <param name="pipeline">The pipeline.</param>
+            <param name="rows">The rows.</param>
+            <param name="translateEnumerable">Translate the rows from one representation to another</param>
+            <returns></returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.IPipelineExecuter.GetAllErrors">
+            <summary>
+            Gets all errors that occured under this executer
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="P:Rhino.Etl.Core.IPipelineExecuter.HasErrors">
+            <summary>
+            Gets a value indicating whether this instance has errors.
+            </summary>
+            <value>
+            	<c>true</c> if this instance has errors; otherwise, <c>false</c>.
+            </value>
+        </member>
+        <member name="M:Rhino.Etl.Core.Pipelines.AbstractPipelineExecuter.Execute(System.String,System.Collections.Generic.ICollection{Rhino.Etl.Core.Operations.IOperation},System.Func{System.Collections.Generic.IEnumerable{Rhino.Etl.Core.Row},System.Collections.Generic.IEnumerable{Rhino.Etl.Core.Row}})">
+            <summary>
+            Executes the specified pipeline.
+            </summary>
+            <param name="pipelineName">The name.</param>
+            <param name="pipeline">The pipeline.</param>
+            <param name="translateRows">Translate the rows into another representation</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Pipelines.AbstractPipelineExecuter.PipelineToEnumerable(System.Collections.Generic.ICollection{Rhino.Etl.Core.Operations.IOperation},System.Collections.Generic.IEnumerable{Rhino.Etl.Core.Row},System.Func{System.Collections.Generic.IEnumerable{Rhino.Etl.Core.Row},System.Collections.Generic.IEnumerable{Rhino.Etl.Core.Row}})">
+            <summary>
+            Transform the pipeline to an enumerable
+            </summary>
+            <param name="pipeline">The pipeline.</param>
+            <param name="rows">The rows</param>
+            <param name="translateEnumerable">Translate the rows from one representation to another</param>
+            <returns></returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.Pipelines.AbstractPipelineExecuter.GetAllErrors">
+            <summary>
+            Gets all errors that occured under this executer
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.Pipelines.AbstractPipelineExecuter.ExecutePipeline(System.Collections.Generic.IEnumerable{Rhino.Etl.Core.Row})">
+            <summary>
+            Iterates the specified enumerable.
+            Since we use a pipeline, we need to force it to execute at some point. 
+            We aren't really interested in the result, just in that the pipeline would execute.
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Pipelines.AbstractPipelineExecuter.DisposeAllOperations(System.Collections.Generic.ICollection{Rhino.Etl.Core.Operations.IOperation})">
+            <summary>
+            Destroys the pipeline.
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Pipelines.AbstractPipelineExecuter.DecorateEnumerableForExecution(Rhino.Etl.Core.Operations.IOperation,System.Collections.Generic.IEnumerable{Rhino.Etl.Core.Row})">
+            <summary>
+            Add a decorator to the enumerable for additional processing
+            </summary>
+            <param name="operation">The operation.</param>
+            <param name="enumerator">The enumerator.</param>
+        </member>
+        <member name="P:Rhino.Etl.Core.Pipelines.AbstractPipelineExecuter.HasErrors">
+            <summary>
+            Gets a value indicating whether this instance has errors.
+            </summary>
+            <value>
+            	<c>true</c> if this instance has errors; otherwise, <c>false</c>.
+            </value>
+        </member>
+        <member name="T:Rhino.Etl.Core.ConventionOperations.ConventionInputCommandOperation">
+            <summary>
+            A convention based version of <see cref="T:Rhino.Etl.Core.Operations.InputCommandOperation"/>. Will
+            figure out as many things as it can on its own.
+            </summary>
+        </member>
+        <member name="T:Rhino.Etl.Core.Operations.InputCommandOperation">
+            <summary>
+            Generic input command operation
+            </summary>
+        </member>
+        <member name="T:Rhino.Etl.Core.Operations.AbstractCommandOperation">
+            <summary>
+            Base class for operations that directly manipulate ADO.Net
+            It is important to remember that this is supposed to be a deep base class, not to be 
+            directly inherited or used
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.AbstractCommandOperation.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.Operations.AbstractDatabaseOperation"/> class.
+            </summary>
+            <param name="connectionStringName">Name of the connection string.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.AbstractCommandOperation.#ctor(System.Configuration.ConnectionStringSettings)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.Operations.AbstractDatabaseOperation"/> class.
+            </summary>
+            <param name="connectionStringSettings">The connection string settings to use.</param>
+        </member>
+        <member name="F:Rhino.Etl.Core.Operations.AbstractCommandOperation.currentCommand">
+            <summary>
+            The current command
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.AbstractCommandOperation.AddParameter(System.String,System.Object)">
+            <summary>
+            Adds the parameter to the current command
+            </summary>
+            <param name="name">The name.</param>
+            <param name="value">The value.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.InputCommandOperation.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.Operations.OutputCommandOperation"/> class.
+            </summary>
+            <param name="connectionStringName">Name of the connection string.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.InputCommandOperation.#ctor(System.Configuration.ConnectionStringSettings)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.Operations.OutputCommandOperation"/> class.
+            </summary>
+            <param name="connectionStringSettings">Connection string settings to use.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.InputCommandOperation.Execute(System.Collections.Generic.IEnumerable{Rhino.Etl.Core.Row})">
+            <summary>
+            Executes this operation
+            </summary>
+            <param name="rows">The rows.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.InputCommandOperation.CreateRowFromReader(System.Data.IDataReader)">
+            <summary>
+            Creates a row from the reader.
+            </summary>
+            <param name="reader">The reader.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.InputCommandOperation.PrepareCommand(System.Data.IDbCommand)">
+            <summary>
+            Prepares the command for execution, set command text, parameters, etc
+            </summary>
+            <param name="cmd">The command.</param>
+        </member>
+        <member name="P:Rhino.Etl.Core.Operations.InputCommandOperation.UseTransaction">
+            <summary>
+             True, if the input operation should be run in a transaction. Otherwise,false.
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.ConventionOperations.ConventionInputCommandOperation.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.ConventionOperations.ConventionInputCommandOperation"/> class.
+            </summary>
+            <param name="connectionStringName">Name of the connection string.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.ConventionOperations.ConventionInputCommandOperation.#ctor(System.Configuration.ConnectionStringSettings)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.ConventionOperations.ConventionInputCommandOperation"/> class.
+            </summary>
+            <param name="connectionStringSettings">Name of the connection string.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.ConventionOperations.ConventionInputCommandOperation.CreateRowFromReader(System.Data.IDataReader)">
+            <summary>
+            Creates a row from the reader.
+            </summary>
+            <param name="reader">The reader.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.ConventionOperations.ConventionInputCommandOperation.PrepareCommand(System.Data.IDbCommand)">
+            <summary>
+            Prepares the command for execution, set command text, parameters, etc
+            </summary>
+            <param name="cmd">The command.</param>
+        </member>
+        <member name="P:Rhino.Etl.Core.ConventionOperations.ConventionInputCommandOperation.Command">
+            <summary>
+            Gets or sets the command to get the input from the database
+            </summary>
+        </member>
+        <member name="T:Rhino.Etl.Core.ConventionOperations.ConventionOutputCommandOperation">
+            <summary>
+            A convention based version of <see cref="T:Rhino.Etl.Core.Operations.OutputCommandOperation"/>. Will
+            figure out as many things as it can on its own.
+            </summary>
+        </member>
+        <member name="T:Rhino.Etl.Core.Operations.OutputCommandOperation">
+            <summary>
+            Generic output command operation
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.OutputCommandOperation.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.Operations.OutputCommandOperation"/> class.
+            </summary>
+            <param name="connectionStringName">Name of the connection string.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.OutputCommandOperation.#ctor(System.Configuration.ConnectionStringSettings)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.Operations.OutputCommandOperation"/> class.
+            </summary>
+            <param name="connectionStringSettings">Connection string settings to use.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.OutputCommandOperation.Execute(System.Collections.Generic.IEnumerable{Rhino.Etl.Core.Row})">
+            <summary>
+            Executes this operation
+            </summary>
+            <param name="rows">The rows.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.OutputCommandOperation.PrepareCommand(System.Data.IDbCommand,Rhino.Etl.Core.Row)">
+            <summary>
+            Prepares the command for execution, set command text, parameters, etc
+            </summary>
+            <param name="cmd">The command.</param>
+            <param name="row">The row.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.ConventionOperations.ConventionOutputCommandOperation.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.ConventionOperations.ConventionOutputCommandOperation"/> class.
+            </summary>
+            <param name="connectionStringName">Name of the connection string.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.ConventionOperations.ConventionOutputCommandOperation.#ctor(System.Configuration.ConnectionStringSettings)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.ConventionOperations.ConventionOutputCommandOperation"/> class.
+            </summary>
+            <param name="connectionStringSettings">Connection string settings to use.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.ConventionOperations.ConventionOutputCommandOperation.PrepareRow(Rhino.Etl.Core.Row)">
+            <summary>
+            Prepares the row by executing custom logic before passing on to the <see cref="M:Rhino.Etl.Core.ConventionOperations.ConventionOutputCommandOperation.PrepareCommand(System.Data.IDbCommand,Rhino.Etl.Core.Row)"/>
+            for further process.
+            </summary>
+            <param name="row">The row.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.ConventionOperations.ConventionOutputCommandOperation.PrepareCommand(System.Data.IDbCommand,Rhino.Etl.Core.Row)">
+            <summary>
+            Prepares the command for execution, set command text, parameters, etc
+            </summary>
+            <param name="cmd">The command.</param>
+            <param name="row">The row.</param>
+        </member>
+        <member name="P:Rhino.Etl.Core.ConventionOperations.ConventionOutputCommandOperation.Command">
+            <summary>
+            Gets or sets the command to execute against the database
+            </summary>
+        </member>
+        <member name="T:Rhino.Etl.Core.Operations.OperationStatistics">
+            <summary>
+            Contains the statistics for an operation
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.OperationStatistics.MarkStarted">
+            <summary>
+            Mark the start time
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.OperationStatistics.MarkFinished">
+            <summary>
+            Mark the end time
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.OperationStatistics.MarkRowProcessed">
+            <summary>
+            Marks a processed row.
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.OperationStatistics.ToString">
+            <summary>
+            Returns a <see cref="T:System.String"/> that represents the current <see cref="T:System.Object"/>.
+            </summary>
+            <returns>
+            A <see cref="T:System.String"/> that represents the current <see cref="T:System.Object"/>.
+            </returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.OperationStatistics.AddOutputRows(System.Int64)">
+            <summary>
+            Adds to the count of the output rows.
+            </summary>
+            <param name="rowProcessed">The row processed.</param>
+        </member>
+        <member name="P:Rhino.Etl.Core.Operations.OperationStatistics.OutputtedRows">
+            <summary>
+            Gets number of the outputted rows.
+            </summary>
+            <value>The processed rows.</value>
+        </member>
+        <member name="P:Rhino.Etl.Core.Operations.OperationStatistics.Duration">
+            <summary>
+            Gets the duration this operation has executed
+            </summary>
+            <value>The duration.</value>
+        </member>
+        <member name="T:Rhino.Etl.Core.EtlProcessBase`1">
+            <summary>
+            Base class for etl processes, provider registration and management
+            services for the pipeline
+            </summary>
+            <typeparam name="TDerived">The type of the derived.</typeparam>
+        </member>
+        <member name="F:Rhino.Etl.Core.EtlProcessBase`1.lastOperations">
+            <summary>
+            Ordered list of the operations in this process that will be added to the
+            operations list after the initialization is completed.
+            </summary>
+        </member>
+        <member name="F:Rhino.Etl.Core.EtlProcessBase`1.operations">
+            <summary>
+            Ordered list of the operations in this process
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.EtlProcessBase`1.Register(Rhino.Etl.Core.Operations.IOperation)">
+            <summary>
+            Registers the specified operation.
+            </summary>
+            <param name="operation">The operation.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.EtlProcessBase`1.RegisterLast(Rhino.Etl.Core.Operations.IOperation)">
+            <summary>
+            Registers the operation at the end of the operations queue
+            </summary>
+            <param name="operation">The operation.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.EtlProcessBase`1.MergeLastOperationsToOperations">
+            <summary>
+            Merges the last operations to the operations list.
+            </summary>
+        </member>
+        <member name="P:Rhino.Etl.Core.EtlProcessBase`1.Name">
+            <summary>
+            Gets the name of this instance
+            </summary>
+            <value>The name.</value>
+        </member>
+        <member name="T:Rhino.Etl.Core.Files.FluentFile">
+            <summary>
+            Gives a fluent interface syntax on top of the <see cref="T:FileHelpers.FileHelperEngine"/>
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Files.FluentFile.For``1">
+            <summary>
+            Get a new fluent file instance for <typeparam name="T"></typeparam>
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Files.FluentFile.#ctor(System.Type)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.Files.FluentFile"/> class.
+            </summary>
+            <param name="type">The type.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Files.FluentFile.From(System.String)">
+            <summary>
+            Specify which file to start reading from
+            </summary>
+            <param name="filename">The filename.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Files.FluentFile.To(System.String)">
+            <summary>
+            Specify which file to start writing to
+            </summary>
+            <param name="filename">The filename.</param>
+            <remarks>
+            This will overwrite the file, use <see cref="M:Rhino.Etl.Core.Files.FluentFile.AppendTo(System.String)"/> if you want
+            to append.
+            </remarks>
+        </member>
+        <member name="M:Rhino.Etl.Core.Files.FluentFile.AppendTo(System.String)">
+            <summary>
+            Specify which file to start appending to
+            </summary>
+            <param name="filename">The filename.</param>
+            <returns></returns>
+        </member>
+        <member name="P:Rhino.Etl.Core.Files.FluentFile.FooterText">
+            <summary>
+            Gets or sets the footer text.
+            </summary>
+            <value>The footer text.</value>
+        </member>
+        <member name="P:Rhino.Etl.Core.Files.FluentFile.HeaderText">
+            <summary>
+            Gets or sets the header text.
+            </summary>
+            <value>The header text.</value>
+        </member>
+        <member name="P:Rhino.Etl.Core.Files.FluentFile.Encoding">
+            <summary>
+            Gets or sets the encoding.
+            </summary>
+            <value>The encoding.</value>
+        </member>
+        <member name="T:Rhino.Etl.Core.Files.FileEngine">
+            <summary>
+            Adapter class to facilitate the nicer syntax
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Files.FileEngine.#ctor(FileHelpers.FileHelperAsyncEngine)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.Files.FileEngine"/> class.
+            </summary>
+            <param name="engine">The engine.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Files.FileEngine.Write(System.Object)">
+            <summary>
+            Writes the specified object ot the file
+            </summary>
+            <param name="t">The t.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Files.FileEngine.OnError(FileHelpers.ErrorMode)">
+            <summary>
+            Set the behavior on error
+            </summary>
+            <param name="errorMode">The error mode.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Files.FileEngine.OutputErrors(System.String)">
+            <summary>
+            Outputs the errors to the specified file
+            </summary>
+            <param name="file">The file.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Files.FileEngine.Dispose">
+            <summary>
+            Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Files.FileEngine.GetEnumerator">
+            <summary>
+            Returns an enumerator that iterates through a collection.
+            </summary>
+            <returns>
+            An <see cref="T:System.Collections.IEnumerator"/> object that can be used to iterate through the collection.
+            </returns>
+        </member>
+        <member name="P:Rhino.Etl.Core.Files.FileEngine.HasErrors">
+            <summary>
+            Gets a value indicating whether this instance has errors.
+            </summary>
+        </member>
+        <member name="T:Rhino.Etl.Core.Operations.AbstractAggregationOperation">
+            <summary>
+            An aggregation operation, handles all the backend stuff of the aggregation,
+            leaving client code just the accumulation process
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.AbstractAggregationOperation.Execute(System.Collections.Generic.IEnumerable{Rhino.Etl.Core.Row})">
+            <summary>
+            Executes this operation
+            </summary>
+            <param name="rows">The rows.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.AbstractAggregationOperation.FinishAggregation(Rhino.Etl.Core.Row)">
+            <summary>
+            Allow a derived class to perform final processing on the
+            aggregate, before sending it downward in the pipeline.
+            </summary>
+            <param name="aggregate">The row.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.AbstractAggregationOperation.Accumulate(Rhino.Etl.Core.Row,Rhino.Etl.Core.Row)">
+            <summary>
+            Accumulate the current row to the current aggregation
+            </summary>
+            <param name="row">The row.</param>
+            <param name="aggregate">The aggregate.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.AbstractAggregationOperation.GetColumnsToGroupBy">
+            <summary>
+            Gets the columns list to group each row by
+            </summary>
+            <value>The group by.</value>
+        </member>
+        <member name="T:Rhino.Etl.Core.Descriptor">
+            <summary>
+            Represent a virtual property, with a type and name. 
+            It also exposes the ability to get the "property" from a container.
+            </summary>
+            <remarks>
+            This is needed because we want to use both types and untyped containers.
+            Those can be entities, hashtables, etc.
+            </remarks>
+        </member>
+        <member name="F:Rhino.Etl.Core.Descriptor.Name">
+            <summary>
+            The name of this descriptor
+            </summary>
+        </member>
+        <member name="F:Rhino.Etl.Core.Descriptor.Type">
+            <summary>
+            The type fo this descriptor
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Descriptor.#ctor(System.String,System.Type)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.Descriptor"/> class.
+            </summary>
+            <param name="name">The name.</param>
+            <param name="type">The type.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Descriptor.GetValue(System.Object)">
+            <summary>
+            Gets the value from the container
+            </summary>
+            <param name="container">The container.</param>
+        </member>
+        <member name="T:Rhino.Etl.Core.DataReaders.DictionaryDescriptorAdapter">
+            <summary>
+            Adapts a dictionary to a descriptor
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.DataReaders.DictionaryDescriptorAdapter.#ctor(System.Collections.Generic.KeyValuePair{System.String,System.Type})">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.DataReaders.DictionaryDescriptorAdapter"/> class.
+            </summary>
+            <param name="pair">The pair.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.DataReaders.DictionaryDescriptorAdapter.GetValue(System.Object)">
+            <summary>
+            Gets the value.
+            </summary>
+            <param name="obj">The obj.</param>
+            <returns></returns>
+        </member>
+        <member name="T:Rhino.Etl.Core.DataReaders.DictionaryEnumeratorDataReader">
+            <summary>
+            A datareader over a collection of dictionaries
+            </summary>
+        </member>
+        <member name="T:Rhino.Etl.Core.DataReaders.EnumerableDataReader">
+            <summary>
+            Represent a data reader that is based on IEnumerable implementation.
+            This is important because we can now pass an in memory generated code to code
+            that requires this, such as the SqlBulkCopy class.
+            </summary>
+        </member>
+        <member name="F:Rhino.Etl.Core.DataReaders.EnumerableDataReader.enumerator">
+            <summary>
+            The enumerator that we are iterating on.
+            Required so subclasses can access the current object.
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.DataReaders.EnumerableDataReader.#ctor(System.Collections.IEnumerator)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.DataReaders.EnumerableDataReader"/> class.
+            </summary>
+            <param name="enumerator">The enumerator.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.DataReaders.EnumerableDataReader.Close">
+            <summary>
+            Closes the <see cref="T:System.Data.IDataReader"/> Object.
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.DataReaders.EnumerableDataReader.DoClose">
+            <summary>
+            Perform the actual closing of the reader
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.DataReaders.EnumerableDataReader.GetSchemaTable">
+            <summary>
+            Returns a <see cref="T:System.Data.DataTable"/> that describes the column metadata of the <see cref="T:System.Data.IDataReader"/>.
+            </summary>
+            <remarks>
+            This is a very trivial implementation, anything that tries to do something really fancy with it
+            may need more information
+            </remarks>
+            <returns>
+            A <see cref="T:System.Data.DataTable"/> that describes the column metadata.
+            </returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.DataReaders.EnumerableDataReader.NextResult">
+            <summary>
+            We do not support mutliply result set
+            </summary>
+            <returns>
+            true if there are more rows; otherwise, false.
+            </returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.DataReaders.EnumerableDataReader.Read">
+            <summary>
+            Advances the <see cref="T:System.Data.IDataReader"/> to the next record.
+            </summary>
+            <returns>
+            true if there are more rows; otherwise, false.
+            </returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.DataReaders.EnumerableDataReader.Dispose">
+            <summary>
+            Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.DataReaders.EnumerableDataReader.GetName(System.Int32)">
+            <summary>
+            Gets the name for the field to find.
+            </summary>
+            <param name="i">The index of the field to find.</param>
+            <returns>
+            The name of the field or the empty string (""), if there is no value to return.
+            </returns>
+            <exception cref="T:System.IndexOutOfRangeException">The index passed was outside the range of 0 through <see cref="P:System.Data.IDataRecord.FieldCount"/>. </exception>
+        </member>
+        <member name="M:Rhino.Etl.Core.DataReaders.EnumerableDataReader.GetDataTypeName(System.Int32)">
+            <summary>
+            Gets the data type information for the specified field.
+            </summary>
+            <param name="i">The index of the field to find.</param>
+            <returns>
+            The data type information for the specified field.
+            </returns>
+            <exception cref="T:System.IndexOutOfRangeException">The index passed was outside the range of 0 through <see cref="P:System.Data.IDataRecord.FieldCount"/>. </exception>
+        </member>
+        <member name="M:Rhino.Etl.Core.DataReaders.EnumerableDataReader.GetFieldType(System.Int32)">
+            <summary>
+            Gets the <see cref="T:System.Type"/> information corresponding to the type of <see cref="T:System.Object"/> that would be returned from <see cref="M:System.Data.IDataRecord.GetValue(System.Int32)"/>.
+            </summary>
+            <param name="i">The index of the field to find.</param>
+            <returns>
+            The <see cref="T:System.Type"/> information corresponding to the type of <see cref="T:System.Object"/> that would be returned from <see cref="M:System.Data.IDataRecord.GetValue(System.Int32)"/>.
+            </returns>
+            <exception cref="T:System.IndexOutOfRangeException">The index passed was outside the range of 0 through <see cref="P:System.Data.IDataRecord.FieldCount"/>. </exception>
+        </member>
+        <member name="M:Rhino.Etl.Core.DataReaders.EnumerableDataReader.GetValue(System.Int32)">
+            <summary>
+            Return the value of the specified field.
+            </summary>
+            <param name="i">The index of the field to find.</param>
+            <returns>
+            The <see cref="T:System.Object"/> which will contain the field value upon return.
+            </returns>
+            <exception cref="T:System.IndexOutOfRangeException">The index passed was outside the range of 0 through <see cref="P:System.Data.IDataRecord.FieldCount"/>. </exception>
+        </member>
+        <member name="M:Rhino.Etl.Core.DataReaders.EnumerableDataReader.GetValues(System.Object[])">
+            <summary>
+            Gets all the attribute fields in the collection for the current record.
+            </summary>
+            <param name="values">An array of <see cref="T:System.Object"/> to copy the attribute fields into.</param>
+            <returns>
+            The number of instances of <see cref="T:System.Object"/> in the array.
+            </returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.DataReaders.EnumerableDataReader.GetOrdinal(System.String)">
+            <summary>
+            Return the index of the named field.
+            </summary>
+            <param name="name">The name of the field to find.</param>
+            <returns>The index of the named field.</returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.DataReaders.EnumerableDataReader.GetBoolean(System.Int32)">
+            <summary>
+            Gets the value of the specified column as a Boolean.
+            </summary>
+            <param name="i">The zero-based column ordinal.</param>
+            <returns>The value of the column.</returns>
+            <exception cref="T:System.IndexOutOfRangeException">The index passed was outside the range of 0 through <see cref="P:System.Data.IDataRecord.FieldCount"/>. </exception>
+        </member>
+        <member name="M:Rhino.Etl.Core.DataReaders.EnumerableDataReader.GetByte(System.Int32)">
+            <summary>
+            Gets the 8-bit unsigned integer value of the specified column.
+            </summary>
+            <param name="i">The zero-based column ordinal.</param>
+            <returns>
+            The 8-bit unsigned integer value of the specified column.
+            </returns>
+            <exception cref="T:System.IndexOutOfRangeException">The index passed was outside the range of 0 through <see cref="P:System.Data.IDataRecord.FieldCount"/>. </exception>
+        </member>
+        <member name="M:Rhino.Etl.Core.DataReaders.EnumerableDataReader.GetBytes(System.Int32,System.Int64,System.Byte[],System.Int32,System.Int32)">
+            <summary>
+            We do not support this operation
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.DataReaders.EnumerableDataReader.GetChar(System.Int32)">
+            <summary>
+            Gets the character value of the specified column.
+            </summary>
+            <param name="i">The zero-based column ordinal.</param>
+            <returns>
+            The character value of the specified column.
+            </returns>
+            <exception cref="T:System.IndexOutOfRangeException">The index passed was outside the range of 0 through <see cref="P:System.Data.IDataRecord.FieldCount"/>. </exception>
+        </member>
+        <member name="M:Rhino.Etl.Core.DataReaders.EnumerableDataReader.GetChars(System.Int32,System.Int64,System.Char[],System.Int32,System.Int32)">
+            <summary>
+            We do not support this operation
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.DataReaders.EnumerableDataReader.GetGuid(System.Int32)">
+            <summary>
+            Returns the GUID value of the specified field.
+            </summary>
+            <param name="i">The index of the field to find.</param>
+            <returns>The GUID value of the specified field.</returns>
+            <exception cref="T:System.IndexOutOfRangeException">The index passed was outside the range of 0 through <see cref="P:System.Data.IDataRecord.FieldCount"/>. </exception>
+        </member>
+        <member name="M:Rhino.Etl.Core.DataReaders.EnumerableDataReader.GetInt16(System.Int32)">
+            <summary>
+            Gets the 16-bit signed integer value of the specified field.
+            </summary>
+            <param name="i">The index of the field to find.</param>
+            <returns>
+            The 16-bit signed integer value of the specified field.
+            </returns>
+            <exception cref="T:System.IndexOutOfRangeException">The index passed was outside the range of 0 through <see cref="P:System.Data.IDataRecord.FieldCount"/>. </exception>
+        </member>
+        <member name="M:Rhino.Etl.Core.DataReaders.EnumerableDataReader.GetInt32(System.Int32)">
+            <summary>
+            Gets the 32-bit signed integer value of the specified field.
+            </summary>
+            <param name="i">The index of the field to find.</param>
+            <returns>
+            The 32-bit signed integer value of the specified field.
+            </returns>
+            <exception cref="T:System.IndexOutOfRangeException">The index passed was outside the range of 0 through <see cref="P:System.Data.IDataRecord.FieldCount"/>. </exception>
+        </member>
+        <member name="M:Rhino.Etl.Core.DataReaders.EnumerableDataReader.GetInt64(System.Int32)">
+            <summary>
+            Gets the 64-bit signed integer value of the specified field.
+            </summary>
+            <param name="i">The index of the field to find.</param>
+            <returns>
+            The 64-bit signed integer value of the specified field.
+            </returns>
+            <exception cref="T:System.IndexOutOfRangeException">The index passed was outside the range of 0 through <see cref="P:System.Data.IDataRecord.FieldCount"/>. </exception>
+        </member>
+        <member name="M:Rhino.Etl.Core.DataReaders.EnumerableDataReader.GetFloat(System.Int32)">
+            <summary>
+            Gets the single-precision floating point number of the specified field.
+            </summary>
+            <param name="i">The index of the field to find.</param>
+            <returns>
+            The single-precision floating point number of the specified field.
+            </returns>
+            <exception cref="T:System.IndexOutOfRangeException">The index passed was outside the range of 0 through <see cref="P:System.Data.IDataRecord.FieldCount"/>. </exception>
+        </member>
+        <member name="M:Rhino.Etl.Core.DataReaders.EnumerableDataReader.GetDouble(System.Int32)">
+            <summary>
+            Gets the double-precision floating point number of the specified field.
+            </summary>
+            <param name="i">The index of the field to find.</param>
+            <returns>
+            The double-precision floating point number of the specified field.
+            </returns>
+            <exception cref="T:System.IndexOutOfRangeException">The index passed was outside the range of 0 through <see cref="P:System.Data.IDataRecord.FieldCount"/>. </exception>
+        </member>
+        <member name="M:Rhino.Etl.Core.DataReaders.EnumerableDataReader.GetString(System.Int32)">
+            <summary>
+            Gets the string value of the specified field.
+            </summary>
+            <param name="i">The index of the field to find.</param>
+            <returns>The string value of the specified field.</returns>
+            <exception cref="T:System.IndexOutOfRangeException">The index passed was outside the range of 0 through <see cref="P:System.Data.IDataRecord.FieldCount"/>. </exception>
+        </member>
+        <member name="M:Rhino.Etl.Core.DataReaders.EnumerableDataReader.GetDecimal(System.Int32)">
+            <summary>
+            Gets the fixed-position numeric value of the specified field.
+            </summary>
+            <param name="i">The index of the field to find.</param>
+            <returns>
+            The fixed-position numeric value of the specified field.
+            </returns>
+            <exception cref="T:System.IndexOutOfRangeException">The index passed was outside the range of 0 through <see cref="P:System.Data.IDataRecord.FieldCount"/>. </exception>
+        </member>
+        <member name="M:Rhino.Etl.Core.DataReaders.EnumerableDataReader.GetDateTime(System.Int32)">
+            <summary>
+            Gets the date and time data value of the specified field.
+            </summary>
+            <param name="i">The index of the field to find.</param>
+            <returns>
+            The date and time data value of the specified field.
+            </returns>
+            <exception cref="T:System.IndexOutOfRangeException">The index passed was outside the range of 0 through <see cref="P:System.Data.IDataRecord.FieldCount"/>. </exception>
+        </member>
+        <member name="M:Rhino.Etl.Core.DataReaders.EnumerableDataReader.GetData(System.Int32)">
+            <summary>
+            We do not support nesting
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.DataReaders.EnumerableDataReader.IsDBNull(System.Int32)">
+            <summary>
+            Return whether the specified field is set to null.
+            </summary>
+            <param name="i">The index of the field to find.</param>
+            <returns>
+            true if the specified field is set to null; otherwise, false.
+            </returns>
+            <exception cref="T:System.IndexOutOfRangeException">The index passed was outside the range of 0 through <see cref="P:System.Data.IDataRecord.FieldCount"/>. </exception>
+        </member>
+        <member name="P:Rhino.Etl.Core.DataReaders.EnumerableDataReader.PropertyDescriptors">
+            <summary>
+            Gets the descriptors for the properties that this instance
+            is going to handle
+            </summary>
+            <value>The property descriptors.</value>
+        </member>
+        <member name="P:Rhino.Etl.Core.DataReaders.EnumerableDataReader.Depth">
+            <summary>
+            Gets a value indicating the depth of nesting for the current row.
+            We do not support nesting.
+            </summary>
+            <value></value>
+            <returns>The level of nesting.</returns>
+        </member>
+        <member name="P:Rhino.Etl.Core.DataReaders.EnumerableDataReader.IsClosed">
+            <summary>
+            Gets a value indicating whether the data reader is closed.
+            </summary>
+            <value></value>
+            <returns>true if the data reader is closed; otherwise, false.</returns>
+        </member>
+        <member name="P:Rhino.Etl.Core.DataReaders.EnumerableDataReader.RecordsAffected">
+            <summary>
+            Gets the number of rows changed, inserted, or deleted by execution of the SQL statement.
+            </summary>
+            <value></value>
+            <returns>The number of rows changed, inserted, or deleted; 0 if no rows were affected or the statement failed; and -1 for SELECT statements.</returns>
+        </member>
+        <member name="P:Rhino.Etl.Core.DataReaders.EnumerableDataReader.FieldCount">
+            <summary>
+            Gets the number of columns in the current row.
+            </summary>
+            <value></value>
+            <returns>When not positioned in a valid recordset, 0; otherwise, the number of columns in the current record. The default is -1.</returns>
+        </member>
+        <member name="P:Rhino.Etl.Core.DataReaders.EnumerableDataReader.Item(System.Int32)">
+            <summary>
+            Gets the <see cref="T:System.Object"/> with the specified i.
+            </summary>
+            <value></value>
+        </member>
+        <member name="P:Rhino.Etl.Core.DataReaders.EnumerableDataReader.Item(System.String)">
+            <summary>
+            Gets the <see cref="T:System.Object"/> with the specified name.
+            </summary>
+            <value></value>
+        </member>
+        <member name="M:Rhino.Etl.Core.DataReaders.DictionaryEnumeratorDataReader.#ctor(System.Collections.Generic.IDictionary{System.String,System.Type},System.Collections.Generic.IEnumerable{Rhino.Etl.Core.Row})">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.DataReaders.DictionaryEnumeratorDataReader"/> class.
+            </summary>
+            <param name="schema">The schema.</param>
+            <param name="enumerable">The enumerator.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.DataReaders.DictionaryEnumeratorDataReader.DoClose">
+            <summary>
+            Perform the actual closing of the reader
+            </summary>
+        </member>
+        <member name="P:Rhino.Etl.Core.DataReaders.DictionaryEnumeratorDataReader.PropertyDescriptors">
+            <summary>
+            Gets the descriptors for the properties that this instance
+            is going to handle
+            </summary>
+            <value>The property descriptors.</value>
+        </member>
+        <member name="T:Rhino.Etl.Core.EtlProcess">
+            <summary>
+            A single etl process
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.EtlProcess.Dispose">
+            <summary>
+            Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+            </summary>
+            <filterpriority>2</filterpriority>
+        </member>
+        <member name="M:Rhino.Etl.Core.EtlProcess.Initialize">
+            <summary>
+            Initializes this instance.
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.EtlProcess.Execute">
+            <summary>
+            Executes this process
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.EtlProcess.TranslateRows(System.Collections.Generic.IEnumerable{Rhino.Etl.Core.Row})">
+            <summary>
+            Translate the rows from one representation to another
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.EtlProcess.OnFinishedProcessing(Rhino.Etl.Core.Operations.IOperation)">
+            <summary>
+            Called when this process has finished processing.
+            </summary>
+            <param name="op">The op.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.EtlProcess.PostProcessing">
+            <summary>
+            Allow derived class to deal with custom logic after all the internal steps have been executed
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.EtlProcess.OnRowProcessed(Rhino.Etl.Core.Operations.IOperation,Rhino.Etl.Core.Row)">
+            <summary>
+            Called when a row is processed.
+            </summary>
+            <param name="op">The operation.</param>
+            <param name="dictionary">The dictionary.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.EtlProcess.ExecuteScalar``1(System.String,System.String)">
+            <summary>
+            Executes the command and return a scalar
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="connectionName">Name of the connection.</param>
+            <param name="commandText">The command text.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.EtlProcess.ExecuteScalar``1(System.Configuration.ConnectionStringSettings,System.String)">
+            <summary>
+            Executes the command and return a scalar
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="connectionStringSettings">The connection string settings node to use</param>
+            <param name="commandText">The command text.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.EtlProcess.GetAllErrors">
+            <summary>
+            Gets all errors that occured during the execution of this process
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="P:Rhino.Etl.Core.EtlProcess.PipelineExecuter">
+            <summary>
+            Gets the pipeline executer.
+            </summary>
+            <value>The pipeline executer.</value>
+        </member>
+        <member name="P:Rhino.Etl.Core.EtlProcess.Partial">
+            <summary>
+            Gets a new partial process that we can work with
+            </summary>
+        </member>
+        <member name="T:Rhino.Etl.Core.Exceptions.MissingKeyException">
+            <summary>
+            Thrown when a an attempt to retrieve that a value by non existing key and
+            the quacking dictionary is set to throw
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Exceptions.MissingKeyException.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.Exceptions.MissingKeyException"/> class.
+            </summary>
+            <param name="message">The message.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Exceptions.MissingKeyException.#ctor(System.String,System.Exception)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.Exceptions.MissingKeyException"/> class.
+            </summary>
+            <param name="message">The message.</param>
+            <param name="inner">The inner.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Exceptions.MissingKeyException.#ctor(System.Runtime.Serialization.SerializationInfo,System.Runtime.Serialization.StreamingContext)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.Exceptions.MissingKeyException"/> class.
+            </summary>
+            <param name="info">The <see cref="T:System.Runtime.Serialization.SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
+            <param name="context">The <see cref="T:System.Runtime.Serialization.StreamingContext"/> that contains contextual information about the source or destination.</param>
+            <exception cref="T:System.ArgumentNullException">The <paramref name="info"/> parameter is null. </exception>
+            <exception cref="T:System.Runtime.Serialization.SerializationException">The class name is null or <see cref="P:System.Exception.HResult"/> is zero (0). </exception>
+        </member>
+        <member name="T:Rhino.Etl.Core.Exceptions.ParameterCountException">
+            <summary>
+            Thrown when an access to a quacking dictionary is made with more than a single
+            parameter
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Exceptions.ParameterCountException.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.Exceptions.ParameterCountException"/> class.
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Exceptions.ParameterCountException.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.Exceptions.ParameterCountException"/> class.
+            </summary>
+            <param name="message">The message.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Exceptions.ParameterCountException.#ctor(System.String,System.Exception)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.Exceptions.ParameterCountException"/> class.
+            </summary>
+            <param name="message">The message.</param>
+            <param name="inner">The inner.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Exceptions.ParameterCountException.#ctor(System.Runtime.Serialization.SerializationInfo,System.Runtime.Serialization.StreamingContext)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.Exceptions.ParameterCountException"/> class.
+            </summary>
+            <param name="info">The <see cref="T:System.Runtime.Serialization.SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
+            <param name="context">The <see cref="T:System.Runtime.Serialization.StreamingContext"/> that contains contextual information about the source or destination.</param>
+            <exception cref="T:System.ArgumentNullException">The <paramref name="info"/> parameter is null. </exception>
+            <exception cref="T:System.Runtime.Serialization.SerializationException">The class name is null or <see cref="P:System.Exception.HResult"/> is zero (0). </exception>
+        </member>
+        <member name="T:Rhino.Etl.Core.ObjectArrayKeys">
+            <summary>
+            This is a utility clss that allows to treat a set of values as key, so it can be put
+            into hash tables and retrieved easily.
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.ObjectArrayKeys.#ctor(System.Object[])">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.ObjectArrayKeys"/> class.
+            </summary>
+            <param name="columnValues">The column values.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.ObjectArrayKeys.Equals(System.Object)">
+            <summary>
+            Determines whether the specified <see cref="T:System.Object"/> is equal to the current <see cref="T:System.Object"/>.
+            </summary>
+            <param name="obj">The <see cref="T:System.Object"/> to compare with the current <see cref="T:System.Object"/>.</param>
+            <returns>
+            true if the specified <see cref="T:System.Object"/> is equal to the current <see cref="T:System.Object"/>; otherwise, false.
+            </returns>
+            <exception cref="T:System.NullReferenceException">The <paramref name="obj"/> parameter is null.</exception>
+        </member>
+        <member name="M:Rhino.Etl.Core.ObjectArrayKeys.GetHashCode">
+            <summary>
+            Serves as a hash function for a particular type.
+            </summary>
+            <returns>
+            A hash code for the current <see cref="T:System.Object"/>.
+            </returns>
+        </member>
+        <member name="T:Rhino.Etl.Core.Enumerables.CachingEnumerable`1">
+            <summary>
+            There are several places where we need to iterate over an enumerable
+            several times, but we cannot assume that it is safe to do so.
+            This class will allow to safely use an enumerable multiple times, by caching
+            the results after the first iteration.
+            </summary>
+            <typeparam name="T"></typeparam>
+        </member>
+        <member name="M:Rhino.Etl.Core.Enumerables.CachingEnumerable`1.#ctor(System.Collections.Generic.IEnumerable{`0})">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.Enumerables.CachingEnumerable`1"/> class.
+            </summary>
+            <param name="inner">The inner.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Enumerables.CachingEnumerable`1.System#Collections#Generic#IEnumerable{T}#GetEnumerator">
+            <summary>
+            Returns an enumerator that iterates through the collection.
+            </summary>
+            
+            <returns>
+            A <see cref="T:System.Collections.Generic.IEnumerator`1"></see> that can be used to iterate through the collection.
+            </returns>
+            <filterpriority>1</filterpriority>
+        </member>
+        <member name="M:Rhino.Etl.Core.Enumerables.CachingEnumerable`1.GetEnumerator">
+            <summary>
+            Returns an enumerator that iterates through a collection.
+            </summary>
+            
+            <returns>
+            An <see cref="T:System.Collections.IEnumerator"></see> object that can be used to iterate through the collection.
+            </returns>
+            <filterpriority>2</filterpriority>
+        </member>
+        <member name="M:Rhino.Etl.Core.Enumerables.CachingEnumerable`1.Dispose">
+            <summary>
+            Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+            </summary>
+            <filterpriority>2</filterpriority>
+        </member>
+        <member name="M:Rhino.Etl.Core.Enumerables.CachingEnumerable`1.MoveNext">
+            <summary>
+            Advances the enumerator to the next element of the collection.
+            </summary>
+            
+            <returns>
+            true if the enumerator was successfully advanced to the next element; false if the enumerator has passed the end of the collection.
+            </returns>
+            
+            <exception cref="T:System.InvalidOperationException">The collection was modified after the enumerator was created. </exception><filterpriority>2</filterpriority>
+        </member>
+        <member name="M:Rhino.Etl.Core.Enumerables.CachingEnumerable`1.Reset">
+            <summary>
+            Sets the enumerator to its initial position, which is before the first element in the collection.
+            </summary>
+            
+            <exception cref="T:System.InvalidOperationException">The collection was modified after the enumerator was created. </exception><filterpriority>2</filterpriority>
+        </member>
+        <member name="P:Rhino.Etl.Core.Enumerables.CachingEnumerable`1.System#Collections#Generic#IEnumerator{T}#Current">
+            <summary>
+            Gets the element in the collection at the current position of the enumerator.
+            </summary>
+            
+            <returns>
+            The element in the collection at the current position of the enumerator.
+            </returns>
+            
+        </member>
+        <member name="P:Rhino.Etl.Core.Enumerables.CachingEnumerable`1.Current">
+            <summary>
+            Gets the current element in the collection.
+            </summary>
+            
+            <returns>
+            The current element in the collection.
+            </returns>
+            
+            <exception cref="T:System.InvalidOperationException">The enumerator is positioned before the first element of the collection or after the last element.-or- The collection was modified after the enumerator was created.</exception><filterpriority>2</filterpriority>
+        </member>
+        <member name="T:Rhino.Etl.Core.Enumerables.EventRaisingEnumerator">
+            <summary>
+            An enumerator that will raise the events on the operation for each iterated item
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Enumerables.EventRaisingEnumerator.#ctor(Rhino.Etl.Core.Operations.IOperation,System.Collections.Generic.IEnumerable{Rhino.Etl.Core.Row})">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.Enumerables.EventRaisingEnumerator"/> class.
+            </summary>
+            <param name="operation">The operation.</param>
+            <param name="inner">The innerEnumerator.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Enumerables.EventRaisingEnumerator.MoveNext">
+            <summary>
+            Advances the enumerator to the next element of the collection.
+            </summary>
+            
+            <returns>
+            true if the enumerator was successfully advanced to the next element; false if the enumerator has passed the end of the collection.
+            </returns>
+            
+            <exception cref="T:System.InvalidOperationException">The collection was modified after the enumerator was created. </exception><filterpriority>2</filterpriority>
+        </member>
+        <member name="T:Rhino.Etl.Core.Operations.JoinOperation">
+            <summary>
+            Perform a join between two sources
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.JoinOperation.Right(Rhino.Etl.Core.Operations.IOperation)">
+            <summary>
+            Sets the right part of the join
+            </summary>
+            <value>The right.</value>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.JoinOperation.Left(Rhino.Etl.Core.Operations.IOperation)">
+            <summary>
+            Sets the left part of the join
+            </summary>
+            <value>The left.</value>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.JoinOperation.Execute(System.Collections.Generic.IEnumerable{Rhino.Etl.Core.Row})">
+            <summary>
+            Executes this operation
+            </summary>
+            <param name="ignored">Ignored rows</param>
+            <returns></returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.JoinOperation.RightOrphanRow(Rhino.Etl.Core.Row)">
+            <summary>
+            Called when a row on the right side was filtered by
+            the join condition, allow a derived class to perform 
+            logic associated to that, such as logging
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.JoinOperation.LeftOrphanRow(Rhino.Etl.Core.Row)">
+            <summary>
+            Called when a row on the left side was filtered by
+            the join condition, allow a derived class to perform 
+            logic associated to that, such as logging
+            </summary>
+            <param name="row">The row.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.JoinOperation.MergeRows(Rhino.Etl.Core.Row,Rhino.Etl.Core.Row)">
+            <summary>
+            Merges the two rows into a single row
+            </summary>
+            <param name="leftRow">The left row.</param>
+            <param name="rightRow">The right row.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.JoinOperation.Initialize">
+            <summary>
+            Initializes this instance.
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.JoinOperation.SetupJoinConditions">
+            <summary>
+            Setups the join conditions.
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.JoinOperation.Dispose">
+            <summary>
+            Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.JoinOperation.PrepareForExecution(Rhino.Etl.Core.IPipelineExecuter)">
+            <summary>
+            Initializes this instance
+            </summary>
+            <param name="pipelineExecuter">The current pipeline executer.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.JoinOperation.GetAllErrors">
+            <summary>
+            Gets all errors that occured when running this operation
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="P:Rhino.Etl.Core.Operations.JoinOperation.InnerJoin">
+            <summary>
+            Create an inner join
+            </summary>
+            <value>The inner.</value>
+        </member>
+        <member name="P:Rhino.Etl.Core.Operations.JoinOperation.LeftJoin">
+            <summary>
+            Create a left outer join
+            </summary>
+            <value>The inner.</value>
+        </member>
+        <member name="P:Rhino.Etl.Core.Operations.JoinOperation.RightJoin">
+            <summary>
+            Create a right outer join
+            </summary>
+            <value>The inner.</value>
+        </member>
+        <member name="P:Rhino.Etl.Core.Operations.JoinOperation.FullOuterJoin">
+            <summary>
+            Create a full outer join
+            </summary>
+            <value>The inner.</value>
+        </member>
+        <member name="T:Rhino.Etl.Core.Operations.JoinOperation.JoinBuilder">
+            <summary>
+            Fluent interface to create joins
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.JoinOperation.JoinBuilder.#ctor(Rhino.Etl.Core.Operations.JoinOperation,Rhino.Etl.Core.Operations.JoinType)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.Operations.JoinOperation.JoinBuilder"/> class.
+            </summary>
+            <param name="parent">The parent.</param>
+            <param name="joinType">Type of the join.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.JoinOperation.JoinBuilder.Left(System.String[])">
+            <summary>
+            Setup the left side of the join
+            </summary>
+            <param name="columns">The columns.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.JoinOperation.JoinBuilder.Right(System.String[])">
+            <summary>
+            Setup the right side of the join
+            </summary>
+            <param name="columns">The columns.</param>
+            <returns></returns>
+        </member>
+        <member name="T:Rhino.Etl.Core.Operations.PartialProcessOperation">
+            <summary>
+            A partial process that can take part in another process
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.PartialProcessOperation.PrepareForExecution(Rhino.Etl.Core.IPipelineExecuter)">
+            <summary>
+            Initializes the current instance
+            </summary>
+            <param name="pipelineExecuter">The current pipeline executer.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.PartialProcessOperation.Execute(System.Collections.Generic.IEnumerable{Rhino.Etl.Core.Row})">
+            <summary>
+            Executes this operation
+            </summary>
+            <param name="rows">The rows.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.PartialProcessOperation.Dispose">
+            <summary>
+            Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+            </summary>
+            <filterpriority>2</filterpriority>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.PartialProcessOperation.Rhino#Etl#Core#Operations#IOperation#RaiseRowProcessed(Rhino.Etl.Core.Row)">
+            <summary>
+            Raises the row processed event
+            </summary>
+            <param name="dictionary">The dictionary.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.PartialProcessOperation.Rhino#Etl#Core#Operations#IOperation#RaiseFinishedProcessing">
+            <summary>
+            Raises the finished processing event
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Operations.PartialProcessOperation.GetAllErrors">
+            <summary>
+            Gets all errors that occured when running this operation
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="E:Rhino.Etl.Core.Operations.PartialProcessOperation.OnFinishedProcessing">
+            <summary>
+            Occurs when all the rows has finished processing.
+            </summary>
+        </member>
+        <member name="P:Rhino.Etl.Core.Operations.PartialProcessOperation.Statistics">
+            <summary>
+            Gets the statistics for this operation
+            </summary>
+            <value>The statistics.</value>
+        </member>
+        <member name="E:Rhino.Etl.Core.Operations.PartialProcessOperation.OnRowProcessed">
+            <summary>
+            Occurs when a row is processed.
+            </summary>
+        </member>
+        <member name="T:Rhino.Etl.Core.Pipelines.ThreadPoolPipelineExecuter">
+            <summary>
+            Execute all the actions concurrently, in the thread pool
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Pipelines.ThreadPoolPipelineExecuter.DecorateEnumerableForExecution(Rhino.Etl.Core.Operations.IOperation,System.Collections.Generic.IEnumerable{Rhino.Etl.Core.Row})">
+            <summary>
+            Add a decorator to the enumerable for additional processing
+            </summary>
+            <param name="operation">The operation.</param>
+            <param name="enumerator">The enumerator.</param>
+        </member>
+        <member name="T:Rhino.Etl.Core.Pipelines.SingleThreadedPipelineExecuter">
+            <summary>
+            Executes the pipeline on a single thread
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Pipelines.SingleThreadedPipelineExecuter.DecorateEnumerableForExecution(Rhino.Etl.Core.Operations.IOperation,System.Collections.Generic.IEnumerable{Rhino.Etl.Core.Row})">
+            <summary>
+            Add a decorator to the enumerable for additional processing
+            </summary>
+            <param name="operation">The operation.</param>
+            <param name="enumerator">The enumerator.</param>
+        </member>
+        <member name="T:Rhino.Etl.Core.RhinoEtlException">
+            <summary>
+            An exception that was caught during exceuting the code.
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.RhinoEtlException.#ctor(System.String,System.Exception)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.RhinoEtlException"/> class.
+            </summary>
+            <param name="message">The message.</param>
+            <param name="inner">The inner.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.RhinoEtlException.#ctor(System.Runtime.Serialization.SerializationInfo,System.Runtime.Serialization.StreamingContext)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.RhinoEtlException"/> class.
+            </summary>
+            <param name="info">The <see cref="T:System.Runtime.Serialization.SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
+            <param name="context">The <see cref="T:System.Runtime.Serialization.StreamingContext"/> that contains contextual information about the source or destination.</param>
+            <exception cref="T:System.ArgumentNullException">The <paramref name="info"/> parameter is null. </exception>
+            <exception cref="T:System.Runtime.Serialization.SerializationException">The class name is null or <see cref="P:System.Exception.HResult"/> is zero (0). </exception>
+        </member>
+        <member name="T:Rhino.Etl.Core.QuackingDictionary">
+            <summary>
+            A dictionary that can be access with a natural syntax from Boo
+            </summary>
+        </member>
+        <member name="F:Rhino.Etl.Core.QuackingDictionary.items">
+            <summary>
+            The inner items collection
+            </summary>
+        </member>
+        <member name="F:Rhino.Etl.Core.QuackingDictionary.lastAccess">
+            <summary>
+            The last item that was access, useful for debugging
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.QuackingDictionary.ShouldThorwIfKeyNotFound">
+            <summary>
+            Set the flag to thorw if key not found.
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.QuackingDictionary.#ctor(System.Collections.IDictionary)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.QuackingDictionary"/> class.
+            </summary>
+            <param name="items">The items.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.QuackingDictionary.QuackGet(System.String,System.Object[])">
+            <summary>
+            Get a value by name or first parameter
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.QuackingDictionary.QuackSet(System.String,System.Object[],System.Object)">
+            <summary>
+            Set a value on the given name or first parameter
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.QuackingDictionary.QuackInvoke(System.String,System.Object[])">
+            <summary>
+            Not supported
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.QuackingDictionary.ToString">
+            <summary>
+            Returns a <see cref="T:System.String"/> that represents the current <see cref="T:System.Object"/>.
+            </summary>
+            <returns>
+            A <see cref="T:System.String"/> that represents the current <see cref="T:System.Object"/>.
+            </returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.QuackingDictionary.GetEnumerator">
+            <summary>
+            Returns an enumerator that iterates through a collection.
+            </summary>
+            <returns>
+            An <see cref="T:System.Collections.IEnumerator"/> object that can be used to iterate through the collection.
+            </returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.QuackingDictionary.System#Collections#IDictionary#GetEnumerator">
+            <summary>
+            Returns an <see cref="T:System.Collections.IDictionaryEnumerator"></see> object for the <see cref="T:System.Collections.IDictionary"></see> object.
+            </summary>
+            
+            <returns>
+            An <see cref="T:System.Collections.IDictionaryEnumerator"></see> object for the <see cref="T:System.Collections.IDictionary"></see> object.
+            </returns>
+            <filterpriority>2</filterpriority>
+        </member>
+        <member name="M:Rhino.Etl.Core.QuackingDictionary.Contains(System.Object)">
+            <summary>
+            Determines whether the <see cref="T:System.Collections.IDictionary"></see> object contains an element with the specified key.
+            </summary>
+            
+            <returns>
+            true if the <see cref="T:System.Collections.IDictionary"></see> contains an element with the key; otherwise, false.
+            </returns>
+            
+            <param name="key">The key to locate in the <see cref="T:System.Collections.IDictionary"></see> object.</param>
+            <exception cref="T:System.ArgumentNullException">key is null. </exception><filterpriority>2</filterpriority>
+        </member>
+        <member name="M:Rhino.Etl.Core.QuackingDictionary.Add(System.Object,System.Object)">
+            <summary>
+            Adds an element with the provided key and value to the <see cref="T:System.Collections.IDictionary"></see> object.
+            </summary>
+            
+            <param name="value">The <see cref="T:System.Object"></see> to use as the value of the element to add. </param>
+            <param name="key">The <see cref="T:System.Object"></see> to use as the key of the element to add. </param>
+            <exception cref="T:System.ArgumentException">An element with the same key already exists in the <see cref="T:System.Collections.IDictionary"></see> object. </exception>
+            <exception cref="T:System.ArgumentNullException">key is null. </exception>
+            <exception cref="T:System.NotSupportedException">The <see cref="T:System.Collections.IDictionary"></see> is read-only.-or- The <see cref="T:System.Collections.IDictionary"></see> has a fixed size. </exception><filterpriority>2</filterpriority>
+        </member>
+        <member name="M:Rhino.Etl.Core.QuackingDictionary.Clear">
+            <summary>
+            Removes all elements from the <see cref="T:System.Collections.IDictionary"></see> object.
+            </summary>
+            
+            <exception cref="T:System.NotSupportedException">The <see cref="T:System.Collections.IDictionary"></see> object is read-only. </exception><filterpriority>2</filterpriority>
+        </member>
+        <member name="M:Rhino.Etl.Core.QuackingDictionary.Remove(System.Object)">
+            <summary>
+            Removes the element with the specified key from the <see cref="T:System.Collections.IDictionary"></see> object.
+            </summary>
+            
+            <param name="key">The key of the element to remove. </param>
+            <exception cref="T:System.NotSupportedException">The <see cref="T:System.Collections.IDictionary"></see> object is read-only.-or- The <see cref="T:System.Collections.IDictionary"></see> has a fixed size. </exception>
+            <exception cref="T:System.ArgumentNullException">key is null. </exception><filterpriority>2</filterpriority>
+        </member>
+        <member name="M:Rhino.Etl.Core.QuackingDictionary.CopyTo(System.Array,System.Int32)">
+            <summary>
+            Copies the elements of the <see cref="T:System.Collections.ICollection"></see> to an <see cref="T:System.Array"></see>, starting at a particular <see cref="T:System.Array"></see> index.
+            </summary>
+            
+            <param name="array">The one-dimensional <see cref="T:System.Array"></see> that is the destination of the elements copied from <see cref="T:System.Collections.ICollection"></see>. The <see cref="T:System.Array"></see> must have zero-based indexing. </param>
+            <param name="index">The zero-based index in array at which copying begins. </param>
+            <exception cref="T:System.ArgumentNullException">array is null. </exception>
+            <exception cref="T:System.ArgumentException">The type of the source <see cref="T:System.Collections.ICollection"></see> cannot be cast automatically to the type of the destination array. </exception>
+            <exception cref="T:System.ArgumentOutOfRangeException">index is less than zero. </exception>
+            <exception cref="T:System.ArgumentException">array is multidimensional.-or- index is equal to or greater than the length of array.-or- The number of elements in the source <see cref="T:System.Collections.ICollection"></see> is greater than the available space from index to the end of the destination array. </exception><filterpriority>2</filterpriority>
+        </member>
+        <member name="P:Rhino.Etl.Core.QuackingDictionary.Item(System.String)">
+            <summary>
+            Gets or sets the <see cref="T:System.Object"/> with the specified key.
+            </summary>
+            <value></value>
+        </member>
+        <member name="P:Rhino.Etl.Core.QuackingDictionary.Item(System.Object)">
+            <summary>
+            Gets or sets the element with the specified key.
+            </summary>
+            
+            <returns>
+            The element with the specified key.
+            </returns>
+            
+            <param name="key">The key of the element to get or set. </param>
+            <exception cref="T:System.NotSupportedException">The property is set and the <see cref="T:System.Collections.IDictionary"></see> object is read-only.-or- The property is set, key does not exist in the collection, and the <see cref="T:System.Collections.IDictionary"></see> has a fixed size. </exception>
+            <exception cref="T:System.ArgumentNullException">key is null. </exception><filterpriority>2</filterpriority>
+        </member>
+        <member name="P:Rhino.Etl.Core.QuackingDictionary.Keys">
+            <summary>
+            Gets an <see cref="T:System.Collections.ICollection"></see> object containing the keys of the <see cref="T:System.Collections.IDictionary"></see> object.
+            </summary>
+            
+            <returns>
+            An <see cref="T:System.Collections.ICollection"></see> object containing the keys of the <see cref="T:System.Collections.IDictionary"></see> object.
+            </returns>
+            <filterpriority>2</filterpriority>
+        </member>
+        <member name="P:Rhino.Etl.Core.QuackingDictionary.Values">
+            <summary>
+            Gets an <see cref="T:System.Collections.ICollection"></see> object containing the values in the <see cref="T:System.Collections.IDictionary"></see> object.
+            </summary>
+            
+            <returns>
+            An <see cref="T:System.Collections.ICollection"></see> object containing the values in the <see cref="T:System.Collections.IDictionary"></see> object.
+            </returns>
+            <filterpriority>2</filterpriority>
+        </member>
+        <member name="P:Rhino.Etl.Core.QuackingDictionary.IsReadOnly">
+            <summary>
+            Gets a value indicating whether the <see cref="T:System.Collections.IDictionary"></see> object is read-only.
+            </summary>
+            
+            <returns>
+            true if the <see cref="T:System.Collections.IDictionary"></see> object is read-only; otherwise, false.
+            </returns>
+            <filterpriority>2</filterpriority>
+        </member>
+        <member name="P:Rhino.Etl.Core.QuackingDictionary.IsFixedSize">
+            <summary>
+            Gets a value indicating whether the <see cref="T:System.Collections.IDictionary"></see> object has a fixed size.
+            </summary>
+            
+            <returns>
+            true if the <see cref="T:System.Collections.IDictionary"></see> object has a fixed size; otherwise, false.
+            </returns>
+            <filterpriority>2</filterpriority>
+        </member>
+        <member name="P:Rhino.Etl.Core.QuackingDictionary.Count">
+            <summary>
+            Gets the number of elements contained in the <see cref="T:System.Collections.ICollection"></see>.
+            </summary>
+            
+            <returns>
+            The number of elements contained in the <see cref="T:System.Collections.ICollection"></see>.
+            </returns>
+            <filterpriority>2</filterpriority>
+        </member>
+        <member name="P:Rhino.Etl.Core.QuackingDictionary.SyncRoot">
+            <summary>
+            Gets an object that can be used to synchronize access to the <see cref="T:System.Collections.ICollection"></see>.
+            </summary>
+            
+            <returns>
+            An object that can be used to synchronize access to the <see cref="T:System.Collections.ICollection"></see>.
+            </returns>
+            <filterpriority>2</filterpriority>
+        </member>
+        <member name="P:Rhino.Etl.Core.QuackingDictionary.IsSynchronized">
+            <summary>
+            Gets a value indicating whether access to the <see cref="T:System.Collections.ICollection"></see> is synchronized (thread safe).
+            </summary>
+            
+            <returns>
+            true if access to the <see cref="T:System.Collections.ICollection"></see> is synchronized (thread safe); otherwise, false.
+            </returns>
+            <filterpriority>2</filterpriority>
+        </member>
+        <member name="T:Rhino.Etl.Core.QuackingDictionary.QuackingDictionaryDebugView">
+            <summary>
+            A debbug view of quacking dictionary
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.QuackingDictionary.QuackingDictionaryDebugView.#ctor(Rhino.Etl.Core.QuackingDictionary)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.QuackingDictionary.QuackingDictionaryDebugView"/> class.
+            </summary>
+            <param name="dictionary">The dictionary.</param>
+        </member>
+        <member name="P:Rhino.Etl.Core.QuackingDictionary.QuackingDictionaryDebugView.Items">
+            <summary>
+            Gets the items.
+            </summary>
+            <value>The items.</value>
+        </member>
+        <member name="T:Rhino.Etl.Core.QuackingDictionary.QuackingDictionaryDebugView.KeyValuePair">
+            <summary>
+            Represent a single key/value pair for the debugger
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.QuackingDictionary.QuackingDictionaryDebugView.KeyValuePair.#ctor(System.Object,System.Object)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.QuackingDictionary.QuackingDictionaryDebugView.KeyValuePair"/> class.
+            </summary>
+            <param name="key">The key.</param>
+            <param name="value">The value.</param>
+        </member>
+        <member name="P:Rhino.Etl.Core.QuackingDictionary.QuackingDictionaryDebugView.KeyValuePair.Key">
+            <summary>
+            Gets the key.
+            </summary>
+            <value>The key.</value>
+        </member>
+        <member name="P:Rhino.Etl.Core.QuackingDictionary.QuackingDictionaryDebugView.KeyValuePair.Value">
+            <summary>
+            Gets the value.
+            </summary>
+            <value>The value.</value>
+        </member>
+        <member name="T:Rhino.Etl.Core.Row">
+            <summary>
+            Represent a virtual row
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Row.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.Row"/> class.
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Row.#ctor(System.Collections.IDictionary)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Rhino.Etl.Core.Row"/> class.
+            </summary>
+            <param name="itemsToClone">The items to clone.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Row.Copy(System.Collections.IDictionary)">
+            <summary>
+            Creates a copy of the given source, erasing whatever is in the row currently.
+            </summary>
+            <param name="source">The source row.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Row.Clone">
+            <summary>
+            Clones this instance.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.Row.Equals(Rhino.Etl.Core.Row)">
+            <summary>
+            Indicates whether the current <see cref="T:Rhino.Etl.Core.Row"/> is equal to another <see cref="T:Rhino.Etl.Core.Row"/>.
+            </summary>
+            <returns>
+            true if the current object is equal to the <paramref name="other"/> parameter; otherwise, false.
+            </returns>
+            <param name="other">An object to compare with this object.</param>
+        </member>
+        <member name="M:Rhino.Etl.Core.Row.CreateKey">
+            <summary>
+            Creates a key from the current row, suitable for use in hashtables
+            </summary>
+        </member>
+        <member name="M:Rhino.Etl.Core.Row.CreateKey(System.String[])">
+            <summary>
+            Creates a key that allow to do full or partial indexing on a row
+            </summary>
+            <param name="columns">The columns.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.Row.FromObject(System.Object)">
+            <summary>
+            Copy all the public properties and fields of an object to the row
+            </summary>
+            <param name="obj">The obj.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.Row.FromReader(System.Data.IDataReader)">
+            <summary>
+            Generate a row from the reader
+            </summary>
+            <param name="reader">The reader.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.Row.ToObject``1">
+            <summary>
+            Create a new object of <typeparamref name="T"/> and set all
+            the matching fields/properties on it.
+            </summary>
+            <typeparam name="T"></typeparam>
+            <returns></returns>
+        </member>
+        <member name="M:Rhino.Etl.Core.Row.ToObject(System.Type)">
+            <summary>
+            Create a new object of <param name="type"/> and set all
+            the matching fields/properties on it.
+            </summary>
+        </member>
+        <member name="P:Rhino.Etl.Core.Row.Columns">
+            <summary>
+            Gets the columns in this row.
+            </summary>
+            <value>The columns.</value>
+        </member>
+    </members>
+</doc>

@@ -1,7 +1,10 @@
 using System;
 using System.IO;
 using System.Threading;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Raven.Client.Document;
+using Raven.Database.Data;
 using Raven.Database.Exceptions;
 using Raven.Database.Indexing;
 using Raven.Server;
@@ -37,7 +40,7 @@ namespace Raven.Client.Tests.Document
 		{
 			using (var server = GetNewServer(port, path))
 			{
-				var documentStore = new DocumentStore("localhost", port);
+				var documentStore = new DocumentStore { Url = "http://localhost:"+ port };
 				documentStore.Initialise();
 
 				var session = documentStore.OpenSession();
@@ -48,13 +51,54 @@ namespace Raven.Client.Tests.Document
 			}
 		}
 
+		[Fact]
+		public void Can_store_using_batch()
+		{
+			using (var server = GetNewServer(port, path))
+			{
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+				documentStore.Initialise();
+				var batchResults = documentStore
+					.DatabaseCommands
+					.Batch(new ICommandData[]
+					{
+						new PutCommandData
+						{
+							Document = JObject.FromObject(new Company{Name = "Hibernating Rhinos"}),
+							Etag = null,
+							Key = "rhino1",
+							Metadata = new JObject(),
+						},
+						new PutCommandData
+						{
+							Document = JObject.FromObject(new Company{Name = "Hibernating Rhinos"}),
+							Etag = null,
+							Key = "rhino2",
+							Metadata = new JObject(),
+						},
+						new DeleteCommandData
+						{
+							Etag = null,
+							Key = "rhino2"
+						}
+					});
+
+				Assert.Equal("rhino1", batchResults[0].Key);
+				Assert.Equal("rhino2", batchResults[1].Key);
+
+				Assert.Null(documentStore.DatabaseCommands.Get("rhino2"));
+				Assert.NotNull(documentStore.DatabaseCommands.Get("rhino1"));
+			}
+		}
+
+
         [Fact]
         public void Can_get_two_documents_in_one_call()
         {
             using (var server = GetNewServer(port, path))
             {
-                var documentStore = new DocumentStore("localhost", port);
-                documentStore.Initialise();
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+				documentStore.Initialise();
 
                 var session = documentStore.OpenSession();
                 session.Store(new Company { Name = "Company A", Id = "1"});
@@ -77,8 +121,8 @@ namespace Raven.Client.Tests.Document
         {
             using (var server = GetNewServer(port, path))
             {
-                var documentStore = new DocumentStore("localhost", port);
-                documentStore.Initialise();
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+				documentStore.Initialise();
 
                 var session = documentStore.OpenSession();
                 var entity = new Company { Name = "Company" };
@@ -101,8 +145,8 @@ namespace Raven.Client.Tests.Document
         {
             using (var server = GetNewServer(port, path))
             {
-                var documentStore = new DocumentStore("localhost", port);
-                documentStore.Initialise();
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+				documentStore.Initialise();
                 var session = documentStore.OpenSession();
                 var company = new Company { Name = "Company 1", Phone = 5 };
                 session.Store(company);
@@ -129,8 +173,8 @@ namespace Raven.Client.Tests.Document
         {
             using (var server = GetNewServer(port, path))
             {
-                var documentStore = new DocumentStore("localhost", port);
-                documentStore.Initialise();
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+				documentStore.Initialise();
 
                 var session = documentStore.OpenSession();
                 session.UseOptimisticConcurrency = true;
@@ -155,7 +199,7 @@ namespace Raven.Client.Tests.Document
 		{
 			using (var server = GetNewServer(port, path))
 			{
-				var documentStore = new DocumentStore("localhost", port);
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
 				documentStore.Initialise();
 
 				var session = documentStore.OpenSession();
@@ -178,7 +222,7 @@ namespace Raven.Client.Tests.Document
 		{
 			using (var server = GetNewServer(port, path))
 			{
-				var documentStore = new DocumentStore("localhost", port);
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
 				documentStore.Initialise();
 
 				var session1 = documentStore.OpenSession();
@@ -202,7 +246,7 @@ namespace Raven.Client.Tests.Document
 		{
 			using (var server = GetNewServer(port, path))
 			{
-				var documentStore = new DocumentStore("localhost", port);
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
 				documentStore.Initialise();
 
 				var session1 = documentStore.OpenSession();
@@ -225,7 +269,7 @@ namespace Raven.Client.Tests.Document
 		{
 			using (var server = GetNewServer(port, path))
 			{
-				var documentStore = new DocumentStore("localhost", port);
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
 				documentStore.Initialise();
 
 				var session = documentStore.OpenSession();

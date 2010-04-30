@@ -90,7 +90,13 @@ namespace Raven.Client.Document
 			return this;
 		}
 
-	    public IDocumentQuery<TProjection> Select<TProjection>(Func<T, TProjection> projectionExpression)
+		public IDocumentQuery<T> WaitForNonStaleResults(TimeSpan timeout)
+		{
+			ApplyForAll(query => query.WaitForNonStaleResults(timeout));
+			return this;
+		}
+
+		public IDocumentQuery<TProjection> Select<TProjection>(Func<T, TProjection> projectionExpression)
 	    {
 	        return new ShardedDocumentQuery<TProjection>(
 	            queries.Select(x => x.Select(projectionExpression)).ToArray()

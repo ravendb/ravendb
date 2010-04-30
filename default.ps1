@@ -29,6 +29,16 @@ task Init -depends Clean {
 		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2010" `
 		-clsCompliant "false"
 		
+		Generate-Assembly-Info `
+		-file "$base_dir\Raven.Sample.SimpleClient\Properties\AssemblyInfo.cs" `
+		-title "Raven Database $version" `
+		-description "A linq enabled document database for .NET" `
+		-company "Hibernating Rhinos" `
+		-product "Raven Database $version" `
+		-version $version `
+		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2010" `
+		-clsCompliant "false"
+		
 	Generate-Assembly-Info `
 		-file "$base_dir\Raven.Sample.ShardClient\Properties\AssemblyInfo.cs" `
 		-title "Raven Sample Shard Client $version" `
@@ -48,17 +58,7 @@ task Init -depends Clean {
 		-version $version `
 		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2010" `
 		-clsCompliant "false"
-
-	Generate-Assembly-Info `
-		-file "$base_dir\Raven.FileStorage\Properties\AssemblyInfo.cs" `
-		-title "Raven Database Client $version" `
-		-description "A linq enabled document database for .NET" `
-		-company "Hibernating Rhinos" `
-		-product "Raven Database $version" `
-		-version $version `
-		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2010" `
-		-clsCompliant "false"
-		
+	
 	Generate-Assembly-Info `
 		-file "$base_dir\Raven.Client.Tests\Properties\AssemblyInfo.cs" `
 		-title "Raven Database Client $version" `
@@ -79,8 +79,8 @@ task Init -depends Clean {
 		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2010" `
 		-clsCompliant "false"
 
-		Generate-Assembly-Info `
-		-file "$base_dir\Raven.Importer\Properties\AssemblyInfo.cs" `
+	Generate-Assembly-Info `
+		-file "$base_dir\Raven.Web\Properties\AssemblyInfo.cs" `
 		-title "Raven Database $version" `
 		-description "A linq enabled document database for .NET" `
 		-company "Hibernating Rhinos" `
@@ -88,6 +88,7 @@ task Init -depends Clean {
 		-version $version `
 		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2010" `
 		-clsCompliant "false"
+
 
 	Generate-Assembly-Info `
 		-file "$base_dir\Raven.Scenarios\Properties\AssemblyInfo.cs" `
@@ -109,15 +110,6 @@ task Init -depends Clean {
 		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2010" `
 		-clsCompliant "false"
 
-	Generate-Assembly-Info `
-		-file "$base_dir\Raven.Importer\Properties\AssemblyInfo.cs" `
-		-title "Raven Database $version" `
-		-description "A linq enabled document database for .NET" `
-		-company "Hibernating Rhinos" `
-		-product "Raven Database $version" `
-		-version $version `
-		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2010" `
-		-clsCompliant "false"
 
 	Generate-Assembly-Info `
 		-file "$base_dir\Raven.Tryouts\Properties\AssemblyInfo.cs" `
@@ -128,11 +120,13 @@ task Init -depends Clean {
 		-version $version `
 		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2010" `
 		-clsCompliant "false"
-		
-	.\Utilities\Binaries\Raven.DefaultDatabase.Creator .\Raven.Server\Defaults\default.json
+	
+	.\Utilities\Binaries\Raven.DefaultDatabase.Creator .\Raven.Database\Defaults\default.json
 		
 	new-item $release_dir -itemType directory
 	new-item $buildartifacts_dir -itemType directory
+	
+	copy $tools_dir\xUnit\*.* $build_dir
 }
 
 task Compile -depends Init {
@@ -143,9 +137,9 @@ task Compile -depends Init {
 task Test -depends Compile {
   $old = pwd
   cd $build_dir
-  exec "$tools_dir\xUnit\xunit.console.exe" "$build_dir\Raven.Tests.dll"
-  exec "$tools_dir\xUnit\xunit.console.exe" "$build_dir\Raven.Scenarios.dll"
-  exec "$tools_dir\xUnit\xunit.console.exe" "$build_dir\Raven.Client.Tests.dll"
+  exec "$build_dir\xunit.console.exe" "$build_dir\Raven.Tests.dll"
+  exec "$build_dir\xunit.console.exe" "$build_dir\Raven.Scenarios.dll"
+  exec "$build_dir\xunit.console.exe" "$build_dir\Raven.Client.Tests.dll"
   cd $old
 }
 
@@ -154,24 +148,63 @@ task Merge -depends Compile {
 	cd $build_dir
 	
 	remove-item $build_dir\RavenDb.exe  -ErrorAction SilentlyContinue
+	remove-item $build_dir\RavenClient.dll -ErrorAction SilentlyContinue
+	remove-item $build_dir\RavenWeb.dll  -ErrorAction SilentlyContinue
 	
-	exec "..\Utilities\Binaries\Raven.Merger.exe"
+	exec "..\Utilities\Binaries\Raven.Merger.exe" $build_dir
 	
 	cd $old
 }
 
-task Release -depends Test, Merge {
-	& $tools_dir\zip.exe -9 -A -j `
+task ReleaseNoTests -depends DoRelease {
+
+}
+
+task Release -depends Test,DoRelease { 
+}
+
+task DoRelease -depends Merge {
+	
+	remove-item $build_dir\Output -Recurse -Force  -ErrorAction SilentlyContinue
+	mkdir $build_dir\Output
+	mkdir $build_dir\Output\Web
+	mkdir $build_dir\Output\Server
+	mkdir $build_dir\Output\Client
+	
+	cp $build_dir\Raven.Client.dll $build_dir\Output\Client
+	cp $build_dir\Raven.Database.dll $build_dir\Output\Client
+	cp $build_dir\Esent.Interop.dll $build_dir\Output\Client
+	cp $build_dir\ICSharpCode.NRefactory.dll $build_dir\Output\Client
+	cp $build_dir\Lucene.Net.dll $build_dir\Output\Client
+	cp $build_dir\log4net.dll $build_dir\Output\Client
+	cp $build_dir\Newtonsoft.Json.dll $build_dir\Output\Client
+	
+	cp $build_dir\RavenWeb.dll $build_dir\Output\Web
+	cp $base_dir\DefaultConfigs\web.config $build_dir\Output\Web\web.config
+	
+	cp $build_dir\RavenDb.exe $build_dir\Output\Server
+	cp $base_dir\DefaultConfigs\RavenDb.exe.config $build_dir\Output\Server\RavenDb.exe.config
+	
+	cp $base_dir\license.txt $build_dir\Output\license.txt
+	cp $base_dir\readme.txt $build_dir\Output\readme.txt
+	cp $base_dir\acknowledgements.txt $build_dir\Output\acknowledgements.txt
+	
+	$old = pwd
+	
+	cd $build_dir\Output
+	
+	& $tools_dir\zip.exe -9 -A `
 		$release_dir\Raven.zip `
-		$build_dir\RavenDb.exe `
-		$build_dir\RavenDb.pdb `
-		$build_dir\RavenDb.xml `
-		$build_dir\Raven.Client.dll `
-		$build_dir\Raven.Client.pdb `
-		$build_dir\Raven.Client.xml `
+		Client\*.* `
+		Web\*.* `
+		Server\*.* `
 		license.txt `
-		acknowledgements.txt
+		acknowledgements.txt `
+		readme.txt
+		
 	if ($lastExitCode -ne 0) {
         throw "Error: Failed to execute ZIP command"
     }
+    
+    cd $old
 }

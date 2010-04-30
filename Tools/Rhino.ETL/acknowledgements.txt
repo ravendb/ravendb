@@ -1,0 +1,2 @@
+Rhino ETL is making use of the FileHelpers library from (www.filehelpers.com), written by Marcos Meli
+Without them, Rhino ETL's task would have been much harder

@@ -12,7 +12,7 @@ namespace Raven.Database.Data
 			get { return "PUT"; }
     	}
 
-        public TransactionInformation TransactionInformation
+    	public TransactionInformation TransactionInformation
         {
             get;
             set;
@@ -24,7 +24,20 @@ namespace Raven.Database.Data
 
 		public void Execute(DocumentDatabase database)
 		{
-			database.Put(Key, Etag, Document, Metadata,TransactionInformation);
+			var putResult = database.Put(Key, Etag, Document, Metadata, TransactionInformation);
+			Etag = putResult.ETag;
+			Key = putResult.Key;
 		}
+
+    	public JObject ToJson()
+    	{
+    		return new JObject(
+				new JProperty("Key", new JValue((object)Key)),
+    			new JProperty("Etag", new JValue(Etag != null ? (object)Etag.ToString() : null)),
+    			new JProperty("Method", new JValue(Method)),
+				new JProperty("Document", Document),
+				new JProperty("Metadata", Metadata)
+    			);
+    	}
     }
 }

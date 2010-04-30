@@ -11,28 +11,42 @@ namespace Raven.Merger
 	{
 		static int Main(string[] args)
 		{
-			try
+		  Environment.CurrentDirectory = args.FirstOrDefault() == null ? @"C:\Work\ravendb\build" : args.First();
+		  try
 			{
-				var merge = new ILMerge
+				Merge("RavenDb.exe", new[]
 				{
-					OutputFile = "RavenDb.exe",
-					TargetKind = ILMerge.Kind.SameAsPrimaryAssembly,
-					Version = new Version(4, 0)
-				};
-				merge.SetInputAssemblies(
-					new[]
-						{
-							@"Raven.Server.exe",
-							@"Raven.Database.dll",
-							@"Esent.Interop.dll",
-                            @"ICSharpCode.NRefactory.dll",
-							@"Lucene.Net.dll",
-							@"log4net.dll",
-							@"Newtonsoft.Json.dll",
+					@"Raven.Server.exe",
+					@"Raven.Database.dll",
+					@"Esent.Interop.dll",
+					@"ICSharpCode.NRefactory.dll",
+					@"Lucene.Net.dll",
+					@"log4net.dll",
+					@"Newtonsoft.Json.dll",
 
-						});
-				merge.SetTargetPlatform("4", Path.GetDirectoryName(typeof(object).Assembly.Location));
-				merge.Merge();
+				});
+				
+				Merge("RavenWeb.dll", new[]
+				{
+					@"Raven.Web.dll",
+					@"Raven.Database.dll",
+					@"Esent.Interop.dll",
+					@"ICSharpCode.NRefactory.dll",
+					@"Lucene.Net.dll",
+					@"log4net.dll",
+					@"Newtonsoft.Json.dll",
+				});
+
+				//Merge("RavenClient.dll", new[]
+				//{
+				//    @"Raven.Client.dll",
+				//    @"Raven.Database.dll",
+				//    @"Esent.Interop.dll",
+				//    @"ICSharpCode.NRefactory.dll",
+				//    @"Lucene.Net.dll",
+				//    @"log4net.dll",
+				//    @"Newtonsoft.Json.dll",
+				//});
 				return 0;
 			}
 			catch (Exception e)
@@ -40,6 +54,19 @@ namespace Raven.Merger
 				Console.WriteLine(e);
 				return -1;
 			}
+		}
+
+	  private static void Merge(string outputFile, string[] inputAssemblies)
+		{
+			var merge = new ILMerge
+			{
+				OutputFile = outputFile,
+				TargetKind = ILMerge.Kind.SameAsPrimaryAssembly,
+				Version = new Version(4, 0),
+			};
+			merge.SetInputAssemblies(inputAssemblies);
+			merge.SetTargetPlatform("4", Path.GetDirectoryName(typeof(object).Assembly.Location));
+			merge.Merge();
 		}
 	}
 }

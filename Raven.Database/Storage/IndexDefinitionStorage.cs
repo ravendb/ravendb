@@ -33,7 +33,8 @@ namespace Raven.Database.Storage
 			{
 				try
 				{
-					AddIndex(Path.GetFileNameWithoutExtension(index),
+					AddAndCompileIndex(
+						HttpUtility.UrlDecode(Path.GetFileNameWithoutExtension(index)),
 						JsonConvert.DeserializeObject<IndexDefinition>(File.ReadAllText(index), new JsonEnumConverter())
 						);
 				}
@@ -51,13 +52,19 @@ namespace Raven.Database.Storage
 
 		public string AddIndex(string name, IndexDefinition indexDefinition)
 		{
+			DynamicViewCompiler transformer = AddAndCompileIndex(name, indexDefinition);
+			File.WriteAllText(Path.Combine(path, transformer.Name + ".index"), JsonConvert.SerializeObject(indexDefinition, Formatting.Indented, new JsonEnumConverter()));
+			return transformer.Name;
+		}
+
+		private DynamicViewCompiler AddAndCompileIndex(string name, IndexDefinition indexDefinition)
+		{
 			var transformer = new DynamicViewCompiler(name, indexDefinition);
 			var generator = transformer.GenerateInstance();
 			indexCache.AddOrUpdate(name, generator, (s, viewGenerator) => generator);
-			File.WriteAllText(Path.Combine(path, transformer.Name + ".index"), JsonConvert.SerializeObject(indexDefinition,Formatting.Indented, new JsonEnumConverter()));
 			logger.InfoFormat("New index {0}:\r\n{1}\r\nCompiled to:\r\n{2}", transformer.Name, transformer.CompiledQueryText,
 			                  transformer.CompiledQueryText);
-			return transformer.Name;
+			return transformer;
 		}
 
 		public void RemoveIndex(string name)

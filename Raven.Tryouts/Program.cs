@@ -1,8 +1,10 @@
 using System;
-using System.Collections.Generic;
-using Newtonsoft.Json;
+using log4net.Appender;
+using log4net.Config;
+using log4net.Layout;
+using Raven.Client.Tests.Document;
 using Raven.Database.Indexing;
-using Raven.Database.Json;
+using Raven.Database.Linq;
 
 namespace Raven.Tryouts
 {
@@ -12,18 +14,27 @@ namespace Raven.Tryouts
 
 		public static void Main()
 		{
-			var serializeObject = JsonConvert.SerializeObject(new IndexDefinition
+			BasicConfigurator.Configure(new ConsoleAppender
 			{
-				Map = "abc",
-				Reduce = "def",
-				Stores = new Dictionary<string, FieldStorage>
+				Layout = new SimpleLayout()
+			});
+			try
+			{
+				var dynamicViewCompiler = new DynamicViewCompiler("a", new IndexDefinition
 				{
-					{"ee", FieldStorage.Compress}
-				}
-			},Formatting.Indented,new JsonEnumConverter());
-			Console.WriteLine(serializeObject);
-			var definition = JsonConvert.DeserializeObject<IndexDefinition>(serializeObject, new JsonEnumConverter());
-			Console.WriteLine(definition.Stores["ee"]);
+					Map = @"
+from post in docs.Posts
+where post.Published == 'aasds'
+select new {post.PostedAt }
+"
+				});
+				dynamicViewCompiler.GenerateInstance();
+				Console.WriteLine(dynamicViewCompiler.CompiledQueryText);
+			}
+			catch (Exception e)
+			{
+				Console.WriteLine(e);
+			}
 		}
 	}
 

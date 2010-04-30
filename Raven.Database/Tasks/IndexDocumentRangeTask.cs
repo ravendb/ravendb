@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
@@ -21,6 +22,20 @@ namespace Raven.Database.Tasks
 			                     Index, FromId, ToId);
 		}
 
+		public override bool TryMerge(Task task)
+		{
+			// we don't merge index ranges, since they are already paritioned on index creation
+			return false;
+		}
+
+		public override bool SupportsMerging
+		{
+			get
+			{
+				return false;
+			}
+		}
+
 		public override void Execute(WorkContext context)
 		{
 			var viewGenerator = context.IndexDefinitionStorage.GetViewGenerator(Index);
@@ -33,8 +48,17 @@ namespace Raven.Database.Tasks
 					.Where(x => x != null)
 					.Select(s => JsonToExpando.Convert(s.ToJson()));
 				context.IndexStorage.Index(Index, viewGenerator, docsToIndex, context, actions);
-				actions.Commit();
 			});
+		}
+
+		public override Task Clone()
+		{
+			return new IndexDocumentRangeTask
+			{
+				FromId = FromId,
+				Index = Index,
+				ToId = ToId,
+			};
 		}
 	}
 }

@@ -13,10 +13,19 @@ namespace Raven.Tests.Patching
         [Fact]
         public void SetValueInNestedElement()
         {
-            var patchedDoc = new JsonPatcher(doc).Apply(
-                JArray.Parse(
-                    @"[{ ""type"": ""modify"" , ""name"": ""user"", ""value"": [{ ""type"":""set"",""name"":""name"",""value"":""rahien""} ]}]")
-                );
+        	var patchedDoc = new JsonPatcher(doc).Apply(
+        		new[]
+        		{
+        			new PatchRequest
+        			{
+        				Type = "modify",
+        				Name = "user",
+        				Nested = new[]
+        				{
+        					new PatchRequest {Type = "set", Name = "name", Value = new JValue("rahien")},
+        				}
+        			},
+        		});
 
             Assert.Equal(@"{""title"":""A Blog Post"",""body"":""html markup"",""comments"":[{""author"":""ayende"",""text"":""good post 1""},{""author"":""ayende"",""text"":""good post 2""}],""user"":{""name"":""rahien"",""id"":13}}",
                 patchedDoc.ToString(Formatting.None));
@@ -26,9 +35,19 @@ namespace Raven.Tests.Patching
         public void SetValueInNestedElement_WithConcurrency_Ok()
         {
             var patchedDoc = new JsonPatcher(doc).Apply(
-                JArray.Parse(
-                    @"[{ ""type"": ""modify"" , ""name"": ""user"", ""value"": [{ ""type"":""set"",""name"":""name"",""value"":""rahien""} ], ""prevVal"": { ""name"": ""ayende"", ""id"": 13}}]")
-                );
+				new[]
+        		{
+        			new PatchRequest
+        			{
+        				Type = "modify",
+        				Name = "user",
+						PrevVal = JObject.Parse(@"{ ""name"": ""ayende"", ""id"": 13}"),
+        				Nested = new[]
+        				{
+        					new PatchRequest {Type = "set", Name = "name", Value = new JValue("rahien")},
+        				}
+        			},
+        		});
 
             Assert.Equal(@"{""title"":""A Blog Post"",""body"":""html markup"",""comments"":[{""author"":""ayende"",""text"":""good post 1""},{""author"":""ayende"",""text"":""good post 2""}],""user"":{""name"":""rahien"",""id"":13}}",
                 patchedDoc.ToString(Formatting.None));
@@ -37,10 +56,20 @@ namespace Raven.Tests.Patching
         [Fact]
         public void SetValueInNestedElement_WithConcurrency_Error()
         {
-            Assert.Throws<ConcurrencyException>(() => new JsonPatcher(doc).Apply(
-                JArray.Parse(
-                    @"[{ ""type"": ""modify"" , ""name"": ""user"", ""value"": [{ ""type"":""set"",""name"":""name"",""value"":""rahien""} ], ""prevVal"": { ""name"": ""ayende"", ""id"": 14}}]")
-                                                            ));
+        	Assert.Throws<ConcurrencyException>(() => new JsonPatcher(doc).Apply(
+        		new[]
+        		{
+        			new PatchRequest
+        			{
+        				Type = "modify",
+        				Name = "user",
+        				PrevVal = JObject.Parse(@"{ ""name"": ""ayende"", ""id"": 14}"),
+        				Nested = new[]
+        				{
+        					new PatchRequest {Type = "set", Name = "name", Value = new JValue("rahien")},
+        				}
+        			},
+        		}));
         }
 
 
@@ -48,9 +77,19 @@ namespace Raven.Tests.Patching
         public void RemoveValueInNestedElement()
         {
             var patchedDoc = new JsonPatcher(doc).Apply(
-                JArray.Parse(
-                    @"[{ ""type"": ""modify"" , ""name"": ""user"", ""value"": [{ ""type"":""unset"",""name"":""name""} ]}]")
-                );
+				new[]
+        		{
+        			new PatchRequest
+        			{
+        				Type = "modify",
+        				Name = "user",
+        				PrevVal = JObject.Parse(@"{ ""name"": ""ayende"", ""id"": 13}"),
+        				Nested = new[]
+        				{
+        					new PatchRequest {Type = "unset", Name = "name" },
+        				}
+        			},
+        		});
 
             Assert.Equal(@"{""title"":""A Blog Post"",""body"":""html markup"",""comments"":[{""author"":""ayende"",""text"":""good post 1""},{""author"":""ayende"",""text"":""good post 2""}],""user"":{""id"":13}}",
                 patchedDoc.ToString(Formatting.None));
@@ -60,9 +99,19 @@ namespace Raven.Tests.Patching
         public void SetValueNestedInArray()
         {
             var patchedDoc = new JsonPatcher(doc).Apply(
-                JArray.Parse(
-                    @"[{ ""type"": ""modify"",  ""name"": ""comments"", ""position"": 1, ""value"": [{ ""type"":""set"",""name"":""author"",""value"":""oren""} ]}]")
-                );
+				new[]
+        		{
+        			new PatchRequest
+        			{
+        				Type = "modify",
+        				Name = "comments",
+						Position = 1,
+        				Nested = new[]
+        				{
+        					new PatchRequest {Type = "set", Name = "author", Value = new JValue("oren")},
+        				}
+        			},
+        		});
 
             Assert.Equal(@"{""title"":""A Blog Post"",""body"":""html markup"",""comments"":[{""author"":""ayende"",""text"":""good post 1""},{""author"":""oren"",""text"":""good post 2""}],""user"":{""name"":""ayende"",""id"":13}}",
                 patchedDoc.ToString(Formatting.None));

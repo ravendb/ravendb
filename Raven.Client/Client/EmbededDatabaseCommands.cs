@@ -91,7 +91,16 @@ namespace Raven.Client.Client
                 .ToArray();
 	    }
 
-	    public void Commit(Guid txId)
+		public BatchResult[] Batch(ICommandData[] commandDatas)
+		{
+			foreach (var commandData in commandDatas)
+			{
+				commandData.TransactionInformation = GetTransactionInformation();
+			}
+			return database.Batch(commandDatas);
+		}
+
+		public void Commit(Guid txId)
 	    {
 	        database.Commit(txId);
 	    }

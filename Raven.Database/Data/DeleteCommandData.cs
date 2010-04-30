@@ -1,4 +1,5 @@
 ﻿using System;
+using Newtonsoft.Json.Linq;
 
 namespace Raven.Database.Data
 {
@@ -21,6 +22,15 @@ namespace Raven.Database.Data
     	public void Execute(DocumentDatabase database)
     	{
     		database.Delete(Key, Etag, TransactionInformation);
+    	}
+
+    	public JObject ToJson()
+    	{
+    		return new JObject(
+				new JProperty("Key", Key),
+				new JProperty("Etag", new JValue(Etag != null ? (object)Etag.ToString() : null)),
+				new JProperty("Method", Method)
+				);
     	}
     }
 }

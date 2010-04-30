@@ -1,13 +1,8 @@
 using System;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using System.Net;
 using System.Security.Principal;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Raven.Database;
-using Raven.Server.Responders;
 
 namespace Raven.Server
 {
@@ -16,30 +11,22 @@ namespace Raven.Server
 		private readonly DocumentDatabase database;
 		private readonly HttpServer server;
 
+		public DocumentDatabase Database
+		{
+			get { return database; }
+		}
+
+		public HttpServer Server
+		{
+			get { return server; }
+		}
+
 		public RavenDbServer(RavenConfiguration settings)
 		{
 			settings.LoadLoggingSettings();
-			if (settings.ShouldCreateDefaultsWhenBuildingNewDatabaseFromScratch)
-				settings.DatabaseCreatedFromScratch += OnDatabaseCreatedFromScratch;
 			database = new DocumentDatabase(settings);
 			database.SpinBackgroundWorkers();
-			server = new HttpServer(settings,
-			                        typeof (RequestResponder).Assembly.GetTypes()
-			                        	.Where(
-			                        		t => typeof (RequestResponder).IsAssignableFrom(t) && t.IsAbstract == false)
-
-			                        	// to ensure that we would get consistent order, so we would always 
-			                        	// have the responders using the same order, otherwise we get possibly
-			                        	// random ordering, and that might cause issues
-			                        	.OrderBy(x => x.Name)
-			                        	.Select(t => (RequestResponder) Activator.CreateInstance(t))
-			                        	.Select(r =>
-			                        	{
-			                        		r.Database = database;
-			                        		r.Settings = settings;
-			                        		return r;
-			                        	})
-				);
+			server = new HttpServer(settings, database);
 			server.Start();
 		}
 
@@ -52,31 +39,6 @@ namespace Raven.Server
 		}
 
 		#endregion
-
-		private void OnDatabaseCreatedFromScratch(DocumentDatabase documentDatabase)
-		{
-			JArray array;
-			const string name = "Raven.Server.Defaults.default.json";
-			using (var defaultDocuments = GetType().Assembly.GetManifestResourceStream(name))
-			{
-				array = JArray.Load(new JsonTextReader(new StreamReader(defaultDocuments)));
-			}
-
-			documentDatabase.TransactionalStorage.Batch(actions =>
-			{
-				foreach (JObject document in array)
-				{
-					actions.AddDocument(
-						document["DocId"].Value<string>(),
-						document["Document"].Value<JObject>().ToString(),
-						null,
-						document["Metadata"].Value<JObject>().ToString()
-						);
-				}
-
-				actions.Commit();
-			});
-		}
 
 		public static void EnsureCanListenToWhenInNonAdminContext(int port)
 		{

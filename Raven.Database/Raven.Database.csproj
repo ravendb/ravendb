@@ -76,6 +76,7 @@
       <HintPath>..\SharedLibs\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.configuration" />
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
@@ -95,26 +96,45 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Server\Abstractions\HttpContextAdapter.cs" />
+    <Compile Include="Server\Abstractions\HttpListenerContextAdpater.cs" />
+    <Compile Include="Server\Abstractions\HttpListenerRequestAdapter.cs" />
+    <Compile Include="Server\Abstractions\HttpListenerResponseAdapter.cs" />
+    <Compile Include="Server\Abstractions\HttpRequestAdapter.cs" />
+    <Compile Include="Server\Abstractions\HttpResponseAdapter.cs" />
+    <Compile Include="Server\Abstractions\IHttpContext.cs" />
+    <Compile Include="Server\Abstractions\IHttpRequest.cs" />
+    <Compile Include="Server\Abstractions\IHttpResponse.cs" />
     <Compile Include="AnonymousUserAccessMode.cs" />
+    <Compile Include="BatchResult.cs" />
     <Compile Include="Data\Attachment.cs" />
+    <Compile Include="Data\CommandDataFactory.cs" />
     <Compile Include="Data\DatabaseStatistics.cs" />
     <Compile Include="Data\DeleteCommandData.cs" />
     <Compile Include="Data\ICommandData.cs" />
     <Compile Include="Data\IndexFailureInformation.cs" />
     <Compile Include="Data\IndexQueryResult.cs" />
     <Compile Include="Data\MetadataExtensions.cs" />
+    <Compile Include="Data\PatchCommandData.cs" />
     <Compile Include="Data\PutCommandData.cs" />
     <Compile Include="Data\ServerError.cs" />
     <Compile Include="Data\IndexStats.cs" />
     <Compile Include="Data\QueryResult.cs" />
     <Compile Include="Data\SortedField.cs" />
+    <Compile Include="Exceptions\BadRequestException.cs" />
     <Compile Include="Exceptions\IndexDisabledException.cs" />
     <Compile Include="Data\IndexQuery.cs" />
+    <Compile Include="Exceptions\OperationVetoedException.cs" />
+    <Compile Include="Extensions\EnumerableExtensions.cs" />
     <Compile Include="Indexing\FieldIndexing.cs" />
     <Compile Include="Indexing\FieldStorage.cs" />
     <Compile Include="Indexing\IndexDefinition.cs" />
     <Compile Include="Indexing\MapReduceIndex.cs" />
+    <Compile Include="Indexing\QueryBuilder.cs" />
     <Compile Include="Indexing\SimpleIndex.cs" />
+    <Compile Include="Plugins\IDeleteTrigger.cs" />
+    <Compile Include="Plugins\IPutTrigger.cs" />
+    <Compile Include="Plugins\IRequiresDocumentDatabaseInitialization.cs" />
     <Compile Include="JsonDocument.cs" />
     <Compile Include="DocumentDatabase.cs" />
     <Compile Include="Exceptions\ConcurrencyException.cs" />
@@ -127,8 +147,10 @@
     <Compile Include="Indexing\WorkContext.cs" />
     <Compile Include="Json\DynamicObjectExtensions.cs" />
     <Compile Include="Json\JsonEnumConverter.cs" />
+    <Compile Include="Json\JsonExtensions.cs" />
     <Compile Include="Json\JsonPatcher.cs" />
     <Compile Include="Json\JsonToExpando.cs" />
+    <Compile Include="Json\PatchRequest.cs" />
     <Compile Include="Linq\AbstractViewGenerator.cs" />
     <Compile Include="Linq\DynamicExpandoObject.cs" />
     <Compile Include="Linq\QueryParsingUtils.cs" />
@@ -136,13 +158,33 @@
     <Compile Include="Linq\IndexingFunc.cs" />
     <Compile Include="Linq\PrivateExtensions\LinqOnDynamic.cs" />
     <Compile Include="PatchResult.cs" />
+    <Compile Include="Plugins\VetoResult.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="PutResult.cs" />
     <Compile Include="RavenConfiguration.cs" />
+    <Compile Include="Server\HttpServer.cs" />
+    <Compile Include="Server\Responders\Docs.cs" />
+    <Compile Include="Server\Responders\Document.cs" />
+    <Compile Include="Server\Responders\DocumentBatch.cs" />
+    <Compile Include="Server\Responders\EnumerableExtensions.cs" />
+    <Compile Include="Server\Responders\Favicon.cs" />
+    <Compile Include="Server\Responders\HttpExtensions.cs" />
+    <Compile Include="Server\Responders\Index.cs" />
+    <Compile Include="Server\Responders\Indexes.cs" />
+    <Compile Include="Server\Responders\Queries.cs" />
+    <Compile Include="Server\Responders\RavenRoot.cs" />
+    <Compile Include="Server\Responders\RavenUI.cs" />
+    <Compile Include="Server\Responders\RequestResponder.cs" />
+    <Compile Include="Server\Responders\Root.cs" />
+    <Compile Include="Server\Responders\Static.cs" />
+    <Compile Include="Server\Responders\Statistics.cs" />
+    <Compile Include="Server\Responders\TransactionCommit.cs" />
+    <Compile Include="Server\Responders\TransactionRollback.cs" />
     <Compile Include="Storage\IndexCreationOptions.cs" />
     <Compile Include="Storage\DocumentInTransactionData.cs" />
+    <Compile Include="Storage\TableColumnsCache.cs" />
     <Compile Include="Tasks\IndexDocumentRangeTask.cs" />
-    <Compile Include="Tasks\IndexDocumentTask.cs" />
+    <Compile Include="Tasks\IndexDocumentsTask.cs" />
     <Compile Include="Tasks\ReduceTask.cs" />
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
     <Compile Include="Tasks\Task.cs" />
@@ -171,7 +213,90 @@
       <Install>true</Install>
     </BootstrapperPackage>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Content Include="Server\WebUI\css\Pager.css" />
+    <Content Include="Server\WebUI\css\rdb.css" />
+    <Content Include="Server\WebUI\css\rdb.jsonEditor.css" />
+    <Content Include="Server\WebUI\css\smoothness\images\ui-bg_flat_0_aaaaaa_40x100.png" />
+    <Content Include="Server\WebUI\css\smoothness\images\ui-bg_flat_75_ffffff_40x100.png" />
+    <Content Include="Server\WebUI\css\smoothness\images\ui-bg_glass_55_fbf9ee_1x400.png" />
+    <Content Include="Server\WebUI\css\smoothness\images\ui-bg_glass_65_ffffff_1x400.png" />
+    <Content Include="Server\WebUI\css\smoothness\images\ui-bg_glass_75_dadada_1x400.png" />
+    <Content Include="Server\WebUI\css\smoothness\images\ui-bg_glass_75_e6e6e6_1x400.png" />
+    <Content Include="Server\WebUI\css\smoothness\images\ui-bg_glass_95_fef1ec_1x400.png" />
+    <Content Include="Server\WebUI\css\smoothness\images\ui-bg_highlight-soft_75_cccccc_1x100.png" />
+    <Content Include="Server\WebUI\css\smoothness\images\ui-icons_222222_256x240.png" />
+    <Content Include="Server\WebUI\css\smoothness\images\ui-icons_2e83ff_256x240.png" />
+    <Content Include="Server\WebUI\css\smoothness\images\ui-icons_454545_256x240.png" />
+    <Content Include="Server\WebUI\css\smoothness\images\ui-icons_888888_256x240.png" />
+    <Content Include="Server\WebUI\css\smoothness\images\ui-icons_cd0a0a_256x240.png" />
+    <Content Include="Server\WebUI\css\smoothness\jquery-ui-1.8rc2.custom.css" />
+    <Content Include="Server\WebUI\documents.html" />
+    <Content Include="Server\WebUI\favicon.ico" />
+    <Content Include="Server\WebUI\images\ajax-loader.gif" />
+    <Content Include="Server\WebUI\images\bgR.png" />
+    <Content Include="Server\WebUI\images\c1_i1.png" />
+    <Content Include="Server\WebUI\images\c2_i2.png" />
+    <Content Include="Server\WebUI\images\c2_i3.png" />
+    <Content Include="Server\WebUI\images\c2_i4.png" />
+    <Content Include="Server\WebUI\images\c2_i5.png" />
+    <Content Include="Server\WebUI\images\c2_i6.png" />
+    <Content Include="Server\WebUI\images\c3_i7.png" />
+    <Content Include="Server\WebUI\images\footerContainerBgR.png" />
+    <Content Include="Server\WebUI\images\footer_bg.png" />
+    <Content Include="Server\WebUI\images\header_bg.png" />
+    <Content Include="Server\WebUI\images\jsonEditor\doc.gif" />
+    <Content Include="Server\WebUI\images\jsonEditor\docNode.gif" />
+    <Content Include="Server\WebUI\images\jsonEditor\docNodeLast.gif" />
+    <Content Include="Server\WebUI\images\jsonEditor\docNodeLastFirst.gif" />
+    <Content Include="Server\WebUI\images\jsonEditor\folder.gif" />
+    <Content Include="Server\WebUI\images\jsonEditor\folderNode.gif" />
+    <Content Include="Server\WebUI\images\jsonEditor\folderNodeFirst.gif" />
+    <Content Include="Server\WebUI\images\jsonEditor\folderNodeLast.gif" />
+    <Content Include="Server\WebUI\images\jsonEditor\folderNodeLastFirst.gif" />
+    <Content Include="Server\WebUI\images\jsonEditor\folderNodeOpen.gif" />
+    <Content Include="Server\WebUI\images\jsonEditor\folderNodeOpenFirst.gif" />
+    <Content Include="Server\WebUI\images\jsonEditor\folderNodeOpenLast.gif" />
+    <Content Include="Server\WebUI\images\jsonEditor\folderNodeOpenLastFirst.gif" />
+    <Content Include="Server\WebUI\images\jsonEditor\folderOpen.gif" />
+    <Content Include="Server\WebUI\images\jsonEditor\vertLine.gif" />
+    <Content Include="Server\WebUI\images\logo.png" />
+    <Content Include="Server\WebUI\images\midBox1.png" />
+    <Content Include="Server\WebUI\images\midBox2Arrow.png" />
+    <Content Include="Server\WebUI\images\sideBarArrow.png" />
+    <Content Include="Server\WebUI\images\sideBarListBoxBottom.png" />
+    <Content Include="Server\WebUI\images\sideBarListBoxTop.png" />
+    <Content Include="Server\WebUI\images\submit.png" />
+    <Content Include="Server\WebUI\images\topNavSep.png" />
+    <Content Include="Server\WebUI\index.html" />
+    <Content Include="Server\WebUI\indexes.html" />
+    <Content Include="Server\WebUI\JSONTemplates\documentation.html" />
+    <Content Include="Server\WebUI\JSONTemplates\globalStats.html" />
+    <Content Include="Server\WebUI\JSONTemplates\indexPage.html" />
+    <Content Include="Server\WebUI\JSONTemplates\quickStats.html" />
+    <Content Include="Server\WebUI\js\jquery-1.4.2.min.js" />
+    <Content Include="Server\WebUI\js\jquery-jtemplates.js" />
+    <Content Include="Server\WebUI\js\jquery-ui.js" />
+    <Content Include="Server\WebUI\js\jquery.pager.js" />
+    <Content Include="Server\WebUI\js\jquery.query-2.1.7.js" />
+    <Content Include="Server\WebUI\js\jquery.RavenDB.js" />
+    <Content Include="Server\WebUI\js\json2.js" />
+    <Content Include="Server\WebUI\js\jstree\jquery.tree.js" />
+    <Content Include="Server\WebUI\js\jstree\themes\default\dot_for_ie.gif" />
+    <Content Include="Server\WebUI\js\jstree\themes\default\icons.png" />
+    <Content Include="Server\WebUI\js\jstree\themes\default\style.css" />
+    <Content Include="Server\WebUI\js\jstree\themes\default\throbber.gif" />
+    <Content Include="Server\WebUI\js\jstree\themes\icons\txt.png" />
+    <Content Include="Server\WebUI\js\raven-ui.documents.js" />
+    <Content Include="Server\WebUI\js\raven-ui.js" />
+    <Content Include="Server\WebUI\js\rdb.jsonEditor\editor.html" />
+    <Content Include="Server\WebUI\js\rdb.jsonEditor\rdb.jsonEditor.js" />
+    <Content Include="Server\WebUI\statistics.html" />
+    <Content Include="Server\WebUI\view.html" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Defaults\default.json" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
@@ -180,4 +305,9 @@
   <Target Name="AfterBuild">
   </Target>
   -->
+  <Target Name="BeforeBuild">
+    <CreateItem Include="Server\WebUI\**\*.*">
+      <Output ItemName="EmbeddedResource" TaskParameter="Include" />
+    </CreateItem>
+  </Target>
 </Project>

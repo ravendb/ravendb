@@ -287,5 +287,39 @@ select new{project_name = prj.name, project_num = prj.num}
 			} while (docs.IsStale);
 			Assert.Equal(2, docs.Results.Length);
 		}
-	}
+
+        [Fact]
+        public void Can_query_by_stop_words()
+        {
+            db.PutIndex("regionIndex", new IndexDefinition
+            {
+                Map = @"
+                    from doc in docs 
+                    select new { doc.Region };
+                    ",
+				Indexes = {{"Region", FieldIndexing.Untokenized}}
+            });
+
+            db.Put("1", Guid.Empty, JObject.Parse(
+            @"{
+                Region: 'A', 
+            }"),
+            new JObject(), null);
+
+            QueryResult docs;
+            do
+            {
+                docs = db.Query("regionIndex", new IndexQuery
+                {
+					Query = "Region:`A`",
+                    Start = 0,
+                    PageSize = 10
+                });
+                if (docs.IsStale)
+                    Thread.Sleep(100);
+            } while (docs.IsStale);
+            Assert.Equal(1, docs.Results.Length);
+        }
+
+    }
 }

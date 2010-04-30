@@ -1,15 +1,13 @@
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reflection;
-using System.Text;
 using System.Transactions;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Client;
 using System;
 using Raven.Database;
+using Raven.Database.Data;
 using Raven.Database.Json;
 
 namespace Raven.Client.Document
@@ -17,7 +15,8 @@ namespace Raven.Client.Document
 	public class DocumentSession : IDocumentSession
 	{
 	    private const string TemporaryIdPrefix = "Temporary Id: ";
-	    private readonly IDatabaseCommands database;
+		private const string RavenEntityName = "Raven-Entity-Name";
+		private readonly IDatabaseCommands database;
 		private readonly DocumentStore documentStore;
         private readonly Dictionary<object, DocumentMetadata> entitiesAndMetadata = new Dictionary<object, DocumentMetadata>();
         private readonly Dictionary<string, object> entitiesByKey = new Dictionary<string, object>();
@@ -62,17 +61,26 @@ namespace Raven.Client.Document
 			return TrackEntity<T>(documentFound);
 		}
 
-	    private T TrackEntity<T>(JsonDocument documentFound)
+		private T TrackEntity<T>(JsonDocument documentFound)
+		{
+			if(documentFound.Metadata.Property("@etag") == null)
+			{
+				documentFound.Metadata.Add("@etag", new JValue(documentFound.Etag.ToString()));
+			}
+			return TrackEntity<T>(documentFound.Key, documentFound.Data.ToJObject(), documentFound.Metadata);
+		}
+
+		public T TrackEntity<T>(string key, JObject document, JObject metadata)
 	    {
-	        var jsonString = Encoding.UTF8.GetString(documentFound.Data);
-	        var entity = ConvertToEntity<T>(documentFound.Key, jsonString);
+			var entity = ConvertToEntity<T>(key, document);
 	        entitiesAndMetadata.Add(entity, new DocumentMetadata
 	        {
-	            Metadata = documentFound.Metadata,
-	            ETag = documentFound.Etag,
-	            Key = documentFound.Key
+				OriginalValue = document,
+	            Metadata = metadata,
+				ETag = new Guid(metadata.Value<string>("@etag")),
+	            Key = key
 	        });
-	        entitiesByKey[documentFound.Key] = entity;
+	        entitiesByKey[key] = entity;
 	        return (T) entity;
 	    }
 
@@ -87,9 +95,9 @@ namespace Raven.Client.Document
 	        deletedEntities.Add(entity);
 	    }
 
-	    private object ConvertToEntity<T>(string id, string documentFound)
+	    private object ConvertToEntity<T>(string id, JObject documentFound)
 		{
-			var entity = JsonConvert.DeserializeObject(documentFound, typeof(T), new JsonEnumConverter());
+	    	var entity = documentFound.Deserialize<T>();
 
 			foreach (var property in entity.GetType().GetProperties())
 			{
@@ -103,18 +111,20 @@ namespace Raven.Client.Document
 		public void Store<T>(T entity)
 		{
             var identityProperty = GetIdentityProperty(typeof(T));
-            var id = identityProperty.GetValue(entity, null) as string ?? TemporaryIdPrefix + Guid.NewGuid();
-            if (entitiesByKey.ContainsKey(id))
+            var id = identityProperty.GetValue(entity, null) as string;
+            if (id != null && entitiesByKey.ContainsKey(id))
                 return;//already in unit of work
 
 			var tag = documentStore.Conventions.FindTypeTagName(typeof(T));
 			entitiesAndMetadata.Add(entity, new DocumentMetadata
 			{
                 Key = id,
-                Metadata = new JObject(new JProperty("Raven-Entity-Name", new JValue(tag))),
-                ETag = null
+                Metadata = new JObject(new JProperty(RavenEntityName, new JValue(tag))),
+                ETag = null,
+				OriginalValue = new JObject()
 			});
-		    entitiesByKey[id] = entity;
+			if (id != null)
+				entitiesByKey[id] = entity;
 		}
 
 		public void Evict<T>(T entity)
@@ -128,28 +138,28 @@ namespace Raven.Client.Document
 		    deletedEntities.Remove(entity);
 		}
 
-		private void StoreEntity(object entity, DocumentMetadata documentMetadata)
+		private ICommandData CreatePutEntityCommand(object entity, DocumentMetadata documentMetadata)
 		{
 			var json = ConvertEntityToJson(entity);
 			var entityType = entity.GetType();
-			PropertyInfo identityProperty = GetIdentityProperty(entityType);
+			var identityProperty = GetIdentityProperty(entityType);
 
             var key = (string)identityProperty.GetValue(entity, null);
-            if (key != null && key.StartsWith(TemporaryIdPrefix))
+            if (key == null || key.StartsWith(TemporaryIdPrefix))
             {
-                entitiesByKey.Remove(key);
-                key = null;
+				if (key != null)
+					entitiesByKey.Remove(key);
+            	key = documentStore.Conventions.GenerateDocumentKey(entity);
             }
 		    var etag = UseOptimisticConcurrency ? documentMetadata.ETag : null;
-		    var result = database.Put(key, etag, json, documentMetadata.Metadata);
-		    entitiesByKey[result.Key] = entity;
-		    documentMetadata.ETag = result.ETag;
-		    documentMetadata.Key = result.Key;
-			identityProperty.SetValue(entity, result.Key, null);
 
-			var stored = Stored;
-			if (stored != null)
-				stored(entity);
+			return new PutCommandData
+			{
+				Document = json,
+				Etag = etag,
+				Key = key,
+				Metadata = documentMetadata.Metadata,
+			};
 		}
 
 		private PropertyInfo GetIdentityProperty(Type entityType)
@@ -169,6 +179,8 @@ namespace Raven.Client.Document
                 enlistment = new RavenClientEnlistment(this, Transaction.Current.TransactionInformation.DistributedIdentifier);
                 Transaction.Current.EnlistVolatile(enlistment,EnlistmentOptions.None);
             }
+			var entities = new List<object>();
+			var cmds = new List<ICommandData>();
             foreach (var key in (from deletedEntity in deletedEntities
                                  let identityProperty = GetIdentityProperty(deletedEntity.GetType())
                                  select identityProperty.GetValue(deletedEntity, null))
@@ -185,15 +197,58 @@ namespace Raven.Client.Document
                 }
 
                 etag = UseOptimisticConcurrency ? etag : null;
-                documentStore.DatabaseCommands.Delete(key, etag);
+            	entities.Add(existingEntity);
+                cmds.Add(new DeleteCommandData
+                {
+                	Etag = etag,
+					Key = key,
+                });
             }
             deletedEntities.Clear();
-		    foreach (var entity in entitiesAndMetadata)
+		    foreach (var entity in entitiesAndMetadata.Where(EntityChanged))
 			{
-				//TODO: Switch to more the batch version when it becomes available
-				StoreEntity(entity.Key, entity.Value);
+				entities.Add(entity.Key);
+				if (entity.Value.Key != null)
+					entitiesByKey.Remove(entity.Value.Key);
+				cmds.Add(CreatePutEntityCommand(entity.Key, entity.Value));
 			}
-		    
+
+			UpdateBatchResults(database.Batch(cmds.ToArray()), entities);
+		}
+
+		private void UpdateBatchResults(IList<BatchResult> batchResults, IList<object> entities)
+		{
+			var stored = Stored;
+			for (int i = 0; i < batchResults.Count; i++)
+			{
+				var batchResult = batchResults[i];
+				if (batchResult.Method != "PUT")
+					continue;
+
+				var entity = entities[i];
+				DocumentMetadata documentMetadata;
+				if (entitiesAndMetadata.TryGetValue(entity, out documentMetadata) == false)
+					continue;
+
+				entitiesByKey[batchResult.Key] = entity;
+				documentMetadata.ETag = batchResult.Etag;
+				documentMetadata.Key = batchResult.Key;
+				documentMetadata.OriginalValue = ConvertEntityToJson(entity);
+
+				GetIdentityProperty(entity.GetType())
+					.SetValue(entity, batchResult.Key, null);
+
+				if (stored != null)
+					stored(entity);
+			}
+		}
+
+		private bool EntityChanged(KeyValuePair<object, DocumentMetadata> kvp)
+		{
+			var newObj = ConvertEntityToJson(kvp.Key);
+			if (kvp.Value == null)
+				return true;
+			return new JTokenEqualityComparer().Equals(newObj, kvp.Value.OriginalValue) == false;
 		}
 
 		private JObject ConvertEntityToJson(object entity)
@@ -223,7 +278,7 @@ namespace Raven.Client.Document
 
 	    public IDocumentQuery<T> Query<T>(string indexName)
 		{
-	        return new DocumentQuery<T>(database, indexName, null);
+	    	return new DocumentQuery<T>(this, database, indexName, null);
 		}
 
         #region IDisposable Members
@@ -250,6 +305,7 @@ namespace Raven.Client.Document
 
         public class DocumentMetadata
         {
+			public JObject OriginalValue { get; set; }
             public JObject Metadata { get; set; }
             public Guid? ETag { get; set; }
             public string Key { get; set; }

@@ -16,6 +16,8 @@ namespace Raven.Client.Client
 		void DeleteIndex(string name);
         JsonDocument[] Get(string[] ids);
 
+		BatchResult[] Batch(ICommandData[] commandDatas);
+
         void Commit(Guid txId);
         void Rollback(Guid txId);
 	}

@@ -2,7 +2,9 @@ using System;
 using System.IO;
 using System.Reflection;
 using System.Transactions;
+using Newtonsoft.Json.Linq;
 using Raven.Client.Document;
+using Raven.Database.Data;
 using Raven.Database.Exceptions;
 using Raven.Database.Indexing;
 using Xunit;
@@ -30,7 +32,6 @@ namespace Raven.Client.Tests.Document
 			var documentStore = new DocumentStore
 			{
 				DataDirectory = path,
-				Conventions = {FindIdentityProperty = q => q.Name == "Id"}
 			};
 			documentStore.Initialise();
 			return documentStore;
@@ -60,6 +61,57 @@ namespace Raven.Client.Tests.Document
             }  
         }
 
+		[Fact]
+		public void Will_set_id_from_query()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				var company = new Company { Name = "Company Name" };
+				using(var session1 = documentStore.OpenSession())
+				{
+					session1.Store(company);
+					session1.SaveChanges();
+				}
+
+				using(var session2 = documentStore.OpenSession())
+				{
+					var companyFromRaven = session2.Query<Company>()
+						.WaitForNonStaleResults()
+						.First();
+					Assert.Equal(companyFromRaven.Id, company.Id);
+				}
+			}
+		}
+
+		[Fact]
+		public void Will_track_entities_from_query()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				var company = new Company { Name = "Company Name" };
+				using (var session1 = documentStore.OpenSession())
+				{
+					session1.Store(company);
+					session1.SaveChanges();
+				}
+
+				using (var session2 = documentStore.OpenSession())
+				{
+					var companyFromRaven = session2.Query<Company>()
+						.WaitForNonStaleResults()
+						.First();
+
+					companyFromRaven.Name = "Hibernating Rhinos";
+					session2.SaveChanges();
+				}
+				using (var session3 = documentStore.OpenSession())
+				{
+					var load = session3.Load<Company>(company.Id);
+					Assert.Equal("Hibernating Rhinos", load.Name);
+				}
+			}
+		}
+
         [Fact]
         public void Can_use_transactions_to_isolate_delete()
         {
@@ -87,6 +139,20 @@ namespace Raven.Client.Tests.Document
                     Assert.Null(session2.Load<Company>(company.Id));
             }
         }
+
+		[Fact]
+		public void Will_use_identity_for_document_key()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				var company = new Company { Name = "Company Name" };
+				var session = documentStore.OpenSession();
+				session.Store(company);
+				session.SaveChanges();
+
+				Assert.Equal("companies/1", company.Id);
+			}
+		}
 
         [Fact]
         public void While_in_transaction_can_read_values_private_for_the_Transaction()
@@ -138,6 +204,86 @@ namespace Raven.Client.Tests.Document
 				var companyFound = session.Load<Company>(company.Id);
 
 				Assert.Equal(companyFound.Id, company.Id);
+			}
+		}
+
+
+		[Fact]
+		public void Will_not_store_if_entity_did_not_change()
+		{
+			var stored = 0;
+			using (var documentStore = NewDocumentStore())
+			{
+				var company = new Company { Name = "Company Name" };
+				var session = documentStore.OpenSession();
+				session.Stored += o => stored++;
+				session.Store(company);
+				Assert.Equal(0, stored);
+				session.SaveChanges();
+				Assert.Equal(1, stored);
+				session.SaveChanges();
+				Assert.Equal(1, stored);
+			}
+		}
+
+		[Fact]
+		public void Will_store_if_entity_changed()
+		{
+			var stored = 0;
+			using (var documentStore = NewDocumentStore())
+			{
+				var company = new Company { Name = "Company Name" };
+				var session = documentStore.OpenSession();
+				session.Store(company);
+				Assert.Equal(0, stored);
+				session.SaveChanges();
+
+				var sessions2 = documentStore.OpenSession();
+				sessions2.Stored += o => stored++;
+				var c2 = sessions2.Load<Company>(company.Id);
+				sessions2.SaveChanges();
+				Assert.Equal(0, stored);
+				c2.Phone = 1;
+				sessions2.SaveChanges();
+				Assert.Equal(1, stored);
+			}
+		}
+
+		[Fact]
+		public void Can_store_using_batch()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				var batchResults = documentStore
+					.DatabaseCommands
+					.Batch(new ICommandData[]
+					{
+						new PutCommandData
+						{
+							Document = JObject.FromObject(new Company{Name = "Hibernating Rhinos"}),
+							Etag = null,
+							Key = "rhino1",
+							Metadata = new JObject(),
+						},
+						new PutCommandData
+						{
+							Document = JObject.FromObject(new Company{Name = "Hibernating Rhinos"}),
+							Etag = null,
+							Key = "rhino2",
+							Metadata = new JObject(),
+						},
+						new DeleteCommandData
+						{
+							Etag = null,
+							Key = "rhino2"
+						}
+					});
+
+				Assert.Equal("rhino1", batchResults[0].Key);
+				Assert.Equal("rhino2", batchResults[1].Key);
+
+				Assert.Null(documentStore.DatabaseCommands.Get("rhino2"));
+				Assert.NotNull(documentStore.DatabaseCommands.Get("rhino1"));
 			}
 		}
 

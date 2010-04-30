@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.ConstrainedExecution;
@@ -10,29 +9,38 @@ namespace Raven.Database.Storage
 {
 	public class TransactionalStorage : CriticalFinalizerObject, IDisposable
 	{
+		public const int MaxSessions = 256;
 		private readonly ThreadLocal<DocumentStorageActions> current = new ThreadLocal<DocumentStorageActions>();
 		private readonly string database;
+		private readonly Action onCommit;
 		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
 		private readonly string path;
 		private bool disposed;
 
-		private IDictionary<string, JET_COLUMNID> documentsColumns;
-		private IDictionary<string, JET_COLUMNID> filesColumns;
-		private IDictionary<string, JET_COLUMNID> indexStatsColumns;
 		private JET_INSTANCE instance;
-		private IDictionary<string, JET_COLUMNID> mappedResultsColumns;
-		private IDictionary<string, JET_COLUMNID> tasksColumns;
-	    private IDictionary<string, JET_COLUMNID> documentsModifiedByTransactionsColumns;
-	    private IDictionary<string, JET_COLUMNID> transactionsColumns;
+		private readonly TableColumnsCache tableColumnsCache = new TableColumnsCache();
 
-	    public TransactionalStorage(string database)
+		public TransactionalStorage(string database, Action onCommit)
 		{
 			this.database = database;
+			this.onCommit = onCommit;
 			path = database;
 			if (Path.IsPathRooted(database) == false)
 				path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, database);
 			this.database = Path.Combine(path, Path.GetFileName(database));
+			
+			LimitSystemCache();
+
 			Api.JetCreateInstance(out instance, database + Guid.NewGuid());
+		}
+
+		private void LimitSystemCache()
+		{
+			var cacheSizeMax = 1024 * 1024 * 1024 / SystemParameters.DatabasePageSize;
+			if (SystemParameters.CacheSizeMax > cacheSizeMax)
+			{
+				SystemParameters.CacheSizeMax = cacheSizeMax; // 1 GB
+			}
 		}
 
 		public JET_INSTANCE Instance
@@ -99,21 +107,23 @@ namespace Raven.Database.Storage
 				{
 					Api.JetOpenDatabase(session, database, null, out dbid, OpenDatabaseGrbit.None);
 					using (var documents = new Table(session, dbid, "documents", OpenTableGrbit.None))
-						documentsColumns = Api.GetColumnDictionary(session, documents);
+						tableColumnsCache .DocumentsColumns = Api.GetColumnDictionary(session, documents);
 					using (var tasks = new Table(session, dbid, "tasks", OpenTableGrbit.None))
-						tasksColumns = Api.GetColumnDictionary(session, tasks);
+						tableColumnsCache.TasksColumns = Api.GetColumnDictionary(session, tasks);
 					using (var files = new Table(session, dbid, "files", OpenTableGrbit.None))
-						filesColumns = Api.GetColumnDictionary(session, files);
+						tableColumnsCache.FilesColumns = Api.GetColumnDictionary(session, files);
 					using (var indexStats = new Table(session, dbid, "indexes_stats", OpenTableGrbit.None))
-						indexStatsColumns = Api.GetColumnDictionary(session, indexStats);
+						tableColumnsCache.IndexesStatsColumns = Api.GetColumnDictionary(session, indexStats);
 					using (var mappedResults = new Table(session, dbid, "mapped_results", OpenTableGrbit.None))
-						mappedResultsColumns = Api.GetColumnDictionary(session, mappedResults);
-                    using (var documentsModifiedByTransactions = new Table(session, dbid, "documents_modified_by_transaction", OpenTableGrbit.None))
-                        documentsModifiedByTransactionsColumns = Api.GetColumnDictionary(session, documentsModifiedByTransactions);
-                    using (var transactions = new Table(session, dbid, "transactions", OpenTableGrbit.None))
-                        transactionsColumns = Api.GetColumnDictionary(session, transactions);
-
-			
+						tableColumnsCache.MappedResultsColumns = Api.GetColumnDictionary(session, mappedResults);
+					using (var documentsModifiedByTransactions = new Table(session, dbid, "documents_modified_by_transaction", OpenTableGrbit.None))
+						tableColumnsCache.DocumentsModifiedByTransactionsColumns = Api.GetColumnDictionary(session, documentsModifiedByTransactions);
+					using (var transactions = new Table(session, dbid, "transactions", OpenTableGrbit.None))
+						tableColumnsCache.TransactionsColumns = Api.GetColumnDictionary(session, transactions);
+					using (var identity = new Table(session, dbid, "identity_table", OpenTableGrbit.None))
+						tableColumnsCache.IdentityColumns = Api.GetColumnDictionary(session, identity);
+					using (var details = new Table(session, dbid, "details", OpenTableGrbit.None))
+						tableColumnsCache.DetailsColumns = Api.GetColumnDictionary(session, details);
 				}
 				finally
 				{
@@ -133,7 +143,13 @@ namespace Raven.Database.Storage
 				TempDirectory = Path.Combine(path, "temp"),
 				SystemDirectory = Path.Combine(path, "system"),
 				LogFileDirectory = Path.Combine(path, "logs"),
-				MaxVerPages = 8192
+				MaxVerPages = 4096, // 256 MB
+				BaseName = "RVN",
+				EventSource = "Raven",
+				LogBuffers = 256,
+				LogFileSize = 16384,
+				MaxSessions = MaxSessions,
+				MaxCursors = 2048,
 			};
 		}
 
@@ -190,7 +206,7 @@ namespace Raven.Database.Storage
 								{
 									ConfigureInstance(recoverInstance.JetInstance);
 									Api.JetAttachDatabase(recoverSession, database,
-									                      AttachDatabaseGrbit.DeleteCorruptIndexes);
+														  AttachDatabaseGrbit.DeleteCorruptIndexes);
 									Api.JetDetachDatabase(recoverSession, database);
 								}
 							}
@@ -238,36 +254,40 @@ namespace Raven.Database.Storage
 		{
 			if (current.Value != null)
 			{
-				try
-				{
-					current.Value.PushTx();
-					action(current.Value);
-				}
-				finally
-				{
-					current.Value.PopTx();
-				}
+				action(current.Value);
 				return;
 			}
 			disposerLock.EnterReadLock();
 			try
 			{
-				using (var pht = new DocumentStorageActions(instance, database, documentsColumns, tasksColumns,
-					                                     filesColumns, indexStatsColumns, mappedResultsColumns,
-                                                         documentsModifiedByTransactionsColumns,
-                                                         transactionsColumns))
-				{
-					current.Value = pht;
-					action(pht);
-					if (pht.CommitCalled == false)
-						throw new InvalidOperationException("You forgot to call commit!");
-				}
+				ExecuteBatch(action);
 			}
 			finally
 			{
 				disposerLock.ExitReadLock();
 				current.Value = null;
 			}
+		}
+
+		private void ExecuteBatch(Action<DocumentStorageActions> action)
+		{
+			using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache))
+			{
+				current.Value = pht;
+				action(pht);
+				pht.Commit();
+				onCommit();
+			}
+		}
+
+		public void ExecuteImmediatelyOrRegisterForSyncronization(Action action)
+		{
+			if(current.Value == null)
+			{
+				action();
+				return;
+			}
+			current.Value.OnCommit += action;
 		}
 	}
 }

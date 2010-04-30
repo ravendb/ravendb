@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Threading;
+using log4net;
 using Raven.Database.Data;
 using Raven.Database.Storage;
 
@@ -11,6 +12,8 @@ namespace Raven.Database.Indexing
 		private readonly ConcurrentQueue<ServerError> serverErrors = new ConcurrentQueue<ServerError>();
 		private readonly object waitForWork = new object();
 		private volatile bool doWork = true;
+		private readonly ILog log = LogManager.GetLogger(typeof (WorkContext));
+		private readonly ThreadLocal<bool> shouldNotifyOnWork = new ThreadLocal<bool>();
 
 		public bool DoWork
 		{
@@ -34,20 +37,30 @@ namespace Raven.Database.Indexing
 				return;
 			lock (waitForWork)
 			{
-				Monitor.Wait(waitForWork);
+				Monitor.Wait(waitForWork, TimeSpan.FromSeconds(1));
 			}
+		}
+
+		public void ShouldNotifyAboutWork()
+		{
+			shouldNotifyOnWork.Value = true;
 		}
 
 		public void NotifyAboutWork()
 		{
+			if (shouldNotifyOnWork.Value == false)
+				return;
+			shouldNotifyOnWork.Value = false;
 			lock (waitForWork)
 			{
+				log.Debug("Notifying background workers about work");
 				Monitor.PulseAll(waitForWork);
 			}
 		}
 
 		public void StopWork()
 		{
+			log.Debug("Stopping background workers"); 
 			doWork = false;
 			lock (waitForWork)
 			{

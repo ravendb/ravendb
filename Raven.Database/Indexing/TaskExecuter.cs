@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using log4net;
 using Raven.Database.Extensions;
 using Raven.Database.Storage;
@@ -23,44 +24,34 @@ namespace Raven.Database.Indexing
 			while (context.DoWork)
 			{
 				var foundWork = false;
-				transactionalStorage.Batch(actions =>
-				{
-					var taskAsJson = actions.GetFirstTask();
-					if (taskAsJson == null)
-					{
-						actions.Commit();
-						return;
-					}
-					log.DebugFormat("Executing {0}", taskAsJson);
-					foundWork = true;
-
-					ExecuteTask(taskAsJson);
-
-					actions.CompleteCurrentTask();
-					actions.Commit();
-				});
-				if (foundWork == false)
-					context.WaitForWork();
-			}
-		}
-
-		private void ExecuteTask(string taskAsJson)
-		{
-			try
-			{
-				var task = Task.ToTask(taskAsJson);
+				Task task = null;
 				try
 				{
-					task.Execute(context);
+					transactionalStorage.Batch(actions =>
+					{
+						task = actions.GetMergedTask();
+						if (task == null)
+							return;
+
+						log.DebugFormat("Executing {0}", task);
+						foundWork = true;
+
+						try
+						{
+							task.Execute(context);
+						}
+						catch (Exception e)
+						{
+							log.WarnFormat(e, "Task {0} has failed and was deleted without completing any work", task);
+						}
+					});
 				}
 				catch (Exception e)
 				{
-					log.WarnFormat(e, "Task {0} has failed and was deleted without completing any work", taskAsJson);
+					log.Error("Failed to execute task: " + task, e);
 				}
-			}
-			catch (Exception e)
-			{
-				log.ErrorFormat(e, "Could not create instance of a task: {0}", taskAsJson);
+				if (foundWork == false)
+					context.WaitForWork();
 			}
 		}
 	}

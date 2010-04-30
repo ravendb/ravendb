@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security;
 using System.Threading;
+using log4net;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
@@ -11,6 +13,7 @@ using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
+using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
 
@@ -18,14 +21,26 @@ namespace Raven.Database
 {
 	public class DocumentDatabase : IDisposable
 	{
+		[ImportMany]
+		public IEnumerable<IPutTrigger> PutTriggers { get; set; }
+
+		[ImportMany]
+		public IEnumerable<IDeleteTrigger> DeleteTriggers { get; set; }
+
 		private readonly RavenConfiguration configuration;
 		private readonly WorkContext workContext;
 		private Thread[] backgroundWorkers = new Thread[0];
+		private readonly ILog log = LogManager.GetLogger(typeof (DocumentDatabase));
 
 		public DocumentDatabase(RavenConfiguration configuration)
 		{
 			this.configuration = configuration;
-			TransactionalStorage = new TransactionalStorage(configuration.DataDirectory);
+			
+			configuration.Container.SatisfyImportsOnce(this);
+		
+			workContext = new WorkContext();
+			TransactionalStorage = new TransactionalStorage(configuration.DataDirectory, workContext.NotifyAboutWork);
+			;
 			bool newDb;
 			try
 			{
@@ -39,12 +54,10 @@ namespace Raven.Database
 
 			IndexDefinitionStorage = new IndexDefinitionStorage(configuration.DataDirectory);
 			IndexStorage = new IndexStorage(configuration.DataDirectory, IndexDefinitionStorage);
-			workContext = new WorkContext
-			{
-				IndexStorage = IndexStorage,
-				TransactionaStorage = TransactionalStorage,
-				IndexDefinitionStorage = IndexDefinitionStorage
-			};
+
+			workContext.IndexStorage = IndexStorage;
+			workContext.TransactionaStorage = TransactionalStorage;
+			workContext.IndexDefinitionStorage = IndexDefinitionStorage;
 
 			if (!newDb) 
 				return;
@@ -64,6 +77,9 @@ namespace Raven.Database
 			}
 	
 			configuration.RaiseDatabaseCreatedFromScratch(this);
+
+			PutTriggers.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+			DeleteTriggers.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
 		}
 
 		public DatabaseStatistics Statistics
@@ -82,7 +98,6 @@ namespace Raven.Database
 						.Where(actions.DoesTasksExistsForIndex)
 						.ToArray();
 					result.Indexes = actions.GetIndexesStats().ToArray();
-					actions.Commit();
 				});
 				return result;
 			}
@@ -132,7 +147,6 @@ namespace Raven.Database
 			TransactionalStorage.Batch(actions =>
 			{
 				document = actions.DocumentByKey(key, transactionInformation);
-				actions.Commit();
 			});
 			return document;
 		}
@@ -147,27 +161,59 @@ namespace Raven.Database
 			}
 			RemoveReservedProperties(document);
 			RemoveReservedProperties(metadata);
-			metadata.Add("@id", new JValue(key));
 			TransactionalStorage.Batch(actions =>
 			{
-                if (transactionInformation == null)
+				if (key.EndsWith("/"))
+				{
+					key += actions.GetNextIdentityValue(key);
+				}
+				metadata.Add("@id", new JValue(key));
+				if (transactionInformation == null)
                 {
-                    etag = actions.AddDocument(key, document.ToString(), etag, metadata.ToString());
-                    actions.AddTask(new IndexDocumentTask {Index = "*", Key = key});
+                	AssertPutOperationNotVetoed(key, metadata, document);
+                	PutTriggers.Apply(trigger => trigger.OnPut(key, document, metadata));
+
+					etag = actions.AddDocument(key, etag, document, metadata);
+					actions.AddTask(new IndexDocumentsTask { Index = "*", Keys = new[] { key } });
                 }
                 else
                 {
                     etag = actions.AddDocumentInTransaction(transactionInformation, key, document.ToString(), etag,
                                                      metadata.ToString());
                 }
-			    actions.Commit();
+				workContext.ShouldNotifyAboutWork();
 			});
-			workContext.NotifyAboutWork();
+
+			TransactionalStorage
+				.ExecuteImmediatelyOrRegisterForSyncronization(() => PutTriggers.Apply(trigger => trigger.AfterCommit(key, document, metadata)));
+	
 		    return new PutResult
 		    {
 		        Key = key,
 		        ETag = (Guid)etag
 		    };
+		}
+
+		private void AssertPutOperationNotVetoed(string key, JObject metadata, JObject document)
+		{
+			var vetoResult = PutTriggers
+				.Select(trigger => new{Trigger = trigger, VetoResult = trigger.AllowPut(key, document,metadata)})
+				.FirstOrDefault(x=>x.VetoResult.IsAllowed == false);
+			if(vetoResult != null)
+			{
+				throw new OperationVetoedException("PUT vetoed by " + vetoResult.Trigger + " because: " + vetoResult.VetoResult.Reason);
+			}
+		}
+
+		private void AssertDeleteOperationNotVetoed(string key)
+		{
+			var vetoResult = DeleteTriggers
+				.Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowDelete(key) })
+				.FirstOrDefault(x => x.VetoResult.IsAllowed == false);
+			if (vetoResult != null)
+			{
+				throw new OperationVetoedException("DELETE vetoed by " + vetoResult.Trigger + " because: " + vetoResult.VetoResult.Reason);
+			}
 		}
 
 		private static void RemoveReservedProperties(JObject document)
@@ -190,6 +236,10 @@ namespace Raven.Database
 			{
                 if (transactionInformation == null)
                 {
+					AssertDeleteOperationNotVetoed(key);
+
+                	DeleteTriggers.Apply(trigger => trigger.OnDelete(key));
+
                     actions.DeleteDocument(key, etag);
                     actions.AddTask(new RemoveFromIndexTask {Index = "*", Keys = new[] {key}});
                 }
@@ -197,9 +247,10 @@ namespace Raven.Database
                 {
                     actions.DeleteDocumentInTransaction(transactionInformation, key, etag);
                 }
-			    actions.Commit();
+				workContext.ShouldNotifyAboutWork();
 			});
-			workContext.NotifyAboutWork();
+        	TransactionalStorage
+        		.ExecuteImmediatelyOrRegisterForSyncronization(() => DeleteTriggers.Apply(trigger => trigger.AfterCommit(key)));
 		}
 
         public void Commit(Guid txId)
@@ -213,11 +264,12 @@ namespace Raven.Database
                     if (doc.Delete)
                         Delete(doc.Key, null, null);
                     else
-                        Put(doc.Key, null, JObject.Parse(doc.Data), JObject.Parse(doc.Metadata), null);
+                        Put(doc.Key, null,
+							doc.Data.ToJObject(),
+							doc.Metadata.ToJObject(), null);
                 });
-                actions.Commit();
+				workContext.ShouldNotifyAboutWork();
             });
-            workContext.NotifyAboutWork();
         }
 
         public void Rollback(Guid txId)
@@ -225,9 +277,8 @@ namespace Raven.Database
             TransactionalStorage.Batch(actions =>
             {
                 actions.RollbackTransaction(txId);
-                actions.Commit();
+				workContext.ShouldNotifyAboutWork();
             });
-            workContext.NotifyAboutWork();
         }
 
 		public string PutIndex(string name, IndexDefinition definition)
@@ -258,9 +309,8 @@ namespace Raven.Database
 						});
 					}
 				}
-				actions.Commit();
+				workContext.ShouldNotifyAboutWork();
 			});
-			workContext.NotifyAboutWork();
 			return name;
 		}
 
@@ -284,7 +334,6 @@ namespace Raven.Database
 					                 where doc != null
 					                 select doc.ToJson();
 					list.AddRange(collection);
-					actions.Commit();
 				});
 			return new QueryResult
 			{
@@ -307,7 +356,7 @@ namespace Raven.Database
 			return new JsonDocument
 			{
 				Key = queryResult.Key,
-				DataAsJosn = queryResult.Projection,
+				Projection = queryResult.Projection,
 			};
 		}
 
@@ -319,9 +368,8 @@ namespace Raven.Database
 			{
 				action.DeleteIndex(name);
 
-				action.Commit();
+				workContext.ShouldNotifyAboutWork();
 			});
-			workContext.NotifyAboutWork();
 		}
 
 		public Attachment GetStatic(string name)
@@ -330,7 +378,6 @@ namespace Raven.Database
 			TransactionalStorage.Batch(actions =>
 			{
 				attachment = actions.GetAttachment(name);
-				actions.Commit();
 			});
 			return attachment;
 		}
@@ -340,7 +387,6 @@ namespace Raven.Database
 			TransactionalStorage.Batch(actions =>
 			{
 				actions.AddAttachment(name, etag, data, metadata.ToString(Formatting.None));
-				actions.Commit();
 			});
 		}
 
@@ -349,7 +395,6 @@ namespace Raven.Database
 			TransactionalStorage.Batch(actions =>
 			{
 				actions.DeleteAttachment(name, etag);
-				actions.Commit();
 			});
 		}
 
@@ -368,7 +413,6 @@ namespace Raven.Database
 
 					list.Add(doc.ToJson());
 				}
-				actions.Commit();
 			});
 			return list;
 		}
@@ -394,7 +438,7 @@ namespace Raven.Database
 				);
 		}
 
-		public PatchResult ApplyPatch(string docId, Guid? etag, JArray patchDoc, TransactionInformation transactionInformation)
+		public PatchResult ApplyPatch(string docId, Guid? etag, PatchRequest[] patchDoc, TransactionInformation transactionInformation)
 		{
 			var result = PatchResult.Patched;
 			TransactionalStorage.Batch(actions =>
@@ -406,7 +450,11 @@ namespace Raven.Database
 				}
 				else if (etag != null && doc.Etag != etag.Value)
 				{
-					result = PatchResult.WriteConflict;
+					throw new ConcurrencyException("Could not patch document '" + docId+ "' because non current etag was used")
+					{
+						ActualETag = doc.Etag,
+						ExpectedETag = etag.Value,
+					};
 				}
 				else
 				{
@@ -416,28 +464,59 @@ namespace Raven.Database
 					result = PatchResult.Patched;
 				}
 
-				actions.Commit();
+				workContext.ShouldNotifyAboutWork();
 			});
 
 			return result;
 		}
 
-        public object[] Batch(IEnumerable<ICommandData> commands)
+		public BatchResult[] Batch(ICollection<ICommandData> commands)
         {
-        	var results = new List<object>();
+			var results = new List<BatchResult>();
 
+			log.DebugFormat("Executing {0} batched commands in a single transaction", commands.Count);
             TransactionalStorage.Batch(actions =>
             {
                 foreach(var command in commands)
                 {
                 	command.Execute(this);
-                	results.Add(new {command.Method, command.Key});
+                	results.Add(new BatchResult
+                	{
+                		Method = command.Method,
+                		Key = command.Key,
+                		Etag = command.Etag
+                	});
                 }
-                actions.Commit();
+				workContext.ShouldNotifyAboutWork();
             });
-
-            workContext.NotifyAboutWork();
+			log.DebugFormat("Successfully executed {0} commands", commands.Count);
             return results.ToArray();
         }
+
+		public bool HasTasks
+		{
+			get
+			{
+				bool hasTasks = false;
+				TransactionalStorage.Batch(actions =>
+				{
+					hasTasks = actions.HasTasks;
+				});
+				return hasTasks;
+			}
+		}
+
+		public int ApproximateTaskCount
+		{
+			get
+			{
+				int approximateTaskCount = 0;
+				TransactionalStorage.Batch(actions =>
+				{
+					approximateTaskCount = actions.ApproximateTaskCount;
+				});
+				return approximateTaskCount;
+			}
+		}
 	}
 }

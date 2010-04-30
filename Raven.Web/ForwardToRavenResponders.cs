@@ -1,0 +1,27 @@
+using System;
+using System.Web;
+using Raven.Database.Server.Abstractions;
+using Raven.Server;
+
+namespace Raven.Web
+{
+	public class ForwardToRavenResponders : IHttpHandler
+	{
+		private readonly HttpServer server;
+
+		public ForwardToRavenResponders(HttpServer server)
+		{
+			this.server = server;
+		}
+
+		public void ProcessRequest(HttpContext context)
+		{
+			server.HandleActualRequest(new HttpContextAdapter(context));
+		}
+
+		public bool IsReusable
+		{
+			get { return true; }
+		}
+	}
+}

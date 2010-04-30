@@ -14,12 +14,9 @@ namespace Raven.Client.Tests.Document
         private readonly string path2;
         private readonly int port1;
         private readonly int port2;
-        private readonly string server;
 
         public When_Using_Multiple_Unsharded_Servers()
 		{
-            server = "localhost";
-
             port1 = 8080;
             port2 = 8081;
 
@@ -33,17 +30,17 @@ namespace Raven.Client.Tests.Document
         [Fact]
         public void Can_insert_into_two_servers_running_simultaneously_without_sharding()
         {
-            var serversStoredUpon = new List<int>();
+            var serversStoredUpon = new List<string>();
 
             using (var server1 = GetNewServer(port1, path1))
             using (var server2 = GetNewServer(port2, path2))
             {
                 foreach (var port in new[] { port1, port2 })
                 {
-                    using (var documentStore = new DocumentStore(server, port).Initialise())
+                    using (var documentStore = new DocumentStore { Url = "http://localhost:"+ port }.Initialise())
                     using (var session = documentStore.OpenSession())
                     {
-                        documentStore.Stored += (storeServer, storePort, storeEntity) => serversStoredUpon.Add(storePort);
+                        documentStore.Stored += (storeServer, storeEntity) => serversStoredUpon.Add(storeServer);
 
                         var entity = new Company { Name = "Company" };
                         session.Store(entity);
@@ -53,8 +50,8 @@ namespace Raven.Client.Tests.Document
                 }
             }
 
-            Assert.Equal(port1, serversStoredUpon[0]);
-            Assert.Equal(port2, serversStoredUpon[1]);
+            Assert.Contains(port1.ToString(), serversStoredUpon[0]);
+            Assert.Contains(port2.ToString(), serversStoredUpon[1]);
         }
 
         #region IDisposable Members

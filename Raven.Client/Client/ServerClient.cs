@@ -19,9 +19,9 @@ namespace Raven.Client.Client
 	{
 		private readonly string url;
 
-		public ServerClient(string server, int port)
+		public ServerClient(string url)
 		{
-			url = String.Format("http://{0}:{1}", server, port);
+			this.url = url;
 		}
 
 		#region IDatabaseCommands Members
@@ -33,13 +33,24 @@ namespace Raven.Client.Client
 		    var metadata = new JObject();
 		    AddTransactionInformation(metadata);
 			var request = new HttpJsonRequest(url + "/docs/" + key, "GET", metadata);
-			return new JsonDocument
+			try
 			{
-				Data = Encoding.UTF8.GetBytes(request.ReadResponseString()),
-				Key = key,
-                Etag = new Guid(request.ResponseHeaders["ETag"]),
-                Metadata = request.ResponseHeaders.FilterHeaders()
-			};
+				return new JsonDocument
+				{
+					Data = Encoding.UTF8.GetBytes(request.ReadResponseString()),
+					Key = key,
+					Etag = new Guid(request.ResponseHeaders["ETag"]),
+					Metadata = request.ResponseHeaders.FilterHeaders()
+				};
+			}
+			catch (WebException e)
+			{
+				var httpWebResponse = e.Response as HttpWebResponse;
+				if (httpWebResponse == null ||
+					httpWebResponse.StatusCode != HttpStatusCode.NotFound)
+					throw;
+				return null;
+			}
 		}
 
 		private static void EnsureIsNotNullOrEmpty(string key, string argName)
@@ -195,7 +206,31 @@ namespace Raven.Client.Client
 	            .ToArray();
 	    }
 
-	    public void Commit(Guid txId)
+		public BatchResult[] Batch(ICommandData[] commandDatas)
+		{
+			var metadata = new JObject();
+			AddTransactionInformation(metadata);
+			var req = new HttpJsonRequest(url + "/bulk_docs", "POST",metadata);
+			var jArray = new JArray(commandDatas.Select(x => x.ToJson()));
+			req.Write(jArray.ToString(Formatting.None));
+
+			string response;
+			try
+			{
+				response = req.ReadResponseString();
+			}
+			catch (WebException e)
+			{
+				var httpWebResponse = e.Response as HttpWebResponse;
+				if (httpWebResponse == null ||
+					httpWebResponse.StatusCode != HttpStatusCode.Conflict)
+					throw;
+				throw ThrowConcurrencyException(e);
+			}
+			return JsonConvert.DeserializeObject<BatchResult[]>(response);
+		}
+
+		public void Commit(Guid txId)
 	    {
 	        var httpJsonRequest = new HttpJsonRequest("/transaction/commit?tx=" + txId, "POST");
 	        httpJsonRequest.ReadResponseString();

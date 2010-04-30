@@ -14,6 +14,16 @@ namespace Raven.Database.Tasks
 			get { return GetType().FullName; }
 		}
 
+		public virtual bool SupportsMerging
+		{
+			get
+			{
+				return true;
+			}
+		}
+
+		public abstract bool TryMerge(Task task);
+
 		public string AsString()
 		{
 			var stringWriter = new StringWriter();
@@ -36,5 +46,7 @@ namespace Raven.Database.Tasks
 		/// 	Another requirement is that executing task MUST be idempotent.
 		/// </summary>
 		public abstract void Execute(WorkContext context);
+
+		public abstract Task Clone();
 	}
 }

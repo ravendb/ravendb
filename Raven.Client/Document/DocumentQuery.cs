@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Reflection;
 using System.Threading;
 using Raven.Client.Client;
@@ -11,16 +12,16 @@ namespace Raven.Client.Document
 	{
 		private readonly IDatabaseCommands databaseCommands;
 
-	    public DocumentQuery(IDatabaseCommands databaseCommands, string indexName, string[] projectionFields)
+	    public DocumentQuery(DocumentSession session, IDatabaseCommands databaseCommands, string indexName, string[] projectionFields):base(session)
 		{
-			this.databaseCommands = databaseCommands;
+	    	this.databaseCommands = databaseCommands;
 		    this.projectionFields = projectionFields;
 		    this.indexName = indexName;
 		}
 
 	    public override IDocumentQuery<TProjection> Select<TProjection>(Func<T, TProjection> projectionExpression)
 	    {
-	        return new DocumentQuery<TProjection>(databaseCommands, indexName,
+			return new DocumentQuery<TProjection>(session, databaseCommands, indexName,
 	                                              projectionExpression
 	                                                  .Method
 	                                                  .ReturnType
@@ -31,12 +32,14 @@ namespace Raven.Client.Document
 	            pageSize = pageSize,
 	            query = query,
 	            start = start,
+				timeout = timeout,
 	            waitForNonStaleResults = waitForNonStaleResults
 	        };
 	    }
 
 	    protected override QueryResult GetQueryResult()
 		{
+	    	var sp = Stopwatch.StartNew();
 			while (true) 
 			{
 				var result = databaseCommands.Query(indexName, new IndexQuery
@@ -48,6 +51,11 @@ namespace Raven.Client.Document
 				});
 				if(waitForNonStaleResults && result.IsStale)
 				{
+					if (sp.Elapsed > timeout)
+					{
+						sp.Stop();
+						throw new TimeoutException(string.Format("Waited for {0:#,#}ms for the query to return non stale result.", sp.ElapsedMilliseconds));
+					}
 					Thread.Sleep(100);
 					continue;
 				}
