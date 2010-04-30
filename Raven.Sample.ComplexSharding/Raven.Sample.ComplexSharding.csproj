@@ -44,8 +44,13 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Blog.cs" />
+    <Compile Include="BlogShardResolutionStrategy.cs" />
+    <Compile Include="BlogShardSelectionStrategy.cs" />
+    <Compile Include="Post.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="User.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Raven.Client\Raven.Client.csproj">
