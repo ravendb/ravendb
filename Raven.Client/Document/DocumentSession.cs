@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Reflection;
@@ -6,12 +7,14 @@ using System.Transactions;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Client;
 using System;
+using Raven.Client.Exceptions;
 using Raven.Database;
 using Raven.Database.Data;
 using Raven.Database.Json;
 
 namespace Raven.Client.Document
 {
+	[DebuggerDisplay("{StoreIdentifier}")]
 	public class DocumentSession : IDocumentSession
 	{
 	    private const string TemporaryIdPrefix = "Temporary Id: ";
@@ -112,8 +115,14 @@ namespace Raven.Client.Document
 		{
             var identityProperty = GetIdentityProperty(typeof(T));
             var id = identityProperty.GetValue(entity, null) as string;
-            if (id != null && entitiesByKey.ContainsKey(id))
-                return;//already in unit of work
+			if (id != null &&
+				id.EndsWith("/") == false && // not a prefix id
+				entitiesByKey.ContainsKey(id))
+			{
+				if (ReferenceEquals(entitiesByKey[id], entity))
+					return;// calling Store twice on the same reference is a no-op
+				throw new NonUniqueObjectException("Attempted to associated a different object with id '" + id + "'.");
+			}
 
 			var tag = documentStore.Conventions.FindTypeTagName(typeof(T));
 			entitiesAndMetadata.Add(entity, new DocumentMetadata

@@ -84,6 +84,7 @@
     <Compile Include="Client\IDatabaseCommands.cs" />
     <Compile Include="Document\RavenClientEnlistment.cs" />
     <Compile Include="Document\ShardedDocumentQuery.cs" />
+    <Compile Include="Exceptions\NonUniqueObjectException.cs" />
     <Compile Include="IDocumentQuery.cs" />
     <Compile Include="IDocumentSession.cs" />
     <Compile Include="IDocumentStore.cs" />
@@ -102,6 +103,7 @@
     <Compile Include="Shard\ShardedDocumentStore.cs" />
     <Compile Include="Shard\ShardStrategy\ShardResolution\ShardResolutionStrategyData.cs" />
     <Compile Include="Shard\Shards.cs" />
+    <Compile Include="Shard\ShardStrategy\ShardStrategy.cs" />
     <Compile Include="Util\Inflector.cs" />
   </ItemGroup>
   <ItemGroup>
