@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Transactions;
+using log4net;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Client;
 using System;
@@ -17,6 +18,7 @@ namespace Raven.Client.Document
 	[DebuggerDisplay("{StoreIdentifier}")]
 	public class DocumentSession : IDocumentSession
 	{
+		private readonly ILog log = LogManager.GetLogger(typeof (DocumentSession));
 	    private const string TemporaryIdPrefix = "Temporary Id: ";
 		private const string RavenEntityName = "Raven-Entity-Name";
 		private readonly IDatabaseCommands database;
@@ -45,11 +47,11 @@ namespace Raven.Client.Document
 		        return (T)existingEntity;
 		    }
 
-            JsonDocument documentFound;
-
+			JsonDocument documentFound;
             try
             {
-                documentFound = database.Get(id);
+				log.DebugFormat("Loading document [{0}] from {1}", id, StoreIdentifier);
+				documentFound = database.Get(id);
             }
             catch (WebException ex)
             {
@@ -76,11 +78,13 @@ namespace Raven.Client.Document
 		public T TrackEntity<T>(string key, JObject document, JObject metadata)
 	    {
 			var entity = ConvertToEntity<T>(key, document);
-	        entitiesAndMetadata.Add(entity, new DocumentMetadata
+			var etag = metadata.Value<string>("@etag");
+			log.DebugFormat("Tracking document [{0}] from {1} as {2}. Etag: {3}", key, StoreIdentifier, typeof(T).FullName, etag);
+			entitiesAndMetadata.Add(entity, new DocumentMetadata
 	        {
 				OriginalValue = document,
 	            Metadata = metadata,
-				ETag = new Guid(metadata.Value<string>("@etag")),
+				ETag = new Guid(etag),
 	            Key = key
 	        });
 	        entitiesByKey[key] = entity;
@@ -89,6 +93,8 @@ namespace Raven.Client.Document
 
 	    public T[] Load<T>(params string[] ids)
 	    {
+			if(log.IsDebugEnabled)
+				log.DebugFormat("Bulk loading ids [{0}] from {1}", string.Join(", ", ids), StoreIdentifier);
 	        return documentStore.DatabaseCommands.Get(ids)
                 .Select(TrackEntity<T>).ToArray();
 	    }
@@ -221,7 +227,11 @@ namespace Raven.Client.Document
 					entitiesByKey.Remove(entity.Value.Key);
 				cmds.Add(CreatePutEntityCommand(entity.Key, entity.Value));
 			}
+			
+			if (cmds.Count == 0)
+				return;
 
+			log.DebugFormat("Saving {0} changes to {1}", cmds.Count, StoreIdentifier);
 			UpdateBatchResults(database.Batch(cmds.ToArray()), entities);
 		}
 

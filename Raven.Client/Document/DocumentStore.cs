@@ -15,7 +15,12 @@ namespace Raven.Client.Document
 			Conventions = new DocumentConvention();
 		}
 
-        public string Identifier { get; set; }
+		private string identifier;
+		public string Identifier
+		{
+			get { return identifier ?? Url ?? DataDirectory; }
+			set { identifier = value; }
+		}
 
 		public string DataDirectory { get; set; }
 
