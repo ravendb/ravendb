@@ -168,6 +168,7 @@ task DoRelease -depends Merge {
 	remove-item $build_dir\Output -Recurse -Force  -ErrorAction SilentlyContinue
 	mkdir $build_dir\Output
 	mkdir $build_dir\Output\Web
+	mkdir $build_dir\Output\Web\bin
 	mkdir $build_dir\Output\Server
 	mkdir $build_dir\Output\Client
 	
@@ -179,7 +180,7 @@ task DoRelease -depends Merge {
 	cp $build_dir\log4net.dll $build_dir\Output\Client
 	cp $build_dir\Newtonsoft.Json.dll $build_dir\Output\Client
 	
-	cp $build_dir\RavenWeb.dll $build_dir\Output\Web
+	cp $build_dir\RavenWeb.dll $build_dir\Output\Web\bin
 	cp $base_dir\DefaultConfigs\web.config $build_dir\Output\Web\web.config
 	
 	cp $build_dir\RavenDb.exe $build_dir\Output\Server
@@ -197,6 +198,7 @@ task DoRelease -depends Merge {
 		$release_dir\Raven.zip `
 		Client\*.* `
 		Web\*.* `
+		Web\bin\*.* `
 		Server\*.* `
 		license.txt `
 		acknowledgements.txt `
