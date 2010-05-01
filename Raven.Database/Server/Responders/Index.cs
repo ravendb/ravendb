@@ -50,6 +50,16 @@ namespace Raven.Database.Server.Responders
 
 		private void Put(IHttpContext context, string index)
 		{
+			if (index.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase))
+			{
+				context.SetStatusToForbidden();
+				context.WriteJson(new
+				{
+					Url = context.Request.RawUrl,
+					Error = "Builtin indexes cannot be modified, attempt to modifiy index '" + index + "' was rejected"
+				});
+				return;
+			}
 			var data = context.ReadJsonObject<IndexDefinition>();
 			if (data.Map == null)
 			{
