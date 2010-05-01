@@ -181,8 +181,16 @@
     <Compile Include="Server\Responders\Statistics.cs" />
     <Compile Include="Server\Responders\TransactionCommit.cs" />
     <Compile Include="Server\Responders\TransactionRollback.cs" />
+    <Compile Include="Storage\EsentDirectory.cs" />
     <Compile Include="Storage\IndexCreationOptions.cs" />
     <Compile Include="Storage\DocumentInTransactionData.cs" />
+    <Compile Include="Storage\StorageActions\Attachments.cs" />
+    <Compile Include="Storage\StorageActions\Documents.cs" />
+    <Compile Include="Storage\StorageActions\Indexing.cs" />
+    <Compile Include="Storage\StorageActions\MappedResults.cs" />
+    <Compile Include="Storage\StorageActions\TableProperties.cs" />
+    <Compile Include="Storage\StorageActions\Tasks.cs" />
+    <Compile Include="Storage\StorageActions\Util.cs" />
     <Compile Include="Storage\TableColumnsCache.cs" />
     <Compile Include="Tasks\IndexDocumentRangeTask.cs" />
     <Compile Include="Tasks\IndexDocumentsTask.cs" />
@@ -191,7 +199,7 @@
     <Compile Include="Tasks\Task.cs" />
     <Compile Include="Storage\TransactionalStorage.cs" />
     <Compile Include="Storage\EsentExtension.cs" />
-    <Compile Include="Storage\DocumentStorageActions.cs" />
+    <Compile Include="Storage\StorageActions\General.cs" />
     <Compile Include="Indexing\IndexStorage.cs" />
     <Compile Include="Storage\SchemaCreator.cs" />
     <Compile Include="Storage\IndexDefinitionStorage.cs" />

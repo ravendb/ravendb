@@ -557,10 +557,5 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				return approximateTaskCount;
 			}
 		}
-
-		public void StartBackup(string fileToBackupTo)
-		{
-			new BackupOperation(this, fileToBackupTo).Start();
-		}
 	}
 }
