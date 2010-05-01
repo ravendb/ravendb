@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security;
 using System.Threading;
+using System.Web;
 using log4net;
 using Microsoft.Isam.Esent.Interop;
 using Newtonsoft.Json;
@@ -31,7 +32,9 @@ namespace Raven.Database
 
 		private readonly RavenConfiguration configuration;
 		private readonly WorkContext workContext;
+
 		private Thread[] backgroundWorkers = new Thread[0];
+
 		private readonly ILog log = LogManager.GetLogger(typeof (DocumentDatabase));
 
 		public DocumentDatabase(RavenConfiguration configuration)
@@ -61,9 +64,18 @@ namespace Raven.Database
 			workContext.TransactionaStorage = TransactionalStorage;
 			workContext.IndexDefinitionStorage = IndexDefinitionStorage;
 
+
+			PutTriggers.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+			DeleteTriggers.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+			
 			if (!newDb) 
 				return;
 
+			OnNewlyCreatedDatabase();
+		}
+
+		private void OnNewlyCreatedDatabase()
+		{
 			if(configuration.ShouldCreateDefaultsWhenBuildingNewDatabaseFromScratch)
 			{
 				PutIndex("Raven/DocumentsByEntityName",
@@ -80,9 +92,6 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 			}
 	
 			configuration.RaiseDatabaseCreatedFromScratch(this);
-
-			PutTriggers.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
-			DeleteTriggers.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
 		}
 
 		public DatabaseStatistics Statistics
@@ -107,7 +116,9 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 		}
 
 		public TransactionalStorage TransactionalStorage { get; private set; }
+
 		public IndexDefinitionStorage IndexDefinitionStorage { get; private set; }
+
 		public IndexStorage IndexStorage { get; private set; }
 
 		#region IDisposable Members
@@ -121,6 +132,11 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 			{
 				backgroundWorker.Join();
 			}
+		}
+
+		public WorkContext WorkContext
+		{
+			get { return workContext; }
 		}
 
 		#endregion
@@ -540,6 +556,11 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				});
 				return approximateTaskCount;
 			}
+		}
+
+		public void StartBackup(string fileToBackupTo)
+		{
+			new BackupOperation(this, fileToBackupTo).Start();
 		}
 	}
 }
