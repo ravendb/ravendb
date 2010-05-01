@@ -114,11 +114,12 @@ namespace Raven.Database.Storage
 			private readonly string name;
 			private long position;
 
-			public EsentIndexInput(TransactionalStorage transactionalStorage,string directory, string name)
+			public EsentIndexInput(TransactionalStorage transactionalStorage, string directory, string name)
 			{
 				this.transactionalStorage = transactionalStorage;
 				this.directory = directory;
 				this.name = name;
+				Length();//side effect, will ensure that the file exists
 			}
 
 			public override void Close()
