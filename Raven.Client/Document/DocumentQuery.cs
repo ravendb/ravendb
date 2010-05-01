@@ -63,6 +63,7 @@ namespace Raven.Client.Document
 					Thread.Sleep(100);
 					continue;
 				}
+				log.DebugFormat("Query returned {0}/{1} results", result.Results.Length, result.TotalResults);
 				return result;
 			} 
 		}
