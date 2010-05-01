@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+#if !CLIENT
 using Lucene.Net.Documents;
+#endif
 
 namespace Raven.Database.Indexing
 {
@@ -18,6 +20,8 @@ namespace Raven.Database.Indexing
 		public Dictionary<string, FieldStorage> Stores { get; set; }
 
 		public Dictionary<string, FieldIndexing> Indexes { get; set; }
+
+#if !CLIENT
 
 		public Field.Store GetStorage(string name, Field.Store defaultStorage)
 		{
@@ -60,7 +64,7 @@ namespace Raven.Database.Indexing
 					throw new ArgumentOutOfRangeException();
 			}
 		}
-
+#endif
 		public IndexDefinition()
 		{
 			Indexes = new Dictionary<string, FieldIndexing>();

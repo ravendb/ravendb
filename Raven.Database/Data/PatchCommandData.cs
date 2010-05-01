@@ -23,7 +23,7 @@ namespace Raven.Database.Data
 		{
 			get; set;
 		}
-
+#if !CLIENT
 		public TransactionInformation TransactionInformation
 		{
 			get; set;
@@ -33,7 +33,7 @@ namespace Raven.Database.Data
 		{
 			database.ApplyPatch(Key, Etag, Patches, TransactionInformation);
 		}
-
+#endif
 		public JObject ToJson()
 		{
 			return new JObject(

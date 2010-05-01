@@ -1,7 +1,4 @@
-﻿using System;
-using Lucene.Net.Search;
-
-namespace Raven.Database.Data
+﻿namespace Raven.Database.Data
 {
 	public class SortedField
 	{
@@ -24,10 +21,11 @@ namespace Raven.Database.Data
 
 		public string Field { get; set; }
 		public bool Descending { get; set; }
-
-		public SortField ToLuceneSortField()
+#if !CLIENT
+		public  Lucene.Net.Search.SortField ToLuceneSortField()
 		{
-			return new SortField(Field, Descending);
+			return new  Lucene.Net.Search.SortField(Field, Descending);
 		}
+#endif
 	}
 }

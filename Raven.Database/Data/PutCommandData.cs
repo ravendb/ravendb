@@ -12,22 +12,24 @@ namespace Raven.Database.Data
 			get { return "PUT"; }
     	}
 
+#if !CLIENT
     	public TransactionInformation TransactionInformation
         {
             get;
             set;
         }
-
-        public virtual Guid? Etag { get; set; }
-        public virtual JObject Document { get; set; }
-        public virtual JObject Metadata { get; set; }
-
 		public void Execute(DocumentDatabase database)
 		{
 			var putResult = database.Put(Key, Etag, Document, Metadata, TransactionInformation);
 			Etag = putResult.ETag;
 			Key = putResult.Key;
 		}
+#endif
+
+        public virtual Guid? Etag { get; set; }
+        public virtual JObject Document { get; set; }
+        public virtual JObject Metadata { get; set; }
+
 
     	public JObject ToJson()
     	{
