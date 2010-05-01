@@ -15,7 +15,6 @@ using Raven.Database.Json;
 
 namespace Raven.Client.Document
 {
-	[DebuggerDisplay("{StoreIdentifier}")]
 	public class DocumentSession : IDocumentSession
 	{
 		private readonly ILog log = LogManager.GetLogger(typeof (DocumentSession));
