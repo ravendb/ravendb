@@ -45,7 +45,7 @@ namespace Raven.Database
 		
 			workContext = new WorkContext();
 			TransactionalStorage = new TransactionalStorage(configuration.DataDirectory, workContext.NotifyAboutWork);
-			;
+			configuration.Container.SatisfyImportsOnce(TransactionalStorage);
 			bool newDb;
 			try
 			{
