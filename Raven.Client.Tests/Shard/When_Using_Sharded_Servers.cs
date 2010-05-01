@@ -85,8 +85,8 @@ namespace Raven.Client.Tests.Shard
                 }
             }
 
-            Assert.Contains(port1.ToString(), serverPortsStoredUpon[0]);
-            Assert.Contains(port2.ToString(), serverPortsStoredUpon[1]);
+			Assert.Contains("Shard1", serverPortsStoredUpon[0]);
+			Assert.Contains("Shard2", serverPortsStoredUpon[1]);
         }
 
         [Fact]
