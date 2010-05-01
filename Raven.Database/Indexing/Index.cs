@@ -24,11 +24,11 @@ namespace Raven.Database.Indexing
 	public abstract class Index : IDisposable
 	{
 		private readonly Directory directory;
-		protected readonly ILog log = LogManager.GetLogger(typeof (Index));
+		protected readonly ILog log = LogManager.GetLogger(typeof(Index));
 		protected readonly string name;
 		protected readonly IndexDefinition indexDefinition;
 
-		protected Index(Directory directory, string name,IndexDefinition indexDefinition)
+		protected Index(Directory directory, string name, IndexDefinition indexDefinition)
 		{
 			this.name = name;
 			this.indexDefinition = indexDefinition;
@@ -75,10 +75,10 @@ namespace Raven.Database.Indexing
 		private static TopDocs ExecuteQuery(IndexSearcher searcher, IndexQuery indexQuery, Query luceneQuery)
 		{
 			TopDocs search;
-			if (indexQuery.SortedFields != null)
+			if (indexQuery.SortedFields != null && indexQuery.SortedFields.Length > 0)
 			{
 				var sort = new Sort(indexQuery.SortedFields.Select(x => x.ToLuceneSortField()).ToArray());
-				search = searcher.Search(luceneQuery, null, indexQuery.PageSize,sort);
+				search = searcher.Search(luceneQuery, null, indexQuery.PageSize, sort);
 			}
 			else
 			{
@@ -91,10 +91,10 @@ namespace Raven.Database.Indexing
 		{
 			var query = indexQuery.Query;
 			Query luceneQuery;
-			if(string.IsNullOrEmpty(query))
+			if (string.IsNullOrEmpty(query))
 			{
 				log.DebugFormat("Issuing query on index {0} for all documents", name);
-				luceneQuery = new MatchAllDocsQuery();	
+				luceneQuery = new MatchAllDocsQuery();
 			}
 			else
 			{
@@ -112,14 +112,14 @@ namespace Raven.Database.Indexing
 		}
 
 		public abstract void IndexDocuments(AbstractViewGenerator viewGenerator, IEnumerable<object> documents,
-		                                    WorkContext context,
-		                                    DocumentStorageActions actions);
+											WorkContext context,
+											DocumentStorageActions actions);
 
 		protected abstract IndexQueryResult RetrieveDocument(Document document, string[] fieldsToFetch);
 
 		protected void Write(Func<IndexWriter, bool> action)
 		{
-			var indexWriter = new IndexWriter(directory, new StandardAnalyzer(Version.LUCENE_CURRENT),IndexWriter.MaxFieldLength.UNLIMITED);
+			var indexWriter = new IndexWriter(directory, new StandardAnalyzer(Version.LUCENE_CURRENT), IndexWriter.MaxFieldLength.UNLIMITED);
 			try
 			{
 				action(indexWriter);
@@ -132,7 +132,7 @@ namespace Raven.Database.Indexing
 
 
 		protected IEnumerable<object> RobustEnumeration(IEnumerable<object> input, IndexingFunc func,
-		                                                DocumentStorageActions actions, WorkContext context)
+														DocumentStorageActions actions, WorkContext context)
 		{
 			var wrapped = new StatefulEnumerableWrapper<dynamic>(input.GetEnumerator());
 			IEnumerator<object> en = func(wrapped).GetEnumerator();
@@ -149,7 +149,7 @@ namespace Raven.Database.Indexing
 		}
 
 		private bool? MoveNext(IEnumerator en, StatefulEnumerableWrapper<object> innerEnumerator, WorkContext context,
-		                       DocumentStorageActions actions)
+							   DocumentStorageActions actions)
 		{
 			try
 			{
@@ -163,11 +163,11 @@ namespace Raven.Database.Indexing
 			{
 				actions.IncrementIndexingFailure();
 				context.AddError(name,
-				                 TryGetDocKey(innerEnumerator.Current),
-				                 e.Message
+								 TryGetDocKey(innerEnumerator.Current),
+								 e.Message
 					);
 				log.WarnFormat(e, "Failed to execute indexing function on {0} on {1}", name,
-				               GetDocId(innerEnumerator));
+							   GetDocId(innerEnumerator));
 			}
 			return null;
 		}
