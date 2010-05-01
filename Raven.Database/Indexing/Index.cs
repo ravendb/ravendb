@@ -14,6 +14,7 @@ using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
+using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Database.Indexing
 {
@@ -42,7 +43,7 @@ namespace Raven.Database.Indexing
 
 			searcher = new CurrentIndexSearcher
 			{
-				Searcher = new IndexSearcher(directory)
+				Searcher = new IndexSearcher(directory, true)
 			};
 		}
 
@@ -61,11 +62,11 @@ namespace Raven.Database.Indexing
 			using (searcher.Use())
 			{
 				var search = ExecuteQuery(indexQuery, GetLuceneQuery(indexQuery));
-				indexQuery.TotalSize.Value = search.Length();
+				indexQuery.TotalSize.Value = search.totalHits;
 				var previousDocuments = new HashSet<string>();
-				for (var i = indexQuery.Start; i < search.Length() && (i - indexQuery.Start) < indexQuery.PageSize; i++)
+				for (var i = indexQuery.Start; i < search.totalHits && (i - indexQuery.Start) < indexQuery.PageSize; i++)
 				{
-					var document = search.Doc(i);
+					var document = searcher.Searcher.Doc(search.scoreDocs[i].doc);
 					if (IsDuplicateDocument(document, indexQuery.FieldsToFetch, previousDocuments))
 						continue;
 					yield return RetrieveDocument(document, indexQuery.FieldsToFetch);
@@ -73,17 +74,17 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private Hits ExecuteQuery(IndexQuery indexQuery, Query luceneQuery)
+		private TopDocs ExecuteQuery(IndexQuery indexQuery, Query luceneQuery)
 		{
-			Hits search;
+			TopDocs search;
 			if (indexQuery.SortedFields != null)
 			{
 				var sort = new Sort(indexQuery.SortedFields.Select(x => x.ToLuceneSortField()).ToArray());
-				search = searcher.Searcher.Search(luceneQuery, sort);
+				search = searcher.Searcher.Search(luceneQuery, null, indexQuery.PageSize,sort);
 			}
 			else
 			{
-				search = searcher.Searcher.Search(luceneQuery);
+				search = searcher.Searcher.Search(luceneQuery, null, indexQuery.PageSize);
 			}
 			return search;
 		}
@@ -120,7 +121,7 @@ namespace Raven.Database.Indexing
 
 		protected void Write(Func<IndexWriter, bool> action)
 		{
-			var indexWriter = new IndexWriter(directory, new StandardAnalyzer());
+			var indexWriter = new IndexWriter(directory, new StandardAnalyzer(Version.LUCENE_CURRENT),IndexWriter.MaxFieldLength.UNLIMITED);
 			bool shouldRcreateSearcher;
 			try
 			{
@@ -204,7 +205,7 @@ namespace Raven.Database.Indexing
 				searcher.MarkForDispoal();
 				searcher = new CurrentIndexSearcher
 				{
-					Searcher = new IndexSearcher(directory)
+					Searcher = new IndexSearcher(directory, true)
 				};
 				Thread.MemoryBarrier(); // force other threads to see this write
 			}
