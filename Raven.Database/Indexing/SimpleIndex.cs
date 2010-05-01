@@ -65,7 +65,7 @@ namespace Raven.Database.Indexing
 			log.DebugFormat("Indexed {0} documents for {1}", count, name);
 		}
 
-		private static void CopyFieldsToDocumentButRemoveDuplicateValues(Document luceneDoc, IEnumerable<Field> fields)
+		private static void CopyFieldsToDocumentButRemoveDuplicateValues(Document luceneDoc, IEnumerable<AbstractField> fields)
 		{
 			foreach (var field in fields)
 			{

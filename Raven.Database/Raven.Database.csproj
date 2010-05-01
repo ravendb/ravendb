@@ -96,6 +96,8 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Backup\EsentBackup.cs" />
+    <Compile Include="Backup\LuceneBackup.cs" />
     <Compile Include="Exceptions\IndexDoesNotExists.cs" />
     <Compile Include="Server\Abstractions\HttpContextAdapter.cs" />
     <Compile Include="Server\Abstractions\HttpListenerContextAdpater.cs" />
