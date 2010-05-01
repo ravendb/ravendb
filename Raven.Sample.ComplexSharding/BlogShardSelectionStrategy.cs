@@ -14,7 +14,7 @@ namespace Raven.Sample.ComplexSharding
 			this.numberOfShardsForPosts = numberOfShardsForPosts;
 		}
 
-		public string SelectShardIdForNewObject(object obj)
+		public string ShardIdForNewObject(object obj)
 		{
 			var shardId = GetShardIdFromObjectType(obj);
 			if(obj is Post)
@@ -27,7 +27,7 @@ namespace Raven.Sample.ComplexSharding
 			return shardId;
 		}
 
-		public string SelectShardIdForExistingObject(object obj)
+		public string ShardIdForExistingObject(object obj)
 		{
 			var shardId = GetShardIdFromObjectType(obj);
 			if(obj is Post)

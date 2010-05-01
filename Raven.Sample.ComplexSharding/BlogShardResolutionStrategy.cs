@@ -14,7 +14,7 @@ namespace Raven.Sample.ComplexSharding
 			this.numberOfShardsForPosts = numberOfShardsForPosts;
 		}
 
-		public IList<string> SelectShardIdsFromData(ShardResolutionStrategyData srsd)
+		public IList<string> SelectShardIds(ShardResolutionStrategyData srsd)
 		{
 			if (srsd.EntityType == typeof (User))
 				return new[] {"Users"};

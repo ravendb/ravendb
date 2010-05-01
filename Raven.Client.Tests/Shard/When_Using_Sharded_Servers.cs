@@ -43,8 +43,8 @@ namespace Raven.Client.Tests.Shard
             };
 
             shardSelection = MockRepository.GenerateStub<IShardSelectionStrategy>();
-            shardSelection.Stub(x => x.SelectShardIdForNewObject(company1)).Return("Shard1");
-            shardSelection.Stub(x => x.SelectShardIdForNewObject(company2)).Return("Shard2");
+            shardSelection.Stub(x => x.ShardIdForNewObject(company1)).Return("Shard1");
+            shardSelection.Stub(x => x.ShardIdForNewObject(company2)).Return("Shard2");
 
             shardResolution = MockRepository.GenerateStub<IShardResolutionStrategy>();
 
@@ -100,7 +100,7 @@ namespace Raven.Client.Tests.Shard
 				session.SaveChanges();
 
                 //get it, should automagically retrieve from 2nd shard
-                shardResolution.Stub(x => x.SelectShardIdsFromData(null)).IgnoreArguments().Return(new[] { "Shard2" });
+                shardResolution.Stub(x => x.SelectShardIds(null)).IgnoreArguments().Return(new[] { "Shard2" });
                 var loadedCompany = session.Load<Company>(company2.Id);
 
                 Assert.NotNull(loadedCompany);
@@ -122,7 +122,7 @@ namespace Raven.Client.Tests.Shard
 				session.SaveChanges();
 
                 //get it, should try all shards and find it
-                shardResolution.Stub(x => x.SelectShardIdsFromData(null)).IgnoreArguments().Return(null);
+                shardResolution.Stub(x => x.SelectShardIds(null)).IgnoreArguments().Return(null);
                 var loadedCompany = session.Load<Company>(company2.Id);
 
                 Assert.NotNull(loadedCompany);
