@@ -185,6 +185,7 @@
     <Compile Include="Storage\IndexCreationOptions.cs" />
     <Compile Include="Storage\DocumentInTransactionData.cs" />
     <Compile Include="Storage\StorageActions\Attachments.cs" />
+    <Compile Include="Storage\StorageActions\Directories.cs" />
     <Compile Include="Storage\StorageActions\Documents.cs" />
     <Compile Include="Storage\StorageActions\Indexing.cs" />
     <Compile Include="Storage\StorageActions\MappedResults.cs" />

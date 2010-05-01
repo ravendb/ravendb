@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Microsoft.Isam.Esent.Interop;
 
 namespace Raven.Database.Storage
@@ -22,5 +23,7 @@ namespace Raven.Database.Storage
 		public IDictionary<string, JET_COLUMNID> IdentityColumns { get; set; }
 
 		public IDictionary<string, JET_COLUMNID> DetailsColumns { get; set; }
+
+		public IDictionary<string, JET_COLUMNID> DirectoriesColumns { get; set; }
 	}
 }

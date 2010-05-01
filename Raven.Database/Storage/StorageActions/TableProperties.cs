@@ -17,6 +17,12 @@ namespace Raven.Database.Storage
 			get { return transactions ?? (transactions = new Table(session, dbid, "transactions", OpenTableGrbit.None)); }
 		}
 
+		private Table directories;
+		protected Table Directories
+		{
+			get { return directories ?? (directories = new Table(session, dbid, "directories", OpenTableGrbit.None)); }
+		}
+
 		private Table documentsModifiedByTransactions;
 		protected Table DocumentsModifiedByTransactions
 		{

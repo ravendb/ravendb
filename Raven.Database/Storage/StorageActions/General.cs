@@ -41,6 +41,9 @@ namespace Raven.Database.Storage
 		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
 		public void Dispose()
 		{
+			if(directories != null)
+				directories.Dispose();
+
 			if (details != null)
 				details.Dispose();
 

@@ -34,6 +34,11 @@ namespace Raven.Database.Storage
 			Api.JetCreateInstance(out instance, database + Guid.NewGuid());
 		}
 
+		public TableColumnsCache TableColumnsCache
+		{
+			get { return tableColumnsCache; }
+		}
+
 		private void LimitSystemCache()
 		{
 			var cacheSizeMax = 1024 * 1024 * 1024 / SystemParameters.DatabasePageSize;
@@ -124,6 +129,8 @@ namespace Raven.Database.Storage
 						tableColumnsCache.IdentityColumns = Api.GetColumnDictionary(session, identity);
 					using (var details = new Table(session, dbid, "details", OpenTableGrbit.None))
 						tableColumnsCache.DetailsColumns = Api.GetColumnDictionary(session, details);
+					using (var directories = new Table(session, dbid, "directories", OpenTableGrbit.None))
+						tableColumnsCache.DirectoriesColumns = Api.GetColumnDictionary(session, directories);
 				}
 				finally
 				{
@@ -252,6 +259,11 @@ namespace Raven.Database.Storage
 		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
 		public void Batch(Action<DocumentStorageActions> action)
 		{
+			if (disposed)
+			{
+				Trace.WriteLine("TransactionalStorage.Batch was called after it was dispoed, call was ignored.");
+				return; // this may happen if someone is calling us from the finalizer thread, so we can't even throw on that
+			}
 			if (current.Value != null)
 			{
 				action(current.Value);
@@ -278,6 +290,15 @@ namespace Raven.Database.Storage
 				pht.Commit();
 				onCommit();
 			}
+		}
+
+		public Tuple<Session,Transaction,JET_DBID> OpenSession()
+		{
+			var session = new Session(instance);
+			var transaction = new Transaction(session);
+			JET_DBID dbid;
+			Api.JetOpenDatabase(session, database, null, out dbid, OpenDatabaseGrbit.None);
+			return new Tuple<Session, Transaction, JET_DBID>(session, transaction, dbid);
 		}
 
 		public void ExecuteImmediatelyOrRegisterForSyncronization(Action action)
