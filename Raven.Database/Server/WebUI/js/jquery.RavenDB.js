@@ -146,7 +146,10 @@
             });
         },
 
-        saveIndex: function (name, mapDef, successCallback, errorCallback) {
+        saveIndex: function (name, mapDef, reduceDef, successCallback, errorCallback) {
+            var data = JSON.stringify({Map: mapDef});
+            if(reduceDef)
+                data += "," + JSON.stringify({Reduce: reduceDef});
             $.ajax({
                 type: 'PUT',
                 url: settings.server + 'indexes/' + name,

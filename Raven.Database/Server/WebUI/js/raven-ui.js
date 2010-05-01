@@ -89,8 +89,8 @@ RavenUI.GetIndex = function (name, successCallback) {
     $.ravenDB.getIndex(name, successCallback);
 }
 
-RavenUI.SaveIndex = function (name, def, successCallback, errorCallback) {
-    $.ravenDB.saveIndex(name, def, successCallback, errorCallback);
+RavenUI.SaveIndex = function (name, mapDef, reduceDef, successCallback, errorCallback) {
+    $.ravenDB.saveIndex(name, mapDef, reduceDef, successCallback, errorCallback);
 }
 
 RavenUI.DeleteIndex = function (name, successCallback) {
