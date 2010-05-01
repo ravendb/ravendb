@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using Lucene.Net.Documents;
+using Lucene.Net.Util;
 
 namespace Raven.Database.Indexing
 {
@@ -21,17 +22,17 @@ namespace Raven.Database.Indexing
 
 		private static string ToIndexableString(object val, Field.Index indexOptions)
 		{
-			if (indexOptions == Field.Index.UN_TOKENIZED)
+			if (indexOptions == Field.Index.NOT_ANALYZED)
 				return val.ToString();
 
 			if (val is DateTime)
 				return DateTools.DateToString((DateTime) val, DateTools.Resolution.DAY);
 
 			if (val is int)
-				return NumberTools.LongToString((int) val);
+				return NumericUtils.IntToPrefixCoded((int) val);
 
 			if (val is long)
-				return NumberTools.LongToString((long) val);
+				return NumericUtils.LongToPrefixCoded((long)val);
 
 			return val.ToString();
 		}
