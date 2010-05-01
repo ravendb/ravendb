@@ -68,10 +68,9 @@ namespace Raven.Database
 				         new IndexDefinition
 				         {
 				         	Map =
-				         		@"
-	from doc in docs 
-	where doc[""@metadata""][""Raven-Entity-Name""] != null 
-	select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
+				         		@"from doc in docs 
+where doc[""@metadata""][""Raven-Entity-Name""] != null 
+select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 "
 				         });
 			}
