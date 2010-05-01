@@ -155,7 +155,7 @@ function pagerClick(newPageNumber) {
 function EditDocument(id) {
     $('#ajaxSuccess, #ajaxError').fadeOut();
     RavenUI.GetDocument(id, 'Edit', function (doc, etag, template) {
-        ShowEditorForDocument(id, doc, etag, template, 'Edit Document', function (id, etag, template, json, editor) {
+        ShowEditorForDocument(id, doc, etag, template, 'Edit Document: ' + id, function (id, etag, template, json, editor) {
             RavenUI.SaveDocument(id, etag, template, GetJSONFromEditor(), function () {
                 $(editor).dialog('close');
                 $('#ajaxSuccess').html('Your document has been updated. Click <a href="#" onclick="EditDocument(\'' + id + '\'); return false;">here</a> to see it again.').fadeIn('slow');
