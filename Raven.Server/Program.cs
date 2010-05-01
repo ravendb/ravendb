@@ -123,7 +123,8 @@ namespace Raven.Server
 			using (new RavenDbServer(ravenConfiguration))
 			{
 				Console.WriteLine("Raven is ready to process requests.");
-				Console.WriteLine("Press any key to stop the server");
+				Console.WriteLine("Data directory: {0}, Port: {1}", ravenConfiguration.DataDirectory, ravenConfiguration.Port);
+				Console.WriteLine("Press the enter key to stop the server or enter 'cls' and then enter to clear the log");
 				while(true)
 				{
 					var readLine = Console.ReadLine();
