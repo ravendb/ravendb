@@ -167,6 +167,7 @@
         function CreateIndex() {
             $('#indexEditorName').val('');
             $('#indexEditorMapDef').val('');
+            $('#indexEditorReduceDef').val('');
             $('#saveError, #ajaxSuccess, #ajaxError').hide(); 
             $('#deleteIndex').hide();           
             $('#divEditor').dialog({
@@ -175,7 +176,8 @@
                     Save: function () {
                         var newName = $('#indexEditorName').val();
                         var mapDef = $('#indexEditorMapDef').val();
-                        RavenUI.SaveIndex(newName, mapDef, function (data) {
+                        var reduceDef = $('#indexEditorReduceDef').val();
+                        RavenUI.SaveIndex(newName, mapDef, reduceDef, function (data) {
                             $('#divEditor').dialog('close');
                             getIndexPage();
                             $('#ajaxSuccess').html('Your index has been created. Click <a href="#" onclick="EditIndex(\'' + newName + '\'); return false;">here</a> to see it again.').fadeIn('slow');
@@ -245,6 +247,9 @@
 
                 <label for="indexEditorMapDef">Map:</label><br />
                 <textarea style="width:100%; height:100px;" id="indexEditorMapDef" name="indexEditorMapDef"></textarea><br /><br />
+
+                <label for="indexEditorReduceDef">Reduce:</label><br />
+                <textarea style="width:100%; height:100px;" id="indexEditorReduceDef" name="indexEditorReduceDef"></textarea><br /><br />
                 <button id="deleteIndex" style="margin-bottom:20px;">Delete Index</button>
             </div>
             <p id="indexList">
