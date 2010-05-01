@@ -14,6 +14,7 @@ namespace Raven.Database.Indexing
 		private volatile bool doWork = true;
 		private readonly ILog log = LogManager.GetLogger(typeof (WorkContext));
 		private readonly ThreadLocal<bool> shouldNotifyOnWork = new ThreadLocal<bool>();
+		private readonly ReaderWriterLockSlim readerWriterLockSlim = new ReaderWriterLockSlim();
 
 		public bool DoWork
 		{
@@ -81,6 +82,33 @@ namespace Raven.Database.Indexing
 				return;
 			ServerError ignored;
 			serverErrors.TryDequeue(out ignored);
+		}
+
+		public IDisposable ExecutingWork()
+		{
+			readerWriterLockSlim.EnterReadLock();
+			return new DisposableAction(readerWriterLockSlim.ExitReadLock);
+		}
+
+		public IDisposable HaltAllWork()
+		{
+			readerWriterLockSlim.EnterWriteLock();
+			return new DisposableAction(readerWriterLockSlim.ExitWriteLock);
+		}
+
+		public class DisposableAction : IDisposable
+		{
+			private readonly Action action;
+
+			public DisposableAction(Action action)
+			{
+				this.action = action;
+			}
+
+			public void Dispose()
+			{
+				action();
+			}
 		}
 	}
 }

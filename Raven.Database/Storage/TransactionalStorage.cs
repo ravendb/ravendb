@@ -27,7 +27,7 @@ namespace Raven.Database.Storage
 			path = database;
 			if (Path.IsPathRooted(database) == false)
 				path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, database);
-			this.database = Path.Combine(path, Path.GetFileName(database));
+			this.database = Path.Combine(path, "Data");
 			
 			LimitSystemCache();
 
