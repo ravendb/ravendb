@@ -6,16 +6,13 @@
     <link href="css/rdb.css" rel="stylesheet" type="text/css" />
     <link href="css/Pager.css" rel="stylesheet" type="text/css" />
     <link href="css/smoothness/jquery-ui-1.8rc2.custom.css" rel="Stylesheet" type="text/css" />
-
     <script type="text/javascript" src="js/jquery-1.4.2.min.js"></script>
     <script type="text/javascript" src="js/jquery-ui.js"></script>
     <script type="text/javascript" src="js/jquery-jtemplates.js"></script>
     <script type="text/javascript" src="js/jquery.pager.js"></script>
     <script type="text/javascript" src="js/json2.js"></script>
-
     <script type="text/javascript" src="js/jquery.RavenDB.js"></script>
     <script type="text/javascript" src="js/raven-ui.js"></script>
-
     <script type="text/javascript">
         var pageNumber = 1;
         var pageSize = 25;
@@ -23,9 +20,9 @@
 
         $(document).ready(function () {
             RavenUI.GetIndexCount(function (totalCount) {
-            numPages = Math.ceil(totalCount / pageSize);
+                numPages = Math.ceil(totalCount / pageSize);
                 var totalIndexes = totalCount;
-                if (totalIndexes != 0) {                    
+                if (totalIndexes != 0) {
                     getIndexPage();
                 } else {
                     $('#indexList').html('There are no indexes in your database');
@@ -43,7 +40,7 @@
             }).click(function () {
                 EditIndex($('#indexNameSearch').val());
             });
-            
+
             $('#deleteIndex').button({
                 icons: { primary: 'ui-icon-trash' }
             });
@@ -74,37 +71,37 @@
                     $(this).click(function () {
                         EditIndex($(this).attr('id'));
                     });
-                    
+
                     $("#pager").pager({
                         pagenumber: pageNumber,
                         pagecount: numPages,
                         buttonClickCallback: pagerClick
                     });
-                    
+
                     var previousBGColor;
                     $(this).hover(function () {
-                        previousBGColor =  $(this).css('background-color');
+                        previousBGColor = $(this).css('background-color');
                         $(this).css('background-color', '#94C2D8');
                         var x = $(this).position().left + $(this).outerWidth();
                         var y = $('.searchListWrapper').position().top;
                         var width = $('#body').width() - x - 20;
-                        var previewText = unescape($(this).children('.searchListItemValue').html());                       
+                        var previewText = unescape($(this).children('.searchListItemValue').html());
                         var previewDiv = $('<div class="indexPreview"></div>');
-                        $(previewDiv).html("<h2>Click to edit this index</h2><h3>Index Preview:</h3>" + previewText);                        
+                        $(previewDiv).html("<h2>Click to edit this index</h2><h3>Index Preview:</h3>" + previewText);
                         $('#indexPreview')
-                            .css('width', width +'px')
+                            .css('width', width + 'px')
                             .css('position', 'absolute')
                             .css('left', x + 'px')
                             .css('top', y + 'px')
                             .html(previewDiv);
                         if ($('#indexPreview').is(":animated"))
-                                $('#indexPreview').stop().show().fadeTo("normal",  0.9);
+                            $('#indexPreview').stop().show().fadeTo("normal", 0.9);
                         else
-                            $('#indexPreview').is(':visible') ? $('#indexPreview').fadeTo("normal", 0.9) : $('#indexPreview').fadeIn();                        
+                            $('#indexPreview').is(':visible') ? $('#indexPreview').fadeTo("normal", 0.9) : $('#indexPreview').fadeIn();
                     }, function () {
                         $(this).css('background-color', previousBGColor);
                         if ($('#indexPreview').is(':animated'))
-                            $('#indexPreview').stop().fadeTo("normal", 0, function() { $(this).hide() });
+                            $('#indexPreview').stop().fadeTo("normal", 0, function () { $(this).hide() });
                         else
                             $('#indexPreview').stop().fadeOut();
                     });
@@ -115,25 +112,31 @@
         function EditIndex(name) {
             RavenUI.GetIndex(name, function (index) {
                 $('#indexEditorName').val(name);
-                $('#indexEditorMapDef').val(index.index.Map);
+                $('#indexEditorMapDef').val(index.Index.Map);
+                if (index.Index.Reduce != undefined) {
+                    $('#indexEditorReduceDef').val(index.Index.Reduce);
+                }
+                else {
+                    $('#indexEditorReduceDef').val('');
+                }
                 $('#saveError, #ajaxSuccess, #ajaxError').hide();
-                
-                $('#deleteIndex').show().click(function() {
+
+                $('#deleteIndex').show().click(function () {
                     var deleteDialog = $('<div title="Delete Confirmation" class="ui-state-error ui-corner-all" style="padding:20px;"></div>');
                     $(deleteDialog)
                         .html('<p><span style="float: left; margin-right: 0.3em;" class="ui-icon ui-icon-alert"></span>Are you sure you want to delete this index?</p>')
                         .dialog({
                             modal: true,
-                            buttons: { 
-                                'Delete' : function() {
-                                    RavenUI.DeleteIndex(name, function(data) {
+                            buttons: {
+                                'Delete': function () {
+                                    RavenUI.DeleteIndex(name, function (data) {
                                         $(deleteDialog).dialog('close');
-                                        $('#divEditor').dialog('close');                       
+                                        $('#divEditor').dialog('close');
                                         $('#ajaxSuccess').html('Your index has been deleted.').fadeIn('slow');
                                         getIndexPage();
-                                    });                                                             
-                                }, 
-                                Cancel: function() {
+                                    });
+                                },
+                                Cancel: function () {
                                     $(this).dialog('close');
                                 }
                             },
@@ -145,14 +148,19 @@
                     buttons: {
                         Save: function () {
                             var newName = $('#indexEditorName').val();
-                            var mapDef = $('#indexEditorMapDef').val();
+                            var mapDef = { Map: $('#indexEditorMapDef').val() };
+
+                            var reduce = $('#indexEditorReduceDef').val();
+                            if (reduce.trim() != '') {
+                                mapDef["Reduce"] = reduce;
+                            }
                             RavenUI.SaveIndex(newName, mapDef, function (data) {
                                 $('#divEditor').dialog('close');
                                 $('#ajaxSuccess').html('Your index has been updated. Click <a href="#" onclick="EditIndex(\'' + newName + '\'); return false;">here</a> to see it again.').fadeIn('slow');
                                 getIndexPage();
-                            }, function() {
+                            }, function () {
                                 $('#saveError').fadeIn();
-                            });                                                        
+                            });
                         },
                         Cancel: function () {
                             $(this).dialog('close');
@@ -167,19 +175,26 @@
         function CreateIndex() {
             $('#indexEditorName').val('');
             $('#indexEditorMapDef').val('');
-            $('#saveError, #ajaxSuccess, #ajaxError').hide(); 
-            $('#deleteIndex').hide();           
+            $('#indexEditorReduceDef').val('');
+            $('#saveError, #ajaxSuccess, #ajaxError').hide();
+            $('#deleteIndex').hide();
             $('#divEditor').dialog({
                 modal: true,
                 buttons: {
                     Save: function () {
                         var newName = $('#indexEditorName').val();
-                        var mapDef = $('#indexEditorMapDef').val();
+                        var mapDef = { Map: $('#indexEditorMapDef').val() };
+
+                        var reduce = $('#indexEditorReduceDef').val();
+                        if (reduce.trim() != '') {
+                            mapDef["Reduce"] = reduce;
+                        }
+
                         RavenUI.SaveIndex(newName, mapDef, function (data) {
                             $('#divEditor').dialog('close');
                             getIndexPage();
                             $('#ajaxSuccess').html('Your index has been created. Click <a href="#" onclick="EditIndex(\'' + newName + '\'); return false;">here</a> to see it again.').fadeIn('slow');
-                        }, function() {
+                        }, function () {
                             $('#saveError').fadeIn();
                         });
                     },
@@ -194,7 +209,7 @@
 
 
         function pagerClick(newPageNumber) {
-            pageNumber = newPageNumber;            
+            pageNumber = newPageNumber;
             getIndexPage();
         }
     </script>
@@ -202,7 +217,8 @@
 <body>
     <div id="header">
         <div id="logo">
-            <a href="index.html" title="Home"><img src="images/logo.png" alt="RavenDB" style="border:none;" /></a>
+            <a href="index.html" title="Home">
+                <img src="images/logo.png" alt="RavenDB" style="border: none;" /></a>
         </div>
         <div id="nav">
             <ul>
@@ -213,57 +229,75 @@
                 <li><a href="view.html?docId=raven_documentation/index">documentation</a></li>
             </ul>
         </div>
-        <div class="clear"></div>
-    </div>    
-    <div id="body" style="position:relative;">
-        <div id="ajaxSuccess"></div>
-        <div id="ajaxError"></div>
-        <div id="right" style="width:250px;">
+        <div class="clear">
+        </div>
+    </div>
+    <div id="body" style="position: relative;">
+        <div id="ajaxSuccess">
+        </div>
+        <div id="ajaxError">
+        </div>
+        <div id="right" style="width: 250px;">
             <div class="sideBarListBox">
-                <h3>Index Actions</h3>
+                <h3>
+                    Index Actions</h3>
                 <ul>
-                    <li><button id="createNewIndex">Create New Index</button></li>
                     <li>
-                        Search Indexes By Name<br />
-                        <input id="indexNameSearch" style="width:200px; margin: 10px 0;" /><br />
-                        <button id="editSearchedIndex" style="display:none;">Edit Index</button>
+                        <button id="createNewIndex">
+                            Create New Index</button></li>
+                    <li>Search Indexes By Name<br />
+                        <input id="indexNameSearch" style="width: 200px; margin: 10px 0;" /><br />
+                        <button id="editSearchedIndex" style="display: none;">
+                            Edit Index</button>
                     </li>
                 </ul>
             </div>
         </div>
-        <div id="content" style="margin-right:350px;">
+        <div id="content" style="margin-right: 350px;">
             <h2>
                 Indexes
             </h2>
-            <div id="divEditor" style="display:none;">
-                <div id="saveError" style="font-weight:bold; color:Red; margin:20px 0; display:none;">
+            <div id="divEditor" style="display: none;">
+                <div id="saveError" style="font-weight: bold; color: Red; margin: 20px 0; display: none;">
                     There was an error saving your index.<br />
                     Please ensure your syntax is correct and try again.
                 </div>
-                <label for="indexEditorName">Name</label><br />
-                <input type="text" style="width:100%;" id="indexEditorName" name="indexEditorName"></input><br /><br />
-
-                <label for="indexEditorMapDef">Map:</label><br />
-                <textarea style="width:100%; height:100px;" id="indexEditorMapDef" name="indexEditorMapDef"></textarea><br /><br />
-                <button id="deleteIndex" style="margin-bottom:20px;">Delete Index</button>
+                <label for="indexEditorName">
+                    Name</label><br />
+                <input type="text" style="width: 100%;" id="indexEditorName" name="indexEditorName"></input><br />
+                <br />
+                <label for="indexEditorMapDef">
+                    Map:</label><br />
+                <textarea style="width: 100%; height: 100px;" id="indexEditorMapDef" name="indexEditorMapDef"></textarea><br />
+                <br />
+                <label for="indexEditorReduceDef">
+                    Reduce:</label><br />
+                <textarea style="width: 100%; height: 100px;" id="indexEditorReduceDef" name="indexEditorReduceDef"></textarea><br />
+                <br />
+                <button id="deleteIndex" style="margin-bottom: 20px;">
+                    Delete Index</button>
             </div>
             <p id="indexList">
-                <img src="images/ajax-loader.gif" /> Loading...
+                <img src="images/ajax-loader.gif" />
+                Loading...
             </p>
-            <div id="pager"></div>
-            <div id="indexPreview" class="ui-corner-all" style="display:none; background-color: #fff; border:1px solid #000; opacity: 0.9;">
-            
+            <div id="pager">
             </div>
-        </div>                
+            <div id="indexPreview" class="ui-corner-all" style="display: none; background-color: #fff;
+                border: 1px solid #000; opacity: 0.9;">
+            </div>
+        </div>
     </div>
     <div id="footer">
-        <div style="float:left; margin-left:20px;">
-            Copyright 2010 <a href="http://hibernatingrhinos.com">Hibernating Rhinos</a>. All Rights Reserved.            
+        <div style="float: left; margin-left: 20px;">
+            Copyright 2010 <a href="http://hibernatingrhinos.com">Hibernating Rhinos</a>. All
+            Rights Reserved.
         </div>
-        <div style="float:right; margin-right:20px;">
+        <div style="float: right; margin-right: 20px;">
             Web interface developed by <a href="http://werul.com">Werül</a>
         </div>
-        <div style="clear:both;"></div>
+        <div style="clear: both;">
+        </div>
     </div>
 </body>
 </html>
