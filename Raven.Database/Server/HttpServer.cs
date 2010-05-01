@@ -44,6 +44,9 @@ namespace Raven.Server
 				requestResponder.Database = database;
 				requestResponder.Settings = configuration;
 			}
+      //force the root responder to be the last one evaluated so that it doesn't
+      //match incorrectly.
+		  RequestResponders = RequestResponders.OrderByDescending(x => x.UrlPattern.Length).ToList();
 		}
 
 		#region IDisposable Members
