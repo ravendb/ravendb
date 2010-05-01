@@ -398,7 +398,7 @@ namespace Raven.Database.Storage
 			                   100);
 		}
 
-		private void CreateDirectoriesTable(JET_DBID dbid)
+		public void CreateDirectoriesTable(JET_DBID dbid)
 		{
 			JET_TABLEID tableid;
 			Api.JetCreateTable(session, dbid, "directories", 16, 100, out tableid);

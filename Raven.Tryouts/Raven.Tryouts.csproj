@@ -66,6 +66,7 @@
       <HintPath>..\SharedLibs\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
@@ -94,6 +95,10 @@
     <ProjectReference Include="..\Raven.Database\Raven.Database.csproj">
       <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
       <Name>Raven.Database</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Tests\Raven.Tests.csproj">
+      <Project>{267AC60C-751E-42E9-AA18-66035DEFF63A}</Project>
+      <Name>Raven.Tests</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

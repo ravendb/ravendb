@@ -49,11 +49,11 @@ namespace Raven.Database.Indexing
 
 		}
 
-		private static Index CreateIndexImplementation(string name, IndexDefinition indexDefinition, Lucene.Net.Store.Directory directory)
+		private Index CreateIndexImplementation(string name, IndexDefinition indexDefinition, Lucene.Net.Store.Directory directory)
 		{
 			return indexDefinition.IsMapReduce
-				? (Index) new MapReduceIndex(directory, name, indexDefinition)
-				: new SimpleIndex(directory, name, indexDefinition);
+				? (Index) new MapReduceIndex(directory, name, indexDefinition,transactionalStorage)
+				: new SimpleIndex(directory, name, indexDefinition, transactionalStorage);
 		}
 
 		public string[] Indexes

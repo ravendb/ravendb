@@ -82,7 +82,7 @@ namespace Raven.Database.Storage
 
 		public override IndexOutput CreateOutput(string name)
 		{
-			var batch = transactionalStorage.INTERNAL_METHOD_GetCurrentBatch();
+			var batch = transactionalStorage.GetCurrentBatch();
 			if (batch.FileExistsInDirectory(directory, name) == false)// SIDE EFFECT: move the current row
 				batch.CreateFileInDirectory(directory, name);
 			var bookmark = Api.GetBookmark(batch.Session, batch.Directories);
@@ -97,7 +97,7 @@ namespace Raven.Database.Storage
 
 		public override IndexInput OpenInput(string name)
 		{
-			var batch = transactionalStorage.INTERNAL_METHOD_GetCurrentBatch();
+			var batch = transactionalStorage.GetCurrentBatch();
 			if (batch.FileExistsInDirectory(directory, name) == false)
 				throw new FileNotFoundException(name + " in " + directory);
 			return new EsentIndexInput(transactionalStorage, directory, name);
@@ -128,13 +128,13 @@ namespace Raven.Database.Storage
 
 			public override long Length()
 			{
-				var batch = transactionalStorage.INTERNAL_METHOD_GetCurrentBatch();
+				var batch = transactionalStorage.GetCurrentBatch();
 				return batch.GetLengthOfFileInDirectory(directory, name);
 			}
 
 			public override void ReadInternal(byte[] b, int offset, int length)
 			{
-				var batch = transactionalStorage.INTERNAL_METHOD_GetCurrentBatch();
+				var batch = transactionalStorage.GetCurrentBatch();
 				position += batch.ReadFromFileInDirectory(directory, name, position, b, offset, length);
 			}
 
@@ -199,12 +199,12 @@ namespace Raven.Database.Storage
 
 			public override Lock MakeLock(string lockName)
 			{
-				return new EsentLock(transactionalStorage.INTERNAL_METHOD_GetCurrentBatch(), directory, lockName);
+				return new EsentLock(transactionalStorage.GetCurrentBatch(), directory, lockName);
 			}
 
 			public override void ClearLock(string lockName)
 			{
-				transactionalStorage.INTERNAL_METHOD_GetCurrentBatch().DeleteFileInDirectory(directory, lockName);
+				transactionalStorage.GetCurrentBatch().DeleteFileInDirectory(directory, lockName);
 			}
 		}
 

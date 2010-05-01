@@ -87,7 +87,7 @@ namespace Raven.Database.Storage
 			Api.MakeKey(session, Directories, directory, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			Api.MakeKey(session, Directories, name, Encoding.Unicode, MakeKeyGrbit.None);
 			if (Api.TrySeek(session, Directories, SeekGrbit.SeekEQ) == false)
-				throw new InvalidOperationException("File " + name + " was not found in " + directory);
+				throw new InvalidOperationException(string.Format("File {0} was not found in {1} ", name, directory));
 		}
 
 		public void DeleteAllFilesInDirectory(string name)

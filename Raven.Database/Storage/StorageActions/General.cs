@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Text;
+using System.Threading;
 using log4net;
 using Microsoft.Isam.Esent.Interop;
 

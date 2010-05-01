@@ -27,11 +27,12 @@ namespace Raven.Database.Indexing
 		protected readonly ILog log = LogManager.GetLogger(typeof (Index));
 		protected readonly string name;
 		protected readonly IndexDefinition indexDefinition;
-		private CurrentIndexSearcher searcher;
+		private TransactionalStorage transactionalStorage;
 
-		protected Index(Directory directory, string name,IndexDefinition indexDefinition)
+		protected Index(Directory directory, string name,IndexDefinition indexDefinition, TransactionalStorage transactionalStorage)
 		{
 			this.name = name;
+			this.transactionalStorage = transactionalStorage;
 			this.indexDefinition = indexDefinition;
 			log.DebugFormat("Creating index for {0}", name);
 			this.directory = directory;
@@ -40,18 +41,12 @@ namespace Raven.Database.Indexing
 			// this may happen if the server crashed while
 			// writing to the index
 			this.directory.ClearLock("write.lock");
-
-			searcher = new CurrentIndexSearcher
-			{
-				Searcher = new IndexSearcher(directory, true)
-			};
 		}
 
 		#region IDisposable Members
 
 		public void Dispose()
 		{
-			searcher.Searcher.Close();
 			directory.Close();
 		}
 
@@ -59,32 +54,37 @@ namespace Raven.Database.Indexing
 
 		public IEnumerable<IndexQueryResult> Query(IndexQuery indexQuery)
 		{
-			using (searcher.Use())
+			var searcher = new IndexSearcher(directory, true);
+			try
 			{
-				var search = ExecuteQuery(indexQuery, GetLuceneQuery(indexQuery));
+				var search = ExecuteQuery(searcher, indexQuery, GetLuceneQuery(indexQuery));
 				indexQuery.TotalSize.Value = search.totalHits;
 				var previousDocuments = new HashSet<string>();
 				for (var i = indexQuery.Start; i < search.totalHits && (i - indexQuery.Start) < indexQuery.PageSize; i++)
 				{
-					var document = searcher.Searcher.Doc(search.scoreDocs[i].doc);
+					var document = searcher.Doc(search.scoreDocs[i].doc);
 					if (IsDuplicateDocument(document, indexQuery.FieldsToFetch, previousDocuments))
 						continue;
 					yield return RetrieveDocument(document, indexQuery.FieldsToFetch);
 				}
 			}
+			finally
+			{
+				searcher.Close();
+			}
 		}
 
-		private TopDocs ExecuteQuery(IndexQuery indexQuery, Query luceneQuery)
+		private static TopDocs ExecuteQuery(IndexSearcher searcher, IndexQuery indexQuery, Query luceneQuery)
 		{
 			TopDocs search;
 			if (indexQuery.SortedFields != null)
 			{
 				var sort = new Sort(indexQuery.SortedFields.Select(x => x.ToLuceneSortField()).ToArray());
-				search = searcher.Searcher.Search(luceneQuery, null, indexQuery.PageSize,sort);
+				search = searcher.Search(luceneQuery, null, indexQuery.PageSize,sort);
 			}
 			else
 			{
-				search = searcher.Searcher.Search(luceneQuery, null, indexQuery.PageSize);
+				search = searcher.Search(luceneQuery, null, indexQuery.PageSize);
 			}
 			return search;
 		}
@@ -122,17 +122,15 @@ namespace Raven.Database.Indexing
 		protected void Write(Func<IndexWriter, bool> action)
 		{
 			var indexWriter = new IndexWriter(directory, new StandardAnalyzer(Version.LUCENE_CURRENT),IndexWriter.MaxFieldLength.UNLIMITED);
-			bool shouldRcreateSearcher;
 			try
 			{
-				shouldRcreateSearcher = action(indexWriter);
+				indexWriter.SetMergeScheduler(new EsentMergeConcurrentMergeScheduler(transactionalStorage));
+				action(indexWriter);
 			}
 			finally
 			{
 				indexWriter.Close();
 			}
-			if (shouldRcreateSearcher)
-				RecreateSearcher();
 		}
 
 
@@ -198,67 +196,6 @@ namespace Raven.Database.Indexing
 			return docId;
 		}
 
-		private void RecreateSearcher()
-		{
-			using (searcher.Use())
-			{
-				searcher.MarkForDispoal();
-				searcher = new CurrentIndexSearcher
-				{
-					Searcher = new IndexSearcher(directory, true)
-				};
-				Thread.MemoryBarrier(); // force other threads to see this write
-			}
-		}
-
 		public abstract void Remove(string[] keys, WorkContext context);
-
-		#region Nested type: CurrentIndexSearcher
-
-		private class CurrentIndexSearcher
-		{
-			private bool shouldDisposeWhenThereAreNoUsages;
-			private int useCount;
-			public IndexSearcher Searcher { get; set; }
-
-
-			public IDisposable Use()
-			{
-				Interlocked.Increment(ref useCount);
-				return new CleanUp(this);
-			}
-
-			public void MarkForDispoal()
-			{
-				shouldDisposeWhenThereAreNoUsages = true;
-			}
-
-			#region Nested type: CleanUp
-
-			private class CleanUp : IDisposable
-			{
-				private readonly CurrentIndexSearcher parent;
-
-				public CleanUp(CurrentIndexSearcher parent)
-				{
-					this.parent = parent;
-				}
-
-				#region IDisposable Members
-
-				public void Dispose()
-				{
-					var uses = Interlocked.Decrement(ref parent.useCount);
-					if (parent.shouldDisposeWhenThereAreNoUsages && uses == 0)
-						parent.Searcher.Close();
-				}
-
-				#endregion
-			}
-
-			#endregion
-		}
-
-		#endregion
 	}
 }

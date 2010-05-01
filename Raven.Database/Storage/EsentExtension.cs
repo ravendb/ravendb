@@ -9,6 +9,7 @@ namespace Raven.Database.Storage
 		public static void WithDatabase(this JET_INSTANCE instance, string database, Action<Session, JET_DBID> action)
 		{
 			using (var session = new Session(instance))
+			using(var tx = new	Transaction(session))
 			{
 				JET_DBID dbid;
 				Api.JetOpenDatabase(session, database, "", out dbid, OpenDatabaseGrbit.None);
@@ -20,6 +21,7 @@ namespace Raven.Database.Storage
 				{
 					Api.JetCloseDatabase(session, dbid, CloseDatabaseGrbit.None);
 				}
+				tx.Commit(CommitTransactionGrbit.None);
 			}
 		}
 	}
