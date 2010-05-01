@@ -1,6 +1,9 @@
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
+using System.Threading;
 using Lucene.Net.Store;
 using Microsoft.Isam.Esent.Interop;
 using Directory = Lucene.Net.Store.Directory;
@@ -17,9 +20,10 @@ namespace Raven.Database.Storage
 			this.transactionalStorage = transactionalStorage;
 			this.directory = directory;
 
-			SetLockFactory(new EsentLockFactory(this));
+			base.SetLockFactory(new EsentLockFactory(transactionalStorage, directory));
 		}
 
+		[Obsolete("For some Directory implementations (FSDirectory}, and its subclasses), this method silently filters its results to include only index files.  Please use ListAll instead, which does no filtering. ")]
 		public override string[] List()
 		{
 			string[] results = null;
@@ -60,6 +64,7 @@ namespace Raven.Database.Storage
 			transactionalStorage.Batch(actions => actions.DeleteFileInDirectory(directory, name));
 		}
 
+		[Obsolete]
 		public override void RenameFile(string from, string to)
 		{
 			transactionalStorage.Batch(actions => actions.RenameFileInDirectory(directory, from, to));
@@ -77,70 +82,25 @@ namespace Raven.Database.Storage
 
 		public override IndexOutput CreateOutput(string name)
 		{
-			transactionalStorage.Batch(actions =>
-			{
-				if (actions.FileExistsInDirectory(directory, name) == false) 
-					actions.CreateFileInDirectory(directory, name);
-			});
-			return OpenSession<IndexOutput>(name, true, (stream, action) => new EsentIndexOutput(stream, action));
+			var batch = transactionalStorage.INTERNAL_METHOD_GetCurrentBatch();
+			if (batch.FileExistsInDirectory(directory, name) == false)// SIDE EFFECT: move the current row
+				batch.CreateFileInDirectory(directory, name);
+			var bookmark = Api.GetBookmark(batch.Session, batch.Directories);
+			return new EsentIndexOutput(new ColumnStream(batch.Session, batch.Directories, transactionalStorage.TableColumnsCache.DirectoriesColumns["data"]),
+				() => Api.JetGotoBookmark(batch.Session, batch.Directories, bookmark, bookmark.Length),
+				() =>
+				{
+					Api.JetGotoBookmark(batch.Session, batch.Directories, bookmark, bookmark.Length);
+					return new Update(batch.Session, batch.Directories, JET_prep.Replace);
+				});
 		}
 
 		public override IndexInput OpenInput(string name)
 		{
-				transactionalStorage.Batch(actions =>
-			{
-				if (actions.FileExistsInDirectory(directory, name) == false) 
-					actions.CreateFileInDirectory(directory, name);
-			});
-				return OpenSession<IndexInput>(name, false, (stream, action) => new EsentIndexInput(stream, action));
-		}
-
-		private T OpenSession<T>(string name, bool update, Func<Stream, Action,T> create)
-		{
-			Table table = null;
-			Transaction transaction = null;
-			Session session = null;
-			var tuple = transactionalStorage.OpenSession();
-			try
-			{
-				transaction = tuple.Item2;
-				session = tuple.Item1;
-				table = new Table(session, tuple.Item3, "directories", OpenTableGrbit.None);
-				Api.JetSetCurrentIndex(session, table, "by_index_and_name");
-				Api.MakeKey(session, table, directory, Encoding.Unicode, MakeKeyGrbit.NewKey);
-				Api.MakeKey(session, table, name, Encoding.Unicode, MakeKeyGrbit.None);
-				if (Api.TrySeek(session, table, SeekGrbit.SeekEQ) == false)
-					throw new InvalidOperationException("File " + name + " was not found in " + directory);
-
-				Update updateOp = null;
-				if(update)
-					updateOp = new Update(session, table, JET_prep.Replace);
-				
-				return create(new ColumnStream(session, table, transactionalStorage.TableColumnsCache.DirectoriesColumns["data"]), () =>
-				{
-					if (updateOp != null)
-					{
-						updateOp.Save();
-					}
-
-					table.Dispose();
-					Api.JetCloseDatabase(session, tuple.Item3,CloseDatabaseGrbit.None);
-					transaction.Commit(CommitTransactionGrbit.LazyFlush);
-					transaction.Dispose();
-					session.Dispose();
-				});
-			}
-			catch (Exception)
-			{
-				if (table != null)
-					table.Dispose();
-				Api.JetCloseDatabase(session, tuple.Item3, CloseDatabaseGrbit.None);
-				if (transaction != null)
-					transaction.Dispose();
-				if (session != null)
-					session.Dispose();
-				throw;
-			}
+			var batch = transactionalStorage.INTERNAL_METHOD_GetCurrentBatch();
+			if (batch.FileExistsInDirectory(directory, name) == false)
+				throw new FileNotFoundException(name + " in " + directory);
+			return new EsentIndexInput(transactionalStorage, directory, name);
 		}
 
 		public override void Close()
@@ -149,114 +109,133 @@ namespace Raven.Database.Storage
 
 		public class EsentIndexInput : BufferedIndexInput
 		{
-			private readonly Stream stream;
-			private readonly Action onClose;
+			private readonly TransactionalStorage transactionalStorage;
+			private readonly string directory;
+			private readonly string name;
+			private long position;
 
-			public EsentIndexInput(Stream stream, Action onClose)
+			public EsentIndexInput(TransactionalStorage transactionalStorage,string directory, string name)
 			{
-				this.stream = stream;
-				this.onClose = onClose;
+				this.transactionalStorage = transactionalStorage;
+				this.directory = directory;
+				this.name = name;
 			}
 
 			public override void Close()
 			{
-				stream.Close();
-				onClose();
 			}
 
 			public override long Length()
 			{
-				return stream.Length;
+				var batch = transactionalStorage.INTERNAL_METHOD_GetCurrentBatch();
+				return batch.GetLengthOfFileInDirectory(directory, name);
 			}
 
-			protected override void ReadInternal(byte[] b, int offset, int length)
+			public override void ReadInternal(byte[] b, int offset, int length)
 			{
-				stream.Read(b, offset, length);
+				var batch = transactionalStorage.INTERNAL_METHOD_GetCurrentBatch();
+				position += batch.ReadFromFileInDirectory(directory, name, position, b, offset, length);
 			}
 
-			protected override void SeekInternal(long pos)
+			public override void SeekInternal(long pos)
 			{
-				stream.Seek(pos, SeekOrigin.Begin);
+				position = pos;
 			}
 		}
 
 		public class EsentIndexOutput : BufferedIndexOutput
-		{	
+		{
 			private readonly Stream stream;
-			private readonly Action onClose;
+			private readonly Action moveToRecord;
+			private readonly Func<Update> moveToRecordAndStartUpdate;
 
-			public EsentIndexOutput(Stream stream, Action onClose)
+			public EsentIndexOutput(Stream stream, Action moveToRecord, Func<Update> moveToRecordAndStartUpdate)
 			{
 				this.stream = stream;
-				this.onClose = onClose;
+				this.moveToRecord = moveToRecord;
+				this.moveToRecordAndStartUpdate = moveToRecordAndStartUpdate;
 			}
-
 
 			public override void FlushBuffer(byte[] b, int offset, int len)
 			{
+				var update = moveToRecordAndStartUpdate();
 				stream.Write(b, offset, len);
+				stream.Flush();
+				update.Save();
 			}
 
 			public override long Length()
 			{
+				moveToRecord();
 				return stream.Length;
+			}
+
+			public override void Seek(long pos)
+			{
+				moveToRecord();
+				base.Seek(pos);
+				stream.Seek(pos, SeekOrigin.Begin);
 			}
 
 			public override void Close()
 			{
+				moveToRecord();
 				base.Close();
 				stream.Close();
-				onClose();
 			}
 		}
 
 		public class EsentLockFactory : LockFactory
 		{
-			private readonly EsentDirectory directory;
+			private readonly TransactionalStorage transactionalStorage;
+			private readonly string directory;
 
-			public EsentLockFactory(EsentDirectory directory)
+			public EsentLockFactory(TransactionalStorage transactionalStorage, string directory)
 			{
+				this.transactionalStorage = transactionalStorage;
 				this.directory = directory;
 			}
 
 			public override Lock MakeLock(string lockName)
 			{
-				return new EsentLock(lockName, directory);
+				return new EsentLock(transactionalStorage.INTERNAL_METHOD_GetCurrentBatch(), directory, lockName);
 			}
 
 			public override void ClearLock(string lockName)
 			{
-				directory.DeleteFile(lockName);
+				transactionalStorage.INTERNAL_METHOD_GetCurrentBatch().DeleteFileInDirectory(directory, lockName);
 			}
 		}
 
 		public class EsentLock : Lock
 		{
 			private readonly string lockName;
-			private readonly EsentDirectory directory;
+			private readonly DocumentStorageActions batch;
+			private readonly string directory;
 
-			public EsentLock(string lockName, EsentDirectory directory)
+			public EsentLock(DocumentStorageActions batch, string directory, string lockName)
 			{
 				this.lockName = lockName;
+				this.batch = batch;
 				this.directory = directory;
 			}
 
 			public override bool Obtain()
 			{
-				var indexOutput = directory.CreateOutput(lockName);
-				indexOutput.WriteByte(1);
-				indexOutput.Close();
-				return true;
+				bool alreadyExists = batch.FileExistsInDirectory(directory, lockName);
+				if (alreadyExists == false)
+					batch.CreateFileInDirectory(directory, lockName);
+				return alreadyExists == false;
 			}
 
 			public override void Release()
 			{
-				directory.DeleteFile(lockName);
+				batch.DeleteFileInDirectory(directory, lockName);
 			}
 
 			public override bool IsLocked()
 			{
-				return directory.FileExists(lockName);
+				return batch.FileExistsInDirectory(directory, lockName);
 			}
 		}
 	}

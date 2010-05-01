@@ -102,11 +102,24 @@ namespace Raven.Database.Storage
 
 		public void CreateFileInDirectory(string directory, string name)
 		{
-			using(var update = new Update(session,Directories,JET_prep.Insert))
+			var bookmark = new byte[SystemParameters.BookmarkMost];
+			int size;
+			using (var update = new Update(session, Directories, JET_prep.Insert))
 			{
 				Api.SetColumn(session, Directories, tableColumnsCache.DirectoriesColumns["index"], directory, Encoding.Unicode);
 				Api.SetColumn(session, Directories, tableColumnsCache.DirectoriesColumns["name"], name, Encoding.Unicode);
-				update.Save();
+				update.Save(bookmark,bookmark.Length, out size);
+			}
+			Api.JetGotoBookmark(session, Directories, bookmark, size);
+		}
+
+		public long ReadFromFileInDirectory(string directory, string name, long position, byte[] bytes, int offset, int length)
+		{
+			GotoFile(directory, name);
+			using(var stream = new ColumnStream(session,Directories, tableColumnsCache.DirectoriesColumns["data"]))
+			{
+				stream.Position = position;
+				return stream.Read(bytes, offset, length);
 			}
 		}
 	}

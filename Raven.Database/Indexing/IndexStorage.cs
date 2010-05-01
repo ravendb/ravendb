@@ -14,6 +14,7 @@ using Raven.Database.Extensions;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
 using Directory = System.IO.Directory;
+using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Database.Indexing
 {
@@ -29,21 +30,23 @@ namespace Raven.Database.Indexing
 		public IndexStorage(IndexDefinitionStorage indexDefinitionStorage, TransactionalStorage transactionalStorage)
 		{
 			this.transactionalStorage = transactionalStorage;
-		
-			string[] indexNames = null;
+
 			transactionalStorage.Batch(actions =>
 			{
-				indexNames = actions.GetIndexesStats().Select(x=>x.Name).ToArray();
+				string[] indexNames = actions.GetIndexesStats().Select(x => x.Name).ToArray();
+
+				foreach (var indexDirectory in indexNames)
+				{
+					log.DebugFormat("Loading saved index {0}", indexDirectory);
+					var indexDefinition = indexDefinitionStorage.GetIndexDefinition(indexDirectory);
+					if (indexDefinition == null)
+						continue;
+					indexes.TryAdd(indexDirectory,
+					               CreateIndexImplementation(indexDirectory, indexDefinition,
+					                                         new EsentDirectory(transactionalStorage, indexDirectory)));
+				}
 			});
 
-			foreach (var indexDirectory in indexNames)
-			{
-				log.DebugFormat("Loading saved index {0}", indexDirectory);
-				var indexDefinition = indexDefinitionStorage.GetIndexDefinition(indexDirectory);
-				if(indexDefinition == null)
-					continue;
-				indexes.TryAdd(indexDirectory, CreateIndexImplementation(indexDirectory, indexDefinition, new EsentDirectory(transactionalStorage, indexDirectory)));
-			}
 		}
 
 		private static Index CreateIndexImplementation(string name, IndexDefinition indexDefinition, Lucene.Net.Store.Directory directory)
@@ -83,10 +86,7 @@ namespace Raven.Database.Indexing
 			Index ignored;
 			if (indexes.TryRemove(name, out ignored))
 			{
-				transactionalStorage.Batch(actions =>
-				{
-					actions.DeleteAllFilesInDirectory(name);
-				});
+				transactionalStorage.Batch(actions => actions.DeleteAllFilesInDirectory(name));
 			}
 		}
 
@@ -97,8 +97,15 @@ namespace Raven.Database.Indexing
 			indexes.AddOrUpdate(name, n =>
 			{
 				var directory = new EsentDirectory(transactionalStorage, name);
-				new IndexWriter(directory, new StandardAnalyzer()).Close(); //creating index structure
-				return CreateIndexImplementation(name, indexDefinition, directory);
+				Index indexImplementation = null;
+				transactionalStorage.Batch(actions =>
+				{
+					//creating index structure
+					new IndexWriter(directory, new StandardAnalyzer(Version.LUCENE_CURRENT), IndexWriter.MaxFieldLength.UNLIMITED).
+						Close();
+					indexImplementation = CreateIndexImplementation(name, indexDefinition, directory);
+				});
+				return indexImplementation;
 			}, (s, index) => index);
 		}
 

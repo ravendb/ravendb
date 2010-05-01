@@ -18,7 +18,7 @@ namespace Raven.Database.Storage
 		}
 
 		private Table directories;
-		protected Table Directories
+		protected internal Table Directories
 		{
 			get { return directories ?? (directories = new Table(session, dbid, "directories", OpenTableGrbit.None)); }
 		}
