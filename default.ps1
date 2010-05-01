@@ -180,15 +180,24 @@ task DoRelease -depends Merge {
 	mkdir $build_dir\Output\Web
 	mkdir $build_dir\Output\Web\bin
 	mkdir $build_dir\Output\Server
+	mkdir $build_dir\Output\EmbeddedClient
+	mkdir $build_dir\Output\Client-3.5
 	mkdir $build_dir\Output\Client
 	
-	cp $build_dir\Raven.Client.dll $build_dir\Output\Client
-	cp $build_dir\Raven.Database.dll $build_dir\Output\Client
-	cp $build_dir\Esent.Interop.dll $build_dir\Output\Client
-	cp $build_dir\ICSharpCode.NRefactory.dll $build_dir\Output\Client
-	cp $build_dir\Lucene.Net.dll $build_dir\Output\Client
-	cp $build_dir\log4net.dll $build_dir\Output\Client
+	cp $build_dir\Raven.Client.dll $build_dir\Output\EmbeddedClient
+	cp $build_dir\Raven.Database.dll $build_dir\Output\EmbeddedClient
+	cp $build_dir\Esent.Interop.dll $build_dir\Output\EmbeddedClient
+	cp $build_dir\ICSharpCode.NRefactory.dll $build_dir\Output\EmbeddedClient
+	cp $build_dir\Lucene.Net.dll $build_dir\Output\EmbeddedClient
+	cp $build_dir\log4net.dll $build_dir\Output\EmbeddedClient
+	cp $build_dir\Newtonsoft.Json.dll $build_dir\Output\EmbeddedClient
+	
 	cp $build_dir\Newtonsoft.Json.dll $build_dir\Output\Client
+	cp $build_dir\Raven.Client.Ligthwieght.dll $build_dir\Output\Client
+	
+	cp $build_dir\Newtonsoft.Json.dll $build_dir\Output\Client-3.5
+	cp $build_dir\Raven.Client-3.5.dll $build_dir\Output\Client-3.5
+	
 	
 	cp $build_dir\RavenWeb.dll $build_dir\Output\Web\bin
 	cp $base_dir\DefaultConfigs\web.config $build_dir\Output\Web\web.config
@@ -206,7 +215,9 @@ task DoRelease -depends Merge {
 	
 	& $tools_dir\zip.exe -9 -A `
 		$release_dir\Raven.zip `
+		EmbeddedClient\*.* `
 		Client\*.* `
+		Client-3.5\*.* `
 		Web\*.* `
 		Web\bin\*.* `
 		Server\*.* `
