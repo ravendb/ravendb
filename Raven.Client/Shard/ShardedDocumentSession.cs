@@ -89,7 +89,7 @@ namespace Raven.Client.Shard
 			if (ReferenceEquals(entity, null))
 				throw new ArgumentNullException("entity");
 
-			var shardIds = shardStrategy.ShardSelectionStrategy.SelectShardIdForExistingObject(entity);
+			var shardIds = shardStrategy.ShardSelectionStrategy.ShardIdForExistingObject(entity);
 
 			GetSingleShardSession(shardIds).Delete(entity);
 		}
@@ -104,7 +104,7 @@ namespace Raven.Client.Shard
 
 		public void Store<T>(T entity)
 		{
-			string shardId = shardStrategy.ShardSelectionStrategy.SelectShardIdForNewObject(entity);
+			string shardId = shardStrategy.ShardSelectionStrategy.ShardIdForNewObject(entity);
 			if (String.IsNullOrEmpty(shardId))
 				throw new ApplicationException("Can't find a shard to use for entity: " + entity);
 
@@ -113,7 +113,7 @@ namespace Raven.Client.Shard
 
 		public void Evict<T>(T entity)
 		{
-			string shardId = shardStrategy.ShardSelectionStrategy.SelectShardIdForExistingObject(entity);
+			string shardId = shardStrategy.ShardSelectionStrategy.ShardIdForExistingObject(entity);
 			if (String.IsNullOrEmpty(shardId))
 				throw new ApplicationException("Can't find a shard to use for entity: " + entity);
 
@@ -140,7 +140,7 @@ namespace Raven.Client.Shard
 		private IDocumentSession[] GetAppropriateShardedSessions<T>(string key)
 		{
 			var sessionIds =
-				shardStrategy.ShardResolutionStrategy.SelectShardIdsFromData(ShardResolutionStrategyData.BuildFrom(typeof(T), key));
+				shardStrategy.ShardResolutionStrategy.SelectShardIds(ShardResolutionStrategyData.BuildFrom(typeof(T), key));
 			IDocumentSession[] documentSessions;
 			if (sessionIds != null)
 				documentSessions = shardSessions.Where(session => sessionIds.Contains(session.StoreIdentifier)).ToArray();

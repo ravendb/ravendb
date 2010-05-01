@@ -10,7 +10,7 @@ namespace Raven.Sample.ShardClient
 {
     public class ShardSelectionByRegion : IShardSelectionStrategy
     {
-        public string SelectShardIdForNewObject(object obj)
+        public string ShardIdForNewObject(object obj)
         {
             var company = obj as Company;
             if (company != null)
@@ -27,9 +27,9 @@ namespace Raven.Sample.ShardClient
             return null;
         }
 
-        public string SelectShardIdForExistingObject(object obj)
+        public string ShardIdForExistingObject(object obj)
         {
-            return SelectShardIdForExistingObject(obj);
+            return ShardIdForExistingObject(obj);
         }
     }
 }
