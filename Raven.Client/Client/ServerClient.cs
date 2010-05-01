@@ -91,8 +91,7 @@ namespace Raven.Client.Client
 	        if (Transaction.Current == null) 
                 return;
 
-	        string txInfo = Transaction.Current.TransactionInformation.DistributedIdentifier + ", " +
-	                        TransactionManager.DefaultTimeout.ToString("c");
+	        string txInfo = string.Format("{0}, {1}", Transaction.Current.TransactionInformation.DistributedIdentifier, TransactionManager.DefaultTimeout);
 	        metadata["Raven-Transaction-Information"] = new JValue(txInfo);
 	    }
 
@@ -164,7 +163,7 @@ namespace Raven.Client.Client
             {
                 path = query.SortedFields.Aggregate(
                         new StringBuilder(path),
-						(sb, field) => sb.Append("&sort=").Append(HttpUtility.UrlEncode(field.Descending ? "-" : "+")).Append(field.Field)
+						(sb, field) => sb.Append("&sort=").Append(field.Descending ? "-" : "").Append(field.Field)
                     ).ToString();
             }
             var request = new HttpJsonRequest(path, "GET");

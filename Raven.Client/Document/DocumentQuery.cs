@@ -42,8 +42,8 @@ namespace Raven.Client.Document
 	    	var sp = Stopwatch.StartNew();
 			while (true) 
 			{
-				log.DebugFormat("Executing query '{0}' on index '{1}' in '{2}'",
-				                query, indexName, session.StoreIdentifier);
+				Trace.WriteLine(string.Format("Executing query '{0}' on index '{1}' in '{2}'",
+								query, indexName, session.StoreIdentifier));
 				var result = databaseCommands.Query(indexName, new IndexQuery
 				{
 					Query = query,
@@ -58,12 +58,13 @@ namespace Raven.Client.Document
 						sp.Stop();
 						throw new TimeoutException(string.Format("Waited for {0:#,#}ms for the query to return non stale result.", sp.ElapsedMilliseconds));
 					}
-					log.DebugFormat("Stale query results on non stable query '{0}' on index '{1}' in '{2}', query will be retired",
-								query, indexName, session.StoreIdentifier);
+					Trace.WriteLine(
+						string.Format("Stale query results on non stable query '{0}' on index '{1}' in '{2}', query will be retired",
+						              query, indexName, session.StoreIdentifier));
 					Thread.Sleep(100);
 					continue;
 				}
-				log.DebugFormat("Query returned {0}/{1} results", result.Results.Length, result.TotalResults);
+				Trace.WriteLine(string.Format("Query returned {0}/{1} results", result.Results.Length, result.TotalResults));
 				return result;
 			} 
 		}

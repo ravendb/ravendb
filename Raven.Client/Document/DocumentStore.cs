@@ -18,12 +18,19 @@ namespace Raven.Client.Document
 		private string identifier;
 		public string Identifier
 		{
-			get { return identifier ?? Url ?? DataDirectory; }
+			get
+			{
+				return identifier ?? Url 
+#if !CLIENT
+					?? DataDirectory
+#endif
+;
+			}
 			set { identifier = value; }
 		}
-
+#if !CLIENT
 		public string DataDirectory { get; set; }
-
+#endif
 		public string Url { get; set; }
 
 		public DocumentConvention Conventions { get; set; }
@@ -47,7 +54,7 @@ namespace Raven.Client.Document
 			{
 				var copy = Stored;
 				if (copy != null) 
-					copy(Url ?? DataDirectory, entity);
+					copy(Identifier, entity);
 			};
             return session;
         }
@@ -56,6 +63,7 @@ namespace Raven.Client.Document
 		{
 			try
 			{
+#if !CLIENT
 				if (String.IsNullOrEmpty(Url))
 				{
 					var embeddedDatabase = new DocumentDatabase(new RavenConfiguration {DataDirectory = DataDirectory});
@@ -63,6 +71,7 @@ namespace Raven.Client.Document
 					DatabaseCommands = new EmbededDatabaseCommands(embeddedDatabase);
 				}
 				else
+#endif
 				{
 					DatabaseCommands = new ServerClient(Url);
 				}

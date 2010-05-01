@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using log4net;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
@@ -11,8 +10,6 @@ namespace Raven.Client.Document
 {
 	public abstract class AbstractDocumentQuery<T> : IDocumentQuery<T>
 	{
-		protected readonly ILog log = LogManager.GetLogger(typeof (DocumentSession));
-
 		protected readonly DocumentSession session;
 		protected string indexName;
 		protected string query = "";

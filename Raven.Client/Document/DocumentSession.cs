@@ -4,7 +4,6 @@ using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Transactions;
-using log4net;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Client;
 using System;
@@ -17,7 +16,6 @@ namespace Raven.Client.Document
 {
 	public class DocumentSession : IDocumentSession
 	{
-		private readonly ILog log = LogManager.GetLogger(typeof (DocumentSession));
 	    private const string TemporaryIdPrefix = "Temporary Id: ";
 		private const string RavenEntityName = "Raven-Entity-Name";
 		private readonly IDatabaseCommands database;
@@ -25,7 +23,7 @@ namespace Raven.Client.Document
         private readonly Dictionary<object, DocumentMetadata> entitiesAndMetadata = new Dictionary<object, DocumentMetadata>();
         private readonly Dictionary<string, object> entitiesByKey = new Dictionary<string, object>();
 
-	    private readonly ISet<object> deletedEntities = new HashSet<object>();
+		private readonly HashSet<object> deletedEntities = new HashSet<object>();
 	    private RavenClientEnlistment enlistment;
 
 		public event Action<object> Stored;
@@ -49,7 +47,7 @@ namespace Raven.Client.Document
 			JsonDocument documentFound;
             try
             {
-				log.DebugFormat("Loading document [{0}] from {1}", id, StoreIdentifier);
+				Trace.WriteLine(string.Format("Loading document [{0}] from {1}", id, StoreIdentifier));
 				documentFound = database.Get(id);
             }
             catch (WebException ex)
@@ -78,7 +76,6 @@ namespace Raven.Client.Document
 	    {
 			var entity = ConvertToEntity<T>(key, document);
 			var etag = metadata.Value<string>("@etag");
-			log.DebugFormat("Tracking document [{0}] from {1} as {2}. Etag: {3}", key, StoreIdentifier, typeof(T).FullName, etag);
 			entitiesAndMetadata.Add(entity, new DocumentMetadata
 	        {
 				OriginalValue = document,
@@ -92,8 +89,7 @@ namespace Raven.Client.Document
 
 	    public T[] Load<T>(params string[] ids)
 	    {
-			if(log.IsDebugEnabled)
-				log.DebugFormat("Bulk loading ids [{0}] from {1}", string.Join(", ", ids), StoreIdentifier);
+	    	Trace.WriteLine(string.Format("Bulk loading ids [{0}] from {1}", string.Join(", ", ids), StoreIdentifier));
 	        return documentStore.DatabaseCommands.Get(ids)
                 .Select(TrackEntity<T>).ToArray();
 	    }
@@ -230,7 +226,7 @@ namespace Raven.Client.Document
 			if (cmds.Count == 0)
 				return;
 
-			log.DebugFormat("Saving {0} changes to {1}", cmds.Count, StoreIdentifier);
+			Trace.WriteLine(string.Format("Saving {0} changes to {1}", cmds.Count, StoreIdentifier));
 			UpdateBatchResults(database.Batch(cmds.ToArray()), entities);
 		}
 
