@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Security;
 using System.Threading;
 using log4net;
+using Microsoft.Isam.Esent.Interop;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
@@ -13,6 +14,7 @@ using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
+using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
@@ -284,17 +286,17 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 
 		public string PutIndex(string name, IndexDefinition definition)
 		{
-			// this must be first to ensure that we don't do any op without first 
-			// ensuring that the new index defintion is valid
-			IndexDefinitionStorage.AddIndex(name, definition); 
 			switch (IndexDefinitionStorage.FindIndexCreationOptionsOptions(name, definition))
 			{
 				case IndexCreationOptions.Noop:
 					return name;
 				case IndexCreationOptions.Update:
+					// ensure that the code can compile
+					new DynamicViewCompiler(name, definition).GenerateInstance();
 					DeleteIndex(name);
 					break;
 			}
+			IndexDefinitionStorage.AddIndex(name, definition);
 			IndexStorage.CreateIndexImplementation(name, definition);
 			TransactionalStorage.Batch(actions =>
 			{
@@ -367,12 +369,30 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 		{
 			IndexDefinitionStorage.RemoveIndex(name);
 			IndexStorage.DeleteIndex(name);
-			TransactionalStorage.Batch(action =>
+			//we may run into a conflict when trying to delete if the index is currently
+			//busy indexing documents
+			for (var i = 0; i < 10; i++)
 			{
-				action.DeleteIndex(name);
+				try
+				{
+					TransactionalStorage.Batch(action =>
+					{
+						action.DeleteIndex(name);
 
-				workContext.ShouldNotifyAboutWork();
-			});
+						workContext.ShouldNotifyAboutWork();
+					});
+					return;
+				}
+				catch (EsentErrorException e)
+				{
+					if(e.Error==JET_err.WriteConflict)
+					{
+						Thread.Sleep(100);
+						continue;
+					}
+					throw;
+				}
+			}
 		}
 
 		public Attachment GetStatic(string name)
