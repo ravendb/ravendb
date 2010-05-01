@@ -28,7 +28,7 @@ from agg in results
 group agg by agg.blog_id into g
 select new { 
   blog_id = g.Key, 
-  comments_length = g.Sum(x=>(int)x.comments_length) 
+  comments_length = g.Sum(x=>(int)x.comments_length).ToString()
   }";
 
 		private readonly DocumentDatabase db;
@@ -40,7 +40,7 @@ select new {
 				DataDirectory = "raven.db.test.esent",
 				ShouldCreateDefaultsWhenBuildingNewDatabaseFromScratch = false
 			});
-			db.PutIndex("CommentsCountPerBlog", new IndexDefinition{Map = map, Reduce = reduce, Indexes = {{"blog_id", FieldIndexing.Untokenized}}});
+			db.PutIndex("CommentsCountPerBlog", new IndexDefinition{Map = map, Reduce = reduce, Indexes = {{"blog_id", FieldIndexing.NotAnalyzed}}});
 			db.SpinBackgroundWorkers();
 		}
 
@@ -91,7 +91,7 @@ select new {
 					Thread.Sleep(100);
 				} while (q.IsStale);
 			}
-			Assert.Equal(@"{""blog_id"":""3"",""comments_length"":""0000000000000e""}", q.Results[0].ToString(Formatting.None));
+			Assert.Equal(@"{""blog_id"":""3"",""comments_length"":""14""}", q.Results[0].ToString(Formatting.None));
 		}
 	}
 }
