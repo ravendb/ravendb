@@ -184,7 +184,7 @@
         	RavenUI.GetIndex(name, function (index) {
         		$('#indexEditorName').val(name);
         		$('#indexEditorMapDef').val(index.Index.Map);
-        		$('#indexEditorFieldOptions').html('');
+        		$('#indexEditorFieldOptions').empty();
         		if (index.Index.Reduce != undefined) {
         			$('#indexEditorReduceDef').val(index.Index.Reduce);
         		}
@@ -194,6 +194,7 @@
 
         		addFieldsFromIndexDefinition(index);
 
+        		$('#actualError', $('#saveError')).remove();
         		$('#saveError, #ajaxSuccess, #ajaxError').hide();
 
         		$('#customizeField').unbind().click(function () {
@@ -239,8 +240,10 @@
         						$('#divEditor').dialog('close');
         						$('#ajaxSuccess').html('Your index has been updated. Click <a href="#" onclick="EditIndex(\'' + newName + '\'); return false;">here</a> to see it again.').fadeIn('slow');
         						getIndexPage();
-        					}, function () {
-        						$('#saveError').fadeIn();
+        					}, function (result) {
+        						$('#saveError')
+									.append('<span id="actualError"><pre>' + result.Error + '</pre></span>')
+								.fadeIn();
         					});
         				},
         				Cancel: function () {
@@ -257,34 +260,38 @@
             $('#indexEditorName').val('');
             $('#indexEditorMapDef').val('');
             $('#indexEditorReduceDef').val('');
+            $('#indexEditorFieldOptions').empty();
+            $('#actualError', $('#saveError')).remove();
             $('#saveError, #ajaxSuccess, #ajaxError').hide();
             $('#deleteIndex').hide();
             $('#divEditor').dialog({
-                modal: true,
-                buttons: {
-                    Save: function () {
-                        var newName = $('#indexEditorName').val();
-                        var mapDef = { Map: $('#indexEditorMapDef').val() };
+            	modal: true,
+            	buttons: {
+            		Save: function () {
+            			var newName = $('#indexEditorName').val();
+            			var mapDef = { Map: $('#indexEditorMapDef').val() };
 
-                        var reduce = $('#indexEditorReduceDef').val();
-                        if (reduce.trim() != '') {
-                            mapDef["Reduce"] = reduce;
-                        }
+            			var reduce = $('#indexEditorReduceDef').val();
+            			if (reduce.trim() != '') {
+            				mapDef["Reduce"] = reduce;
+            			}
 
-                        RavenUI.SaveIndex(newName, mapDef, function (data) {
-                            $('#divEditor').dialog('close');
-                            getIndexPage();
-                            $('#ajaxSuccess').html('Your index has been created. Click <a href="#" onclick="EditIndex(\'' + newName + '\'); return false;">here</a> to see it again.').fadeIn('slow');
-                        }, function () {
-                            $('#saveError').fadeIn();
-                        });
-                    },
-                    Cancel: function () {
-                        $(this).dialog('close');
-                    }
-                },
-                title: 'Create New Index',
-                width: 500
+            			RavenUI.SaveIndex(newName, mapDef, function (data) {
+            				$('#divEditor').dialog('close');
+            				getIndexPage();
+            				$('#ajaxSuccess').html('Your index has been created. Click <a href="#" onclick="EditIndex(\'' + newName + '\'); return false;">here</a> to see it again.').fadeIn('slow');
+            			}, function (result) {
+            				$('#saveError')
+								.append('<span id="actualError"><pre>' + result.Error + '</pre></span>')
+							.fadeIn();
+            			});
+            		},
+            		Cancel: function () {
+            			$(this).dialog('close');
+            		}
+            	},
+            	title: 'Create New Index',
+            	width: 500
             });
         }
 

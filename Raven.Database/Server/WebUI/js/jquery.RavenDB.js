@@ -155,7 +155,8 @@
                     successCallback(data);
                 },
                 error: function(request, textStatus, errorThrown) {
-                    errorCallback();
+					var result = JSON.parse(request.responseText)
+                    errorCallback(result);
                 }
             });
         },
