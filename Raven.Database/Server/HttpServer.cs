@@ -137,6 +137,8 @@ namespace Raven.Server
 					HandleConcurrencyException(ctx, (ConcurrencyException)e);
 				else if (e is IndexDisabledException)
 					HandleIndexDisabledException(ctx, (IndexDisabledException)e);
+				else if (e is IndexDoesNotExistsException)
+					HandleIndexDoesNotExistsException(ctx, e);
 				else
 					HandleGenericException(ctx, e);
 			}
@@ -144,6 +146,16 @@ namespace Raven.Server
 			{
 				logger.Error("Failed to properly handle error, further error handling is ignored", e);
 			}
+		}
+
+		private static void HandleIndexDoesNotExistsException(IHttpContext ctx, Exception e)
+		{
+			ctx.SetStatusToNotFound();
+			SerializeError(ctx, new
+			{
+				Url = ctx.Request.RawUrl,
+				Error = e.Message
+			});
 		}
 
 		private static void HandleTooBusyError(IHttpContext ctx)
