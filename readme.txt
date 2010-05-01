@@ -7,8 +7,16 @@ This release contains the following
 		  
 /Web	- The files required to run Raven under IIS.
 		  Create an IIS site in the /Web directory to start the Raven site.
-		  
-/Client	- The files required to run the Raven client, in server or embedded mode.
+
+/Client-3.5
+		- The files required to run the Raven client under .NET 3.5
+		
+/Client
+		- The files required to run the Raven client under .NET 4.0
+		*** This is the recommended client to use ***
+
+/ClientEmbedded
+		- The files required to run the Raven client, in server or embedded mode.
 		  Reference the RavenClient.dll and create a DocumentStore, passing a URL
 		  or a directory.
 		  
