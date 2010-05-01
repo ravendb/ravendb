@@ -807,7 +807,7 @@ namespace Raven.Database.Storage
 			Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
 			Api.MakeKey(session, IndexesStats, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
-				throw new InvalidOperationException("There is no index named: " + index);
+				throw new IndexDoesNotExistsException("There is no index named: " + index);
 		}
 
 		public void IncrementIndexingAttempt()
