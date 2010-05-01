@@ -1,4 +1,9 @@
-﻿$(document).ready(function () {
+﻿//a useful extension to string
+String.prototype.trim = function () {
+    return this.replace(/^\s+|\s+$/g, "");
+}
+
+$(document).ready(function () {
     $.ravenDB.init();
     
     var windowSize = $(window).height();

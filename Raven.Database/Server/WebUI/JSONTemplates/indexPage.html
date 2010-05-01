@@ -1,18 +1,15 @@
 ﻿<div class="searchListWrapper ui-corner-all">
-    {#foreach $T as index}
+{#foreach $T as index}
         <div id="{$T.index.name}" class="searchListItem {#if $T.index$iteration % 2} alternate{#/if}">
             {$T.index.name}
             <div class="searchListItemValue" style="display:none;">
+            Map:<br />
                 <pre>{$T.index.definition.Map}</pre>
-            </div>
-            <div class="searchListItemValue" style="display:none;">
-                <pre>{$T.index.definition.Map}</pre>
-            </div>
             {#if $T.index.definition.IsMapReduce}
-            <div class="searchListItemValue" style="display:none;">
+            Reduce:<br />
                 <pre>{$T.index.definition.Reduce}</pre>
-            </div>
             {#/if}
+            </div>
         </div>
     {#/for}    
 </div>
