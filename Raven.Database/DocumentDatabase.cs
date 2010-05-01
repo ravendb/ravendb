@@ -71,7 +71,9 @@ namespace Raven.Database
 				         		@"from doc in docs 
 where doc[""@metadata""][""Raven-Entity-Name""] != null 
 select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
-"
+",
+				         	Indexes = {{"Tag", FieldIndexing.Untokenized}},
+				         	Stores = {{"Tag", FieldStorage.No}}
 				         });
 			}
 	
