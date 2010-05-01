@@ -284,6 +284,9 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 
 		public string PutIndex(string name, IndexDefinition definition)
 		{
+			// this must be first to ensure that we don't do any op without first 
+			// ensuring that the new index defintion is valid
+			IndexDefinitionStorage.AddIndex(name, definition); 
 			switch (IndexDefinitionStorage.FindIndexCreationOptionsOptions(name, definition))
 			{
 				case IndexCreationOptions.Noop:
@@ -292,7 +295,6 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 					DeleteIndex(name);
 					break;
 			}
-			IndexDefinitionStorage.AddIndex(name, definition);
 			IndexStorage.CreateIndexImplementation(name, definition);
 			TransactionalStorage.Batch(actions =>
 			{
