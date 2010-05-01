@@ -27,12 +27,10 @@ namespace Raven.Database.Indexing
 		protected readonly ILog log = LogManager.GetLogger(typeof (Index));
 		protected readonly string name;
 		protected readonly IndexDefinition indexDefinition;
-		private TransactionalStorage transactionalStorage;
 
-		protected Index(Directory directory, string name,IndexDefinition indexDefinition, TransactionalStorage transactionalStorage)
+		protected Index(Directory directory, string name,IndexDefinition indexDefinition)
 		{
 			this.name = name;
-			this.transactionalStorage = transactionalStorage;
 			this.indexDefinition = indexDefinition;
 			log.DebugFormat("Creating index for {0}", name);
 			this.directory = directory;
@@ -124,7 +122,6 @@ namespace Raven.Database.Indexing
 			var indexWriter = new IndexWriter(directory, new StandardAnalyzer(Version.LUCENE_CURRENT),IndexWriter.MaxFieldLength.UNLIMITED);
 			try
 			{
-				indexWriter.SetMergeScheduler(new EsentMergeConcurrentMergeScheduler(transactionalStorage));
 				action(indexWriter);
 			}
 			finally

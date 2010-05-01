@@ -181,10 +181,8 @@
     <Compile Include="Server\Responders\Statistics.cs" />
     <Compile Include="Server\Responders\TransactionCommit.cs" />
     <Compile Include="Server\Responders\TransactionRollback.cs" />
-    <Compile Include="Storage\Lucene\EsentDirectory.cs" />
     <Compile Include="Storage\IndexCreationOptions.cs" />
     <Compile Include="Storage\DocumentInTransactionData.cs" />
-    <Compile Include="Storage\Lucene\EsentMergeThread.cs" />
     <Compile Include="Storage\SchemaUpdates\From21.cs" />
     <Compile Include="Storage\SchemaUpdates\ISchemaUpdate.cs" />
     <Compile Include="Storage\StorageActions\Attachments.cs" />

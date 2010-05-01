@@ -23,13 +23,15 @@ namespace Raven.Database.Indexing
 	/// </summary>
 	public class IndexStorage : CriticalFinalizerObject, IDisposable
 	{
-		private readonly TransactionalStorage transactionalStorage;
+		private readonly string path;
 		private readonly ConcurrentDictionary<string, Index> indexes = new ConcurrentDictionary<string, Index>();
 		private readonly ILog log = LogManager.GetLogger(typeof (IndexStorage));
 
-		public IndexStorage(IndexDefinitionStorage indexDefinitionStorage, TransactionalStorage transactionalStorage)
+		public IndexStorage(IndexDefinitionStorage indexDefinitionStorage, TransactionalStorage transactionalStorage, string dataDir)
 		{
-			this.transactionalStorage = transactionalStorage;
+			path = Path.Combine(dataDir,"Indexes");
+			if (Directory.Exists(path) == false)
+				Directory.CreateDirectory(path);
 
 			transactionalStorage.Batch(actions =>
 			{
@@ -38,22 +40,23 @@ namespace Raven.Database.Indexing
 				foreach (var indexDirectory in indexNames)
 				{
 					log.DebugFormat("Loading saved index {0}", indexDirectory);
+				
 					var indexDefinition = indexDefinitionStorage.GetIndexDefinition(indexDirectory);
 					if (indexDefinition == null)
 						continue;
 					indexes.TryAdd(indexDirectory,
 					               CreateIndexImplementation(indexDirectory, indexDefinition,
-					                                         new EsentDirectory(transactionalStorage, indexDirectory)));
+															 FSDirectory.Open(new DirectoryInfo(Path.Combine(path, HttpUtility.UrlEncode(indexDirectory))))));
 				}
 			});
 
 		}
 
-		private Index CreateIndexImplementation(string name, IndexDefinition indexDefinition, Lucene.Net.Store.Directory directory)
+		private static Index CreateIndexImplementation(string name, IndexDefinition indexDefinition, Lucene.Net.Store.Directory directory)
 		{
 			return indexDefinition.IsMapReduce
-				? (Index) new MapReduceIndex(directory, name, indexDefinition,transactionalStorage)
-				: new SimpleIndex(directory, name, indexDefinition, transactionalStorage);
+				? (Index) new MapReduceIndex(directory, name, indexDefinition)
+				: new SimpleIndex(directory, name, indexDefinition);
 		}
 
 		public string[] Indexes
@@ -84,9 +87,10 @@ namespace Raven.Database.Indexing
 			log.InfoFormat("Deleting index {0}", name);
 			value.Dispose();
 			Index ignored;
-			if (indexes.TryRemove(name, out ignored))
+			var dirOnDisk = Path.Combine(path, HttpUtility.UrlEncode(name));
+			if (indexes.TryRemove(name, out ignored) && Directory.Exists(dirOnDisk))
 			{
-				transactionalStorage.Batch(actions => actions.DeleteAllFilesInDirectory(name));
+				Directory.Delete(dirOnDisk, true);
 			}
 		}
 
@@ -96,16 +100,11 @@ namespace Raven.Database.Indexing
 
 			indexes.AddOrUpdate(name, n =>
 			{
-				var directory = new EsentDirectory(transactionalStorage, name);
-				Index indexImplementation = null;
-				transactionalStorage.Batch(actions =>
-				{
-					//creating index structure
-					new IndexWriter(directory, new StandardAnalyzer(Version.LUCENE_CURRENT), IndexWriter.MaxFieldLength.UNLIMITED).
-						Close();
-					indexImplementation = CreateIndexImplementation(name, indexDefinition, directory);
-				});
-				return indexImplementation;
+				var directory = FSDirectory.Open(new DirectoryInfo(Path.Combine(path, HttpUtility.UrlEncode(name))));
+				//creating index structure
+				new IndexWriter(directory, new StandardAnalyzer(Version.LUCENE_CURRENT), IndexWriter.MaxFieldLength.UNLIMITED).
+					Close();
+				return CreateIndexImplementation(name, indexDefinition, directory);
 			}, (s, index) => index);
 		}
 

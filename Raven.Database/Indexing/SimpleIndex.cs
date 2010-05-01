@@ -13,8 +13,8 @@ namespace Raven.Database.Indexing
 {
 	public class SimpleIndex : Index
 	{
-		public SimpleIndex(Directory directory, string name, IndexDefinition indexDefinition, TransactionalStorage transactionalStorage)
-			: base(directory, name, indexDefinition, transactionalStorage)
+		public SimpleIndex(Directory directory, string name, IndexDefinition indexDefinition)
+			: base(directory, name, indexDefinition)
 		{
 		}
 

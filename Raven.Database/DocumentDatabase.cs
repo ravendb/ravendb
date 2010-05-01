@@ -58,7 +58,7 @@ namespace Raven.Database
 			}
 
 			IndexDefinitionStorage = new IndexDefinitionStorage(configuration.DataDirectory);
-			IndexStorage = new IndexStorage(IndexDefinitionStorage,TransactionalStorage);
+			IndexStorage = new IndexStorage(IndexDefinitionStorage,TransactionalStorage, configuration.DataDirectory);
 
 			workContext.IndexStorage = IndexStorage;
 			workContext.TransactionaStorage = TransactionalStorage;
