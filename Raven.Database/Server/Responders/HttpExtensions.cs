@@ -290,7 +290,7 @@ namespace Raven.Database.Server.Responders
 		{
 			public override void WriteJson (JsonWriter writer, object value)
 			{
-				((JToken) value).WriteTo(writer);
+				((JObject)value).WriteTo(writer);
 			}
 
 			public override object ReadJson (JsonReader reader, Type objectType)
@@ -300,7 +300,7 @@ namespace Raven.Database.Server.Responders
 
 			public override bool CanConvert (Type objectType)
 			{
-				return objectType == typeof(JToken);
+				return objectType == typeof(JObject);
 			}
 		}
 
