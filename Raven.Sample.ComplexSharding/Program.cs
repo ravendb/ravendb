@@ -95,9 +95,9 @@ namespace Raven.Sample.ComplexSharding
 			// queries
 			using (var session = documentStore.OpenSession())
 			{
-				session.Query<User>().ToArray();
-				session.Query<Blog>().ToArray();
-				session.Query<Post>().ToArray();
+				session.Query<User>().WaitForNonStaleResults().ToArray();
+				session.Query<Blog>().WaitForNonStaleResults().ToArray();
+				session.Query<Post>().WaitForNonStaleResults().ToArray();
 			}
 
 			// loading
