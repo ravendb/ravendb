@@ -5,6 +5,7 @@ using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Exceptions;
+using Raven.Database.Json;
 using Raven.Database.Server.Abstractions;
 
 namespace Raven.Database.Server.Responders
@@ -22,7 +23,10 @@ namespace Raven.Database.Server.Responders
 		{
 			using (var streamReader = new StreamReader(context.Request.InputStream))
 			using (var jsonReader = new JsonTextReader(streamReader))
-				return (T)new JsonSerializer().Deserialize(jsonReader, typeof(T));
+				return (T)new JsonSerializer
+				{
+					Converters = {new JsonEnumConverter()}
+				}.Deserialize(jsonReader, typeof(T));
 		}
 
 		public static JArray ReadJsonArray(this IHttpContext context)
@@ -44,7 +48,7 @@ namespace Raven.Database.Server.Responders
 			var streamWriter = new StreamWriter(context.Response.OutputStream);
 			new JsonSerializer
 			{
-				Converters = {new JsonToJsonConverter()},
+				Converters = {new JsonToJsonConverter(), new JsonEnumConverter()},
 			}.Serialize(new JsonTextWriter(streamWriter)
 			{
 				Formatting = Formatting.Indented
@@ -60,7 +64,7 @@ namespace Raven.Database.Server.Responders
 			{
 				Formatting = Formatting.Indented
 			};
-			obj.WriteTo(jsonTextWriter);
+			obj.WriteTo(jsonTextWriter, new JsonEnumConverter());
 			jsonTextWriter.Flush();
 			streamWriter.Flush();
 		}
@@ -278,26 +282,19 @@ namespace Raven.Database.Server.Responders
 
 		public class JsonToJsonConverter : JsonConverter
 		{
-			public override
-				void WriteJson
-				(JsonWriter writer, object value)
+			public override void WriteJson (JsonWriter writer, object value)
 			{
-				((JObject) value).WriteTo(writer);
+				((JToken) value).WriteTo(writer);
 			}
 
-			public override
-				object ReadJson
-				(JsonReader reader, Type objectType)
+			public override object ReadJson (JsonReader reader, Type objectType)
 			{
 				throw new NotImplementedException();
 			}
 
-			public override
-				bool CanConvert
-				(Type
-				 	objectType)
+			public override bool CanConvert (Type objectType)
 			{
-				return objectType == typeof (JObject);
+				return objectType == typeof(JToken);
 			}
 		}
 
