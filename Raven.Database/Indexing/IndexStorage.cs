@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.ConstrainedExecution;
+using System.Threading;
 using System.Web;
 using log4net;
 using Lucene.Net.Analysis.Standard;
@@ -88,9 +89,21 @@ namespace Raven.Database.Indexing
 			value.Dispose();
 			Index ignored;
 			var dirOnDisk = Path.Combine(path, HttpUtility.UrlEncode(name));
-			if (indexes.TryRemove(name, out ignored) && Directory.Exists(dirOnDisk))
+			
+			if (!indexes.TryRemove(name, out ignored) || !Directory.Exists(dirOnDisk)) 
+				return;
+
+			for (int i = 0; i < 15; i++)
 			{
-				Directory.Delete(dirOnDisk, true);
+				try
+				{
+					Directory.Delete(dirOnDisk, true);
+					break;
+				}
+				catch (IOException)
+				{
+					Thread.Sleep(100);
+				}
 			}
 		}
 
