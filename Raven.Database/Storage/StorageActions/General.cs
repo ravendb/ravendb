@@ -16,7 +16,12 @@ namespace Raven.Database.Storage
 		protected readonly ILog logger = LogManager.GetLogger(typeof(DocumentStorageActions));
 		protected readonly Session session;
 		private readonly Transaction transaction;
-		
+
+
+		public Session Session
+		{
+			get { return session; }
+		}
 
 		[CLSCompliant(false)]
 		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]

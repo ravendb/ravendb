@@ -39,7 +39,7 @@ namespace Raven.Database.Storage
 			get { return tableColumnsCache; }
 		}
 
-		private void LimitSystemCache()
+		private static void LimitSystemCache()
 		{
 			var cacheSizeMax = 1024 * 1024 * 1024 / SystemParameters.DatabasePageSize;
 			if (SystemParameters.CacheSizeMax > cacheSizeMax)
@@ -292,15 +292,6 @@ namespace Raven.Database.Storage
 			}
 		}
 
-		public Tuple<Session,Transaction,JET_DBID> OpenSession()
-		{
-			var session = new Session(instance);
-			var transaction = new Transaction(session);
-			JET_DBID dbid;
-			Api.JetOpenDatabase(session, database, null, out dbid, OpenDatabaseGrbit.None);
-			return new Tuple<Session, Transaction, JET_DBID>(session, transaction, dbid);
-		}
-
 		public void ExecuteImmediatelyOrRegisterForSyncronization(Action action)
 		{
 			if(current.Value == null)
@@ -309,6 +300,14 @@ namespace Raven.Database.Storage
 				return;
 			}
 			current.Value.OnCommit += action;
+		}
+
+		internal DocumentStorageActions INTERNAL_METHOD_GetCurrentBatch()
+		{
+			var batch = current.Value;
+			if(batch == null)
+				throw new InvalidOperationException("Batch was not started, you are not supposed to call this method");
+			return batch;
 		}
 	}
 }
