@@ -134,6 +134,12 @@ namespace Raven.Database.Server.Responders
 			context.Response.StatusDescription = "Unauthorized";
 		}
 
+		public static void SetStatusToForbidden(this IHttpContext context)
+		{
+			context.Response.StatusCode = 403;
+			context.Response.StatusDescription = "Forbidden";
+		}
+
 		public static void Write(this IHttpContext context, string str)
 		{
 			var sw = new StreamWriter(context.Response.OutputStream);

@@ -32,6 +32,16 @@ namespace Raven.Database.Server.Responders
 					Put(context, index);
 					break;
 				case "DELETE":
+					if(index.StartsWith("Raven/",StringComparison.InvariantCultureIgnoreCase))
+					{
+						context.SetStatusToForbidden();
+						context.WriteJson(new
+						{
+							Url = context.Request.RawUrl,
+							Error = "Builtin indexes cannot be deleted, attempt to delete index '" + index + "' was rejected"
+						});
+						return;
+					}
 					context.SetStatusToDeleted();
 					Database.DeleteIndex(index);
 					break;
