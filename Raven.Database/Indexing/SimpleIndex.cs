@@ -49,7 +49,7 @@ namespace Raven.Database.Indexing
                     if (newDocId != null)
                     {
                         var luceneDoc = new Document();
-                        luceneDoc.Add(new Field("__document_id", newDocId, Field.Store.YES, Field.Index.UN_TOKENIZED));
+                        luceneDoc.Add(new Field("__document_id", newDocId, Field.Store.YES, Field.Index.NOT_ANALYZED));
 
                         currentId = newDocId;
                         CopyFieldsToDocumentButRemoveDuplicateValues(luceneDoc, fields);
