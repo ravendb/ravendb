@@ -144,11 +144,5 @@ namespace Raven.Database.Storage
 				);
 		}
 
-		public void TEST()
-		{
-			Api.MoveBeforeFirst(session,Tasks);
-			while (Api.TryMoveNext(session, Tasks))
-				Api.JetDelete(session, Tasks);
-		}
 	}
 }
