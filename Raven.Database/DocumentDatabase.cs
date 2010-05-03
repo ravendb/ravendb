@@ -1,11 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security;
 using System.Threading;
-using System.Web;
+using System.Threading.Tasks;
 using log4net;
 using Microsoft.Isam.Esent.Interop;
 using Newtonsoft.Json;
@@ -47,6 +48,7 @@ namespace Raven.Database
 			workContext = new WorkContext();
 			TransactionalStorage = new TransactionalStorage(configuration.DataDirectory, workContext.NotifyAboutWork);
 			configuration.Container.SatisfyImportsOnce(TransactionalStorage);
+
 			bool newDb;
 			try
 			{
@@ -68,11 +70,21 @@ namespace Raven.Database
 
 			PutTriggers.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
 			DeleteTriggers.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
-			
+
+			ExecuteStartupTasks();
+
 			if (!newDb) 
 				return;
 
 			OnNewlyCreatedDatabase();
+		}
+
+		private void ExecuteStartupTasks()
+		{
+			foreach (var task in configuration.Container.GetExportedValues<IStartupTask>())
+			{
+				task.Execute(this);
+			}
 		}
 
 		private void OnNewlyCreatedDatabase()
@@ -559,10 +571,30 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 			}
 		}
 
-		public void Backup(string bak)
+		public void StartBackup(string backupDestinationDirectory)
 		{
-			var backupOperation = new BackupOperation(TransactionalStorage.Instance, configuration.DataDirectory, bak);
-			backupOperation.Execute();
+			var document = Get(BackupStatus.RavenBackupStatusDocumentKey,null);
+			if(document!=null)
+			{
+				var backupStatus = document.Data.JsonDeserialization<BackupStatus>();
+				if(backupStatus.IsRunning)
+				{
+					throw new InvalidOperationException("Backup is already running");
+				}
+			}
+			Put(BackupStatus.RavenBackupStatusDocumentKey, null, JObject.FromObject(new BackupStatus
+			{
+				Started = DateTime.Now,
+				IsRunning = true,
+			}), new JObject(), null);
+
+			new System.Threading.Tasks.Task(() =>
+			{
+				var backupOperation = new BackupOperation(this, configuration.DataDirectory, backupDestinationDirectory);
+				backupOperation.Execute();
+			}, TaskCreationOptions.LongRunning)
+			.Start();
+			
 		}
 	}
 }
