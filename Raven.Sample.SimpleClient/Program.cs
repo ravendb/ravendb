@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using Raven.Client.Document;
 using Raven.Client;
+using Raven.Database.Indexing;
 
 namespace Raven.Sample.SimpleClient
 {
@@ -11,22 +12,31 @@ namespace Raven.Sample.SimpleClient
     {
         static void Main(string[] args)
         {
-			using (var documentStore = new DocumentStore { Url = "http://localhost:8080" }.Initialise())
-            using (var session = documentStore.OpenSession())
+			using (var documentStore = new DocumentStore { Url = "http://localhost:8080" })
             {
-                //session.Store(new Company { Name = "Company 1", Region = "A" });
-                //session.Store(new Company { Name = "Company 2", Region = "B" });
-                //session.SaveChanges();
+            	documentStore.Initialise();
+				//documentStore.DatabaseCommands.PutIndex("regionIndex",
+				//                                        new IndexDefinition
+				//                                        {
+				//                                            Map = "from company in docs.Companies select new{company.Region}"
+				//                                        });
+				using (var session = documentStore.OpenSession())
+            {
+				
+
+				session.Store(new Company { Name = "Company 1", Region = "Asia" });
+				session.Store(new Company { Name = "Company 2", Region = "Africa" });
+				session.SaveChanges();
 
                 var allCompanies = session
                     .Query<Company>("regionIndex")
-                    .Where("Region:B")
+                    .Where("Region:Africa")
                     .WaitForNonStaleResults()
                     .ToArray();
 
                 foreach (var company in allCompanies)
                     Console.WriteLine(company.Name);
-            }
+            }}
         }
 
     }
