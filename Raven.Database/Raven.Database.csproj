@@ -101,6 +101,7 @@
     <Compile Include="Backup\EsentBackup.cs" />
     <Compile Include="Backup\DirectoryBackup.cs" />
     <Compile Include="Backup\RemoveBackupDocumentStartupTask.cs" />
+    <Compile Include="Backup\RestoreOperation.cs" />
     <Compile Include="Exceptions\IndexDoesNotExists.cs" />
     <Compile Include="IStartupTask.cs" />
     <Compile Include="Server\Abstractions\HttpContextAdapter.cs" />

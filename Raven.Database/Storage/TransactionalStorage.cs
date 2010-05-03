@@ -92,7 +92,7 @@ namespace Raven.Database.Storage
 		{
 			try
 			{
-				ConfigureInstance(instance);
+				ConfigureInstance(instance, path);
 				Api.JetInit(ref instance);
 
 				var newDb = EnsureDatabaseIsCreatedAndAttachToDatabase();
@@ -145,12 +145,13 @@ namespace Raven.Database.Storage
 			}
 		}
 
-		private void ConfigureInstance(JET_INSTANCE jetInstance)
+		public static void ConfigureInstance(JET_INSTANCE jetInstance, string path)
 		{
 			new InstanceParameters(jetInstance)
 			{
 				CircularLog = true,
 				Recovery = true,
+				NoInformationEvent = false,
 				CreatePathIfNotExist = true,
 				TempDirectory = Path.Combine(path, "temp"),
 				SystemDirectory = Path.Combine(path, "system"),
@@ -221,7 +222,7 @@ namespace Raven.Database.Storage
 								recoverInstance.Init();
 								using (var recoverSession = new Session(recoverInstance))
 								{
-									ConfigureInstance(recoverInstance.JetInstance);
+									ConfigureInstance(recoverInstance.JetInstance, path);
 									Api.JetAttachDatabase(recoverSession, database,
 														  AttachDatabaseGrbit.DeleteCorruptIndexes);
 									Api.JetDetachDatabase(recoverSession, database);

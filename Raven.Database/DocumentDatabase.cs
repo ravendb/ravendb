@@ -594,7 +594,11 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				backupOperation.Execute();
 			}, TaskCreationOptions.LongRunning)
 			.Start();
-			
+		}
+
+		public static void Restore(string backupLocation, string databaseLocation)
+		{
+			new RestoreOperation(backupLocation, databaseLocation).Execute();
 		}
 	}
 }

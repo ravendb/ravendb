@@ -36,7 +36,7 @@ namespace Raven.Database.Backup
 					new DirectoryBackup(Path.Combine(src, "IndexDefinitions"), Path.Combine(to, "IndexDefinitions"))
 				};
 				directoryBackups.AddRange(from index in Directory.GetDirectories(Path.Combine(src, "Indexes"))
-				                          let fromIndex = Path.Combine(src, "Indexes", index)
+										  let fromIndex = Path.Combine(src, "Indexes", Path.GetFileName(index))
 				                          let toIndex = Path.Combine(to, "Indexes", Path.GetFileName(index))
 				                          select new DirectoryBackup(fromIndex, toIndex));
 

@@ -46,6 +46,8 @@ namespace Raven.Database.Backup
 				File.Copy(file, Path.Combine(destination, Path.GetFileName(file)), overwrite: true);
 				Notify("Copied " + Path.GetFileName(file));
 			}
+
+			Directory.Delete(tempPath, true);
 		}
 
 		public void Prepare()

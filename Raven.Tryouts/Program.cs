@@ -17,12 +17,14 @@ namespace Raven.Tryouts
 			
 			try
 			{
-				if(Directory.Exists("bak"))
-					Directory.Delete("bak", true);
+				//if(Directory.Exists("bak"))
+				//    Directory.Delete("bak", true);
 
+
+				DocumentDatabase.Restore("bak", "Data4");
 				var ravenConfiguration = new RavenConfiguration
 				{
-					DataDirectory = @"C:\Work\StackOverflow.Data"
+					DataDirectory = @"Data3"
 				};
 				using (var db = new DocumentDatabase(ravenConfiguration))
 				{
@@ -33,14 +35,14 @@ namespace Raven.Tryouts
 						if (jsonDocument == null)
 							break;
 						var backupStatus = jsonDocument.Data.JsonDeserialization<BackupStatus>();
-						if (backupStatus.IsRunning == false)
-							return;
 						Console.Clear();
 						Console.WriteLine("Backup started at {0}", backupStatus.Started);
 						foreach (var message in backupStatus.Messages)
 						{
 							Console.WriteLine(" - {0}: {1}", message.Timestamp, message.Message);
 						}
+						if (backupStatus.IsRunning == false)
+							return;
 						Thread.Sleep(500);
 					}
 				}
