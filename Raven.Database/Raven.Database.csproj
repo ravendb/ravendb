@@ -97,9 +97,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Backup\BackupOperation.cs" />
+    <Compile Include="Backup\BackupStatus.cs" />
     <Compile Include="Backup\EsentBackup.cs" />
     <Compile Include="Backup\DirectoryBackup.cs" />
+    <Compile Include="Backup\RemoveBackupDocumentStartupTask.cs" />
     <Compile Include="Exceptions\IndexDoesNotExists.cs" />
+    <Compile Include="IStartupTask.cs" />
     <Compile Include="Server\Abstractions\HttpContextAdapter.cs" />
     <Compile Include="Server\Abstractions\HttpListenerContextAdpater.cs" />
     <Compile Include="Server\Abstractions\HttpListenerRequestAdapter.cs" />

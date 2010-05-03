@@ -18,5 +18,10 @@ namespace Raven.Database.Json
 		{
 			return JObject.Load(new JsonTextReader(new StreamReader(new MemoryStream(self), Encoding.UTF8)));
 		}
+
+		public static T JsonDeserialization<T>(this byte [] self)
+		{
+			return (T) new JsonSerializer().Deserialize(new JsonTextReader(new StreamReader(new MemoryStream(self))), typeof (T));
+		}
 	}
 }

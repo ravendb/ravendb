@@ -14,14 +14,12 @@ namespace Raven.Database.Backup
 
 		public event Action<string> Notify = delegate {  };
 
-		private readonly DateTime lastBackupUtc;
 		private readonly string source;
 		private readonly string destination;
 		private readonly string tempPath;
 
-		public DirectoryBackup(string source, string destination, DateTime lastBackupUtc)
+		public DirectoryBackup(string source, string destination)
 		{
-			this.lastBackupUtc = lastBackupUtc;
 			this.source = source;
 			this.destination = destination;
 
@@ -46,6 +44,7 @@ namespace Raven.Database.Backup
 			{
 				Notify("Copying " + Path.GetFileName(file)); 
 				File.Copy(file, Path.Combine(destination, Path.GetFileName(file)), overwrite: true);
+				Notify("Copied " + Path.GetFileName(file));
 			}
 		}
 
@@ -54,8 +53,6 @@ namespace Raven.Database.Backup
 			var sourceFilesSnapshot = Directory.GetFiles(source);
 			foreach (var sourceFile in sourceFilesSnapshot)
 			{
-				if(File.GetLastWriteTimeUtc(sourceFile) < lastBackupUtc)
-					continue;
 				Notify("Hard linking " + sourceFile);
 				CreateHardLink(
 					Path.Combine(tempPath, Path.GetFileName(sourceFile)),
