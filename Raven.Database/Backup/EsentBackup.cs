@@ -5,11 +5,11 @@ namespace Raven.Database.Backup
 {
 	public class EsentBackup
 	{
-		private readonly Instance instance;
+		private readonly JET_INSTANCE instance;
 		private readonly string destination;
 		private readonly bool fullBackup;
 
-		public EsentBackup(Instance instance, string destination, bool fullBackup)
+		public EsentBackup(JET_INSTANCE instance, string destination, bool fullBackup)
 		{
 			this.instance = instance;
 			this.destination = destination;
@@ -20,7 +20,13 @@ namespace Raven.Database.Backup
 		{
 			Api.JetBackupInstance(instance, destination,
 			                      fullBackup ? BackupGrbit.Atomic : BackupGrbit.Incremental, 
-								  null);
+								  StatusCallback);
+		}
+
+		private static JET_err StatusCallback(JET_SESID sesid, JET_SNP snp, JET_SNT snt, object data)
+		{
+			Console.WriteLine("{0} {1} {2}", snp, snt, data);
+			return JET_err.Success;
 		}
 	}
 }

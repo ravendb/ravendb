@@ -10,6 +10,7 @@ using log4net;
 using Microsoft.Isam.Esent.Interop;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Database.Backup;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
@@ -556,6 +557,12 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				});
 				return approximateTaskCount;
 			}
+		}
+
+		public void Backup(string bak)
+		{
+			var backupOperation = new BackupOperation(TransactionalStorage.Instance, configuration.DataDirectory, bak);
+			backupOperation.Execute();
 		}
 	}
 }
