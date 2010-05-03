@@ -136,8 +136,6 @@ namespace Raven.Database.Storage
 						tableColumnsCache.IdentityColumns = Api.GetColumnDictionary(session, identity);
 					using (var details = new Table(session, dbid, "details", OpenTableGrbit.None))
 						tableColumnsCache.DetailsColumns = Api.GetColumnDictionary(session, details);
-					using (var directories = new Table(session, dbid, "directories", OpenTableGrbit.None))
-						tableColumnsCache.DirectoriesColumns = Api.GetColumnDictionary(session, directories);
 				}
 				finally
 				{
