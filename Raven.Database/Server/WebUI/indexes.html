@@ -153,13 +153,13 @@
 
         function addFieldsFromIndexDefinition(index) {
 			 var fields = [];
-        	if (index.Index.Stores != null) {
-        		for (var field in index.Index.Stores) {
+        	if (index.Stores != null) {
+        		for (var field in index.Stores) {
         			fields.push(field);
         		}
         	}
-        	if (index.Index.Indexes != null) {
-        		for (var field in index.Index.Indexes) {
+        	if (index.Indexes != null) {
+        		for (var field in index.Indexes) {
         			var contained = $.inArray(fields, field);
         			if (contained == -1)
         				fields.push(field);
@@ -170,11 +170,11 @@
         		var newField = addFieldOptionsToEditDocumentDialog();
         		var fieldName = fields[field];
         		$('#indexEditorFieldOption_Name', newField).val(fieldName);
-        		if (index.Index.Stores[fieldName]) {
-        			$('#indexEditorFieldOption_Store', newField).val(index.Index.Stores[fieldName]);
+        		if (index.Stores != null && index.Stores[fieldName]) {
+        			$('#indexEditorFieldOption_Store', newField).val(index.Stores[fieldName]);
         		}
-        		if (index.Index.Indexes[fieldName]) {
-        			$('#indexEditorFieldOption_Index', newField).val(index.Index.Indexes[fieldName]);
+        		if (index.Indexes != null && index.Indexes[fieldName]) {
+        			$('#indexEditorFieldOption_Index', newField).val(index.Indexes[fieldName]);
         		}
         	}
         }
@@ -192,7 +192,7 @@
         			$('#indexEditorReduceDef').val('');
         		}
 
-        		addFieldsFromIndexDefinition(index);
+        		addFieldsFromIndexDefinition(index.Index);
 
         		$('#actualError', $('#saveError')).remove();
         		$('#saveError, #ajaxSuccess, #ajaxError').hide();
@@ -251,7 +251,7 @@
         				}
         			},
         			title: 'Edit Index',
-        			width: 500
+        			width: 600
         		});
         	});
         }
@@ -264,19 +264,24 @@
             $('#actualError', $('#saveError')).remove();
             $('#saveError, #ajaxSuccess, #ajaxError').hide();
             $('#deleteIndex').hide();
+
+            $('#customizeField').unbind().click(function () {
+            	addFieldOptionsToEditDocumentDialog();
+            });
+
             $('#divEditor').dialog({
             	modal: true,
             	buttons: {
             		Save: function () {
             			var newName = $('#indexEditorName').val();
-            			var mapDef = { Map: $('#indexEditorMapDef').val() };
+            			var index = { Map: $('#indexEditorMapDef').val(), Indexes: {}, Stores: {} };
 
             			var reduce = $('#indexEditorReduceDef').val();
             			if (reduce.trim() != '') {
-            				mapDef["Reduce"] = reduce;
+            				index["Reduce"] = reduce;
             			}
-
-            			RavenUI.SaveIndex(newName, mapDef, function (data) {
+            			setFieldsOptionsInIndexDefinition(index);
+            			RavenUI.SaveIndex(newName, index, function (data) {
             				$('#divEditor').dialog('close');
             				getIndexPage();
             				$('#ajaxSuccess').html('Your index has been created. Click <a href="#" onclick="EditIndex(\'' + newName + '\'); return false;">here</a> to see it again.').fadeIn('slow');
@@ -291,7 +296,7 @@
             		}
             	},
             	title: 'Create New Index',
-            	width: 500
+            	width: 600
             });
         }
 
