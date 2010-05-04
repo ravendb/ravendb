@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using Microsoft.Isam.Esent.Interop;
 
 namespace Raven.Database.Backup
@@ -7,7 +8,7 @@ namespace Raven.Database.Backup
 	{
 		private readonly JET_INSTANCE instance;
 		private readonly string destination;
-		public event Action<string> Notify= delegate {  };
+		public event Action<string> Notify = delegate { };
 
 		public EsentBackup(JET_INSTANCE instance, string destination)
 		{
@@ -18,8 +19,9 @@ namespace Raven.Database.Backup
 		public void Execute()
 		{
 			Api.JetBackupInstance(instance, destination,
-			                      BackupGrbit.Atomic, 
+								  BackupGrbit.Atomic,
 								  StatusCallback);
+
 		}
 
 		private JET_err StatusCallback(JET_SESID sesid, JET_SNP snp, JET_SNT snt, object data)
