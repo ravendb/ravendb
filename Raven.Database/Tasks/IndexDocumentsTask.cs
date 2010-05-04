@@ -37,6 +37,7 @@ namespace Raven.Database.Tasks
 			context.TransactionaStorage.Batch(actions =>
 			{
 				var jsonDocuments = Keys.Select(key => actions.DocumentByKey(key, null))
+					.Where(x => x != null)
 					.Select(x => JsonToExpando.Convert(x.ToJson()))
 					.ToArray();
 
