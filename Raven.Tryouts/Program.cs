@@ -34,7 +34,7 @@ namespace Raven.Tryouts
 						var jsonDocument = db.Get(BackupStatus.RavenBackupStatusDocumentKey, null);
 						if (jsonDocument == null)
 							break;
-						var backupStatus = jsonDocument.Data.JsonDeserialization<BackupStatus>();
+						var backupStatus = jsonDocument.DataAsJson.JsonDeserialization<BackupStatus>();
 						Console.Clear();
 						Console.WriteLine("Backup started at {0}", backupStatus.Started);
 						foreach (var message in backupStatus.Messages)

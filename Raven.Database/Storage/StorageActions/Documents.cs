@@ -55,7 +55,7 @@ namespace Raven.Database.Storage
 						var etag = new Guid(Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["etag"]));
 						return new JsonDocument
 						{
-							Data = data,
+							DataAsJson = data.ToJObject(),
 							Etag = etag,
 							Key = Api.RetrieveColumnAsString(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["key"], Encoding.Unicode),
 							Metadata = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["metadata"]).ToJObject()
@@ -76,7 +76,7 @@ namespace Raven.Database.Storage
 			var existingEtag = new Guid(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
 			return new JsonDocument
 			{
-				Data = data,
+				DataAsJson = data.ToJObject(),
 				Etag = existingEtag,
 				Key = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode),
 				Metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject()
@@ -114,7 +114,7 @@ namespace Raven.Database.Storage
 				var doc = new JsonDocument
 				{
 					Key = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode),
-					Data = data,
+					DataAsJson = data.ToJObject(),
 					Etag = etag,
 					Metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject()
 				};

@@ -105,6 +105,9 @@
     <Compile Include="Data\BackupRequest.cs" />
     <Compile Include="Exceptions\IndexDoesNotExists.cs" />
     <Compile Include="IStartupTask.cs" />
+    <Compile Include="Plugins\IReadTrigger.cs" />
+    <Compile Include="Plugins\ReadOperation.cs" />
+    <Compile Include="Plugins\ReadVetoResult.cs" />
     <Compile Include="Server\Abstractions\HttpContextAdapter.cs" />
     <Compile Include="Server\Abstractions\HttpListenerContextAdpater.cs" />
     <Compile Include="Server\Abstractions\HttpListenerRequestAdapter.cs" />

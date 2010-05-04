@@ -6,7 +6,7 @@ namespace Raven.Database
 {
 	public class JsonDocument
 	{
-		public byte[] Data { get; set; }
+		public JObject DataAsJson { get; set; }
 		public JObject Metadata { get; set; }
 		public string Key { get; set; }
 		public Guid Etag { get; set; }
@@ -18,7 +18,7 @@ namespace Raven.Database
 			if (Projection != null)
 				return Projection;
 
-			var doc = Data.ToJObject();
+			var doc = DataAsJson;
 			var etagProp = Metadata.Property("@etag");
 			if (etagProp == null)
 			{

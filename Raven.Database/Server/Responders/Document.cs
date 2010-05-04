@@ -38,7 +38,7 @@ namespace Raven.Database.Server.Responders
 						context.SetStatusToNotModified();
 						return;
 					}
-					context.WriteData(doc.Data, doc.Metadata, doc.Etag);
+					context.WriteData(doc.DataAsJson, doc.Metadata, doc.Etag);
 					break;
 				case "DELETE":
 					Database.Delete(docId, context.GetEtag(), GetRequestTransaction(context));

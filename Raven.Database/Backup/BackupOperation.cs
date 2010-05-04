@@ -75,7 +75,7 @@ namespace Raven.Database.Backup
 				if (jsonDocument == null)
 					return;
 
-				var backupStatus = jsonDocument.Data.JsonDeserialization<BackupStatus>();
+				var backupStatus = jsonDocument.DataAsJson.JsonDeserialization<BackupStatus>();
 				backupStatus.IsRunning = false;
 				backupStatus.Completed = DateTime.Now;
 				database.Put(BackupStatus.RavenBackupStatusDocumentKey, null, JObject.FromObject(backupStatus),
@@ -104,7 +104,7 @@ namespace Raven.Database.Backup
 				var jsonDocument = database.Get(BackupStatus.RavenBackupStatusDocumentKey, null);
 				if(jsonDocument==null)
 					return;
-				var backupStatus = jsonDocument.Data.JsonDeserialization<BackupStatus>();
+				var backupStatus = jsonDocument.DataAsJson.JsonDeserialization<BackupStatus>();
 				backupStatus.Messages.Add(new BackupStatus.BackupMessage
 				{
 					Message = newMsg,

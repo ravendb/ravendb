@@ -1,12 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
-using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security;
 using System.Threading;
-using System.Threading.Tasks;
 using log4net;
 using Microsoft.Isam.Esent.Interop;
 using Newtonsoft.Json;
@@ -31,6 +29,9 @@ namespace Raven.Database
 
 		[ImportMany]
 		public IEnumerable<IDeleteTrigger> DeleteTriggers { get; set; }
+
+		[ImportMany]
+		public IEnumerable<IReadTrigger> ReadTriggers { get; set; }
 
 		private readonly RavenConfiguration configuration;
 		private readonly WorkContext workContext;
@@ -68,15 +69,20 @@ namespace Raven.Database
 			workContext.IndexDefinitionStorage = IndexDefinitionStorage;
 
 
-			PutTriggers.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
-			DeleteTriggers.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
-
+			InitializeTriggers();
 			ExecuteStartupTasks();
 
 			if (!newDb) 
 				return;
 
 			OnNewlyCreatedDatabase();
+		}
+
+		private void InitializeTriggers()
+		{
+			PutTriggers.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+			DeleteTriggers.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+			ReadTriggers.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
 		}
 
 		private void ExecuteStartupTasks()
@@ -180,6 +186,58 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 			{
 				document = actions.DocumentByKey(key, transactionInformation);
 			});
+
+			return ExecuteReadTriggersOnRead(ProcessReadVetoes(document));
+		}
+
+		private JsonDocument ExecuteReadTriggersOnRead(JsonDocument resultingDocument)
+		{
+			if (resultingDocument == null)
+				return null;
+
+			foreach (var readTrigger in ReadTriggers)
+			{
+				readTrigger.OnRead(resultingDocument.DataAsJson, resultingDocument.Metadata, ReadOperation.Load);
+			}
+			return resultingDocument;
+		}
+
+		private JsonDocument ProcessReadVetoes(JsonDocument document)
+		{
+			if (document == null)
+				return document;
+			foreach (var readTrigger in ReadTriggers)
+			{
+				var readVetoResult = readTrigger.AllowRead(document.DataAsJson, document.Metadata, ReadOperation.Load);
+				switch (readVetoResult.Veto)
+				{
+					case ReadVetoResult.ReadAllow.Allow:
+						break;
+					case ReadVetoResult.ReadAllow.Deny:
+						return new JsonDocument
+						{
+							DataAsJson = 
+								JObject.FromObject(new
+								{
+									Message = "The document exists, but it is hidden by a read trigger",
+									DocumentHidden = true,
+									readVetoResult.Reason
+								}),
+							Metadata = JObject.FromObject(
+								new
+								{
+									ReadVeto = true,
+									VetoingTrigger = readTrigger.ToString()
+								}
+								)
+						};
+					case ReadVetoResult.ReadAllow.Ignore:
+						return null;
+					default:
+						throw new ArgumentOutOfRangeException(readVetoResult.Veto.ToString());
+				}
+			}
+
 			return document;
 		}
 
@@ -365,8 +423,9 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 					var collection = from queryResult in IndexStorage.Query(index, query)
 					                 select RetrieveDocument(actions, queryResult, loadedIds)
 					                 into doc
-					                 where doc != null
-					                 select doc.ToJson();
+										 let processedDoc = ExecuteReadTriggersOnRead(ProcessReadVetoes(doc))
+										 where processedDoc != null
+										 select processedDoc.ToJson();
 					list.AddRange(collection);
 				});
 			return new QueryResult
@@ -459,11 +518,14 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 					var documentAndId in actions.DocumentsById(new Reference<bool>(), start, int.MaxValue, pageSize))
 				{
 					var doc = documentAndId.Item1;
-					doc.Metadata.Add("@docNum", new JValue(documentAndId.Item2));
-					if (doc.Metadata.Property("@id") == null)
-						doc.Metadata.Add("@id", new JValue(doc.Key));
+					var document = ExecuteReadTriggersOnRead(ProcessReadVetoes(doc));
+					if(document == null)
+						continue;
+					document.Metadata.Add("@docNum", new JValue(documentAndId.Item2));
+					if (document.Metadata.Property("@id") == null)
+						document.Metadata.Add("@id", new JValue(doc.Key));
 
-					list.Add(doc.ToJson());
+					list.Add(document.ToJson());
 				}
 			});
 			return list;
@@ -576,7 +638,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 			var document = Get(BackupStatus.RavenBackupStatusDocumentKey,null);
 			if(document!=null)
 			{
-				var backupStatus = document.Data.JsonDeserialization<BackupStatus>();
+				var backupStatus = document.DataAsJson.JsonDeserialization<BackupStatus>();
 				if(backupStatus.IsRunning)
 				{
 					throw new InvalidOperationException("Backup is already running");

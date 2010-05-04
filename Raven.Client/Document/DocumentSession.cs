@@ -69,7 +69,7 @@ namespace Raven.Client.Document
 			{
 				documentFound.Metadata.Add("@etag", new JValue(documentFound.Etag.ToString()));
 			}
-			return TrackEntity<T>(documentFound.Key, documentFound.Data.ToJObject(), documentFound.Metadata);
+			return TrackEntity<T>(documentFound.Key, documentFound.DataAsJson, documentFound.Metadata);
 		}
 
 		public T TrackEntity<T>(string key, JObject document, JObject metadata)

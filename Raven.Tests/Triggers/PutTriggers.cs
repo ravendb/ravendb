@@ -43,7 +43,7 @@ namespace Raven.Tests.Triggers
 		{
 			db.Put("abc", null, JObject.Parse("{'name': 'abc'}"), new JObject(), null);
 
-			var actualString = db.Get("abc", null).Data.ToJObject().ToString(Formatting.None);
+			var actualString = db.Get("abc", null).DataAsJson.ToString(Formatting.None);
 			Assert.Contains(@"{""name"":""abc"",""created_at"":""\/Date(946677600000+0200)\/""}", actualString);
 		}
 

@@ -113,7 +113,7 @@ namespace Raven.Tests.Storage
 				var jsonDocument = db.Get(BackupStatus.RavenBackupStatusDocumentKey, null);
 				if (jsonDocument == null)
 					break;
-				var backupStatus = jsonDocument.Data.JsonDeserialization<BackupStatus>();
+				var backupStatus = jsonDocument.DataAsJson.JsonDeserialization<BackupStatus>();
 				if (backupStatus.IsRunning == false)
 					return;
 				Thread.Sleep(50);

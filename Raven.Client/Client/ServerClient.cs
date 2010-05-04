@@ -37,7 +37,7 @@ namespace Raven.Client.Client
 			{
 				return new JsonDocument
 				{
-					Data = Encoding.UTF8.GetBytes(request.ReadResponseString()),
+					DataAsJson = JObject.Parse(request.ReadResponseString()),
 					Key = key,
 					Etag = new Guid(request.ResponseHeaders["ETag"]),
 					Metadata = request.ResponseHeaders.FilterHeaders()
@@ -200,7 +200,7 @@ namespace Raven.Client.Client
 	                    Key = metadata["@id"].Value<string>(),
 	                    Etag = new Guid(metadata["@etag"].Value<string>()),
 	                    Metadata = metadata,
-	                    Data = Encoding.UTF8.GetBytes(doc.ToString(Formatting.None)),
+	                    DataAsJson = doc,
 	                })
 	            .ToArray();
 	    }

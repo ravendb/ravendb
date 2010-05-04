@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Exceptions;
@@ -67,6 +68,11 @@ namespace Raven.Database.Server.Responders
 			obj.WriteTo(jsonTextWriter, new JsonEnumConverter());
 			jsonTextWriter.Flush();
 			streamWriter.Flush();
+		}
+
+		public static void WriteData(this IHttpContext context, JObject data, JObject headers, Guid etag)
+		{
+			WriteData(context, Encoding.UTF8.GetBytes(data.ToString(Formatting.Indented)), headers, etag);
 		}
 
 		public static void WriteData(this IHttpContext context, byte[] data, JObject headers, Guid etag)
