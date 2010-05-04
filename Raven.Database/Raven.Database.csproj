@@ -102,6 +102,7 @@
     <Compile Include="Backup\DirectoryBackup.cs" />
     <Compile Include="Backup\RemoveBackupDocumentStartupTask.cs" />
     <Compile Include="Backup\RestoreOperation.cs" />
+    <Compile Include="Data\BackupRequest.cs" />
     <Compile Include="Exceptions\IndexDoesNotExists.cs" />
     <Compile Include="IStartupTask.cs" />
     <Compile Include="Server\Abstractions\HttpContextAdapter.cs" />
@@ -171,6 +172,7 @@
     <Compile Include="PutResult.cs" />
     <Compile Include="RavenConfiguration.cs" />
     <Compile Include="Server\HttpServer.cs" />
+    <Compile Include="Server\Responders\AdminBackup.cs" />
     <Compile Include="Server\Responders\Docs.cs" />
     <Compile Include="Server\Responders\Document.cs" />
     <Compile Include="Server\Responders\DocumentBatch.cs" />
