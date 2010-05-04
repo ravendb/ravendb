@@ -35,7 +35,7 @@ namespace Raven.Server
 
 		public HttpServer(RavenConfiguration configuration, DocumentDatabase database)
 		{
-			this.Configuration = configuration;
+			Configuration = configuration;
 
 			configuration.Container.SatisfyImportsOnce(this);
 
@@ -59,7 +59,10 @@ namespace Raven.Server
 		public void Start()
 		{
 			listener = new HttpListener();
-			listener.Prefixes.Add("http://+:" + Configuration.Port + "/" + Configuration.VirtualDirectory);
+			string virtualDirectory = Configuration.VirtualDirectory;
+			if (virtualDirectory.EndsWith("/") == false)
+				virtualDirectory = virtualDirectory + "/";
+			listener.Prefixes.Add("http://+:" + Configuration.Port + virtualDirectory);
 			switch (Configuration.AnonymousUserAccessMode)
 			{
 				case AnonymousUserAccessMode.None:
