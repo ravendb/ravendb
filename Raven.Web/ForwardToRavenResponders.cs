@@ -16,7 +16,7 @@ namespace Raven.Web
 
 		public void ProcessRequest(HttpContext context)
 		{
-			server.HandleActualRequest(new HttpContextAdapter(context));
+			server.HandleActualRequest(new HttpContextAdapter(context, server.Configuration));
 		}
 
 		public bool IsReusable

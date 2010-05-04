@@ -165,5 +165,12 @@ namespace Raven.Database
 
 			});
 		}
+
+		public string GetFullUrl(string baseUrl)
+		{
+			if (baseUrl.StartsWith("/"))
+				baseUrl = baseUrl.Substring(1);
+			return VirtualDirectory + "/" + baseUrl;
+		}
 	}
 }

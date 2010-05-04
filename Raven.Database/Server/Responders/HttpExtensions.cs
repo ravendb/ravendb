@@ -106,7 +106,7 @@ namespace Raven.Database.Server.Responders
 		{
 			context.Response.StatusCode = 201;
 			context.Response.StatusDescription = "Created";
-			context.Response.Headers["Location"] = location;
+			context.Response.Headers["Location"] = context.Configuration.GetFullUrl(location);
 		}
 
 

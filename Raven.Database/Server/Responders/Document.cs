@@ -57,7 +57,7 @@ namespace Raven.Database.Server.Responders
 							context.SetStatusToNotFound();
 							break;
 						case PatchResult.Patched:
-							context.Response.Headers["Location"] = "/docs/" + docId;
+							context.Response.Headers["Location"] = Database.Configuration.GetFullUrl("/docs/" + docId);
 							context.WriteJson(new {Patched = true});
 							break;
 						default:

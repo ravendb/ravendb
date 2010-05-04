@@ -22,7 +22,7 @@ namespace Raven.Server
 		[ImportMany]
 		public IEnumerable<RequestResponder> RequestResponders { get; set; }
 
-		private readonly RavenConfiguration configuration;
+		public RavenConfiguration Configuration { get; private set; }
 		private HttpListener listener;
 
 		private readonly ILog logger = LogManager.GetLogger(typeof(HttpServer));
@@ -35,7 +35,7 @@ namespace Raven.Server
 
 		public HttpServer(RavenConfiguration configuration, DocumentDatabase database)
 		{
-			this.configuration = configuration;
+			this.Configuration = configuration;
 
 			configuration.Container.SatisfyImportsOnce(this);
 
@@ -59,8 +59,8 @@ namespace Raven.Server
 		public void Start()
 		{
 			listener = new HttpListener();
-			listener.Prefixes.Add("http://+:" + configuration.Port + "/" + configuration.VirtualDirectory);
-			switch (configuration.AnonymousUserAccessMode)
+			listener.Prefixes.Add("http://+:" + Configuration.Port + "/" + Configuration.VirtualDirectory);
+			switch (Configuration.AnonymousUserAccessMode)
 			{
 				case AnonymousUserAccessMode.None:
 					listener.AuthenticationSchemes = AuthenticationSchemes.IntegratedWindowsAuthentication;
@@ -80,7 +80,7 @@ namespace Raven.Server
 			IHttpContext ctx;
 			try
 			{
-				ctx = new HttpListenerContextAdpater(listener.EndGetContext(ar));
+				ctx = new HttpListenerContextAdpater(listener.EndGetContext(ar), Configuration);
 				//setup waiting for the next request
 				listener.BeginGetContext(GetContext, null);
 			}
@@ -254,7 +254,7 @@ namespace Raven.Server
 
 		private bool AssertSecurityRights(IHttpContext ctx)
 		{
-			if (configuration.AnonymousUserAccessMode == AnonymousUserAccessMode.Get &&
+			if (Configuration.AnonymousUserAccessMode == AnonymousUserAccessMode.Get &&
 				(ctx.User == null || ctx.User.Identity == null || ctx.User.Identity.IsAuthenticated == false) &&
 					ctx.Request.HttpMethod != "GET"
 				)
