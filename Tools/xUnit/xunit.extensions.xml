@@ -18,6 +18,16 @@
             <param name="collection">The collection to be inspected</param>
             <exception cref="T:Xunit.Sdk.ContainsException">Thrown when the object is not present in the collection</exception>
         </member>
+        <member name="M:Xunit.Extensions.Assertions.Contains``1(``0,System.Collections.Generic.IEnumerable{``0},System.Collections.Generic.IEqualityComparer{``0})">
+            <summary>
+            Verifies that a collection contains a given object, using an equality comparer.
+            </summary>
+            <typeparam name="T">The type of the object to be verified</typeparam>
+            <param name="expected">The object expected to be in the collection</param>
+            <param name="collection">The collection to be inspected</param>
+            <param name="comparer">The comparer used to equate objects in the collection with the expected object</param>
+            <exception cref="T:Xunit.Sdk.ContainsException">Thrown when the object is not present in the collection</exception>
+        </member>
         <member name="M:Xunit.Extensions.Assertions.Contains``1(``0,System.Collections.Generic.IEnumerable{``0},System.Collections.Generic.IComparer{``0})">
             <summary>
             Verifies that a collection contains a given object, using a comparer.
@@ -52,6 +62,16 @@
             <typeparam name="T">The type of the object to be compared</typeparam>
             <param name="expected">The object that is expected not to be in the collection</param>
             <param name="collection">The collection to be inspected</param>
+            <exception cref="T:Xunit.Sdk.DoesNotContainException">Thrown when the object is present inside the container</exception>
+        </member>
+        <member name="M:Xunit.Extensions.Assertions.DoesNotContain``1(``0,System.Collections.Generic.IEnumerable{``0},System.Collections.Generic.IEqualityComparer{``0})">
+            <summary>
+            Verifies that a collection does not contain a given object, using an equality comparer.
+            </summary>
+            <typeparam name="T">The type of the object to be compared</typeparam>
+            <param name="expected">The object that is expected not to be in the collection</param>
+            <param name="collection">The collection to be inspected</param>
+            <param name="comparer">The comparer used to equate objects in the collection with the expected object</param>
             <exception cref="T:Xunit.Sdk.DoesNotContainException">Thrown when the object is present inside the container</exception>
         </member>
         <member name="M:Xunit.Extensions.Assertions.DoesNotContain``1(``0,System.Collections.Generic.IEnumerable{``0},System.Collections.Generic.IComparer{``0})">
@@ -104,6 +124,16 @@
             <param name="actual">The value to be compared against</param>
             <exception cref="T:Xunit.Sdk.EqualException">Thrown when the objects are not equal</exception>
         </member>
+        <member name="M:Xunit.Extensions.Assertions.Equal``1(``0,``0,System.Collections.Generic.IEqualityComparer{``0})">
+            <summary>
+            Verifies that two objects are equal, using a custom equatable comparer.
+            </summary>
+            <typeparam name="T">The type of the objects to be compared</typeparam>
+            <param name="expected">The expected value</param>
+            <param name="actual">The value to be compared against</param>
+            <param name="comparer">The comparer used to compare the two objects</param>
+            <exception cref="T:Xunit.Sdk.EqualException">Thrown when the objects are not equal</exception>
+        </member>
         <member name="M:Xunit.Extensions.Assertions.Equal``1(``0,``0,System.Collections.Generic.IComparer{``0})">
             <summary>
             Verifies that two objects are equal, using a custom comparer.
@@ -113,9 +143,6 @@
             <param name="actual">The value to be compared against</param>
             <param name="comparer">The comparer used to compare the two objects</param>
             <exception cref="T:Xunit.Sdk.EqualException">Thrown when the objects are not equal</exception>
-        </member>
-        <member name="M:Xunit.Extensions.Assertions.Equals(System.Object)">
-            <summary>Do not call this method. Call Assert.Equal() instead.</summary>
         </member>
         <member name="M:Xunit.Extensions.Assertions.False(System.Boolean)">
             <summary>
@@ -131,12 +158,6 @@
             <param name="condition">The condition to be tested</param>
             <param name="userMessage">The message to show when the condition is not false</param>
             <exception cref="T:Xunit.Sdk.FalseException">Thrown if the condition is not false</exception>
-        </member>
-        <member name="M:Xunit.Extensions.Assertions.GetHashCode">
-            <summary>
-            Serves as a hash function for a particular type.
-            </summary>
-            <returns>A hash code for the current <see cref="T:System.Object"/>.</returns>
         </member>
         <member name="M:Xunit.Extensions.Assertions.InRange``1(``0,``0,``0)">
             <summary>
@@ -159,13 +180,30 @@
             <param name="comparer">The comparer used to evaluate the value's range</param>
             <exception cref="T:Xunit.Sdk.InRangeException">Thrown when the value is not in the given range</exception>
         </member>
+        <member name="M:Xunit.Extensions.Assertions.IsAssignableFrom``1(System.Object)">
+            <summary>
+            Verifies that an object is of the given type or a derived type.
+            </summary>
+            <typeparam name="T">The type the object should be</typeparam>
+            <param name="object">The object to be evaluated</param>
+            <returns>The object, casted to type T when successful</returns>
+            <exception cref="T:Xunit.Sdk.IsAssignableFromException">Thrown when the object is not the given type</exception>
+        </member>
+        <member name="M:Xunit.Extensions.Assertions.IsAssignableFrom(System.Type,System.Object)">
+            <summary>
+            Verifies that an object is of the given type or a derived type.
+            </summary>
+            <param name="expectedType">The type the object should be</param>
+            <param name="object">The object to be evaluated</param>
+            <exception cref="T:Xunit.Sdk.IsAssignableFromException">Thrown when the object is not the given type</exception>
+        </member>
         <member name="M:Xunit.Extensions.Assertions.IsNotType``1(System.Object)">
             <summary>
             Verifies that an object is not exactly the given type.
             </summary>
             <typeparam name="T">The type the object should not be</typeparam>
             <param name="object">The object to be evaluated</param>
-            <exception cref="T:Xunit.Sdk.IsTypeException">Thrown when the object is the given type</exception>
+            <exception cref="T:Xunit.Sdk.IsNotTypeException">Thrown when the object is the given type</exception>
         </member>
         <member name="M:Xunit.Extensions.Assertions.IsNotType(System.Type,System.Object)">
             <summary>
@@ -173,7 +211,7 @@
             </summary>
             <param name="expectedType">The type the object should not be</param>
             <param name="object">The object to be evaluated</param>
-            <exception cref="T:Xunit.Sdk.IsTypeException">Thrown when the object is the given type</exception>
+            <exception cref="T:Xunit.Sdk.IsNotTypeException">Thrown when the object is the given type</exception>
         </member>
         <member name="M:Xunit.Extensions.Assertions.IsType``1(System.Object)">
             <summary>
@@ -207,6 +245,16 @@
             <typeparam name="T">The type of the objects to be compared</typeparam>
             <param name="expected">The expected object</param>
             <param name="actual">The actual object</param>
+            <exception cref="T:Xunit.Sdk.NotEqualException">Thrown when the objects are equal</exception>
+        </member>
+        <member name="M:Xunit.Extensions.Assertions.NotEqual``1(``0,``0,System.Collections.Generic.IEqualityComparer{``0})">
+            <summary>
+            Verifies that two objects are not equal, using a custom equality comparer.
+            </summary>
+            <typeparam name="T">The type of the objects to be compared</typeparam>
+            <param name="expected">The expected object</param>
+            <param name="actual">The actual object</param>
+            <param name="comparer">The comparer used to examine the objects</param>
             <exception cref="T:Xunit.Sdk.NotEqualException">Thrown when the objects are equal</exception>
         </member>
         <member name="M:Xunit.Extensions.Assertions.NotEqual``1(``0,``0,System.Collections.Generic.IComparer{``0})">
@@ -270,6 +318,27 @@
             <param name="actual">The actual object instance</param>
             <exception cref="T:Xunit.Sdk.SameException">Thrown when the objects are not the same instance</exception>
         </member>
+        <member name="M:Xunit.Extensions.Assertions.Single(System.Collections.IEnumerable)">
+            <summary>
+            Verifies that the given collection contains only a single
+            element of the given type.
+            </summary>
+            <param name="collection">The collection.</param>
+            <returns>The single item in the collection.</returns>
+            <exception cref="T:Xunit.Sdk.SingleException">Thrown when the collection does not contain
+            exactly one element.</exception>
+        </member>
+        <member name="M:Xunit.Extensions.Assertions.Single``1(System.Collections.Generic.IEnumerable{``0})">
+            <summary>
+            Verifies that the given collection contains only a single
+            element of the given type.
+            </summary>
+            <typeparam name="T">The collection type.</typeparam>
+            <param name="collection">The collection.</param>
+            <returns>The single item in the collection.</returns>
+            <exception cref="T:Xunit.Sdk.SingleException">Thrown when the collection does not contain
+            exactly one element.</exception>
+        </member>
         <member name="M:Xunit.Extensions.Assertions.Throws``1(Xunit.Assert.ThrowsDelegate)">
             <summary>
             Verifies that the exact exception is thrown (and not a derived exception type).
@@ -279,12 +348,12 @@
             <returns>The exception that was thrown, when successful</returns>
             <exception cref="T:Xunit.Sdk.ThrowsException">Thrown when an exception was not thrown, or when an exception of the incorrect type is thrown</exception>
         </member>
-        <member name="M:Xunit.Extensions.Assertions.Throws``1(System.String,Xunit.Assert.ThrowsDelegate)">
+        <member name="M:Xunit.Extensions.Assertions.Throws``1(Xunit.Assert.ThrowsDelegateWithReturn)">
             <summary>
             Verifies that the exact exception is thrown (and not a derived exception type).
+            Generally used to test property accessors.
             </summary>
             <typeparam name="T">The type of the exception expected to be thrown</typeparam>
-            <param name="userMessage">The message to be shown if the test fails</param>
             <param name="testCode">A delegate to the code to be tested</param>
             <returns>The exception that was thrown, when successful</returns>
             <exception cref="T:Xunit.Sdk.ThrowsException">Thrown when an exception was not thrown, or when an exception of the incorrect type is thrown</exception>
@@ -292,6 +361,16 @@
         <member name="M:Xunit.Extensions.Assertions.Throws(System.Type,Xunit.Assert.ThrowsDelegate)">
             <summary>
             Verifies that the exact exception is thrown (and not a derived exception type).
+            </summary>
+            <param name="exceptionType">The type of the exception expected to be thrown</param>
+            <param name="testCode">A delegate to the code to be tested</param>
+            <returns>The exception that was thrown, when successful</returns>
+            <exception cref="T:Xunit.Sdk.ThrowsException">Thrown when an exception was not thrown, or when an exception of the incorrect type is thrown</exception>
+        </member>
+        <member name="M:Xunit.Extensions.Assertions.Throws(System.Type,Xunit.Assert.ThrowsDelegateWithReturn)">
+            <summary>
+            Verifies that the exact exception is thrown (and not a derived exception type).
+            Generally used to test property accessors.
             </summary>
             <param name="exceptionType">The type of the exception expected to be thrown</param>
             <param name="testCode">A delegate to the code to be tested</param>
@@ -414,6 +493,9 @@
             <param name="methodUnderTest">The method that is being tested</param>
             <param name="parameterTypes">The types of the parameters for the test method</param>
             <returns>The theory data</returns>
+        </member>
+        <member name="P:Xunit.Extensions.DataAttribute.TypeId">
+            <inheritdoc/>
         </member>
         <member name="M:Xunit.Extensions.ClassDataAttribute.#ctor(System.Type)">
             <summary>
@@ -656,7 +738,7 @@
             multiple times (once with each data row).
             </summary>
         </member>
-        <member name="M:Xunit.Extensions.TheoryAttribute.EnumerateTestCommands(System.Reflection.MethodInfo)">
+        <member name="M:Xunit.Extensions.TheoryAttribute.EnumerateTestCommands(Xunit.Sdk.IMethodInfo)">
             <summary>
             Creates instances of <see cref="T:Xunit.Extensions.TheoryCommand"/> which represent individual intended
             invocations of the test method, one per data row in the data source.
@@ -669,7 +751,7 @@
             Represents a single invocation of a data theory test method.
             </summary>
         </member>
-        <member name="M:Xunit.Extensions.TheoryCommand.#ctor(System.Reflection.MethodInfo,System.Object[])">
+        <member name="M:Xunit.Extensions.TheoryCommand.#ctor(Xunit.Sdk.IMethodInfo,System.Object[])">
             <summary>
             Creates a new instance of <see cref="T:Xunit.Extensions.TheoryCommand"/>.
             </summary>
