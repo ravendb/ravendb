@@ -14,7 +14,7 @@ namespace Raven.Database
 		public RavenConfiguration()
 		{
 			Catalog = new AggregateCatalog(
-				new AssemblyCatalog(typeof(DocumentDatabase).Assembly)
+				new AssemblyCatalog(typeof (DocumentDatabase).Assembly)
 				);
 
 			Catalog.Changed += (sender, args) => ResetContainer();
@@ -34,7 +34,12 @@ namespace Raven.Database
 
 			WebDir = ConfigurationManager.AppSettings["RavenWebDir"] ?? GetDefaultWebDir();
 
-			VirtualDirectory = ConfigurationManager.AppSettings["VirtualDirectory"];
+			VirtualDirectory = ConfigurationManager.AppSettings["VirtualDirectory"] ?? "/";
+
+			if (VirtualDirectory.EndsWith("/") )
+				VirtualDirectory = VirtualDirectory.Substring(0, VirtualDirectory.Length - 1); 
+			if (VirtualDirectory.StartsWith("/") == false)
+				VirtualDirectory = "/" + VirtualDirectory;
 
 			PluginsDirectory = ConfigurationManager.AppSettings["PluginsDirectory"] ?? @"~\Plugins";
 			if (PluginsDirectory.StartsWith(@"~\"))
