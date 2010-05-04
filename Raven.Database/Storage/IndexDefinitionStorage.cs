@@ -89,7 +89,7 @@ namespace Raven.Database.Storage
 		{
 			var indexPath = GetIndexPath(name);
 			if (File.Exists(indexPath) == false)
-				throw new InvalidOperationException("Index file does not exists");
+				throw new InvalidOperationException("Index file does not exists: " + indexPath);
 			return JsonConvert.DeserializeObject<IndexDefinition>(File.ReadAllText(indexPath), new JsonEnumConverter());
 		}
 
