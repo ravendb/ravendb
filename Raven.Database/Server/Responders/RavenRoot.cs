@@ -16,7 +16,10 @@ namespace Raven.Database.Server.Responders
 
 		public override void Respond(IHttpContext context)
 		{
-			context.Response.Redirect("/raven/index.html");
+			if(Settings.VirtualDirectory != "/")
+				context.Response.Redirect( Settings.VirtualDirectory + "/raven/index.html");
+			else
+				context.Response.Redirect("/raven/index.html");
 		}
 	}
 }
