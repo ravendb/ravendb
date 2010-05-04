@@ -31,7 +31,7 @@ function RavenUI() { }
 
 RavenUI.UpdateQuickStats = function (targetSelector) {
     if (!$(targetSelector).hasTemplate()) {
-        $(targetSelector).setTemplateURL('JSONTemplates/quickStats.html');
+    	$(targetSelector).setTemplateURL($.ravenDB.getServerUrl() + '/raven/JSONTemplates/quickStats.html');
     }
 
     $.ravenDB.getStatistics(function (stats) {
@@ -42,13 +42,13 @@ RavenUI.UpdateQuickStats = function (targetSelector) {
 //global statistics
 
 RavenUI.GetGlobalStatistics = function (targetSelector) {
-    if (!$(targetSelector).hasTemplate()) {
-        $(targetSelector).setTemplateURL('JSONTemplates/globalStats.html');
-    }
+	if (!$(targetSelector).hasTemplate()) {
+		$(targetSelector).setTemplateURL($.ravenDB.getServerUrl() + '/raven/JSONTemplates/globalStats.html');
+	}
 
-    $.ravenDB.getStatistics(function (stats) {
-        $(targetSelector).processTemplate(stats);
-    });
+	$.ravenDB.getStatistics(function (stats) {
+		$(targetSelector).processTemplate(stats);
+	});
 }
 
 //Documents
@@ -81,7 +81,7 @@ RavenUI.GetIndexCount = function (successCallback) {
 
 RavenUI.GetIndexPage = function (pageNum, pageSize, targetSelector, successCallback) {
     if (!$(targetSelector).hasTemplate()) {
-        $(targetSelector).setTemplateURL('JSONTemplates/indexPage.html');
+    	$(targetSelector).setTemplateURL($.ravenDB.getServerUrl() + '/raven/JSONTemplates/indexPage.html');
     }
 
     $.ravenDB.getIndexPage(pageNum, pageSize, function (indexes) {
@@ -125,7 +125,7 @@ RavenUI.ShowTemplatedDocument = function (docId, operation, elementName) {
 			$(elementName).html('No ' + operation.toLowerCase() + ' template was specified for this document.');
 			return;
 		}
-		$(elementName).setTemplateURL(template, null, { filter_data: false });
+		$(elementName).setTemplateURL($.ravenDB.getServerUrl() + template, null, { filter_data: false });
 		$(elementName).processTemplate(data);
 	})
 }
