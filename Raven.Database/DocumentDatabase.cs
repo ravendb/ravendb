@@ -588,12 +588,8 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				IsRunning = true,
 			}), new JObject(), null);
 
-			new System.Threading.Tasks.Task(() =>
-			{
-				var backupOperation = new BackupOperation(this, configuration.DataDirectory, backupDestinationDirectory);
-				backupOperation.Execute();
-			}, TaskCreationOptions.LongRunning)
-			.Start();
+			var backupOperation = new BackupOperation(this, configuration.DataDirectory, backupDestinationDirectory);
+			ThreadPool.QueueUserWorkItem(backupOperation.Execute);
 		}
 
 		public static void Restore(string backupLocation, string databaseLocation)

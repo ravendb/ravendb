@@ -26,7 +26,7 @@ namespace Raven.Database.Backup
 			this.src = src;
 		}
 
-		public void Execute()
+		public void Execute(object ignored)
 		{
 			try
 			{
