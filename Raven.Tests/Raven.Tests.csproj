@@ -118,6 +118,7 @@
     <Compile Include="Triggers\CascadeDeleteTrigger.cs" />
     <Compile Include="Triggers\DeleteTriggers.cs" />
     <Compile Include="Triggers\PutTriggers.cs" />
+    <Compile Include="Triggers\ReadTriggers.cs" />
     <Compile Include="Triggers\VetoCapitalNamesPutTrigger.cs" />
     <Compile Include="Views\MapReduce.cs" />
     <Compile Include="Views\ViewCompilation.cs" />
