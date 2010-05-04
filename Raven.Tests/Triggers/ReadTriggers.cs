@@ -23,13 +23,14 @@ namespace Raven.Tests.Triggers
 				DataDirectory = "raven.db.test.esent",
 				Container = new CompositionContainer(new TypeCatalog(
 					typeof(VetoReadsOnCapitalNamesTrigger),
-					typeof(HiddenDocumentsTrigger)))
+					typeof(HiddenDocumentsTrigger),
+					typeof(UpperCaseNamesTrigger)))
 			});
 			db.SpinBackgroundWorkers();
 			db.PutIndex("ByName",
 			            new IndexDefinition
 			            {
-			            	Map = "from doc in docs select new{ doc.name} "
+			            	Map = "from doc in docs select new{ doc.name}"
 			            });
 		}
 
@@ -117,6 +118,44 @@ namespace Raven.Tests.Triggers
 			Assert.Empty(queryResult.Results);
 		}
 
+
+		[Fact]
+		public void CanModifyDocumentUsingTrigger()
+		{
+			db.Put("abc", null, JObject.Parse("{'name': 'abc'}"), new JObject(), null);
+
+			var jsonDocument = db.Get("abc", null);
+
+			Assert.Equal("ABC", jsonDocument.DataAsJson.Value<string>("name"));
+		}
+
+		[Fact]
+		public void CanModifyDocumentUsingTrigger_GetDocuments()
+		{
+			db.Put("abc", null, JObject.Parse("{'name': 'abc'}"), new JObject(), null);
+
+
+			Assert.Equal("ABC", db.GetDocuments(0,10).First().Value<string>("name"));
+		}
+
+		[Fact]
+		public void CanModifyDocumentUsingTrigger_Query()
+		{
+			db.Put("abc", null, JObject.Parse("{'name': 'abc'}"), new JObject(), null);
+
+			QueryResult queryResult;
+			do
+			{
+				queryResult = db.Query("ByName", new IndexQuery
+				{
+					Query = "name:abC",
+					PageSize = 10
+				});
+			} while (queryResult.IsStale);
+
+			Assert.Equal("ABC", queryResult.Results[0].Value<string>("name"));
+		}
+
 		public class HiddenDocumentsTrigger : IReadTrigger
 		{
 			public ReadVetoResult AllowRead(JObject document, JObject metadata, ReadOperation operation)
@@ -148,6 +187,24 @@ namespace Raven.Tests.Triggers
 
 			public void OnRead(JObject document, JObject metadata, ReadOperation operation)
 			{
+			}
+		}
+
+		public class UpperCaseNamesTrigger : IReadTrigger
+		{
+			public ReadVetoResult AllowRead(JObject document, JObject metadata, ReadOperation operation)
+			{
+				
+				return ReadVetoResult.Allowed;
+			}
+
+			public void OnRead(JObject document, JObject metadata, ReadOperation operation)
+			{
+				var name = document.Property("name");
+				if (name != null)
+				{
+					name.Value = new JValue(name.Value.Value<string>().ToUpper());
+				}
 			}
 		}
 	}
