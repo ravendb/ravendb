@@ -39,6 +39,14 @@ namespace Raven.Server
 					case "stop":
 						AdminRequired(StopService, "/stop");
 						break;
+					case "restore":
+						if(args.Length != 3)
+						{
+							PrintUsage();
+							break;
+						}
+						RunRestoreOperation(args[0], args[1]);
+						break;
 					case "debug":
 						RunInDebugMode(createDefaultDatabase: true, anonymousUserAccessMode: null);
 						break;
@@ -59,6 +67,18 @@ namespace Raven.Server
 			else
 			{
 				ServiceBase.Run(new RavenService());
+			}
+		}
+
+		private static void RunRestoreOperation(string backupLocation, string databaseLocation)
+		{
+			try
+			{
+				DocumentDatabase.Restore(backupLocation, databaseLocation);
+			}
+			catch (Exception e)
+			{
+				Console.WriteLine(e);
 			}
 		}
 
@@ -95,7 +115,7 @@ namespace Raven.Server
 		{
 			if (args.Length == 0)
 				return "debug";
-			if (args.Length > 1 || args[0].StartsWith("/") == false)
+			if (args[0].StartsWith("/") == false)
 				return "help";
 			return args[0].Substring(1);
 		}
@@ -151,7 +171,9 @@ Command line ptions:
     RavenDb /start		- starts the previously installed Raven service
     RavenDb /stop		- stops the previously installed Raven service
     RavenDb /restart	- restarts the previously installed Raven service
-
+	RavenDB /restore [backup location] [new database location]
+						- restore a previously backed up database to the new
+						  location
 Enjoy...
 ");
 		}
