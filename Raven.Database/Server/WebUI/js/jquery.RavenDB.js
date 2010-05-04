@@ -4,9 +4,32 @@
     $.ravenDB = {
         settings: null,
 
+		getServerUrl: function() {
+			return settings.server;
+		},
+
         init: function (options) {
+
+			var scriptSource = (function() {
+				var scripts = document.getElementsByTagName('script');
+				var scriptSrc = null;
+				for (var i = 0; i < scripts.length; i++) {
+					if (scripts[i].getAttribute.length !== undefined) {
+						scriptSrc = scripts[i].src;
+					}
+					else {
+						scriptSrc = scripts[i].getAttribute('src', -1);
+					}
+					var indexPosition =  scriptSrc.indexOf('jquery.RavenDB.js');
+					if(indexPosition != -1)
+						break;
+				}
+				var indexPosition =  scriptSrc.indexOf('raven/js/jquery.RavenDB.js');
+				return scriptSrc.substring(0, indexPosition);
+			}());
+
             settings = $.extend({
-                server: '/'
+                server: scriptSource
             }, options);
         },
 
