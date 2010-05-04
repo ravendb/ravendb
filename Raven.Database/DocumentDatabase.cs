@@ -33,7 +33,6 @@ namespace Raven.Database
 		[ImportMany]
 		public IEnumerable<IReadTrigger> ReadTriggers { get; set; }
 
-		private readonly RavenConfiguration configuration;
 		private readonly WorkContext workContext;
 
 		private Thread[] backgroundWorkers = new Thread[0];
@@ -42,7 +41,7 @@ namespace Raven.Database
 
 		public DocumentDatabase(RavenConfiguration configuration)
 		{
-			this.configuration = configuration;
+			this.Configuration = configuration;
 			
 			configuration.Container.SatisfyImportsOnce(this);
 		
@@ -87,7 +86,7 @@ namespace Raven.Database
 
 		private void ExecuteStartupTasks()
 		{
-			foreach (var task in configuration.Container.GetExportedValues<IStartupTask>())
+			foreach (var task in Configuration.Container.GetExportedValues<IStartupTask>())
 			{
 				task.Execute(this);
 			}
@@ -95,7 +94,7 @@ namespace Raven.Database
 
 		private void OnNewlyCreatedDatabase()
 		{
-			if(configuration.ShouldCreateDefaultsWhenBuildingNewDatabaseFromScratch)
+			if (Configuration.ShouldCreateDefaultsWhenBuildingNewDatabaseFromScratch)
 			{
 				PutIndex("Raven/DocumentsByEntityName",
 				         new IndexDefinition
@@ -109,8 +108,8 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				         	Stores = {{"Tag", FieldStorage.No}}
 				         });
 			}
-	
-			configuration.RaiseDatabaseCreatedFromScratch(this);
+
+			Configuration.RaiseDatabaseCreatedFromScratch(this);
 		}
 
 		public DatabaseStatistics Statistics
@@ -132,6 +131,11 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				});
 				return result;
 			}
+		}
+
+		public RavenConfiguration Configuration
+		{
+			get; private set;
 		}
 
 		public TransactionalStorage TransactionalStorage { get; private set; }
@@ -391,12 +395,12 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				var firstAndLast = actions.FirstAndLastDocumentIds();
 				if (firstAndLast.Item1 != 0 && firstAndLast.Item2 != 0)
 				{
-					for (var i = firstAndLast.Item1; i <= firstAndLast.Item2; i += configuration.IndexingBatchSize)
+					for (var i = firstAndLast.Item1; i <= firstAndLast.Item2; i += Configuration.IndexingBatchSize)
 					{
 						actions.AddTask(new IndexDocumentRangeTask
 						{
 							FromId = i,
-							ToId = Math.Min(i + configuration.IndexingBatchSize, firstAndLast.Item2),
+							ToId = Math.Min(i + Configuration.IndexingBatchSize, firstAndLast.Item2),
 							Index = name
 						});
 					}
@@ -650,7 +654,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				IsRunning = true,
 			}), new JObject(), null);
 
-			var backupOperation = new BackupOperation(this, configuration.DataDirectory, backupDestinationDirectory);
+			var backupOperation = new BackupOperation(this, Configuration.DataDirectory, backupDestinationDirectory);
 			ThreadPool.QueueUserWorkItem(backupOperation.Execute);
 		}
 
