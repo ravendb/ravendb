@@ -21,7 +21,7 @@ namespace Raven.Database.Server.Responders
 
 		public override void Respond(IHttpContext context)
 		{
-			var match = urlMatcher.Match(context.Request.Url.LocalPath);
+			var match = urlMatcher.Match(context.GetRequestUrl());
 			var docId = match.Groups[1].Value;
 			switch (context.Request.HttpMethod)
 			{
