@@ -193,7 +193,7 @@ task DoRelease -depends Merge {
 	cp $build_dir\Newtonsoft.Json.dll $build_dir\Output\EmbeddedClient
 	
 	cp $build_dir\Newtonsoft.Json.dll $build_dir\Output\Client
-	cp $build_dir\Raven.Client.Ligthwieght.dll $build_dir\Output\Client
+	cp $build_dir\Raven.Client.Lightweight.dll $build_dir\Output\Client
 	
 	cp $build_dir\Newtonsoft.Json.dll $build_dir\Output\Client-3.5
 	cp $build_dir\Raven.Client-3.5.dll $build_dir\Output\Client-3.5
