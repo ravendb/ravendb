@@ -9,8 +9,8 @@ namespace Raven.Database.Server.Abstractions
 		NameValueCollection Headers { get;  }
 		Stream InputStream { get; }
 		NameValueCollection QueryString { get; }
-		Uri Url { get; }
 		string HttpMethod { get; }
+		Uri Url { get; }
 		string RawUrl { get; }
 	}
 }

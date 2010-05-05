@@ -1,3 +1,4 @@
+using System;
 using System.Security.Principal;
 using System.Web;
 
@@ -8,12 +9,19 @@ namespace Raven.Database.Server.Abstractions
 		private readonly HttpContext context;
 		private readonly HttpRequestAdapter request;
 		private readonly HttpResponseAdapter response;
+		private readonly RavenConfiguration configuration;
 
-		public HttpContextAdapter(HttpContext context)
+		public HttpContextAdapter(HttpContext context, RavenConfiguration configuration)
 		{
 			this.context = context;
+			this.configuration = configuration;
 			request = new HttpRequestAdapter(context.Request);
 			response = new HttpResponseAdapter(context.Response);
+		}
+
+		public RavenConfiguration Configuration
+		{
+			get { return configuration; }
 		}
 
 		public IHttpRequest Request

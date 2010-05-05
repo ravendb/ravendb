@@ -9,6 +9,7 @@ using log4net;
 using Microsoft.Isam.Esent.Interop;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Database.Backup;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
@@ -29,20 +30,25 @@ namespace Raven.Database
 		[ImportMany]
 		public IEnumerable<IDeleteTrigger> DeleteTriggers { get; set; }
 
-		private readonly RavenConfiguration configuration;
+		[ImportMany]
+		public IEnumerable<IReadTrigger> ReadTriggers { get; set; }
+
 		private readonly WorkContext workContext;
+
 		private Thread[] backgroundWorkers = new Thread[0];
+
 		private readonly ILog log = LogManager.GetLogger(typeof (DocumentDatabase));
 
 		public DocumentDatabase(RavenConfiguration configuration)
 		{
-			this.configuration = configuration;
+			this.Configuration = configuration;
 			
 			configuration.Container.SatisfyImportsOnce(this);
 		
 			workContext = new WorkContext();
 			TransactionalStorage = new TransactionalStorage(configuration.DataDirectory, workContext.NotifyAboutWork);
-			;
+			configuration.Container.SatisfyImportsOnce(TransactionalStorage);
+
 			bool newDb;
 			try
 			{
@@ -55,16 +61,40 @@ namespace Raven.Database
 			}
 
 			IndexDefinitionStorage = new IndexDefinitionStorage(configuration.DataDirectory);
-			IndexStorage = new IndexStorage(configuration.DataDirectory, IndexDefinitionStorage);
+			IndexStorage = new IndexStorage(IndexDefinitionStorage,TransactionalStorage, configuration.DataDirectory);
 
 			workContext.IndexStorage = IndexStorage;
 			workContext.TransactionaStorage = TransactionalStorage;
 			workContext.IndexDefinitionStorage = IndexDefinitionStorage;
 
+
+			InitializeTriggers();
+			ExecuteStartupTasks();
+
 			if (!newDb) 
 				return;
 
-			if(configuration.ShouldCreateDefaultsWhenBuildingNewDatabaseFromScratch)
+			OnNewlyCreatedDatabase();
+		}
+
+		private void InitializeTriggers()
+		{
+			PutTriggers.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+			DeleteTriggers.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+			ReadTriggers.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+		}
+
+		private void ExecuteStartupTasks()
+		{
+			foreach (var task in Configuration.Container.GetExportedValues<IStartupTask>())
+			{
+				task.Execute(this);
+			}
+		}
+
+		private void OnNewlyCreatedDatabase()
+		{
+			if (Configuration.ShouldCreateDefaultsWhenBuildingNewDatabaseFromScratch)
 			{
 				PutIndex("Raven/DocumentsByEntityName",
 				         new IndexDefinition
@@ -74,15 +104,12 @@ namespace Raven.Database
 where doc[""@metadata""][""Raven-Entity-Name""] != null 
 select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 ",
-				         	Indexes = {{"Tag", FieldIndexing.Untokenized}},
+				         	Indexes = {{"Tag", FieldIndexing.NotAnalyzed}},
 				         	Stores = {{"Tag", FieldStorage.No}}
 				         });
 			}
-	
-			configuration.RaiseDatabaseCreatedFromScratch(this);
 
-			PutTriggers.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
-			DeleteTriggers.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+			Configuration.RaiseDatabaseCreatedFromScratch(this);
 		}
 
 		public DatabaseStatistics Statistics
@@ -106,8 +133,15 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 			}
 		}
 
+		public RavenConfiguration Configuration
+		{
+			get; private set;
+		}
+
 		public TransactionalStorage TransactionalStorage { get; private set; }
+
 		public IndexDefinitionStorage IndexDefinitionStorage { get; private set; }
+
 		public IndexStorage IndexStorage { get; private set; }
 
 		#region IDisposable Members
@@ -121,6 +155,11 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 			{
 				backgroundWorker.Join();
 			}
+		}
+
+		public WorkContext WorkContext
+		{
+			get { return workContext; }
 		}
 
 		#endregion
@@ -151,6 +190,58 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 			{
 				document = actions.DocumentByKey(key, transactionInformation);
 			});
+
+			return ExecuteReadTriggersOnRead(ProcessReadVetoes(document));
+		}
+
+		private JsonDocument ExecuteReadTriggersOnRead(JsonDocument resultingDocument)
+		{
+			if (resultingDocument == null)
+				return null;
+
+			foreach (var readTrigger in ReadTriggers)
+			{
+				readTrigger.OnRead(resultingDocument.DataAsJson, resultingDocument.Metadata, ReadOperation.Load);
+			}
+			return resultingDocument;
+		}
+
+		private JsonDocument ProcessReadVetoes(JsonDocument document)
+		{
+			if (document == null)
+				return document;
+			foreach (var readTrigger in ReadTriggers)
+			{
+				var readVetoResult = readTrigger.AllowRead(document.DataAsJson, document.Metadata, ReadOperation.Load);
+				switch (readVetoResult.Veto)
+				{
+					case ReadVetoResult.ReadAllow.Allow:
+						break;
+					case ReadVetoResult.ReadAllow.Deny:
+						return new JsonDocument
+						{
+							DataAsJson = 
+								JObject.FromObject(new
+								{
+									Message = "The document exists, but it is hidden by a read trigger",
+									DocumentHidden = true,
+									readVetoResult.Reason
+								}),
+							Metadata = JObject.FromObject(
+								new
+								{
+									ReadVeto = true,
+									VetoingTrigger = readTrigger.ToString()
+								}
+								)
+						};
+					case ReadVetoResult.ReadAllow.Ignore:
+						return null;
+					default:
+						throw new ArgumentOutOfRangeException(readVetoResult.Veto.ToString());
+				}
+			}
+
 			return document;
 		}
 
@@ -304,12 +395,12 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				var firstAndLast = actions.FirstAndLastDocumentIds();
 				if (firstAndLast.Item1 != 0 && firstAndLast.Item2 != 0)
 				{
-					for (var i = firstAndLast.Item1; i <= firstAndLast.Item2; i += configuration.IndexingBatchSize)
+					for (var i = firstAndLast.Item1; i <= firstAndLast.Item2; i += Configuration.IndexingBatchSize)
 					{
 						actions.AddTask(new IndexDocumentRangeTask
 						{
 							FromId = i,
-							ToId = Math.Min(i + configuration.IndexingBatchSize, firstAndLast.Item2),
+							ToId = Math.Min(i + Configuration.IndexingBatchSize, firstAndLast.Item2),
 							Index = name
 						});
 					}
@@ -336,8 +427,9 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 					var collection = from queryResult in IndexStorage.Query(index, query)
 					                 select RetrieveDocument(actions, queryResult, loadedIds)
 					                 into doc
-					                 where doc != null
-					                 select doc.ToJson();
+										 let processedDoc = ExecuteReadTriggersOnRead(ProcessReadVetoes(doc))
+										 where processedDoc != null
+										 select processedDoc.ToJson();
 					list.AddRange(collection);
 				});
 			return new QueryResult
@@ -430,11 +522,14 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 					var documentAndId in actions.DocumentsById(new Reference<bool>(), start, int.MaxValue, pageSize))
 				{
 					var doc = documentAndId.Item1;
-					doc.Metadata.Add("@docNum", new JValue(documentAndId.Item2));
-					if (doc.Metadata.Property("@id") == null)
-						doc.Metadata.Add("@id", new JValue(doc.Key));
+					var document = ExecuteReadTriggersOnRead(ProcessReadVetoes(doc));
+					if(document == null)
+						continue;
+					document.Metadata.Add("@docNum", new JValue(documentAndId.Item2));
+					if (document.Metadata.Property("@id") == null)
+						document.Metadata.Add("@id", new JValue(doc.Key));
 
-					list.Add(doc.ToJson());
+					list.Add(document.ToJson());
 				}
 			});
 			return list;
@@ -540,6 +635,32 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				});
 				return approximateTaskCount;
 			}
+		}
+
+		public void StartBackup(string backupDestinationDirectory)
+		{
+			var document = Get(BackupStatus.RavenBackupStatusDocumentKey,null);
+			if(document!=null)
+			{
+				var backupStatus = document.DataAsJson.JsonDeserialization<BackupStatus>();
+				if(backupStatus.IsRunning)
+				{
+					throw new InvalidOperationException("Backup is already running");
+				}
+			}
+			Put(BackupStatus.RavenBackupStatusDocumentKey, null, JObject.FromObject(new BackupStatus
+			{
+				Started = DateTime.Now,
+				IsRunning = true,
+			}), new JObject(), null);
+
+			var backupOperation = new BackupOperation(this, Configuration.DataDirectory, backupDestinationDirectory);
+			ThreadPool.QueueUserWorkItem(backupOperation.Execute);
+		}
+
+		public static void Restore(string backupLocation, string databaseLocation)
+		{
+			new RestoreOperation(backupLocation, databaseLocation).Execute();
 		}
 	}
 }

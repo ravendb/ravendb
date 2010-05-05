@@ -1,9 +1,13 @@
 using System;
+using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.ConstrainedExecution;
 using System.Threading;
 using Microsoft.Isam.Esent.Interop;
+using Raven.Database.Storage.SchemaUpdates;
+using System.Linq;
 
 namespace Raven.Database.Storage
 {
@@ -20,6 +24,9 @@ namespace Raven.Database.Storage
 		private JET_INSTANCE instance;
 		private readonly TableColumnsCache tableColumnsCache = new TableColumnsCache();
 
+		[ImportMany]
+		public IEnumerable<ISchemaUpdate> Updaters { get; set; }
+
 		public TransactionalStorage(string database, Action onCommit)
 		{
 			this.database = database;
@@ -27,14 +34,19 @@ namespace Raven.Database.Storage
 			path = database;
 			if (Path.IsPathRooted(database) == false)
 				path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, database);
-			this.database = Path.Combine(path, Path.GetFileName(database));
-			
+			this.database = Path.Combine(path, "Data");
+
 			LimitSystemCache();
 
 			Api.JetCreateInstance(out instance, database + Guid.NewGuid());
 		}
 
-		private void LimitSystemCache()
+		public TableColumnsCache TableColumnsCache
+		{
+			get { return tableColumnsCache; }
+		}
+
+		private static void LimitSystemCache()
 		{
 			var cacheSizeMax = 1024 * 1024 * 1024 / SystemParameters.DatabasePageSize;
 			if (SystemParameters.CacheSizeMax > cacheSizeMax)
@@ -80,7 +92,7 @@ namespace Raven.Database.Storage
 		{
 			try
 			{
-				ConfigureInstance(instance);
+				ConfigureInstance(instance, path);
 				Api.JetInit(ref instance);
 
 				var newDb = EnsureDatabaseIsCreatedAndAttachToDatabase();
@@ -107,7 +119,7 @@ namespace Raven.Database.Storage
 				{
 					Api.JetOpenDatabase(session, database, null, out dbid, OpenDatabaseGrbit.None);
 					using (var documents = new Table(session, dbid, "documents", OpenTableGrbit.None))
-						tableColumnsCache .DocumentsColumns = Api.GetColumnDictionary(session, documents);
+						tableColumnsCache.DocumentsColumns = Api.GetColumnDictionary(session, documents);
 					using (var tasks = new Table(session, dbid, "tasks", OpenTableGrbit.None))
 						tableColumnsCache.TasksColumns = Api.GetColumnDictionary(session, tasks);
 					using (var files = new Table(session, dbid, "files", OpenTableGrbit.None))
@@ -133,12 +145,13 @@ namespace Raven.Database.Storage
 			}
 		}
 
-		private void ConfigureInstance(JET_INSTANCE jetInstance)
+		public static void ConfigureInstance(JET_INSTANCE jetInstance, string path)
 		{
 			new InstanceParameters(jetInstance)
 			{
 				CircularLog = true,
 				Recovery = true,
+				NoInformationEvent = false,
 				CreatePathIfNotExist = true,
 				TempDirectory = Path.Combine(path, "temp"),
 				SystemDirectory = Path.Combine(path, "system"),
@@ -166,11 +179,16 @@ namespace Raven.Database.Storage
 						var column = Api.RetrieveColumn(session, details, columnids["id"]);
 						Id = new Guid(column);
 						var schemaVersion = Api.RetrieveColumnAsString(session, details, columnids["schema_version"]);
-						if (schemaVersion != SchemaCreator.SchemaVersion)
-							throw new InvalidOperationException("The version on disk (" + schemaVersion +
-								") is different that the version supported by this library: " +
-									SchemaCreator.SchemaVersion + Environment.NewLine +
-										"You need to migrate the disk version to the library version, alternatively, if the data isn't important, you can delete the file and it will be re-created (with no data) with the library version.");
+						if (schemaVersion == SchemaCreator.SchemaVersion)
+							return;
+						do
+						{
+							var updater = Updaters.FirstOrDefault(lazy => lazy.FromSchemaVersion == schemaVersion);
+							if (updater == null)
+								throw new InvalidOperationException(string.Format("The version on disk ({0}) is different that the version supported by this library: {1}{2}You need to migrate the disk version to the library version, alternatively, if the data isn't important, you can delete the file and it will be re-created (with no data) with the library version.", schemaVersion, SchemaCreator.SchemaVersion, Environment.NewLine));
+							updater.Update(session, dbid);
+							schemaVersion = Api.RetrieveColumnAsString(session, details, columnids["schema_version"]);
+						}while(schemaVersion != SchemaCreator.SchemaVersion);
 					}
 				});
 			}
@@ -204,7 +222,7 @@ namespace Raven.Database.Storage
 								recoverInstance.Init();
 								using (var recoverSession = new Session(recoverInstance))
 								{
-									ConfigureInstance(recoverInstance.JetInstance);
+									ConfigureInstance(recoverInstance.JetInstance, path);
 									Api.JetAttachDatabase(recoverSession, database,
 														  AttachDatabaseGrbit.DeleteCorruptIndexes);
 									Api.JetDetachDatabase(recoverSession, database);
@@ -252,6 +270,11 @@ namespace Raven.Database.Storage
 		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
 		public void Batch(Action<DocumentStorageActions> action)
 		{
+			if (disposed)
+			{
+				Trace.WriteLine("TransactionalStorage.Batch was called after it was dispoed, call was ignored.");
+				return; // this may happen if someone is calling us from the finalizer thread, so we can't even throw on that
+			}
 			if (current.Value != null)
 			{
 				action(current.Value);
@@ -282,12 +305,20 @@ namespace Raven.Database.Storage
 
 		public void ExecuteImmediatelyOrRegisterForSyncronization(Action action)
 		{
-			if(current.Value == null)
+			if (current.Value == null)
 			{
 				action();
 				return;
 			}
 			current.Value.OnCommit += action;
+		}
+
+		internal DocumentStorageActions GetCurrentBatch()
+		{
+			var batch = current.Value;
+			if (batch == null)
+				throw new InvalidOperationException("Batch was not started, you are not supposed to call this method");
+			return batch;
 		}
 	}
 }

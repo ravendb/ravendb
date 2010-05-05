@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Exceptions;
@@ -69,6 +70,11 @@ namespace Raven.Database.Server.Responders
 			streamWriter.Flush();
 		}
 
+		public static void WriteData(this IHttpContext context, JObject data, JObject headers, Guid etag)
+		{
+			WriteData(context, Encoding.UTF8.GetBytes(data.ToString(Formatting.Indented)), headers, etag);
+		}
+
 		public static void WriteData(this IHttpContext context, byte[] data, JObject headers, Guid etag)
 		{
 			foreach (var header in headers.Properties())
@@ -100,7 +106,7 @@ namespace Raven.Database.Server.Responders
 		{
 			context.Response.StatusCode = 201;
 			context.Response.StatusDescription = "Created";
-			context.Response.Headers["Location"] = location;
+			context.Response.Headers["Location"] = context.Configuration.GetFullUrl(location);
 		}
 
 

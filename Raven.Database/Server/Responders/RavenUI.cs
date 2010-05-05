@@ -16,7 +16,7 @@ namespace Raven.Database.Server.Responders
 
 		public override void Respond(IHttpContext context)
 		{
-			var docPath = context.Request.Url.LocalPath.Replace("/raven/", "");
+			var docPath = context.GetRequestUrl().Replace("/raven/", "");
 			context.WriteEmbeddedFile(Settings.WebDir, docPath);
 		}
 

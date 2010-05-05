@@ -363,7 +363,7 @@ namespace Raven.Client.Tests.Document
             	                                        new IndexDefinition
             	                                        {
             	                                        	Map = "from doc in docs select new { doc.Name, doc.Phone}",
-            	                                        	Indexes = {{"Phone", FieldIndexing.Tokenized}}
+            	                                        	Indexes = {{"Phone", FieldIndexing.Analyzed}}
             	                                        });
 
 				// Wait until the index is built

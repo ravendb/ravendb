@@ -49,7 +49,7 @@ namespace Raven.Database.Indexing
                     if (newDocId != null)
                     {
                         var luceneDoc = new Document();
-                        luceneDoc.Add(new Field("__document_id", newDocId, Field.Store.YES, Field.Index.UN_TOKENIZED));
+                        luceneDoc.Add(new Field("__document_id", newDocId, Field.Store.YES, Field.Index.NOT_ANALYZED));
 
                         currentId = newDocId;
                         CopyFieldsToDocumentButRemoveDuplicateValues(luceneDoc, fields);
@@ -65,7 +65,7 @@ namespace Raven.Database.Indexing
 			log.DebugFormat("Indexed {0} documents for {1}", count, name);
 		}
 
-		private static void CopyFieldsToDocumentButRemoveDuplicateValues(Document luceneDoc, IEnumerable<Field> fields)
+		private static void CopyFieldsToDocumentButRemoveDuplicateValues(Document luceneDoc, IEnumerable<AbstractField> fields)
 		{
 			foreach (var field in fields)
 			{

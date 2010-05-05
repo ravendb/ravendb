@@ -21,7 +21,7 @@ namespace Raven.Database.Server.Responders
 
 		public override void Respond(IHttpContext context)
 		{
-			var match = urlMatcher.Match(context.Request.Url.LocalPath);
+			var match = urlMatcher.Match(context.GetRequestUrl());
 			var docId = match.Groups[1].Value;
 			switch (context.Request.HttpMethod)
 			{
@@ -38,7 +38,7 @@ namespace Raven.Database.Server.Responders
 						context.SetStatusToNotModified();
 						return;
 					}
-					context.WriteData(doc.Data, doc.Metadata, doc.Etag);
+					context.WriteData(doc.DataAsJson, doc.Metadata, doc.Etag);
 					break;
 				case "DELETE":
 					Database.Delete(docId, context.GetEtag(), GetRequestTransaction(context));
@@ -57,7 +57,7 @@ namespace Raven.Database.Server.Responders
 							context.SetStatusToNotFound();
 							break;
 						case PatchResult.Patched:
-							context.Response.Headers["Location"] = "/docs/" + docId;
+							context.Response.Headers["Location"] = Database.Configuration.GetFullUrl("/docs/" + docId);
 							context.WriteJson(new {Patched = true});
 							break;
 						default:

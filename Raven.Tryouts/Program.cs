@@ -1,10 +1,10 @@
 using System;
-using log4net.Appender;
-using log4net.Config;
-using log4net.Layout;
-using Raven.Client.Tests.Document;
+using System.IO;
+using System.Threading;
+using Raven.Database;
+using Raven.Database.Backup;
 using Raven.Database.Indexing;
-using Raven.Database.Linq;
+using Raven.Database.Json;
 
 namespace Raven.Tryouts
 {
@@ -14,22 +14,38 @@ namespace Raven.Tryouts
 
 		public static void Main()
 		{
-			BasicConfigurator.Configure(new ConsoleAppender
-			{
-				Layout = new SimpleLayout()
-			});
+			
 			try
 			{
-				var dynamicViewCompiler = new DynamicViewCompiler("a", new IndexDefinition
+				//if(Directory.Exists("bak"))
+				//    Directory.Delete("bak", true);
+
+
+				DocumentDatabase.Restore("bak", "Data4");
+				var ravenConfiguration = new RavenConfiguration
 				{
-					Map = @"
-from post in docs.Posts
-where post.Published == 'aasds'
-select new {post.PostedAt }
-"
-				});
-				dynamicViewCompiler.GenerateInstance();
-				Console.WriteLine(dynamicViewCompiler.CompiledQueryText);
+					DataDirectory = @"Data3"
+				};
+				using (var db = new DocumentDatabase(ravenConfiguration))
+				{
+					db.StartBackup("bak");
+					while(true)
+					{
+						var jsonDocument = db.Get(BackupStatus.RavenBackupStatusDocumentKey, null);
+						if (jsonDocument == null)
+							break;
+						var backupStatus = jsonDocument.DataAsJson.JsonDeserialization<BackupStatus>();
+						Console.Clear();
+						Console.WriteLine("Backup started at {0}", backupStatus.Started);
+						foreach (var message in backupStatus.Messages)
+						{
+							Console.WriteLine(" - {0}: {1}", message.Timestamp, message.Message);
+						}
+						if (backupStatus.IsRunning == false)
+							return;
+						Thread.Sleep(500);
+					}
+				}
 			}
 			catch (Exception e)
 			{

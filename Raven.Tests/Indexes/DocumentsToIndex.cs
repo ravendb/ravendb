@@ -297,7 +297,7 @@ select new{project_name = prj.name, project_num = prj.num}
                     from doc in docs 
                     select new { doc.Region };
                     ",
-				Indexes = {{"Region", FieldIndexing.Untokenized}}
+				Indexes = {{"Region", FieldIndexing.NotAnalyzed}}
             });
 
             db.Put("1", Guid.Empty, JObject.Parse(

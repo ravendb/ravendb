@@ -4,6 +4,7 @@ using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Index;
 using Lucene.Net.QueryParsers;
 using Lucene.Net.Search;
+using Lucene.Net.Util;
 
 namespace Raven.Database.Indexing
 {
@@ -15,7 +16,7 @@ namespace Raven.Database.Indexing
 		{
 			var matchCollection = untokenizedQuery.Matches(query);
 			if (matchCollection.Count == 0)
-				return new QueryParser("", new StandardAnalyzer()).Parse(query);
+				return new QueryParser(Version.LUCENE_CURRENT, "", new StandardAnalyzer(Version.LUCENE_CURRENT)).Parse(query);
 			var sb = new StringBuilder(query);
 			var booleanQuery = new BooleanQuery();
 			foreach (Match match in matchCollection)
@@ -39,7 +40,7 @@ namespace Raven.Database.Indexing
 			var remaining = sb.ToString().Trim();
 			if(remaining.Length > 0)
 			{
-				booleanQuery.Add(new QueryParser("", new StandardAnalyzer()).Parse(remaining), BooleanClause.Occur.SHOULD);
+				booleanQuery.Add(new QueryParser(Version.LUCENE_CURRENT, "", new StandardAnalyzer(Version.LUCENE_CURRENT)).Parse(remaining), BooleanClause.Occur.SHOULD);
 			}
 			return booleanQuery;
 		}

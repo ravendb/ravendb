@@ -17,7 +17,7 @@ namespace Raven.Database.Server.Responders
 
 		public override void Respond(IHttpContext context)
 		{
-			var match = urlMatcher.Match(context.Request.Url.LocalPath);
+			var match = urlMatcher.Match(context.GetRequestUrl());
 			var filename = match.Groups[1].Value;
 			var etag = context.GetEtag();
 			switch (context.Request.HttpMethod)

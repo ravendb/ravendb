@@ -365,7 +365,6 @@ namespace Raven.Database.Storage
 			Api.JetCreateTable(session, dbid, "files", 16, 100, out tableid);
 			JET_COLUMNID columnid;
 
-
 			Api.JetAddColumn(session, tableid, "name", new JET_COLUMNDEF
 			{
 				cbMax = 255,

@@ -3,6 +3,7 @@ using System.Linq;
 using System.Management.Automation;
 using System.Management.Automation.Provider;
 using System.Text;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Indexing;
@@ -143,8 +144,7 @@ namespace Raven.PowerShellIntegration
 					document = null;
 				else
 				    document = db.Database.Get(pathTypeValue, null);
-				var enc = new ASCIIEncoding();
-				var str = enc.GetString(document.Data);
+				var str = document.DataAsJson.ToString(Formatting.Indented);
 
 				WriteItemObject(str, path, true);
 			}

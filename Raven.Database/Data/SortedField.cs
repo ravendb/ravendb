@@ -1,4 +1,6 @@
-﻿namespace Raven.Database.Data
+﻿using System.Globalization;
+
+namespace Raven.Database.Data
 {
 	public class SortedField
 	{
@@ -24,7 +26,7 @@
 #if !CLIENT
 		public  Lucene.Net.Search.SortField ToLuceneSortField()
 		{
-			return new  Lucene.Net.Search.SortField(Field, Descending);
+			return new  Lucene.Net.Search.SortField(Field, CultureInfo.InvariantCulture, Descending);
 		}
 #endif
 	}

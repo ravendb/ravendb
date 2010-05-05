@@ -27,7 +27,7 @@ namespace Raven.Database.Server.Responders
 
 		public bool WillRespond(IHttpContext context)
 		{
-			var match = urlMatcher.Match(context.Request.Url.LocalPath);
+			var match = urlMatcher.Match(context.GetRequestUrl());
 			return match.Success && supportedVerbsCached.Contains(context.Request.HttpMethod);
 		}
 

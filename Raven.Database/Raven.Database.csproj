@@ -54,8 +54,7 @@
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Esent.Interop, Version=1.0.0.0, Culture=neutral, PublicKeyToken=b93b4ad6c4b80595, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="Esent.Interop">
       <HintPath>..\SharedLibs\Esent.Interop.dll</HintPath>
     </Reference>
     <Reference Include="ICSharpCode.NRefactory, Version=3.0.0.3800, Culture=neutral, PublicKeyToken=efe927acf176eea2, processorArchitecture=MSIL">
@@ -96,7 +95,18 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Backup\BackupOperation.cs" />
+    <Compile Include="Backup\BackupStatus.cs" />
+    <Compile Include="Backup\EsentBackup.cs" />
+    <Compile Include="Backup\DirectoryBackup.cs" />
+    <Compile Include="Backup\RemoveBackupDocumentStartupTask.cs" />
+    <Compile Include="Backup\RestoreOperation.cs" />
+    <Compile Include="Data\BackupRequest.cs" />
     <Compile Include="Exceptions\IndexDoesNotExists.cs" />
+    <Compile Include="IStartupTask.cs" />
+    <Compile Include="Plugins\IReadTrigger.cs" />
+    <Compile Include="Plugins\ReadOperation.cs" />
+    <Compile Include="Plugins\ReadVetoResult.cs" />
     <Compile Include="Server\Abstractions\HttpContextAdapter.cs" />
     <Compile Include="Server\Abstractions\HttpListenerContextAdpater.cs" />
     <Compile Include="Server\Abstractions\HttpListenerRequestAdapter.cs" />
@@ -164,6 +174,7 @@
     <Compile Include="PutResult.cs" />
     <Compile Include="RavenConfiguration.cs" />
     <Compile Include="Server\HttpServer.cs" />
+    <Compile Include="Server\Responders\AdminBackup.cs" />
     <Compile Include="Server\Responders\Docs.cs" />
     <Compile Include="Server\Responders\Document.cs" />
     <Compile Include="Server\Responders\DocumentBatch.cs" />
@@ -183,6 +194,14 @@
     <Compile Include="Server\Responders\TransactionRollback.cs" />
     <Compile Include="Storage\IndexCreationOptions.cs" />
     <Compile Include="Storage\DocumentInTransactionData.cs" />
+    <Compile Include="Storage\SchemaUpdates\ISchemaUpdate.cs" />
+    <Compile Include="Storage\StorageActions\Attachments.cs" />
+    <Compile Include="Storage\StorageActions\Documents.cs" />
+    <Compile Include="Storage\StorageActions\Indexing.cs" />
+    <Compile Include="Storage\StorageActions\MappedResults.cs" />
+    <Compile Include="Storage\StorageActions\TableProperties.cs" />
+    <Compile Include="Storage\StorageActions\Tasks.cs" />
+    <Compile Include="Storage\StorageActions\Util.cs" />
     <Compile Include="Storage\TableColumnsCache.cs" />
     <Compile Include="Tasks\IndexDocumentRangeTask.cs" />
     <Compile Include="Tasks\IndexDocumentsTask.cs" />
@@ -191,7 +210,7 @@
     <Compile Include="Tasks\Task.cs" />
     <Compile Include="Storage\TransactionalStorage.cs" />
     <Compile Include="Storage\EsentExtension.cs" />
-    <Compile Include="Storage\DocumentStorageActions.cs" />
+    <Compile Include="Storage\StorageActions\General.cs" />
     <Compile Include="Indexing\IndexStorage.cs" />
     <Compile Include="Storage\SchemaCreator.cs" />
     <Compile Include="Storage\IndexDefinitionStorage.cs" />
@@ -297,6 +316,9 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Defaults\default.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <WCFMetadata Include="Service References\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

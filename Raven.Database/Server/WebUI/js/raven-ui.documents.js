@@ -94,7 +94,6 @@ function processDocumentResults(results, totalCount) {
     var wrapper = $('<div class="searchListWrapper ui-corner-all"></div>');
     var alternate = false;
     $(results).each(function () {
-        debugger;
         var docID = this['@metadata']['@id'];
         var previewHTML = GetDocumentViewHTML(this);
         if (alternate) {

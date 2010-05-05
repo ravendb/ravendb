@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.ConstrainedExecution;
+using System.Threading;
 using System.Web;
 using log4net;
 using Lucene.Net.Analysis.Standard;
@@ -14,6 +15,7 @@ using Raven.Database.Extensions;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
 using Directory = System.IO.Directory;
+using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Database.Indexing
 {
@@ -22,34 +24,40 @@ namespace Raven.Database.Indexing
 	/// </summary>
 	public class IndexStorage : CriticalFinalizerObject, IDisposable
 	{
+		private readonly string path;
 		private readonly ConcurrentDictionary<string, Index> indexes = new ConcurrentDictionary<string, Index>();
 		private readonly ILog log = LogManager.GetLogger(typeof (IndexStorage));
-		private readonly string path;
 
-		public IndexStorage(string path, IndexDefinitionStorage indexDefinitionStorage)
+		public IndexStorage(IndexDefinitionStorage indexDefinitionStorage, TransactionalStorage transactionalStorage, string dataDir)
 		{
-			this.path = Path.Combine(path, "Index");
-			if (Directory.Exists(this.path) == false)
-				Directory.CreateDirectory(this.path);
-			log.DebugFormat("Initializing index storage at {0}", this.path);
-			foreach (var indexDirectory in Directory.GetDirectories(this.path))
+			path = Path.Combine(dataDir,"Indexes");
+			if (Directory.Exists(path) == false)
+				Directory.CreateDirectory(path);
+
+			transactionalStorage.Batch(actions =>
 			{
-				log.DebugFormat("Loading saved index {0}", indexDirectory);
-				var name = Path.GetFileName(indexDirectory);
-				name = HttpUtility.UrlDecode(name);
-				var indexDefinition = indexDefinitionStorage.GetIndexDefinition(name);
-				if(indexDefinition == null)
-					continue;
-				var fsDirectory = FSDirectory.GetDirectory(indexDirectory, false);
-				indexes.TryAdd(name, CreateIndexImplementation(name, indexDefinition, fsDirectory));
-			}
+				string[] indexNames = actions.GetIndexesStats().Select(x => x.Name).ToArray();
+
+				foreach (var indexDirectory in indexNames)
+				{
+					log.DebugFormat("Loading saved index {0}", indexDirectory);
+				
+					var indexDefinition = indexDefinitionStorage.GetIndexDefinition(indexDirectory);
+					if (indexDefinition == null)
+						continue;
+					indexes.TryAdd(indexDirectory,
+					               CreateIndexImplementation(indexDirectory, indexDefinition,
+															 FSDirectory.Open(new DirectoryInfo(Path.Combine(path, HttpUtility.UrlEncode(indexDirectory))))));
+				}
+			});
+
 		}
 
-		private static Index CreateIndexImplementation(string name, IndexDefinition indexDefinition, FSDirectory fsDirectory)
+		private static Index CreateIndexImplementation(string name, IndexDefinition indexDefinition, Lucene.Net.Store.Directory directory)
 		{
 			return indexDefinition.IsMapReduce
-				? (Index) new MapReduceIndex(fsDirectory, name, indexDefinition)
-				: new SimpleIndex(fsDirectory, name, indexDefinition);
+				? (Index) new MapReduceIndex(directory, name, indexDefinition)
+				: new SimpleIndex(directory, name, indexDefinition);
 		}
 
 		public string[] Indexes
@@ -80,11 +88,22 @@ namespace Raven.Database.Indexing
 			log.InfoFormat("Deleting index {0}", name);
 			value.Dispose();
 			Index ignored;
-			var nameOnDisk = HttpUtility.UrlEncode(name);
-			var indexDir = Path.Combine(path, nameOnDisk);
-			if (indexes.TryRemove(name, out ignored) && Directory.Exists(indexDir))
+			var dirOnDisk = Path.Combine(path, HttpUtility.UrlEncode(name));
+			
+			if (!indexes.TryRemove(name, out ignored) || !Directory.Exists(dirOnDisk)) 
+				return;
+
+			for (int i = 0; i < 15; i++)
 			{
-				Directory.Delete(indexDir, true);
+				try
+				{
+					Directory.Delete(dirOnDisk, true);
+					break;
+				}
+				catch (IOException)
+				{
+					Thread.Sleep(100);
+				}
 			}
 		}
 
@@ -94,9 +113,10 @@ namespace Raven.Database.Indexing
 
 			indexes.AddOrUpdate(name, n =>
 			{
-				var nameOnDisk = HttpUtility.UrlEncode(name);
-				var directory = FSDirectory.GetDirectory(Path.Combine(path, nameOnDisk), true);
-				new IndexWriter(directory, new StandardAnalyzer()).Close(); //creating index structure
+				var directory = FSDirectory.Open(new DirectoryInfo(Path.Combine(path, HttpUtility.UrlEncode(name))));
+				//creating index structure
+				new IndexWriter(directory, new StandardAnalyzer(Version.LUCENE_CURRENT), IndexWriter.MaxFieldLength.UNLIMITED).
+					Close();
 				return CreateIndexImplementation(name, indexDefinition, directory);
 			}, (s, index) => index);
 		}
