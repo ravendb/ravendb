@@ -12,34 +12,44 @@ namespace Raven.DefaultDatabase.Creator
 	{
 		static void Main(string[] args)
 		{
-			var array = new JArray();
-			var crawled = new HashSet<string>();
-			var sgmlReader = new SgmlReader
+			try
 			{
-				Href = "http://groups.google.com/group/ravendb/web/docs-index"
-			};
-			crawled.Add(sgmlReader.Href);
-			var doc = new XmlDocument();
-			doc.Load(sgmlReader);
+				var array = new JArray();
+				var crawled = new HashSet<string>();
+				var sgmlReader = new SgmlReader
+				{
+					Href = "http://groups.google.com/group/ravendb/web/docs-index"
+				};
+				crawled.Add(sgmlReader.Href);
+				var doc = new XmlDocument();
+				doc.Load(sgmlReader);
 
 
-			var layout = doc.SelectSingleNode("//div[@class='layout']");
+				var layout = doc.SelectSingleNode("//div[@class='layout']");
 
-			var index = new JObject(new JProperty("Html", FixLinksAndImages(layout.InnerXml)), new JProperty("Name", "Index"));
+				var index = new JObject(new JProperty("Html", FixLinksAndImages(layout.InnerXml)), new JProperty("Name", "Index"));
 
-			array.Add(new JObject(
-			          	new JProperty("DocId", "raven_documentation/index"),
-			          	new JProperty("Document", index),
-			          	new JProperty("Type", "raven documentation"),
-			          	new JProperty("Metadata",
-			          	              new JObject(new JProperty("Raven-View-Template", "/raven/JSONTemplates/documentation.html"),
-			          	                          new JProperty("Raven-Entity-Tag", "Documentation"))
-			          		)));
+				array.Add(new JObject(
+				          	new JProperty("DocId", "raven_documentation/index"),
+				          	new JProperty("Document", index),
+				          	new JProperty("Type", "raven documentation"),
+				          	new JProperty("Metadata",
+				          	              new JObject(new JProperty("Raven-View-Template", "/raven/JSONTemplates/documentation.html"),
+				          	                          new JProperty("Raven-Entity-Tag", "Documentation"))
+				          		)));
 
 
-			AddDocumentsFromLinks(array, crawled, layout.SelectNodes(".//a"));
+				AddDocumentsFromLinks(array, crawled, layout.SelectNodes(".//a"));
 
-			File.WriteAllText(args[0], array.ToString(Formatting.Indented));
+				File.WriteAllText(args[0], array.ToString(Formatting.Indented));
+			}
+			catch (Exception e)
+			{
+				Console.ForegroundColor = ConsoleColor.Red;
+				Console.WriteLine("Could not update documentation!");
+				Console.WriteLine(e.Message);
+				Console.ResetColor();
+			}
 		}
 
 		private static void AddDocumentsFromLinks(JArray array, HashSet<string> crawled, XmlNodeList list)
