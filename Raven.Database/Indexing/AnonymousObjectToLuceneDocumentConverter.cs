@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Linq;
 using Lucene.Net.Documents;
 using Lucene.Net.Util;
+using Raven.Database.Json;
 
 namespace Raven.Database.Indexing
 {
@@ -21,63 +22,30 @@ namespace Raven.Database.Indexing
 
 		private static AbstractField Createfield(string name, object value, IndexDefinition indexDefinition, Field.Store defaultStorage)
 		{
-			if (indexDefinition.GetIndex(name) == Field.Index.NOT_ANALYZED || value is string)
+			if (indexDefinition.GetIndex(name, Field.Index.ANALYZED) == Field.Index.NOT_ANALYZED || value is string)
 				return new Field(name, value.ToString(), indexDefinition.GetStorage(name, defaultStorage),
-								 indexDefinition.GetIndex(name));
-
+								 indexDefinition.GetIndex(name, Field.Index.ANALYZED));
 
 			if (value is int)
 			{
-				return new Field(name, NumberTools.LongToString((int)value), indexDefinition.GetStorage(name, defaultStorage),
-								 indexDefinition.GetIndex(name));
+				return new Field(name, JsonLuceneNumberConverter.NumberToString((int)value), indexDefinition.GetStorage(name, defaultStorage),
+								 indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
 
 			}
 			if (value is long)
 			{
-				return new Field(name, NumberTools.LongToString((long)value), indexDefinition.GetStorage(name, defaultStorage),
-								 indexDefinition.GetIndex(name));
+				return new Field(name, JsonLuceneNumberConverter.NumberToString((long)value), indexDefinition.GetStorage(name, defaultStorage),
+								 indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
 
 			}
 			if (value is DateTime)
 			{
 				return new Field(name, DateTools.DateToString((DateTime)value, DateTools.Resolution.MILLISECOND),
 					indexDefinition.GetStorage(name, defaultStorage),
-					indexDefinition.GetIndex(name));
+					indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
 			}
-			// Using the approach below result in failing test because we can't sort on ints using NumericField
-			// Not really sure why
-
-			//if(value is int)
-			//{
-			//    var i = ((int) value);
-			//    var numericField = new NumericField(name);
-			//    numericField.SetIntValue(i);
-			//    return numericField;
-			//}
-			//if(value is long)
-			//{
-			//    var l = ((long)value);
-			//    var numericField = new NumericField(name);
-			//    numericField.SetLongValue(l);
-			//    return numericField;
-			//}
-			
-			//if(value is double)
-			//{
-			//    var d = ((double)value);
-			//    var numericField = new NumericField(name);
-			//    numericField.SetDoubleValue(d);
-			//    return numericField;
-			//}
-			//if (value is float)
-			//{
-			//    var f = ((float)value);
-			//    var numericField = new NumericField(name);
-			//    numericField.SetFloatValue(f);
-			//    return numericField;
-			//}
 			return new Field(name, value.ToString(), indexDefinition.GetStorage(name, defaultStorage),
-							 indexDefinition.GetIndex(name));
+							 indexDefinition.GetIndex(name, Field.Index.ANALYZED));
 		}
 	}
 }
