@@ -42,7 +42,7 @@ namespace Raven.Database
 
 		public DocumentDatabase(RavenConfiguration configuration)
 		{
-			this.Configuration = configuration;
+			Configuration = configuration;
 			
 			configuration.Container.SatisfyImportsOnce(this);
 		
@@ -500,18 +500,12 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 
 		public void PutStatic(string name, Guid? etag, byte[] data, JObject metadata)
 		{
-			TransactionalStorage.Batch(actions =>
-			{
-				actions.AddAttachment(name, etag, data, metadata.ToString(Formatting.None));
-			});
+			TransactionalStorage.Batch(actions => actions.AddAttachment(name, etag, data, metadata.ToString(Formatting.None)));
 		}
 
 		public void DeleteStatic(string name, Guid? etag)
 		{
-			TransactionalStorage.Batch(actions =>
-			{
-				actions.DeleteAttachment(name, etag);
-			});
+			TransactionalStorage.Batch(actions => actions.DeleteAttachment(name, etag));
 		}
 
 		public JArray GetDocuments(int start, int pageSize)
