@@ -79,7 +79,7 @@ namespace Raven.Client.Document
 
 		public T TrackEntity<T>(string key, JObject document, JObject metadata)
 	    {
-			var entity = ConvertToEntity<T>(key, document);
+			var entity = ConvertToEntity<T>(key, document, metadata);
 			var etag = metadata.Value<string>("@etag");
 			entitiesAndMetadata.Add(entity, new DocumentMetadata
 	        {
@@ -104,11 +104,11 @@ namespace Raven.Client.Document
 	        deletedEntities.Add(entity);
 	    }
 
-	    private object ConvertToEntity<T>(string id, JObject documentFound)
+	    private object ConvertToEntity<T>(string id, JObject documentFound, JObject metadata)
 	    {
 	    	T entity = default(T);
 
-	    	var documentType = documentFound.Value<string>("Type");
+	    	var documentType = metadata.Value<string>("Raven-Clr-Type");
 	    	if (documentType != null)
 	    	{
 	    		Type type = Type.GetType(documentType);
@@ -163,7 +163,7 @@ namespace Raven.Client.Document
 
 		private ICommandData CreatePutEntityCommand(object entity, DocumentMetadata documentMetadata)
 		{
-			var json = ConvertEntityToJson(entity);
+			var json = ConvertEntityToJson(entity, documentMetadata.Metadata);
 			var entityType = entity.GetType();
 			var identityProperty = GetIdentityProperty(entityType);
 
@@ -259,7 +259,7 @@ namespace Raven.Client.Document
 				entitiesByKey[batchResult.Key] = entity;
 				documentMetadata.ETag = batchResult.Etag;
 				documentMetadata.Key = batchResult.Key;
-				documentMetadata.OriginalValue = ConvertEntityToJson(entity);
+				documentMetadata.OriginalValue = ConvertEntityToJson(entity, documentMetadata.Metadata);
 
 				GetIdentityProperty(entity.GetType())
 					.SetValue(entity, batchResult.Key, null);
@@ -271,13 +271,13 @@ namespace Raven.Client.Document
 
 		private bool EntityChanged(KeyValuePair<object, DocumentMetadata> kvp)
 		{
-			var newObj = ConvertEntityToJson(kvp.Key);
+			var newObj = ConvertEntityToJson(kvp.Key, kvp.Value.Metadata);
 			if (kvp.Value == null)
 				return true;
 			return new JTokenEqualityComparer().Equals(newObj, kvp.Value.OriginalValue) == false;
 		}
 
-		private JObject ConvertEntityToJson(object entity)
+		private JObject ConvertEntityToJson(object entity, JObject metadata)
 		{
 			var entityType = entity.GetType();
 			var identityProperty = documentStore.Conventions.GetIdentityProperty(entityType);
@@ -288,7 +288,7 @@ namespace Raven.Client.Document
 				objectAsJson.Remove(identityProperty.Name);
 			}
 
-			objectAsJson.Add("Type", JToken.FromObject(entityType.FullName +", " + entityType.Assembly.GetName().Name));
+			metadata["Raven-Clr-Type"] = JToken.FromObject(entityType.FullName + ", " + entityType.Assembly.GetName().Name);
 			return objectAsJson;
 		}
 
