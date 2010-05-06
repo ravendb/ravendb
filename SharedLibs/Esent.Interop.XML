@@ -743,6 +743,17 @@
             error is encountered.
             </returns>
         </member>
+        <member name="M:Microsoft.Isam.Esent.Interop.Api.TryOpenTable(Microsoft.Isam.Esent.Interop.JET_SESID,Microsoft.Isam.Esent.Interop.JET_DBID,System.String,Microsoft.Isam.Esent.Interop.OpenTableGrbit,Microsoft.Isam.Esent.Interop.JET_TABLEID@)">
+            <summary>
+            Try to open a table.
+            </summary>
+            <param name="sesid">The session to use.</param>
+            <param name="dbid">The database to look for the table in.</param>
+            <param name="tablename">The name of the table.</param>
+            <param name="grbit">Table open options.</param>
+            <param name="tableid">Returns the opened tableid.</param>
+            <returns>True if the table was opened, false if the table doesn't exist.</returns>
+        </member>
         <member name="M:Microsoft.Isam.Esent.Interop.Api.GetColumnDictionary(Microsoft.Isam.Esent.Interop.JET_SESID,Microsoft.Isam.Esent.Interop.JET_TABLEID)">
             <summary>
             Creates a dictionary which maps column names to their column IDs.
@@ -13636,6 +13647,12 @@
             this mode is that backups are not required to retire old transaction log files. 
             </summary>
         </member>
+        <member name="F:Microsoft.Isam.Esent.Interop.JET_param.DbExtensionSize">
+            <summary>
+            This parameter controls the amount of space that is added to a database file each
+            time it needs to grow to accommodate more data. The size is in database pages.
+            </summary>
+        </member>
         <member name="F:Microsoft.Isam.Esent.Interop.JET_param.PageTempDBMin">
             <summary>
             This parameter controls the initial size of the temporary database. The size is in
@@ -14071,6 +14088,13 @@
             The wrapped status callback.
             </summary>
         </member>
+        <member name="F:Microsoft.Isam.Esent.Interop.JetCallbackWrapper.nativeCallback">
+            <summary>
+            The native version of the callback. This will actually be a closure
+            because we are calling a non-static method. Keep track of it here
+            to make sure that it isn't garbage collected.
+            </summary>
+        </member>
         <member name="M:Microsoft.Isam.Esent.Interop.JetCallbackWrapper.#cctor">
             <summary>
             Initializes static members of the <see cref="T:Microsoft.Isam.Esent.Interop.JetCallbackWrapper"/> class. 
@@ -14111,7 +14135,7 @@
             collected.
             </summary>
         </member>
-        <member name="P:Microsoft.Isam.Esent.Interop.JetCallbackWrapper.Callback">
+        <member name="P:Microsoft.Isam.Esent.Interop.JetCallbackWrapper.NativeCallback">
             <summary>
             Gets a NATIVE_CALLBACK callback that wraps the managed callback.
             </summary>
@@ -14590,6 +14614,12 @@
             files will need to be replayed after a crash. If circular logging is enabled using
             CircularLog then this parameter will also control the approximate amount
             of transaction log files that will be retained on disk.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Isam.Esent.Interop.InstanceParameters.DbExtensionSize">
+            <summary>
+            Gets or sets the number of pages that are added to a database file each
+            time it needs to grow to accommodate more data.
             </summary>
         </member>
         <member name="P:Microsoft.Isam.Esent.Interop.InstanceParameters.Recovery">
@@ -15087,6 +15117,12 @@
             The wrapped status callback.
             </summary>
         </member>
+        <member name="F:Microsoft.Isam.Esent.Interop.StatusCallbackWrapper.nativeCallback">
+            <summary>
+            The native version of the callback. This will be a closure (because we are wrapping
+            a non-static method) so keep track of it here to make sure it isn't garbage collected.
+            </summary>
+        </member>
         <member name="M:Microsoft.Isam.Esent.Interop.StatusCallbackWrapper.#cctor">
             <summary>
             Initializes static members of the <see cref="T:Microsoft.Isam.Esent.Interop.StatusCallbackWrapper"/> class. 
@@ -15117,7 +15153,7 @@
             <param name="nativeSnprog">Optional <see cref="T:Microsoft.Isam.Esent.Interop.NATIVE_SNPROG"/>.</param>
             <returns>An error code.</returns>
         </member>
-        <member name="P:Microsoft.Isam.Esent.Interop.StatusCallbackWrapper.Callback">
+        <member name="P:Microsoft.Isam.Esent.Interop.StatusCallbackWrapper.NativeCallback">
             <summary>
             Gets a NATIVE_PFNSTATUS callback that wraps the managed callback.
             </summary>
