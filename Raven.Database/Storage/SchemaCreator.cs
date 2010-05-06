@@ -111,7 +111,7 @@ namespace Raven.Database.Storage
         private void CreateTransactionsTable(JET_DBID dbid)
         {
             JET_TABLEID tableid;
-            Api.JetCreateTable(session, dbid, "transactions", 16, 100, out tableid);
+			Api.JetCreateTable(session, dbid, "transactions", 64 * 256, 100, out tableid);
             JET_COLUMNID columnid;
 
             Api.JetAddColumn(session, tableid, "tx_id", new JET_COLUMNDEF
@@ -135,7 +135,7 @@ namespace Raven.Database.Storage
 	    private void CreateDocumentsTable(JET_DBID dbid)
 		{
 			JET_TABLEID tableid;
-			Api.JetCreateTable(session, dbid, "documents", 16, 100, out tableid);
+			Api.JetCreateTable(session, dbid, "documents", 64 * 1024, 100, out tableid);
 			JET_COLUMNID columnid;
 
 			Api.JetAddColumn(session, tableid, "key", new JET_COLUMNDEF
@@ -191,7 +191,7 @@ namespace Raven.Database.Storage
         private void CreateDocumentsBeingModifiedByTransactionsTable(JET_DBID dbid)
         {
             JET_TABLEID tableid;
-            Api.JetCreateTable(session, dbid, "documents_modified_by_transaction", 16, 100, out tableid);
+			Api.JetCreateTable(session, dbid, "documents_modified_by_transaction", 64 * 1024, 100, out tableid);
             JET_COLUMNID columnid;
 
             Api.JetAddColumn(session, tableid, "key", new JET_COLUMNDEF
@@ -246,7 +246,7 @@ namespace Raven.Database.Storage
 		private void CreateMapResultsTable(JET_DBID dbid)
 		{
 			JET_TABLEID tableid;
-			Api.JetCreateTable(session, dbid, "mapped_results", 16, 100, out tableid);
+			Api.JetCreateTable(session, dbid, "mapped_results", 64 * 1024, 100, out tableid);
 			JET_COLUMNID columnid;
 
 
@@ -309,7 +309,7 @@ namespace Raven.Database.Storage
 		private void CreateTasksTable(JET_DBID dbid)
 		{
 			JET_TABLEID tableid;
-			Api.JetCreateTable(session, dbid, "tasks", 16, 100, out tableid);
+			Api.JetCreateTable(session, dbid, "tasks", 64 * 256, 100, out tableid);
 			JET_COLUMNID columnid;
 
 			Api.JetAddColumn(session, tableid, "id", new JET_COLUMNDEF
@@ -362,7 +362,7 @@ namespace Raven.Database.Storage
 		private void CreateFilesTable(JET_DBID dbid)
 		{
 			JET_TABLEID tableid;
-			Api.JetCreateTable(session, dbid, "files", 16, 100, out tableid);
+			Api.JetCreateTable(session, dbid, "files", 64 * 1024, 100, out tableid);
 			JET_COLUMNID columnid;
 
 			Api.JetAddColumn(session, tableid, "name", new JET_COLUMNDEF
