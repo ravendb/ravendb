@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Client.Document;
 
 namespace Raven.Client
 {
@@ -24,7 +25,9 @@ namespace Raven.Client
 
         bool UseOptimisticConcurrency { get; set; }
 
-        void Commit(Guid txId);
+    	DocumentConvention Conventions { get; }
+
+    	void Commit(Guid txId);
  
         void Rollback(Guid txId);
  
