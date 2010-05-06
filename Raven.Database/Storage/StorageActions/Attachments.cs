@@ -5,9 +5,9 @@ using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
 
-namespace Raven.Database.Storage
+namespace Raven.Database.Storage.StorageActions
 {
-	public partial class DocumentStorageActions
+	public partial class DocumentStorageActions 
 	{
 		public void AddAttachment(string key, Guid? etag, byte[] data, string headers)
 		{

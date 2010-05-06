@@ -5,9 +5,9 @@ using Microsoft.Isam.Esent.Interop;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Json;
 
-namespace Raven.Database.Storage
+namespace Raven.Database.Storage.StorageActions
 {
-	public partial class DocumentStorageActions
+	public partial class DocumentStorageActions 
 	{
 
 		public void PutMappedResult(string view, string docId, string reduceKey, string data)

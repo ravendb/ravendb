@@ -1,7 +1,6 @@
-using log4net;
 using Microsoft.Isam.Esent.Interop;
 
-namespace Raven.Database.Storage
+namespace Raven.Database.Storage.StorageActions
 {
 	public partial class DocumentStorageActions
 	{

@@ -14,6 +14,7 @@ using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
+using Raven.Database.Storage.StorageActions;
 using Directory = System.IO.Directory;
 using Version = Lucene.Net.Util.Version;
 

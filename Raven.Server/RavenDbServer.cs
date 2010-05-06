@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Security.Principal;
 using Raven.Database;
+using Raven.Database.Server;
 
 namespace Raven.Server
 {

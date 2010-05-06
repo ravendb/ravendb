@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using Lucene.Net.Documents;
@@ -8,6 +8,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
+using Raven.Database.Storage.StorageActions;
 
 namespace Raven.Database.Indexing
 {

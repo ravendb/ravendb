@@ -14,6 +14,7 @@ using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
+using Raven.Database.Storage.StorageActions;
 using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Database.Indexing

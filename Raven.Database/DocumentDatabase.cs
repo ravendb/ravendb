@@ -18,6 +18,7 @@ using Raven.Database.Json;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
+using Raven.Database.Storage.StorageActions;
 using Raven.Database.Tasks;
 
 namespace Raven.Database

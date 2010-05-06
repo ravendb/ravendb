@@ -1,6 +1,6 @@
 using System.Web;
 using Raven.Database;
-using Raven.Server;
+using Raven.Database.Server;
 
 namespace Raven.Web
 {

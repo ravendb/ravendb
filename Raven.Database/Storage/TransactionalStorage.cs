@@ -8,6 +8,7 @@ using System.Threading;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Database.Storage.SchemaUpdates;
 using System.Linq;
+using Raven.Database.Storage.StorageActions;
 
 namespace Raven.Database.Storage
 {

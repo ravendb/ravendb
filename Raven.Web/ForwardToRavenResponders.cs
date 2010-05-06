@@ -1,7 +1,7 @@
 using System;
 using System.Web;
+using Raven.Database.Server;
 using Raven.Database.Server.Abstractions;
-using Raven.Server;
 
 namespace Raven.Web
 {

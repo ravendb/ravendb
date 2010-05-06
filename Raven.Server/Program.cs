@@ -12,6 +12,7 @@ using log4net.Config;
 using log4net.Filter;
 using log4net.Layout;
 using Raven.Database;
+using Raven.Database.Server;
 using Raven.Database.Server.Responders;
 
 namespace Raven.Server

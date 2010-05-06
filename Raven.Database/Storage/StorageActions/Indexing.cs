@@ -1,13 +1,12 @@
-using System;
 using System.Collections.Generic;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
 
-namespace Raven.Database.Storage
+namespace Raven.Database.Storage.StorageActions
 {
-	public partial class DocumentStorageActions
+	public partial class DocumentStorageActions 
 	{
 		public void SetCurrentIndexStatsTo(string index)
 		{

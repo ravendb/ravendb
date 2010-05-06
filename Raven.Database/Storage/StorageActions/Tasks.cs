@@ -4,7 +4,7 @@ using Microsoft.Isam.Esent.Interop;
 using Raven.Database.Tasks;
 using Raven.Database.Extensions;
 
-namespace Raven.Database.Storage
+namespace Raven.Database.Storage.StorageActions
 {
 	public partial class DocumentStorageActions 
 	{

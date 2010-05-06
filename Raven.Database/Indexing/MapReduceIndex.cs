@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -10,6 +10,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
+using Raven.Database.Storage.StorageActions;
 using Raven.Database.Tasks;
 
 namespace Raven.Database.Indexing

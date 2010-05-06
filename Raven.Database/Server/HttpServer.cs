@@ -3,19 +3,17 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Threading;
 using log4net;
 using Newtonsoft.Json;
-using Raven.Database;
 using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Responders;
 using Raven.Database.Storage;
 
-namespace Raven.Server
+namespace Raven.Database.Server
 {
 	public class HttpServer : IDisposable
 	{
