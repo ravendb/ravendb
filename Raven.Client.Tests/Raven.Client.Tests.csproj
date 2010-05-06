@@ -51,6 +51,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Newtonsoft.Json, Version=3.5.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
@@ -82,6 +83,7 @@
     <Compile Include="BaseTest.cs" />
     <Compile Include="Document\Company.cs" />
     <Compile Include="Document\Contact.cs" />
+    <Compile Include="Document\Inheritance.cs" />
     <Compile Include="Document\When_Using_Multiple_Unsharded_Servers.cs" />
     <Compile Include="Shard\When_Using_Parallel_Access_Strategy.cs" />
     <Compile Include="Shard\When_Using_Sharded_Servers.cs" />
