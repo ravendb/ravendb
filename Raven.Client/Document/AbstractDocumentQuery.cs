@@ -5,6 +5,7 @@ using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
+using Raven.Database.Json;
 
 namespace Raven.Client.Document
 {
@@ -52,7 +53,14 @@ namespace Raven.Client.Document
 			var metadata = result.Value<JObject>("@metadata");
 			if (projectionFields != null && projectionFields.Length > 0  // we asked for a projection directly from the index
 				|| metadata == null)									 // we aren't querying a document, we are probably querying a map reduce index result
-				return (T)new JsonSerializer().Deserialize(new JsonTokenReader(result), typeof(T));
+				return (T)new JsonSerializer
+				{
+					Converters =
+						{
+							new JsonEnumConverter(),
+							new JsonLuceneNumberConverter(),
+						}
+				}.Deserialize(new JsonTokenReader(result), typeof(T));
 			return session.TrackEntity<T>(metadata.Value<string>("@id"),
 			                              result,
 			                              metadata);
