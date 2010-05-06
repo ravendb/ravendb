@@ -18,6 +18,8 @@ namespace Raven.Database.Json
 
 		public override object ReadJson(JsonReader reader, Type objectType)
 		{
+			if (reader.Value is long || reader.Value is int)
+				return reader.Value;
 			return ParseNumber((string) reader.Value);
 		}
 
