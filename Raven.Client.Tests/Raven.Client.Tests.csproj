@@ -81,6 +81,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BaseTest.cs" />
+    <Compile Include="Document\CasingIssue.cs" />
     <Compile Include="Document\Company.cs" />
     <Compile Include="Document\Contact.cs" />
     <Compile Include="Document\Inheritance.cs" />
