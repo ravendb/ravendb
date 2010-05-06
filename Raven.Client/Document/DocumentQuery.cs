@@ -49,7 +49,8 @@ namespace Raven.Client.Document
 					Query = query,
 					PageSize = pageSize,
 					Start = start,
-					SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray()
+					SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
+					FieldsToFetch = projectionFields
 				});
 				if(waitForNonStaleResults && result.IsStale)
 				{
