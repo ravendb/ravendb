@@ -79,15 +79,25 @@ namespace Raven.Client.Document
 
 		public T TrackEntity<T>(string key, JObject document, JObject metadata)
 	    {
-			var entity = ConvertToEntity<T>(key, document, metadata);
+			object entity;
+			if (entitiesByKey.TryGetValue(key, out entity) == false)
+			{
+				entity = ConvertToEntity<T>(key, document, metadata);
+			}
+			else
+			{
+				// the local instnace may have been changed, we adhere to the current Unit of Work
+				// instance, and return that, ignoring anything new.
+				return (T) entity;
+			}
 			var etag = metadata.Value<string>("@etag");
-			entitiesAndMetadata.Add(entity, new DocumentMetadata
+			entitiesAndMetadata[entity] =  new DocumentMetadata
 	        {
 				OriginalValue = document,
 	            Metadata = metadata,
 				ETag = new Guid(etag),
 	            Key = key
-	        });
+	        };
 	        entitiesByKey[key] = entity;
 	        return (T) entity;
 	    }
