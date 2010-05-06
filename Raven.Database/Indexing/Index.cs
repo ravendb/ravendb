@@ -106,9 +106,11 @@ namespace Raven.Database.Indexing
 
 		private static bool IsDuplicateDocument(Document document, ICollection<string> fieldsToFetch, ISet<string> previousDocuments)
 		{
-			if (fieldsToFetch != null && fieldsToFetch.Count > 1)
+			var docId = document.Get("__document_id");
+			if (fieldsToFetch != null && fieldsToFetch.Count > 1 ||
+				string.IsNullOrEmpty(docId))
 				return false;
-			return previousDocuments.Add(document.Get("__document_id")) == false;
+			return previousDocuments.Add(docId) == false;
 		}
 
 		public abstract void IndexDocuments(AbstractViewGenerator viewGenerator, IEnumerable<object> documents,

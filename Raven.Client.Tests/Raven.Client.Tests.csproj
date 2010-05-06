@@ -85,6 +85,7 @@
     <Compile Include="Document\Company.cs" />
     <Compile Include="Document\Contact.cs" />
     <Compile Include="Document\Inheritance.cs" />
+    <Compile Include="Document\TagCloud.cs" />
     <Compile Include="Document\When_Using_Multiple_Unsharded_Servers.cs" />
     <Compile Include="Shard\When_Using_Parallel_Access_Strategy.cs" />
     <Compile Include="Shard\When_Using_Sharded_Servers.cs" />
