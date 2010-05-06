@@ -163,6 +163,7 @@ namespace Raven.Database.Storage
 				LogFileSize = 16384,
 				MaxSessions = MaxSessions,
 				MaxCursors = 2048,
+				DbExtensionSize = 64*1024
 			};
 		}
 
