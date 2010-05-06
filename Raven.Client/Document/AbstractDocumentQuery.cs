@@ -49,9 +49,10 @@ namespace Raven.Client.Document
 
 		private T Deserialize(JObject result)
 		{
-			if (projectionFields != null && projectionFields.Length > 0)
-				return (T)new JsonSerializer().Deserialize(new JsonTokenReader(result), typeof(T));
 			var metadata = result.Value<JObject>("@metadata");
+			if (projectionFields != null && projectionFields.Length > 0  // we asked for a projection directly from the index
+				|| metadata == null)									 // we aren't querying a document, we are probably querying a map reduce index result
+				return (T)new JsonSerializer().Deserialize(new JsonTokenReader(result), typeof(T));
 			return session.TrackEntity<T>(metadata.Value<string>("@id"),
 			                              result,
 			                              metadata);
