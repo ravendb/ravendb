@@ -4,9 +4,70 @@
     $.ravenDB = {
         settings: null,
 
-		getServerUrl: function() {
-			return settings.server;
-		},
+        headersToIgnore: [
+          // Entity headers - those are NOT ignored
+          /*
+                "Content-Disposition",
+                "Content-Encoding",
+                "Content-Language",
+                "Content-Location",
+                "Content-MD5",
+                "Content-Type",
+                "Expires",
+          */
+          "Origin",
+          "Allow",
+          "Content-Range",
+          "Last-Modified",
+          // Ignoring this header, since it may
+          // very well change due to things like encoding,
+          // adding metadata, etc
+          "Content-Length",
+          // Special things to ignore
+          "Keep-Alive",
+          "X-Requested-With",
+          // Request headers
+          "Accept-Charset",
+          "Accept-Encoding",
+          "Accept",
+          "Accept-Language",
+          "Authorization",
+          "Cookie",
+          "Expect",
+          "From",
+          "Host",
+          "If-Match",
+          "If-Modified-Since",
+          "If-None-Match",
+          "If-Range",
+          "If-Unmodified-Since",
+          "Max-Forwards",
+          "Referer",
+          "TE",
+          "User-Agent",
+          //Response headers
+          "Accept-Ranges",
+          "Age",
+          "Allow",
+          "ETag",
+          "Location",
+          "Retry-After",
+          "Server",
+          "Set-Cookie2",
+          "Set-Cookie",
+          "Vary",
+          "Www-Authenticate",
+          // General
+          "Cache-Control",
+          "Connection",
+          "Date",
+          "Pragma",
+          "Trailer",
+          "Transfer-Encoding",
+          "Upgrade",
+          "Via",
+          "Warning",
+        ],
 
         init: function (options) {
 
@@ -69,7 +130,25 @@
             });
         },
 
-        getDocument: function (id, operation, successCallback) {
+        splitAndFilterHeaders: function(headersAsSingleString) {
+            var headers = {};
+            var headersLines = headersAsSingleString.split('\r\n');
+            for (var i = 0; i < headersLines.length; i++) {
+                var line = headersLines[i];
+                var keyStart = line.indexOf(': ');
+                if(keyStart == -1)
+                    continue;
+                var key = line.substring(0, keyStart);
+
+                if($.inArray(key, $.ravenDB.headersToIgnore) != -1)
+                    continue;
+
+                headers[key] = line.substring(keyStart+2);
+            }
+            return headers;
+        },
+
+         getDocument: function (id, successCallback) {
             $.ajax({
                 url: settings.server + 'docs/' + id,
                 dataType: 'json',
@@ -79,8 +158,9 @@
                         case 200:
                             var data = JSON.parse(xhr.responseText);
                             var etag = xhr.getResponseHeader("Etag");
-                            var template = xhr.getResponseHeader('Raven-' + operation + '-Template');
-                            successCallback(data, etag, template);
+                            var headersAsSingleString = xhr.getAllResponseHeaders();
+                            var headers = $.ravenDB.splitAndFilterHeaders(headersAsSingleString);
+                            successCallback(data, etag, headers);
                             break;
                         case 404:
                             successCallback(null, null, null);
@@ -90,7 +170,7 @@
             });
         },
 
-        saveDocument: function (id, etag, template, json, successCallback, errorCallback) {
+        saveDocument: function (id, etag, metadata, json, successCallback, errorCallback) {
             var idStr = '';
             var type = 'POST';
             if (id != null) {
@@ -104,8 +184,11 @@
                 beforeSend: function(xhr) {
                     if (etag)
                         xhr.setRequestHeader("If-Match", etag); 
-                    if (template)
-                        xhr.setRequestHeader('Raven-View-Template', template);       
+                    if (metadata) {
+                        for (var key in metadata) {
+                            xhr.setRequestHeader(key, metadata[key]);       
+                        }
+                    }
                 },
                 success: function (data) {
                     successCallback(data);
