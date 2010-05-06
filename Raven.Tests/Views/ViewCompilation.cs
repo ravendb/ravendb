@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Linq;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Indexing;
@@ -49,7 +50,9 @@ select new {
 		public void CanDetectGroupByTarget()
 		{
 			var abstractViewGenerator = new DynamicViewCompiler("test", new IndexDefinition { Map = map, Reduce = reduce }).GenerateInstance();
-			Assert.Equal("blog_id", abstractViewGenerator.GroupByField);
+			var expandoObject = new ExpandoObject();
+			((IDictionary<string,object>)expandoObject).Add("blog_id","1");
+			Assert.Equal("1", abstractViewGenerator.GroupByExtraction(expandoObject));
 		}
 
 		[Fact]

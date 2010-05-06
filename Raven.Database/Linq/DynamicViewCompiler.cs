@@ -97,13 +97,19 @@ namespace Raven.Database.Linq
 				                   		})));
 				var sourceSelect = (QueryExpression) ((QueryExpression) reduceDefiniton.Initializer).FromClause.InExpression;
 				var groupBySource = ((QueryExpressionGroupClause) sourceSelect.SelectOrGroupClause).GroupBy;
-				var groupByField = ((MemberReferenceExpression) groupBySource).MemberName;
 				ctor.Body.AddChild(new ExpressionStatement(
 				                   	new AssignmentExpression(
 				                   		new MemberReferenceExpression(new ThisReferenceExpression(),
-				                   		                              "GroupByField"),
+				                   		                              "GroupByExtraction"),
 				                   		AssignmentOperatorType.Assign,
-				                   		new PrimitiveExpression(groupByField, groupByField))));
+				                   		new LambdaExpression
+				                   		{
+											Parameters =
+												{
+													new ParameterDeclarationExpression(null, sourceSelect.FromClause.Identifier)
+												},
+											ExpressionBody = groupBySource
+				                   		})));
 			}
 
 			CompiledQueryText = QueryParsingUtils.GenerateText(type);

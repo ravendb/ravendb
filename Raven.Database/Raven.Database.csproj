@@ -104,6 +104,7 @@
     <Compile Include="Data\BackupRequest.cs" />
     <Compile Include="Exceptions\IndexDoesNotExists.cs" />
     <Compile Include="IStartupTask.cs" />
+    <Compile Include="Json\JsonLuceneNumberConverter.cs" />
     <Compile Include="Plugins\IReadTrigger.cs" />
     <Compile Include="Plugins\ReadOperation.cs" />
     <Compile Include="Plugins\ReadVetoResult.cs" />

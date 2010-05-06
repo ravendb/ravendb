@@ -30,31 +30,29 @@ namespace Raven.Database.Indexing
 		{
 			actions.SetCurrentIndexStatsTo(name);
 			var count = 0;
-			PropertyDescriptor groupByPropertyDescriptor = null;
 			PropertyDescriptor documentIdPropertyDescriptor = null;
 			var reduceKeys = new HashSet<string>();
 			foreach (var doc in RobustEnumeration(documents, viewGenerator.MapDefinition, actions, context))
 			{
 				count++;
 
-				if (groupByPropertyDescriptor == null)
+				if (documentIdPropertyDescriptor == null)
 				{
 					var props = TypeDescriptor.GetProperties(doc);
-					groupByPropertyDescriptor = props.Find(viewGenerator.GroupByField, false);
 					documentIdPropertyDescriptor = props.Find("__document_id", false);
 				}
 
 				var docIdValue = documentIdPropertyDescriptor.GetValue(doc);
 				if (docIdValue == null)
 					throw new InvalidOperationException("Could not find document id for this document");
-				
-				var reduceValue = groupByPropertyDescriptor.GetValue(doc);
+
+				var reduceValue = viewGenerator.GroupByExtraction(doc);
 				if (reduceValue == null)
 				{
-					log.DebugFormat("Field {0} is used as the reduce key and cannot be null, skipping document {1}", viewGenerator.GroupByField, docIdValue);
+					log.DebugFormat("Field {0} is used as the reduce key and cannot be null, skipping document {1}", viewGenerator.GroupByExtraction, docIdValue);
 					continue;
 				}
-				var reduceKey = reduceValue.ToString();
+				var reduceKey = ReduceKeyToString(reduceValue);
 				var docId = docIdValue.ToString();
 
 				reduceKeys.Add(reduceKey);
@@ -78,6 +76,13 @@ namespace Raven.Database.Indexing
 			}
 
 			log.DebugFormat("Mapped {0} documents for {1}", count, name);
+		}
+
+		private static string ReduceKeyToString(object reduceValue)
+		{
+			if (reduceValue is string || reduceValue is ValueType)
+				return reduceValue.ToString();
+			return JToken.FromObject(reduceValue).ToString(Formatting.None);
 		}
 
 		protected override IndexQueryResult RetrieveDocument(Document document, string[] fieldsToFetch)
@@ -151,7 +156,7 @@ namespace Raven.Database.Indexing
 			var count = 0;
 			Write(indexWriter =>
 			{
-				indexWriter.DeleteDocuments(new Term(viewGenerator.GroupByField, reduceKey));
+				indexWriter.DeleteDocuments(new Term("__reduce_key", reduceKey));
 				var converter = new AnonymousObjectToLuceneDocumentConverter();
 				PropertyDescriptorCollection properties = null;
 				foreach (var doc in RobustEnumeration(mappedResults, viewGenerator.ReduceDefinition, actions, context))
@@ -164,6 +169,7 @@ namespace Raven.Database.Indexing
 					var fields = converter.Index(doc, properties, indexDefinition, Field.Store.YES);
 
 					var luceneDoc = new Document();
+					luceneDoc.Add(new Field("__reduce_key", reduceKey, Field.Store.NO, Field.Index.NOT_ANALYZED));
 					foreach (var field in fields)
 					{
 						luceneDoc.Add(field);

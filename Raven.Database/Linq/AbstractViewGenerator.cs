@@ -8,7 +8,7 @@ namespace Raven.Database.Linq
 		public IndexingFunc ReduceDefinition { get; set; }
 		public string ViewText { get; set; }
 
-		public string GroupByField { get; set; }
+		public GroupByKeyFunc GroupByExtraction { get; set; }
 
 		public string Trace(object o)
 		{

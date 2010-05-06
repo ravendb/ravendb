@@ -70,7 +70,7 @@ select new { Tag = g.Key, Count = g.Sum(x => (long)x.Count) }"
 					});
 					session.SaveChanges();
 
-					var tagAndCounts = session.Query<TagAndCount>("TagCloud").WaitForNonStaleResults(TimeSpan.FromHours(10))
+					var tagAndCounts = session.Query<TagAndCount>("TagCloud").WaitForNonStaleResults()
 						.ToArray();
 
 					Assert.Equal(1, tagAndCounts.First(x=>x.Tag == "C#").Count);
@@ -79,6 +79,71 @@ select new { Tag = g.Key, Count = g.Sum(x => (long)x.Count) }"
 					Assert.Equal(1, tagAndCounts.First(x => x.Tag == "Programming").Count);
 				}
 			}
+		}
+
+		[Fact]
+		public void CanQueryMapReduceIndexOnMultipleFields()
+		{
+			using (var store = NewDocumentStore())
+			{
+				store.DatabaseCommands.PutIndex("EventsByActivityAndCharacterCountAmount",
+												  new IndexDefinition()
+				   {
+					   Map = @"
+from doc in docs select new {
+	Activity = doc.Activity,
+	Character = doc.Character,
+	Amount = doc.Amount
+}",
+					   Reduce = @"
+from result in results
+group result by new { result.Activity, result.Character } into g 
+select new
+        {
+            Activity = g.Key.Activity,
+            Character =  g.Key.Character,
+            Amount = g.Sum(x=>(long)x.Amount)
+        }"
+				   });
+
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Event
+					{
+						Activity = "Reading",
+						Character = "Elf",
+						Amount = 5
+					});
+					session.Store(new Event
+					{
+						Activity = "Reading",
+						Character = "Dward",
+						Amount = 7
+					});
+					session.Store(new Event
+					{
+						Activity = "Reading",
+						Character = "Elf",
+						Amount = 10
+					});
+					session.SaveChanges();
+
+					var tagAndCounts = session.Query<ActivityAndCharacterCountAmount>("EventsByActivityAndCharacterCountAmount")
+						.WaitForNonStaleResults(TimeSpan.FromHours(10))
+						.ToArray();
+
+					Assert.Equal(15, tagAndCounts.First(x => x.Activity == "Reading" && x.Character == "Elf").Amount);
+					Assert.Equal(7, tagAndCounts.First(x => x.Activity == "Reading" && x.Character == "Dward").Amount);
+					
+				}
+			}
+		}
+		
+		public class ActivityAndCharacterCountAmount
+		{
+			public string Activity { get; set; }
+			public string Character { get; set; }
+			public long Amount { get; set; }
 		}
 
 		public class TagAndCount
@@ -94,6 +159,15 @@ select new { Tag = g.Key, Count = g.Sum(x => (long)x.Count) }"
 			public string Title { get; set; }
 			public DateTime PostedAt { get; set; }
 			public List<string> Tags { get; set; }
+
+		}
+
+		public class Event
+		{
+			public string Id { get; set; }
+			public string Activity { get; set;}
+			public string Character{ get; set;}
+			public long Amount { get; set; }
 
 		}
 	}
