@@ -43,13 +43,13 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		public Field.Index GetIndex(string name)
+		public Field.Index GetIndex(string name, Field.Index defaultIndex)
 		{
 			if (Indexes == null)
-				return Field.Index.ANALYZED;
+				return defaultIndex;
 			FieldIndexing value;
 			if (Indexes.TryGetValue(name, out value) == false)
-				return Field.Index.ANALYZED;
+				return defaultIndex;
 			switch (value)
 			{
 				case FieldIndexing.No:
