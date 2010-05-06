@@ -53,6 +53,7 @@ namespace Raven.Client.Document
 			var metadata = result.Value<JObject>("@metadata");
 			if (projectionFields != null && projectionFields.Length > 0  // we asked for a projection directly from the index
 				|| metadata == null)									 // we aren't querying a document, we are probably querying a map reduce index result
+			{
 				return (T)new JsonSerializer
 				{
 					Converters =
@@ -61,6 +62,7 @@ namespace Raven.Client.Document
 							new JsonLuceneNumberConverter(),
 						}
 				}.Deserialize(new JsonTokenReader(result), typeof(T));
+			}
 			return session.TrackEntity<T>(metadata.Value<string>("@id"),
 			                              result,
 			                              metadata);
