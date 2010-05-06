@@ -13,7 +13,7 @@ namespace Raven.Client
 			if(shardedDocumentSession != null)
 			{
 				var documentQuery = (ShardedDocumentQuery<T>)shardedDocumentSession.Query<T>(Raven_DocumentByEntityName);
-				documentQuery.ForEachQuery((documentSession, query) => query.Where(GenerateQuery<T>(session)));
+				documentQuery.ForEachQuery((documentSession, query) => query.Where(GenerateQuery<T>(documentSession)));
 				return documentQuery;
 			}
 
