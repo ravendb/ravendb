@@ -11,7 +11,6 @@ using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
 using Raven.Database.Data;
-using Raven.Database.Extensions;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
 using Raven.Database.Storage.StorageActions;
@@ -25,13 +24,15 @@ namespace Raven.Database.Indexing
 	/// </summary>
 	public class IndexStorage : CriticalFinalizerObject, IDisposable
 	{
+		private readonly RavenConfiguration configuration;
 		private readonly string path;
 		private readonly ConcurrentDictionary<string, Index> indexes = new ConcurrentDictionary<string, Index>();
 		private readonly ILog log = LogManager.GetLogger(typeof (IndexStorage));
 
-		public IndexStorage(IndexDefinitionStorage indexDefinitionStorage, TransactionalStorage transactionalStorage, string dataDir)
+		public IndexStorage(IndexDefinitionStorage indexDefinitionStorage, TransactionalStorage transactionalStorage, RavenConfiguration configuration)
 		{
-			path = Path.Combine(dataDir,"Indexes");
+			this.configuration = configuration;
+			path = Path.Combine(configuration.DataDirectory,"Indexes");
 			if (Directory.Exists(path) == false)
 				Directory.CreateDirectory(path);
 
@@ -48,10 +49,17 @@ namespace Raven.Database.Indexing
 						continue;
 					indexes.TryAdd(indexDirectory,
 					               CreateIndexImplementation(indexDirectory, indexDefinition,
-															 FSDirectory.Open(new DirectoryInfo(Path.Combine(path, HttpUtility.UrlEncode(indexDirectory))))));
+															 CreateLuceneDirectory(indexDirectory)));
 				}
 			});
 
+		}
+
+		protected Lucene.Net.Store.Directory CreateLuceneDirectory(string indexDirectory)
+		{
+			if (configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction)
+				return new RAMDirectory();
+			return FSDirectory.Open(new DirectoryInfo(Path.Combine(path, HttpUtility.UrlEncode(indexDirectory))));
 		}
 
 		private static Index CreateIndexImplementation(string name, IndexDefinition indexDefinition, Lucene.Net.Store.Directory directory)
@@ -114,7 +122,7 @@ namespace Raven.Database.Indexing
 
 			indexes.AddOrUpdate(name, n =>
 			{
-				var directory = FSDirectory.Open(new DirectoryInfo(Path.Combine(path, HttpUtility.UrlEncode(name))));
+				var directory = CreateLuceneDirectory(name);
 				//creating index structure
 				new IndexWriter(directory, new StandardAnalyzer(Version.LUCENE_CURRENT), IndexWriter.MaxFieldLength.UNLIMITED).
 					Close();

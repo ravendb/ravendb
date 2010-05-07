@@ -47,7 +47,7 @@ namespace Raven.Database
 			configuration.Container.SatisfyImportsOnce(this);
 		
 			workContext = new WorkContext();
-			TransactionalStorage = new TransactionalStorage(configuration.DataDirectory, workContext.NotifyAboutWork);
+			TransactionalStorage = new TransactionalStorage(configuration, workContext.NotifyAboutWork);
 			configuration.Container.SatisfyImportsOnce(TransactionalStorage);
 
 			bool newDb;
@@ -62,7 +62,7 @@ namespace Raven.Database
 			}
 
 			IndexDefinitionStorage = new IndexDefinitionStorage(configuration.DataDirectory);
-			IndexStorage = new IndexStorage(IndexDefinitionStorage,TransactionalStorage, configuration.DataDirectory);
+			IndexStorage = new IndexStorage(IndexDefinitionStorage,TransactionalStorage, configuration);
 
 			workContext.IndexStorage = IndexStorage;
 			workContext.TransactionaStorage = TransactionalStorage;

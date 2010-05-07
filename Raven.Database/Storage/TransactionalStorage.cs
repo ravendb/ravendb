@@ -17,6 +17,7 @@ namespace Raven.Database.Storage
 		public const int MaxSessions = 256;
 		private readonly ThreadLocal<DocumentStorageActions> current = new ThreadLocal<DocumentStorageActions>();
 		private readonly string database;
+		private readonly RavenConfiguration configuration;
 		private readonly Action onCommit;
 		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
 		private readonly string path;
@@ -28,14 +29,15 @@ namespace Raven.Database.Storage
 		[ImportMany]
 		public IEnumerable<ISchemaUpdate> Updaters { get; set; }
 
-		public TransactionalStorage(string database, Action onCommit)
+		public TransactionalStorage(RavenConfiguration configuration, Action onCommit)
 		{
-			this.database = database;
+			database = configuration.DataDirectory;
+			this.configuration = configuration;
 			this.onCommit = onCommit;
 			path = database;
 			if (Path.IsPathRooted(database) == false)
 				path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, database);
-			this.database = Path.Combine(path, "Data");
+			database = Path.Combine(path, "Data");
 
 			LimitSystemCache();
 
@@ -94,6 +96,16 @@ namespace Raven.Database.Storage
 			try
 			{
 				ConfigureInstance(instance, path);
+
+				if(configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction)
+				{
+					new InstanceParameters(instance)
+					{
+						Recovery = false,
+						CircularLog = false,
+					};
+				}
+
 				Api.JetInit(ref instance);
 
 				var newDb = EnsureDatabaseIsCreatedAndAttachToDatabase();

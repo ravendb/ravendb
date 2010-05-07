@@ -133,6 +133,8 @@ namespace Raven.Database
 
 		public AggregateCatalog Catalog { get; set; }
 
+		public bool RunInUnreliableYetFastModeThatIsNotSuitableForProduction { get; set; }
+
 		public void LoadLoggingSettings()
 		{
 			XmlConfigurator.ConfigureAndWatch(
