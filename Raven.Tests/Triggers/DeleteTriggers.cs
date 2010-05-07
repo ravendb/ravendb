@@ -16,7 +16,8 @@ namespace Raven.Tests.Triggers
 			{
 				DataDirectory = "raven.db.test.esent",
 				Container = new CompositionContainer(new TypeCatalog(
-					typeof(CascadeDeleteTrigger)))
+					typeof(CascadeDeleteTrigger))),
+				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true
 			});
 		}
 

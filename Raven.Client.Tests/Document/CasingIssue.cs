@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Reflection;
 using Raven.Client.Document;
+using Raven.Database;
 using Xunit;
 using System.Linq;
 
@@ -27,7 +28,11 @@ namespace Raven.Client.Tests.Document
 			path = Path.Combine(path, "TestDb").Substring(6);
 			var documentStore = new DocumentStore
 			{
-				DataDirectory = path,
+				Configuration = new RavenConfiguration
+				{
+					DataDirectory = path,
+					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true
+				}
 				
 			};
 			documentStore.Initialise();

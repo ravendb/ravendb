@@ -13,7 +13,7 @@ namespace Raven.Tests.Transactions
 
         public WriteConflicts()
         {
-            db = new DocumentDatabase(new RavenConfiguration { DataDirectory = "raven.db.test.esent" });
+			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = "raven.db.test.esent", RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true });
         }
 
         public override void Dispose()

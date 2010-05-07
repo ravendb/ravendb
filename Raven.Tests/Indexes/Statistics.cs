@@ -16,7 +16,7 @@ namespace Raven.Tests.Indexes
 
 		public Statistics()
 		{
-			db = new DocumentDatabase(new RavenConfiguration {DataDirectory = "raven.db.test.esent"});
+			db = new DocumentDatabase(new RavenConfiguration {DataDirectory = "raven.db.test.esent", RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true});
 			db.SpinBackgroundWorkers();
 
 			db.PutIndex("pagesByTitle2",

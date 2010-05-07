@@ -39,7 +39,7 @@ namespace Raven.Tests.Storage
 
 			DocumentDatabase.Restore("raven.db.test.backup", "raven.db.test.esent");
 
-			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = "raven.db.test.esent" });
+			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = "raven.db.test.esent"});
 
 			var jObject = db.Get("ayende", null).ToJson();
 			Assert.Equal("ayende@ayende.com", jObject.Value<string>("email"));

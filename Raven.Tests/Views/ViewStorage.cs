@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Threading;
+using Raven.Database;
 using Raven.Database.Storage;
 using Raven.Tests.Storage;
 using Xunit;
@@ -13,7 +14,11 @@ namespace Raven.Tests.Views
 
 		public ViewStorage()
 		{
-			transactionalStorage = new TransactionalStorage("raven.db.test.esent", () => { });
+			transactionalStorage = new TransactionalStorage(new RavenConfiguration
+			{
+				DataDirectory = "raven.db.test.esent",
+				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true
+			}, () => { });
 			transactionalStorage.Initialize();
 		}
 
@@ -41,16 +46,10 @@ namespace Raven.Tests.Views
 		[Fact]
 		public void CanUpdateValue()
 		{
-			transactionalStorage.Batch(actions =>
-			{
-				actions.PutMappedResult("CommentCountsByBlog", "123", "1", "{'a': 'abc'}");
-			});
+			transactionalStorage.Batch(actions => actions.PutMappedResult("CommentCountsByBlog", "123", "1", "{'a': 'abc'}"));
 
 
-			transactionalStorage.Batch(actions =>
-			{
-				actions.PutMappedResult("CommentCountsByBlog", "123", "1", "{'a': 'def'}");
-			});
+			transactionalStorage.Batch(actions => actions.PutMappedResult("CommentCountsByBlog", "123", "1", "{'a': 'def'}"));
 		}
 
 		[Fact]

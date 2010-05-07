@@ -27,7 +27,11 @@ namespace Raven.Client.Tests.Document
 			path = Path.Combine(path, "TestDb").Substring(6);
 			var documentStore = new DocumentStore
 			{
-				DataDirectory = path,
+				Configuration =
+					{
+						RunInUnreliableYetFastModeThatIsNotSuitableForProduction =true,
+						DataDirectory = path
+					},
 				Conventions =
 					{
 						FindTypeTagName = type => typeof(IServer).IsAssignableFrom(type) ? "Servers" : null

@@ -13,7 +13,11 @@ namespace Raven.Tests.Indexes
 
 		public ComplexIndexOnNotAnalyzedField()
 		{
-			db = new DocumentDatabase(new RavenConfiguration {DataDirectory = "raven.db.test.esent"});
+			db = new DocumentDatabase(new RavenConfiguration
+			{
+				DataDirectory = "raven.db.test.esent",
+				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true
+			});
 			db.SpinBackgroundWorkers();
 		}
 

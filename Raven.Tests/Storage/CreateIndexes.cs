@@ -13,7 +13,7 @@ namespace Raven.Tests.Storage
 
 		public CreateIndexes()
 		{
-			db = new DocumentDatabase(new RavenConfiguration {DataDirectory = "raven.db.test.esent"});
+			db = new DocumentDatabase(new RavenConfiguration {DataDirectory = "raven.db.test.esent", RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true});
 		}
 
 		#region IDisposable Members

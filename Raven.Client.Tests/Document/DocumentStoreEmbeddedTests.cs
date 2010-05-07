@@ -31,7 +31,11 @@ namespace Raven.Client.Tests.Document
 			path = Path.Combine(path, "TestDb").Substring(6);
 			var documentStore = new DocumentStore
 			{
-				DataDirectory = path,
+				Configuration =
+					{
+						DataDirectory = path,
+						RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true
+					}
 			};
 			documentStore.Initialise();
 			return documentStore;
