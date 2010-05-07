@@ -129,7 +129,7 @@ select new
 					session.SaveChanges();
 
 					var tagAndCounts = session.Query<ActivityAndCharacterCountAmount>("EventsByActivityAndCharacterCountAmount")
-						.WaitForNonStaleResults(TimeSpan.FromHours(10))
+						.WaitForNonStaleResults()
 						.ToArray();
 
 					Assert.Equal(15, tagAndCounts.First(x => x.Activity == "Reading" && x.Character == "Elf").Amount);
