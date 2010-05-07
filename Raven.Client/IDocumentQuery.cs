@@ -12,8 +12,7 @@ namespace Raven.Client
 		IDocumentQuery<T> OrderBy(params string[] fields);
 		IDocumentQuery<T> WaitForNonStaleResults();
 		IDocumentQuery<T> WaitForNonStaleResults(TimeSpan timeout);
-
-	    IDocumentQuery<TProjection> Select<TProjection>(Func<T, TProjection> projectionExpression);
+		IDocumentQuery<TProjection> SelectFields<TProjection>(params string[] fields);
 
 		QueryResult QueryResult { get; }
 	}

@@ -336,13 +336,14 @@ namespace Raven.Client.Tests.Document
                 documentStore.DatabaseCommands.PutIndex("company_by_name",
                                                         new IndexDefinition
                                                         {
-                                                            Map = "from doc in docs select new { doc.Name, doc.Phone}"
+                                                            Map = "from doc in docs select new { doc.Name, doc.Phone}",
+															Stores = {{"Name", FieldStorage.Yes}, {"Phone",FieldStorage.Yes}}
                                                         });
 
-                var q = from doc in session
-                            .Query<Company>("company_by_name")
-                            .WaitForNonStaleResults()
-                        select new {doc.Name, doc.Phone};
+            	var q = session
+            		.Query<Company>("company_by_name")
+            		.SelectFields<Company>("Name", "Phone")
+            		.WaitForNonStaleResults();
                 var single = q.Single();
                 Assert.Equal("Company 1", single.Name);
                 Assert.Equal(5, single.Phone);

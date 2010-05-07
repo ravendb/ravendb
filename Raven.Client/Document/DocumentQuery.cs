@@ -19,15 +19,9 @@ namespace Raven.Client.Document
 		    this.indexName = indexName;
 		}
 
-	    public override IDocumentQuery<TProjection> Select<TProjection>(Func<T, TProjection> projectionExpression)
+		public override IDocumentQuery<TProjection> SelectFields<TProjection>(string[] fields)
 	    {
-			return new DocumentQuery<TProjection>(session, databaseCommands, indexName,
-	                                              projectionExpression
-	                                                  .Method
-	                                                  .ReturnType
-	                                                  .GetProperties(BindingFlags.Instance | BindingFlags.Public)
-	                                                  .Select(x => x.Name).ToArray()
-	            )
+			return new DocumentQuery<TProjection>(session, databaseCommands, indexName,fields)
 	        {
 	            pageSize = pageSize,
 	            query = query,

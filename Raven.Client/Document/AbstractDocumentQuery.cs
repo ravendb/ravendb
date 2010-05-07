@@ -34,9 +34,9 @@ namespace Raven.Client.Document
 			return this;
 		}
 
-		public abstract IDocumentQuery<TProjection> Select<TProjection>(Func<T, TProjection> projectionExpression);
+		public abstract IDocumentQuery<TProjection> SelectFields<TProjection>(string[] fields);
 
-	    public QueryResult QueryResult
+		public QueryResult QueryResult
 		{
 			get { return queryResult ?? (queryResult = GetQueryResult()); }
 		}

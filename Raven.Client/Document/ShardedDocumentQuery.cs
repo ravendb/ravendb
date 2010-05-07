@@ -105,10 +105,10 @@ namespace Raven.Client.Document
 			return this;
 		}
 
-		public IDocumentQuery<TProjection> Select<TProjection>(Func<T, TProjection> projectionExpression)
+		public IDocumentQuery<TProjection> SelectFields<TProjection>(string[] fieds)
 	    {
 	        return new ShardedDocumentQuery<TProjection>(
-	            queries.Select(x => x.Select(projectionExpression)).ToArray(),shardSessions
+				queries.Select(x => x.SelectFields<TProjection>(fieds)).ToArray(), shardSessions
 	            );
 	    }
 
