@@ -95,22 +95,20 @@ namespace Raven.Database
 
 		private void OnNewlyCreatedDatabase()
 		{
-			if (Configuration.ShouldCreateDefaultsWhenBuildingNewDatabaseFromScratch)
-			{
-				PutIndex("Raven/DocumentsByEntityName",
-				         new IndexDefinition
-				         {
-				         	Map =
-				         		@"from doc in docs 
+			PutIndex("Raven/DocumentsByEntityName",
+			         new IndexDefinition
+			         {
+			         	Map =
+			         		@"from doc in docs 
 where doc[""@metadata""][""Raven-Entity-Name""] != null 
 select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 ",
-				         	Indexes = {{"Tag", FieldIndexing.NotAnalyzed}},
-				         	Stores = {{"Tag", FieldStorage.No}}
-				         });
-			}
+			         	Indexes = {{"Tag", FieldIndexing.NotAnalyzed}},
+			         	Stores = {{"Tag", FieldStorage.No}}
+			         });
 
-			Configuration.RaiseDatabaseCreatedFromScratch(this);
+			if (Configuration.ShouldCreateDefaultsWhenBuildingNewDatabaseFromScratch)
+				Configuration.RaiseDatabaseCreatedFromScratch(this);
 		}
 
 		public DatabaseStatistics Statistics
