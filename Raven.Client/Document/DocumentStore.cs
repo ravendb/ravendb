@@ -29,7 +29,31 @@ namespace Raven.Client.Document
 			set { identifier = value; }
 		}
 #if !CLIENT
-		public string DataDirectory { get; set; }
+		private RavenConfiguration configuration;
+		public RavenConfiguration Configuration
+		{
+			get
+			{
+				if(configuration == null)
+					configuration = new RavenConfiguration();
+				return configuration;
+			}
+			set { configuration = value; }
+		}
+
+		public string DataDirectory
+		{
+			get
+			{
+				return Configuration == null ? null : Configuration.DataDirectory;
+			}
+			set
+			{
+				if (Configuration == null)
+					Configuration = new RavenConfiguration();
+				Configuration.DataDirectory = value;
+			}
+		}
 #endif
 		public string Url { get; set; }
 
@@ -64,9 +88,9 @@ namespace Raven.Client.Document
 			try
 			{
 #if !CLIENT
-				if (String.IsNullOrEmpty(Url))
+				if (configuration != null)
 				{
-					var embeddedDatabase = new DocumentDatabase(new RavenConfiguration {DataDirectory = DataDirectory});
+					var embeddedDatabase = new DocumentDatabase(configuration);
 					embeddedDatabase.SpinBackgroundWorkers();
 					DatabaseCommands = new EmbededDatabaseCommands(embeddedDatabase);
 				}
