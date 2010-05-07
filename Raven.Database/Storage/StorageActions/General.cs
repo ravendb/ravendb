@@ -119,6 +119,7 @@ namespace Raven.Database.Storage.StorageActions
 		{
 			CompleteTransaction(txId, doc =>
 			{
+				Api.JetSetCurrentIndex(session,Documents,"by_key");
 				Api.MakeKey(session, Documents, doc.Key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 				if (Api.TrySeek(session, Documents, SeekGrbit.SeekEQ))
 				{

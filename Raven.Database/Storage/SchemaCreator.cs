@@ -138,6 +138,12 @@ namespace Raven.Database.Storage
 			Api.JetCreateTable(session, dbid, "documents", 1024, 100, out tableid);
 			JET_COLUMNID columnid;
 
+			Api.JetAddColumn(session, tableid, "id", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.Long,
+				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnAutoincrement | ColumndefGrbit.ColumnNotNULL
+			}, null, 0, out columnid);
+
 			Api.JetAddColumn(session, tableid, "key", new JET_COLUMNDEF
 			{
 				cbMax = 255,
@@ -160,12 +166,6 @@ namespace Raven.Database.Storage
                 grbit = ColumndefGrbit.ColumnTagged,
             }, null, 0, out columnid);
 
-			Api.JetAddColumn(session, tableid, "id", new JET_COLUMNDEF
-			{
-				coltyp = JET_coltyp.Long,
-				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnAutoincrement | ColumndefGrbit.ColumnNotNULL
-			}, null, 0, out columnid);
-
 			Api.JetAddColumn(session, tableid, "data", new JET_COLUMNDEF
 			{
 				coltyp = JET_coltyp.LongBinary,
@@ -180,11 +180,11 @@ namespace Raven.Database.Storage
 
 
 			var indexDef = "+key\0\0";
-			Api.JetCreateIndex(session, tableid, "by_key", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
+			Api.JetCreateIndex(session, tableid, "by_key", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
 			                   100);
 
 			indexDef = "+id\0\0";
-			Api.JetCreateIndex(session, tableid, "by_id", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
+			Api.JetCreateIndex(session, tableid, "by_id", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
 			                   100);
 		}
 
@@ -194,7 +194,13 @@ namespace Raven.Database.Storage
 			Api.JetCreateTable(session, dbid, "documents_modified_by_transaction", 1024, 100, out tableid);
             JET_COLUMNID columnid;
 
-            Api.JetAddColumn(session, tableid, "key", new JET_COLUMNDEF
+			Api.JetAddColumn(session, tableid, "id", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.Long,
+				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnAutoincrement | ColumndefGrbit.ColumnNotNULL
+			}, null, 0, out columnid);
+			
+			Api.JetAddColumn(session, tableid, "key", new JET_COLUMNDEF
             {
                 cbMax = 255,
                 coltyp = JET_coltyp.Text,
@@ -235,8 +241,12 @@ namespace Raven.Database.Storage
             }, null, 0, out columnid);
 
             var indexDef = "+key\0\0";
-            Api.JetCreateIndex(session, tableid, "by_key", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
+			Api.JetCreateIndex(session, tableid, "by_key", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
                                100);
+
+			indexDef = "+id\0\0";
+			Api.JetCreateIndex(session, tableid, "by_id", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
+							   100);
 
             indexDef = "+locked_by_transaction\0\0";
             Api.JetCreateIndex(session, tableid, "by_tx", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
@@ -249,6 +259,11 @@ namespace Raven.Database.Storage
 			Api.JetCreateTable(session, dbid, "mapped_results", 1024, 100, out tableid);
 			JET_COLUMNID columnid;
 
+			Api.JetAddColumn(session, tableid, "id", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.Long,
+				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnAutoincrement | ColumndefGrbit.ColumnNotNULL
+			}, null, 0, out columnid);
 
 			Api.JetAddColumn(session, tableid, "view", new JET_COLUMNDEF
 			{
@@ -288,9 +303,13 @@ namespace Raven.Database.Storage
 			}, null, 0, out columnid);
 
 			var indexDef = "+view\0+document_key\0+reduce_key\0\0";
-			Api.JetCreateIndex(session, tableid, "by_pk", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
+			Api.JetCreateIndex(session, tableid, "by_pk", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
 			                   100);
 
+			indexDef = "+id\0\0";
+			Api.JetCreateIndex(session, tableid, "by_id", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
+							   100);
+			
 			indexDef = "+view\0+document_key\0\0";
 			Api.JetCreateIndex(session, tableid, "by_view_and_doc_key", CreateIndexGrbit.IndexDisallowNull, indexDef,
 			                   indexDef.Length,
@@ -365,6 +384,13 @@ namespace Raven.Database.Storage
 			Api.JetCreateTable(session, dbid, "files", 1024, 100, out tableid);
 			JET_COLUMNID columnid;
 
+
+			Api.JetAddColumn(session, tableid, "id", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.Long,
+				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnAutoincrement | ColumndefGrbit.ColumnNotNULL
+			}, null, 0, out columnid);
+
 			Api.JetAddColumn(session, tableid, "name", new JET_COLUMNDEF
 			{
 				cbMax = 255,
@@ -392,9 +418,13 @@ namespace Raven.Database.Storage
 				grbit = ColumndefGrbit.ColumnTagged
 			}, null, 0, out columnid);
 
-			const string indexDef = "+name\0\0";
-			Api.JetCreateIndex(session, tableid, "by_name", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
+			var indexDef = "+name\0\0";
+			Api.JetCreateIndex(session, tableid, "by_name", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
 			                   100);
+
+			indexDef = "+id\0\0";
+			Api.JetCreateIndex(session, tableid, "by_id", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
+							   100);
 		}
 
 		private void CreateDetailsTable(JET_DBID dbid)
