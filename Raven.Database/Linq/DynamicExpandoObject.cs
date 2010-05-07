@@ -1,6 +1,7 @@
 using System.Dynamic;
 using System.Linq;
 using Newtonsoft.Json.Linq;
+using Raven.Database.Json;
 
 namespace Raven.Database.Linq
 {
@@ -39,7 +40,19 @@ namespace Raven.Database.Linq
 				case JsonTokenType.Array:
 					return jToken.Select(TransformToValue).ToArray();
 				default:
-					return jToken.Value<object>();
+					var value = jToken.Value<object>();
+					if(value is long)
+					{
+						var l = (long) value;
+						if(l > int.MinValue && int.MaxValue > l)
+							return (int) l;
+					}
+					var str = value as string;
+					if(str != null && str.StartsWith("0x"))
+					{
+						return JsonLuceneNumberConverter.ParseNumber(str);
+					}
+					return value;
 			}
 		}
 

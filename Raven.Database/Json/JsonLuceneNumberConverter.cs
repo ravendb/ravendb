@@ -41,7 +41,7 @@ namespace Raven.Database.Json
 		public static object ParseNumber(string number)
 		{
 			return number.Length == 18 ? 
-				Convert.ToInt64(number, 16) :
+				(object)Convert.ToInt64(number, 16) :
 				Convert.ToInt32(number, 16);
 		}
 	}

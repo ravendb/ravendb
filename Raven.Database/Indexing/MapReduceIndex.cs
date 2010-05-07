@@ -8,6 +8,7 @@ using Lucene.Net.Store;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
+using Raven.Database.Json;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
 using Raven.Database.Storage.StorageActions;
@@ -57,7 +58,7 @@ namespace Raven.Database.Indexing
 
 				reduceKeys.Add(reduceKey);
 
-				var data = JObject.FromObject(doc).ToString(Formatting.None);
+				var data = JObject.FromObject(doc).ToString(Formatting.None, new JsonEnumConverter(), new JsonLuceneNumberConverter());
 				
 				log.DebugFormat("Mapped result for '{0}': '{1}'", name, data);
 
