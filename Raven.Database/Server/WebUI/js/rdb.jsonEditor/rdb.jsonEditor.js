@@ -38,7 +38,7 @@ function InitializeJSONEditor(jsonToEdit) {
                     $('#txtJSON').val(json);
                 }
                 if (ValidateRawJSON()) {
-                    $('#jsonViewer').html(GetDocumentViewHTML(JSON.parse($('#txtJSON').val()), $('#txtJSONViewTemplate').val()));
+                    $('#jsonViewer').html(GetDocumentViewHTML(JSON.parse($('#txtJSON').val()), $('#txtJSONMetadata').val()));
                 } else {
                     event.preventDefault();
                 }
@@ -66,7 +66,7 @@ function InitializeJSONEditor(jsonToEdit) {
     });
     
     if (ValidateRawJSON()) {
-        $('#jsonViewer').html(GetDocumentViewHTML(JSON.parse($('#txtJSON').val()), $('#txtJSONViewTemplate').val()));
+        $('#jsonViewer').html(GetDocumentViewHTML(JSON.parse($('#txtJSON').val()), $('#txtJSONMetadata').val()));
     } else {
         $('#editorTabs').tabs('select', 1);
     }    
@@ -75,28 +75,29 @@ function InitializeJSONEditor(jsonToEdit) {
 }
 
 function ShowEditorForNewDocument(saveCallback) {
-    ShowEditorForDocument(null, { PropertyName : ''}, null, null, 'Create New Document', function(id, etag, template, json, editor) {
-        saveCallback(template, json, editor);
+    ShowEditorForDocument(null, { PropertyName: '' }, null, {}, 'Create New Document', function (id, etag, metadata, json, editor) {
+        saveCallback(metadata, json, editor);
     }, null);
 }
 
-function ShowEditorForDocument(id, doc, etag, viewTemplate, title, saveCallback, deleteCallback) {
+function ShowEditorForDocument(id, doc, etag, metadata, title, saveCallback, deleteCallback) {
     var editorHtml = $('<div id="editorContainer"></div>');
-    $(editorHtml).load('/raven/js/rdb.jsonEditor/editor.html', function() {
+    $(editorHtml).load('/raven/js/rdb.jsonEditor/editor.html', function () {
         if (id) {
+            $('#documentId', editorHtml).html(id).show();
             var deleteButton = $('<button style="margin-top:10px;">Delete Document</button>');
             $(deleteButton).button({
                 icons: { primary: 'ui-icon-trash' }
-            }).click(function() {
+            }).click(function () {
                 $('<div title="Delete Confirmation" class="ui-state-error ui-corner-all" style="padding:20px;"></div>')
                     .html('<p><span style="float: left; margin-right: 0.3em;" class="ui-icon ui-icon-alert"></span>Are you sure you want to delete this document?</p>')
                     .dialog({
                         modal: true,
-                        buttons: { 
-                            'Delete' : function() {
-                                deleteCallback(id, etag, editorHtml, this);                                                              
-                            }, 
-                            Cancel: function() {
+                        buttons: {
+                            'Delete': function () {
+                                deleteCallback(id, etag, editorHtml, this);
+                            },
+                            Cancel: function () {
                                 $(this).dialog('close');
                             }
                         },
@@ -104,35 +105,35 @@ function ShowEditorForDocument(id, doc, etag, viewTemplate, title, saveCallback,
                     });
             });
             $(editorHtml).append(deleteButton);
-            
-            if (viewTemplate) 
-                $(editorHtml).find('#txtJSONViewTemplate').val(viewTemplate);
+
+            if (metadata)
+                $(editorHtml).find('#txtJSONMetadata').val(JSON.stringify(metadata));
         }
         $(editorHtml).css('position', 'relative').css('height', '500px');
         $(editorHtml).dialog({
-        modal: true,
-        open: function(event, ui) {
-            InitializeJSONEditor(doc);
-        },
-        close: function() {
-            $('#editorContainer').dialog('destroy');
-            $('#editorContainer').remove();
-        },
-        buttons: {
-            Save: function () {
-                if (ValidateRawJSON()) {
-                    saveCallback(id, etag, $('#txtJSONViewTemplate').val(), GetJSONFromEditor(), editorHtml);
-                };
+            modal: true,
+            open: function (event, ui) {
+                InitializeJSONEditor(doc);
             },
-            Cancel: function () {
-                $(this).dialog('close');
-            }
-        },
-        title: title,
-        width: 'auto'
+            close: function () {
+                $('#editorContainer').dialog('destroy');
+                $('#editorContainer').remove();
+            },
+            buttons: {
+                Save: function () {
+                    if (ValidateRawJSON()) {
+                        saveCallback(id, etag, $('#txtJSONMetadata').val(), GetJSONFromEditor(), editorHtml);
+                    };
+                },
+                Cancel: function () {
+                    $(this).dialog('close');
+                }
+            },
+            title: title,
+            width: 'auto'
+        });
+
     });
-    
-});
 }
 
 function ValidateRawJSON() {

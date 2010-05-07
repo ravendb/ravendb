@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using log4net.Appender;
@@ -47,7 +47,7 @@ namespace Raven.Sample.ComplexSharding
 					Url = "http://localhost:8081",
 					Conventions =
 						{
-							GenerateDocumentKey = user => "users/" + ((User) user).Name
+							DocumentKeyGenerator = user => "users/" + ((User) user).Name
 						}
 				},
 				new DocumentStore {Identifier = "Blogs", Url = "http://localhost:8082"},

@@ -153,9 +153,9 @@ function pagerClick(newPageNumber) {
 
 function EditDocument(id) {
     $('#ajaxSuccess, #ajaxError').fadeOut();
-    RavenUI.GetDocument(id, 'Edit', function (doc, etag, template) {
-        ShowEditorForDocument(id, doc, etag, template, 'Edit Document: ' + id, function (id, etag, template, json, editor) {
-            RavenUI.SaveDocument(id, etag, template, GetJSONFromEditor(), function () {
+    RavenUI.GetDocument(id, function (doc, etag, metadata) {
+        ShowEditorForDocument(id, doc, etag, metadata, 'Edit Document', function (id, etag, metadata, json, editor) {
+            RavenUI.SaveDocument(id, etag, JSON.parse($('#txtJSONMetadata').val()), GetJSONFromEditor(), function () {
                 $(editor).dialog('close');
                 $('#ajaxSuccess').html('Your document has been updated. Click <a href="#" onclick="EditDocument(\'' + id + '\'); return false;">here</a> to see it again.').fadeIn('slow');
                 if (!isInQueryMode) {
@@ -183,8 +183,8 @@ function EditDocument(id) {
 
 function CreateDocument() {
     $('#ajaxSuccess, #ajaxError').fadeOut();
-    ShowEditorForNewDocument(function (template, json, editor) {
-        RavenUI.SaveDocument(null, null, template, json, function (data) {
+    ShowEditorForNewDocument(function (metadata, json, editor) {
+        RavenUI.SaveDocument(null, null, metadata, json, function (data) {
             $(editor).dialog('close');
             $('#ajaxSuccess').html('Your document has been created. Click <a href="#" onclick="EditDocument(\'' + data.id + '\'); return false;">here</a> to see it again.').fadeIn('slow');
             if (!isInQueryMode) {

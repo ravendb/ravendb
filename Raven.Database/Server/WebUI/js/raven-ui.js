@@ -46,9 +46,9 @@ RavenUI.GetGlobalStatistics = function (targetSelector) {
 		$(targetSelector).setTemplateURL($.ravenDB.getServerUrl() + '/raven/JSONTemplates/globalStats.html');
 	}
 
-	$.ravenDB.getStatistics(function (stats) {
-		$(targetSelector).processTemplate(stats);
-	});
+    $.ravenDB.getStatistics(function (stats) {
+        $(targetSelector).processTemplate(stats);
+    });
 }
 
 //Documents
@@ -62,8 +62,8 @@ RavenUI.GetDocumentPage = function (pageNum, pageSize, successCallback) {
     });
 }
 
-RavenUI.GetDocument = function (id, operation, successCallback) {
-	$.ravenDB.getDocument(id, operation, successCallback);
+RavenUI.GetDocument = function (id, successCallback) {
+	$.ravenDB.getDocument(id, successCallback);
 }
 
 RavenUI.SaveDocument = function (id, etag, template, json, successCallback, errorCallback) {
@@ -112,20 +112,21 @@ RavenUI.QueryIndex = function (name, queryValues, pageNumber, pageSize, successC
 
 // View
 RavenUI.ShowTemplatedDocument = function (docId, operation, elementName) {
-	if ($.query.get('docId').length == 0) {
-		$(elementName).html('No document id specified.');
-		return;
-	}
-	RavenUI.GetDocument(docId, operation, function (data, etag, template) {
-		if (data == null) {
-			$(elementName).html('The document "' + docId +'" could not be found');
-			return;
-		}
-		if (template == null) {
-			$(elementName).html('No ' + operation.toLowerCase() + ' template was specified for this document.');
-			return;
-		}
-		$(elementName).setTemplateURL($.ravenDB.getServerUrl() + template, null, { filter_data: false });
-		$(elementName).processTemplate(data);
-	})
+    if ($.query.get('docId').length == 0) {
+        $(elementName).html('No document id specified.');
+        return;
+    }
+    RavenUI.GetDocument(docId, function (data, etag, metadata) {
+        if (data == null) {
+            $(elementName).html('The document "' + docId + '" could not be found');
+            return;
+        }
+        var template = metadata['Raven-' + operation + '-Template'];
+        if (template == null) {
+            $(elementName).html('No ' + operation.toLowerCase() + ' template was specified for this document.');
+            return;
+        }
+        $(elementName).setTemplateURL(metadata['Raven-' + operation + '-Template'], null, { filter_data: false });
+        $(elementName).processTemplate(data);
+    })
 }

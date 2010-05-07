@@ -10,11 +10,13 @@ namespace Raven.Client.Document
 {
 	public class ShardedDocumentQuery<T> : IDocumentQuery<T>
 	{
+		private readonly IList<IDocumentSession> shardSessions;
 		private readonly IDocumentQuery<T>[] queries;
 		private QueryResult queryResult;
 
 		public ShardedDocumentQuery(string indexName, IList<IDocumentSession> shardSessions)
 		{
+			this.shardSessions = shardSessions;
 			queries = new IDocumentQuery<T>[shardSessions.Count];
 			for (int i = 0; i < shardSessions.Count; i++)
 			{
@@ -22,7 +24,7 @@ namespace Raven.Client.Document
 			}
 		}
 
-	    private ShardedDocumentQuery(IDocumentQuery<T>[] queries)
+		private ShardedDocumentQuery(IDocumentQuery<T>[] queries, IList<IDocumentSession> shardSessions)
 	    {
 	        this.queries = queries;
 	    }
@@ -54,6 +56,13 @@ namespace Raven.Client.Document
 				.GetEnumerator();
 		}
 
+		public void ForEachQuery(Action<IDocumentSession,IDocumentQuery<T>> action)
+		{
+			for (int i = 0; i < shardSessions.Count; i++)
+			{
+				action(shardSessions[i], queries[i]);
+			}
+		}
 
 		IEnumerator IEnumerable.GetEnumerator()
 		{
@@ -99,7 +108,7 @@ namespace Raven.Client.Document
 		public IDocumentQuery<TProjection> Select<TProjection>(Func<T, TProjection> projectionExpression)
 	    {
 	        return new ShardedDocumentQuery<TProjection>(
-	            queries.Select(x => x.Select(projectionExpression)).ToArray()
+	            queries.Select(x => x.Select(projectionExpression)).ToArray(),shardSessions
 	            );
 	    }
 

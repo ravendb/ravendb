@@ -170,6 +170,11 @@ namespace Raven.Client.Shard
 
 		#endregion
 
+		public DocumentConvention Conventions
+		{
+			get { throw new NotSupportedException("You cannot ask a sharded session for its conventions, internal sharded session may each have diffeernt conventions"); }
+		}
+
 		public void Commit(Guid txId)
 		{
 			shardStrategy.ShardAccessStrategy.Apply(shardSessions, session =>

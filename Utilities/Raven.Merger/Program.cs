@@ -11,7 +11,6 @@ namespace Raven.Merger
 	{
 		static int Main(string[] args)
 		{
-		  Environment.CurrentDirectory = args.FirstOrDefault() == null ? @"C:\Work\ravendb\build" : args.First();
 		  try
 			{
 				Merge("RavenDb.exe", new[]
