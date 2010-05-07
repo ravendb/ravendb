@@ -40,9 +40,9 @@ namespace Raven.Database.Json
 
 		public static object ParseNumber(string number)
 		{
-			return number.Length == 16 ? 
-				long.Parse(number, NumberStyles.AllowHexSpecifier | NumberStyles.HexNumber) : 
-				int.Parse(number, NumberStyles.AllowHexSpecifier | NumberStyles.HexNumber);
+			return number.Length == 18 ? 
+				Convert.ToInt64(number, 16) :
+				Convert.ToInt32(number, 16);
 		}
 	}
 }
