@@ -89,9 +89,9 @@ namespace Raven.Database.Storage.StorageActions
 
 		#endregion
 
-		public void Commit()
+		public void Commit(CommitTransactionGrbit txMode)
 		{
-			transaction.Commit(CommitTransactionGrbit.LazyFlush);
+			transaction.Commit(txMode);
 			OnCommit();
 		}
 

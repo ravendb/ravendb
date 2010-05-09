@@ -34,6 +34,12 @@ namespace Raven.Database
 
 			WebDir = ConfigurationManager.AppSettings["RavenWebDir"] ?? GetDefaultWebDir();
 
+			var transactionMode = ConfigurationManager.AppSettings["TransactionMode"];
+			TransactionMode result;
+			if(Enum.TryParse(transactionMode, true, out result) == false)
+				result = TransactionMode.Lazy;
+			TransactionMode = result;
+
 			VirtualDirectory = ConfigurationManager.AppSettings["VirtualDirectory"] ?? "/";
 
 			if (VirtualDirectory.EndsWith("/") )
@@ -97,6 +103,7 @@ namespace Raven.Database
 			return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"WebUI");
 		}
 
+		public TransactionMode TransactionMode { get; set; }
 		public string DataDirectory { get; set; }
 		public int Port { get; set; }
 		public string WebDir { get; set; }

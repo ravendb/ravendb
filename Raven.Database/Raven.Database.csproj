@@ -216,6 +216,7 @@
     <Compile Include="Storage\SchemaCreator.cs" />
     <Compile Include="Storage\IndexDefinitionStorage.cs" />
     <Compile Include="TransactionInformation.cs" />
+    <Compile Include="TransactionMode.cs" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include="Microsoft.Net.Client.3.5">

@@ -308,11 +308,14 @@ namespace Raven.Database.Storage
 
 		private void ExecuteBatch(Action<DocumentStorageActions> action)
 		{
+			var txMode = configuration.TransactionMode == TransactionMode.Lazy
+				? CommitTransactionGrbit.LazyFlush
+				: CommitTransactionGrbit.None;
 			using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache))
 			{
 				current.Value = pht;
 				action(pht);
-				pht.Commit();
+				pht.Commit(txMode);
 				onCommit();
 			}
 		}
