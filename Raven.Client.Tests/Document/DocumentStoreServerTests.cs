@@ -52,6 +52,20 @@ namespace Raven.Client.Tests.Document
 		}
 
 		[Fact]
+		public void Requesting_stats()
+		{
+			using (var server = GetNewServer(port, path))
+			{
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+				documentStore.Initialise();
+
+				var session = documentStore.OpenSession();
+				var databaseStatistics = session.Load<DatabaseStatistics>("stats");
+				Assert.Null(databaseStatistics);
+			}
+		}
+
+		[Fact]
 		public void Can_store_using_batch()
 		{
 			using (var server = GetNewServer(port, path))
