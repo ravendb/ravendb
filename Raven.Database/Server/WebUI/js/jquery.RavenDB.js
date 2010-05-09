@@ -79,8 +79,14 @@
 				var scripts = document.getElementsByTagName('script');
 				var scriptSrc = null;
 				for (var i = 0; i < scripts.length; i++) {
-					if (scripts[i].getAttribute.length !== undefined) {
-						scriptSrc = scripts[i].src;
+					if (scripts[i].src != null) {
+						if(scripts[i].getAttribute('src', -1) != null && 
+							scripts[i].getAttribute('src', -1).length > scripts[i].length){
+							scriptSrc = scripts[i].getAttribute('src', -1);	
+						}
+						else {
+							scriptSrc = scripts[i].src;
+						}
 					}
 					else {
 						scriptSrc = scripts[i].getAttribute('src', -1);
