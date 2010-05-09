@@ -52,9 +52,9 @@
     <None Include="app.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Raven.Client.Ligthwieght\Raven.Client.Ligthwieght.csproj">
+    <ProjectReference Include="..\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj">
       <Project>{4E087ECB-E7CA-4891-AC3C-3C76702715B6}</Project>
-      <Name>Raven.Client.Ligthwieght</Name>
+      <Name>Raven.Client.Lightweight</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
