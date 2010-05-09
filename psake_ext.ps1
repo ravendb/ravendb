@@ -1,7 +1,21 @@
+function Get-File-Exists-On-Path
+{
+	param(
+		[string]$file
+	)
+	$results = ($Env:Path).Split(";") | Get-ChildItem -filter $file -erroraction silentlycontinue
+	return $results.Length > 0
+}
+
 function Get-Git-Commit
 {
-	$gitLog = git log --oneline -1
-	return $gitLog.Split(' ')[0]
+	if ((Get-File-Exists-On-Path git.exe )){
+		$gitLog = git log --oneline -1
+		return $gitLog.Split(' ')[0]
+	}
+	else {
+		return ""
+	}
 }
 
 function Generate-Assembly-Info
@@ -16,7 +30,6 @@ param(
 	[string]$version,
 	[string]$file = $(throw "file is a required parameter.")
 )
-  $commit = Get-Git-Commit
   $asmInfo = "using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
