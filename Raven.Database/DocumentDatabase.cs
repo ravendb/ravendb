@@ -513,14 +513,12 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 			var list = new JArray();
 			TransactionalStorage.Batch(actions =>
 			{
-				foreach (
-					var documentAndId in actions.DocumentsById(new Reference<bool>(), start, int.MaxValue, pageSize))
+				foreach (var doc in 
+					actions.GetDocumentsByReverseCreationOrder(new Reference<bool>(), start, pageSize))
 				{
-					var doc = documentAndId.Item1;
 					var document = ExecuteReadTriggersOnRead(ProcessReadVetoes(doc));
 					if(document == null)
 						continue;
-					document.Metadata.Add("@docNum", new JValue(documentAndId.Item2));
 					if (document.Metadata.Property("@id") == null)
 						document.Metadata.Add("@id", new JValue(doc.Key));
 

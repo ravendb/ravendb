@@ -83,6 +83,26 @@ namespace Raven.Database.Storage.StorageActions
 			};
 		}
 
+		public IEnumerable<JsonDocument> GetDocumentsByReverseCreationOrder(Reference<bool> hasMore, int start,int pageSize)
+		{
+			Api.MoveAfterLast(session, Documents);
+			for (int i = 0; i < start; i++)
+			{
+				if(Api.TryMovePrevious(session,Documents) == false)
+					yield break;
+			}
+			while (Api.TryMovePrevious(session, Documents))
+			{
+				yield return new JsonDocument
+				{
+					Key = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode),
+					DataAsJson = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["data"]).ToJObject(),
+					Etag = new Guid(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"])),
+					Metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject()
+				};	
+			}
+		}
+
 		public IEnumerable<Tuple<JsonDocument, int>> DocumentsById(Reference<bool> hasMoreWork, int startId, int endId,
 																   int limit)
 		{
