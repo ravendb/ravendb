@@ -86,6 +86,72 @@ select new { Tag = g.Key, Count = g.Sum(x => (long)x.Count) }"
 		}
 
 		[Fact]
+		public void CanQueryMapReduceIndex_WithUpdates()
+		{
+			using (var store = NewDocumentStore())
+			{
+				store.DatabaseCommands.PutIndex("TagCloud",
+												new IndexDefinition
+												{
+													Map =
+														@"
+from post in docs.Posts 
+from Tag in post.Tags
+select new { Tag, Count = 1 }",
+
+													Reduce =
+														@"
+from result in results
+group result by result.Tag into g
+select new { Tag = g.Key, Count = g.Sum(x => (long)x.Count) }"
+												});
+
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Post
+					{
+						PostedAt = DateTime.Now,
+						Tags = new List<string> { "C#", "Programming", "NoSql" }
+					});
+					session.Store(new Post
+					{
+						PostedAt = DateTime.Now,
+						Tags = new List<string> { "Database", "NoSql" }
+					});
+					session.SaveChanges();
+
+					var tagAndCounts = session.Query<TagAndCount>("TagCloud").WaitForNonStaleResults()
+					.ToArray();
+
+					Assert.Equal(1, tagAndCounts.Single(x => x.Tag == "C#").Count);
+					Assert.Equal(1, tagAndCounts.Single(x => x.Tag == "Database").Count);
+					Assert.Equal(2, tagAndCounts.Single(x => x.Tag == "NoSql").Count);
+					Assert.Equal(1, tagAndCounts.Single(x => x.Tag == "Programming").Count);
+		
+					session.Store(new Post
+					{
+						PostedAt = DateTime.Now,
+						Tags = new List<string> { "C#", "Programming", "NoSql" }
+					});
+					session.Store(new Post
+					{
+						PostedAt = DateTime.Now,
+						Tags = new List<string> { "Database", "NoSql" }
+					});
+					session.SaveChanges();
+
+					tagAndCounts = session.Query<TagAndCount>("TagCloud").WaitForNonStaleResults()
+						.ToArray();
+
+					Assert.Equal(2, tagAndCounts.Single(x => x.Tag == "C#").Count);
+					Assert.Equal(2, tagAndCounts.Single(x => x.Tag == "Database").Count);
+					Assert.Equal(4, tagAndCounts.Single(x => x.Tag == "NoSql").Count);
+					Assert.Equal(2, tagAndCounts.Single(x => x.Tag == "Programming").Count);
+				}
+			}
+		}
+
+		[Fact]
 		public void CanQueryMapReduceIndexOnMultipleFields()
 		{
 			using (var store = NewDocumentStore())
@@ -154,6 +220,11 @@ select new
 		{
 			public string Tag { get; set; }
 			public long Count { get; set; }
+
+			public override string ToString()
+			{
+				return string.Format("Tag: {0}, Count: {1}", Tag, Count);
+			}
 		}
 
 
@@ -164,6 +235,7 @@ select new
 			public DateTime PostedAt { get; set; }
 			public List<string> Tags { get; set; }
 
+			public string Content { get; set; }
 		}
 
 		public class Event
