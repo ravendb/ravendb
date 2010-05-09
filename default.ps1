@@ -13,12 +13,18 @@ include .\psake_ext.ps1
 
 task default -depends Release
 
+task Verify40 {
+	if( (ls "$env:windir\Microsoft.NET\Framework\v4.0*") -eq $null ) {
+		throw "Building Raven requires .NET 4.0, which doesn't appear to be installed on this machine"
+	}
+}
+
 task Clean {
   remove-item -force -recurse $buildartifacts_dir -ErrorAction SilentlyContinue
   remove-item -force -recurse $release_dir -ErrorAction SilentlyContinue
 }
 
-task Init -depends Clean {
+task Init -depends Verify40, Clean {
 	Generate-Assembly-Info `
 		-file "$base_dir\Raven.Database\Properties\AssemblyInfo.cs" `
 		-title "Raven Database $version" `
@@ -140,7 +146,7 @@ task Init -depends Clean {
 }
 
 task Compile -depends Init {
-	$v4_net_version = (ls "C:\Windows\Microsoft.NET\Framework\v4.0*").Name
+	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
     exec "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" """$sln_file"" /p:OutDir=""$buildartifacts_dir\"""
 }
 
