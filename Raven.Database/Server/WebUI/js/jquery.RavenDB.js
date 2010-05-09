@@ -68,6 +68,10 @@
           "Via",
           "Warning",
         ],
+		
+		getServerUrl: function() {
+			return settings.server;
+		},
 
         init: function (options) {
 
