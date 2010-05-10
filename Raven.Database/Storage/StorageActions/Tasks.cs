@@ -114,6 +114,14 @@ namespace Raven.Database.Storage.StorageActions
 			Api.JetSetIndexRange(session, Tasks, SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
 			do
 			{
+				// esent index ranges are approximate, and we need to check them ourselves as well
+				if (Api.RetrieveColumnAsBoolean(session, Tasks, tableColumnsCache.TasksColumns["supports_merging"]) == false)
+					continue;
+				if (Api.RetrieveColumnAsString(session, Tasks, tableColumnsCache.TasksColumns["for_index"]) != task.Index)
+					continue;
+				if (Api.RetrieveColumnAsString(session, Tasks, tableColumnsCache.TasksColumns["task_type"]) != task.Type)
+					continue;
+
 				try
 				{
 					var taskAsString = Api.RetrieveColumnAsString(session, Tasks, tableColumnsCache.TasksColumns["task"], Encoding.Unicode);

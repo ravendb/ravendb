@@ -136,14 +136,17 @@ namespace Raven.Database.Storage.StorageActions
 				Api.JetDelete(session, Transactions);
 
 			Api.JetSetCurrentIndex(session, DocumentsModifiedByTransactions, "by_tx");
-			Api.MakeKey(session, DocumentsModifiedByTransactions, txId.ToByteArray(), MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, DocumentsModifiedByTransactions, txId, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, DocumentsModifiedByTransactions, SeekGrbit.SeekEQ) == false)
 				return;
-			Api.MakeKey(session, DocumentsModifiedByTransactions, txId.ToByteArray(), MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, DocumentsModifiedByTransactions, txId, MakeKeyGrbit.NewKey);
 			Api.JetSetIndexRange(session, DocumentsModifiedByTransactions, SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
 
 			do
 			{
+				// esent index ranges are approximate, and we need to check them ourselves as well
+				if (Api.RetrieveColumnAsGuid(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["locked_by_transaction"]) != txId)
+					continue;
 				var documentInTransactionData = new DocumentInTransactionData
 				{
 					Data = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"]),

@@ -249,8 +249,18 @@ namespace Raven.Database.Storage
 							   100);
 
             indexDef = "+locked_by_transaction\0\0";
-            Api.JetCreateIndex(session, tableid, "by_tx", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
-                               100);
+        	Api.JetCreateIndex2(session, tableid, new[]
+        	{
+        		new JET_INDEXCREATE
+        		{
+        			cbKey = indexDef.Length,
+        			cbKeyMost = SystemParameters.KeyMost,
+        			grbit = CreateIndexGrbit.IndexDisallowNull,
+        			szIndexName = "by_tx",
+        			szKey = indexDef,
+        			ulDensity = 100,
+        		},
+        	}, 1);
         }
 
 		private void CreateMapResultsTable(JET_DBID dbid)
@@ -320,9 +330,18 @@ namespace Raven.Database.Storage
 			                   100);
 
 			indexDef = "+view\0+reduce_key\0\0";
-			Api.JetCreateIndex(session, tableid, "by_view_and_reduce_key", CreateIndexGrbit.IndexDisallowNull, indexDef,
-			                   indexDef.Length,
-			                   100);
+			Api.JetCreateIndex2(session, tableid, new[] {new JET_INDEXCREATE
+			{
+				cbKey = indexDef.Length,
+				cbKeyMost = SystemParameters.KeyMost,
+				szKey = indexDef,
+				ulDensity = 100,
+				szIndexName = "by_view_and_reduce_key",
+				grbit = CreateIndexGrbit.IndexDisallowNull
+			},}, 1);
+			//Api.JetCreateIndex(session, tableid, "by_view_and_reduce_key", CreateIndexGrbit.IndexDisallowNull, indexDef,
+			//                   indexDef.Length,
+			//                   100);
 		}
 
 		private void CreateTasksTable(JET_DBID dbid)
@@ -374,8 +393,15 @@ namespace Raven.Database.Storage
 			                   100);
 
 			indexDef = "+supports_merging\0+for_index\0+task_type\0\0";
-			Api.JetCreateIndex(session, tableid, "mergables_by_task_type", CreateIndexGrbit.IndexIgnoreNull, indexDef, indexDef.Length,
-							   100);
+			Api.JetCreateIndex2(session, tableid, new[]{new JET_INDEXCREATE
+			{
+				cbKey = indexDef.Length,
+				cbKeyMost = SystemParameters.KeyMost,
+				grbit = CreateIndexGrbit.IndexIgnoreNull,
+				szIndexName = "mergables_by_task_type",
+				ulDensity = 100,
+				szKey = indexDef
+			}, },1);
 		}
 
 		private void CreateFilesTable(JET_DBID dbid)

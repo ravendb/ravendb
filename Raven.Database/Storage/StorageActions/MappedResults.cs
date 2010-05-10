@@ -47,10 +47,10 @@ namespace Raven.Database.Storage.StorageActions
 
 			do
 			{
-				//TODO: This is a workaround for a bug. I am not sure yet what is causing this, but esent doesn't handle index ranges for
-				//TODO: keys larger than 87 characters when the difference is after the 87th character. Need to figure out what is actually
-				//TODO: going on here, since I am guessing that this isn't an Esent bug, but something in our use of Esent
+				// esent index ranges are approximate, and we need to check them ourselves as well
 				if (Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"]) != reduceKey)
+					continue;
+				if (Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"]) != view)
 					continue;
 				yield return Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["data"]).ToJObject();
 			} while (Api.TryMoveNext(session, MappedResults));
@@ -70,6 +70,11 @@ namespace Raven.Database.Storage.StorageActions
 			Api.JetSetIndexRange(session, MappedResults, SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive);
 			do
 			{
+				// esent index ranges are approximate, and we need to check them ourselves as well
+				if (Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"]) != view)
+					continue;
+				if (Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["document_key"]) != documentId)
+					continue; 
 				var reduceKey = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"],
 														   Encoding.Unicode);
 				reduceKeys.Add(reduceKey);
@@ -89,6 +94,9 @@ namespace Raven.Database.Storage.StorageActions
 
 			do
 			{
+				// esent index ranges are approximate, and we need to check them ourselves as well
+				if (Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"]) != view)
+					continue;
 				Api.JetDelete(session, MappedResults);
 			} while (Api.TryMoveNext(session, MappedResults));
 		}
