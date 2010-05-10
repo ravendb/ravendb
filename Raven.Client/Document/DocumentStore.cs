@@ -92,12 +92,12 @@ namespace Raven.Client.Document
 				{
 					var embeddedDatabase = new DocumentDatabase(configuration);
 					embeddedDatabase.SpinBackgroundWorkers();
-					DatabaseCommands = new EmbededDatabaseCommands(embeddedDatabase);
+					DatabaseCommands = new EmbededDatabaseCommands(embeddedDatabase, Conventions);
 				}
 				else
 #endif
 				{
-					DatabaseCommands = new ServerClient(Url);
+					DatabaseCommands = new ServerClient(Url, Conventions);
 				}
 			}
 			catch (Exception)

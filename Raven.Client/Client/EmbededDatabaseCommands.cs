@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Transactions;
 using Newtonsoft.Json.Linq;
+using Raven.Client.Document;
 using Raven.Database;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
@@ -14,10 +15,12 @@ namespace Raven.Client.Client
 	public class EmbededDatabaseCommands : IDatabaseCommands
 	{
 		private readonly DocumentDatabase database;
+		private readonly DocumentConvention convention;
 
-		public EmbededDatabaseCommands(DocumentDatabase database)
+		public EmbededDatabaseCommands(DocumentDatabase database, DocumentConvention convention)
 		{
 			this.database = database;
+			this.convention = convention;
 		}
 
 		public DatabaseStatistics Statistics
@@ -71,6 +74,11 @@ namespace Raven.Client.Client
 		public string PutIndex(string name, IndexDefinition definition)
 		{
 			return database.PutIndex(name, definition);
+		}
+
+		public string PutIndex<TDocument, TReduceResult>(string name, IndexDefinition<TDocument, TReduceResult> indexDef)
+		{
+			return PutIndex(name, indexDef.ToIndexDefinition(convention));
 		}
 
 		public QueryResult Query(string index, IndexQuery query)

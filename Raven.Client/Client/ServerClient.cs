@@ -7,6 +7,7 @@ using System.Transactions;
 using System.Web;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Client.Document;
 using Raven.Database;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
@@ -18,10 +19,12 @@ namespace Raven.Client.Client
 	public class ServerClient : IDatabaseCommands
 	{
 		private readonly string url;
+		private readonly DocumentConvention convention;
 
-		public ServerClient(string url)
+		public ServerClient(string url, DocumentConvention convention)
 		{
 			this.url = url;
+			this.convention = convention;
 		}
 
 		#region IDatabaseCommands Members
@@ -146,6 +149,11 @@ namespace Raven.Client.Client
 			var obj = new {index = ""};
 			obj = JsonConvert.DeserializeAnonymousType(request.ReadResponseString(), obj);
 			return obj.index;
+		}
+
+		public string PutIndex<TDocument, TReduceResult>(string name, IndexDefinition<TDocument, TReduceResult> indexDef)
+		{
+			return PutIndex(name, indexDef.ToIndexDefinition(convention));
 		}
 
 		public QueryResult Query(string index, IndexQuery query)
