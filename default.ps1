@@ -136,13 +136,15 @@ task Init -depends Verify40, Clean {
 		-version $version `
 		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2010" `
 		-clsCompliant "false"
-	
-	.\Utilities\Binaries\Raven.DefaultDatabase.Creator .\Raven.Database\Defaults\default.json
 		
 	new-item $release_dir -itemType directory
 	new-item $buildartifacts_dir -itemType directory
 	
 	copy $tools_dir\xUnit\*.* $build_dir
+}
+
+task Updatedocs {
+	.\Utilities\Binaries\Raven.DefaultDatabase.Creator .\Raven.Database\Defaults\default.json	
 }
 
 task Compile -depends Init {
