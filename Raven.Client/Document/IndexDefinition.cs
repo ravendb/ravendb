@@ -72,9 +72,10 @@ namespace Raven.Client.Document
 
 		private static string ReplaceAnonymousTypeBraces(string linqQuery)
 		{
-			var match = Regex.Match(linqQuery, @"new <>[\w_]+`\d+");
-			while (match.Success)
+			var matches = Regex.Matches(linqQuery, @"new <>[\w_]+`\d+");
+			for (int i = 0; i < matches.Count; i++ )
 			{
+				var match = matches[i];
 				int endBrace = -1;
 				var startBrace = linqQuery[match.Index + match.Length];
 				int startIndex = match.Index + match.Length;
@@ -82,15 +83,15 @@ namespace Raven.Client.Document
 					break;
 
 				int otherBraces = 0;
-				for (int i = startIndex; i < linqQuery.Length; i++)
+				for (int j = startIndex; j < linqQuery.Length; j++)
 				{
-					if (linqQuery[i] == '(')
+					if (linqQuery[j] == '(')
 						otherBraces++;
-					else if (linqQuery[i] != ')')
+					else if (linqQuery[j] != ')')
 						continue;
 					if (otherBraces == 0)
 					{
-						endBrace = i;
+						endBrace = j;
 						break;
 					}
 					otherBraces--;
@@ -101,7 +102,7 @@ namespace Raven.Client.Document
 					s += linqQuery.Substring(startIndex + 1, endBrace - startIndex - 1) + "}";
 					s += linqQuery.Substring(endBrace + 1);
 					linqQuery = s;
-					match = Regex.Match(linqQuery, @"new <>[\w_]+`\d+");
+					matches = Regex.Matches(linqQuery, @"new <>[\w_]+`\d+");
 					continue;
 				}
 				break;
