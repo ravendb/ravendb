@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Web;
 using ICSharpCode.NRefactory.Ast;
+using ICSharpCode.NRefactory.PrettyPrinter;
 using Raven.Database.Indexing;
 
 namespace Raven.Database.Linq
@@ -80,7 +81,30 @@ namespace Raven.Database.Linq
 
 			if (indexDefinition.IsMapReduce)
 			{
-				var reduceDefiniton = QueryParsingUtils.GetVariableDeclaration(indexDefinition.Reduce);
+				VariableDeclaration reduceDefiniton;
+				Expression groupBySource;
+				string groupByParamter;
+				if (indexDefinition.Reduce.Trim().StartsWith("from"))
+				{
+					reduceDefiniton = QueryParsingUtils.GetVariableDeclarationForLinqQuery(indexDefinition.Reduce);
+					var sourceSelect = (QueryExpression)((QueryExpression)reduceDefiniton.Initializer).FromClause.InExpression;
+					groupBySource = ((QueryExpressionGroupClause)sourceSelect.SelectOrGroupClause).GroupBy;
+					groupByParamter = sourceSelect.FromClause.Identifier;
+				}
+				else
+				{
+					reduceDefiniton = QueryParsingUtils.GetVariableDeclarationForLinqMethods(indexDefinition.Reduce);
+					var invocation = ((InvocationExpression) reduceDefiniton.Initializer);
+					var target = (MemberReferenceExpression) invocation.TargetObject;
+					while(target.MemberName!="GroupBy")
+					{
+						invocation = (InvocationExpression) target.TargetObject;
+						target = (MemberReferenceExpression)invocation.TargetObject;
+					}
+					var lambdaExpression = ((LambdaExpression)invocation.Arguments[0]);
+					groupByParamter = lambdaExpression.Parameters[0].ParameterName;
+					groupBySource = lambdaExpression.ExpressionBody;
+				}
 				// this.ReduceDefinition = from result in results...;
 				ctor.Body.AddChild(new ExpressionStatement(
 				                   	new AssignmentExpression(
@@ -95,8 +119,7 @@ namespace Raven.Database.Linq
 				                   				},
 				                   			ExpressionBody = reduceDefiniton.Initializer
 				                   		})));
-				var sourceSelect = (QueryExpression) ((QueryExpression) reduceDefiniton.Initializer).FromClause.InExpression;
-				var groupBySource = ((QueryExpressionGroupClause) sourceSelect.SelectOrGroupClause).GroupBy;
+				
 				ctor.Body.AddChild(new ExpressionStatement(
 				                   	new AssignmentExpression(
 				                   		new MemberReferenceExpression(new ThisReferenceExpression(),
@@ -106,7 +129,7 @@ namespace Raven.Database.Linq
 				                   		{
 											Parameters =
 												{
-													new ParameterDeclarationExpression(null, sourceSelect.FromClause.Identifier)
+													new ParameterDeclarationExpression(null, groupByParamter)
 												},
 											ExpressionBody = groupBySource
 				                   		})));
@@ -126,7 +149,84 @@ namespace Raven.Database.Linq
 
 		private VariableDeclaration TransformMapDefinition()
 		{
-			var variableDeclaration = QueryParsingUtils.GetVariableDeclaration(indexDefinition.Map);
+			if (indexDefinition.Map.Trim().StartsWith("from"))
+				return TransformMapDefinitionFromLinqQuerySyntax();
+			return TransformMapDefinitionFromLinqMethodSyntax();
+		}
+
+		private VariableDeclaration TransformMapDefinitionFromLinqMethodSyntax()
+		{
+			var variableDeclaration = QueryParsingUtils.GetVariableDeclarationForLinqMethods(indexDefinition.Map);
+			AddEntityNameFilteringIfNeeded(variableDeclaration);
+
+			var invocationExpression = ((InvocationExpression)variableDeclaration.Initializer);
+			var targetExpression = ((MemberReferenceExpression)invocationExpression.TargetObject);
+			do
+			{
+				AddDocumentIdFieldToLambdaIfCreatingNewObject((LambdaExpression)invocationExpression.Arguments[0]);
+				invocationExpression = (InvocationExpression)targetExpression.TargetObject;
+				targetExpression = (MemberReferenceExpression) invocationExpression.TargetObject;
+			} while (targetExpression.TargetObject is InvocationExpression);
+			return variableDeclaration;
+		}
+
+		private void AddEntityNameFilteringIfNeeded(VariableDeclaration variableDeclaration)
+		{
+			var invocationExpression = ((InvocationExpression)variableDeclaration.Initializer);
+			var targetExpression = ((MemberReferenceExpression)invocationExpression.TargetObject);
+			while (targetExpression.TargetObject is InvocationExpression)
+			{
+				invocationExpression = (InvocationExpression) targetExpression.TargetObject;
+				targetExpression = (MemberReferenceExpression)invocationExpression.TargetObject;
+			}
+			if (targetExpression.TargetObject is MemberReferenceExpression) // collection
+			{
+				var mre = (MemberReferenceExpression)targetExpression.TargetObject;
+				//doc["@metadata"]["Raven-Entity-Name"]
+				var metadata = new IndexerExpression(
+					new IndexerExpression(new IdentifierExpression("__document"), new List<Expression> { new PrimitiveExpression("@metadata", "@metadata") }),
+					new List<Expression> { new PrimitiveExpression("Raven-Entity-Name", "Raven-Entity-Name") }
+					);
+				var whereMethod = new InvocationExpression(new MemberReferenceExpression(mre.TargetObject, "Where"),
+				                                           new List<Expression>
+				                                           {
+				                                           	new LambdaExpression
+				                                           	{
+				                                           		Parameters =
+				                                           			{
+				                                           				new ParameterDeclarationExpression(null, "__document")
+				                                           			},
+				                                           		ExpressionBody = new BinaryOperatorExpression(
+				                                           			metadata,
+				                                           			BinaryOperatorType.Equality,
+				                                           			new PrimitiveExpression(mre.MemberName, mre.MemberName)
+				                                           			)
+				                                           	}
+				                                           });
+
+				invocationExpression.TargetObject = new MemberReferenceExpression(whereMethod, targetExpression.MemberName);
+
+			}
+		}
+
+		private static void AddDocumentIdFieldToLambdaIfCreatingNewObject(LambdaExpression lambdaExpression)
+		{
+			if (lambdaExpression.ExpressionBody is ObjectCreateExpression == false)
+				return;
+			var objectInitializer = ((ObjectCreateExpression)lambdaExpression.ExpressionBody).ObjectInitializer;
+
+			var identifierExpression = new IdentifierExpression(lambdaExpression.Parameters[0].ParameterName);
+			objectInitializer.CreateExpressions.Add(
+				new NamedArgumentExpression
+				{
+					Name = "__document_id",
+					Expression = new MemberReferenceExpression(identifierExpression, "__document_id")
+				});
+		}
+
+		private VariableDeclaration TransformMapDefinitionFromLinqQuerySyntax()
+		{
+			var variableDeclaration = QueryParsingUtils.GetVariableDeclarationForLinqQuery(indexDefinition.Map);
 			var queryExpression = ((QueryExpression) variableDeclaration.Initializer);
 			var expression = queryExpression.FromClause.InExpression;
 			if(expression is MemberReferenceExpression) // collection
@@ -139,15 +239,15 @@ namespace Raven.Database.Linq
 					new List<Expression> { new PrimitiveExpression("Raven-Entity-Name", "Raven-Entity-Name") }
 					);
 				queryExpression.MiddleClauses.Insert(0, 
-					new QueryExpressionWhereClause
-					{
-						Condition = 
-							new BinaryOperatorExpression(
-								metadata,
-								BinaryOperatorType.Equality,
-								new PrimitiveExpression(mre.MemberName, mre.MemberName)
-								)
-					});
+				                                     new QueryExpressionWhereClause
+				                                     {
+				                                     	Condition = 
+				                                     		new BinaryOperatorExpression(
+				                                     		metadata,
+				                                     		BinaryOperatorType.Equality,
+				                                     		new PrimitiveExpression(mre.MemberName, mre.MemberName)
+				                                     		)
+				                                     });
 			}
 			var selectOrGroupClause = queryExpression.SelectOrGroupClause;
 			var projection = ((QueryExpressionSelectClause) selectOrGroupClause).Projection;
