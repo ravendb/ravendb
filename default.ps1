@@ -251,7 +251,7 @@ task Upload -depends ReleaseNoTests {
       $log = git log -n 1 --oneline		
     }
 		write-host "Executing: $uploader '$global:uploadCategory' '$release_dir\Raven-Build-$env:buildlabel.zip' '$log'"
-		&$uploader "$global:uploadCategory" "$release_dir\Raven-Build-$env:buildlabel.zip" "$log"
+		&$uploader "$uploadCategory" "$release_dir\Raven-Build-$env:buildlabel.zip" "$log"
 		
 		if ($lastExitCode -ne 0) {
       write-host "Failed to upload to S3: $lastExitCode"
