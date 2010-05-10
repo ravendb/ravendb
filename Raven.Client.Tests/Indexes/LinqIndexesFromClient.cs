@@ -62,6 +62,8 @@ namespace Raven.Client.Tests.Indexes
 			public string Id { get; set; }
 			public string Name { get; set; }
 			public string Location { get; set; }
+
+			public int Age { get; set; }
 		}
 
 		public class Named
@@ -74,6 +76,12 @@ namespace Raven.Client.Tests.Indexes
 			public int Count { get; set; }
 		}
 
+
+		public class LocationAge
+		{
+			public string Location { get; set; }
+			public decimal Age { get; set; }
+		}
 	}
 
 

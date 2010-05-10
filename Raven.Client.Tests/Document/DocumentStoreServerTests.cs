@@ -387,5 +387,50 @@ namespace Raven.Client.Tests.Document
 				}
 			}
 		}
+
+		[Fact]
+		public void Can_get_correct_averages_from_map_reduce_index()
+		{
+			using (var server = GetNewServer(port, path))
+			{
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+				documentStore.Initialise();
+				documentStore.DatabaseCommands.PutIndex("AvgAgeByLocation", new IndexDefinition<LinqIndexesFromClient.User, LinqIndexesFromClient.LocationAge>
+				{
+					Map = users => from user in users
+								   select new { user.Location, user.Age },
+					Reduce = results => from loc in results
+										group loc by loc.Location into g
+										select new { Location = g.Key, Age = g.Average(x => x.Age) },
+				});
+
+				using (var session = documentStore.OpenSession())
+				{
+					session.Store(new LinqIndexesFromClient.User
+					{
+						Location = "Tel Aviv",
+						Age = 29,
+						Name = "Yael"
+					});
+
+					session.Store(new LinqIndexesFromClient.User
+					{
+						Location = "Tel Aviv",
+						Age = 24,
+						Name = "Einat"
+					});
+
+					session.SaveChanges();
+
+					LinqIndexesFromClient.LocationAge single = session.Query<LinqIndexesFromClient.LocationAge>("AvgAgeByLocation")
+						.Where("Location:Tel Aviv")
+						.WaitForNonStaleResults()
+						.Single();
+
+					Assert.Equal("Tel Aviv", single.Location);
+					Assert.Equal(26.5m, single.Age);
+				}
+			}
+		}
 	}
 }
