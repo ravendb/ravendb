@@ -1,6 +1,9 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 #if !CLIENT
+using System.Linq.Expressions;
+using System.Text.RegularExpressions;
 using Lucene.Net.Documents;
 #endif
 
@@ -17,9 +20,9 @@ namespace Raven.Database.Indexing
 			get { return Reduce != null; }
 		}
 
-		public Dictionary<string, FieldStorage> Stores { get; set; }
+		public IDictionary<string, FieldStorage> Stores { get; set; }
 
-		public Dictionary<string, FieldIndexing> Indexes { get; set; }
+		public IDictionary<string, FieldIndexing> Indexes { get; set; }
 
 #if !CLIENT
 
@@ -69,6 +72,48 @@ namespace Raven.Database.Indexing
 		{
 			Indexes = new Dictionary<string, FieldIndexing>();
 			Stores = new Dictionary<string, FieldStorage>();
+		}
+
+		public bool Equals(IndexDefinition other)
+		{
+			if (ReferenceEquals(null, other)) return false;
+			if (ReferenceEquals(this, other)) return true;
+			return Equals(other.Map, Map) && Equals(other.Reduce, Reduce) && DictionaryEquals(other.Stores, Stores) &&
+				DictionaryEquals(other.Indexes, Indexes);
+		}
+
+		private static bool DictionaryEquals<TKey,TValue>(IDictionary<TKey, TValue> x, IDictionary<TKey, TValue> y)
+		{
+			if(x.Count!=y.Count)
+				return false;
+			foreach (var v in x)
+			{
+				TValue value;
+				if(y.TryGetValue(v.Key, out value) == false)
+					return false;
+				if(Equals(value,v.Value)==false)
+					return false;
+			}
+			return true;
+		}
+
+		public override bool Equals(object obj)
+		{
+			if (ReferenceEquals(null, obj)) return false;
+			if (ReferenceEquals(this, obj)) return true;
+			return Equals(obj as IndexDefinition);
+		}
+
+		public override int GetHashCode()
+		{
+			unchecked
+			{
+				int result = (Map != null ? Map.GetHashCode() : 0);
+				result = (result*397) ^ (Reduce != null ? Reduce.GetHashCode() : 0);
+				result = (result*397) ^ (Stores != null ? Stores.GetHashCode() : 0);
+				result = (result*397) ^ (Indexes != null ? Indexes.GetHashCode() : 0);
+				return result;
+			}
 		}
 	}
 }
