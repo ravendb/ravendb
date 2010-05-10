@@ -82,6 +82,7 @@
     <Compile Include="Client\EmbededDatabaseCommands.cs" />
     <Compile Include="Client\HttpJsonRequest.cs" />
     <Compile Include="Client\IDatabaseCommands.cs" />
+    <Compile Include="Document\IndexDefinition.cs" />
     <Compile Include="Document\RavenClientEnlistment.cs" />
     <Compile Include="Document\ShardedDocumentQuery.cs" />
     <Compile Include="Exceptions\NonUniqueObjectException.cs" />

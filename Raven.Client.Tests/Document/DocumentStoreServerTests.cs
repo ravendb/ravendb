@@ -4,6 +4,7 @@ using System.Threading;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Document;
+using Raven.Client.Tests.Indexes;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
 using Raven.Database.Indexing;
@@ -312,6 +313,78 @@ namespace Raven.Client.Tests.Document
 
 				Assert.Equal("Company 2", companies[0].Name);
 				Assert.Equal("Company 1", companies[1].Name);
+			}
+		}
+
+		[Fact]
+		public void Can_create_index_using_linq_from_client()
+		{
+			using (var server = GetNewServer(port, path))
+			{
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+				documentStore.Initialise();
+				documentStore.DatabaseCommands.PutIndex("UsersByLocation", new IndexDefinition<LinqIndexesFromClient.User>
+				{
+					Map = users => from user in users
+								   where user.Location == "Tel Aviv"
+								   select new { user.Name },
+				});
+
+				using (var session = documentStore.OpenSession())
+				{
+					session.Store(new LinqIndexesFromClient.User
+					{
+						Location = "Tel Aviv",
+						Name = "Yael"
+					});
+
+					session.SaveChanges();
+
+					LinqIndexesFromClient.User single = session.Query<LinqIndexesFromClient.User>("UsersByLocation")
+						.Where("Name:Yael")
+						.WaitForNonStaleResults()
+						.Single();
+
+					Assert.Equal("Yael", single.Name);
+				}
+			}
+		}
+
+		[Fact]
+		public void Can_create_index_using_linq_from_client_using_map_reduce()
+		{
+			using (var server = GetNewServer(port, path))
+			{
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+				documentStore.Initialise();
+				documentStore.DatabaseCommands.PutIndex("UsersCountByLocation", new IndexDefinition<LinqIndexesFromClient.User, LinqIndexesFromClient.LocationCount>
+				{
+					Map = users => from user in users
+								   where user.Location == "Tel Aviv"
+								   select new { user.Location, Count =1 },
+					Reduce = results => from loc in results 
+										group loc by loc.Location into g
+										select new { Location = g.Key, Count =  g.Sum(x=>x.Count)},
+				});
+
+				using (var session = documentStore.OpenSession())
+				{
+					session.Store(new LinqIndexesFromClient.User
+					{
+						Location = "Tel Aviv",
+						Name = "Yael"
+					});
+
+					session.SaveChanges();
+
+					LinqIndexesFromClient.LocationCount single = session.Query<LinqIndexesFromClient.LocationCount>("UsersCountByLocation")
+						.Where("Location:Tel Aviv")
+						.WaitForNonStaleResults()
+						.Single();
+
+					Assert.Equal("Tel Aviv", single.Location);
+					Assert.Equal(1, single.Count);
+				}
 			}
 		}
 	}

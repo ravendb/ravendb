@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Transactions;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Document;
+using Raven.Client.Tests.Indexes;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
 using Raven.Database.Indexing;
@@ -464,6 +465,38 @@ namespace Raven.Client.Tests.Document
 					.ToArray();
 
 				Assert.Equal(2, companyFound.Length);
+			}
+		}
+
+		[Fact]
+		public void Can_create_index_using_linq_from_client()
+		{
+			using (var store = NewDocumentStore())
+			{
+				store.DatabaseCommands.PutIndex("UsersByLocation", new IndexDefinition<LinqIndexesFromClient.User>
+				{
+					Map = users => from user in users
+								   where user.Location == "Tel Aviv"
+								   select new { user.Name },
+				});
+
+				using (var session = store.OpenSession())
+				{
+					session.Store(new LinqIndexesFromClient.User
+					{
+						Location = "Tel Aviv",
+						Name = "Yael"
+					});
+
+					session.SaveChanges();
+
+					LinqIndexesFromClient.User single = session.Query<LinqIndexesFromClient.User>("UsersByLocation")
+						.Where("Name:Yael")
+						.WaitForNonStaleResults()
+						.Single();
+
+					Assert.Equal("Yael", single.Name);
+				}
 			}
 		}
 	}

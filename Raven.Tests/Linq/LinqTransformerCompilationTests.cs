@@ -83,6 +83,80 @@ namespace Raven.Tests.Linq
 			}
 		}
 
+		[Fact]
+		public void Can_compile_map_using_linq_methods()
+		{
+			var viewGenerator = new DynamicViewCompiler("test", new IndexDefinition
+			{
+				Map = @"docs.Users
+	.Select(user => new {Location = user.Location, Count = 1})
+	.Select(user => new {Location = user.Location})"
+			}).GenerateInstance();
+
+
+			var results = viewGenerator.MapDefinition(new[]
+			{
+				GetDocumentFromString(
+				@"
+                {
+                    '@metadata': {'Raven-Entity-Name': 'Users', '@id': 1},
+                    'Location': 'Tel Aviv'
+                }")
+			}).Cast<object>().ToArray();
+
+			var expected = new[]
+			{
+				"{ Location = Tel Aviv, __document_id = 1 }",
+			};
+
+			for (var i = 0; i < results.Length; i++)
+			{
+				Assert.Equal(expected[i], results[i].ToString());
+			}
+		}
+
+		[Fact]
+		public void Can_compile_map_reudce_using_linq_methods()
+		{
+			var viewGenerator = new DynamicViewCompiler("test", new IndexDefinition
+			{
+				Map = @"docs.Users
+	.Select(user => new {Location = user.Location, Count = 1})",
+				Reduce =
+					@"results
+	.GroupBy(agg => agg.Location)
+	.Select(g => new {Loction = g.Key, Count = g.Sum(x => x.Count}))"
+			}).GenerateInstance();
+
+
+			var results = viewGenerator.ReduceDefinition(viewGenerator.MapDefinition(new[]
+			{
+				GetDocumentFromString(
+				@"
+                {
+                    '@metadata': {'Raven-Entity-Name': 'Users', '@id': 1},
+                    'Location': 'Tel Aviv'
+                }"),
+				  GetDocumentFromString(
+				@"
+                {
+                    '@metadata': {'Raven-Entity-Name': 'Users', '@id': 1},
+                    'Location': 'Tel Aviv'
+                }")
+			})).Cast<object>().ToArray();
+
+			var expected = new[]
+			{
+				"{ Loction = Tel Aviv, Count = 2 }",
+			};
+
+			for (var i = 0; i < results.Length; i++)
+			{
+				Assert.Equal(expected[i], results[i].ToString());
+			}
+		}
+
+
 		public static dynamic GetDocumentFromString(string json)
 		{
 			return JsonToExpando.Convert(JObject.Parse(json));
