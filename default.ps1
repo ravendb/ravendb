@@ -183,27 +183,6 @@ task ReleaseNoTests -depends DoRelease {
 task Release -depends Test,DoRelease { 
 }
 
-
-task Upload -depends ReleaseNoTests {
-	Write-Host "Starting upload"
-	if (Test-Path $uploader) {
-		$log = $env:push_msg 
-    if($log -eq $null -or $log.Length -eq 0) {
-      $log = git log -n 1 --oneline		
-    }
-		&$uploader "$global:uploadCategory" "$release_dir\Raven-Build-$env:buildlabel.zip" "$log"
-		
-		if ($lastExitCode -ne 0) {
-      write-host "Failed to upload to S3: $lastExitCode"
-			throw "Error: Failed to publish build"
-		}
-	}
-	else {
-		Write-Host "could not find upload script $uploadScript, skipping upload"
-	}
-}
-
-
 task DoRelease -depends Merge {
 	
 	remove-item $build_dir\Output -Recurse -Force  -ErrorAction SilentlyContinue
@@ -261,4 +240,25 @@ task DoRelease -depends Merge {
     }
     
     cd $old
+}
+
+
+task Upload -depends ReleaseNoTests {
+	Write-Host "Starting upload"
+	if (Test-Path $uploader) {
+		$log = $env:push_msg 
+    if($log -eq $null -or $log.Length -eq 0) {
+      $log = git log -n 1 --oneline		
+    }
+		write-host "Executing: $uploader '$global:uploadCategory' '$release_dir\Raven-Build-$env:buildlabel.zip' '$log'"
+		&$uploader "$global:uploadCategory" "$release_dir\Raven-Build-$env:buildlabel.zip" "$log"
+		
+		if ($lastExitCode -ne 0) {
+      write-host "Failed to upload to S3: $lastExitCode"
+			throw "Error: Failed to publish build"
+		}
+	}
+	else {
+		Write-Host "could not find upload script $uploadScript, skipping upload"
+	}
 }
