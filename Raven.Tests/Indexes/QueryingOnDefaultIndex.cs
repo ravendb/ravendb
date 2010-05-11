@@ -44,6 +44,65 @@ namespace Raven.Tests.Indexes
 
 			Assert.Equal("ayende@ayende.com", queryResult.Results[0].Value<string>("email"));
 		}
+
+
+        [Fact]
+        public void CanPageOverDefaultIndex()
+        {
+            db.Put("users/ayende", null, JObject.Parse("{'email':'ayende@ayende.com'"),
+                   JObject.Parse("{'Raven-Entity-Name': 'Users'}"), null);
+            db.Put("users/rob", null, JObject.Parse("{'email':'robashton@codeofrob.com'"),
+                   JObject.Parse("{'Raven-Entity-Name': 'Users'}"), null);
+            db.Put("users/joe", null, JObject.Parse("{'email':'joe@bloggs.com'"),
+                   JObject.Parse("{'Raven-Entity-Name': 'Users'}"), null);
+
+            // This is perhaps too much code in one test, I don't know what the standards are for your tests
+            QueryResult queryResultPageOne;
+            QueryResult queryResultPageTwo;
+            QueryResult queryResultPageThree;
+            do
+            {
+                queryResultPageOne = db.Query("Raven/DocumentsByEntityName", new IndexQuery
+                {
+                    Query = "Tag:`Users`",
+                    Start = 0,
+                    PageSize = 2
+                });
+            } while (queryResultPageOne.IsStale);
+            do
+            {
+                queryResultPageTwo = db.Query("Raven/DocumentsByEntityName", new IndexQuery
+                {
+                    Query = "Tag:`Users`",
+                    Start = 1,
+                    PageSize = 2
+                });
+            } while (queryResultPageTwo.IsStale);
+
+            do
+            {
+                queryResultPageThree = db.Query("Raven/DocumentsByEntityName", new IndexQuery
+                {
+                    Query = "Tag:`Users`",
+                    Start = 2,
+                    PageSize = 2
+                });
+            } while (queryResultPageThree.IsStale);
+
+            // Page one
+            Assert.Equal(2, queryResultPageOne.Results.Length);
+            Assert.Equal("ayende@ayende.com", queryResultPageOne.Results[0].Value<string>("email"));
+            Assert.Equal("robashton@codeofrob.com", queryResultPageOne.Results[1].Value<string>("email"));
+
+            // Page two
+            Assert.Equal(2, queryResultPageTwo.Results.Length);
+            Assert.Equal("robashton@codeofrob.com", queryResultPageTwo.Results[0].Value<string>("email"));
+            Assert.Equal("joe@bloggs.com", queryResultPageTwo.Results[1].Value<string>("email"));
+
+            // Page three
+            Assert.Equal(1, queryResultPageThree.Results.Length);
+            Assert.Equal("joe@bloggs.com", queryResultPageThree.Results[0].Value<string>("email"));
+        }
 		
 	}
 }

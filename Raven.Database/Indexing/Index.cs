@@ -75,15 +75,16 @@ namespace Raven.Database.Indexing
 
 		private static TopDocs ExecuteQuery(IndexSearcher searcher, IndexQuery indexQuery, Query luceneQuery)
 		{
+            // NOTE: We get Start + Pagesize results back so we have something to page on
 			TopDocs search;
 			if (indexQuery.SortedFields != null && indexQuery.SortedFields.Length > 0)
 			{
 				var sort = new Sort(indexQuery.SortedFields.Select(x => x.ToLuceneSortField()).ToArray());
-				search = searcher.Search(luceneQuery, null, indexQuery.PageSize, sort);
+				search = searcher.Search(luceneQuery, null, indexQuery.PageSize + indexQuery.Start, sort);
 			}
 			else
 			{
-				search = searcher.Search(luceneQuery, null, indexQuery.PageSize);
+                search = searcher.Search(luceneQuery, null, indexQuery.PageSize + indexQuery.Start);
 			}
 			return search;
 		}
