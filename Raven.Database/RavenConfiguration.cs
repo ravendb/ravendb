@@ -19,35 +19,35 @@ namespace Raven.Database
 
 			Catalog.Changed += (sender, args) => ResetContainer();
 
-			var portStr = ConfigurationManager.AppSettings["RavenPort"];
+			var portStr = ConfigurationManager.AppSettings["Raven/Port"];
 
 			Port = portStr != null ? int.Parse(portStr) : 8080;
 
-			var indexBatchSizeStr = ConfigurationManager.AppSettings["IndexingBatchSize"];
+			var indexBatchSizeStr = ConfigurationManager.AppSettings["Raven/IndexingBatchSize"];
 
 			IndexingBatchSize = indexBatchSizeStr != null ? int.Parse(indexBatchSizeStr) : 1024;
 
-			DataDirectory = ConfigurationManager.AppSettings["RavenDataDir"] ?? @"~\Data";
+			DataDirectory = ConfigurationManager.AppSettings["Raven/DataDir"] ?? @"~\Data";
 
 			if (DataDirectory.StartsWith(@"~\"))
 				DataDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, DataDirectory.Substring(2));
 
-			WebDir = ConfigurationManager.AppSettings["RavenWebDir"] ?? GetDefaultWebDir();
+			WebDir = ConfigurationManager.AppSettings["Raven/WebDir"] ?? GetDefaultWebDir();
 
-			var transactionMode = ConfigurationManager.AppSettings["TransactionMode"];
+			var transactionMode = ConfigurationManager.AppSettings["Raven/TransactionMode"];
 			TransactionMode result;
 			if(Enum.TryParse(transactionMode, true, out result) == false)
 				result = TransactionMode.Lazy;
 			TransactionMode = result;
 
-			VirtualDirectory = ConfigurationManager.AppSettings["VirtualDirectory"] ?? "/";
+			VirtualDirectory = ConfigurationManager.AppSettings["Raven/VirtualDirectory"] ?? "/";
 
 			if (VirtualDirectory.EndsWith("/") )
 				VirtualDirectory = VirtualDirectory.Substring(0, VirtualDirectory.Length - 1); 
 			if (VirtualDirectory.StartsWith("/") == false)
 				VirtualDirectory = "/" + VirtualDirectory;
 
-			PluginsDirectory = ConfigurationManager.AppSettings["PluginsDirectory"] ?? @"~\Plugins";
+			PluginsDirectory = ConfigurationManager.AppSettings["Raven/PluginsDirectory"] ?? @"~\Plugins";
 			if (PluginsDirectory.StartsWith(@"~\"))
 				PluginsDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, PluginsDirectory.Substring(2));
 
@@ -90,9 +90,9 @@ namespace Raven.Database
 
 		private static AnonymousUserAccessMode GetAnonymousUserAccessMode()
 		{
-			if (string.IsNullOrEmpty(ConfigurationManager.AppSettings["AnonymousAccess"]) == false)
+			if (string.IsNullOrEmpty(ConfigurationManager.AppSettings["Raven/AnonymousAccess"]) == false)
 			{
-				var val = Enum.Parse(typeof (AnonymousUserAccessMode), ConfigurationManager.AppSettings["AnonymousAccess"]);
+                var val = Enum.Parse(typeof(AnonymousUserAccessMode), ConfigurationManager.AppSettings["Raven/AnonymousAccess"]);
 				return (AnonymousUserAccessMode) val;
 			}
 			return AnonymousUserAccessMode.Get;
@@ -100,7 +100,7 @@ namespace Raven.Database
 
 		private static string GetDefaultWebDir()
 		{
-			return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"WebUI");
+            return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"Raven/WebUI");
 		}
 
 		public TransactionMode TransactionMode { get; set; }
