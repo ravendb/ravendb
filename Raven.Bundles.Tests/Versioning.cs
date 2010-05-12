@@ -37,7 +37,7 @@ namespace Raven.Bundles.Tests
                             {
                                 Catalogs =
                                     {
-                                        new AssemblyCatalog(typeof (Bundles.Versioning.PutTrigger).Assembly)
+                                        new AssemblyCatalog(typeof (Bundles.Versioning.VersioningPutTrigger).Assembly)
                                     }
                             }
                     }

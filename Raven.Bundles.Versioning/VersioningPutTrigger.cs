@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace Raven.Bundles.Versioning
 {
-    public class PutTrigger : IPutTrigger, IRequiresDocumentDatabaseInitialization
+    public class VersioningPutTrigger : IPutTrigger, IRequiresDocumentDatabaseInitialization
     {
         private const string RavenDocumentRevision = "Raven-Document-Revision";
         private const string RavenDocumentRevisionStatus = "Raven-Document-Revision-Status";
