@@ -160,11 +160,14 @@ namespace Raven.Client.Client
                 if(overwrite == false)
                     throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
             }
-            catch (WebException)
+            catch (WebException e)
             {
+                var response = e.Response as HttpWebResponse;
+                if (response == null || response.StatusCode != HttpStatusCode.NotFound)
+                    throw;
             }
 
-			var request = new HttpJsonRequest(requestUri, "PUT", credentials);
+            var request = new HttpJsonRequest(requestUri, "PUT", credentials);
 			request.Write(JsonConvert.SerializeObject(definition, new JsonEnumConverter()));
 
 			var obj = new {index = ""};
