@@ -13,14 +13,15 @@ namespace Raven.Client.Client
 
         public NameValueCollection ResponseHeaders { get; set; }
 
-        public HttpJsonRequest(string url, string method)
-            : this(url, method, new JObject())
+        public HttpJsonRequest(string url, string method, ICredentials credentials)
+            : this(url, method, new JObject(), credentials)
         {
         }
 
-        public HttpJsonRequest(string url, string method, JObject metadata)
+        public HttpJsonRequest(string url, string method, JObject metadata, ICredentials credentials)
         {
             webRequest = WebRequest.Create(url);
+            webRequest.Credentials = credentials;
             WriteMetadata(metadata);
             webRequest.Method = method;
             webRequest.ContentType = "application/json";

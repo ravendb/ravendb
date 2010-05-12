@@ -1,4 +1,5 @@
 using System;
+using System.Net;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Data;
@@ -26,5 +27,6 @@ namespace Raven.Client.Client
 
         void Commit(Guid txId);
         void Rollback(Guid txId);
+        IDatabaseCommands With(ICredentials credentialsForSession);
 	}
 }

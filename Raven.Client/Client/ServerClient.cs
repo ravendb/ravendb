@@ -20,10 +20,12 @@ namespace Raven.Client.Client
 	{
 		private readonly string url;
 		private readonly DocumentConvention convention;
+	    private readonly ICredentials credentials;
 
-		public ServerClient(string url, DocumentConvention convention)
+	    public ServerClient(string url, DocumentConvention convention, ICredentials credentials)
 		{
-			this.url = url;
+	        this.credentials = credentials;
+	        this.url = url;
 			this.convention = convention;
 		}
 
@@ -35,7 +37,7 @@ namespace Raven.Client.Client
 
 		    var metadata = new JObject();
 		    AddTransactionInformation(metadata);
-			var request = new HttpJsonRequest(url + "/docs/" + key, "GET", metadata);
+			var request = new HttpJsonRequest(url + "/docs/" + key, "GET", metadata, credentials);
 			try
 			{
 				return new JsonDocument
@@ -70,7 +72,7 @@ namespace Raven.Client.Client
             AddTransactionInformation(metadata);
             if (etag != null)
                 metadata["ETag"] = new JValue(etag.Value.ToString());
-		    var request = new HttpJsonRequest(url + "/docs/" + key, method, metadata);
+		    var request = new HttpJsonRequest(url + "/docs/" + key, method, metadata, credentials);
 			request.Write(document.ToString());
 
 		    string readResponseString;
@@ -105,7 +107,7 @@ namespace Raven.Client.Client
             if (etag != null)
                 metadata.Add("ETag", new JValue(etag.Value.ToString()));
 	        AddTransactionInformation(metadata);
-	        var httpJsonRequest = new HttpJsonRequest(url + "/docs/" + key, "DELETE", metadata);
+	        var httpJsonRequest = new HttpJsonRequest(url + "/docs/" + key, "DELETE", metadata, credentials);
 	        try
 	        {
 	            httpJsonRequest.ReadResponseString();
@@ -162,7 +164,7 @@ namespace Raven.Client.Client
             {
             }
 
-			var request = new HttpJsonRequest(requestUri, "PUT");
+			var request = new HttpJsonRequest(requestUri, "PUT", credentials);
 			request.Write(JsonConvert.SerializeObject(definition, new JsonEnumConverter()));
 
 			var obj = new {index = ""};
@@ -199,7 +201,7 @@ namespace Raven.Client.Client
 						(sb, field) => sb.Append("&sort=").Append(field.Descending ? "-" : "").Append(field.Field)
                     ).ToString();
             }
-            var request = new HttpJsonRequest(path, "GET");
+            var request = new HttpJsonRequest(path, "GET", credentials);
             var serializer = new JsonSerializer();
             JToken json;
             using (var reader = new JsonTextReader(new StringReader(request.ReadResponseString())))
@@ -216,13 +218,13 @@ namespace Raven.Client.Client
 	    public void DeleteIndex(string name)
 		{
 			EnsureIsNotNullOrEmpty(name, "name");
-            var request = new HttpJsonRequest(url + "/indexes/" + name, "DELETE");
+            var request = new HttpJsonRequest(url + "/indexes/" + name, "DELETE", credentials);
 		    request.ReadResponseString();
 		}
 
 	    public JsonDocument[] Get(string[] ids)
 	    {
-            var request = new HttpJsonRequest(url + "/queries/", "POST");
+            var request = new HttpJsonRequest(url + "/queries/", "POST", credentials);
             request.Write(new JArray(ids).ToString(Formatting.None));
             var responses = JArray.Parse(request.ReadResponseString());
 
@@ -243,7 +245,7 @@ namespace Raven.Client.Client
 		{
 			var metadata = new JObject();
 			AddTransactionInformation(metadata);
-			var req = new HttpJsonRequest(url + "/bulk_docs", "POST",metadata);
+			var req = new HttpJsonRequest(url + "/bulk_docs", "POST",metadata, credentials);
 			var jArray = new JArray(commandDatas.Select(x => x.ToJson()));
 			req.Write(jArray.ToString(Formatting.None));
 
@@ -265,14 +267,19 @@ namespace Raven.Client.Client
 
 		public void Commit(Guid txId)
 	    {
-	        var httpJsonRequest = new HttpJsonRequest("/transaction/commit?tx=" + txId, "POST");
+	        var httpJsonRequest = new HttpJsonRequest("/transaction/commit?tx=" + txId, "POST", credentials);
 	        httpJsonRequest.ReadResponseString();
 	    }
 
 	    public void Rollback(Guid txId)
 	    {
-            var httpJsonRequest = new HttpJsonRequest("/transaction/rollback?tx=" + txId, "POST");
+            var httpJsonRequest = new HttpJsonRequest("/transaction/rollback?tx=" + txId, "POST", credentials);
             httpJsonRequest.ReadResponseString();
+	    }
+
+	    public IDatabaseCommands With(ICredentials credentialsForSession)
+	    {
+	        return new ServerClient(url, convention, credentialsForSession);
 	    }
 
 	    #endregion

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Transactions;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Document;
@@ -128,6 +129,11 @@ namespace Raven.Client.Client
 	    public void Rollback(Guid txId)
 	    {
 	        database.Rollback(txId);
+	    }
+
+	    public IDatabaseCommands With(ICredentials credentialsForSession)
+	    {
+	        return this;
 	    }
 
 	    #endregion

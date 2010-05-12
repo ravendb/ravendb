@@ -1,4 +1,5 @@
 using System;
+using System.Net;
 using Raven.Client.Client;
 using Raven.Database;
 
@@ -16,7 +17,15 @@ namespace Raven.Client.Document
 		}
 
 		private string identifier;
-		public string Identifier
+        private ICredentials credentials = CredentialCache.DefaultNetworkCredentials;
+
+	    public ICredentials Credentials
+	    {
+	        get { return credentials; }
+	        set { credentials = value; }
+	    }
+
+	    public string Identifier
 		{
 			get
 			{
@@ -71,8 +80,25 @@ namespace Raven.Client.Document
 
 		#endregion
 
+        public IDocumentSession OpenSession(ICredentials credentialsForSession)
+        {
+
+            if (DatabaseCommands == null)
+                throw new InvalidOperationException("You cannot open a session before initialising the document store. Did you forgot calling Initialise?");
+            var session = new DocumentSession(this, DatabaseCommands.With(credentialsForSession));
+            session.Stored += entity =>
+            {
+                var copy = Stored;
+                if (copy != null)
+                    copy(Identifier, entity);
+            };
+            return session;
+        }
+
         public IDocumentSession OpenSession()
         {
+            if(DatabaseCommands == null)
+                throw new InvalidOperationException("You cannot open a session before initialising the document store. Did you forgot calling Initialise?");
             var session = new DocumentSession(this, DatabaseCommands);
 			session.Stored += entity =>
 			{
@@ -97,7 +123,7 @@ namespace Raven.Client.Document
 				else
 #endif
 				{
-					DatabaseCommands = new ServerClient(Url, Conventions);
+					DatabaseCommands = new ServerClient(Url, Conventions, credentials);
 				}
 			}
 			catch (Exception)
