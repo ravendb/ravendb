@@ -2,6 +2,7 @@
 using System.ComponentModel.Composition.Hosting;
 using System.IO;
 using System.Reflection;
+using Newtonsoft.Json.Linq;
 using Raven.Client.Document;
 using Raven.Client.Tests;
 using Raven.Client.Tests.Document;
@@ -39,7 +40,11 @@ namespace Raven.Bundles.Tests
                                         new AssemblyCatalog(typeof (Bundles.Versioning.VersioningPutTrigger).Assembly)
                                     }
                             },
-                        Settings = {{"Raven/Versioning/MaxRevisions", "5"}}
+                        Settings =
+                            {
+                                {"Raven/Versioning/MaxRevisions", "5"},
+                                {"Raven/Versioning/Exclude", "Users;Comments;"}
+                            }
                     }
             };
             documentStore.Initialise();
@@ -64,6 +69,36 @@ namespace Raven.Bundles.Tests
                     var metadata = session.GetMetadataFor(company2);
                     Assert.Equal("Current", metadata.Value<string>("Raven-Document-Revision-Status"));
                     Assert.Equal(1, metadata.Value<int>("Raven-Document-Revision"));
+                }
+            }
+        }
+
+        [Fact]
+        public void Can_exclude_entities_from_versioning()
+        {
+            using (var documentStore = NewDocumentStore())
+            {
+                var user = new User { Name = "User Name" };
+                var comment = new Comment { Name = "foo"};
+                using (var session = documentStore.OpenSession())
+                {
+                    session.Store(user);
+                    session.Store(comment);
+                    session.SaveChanges();
+                }
+
+                using (var session = documentStore.OpenSession())
+                {
+                    Assert.Null(session.Load<User>(user.Id +"/revisions/1"));
+                    Assert.Null(session.Load<Comment>(comment.Id + "/revisions/1"));
+                }
+
+                using (var sesion = documentStore.OpenSession())
+                {
+                    JObject metadata = sesion.GetMetadataFor(sesion.Load<User>(user.Id));
+                    Assert.Null(metadata.Value<string>("Raven-Document-Revision-Status"));
+                    Assert.Equal(0, metadata.Value<int>("Raven-Document-Revision"));
+               
                 }
             }
         }
@@ -177,6 +212,19 @@ namespace Raven.Bundles.Tests
                     }
                 }
             }
+        }
+
+
+        public class User
+        {
+            public string Id { get; set; }
+            public string Name { get; set; }
+        }
+
+        public class Comment
+        {
+            public string Id { get; set; }
+            public string Name { get; set; }
         }
     }
 }

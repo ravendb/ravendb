@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Configuration;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
@@ -13,6 +14,7 @@ namespace Raven.Bundles.Versioning
         private const string RavenDocumentRevisionStatus = "Raven-Document-Revision-Status";
         private DocumentDatabase docDb;
         private int? maxRevisions;
+        private string[] excludeByEntityName = new string[0];
 
         public VetoResult AllowPut(string key, JObject document, JObject metadata, TransactionInformation transactionInformation)
         {
@@ -27,6 +29,9 @@ namespace Raven.Bundles.Versioning
         public void OnPut(string key, JObject document, JObject metadata, TransactionInformation transactionInformation)
         {
             if (metadata.Value<string>(RavenDocumentRevisionStatus) == "Historical")
+                return;
+
+            if (excludeByEntityName.Contains(metadata.Value<string>("Raven-Entity-Name")))
                 return;
 
             int revision = 0;
@@ -66,6 +71,17 @@ namespace Raven.Bundles.Versioning
         {
             docDb = database;
             maxRevisions = database.Configuration.GetConfigurationValue<int>("Raven/Versioning/MaxRevisions");
+
+            string value;
+            if(database.Configuration.Settings.TryGetValue("Raven/Versioning/Exclude", out value)==false)
+            {
+                excludeByEntityName = new string[0];
+                return;
+            }
+            excludeByEntityName = value
+                .Split(new[] {';'}, StringSplitOptions.RemoveEmptyEntries)
+                .Select(x => x.Trim())
+                .ToArray();
         }
     }
 }
