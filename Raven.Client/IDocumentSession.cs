@@ -1,4 +1,5 @@
 ﻿using System;
+using Newtonsoft.Json.Linq;
 using Raven.Client.Document;
 
 namespace Raven.Client
@@ -32,5 +33,7 @@ namespace Raven.Client
         void Rollback(Guid txId);
  
 		event Action<object> Stored;
+
+        JObject GetMetadataFor<T>(T instance);
     }
 }

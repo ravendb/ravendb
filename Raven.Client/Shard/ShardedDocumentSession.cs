@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using Newtonsoft.Json.Linq;
 using Raven.Client.Document;
 using Raven.Client.Shard.ShardStrategy;
 using Raven.Client.Shard.ShardStrategy.ShardResolution;
@@ -34,8 +35,13 @@ namespace Raven.Client.Shard
 		}
 
 		public event Action<object> Stored;
+	    public JObject GetMetadataFor<T>(T instance)
+	    {
+	        var shardIds = shardStrategy.ShardSelectionStrategy.ShardIdForExistingObject(instance);
+	        return GetSingleShardSession(shardIds).GetMetadataFor(instance);
+	    }
 
-		public ShardedDocumentSession(IShardStrategy shardStrategy, params IDocumentSession[] shardSessions)
+	    public ShardedDocumentSession(IShardStrategy shardStrategy, params IDocumentSession[] shardSessions)
 		{
 			this.shardStrategy = shardStrategy;
 			this.shardSessions = shardSessions;

@@ -27,7 +27,16 @@ namespace Raven.Client.Document
 	    private RavenClientEnlistment enlistment;
 
 		public event Action<object> Stored;
-        public string StoreIdentifier { get { return documentStore.Identifier; } }
+
+	    public JObject GetMetadataFor<T>(T instance)
+	    {
+	        DocumentMetadata value;
+            if (entitiesAndMetadata.TryGetValue(instance, out value) == false)
+                return null;
+	        return value.Metadata;
+	    }
+
+	    public string StoreIdentifier { get { return documentStore.Identifier; } }
 
 		public DocumentConvention Conventions
 		{
