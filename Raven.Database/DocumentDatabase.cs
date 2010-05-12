@@ -265,8 +265,8 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				metadata.Add("@id", new JValue(key));
 				if (transactionInformation == null)
                 {
-                	AssertPutOperationNotVetoed(key, metadata, document);
-                	PutTriggers.Apply(trigger => trigger.OnPut(key, document, metadata));
+                	AssertPutOperationNotVetoed(key, metadata, document, transactionInformation);
+                	PutTriggers.Apply(trigger => trigger.OnPut(key, document, metadata, transactionInformation));
 
 					etag = actions.AddDocument(key, etag, document, metadata);
 					actions.AddTask(new IndexDocumentsTask { Index = "*", Keys = new[] { key } });
@@ -289,10 +289,10 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 		    };
 		}
 
-		private void AssertPutOperationNotVetoed(string key, JObject metadata, JObject document)
+		private void AssertPutOperationNotVetoed(string key, JObject metadata, JObject document, TransactionInformation transactionInformation)
 		{
 			var vetoResult = PutTriggers
-				.Select(trigger => new{Trigger = trigger, VetoResult = trigger.AllowPut(key, document,metadata)})
+				.Select(trigger => new{Trigger = trigger, VetoResult = trigger.AllowPut(key, document,metadata, transactionInformation)})
 				.FirstOrDefault(x=>x.VetoResult.IsAllowed == false);
 			if(vetoResult != null)
 			{
