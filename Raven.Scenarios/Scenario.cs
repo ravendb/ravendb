@@ -37,6 +37,8 @@ namespace Raven.Scenarios
 				@"id"": ?""(\{{0,1}([0-9a-fA-F]){8}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){12}\}{0,1})""")
 			,
 			new Regex(@"Timestamp"": ?""\\/Date(\(\d\d\d\d\d\d\d\d\d\d\d\d\d[+|-]\d\d\d\d\))\\/"""),
+
+            new Regex(@"Last-Modified"": ?""(\w{3}.+?GMT)"""),
 		};
 
 		private string lastEtag;
@@ -289,9 +291,9 @@ namespace Raven.Scenarios
 			while (string.IsNullOrEmpty((header = sr.ReadLine())) == false)
 			{
 				var parts = header.Split(new[] { ": " }, 2, StringSplitOptions.None);
-				if (parts[0] == "Content-Length")
+                if (parts[0] == "Content-Length" || parts[0] == "Connection")
 					continue;
-				if (parts[0] == "Date" || parts[0] == "ETag" || parts[0] == "Location")
+				if (parts[0] == "Date" || parts[0] == "ETag" || parts[0] == "Location" || parts[0] == "Last-Modified")
 				{
 					Assert.Contains(parts[0], actual.Item2.AllKeys);
 					continue;
