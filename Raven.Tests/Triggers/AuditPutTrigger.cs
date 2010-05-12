@@ -1,19 +1,20 @@
 ﻿using System;
 using Newtonsoft.Json.Linq;
+using Raven.Database;
 using Raven.Database.Plugins;
 
 namespace Raven.Tests.Triggers
 {
 	public class AuditPutTrigger : IPutTrigger
 	{
-		public VetoResult AllowPut(string key, JObject document, JObject metadata)
+        public VetoResult AllowPut(string key, JObject document, JObject metadata, TransactionInformation transactionInformation)
 		{
 			return VetoResult.Allowed;
 		}
 
-		public void OnPut(string key, JObject document, JObject metadata)
+		public void OnPut(string key, JObject document, JObject metadata, TransactionInformation transactionInformation)
 		{
-			document["created_at"] = new JValue(new DateTime(2000, 1, 1));
+			document["created_at"] = new JValue(new DateTime(2000, 1, 1).ToUniversalTime());
 		}
 
 		public void AfterCommit(string key, JObject document, JObject metadata)
