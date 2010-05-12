@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Configuration;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Plugins;
@@ -10,8 +8,8 @@ namespace Raven.Bundles.Versioning
 {
     public class VersioningPutTrigger : IPutTrigger, IRequiresDocumentDatabaseInitialization
     {
-        private const string RavenDocumentRevision = "Raven-Document-Revision";
-        private const string RavenDocumentRevisionStatus = "Raven-Document-Revision-Status";
+        public const string RavenDocumentRevision = "Raven-Document-Revision";
+        public const string RavenDocumentRevisionStatus = "Raven-Document-Revision-Status";
         private DocumentDatabase docDb;
         private int? maxRevisions;
         private string[] excludeByEntityName = new string[0];
@@ -60,7 +58,15 @@ namespace Raven.Bundles.Versioning
             if (latestValidRevision <= 1)
                 return;
 
-            docDb.Delete(key + "/revisions/" + (latestValidRevision - 1), null, transactionInformation);
+            VersioningDeleteTrigger.allowDeletiongOfHistoricalDocuments = true;
+            try
+            {
+                docDb.Delete(key + "/revisions/" + (latestValidRevision - 1), null, transactionInformation);
+            }
+            finally
+            {
+                VersioningDeleteTrigger.allowDeletiongOfHistoricalDocuments = false;    
+            }
         }
 
         public void AfterCommit(string key, JObject document, JObject metadata)
