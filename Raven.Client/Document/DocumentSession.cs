@@ -146,7 +146,9 @@ namespace Raven.Client.Document
 
 		public void Store<T>(T entity)
 		{
-            var identityProperty = GetIdentityProperty(typeof(T));
+            if (ReferenceEquals(null, entity))
+                throw new ArgumentNullException("entity");
+            var identityProperty = GetIdentityProperty(entity.GetType());
             var id = identityProperty.GetValue(entity, null) as string;
 			if (id != null &&
 				id.EndsWith("/") == false && // not a prefix id
@@ -157,7 +159,7 @@ namespace Raven.Client.Document
 				throw new NonUniqueObjectException("Attempted to associated a different object with id '" + id + "'.");
 			}
 
-			var tag = documentStore.Conventions.GetTypeTagName(typeof (T));
+            var tag = documentStore.Conventions.GetTypeTagName(entity.GetType());
 			entitiesAndMetadata.Add(entity, new DocumentMetadata
 			{
                 Key = id,
