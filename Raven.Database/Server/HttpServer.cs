@@ -66,7 +66,9 @@ namespace Raven.Database.Server
 				case AnonymousUserAccessMode.None:
 					listener.AuthenticationSchemes = AuthenticationSchemes.IntegratedWindowsAuthentication;
 					break;
-				default:
+                case AnonymousUserAccessMode.All:
+			        break;
+				case AnonymousUserAccessMode.Get:
 					listener.AuthenticationSchemes = AuthenticationSchemes.IntegratedWindowsAuthentication |
 						AuthenticationSchemes.Anonymous;
 			        listener.AuthenticationSchemeSelectorDelegate = request =>
@@ -76,6 +78,8 @@ namespace Raven.Database.Server
                             AuthenticationSchemes.IntegratedWindowsAuthentication;
 			        };
 					break;
+                default:
+			        throw new ArgumentException("Cannot understand access mode: " + Configuration.AnonymousUserAccessMode   );
 			}
 
 			listener.Start();
