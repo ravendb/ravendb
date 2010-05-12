@@ -300,10 +300,10 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 			}
 		}
 
-		private void AssertDeleteOperationNotVetoed(string key)
+		private void AssertDeleteOperationNotVetoed(string key, TransactionInformation transactionInformation)
 		{
 			var vetoResult = DeleteTriggers
-				.Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowDelete(key) })
+				.Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowDelete(key, transactionInformation) })
 				.FirstOrDefault(x => x.VetoResult.IsAllowed == false);
 			if (vetoResult != null)
 			{
@@ -331,9 +331,9 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 			{
                 if (transactionInformation == null)
                 {
-					AssertDeleteOperationNotVetoed(key);
+					AssertDeleteOperationNotVetoed(key, transactionInformation);
 
-                	DeleteTriggers.Apply(trigger => trigger.OnDelete(key));
+                	DeleteTriggers.Apply(trigger => trigger.OnDelete(key, transactionInformation));
 
                     actions.DeleteDocument(key, etag);
                     actions.AddTask(new RemoveFromIndexTask {Index = "*", Keys = new[] {key}});

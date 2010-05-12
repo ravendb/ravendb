@@ -6,12 +6,12 @@ namespace Raven.Tests.Triggers
 	public class CascadeDeleteTrigger : IDeleteTrigger, IRequiresDocumentDatabaseInitialization 
 	{
 		private DocumentDatabase docDb;
-		public VetoResult AllowDelete(string key)
+        public VetoResult AllowDelete(string key, TransactionInformation transactionInformation)
 		{
 			return VetoResult.Allowed;
 		}
 
-		public void OnDelete(string key)
+		public void OnDelete(string key, TransactionInformation transactionInformation)
 		{
 			var document = docDb.Get(key, null);
 			if (document == null)

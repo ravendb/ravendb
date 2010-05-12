@@ -5,17 +5,18 @@ namespace Raven.Database.Plugins
 	[InheritedExport]
 	public interface IDeleteTrigger
 	{
-		/// <summary>
-		/// Ask the trigger whatever the DELETE should be vetoed.
-		/// If the trigger vote to veto the DELETE, it needs to provide a human readable 
-		/// explanation why the DELETE was rejected.
-		/// </summary>
-		/// <remarks>
-		/// This method SHOULD NOT modify either the document or the metadata.
-		/// </remarks>
-		/// <param name="key">The document key</param>
-		/// <returns>Whatever the put was vetoed or not</returns>
-		VetoResult AllowDelete(string key);
+	    /// <summary>
+	    /// Ask the trigger whatever the DELETE should be vetoed.
+	    /// If the trigger vote to veto the DELETE, it needs to provide a human readable 
+	    /// explanation why the DELETE was rejected.
+	    /// </summary>
+	    /// <remarks>
+	    /// This method SHOULD NOT modify either the document or the metadata.
+	    /// </remarks>
+	    /// <param name="key">The document key</param>
+	    /// <param name="transactionInformation">The current transaction, if any</param>
+	    /// <returns>Whatever the put was vetoed or not</returns>
+	    VetoResult AllowDelete(string key, TransactionInformation transactionInformation);
 
 		/// <summary>
 		/// Allow the trigger to perform any logic just before the document is deleted.
@@ -28,8 +29,9 @@ namespace Raven.Database.Plugins
 		/// Any call to the provided <seealso cref="DocumentDatabase"/> instance will be done under the
 		/// same transaction as the DELETE operation.
 		/// </remarks>
-		/// <param name="key">The document key</param>
-		void OnDelete(string key);
+		/// <param name="transactionInformation">The current transaction, if any</param>
+	    /// <param name="key">The document key</param>
+        void OnDelete(string key, TransactionInformation transactionInformation);
 
 		/// <summary>
 		/// Allow the trigger to perform any logic _after_ the transaction was committed.
