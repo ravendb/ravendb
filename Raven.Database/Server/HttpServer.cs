@@ -69,6 +69,12 @@ namespace Raven.Database.Server
 				default:
 					listener.AuthenticationSchemes = AuthenticationSchemes.IntegratedWindowsAuthentication |
 						AuthenticationSchemes.Anonymous;
+			        listener.AuthenticationSchemeSelectorDelegate = request =>
+			        {
+                        return request.HttpMethod == "GET" || request.HttpMethod == "HEAD" ? 
+                            AuthenticationSchemes.Anonymous : 
+                            AuthenticationSchemes.IntegratedWindowsAuthentication;
+			        };
 					break;
 			}
 
