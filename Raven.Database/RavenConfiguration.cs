@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.Composition.Hosting;
 using System.Configuration;
 using System.IO;
@@ -11,8 +12,18 @@ namespace Raven.Database
 {
 	public class RavenConfiguration
 	{
+        public IDictionary<string, string> Settings { get; set; }
+
 		public RavenConfiguration()
 		{
+		    Settings = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
+
+		    foreach (string setting in ConfigurationManager.AppSettings)
+		    {
+                if (setting.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase))
+                    Settings[setting] = ConfigurationManager.AppSettings[setting];
+		    }
+
 			Catalog = new AggregateCatalog(
 				new AssemblyCatalog(typeof (DocumentDatabase).Assembly)
 				);
@@ -186,5 +197,14 @@ namespace Raven.Database
 				baseUrl = baseUrl.Substring(1);
 			return VirtualDirectory + "/" + baseUrl;
 		}
+
+	    public T? GetConfigurationValue<T>(string configName) where T : struct
+	    {
+	        string value;
+            // explicitly fail if we can convert it
+            if (Settings.TryGetValue(configName, out value))
+                return (T)Convert.ChangeType(value, typeof (T));
+	        return null;
+	    }
 	}
 }

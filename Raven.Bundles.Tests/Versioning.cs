@@ -2,7 +2,6 @@
 using System.ComponentModel.Composition.Hosting;
 using System.IO;
 using System.Reflection;
-using Newtonsoft.Json.Linq;
 using Raven.Client.Document;
 using Raven.Client.Tests;
 using Raven.Client.Tests.Document;
@@ -39,7 +38,8 @@ namespace Raven.Bundles.Tests
                                     {
                                         new AssemblyCatalog(typeof (Bundles.Versioning.VersioningPutTrigger).Assembly)
                                     }
-                            }
+                            },
+                        Settings = {{"Raven/Versioning/MaxRevisions", "5"}}
                     }
             };
             documentStore.Initialise();
@@ -142,6 +142,39 @@ namespace Raven.Bundles.Tests
                     Assert.Equal("Hibernating Rhinos", company2.Name);
                     Assert.Equal("Historical", metadata.Value<string>("Raven-Document-Revision-Status"));
                     Assert.Equal(2, metadata.Value<int>("Raven-Document-Revision"));
+                }
+            }
+        }
+
+        [Fact]
+        public void Will_delete_old_revisions()
+        {
+            using (var documentStore = NewDocumentStore())
+            {
+                var company = new Company { Name = "Company #1" };
+                using (var session = documentStore.OpenSession())
+                {
+                    session.Store(company);
+                    session.SaveChanges();
+                    for (int i = 0; i < 10; i++)
+                    {
+                        company.Name = "Company #" + i + 2;
+                        session.SaveChanges();
+                    }
+                }
+
+
+                using (var session = documentStore.OpenSession())
+                {
+                    for (int i = 1; i < 6; i++)
+                    {
+                        Assert.Null(session.Load<Company>(company.Id + "/revisions/" + i));
+                    }
+
+                    for (int i = 6; i < 11; i++)
+                    {
+                        Assert.NotNull(session.Load<Company>(company.Id + "/revisions/" + i));
+                    }
                 }
             }
         }
