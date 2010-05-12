@@ -248,6 +248,8 @@ namespace Raven.Database.Server
 				}
 			}
 			ctx.SetStatusToBadRequest();
+            if (ctx.Request.HttpMethod == "HEAD")
+                return;
 			ctx.Write(
 				@"
 <html>
