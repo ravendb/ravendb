@@ -335,8 +335,8 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 
                 	DeleteTriggers.Apply(trigger => trigger.OnDelete(key, transactionInformation));
 
-                    actions.DeleteDocument(key, etag);
-                    actions.AddTask(new RemoveFromIndexTask {Index = "*", Keys = new[] {key}});
+                    if (actions.DeleteDocument(key, etag))
+                        actions.AddTask(new RemoveFromIndexTask {Index = "*", Keys = new[] {key}});
                 }
                 else
                 {

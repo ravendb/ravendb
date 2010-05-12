@@ -224,14 +224,14 @@ namespace Raven.Database.Storage.StorageActions
 		}
 
 
-		public void DeleteDocument(string key, Guid? etag)
+		public bool DeleteDocument(string key, Guid? etag)
 		{
 			Api.JetSetCurrentIndex(session, Documents, "by_key");
 			Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Documents, SeekGrbit.SeekEQ) == false)
 			{
 				logger.DebugFormat("Document with key '{0}' was not found, and considered deleted", key);
-				return;
+			    return false;
 			}
 			if (Api.TryMoveFirst(session, Details))
 				Api.EscrowUpdate(session, Details, tableColumnsCache.DetailsColumns["document_count"], -1);
@@ -241,6 +241,7 @@ namespace Raven.Database.Storage.StorageActions
 
 			Api.JetDelete(session, Documents);
 			logger.DebugFormat("Document with key '{0}' was deleted", key);
+		    return true;
 		}
 
 
