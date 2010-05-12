@@ -139,6 +139,27 @@ task Init -depends Verify40, Clean {
 		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2010" `
 		-clsCompliant "false"
 		
+		
+	Generate-Assembly-Info `
+		-file "$base_dir\Raven.Bundles.Tests\Properties\AssemblyInfo.cs" `
+		-title "Raven Database $version" `
+		-description "A linq enabled document database for .NET" `
+		-company "Hibernating Rhinos" `
+		-product "Raven Database $version" `
+		-version $version `
+		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2010" `
+		-clsCompliant "false"
+	
+	Generate-Assembly-Info `
+		-file "$base_dir\Raven.Bundles.Versioning\Properties\AssemblyInfo.cs" `
+		-title "Raven Database $version" `
+		-description "A linq enabled document database for .NET" `
+		-company "Hibernating Rhinos" `
+		-product "Raven Database $version" `
+		-version $version `
+		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2010" `
+		-clsCompliant "false"
+		
 	new-item $release_dir -itemType directory
 	new-item $buildartifacts_dir -itemType directory
 	
@@ -160,6 +181,7 @@ task Test -depends Compile {
   exec "$build_dir\xunit.console.exe" "$build_dir\Raven.Tests.dll"
   exec "$build_dir\xunit.console.exe" "$build_dir\Raven.Scenarios.dll"
   exec "$build_dir\xunit.console.exe" "$build_dir\Raven.Client.Tests.dll"
+  exec "$build_dir\xunit.console.exe" "$build_dir\Raven.Bundles.Tests.dll"
   cd $old
 }
 
@@ -193,6 +215,7 @@ task DoRelease -depends Merge {
 	mkdir $build_dir\Output\EmbeddedClient
 	mkdir $build_dir\Output\Client-3.5
 	mkdir $build_dir\Output\Client
+	mkdir $build_dir\Output\Bundles
 	
 	cp $build_dir\Raven.Client.dll $build_dir\Output\EmbeddedClient
 	cp $build_dir\Raven.Database.dll $build_dir\Output\EmbeddedClient
@@ -210,6 +233,7 @@ task DoRelease -depends Merge {
 	
 	
 	cp $build_dir\RavenWeb.dll $build_dir\Output\Web\bin
+	cp $build_dir\Raven.Bundles.*.dll $build_dir\Output\Bundles
 	cp $base_dir\DefaultConfigs\web.config $build_dir\Output\Web\web.config
 	
 	cp $build_dir\RavenDb.exe $build_dir\Output\Server
@@ -229,6 +253,7 @@ task DoRelease -depends Merge {
 		Client\*.* `
 		Client-3.5\*.* `
 		Web\*.* `
+		Bundles\*.* `
 		Web\bin\*.* `
 		Server\*.* `
 		license.txt `
