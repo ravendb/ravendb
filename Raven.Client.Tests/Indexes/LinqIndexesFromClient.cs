@@ -87,7 +87,7 @@ namespace Raven.Client.Tests.Indexes
 				Reduce = counts => from agg in counts
 								   group agg by agg.Location
 									   into g
-									   select new { Loction = g.Key, Count = g.Sum(x => x.Count) },
+									   select new { Location = g.Key, Count = g.Sum(x => x.Count) },
 			}.ToIndexDefinition(new DocumentConvention());
 			var original = new IndexDefinition
 			{
@@ -95,7 +95,7 @@ namespace Raven.Client.Tests.Indexes
 	.Select(user => new {Location = user.Location, Count = 1})",
 				Reduce = @"results
 	.GroupBy(agg => agg.Location)
-	.Select(g => new {Loction = g.Key, Count = g.Sum(x => x.Count}))"
+	.Select(g => new {Location = g.Key, Count = g.Sum(x => x.Count)})"
 			};
 
 			Assert.Equal(original, generated);

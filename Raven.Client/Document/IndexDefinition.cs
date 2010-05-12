@@ -83,12 +83,15 @@ namespace Raven.Client.Document
 					break;
 
 				int otherBraces = 0;
-				for (int j = startIndex; j < linqQuery.Length; j++)
+				for (int j = startIndex+1; j < linqQuery.Length; j++)
 				{
-					if (linqQuery[j] == '(')
-						otherBraces++;
-					else if (linqQuery[j] != ')')
-						continue;
+                    if (linqQuery[j] == '(')
+                    {
+                        otherBraces++;
+                        continue;
+                    }
+                    else if (linqQuery[j] != ')')
+                        continue;
 					if (otherBraces == 0)
 					{
 						endBrace = j;
