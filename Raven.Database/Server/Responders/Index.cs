@@ -15,7 +15,7 @@ namespace Raven.Database.Server.Responders
 
 		public override string[] SupportedVerbs
 		{
-			get { return new[] {"GET", "PUT", "DELETE"}; }
+			get { return new[] {"GET", "PUT", "DELETE","HEAD"}; }
 		}
 
 		public override void Respond(IHttpContext context)
@@ -25,6 +25,10 @@ namespace Raven.Database.Server.Responders
 
 			switch (context.Request.HttpMethod)
 			{
+                case "HEAD":
+			        if(Database.IndexDefinitionStorage.IndexNames.Contains(index, StringComparer.InvariantCultureIgnoreCase) == false)
+                        context.SetStatusToNotFound();
+			        break;
 				case "GET":
 					OnGet(context, index);
 					break;
