@@ -234,6 +234,7 @@ task DoRelease -depends Merge {
 	
 	cp $build_dir\RavenWeb.dll $build_dir\Output\Web\bin
 	cp $build_dir\Raven.Bundles.*.dll $build_dir\Output\Bundles
+	del $build_dir\Output\Bundles\Raven.Bundles.Tests.dll
 	cp $base_dir\DefaultConfigs\web.config $build_dir\Output\Web\web.config
 	
 	cp $build_dir\RavenDb.exe $build_dir\Output\Server
