@@ -258,6 +258,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 			RemoveReservedProperties(metadata);
 			TransactionalStorage.Batch(actions =>
 			{
+			    metadata["Last-Modified"] = JToken.FromObject(DateTime.UtcNow.ToString("r"));
 				if (key.EndsWith("/"))
 				{
 					key += actions.GetNextIdentityValue(key);
