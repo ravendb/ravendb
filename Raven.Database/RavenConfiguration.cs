@@ -195,6 +195,8 @@ namespace Raven.Database
 		{
 			if (baseUrl.StartsWith("/"))
 				baseUrl = baseUrl.Substring(1);
+            if (VirtualDirectory.EndsWith("/"))
+                return VirtualDirectory + baseUrl;
 			return VirtualDirectory + "/" + baseUrl;
 		}
 
