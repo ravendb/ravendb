@@ -66,6 +66,31 @@ namespace Raven.Client.Tests.Document
 			}
 		}
 
+
+        [Fact]
+        public void Can_store_and_get_array_metadata()
+        {
+            using (var server = GetNewServer(port, path))
+            {
+                var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+                documentStore.Initialise();
+
+                var session = documentStore.OpenSession();
+                session.OnEntityConverted += (entity, document, metadata) =>
+                {
+                    metadata["Raven-Allowed-Users"] = new JArray("ayende", "oren", "rob");
+                };
+
+                var company = new Company { Name = "Company" };
+                session.Store(company);
+                session.SaveChanges();
+
+                var metadataFromServer = session.GetMetadataFor(session.Load<Company>(company.Id));
+                var users = metadataFromServer["Raven-Allowed-Users"].OfType<JValue>().Select(x => (string) x.Value).ToArray();
+                Assert.Equal(new[]{"ayende","oren","rob"}, users);
+            }
+        }
+
 		[Fact]
 		public void Can_store_using_batch()
 		{
