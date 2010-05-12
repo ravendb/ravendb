@@ -73,13 +73,25 @@ namespace Raven.Client.Client
 
 		public string PutIndex(string name, IndexDefinition definition)
 		{
-			return database.PutIndex(name, definition);
+		    return PutIndex(name, definition, false);
 		}
+
+        public string PutIndex(string name, IndexDefinition definition, bool overwrite)
+        {
+            if(overwrite == false && database.IndexStorage.Indexes.Contains(name))
+                throw new InvalidOperationException("Cannot put index: " + name + ", index already exists"); 
+            return database.PutIndex(name, definition);
+        }
 
 		public string PutIndex<TDocument, TReduceResult>(string name, IndexDefinition<TDocument, TReduceResult> indexDef)
 		{
 			return PutIndex(name, indexDef.ToIndexDefinition(convention));
 		}
+
+        public string PutIndex<TDocument, TReduceResult>(string name, IndexDefinition<TDocument, TReduceResult> indexDef, bool overwrite)
+        {
+            return PutIndex(name, indexDef.ToIndexDefinition(convention), overwrite);
+        }
 
 		public QueryResult Query(string index, IndexQuery query)
 		{

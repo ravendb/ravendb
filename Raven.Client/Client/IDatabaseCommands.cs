@@ -14,7 +14,11 @@ namespace Raven.Client.Client
 		void Delete(string key, Guid? etag);
 		string PutIndex(string name, IndexDefinition indexDef);
 		string PutIndex<TDocument,TReduceResult>(string name, IndexDefinition<TDocument,TReduceResult> indexDef);
-		QueryResult Query(string index, IndexQuery query);
+
+        string PutIndex(string name, IndexDefinition indexDef, bool overwrite);
+        string PutIndex<TDocument, TReduceResult>(string name, IndexDefinition<TDocument, TReduceResult> indexDef, bool overwrite);
+		
+        QueryResult Query(string index, IndexQuery query);
 		void DeleteIndex(string name);
         JsonDocument[] Get(string[] ids);
 

@@ -140,10 +140,29 @@ namespace Raven.Client.Client
 	        }
 	    }
 
-	    public string PutIndex(string name, IndexDefinition definition)
-		{
+        public string PutIndex(string name, IndexDefinition definition)
+        {
+            return PutIndex(name, definition, false);
+        }
+
+        public string PutIndex(string name, IndexDefinition definition, bool overwrite)
+        {
 			EnsureIsNotNullOrEmpty(name, "name");
-			var request = new HttpJsonRequest(url + "/indexes/" + name, "PUT");
+
+            string requestUri = url+"/indexes/"+name;
+            try
+            {
+                var webRequest = (HttpWebRequest)WebRequest.Create(requestUri);
+                webRequest.Method = "HEAD";
+                webRequest.GetResponse().Close();
+                if(overwrite == false)
+                    throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
+            }
+            catch (WebException)
+            {
+            }
+
+			var request = new HttpJsonRequest(requestUri, "PUT");
 			request.Write(JsonConvert.SerializeObject(definition, new JsonEnumConverter()));
 
 			var obj = new {index = ""};
@@ -155,6 +174,12 @@ namespace Raven.Client.Client
 		{
 			return PutIndex(name, indexDef.ToIndexDefinition(convention));
 		}
+
+
+        public string PutIndex<TDocument, TReduceResult>(string name, IndexDefinition<TDocument, TReduceResult> indexDef, bool overwrite)
+        {
+            return PutIndex(name, indexDef.ToIndexDefinition(convention), overwrite);
+        }
 
 		public QueryResult Query(string index, IndexQuery query)
 		{
