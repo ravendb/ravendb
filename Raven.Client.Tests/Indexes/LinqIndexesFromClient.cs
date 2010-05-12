@@ -1,17 +1,32 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using Raven.Client.Document;
 using Raven.Client.Tests.Document;
 using Raven.Database.Indexing;
+using Raven.Database.Linq;
 using Xunit;
 
 namespace Raven.Client.Tests.Indexes
 {
 	public class LinqIndexesFromClient
 	{
-		[Fact]
+        [Fact]
+        public void Convert_select_many()
+        {
+            IndexDefinition indexDefinition = new IndexDefinition<Order>
+            {
+                Map = orders => from order in orders
+                                from line in order.OrderLines
+                                select new { line.ProductId }
+            }.ToIndexDefinition(new DocumentConvention());
+            new DynamicViewCompiler("test", indexDefinition)
+                .GenerateInstance();
+        }
+
+	    [Fact]
 		public void Convert_simple_query()
 		{
 			IndexDefinition generated = new IndexDefinition<User, Named>
@@ -82,6 +97,24 @@ namespace Raven.Client.Tests.Indexes
 			public string Location { get; set; }
 			public decimal Age { get; set; }
 		}
+
+        public class Order
+        {
+            public string Id { get; set; }
+            public string Customer { get; set; }
+            public IList<OrderLine> OrderLines { get; set; }
+
+            public Order()
+            {
+                OrderLines = new List<OrderLine>();
+            }
+        }
+
+        public class OrderLine
+        {
+            public string ProductId { get; set; }
+            public int Quantity { get; set; }
+        }
 	}
 
 

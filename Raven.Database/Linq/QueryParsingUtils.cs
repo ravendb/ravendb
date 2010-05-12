@@ -100,10 +100,10 @@ namespace Raven.Database.Linq
 			if(targetObject == null)
 				throw new InvalidOperationException("Variable initializer must be invoked on a method reference expression");
 
-			if (targetObject.MemberName != "Select")
+			if (targetObject.MemberName != "Select" && targetObject.MemberName != "SelectMany")
 				throw new InvalidOperationException("Variable initializer must end with a select call");
 
-			var lambdaExpression = ((InvocationExpression)variable.Initializer).Arguments[0] as LambdaExpression;
+			var lambdaExpression = ((InvocationExpression)variable.Initializer).Arguments.Last() as LambdaExpression;
 			if (lambdaExpression == null)
 				throw new InvalidOperationException("Variable initializer select must have a lambda expression");
 
