@@ -34,7 +34,9 @@ namespace Raven.Client.Shard
 			}
 		}
 
-		public event Action<object> Stored;
+		public event EntityStored Stored;
+	    public event EntityToDocument OnEntityConverted;
+
 	    public JObject GetMetadataFor<T>(T instance)
 	    {
 	        var shardIds = shardStrategy.ShardSelectionStrategy.ShardIdForExistingObject(instance);
@@ -49,6 +51,7 @@ namespace Raven.Client.Shard
 			foreach (var shardSession in shardSessions)
 			{
 				shardSession.Stored += Stored;
+			    shardSession.OnEntityConverted += OnEntityConverted;
 			}
 		}
 
@@ -172,6 +175,7 @@ namespace Raven.Client.Shard
 
 			//dereference all event listeners
 			Stored = null;
+		    OnEntityConverted = null;
 		}
 
 		#endregion

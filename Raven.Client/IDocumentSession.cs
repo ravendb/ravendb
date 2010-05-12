@@ -32,8 +32,14 @@ namespace Raven.Client
  
         void Rollback(Guid txId);
  
-		event Action<object> Stored;
+		event EntityStored Stored;
+
+        event EntityToDocument OnEntityConverted;
 
         JObject GetMetadataFor<T>(T instance);
     }
+
+    public delegate void EntityStored(object entity);
+
+    public delegate void EntityToDocument(object entity, JObject document, JObject metadata);
 }

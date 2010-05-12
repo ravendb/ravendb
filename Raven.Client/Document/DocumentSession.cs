@@ -26,7 +26,8 @@ namespace Raven.Client.Document
 		private readonly HashSet<object> deletedEntities = new HashSet<object>();
 	    private RavenClientEnlistment enlistment;
 
-		public event Action<object> Stored;
+        public event EntityStored Stored;
+	    public event EntityToDocument OnEntityConverted;
 
 	    public JObject GetMetadataFor<T>(T instance)
 	    {
@@ -310,7 +311,12 @@ namespace Raven.Client.Document
 			}
 
 			metadata["Raven-Clr-Type"] = JToken.FromObject(entityType.FullName + ", " + entityType.Assembly.GetName().Name);
-			return objectAsJson;
+
+		    var entityConverted = OnEntityConverted;
+            if(entityConverted!=null)
+                entityConverted(entity,objectAsJson, metadata);
+
+		    return objectAsJson;
 		}
 
 		public void Clear()
