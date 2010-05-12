@@ -5,6 +5,7 @@ using System.Web;
 using ICSharpCode.NRefactory.Ast;
 using ICSharpCode.NRefactory.PrettyPrinter;
 using Raven.Database.Indexing;
+using System.Linq;
 
 namespace Raven.Database.Linq
 {
@@ -163,7 +164,7 @@ namespace Raven.Database.Linq
 			var targetExpression = ((MemberReferenceExpression)invocationExpression.TargetObject);
 			do
 			{
-				AddDocumentIdFieldToLambdaIfCreatingNewObject((LambdaExpression)invocationExpression.Arguments[0]);
+				AddDocumentIdFieldToLambdaIfCreatingNewObject((LambdaExpression)invocationExpression.Arguments.Last());
 				invocationExpression = (InvocationExpression)targetExpression.TargetObject;
 				targetExpression = (MemberReferenceExpression) invocationExpression.TargetObject;
 			} while (targetExpression.TargetObject is InvocationExpression);

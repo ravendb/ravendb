@@ -1,11 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using Newtonsoft.Json.Linq;
 using Raven.Client.Document;
 using Raven.Client.Tests.Document;
 using Raven.Database.Indexing;
+using Raven.Database.Json;
 using Raven.Database.Linq;
 using Xunit;
 
@@ -14,7 +17,7 @@ namespace Raven.Client.Tests.Indexes
 	public class LinqIndexesFromClient
 	{
         [Fact]
-        public void Convert_select_many()
+        public void Convert_select_many_will_keep_doc_id()
         {
             IndexDefinition indexDefinition = new IndexDefinition<Order>
             {
@@ -22,8 +25,35 @@ namespace Raven.Client.Tests.Indexes
                                 from line in order.OrderLines
                                 select new { line.ProductId }
             }.ToIndexDefinition(new DocumentConvention());
-            new DynamicViewCompiler("test", indexDefinition)
+            var generator = new DynamicViewCompiler("test", indexDefinition)
                 .GenerateInstance();
+
+
+            var results = generator.MapDefinition(new[]
+			{
+				GetDocumentFromString(
+				@"
+                {
+                    '@metadata': {'Raven-Entity-Name': 'Orders', '@id': 1},
+                    'OrderLines': [{'ProductId': 2}, {'ProductId': 3}]
+                }"),
+				  GetDocumentFromString(
+				@"
+                {
+                    '@metadata': {'Raven-Entity-Name': 'Orders', '@id': 2},
+                    'OrderLines': [{'ProductId': 5}, {'ProductId': 4}]
+                }")
+			}).Cast<object>().ToArray();
+
+            foreach (var result in results)
+            {
+                Assert.NotNull(TypeDescriptor.GetProperties(result).Find("__document_id", true));
+            }
+        }
+
+        public static dynamic GetDocumentFromString(string json)
+        {
+            return JsonToExpando.Convert(JObject.Parse(json));
         }
 
 	    [Fact]
@@ -116,6 +146,4 @@ namespace Raven.Client.Tests.Indexes
             public int Quantity { get; set; }
         }
 	}
-
-
 }
