@@ -61,6 +61,12 @@ namespace Raven.Client.Client
             if (metadata == null)
                 return;
 
+            if(metadata.Count==0)
+            {
+                webRequest.ContentLength = 0;
+                return;
+            }
+
             foreach (JProperty prop in metadata)
             {
                 if (prop.Value == null)

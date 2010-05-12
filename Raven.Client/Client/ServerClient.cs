@@ -270,13 +270,13 @@ namespace Raven.Client.Client
 
 		public void Commit(Guid txId)
 	    {
-	        var httpJsonRequest = new HttpJsonRequest("/transaction/commit?tx=" + txId, "POST", credentials);
+	        var httpJsonRequest = new HttpJsonRequest(url + "/transaction/commit?tx=" + txId, "POST", credentials);
 	        httpJsonRequest.ReadResponseString();
 	    }
 
 	    public void Rollback(Guid txId)
 	    {
-            var httpJsonRequest = new HttpJsonRequest("/transaction/rollback?tx=" + txId, "POST", credentials);
+            var httpJsonRequest = new HttpJsonRequest(url + "/transaction/rollback?tx=" + txId, "POST", credentials);
             httpJsonRequest.ReadResponseString();
 	    }
 
