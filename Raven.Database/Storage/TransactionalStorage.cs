@@ -197,7 +197,7 @@ namespace Raven.Database.Storage
 							return;
 						do
 						{
-							var updater = Updaters.FirstOrDefault(lazy => lazy.FromSchemaVersion == schemaVersion);
+							var updater = Updaters.FirstOrDefault(update => update.FromSchemaVersion == schemaVersion);
 							if (updater == null)
 								throw new InvalidOperationException(string.Format("The version on disk ({0}) is different that the version supported by this library: {1}{2}You need to migrate the disk version to the library version, alternatively, if the data isn't important, you can delete the file and it will be re-created (with no data) with the library version.", schemaVersion, SchemaCreator.SchemaVersion, Environment.NewLine));
 							updater.Update(session, dbid);
