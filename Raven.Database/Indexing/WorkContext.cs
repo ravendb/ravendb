@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading;
 using log4net;
 using Raven.Database.Data;
+using Raven.Database.Plugins;
 using Raven.Database.Storage;
 
 namespace Raven.Database.Indexing
@@ -15,6 +17,7 @@ namespace Raven.Database.Indexing
 		private readonly ILog log = LogManager.GetLogger(typeof (WorkContext));
 		private readonly ThreadLocal<bool> shouldNotifyOnWork = new ThreadLocal<bool>();
 		private readonly ReaderWriterLockSlim readerWriterLockSlim = new ReaderWriterLockSlim();
+        public IEnumerable<IIndexUpdateTrigger> IndexUpdateTriggers{ get; set;}
 
 		public bool DoWork
 		{

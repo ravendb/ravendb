@@ -6,6 +6,7 @@ using Lucene.Net.Index;
 using Lucene.Net.Store;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
+using Raven.Database.Extensions;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
 using Raven.Database.Storage.StorageActions;
@@ -44,6 +45,7 @@ namespace Raven.Database.Indexing
 					var fields = converter.Index(doc, properties, indexDefinition, Field.Store.NO);
 					if (currentId != newDocId) // new document id, so delete all old values matching it
 					{
+					    context.IndexUpdateTriggers.Apply(trigger => trigger.OnIndexEntryDeleted(newDocId));
 						indexWriter.DeleteDocuments(new Term("__document_id", newDocId));
 					}
 
@@ -54,7 +56,8 @@ namespace Raven.Database.Indexing
 
                         currentId = newDocId;
                         CopyFieldsToDocumentButRemoveDuplicateValues(luceneDoc, fields);
-                    	log.DebugFormat("Index '{0}' resulted in: {1}", name, luceneDoc);
+                        context.IndexUpdateTriggers.Apply(trigger => trigger.OnIndexEntryCreated(newDocId, luceneDoc));
+                        log.DebugFormat("Index '{0}' resulted in: {1}", name, luceneDoc);
                         indexWriter.AddDocument(luceneDoc);
                     }
 
@@ -117,6 +120,7 @@ namespace Raven.Database.Indexing
 				{
 					log.DebugFormat("Deleting ({0}) from {1}", string.Format(", ", keys), name);
 				}
+			    keys.Apply(key => context.IndexUpdateTriggers.Apply(trigger => trigger.OnIndexEntryDeleted(key)));
 				writer.DeleteDocuments(keys.Select(k => new Term("__document_id", k)).ToArray());
 				return true;
 			});

@@ -31,6 +31,10 @@ namespace Raven.Database
 		[ImportMany]
 		public IEnumerable<IDeleteTrigger> DeleteTriggers { get; set; }
 
+
+        [ImportMany]
+        public IEnumerable<IIndexUpdateTrigger> IndexUpdateTriggers { get; set; }
+
 		[ImportMany]
 		public IEnumerable<IReadTrigger> ReadTriggers { get; set; }
 
@@ -45,12 +49,13 @@ namespace Raven.Database
 			Configuration = configuration;
 			
 			configuration.Container.SatisfyImportsOnce(this);
-		
-			workContext = new WorkContext();
+
+		    workContext = new WorkContext {IndexUpdateTriggers = IndexUpdateTriggers};
+
 			TransactionalStorage = new TransactionalStorage(configuration, workContext.NotifyAboutWork);
 			configuration.Container.SatisfyImportsOnce(TransactionalStorage);
-
-			bool newDb;
+			
+            bool newDb;
 			try
 			{
 				newDb = TransactionalStorage.Initialize();
@@ -83,6 +88,7 @@ namespace Raven.Database
 			PutTriggers.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
 			DeleteTriggers.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
 			ReadTriggers.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+            IndexUpdateTriggers.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
 		}
 
 		private void ExecuteStartupTasks()

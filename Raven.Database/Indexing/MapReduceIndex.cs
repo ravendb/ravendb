@@ -10,6 +10,7 @@ using Lucene.Net.Store;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
+using Raven.Database.Extensions;
 using Raven.Database.Json;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
@@ -168,6 +169,7 @@ namespace Raven.Database.Indexing
 			Write(indexWriter =>
 			{
 				indexWriter.DeleteDocuments(new Term("__reduce_key", reduceKey));
+			    context.IndexUpdateTriggers.Apply(trigger => trigger.OnIndexEntryDeleted(reduceKey));
 				var converter = new AnonymousObjectToLuceneDocumentConverter();
 				PropertyDescriptorCollection properties = null;
 				foreach (var doc in RobustEnumeration(mappedResults, viewGenerator.ReduceDefinition, actions, context))
@@ -185,7 +187,8 @@ namespace Raven.Database.Indexing
 					{
 						luceneDoc.Add(field);
 					}
-					log.DebugFormat("Reduce key {0} result in index {1} gave document: {2}", reduceKey, name, luceneDoc);
+                    context.IndexUpdateTriggers.Apply(trigger => trigger.OnIndexEntryCreated(reduceKey,luceneDoc));
+                    log.DebugFormat("Reduce key {0} result in index {1} gave document: {2}", reduceKey, name, luceneDoc);
 					indexWriter.AddDocument(luceneDoc);
 					actions.IncrementSuccessIndexing();
 				}
