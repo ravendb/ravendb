@@ -83,7 +83,7 @@ namespace Raven.Database.Storage.StorageActions
 			};
 		}
 
-		public IEnumerable<JsonDocument> GetDocumentsByReverseCreationOrder(Reference<bool> hasMore, int start,int pageSize)
+		public IEnumerable<JsonDocument> GetDocumentsByReverseCreationOrder(Reference<bool> hasMore, int start)
 		{
 			Api.MoveAfterLast(session, Documents);
 			for (int i = 0; i < start; i++)
@@ -102,6 +102,30 @@ namespace Raven.Database.Storage.StorageActions
 				};	
 			}
 		}
+
+        public IEnumerable<JsonDocument> GetDocumentsAfter(Guid etag)
+        {
+            Api.JetSetCurrentIndex(session, Documents, "by_etag");
+            var byteArray = etag.ToByteArray();
+            Api.MakeKey(session, Documents, byteArray, MakeKeyGrbit.NewKey);
+            if(Api.TrySeek(session, Documents, SeekGrbit.SeekGT)==false)
+                yield break;
+            do
+            {
+                yield return new JsonDocument
+                {
+                    Key =
+                        Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"],
+                                                   Encoding.Unicode),
+                    DataAsJson =
+                        Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["data"]).ToJObject(),
+                    Etag = new Guid(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"])),
+                    Metadata =
+                        Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject
+                            ()
+                };
+            } while (Api.TryMoveNext(session, Documents));
+        }
 
 		public IEnumerable<Tuple<JsonDocument, int>> DocumentsById(Reference<bool> hasMoreWork, int startId, int endId,
 																   int limit)
@@ -159,14 +183,13 @@ namespace Raven.Database.Storage.StorageActions
 				if (Api.TryMoveFirst(session, Details))
 					Api.EscrowUpdate(session, Details, tableColumnsCache.DetailsColumns["document_count"], 1);
 			}
-			Guid newEtag;
-			DocumentDatabase.UuidCreateSequential(out newEtag);
+		    Guid newEtag = DocumentDatabase.CreateSequentialUuid();
 
 			using (var update = new Update(session, Documents, isUpdate ? JET_prep.Replace : JET_prep.Insert))
 			{
 				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["key"], key, Encoding.Unicode);
 				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["data"], Encoding.UTF8.GetBytes(data.ToString()));
-				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"], newEtag.ToByteArray());
+			    Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"], newEtag.ToByteArray());
 				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"], Encoding.UTF8.GetBytes(metadata.ToString()));
 
 				update.Save();
@@ -199,8 +222,7 @@ namespace Raven.Database.Storage.StorageActions
 				EnsureDocumentIsNotCreatedInAnotherTransaction(key, transactionInformation.Id);
 			}
 			EnsureTransactionExists(transactionInformation);
-			Guid newEtag;
-			DocumentDatabase.UuidCreateSequential(out newEtag);
+		    Guid newEtag = DocumentDatabase.CreateSequentialUuid();
 
 			Api.JetSetCurrentIndex(session, DocumentsModifiedByTransactions, "by_key");
 			Api.MakeKey(session, DocumentsModifiedByTransactions, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -265,8 +287,7 @@ namespace Raven.Database.Storage.StorageActions
 			}
 			EnsureTransactionExists(transactionInformation);
 
-			Guid newEtag;
-			DocumentDatabase.UuidCreateSequential(out newEtag);
+		    Guid newEtag = DocumentDatabase.CreateSequentialUuid();
 
 			Api.JetSetCurrentIndex(session, DocumentsModifiedByTransactions, "by_key");
 			Api.MakeKey(session, DocumentsModifiedByTransactions, key, Encoding.Unicode, MakeKeyGrbit.NewKey);

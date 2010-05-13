@@ -19,8 +19,7 @@ namespace Raven.Database.Storage.StorageActions
 			Api.MakeKey(session, MappedResults, reduceKey, Encoding.Unicode, MakeKeyGrbit.None);
 			var isUpdate = Api.TrySeek(session, MappedResults, SeekGrbit.SeekEQ);
 
-			Guid etag;
-			DocumentDatabase.UuidCreateSequential(out etag);
+	        Guid etag = DocumentDatabase.CreateSequentialUuid();
 
 			using (var update = new Update(session, MappedResults, isUpdate ? JET_prep.Replace : JET_prep.Insert))
 			{

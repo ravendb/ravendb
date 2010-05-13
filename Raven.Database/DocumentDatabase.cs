@@ -188,9 +188,16 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 
 		[SuppressUnmanagedCodeSecurity]
 		[DllImport("rpcrt4.dll", SetLastError = true)]
-		public static extern int UuidCreateSequential(out Guid value);
+		private static extern int UuidCreateSequential(out Guid value);
 
-		public JsonDocument Get(string key, TransactionInformation transactionInformation)
+        public static Guid CreateSequentialUuid()
+        {
+            Guid value;
+            UuidCreateSequential(out value);
+            return value;
+        }
+
+	    public JsonDocument Get(string key, TransactionInformation transactionInformation)
 		{
 			JsonDocument document = null;
 			TransactionalStorage.Batch(actions =>
@@ -520,8 +527,9 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 			var list = new JArray();
 			TransactionalStorage.Batch(actions =>
 			{
-				foreach (var doc in 
-					actions.GetDocumentsByReverseCreationOrder(new Reference<bool>(), start, pageSize))
+				foreach (var doc in  actions
+                    .GetDocumentsByReverseCreationOrder(new Reference<bool>(), start)
+                    .Take(pageSize))
 				{
 					var document = ExecuteReadTriggersOnRead(ProcessReadVetoes(doc, null), null);
 					if(document == null)
