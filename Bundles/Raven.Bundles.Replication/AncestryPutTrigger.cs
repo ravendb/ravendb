@@ -6,7 +6,6 @@ namespace Raven.Bundles.Replication
 {
     public class AncestryPutTrigger : IPutTrigger, IRequiresDocumentDatabaseInitialization
     {
-        private const string RavenAncestry = "Raven-Replication-Ancestry";
         private DocumentDatabase docDb;
 
         public VetoResult AllowPut(string key, JObject document, JObject metadata, TransactionInformation transactionInformation)
@@ -19,11 +18,11 @@ namespace Raven.Bundles.Replication
             var oldVersion = docDb.Get(key, transactionInformation);
             if (oldVersion == null)
                 return;
-            var ancestry = metadata.Value<JArray>(RavenAncestry);
+            var ancestry = metadata.Value<JArray>(ReplicationConstants.RavenAncestry);
             if(ancestry == null)
             {
                 ancestry = new JArray();
-                metadata.Add(RavenAncestry, ancestry);
+                metadata.Add(ReplicationConstants.RavenAncestry, ancestry);
             }
             ancestry.Add(JToken.FromObject(oldVersion.Etag.ToString()));
             if(ancestry.Count > 15)

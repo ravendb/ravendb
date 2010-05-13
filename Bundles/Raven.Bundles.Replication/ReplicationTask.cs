@@ -8,13 +8,11 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Plugins;
-using Raven.Database.Linq.PrivateExtensions;
 
 namespace Raven.Bundles.Replication
 {
     public class ReplicationTask : IRequiresDocumentDatabaseInitialization
     {
-        private const string RavenReplicationDestinations = "Raven/Replication/Destinations";
         private DocumentDatabase docDb;
         private readonly ILog log = LogManager.GetLogger(typeof(ReplicationTask));
         private bool firstTimeFoundNoReplicationDocument = true;
@@ -75,7 +73,7 @@ namespace Raven.Bundles.Replication
             var etag = GetLastReplicatedEtagFrom(destination);
             if(etag == null)
                 return;
-            var jsonDocuments = GetJsonDocuments(etag);
+            var jsonDocuments = GetJsonDocuments(etag.Value);
             if(jsonDocuments == null)
                 return;
             TryReplicatingData(destination, jsonDocuments);
@@ -108,19 +106,19 @@ namespace Raven.Bundles.Replication
             }
         }
 
-        private JArray GetJsonDocuments(Guid? etag)
+        private JArray GetJsonDocuments(Guid etag)
         {
             JArray jsonDocuments = null;
             try
             {
                 docDb.TransactionalStorage.Batch(actions =>
                 {
-                    jsonDocuments = new JArray(actions.GetDocumentsAfter(etag.Value).Take(100).Select(x => x.ToJson()));
+                    jsonDocuments = new JArray(actions.GetDocumentsAfter(etag).Take(100).Select(x => x.ToJson()));
                 });
             }
             catch (Exception e)
             {
-                log.Warn("Could not get documents to replicate after: " + etag.Value, e);
+                log.Warn("Could not get documents to replicate after: " + etag, e);
             }
             return jsonDocuments;
         }
@@ -162,11 +160,11 @@ namespace Raven.Bundles.Replication
 
         private string[] GetReplicationDestinations()
         {
-            var document = docDb.Get(RavenReplicationDestinations, null);
+            var document = docDb.Get(ReplicationConstants.RavenReplicationDestinations, null);
             if (document == null)
             {
-                docDb.Put(RavenReplicationDestinations, null, new JObject(), new JObject(), null);
-                document = docDb.Get(RavenReplicationDestinations, null);
+                docDb.Put(ReplicationConstants.RavenReplicationDestinations, null, new JObject(), new JObject(), null);
+                document = docDb.Get(ReplicationConstants.RavenReplicationDestinations, null);
             }
             return document.DataAsJson.Cast<JProperty>().Select(x => x.Value<string>()).ToArray();
         }

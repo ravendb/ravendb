@@ -6,7 +6,6 @@ namespace Raven.Bundles.Replication
 {
     public class RemoveConflictOnPutTrigger : IPutTrigger, IRequiresDocumentDatabaseInitialization
     {
-        public const string RavenReplicationConflict = "Raven-Replication-Conflict";
         private DocumentDatabase docDb;
 
         public VetoResult AllowPut(string key, JObject document, JObject metadata, TransactionInformation transactionInformation)
@@ -19,7 +18,7 @@ namespace Raven.Bundles.Replication
             var oldVersion = docDb.Get(key, transactionInformation);
             if (oldVersion == null)
                 return;
-            if (oldVersion.Metadata[RavenReplicationConflict] == null)
+            if (oldVersion.Metadata[ReplicationConstants.RavenReplicationConflict] == null)
                 return;
             // this is a conflict document, holding document keys in the 
             // values of the properties
