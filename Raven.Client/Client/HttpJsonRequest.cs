@@ -61,12 +61,6 @@ namespace Raven.Client.Client
             if (metadata == null)
                 return;
 
-            if(metadata.Count==0)
-            {
-                webRequest.ContentLength = 0;
-                return;
-            }
-
             foreach (JProperty prop in metadata)
             {
                 if (prop.Value == null)
@@ -82,6 +76,8 @@ namespace Raven.Client.Client
                 var value = prop.Value.Value<object>().ToString();
                 switch (headerName)
                 {
+                    case "Content-Length":
+                        break;
                     case "Content-Type":
                         webRequest.ContentType = value;
                         break;
