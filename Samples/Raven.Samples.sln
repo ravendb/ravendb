@@ -1,0 +1,32 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Sample.ComplexSharding", "Raven.Sample.ComplexSharding\Raven.Sample.ComplexSharding.csproj", "{C7F492BF-8C5C-4080-85A0-A0C4A63D68F2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Sample.ShardClient", "Raven.Sample.ShardClient\Raven.Sample.ShardClient.csproj", "{B40059BD-5E50-4855-8EE1-1576E007E5F4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Sample.SimpleClient", "Raven.Sample.SimpleClient\Raven.Sample.SimpleClient.csproj", "{FAE55BF3-BC8D-47A9-9E32-305ED5C40EDF}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x86 = Debug|x86
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C7F492BF-8C5C-4080-85A0-A0C4A63D68F2}.Debug|x86.ActiveCfg = Debug|x86
+		{C7F492BF-8C5C-4080-85A0-A0C4A63D68F2}.Debug|x86.Build.0 = Debug|x86
+		{C7F492BF-8C5C-4080-85A0-A0C4A63D68F2}.Release|x86.ActiveCfg = Release|x86
+		{C7F492BF-8C5C-4080-85A0-A0C4A63D68F2}.Release|x86.Build.0 = Release|x86
+		{B40059BD-5E50-4855-8EE1-1576E007E5F4}.Debug|x86.ActiveCfg = Debug|x86
+		{B40059BD-5E50-4855-8EE1-1576E007E5F4}.Debug|x86.Build.0 = Debug|x86
+		{B40059BD-5E50-4855-8EE1-1576E007E5F4}.Release|x86.ActiveCfg = Release|x86
+		{B40059BD-5E50-4855-8EE1-1576E007E5F4}.Release|x86.Build.0 = Release|x86
+		{FAE55BF3-BC8D-47A9-9E32-305ED5C40EDF}.Debug|x86.ActiveCfg = Debug|x86
+		{FAE55BF3-BC8D-47A9-9E32-305ED5C40EDF}.Debug|x86.Build.0 = Debug|x86
+		{FAE55BF3-BC8D-47A9-9E32-305ED5C40EDF}.Release|x86.ActiveCfg = Release|x86
+		{FAE55BF3-BC8D-47A9-9E32-305ED5C40EDF}.Release|x86.Build.0 = Release|x86
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
