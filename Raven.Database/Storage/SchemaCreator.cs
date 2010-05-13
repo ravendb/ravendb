@@ -7,7 +7,7 @@ namespace Raven.Database.Storage
 	[CLSCompliant(false)]
 	public class SchemaCreator
 	{
-		public const string SchemaVersion = "2.3";
+		public const string SchemaVersion = "2.4";
 		private readonly Session session;
 
 		public SchemaCreator(Session session)
@@ -187,6 +187,10 @@ namespace Raven.Database.Storage
 			indexDef = "+id\0\0";
 			Api.JetCreateIndex(session, tableid, "by_id", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
 			                   100);
+
+            indexDef = "+etag\0\0";
+            Api.JetCreateIndex(session, tableid, "by_etag", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
+                               100);
 		}
 
         private void CreateDocumentsBeingModifiedByTransactionsTable(JET_DBID dbid)
