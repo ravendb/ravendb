@@ -48,7 +48,7 @@ namespace Raven.Database
 			var transactionMode = ConfigurationManager.AppSettings["Raven/TransactionMode"];
 			TransactionMode result;
 			if(Enum.TryParse(transactionMode, true, out result) == false)
-				result = TransactionMode.Lazy;
+				result = TransactionMode.Safe;
 			TransactionMode = result;
 
 			VirtualDirectory = ConfigurationManager.AppSettings["Raven/VirtualDirectory"] ?? "/";
