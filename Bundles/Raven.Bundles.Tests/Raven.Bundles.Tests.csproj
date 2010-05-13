@@ -32,7 +32,13 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Newtonsoft.Json">
-      <HintPath>..\SharedLibs\Newtonsoft.Json.dll</HintPath>
+      <HintPath>..\..\SharedLibs\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="Raven.Client.Lightweight">
+      <HintPath>..\..\build\Raven.Client.Lightweight.dll</HintPath>
+    </Reference>
+    <Reference Include="RavenDb">
+      <HintPath>..\..\build\RavenDb.exe</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
@@ -43,7 +49,7 @@
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
     <Reference Include="xunit">
-      <HintPath>..\SharedLibs\xunit.dll</HintPath>
+      <HintPath>..\..\SharedLibs\xunit.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -54,18 +60,6 @@
     <ProjectReference Include="..\Raven.Bundles.Versioning\Raven.Bundles.Versioning.csproj">
       <Project>{22BCC20F-FC1F-4523-A717-77CDF8519C1D}</Project>
       <Name>Raven.Bundles.Versioning</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Raven.Client.Tests\Raven.Client.Tests.csproj">
-      <Project>{36B31D69-508B-4594-8F8E-85774BAA7D3F}</Project>
-      <Name>Raven.Client.Tests</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Raven.Client\Raven.Client.csproj">
-      <Project>{9F92FD36-60B6-4655-B8C6-00125B46AB6A}</Project>
-      <Name>Raven.Client</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Raven.Database\Raven.Database.csproj">
-      <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
-      <Name>Raven.Database</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
