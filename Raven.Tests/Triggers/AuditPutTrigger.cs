@@ -14,7 +14,7 @@ namespace Raven.Tests.Triggers
 
 		public void OnPut(string key, JObject document, JObject metadata, TransactionInformation transactionInformation)
 		{
-			document["created_at"] = new JValue(new DateTime(2000, 1, 1).ToUniversalTime());
+			document["created_at"] = new JValue(new DateTime(2000, 1, 1,0,0,0,DateTimeKind.Utc));
 		}
 
 		public void AfterCommit(string key, JObject document, JObject metadata)
