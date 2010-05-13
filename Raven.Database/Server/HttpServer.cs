@@ -95,6 +95,12 @@ namespace Raven.Database.Server
 				//setup waiting for the next request
 				listener.BeginGetContext(GetContext, null);
 			}
+            catch(InvalidOperationException)
+            {
+                // can't get current request / end new one, probably
+                // listner shutdown
+                return;
+            }
 			catch (HttpListenerException)
 			{
 				// can't get current request / end new one, probably
