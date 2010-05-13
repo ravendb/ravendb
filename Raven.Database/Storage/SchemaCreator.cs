@@ -7,7 +7,7 @@ namespace Raven.Database.Storage
 	[CLSCompliant(false)]
 	public class SchemaCreator
 	{
-		public const string SchemaVersion = "2.1";
+		public const string SchemaVersion = "2.2";
 		private readonly Session session;
 
 		public SchemaCreator(Session session)
@@ -293,11 +293,17 @@ namespace Raven.Database.Storage
 
 			Api.JetAddColumn(session, tableid, "reduce_key", new JET_COLUMNDEF
 			{
-				cbMax = 255,
-				coltyp = JET_coltyp.Text,
+				coltyp = JET_coltyp.LongText,
 				cp = JET_CP.Unicode,
 				grbit = ColumndefGrbit.ColumnNotNULL
 			}, null, 0, out columnid);
+
+            Api.JetAddColumn(session, tableid, "reduce_key_and_view_hashed", new JET_COLUMNDEF
+            {
+                cbMax = 32,
+                coltyp = JET_coltyp.Binary,
+                grbit = ColumndefGrbit.ColumnNotNULL
+            }, null, 0, out columnid);
 
 			Api.JetAddColumn(session, tableid, "data", new JET_COLUMNDEF
 			{
@@ -329,19 +335,9 @@ namespace Raven.Database.Storage
 			Api.JetCreateIndex(session, tableid, "by_view", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
 			                   100);
 
-			indexDef = "+view\0+reduce_key\0\0";
-			Api.JetCreateIndex2(session, tableid, new[] {new JET_INDEXCREATE
-			{
-				cbKey = indexDef.Length,
-				cbKeyMost = SystemParameters.KeyMost,
-				szKey = indexDef,
-				ulDensity = 100,
-				szIndexName = "by_view_and_reduce_key",
-				grbit = CreateIndexGrbit.IndexDisallowNull
-			},}, 1);
-			//Api.JetCreateIndex(session, tableid, "by_view_and_reduce_key", CreateIndexGrbit.IndexDisallowNull, indexDef,
-			//                   indexDef.Length,
-			//                   100);
+            indexDef = "+reduce_key_and_view_hashed\0\0";
+            Api.JetCreateIndex(session, tableid, "by_reduce_key_and_view_hashed", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
+                               100);
 		}
 
 		private void CreateTasksTable(JET_DBID dbid)
