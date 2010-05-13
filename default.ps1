@@ -38,7 +38,7 @@ task Init -depends Verify40, Clean {
 		-clsCompliant "false"
 		
 	Generate-Assembly-Info `
-		-file "$base_dir\Raven.Sample.SimpleClient\Properties\AssemblyInfo.cs" `
+		-file "$base_dir\Samples\Raven.Sample.SimpleClient\Properties\AssemblyInfo.cs" `
 		-title "Raven Database $version" `
 		-description "A linq enabled document database for .NET" `
 		-company "Hibernating Rhinos" `
@@ -48,7 +48,7 @@ task Init -depends Verify40, Clean {
 		-clsCompliant "false"
 		
 	Generate-Assembly-Info `
-		-file "$base_dir\Raven.Sample.ComplexSharding\Properties\AssemblyInfo.cs" `
+		-file "$base_dir\Samples\Raven.Sample.ComplexSharding\Properties\AssemblyInfo.cs" `
 		-title "Raven Database $version" `
 		-description "A linq enabled document database for .NET" `
 		-company "Hibernating Rhinos" `
@@ -58,7 +58,7 @@ task Init -depends Verify40, Clean {
 		-clsCompliant "false"
 	
 	Generate-Assembly-Info `
-		-file "$base_dir\Raven.Sample.ShardClient\Properties\AssemblyInfo.cs" `
+		-file "$base_dir\Samples\Raven.Sample.ShardClient\Properties\AssemblyInfo.cs" `
 		-title "Raven Sample Shard Client $version" `
 		-description "A linq enabled document database for .NET" `
 		-company "Hibernating Rhinos" `
@@ -141,7 +141,7 @@ task Init -depends Verify40, Clean {
 		
 		
 	Generate-Assembly-Info `
-		-file "$base_dir\Raven.Bundles.Tests\Properties\AssemblyInfo.cs" `
+		-file "$base_dir\Bundles\Raven.Bundles.Tests\Properties\AssemblyInfo.cs" `
 		-title "Raven Database $version" `
 		-description "A linq enabled document database for .NET" `
 		-company "Hibernating Rhinos" `
@@ -151,7 +151,7 @@ task Init -depends Verify40, Clean {
 		-clsCompliant "false"
 	
 	Generate-Assembly-Info `
-		-file "$base_dir\Raven.Bundles.Versioning\Properties\AssemblyInfo.cs" `
+		-file "$base_dir\Bundles\Raven.Bundles.Versioning\Properties\AssemblyInfo.cs" `
 		-title "Raven Database $version" `
 		-description "A linq enabled document database for .NET" `
 		-company "Hibernating Rhinos" `
@@ -172,7 +172,21 @@ task Updatedocs {
 
 task Compile -depends Init {
 	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
-    exec "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" """$sln_file"" /p:OutDir=""$buildartifacts_dir\"""
+    exec "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" """$base_dir\RavenDB.sln"" /p:OutDir=""$buildartifacts_dir\"""
+    
+    # merge
+    $old = pwd
+    cd $build_dir
+    
+    remove-item $build_dir\RavenDb.exe  -ErrorAction SilentlyContinue
+    remove-item $build_dir\RavenClient.dll -ErrorAction SilentlyContinue
+    remove-item $build_dir\RavenWeb.dll  -ErrorAction SilentlyContinue
+    
+    exec "..\Utilities\Binaries\Raven.Merger.exe"
+    
+    cd $old
+    
+    exec "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" """$base_dir\Bundles\Raven.Bundles.sln"" /p:OutDir=""$buildartifacts_dir\"""
 }
 
 task Test -depends Compile {
@@ -185,19 +199,6 @@ task Test -depends Compile {
   cd $old
 }
 
-task Merge -depends Compile {
-	$old = pwd
-	cd $build_dir
-	
-	remove-item $build_dir\RavenDb.exe  -ErrorAction SilentlyContinue
-	remove-item $build_dir\RavenClient.dll -ErrorAction SilentlyContinue
-	remove-item $build_dir\RavenWeb.dll  -ErrorAction SilentlyContinue
-	
-	exec "..\Utilities\Binaries\Raven.Merger.exe"
-	
-	cd $old
-}
-
 task ReleaseNoTests -depends DoRelease {
 
 }
@@ -205,7 +206,7 @@ task ReleaseNoTests -depends DoRelease {
 task Release -depends Test,DoRelease { 
 }
 
-task DoRelease -depends Merge {
+task DoRelease -depends Compile {
 	
 	remove-item $build_dir\Output -Recurse -Force  -ErrorAction SilentlyContinue
 	mkdir $build_dir\Output
