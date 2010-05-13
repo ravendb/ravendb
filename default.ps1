@@ -187,6 +187,7 @@ task Compile -depends Init {
     cd $old
     
     exec "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" """$base_dir\Bundles\Raven.Bundles.sln"" /p:OutDir=""$buildartifacts_dir\"""
+    exec "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" """$base_dir\Samples\Raven.Samples.sln"" /p:OutDir=""$buildartifacts_dir\"""
 }
 
 task Test -depends Compile {
