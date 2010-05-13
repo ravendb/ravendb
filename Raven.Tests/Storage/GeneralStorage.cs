@@ -1,6 +1,8 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using System;
+using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Xunit;
+using System.Linq;
 
 namespace Raven.Tests.Storage
 {
@@ -43,6 +45,66 @@ namespace Raven.Tests.Storage
 
 			db.TransactionalStorage.Batch(actions => Assert.Equal(0, actions.GetDocumentsCount()));
 		}
+
+        [Fact]
+        public void CanGetDocumentAfterEmptyEtag()
+        {
+            db.TransactionalStorage.Batch(actions => actions.AddDocument("a", null, new JObject(), new JObject()));
+
+            db.TransactionalStorage.Batch(actions =>
+            {
+                var documents = actions.GetDocumentsAfter(Guid.Empty).ToArray();
+                Assert.Equal(1, documents.Length);
+            });
+        }
+
+        [Fact]
+        public void CanGetDocumentAfterAnEtag()
+        {
+            db.TransactionalStorage.Batch(actions =>
+            {
+                actions.AddDocument("a", null, new JObject(), new JObject());
+                actions.AddDocument("b", null, new JObject(), new JObject());
+                actions.AddDocument("c", null, new JObject(), new JObject());
+            });
+
+            db.TransactionalStorage.Batch(actions =>
+            {
+                var doc = actions.DocumentByKey("a",null);
+                var documents = actions.GetDocumentsAfter(doc.Etag).Select(x => x.Key).ToArray();
+                Assert.Equal(2, documents.Length);
+                Assert.Equal("b", documents[0]);
+                Assert.Equal("c", documents[1]);
+            });
+        }
+
+        [Fact]
+        public void CanGetDocumentAfterAnEtagAfterDocumentUpdateWouldReturnThatDocument()
+        {
+            db.TransactionalStorage.Batch(actions =>
+            {
+                actions.AddDocument("a", null, new JObject(), new JObject());
+                actions.AddDocument("b", null, new JObject(), new JObject());
+                actions.AddDocument("c", null, new JObject(), new JObject());
+            });
+
+            Guid guid = Guid.Empty;
+            db.TransactionalStorage.Batch(actions =>
+            {
+                var doc = actions.DocumentByKey("a", null);
+                guid = doc.Etag;
+                actions.AddDocument("a", null, new JObject(), new JObject());
+            });
+
+            db.TransactionalStorage.Batch(actions =>
+            {
+                var documents = actions.GetDocumentsAfter(guid).Select(x => x.Key).ToArray();
+                Assert.Equal(3, documents.Length);
+                Assert.Equal("b", documents[0]);
+                Assert.Equal("c", documents[1]);
+                Assert.Equal("a", documents[2]);
+            });
+        }
 
 		[Fact]
 		public void UpdatingDocumentWillKeepSameCount()
