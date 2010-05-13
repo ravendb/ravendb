@@ -1,3 +1,5 @@
+using System.ComponentModel.Composition;
+
 namespace Raven.Database.Plugins
 {
     /// <summary>
@@ -11,17 +13,21 @@ namespace Raven.Database.Plugins
     /// <remarks>
     /// * All operations are delete/create operations, whatever the value
     ///   previously existed or not.
-    /// * It s possible for OnIndexEntryDeleted to be called for non existant
+    /// * It is possible for OnIndexEntryDeleted to be called for non existant
     ///   values.
+    /// * It is possible for a single entry key to be called inserted several times
+    ///   entry keys are NOT unique.
     /// </remarks>
+    [InheritedExport]
     public interface IIndexUpdateTrigger
     {
         /// <summary>
         /// Notify that a document with the specified key was deleted
         /// Key may represent a mising document
         /// </summary>
+        /// <param name="indexName">The updated index name</param>
         /// <param name="entryKey">The entry key</param>
-        void OnIndexEntryDeleted(string entryKey);
+        void OnIndexEntryDeleted(string indexName, string entryKey);
 
         /// <summary>
         /// Notify that the specifid document with the specified key is about 
@@ -31,8 +37,9 @@ namespace Raven.Database.Plugins
         /// You may modify the provided lucene document, changes made to the document
         /// will be written to the Lucene index
         /// </remarks>
+        /// <param name="indexName">The updated index name</param>
         /// <param name="entryKey">The entry key</param>
         /// <param name="document">The lucene document about to be written</param>
-        void OnIndexEntryCreated(string entryKey, Lucene.Net.Documents.Document document);
+        void OnIndexEntryCreated(string indexName, string entryKey, Lucene.Net.Documents.Document document);
     }
 }

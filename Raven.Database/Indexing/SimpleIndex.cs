@@ -45,7 +45,7 @@ namespace Raven.Database.Indexing
 					var fields = converter.Index(doc, properties, indexDefinition, Field.Store.NO);
 					if (currentId != newDocId) // new document id, so delete all old values matching it
 					{
-					    context.IndexUpdateTriggers.Apply(trigger => trigger.OnIndexEntryDeleted(newDocId));
+                        context.IndexUpdateTriggers.Apply(trigger => trigger.OnIndexEntryDeleted(name, newDocId));
 						indexWriter.DeleteDocuments(new Term("__document_id", newDocId));
 					}
 
@@ -56,7 +56,7 @@ namespace Raven.Database.Indexing
 
                         currentId = newDocId;
                         CopyFieldsToDocumentButRemoveDuplicateValues(luceneDoc, fields);
-                        context.IndexUpdateTriggers.Apply(trigger => trigger.OnIndexEntryCreated(newDocId, luceneDoc));
+                        context.IndexUpdateTriggers.Apply(trigger => trigger.OnIndexEntryCreated(name, newDocId, luceneDoc));
                         log.DebugFormat("Index '{0}' resulted in: {1}", name, luceneDoc);
                         indexWriter.AddDocument(luceneDoc);
                     }
@@ -120,7 +120,7 @@ namespace Raven.Database.Indexing
 				{
 					log.DebugFormat("Deleting ({0}) from {1}", string.Format(", ", keys), name);
 				}
-			    keys.Apply(key => context.IndexUpdateTriggers.Apply(trigger => trigger.OnIndexEntryDeleted(key)));
+                keys.Apply(key => context.IndexUpdateTriggers.Apply(trigger => trigger.OnIndexEntryDeleted(name, key)));
 				writer.DeleteDocuments(keys.Select(k => new Term("__document_id", k)).ToArray());
 				return true;
 			});

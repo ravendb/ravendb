@@ -169,7 +169,7 @@ namespace Raven.Database.Indexing
 			Write(indexWriter =>
 			{
 				indexWriter.DeleteDocuments(new Term("__reduce_key", reduceKey));
-			    context.IndexUpdateTriggers.Apply(trigger => trigger.OnIndexEntryDeleted(reduceKey));
+                context.IndexUpdateTriggers.Apply(trigger => trigger.OnIndexEntryDeleted(name, reduceKey));
 				var converter = new AnonymousObjectToLuceneDocumentConverter();
 				PropertyDescriptorCollection properties = null;
 				foreach (var doc in RobustEnumeration(mappedResults, viewGenerator.ReduceDefinition, actions, context))
@@ -187,7 +187,7 @@ namespace Raven.Database.Indexing
 					{
 						luceneDoc.Add(field);
 					}
-                    context.IndexUpdateTriggers.Apply(trigger => trigger.OnIndexEntryCreated(reduceKey,luceneDoc));
+                    context.IndexUpdateTriggers.Apply(trigger => trigger.OnIndexEntryCreated(name, reduceKey, luceneDoc));
                     log.DebugFormat("Reduce key {0} result in index {1} gave document: {2}", reduceKey, name, luceneDoc);
 					indexWriter.AddDocument(luceneDoc);
 					actions.IncrementSuccessIndexing();
