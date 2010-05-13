@@ -67,6 +67,14 @@ namespace Raven.Database
 			ShouldCreateDefaultsWhenBuildingNewDatabaseFromScratch = true;
 		}
 
+	    public string ServerUrl
+	    {
+	        get
+	        {
+	            return "http://" + Environment.MachineName + ":" + Port + VirtualDirectory;
+	        }
+	    }
+
 		private string pluginsDirectory;
 		public string PluginsDirectory
 		{

@@ -5,6 +5,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Bundles.Tests", "Rave
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Bundles.Versioning", "Raven.Bundles.Versioning\Raven.Bundles.Versioning.csproj", "{22BCC20F-FC1F-4523-A717-77CDF8519C1D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Bundles.Replication", "Raven.Bundles.Replication\Raven.Bundles.Replication.csproj", "{2EA316E8-629A-45C2-80B8-48F9CDB5BF57}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -19,6 +21,10 @@ Global
 		{22BCC20F-FC1F-4523-A717-77CDF8519C1D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{22BCC20F-FC1F-4523-A717-77CDF8519C1D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{22BCC20F-FC1F-4523-A717-77CDF8519C1D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2EA316E8-629A-45C2-80B8-48F9CDB5BF57}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2EA316E8-629A-45C2-80B8-48F9CDB5BF57}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2EA316E8-629A-45C2-80B8-48F9CDB5BF57}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2EA316E8-629A-45C2-80B8-48F9CDB5BF57}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
