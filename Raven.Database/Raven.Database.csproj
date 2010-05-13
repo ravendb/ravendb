@@ -202,6 +202,7 @@
     <Compile Include="Storage\StorageActions\Documents.cs" />
     <Compile Include="Storage\StorageActions\Indexing.cs" />
     <Compile Include="Storage\StorageActions\MappedResults.cs" />
+    <Compile Include="Storage\StorageActions\Queue.cs" />
     <Compile Include="Storage\StorageActions\TableProperties.cs" />
     <Compile Include="Storage\StorageActions\Tasks.cs" />
     <Compile Include="Storage\StorageActions\Util.cs" />

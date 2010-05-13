@@ -66,6 +66,42 @@ namespace Raven.Tests.Storage
 			db.TransactionalStorage.Batch(actions => Assert.Equal(1, actions.GetDocumentsCount()));
 		}
 
+
+        [Fact]
+        public void CanEnqueueAndPeek()
+        {
+            db.TransactionalStorage.Batch(actions => actions.EnqueueToQueue("ayende", new byte[]{1,2}));
+
+            db.TransactionalStorage.Batch(actions => Assert.Equal(new byte[] { 1, 2 }, actions.PeekFromQueue("ayende").Item1));
+        }
+
+        [Fact]
+        public void PoisonMessagesWillBeDeletes()
+        {
+            db.TransactionalStorage.Batch(actions => actions.EnqueueToQueue("ayende", new byte[] { 1, 2 }));
+
+            db.TransactionalStorage.Batch(actions =>
+            {
+                for (int i = 0; i < 6; i++)
+                {
+                    actions.PeekFromQueue("ayende");
+                }
+                Assert.Equal(null, actions.PeekFromQueue("ayende"));
+            });
+        }
+
+        [Fact]
+        public void CanDeleteQueuedData()
+        {
+            db.TransactionalStorage.Batch(actions => actions.EnqueueToQueue("ayende", new byte[] { 1, 2 }));
+
+            db.TransactionalStorage.Batch(actions =>
+            {
+                actions.DeleteFromQueue(actions.PeekFromQueue("ayende").Item2);
+                Assert.Equal(null, actions.PeekFromQueue("ayende"));
+            });
+        }
+
 		[Fact]
 		public void CanGetNewIdentityValues()
 		{
