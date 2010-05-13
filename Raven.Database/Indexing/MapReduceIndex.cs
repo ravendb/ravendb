@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
@@ -62,7 +64,9 @@ namespace Raven.Database.Indexing
 				
 				log.DebugFormat("Mapped result for '{0}': '{1}'", name, data);
 
-				actions.PutMappedResult(name, docId, reduceKey, data);
+			    var hash = ComputeHash(name, reduceKey);
+
+			    actions.PutMappedResult(name, docId, reduceKey, data, hash);
 
 				actions.IncrementSuccessIndexing();
 			}
@@ -79,7 +83,13 @@ namespace Raven.Database.Indexing
 			log.DebugFormat("Mapped {0} documents for {1}", count, name);
 		}
 
-		private static string ReduceKeyToString(object reduceValue)
+	    public static byte[] ComputeHash(string name, string reduceKey)
+	    {
+            using (var sha256 = SHA256.Create())
+                return sha256.ComputeHash(Encoding.UTF8.GetBytes(name + "/" + reduceKey));
+	    }
+
+	    private static string ReduceKeyToString(object reduceValue)
 		{
 			if (reduceValue is string || reduceValue is ValueType)
 				return reduceValue.ToString();
