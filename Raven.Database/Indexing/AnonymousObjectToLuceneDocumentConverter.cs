@@ -38,6 +38,21 @@ namespace Raven.Database.Indexing
 								 indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
 
 			}
+            if(value is decimal)
+            {
+                return new Field(name, JsonLuceneNumberConverter.NumberToString((decimal)value), indexDefinition.GetStorage(name, defaultStorage),
+                                 indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
+            }
+            if (value is float)
+            {
+                return new Field(name, JsonLuceneNumberConverter.NumberToString((float)value), indexDefinition.GetStorage(name, defaultStorage),
+                                 indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
+            }
+            if (value is double)
+            {
+                return new Field(name, JsonLuceneNumberConverter.NumberToString((double)value), indexDefinition.GetStorage(name, defaultStorage),
+                                 indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
+            }
 			if (value is DateTime)
 			{
 				return new Field(name, DateTools.DateToString((DateTime)value, DateTools.Resolution.MILLISECOND),

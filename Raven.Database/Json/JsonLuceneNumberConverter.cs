@@ -38,6 +38,21 @@ namespace Raven.Database.Json
 			return string.Format("0x{0:X16}", number);
 		}
 
+        public static string NumberToString(decimal number)
+        {
+            return number.ToString(CultureInfo.InvariantCulture);
+        }
+
+        public static string NumberToString(float number)
+        {
+            return number.ToString(CultureInfo.InvariantCulture);
+        }
+
+        public static string NumberToString(double number)
+        {
+            return number.ToString(CultureInfo.InvariantCulture);
+        }
+
 		public static object ParseNumber(string number)
 		{
 			return number.Length == 18 ? 
