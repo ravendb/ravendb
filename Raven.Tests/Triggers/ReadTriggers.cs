@@ -158,7 +158,7 @@ namespace Raven.Tests.Triggers
 
 		public class HiddenDocumentsTrigger : IReadTrigger
 		{
-			public ReadVetoResult AllowRead(JObject document, JObject metadata, ReadOperation operation)
+			public ReadVetoResult AllowRead(JObject document, JObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
 			{
 				var name = document["hidden"];
 				if (name != null && name.Value<bool>())
@@ -168,14 +168,14 @@ namespace Raven.Tests.Triggers
 				return ReadVetoResult.Allowed;
 			}
 
-			public void OnRead(JObject document, JObject metadata, ReadOperation operation)
+            public void OnRead(JObject document, JObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
 			{
 			}
 		}
 
 		public class VetoReadsOnCapitalNamesTrigger : IReadTrigger
 		{
-			public ReadVetoResult AllowRead(JObject document, JObject metadata, ReadOperation operation)
+            public ReadVetoResult AllowRead(JObject document, JObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
 			{
 				var name = document["name"];
 				if (name != null && name.Value<string>().Any(char.IsUpper))
@@ -185,20 +185,20 @@ namespace Raven.Tests.Triggers
 				return ReadVetoResult.Allowed;
 			}
 
-			public void OnRead(JObject document, JObject metadata, ReadOperation operation)
+            public void OnRead(JObject document, JObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
 			{
 			}
 		}
 
 		public class UpperCaseNamesTrigger : IReadTrigger
 		{
-			public ReadVetoResult AllowRead(JObject document, JObject metadata, ReadOperation operation)
+            public ReadVetoResult AllowRead(JObject document, JObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
 			{
 				
 				return ReadVetoResult.Allowed;
 			}
 
-			public void OnRead(JObject document, JObject metadata, ReadOperation operation)
+            public void OnRead(JObject document, JObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
 			{
 				var name = document.Property("name");
 				if (name != null)
