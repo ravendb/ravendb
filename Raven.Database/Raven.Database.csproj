@@ -195,6 +195,7 @@
     <Compile Include="Server\Responders\TransactionRollback.cs" />
     <Compile Include="Storage\IndexCreationOptions.cs" />
     <Compile Include="Storage\DocumentInTransactionData.cs" />
+    <Compile Include="Storage\SchemaUpdates\From22To23.cs" />
     <Compile Include="Storage\SchemaUpdates\ISchemaUpdate.cs" />
     <Compile Include="Storage\SchemaUpdates\From21To22.cs" />
     <Compile Include="Storage\StorageActions\Attachments.cs" />

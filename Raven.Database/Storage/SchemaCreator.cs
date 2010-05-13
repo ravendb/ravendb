@@ -7,7 +7,7 @@ namespace Raven.Database.Storage
 	[CLSCompliant(false)]
 	public class SchemaCreator
 	{
-		public const string SchemaVersion = "2.2";
+		public const string SchemaVersion = "2.3";
 		private readonly Session session;
 
 		public SchemaCreator(Session session)
@@ -31,6 +31,7 @@ namespace Raven.Database.Storage
 					CreateMapResultsTable(dbid);
 					CreateIndexingStatsTable(dbid);
 					CreateFilesTable(dbid);
+                    CreateQueueTable(dbid);
 					CreateIdentityTable(dbid);
 
 					tx.Commit(CommitTransactionGrbit.None);
@@ -449,7 +450,51 @@ namespace Raven.Database.Storage
 							   100);
 		}
 
-		private void CreateDetailsTable(JET_DBID dbid)
+	    public void CreateQueueTable(JET_DBID dbid)
+        {
+            JET_TABLEID tableid;
+            Api.JetCreateTable(session, dbid, "queue", 1024, 100, out tableid);
+            JET_COLUMNID columnid;
+
+
+            Api.JetAddColumn(session, tableid, "id", new JET_COLUMNDEF
+            {
+                coltyp = JET_coltyp.Long,
+                grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnAutoincrement | ColumndefGrbit.ColumnNotNULL
+            }, null, 0, out columnid);
+
+            Api.JetAddColumn(session, tableid, "name", new JET_COLUMNDEF
+            {
+                cbMax = 255,
+                coltyp = JET_coltyp.Text,
+                cp = JET_CP.Unicode,
+                grbit = ColumndefGrbit.ColumnTagged
+            }, null, 0, out columnid);
+
+            Api.JetAddColumn(session, tableid, "data", new JET_COLUMNDEF
+            {
+                coltyp = JET_coltyp.LongBinary,
+                grbit = ColumndefGrbit.ColumnTagged
+            }, null, 0, out columnid);
+
+            var bytes = BitConverter.GetBytes(0);
+            Api.JetAddColumn(session, tableid, "read_count", new JET_COLUMNDEF
+            {
+                coltyp = JET_coltyp.Long,
+                grbit = ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnEscrowUpdate
+            }, bytes, bytes.Length, out columnid);
+
+
+            var indexDef = "+name\0\0";
+            Api.JetCreateIndex(session, tableid, "by_name", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
+                               100);
+
+            indexDef = "+id\0\0";
+            Api.JetCreateIndex(session, tableid, "by_id", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
+                               100);
+        }
+        
+        private void CreateDetailsTable(JET_DBID dbid)
 		{
 			JET_TABLEID tableid;
 			Api.JetCreateTable(session, dbid, "details", 16, 100, out tableid);
