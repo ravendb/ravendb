@@ -83,6 +83,11 @@ namespace Raven.Database.Server.Responders
 					continue;
 				context.Response.Headers[header.Name] = StringQuotesIfNeeded(header.Value.ToString());
 			}
+            if (headers["@Http-Status-Code"] != null)
+            {
+                context.Response.StatusCode = headers.Value<int>("@Http-Status-Code");
+                context.Response.StatusDescription = headers.Value<string>("@Http-Status-Description");
+            }
 			context.Response.Headers["ETag"] = etag.ToString();
 			context.Response.ContentLength64 = data.Length;
 			context.Response.OutputStream.Write(data, 0, data.Length);
