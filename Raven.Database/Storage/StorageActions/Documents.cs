@@ -83,9 +83,10 @@ namespace Raven.Database.Storage.StorageActions
 			};
 		}
 
-		public IEnumerable<JsonDocument> GetDocumentsByReverseCreationOrder(Reference<bool> hasMore, int start)
+		public IEnumerable<JsonDocument> GetDocumentsByReverseUpdateOrder(int start)
 		{
-			Api.MoveAfterLast(session, Documents);
+            Api.JetSetCurrentIndex(session, Documents, "by_etag");
+		    Api.MoveAfterLast(session, Documents);
 			for (int i = 0; i < start; i++)
 			{
 				if(Api.TryMovePrevious(session,Documents) == false)
