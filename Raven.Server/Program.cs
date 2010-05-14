@@ -6,14 +6,12 @@ using System.Linq;
 using System.Reflection;
 using System.Security.Principal;
 using System.ServiceProcess;
-using System.Xml.Linq;
 using log4net.Appender;
 using log4net.Config;
 using log4net.Filter;
 using log4net.Layout;
 using Raven.Database;
 using Raven.Database.Server;
-using Raven.Database.Server.Responders;
 
 namespace Raven.Server
 {
@@ -23,55 +21,69 @@ namespace Raven.Server
 		{
 			if (Environment.UserInteractive)
 			{
-				switch (GetArgument(args))
-				{
-					case "install":
-						AdminRequired(InstallAndStart, "/install");
-						break;
-					case "uninstall":
-						AdminRequired(EnsureStoppedAndUninstall, "/uninstall");
-						break;
-					case "start":
-						AdminRequired(StartService, "/start");
-						break;
-					case "restart":
-						AdminRequired(RestartService, "/restart");
-						break;
-					case "stop":
-						AdminRequired(StopService, "/stop");
-						break;
-					case "restore":
-						if(args.Length != 3)
-						{
-							PrintUsage();
-							break;
-						}
-						RunRestoreOperation(args[0], args[1]);
-						break;
-					case "debug":
-						RunInDebugMode(createDefaultDatabase: true, anonymousUserAccessMode: null);
-						break;
-#if DEBUG
-					case "test":
-						var dataDirectory = new RavenConfiguration().DataDirectory;
-						if (Directory.Exists(dataDirectory))
-							Directory.Delete(dataDirectory, true);
-
-						RunInDebugMode(createDefaultDatabase: false, anonymousUserAccessMode: AnonymousUserAccessMode.All);
-						break;
-#endif
-					default:
-						PrintUsage();
-						break;
-				}
+			    try
+			    {
+			        InteractiveRun(args);
+			    }
+			    catch (Exception e)
+			    {
+			        Console.WriteLine(e);
+			        Environment.Exit(-1);
+			    }
 			}
 			else
 			{
+                // no try catch here, we want the exception to be logged by Windows
 				ServiceBase.Run(new RavenService());
 			}
 		}
 
-		private static void RunRestoreOperation(string backupLocation, string databaseLocation)
+	    private static void InteractiveRun(string[] args)
+	    {
+	        switch (GetArgument(args))
+	        {
+	            case "install":
+	                AdminRequired(InstallAndStart, "/install");
+	                break;
+	            case "uninstall":
+	                AdminRequired(EnsureStoppedAndUninstall, "/uninstall");
+	                break;
+	            case "start":
+	                AdminRequired(StartService, "/start");
+	                break;
+	            case "restart":
+	                AdminRequired(RestartService, "/restart");
+	                break;
+	            case "stop":
+	                AdminRequired(StopService, "/stop");
+	                break;
+	            case "restore":
+	                if(args.Length != 3)
+	                {
+	                    PrintUsage();
+	                    break;
+	                }
+	                RunRestoreOperation(args[0], args[1]);
+	                break;
+	            case "debug":
+	                RunInDebugMode(createDefaultDatabase: true, anonymousUserAccessMode: null);
+	                break;
+#if DEBUG
+	            case "test":
+	                var dataDirectory = new RavenConfiguration().DataDirectory;
+	                if (Directory.Exists(dataDirectory))
+	                    Directory.Delete(dataDirectory, true);
+
+	                RunInDebugMode(createDefaultDatabase: false, anonymousUserAccessMode: AnonymousUserAccessMode.All);
+	                break;
+#endif
+	            default:
+	                PrintUsage();
+	                break;
+	        }
+	    }
+
+	    private static void RunRestoreOperation(string backupLocation, string databaseLocation)
 		{
 			try
 			{
