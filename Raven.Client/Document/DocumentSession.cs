@@ -151,9 +151,19 @@ namespace Raven.Client.Document
                 throw new ArgumentNullException("entity");
             var identityProperty = GetIdentityProperty(entity.GetType());
             var id = identityProperty.GetValue(entity, null) as string;
-			if (id != null &&
-				id.EndsWith("/") == false && // not a prefix id
-				entitiesByKey.ContainsKey(id))
+
+            if (id == null)
+            {
+                // Generate the key up front
+                id = Conventions.GenerateDocumentKey(entity);
+
+                if (id != null)
+                {
+                    // And store it so the client has access to to it
+                    identityProperty.SetValue(entity, id, null);
+                }                
+            }            
+			else if (entitiesByKey.ContainsKey(id))
 			{
 				if (ReferenceEquals(entitiesByKey[id], entity))
 					return;// calling Store twice on the same reference is a no-op
@@ -190,11 +200,9 @@ namespace Raven.Client.Document
 			var identityProperty = GetIdentityProperty(entityType);
 
             var key = (string)identityProperty.GetValue(entity, null);
-            if (key == null || key.StartsWith(TemporaryIdPrefix))
+            if (key != null && key.StartsWith(TemporaryIdPrefix))
             {
-				if (key != null)
-					entitiesByKey.Remove(key);
-            	key = documentStore.Conventions.GenerateDocumentKey(entity);
+				entitiesByKey.Remove(key);            	
             }
 		    var etag = UseOptimisticConcurrency ? documentMetadata.ETag : null;
 
@@ -277,12 +285,13 @@ namespace Raven.Client.Document
 				DocumentMetadata documentMetadata;
 				if (entitiesAndMetadata.TryGetValue(entity, out documentMetadata) == false)
 					continue;
-
+                                
 				entitiesByKey[batchResult.Key] = entity;
 				documentMetadata.ETag = batchResult.Etag;
 				documentMetadata.Key = batchResult.Key;
 				documentMetadata.OriginalValue = ConvertEntityToJson(entity, documentMetadata.Metadata);
 
+                // Set/Update the id of the entity
 				GetIdentityProperty(entity.GetType())
 					.SetValue(entity, batchResult.Key, null);
 

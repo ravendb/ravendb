@@ -341,7 +341,7 @@ namespace Raven.Client.Tests.Document
                 documentStore.DatabaseCommands.PutIndex("company_by_name",
                                                         new IndexDefinition
                                                         {
-                                                            Map = "from doc in docs select new { doc.Name, doc.Phone}",
+                                                            Map = "from doc in docs where doc.Name != null select new { doc.Name, doc.Phone}",
 															Stores = {{"Name", FieldStorage.Yes}, {"Phone",FieldStorage.Yes}}
                                                         });
 
@@ -368,7 +368,7 @@ namespace Raven.Client.Tests.Document
             	documentStore.DatabaseCommands.PutIndex("company_by_name",
             	                                        new IndexDefinition
             	                                        {
-            	                                        	Map = "from doc in docs select new { doc.Name, doc.Phone}",
+                                                            Map = "from doc in docs where doc.Name != null select new { doc.Name, doc.Phone}",
             	                                        	Indexes = {{"Phone", FieldIndexing.Analyzed}}
             	                                        });
 

@@ -68,6 +68,9 @@
     <Compile Include="..\Raven.Client\Document\DocumentStore.cs">
       <Link>Document\DocumentStore.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client\Document\HiLoKeyGenerator.cs">
+      <Link>Document\HiLoKeyGenerator.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client\Document\IndexDefinition.cs">
       <Link>Document\IndexDefinition.cs</Link>
     </Compile>

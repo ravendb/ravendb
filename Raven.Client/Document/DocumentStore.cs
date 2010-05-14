@@ -14,10 +14,16 @@ namespace Raven.Client.Document
 		public DocumentStore()
 		{
 			Conventions = new DocumentConvention();
+
+            // Create a hi lo key generator and set that up as the default key generator
+            // Really not sure where to put this, as there is no precedent to follow
+            keyGenerator = new HiLoKeyGenerator(10, this);
+            keyGenerator.SetupConventions(Conventions);
 		}
 
 		private string identifier;
         private ICredentials credentials = CredentialCache.DefaultNetworkCredentials;
+        private HiLoKeyGenerator keyGenerator;
 
 	    public ICredentials Credentials
 	    {
