@@ -11,10 +11,14 @@ namespace Raven.Client.Document
 		{
 			FindIdentityProperty = q => q.Name == "Id";
 			FindTypeTagName = t => DefaultTypeTagName(t);
-			DocumentKeyGenerator = entity => DefaultGenerateDocumentKey(this, entity);
+
+
+            var keyGenerator = new HiLoKeyGenerator(1024);
+
+		    DocumentKeyGenerator = entity => keyGenerator.GenerateDocumentKey(this, entity);
 		}
 
-		public static string DefaultGenerateDocumentKey(DocumentConvention conventions, object entity)
+		public static string GenerateDocumentKeyUsingIdentity(DocumentConvention conventions, object entity)
 		{
 			return conventions.FindTypeTagName(entity.GetType()).ToLowerInvariant() + "/";
 		}

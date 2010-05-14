@@ -6,23 +6,16 @@ namespace Raven.Client.Document
     public class HiLoKeyGenerator
     {
         private readonly long capacity;
-        private readonly IDocumentStore documentStore;
         private readonly object generatorLock;
         private long currentHi;
         private long currentLo;
 
-        public HiLoKeyGenerator(long capacity, IDocumentStore documentStore)
+        public HiLoKeyGenerator(long capacity)
         {
             generatorLock = new object();
-            this.documentStore = documentStore;
             currentHi = 0;
             this.capacity = capacity;
             currentLo = capacity + 1;
-        }
-
-        public void SetupConventions(DocumentConvention conventions)
-        {
-            conventions.DocumentKeyGenerator = (Object entity) => GenerateDocumentKey(conventions, entity);
         }
 
         public string GenerateDocumentKey(DocumentConvention conventions, object entity)
