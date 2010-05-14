@@ -41,8 +41,8 @@ namespace Raven.Client.Document
                     if (Thread.VolatileRead(ref currentLo) >= capacity)
                     {
                         currentHi = GetNextHi();
-                        currentLo = 0;
-                        incrementedCurrentLow = 0;
+                        currentLo = 1;
+                        incrementedCurrentLow = 1;
                     }
                 }
             }
