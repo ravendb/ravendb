@@ -110,12 +110,14 @@ namespace Raven.Server
 		{
 			try
 			{
-				Process.Start(new ProcessStartInfo
-				{
-					Arguments = cmdLine,
-					FileName = Assembly.GetExecutingAssembly().Location,
-					Verb = "runas",
-				}).WaitForExit();
+			    var process = Process.Start(new ProcessStartInfo
+			    {
+			        Arguments = cmdLine,
+			        FileName = Assembly.GetExecutingAssembly().Location,
+			        Verb = "runas",
+			    });
+                if (process != null)
+                    process.WaitForExit();
 				return true;
 			}
 			catch (Exception)
@@ -152,6 +154,13 @@ namespace Raven.Server
 				ravenConfiguration.AnonymousUserAccessMode = anonymousUserAccessMode.Value;
 			using (new RavenDbServer(ravenConfiguration))
 			{
+			    var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "default.raven");
+			    if(File.Exists(path))
+			    {
+			        Console.WriteLine("Loading data from: {0}", path);
+			        Smuggler.Smuggler.ImportData(ravenConfiguration.ServerUrl, path);
+			    }
+
 				Console.WriteLine("Raven is ready to process requests.");
 				Console.WriteLine("Data directory: {0}, Port: {1}", ravenConfiguration.DataDirectory, ravenConfiguration.Port);
 				Console.WriteLine("Press the enter key to stop the server or enter 'cls' and then enter to clear the log");
