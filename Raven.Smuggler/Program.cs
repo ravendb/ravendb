@@ -2,9 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using System.Net;
-using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -104,7 +102,7 @@ Usage:
                         {
                             item.WriteTo(jsonWriter);
                         }
-                        lastEtag = Guid.Parse(array.Last.Value<JObject>("@metadata").Value<string>("@etag"));
+                        lastEtag = new Guid(array.Last.Value<JObject>("@metadata").Value<string>("@etag"));
                     }
                 }
                 jsonWriter.WriteEndArray();
