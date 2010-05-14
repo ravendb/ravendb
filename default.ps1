@@ -176,10 +176,6 @@ task Init -depends Verify40, Clean {
 	copy $tools_dir\xUnit\*.* $build_dir
 }
 
-task Updatedocs {
-	.\Utilities\Binaries\Raven.DefaultDatabase.Creator .\Raven.Database\Defaults\default.json	
-}
-
 task Compile -depends Init {
 	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
     exec "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" """$base_dir\RavenDB.sln"" /p:OutDir=""$buildartifacts_dir\"""
@@ -237,6 +233,8 @@ task DoRelease -depends Compile {
 	cp $build_dir\log4net.dll $build_dir\Output\EmbeddedClient
 	cp $build_dir\Newtonsoft.Json.dll $build_dir\Output\EmbeddedClient
 	
+	cp $build_dir\Raven.Smuggler.exe $build_dir\Output
+	
 	cp $build_dir\Newtonsoft.Json.dll $build_dir\Output\Client
 	cp $build_dir\Raven.Client.Lightweight.dll $build_dir\Output\Client
 	
@@ -269,9 +267,7 @@ task DoRelease -depends Compile {
 		Bundles\*.* `
 		Web\bin\*.* `
 		Server\*.* `
-		license.txt `
-		acknowledgements.txt `
-		readme.txt
+		*.*
 		
 	if ($lastExitCode -ne 0) {
         throw "Error: Failed to execute ZIP command"
