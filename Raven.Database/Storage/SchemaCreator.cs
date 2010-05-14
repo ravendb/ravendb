@@ -300,7 +300,7 @@ namespace Raven.Database.Storage
 			{
 				coltyp = JET_coltyp.LongText,
 				cp = JET_CP.Unicode,
-				grbit = ColumndefGrbit.ColumnNotNULL
+				grbit = ColumndefGrbit.None
 			}, null, 0, out columnid);
 
             Api.JetAddColumn(session, tableid, "reduce_key_and_view_hashed", new JET_COLUMNDEF
