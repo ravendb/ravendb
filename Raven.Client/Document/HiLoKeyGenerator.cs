@@ -1,32 +1,31 @@
 ﻿using System;
 using System.Threading;
+using Newtonsoft.Json.Linq;
+using Raven.Client.Client;
+using Raven.Database.Exceptions;
+using Raven.Database.Json;
 
 namespace Raven.Client.Document
 {
     public class HiLoKeyGenerator
     {
+        private const string RavenKeyGeneratorsHilo = "Raven/KeyGenerators/Hilo";
+        private readonly IDatabaseCommands commands;
         private readonly long capacity;
-        private readonly object generatorLock;
+        private readonly object generatorLock = new object();
         private long currentHi;
         private long currentLo;
 
-        public HiLoKeyGenerator(long capacity)
+        public HiLoKeyGenerator(IDatabaseCommands commands,long capacity)
         {
-            generatorLock = new object();
             currentHi = 0;
+            this.commands = commands;
             this.capacity = capacity;
             currentLo = capacity + 1;
         }
 
         public string GenerateDocumentKey(DocumentConvention conventions, object entity)
         {
-            // We allow the server to assign hi lo's key!
-            if (entity is HiLoKey)
-            {
-                return "hilo/";
-            }
-
-            // Or we assign one ourselves using HiLo
             return string.Format("{0}/{1}",
                                  conventions.GetTypeTagName(entity.GetType()).ToLowerInvariant(),
                                  NextId());
@@ -52,15 +51,32 @@ namespace Raven.Client.Document
 
         private long GetNextHi()
         {
-            using (IDocumentSession session = documentStore.OpenSession())
+            while (true)
             {
-                // Dump a new object into the db
-                var store = new HiLoKey {Timestamp = DateTime.Now.ToString()};
-                session.Store(store);
-                session.SaveChanges();
-
-                // And use its generated id as our new Hi value
-                return Convert.ToInt64(store.Id.Split('/')[1]);
+                try
+                {
+                    var document = commands.Get(RavenKeyGeneratorsHilo);
+                    if (document == null)
+                    {
+                        commands.Put(RavenKeyGeneratorsHilo,
+                                     Guid.Empty,
+                                     // sending empty guid means - ensure the that the document does NOT exists
+                                     JObject.FromObject(new HiLoKey{ServerHi = 1}),
+                                     new JObject());
+                        return 1;
+                    }
+                    var hiLoKey = document.DataAsJson.JsonDeserialization<HiLoKey>();
+                    var newHi = hiLoKey.ServerHi;
+                    hiLoKey.ServerHi += 1;
+                    commands.Put(RavenKeyGeneratorsHilo, document.Etag,
+                                 JObject.FromObject(hiLoKey),
+                                 document.Metadata);
+                    return newHi;
+                }
+                catch (ConcurrencyException)
+                {
+                   // expected, we need to retry
+                }
             }
         }
 
@@ -68,9 +84,8 @@ namespace Raven.Client.Document
 
         private class HiLoKey
         {
-            public string Id { get; set; }
+            public long ServerHi { get; set; }
 
-            public string Timestamp { get; set; }
         }
 
         #endregion
