@@ -8,7 +8,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Raven.Smuggler
 {
-    class Program
+    public class Smuggler
     {
         static void Main(string[] args)
         {
@@ -111,7 +111,7 @@ Usage:
             }
         }
 
-        private static void ImportData(string instanceUrl, string file)
+        public static void ImportData(string instanceUrl, string file)
         {
             using (var streamReader = new StreamReader(new GZipStream(File.OpenRead(file), CompressionMode.Decompress)))
             {
