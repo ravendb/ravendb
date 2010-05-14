@@ -16,7 +16,6 @@ namespace Raven.Client.Document
 {
 	public class DocumentSession : IDocumentSession
 	{
-	    private const string TemporaryIdPrefix = "Temporary Id: ";
 		private const string RavenEntityName = "Raven-Entity-Name";
 		private readonly IDatabaseCommands database;
 		private readonly DocumentStore documentStore;
@@ -163,7 +162,12 @@ namespace Raven.Client.Document
                     identityProperty.SetValue(entity, id, null);
                 }                
             }            
-			else if (entitiesByKey.ContainsKey(id))
+            // we make the check here even if we just generated the key
+            // users can override the key generation behavior, and we need
+            // to detect if they generate duplicates.
+			if (id != null && 
+                id.EndsWith("/") == false // not a prefix id
+                && entitiesByKey.ContainsKey(id))
 			{
 				if (ReferenceEquals(entitiesByKey[id], entity))
 					return;// calling Store twice on the same reference is a no-op
@@ -200,10 +204,6 @@ namespace Raven.Client.Document
 			var identityProperty = GetIdentityProperty(entityType);
 
             var key = (string)identityProperty.GetValue(entity, null);
-            if (key != null && key.StartsWith(TemporaryIdPrefix))
-            {
-				entitiesByKey.Remove(key);            	
-            }
 		    var etag = UseOptimisticConcurrency ? documentMetadata.ETag : null;
 
 			return new PutCommandData
