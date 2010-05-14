@@ -44,8 +44,9 @@ namespace Raven.Client.Tests.Document
             using (var store = NewDocumentStore())
             {
                 // Ensure we're using the hi lo generator
-                HiLoKeyGenerator generator = new HiLoKeyGenerator(10, store);
-                generator.SetupConventions(store.Conventions);
+                var generator = new HiLoKeyGenerator(store.DatabaseCommands, 10);
+                store.Conventions.DocumentKeyGenerator =
+                    entity => generator.GenerateDocumentKey(store.Conventions, entity);
 
                 using (var session = store.OpenSession())
                 {
@@ -63,8 +64,9 @@ namespace Raven.Client.Tests.Document
             using (var store = NewDocumentStore())
             {
                 // Ensure we're using the hi lo generator
-                HiLoKeyGenerator generator = new HiLoKeyGenerator(10, store);
-                generator.SetupConventions(store.Conventions);
+                var generator = new HiLoKeyGenerator(store.DatabaseCommands, 10);
+                store.Conventions.DocumentKeyGenerator =
+                    entity => generator.GenerateDocumentKey(store.Conventions, entity);
 
                 using (var session = store.OpenSession())
                 {
