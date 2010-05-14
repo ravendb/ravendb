@@ -74,6 +74,9 @@
     <Compile Include="..\Raven.Client\Document\IndexDefinition.cs">
       <Link>Document\IndexDefinition.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client\Document\MultiTypeHiLoKeyGenerator.cs">
+      <Link>Document\MultiTypeHiLoKeyGenerator.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client\Document\RavenClientEnlistment.cs">
       <Link>Document\RavenClientEnlistment.cs</Link>
     </Compile>

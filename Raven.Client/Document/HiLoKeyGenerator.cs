@@ -9,25 +9,27 @@ namespace Raven.Client.Document
 {
     public class HiLoKeyGenerator
     {
-        private const string RavenKeyGeneratorsHilo = "Raven/KeyGenerators/Hilo";
+        private const string RavenKeyGeneratorsHilo = "Raven/Hilo/";
         private readonly IDatabaseCommands commands;
+        private readonly string tag;
         private readonly long capacity;
         private readonly object generatorLock = new object();
         private long currentHi;
         private long currentLo;
 
-        public HiLoKeyGenerator(IDatabaseCommands commands,long capacity)
+        public HiLoKeyGenerator(IDatabaseCommands commands, string tag, long capacity)
         {
             currentHi = 0;
             this.commands = commands;
+            this.tag = tag;
             this.capacity = capacity;
             currentLo = capacity + 1;
         }
 
-        public string GenerateDocumentKey(DocumentConvention conventions, object entity)
+        public string GenerateDocumentKey(object entity)
         {
             return string.Format("{0}/{1}",
-                                 conventions.GetTypeTagName(entity.GetType()).ToLowerInvariant(),
+                                 tag,
                                  NextId());
         }
 
@@ -58,7 +60,7 @@ namespace Raven.Client.Document
                     var document = commands.Get(RavenKeyGeneratorsHilo);
                     if (document == null)
                     {
-                        commands.Put(RavenKeyGeneratorsHilo,
+                        commands.Put(RavenKeyGeneratorsHilo + tag,
                                      Guid.Empty,
                                      // sending empty guid means - ensure the that the document does NOT exists
                                      JObject.FromObject(new HiLoKey{ServerHi = 1}),
@@ -68,7 +70,7 @@ namespace Raven.Client.Document
                     var hiLoKey = document.DataAsJson.JsonDeserialization<HiLoKey>();
                     var newHi = hiLoKey.ServerHi;
                     hiLoKey.ServerHi += 1;
-                    commands.Put(RavenKeyGeneratorsHilo, document.Etag,
+                    commands.Put(RavenKeyGeneratorsHilo + tag, document.Etag,
                                  JObject.FromObject(hiLoKey),
                                  document.Metadata);
                     return newHi;
