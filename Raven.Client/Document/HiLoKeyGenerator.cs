@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 
 namespace Raven.Client.Document
 {
@@ -40,16 +41,20 @@ namespace Raven.Client.Document
 
         private long NextId()
         {
-            lock (generatorLock)
+            var incrementedCurrentLow = Interlocked.Increment(ref currentLo);
+            if(incrementedCurrentLow >= capacity)
             {
-                if (currentLo >= capacity)
+                lock (generatorLock)
                 {
-                    currentHi = GetNextHi();
-                    currentLo = 0;
+                    if (Thread.VolatileRead(ref currentLo) >= capacity)
+                    {
+                        currentHi = GetNextHi();
+                        currentLo = 0;
+                        incrementedCurrentLow = 0;
+                    }
                 }
-
-                return (currentHi - 1) * capacity + (++currentLo);
             }
+            return (currentHi - 1) * capacity + (incrementedCurrentLow);
         }
 
         private long GetNextHi()
@@ -57,8 +62,7 @@ namespace Raven.Client.Document
             using (var session = documentStore.OpenSession())
             {
                 // Dump a new object into the db
-                HiLoKey store = new HiLoKey(){};
-                store.Timestamp = DateTime.Now.ToString();
+                var store = new HiLoKey {Timestamp = DateTime.Now.ToString()};
                 session.Store(store);
                 session.SaveChanges();
 
