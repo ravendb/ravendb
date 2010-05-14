@@ -63,8 +63,6 @@ namespace Raven.Database
 				PluginsDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, PluginsDirectory.Substring(2));
 
 			AnonymousUserAccessMode = GetAnonymousUserAccessMode();
-
-			ShouldCreateDefaultsWhenBuildingNewDatabaseFromScratch = true;
 		}
 
 	    public string ServerUrl
@@ -129,20 +127,6 @@ namespace Raven.Database
 		public int IndexingBatchSize { get; set; }
 		public AnonymousUserAccessMode AnonymousUserAccessMode { get; set; }
 
-		private bool shouldCreateDefaultsWhenBuildingNewDatabaseFromScratch;
-		public bool ShouldCreateDefaultsWhenBuildingNewDatabaseFromScratch
-		{
-			get { return shouldCreateDefaultsWhenBuildingNewDatabaseFromScratch; }
-			set
-			{
-				shouldCreateDefaultsWhenBuildingNewDatabaseFromScratch = value;
-				if(shouldCreateDefaultsWhenBuildingNewDatabaseFromScratch)
-					DatabaseCreatedFromScratch += OnDatabaseCreatedFromScratch;
-				else
-					DatabaseCreatedFromScratch -= OnDatabaseCreatedFromScratch;
-			}
-		}
-
 		public string VirtualDirectory { get; set; }
 
 		private bool containerExternallySet;
@@ -165,38 +149,6 @@ namespace Raven.Database
 		{
 			XmlConfigurator.ConfigureAndWatch(
 				new FileInfo(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "log4net.config")));
-		}
-
-		public void RaiseDatabaseCreatedFromScratch(DocumentDatabase documentDatabase)
-		{
-			var onDatabaseCreatedFromScratch = DatabaseCreatedFromScratch;
-			if (onDatabaseCreatedFromScratch != null)
-				onDatabaseCreatedFromScratch(documentDatabase);
-		}
-
-		public event Action<DocumentDatabase> DatabaseCreatedFromScratch;
-
-		private void OnDatabaseCreatedFromScratch(DocumentDatabase documentDatabase)
-		{
-			JArray array;
-			const string name = "Raven.Database.Defaults.default.json";
-			using (var defaultDocuments = GetType().Assembly.GetManifestResourceStream(name))
-			{
-				array = JArray.Load(new JsonTextReader(new StreamReader(defaultDocuments)));
-			}
-
-			documentDatabase.TransactionalStorage.Batch(actions =>
-			{
-				foreach (JObject document in array)
-				{
-					actions.AddDocument(
-						document["DocId"].Value<string>(),
-						null,
-						document["Document"].Value<JObject>(),
-						document["Metadata"].Value<JObject>());
-				}
-
-			});
 		}
 
 		public string GetFullUrl(string baseUrl)

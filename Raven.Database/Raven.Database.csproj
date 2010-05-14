@@ -323,9 +323,6 @@
     <Content Include="Server\WebUI\view.html" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Defaults\default.json" />
-  </ItemGroup>
-  <ItemGroup>
     <WCFMetadata Include="Service References\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

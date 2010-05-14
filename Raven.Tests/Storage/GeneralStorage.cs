@@ -15,7 +15,6 @@ namespace Raven.Tests.Storage
 			db = new DocumentDatabase(new RavenConfiguration
 			{
 				DataDirectory = "raven.db.test.esent",
-				ShouldCreateDefaultsWhenBuildingNewDatabaseFromScratch = false
 			});
 		}
 

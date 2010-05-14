@@ -66,7 +66,7 @@ namespace Raven.Server
 	                RunRestoreOperation(args[0], args[1]);
 	                break;
 	            case "debug":
-	                RunInDebugMode(createDefaultDatabase: true, anonymousUserAccessMode: null);
+	                RunInDebugMode(anonymousUserAccessMode: null);
 	                break;
 #if DEBUG
 	            case "test":
@@ -74,7 +74,7 @@ namespace Raven.Server
 	                if (Directory.Exists(dataDirectory))
 	                    Directory.Delete(dataDirectory, true);
 
-	                RunInDebugMode(createDefaultDatabase: false, anonymousUserAccessMode: AnonymousUserAccessMode.All);
+	                RunInDebugMode(anonymousUserAccessMode: AnonymousUserAccessMode.All);
 	                break;
 #endif
 	            default:
@@ -133,7 +133,7 @@ namespace Raven.Server
 			return args[0].Substring(1);
 		}
 
-		private static void RunInDebugMode(bool createDefaultDatabase, AnonymousUserAccessMode? anonymousUserAccessMode)
+		private static void RunInDebugMode(AnonymousUserAccessMode? anonymousUserAccessMode)
 		{
 			var consoleAppender = new ConsoleAppender
 			{
@@ -146,10 +146,7 @@ namespace Raven.Server
 			});
 			consoleAppender.AddFilter(new DenyAllFilter());
 			BasicConfigurator.Configure(consoleAppender);
-            var ravenConfiguration = new RavenConfiguration
-            {
-                ShouldCreateDefaultsWhenBuildingNewDatabaseFromScratch = createDefaultDatabase,
-            };
+            var ravenConfiguration = new RavenConfiguration();
             RavenDbServer.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Port);
 			if (anonymousUserAccessMode.HasValue)
 				ravenConfiguration.AnonymousUserAccessMode = anonymousUserAccessMode.Value;

@@ -61,7 +61,6 @@ namespace Raven.Scenarios
 					DataDirectory = tempFileName,
 					Port = testPort,
 					AnonymousUserAccessMode = AnonymousUserAccessMode.All,
-					ShouldCreateDefaultsWhenBuildingNewDatabaseFromScratch = false,
 					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true
 				}))
 				{

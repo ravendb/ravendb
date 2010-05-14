@@ -38,7 +38,6 @@ select new {
 			db = new DocumentDatabase(new RavenConfiguration
 			{
 				DataDirectory = "raven.db.test.esent",
-				ShouldCreateDefaultsWhenBuildingNewDatabaseFromScratch = false,
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true
 			});
 			db.PutIndex("CommentsCountPerBlog", new IndexDefinition{Map = map, Reduce = reduce, Indexes = {{"blog_id", FieldIndexing.NotAnalyzed}}});

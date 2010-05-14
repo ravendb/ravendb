@@ -19,7 +19,6 @@ namespace Raven.Tests.Triggers
 		{
 			db = new DocumentDatabase(new RavenConfiguration
 			{
-				ShouldCreateDefaultsWhenBuildingNewDatabaseFromScratch = false,
 				DataDirectory = "raven.db.test.esent",
 				Container = new CompositionContainer(new TypeCatalog(
 					typeof(VetoReadsOnCapitalNamesTrigger),
