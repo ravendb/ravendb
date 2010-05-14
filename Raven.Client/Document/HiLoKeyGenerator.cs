@@ -1,26 +1,23 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 
 namespace Raven.Client.Document
 {
     public class HiLoKeyGenerator
     {
-        private object generatorLock;
-        private IDocumentStore documentStore;
-        private long capacity;
-        private long currentLo;
+        private readonly long capacity;
+        private readonly IDocumentStore documentStore;
+        private readonly object generatorLock;
         private long currentHi;
+        private long currentLo;
 
         public HiLoKeyGenerator(long capacity, IDocumentStore documentStore)
         {
-            this.generatorLock = new object();
+            generatorLock = new object();
             this.documentStore = documentStore;
-            this.currentHi = 0;
+            currentHi = 0;
             this.capacity = capacity;
-            this.currentLo = capacity + 1;
+            currentLo = capacity + 1;
         }
 
         public void SetupConventions(DocumentConvention conventions)
@@ -28,21 +25,24 @@ namespace Raven.Client.Document
             conventions.DocumentKeyGenerator = (Object entity) => GenerateDocumentKey(conventions, entity);
         }
 
-        public string GenerateDocumentKey(DocumentConvention conventions,  object entity)
+        public string GenerateDocumentKey(DocumentConvention conventions, object entity)
         {
             // We allow the server to assign hi lo's key!
-            if (entity is HiLoKey) { return "hilo/"; }
+            if (entity is HiLoKey)
+            {
+                return "hilo/";
+            }
 
             // Or we assign one ourselves using HiLo
             return string.Format("{0}/{1}",
-                    conventions.GetTypeTagName(entity.GetType()).ToLowerInvariant(),
-                    NextId());
+                                 conventions.GetTypeTagName(entity.GetType()).ToLowerInvariant(),
+                                 NextId());
         }
 
         private long NextId()
         {
-            var incrementedCurrentLow = Interlocked.Increment(ref currentLo);
-            if(incrementedCurrentLow >= capacity)
+            long incrementedCurrentLow = Interlocked.Increment(ref currentLo);
+            if (incrementedCurrentLow >= capacity)
             {
                 lock (generatorLock)
                 {
@@ -54,12 +54,12 @@ namespace Raven.Client.Document
                     }
                 }
             }
-            return (currentHi - 1) * capacity + (incrementedCurrentLow);
+            return (currentHi - 1)*capacity + (incrementedCurrentLow);
         }
 
         private long GetNextHi()
         {
-            using (var session = documentStore.OpenSession())
+            using (IDocumentSession session = documentStore.OpenSession())
             {
                 // Dump a new object into the db
                 var store = new HiLoKey {Timestamp = DateTime.Now.ToString()};
@@ -71,19 +71,15 @@ namespace Raven.Client.Document
             }
         }
 
+        #region Nested type: HiLoKey
 
         private class HiLoKey
         {
-            public string Id
-            {
-                get;
-                set;
-            }
+            public string Id { get; set; }
 
-            public string Timestamp
-            {
-                get;set;
-            }
+            public string Timestamp { get; set; }
         }
+
+        #endregion
     }
 }
