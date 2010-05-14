@@ -215,7 +215,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 
 			foreach (var readTrigger in ReadTriggers)
 			{
-				readTrigger.OnRead(resultingDocument.DataAsJson, resultingDocument.Metadata, ReadOperation.Load, transactionInformation);
+				readTrigger.OnRead(resultingDocument.Key, resultingDocument.DataAsJson, resultingDocument.Metadata, ReadOperation.Load, transactionInformation);
 			}
 			return resultingDocument;
 		}
@@ -226,7 +226,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				return document;
 			foreach (var readTrigger in ReadTriggers)
 			{
-				var readVetoResult = readTrigger.AllowRead(document.DataAsJson, document.Metadata, ReadOperation.Load, transactionInformation);
+				var readVetoResult = readTrigger.AllowRead(document.Key, document.DataAsJson, document.Metadata, ReadOperation.Load, transactionInformation);
 				switch (readVetoResult.Veto)
 				{
 					case ReadVetoResult.ReadAllow.Allow:

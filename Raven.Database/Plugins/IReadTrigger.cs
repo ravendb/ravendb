@@ -16,6 +16,7 @@ namespace Raven.Database.Plugins
 	    /// <remarks>
 	    /// The document and metadata instances SHOULD NOT be modified.
 	    /// </remarks>
+	    /// <param name="key">The key of the read document - can be null if reading a projection</param>
 	    /// <param name="document">The document being read</param>
 	    /// <param name="metadata">The document metadata</param>
 	    /// <param name="operation">Whatever the operation is a load or a query</param>
@@ -29,7 +30,7 @@ namespace Raven.Database.Plugins
 	    ///   asking for a particular document, or skip including the result entirely 
 	    ///   in the query results.
 	    /// </returns>
-	    ReadVetoResult AllowRead(JObject document, JObject metadata, ReadOperation operation, TransactionInformation transactionInformation);
+	    ReadVetoResult AllowRead(string key, JObject document, JObject metadata, ReadOperation operation, TransactionInformation transactionInformation);
 
 	    /// <summary>
 	    /// Allow the trigger the option of modifying the document and metadata instances
@@ -38,10 +39,11 @@ namespace Raven.Database.Plugins
 	    /// <remarks>
 	    /// The modified values are transient, and are NOT saved to the database.
 	    /// </remarks>
-	    /// <param name="document">The document being read</param>
+        /// <param name="key">The key of the read document - can be null if reading a projection</param>
+        /// <param name="document">The document being read</param>
 	    /// <param name="metadata">The document metadata</param>
 	    /// <param name="operation">Whatever the operation is a load or a query</param>
 	    /// <param name="transactionInformation">The transaction information, if any</param>
-	    void OnRead(JObject document, JObject metadata, ReadOperation operation, TransactionInformation transactionInformation);
+	    void OnRead(string key, JObject document, JObject metadata, ReadOperation operation, TransactionInformation transactionInformation);
 	}
 }
