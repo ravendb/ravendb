@@ -15,20 +15,20 @@ namespace Raven.Database.Storage.SchemaUpdates
         {
             using (var tx = new Transaction(session))
             {
-                using (var documents = new Table(session, dbid, "details", OpenTableGrbit.PermitDDL))
+                using (var documents = new Table(session, dbid, "documents", OpenTableGrbit.None))
                 {
                     const string indexDef = "+etag\0\0";
                     Api.JetCreateIndex(session, documents, "by_etag", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
                                        100);
 
-                    using (var details = new Table(session, dbid, "details", OpenTableGrbit.ReadOnly))
+                    using (var details = new Table(session, dbid, "details", OpenTableGrbit.None))
                     {
                         Api.JetMove(session, details, JET_Move.First, MoveGrbit.None);
                         var columnids = Api.GetColumnDictionary(session, details);
 
                         using (var update = new Update(session, details, JET_prep.Replace))
                         {
-                            Api.SetColumn(session, details, columnids["schema_version"], "2.2", Encoding.Unicode);
+                            Api.SetColumn(session, details, columnids["schema_version"], "2.4", Encoding.Unicode);
 
                             update.Save();
                         }

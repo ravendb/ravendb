@@ -16,7 +16,7 @@ namespace Raven.Database.Storage.SchemaUpdates
         {
             using(var tx = new Transaction(session))
             {
-                using (var mappedResults = new Table(session, dbid, "mapped_results", OpenTableGrbit.PermitDDL))
+                using (var mappedResults = new Table(session, dbid, "mapped_results", OpenTableGrbit.None))
                 {
                     JET_COLUMNID columnid;
                     Api.JetAddColumn(session, mappedResults, "reduce_key_and_view_hashed", new JET_COLUMNDEF
@@ -55,7 +55,7 @@ namespace Raven.Database.Storage.SchemaUpdates
                     }
 
 
-                    using (var details = new Table(session, dbid, "details", OpenTableGrbit.ReadOnly))
+                    using (var details = new Table(session, dbid, "details", OpenTableGrbit.None))
                     {
                         Api.JetMove(session, details, JET_Move.First, MoveGrbit.None);
                         var columnids = Api.GetColumnDictionary(session, details);
