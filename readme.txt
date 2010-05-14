@@ -1,6 +1,6 @@
 Raven DB
 ========
-This release contains the following
+This release contains the following:
 
 /Server - The files required to run Raven in server / service mode.
 		  Execute /Server/RavenDB.exe /install to register and start the Raven service
@@ -19,8 +19,16 @@ This release contains the following
 		- The files required to run the Raven client, in server or embedded mode.
 		  Reference the RavenClient.dll and create a DocumentStore, passing a URL
 		  or a directory.
+
+/Bundles
+    - Bundles that extend Raven in various ways
+    
+/Raven.Smuggler.exe
+    - The Import/Export utility for Raven
 		  
-For more information, start the Raven Service (by executing /server/ravendb.exe) and visit
-http://localhost:8080 to read Raven's documentation.
+You can start the Raven Service by executing /server/ravendb.exe, you can then visit
+http://localhost:8080 for looking at the UI.
 
 For any questions, please visit: http://groups.google.com/group/ravendb/
+
+Raven's homepage: http://ravendb.net
