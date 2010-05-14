@@ -214,17 +214,26 @@ namespace Raven.Database.Server.Responders
 			var etagAsString = context.Request.Headers["If-Match"];
 			if (etagAsString != null)
 			{
-				try
-				{
-					return new Guid(etagAsString);
-				}
-				catch
-				{
-					throw new BadRequestException("Could not parse If-Match header as Guid");
-				}
+			    Guid result;
+			    if (Guid.TryParse(etagAsString, out result))
+			        return result;
+			    throw new BadRequestException("Could not parse If-Match header as Guid");
 			}
-			return null;
+		    return null;
 		}
+
+        public static Guid? GetEtagFromQueryString(this IHttpContext context)
+        {
+            var etagAsString = context.Request.QueryString["etag"];
+            if (etagAsString != null)
+            {
+                Guid result;
+                if (Guid.TryParse(etagAsString, out result))
+                    return result;
+                throw new BadRequestException("Could not parse etag query parameter as Guid");
+            }
+            return null;
+        }
 
 		public static bool MatchEtag(this IHttpContext context, Guid etag)
 		{

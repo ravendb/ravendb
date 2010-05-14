@@ -56,7 +56,7 @@ namespace Raven.Tests.Triggers
 		{
 			db.Put("abc", null, JObject.Parse("{'name': 'abC'}"), new JObject(), null);
 
-			var jsonDocument = db.GetDocuments(0,25).First();
+			var jsonDocument = db.GetDocuments(0,25,null).First();
 
 			Assert.Equal("Upper case characters in the 'name' property means the document is a secret!",
 				jsonDocument.Value<string>("Reason"));
@@ -97,7 +97,7 @@ namespace Raven.Tests.Triggers
 			db.Put("abc", null, JObject.Parse("{'name': 'abc', 'hidden': true}"), new JObject(), null);
 
 
-			Assert.Empty(db.GetDocuments(0, 25));
+            Assert.Empty(db.GetDocuments(0, 25, null));
 		}
 
 		[Fact]
@@ -135,7 +135,7 @@ namespace Raven.Tests.Triggers
 			db.Put("abc", null, JObject.Parse("{'name': 'abc'}"), new JObject(), null);
 
 
-			Assert.Equal("ABC", db.GetDocuments(0,10).First().Value<string>("name"));
+            Assert.Equal("ABC", db.GetDocuments(0, 10, null).First().Value<string>("name"));
 		}
 
 		[Fact]

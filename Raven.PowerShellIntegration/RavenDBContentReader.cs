@@ -31,7 +31,7 @@ namespace Raven.PowerShellIntegration
 		{
 			JArray retVal;
 			if (this._typeIsDocument)
-				retVal = this._db.GetDocuments(_currentOffset, Convert.ToInt32(readCount));
+				retVal = this._db.GetDocuments(_currentOffset, Convert.ToInt32(readCount), null);
 			else
 				retVal = this._db.GetIndexes(_currentOffset, Convert.ToInt32(readCount));
 

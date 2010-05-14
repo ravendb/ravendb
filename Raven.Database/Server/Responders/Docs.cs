@@ -21,7 +21,7 @@ namespace Raven.Database.Server.Responders
 			switch (context.Request.HttpMethod)
 			{
 				case "GET":
-					context.WriteJson(Database.GetDocuments(context.GetStart(), context.GetPageSize()));
+					context.WriteJson(Database.GetDocuments(context.GetStart(), context.GetPageSize(), context.GetEtagFromQueryString()));
 					break;
 				case "POST":
 					var json = context.ReadJson();

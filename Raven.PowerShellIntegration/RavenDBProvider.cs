@@ -352,7 +352,7 @@ namespace Raven.PowerShellIntegration
 			if (PathIsDrive(path))
 			{
 				WriteItemObject("documents\\", "documents", true);
-				foreach (JObject doc in db.Database.GetDocuments(0, int.MaxValue))
+				foreach (JObject doc in db.Database.GetDocuments(0, int.MaxValue, null))
 				{
 					WriteItemObject('\t' + doc["@metadata"]["@id"].Value<string>(), path, false);
 				}
@@ -371,7 +371,7 @@ namespace Raven.PowerShellIntegration
 
 				if (type == PathType.Documents)
 				{
-					foreach (JObject doc in db.Database.GetDocuments(0, int.MaxValue))
+					foreach (JObject doc in db.Database.GetDocuments(0, int.MaxValue, null))
 					{
 						WriteItemObject(doc["@metadata"]["@id"].Value<string>(), path, false);
 					}
@@ -406,7 +406,7 @@ namespace Raven.PowerShellIntegration
 			// If path represented is a drive then the children will be all indexes and tables
 			if (PathIsDrive(path))
 			{
-				foreach (JObject doc in db.Database.GetDocuments(0, int.MaxValue))
+				foreach (JObject doc in db.Database.GetDocuments(0, int.MaxValue,null))
 				{
 					WriteItemObject(doc["@metadata"]["@id"].Value<string>(), path, false);
 				}
@@ -424,7 +424,7 @@ namespace Raven.PowerShellIntegration
 
 				if (type == PathType.Documents)
 				{
-					foreach (JObject doc in db.Database.GetDocuments(0, int.MaxValue))
+					foreach (JObject doc in db.Database.GetDocuments(0, int.MaxValue,null))
 					{
 						WriteItemObject(doc["@metadata"]["@id"].Value<string>(), path, false);
 					}
@@ -651,7 +651,7 @@ namespace Raven.PowerShellIntegration
 			// If path represented is a drive then the children will be all indexes and tables
 			if (PathIsDrive(path))
 			{
-				foreach (JObject doc in db.Database.GetDocuments(0, int.MaxValue))
+				foreach (JObject doc in db.Database.GetDocuments(0, int.MaxValue,null))
 				{
                     db.Database.Delete(doc["@metadata"]["@id"].Value<string>(), doc["@metadata"]["@etag"].Value<Guid?>(),
                                            null);
@@ -670,7 +670,7 @@ namespace Raven.PowerShellIntegration
 
 				if (type == PathType.Documents)
 				{
-					foreach (JObject doc in db.Database.GetDocuments(0, int.MaxValue))
+                    foreach (JObject doc in db.Database.GetDocuments(0, int.MaxValue, null))
 					{
 						db.Database.Delete(doc["@metadata"]["@id"].Value<string>(),
 						                   doc["@metadata"]["@etag"].Value<Guid?>(),

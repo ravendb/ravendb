@@ -522,13 +522,17 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 			TransactionalStorage.Batch(actions => actions.DeleteAttachment(name, etag));
 		}
 
-		public JArray GetDocuments(int start, int pageSize)
+		public JArray GetDocuments(int start, int pageSize, Guid? etag)
 		{
 			var list = new JArray();
 			TransactionalStorage.Batch(actions =>
 			{
-				foreach (var doc in  actions
-                    .GetDocumentsByReverseCreationOrder(new Reference<bool>(), start)
+			    IEnumerable<JsonDocument> documents;
+                if (etag == null)
+                    documents = actions.GetDocumentsByReverseUpdateOrder(start);
+                else
+                    documents = actions.GetDocumentsAfter(etag.Value);
+			    foreach (var doc in  documents
                     .Take(pageSize))
 				{
 					var document = ExecuteReadTriggersOnRead(ProcessReadVetoes(doc, null), null);
