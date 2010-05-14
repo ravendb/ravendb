@@ -59,6 +59,29 @@ namespace Raven.Client.Tests.Document
         }
 
         [Fact]
+        public void DifferentTypesWillHaveDifferentIdGenerators()
+        {
+            using (var store = NewDocumentStore())
+            {
+                // Ensure we're using the hi lo generator
+                var generator = new HiLoKeyGenerator(store.DatabaseCommands, 10);
+                store.Conventions.DocumentKeyGenerator =
+                    entity => generator.GenerateDocumentKey(store.Conventions, entity);
+
+                using (var session = store.OpenSession())
+                {
+                    var company = new Company();
+                    session.Store(company);
+                    var contact = new Contact();
+                    session.Store(contact);
+
+                    Assert.Equal("companies/1", company.Id);
+                    Assert.Equal("contacts/1", contact.Id);
+                }
+            }
+        }
+
+        [Fact]
         public void IdIsKeptFromGeneratorOnSaveChanges()
         {
             using (var store = NewDocumentStore())
