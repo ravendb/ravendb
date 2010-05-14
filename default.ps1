@@ -38,6 +38,16 @@ task Init -depends Verify40, Clean {
 		-clsCompliant "false"
 		
 	Generate-Assembly-Info `
+		-file "$base_dir\Raven.Smuggler\Properties\AssemblyInfo.cs" `
+		-title "Raven Database $version" `
+		-description "A linq enabled document database for .NET" `
+		-company "Hibernating Rhinos" `
+		-product "Raven Database $version" `
+		-version $version `
+		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2010" `
+		-clsCompliant "false"
+		
+	Generate-Assembly-Info `
 		-file "$base_dir\Samples\Raven.Sample.SimpleClient\Properties\AssemblyInfo.cs" `
 		-title "Raven Database $version" `
 		-description "A linq enabled document database for .NET" `
