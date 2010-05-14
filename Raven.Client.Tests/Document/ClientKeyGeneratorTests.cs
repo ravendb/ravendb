@@ -72,6 +72,57 @@ namespace Raven.Client.Tests.Document
         }
 
         [Fact]
+        public void WhenDocumentAlreadyExists_Can_Still_Generate_Values()
+        {
+            using (var store = NewDocumentStore())
+            {
+                var mk = new MultiTypeHiLoKeyGenerator(store.DatabaseCommands, 5);
+                store.Conventions.DocumentKeyGenerator = o => mk.GenerateDocumentKey(store.Conventions, o);
+
+                
+                using (var session = store.OpenSession())
+                {
+                    var company = new Company();
+                    session.Store(company);
+                    var contact = new Contact();
+                    session.Store(contact);
+
+                    Assert.Equal("companies/1", company.Id);
+                    Assert.Equal("contacts/1", contact.Id);
+                }
+
+                mk = new MultiTypeHiLoKeyGenerator(store.DatabaseCommands, 5);
+                store.Conventions.DocumentKeyGenerator = o => mk.GenerateDocumentKey(store.Conventions, o);
+
+                using (var session = store.OpenSession())
+                {
+                    var company = new Company();
+                    session.Store(company);
+                    var contact = new Contact();
+                    session.Store(contact);
+
+                    Assert.Equal("companies/6", company.Id);
+                    Assert.Equal("contacts/6", contact.Id);
+                }
+            }
+        }
+
+        [Fact]
+        public void DoesNotLoseValuesWhenHighIsOver()
+        {
+            using (var store = NewDocumentStore())
+            {
+                var mk = new MultiTypeHiLoKeyGenerator(store.DatabaseCommands, 5);
+                for (int i = 0; i < 15; i++)
+                {
+                    Assert.Equal("companies/"+(i+1),
+                        mk.GenerateDocumentKey(store.Conventions, new Company()));
+                }
+            }
+        }
+
+
+        [Fact]
         public void IdIsKeptFromGeneratorOnSaveChanges()
         {
             using (var store = NewDocumentStore())

@@ -36,11 +36,11 @@ namespace Raven.Client.Document
         private long NextId()
         {
             long incrementedCurrentLow = Interlocked.Increment(ref currentLo);
-            if (incrementedCurrentLow >= capacity)
+            if (incrementedCurrentLow > capacity)
             {
                 lock (generatorLock)
                 {
-                    if (Thread.VolatileRead(ref currentLo) >= capacity)
+                    if (Thread.VolatileRead(ref currentLo) > capacity)
                     {
                         currentHi = GetNextHi();
                         currentLo = 1;
@@ -57,13 +57,13 @@ namespace Raven.Client.Document
             {
                 try
                 {
-                    var document = commands.Get(RavenKeyGeneratorsHilo);
+                    var document = commands.Get(RavenKeyGeneratorsHilo + tag);
                     if (document == null)
                     {
                         commands.Put(RavenKeyGeneratorsHilo + tag,
                                      Guid.Empty,
                                      // sending empty guid means - ensure the that the document does NOT exists
-                                     JObject.FromObject(new HiLoKey{ServerHi = 1}),
+                                     JObject.FromObject(new HiLoKey{ServerHi = 2}),
                                      new JObject());
                         return 1;
                     }
