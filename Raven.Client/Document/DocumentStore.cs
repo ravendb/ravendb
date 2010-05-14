@@ -37,13 +37,13 @@ namespace Raven.Client.Document
 			set { identifier = value; }
 		}
 #if !CLIENT
-		private RavenConfiguration configuration;
-		public RavenConfiguration Configuration
+		private Raven.Database.RavenConfiguration configuration;
+        public Raven.Database.RavenConfiguration Configuration
 		{
 			get
 			{
 				if(configuration == null)
-					configuration = new RavenConfiguration();
+                    configuration = new Raven.Database.RavenConfiguration();
 				return configuration;
 			}
 			set { configuration = value; }
@@ -58,7 +58,7 @@ namespace Raven.Client.Document
 			set
 			{
 				if (Configuration == null)
-					Configuration = new RavenConfiguration();
+                    Configuration = new Raven.Database.RavenConfiguration();
 				Configuration.DataDirectory = value;
 			}
 		}
@@ -115,7 +115,7 @@ namespace Raven.Client.Document
 #if !CLIENT
 				if (configuration != null)
 				{
-					var embeddedDatabase = new DocumentDatabase(configuration);
+					var embeddedDatabase = new Raven.Database.DocumentDatabase(configuration);
 					embeddedDatabase.SpinBackgroundWorkers();
 					DatabaseCommands = new EmbededDatabaseCommands(embeddedDatabase, Conventions);
 				}
@@ -124,6 +124,11 @@ namespace Raven.Client.Document
 				{
 					DatabaseCommands = new ServerClient(Url, Conventions, credentials);
 				}
+                if(Conventions.DocumentKeyGenerator == null)// don't overwrite what the user is doing
+                {
+                    var generator = new HiLoKeyGenerator(DatabaseCommands, 1024);
+                    Conventions.DocumentKeyGenerator = entity => generator.GenerateDocumentKey(Conventions, entity);
+                }
 			}
 			catch (Exception)
 			{

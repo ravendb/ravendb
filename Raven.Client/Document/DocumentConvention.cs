@@ -11,11 +11,6 @@ namespace Raven.Client.Document
 		{
 			FindIdentityProperty = q => q.Name == "Id";
 			FindTypeTagName = t => DefaultTypeTagName(t);
-
-
-            var keyGenerator = new HiLoKeyGenerator(1024);
-
-		    DocumentKeyGenerator = entity => keyGenerator.GenerateDocumentKey(this, entity);
 		}
 
 		public static string GenerateDocumentKeyUsingIdentity(DocumentConvention conventions, object entity)
@@ -43,9 +38,9 @@ namespace Raven.Client.Document
 			return type.GetProperties().FirstOrDefault(FindIdentityProperty);
 		}
 
-		public Func<Type, string> FindTypeTagName { private get; set; }
-		public Func<PropertyInfo, bool> FindIdentityProperty { private get; set; }
+		public Func<Type, string> FindTypeTagName { get; set; }
+		public Func<PropertyInfo, bool> FindIdentityProperty { get; set; }
 
-		public Func<object, string> DocumentKeyGenerator { private get; set; }
+		public Func<object, string> DocumentKeyGenerator { get; set; }
 	}
 }
