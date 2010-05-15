@@ -284,22 +284,26 @@ namespace Raven.Client.Tests.Document
         {
             using (var server = GetNewServer(port, path))
             {
-                const string id = "Company/id";
+                string id;
                 var documentStore = new DocumentStore { Url = "http://localhost:" + port };
                 documentStore.Initialise();
 
                 using (var session = documentStore.OpenSession())
                 {
-                    Assert.Null(session.Load<Company>(id));
                     using (var tx = new TransactionScope())
                     {
-                        var company = new Company { Id = id, Name = "Company 1" };
+                        var company = new Company { Name = "Company 1" };
                         session.Store(company);
 
                         session.SaveChanges();
 
+                        id = company.Id;
                     }
-                    Assert.Null(session.Load<Company>(id));
+                }
+                using (var session2 = documentStore.OpenSession())
+                {
+
+                    Assert.Null(session2.Load<Company>(id));
                 }
             }
         }
