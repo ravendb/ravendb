@@ -1,4 +1,4 @@
-﻿<%@ Page Language="C#" MasterPageFile="~/Views/Shared/Site.Master" Inherits="System.Web.Mvc.ViewPage<IEnumerable<MvcMusicStore.Models.Album>>" %>
+﻿<%@ Page Language="C#" MasterPageFile="~/Views/Shared/Site.Master" Inherits="System.Web.Mvc.ViewPage<IEnumerable<MvcMusicStore.Models.RavenAlbum>>" %>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="TitleContent" runat="server">
     ASP.NET MVC Music Store
@@ -14,7 +14,7 @@
         <% foreach (var album in Model)
            { %>
         <li>
-            <a href="<%: Url.Action("Details", "Store", new { id = album.AlbumId }) %>">
+            <a href="<%: Url.Action("Details", "Store", new { id = album.Id }) %>">
             <img alt="<%: album.Title %>" src="<%: album.AlbumArtUrl %>" />
             <span><%: album.Title %></span>
             </a>
