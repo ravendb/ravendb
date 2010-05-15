@@ -37,14 +37,15 @@ namespace MvcMusicStore.Models
 
         public AccountMembershipService(MembershipProvider provider)
         {
-            _provider = provider ?? Membership.Provider;
+            //_provider = provider ?? Membership.Provider;
         }
 
         public int MinPasswordLength
         {
             get
             {
-                return _provider.MinRequiredPasswordLength;
+                //return _provider.MinRequiredPasswordLength;
+                return 4;
             }
         }
 
@@ -63,9 +64,9 @@ namespace MvcMusicStore.Models
             ValidationUtil.ValidateRequiredStringValue(password, "password");
             ValidationUtil.ValidateRequiredStringValue(email, "email");
 
-            MembershipCreateStatus status;
-            _provider.CreateUser(userName, password, email, null, null, true, null, out status);
-            return status;
+            //MembershipCreateStatus status;
+            //_provider.CreateUser(userName, password, email, null, null, true, null, out status);
+            return MembershipCreateStatus.Success;
         }
 
         public bool ChangePassword(string userName, string oldPassword, string newPassword)
@@ -78,8 +79,9 @@ namespace MvcMusicStore.Models
             // than return false in certain failure scenarios.
             try
             {
-                MembershipUser currentUser = _provider.GetUser(userName, true /* userIsOnline */);
-                return currentUser.ChangePassword(oldPassword, newPassword);
+                //MembershipUser currentUser = _provider.GetUser(userName, true /* userIsOnline */);
+                //return currentUser.ChangePassword(oldPassword, newPassword);
+                return true;
             }
             catch (ArgumentException)
             {
