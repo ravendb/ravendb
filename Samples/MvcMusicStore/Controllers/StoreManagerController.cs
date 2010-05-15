@@ -30,7 +30,7 @@ namespace MvcMusicStore.Controllers
         {
             var viewModel = new StoreManagerViewModel
             {
-                Album = new Album(),
+                Album = new Album2(),
                 Genres = storeDB.Genres.ToList(),
                 Artists = storeDB.Artists.ToList()
             };
@@ -42,7 +42,7 @@ namespace MvcMusicStore.Controllers
         // POST: /StoreManager/Create
 
         [HttpPost]
-        public ActionResult Create(Album album)
+        public ActionResult Create(Album2 album)
         {
             try
             {

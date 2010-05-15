@@ -21,17 +21,17 @@ namespace MvcMusicStore.Controllers
             return View(albums);
         }
 
-        private IEnumerable<RavenAlbum> GetTopSellingAlbums(int count)
+        private IEnumerable<Album> GetTopSellingAlbums(int count)
         {
            var session = MvcApplication.CurrentSession;
 
-            return session.Query<RavenAlbum>("AlbumsByCountSold")
+           return session.Query<Album>("AlbumsByCountSold")
                 .Take(count)
                 .OrderBy("-Quantity")
                 .ToArray();
         }
 
-        private IEnumerable<RavenAlbum> GetTopSellingAlbums_Map_Reduce(int count)
+        private IEnumerable<Album> GetTopSellingAlbums_Map_Reduce(int count)
         {
             var session = MvcApplication.CurrentSession;
 
@@ -43,12 +43,12 @@ namespace MvcMusicStore.Controllers
                 .ToArray();
 
             // get the actual album documents
-            var topSoldAlbums = session.Load<RavenAlbum>(topSoldAlbumIds);
+            var topSoldAlbums = session.Load<Album>(topSoldAlbumIds);
             // if we don't have enough sold albums
             if(topSoldAlbums.Length < count)
             {
                 // top it off from the unsold albums
-                var justRegularAlbums = session.Query<RavenAlbum>()
+                var justRegularAlbums = session.Query<Album>()
                     .Take(count);
                 topSoldAlbums = topSoldAlbums.Concat(justRegularAlbums)
                     .Distinct()
@@ -68,7 +68,7 @@ namespace MvcMusicStore.Controllers
                     int count = 0;
                     do
                     {
-                        var albums = session.Query<RavenAlbum>()
+                        var albums = session.Query<Album>()
                             .Skip(count)
                             .Take(128)
                             .ToArray();
