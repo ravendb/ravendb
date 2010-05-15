@@ -108,6 +108,7 @@
             $.ajax({
                 url: settings.server + 'stats',
                 dataType: 'json',
+                cache: false,
                 success: function (data) {
                     successCallback(data);
                 }
@@ -118,6 +119,7 @@
             $.ajax({
                 url: settings.server + 'stats',
                 dataType: 'json',
+                cache: false,
                 success: function (data) {
                     successCallback(data.CountOfDocuments);
                 }
@@ -130,6 +132,7 @@
             $.ajax({
                 url: settings.server + 'docs/',
                 dataType: 'json',
+                cache: false,
                 data: {
                     start: start,
                     pageSize: pageSize
@@ -162,6 +165,7 @@
             $.ajax({
                 url: settings.server + 'docs/' + id,
                 dataType: 'json',
+                cache: false,
                 complete: function(xhr) {
                     switch(xhr.status) 
                     {
@@ -191,13 +195,13 @@
                 type: type,
                 url: settings.server + 'docs/' + idStr,
                 data: json,
+                cache: false,
                 beforeSend: function(xhr) {
                     if (etag)
                         xhr.setRequestHeader("If-Match", etag); 
                     if (metadata) {
-                        var metadataObject = JSON.parse(metadata);
-                        for (var key in metadataObject) {
-                            xhr.setRequestHeader(key, metadataObject[key]);       
+                       for (var key in metadata) {
+                            xhr.setRequestHeader(key, metadata[key]);       
                         }
                     }
                 },
@@ -217,6 +221,7 @@
             $.ajax({
                 type: 'DELETE',
                 url: settings.server + 'docs/' + id,
+                cache: false,
                 beforeSend: function(xhr) {
                     xhr.setRequestHeader("If-Match", etag);        
                 },
@@ -230,6 +235,7 @@
             $.ajax({
                 url: settings.server + 'stats',
                 dataType: 'json',
+                cache: false,
                 success: function (data) {
                     successCallback(data.CountOfIndexes);
                 }
@@ -242,6 +248,7 @@
             $.ajax({
                 url: settings.server + 'indexes/',
                 dataType: 'json',
+                cache: false,
                 data: {
                     start: start,
                     pageSize: pageSize
@@ -256,6 +263,7 @@
             $.ajax({
                 url: settings.server + 'indexes/' + name,
                 dataType: 'json',
+                cache: false,
                 data: {definition: 'yes'},
                 success: function (data) {
                     successCallback(data);
@@ -268,6 +276,7 @@
                 type: 'PUT',
                 url: settings.server + 'indexes/' + name,
                 data: JSON.stringify(indexDef),
+                cache: false,
                 success: function (data) {
                     successCallback(data);
                 },
@@ -281,6 +290,7 @@
         deleteIndex: function(name, successCallback) {
             $.ajax({
                 type: 'DELETE',
+                cache: false,
                 url: settings.server + 'indexes/' + name,
                 success: function (data) {
                     successCallback(data);
@@ -295,6 +305,7 @@
                 type: 'GET',
                 url: settings.server + 'indexes/' + name,
                 dataType: 'json',
+                cache: false,
                 data: { 
                     query : queryValues,
                     start: start,

@@ -75,7 +75,7 @@ function InitializeJSONEditor(jsonToEdit) {
 }
 
 function ShowEditorForNewDocument(saveCallback) {
-    ShowEditorForDocument(null, { PropertyName: '' }, null, {}, 'Create New Document', function (id, etag, metadata, json, editor) {
+    ShowEditorForDocument(null, { PropertyName: '' }, {}, null, 'Create New Document', function (id, etag, metadata, json, editor) {
         saveCallback(metadata, json, editor);
     }, null);
 }
@@ -105,10 +105,17 @@ function ShowEditorForDocument(id, doc, etag, metadata, title, saveCallback, del
                     });
             });
             $(editorHtml).append(deleteButton);
-
-            if (metadata)
-                $(editorHtml).find('#txtJSONMetadata').val(JSON.stringify(metadata));
         }
+        
+        alert(metadata);
+        if (metadata) {
+            alert(JSON.stringify(metadata));
+            $(editorHtml).find('#txtJSONMetadata').val(JSON.stringify(metadata));
+        }
+        else {
+            $(editorHtml).find('#txtJSONMetadata').val('{}');
+        }
+
         $(editorHtml).css('position', 'relative').css('height', '500px');
         $(editorHtml).dialog({
             modal: true,
@@ -121,8 +128,8 @@ function ShowEditorForDocument(id, doc, etag, metadata, title, saveCallback, del
             },
             buttons: {
                 Save: function () {
-                    if (ValidateRawJSON()) {
-                        saveCallback(id, etag, $('#txtJSONMetadata').val(), GetJSONFromEditor(), editorHtml);
+                    if (ValidateRawJSON() && ValidateMetaData()) {
+                        saveCallback(id, etag, JSON.parse($('#txtJSONMetadata').val()), GetJSONFromEditor(), editorHtml);
                     };
                 },
                 Cancel: function () {
@@ -136,6 +143,27 @@ function ShowEditorForDocument(id, doc, etag, metadata, title, saveCallback, del
     });
 }
 
+function ValidateMetaData() {
+    try {
+        var json = JSON.parse($('#txtJSONMetadata').val());
+        if (typeof json != "object")
+            throw "Invalid";
+        return true;
+    }
+    catch (err) {
+        $('<div title="Invalid Metadata">There was an error parsing the Document Metadata - Please enter valid JSON before proceeding.</div>').
+            dialog({
+                modal: true,
+                buttons: {
+                    Ok: function () {
+                        $(this).dialog('close');
+                    }
+                }
+            });
+        return false;
+    }
+}
+
 function ValidateRawJSON() {
     try
     {
@@ -146,7 +174,7 @@ function ValidateRawJSON() {
     }
     catch (err)
     {
-        $('<div title="Invalid JSON">There was an error parsing the JSON value.  Please enter valid JSON before proceeding.</div>').
+        $('<div title="Invalid JSON">There was an error parsing the JSON data.  Please enter valid JSON before proceeding.</div>').
             dialog({
                 modal: true,
                 buttons: { 
@@ -267,7 +295,7 @@ function CreateValue() {
         }, $.tree.focused().selected, 'after');
         if (node) {
             $.tree.focused().select_branch(node);
-        }  
+        }
     } else {
         var node = $.tree.focused().create({
             data: 'New Value',

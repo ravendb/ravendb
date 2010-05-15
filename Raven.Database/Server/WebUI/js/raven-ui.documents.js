@@ -155,7 +155,7 @@ function EditDocument(id) {
     $('#ajaxSuccess, #ajaxError').fadeOut();
     RavenUI.GetDocument(id, function (doc, etag, metadata) {
         ShowEditorForDocument(id, doc, etag, metadata, 'Edit Document', function (id, etag, metadata, json, editor) {
-            RavenUI.SaveDocument(id, etag, JSON.parse($('#txtJSONMetadata').val()), GetJSONFromEditor(), function () {
+            RavenUI.SaveDocument(id, etag, metadata, json, function () {
                 $(editor).dialog('close');
                 $('#ajaxSuccess').html('Your document has been updated. Click <a href="#" onclick="EditDocument(\'' + id + '\'); return false;">here</a> to see it again.').fadeIn('slow');
                 if (!isInQueryMode) {
@@ -186,7 +186,7 @@ function CreateDocument() {
     ShowEditorForNewDocument(function (metadata, json, editor) {
         RavenUI.SaveDocument(null, null, metadata, json, function (data) {
             $(editor).dialog('close');
-            $('#ajaxSuccess').html('Your document has been created. Click <a href="#" onclick="EditDocument(\'' + data.id + '\'); return false;">here</a> to see it again.').fadeIn('slow');
+            $('#ajaxSuccess').html('Your document has been created. Click <a href="#" onclick="EditDocument(\'' + data.Key + '\'); return false;">here</a> to see it again.').fadeIn('slow');
             if (!isInQueryMode) {
                 getAllDocuments();
             } else {
