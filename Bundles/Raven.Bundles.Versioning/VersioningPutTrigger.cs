@@ -6,25 +6,24 @@ using System.Linq;
 
 namespace Raven.Bundles.Versioning
 {
-    public class VersioningPutTrigger : IPutTrigger, IRequiresDocumentDatabaseInitialization
+    public class VersioningPutTrigger : AbstractPutTrigger
     {
         public const string RavenDocumentRevision = "Raven-Document-Revision";
         public const string RavenDocumentRevisionStatus = "Raven-Document-Revision-Status";
-        private DocumentDatabase docDb;
         private int? maxRevisions;
         private string[] excludeByEntityName = new string[0];
 
-        public VetoResult AllowPut(string key, JObject document, JObject metadata, TransactionInformation transactionInformation)
+        public override VetoResult AllowPut(string key, JObject document, JObject metadata, TransactionInformation transactionInformation)
         {
             if (metadata.Value<string>(RavenDocumentRevisionStatus) != "Historical")
                 return VetoResult.Allowed;
-            if(  docDb.Get(key, transactionInformation) == null)
+            if (Database.Get(key, transactionInformation) == null)
                 return VetoResult.Allowed;
           
             return VetoResult.Deny("Modifying a historical revision is not allowed");
         }
 
-        public void OnPut(string key, JObject document, JObject metadata, TransactionInformation transactionInformation)
+        public override void OnPut(string key, JObject document, JObject metadata, TransactionInformation transactionInformation)
         {
             if (metadata.Value<string>(RavenDocumentRevisionStatus) == "Historical")
                 return;
@@ -39,7 +38,7 @@ namespace Raven.Bundles.Versioning
             var copyMetadata = new JObject(metadata);
             copyMetadata[RavenDocumentRevisionStatus] = JToken.FromObject("Historical");
             copyMetadata[RavenDocumentRevision] = JToken.FromObject(revision +1);
-            PutResult newDoc = docDb.Put(key + "/revisions/", null, document, copyMetadata,
+            PutResult newDoc = Database.Put(key + "/revisions/", null, document, copyMetadata,
                                          transactionInformation);
             revision = int.Parse(newDoc.Key.Split('/').Last());
 
@@ -61,25 +60,19 @@ namespace Raven.Bundles.Versioning
             VersioningDeleteTrigger.allowDeletiongOfHistoricalDocuments = true;
             try
             {
-                docDb.Delete(key + "/revisions/" + (latestValidRevision - 1), null, transactionInformation);
+                Database.Delete(key + "/revisions/" + (latestValidRevision - 1), null, transactionInformation);
             }
             finally
             {
                 VersioningDeleteTrigger.allowDeletiongOfHistoricalDocuments = false;    
             }
         }
-
-        public void AfterCommit(string key, JObject document, JObject metadata)
+        public override void Initialize()
         {
-        }
-
-        public void Initialize(DocumentDatabase database)
-        {
-            docDb = database;
-            maxRevisions = database.Configuration.GetConfigurationValue<int>("Raven/Versioning/MaxRevisions");
+            maxRevisions = Database.Configuration.GetConfigurationValue<int>("Raven/Versioning/MaxRevisions");
 
             string value;
-            if(database.Configuration.Settings.TryGetValue("Raven/Versioning/Exclude", out value)==false)
+            if(Database.Configuration.Settings.TryGetValue("Raven/Versioning/Exclude", out value)==false)
             {
                 excludeByEntityName = new string[0];
                 return;

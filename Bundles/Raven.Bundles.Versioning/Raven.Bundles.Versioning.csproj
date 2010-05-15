@@ -31,7 +31,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="RavenDb">
+    <Reference Include="RavenDb, Version=4.0.65535.65535, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <ExecutableExtension>.exe</ExecutableExtension>
       <HintPath>..\..\build\RavenDb.exe</HintPath>
     </Reference>
     <Reference Include="System" />
