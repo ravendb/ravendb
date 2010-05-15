@@ -22,22 +22,6 @@ namespace MvcMusicStore.Controllers
             return View(albums);
         }
 
-        // 
-        // GET: /StoreManager/Create
-
-        public ActionResult Create()
-        {
-            var viewModel = new StoreManagerViewModel
-            {
-                Album = new Album(),
-                Genres = session.Query<Genre>().ToList(),
-                //TODO
-                //Artists = storeDB.Artists.ToList()
-            };
-
-            return View(viewModel);
-        }
-
         //
         // POST: /StoreManager/Create
 
@@ -60,8 +44,23 @@ namespace MvcMusicStore.Controllers
             {
                 Album = session.Load<Album>(id),
                 Genres = session.Query<Genre>().ToList(),
-                //TODO
-                //Artists = storeDB.Artists.ToList()
+                Artists = session.Query<Album.AlbumArtist>("Artists").ToList()
+            };
+
+            return View(viewModel);
+        }
+
+
+        // 
+        // GET: /StoreManager/Create
+
+        public ActionResult Create()
+        {
+            var viewModel = new StoreManagerViewModel
+            {
+                Album = new Album(),
+                Genres = session.Query<Genre>().ToList(),
+                Artists = session.Query<Album.AlbumArtist>("Artists").ToList()
             };
 
             return View(viewModel);

@@ -45,6 +45,12 @@ namespace MvcMusicStore.Controllers
                 var cart = ShoppingCartFinder.FindShoppingCart();
                 cart.CreateOrder(order);
 
+                var soldAlbums = session.Load<Album>(order.Lines.Select(x=>x.Album.Id).ToArray());
+                foreach (var soldAlbum in soldAlbums)
+                {
+                    soldAlbum.CountSold++;
+                }
+
                 session.Store(order);
                 session.SaveChanges();
 
