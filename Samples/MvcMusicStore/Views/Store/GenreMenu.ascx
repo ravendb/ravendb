@@ -3,7 +3,7 @@
 <ul>
     <% foreach (var genre in Model) { %>
     <li>
-        <%: Html.ActionLink(genre.Name, "Browse", "Store", new { Genre = genre.Id }, null)%>
+        <%: Html.ActionLink(genre.Name, "Browse", "Store", new { id = genre.Id }, null)%>
     </li>
     <% } %>
 </ul>

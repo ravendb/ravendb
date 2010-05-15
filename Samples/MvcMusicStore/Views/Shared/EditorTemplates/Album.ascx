@@ -1,6 +1,6 @@
 ﻿<%@ Import Namespace="MvcMusicStore"%>
 
-<%@ Control Language="C#" Inherits="System.Web.Mvc.ViewUserControl<MvcMusicStore.Models.Album2>" %>
+<%@ Control Language="C#" Inherits="System.Web.Mvc.ViewUserControl<MvcMusicStore.Models.Album>" %>
 
 <script src="/Scripts/MicrosoftAjax.js" type="text/javascript"></script>
 <script src="/Scripts/MicrosoftMvcAjax.js" type="text/javascript"></script>
@@ -23,9 +23,9 @@
 </p>
 <p>
     <%: Html.LabelFor(model => model.Artist)%>
-    <%: Html.DropDownList("ArtistId", new SelectList(ViewData["Artists"] as IEnumerable, "ArtistId", "Name", Model.ArtistId))%>
+    <%: Html.DropDownList("ArtistId", new SelectList(ViewData["Artists"] as IEnumerable, "ArtistId", "Name", Model.Artist.Id))%>
 </p>
 <p>
     <%: Html.LabelFor(model => model.Genre)%>
-    <%: Html.DropDownList("GenreId", new SelectList(ViewData["Genres"] as IEnumerable, "GenreId", "Name", Model.GenreId))%>
+    <%: Html.DropDownList("GenreId", new SelectList(ViewData["Genres"] as IEnumerable, "GenreId", "Name", Model.Genre.Id))%>
 </p>
