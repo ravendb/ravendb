@@ -23,7 +23,7 @@ namespace MvcMusicStore.Controllers
             // Set up our ViewModel
             var viewModel = new StoreIndexViewModel()
             {
-                Genres = genres.Select(x=>x.Name).ToList(),
+                Genres = genres,
                 NumberOfGenres = genres.Length
             };
 
@@ -37,13 +37,16 @@ namespace MvcMusicStore.Controllers
         public ActionResult Browse(string genre)
         {
             // Retrieve Genre from database
-            var genreModel = storeDB.Genres.Include("Albums")
-                .Single(g => g.Name == genre);
+            var session = MvcApplication.CurrentSession;
 
+            var genreModel = session.Load<Genre>(genre);
+            var albums = session.Query<Album>("AlbumsByGenre")
+                .Where("Genre:" + genre)
+                .ToArray();
             var viewModel = new StoreBrowseViewModel()
             {
                 Genre = genreModel,
-                Albums = genreModel.Albums.ToList()
+                Albums = albums
             };
 
             return View(viewModel);
@@ -66,9 +69,9 @@ namespace MvcMusicStore.Controllers
         [ChildActionOnly]
         public ActionResult GenreMenu()
         {
-            var genres = storeDB.Genres.ToList();
-
-            return View(genres);
+            var session = MvcApplication.CurrentSession;
+            return View(session.Query<Genre>()
+                .ToArray());
         }
     }
 }
