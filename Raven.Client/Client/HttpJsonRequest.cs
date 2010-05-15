@@ -93,9 +93,16 @@ namespace Raven.Client.Client
 
         public void Write(string data)
         {
+            var byteArray = Encoding.UTF8.GetBytes(data);
+
+            Write(byteArray);
+        }
+        public void Write(byte[] byteArray)
+        {
+            webRequest.ContentLength = byteArray.Length;
+
             using (var dataStream = webRequest.GetRequestStream())
             {
-                var byteArray = Encoding.UTF8.GetBytes(data);
                 dataStream.Write(byteArray, 0, byteArray.Length);
                 dataStream.Close();
             }
