@@ -9,6 +9,7 @@ using System.Web.Routing;
 using System.Web.Security;
 using MvcMusicStore.Models;
 using MvcMusicStore.Services;
+using Raven.Client;
 
 namespace MvcMusicStore.Controllers
 {
@@ -16,6 +17,7 @@ namespace MvcMusicStore.Controllers
     [HandleError]
     public class AccountController : Controller
     {
+        IDocumentSession session = MvcApplication.CurrentSession;
 
         // This constructor is used by the MVC framework to instantiate the controller using
         // the default forms authentication and membership providers.
@@ -140,8 +142,6 @@ namespace MvcMusicStore.Controllers
 
         private void MigrateShoppingCart(string UserName)
         {
-            var session = MvcApplication.CurrentSession;
-
             // Associate shopping cart items with logged-in user
             var cart = ShoppingCartFinder.FindShoppingCart();
             var newShoppingCartId = ShoppingCartFinder.SetShoppingCartId(UserName);

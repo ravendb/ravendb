@@ -1,21 +1,15 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using System.Web.Mvc;
 using MvcMusicStore.Models;
 using MvcMusicStore.Services;
 using MvcMusicStore.ViewModels;
-using System.Collections.Generic;
-using System.Collections.Specialized;
 using Raven.Client;
-using MvcMusicStore;
 
 namespace MvcMusicStore.Controllers
 {
     public class ShoppingCartController : Controller
     {
         private IDocumentSession session = MvcApplication.CurrentSession;
-
-        
 
         //
         // GET: /ShoppingCart/

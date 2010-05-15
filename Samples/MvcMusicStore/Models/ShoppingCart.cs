@@ -12,11 +12,8 @@ namespace MvcMusicStore.Models
 
         public decimal Total
         {
-            get
-            {
-                // this executes in memory, no database queries here!
-                return Lines.Sum(x => x.Price);
-            }
+            // this executes in memory, no database queries here!
+            get { return Lines.Sum(x => x.Price); }
         }
 
         public ShoppingCart()
@@ -32,7 +29,8 @@ namespace MvcMusicStore.Models
 
             public ShoppingCartLineAlbum Album
             {
-                get; set;
+                get;
+                set;
             }
 
             public class ShoppingCartLineAlbum
