@@ -107,9 +107,7 @@ function ShowEditorForDocument(id, doc, etag, metadata, title, saveCallback, del
             $(editorHtml).append(deleteButton);
         }
         
-        alert(metadata);
         if (metadata) {
-            alert(JSON.stringify(metadata));
             $(editorHtml).find('#txtJSONMetadata').val(JSON.stringify(metadata));
         }
         else {
