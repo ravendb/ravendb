@@ -29,6 +29,36 @@ namespace Raven.Tests.Patching
                 patchedDoc.ToString(Formatting.None));
         }
 
+
+        [Fact]
+        public void PropertyIncrement()
+        {
+            var patchedDoc = new JsonPatcher(doc).Apply(
+                new[]
+        		{
+        			new PatchRequest
+        			{
+        				Type = "set",
+        				Name = "blog_id",
+        				Value = new JValue(1)
+        			},
+        		});
+
+            patchedDoc = new JsonPatcher(patchedDoc).Apply(
+                new[]
+        		{
+        			new PatchRequest
+        			{
+        				Type = "inc",
+        				Name = "blog_id",
+        				Value = new JValue(1)
+        			},
+        		});
+
+            Assert.Equal(@"{""title"":""A Blog Post"",""body"":""html markup"",""comments"":[{""author"":""ayende"",""text"":""good post""}],""blog_id"":2}",
+                patchedDoc.ToString(Formatting.None));
+        }
+
         [Fact]
         public void PropertyAddition_WithConcurrenty_MissingProp()
         {

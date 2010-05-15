@@ -23,6 +23,11 @@ This release contains the following:
 /Bundles
     - Bundles that extend Raven in various ways
     
+/Samples
+    - The sample applications for Raven
+    * Under each sample application folder there is a "Start Raven.cmd" file which will
+      starts Raven with all the data and indexes required to run the sample successfully.
+    
 /Raven.Smuggler.exe
     - The Import/Export utility for Raven
 		  

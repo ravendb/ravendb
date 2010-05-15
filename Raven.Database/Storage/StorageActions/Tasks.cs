@@ -8,19 +8,36 @@ namespace Raven.Database.Storage.StorageActions
 {
 	public partial class DocumentStorageActions 
 	{
-		public bool DoesTasksExistsForIndex(string name)
+		public bool DoesTasksExistsForIndex(string name, DateTime? cutOff)
 		{
 			Api.JetSetCurrentIndex(session, Tasks, "by_index");
 			Api.MakeKey(session, Tasks, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Tasks, SeekGrbit.SeekEQ) == false)
 			{
-				Api.MakeKey(session, Tasks, "*", Encoding.Unicode, MakeKeyGrbit.NewKey);
-				return Api.TrySeek(session, Tasks, SeekGrbit.SeekEQ);
+				return DoesTasksExistsForAllIndexes(cutOff);
 			}
-			return true;
+            if (cutOff == null)
+                return true;
+            // we are at the first row for this index
+		    var addedAt = Api.RetrieveColumnAsDateTime(session, Tasks, tableColumnsCache.TasksColumns["added_at"]).Value;
+            if (cutOff.Value > addedAt)
+                return true;
+            // we might still have an earlier index for this.
+            return DoesTasksExistsForAllIndexes(cutOff);
 		}
 
-		public void AddTask(Task task)
+	    private bool DoesTasksExistsForAllIndexes(DateTime? cutOff)
+	    {
+	        Api.MakeKey(session, Tasks, "*", Encoding.Unicode, MakeKeyGrbit.NewKey);
+	        if (Api.TrySeek(session, Tasks, SeekGrbit.SeekEQ) == false)
+	            return false;
+            if (cutOff == null)
+                return true;
+	        var addedAt = Api.RetrieveColumnAsDateTime(session, Tasks, tableColumnsCache.TasksColumns["added_at"]).Value;
+	        return cutOff.Value > addedAt;
+	    }
+
+	    public void AddTask(Task task)
 		{
 			int actualBookmarkSize;
 			var bookmark = new byte[SystemParameters.BookmarkMost];
@@ -30,6 +47,7 @@ namespace Raven.Database.Storage.StorageActions
 				Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["for_index"], task.Index, Encoding.Unicode);
 				Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["task_type"], task.Type, Encoding.Unicode);
 				Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["supports_merging"], task.SupportsMerging);
+                Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["added_at"], DateTime.Now);
 
 				update.Save(bookmark, bookmark.Length, out actualBookmarkSize);
 			}

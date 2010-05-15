@@ -1,0 +1,49 @@
+<%@ Master Language="C#" Inherits="System.Web.Mvc.ViewMasterPage" %>
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+    <head runat="server">
+        <link href="/Content/Site.css" rel="stylesheet" type="text/css" />
+        <title>
+            <asp:ContentPlaceHolder ID="TitleContent" runat="server" />
+        </title>
+    </head>
+
+    <body>
+        <div id="container">
+
+            <div id="header">
+                <h1>
+                    <a href="/">ASP.NET MVC MUSIC STORE</a>
+                </h1>
+
+                <ul id="navlist">
+                    <li class="first"><a href="/" id="current">Home</a></li>
+                    <li><a href="/Store/">Store</a></li>
+                    <li>
+                        <% Html.RenderAction("CartSummary", "ShoppingCart"); %>
+                    </li>
+                    <li><a href="/StoreManager/">Admin</a></li>
+                </ul>
+            </div>
+
+            <div id="content-section">
+
+                <div id="categories">
+                    <% Html.RenderAction("GenreMenu", "Store"); %>
+                </div>
+
+                <div id="main">
+                    <asp:ContentPlaceHolder ID="MainContent" runat="server" />
+                </div>
+
+                <div id="footer">
+                    built with <a href="http://asp.net/mvc">ASP.NET MVC 2</a>
+                </div>
+
+            </div>
+
+        </div>
+    </body>
+</html>

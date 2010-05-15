@@ -43,7 +43,7 @@ namespace Raven.Database.Tasks
 				return; // index was deleted, probably
 			context.TransactionaStorage.Batch(actions =>
 			{
-				var docsToIndex = actions.DocumentsById(new Reference<bool>(), FromId, ToId, 100)
+				var docsToIndex = actions.DocumentsById(FromId, ToId)
 					.Select(d => d.Item1)
 					.Where(x => x != null)
 					.Select(s => JsonToExpando.Convert(s.ToJson()));

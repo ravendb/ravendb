@@ -49,6 +49,9 @@ namespace Raven.Database.Json
                 case "modify":
                     ModifyValue(patchCmd, patchCmd.Name);
                     break;
+                case "inc":
+                    IncrementProperty(patchCmd, patchCmd.Name);
+                    break;
                 default:
 					throw new ArgumentException("Cannot understand command: " + patchCmd.Type);
             }
@@ -170,6 +173,23 @@ namespace Raven.Database.Json
         	property.Value = patchCmd.Value;
         }
 
+
+        private void IncrementProperty(PatchRequest patchCmd, string propName)
+        {
+            if(patchCmd.Value.Type != JsonTokenType.Integer)
+                throw new InvalidOperationException("Cannot increment when value is not an integer");
+            var property = document.Property(propName);
+            EnsurePreviousValueMatchCurrentValue(patchCmd, property);
+            if (property == null)
+            {
+                property = new JProperty(propName);
+                document.Add(property);
+            }
+            if (property.Value == null || property.Value.Type == JsonTokenType.Null)
+                property.Value = patchCmd.Value;
+            else
+                property.Value = JToken.FromObject(property.Value.Value<int>() + patchCmd.Value.Value<int>());
+        }
 		private static void EnsurePreviousValueMatchCurrentValue(PatchRequest patchCmd, JProperty property)
         {
             var prevVal = patchCmd.PrevVal;

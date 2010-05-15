@@ -92,6 +92,7 @@
   <ItemGroup>
     <Compile Include="Indexes\ComplexIndexOnNotAnalyzedField.cs" />
     <Compile Include="Indexes\QueryingOnDefaultIndex.cs" />
+    <Compile Include="Indexes\QueryingOnStaleIndexes.cs" />
     <Compile Include="Indexes\Statistics.cs" />
     <Compile Include="Linq\LinqTransformerCompilationTests.cs" />
     <Compile Include="Linq\PerformingQueries.cs" />

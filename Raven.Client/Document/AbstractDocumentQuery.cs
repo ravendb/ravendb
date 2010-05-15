@@ -21,8 +21,9 @@ namespace Raven.Client.Document
 		protected TimeSpan timeout;
         protected string[] projectionFields;
         private QueryResult queryResult;
+	    protected DateTime? cutoff;
 
-		protected AbstractDocumentQuery(DocumentSession session)
+	    protected AbstractDocumentQuery(DocumentSession session)
 		{
 			this.session = session;
 		}
@@ -102,7 +103,37 @@ namespace Raven.Client.Document
 			return this;
 		}
 
-		public IDocumentQuery<T> WaitForNonStaleResults()
+	    public IDocumentQuery<T> WaitForNonStaleResultsAsOfNow()
+	    {
+	        waitForNonStaleResults = true;
+	        cutoff = DateTime.Now;
+	        return this;
+	    }
+
+        public IDocumentQuery<T> WaitForNonStaleResultsAsOfNow(TimeSpan waitTimeout)
+	    {
+            waitForNonStaleResults = true;
+            cutoff = DateTime.Now;
+            timeout = waitTimeout;
+            return this;
+	    }
+
+	    public IDocumentQuery<T> WaitForNonStaleResultsAsOf(DateTime cutOff)
+	    {
+            waitForNonStaleResults = true;
+            this.cutoff = cutOff;
+            return this;
+	    }
+
+        public IDocumentQuery<T> WaitForNonStaleResultsAsOf(DateTime cutOff, TimeSpan waitTimeout)
+	    {
+            waitForNonStaleResults = true;
+            this.cutoff = cutOff;
+            timeout = waitTimeout;
+            return this;
+        }
+
+	    public IDocumentQuery<T> WaitForNonStaleResults()
 		{
 			waitForNonStaleResults = true;
 			timeout = TimeSpan.FromSeconds(15);

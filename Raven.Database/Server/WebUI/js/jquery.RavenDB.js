@@ -7,66 +7,66 @@
         headersToIgnore: [
           // Entity headers - those are NOT ignored
           /*
-                "Content-Disposition",
-                "Content-Encoding",
-                "Content-Language",
-                "Content-Location",
-                "Content-MD5",
-                "Content-Type",
-                "Expires",
+                "content-disposition",
+                "content-encoding",
+                "content-language",
+                "content-location",
+                "content-md5",
+                "content-type",
+                "expires",
           */
-          "Origin",
-          "Allow",
-          "Content-Range",
-          "Last-Modified",
+          "origin",
+          "allow",
+          "content-range",
+          "last-modified",
           // Ignoring this header, since it may
           // very well change due to things like encoding,
           // adding metadata, etc
-          "Content-Length",
+          "content-length",
           // Special things to ignore
-          "Keep-Alive",
-          "X-Requested-With",
+          "keep-alive",
+          "x-requested-with",
           // Request headers
-          "Accept-Charset",
-          "Accept-Encoding",
-          "Accept",
-          "Accept-Language",
-          "Authorization",
-          "Cookie",
-          "Expect",
-          "From",
-          "Host",
-          "If-Match",
-          "If-Modified-Since",
-          "If-None-Match",
-          "If-Range",
-          "If-Unmodified-Since",
-          "Max-Forwards",
-          "Referer",
-          "TE",
-          "User-Agent",
+          "accept-charset",
+          "accept-encoding",
+          "accept",
+          "accept-language",
+          "authorization",
+          "cookie",
+          "expect",
+          "from",
+          "host",
+          "if-match",
+          "if-modified-since",
+          "if-none-match",
+          "if-range",
+          "if-unmodified-since",
+          "max-forwards",
+          "referer",
+          "te",
+          "user-agent",
           //Response headers
-          "Accept-Ranges",
-          "Age",
-          "Allow",
-          "ETag",
-          "Location",
-          "Retry-After",
-          "Server",
-          "Set-Cookie2",
-          "Set-Cookie",
-          "Vary",
-          "Www-Authenticate",
+          "accept-ranges",
+          "age",
+          "allow",
+          "etag",
+          "location",
+          "retry-after",
+          "server",
+          "set-cookie2",
+          "set-cookie",
+          "vary",
+          "www-authenticate",
           // General
-          "Cache-Control",
-          "Connection",
-          "Date",
-          "Pragma",
-          "Trailer",
-          "Transfer-Encoding",
-          "Upgrade",
-          "Via",
-          "Warning",
+          "cache-control",
+          "connection",
+          "date",
+          "pragma",
+          "trailer",
+          "transfer-encoding",
+          "upgrade",
+          "via",
+          "warning",
         ],
 		
 		getServerUrl: function() {
@@ -108,6 +108,7 @@
             $.ajax({
                 url: settings.server + 'stats',
                 dataType: 'json',
+                cache: false,
                 success: function (data) {
                     successCallback(data);
                 }
@@ -118,6 +119,7 @@
             $.ajax({
                 url: settings.server + 'stats',
                 dataType: 'json',
+                cache: false,
                 success: function (data) {
                     successCallback(data.CountOfDocuments);
                 }
@@ -130,6 +132,7 @@
             $.ajax({
                 url: settings.server + 'docs/',
                 dataType: 'json',
+                cache: false,
                 data: {
                     start: start,
                     pageSize: pageSize
@@ -142,7 +145,7 @@
 
         splitAndFilterHeaders: function(headersAsSingleString) {
             var headers = {};
-            var headersLines = headersAsSingleString.split('\r\n');
+            var headersLines = headersAsSingleString.replace(/\r\n/g,"\n").split('\n');
             for (var i = 0; i < headersLines.length; i++) {
                 var line = headersLines[i];
                 var keyStart = line.indexOf(': ');
@@ -150,7 +153,7 @@
                     continue;
                 var key = line.substring(0, keyStart);
 
-                if($.inArray(key, $.ravenDB.headersToIgnore) != -1)
+                if($.inArray(key.toLowerCase(), $.ravenDB.headersToIgnore) != -1)
                     continue;
 
                 headers[key] = line.substring(keyStart+2);
@@ -162,6 +165,7 @@
             $.ajax({
                 url: settings.server + 'docs/' + id,
                 dataType: 'json',
+                cache: false,
                 complete: function(xhr) {
                     switch(xhr.status) 
                     {
@@ -191,11 +195,12 @@
                 type: type,
                 url: settings.server + 'docs/' + idStr,
                 data: json,
+                cache: false,
                 beforeSend: function(xhr) {
                     if (etag)
                         xhr.setRequestHeader("If-Match", etag); 
                     if (metadata) {
-                        for (var key in metadata) {
+                       for (var key in metadata) {
                             xhr.setRequestHeader(key, metadata[key]);       
                         }
                     }
@@ -206,7 +211,7 @@
                 error: function(data){
                     var m = JSON.parse(data.responseText);
                     if(errorCallback != undefined){
-                        errorCallback(m.error);
+                        errorCallback(m.Error);
                     }
                 }
             });
@@ -216,6 +221,7 @@
             $.ajax({
                 type: 'DELETE',
                 url: settings.server + 'docs/' + id,
+                cache: false,
                 beforeSend: function(xhr) {
                     xhr.setRequestHeader("If-Match", etag);        
                 },
@@ -229,6 +235,7 @@
             $.ajax({
                 url: settings.server + 'stats',
                 dataType: 'json',
+                cache: false,
                 success: function (data) {
                     successCallback(data.CountOfIndexes);
                 }
@@ -241,6 +248,7 @@
             $.ajax({
                 url: settings.server + 'indexes/',
                 dataType: 'json',
+                cache: false,
                 data: {
                     start: start,
                     pageSize: pageSize
@@ -255,6 +263,7 @@
             $.ajax({
                 url: settings.server + 'indexes/' + name,
                 dataType: 'json',
+                cache: false,
                 data: {definition: 'yes'},
                 success: function (data) {
                     successCallback(data);
@@ -267,6 +276,7 @@
                 type: 'PUT',
                 url: settings.server + 'indexes/' + name,
                 data: JSON.stringify(indexDef),
+                cache: false,
                 success: function (data) {
                     successCallback(data);
                 },
@@ -280,6 +290,7 @@
         deleteIndex: function(name, successCallback) {
             $.ajax({
                 type: 'DELETE',
+                cache: false,
                 url: settings.server + 'indexes/' + name,
                 success: function (data) {
                     successCallback(data);
@@ -294,6 +305,7 @@
                 type: 'GET',
                 url: settings.server + 'indexes/' + name,
                 dataType: 'json',
+                cache: false,
                 data: { 
                     query : queryValues,
                     start: start,

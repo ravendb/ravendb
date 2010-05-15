@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -204,6 +205,10 @@ namespace Raven.Client.Client
 						(sb, field) => sb.Append("&sort=").Append(field.Descending ? "-" : "").Append(field.Field)
                     ).ToString();
             }
+            if(query.Cutoff != null)
+            {
+                path = path + "&cutOff=" + SimpleUrlEncodeOnTheClientProfile(query.Cutoff.Value.ToString("o", CultureInfo.InvariantCulture));
+            }
             var request = new HttpJsonRequest(path, "GET", credentials);
             var serializer = new JsonSerializer();
             JToken json;
@@ -216,6 +221,11 @@ namespace Raven.Client.Client
                 Results = json["Results"].Children().Cast<JObject>().ToArray(),
                 TotalResults =  Convert.ToInt32(json["TotalResults"].ToString())
             }; 
+	    }
+
+	    private static string SimpleUrlEncodeOnTheClientProfile(string str)
+	    {
+	        return str.Replace("+", "%2B");
 	    }
 
 	    public void DeleteIndex(string name)

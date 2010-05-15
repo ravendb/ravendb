@@ -93,7 +93,31 @@ namespace Raven.Client.Document
 			return this;
 		}
 
-		public IDocumentQuery<T> WaitForNonStaleResults()
+	    public IDocumentQuery<T> WaitForNonStaleResultsAsOfNow()
+	    {
+            ApplyForAll(query => query.WaitForNonStaleResultsAsOfNow());
+            return this;
+	    }
+
+	    public IDocumentQuery<T> WaitForNonStaleResultsAsOfNow(TimeSpan waitTimeout)
+	    {
+            ApplyForAll(query => query.WaitForNonStaleResultsAsOfNow(waitTimeout));
+            return this;
+	    }
+
+	    public IDocumentQuery<T> WaitForNonStaleResultsAsOf(DateTime cutOff)
+	    {
+            ApplyForAll(query => query.WaitForNonStaleResultsAsOf(cutOff));
+            return this;
+	    }
+
+	    public IDocumentQuery<T> WaitForNonStaleResultsAsOf(DateTime cutOff, TimeSpan waitTimeout)
+	    {
+            ApplyForAll(query => query.WaitForNonStaleResultsAsOf(cutOff, waitTimeout));
+            return this;
+	    }
+
+	    public IDocumentQuery<T> WaitForNonStaleResults()
 		{
 			ApplyForAll(query => query.WaitForNonStaleResults());
 			return this;

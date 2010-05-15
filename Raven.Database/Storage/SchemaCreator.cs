@@ -7,7 +7,7 @@ namespace Raven.Database.Storage
 	[CLSCompliant(false)]
 	public class SchemaCreator
 	{
-		public const string SchemaVersion = "2.4";
+		public const string SchemaVersion = "2.5";
 		private readonly Session session;
 
 		public SchemaCreator(Session session)
@@ -385,6 +385,11 @@ namespace Raven.Database.Storage
 				grbit = ColumndefGrbit.ColumnNotNULL
 			}, null, 0, out columnid);
 
+            Api.JetAddColumn(session, tableid, "added_at", new JET_COLUMNDEF
+            {
+                coltyp = JET_coltyp.DateTime,
+                grbit = ColumndefGrbit.ColumnNotNULL
+            }, null, 0, out columnid);
 
 			var indexDef = "+id\0\0";
 			Api.JetCreateIndex(session, tableid, "by_id", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,

@@ -128,8 +128,7 @@ namespace Raven.Database.Storage.StorageActions
             } while (Api.TryMoveNext(session, Documents));
         }
 
-		public IEnumerable<Tuple<JsonDocument, int>> DocumentsById(Reference<bool> hasMoreWork, int startId, int endId,
-																   int limit)
+		public IEnumerable<Tuple<JsonDocument, int>> DocumentsById(int startId, int endId)
 		{
 			Api.JetSetCurrentIndex(session, Documents, "by_id");
 			Api.MakeKey(session, Documents, startId, MakeKeyGrbit.NewKey);
@@ -140,14 +139,8 @@ namespace Raven.Database.Storage.StorageActions
 				logger.DebugFormat("Document with id {0} or higher was not found", startId);
 				yield break;
 			}
-			var count = 0;
 			do
 			{
-				if ((++count) > limit)
-				{
-					hasMoreWork.Value = true;
-					yield break;
-				}
 				var id = Api.RetrieveColumnAsInt32(session, Documents, tableColumnsCache.DocumentsColumns["id"],
 												   RetrieveColumnGrbit.RetrieveFromIndex).Value;
 				if (id > endId)
@@ -165,7 +158,6 @@ namespace Raven.Database.Storage.StorageActions
 				};
 				yield return new Tuple<JsonDocument, int>(doc, id);
 			} while (Api.TryMoveNext(session, Documents));
-			hasMoreWork.Value = false;
 		}
 
 		public Guid AddDocument(string key, Guid? etag, JObject data, JObject metadata)

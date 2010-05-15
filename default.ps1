@@ -224,6 +224,7 @@ task DoRelease -depends Compile {
 	mkdir $build_dir\Output\Client-3.5
 	mkdir $build_dir\Output\Client
 	mkdir $build_dir\Output\Bundles
+	mkdir $build_dir\Output\Samples
 	
 	cp $build_dir\Raven.Client.dll $build_dir\Output\EmbeddedClient
 	cp $build_dir\Raven.Database.dll $build_dir\Output\EmbeddedClient
@@ -254,14 +255,20 @@ task DoRelease -depends Compile {
 	cp $base_dir\readme.txt $build_dir\Output\readme.txt
 	cp $base_dir\acknowledgements.txt $build_dir\Output\acknowledgements.txt
 	
+	
+	cp $base_dir\Samples\MvcMusicStore $build_dir\Output\Samples -recurse 
+	rd $build_dir\Output\Samples\MvcMusicStore\obj -recurse 
+	
 	$old = pwd
 	
 	cd $build_dir\Output
 	
-	& $tools_dir\zip.exe -9 -A `
+	& $tools_dir\zip.exe -9 -A -r `
 		$release_dir\Raven-Build-$env:buildlabel.zip `
 		EmbeddedClient\*.* `
 		Client\*.* `
+		Samples\*.* `
+		Samples\MvcMusicStore\*.* `
 		Client-3.5\*.* `
 		Web\*.* `
 		Bundles\*.* `

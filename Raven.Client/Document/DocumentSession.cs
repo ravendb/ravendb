@@ -149,9 +149,11 @@ namespace Raven.Client.Document
             if (ReferenceEquals(null, entity))
                 throw new ArgumentNullException("entity");
             var identityProperty = GetIdentityProperty(entity.GetType());
-            var id = identityProperty.GetValue(entity, null) as string;
+		    string id = null;
+            if(identityProperty != null)
+		        id = identityProperty.GetValue(entity, null) as string;
 
-            if (id == null)
+		    if (id == null)
             {
                 // Generate the key up front
                 id = Conventions.GenerateDocumentKey(entity);
@@ -203,7 +205,9 @@ namespace Raven.Client.Document
 			var entityType = entity.GetType();
 			var identityProperty = GetIdentityProperty(entityType);
 
-            var key = (string)identityProperty.GetValue(entity, null);
+		    string key = null;
+            if (identityProperty != null)
+                key = (string) identityProperty.GetValue(entity, null);
 		    var etag = UseOptimisticConcurrency ? documentMetadata.ETag : null;
 
 			return new PutCommandData
@@ -217,11 +221,7 @@ namespace Raven.Client.Document
 
 		private PropertyInfo GetIdentityProperty(Type entityType)
 		{
-			var identityProperty =  documentStore.Conventions.GetIdentityProperty(entityType);
-
-			if(identityProperty == null)
-				throw new InvalidOperationException("Could not find id proeprty for " + entityType.Name);
-			return identityProperty;
+		    return documentStore.Conventions.GetIdentityProperty(entityType);
 		}
 
 		public void SaveChanges()
@@ -233,10 +233,10 @@ namespace Raven.Client.Document
             }
 			var entities = new List<object>();
 			var cmds = new List<ICommandData>();
-            foreach (var key in (from deletedEntity in deletedEntities
-                                 let identityProperty = GetIdentityProperty(deletedEntity.GetType())
-                                 select identityProperty.GetValue(deletedEntity, null))
-                                 .OfType<string>())
+		    DocumentMetadata value = null;
+		    foreach (var key in (from deletedEntity in deletedEntities
+                                 where entitiesAndMetadata.TryGetValue(deletedEntity, out value)
+                                 select value.Key))
             {
                 Guid? etag = null;
                 object existingEntity;
@@ -292,8 +292,9 @@ namespace Raven.Client.Document
 				documentMetadata.OriginalValue = ConvertEntityToJson(entity, documentMetadata.Metadata);
 
                 // Set/Update the id of the entity
-				GetIdentityProperty(entity.GetType())
-					.SetValue(entity, batchResult.Key, null);
+			    var identityProperty = GetIdentityProperty(entity.GetType());
+                if (identityProperty != null && identityProperty.CanWrite)// this is allowed because we need to support store anonymous types
+                    identityProperty.SetValue(entity, batchResult.Key, null);
 
 				if (stored != null)
 					stored(entity);
