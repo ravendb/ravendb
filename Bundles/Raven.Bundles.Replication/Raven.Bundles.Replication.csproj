@@ -45,10 +45,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="HideVirtuallyDeletedDocumentsReadTrigger.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="AncestryPutTrigger.cs" />
     <Compile Include="RemoveConflictOnPutTrigger.cs" />
     <Compile Include="ReplicationConstants.cs" />
+    <Compile Include="ReplicationDocument.cs" />
     <Compile Include="ReplicationLastEtagResponser.cs" />
     <Compile Include="ReplicationResponder.cs" />
     <Compile Include="ReplicationTask.cs" />
