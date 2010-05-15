@@ -2,25 +2,24 @@
 using System.Web.Mvc;
 using MvcMusicStore.Models;
 using MvcMusicStore.ViewModels;
+using Raven.Client;
 
 namespace MvcMusicStore.Controllers
 {
     [HandleError]
-    [Authorize(Roles = "Administrator")]
+    //[Authorize(Roles = "Administrator")]
     public class StoreManagerController : Controller
     {
-        MusicStoreEntities storeDB = new MusicStoreEntities();
+        private IDocumentSession session = MvcApplication.CurrentSession;
 
         //
         // GET: /StoreManager/
 
         public ActionResult Index()
         {
-            var albums = storeDB.Albums
-                .Include("Genre").Include("Artist")
-                .ToList();
+            var albums = session.Query<Album>().ToArray();
 
-            return View(storeDB.Albums);
+            return View(albums);
         }
 
         // 
@@ -30,9 +29,10 @@ namespace MvcMusicStore.Controllers
         {
             var viewModel = new StoreManagerViewModel
             {
-                Album = new Album2(),
-                Genres = storeDB.Genres.ToList(),
-                Artists = storeDB.Artists.ToList()
+                Album = new Album(),
+                Genres = session.Query<Genre>().ToList(),
+                //TODO
+                //Artists = storeDB.Artists.ToList()
             };
 
             return View(viewModel);
@@ -42,41 +42,26 @@ namespace MvcMusicStore.Controllers
         // POST: /StoreManager/Create
 
         [HttpPost]
-        public ActionResult Create(Album2 album)
+        public ActionResult Create(Album album)
         {
-            try
-            {
-                //Save Album
-                storeDB.AddToAlbums(album);
-                storeDB.SaveChanges();
+            //Save Album
+            session.Store(album);
+            session.SaveChanges();
 
-                return Redirect("/");
-            }
-            catch
-            {
-                //Invalid - redisplay with errors
-
-                var viewModel = new StoreManagerViewModel
-                {
-                    Album = album,
-                    Genres = storeDB.Genres.ToList(),
-                    Artists = storeDB.Artists.ToList()
-                };
-
-                return View(viewModel);
-            }
+            return Redirect("/");
         }
 
         //
         // GET: /StoreManager/Edit/5
 
-        public ActionResult Edit(int id)
+        public ActionResult Edit(string id)
         {
             var viewModel = new StoreManagerViewModel
             {
-                Album = storeDB.Albums.Single(a => a.AlbumId == id),
-                Genres = storeDB.Genres.ToList(),
-                Artists = storeDB.Artists.ToList()
+                Album = session.Load<Album>(id),
+                Genres = session.Query<Genre>().ToList(),
+                //TODO
+                //Artists = storeDB.Artists.ToList()
             };
 
             return View(viewModel);
@@ -86,58 +71,36 @@ namespace MvcMusicStore.Controllers
         // POST: /StoreManager/Edit/5
 
         [HttpPost]
-        public ActionResult Edit(int id, FormCollection formValues)
+        public ActionResult Edit(string id, FormCollection formValues)
         {
-            var album = storeDB.Albums.Single(a => a.AlbumId == id);
+            var albumModel = session.Load<Album>(id);
+            //Save Album
 
-            try
-            {
-                //Save Album
+            UpdateModel(albumModel, "Album");
+            session.SaveChanges();
 
-                UpdateModel(album, "Album");
-                storeDB.SaveChanges();
-
-                return RedirectToAction("Index");
-            }
-            catch
-            {
-                var viewModel = new StoreManagerViewModel
-                {
-                    Album = album,
-                    Genres = storeDB.Genres.ToList(),
-                    Artists = storeDB.Artists.ToList()
-                };
-
-                return View(viewModel);
-            }
+            return RedirectToAction("Index");
         }
 
         //
         // GET: /StoreManager/Delete/5
 
-        public ActionResult Delete(int id)
+        public ActionResult Delete(string id)
         {
-            var album = storeDB.Albums.Single(a => a.AlbumId == id);
+            var albumModel = session.Load<Album>(id);
 
-            return View(album);
+            return View(albumModel);
         }
 
         //
         // POST: /StoreManager/Delete/5
 
         [HttpPost]
-        public ActionResult Delete(int id, string confirmButton)
+        public ActionResult Delete(string id, string confirmButton)
         {
-            var album = storeDB.Albums
-                .Include("OrderDetails").Include("Carts")
-                .Single(a => a.AlbumId == id);
+            session.Delete(session.Load<Album>(id));
+            session.SaveChanges();
 
-            // For simplicity, we're allowing deleting of albums 
-            // with existing orders We've set up OnDelete = Cascade 
-            // on the Album->OrderDetails and Album->Carts relationships
-
-            storeDB.DeleteObject(album);
-            storeDB.SaveChanges();
 
             return View("Deleted");
         }

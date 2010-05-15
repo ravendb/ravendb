@@ -115,7 +115,7 @@ namespace MvcMusicStore.Controllers
         {
             if (ModelState.IsValid)
             {
-                if (MembershipService.ValidateUser(model.UserName, model.Password))
+                //if (MembershipService.ValidateUser(model.UserName, model.Password))
                 {
                     MigrateShoppingCart(model.UserName);
 
@@ -130,10 +130,10 @@ namespace MvcMusicStore.Controllers
                         return RedirectToAction("Index", "Home");
                     }
                 }
-                else
-                {
-                    ModelState.AddModelError("", "The user name or password provided is incorrect.");
-                }
+                //else
+                //{
+                //    ModelState.AddModelError("", "The user name or password provided is incorrect.");
+                //}
             }
 
             // If we got this far, something failed, redisplay form
@@ -145,6 +145,8 @@ namespace MvcMusicStore.Controllers
             // Associate shopping cart items with logged-in user
             var cart = ShoppingCartFinder.FindShoppingCart();
             var newShoppingCartId = ShoppingCartFinder.SetShoppingCartId(UserName);
+            if (cart.Id == newShoppingCartId)
+                return;// already migrated
 
             var newCart = cart.MigrateCart(newShoppingCartId);
             session.Delete(cart);
