@@ -37,15 +37,14 @@ namespace MvcMusicStore.Models
 
         public AccountMembershipService(MembershipProvider provider)
         {
-            //_provider = provider ?? Membership.Provider;
+            _provider = provider ?? Membership.Provider;
         }
 
         public int MinPasswordLength
         {
             get
             {
-                //return _provider.MinRequiredPasswordLength;
-                return 4;
+                return _provider.MinRequiredPasswordLength;
             }
         }
 
@@ -54,8 +53,7 @@ namespace MvcMusicStore.Models
             ValidationUtil.ValidateRequiredStringValue(userName, "userName");
             ValidationUtil.ValidateRequiredStringValue(password, "password");
 
-            //return _provider.ValidateUser(userName, password);
-            return userName == password;
+            return _provider.ValidateUser(userName, password);
         }
 
         public MembershipCreateStatus CreateUser(string userName, string password, string email)
@@ -64,9 +62,9 @@ namespace MvcMusicStore.Models
             ValidationUtil.ValidateRequiredStringValue(password, "password");
             ValidationUtil.ValidateRequiredStringValue(email, "email");
 
-            //MembershipCreateStatus status;
-            //_provider.CreateUser(userName, password, email, null, null, true, null, out status);
-            return MembershipCreateStatus.Success;
+            MembershipCreateStatus status;
+            _provider.CreateUser(userName, password, email, null, null, true, null, out status);
+            return status;
         }
 
         public bool ChangePassword(string userName, string oldPassword, string newPassword)
@@ -79,9 +77,8 @@ namespace MvcMusicStore.Models
             // than return false in certain failure scenarios.
             try
             {
-                //MembershipUser currentUser = _provider.GetUser(userName, true /* userIsOnline */);
-                //return currentUser.ChangePassword(oldPassword, newPassword);
-                return true;
+                MembershipUser currentUser = _provider.GetUser(userName, true /* userIsOnline */);
+                return currentUser.ChangePassword(oldPassword, newPassword);
             }
             catch (ArgumentException)
             {
