@@ -2,16 +2,17 @@
 using System.Linq;
 using System.Web.Mvc;
 using MvcMusicStore.Models;
+using MvcMusicStore.Services;
 using MvcMusicStore.ViewModels;
+using Raven.Client;
 
 namespace MvcMusicStore.Controllers
 {
     [Authorize]
     public class CheckoutController : Controller
     {
-        MusicStoreEntities storeDB = new MusicStoreEntities();
         const string PromoCode = "FREE";
-
+        private IDocumentSession session = MvcApplication.CurrentSession;
         //
         // GET: /Checkout/AddressAndPayment
 
@@ -41,16 +42,12 @@ namespace MvcMusicStore.Controllers
                     order.Username = User.Identity.Name;
                     order.OrderDate = DateTime.Now;
 
-                    //Save Order
-                    storeDB.AddToOrders(order);
-                    storeDB.SaveChanges();
-
                     //Process the order
-                    var cart = ShoppingCart.GetCart(this.HttpContext);
+                    var cart = ShoppingCartFinder.FindShoppingCart();
                     cart.CreateOrder(order);
 
                     return RedirectToAction("Complete", 
-                        new { id = order.OrderId });
+                        new { id = order.Id });
                 }
 
             }
@@ -64,21 +61,12 @@ namespace MvcMusicStore.Controllers
         //
         // GET: /Checkout/Complete
 
-        public ActionResult Complete(int id)
+        public ActionResult Complete(string id)
         {
-            // Validate customer owns this order
-            bool isValid = storeDB.Orders.Any(
-                o => o.OrderId == id &&
-                o.Username == User.Identity.Name);
-
-            if (isValid)
-            {
-                return View(id);
-            }
-            else
-            {
+            var order = session.Load<Order>(id);
+            if (order == null || order.Username != User.Identity.Name)
                 return View("Error");
-            }
+            return View(id);
         }
     }
 }
