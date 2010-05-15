@@ -8,6 +8,7 @@ using System.Web.Mvc;
 using System.Web.Routing;
 using System.Web.Security;
 using MvcMusicStore.Models;
+using MvcMusicStore.Services;
 
 namespace MvcMusicStore.Controllers
 {
@@ -139,11 +140,17 @@ namespace MvcMusicStore.Controllers
 
         private void MigrateShoppingCart(string UserName)
         {
-            // Associate shopping cart items with logged-in user
-            var cart = ShoppingCart.GetCart(this.HttpContext);
+            var session = MvcApplication.CurrentSession;
 
-            cart.MigrateCart(UserName);
-            Session[ShoppingCart.CartSessionKey] = UserName;
+            // Associate shopping cart items with logged-in user
+            var cart = ShoppingCartFinder.FindShoppingCart();
+            var newShoppingCartId = ShoppingCartFinder.SetShoppingCartId(UserName);
+
+            var newCart = cart.MigrateCart(newShoppingCartId);
+            session.Delete(cart);
+            session.Store(newCart);
+            session.SaveChanges();
+            
         }
 
         public ActionResult Register()
