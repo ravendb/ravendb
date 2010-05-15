@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Web.Mvc;
 using MvcMusicStore.Models;
@@ -20,7 +21,17 @@ namespace MvcMusicStore.Controllers
             return View(albums);
         }
 
-        private IEnumerable<Album> GetTopSellingAlbums(int count)
+        private IEnumerable<RavenAlbum> GetTopSellingAlbums(int count)
+        {
+           var session = MvcApplication.CurrentSession;
+
+            return session.Query<RavenAlbum>("AlbumsByCountSold")
+                .Take(count)
+                .OrderBy("-Quantity")
+                .ToArray();
+        }
+
+        private IEnumerable<RavenAlbum> GetTopSellingAlbums_Map_Reduce(int count)
         {
             var session = MvcApplication.CurrentSession;
 
@@ -32,12 +43,12 @@ namespace MvcMusicStore.Controllers
                 .ToArray();
 
             // get the actual album documents
-            var topSoldAlbums = session.Load<Album>(topSoldAlbumIds);
+            var topSoldAlbums = session.Load<RavenAlbum>(topSoldAlbumIds);
             // if we don't have enough sold albums
             if(topSoldAlbums.Length < count)
             {
                 // top it off from the unsold albums
-                var justRegularAlbums = session.Query<Album>()
+                var justRegularAlbums = session.Query<RavenAlbum>()
                     .Take(count);
                 topSoldAlbums = topSoldAlbums.Concat(justRegularAlbums)
                     .Distinct()
@@ -47,14 +58,45 @@ namespace MvcMusicStore.Controllers
             return topSoldAlbums;
         }
 
-        public class SoldAlbum
+        public ActionResult AddCountSoldtoAlbum()
         {
-            public string Album { get; set; }
-            public int Quantity{ get; set; }
+            using (var documentStore = new DocumentStore {  Url = "http://localhost:8080" })
+            {
+                documentStore.Initialise();
+                using (var session = documentStore.OpenSession())
+                {
+                    int count = 0;
+                    do
+                    {
+                        var albums = session.Query<RavenAlbum>()
+                            .Skip(count)
+                            .Take(128)
+                            .ToArray();
+                        if (albums.Length == 0)
+                            break;
+
+                        foreach (var album in albums)
+                        {
+                            var result = session.Query<SoldAlbum>("SoldAlbums")
+                                .Where("Album:" + album.Id)
+                                .SingleOrDefault();
+
+                            album.CountSold = result == null ? 0 : result.Quantity;
+                        }
+
+                        count += albums.Length;
+
+                        session.SaveChanges();
+                        session.Clear();
+                    } while (true); 
+                }
+            }
+            return Content("OK");
         }
 
-#if  !STILL_PORTING
-        public ActionResult Port()
+
+#if  STILL_PORTING
+        public ActionResult PortToRaven()
         {
             using (var documentStore = new DocumentStore
             {
@@ -102,4 +144,6 @@ namespace MvcMusicStore.Controllers
         }
 #endif
     }
+
+
 }

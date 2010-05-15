@@ -92,9 +92,11 @@
     <Compile Include="Helpers\HtmlHelpers.cs" />
     <Compile Include="Models\AccountModels.cs" />
     <Compile Include="Models\Album.cs" />
+    <Compile Include="Models\Genre.cs" />
     <Compile Include="Models\Order.cs" />
     <Compile Include="Models\ShoppingCart.cs" />
-    <Compile Include="Models\StoreDB.Designer.cs">
+    <Compile Include="Models\SoldAlbum.cs" />
+    <Compile Include="Models\StoreDB1.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>StoreDB.edmx</DependentUpon>
@@ -178,10 +180,9 @@
   <ItemGroup>
     <EntityDeploy Include="Models\StoreDB.edmx">
       <Generator>EntityModelCodeGenerator</Generator>
-      <LastGenOutput>StoreDB.Designer.cs</LastGenOutput>
+      <LastGenOutput>StoreDB1.Designer.cs</LastGenOutput>
     </EntityDeploy>
   </ItemGroup>
-  <ItemGroup />
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v10.0\WebApplications\Microsoft.WebApplication.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
