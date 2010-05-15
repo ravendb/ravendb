@@ -4,6 +4,8 @@ using System.Linq;
 using System.Web;
 using System.Web.Mvc;
 using System.Web.Routing;
+using Raven.Client;
+using Raven.Client.Document;
 
 namespace MvcMusicStore
 {
@@ -12,6 +14,35 @@ namespace MvcMusicStore
 
     public class MvcApplication : System.Web.HttpApplication
     {
+        private const string RavenSessionKey = "Raven.Session";
+        private static DocumentStore _documentStore;
+
+        protected void Application_Start()
+        {
+            _documentStore = new DocumentStore { Url = "http://localhost:8080/" };
+            _documentStore.Initialise();
+
+            AreaRegistration.RegisterAllAreas();
+
+            RegisterRoutes(RouteTable.Routes);
+        }
+
+        public MvcApplication()
+        {
+            BeginRequest += (sender, args) => HttpContext.Current.Items[RavenSessionKey] = _documentStore.OpenSession();
+            EndRequest += (o, eventArgs) =>
+            {
+                var disposable = HttpContext.Current.Items[RavenSessionKey] as IDisposable;
+                if (disposable != null)
+                    disposable.Dispose();
+            };
+        }
+
+        public static IDocumentSession CurrentSession
+        {
+            get { return (IDocumentSession) HttpContext.Current.Items[RavenSessionKey]; }
+        }
+
         public static void RegisterRoutes(RouteCollection routes)
         {
             routes.IgnoreRoute("{resource}.axd/{*pathInfo}");
@@ -20,21 +51,13 @@ namespace MvcMusicStore
                 "Browse",                                                // Route name
                 "Store/Browse/{genre}",                                  // URL with parameters
                 new { controller = "Store", action = "Browse", id = "" } // Parameter defaults
-            );
+                );
 
             routes.MapRoute(
                 "Default",                                              // Route name
                 "{controller}/{action}/{id}",                           // URL with parameters
                 new { controller = "Home", action = "Index", id = "" }  // Parameter defaults
-            );
-
-        }
-
-        protected void Application_Start()
-        {
-            AreaRegistration.RegisterAllAreas();
-
-            RegisterRoutes(RouteTable.Routes);
+                );
         }
     }
 }
