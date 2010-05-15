@@ -5,174 +5,100 @@ using System.Web;
 
 namespace MvcMusicStore.Models
 {
-    public partial class ShoppingCart
+    public class ShoppingCart
     {
-        MusicStoreEntities storeDB = new MusicStoreEntities();
-        string shoppingCartId { get; set; }
-        public const string CartSessionKey = "CartId";
+        public string Id { get; set; }
+        public List<ShoppingCartLine> Lines { get; set; }
 
-        public static ShoppingCart GetCart(HttpContextBase context)
+        public decimal Total
         {
-            var cart = new ShoppingCart();
-            cart.shoppingCartId = cart.GetCartId(context);
-            return cart;
+            get
+            {
+                // this executes in memory, no database queries here!
+                return Lines.Sum(x => x.Price);
+            }
         }
 
-        public void AddToCart(Album2 album)
+        public ShoppingCart()
         {
-            var cartItem = storeDB.Carts.SingleOrDefault(
-                c => c.CartId == shoppingCartId && 
-                c.AlbumId == album.AlbumId);
+            Lines = new List<ShoppingCartLine>();
+        }
 
-            if (cartItem == null)
+        public class ShoppingCartLine
+        {
+            public int Quantity { get; set; }
+            public decimal Price { get; set; }
+            public DateTime DateCreated { get; set; }
+
+            public ShoppingCartLineAlbum Album
             {
-                // Create a new cart item
-                cartItem = new Cart
+                get; set;
+            }
+
+            public class ShoppingCartLineAlbum
+            {
+                public string Id { get; set; }
+                public string Title { get; set; }
+            }
+        }
+
+        public void AddToCart(Album album)
+        {
+            // this runs in memory, there is no database queries here, mister!
+            var albumLine = Lines.FirstOrDefault(line => line.Album.Id == album.Id);
+            if (albumLine != null)
+            {
+                albumLine.Quantity++;
+                return;
+            }
+            Lines.Add(new ShoppingCartLine
+            {
+                Album = new ShoppingCartLine.ShoppingCartLineAlbum
                 {
-                    AlbumId = album.AlbumId,
-                    CartId = shoppingCartId,
-                    Count = 1,
-                    DateCreated = DateTime.Now
-                };
-                storeDB.AddToCarts(cartItem);
-            }
-            else
-            {
-                // Add one to the quantity
-                cartItem.Count++;
-            }
-
-            // Save it
-            storeDB.SaveChanges();
+                    Id = album.Id,
+                    Title = album.Title
+                },
+                DateCreated = DateTime.Now,
+                Price = album.Price,
+                Quantity = 1
+            });
         }
 
-        public void RemoveFromCart(int id)
+        public string RemoveFromCart(string album)
         {
-            //Get the cart
-            var cartItem = storeDB.Carts.Single(
-                cart => cart.CartId == shoppingCartId 
-                && cart.RecordId == id);
+            // this runs in memory, there is no database queries here, mister!
+            var albumLine = Lines.FirstOrDefault(line => line.Album.Id == album);
+            if (albumLine == null)
+                return null;
+            albumLine.Quantity--;
+            if (albumLine.Quantity == 0)
+                Lines.Remove(albumLine);
+            return albumLine.Album.Title;
+        }
 
-            if (cartItem != null)
+        public ShoppingCart MigrateCart(string newShoppingCartId)
+        {
+            return new ShoppingCart
             {
-                if (cartItem.Count > 1)
+                Id = newShoppingCartId,
+                Lines = Lines
+            };
+        }
+
+        public void CreateOrder(Order order)
+        {
+            order.Lines = new List<Order.OrderLine>(
+                Lines.Select(line => new Order.OrderLine
                 {
-                    cartItem.Count--;
-                }
-                else
-                {
-                    storeDB.Carts.DeleteObject(cartItem);
-                }
-                storeDB.SaveChanges();
-            }
-        }
-
-        public void EmptyCart()
-        {
-            var cartItems = storeDB.Carts
-                .Where(cart => cart.CartId == shoppingCartId);
-
-            foreach (var cartItem in cartItems)
-            {
-                storeDB.DeleteObject(cartItem);
-            }
-
-            storeDB.SaveChanges();
-        }
-
-        public List<Cart> GetCartItems()
-        {
-            var cartItems = (from cart in storeDB.Carts
-                             where cart.CartId == shoppingCartId
-                             select cart).ToList();
-            return cartItems;
-        }
-
-        public int GetCount()
-        {
-            int? count = (from cartItems in storeDB.Carts
-                          where cartItems.CartId == shoppingCartId
-                          select (int?)cartItems.Count).Sum();
-
-            return count ?? 0;
-        }
-
-        public decimal GetTotal()
-        {
-            decimal? total = 
-                (from cartItems in storeDB.Carts
-                where cartItems.CartId == shoppingCartId
-                select (int?)cartItems.Count * cartItems.Album.Price)
-                .Sum();
-
-            return total ?? decimal.Zero;
-        }
-
-        public int CreateOrder(Order order)
-        {
-            decimal orderTotal = 0;
-
-            var cartItems = GetCartItems();
-
-            //Iterate the items in the cart, adding Order Details for each
-            foreach (var cartItem in cartItems)
-            {
-                var orderDetails = new OrderDetail
-                {
-                    AlbumId = cartItem.AlbumId,
-                    OrderId = order.OrderId,
-                    UnitPrice = cartItem.Album.Price
-                };
-
-                storeDB.OrderDetails.AddObject(orderDetails);
-
-                orderTotal += (cartItem.Count * cartItem.Album.Price);
-            }
-
-            //Save the order
-            storeDB.SaveChanges();
-
-            //Empty the shopping cart
-            EmptyCart();
-
-            //Return the OrderId as a confirmation number
-            return order.OrderId;
-        }
-
-        // We're using HttpContextBase to allow access to cookies.
-        public String GetCartId(HttpContextBase context)
-        {
-            if (context.Session[CartSessionKey] == null)
-            {
-                if (!string.IsNullOrWhiteSpace(context.User.Identity.Name))
-                {
-                    // User is logged in, associate the cart with there username
-                    context.Session[CartSessionKey] = context.User.Identity.Name;
-                }
-                else
-                {
-                    // Generate a new random GUID using System.Guid Class
-                    Guid tempCartId = Guid.NewGuid();
-
-                    // Send tempCartId back to client as a cookie
-                    context.Session[CartSessionKey] = tempCartId.ToString();
-                }
-            }
-            return context.Session[CartSessionKey].ToString();
-        }
-
-        // When a user has logged in, migrate their shopping cart to
-        // be associated with their username
-        public void MigrateCart(string userName)
-        {
-            var shoppingCart = storeDB.Carts
-                .Where(c => c.CartId == shoppingCartId);
-
-            foreach (Cart item in shoppingCart)
-            {
-                item.CartId = userName;
-            }
-            storeDB.SaveChanges();
+                    Album = new Order.OrderLine.OrderAlbum
+                    {
+                        Id = line.Album.Id,
+                        Title = line.Album.Title
+                    },
+                    Price = line.Price,
+                    Quantity = line.Quantity
+                }));
+            Lines.Clear();
         }
     }
 }
