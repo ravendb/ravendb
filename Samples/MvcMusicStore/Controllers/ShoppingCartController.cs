@@ -1,28 +1,34 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Web.Mvc;
 using MvcMusicStore.Models;
+using MvcMusicStore.Services;
 using MvcMusicStore.ViewModels;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using Raven.Client;
+using MvcMusicStore;
 
 namespace MvcMusicStore.Controllers
 {
     public class ShoppingCartController : Controller
     {
-        MusicStoreEntities storeDB = new MusicStoreEntities();
+        private IDocumentSession session = MvcApplication.CurrentSession;
+
+        
 
         //
         // GET: /ShoppingCart/
 
         public ActionResult Index()
         {
-            var cart = ShoppingCart.GetCart(this.HttpContext);
+            var cart = ShoppingCartFinder.FindShoppingCart();
 
             // Set up our ViewModel
             var viewModel = new ShoppingCartViewModel
             {
-                CartItems = cart.GetCartItems(),
-                CartTotal = cart.GetTotal()
+                CartItems = cart.Lines,
+                CartTotal = cart.Lines.Count
             };
 
             // Return the view
@@ -32,17 +38,11 @@ namespace MvcMusicStore.Controllers
         //
         // GET: /Store/AddToCart/5
 
-        public ActionResult AddToCart(int id)
+        public ActionResult AddToCart(string album)
         {
-
-            // Retrieve the album from the database
-            var addedAlbum = storeDB.Albums
-                .Single(album => album.AlbumId == id);
-
-            // Add it to the shopping cart
-            var cart = ShoppingCart.GetCart(this.HttpContext);
-
-            cart.AddToCart(addedAlbum);
+            var shoppingCart = ShoppingCartFinder.FindShoppingCart();
+            shoppingCart.AddToCart(session.Load<Album>(album));
+            session.SaveChanges();
 
             // Go back to the main store page for more shopping
             return RedirectToAction("Index");
@@ -52,29 +52,25 @@ namespace MvcMusicStore.Controllers
         // AJAX: /ShoppingCart/RemoveFromCart/5
 
         [HttpPost]
-        public ActionResult RemoveFromCart(int id)
+        public ActionResult RemoveFromCart(string album)
         {
             // Remove the item from the cart
-            var cart = ShoppingCart.GetCart(this.HttpContext);
+            var shoppingCart = ShoppingCartFinder.FindShoppingCart();
+            string title = shoppingCart.RemoveFromCart(album);
 
-            // Get the name of the album to display confirmation
-            string albumName = storeDB.Carts
-                .Single(item => item.RecordId == id).Album.Title;
-
-            // Remove from cart. Note that for simplicity, we're 
-            // removing all rather than decrementing the count.
-            cart.RemoveFromCart(id);
+            string message = title == null
+                          ? "The album was not found in your shopping cart."
+                          : Server.HtmlEncode(title) + " has been removed from your shopping cart.";
 
             // Display the confirmation message
-            var results = new ShoppingCartRemoveViewModel { 
-                Message = Server.HtmlEncode(albumName) + 
-                    " has been removed from your shopping cart.",
-                CartTotal = cart.GetTotal(),
-                CartCount = cart.GetCount(),
-                DeleteId = id 
-            };
 
-            return Json(results);
+            return Json(new ShoppingCartRemoveViewModel
+            {
+                Message = message,
+                CartTotal = shoppingCart.Total,
+                CartCount = shoppingCart.Lines.Count,
+                DeleteId = album
+            });
         }
 
         //
@@ -83,9 +79,9 @@ namespace MvcMusicStore.Controllers
         [ChildActionOnly]
         public ActionResult CartSummary()
         {
-            var cart = ShoppingCart.GetCart(this.HttpContext);
+            var shoppingCart = ShoppingCartFinder.FindShoppingCart();
 
-            ViewData["CartCount"] = cart.GetCount();
+            ViewData["CartCount"] = shoppingCart.Lines.Count;
 
             return PartialView("CartSummary");
         }
