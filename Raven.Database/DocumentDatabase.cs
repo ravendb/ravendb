@@ -26,17 +26,17 @@ namespace Raven.Database
 	public class DocumentDatabase : IDisposable
 	{
 		[ImportMany]
-		public IEnumerable<IPutTrigger> PutTriggers { get; set; }
+		public IEnumerable<AbstractPutTrigger> PutTriggers { get; set; }
 
 		[ImportMany]
-		public IEnumerable<IDeleteTrigger> DeleteTriggers { get; set; }
+		public IEnumerable<AbstractDeleteTrigger> DeleteTriggers { get; set; }
 
 
         [ImportMany]
-        public IEnumerable<IIndexUpdateTrigger> IndexUpdateTriggers { get; set; }
+        public IEnumerable<AbstractIndexUpdateTrigger> IndexUpdateTriggers { get; set; }
 
 		[ImportMany]
-		public IEnumerable<IReadTrigger> ReadTriggers { get; set; }
+		public IEnumerable<AbstractReadTrigger> ReadTriggers { get; set; }
 
 		private readonly WorkContext workContext;
 
@@ -281,6 +281,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 
 					etag = actions.AddDocument(key, etag, document, metadata);
 					actions.AddTask(new IndexDocumentsTask { Index = "*", Keys = new[] { key } });
+                    PutTriggers.Apply(trigger => trigger.AfterPut(key, document, metadata, transactionInformation));
                 }
                 else
                 {
@@ -347,7 +348,10 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
                 	DeleteTriggers.Apply(trigger => trigger.OnDelete(key, transactionInformation));
 
                     if (actions.DeleteDocument(key, etag))
+                    {
                         actions.AddTask(new RemoveFromIndexTask {Index = "*", Keys = new[] {key}});
+                        DeleteTriggers.Apply(trigger => trigger.AfterDelete(key, transactionInformation));
+                    }
                 }
                 else
                 {

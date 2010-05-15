@@ -17,7 +17,7 @@ namespace Raven.Database.Indexing
 		private readonly ILog log = LogManager.GetLogger(typeof (WorkContext));
 		private readonly ThreadLocal<bool> shouldNotifyOnWork = new ThreadLocal<bool>();
 		private readonly ReaderWriterLockSlim readerWriterLockSlim = new ReaderWriterLockSlim();
-        public IEnumerable<IIndexUpdateTrigger> IndexUpdateTriggers{ get; set;}
+        public IEnumerable<AbstractIndexUpdateTrigger> IndexUpdateTriggers{ get; set;}
 
 		public bool DoWork
 		{
