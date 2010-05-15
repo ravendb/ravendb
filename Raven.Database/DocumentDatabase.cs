@@ -127,7 +127,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				{
 					result.CountOfDocuments = actions.GetDocumentsCount();
 					result.StaleIndexes = IndexStorage.Indexes
-						.Where(actions.DoesTasksExistsForIndex)
+                        .Where(s => actions.DoesTasksExistsForIndex(s, null))
 						.ToArray();
 					result.Indexes = actions.GetIndexesStats().ToArray();
 				});
@@ -429,8 +429,9 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 			TransactionalStorage.Batch(
 				actions =>
 				{
-					stale = actions.DoesTasksExistsForIndex(index);
-					var indexFailureInformation = actions.GetFailureRate(index);
+					stale = actions.DoesTasksExistsForIndex(index, query.Cutoff);
+					var indexFailureInformation = actions.GetFailureRate(index)
+;
 					if (indexFailureInformation.IsInvalidIndex)
 					{
 						throw new IndexDisabledException(indexFailureInformation);

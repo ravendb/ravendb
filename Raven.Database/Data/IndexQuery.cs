@@ -1,4 +1,5 @@
-﻿using Raven.Database.Extensions;
+﻿using System;
+using Raven.Database.Extensions;
 
 namespace Raven.Database.Data
 {
@@ -20,5 +21,7 @@ namespace Raven.Database.Data
 		public string[] FieldsToFetch { get; set; }
 
 		public SortedField[] SortedFields { get; set; }
+
+        public DateTime? Cutoff { get; set; }
 	}
 }
