@@ -11,13 +11,13 @@ using Raven.Database.Plugins;
 
 namespace Raven.Bundles.Replication
 {
-    public class ReplicationTask : IRequiresDocumentDatabaseInitialization
+    public class ReplicationTask : IStartupTask
     {
         private DocumentDatabase docDb;
         private readonly ILog log = LogManager.GetLogger(typeof(ReplicationTask));
         private bool firstTimeFoundNoReplicationDocument = true;
 
-        public void Initialize(DocumentDatabase database)
+        public void Execute(DocumentDatabase database)
         {
             docDb = database;
 

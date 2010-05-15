@@ -4,18 +4,11 @@ using Raven.Database.Plugins;
 
 namespace Raven.Bundles.Replication
 {
-    public class RemoveConflictOnPutTrigger : IPutTrigger, IRequiresDocumentDatabaseInitialization
+    public class RemoveConflictOnPutTrigger : AbstractPutTrigger
     {
-        private DocumentDatabase docDb;
-
-        public VetoResult AllowPut(string key, JObject document, JObject metadata, TransactionInformation transactionInformation)
-        {
-            return VetoResult.Allowed;
-        }
-
         public void OnPut(string key, JObject document, JObject metadata, TransactionInformation transactionInformation)
         {
-            var oldVersion = docDb.Get(key, transactionInformation);
+            var oldVersion = Database.Get(key, transactionInformation);
             if (oldVersion == null)
                 return;
             if (oldVersion.Metadata[ReplicationConstants.RavenReplicationConflict] == null)
@@ -24,17 +17,8 @@ namespace Raven.Bundles.Replication
             // values of the properties
             foreach (JProperty prop in oldVersion.DataAsJson)
             {
-                docDb.Delete(prop.Value<string>(), null, transactionInformation);
+                Database.Delete(prop.Value<string>(), null, transactionInformation);
             }
-        }
-
-        public void AfterCommit(string key, JObject document, JObject metadata)
-        {
-        }
-
-        public void Initialize(DocumentDatabase database)
-        {
-            docDb = database;
         }
     }
 }

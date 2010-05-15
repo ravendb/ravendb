@@ -4,18 +4,11 @@ using Raven.Database.Plugins;
 
 namespace Raven.Bundles.Replication
 {
-    public class AncestryPutTrigger : IPutTrigger, IRequiresDocumentDatabaseInitialization
+    public class AncestryPutTrigger : AbstractPutTrigger
     {
-        private DocumentDatabase docDb;
-
-        public VetoResult AllowPut(string key, JObject document, JObject metadata, TransactionInformation transactionInformation)
+        public override void OnPut(string key, JObject document, JObject metadata, TransactionInformation transactionInformation)
         {
-            return VetoResult.Allowed;
-        }
-
-        public void OnPut(string key, JObject document, JObject metadata, TransactionInformation transactionInformation)
-        {
-            var oldVersion = docDb.Get(key, transactionInformation);
+            var oldVersion = Database.Get(key, transactionInformation);
             if (oldVersion == null)
                 return;
             var ancestry = metadata.Value<JArray>(ReplicationConstants.RavenAncestry);
@@ -27,15 +20,6 @@ namespace Raven.Bundles.Replication
             ancestry.Add(JToken.FromObject(oldVersion.Etag.ToString()));
             if(ancestry.Count > 15)
                 ancestry.RemoveAt(0);
-        }
-
-        public void AfterCommit(string key, JObject document, JObject metadata)
-        {
-        }
-
-        public void Initialize(DocumentDatabase database)
-        {
-            docDb = database;
         }
     }
 }
