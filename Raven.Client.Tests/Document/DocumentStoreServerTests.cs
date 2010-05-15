@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Threading;
+using System.Transactions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Document;
@@ -232,6 +233,31 @@ namespace Raven.Client.Tests.Document
 
                 company.Name = "Company 2";
                 Assert.Throws<ConcurrencyException>(() => session.SaveChanges());
+            }
+        }
+
+        [Fact]
+        public void Can_insert_with_transaction()
+        {
+            using (var server = GetNewServer(port, path))
+            {
+                const string id = "Company/id";
+                var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+                documentStore.Initialise();
+
+                using (var session = documentStore.OpenSession())
+                {
+                    Assert.Null(session.Load<Company>(id));
+                    using (var tx = new TransactionScope())
+                    {
+                        var company = new Company { Id = id, Name = "Company 1" };
+                        session.Store(company);
+
+                        session.SaveChanges();
+                    }
+                    Assert.NotNull(session.Load<Company>(id));
+
+                }
             }
         }
 
