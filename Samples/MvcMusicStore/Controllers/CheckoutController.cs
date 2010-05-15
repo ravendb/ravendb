@@ -45,6 +45,7 @@ namespace MvcMusicStore.Controllers
                 var cart = ShoppingCartFinder.FindShoppingCart();
                 cart.CreateOrder(order);
 
+                session.Store(order);
                 session.SaveChanges();
 
                 return RedirectToAction("Complete", 
@@ -65,7 +66,7 @@ namespace MvcMusicStore.Controllers
             var order = session.Load<Order>(id);
             if (order == null || order.Username != User.Identity.Name)
                 return View("Error");
-            return View(id);
+            return View((object)id);
         }
     }
 }
