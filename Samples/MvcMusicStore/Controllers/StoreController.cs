@@ -2,6 +2,7 @@
 using System.Web.Mvc;
 using MvcMusicStore.Models;
 using MvcMusicStore.ViewModels;
+using Raven.Client;
 
 namespace MvcMusicStore.Controllers
 {
@@ -14,15 +15,16 @@ namespace MvcMusicStore.Controllers
 
         public ActionResult Index()
         {
+            var session = MvcApplication.CurrentSession;
             // Retrieve list of Genres from database
-            var genres = from genre in storeDB.Genres
-                         select genre.Name;
+            var genres = session.Query<Genre>()
+                .ToArray();
 
             // Set up our ViewModel
             var viewModel = new StoreIndexViewModel()
             {
-                Genres = genres.ToList(),
-                NumberOfGenres = genres.Count()
+                Genres = genres.Select(x=>x.Name).ToList(),
+                NumberOfGenres = genres.Length
             };
 
             // Return the view
