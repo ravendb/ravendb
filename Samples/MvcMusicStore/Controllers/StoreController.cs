@@ -8,12 +8,13 @@ namespace MvcMusicStore.Controllers
 {
     public class StoreController : Controller
     {
+        IDocumentSession session = MvcApplication.CurrentSession;
+
         //
         // GET: /Store/
 
         public ActionResult Index()
         {
-            var session = MvcApplication.CurrentSession;
             // Retrieve list of Genres from database
             var genres = session.Query<Genre>()
                 .ToArray();
@@ -32,18 +33,16 @@ namespace MvcMusicStore.Controllers
         //
         // GET: /Store/Browse?Genre=Disco
 
-        public ActionResult Browse(string genre)
+        public ActionResult Browse(string id)
         {
             // Retrieve Genre from database
-            var session = MvcApplication.CurrentSession;
-
-            var genreModel = session.Load<Genre>(genre);
+            var genre = session.Load<Genre>(id);
             var albums = session.Query<Album>("AlbumsByGenre")
-                .Where("Genre:" + genre)
+                .Where("Genre:" + id)
                 .ToArray();
             var viewModel = new StoreBrowseViewModel()
             {
-                Genre = genreModel,
+                Genre = genre,
                 Albums = albums
             };
 
@@ -53,11 +52,9 @@ namespace MvcMusicStore.Controllers
         //
         // GET: /Store/Details/5
 
-        public ActionResult Details(string album)
+        public ActionResult Details(string id)
         {
-            var session = MvcApplication.CurrentSession;
-            var albumModel = session.Load<Album>(album);
-            return View(albumModel);
+            return View(session.Load<Album>(id));
         }
 
         //
@@ -66,9 +63,7 @@ namespace MvcMusicStore.Controllers
         [ChildActionOnly]
         public ActionResult GenreMenu()
         {
-            var session = MvcApplication.CurrentSession;
-            return View(session.Query<Genre>()
-                .ToArray());
+            return View(session.Query<Genre>().ToArray());
         }
     }
 }

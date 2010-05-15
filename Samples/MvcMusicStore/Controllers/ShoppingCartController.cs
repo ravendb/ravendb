@@ -38,10 +38,10 @@ namespace MvcMusicStore.Controllers
         //
         // GET: /Store/AddToCart/5
 
-        public ActionResult AddToCart(string album)
+        public ActionResult AddToCart(string id)
         {
             var shoppingCart = ShoppingCartFinder.FindShoppingCart();
-            shoppingCart.AddToCart(session.Load<Album>(album));
+            shoppingCart.AddToCart(session.Load<Album>(id));
             session.SaveChanges();
 
             // Go back to the main store page for more shopping
@@ -52,11 +52,11 @@ namespace MvcMusicStore.Controllers
         // AJAX: /ShoppingCart/RemoveFromCart/5
 
         [HttpPost]
-        public ActionResult RemoveFromCart(string album)
+        public ActionResult RemoveFromCart(string id)
         {
             // Remove the item from the cart
             var shoppingCart = ShoppingCartFinder.FindShoppingCart();
-            string title = shoppingCart.RemoveFromCart(album);
+            string title = shoppingCart.RemoveFromCart(id);
 
             string message = title == null
                           ? "The album was not found in your shopping cart."
@@ -69,7 +69,7 @@ namespace MvcMusicStore.Controllers
                 Message = message,
                 CartTotal = shoppingCart.Total,
                 CartCount = shoppingCart.Lines.Count,
-                DeleteId = album
+                DeleteId = id
             });
         }
 
