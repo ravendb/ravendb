@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading;
+using System.Threading.Tasks;
 using log4net;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -45,10 +46,7 @@ namespace Raven.Bundles.Replication
                     }
                     else
                     {
-                        foreach (var destination in destinations)
-                        {
-                            ReplicateTo(destination);
-                        }
+                        Parallel.ForEach(destinations, ReplicateTo);
                     }
                 }
                 catch (Exception e)
@@ -72,13 +70,20 @@ namespace Raven.Bundles.Replication
 
         private void ReplicateTo(string destination)
         {
-            var etag = GetLastReplicatedEtagFrom(destination);
-            if(etag == null)
-                return;
-            var jsonDocuments = GetJsonDocuments(etag.Value);
-            if(jsonDocuments == null || jsonDocuments.Count == 0)
-                return;
-            TryReplicatingData(destination, jsonDocuments);
+            try
+            {
+                var etag = GetLastReplicatedEtagFrom(destination);
+                if(etag == null)
+                    return;
+                var jsonDocuments = GetJsonDocuments(etag.Value);
+                if(jsonDocuments == null || jsonDocuments.Count == 0)
+                    return;
+                TryReplicatingData(destination, jsonDocuments);
+            }
+            catch (Exception e)
+            {
+                log.Warn("Failed to replicate to: " + destination, e);
+            }
         }
 
         private void TryReplicatingData(string destination, JArray jsonDocuments)
