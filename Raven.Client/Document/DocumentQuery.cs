@@ -27,6 +27,7 @@ namespace Raven.Client.Document
 	            query = query,
 	            start = start,
 				timeout = timeout,
+                cutoff = cutoff,
 	            waitForNonStaleResults = waitForNonStaleResults
 	        };
 	    }
@@ -43,6 +44,7 @@ namespace Raven.Client.Document
 					Query = query,
 					PageSize = pageSize,
 					Start = start,
+                    Cutoff = cutoff,
 					SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
 					FieldsToFetch = projectionFields
 				});
