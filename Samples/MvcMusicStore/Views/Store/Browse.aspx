@@ -13,7 +13,7 @@
             <% foreach (var album in Model.Albums) { %>
 
             <li>
-                <a href="<%: Url.Action("Details", new { id = album.AlbumId }) %>">
+                <a href="<%: Url.Action("Details", new { id = album.Id }) %>">
                     <img alt="<%: album.Title %>" src="<%: album.AlbumArtUrl %>" />
                     <span><%: album.Title %></span>
                 </a>
