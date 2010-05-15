@@ -78,17 +78,18 @@ namespace Raven.Database.Server.Responders
 		private void OnGet(IHttpContext context, string index)
 		{
 			var definition = context.Request.QueryString["definition"];
-			if ("yes".Equals(definition, StringComparison.InvariantCultureIgnoreCase))
+		    if ("yes".Equals(definition, StringComparison.InvariantCultureIgnoreCase))
 			{
 				context.WriteJson(new {Index = Database.IndexDefinitionStorage.GetIndexDefinition(index)});
 			}
 			else
 			{
-				context.WriteJson(Database.Query(index, new IndexQuery
+                context.WriteJson(Database.Query(index, new IndexQuery
 				{
 					Query = context.Request.QueryString["query"],
 					Start = context.GetStart(),
 					PageSize = context.GetPageSize(),
+                    Cutoff = context.GetCutOff(),
 					FieldsToFetch = context.Request.QueryString.GetValues("fetch"),
 					SortedFields = context.Request.QueryString.GetValues("sort")
 						.EmptyIfNull()

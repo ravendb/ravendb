@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -208,6 +209,19 @@ namespace Raven.Database.Server.Responders
 				pageSize = 1024;
 			return pageSize;
 		}
+
+        public static DateTime? GetCutOff(this IHttpContext context)
+        {
+            var etagAsString = context.Request.QueryString["cutOff"];
+            if (etagAsString != null)
+            {
+                DateTime result;
+                if (DateTime.TryParseExact(etagAsString, "o", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out result))
+                    return result;
+                throw new BadRequestException("Could not parse cut off query parameter as date");
+            }
+            return null;
+        }
 
 		public static Guid? GetEtag(this IHttpContext context)
 		{
