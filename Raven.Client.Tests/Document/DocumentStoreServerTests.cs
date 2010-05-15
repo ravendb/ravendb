@@ -279,6 +279,31 @@ namespace Raven.Client.Tests.Document
             }
         }
 
+        [Fact]
+        public void Can_rollback_transaction()
+        {
+            using (var server = GetNewServer(port, path))
+            {
+                const string id = "Company/id";
+                var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+                documentStore.Initialise();
+
+                using (var session = documentStore.OpenSession())
+                {
+                    Assert.Null(session.Load<Company>(id));
+                    using (var tx = new TransactionScope())
+                    {
+                        var company = new Company { Id = id, Name = "Company 1" };
+                        session.Store(company);
+
+                        session.SaveChanges();
+
+                    }
+                    Assert.Null(session.Load<Company>(id));
+                }
+            }
+        }
+
 		[Fact]
 		public void Should_update_stored_entity()
 		{
