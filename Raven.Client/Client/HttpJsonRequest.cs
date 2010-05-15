@@ -58,8 +58,11 @@ namespace Raven.Client.Client
 
         private void WriteMetadata(JObject metadata)
         {
-            if (metadata == null)
+            if (metadata == null || metadata.Count == 0)
+            {
+                webRequest.ContentLength = 0;
                 return;
+            }
 
             foreach (JProperty prop in metadata)
             {

@@ -270,6 +270,8 @@ namespace Raven.Client.Tests.Document
                         session.Store(company);
 
                         session.SaveChanges();
+
+                        tx.Complete();
                     }
                     Assert.NotNull(session.Load<Company>(id));
 
