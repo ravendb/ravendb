@@ -5,8 +5,8 @@ namespace MvcMusicStore.ViewModels
 {
     public class StoreManagerViewModel
     {
-        public Album Album { get; set; }
+        public Album2 Album { get; set; }
         public List<Artist> Artists { get; set; }
-        public List<Genre> Genres { get; set; }
+        public List<Genre2> Genres { get; set; }
     }
 }

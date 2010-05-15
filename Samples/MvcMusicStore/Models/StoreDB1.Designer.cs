@@ -18,10 +18,10 @@ using System.Runtime.Serialization;
 [assembly: EdmSchemaAttribute()]
 #region EDM Relationship Metadata
 
-[assembly: EdmRelationshipAttribute("MvcMusicStoreModel", "FK__Album__ArtistId__276EDEB3", "Artist", System.Data.Metadata.Edm.RelationshipMultiplicity.One, typeof(MvcMusicStore.Models.Artist), "Album", System.Data.Metadata.Edm.RelationshipMultiplicity.Many, typeof(MvcMusicStore.Models.Album), true)]
-[assembly: EdmRelationshipAttribute("MvcMusicStoreModel", "FK_Album_Genre", "Genre", System.Data.Metadata.Edm.RelationshipMultiplicity.One, typeof(MvcMusicStore.Models.Genre), "Album", System.Data.Metadata.Edm.RelationshipMultiplicity.Many, typeof(MvcMusicStore.Models.Album), true)]
-[assembly: EdmRelationshipAttribute("MvcMusicStoreModel", "FK_Cart_Album", "Album", System.Data.Metadata.Edm.RelationshipMultiplicity.One, typeof(MvcMusicStore.Models.Album), "Cart", System.Data.Metadata.Edm.RelationshipMultiplicity.Many, typeof(MvcMusicStore.Models.Cart), true)]
-[assembly: EdmRelationshipAttribute("MvcMusicStoreModel", "FK_InvoiceLine_Album", "Album", System.Data.Metadata.Edm.RelationshipMultiplicity.One, typeof(MvcMusicStore.Models.Album), "OrderDetail", System.Data.Metadata.Edm.RelationshipMultiplicity.Many, typeof(MvcMusicStore.Models.OrderDetail), true)]
+[assembly: EdmRelationshipAttribute("MvcMusicStoreModel", "FK__Album__ArtistId__276EDEB3", "Artist", System.Data.Metadata.Edm.RelationshipMultiplicity.One, typeof(MvcMusicStore.Models.Artist), "Album", System.Data.Metadata.Edm.RelationshipMultiplicity.Many, typeof(MvcMusicStore.Models.Album2), true)]
+[assembly: EdmRelationshipAttribute("MvcMusicStoreModel", "FK_Album_Genre", "Genre", System.Data.Metadata.Edm.RelationshipMultiplicity.One, typeof(MvcMusicStore.Models.Genre2), "Album", System.Data.Metadata.Edm.RelationshipMultiplicity.Many, typeof(MvcMusicStore.Models.Album2), true)]
+[assembly: EdmRelationshipAttribute("MvcMusicStoreModel", "FK_Cart_Album", "Album", System.Data.Metadata.Edm.RelationshipMultiplicity.One, typeof(MvcMusicStore.Models.Album2), "Cart", System.Data.Metadata.Edm.RelationshipMultiplicity.Many, typeof(MvcMusicStore.Models.Cart), true)]
+[assembly: EdmRelationshipAttribute("MvcMusicStoreModel", "FK_InvoiceLine_Album", "Album", System.Data.Metadata.Edm.RelationshipMultiplicity.One, typeof(MvcMusicStore.Models.Album2), "OrderDetail", System.Data.Metadata.Edm.RelationshipMultiplicity.Many, typeof(MvcMusicStore.Models.OrderDetail), true)]
 [assembly: EdmRelationshipAttribute("MvcMusicStoreModel", "FK__InvoiceLi__Invoi__2F10007B", "Order", System.Data.Metadata.Edm.RelationshipMultiplicity.One, typeof(MvcMusicStore.Models.Order), "OrderDetail", System.Data.Metadata.Edm.RelationshipMultiplicity.Many, typeof(MvcMusicStore.Models.OrderDetail), true)]
 
 #endregion
@@ -77,18 +77,18 @@ namespace MvcMusicStore.Models
         /// <summary>
         /// No Metadata Documentation available.
         /// </summary>
-        public ObjectSet<Album> Albums
+        public ObjectSet<Album2> Albums
         {
             get
             {
                 if ((_Albums == null))
                 {
-                    _Albums = base.CreateObjectSet<Album>("Albums");
+                    _Albums = base.CreateObjectSet<Album2>("Albums");
                 }
                 return _Albums;
             }
         }
-        private ObjectSet<Album> _Albums;
+        private ObjectSet<Album2> _Albums;
     
         /// <summary>
         /// No Metadata Documentation available.
@@ -109,18 +109,18 @@ namespace MvcMusicStore.Models
         /// <summary>
         /// No Metadata Documentation available.
         /// </summary>
-        public ObjectSet<Genre> Genres
+        public ObjectSet<Genre2> Genres
         {
             get
             {
                 if ((_Genres == null))
                 {
-                    _Genres = base.CreateObjectSet<Genre>("Genres");
+                    _Genres = base.CreateObjectSet<Genre2>("Genres");
                 }
                 return _Genres;
             }
         }
-        private ObjectSet<Genre> _Genres;
+        private ObjectSet<Genre2> _Genres;
     
         /// <summary>
         /// No Metadata Documentation available.
@@ -176,7 +176,7 @@ namespace MvcMusicStore.Models
         /// <summary>
         /// Deprecated Method for adding a new object to the Albums EntitySet. Consider using the .Add method of the associated ObjectSet&lt;T&gt; property instead.
         /// </summary>
-        public void AddToAlbums(Album album)
+        public void AddToAlbums(Album2 album)
         {
             base.AddObject("Albums", album);
         }
@@ -192,7 +192,7 @@ namespace MvcMusicStore.Models
         /// <summary>
         /// Deprecated Method for adding a new object to the Genres EntitySet. Consider using the .Add method of the associated ObjectSet&lt;T&gt; property instead.
         /// </summary>
-        public void AddToGenres(Genre genre)
+        public void AddToGenres(Genre2 genre)
         {
             base.AddObject("Genres", genre);
         }
@@ -235,7 +235,7 @@ namespace MvcMusicStore.Models
     [EdmEntityTypeAttribute(NamespaceName="MvcMusicStoreModel", Name="Album")]
     [Serializable()]
     [DataContractAttribute(IsReference=true)]
-    public partial class Album : EntityObject
+    public partial class Album2 : EntityObject
     {
         #region Factory Method
     
@@ -247,9 +247,9 @@ namespace MvcMusicStore.Models
         /// <param name="artistId">Initial value of the ArtistId property.</param>
         /// <param name="title">Initial value of the Title property.</param>
         /// <param name="price">Initial value of the Price property.</param>
-        public static Album CreateAlbum(global::System.Int32 albumId, global::System.Int32 genreId, global::System.Int32 artistId, global::System.String title, global::System.Decimal price)
+        public static Album2 CreateAlbum(global::System.Int32 albumId, global::System.Int32 genreId, global::System.Int32 artistId, global::System.String title, global::System.Decimal price)
         {
-            Album album = new Album();
+            Album2 album = new Album2();
             album.AlbumId = albumId;
             album.GenreId = genreId;
             album.ArtistId = artistId;
@@ -457,15 +457,15 @@ namespace MvcMusicStore.Models
         [SoapIgnoreAttribute()]
         [DataMemberAttribute()]
         [EdmRelationshipNavigationPropertyAttribute("MvcMusicStoreModel", "FK_Album_Genre", "Genre")]
-        public Genre Genre
+        public Genre2 Genre
         {
             get
             {
-                return ((IEntityWithRelationships)this).RelationshipManager.GetRelatedReference<Genre>("MvcMusicStoreModel.FK_Album_Genre", "Genre").Value;
+                return ((IEntityWithRelationships)this).RelationshipManager.GetRelatedReference<Genre2>("MvcMusicStoreModel.FK_Album_Genre", "Genre").Value;
             }
             set
             {
-                ((IEntityWithRelationships)this).RelationshipManager.GetRelatedReference<Genre>("MvcMusicStoreModel.FK_Album_Genre", "Genre").Value = value;
+                ((IEntityWithRelationships)this).RelationshipManager.GetRelatedReference<Genre2>("MvcMusicStoreModel.FK_Album_Genre", "Genre").Value = value;
             }
         }
         /// <summary>
@@ -473,17 +473,17 @@ namespace MvcMusicStore.Models
         /// </summary>
         [BrowsableAttribute(false)]
         [DataMemberAttribute()]
-        public EntityReference<Genre> GenreReference
+        public EntityReference<Genre2> GenreReference
         {
             get
             {
-                return ((IEntityWithRelationships)this).RelationshipManager.GetRelatedReference<Genre>("MvcMusicStoreModel.FK_Album_Genre", "Genre");
+                return ((IEntityWithRelationships)this).RelationshipManager.GetRelatedReference<Genre2>("MvcMusicStoreModel.FK_Album_Genre", "Genre");
             }
             set
             {
                 if ((value != null))
                 {
-                    ((IEntityWithRelationships)this).RelationshipManager.InitializeRelatedReference<Genre>("MvcMusicStoreModel.FK_Album_Genre", "Genre", value);
+                    ((IEntityWithRelationships)this).RelationshipManager.InitializeRelatedReference<Genre2>("MvcMusicStoreModel.FK_Album_Genre", "Genre", value);
                 }
             }
         }
@@ -621,17 +621,17 @@ namespace MvcMusicStore.Models
         [SoapIgnoreAttribute()]
         [DataMemberAttribute()]
         [EdmRelationshipNavigationPropertyAttribute("MvcMusicStoreModel", "FK__Album__ArtistId__276EDEB3", "Album")]
-        public EntityCollection<Album> Albums
+        public EntityCollection<Album2> Albums
         {
             get
             {
-                return ((IEntityWithRelationships)this).RelationshipManager.GetRelatedCollection<Album>("MvcMusicStoreModel.FK__Album__ArtistId__276EDEB3", "Album");
+                return ((IEntityWithRelationships)this).RelationshipManager.GetRelatedCollection<Album2>("MvcMusicStoreModel.FK__Album__ArtistId__276EDEB3", "Album");
             }
             set
             {
                 if ((value != null))
                 {
-                    ((IEntityWithRelationships)this).RelationshipManager.InitializeRelatedCollection<Album>("MvcMusicStoreModel.FK__Album__ArtistId__276EDEB3", "Album", value);
+                    ((IEntityWithRelationships)this).RelationshipManager.InitializeRelatedCollection<Album2>("MvcMusicStoreModel.FK__Album__ArtistId__276EDEB3", "Album", value);
                 }
             }
         }
@@ -805,15 +805,15 @@ namespace MvcMusicStore.Models
         [SoapIgnoreAttribute()]
         [DataMemberAttribute()]
         [EdmRelationshipNavigationPropertyAttribute("MvcMusicStoreModel", "FK_Cart_Album", "Album")]
-        public Album Album
+        public Album2 Album
         {
             get
             {
-                return ((IEntityWithRelationships)this).RelationshipManager.GetRelatedReference<Album>("MvcMusicStoreModel.FK_Cart_Album", "Album").Value;
+                return ((IEntityWithRelationships)this).RelationshipManager.GetRelatedReference<Album2>("MvcMusicStoreModel.FK_Cart_Album", "Album").Value;
             }
             set
             {
-                ((IEntityWithRelationships)this).RelationshipManager.GetRelatedReference<Album>("MvcMusicStoreModel.FK_Cart_Album", "Album").Value = value;
+                ((IEntityWithRelationships)this).RelationshipManager.GetRelatedReference<Album2>("MvcMusicStoreModel.FK_Cart_Album", "Album").Value = value;
             }
         }
         /// <summary>
@@ -821,17 +821,17 @@ namespace MvcMusicStore.Models
         /// </summary>
         [BrowsableAttribute(false)]
         [DataMemberAttribute()]
-        public EntityReference<Album> AlbumReference
+        public EntityReference<Album2> AlbumReference
         {
             get
             {
-                return ((IEntityWithRelationships)this).RelationshipManager.GetRelatedReference<Album>("MvcMusicStoreModel.FK_Cart_Album", "Album");
+                return ((IEntityWithRelationships)this).RelationshipManager.GetRelatedReference<Album2>("MvcMusicStoreModel.FK_Cart_Album", "Album");
             }
             set
             {
                 if ((value != null))
                 {
-                    ((IEntityWithRelationships)this).RelationshipManager.InitializeRelatedReference<Album>("MvcMusicStoreModel.FK_Cart_Album", "Album", value);
+                    ((IEntityWithRelationships)this).RelationshipManager.InitializeRelatedReference<Album2>("MvcMusicStoreModel.FK_Cart_Album", "Album", value);
                 }
             }
         }
@@ -845,7 +845,7 @@ namespace MvcMusicStore.Models
     [EdmEntityTypeAttribute(NamespaceName="MvcMusicStoreModel", Name="Genre")]
     [Serializable()]
     [DataContractAttribute(IsReference=true)]
-    public partial class Genre : EntityObject
+    public partial class Genre2 : EntityObject
     {
         #region Factory Method
     
@@ -853,9 +853,9 @@ namespace MvcMusicStore.Models
         /// Create a new Genre object.
         /// </summary>
         /// <param name="genreId">Initial value of the GenreId property.</param>
-        public static Genre CreateGenre(global::System.Int32 genreId)
+        public static Genre2 CreateGenre(global::System.Int32 genreId)
         {
-            Genre genre = new Genre();
+            Genre2 genre = new Genre2();
             genre.GenreId = genreId;
             return genre;
         }
@@ -949,17 +949,17 @@ namespace MvcMusicStore.Models
         [SoapIgnoreAttribute()]
         [DataMemberAttribute()]
         [EdmRelationshipNavigationPropertyAttribute("MvcMusicStoreModel", "FK_Album_Genre", "Album")]
-        public EntityCollection<Album> Albums
+        public EntityCollection<Album2> Albums
         {
             get
             {
-                return ((IEntityWithRelationships)this).RelationshipManager.GetRelatedCollection<Album>("MvcMusicStoreModel.FK_Album_Genre", "Album");
+                return ((IEntityWithRelationships)this).RelationshipManager.GetRelatedCollection<Album2>("MvcMusicStoreModel.FK_Album_Genre", "Album");
             }
             set
             {
                 if ((value != null))
                 {
-                    ((IEntityWithRelationships)this).RelationshipManager.InitializeRelatedCollection<Album>("MvcMusicStoreModel.FK_Album_Genre", "Album", value);
+                    ((IEntityWithRelationships)this).RelationshipManager.InitializeRelatedCollection<Album2>("MvcMusicStoreModel.FK_Album_Genre", "Album", value);
                 }
             }
         }
@@ -1505,15 +1505,15 @@ namespace MvcMusicStore.Models
         [SoapIgnoreAttribute()]
         [DataMemberAttribute()]
         [EdmRelationshipNavigationPropertyAttribute("MvcMusicStoreModel", "FK_InvoiceLine_Album", "Album")]
-        public Album Album
+        public Album2 Album
         {
             get
             {
-                return ((IEntityWithRelationships)this).RelationshipManager.GetRelatedReference<Album>("MvcMusicStoreModel.FK_InvoiceLine_Album", "Album").Value;
+                return ((IEntityWithRelationships)this).RelationshipManager.GetRelatedReference<Album2>("MvcMusicStoreModel.FK_InvoiceLine_Album", "Album").Value;
             }
             set
             {
-                ((IEntityWithRelationships)this).RelationshipManager.GetRelatedReference<Album>("MvcMusicStoreModel.FK_InvoiceLine_Album", "Album").Value = value;
+                ((IEntityWithRelationships)this).RelationshipManager.GetRelatedReference<Album2>("MvcMusicStoreModel.FK_InvoiceLine_Album", "Album").Value = value;
             }
         }
         /// <summary>
@@ -1521,17 +1521,17 @@ namespace MvcMusicStore.Models
         /// </summary>
         [BrowsableAttribute(false)]
         [DataMemberAttribute()]
-        public EntityReference<Album> AlbumReference
+        public EntityReference<Album2> AlbumReference
         {
             get
             {
-                return ((IEntityWithRelationships)this).RelationshipManager.GetRelatedReference<Album>("MvcMusicStoreModel.FK_InvoiceLine_Album", "Album");
+                return ((IEntityWithRelationships)this).RelationshipManager.GetRelatedReference<Album2>("MvcMusicStoreModel.FK_InvoiceLine_Album", "Album");
             }
             set
             {
                 if ((value != null))
                 {
-                    ((IEntityWithRelationships)this).RelationshipManager.InitializeRelatedReference<Album>("MvcMusicStoreModel.FK_InvoiceLine_Album", "Album", value);
+                    ((IEntityWithRelationships)this).RelationshipManager.InitializeRelatedReference<Album2>("MvcMusicStoreModel.FK_InvoiceLine_Album", "Album", value);
                 }
             }
         }

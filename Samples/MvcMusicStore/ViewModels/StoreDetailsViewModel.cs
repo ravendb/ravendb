@@ -4,6 +4,6 @@ namespace MvcMusicStore.ViewModels
 {
     public class StoreDetailsViewModel
     {
-        public Album Album { get; set; }
+        public Album2 Album { get; set; }
     }
 }

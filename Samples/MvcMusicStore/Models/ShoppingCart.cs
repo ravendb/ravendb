@@ -18,7 +18,7 @@ namespace MvcMusicStore.Models
             return cart;
         }
 
-        public void AddToCart(Album album)
+        public void AddToCart(Album2 album)
         {
             var cartItem = storeDB.Carts.SingleOrDefault(
                 c => c.CartId == shoppingCartId && 

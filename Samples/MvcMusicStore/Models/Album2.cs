@@ -6,7 +6,7 @@ using System.Web.Mvc;
 namespace MvcMusicStore.Models
 {
     [MetadataType(typeof(AlbumMetaData))]
-    public partial class Album
+    public partial class Album2
     {
         // Validation rules for the Album class
 
@@ -40,7 +40,7 @@ namespace MvcMusicStore.Models
         #endregion
     }
 
-    public class RavenAlbum
+    public class Album
     {
         public string Id { get; set; }
         public string AlbumArtUrl { get; set; }
