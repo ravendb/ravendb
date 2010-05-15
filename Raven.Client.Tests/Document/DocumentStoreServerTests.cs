@@ -35,7 +35,7 @@ namespace Raven.Client.Tests.Document
 		}
 
 		#endregion
-
+            
 		[Fact]
 		public void Should_insert_into_db_and_set_id()
 		{
@@ -51,6 +51,22 @@ namespace Raven.Client.Tests.Document
 				Assert.NotEqual(Guid.Empty.ToString(), entity.Id);
 			}
 		}
+
+        [Fact]
+        public void Can_specify_cutoff_using_server()
+        {
+            using (var server = GetNewServer(port, path))
+            {
+                var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+                documentStore.Initialise();
+
+                documentStore.DatabaseCommands.Query("Raven/DocumentsByEntityName", new IndexQuery
+                {
+                    PageSize = 10,
+                    Cutoff = DateTime.Now.AddHours(-1)
+                });
+            }
+        }
 
 		[Fact]
 		public void Requesting_stats()
