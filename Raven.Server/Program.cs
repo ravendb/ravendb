@@ -154,7 +154,7 @@ namespace Raven.Server
 				ravenConfiguration.AnonymousUserAccessMode = anonymousUserAccessMode.Value;
 			using (new RavenDbServer(ravenConfiguration))
 			{
-			    var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "default.raven");
+			    var path = Path.Combine(Environment.CurrentDirectory, "default.raven");
 			    if(File.Exists(path))
 			    {
 			        Console.WriteLine("Loading data from: {0}", path);
