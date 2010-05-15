@@ -195,8 +195,9 @@
                     if (etag)
                         xhr.setRequestHeader("If-Match", etag); 
                     if (metadata) {
-                        for (var key in metadata) {
-                            xhr.setRequestHeader(key, metadata[key]);       
+                        var metadataObject = JSON.parse(metadata);
+                        for (var key in metadataObject) {
+                            xhr.setRequestHeader(key, metadataObject[key]);       
                         }
                     }
                 },
@@ -206,7 +207,7 @@
                 error: function(data){
                     var m = JSON.parse(data.responseText);
                     if(errorCallback != undefined){
-                        errorCallback(m.error);
+                        errorCallback(m.Error);
                     }
                 }
             });
