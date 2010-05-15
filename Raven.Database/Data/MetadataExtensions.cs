@@ -2,12 +2,13 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using Newtonsoft.Json.Linq;
+using System;
 
 namespace Raven.Database.Data
 {
     public static class MetadataExtensions
     {
-        private static readonly HashSet<string> HeadersToIgnore = new HashSet<string>
+        private static readonly HashSet<string> HeadersToIgnore = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 		{
 			// Entity headers - those are NOT ignored
 			/*
