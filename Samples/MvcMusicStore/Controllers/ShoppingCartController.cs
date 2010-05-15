@@ -58,6 +58,8 @@ namespace MvcMusicStore.Controllers
             var shoppingCart = ShoppingCartFinder.FindShoppingCart();
             string title = shoppingCart.RemoveFromCart(id);
 
+            session.SaveChanges();
+            
             string message = title == null
                           ? "The album was not found in your shopping cart."
                           : Server.HtmlEncode(title) + " has been removed from your shopping cart.";
@@ -69,7 +71,7 @@ namespace MvcMusicStore.Controllers
                 Message = message,
                 CartTotal = shoppingCart.Total,
                 CartCount = shoppingCart.Lines.Count,
-                DeleteId = id
+                DeleteId = id.Split('/').Last()
             });
         }
 

@@ -42,7 +42,7 @@
         </tr>
 
         <% foreach (var item in Model.CartItems) { %>
-        <tr id="row-<%: item.Album.Id %>">
+        <tr id="row-<%: item.Album.Id.Split('/').Last() %>">
             <td>
                 <%: Html.ActionLink(item.Album.Title, "Details", "Store", new { id = item.Album.Id }, null)%>
             </td>
