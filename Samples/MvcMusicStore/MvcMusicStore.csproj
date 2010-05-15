@@ -107,14 +107,6 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="App_Data\ASPNETDB.MDF" />
-    <Content Include="App_Data\aspnetdb_log.ldf">
-      <DependentUpon>ASPNETDB.MDF</DependentUpon>
-    </Content>
-    <Content Include="App_Data\MvcMusicStore.mdf" />
-    <Content Include="App_Data\MvcMusicStore_log.ldf">
-      <DependentUpon>MvcMusicStore.mdf</DependentUpon>
-    </Content>
     <Content Include="Content\Images\content_top_bg.jpg" />
     <Content Include="Content\Images\header_bg.jpg" />
     <Content Include="Content\Images\home-showcase.png" />
