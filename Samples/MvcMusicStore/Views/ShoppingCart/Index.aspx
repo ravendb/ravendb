@@ -42,18 +42,18 @@
         </tr>
 
         <% foreach (var item in Model.CartItems) { %>
-        <tr id="row-<%: item.RecordId %>">
+        <tr id="row-<%: item.Album.Id %>">
             <td>
-                <%: Html.ActionLink(item.Album.Title, "Details", "Store", new { id = item.AlbumId }, null)%>
+                <%: Html.ActionLink(item.Album.Title, "Details", "Store", new { id = item.Album.Id }, null)%>
             </td>
             <td>
-                <%: item.Album.Price %>
+                <%: item.Price %>
             </td>
             <td>
-                <%: item.Count %>
+                <%: item.Quantity %>
             </td>
             <td>
-                <%: Ajax.ActionLink("Remove from cart", "RemoveFromCart", new { id = item.RecordId }, new AjaxOptions { OnSuccess = "handleUpdate" })%>
+                <%: Ajax.ActionLink("Remove from cart", "RemoveFromCart", new { id = item.Album.Id }, new AjaxOptions { OnSuccess = "handleUpdate" })%>
             </td>
         </tr>
         <% } %>
