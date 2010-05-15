@@ -72,7 +72,8 @@ function ExecuteQuery() {
     });
 }
 
-function getDisplayString(json) {
+function getDisplayString(docID, json) {
+    
     var returnJSON = json;
     delete returnJSON["@metadata"];
     var jsonString = JSON.stringify(returnJSON)
@@ -80,7 +81,7 @@ function getDisplayString(json) {
 				.replace(/>/g, '&gt;');
     if (jsonString.length > 90)
         jsonString = jsonString.substring(0, 90) + '...';
-    return jsonString;
+    return "<span style='float:right'><b>" + docID + "</b></span>" + jsonString;
 }
 
 function processDocumentResults(results, totalCount) {
@@ -102,7 +103,7 @@ function processDocumentResults(results, totalCount) {
             var searchResult = $('<div id="' + docID + '" class="searchListItem"></div>');
         }
         alternate = !alternate;
-        $(searchResult).html(getDisplayString(this));
+        $(searchResult).html(getDisplayString(docID, this));
         $(searchResult).click(function () {
             EditDocument(docID);
         });
