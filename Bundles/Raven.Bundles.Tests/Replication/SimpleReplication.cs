@@ -32,10 +32,6 @@ namespace Raven.Bundles.Tests.Replication
                 if(Directory.Exists("Data #" + i))
                     Directory.Delete("Data #" + i, true);
             }
-            BasicConfigurator.Configure(new OutputDebugStringAppender
-            {
-                Layout = new SimpleLayout()
-            });
         }
 
         public IDocumentStore CreateStore()
