@@ -37,19 +37,18 @@ namespace MvcMusicStore.Controllers
                 {
                     return View(order);
                 }
-                else
-                {
-                    order.Username = User.Identity.Name;
-                    order.OrderDate = DateTime.Now;
 
-                    //Process the order
-                    var cart = ShoppingCartFinder.FindShoppingCart();
-                    cart.CreateOrder(order);
+                order.Username = User.Identity.Name;
+                order.OrderDate = DateTime.Now;
 
-                    return RedirectToAction("Complete", 
-                        new { id = order.Id });
-                }
+                //Process the order
+                var cart = ShoppingCartFinder.FindShoppingCart();
+                cart.CreateOrder(order);
 
+                session.SaveChanges();
+
+                return RedirectToAction("Complete", 
+                                        new { id = order.Id });
             }
             catch
             {
