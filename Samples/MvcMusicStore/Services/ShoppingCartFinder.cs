@@ -13,8 +13,13 @@ namespace MvcMusicStore.Services
         public static ShoppingCart FindShoppingCart()
         {
             var shoppingCartId = GetShoppingCartId(HttpContext.Current);
-            return MvcApplication.CurrentSession.Load<ShoppingCart>(shoppingCartId)
-                   ?? new ShoppingCart { Id = ShoppingCartPrefix + shoppingCartId };
+            var shoppingCart = MvcApplication.CurrentSession.Load<ShoppingCart>(shoppingCartId);
+            if(shoppingCart == null)
+            {
+                shoppingCart = new ShoppingCart {Id = shoppingCartId};
+                MvcApplication.CurrentSession.Store(shoppingCart);// in memory operation only
+            }
+            return shoppingCart;
         }
 
         public static string SetShoppingCartId(string userName)
