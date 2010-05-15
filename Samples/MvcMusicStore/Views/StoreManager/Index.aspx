@@ -1,4 +1,4 @@
-﻿<%@ Page Language="C#" MasterPageFile="~/Views/Shared/Site.Master" Inherits="System.Web.Mvc.ViewPage<IEnumerable<MvcMusicStore.Models.Album2>>" %>
+﻿<%@ Page Language="C#" MasterPageFile="~/Views/Shared/Site.Master" Inherits="System.Web.Mvc.ViewPage<IEnumerable<MvcMusicStore.Models.Album>>" %>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="TitleContent" runat="server">
 	Store Manager - All Albums
@@ -23,8 +23,8 @@
     <% foreach (var item in Model) { %>
         <tr>
             <td>
-                <%: Html.ActionLink("Edit", "Edit", new { id=item.AlbumId }) %> |
-                <%: Html.ActionLink("Delete", "Delete", new { id=item.AlbumId })%>
+                <%: Html.ActionLink("Edit", "Edit", new { id=item.Id }) %> |
+                <%: Html.ActionLink("Delete", "Delete", new { id=item.Id })%>
             </td>
             <td><%: Html.Truncate(item.Title, 25) %></td>
             <td><%: Html.Truncate(item.Artist.Name, 25) %></td>
