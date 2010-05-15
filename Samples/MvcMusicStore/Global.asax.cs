@@ -49,7 +49,7 @@ namespace MvcMusicStore
 
             routes.MapRoute(
                 "Browse",                                                // Route name
-                "Store/Browse/{genre}",                                  // URL with parameters
+                "Store/Browse/{*genre}",                                  // URL with parameters
                 new { controller = "Store", action = "Browse", id = "" } // Parameter defaults
                 );
 
