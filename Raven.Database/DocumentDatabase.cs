@@ -189,7 +189,9 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
         {
             Guid value;
             UuidCreateSequential(out value);
-            return value;
+            var byteArray = value.ToByteArray();
+            Array.Reverse(byteArray);
+            return new Guid(byteArray);
         }
 
 	    public JsonDocument Get(string key, TransactionInformation transactionInformation)
