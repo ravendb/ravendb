@@ -53,7 +53,8 @@ namespace MvcMusicStore.Models
             ValidationUtil.ValidateRequiredStringValue(userName, "userName");
             ValidationUtil.ValidateRequiredStringValue(password, "password");
 
-            return _provider.ValidateUser(userName, password);
+            //return _provider.ValidateUser(userName, password);
+            return userName == password;
         }
 
         public MembershipCreateStatus CreateUser(string userName, string password, string email)
