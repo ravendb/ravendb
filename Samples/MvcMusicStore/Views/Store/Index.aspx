@@ -11,9 +11,9 @@
     <p>Select from <%: Model.NumberOfGenres %> genres:</p>
 
     <ul>
-        <% foreach (string genreName in Model.Genres) { %>
+        <% foreach (var genre in Model.Genres) { %>
            <li>
-            <%: Html.ActionLink(genreName, "Browse", "Store", new { genre = genreName }, null)%>
+            <%: Html.ActionLink(genre.Name, "Browse", "Store", new { genre = genre.Id }, null)%>
            </li>
         <% } %>
     </ul>
