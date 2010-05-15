@@ -145,7 +145,7 @@
 
         splitAndFilterHeaders: function(headersAsSingleString) {
             var headers = {};
-            var headersLines = headersAsSingleString.split('\n');
+            var headersLines = headersAsSingleString.replace(/\r\n/g,"\n").split('\n');
             for (var i = 0; i < headersLines.length; i++) {
                 var line = headersLines[i];
                 var keyStart = line.indexOf(': ');
