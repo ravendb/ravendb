@@ -1,4 +1,4 @@
-﻿<%@ Page Language="C#" MasterPageFile="~/Views/Shared/Site.Master" Inherits="System.Web.Mvc.ViewPage<MvcMusicStore.Models.Album2>" %>
+﻿<%@ Page Language="C#" MasterPageFile="~/Views/Shared/Site.Master" Inherits="System.Web.Mvc.ViewPage<MvcMusicStore.Models.Album>" %>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="TitleContent" runat="server">
     Album - <%: Model.Title %>
@@ -24,7 +24,7 @@
             <%: String.Format("{0:F}", Model.Price) %>
         </p>
         <p class="button">
-            <%: Html.ActionLink("Add to cart", "AddToCart", "ShoppingCart", new { id = Model.AlbumId }, "")%>
+            <%: Html.ActionLink("Add to cart", "AddToCart", "ShoppingCart", new { id = Model.Id }, "")%>
         </p>
     </div>
 
