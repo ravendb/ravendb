@@ -47,23 +47,19 @@ namespace MvcMusicStore
         {
             routes.IgnoreRoute("{resource}.axd/{*pathInfo}");
 
+            // urls with raven's id, which include /
             routes.MapRoute(
-                "Browse",                                                // Route name
-                "Store/Browse/{*genre}",                                  // URL with parameters
-                new { controller = "Store", action = "Browse", id = "" } // Parameter defaults
+                "WithParam",                                              // Route name
+                "{controller}/{action}/{*id}"                         // URL with parameters
                 );
 
+            // paramter less urls
             routes.MapRoute(
-                "Details",                                                // Route name
-                "Store/Details/{*album}",                                  // URL with parameters
-                new { controller = "Store", action = "Details", id = "" } // Parameter defaults
-                );
-
-            routes.MapRoute(
-                "Default",                                              // Route name
-                "{controller}/{action}/{id}",                           // URL with parameters
-                new { controller = "Home", action = "Index", id = "" }  // Parameter defaults
-                );
+              "Default",                                              // Route name
+              "{controller}/{action}",                           // URL with parameters
+              new { controller = "Home", action = "Index" }  // Parameter defaults
+              );
+          
         }
     }
 }
