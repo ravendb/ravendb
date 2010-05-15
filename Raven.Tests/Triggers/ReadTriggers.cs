@@ -155,9 +155,9 @@ namespace Raven.Tests.Triggers
 			Assert.Equal("ABC", queryResult.Results[0].Value<string>("name"));
 		}
 
-		public class HiddenDocumentsTrigger : IReadTrigger
+		public class HiddenDocumentsTrigger : AbstractReadTrigger
 		{
-			public ReadVetoResult AllowRead(string key, JObject document, JObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
+			public override ReadVetoResult AllowRead(string key, JObject document, JObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
 			{
 				var name = document["hidden"];
 				if (name != null && name.Value<bool>())
@@ -166,15 +166,11 @@ namespace Raven.Tests.Triggers
 				}
 				return ReadVetoResult.Allowed;
 			}
-
-            public void OnRead(string key, JObject document, JObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
-			{
-			}
 		}
 
-		public class VetoReadsOnCapitalNamesTrigger : IReadTrigger
+		public class VetoReadsOnCapitalNamesTrigger : AbstractReadTrigger
 		{
-            public ReadVetoResult AllowRead(string key, JObject document, JObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
+            public override ReadVetoResult AllowRead(string key, JObject document, JObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
 			{
 				var name = document["name"];
 				if (name != null && name.Value<string>().Any(char.IsUpper))
@@ -183,21 +179,11 @@ namespace Raven.Tests.Triggers
 				}
 				return ReadVetoResult.Allowed;
 			}
-
-            public void OnRead(string key, JObject document, JObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
-			{
-			}
 		}
 
-		public class UpperCaseNamesTrigger : IReadTrigger
+		public class UpperCaseNamesTrigger : AbstractReadTrigger
 		{
-            public ReadVetoResult AllowRead(string key, JObject document, JObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
-			{
-				
-				return ReadVetoResult.Allowed;
-			}
-
-            public void OnRead(string key, JObject document, JObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
+            public override void OnRead(string key, JObject document, JObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
 			{
 				var name = document.Property("name");
 				if (name != null)
