@@ -54,6 +54,12 @@ namespace MvcMusicStore
                 );
 
             routes.MapRoute(
+                "Details",                                                // Route name
+                "Store/Details/{*album}",                                  // URL with parameters
+                new { controller = "Store", action = "Details", id = "" } // Parameter defaults
+                );
+
+            routes.MapRoute(
                 "Default",                                              // Route name
                 "{controller}/{action}/{id}",                           // URL with parameters
                 new { controller = "Home", action = "Index", id = "" }  // Parameter defaults

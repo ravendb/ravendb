@@ -55,12 +55,11 @@ namespace MvcMusicStore.Controllers
         //
         // GET: /Store/Details/5
 
-        public ActionResult Details(int id)
+        public ActionResult Details(string album)
         {
-            var album = storeDB.Albums
-                .Single(a => a.AlbumId == id);
-
-            return View(album);
+            var session = MvcApplication.CurrentSession;
+            var albumModel = session.Load<Album>(album);
+            return View(albumModel);
         }
 
         //
