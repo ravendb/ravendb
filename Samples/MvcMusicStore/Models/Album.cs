@@ -1,6 +1,6 @@
 ﻿namespace MvcMusicStore.Models
 {
-    public class Album
+    public partial class Album
     {
         public string Id { get; set; }
         public string AlbumArtUrl { get; set; }

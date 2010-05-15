@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace MvcMusicStore.Models
 {
-    public class Order
+    public partial class Order
     {
         public Order()
         {

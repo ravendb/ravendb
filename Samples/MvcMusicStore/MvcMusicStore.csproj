@@ -93,6 +93,7 @@
     <Compile Include="Models\AccountModels.cs" />
     <Compile Include="Models\Album.cs" />
     <Compile Include="Models\Genre.cs" />
+    <Compile Include="Models\Metadata.cs" />
     <Compile Include="Models\Order.cs" />
     <Compile Include="Models\ShoppingCart.cs" />
     <Compile Include="Models\SoldAlbum.cs" />
