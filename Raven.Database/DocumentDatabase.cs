@@ -66,7 +66,7 @@ namespace Raven.Database
 				throw;
 			}
 
-			IndexDefinitionStorage = new IndexDefinitionStorage(configuration.DataDirectory);
+			IndexDefinitionStorage = new IndexDefinitionStorage(configuration.DataDirectory, configuration.Container.GetExportedValues<AbstractViewGenerator>());
 			IndexStorage = new IndexStorage(IndexDefinitionStorage,TransactionalStorage, configuration);
 
 			workContext.IndexStorage = IndexStorage;
