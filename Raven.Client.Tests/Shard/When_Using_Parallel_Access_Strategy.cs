@@ -1,6 +1,9 @@
 using System;
+using System.IO;
+using System.Threading;
 using Raven.Client.Document;
 using Raven.Client.Tests.Document;
+using Raven.Server;
 using Xunit;
 using System.Collections.Generic;
 using Raven.Client.Shard.ShardStrategy.ShardAccess;
@@ -8,29 +11,54 @@ using System.Linq;
 
 namespace Raven.Client.Tests.Shard
 {
-    public class When_Using_Parallel_Access_Strategy : BaseTest
+    public class When_Using_Parallel_Access_Strategy  : BaseTest, IDisposable
 	{
+		private readonly string path;
+        private readonly int port;
+
+		public When_Using_Parallel_Access_Strategy()
+		{
+            port = 8080;
+            path = GetPath("TestDb");
+			RavenDbServer.EnsureCanListenToWhenInNonAdminContext(8080);
+		}
+
+		#region IDisposable Members
+
+		public void Dispose()
+		{
+			Directory.Delete(path, true);
+		}
+
+		#endregion
 
         [Fact]
         public void Null_result_is_not_an_exception()
         {
-        	var shard1 = new DocumentStore {Url = "http://localhost:8080"}.Initialise().OpenSession();
+        	using(GetNewServer(port, path))
+        	{
+                var shard1 = new DocumentStore { Url = "http://localhost:8080" }.Initialise().OpenSession();
 
-			var results = new ParallelShardAccessStrategy().Apply(new[] { shard1 }, x => (IList<Company>)null);
+                var results = new ParallelShardAccessStrategy().Apply(new[] { shard1 }, x => (IList<Company>)null);
 
-            Assert.Equal(0, results.Count);
+                Assert.Equal(0, results.Count);
+        	}
         }
 
         [Fact]
         public void Execution_exceptions_are_rethrown()
         {
-            var shard1 = new DocumentStore { Url = "http://localhost:8080" }.Initialise().OpenSession();
-
-
-            Assert.Throws(typeof(ApplicationException), () =>
+            using (GetNewServer(port, path))
             {
-            	new ParallelShardAccessStrategy().Apply<object>(new[] {shard1}, x => { throw new ApplicationException(); });
-            });
+                var shard1 = new DocumentStore {Url = "http://localhost:8080"}.Initialise().OpenSession();
+
+
+                Assert.Throws(typeof (ApplicationException), () =>
+                {
+                    new ParallelShardAccessStrategy().Apply<object>(new[] {shard1},
+                                                                    x => { throw new ApplicationException(); });
+                });
+            }
         }
-    }
+	}
 }
