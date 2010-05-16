@@ -158,7 +158,7 @@ namespace Raven.Client.Document
                 // Generate the key up front
                 id = Conventions.GenerateDocumentKey(entity);
 
-                if (id != null)
+                if (id != null && identityProperty != null)
                 {
                     // And store it so the client has access to to it
                     identityProperty.SetValue(entity, id, null);
