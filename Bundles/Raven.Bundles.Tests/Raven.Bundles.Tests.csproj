@@ -53,10 +53,15 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Replication\SimpleReplication.cs" />
     <Compile Include="Versioning.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Raven.Bundles.Replication\Raven.Bundles.Replication.csproj">
+      <Project>{2EA316E8-629A-45C2-80B8-48F9CDB5BF57}</Project>
+      <Name>Raven.Bundles.Replication</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Bundles.Versioning\Raven.Bundles.Versioning.csproj">
       <Project>{22BCC20F-FC1F-4523-A717-77CDF8519C1D}</Project>
       <Name>Raven.Bundles.Versioning</Name>

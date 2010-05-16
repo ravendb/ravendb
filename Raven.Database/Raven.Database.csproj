@@ -106,8 +106,8 @@
     <Compile Include="IStartupTask.cs" />
     <Compile Include="Json\JsonLuceneNumberConverter.cs" />
     <Compile Include="Plugins\Builtins\FilterRavenInternalDocumentsReadTrigger.cs" />
-    <Compile Include="Plugins\IIndexUpdateTrigger.cs" />
-    <Compile Include="Plugins\IReadTrigger.cs" />
+    <Compile Include="Plugins\AbstractIndexUpdateTrigger.cs" />
+    <Compile Include="Plugins\AbstractReadTrigger.cs" />
     <Compile Include="Plugins\ReadOperation.cs" />
     <Compile Include="Plugins\ReadVetoResult.cs" />
     <Compile Include="Server\Abstractions\HttpContextAdapter.cs" />
@@ -146,8 +146,8 @@
     <Compile Include="Indexing\MapReduceIndex.cs" />
     <Compile Include="Indexing\QueryBuilder.cs" />
     <Compile Include="Indexing\SimpleIndex.cs" />
-    <Compile Include="Plugins\IDeleteTrigger.cs" />
-    <Compile Include="Plugins\IPutTrigger.cs" />
+    <Compile Include="Plugins\AbstractDeleteTrigger.cs" />
+    <Compile Include="Plugins\AbstractPutTrigger.cs" />
     <Compile Include="Plugins\IRequiresDocumentDatabaseInitialization.cs" />
     <Compile Include="JsonDocument.cs" />
     <Compile Include="DocumentDatabase.cs" />

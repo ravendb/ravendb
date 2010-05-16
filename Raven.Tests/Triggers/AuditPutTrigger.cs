@@ -5,20 +5,16 @@ using Raven.Database.Plugins;
 
 namespace Raven.Tests.Triggers
 {
-	public class AuditPutTrigger : IPutTrigger
+	public class AuditPutTrigger : AbstractPutTrigger
 	{
-        public VetoResult AllowPut(string key, JObject document, JObject metadata, TransactionInformation transactionInformation)
+        public override VetoResult AllowPut(string key, JObject document, JObject metadata, TransactionInformation transactionInformation)
 		{
 			return VetoResult.Allowed;
 		}
 
-		public void OnPut(string key, JObject document, JObject metadata, TransactionInformation transactionInformation)
+		public override void OnPut(string key, JObject document, JObject metadata, TransactionInformation transactionInformation)
 		{
 			document["created_at"] = new JValue(new DateTime(2000, 1, 1,0,0,0,DateTimeKind.Utc));
-		}
-
-		public void AfterCommit(string key, JObject document, JObject metadata)
-		{
 		}
 	}
 }

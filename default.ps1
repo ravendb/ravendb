@@ -180,7 +180,7 @@ task Compile -depends Init {
 	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
     exec "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" """$base_dir\RavenDB.sln"" /p:OutDir=""$buildartifacts_dir\"""
     
-    # merge
+    Write-Host "Merging..."
     $old = pwd
     cd $build_dir
     
@@ -191,6 +191,8 @@ task Compile -depends Init {
     exec "..\Utilities\Binaries\Raven.Merger.exe"
     
     cd $old
+    
+    Write-Host "Finished merging"
     
     exec "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" """$base_dir\Bundles\Raven.Bundles.sln"" /p:OutDir=""$buildartifacts_dir\"""
     exec "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" """$base_dir\Samples\Raven.Samples.sln"" /p:OutDir=""$buildartifacts_dir\"""

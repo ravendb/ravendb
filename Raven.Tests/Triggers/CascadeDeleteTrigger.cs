@@ -3,29 +3,23 @@ using Raven.Database.Plugins;
 
 namespace Raven.Tests.Triggers
 {
-	public class CascadeDeleteTrigger : IDeleteTrigger, IRequiresDocumentDatabaseInitialization 
+	public class CascadeDeleteTrigger : AbstractDeleteTrigger 
 	{
-		private DocumentDatabase docDb;
-        public VetoResult AllowDelete(string key, TransactionInformation transactionInformation)
+        public override VetoResult AllowDelete(string key, TransactionInformation transactionInformation)
 		{
 			return VetoResult.Allowed;
 		}
 
-		public void OnDelete(string key, TransactionInformation transactionInformation)
+		public override void OnDelete(string key, TransactionInformation transactionInformation)
 		{
-			var document = docDb.Get(key, null);
+			var document = Database.Get(key, null);
 			if (document == null)
 				return;
-			docDb.Delete(document.Metadata.Value<string>("Cascade-Delete"), null, null);
+            Database.Delete(document.Metadata.Value<string>("Cascade-Delete"), null, null);
 		}
 
-		public void AfterCommit(string key)
+		public override void AfterCommit(string key)
 		{
-		}
-
-		public void Initialize(DocumentDatabase database)
-		{
-			docDb = database;
 		}
 	}
 }

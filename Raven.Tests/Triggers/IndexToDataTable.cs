@@ -4,7 +4,7 @@ using Raven.Database.Plugins;
 
 namespace Raven.Tests.Triggers
 {
-    public class IndexToDataTable : IIndexUpdateTrigger
+    public class IndexToDataTable : AbstractIndexUpdateTrigger
     {
         public DataTable DataTable { get; set; }
 
@@ -15,7 +15,7 @@ namespace Raven.Tests.Triggers
             DataTable.Columns.Add("Project", typeof(string));
         }
 
-        public void OnIndexEntryDeleted(string indexName, string entryKey)
+        public override void OnIndexEntryDeleted(string indexName, string entryKey)
         {
             var dataRows = DataTable.Rows.Cast<DataRow>().Where(x=> (string) x["entry"] == entryKey).ToArray();
             foreach (var dataRow in dataRows)
@@ -24,7 +24,7 @@ namespace Raven.Tests.Triggers
             }
         }
 
-        public void OnIndexEntryCreated(string indexName, string entryKey, Lucene.Net.Documents.Document document)
+        public override void OnIndexEntryCreated(string indexName, string entryKey, Lucene.Net.Documents.Document document)
         {
             DataTable.Rows.Add(entryKey, document.GetField("Project").StringValue());
         }

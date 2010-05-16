@@ -3,21 +3,23 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading;
+using System.Threading.Tasks;
 using log4net;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Plugins;
+using Raven.Database.Json;
 
 namespace Raven.Bundles.Replication
 {
-    public class ReplicationTask : IRequiresDocumentDatabaseInitialization
+    public class ReplicationTask : IStartupTask
     {
         private DocumentDatabase docDb;
         private readonly ILog log = LogManager.GetLogger(typeof(ReplicationTask));
         private bool firstTimeFoundNoReplicationDocument = true;
 
-        public void Initialize(DocumentDatabase database)
+        public void Execute(DocumentDatabase database)
         {
             docDb = database;
 
@@ -41,12 +43,10 @@ namespace Raven.Bundles.Replication
                     if (destinations.Length == 0)
                     {
                         WarnIfNoReplicationTargetsWereFound();
-                        continue;
                     }
-                    
-                    foreach (var destination in destinations)
+                    else
                     {
-                        ReplicateTo(destination);
+                        Parallel.ForEach(destinations, ReplicateTo);
                     }
                 }
                 catch (Exception e)
@@ -70,13 +70,20 @@ namespace Raven.Bundles.Replication
 
         private void ReplicateTo(string destination)
         {
-            var etag = GetLastReplicatedEtagFrom(destination);
-            if(etag == null)
-                return;
-            var jsonDocuments = GetJsonDocuments(etag.Value);
-            if(jsonDocuments == null)
-                return;
-            TryReplicatingData(destination, jsonDocuments);
+            try
+            {
+                var etag = GetLastReplicatedEtagFrom(destination);
+                if(etag == null)
+                    return;
+                var jsonDocuments = GetJsonDocuments(etag.Value);
+                if(jsonDocuments == null || jsonDocuments.Count == 0)
+                    return;
+                TryReplicatingData(destination, jsonDocuments);
+            }
+            catch (Exception e)
+            {
+                log.Warn("Failed to replicate to: " + destination, e);
+            }
         }
 
         private void TryReplicatingData(string destination, JArray jsonDocuments)
@@ -113,7 +120,10 @@ namespace Raven.Bundles.Replication
             {
                 docDb.TransactionalStorage.Batch(actions =>
                 {
-                    jsonDocuments = new JArray(actions.GetDocumentsAfter(etag).Take(100).Select(x => x.ToJson()));
+                    jsonDocuments = new JArray(actions.GetDocumentsAfter(etag)
+                        .Where(x=>x.Key.StartsWith("Raven/") == false)
+                        .Take(100)
+                        .Select(x => x.ToJson()));
                 });
             }
             catch (Exception e)
@@ -163,10 +173,12 @@ namespace Raven.Bundles.Replication
             var document = docDb.Get(ReplicationConstants.RavenReplicationDestinations, null);
             if (document == null)
             {
-                docDb.Put(ReplicationConstants.RavenReplicationDestinations, null, new JObject(), new JObject(), null);
+                docDb.Put(ReplicationConstants.RavenReplicationDestinations, null, JObject.FromObject(new ReplicationDocument()), new JObject(), null);
                 document = docDb.Get(ReplicationConstants.RavenReplicationDestinations, null);
             }
-            return document.DataAsJson.Cast<JProperty>().Select(x => x.Value<string>()).ToArray();
+            return document.DataAsJson.JsonDeserialization<ReplicationDocument>()
+                .Destinations.Select(x => x.Url)
+                .ToArray();
         }
     }
 }
