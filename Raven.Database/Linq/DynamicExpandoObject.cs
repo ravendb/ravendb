@@ -9,7 +9,12 @@ namespace Raven.Database.Linq
 	{
 		private readonly JObject obj;
 
-		public DynamicJsonObject(JObject obj)
+	    public JObject Inner
+	    {
+	        get { return obj; }
+	    }
+
+	    public DynamicJsonObject(JObject obj)
 		{
 			this.obj = obj;
 		}
