@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Responders;
@@ -12,42 +10,68 @@ namespace Raven.Bundles.Replication
     {
         public override void Respond(IHttpContext context)
         {
-            var array = context.ReadJsonArray();
-            Database.TransactionalStorage.Batch(actions =>
+            var src = context.Request.QueryString["from"];
+            if (string.IsNullOrEmpty(src))
             {
-                foreach (JObject document in array)
+                context.SetStatusToBadRequest();
+                return;
+            }
+            var array = context.ReadJsonArray();
+            using (ReplicationContext.Enter())
+            {
+                Database.TransactionalStorage.Batch(actions =>
                 {
-                    var metadata = document.Value<JObject>("@metadata");
-                    var id = metadata.Value<string>("@id");
-                    ReplicateDocument(actions, id, metadata, document);
-                }
-            });
+                    string lastEtag = Guid.Empty.ToString();
+                    foreach (JObject document in array)
+                    {
+                        var metadata = document.Value<JObject>("@metadata");
+                        lastEtag = metadata.Value<string>("@etag");
+                        var id = metadata.Value<string>("@id");
+                        document.Remove("@metadata");
+                        ReplicateDocument(actions, id, metadata, document);
+                    }
+
+                    Database.Put(ReplicationConstants.RavenReplicationSourcesBasePath + "/" + src, null,
+                                 JObject.FromObject(new SourceReplicationInformation {LastEtag = new Guid(lastEtag)}),
+                                 new JObject(), null);
+                });
+            }
         }
 
         private static void ReplicateDocument(DocumentStorageActions actions, string id, JObject metadata, JObject document)
         {
 
             var existingDoc = actions.DocumentByKey(id, null);
-            if(existingDoc == null)
+            var replicationSourceId = metadata.Value<string>(ReplicationConstants.RavenReplicationSource);
+            if (existingDoc == null || replicationSourceId == null)
             {
                 actions.AddDocument(id, null, document, metadata);
                 return;
             }
-            var etag = metadata.Value<string>("@etag");
+            var existingDocumentReplicationSourceId = existingDoc.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource);
+            if(existingDocumentReplicationSourceId == null)
+            {
+                actions.AddDocument(id, null, document, metadata);
+                return;
+            }
 
-            var ancestryMetaData = metadata.Value<JArray>(ReplicationConstants.RavenAncestry);
-            IEnumerable<Guid> ancestry = ancestryMetaData != null ? ancestryMetaData.Cast<JValue>().Select(x => new Guid(x.Value<string>())) : new Guid[0];
-            ancestry = ancestry.Concat(new[] {new Guid(etag)});
-            if(ancestry.Contains(existingDoc.Etag)) // fast-forward, essentially
+            var existingDocumentIsInConflict = existingDoc.Metadata[ReplicationConstants.RavenReplicationConflict] != null;
+
+            
+            if (existingDocumentIsInConflict == false &&                    // if the current document is in conflict, we have to keep conflict semantics
+                replicationSourceId == existingDocumentReplicationSourceId) // our last update from that server too, so we are fine with overwriting this
             {
                 actions.AddDocument(id, null, document, metadata);
                 return;
             }
-            var newDocumentConflictId = id + "/conflicts/" + etag;
+
+
+            var newDocumentConflictId = id + "/conflicts/" + metadata.Value<string>("@etag");
             actions.AddDocument(newDocumentConflictId, null, document, metadata);
 
-            if (existingDoc.Metadata[ReplicationConstants.RavenReplicationConflict] != null) // the existing document is in conflict
+            if (existingDocumentIsInConflict) // the existing document is in conflict
             {
+                // just update the current doc with the new conflict document
                 existingDoc.DataAsJson.Value<JArray>("Conflicts").Add(JToken.FromObject(newDocumentConflictId));
                 actions.AddDocument(id, existingDoc.Etag, existingDoc.DataAsJson, existingDoc.Metadata);
                 return;
