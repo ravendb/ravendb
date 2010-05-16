@@ -1,9 +1,8 @@
-using System;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Plugins;
 
-namespace Raven.Bundles.Replication
+namespace Raven.Bundles.Replication.Triggers
 {
     /// <summary>
     /// We can't allow real deletes when using replication, because
@@ -15,6 +14,8 @@ namespace Raven.Bundles.Replication
     {
         public override void AfterDelete(string key, TransactionInformation transactionInformation)
         {
+            if (ReplicationContext.IsInReplicationContext)
+                return;
             Database.Put(key, null, new JObject(), new JObject(new JProperty("Raven-Delete-Marker", true)),
                          transactionInformation);
         }

@@ -45,18 +45,20 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="HideVirtuallyDeletedDocumentsReadTrigger.cs" />
+    <Compile Include="Data\DestinationFailureInformation.cs" />
+    <Compile Include="Data\ReplicationDestination.cs" />
+    <Compile Include="Triggers\HideVirtuallyDeletedDocumentsReadTrigger.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="AncestryPutTrigger.cs" />
-    <Compile Include="RemoveConflictOnPutTrigger.cs" />
+    <Compile Include="Triggers\AncestryPutTrigger.cs" />
+    <Compile Include="Triggers\RemoveConflictOnPutTrigger.cs" />
     <Compile Include="ReplicationConstants.cs" />
-    <Compile Include="ReplicationDocument.cs" />
-    <Compile Include="ReplicationLastEtagResponser.cs" />
-    <Compile Include="ReplicationResponder.cs" />
-    <Compile Include="ReplicationTask.cs" />
-    <Compile Include="ReplicationUtil.cs" />
-    <Compile Include="SourceReplicationInformation.cs" />
-    <Compile Include="VirtualDeleteTrigger.cs" />
+    <Compile Include="ReplicationContext.cs" />
+    <Compile Include="Data\ReplicationDocument.cs" />
+    <Compile Include="Reponsders\ReplicationLastEtagResponser.cs" />
+    <Compile Include="Reponsders\ReplicationResponder.cs" />
+    <Compile Include="Tasks\ReplicationTask.cs" />
+    <Compile Include="Data\SourceReplicationInformation.cs" />
+    <Compile Include="Triggers\VirtualDeleteTrigger.cs" />
   </ItemGroup>
   <ItemGroup>
     <WCFMetadata Include="Service References\" />

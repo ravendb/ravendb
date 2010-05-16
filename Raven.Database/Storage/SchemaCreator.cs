@@ -181,7 +181,7 @@ namespace Raven.Database.Storage
 
 
 			var indexDef = "+key\0\0";
-			Api.JetCreateIndex(session, tableid, "by_key", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
+			Api.JetCreateIndex(session, tableid, "by_key", CreateIndexGrbit.IndexDisallowNull | CreateIndexGrbit.IndexUnique, indexDef, indexDef.Length,
 			                   100);
 
 			indexDef = "+id\0\0";

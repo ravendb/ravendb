@@ -205,28 +205,28 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				document = actions.DocumentByKey(key, transactionInformation);
 			});
 
-			return ExecuteReadTriggersOnRead(ProcessReadVetoes(document, transactionInformation), transactionInformation);
+			return ExecuteReadTriggersOnRead(ProcessReadVetoes(document, transactionInformation, ReadOperation.Load), transactionInformation, ReadOperation.Load);
 		}
 
-		private JsonDocument ExecuteReadTriggersOnRead(JsonDocument resultingDocument, TransactionInformation transactionInformation)
+		private JsonDocument ExecuteReadTriggersOnRead(JsonDocument resultingDocument, TransactionInformation transactionInformation, ReadOperation operation)
 		{
 			if (resultingDocument == null)
 				return null;
 
 			foreach (var readTrigger in ReadTriggers)
 			{
-				readTrigger.OnRead(resultingDocument.Key, resultingDocument.DataAsJson, resultingDocument.Metadata, ReadOperation.Load, transactionInformation);
+				readTrigger.OnRead(resultingDocument.Key, resultingDocument.DataAsJson, resultingDocument.Metadata, operation, transactionInformation);
 			}
 			return resultingDocument;
 		}
 
-		private JsonDocument ProcessReadVetoes(JsonDocument document, TransactionInformation transactionInformation)
+		private JsonDocument ProcessReadVetoes(JsonDocument document, TransactionInformation transactionInformation, ReadOperation operation)
 		{
 			if (document == null)
 				return document;
 			foreach (var readTrigger in ReadTriggers)
 			{
-				var readVetoResult = readTrigger.AllowRead(document.Key, document.DataAsJson, document.Metadata, ReadOperation.Load, transactionInformation);
+				var readVetoResult = readTrigger.AllowRead(document.Key, document.DataAsJson, document.Metadata, operation, transactionInformation);
 				switch (readVetoResult.Veto)
 				{
 					case ReadVetoResult.ReadAllow.Allow:
@@ -447,7 +447,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 					var collection = from queryResult in IndexStorage.Query(index, query)
 					                 select RetrieveDocument(actions, queryResult, loadedIds)
 					                 into doc
-										 let processedDoc = ExecuteReadTriggersOnRead(ProcessReadVetoes(doc, null), null)
+										 let processedDoc = ExecuteReadTriggersOnRead(ProcessReadVetoes(doc, null, ReadOperation.Query), null, ReadOperation.Query)
 										 where processedDoc != null
 										 select processedDoc.ToJson();
 					list.AddRange(collection);
@@ -540,7 +540,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 			    foreach (var doc in  documents
                     .Take(pageSize))
 				{
-					var document = ExecuteReadTriggersOnRead(ProcessReadVetoes(doc, null), null);
+					var document = ExecuteReadTriggersOnRead(ProcessReadVetoes(doc, null, ReadOperation.Query), null, ReadOperation.Query);
 					if(document == null)
 						continue;
 					if (document.Metadata.Property("@id") == null)

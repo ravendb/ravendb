@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Raven.Bundles.Replication
+namespace Raven.Bundles.Replication.Data
 {
     public class SourceReplicationInformation
     {

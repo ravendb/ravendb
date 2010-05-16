@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Raven.Bundles.Replication
+namespace Raven.Bundles.Replication.Data
 {
     public class ReplicationDocument
     {
@@ -13,10 +13,5 @@ namespace Raven.Bundles.Replication
             Destinations = new List<ReplicationDestination>();
             Id = ReplicationConstants.RavenReplicationDestinations;
         }
-    }
-
-    public class ReplicationDestination
-    {
-        public string Url { get; set; }
     }
 }

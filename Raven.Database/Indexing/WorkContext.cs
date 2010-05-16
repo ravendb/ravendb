@@ -35,13 +35,13 @@ namespace Raven.Database.Indexing
 			get { return serverErrors.ToArray(); }
 		}
 
-		public void WaitForWork()
+		public void WaitForWork(TimeSpan timeout)
 		{
 			if (!doWork)
 				return;
 			lock (waitForWork)
 			{
-				Monitor.Wait(waitForWork, TimeSpan.FromSeconds(1));
+				Monitor.Wait(waitForWork, timeout);
 			}
 		}
 
