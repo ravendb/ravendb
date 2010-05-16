@@ -1,14 +1,18 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Transactions;
-using System.Web;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Bundles.Replication.Data;
 using Raven.Client.Document;
+using Raven.Client.Exceptions;
 using Raven.Database;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
@@ -19,7 +23,20 @@ namespace Raven.Client.Client
 {
 	public class ServerClient : IDatabaseCommands
 	{
-		private readonly string url;
+        private const string RavenReplicationDestinations = "Raven/Replication/Destinations";
+        private DateTime lastReplicationUpdate = DateTime.MinValue;
+        private readonly object replicationLock = new object();
+	    private List<string> replicationDestinations = new List<string>();
+        private readonly Dictionary<string, IntHolder> failureCounts = new Dictionary<string, IntHolder>();
+	    private int requestCount;
+
+
+	    private class IntHolder
+	    {
+	        public int Value;
+	    }
+
+	    private readonly string url;
 		private readonly DocumentConvention convention;
 	    private readonly ICredentials credentials;
 
@@ -28,38 +45,161 @@ namespace Raven.Client.Client
 	        this.credentials = credentials;
 	        this.url = url;
 			this.convention = convention;
+	        UpdateReplicationInformationIfNeeded();
 		}
 
-		#region IDatabaseCommands Members
+        private void UpdateReplicationInformationIfNeeded()
+        {
+            lock (replicationLock)
+            {
+                if (lastReplicationUpdate.AddMinutes(5) > DateTime.Now)
+                    return;
+                lastReplicationUpdate = DateTime.Now;
+                var document = DirectGet(url, RavenReplicationDestinations);
+                failureCounts[url] = new IntHolder();// we just hit the master, so we can reset its failure count
+                if (document == null)
+                    return;
+                var replicationDocument = document.DataAsJson.JsonDeserialization<ReplicationDocument>();
+                replicationDestinations = replicationDocument.Destinations.Select(x => x.Url).ToList();
+                foreach (var replicationDestination in replicationDestinations)
+                {
+                    IntHolder value;
+                    if(failureCounts.TryGetValue(replicationDestination, out value))
+                        continue;
+                    failureCounts[replicationDestination] = new IntHolder();
+                }
+            }
+        }
+
+	    #region IDatabaseCommands Members
 
 		public JsonDocument Get(string key)
 		{
-			EnsureIsNotNullOrEmpty(key, "key");
+		    EnsureIsNotNullOrEmpty(key, "key");
 
-		    var metadata = new JObject();
-		    AddTransactionInformation(metadata);
-			var request = new HttpJsonRequest(url + "/docs/" + key, "GET", metadata, credentials);
-			try
-			{
-				return new JsonDocument
-				{
-					DataAsJson = JObject.Parse(request.ReadResponseString()),
-					Key = key,
-					Etag = new Guid(request.ResponseHeaders["ETag"]),
-					Metadata = request.ResponseHeaders.FilterHeaders()
-				};
-			}
-			catch (WebException e)
-			{
-				var httpWebResponse = e.Response as HttpWebResponse;
-				if (httpWebResponse == null ||
-					httpWebResponse.StatusCode != HttpStatusCode.NotFound)
-					throw;
-				return null;
-			}
+		    return ExecuteWithReplication(u => DirectGet(u, key));
 		}
 
-		private static void EnsureIsNotNullOrEmpty(string key, string argName)
+	    private T ExecuteWithReplication<T>(Func<string, T> operation)
+	    {
+	        var currentRequest = Interlocked.Increment(ref requestCount);
+	        T result;
+	        var threadSafeCopy = replicationDestinations;
+            if (ShouldExecuteUsing(url, currentRequest))
+            {
+                if (TryOperation(operation, url, true, out result))
+                    return result;
+                if (IsFirstFailure(url) && TryOperation(operation, url, threadSafeCopy.Count>0, out result))
+                    return result;
+                IncrementFailureCount(url);
+            }
+
+	        for (int i = 0; i < threadSafeCopy.Count; i++)
+	        {
+	            var replicationDestination = threadSafeCopy[i];
+                if (ShouldExecuteUsing(replicationDestination, currentRequest) == false)
+                    continue;
+                if (TryOperation(operation, url, true, out result))
+                    return result;
+                if (IsFirstFailure(url) && TryOperation(operation, url, threadSafeCopy.Count > i+1, out result))
+                    return result;
+                IncrementFailureCount(url);
+	        }
+            // this should not be thrown, but since I know the value of should...
+            throw new InvalidOperationException(@"Attempted to conect to master and all replicas has failed, giving up.
+There is a high probability of a network problem preventing access to all the replicas.
+Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven instances.");
+	    }
+
+	    private bool ShouldExecuteUsing(string operationUrl, int currentRequest)
+	    {
+            IntHolder value;
+            if (failureCounts.TryGetValue(operationUrl, out value) == false)
+                throw new KeyNotFoundException("BUG: Could not find failure count for " + operationUrl);
+	        if (value.Value > 1000)
+            {
+                return currentRequest % 1000 == 0;
+            }
+            if (value.Value > 100)
+            {
+                return currentRequest % 100 == 0;
+            }
+            if (value.Value > 10)
+            {
+                return currentRequest % 10 == 0;
+            }
+            return true;
+	    }
+
+	    private bool IsFirstFailure(string operationUrl)
+	    {
+            IntHolder value;
+            if (failureCounts.TryGetValue(operationUrl, out value) == false)
+                throw new KeyNotFoundException("BUG: Could not find failure count for " + operationUrl);
+	        return Thread.VolatileRead(ref value.Value) == 0;
+	    }
+
+	    private void IncrementFailureCount(string operationUrl)
+	    {
+	        IntHolder value;
+            if (failureCounts.TryGetValue(operationUrl, out value) == false)
+                throw new KeyNotFoundException("BUG: Could not find failure count for " + operationUrl);
+	        Interlocked.Increment(ref value.Value);
+	    }
+
+	    private static bool TryOperation<T>(Func<string, T> operation, string operationUrl, bool avoidThrowing, out T result)
+	    {
+	        try
+	        {
+	            result = operation(operationUrl);
+	            return true;
+	        }
+	        catch(WebException e)
+	        {
+                if (avoidThrowing == false)
+                    throw;
+	            result = default(T);
+                if (IsServerDown(e))
+                    return false;
+	            throw;
+	        }
+	    }
+
+	    private static bool IsServerDown(WebException e)
+	    {
+	        return e.InnerException is SocketException;
+	    }
+
+	    private JsonDocument DirectGet(string serverUrl, string key)
+	    {
+	        var metadata = new JObject();
+	        AddTransactionInformation(metadata);
+            var request = new HttpJsonRequest(serverUrl + "/docs/" + key, "GET", metadata, credentials);
+	        try
+	        {
+	            return new JsonDocument
+	            {
+	                DataAsJson = JObject.Parse(request.ReadResponseString()),
+	                Key = key,
+	                Etag = new Guid(request.ResponseHeaders["ETag"]),
+	                Metadata = request.ResponseHeaders.FilterHeaders()
+	            };
+	        }
+	        catch (WebException e)
+	        {
+	            var httpWebResponse = e.Response as HttpWebResponse;
+                if (httpWebResponse == null)
+                    throw;
+	            if (httpWebResponse.StatusCode == HttpStatusCode.NotFound)
+	                return null;
+                if (httpWebResponse.StatusCode == HttpStatusCode.Conflict)
+                    throw new ConflictException("Conflict detected on " + key +
+                                                ", conflict must be resolved before the document will be accessible");
+                throw;
+	        }
+	    }
+
+	    private static void EnsureIsNotNullOrEmpty(string key, string argName)
 		{
 			if(string.IsNullOrEmpty(key))
 				throw new ArgumentException("Key cannot be null or empty", argName);
@@ -67,30 +207,35 @@ namespace Raven.Client.Client
 
 		public PutResult Put(string key, Guid? etag, JObject document, JObject metadata)
 		{
-            if (metadata == null)
-                metadata = new JObject();
-			var method = String.IsNullOrEmpty(key) ? "POST" : "PUT";
-            AddTransactionInformation(metadata);
-            if (etag != null)
-                metadata["ETag"] = new JValue(etag.Value.ToString());
-		    var request = new HttpJsonRequest(url + "/docs/" + key, method, metadata, credentials);
-			request.Write(document.ToString());
-
-		    string readResponseString;
-		    try
-		    {
-		        readResponseString = request.ReadResponseString();
-		    }
-		    catch (WebException e)
-		    {
-                var httpWebResponse = e.Response as HttpWebResponse;
-                if (httpWebResponse == null ||
-                    httpWebResponse.StatusCode != HttpStatusCode.Conflict)
-                    throw;
-                throw ThrowConcurrencyException(e);
-		    }
-			return JsonConvert.DeserializeObject<PutResult>(readResponseString, new JsonEnumConverter());
+		    return ExecuteWithReplication(u => DirectGet(metadata, key, etag, document, u));
 		}
+
+	    private PutResult DirectGet(JObject metadata, string key, Guid? etag, JObject document, string operationUrl)
+	    {
+	        if (metadata == null)
+	            metadata = new JObject();
+	        var method = String.IsNullOrEmpty(key) ? "POST" : "PUT";
+	        AddTransactionInformation(metadata);
+	        if (etag != null)
+	            metadata["ETag"] = new JValue(etag.Value.ToString());
+	        var request = new HttpJsonRequest(operationUrl + "/docs/" + key, method, metadata, credentials);
+	        request.Write(document.ToString());
+
+	        string readResponseString;
+	        try
+	        {
+	            readResponseString = request.ReadResponseString();
+	        }
+	        catch (WebException e)
+	        {
+	            var httpWebResponse = e.Response as HttpWebResponse;
+	            if (httpWebResponse == null ||
+	                httpWebResponse.StatusCode != HttpStatusCode.Conflict)
+	                throw;
+	            throw ThrowConcurrencyException(e);
+	        }
+	        return JsonConvert.DeserializeObject<PutResult>(readResponseString, new JsonEnumConverter());
+	    }
 
 	    private static void AddTransactionInformation(JObject metadata)
 	    {
@@ -102,13 +247,22 @@ namespace Raven.Client.Client
 	    }
 
 	    public void Delete(string key, Guid? etag)
-		{
-			EnsureIsNotNullOrEmpty(key, "key");
+	    {
+	        EnsureIsNotNullOrEmpty(key, "key");
+	        ExecuteWithReplication<object>(u =>
+	        {
+	            DirectDelete(key, etag, u);
+	            return null;
+	        });
+	    }
+
+	    private void DirectDelete(string key, Guid? etag, string operationUrl)
+	    {
 	        var metadata = new JObject();
-            if (etag != null)
-                metadata.Add("ETag", new JValue(etag.Value.ToString()));
+	        if (etag != null)
+	            metadata.Add("ETag", new JValue(etag.Value.ToString()));
 	        AddTransactionInformation(metadata);
-	        var httpJsonRequest = new HttpJsonRequest(url + "/docs/" + key, "DELETE", metadata, credentials);
+	        var httpJsonRequest = new HttpJsonRequest(operationUrl + "/docs/" + key, "DELETE", metadata, credentials);
 	        try
 	        {
 	            httpJsonRequest.ReadResponseString();
@@ -116,12 +270,12 @@ namespace Raven.Client.Client
 	        catch (WebException e)
 	        {
 	            var httpWebResponse = e.Response as HttpWebResponse;
-                if (httpWebResponse == null ||
-                    httpWebResponse.StatusCode != HttpStatusCode.Conflict)
-                    throw;
-                 throw ThrowConcurrencyException(e);
+	            if (httpWebResponse == null ||
+	                httpWebResponse.StatusCode != HttpStatusCode.Conflict)
+	                throw;
+	            throw ThrowConcurrencyException(e);
 	        }
-		}
+	    }
 
 	    private static Exception ThrowConcurrencyException(WebException e)
 	    {
@@ -189,38 +343,43 @@ namespace Raven.Client.Client
 
 		public QueryResult Query(string index, IndexQuery query)
 		{
-            EnsureIsNotNullOrEmpty(index, "index");
-            var path = string.Format("{0}/indexes/{1}?query={2}&start={3}&pageSize={4}", url, index, query.Query, query.Start, query.PageSize);
-            if (query.FieldsToFetch != null && query.FieldsToFetch.Length > 0)
-            {
-                path = query.FieldsToFetch.Aggregate(
-                        new StringBuilder(path),
-                        (sb, field) => sb.Append("&fetch=").Append(field)
-                    ).ToString();
-            }
-            if(query.SortedFields!=null && query.SortedFields.Length>0)
-            {
-                path = query.SortedFields.Aggregate(
-                        new StringBuilder(path),
-						(sb, field) => sb.Append("&sort=").Append(field.Descending ? "-" : "").Append(field.Field)
-                    ).ToString();
-            }
-            if(query.Cutoff != null)
-            {
-                path = path + "&cutOff=" + SimpleUrlEncodeOnTheClientProfile(query.Cutoff.Value.ToString("o", CultureInfo.InvariantCulture));
-            }
-            var request = new HttpJsonRequest(path, "GET", credentials);
-            var serializer = new JsonSerializer();
-            JToken json;
-            using (var reader = new JsonTextReader(new StringReader(request.ReadResponseString())))
-                json = (JToken)serializer.Deserialize(reader);
+		    EnsureIsNotNullOrEmpty(index, "index");
+            return ExecuteWithReplication(u => DirectQuery(index, query, u));
+		}
 
-            return new QueryResult
-            {
-                IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
-                Results = json["Results"].Children().Cast<JObject>().ToArray(),
-                TotalResults =  Convert.ToInt32(json["TotalResults"].ToString())
-            }; 
+	    private QueryResult DirectQuery(string index, IndexQuery query, string operationUrl)
+	    {
+	        var path = string.Format("{0}/indexes/{1}?query={2}&start={3}&pageSize={4}", operationUrl, index, query.Query, query.Start, query.PageSize);
+	        if (query.FieldsToFetch != null && query.FieldsToFetch.Length > 0)
+	        {
+	            path = query.FieldsToFetch.Aggregate(
+	                new StringBuilder(path),
+	                (sb, field) => sb.Append("&fetch=").Append(field)
+	                ).ToString();
+	        }
+	        if(query.SortedFields!=null && query.SortedFields.Length>0)
+	        {
+	            path = query.SortedFields.Aggregate(
+	                new StringBuilder(path),
+	                (sb, field) => sb.Append("&sort=").Append(field.Descending ? "-" : "").Append(field.Field)
+	                ).ToString();
+	        }
+	        if(query.Cutoff != null)
+	        {
+	            path = path + "&cutOff=" + SimpleUrlEncodeOnTheClientProfile(query.Cutoff.Value.ToString("o", CultureInfo.InvariantCulture));
+	        }
+	        var request = new HttpJsonRequest(path, "GET", credentials);
+	        var serializer = new JsonSerializer();
+	        JToken json;
+	        using (var reader = new JsonTextReader(new StringReader(request.ReadResponseString())))
+	            json = (JToken)serializer.Deserialize(reader);
+
+	        return new QueryResult
+	        {
+	            IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
+	            Results = json["Results"].Children().Cast<JObject>().ToArray(),
+	            TotalResults =  Convert.ToInt32(json["TotalResults"].ToString())
+	        };
 	    }
 
 	    private static string SimpleUrlEncodeOnTheClientProfile(string str)
@@ -237,9 +396,14 @@ namespace Raven.Client.Client
 
 	    public JsonDocument[] Get(string[] ids)
 	    {
-            var request = new HttpJsonRequest(url + "/queries/", "POST", credentials);
-            request.Write(new JArray(ids).ToString(Formatting.None));
-            var responses = JArray.Parse(request.ReadResponseString());
+	        return ExecuteWithReplication(u => DirectGet(ids, u));
+	    }
+
+	    private JsonDocument[] DirectGet(string[] ids, string operationUrl)
+	    {
+	        var request = new HttpJsonRequest(operationUrl + "/queries/", "POST", credentials);
+	        request.Write(new JArray(ids).ToString(Formatting.None));
+	        var responses = JArray.Parse(request.ReadResponseString());
 
 	        return (from doc in responses.Cast<JObject>()
 	                let metadata = (JObject) doc["@metadata"]
@@ -254,40 +418,63 @@ namespace Raven.Client.Client
 	            .ToArray();
 	    }
 
-		public BatchResult[] Batch(ICommandData[] commandDatas)
-		{
-			var metadata = new JObject();
-			AddTransactionInformation(metadata);
-			var req = new HttpJsonRequest(url + "/bulk_docs", "POST",metadata, credentials);
-			var jArray = new JArray(commandDatas.Select(x => x.ToJson()));
-			req.Write(jArray.ToString(Formatting.None));
-
-			string response;
-			try
-			{
-				response = req.ReadResponseString();
-			}
-			catch (WebException e)
-			{
-				var httpWebResponse = e.Response as HttpWebResponse;
-				if (httpWebResponse == null ||
-					httpWebResponse.StatusCode != HttpStatusCode.Conflict)
-					throw;
-				throw ThrowConcurrencyException(e);
-			}
-			return JsonConvert.DeserializeObject<BatchResult[]>(response);
-		}
-
-		public void Commit(Guid txId)
+	    public BatchResult[] Batch(ICommandData[] commandDatas)
 	    {
-	        var httpJsonRequest = new HttpJsonRequest(url + "/transaction/commit?tx=" + txId, "POST", credentials);
+            return ExecuteWithReplication(u => DirectBatch(commandDatas, u));
+	    }
+
+	    private BatchResult[] DirectBatch(ICommandData[] commandDatas, string operationUrl)
+	    {
+	        var metadata = new JObject();
+	        AddTransactionInformation(metadata);
+	        var req = new HttpJsonRequest(operationUrl + "/bulk_docs", "POST",metadata, credentials);
+	        var jArray = new JArray(commandDatas.Select(x => x.ToJson()));
+	        req.Write(jArray.ToString(Formatting.None));
+
+	        string response;
+	        try
+	        {
+	            response = req.ReadResponseString();
+	        }
+	        catch (WebException e)
+	        {
+	            var httpWebResponse = e.Response as HttpWebResponse;
+	            if (httpWebResponse == null ||
+	                httpWebResponse.StatusCode != HttpStatusCode.Conflict)
+	                throw;
+	            throw ThrowConcurrencyException(e);
+	        }
+	        return JsonConvert.DeserializeObject<BatchResult[]>(response);
+	    }
+
+	    public void Commit(Guid txId)
+	    {
+	        ExecuteWithReplication<object>(u =>
+	        {
+	            DirectCommit(txId, u);
+	            return null;
+	        });
+	    }
+
+	    private void DirectCommit(Guid txId, string s)
+	    {
+	        var httpJsonRequest = new HttpJsonRequest(s + "/transaction/commit?tx=" + txId, "POST", credentials);
 	        httpJsonRequest.ReadResponseString();
 	    }
 
 	    public void Rollback(Guid txId)
 	    {
-            var httpJsonRequest = new HttpJsonRequest(url + "/transaction/rollback?tx=" + txId, "POST", credentials);
-            httpJsonRequest.ReadResponseString();
+            ExecuteWithReplication<object>(u =>
+            {
+                DirectRollback(txId, u);
+                return null;
+            });
+	    }
+
+	    private void DirectRollback(Guid txId, string operationUrl)
+	    {
+	        var httpJsonRequest = new HttpJsonRequest(operationUrl + "/transaction/rollback?tx=" + txId, "POST", credentials);
+	        httpJsonRequest.ReadResponseString();
 	    }
 
 	    public IDatabaseCommands With(ICredentials credentialsForSession)

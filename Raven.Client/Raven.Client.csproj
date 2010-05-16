@@ -74,6 +74,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\Bundles\Raven.Bundles.Replication\Data\ReplicationDestination.cs">
+      <Link>Data\ReplicationDestination.cs</Link>
+    </Compile>
+    <Compile Include="..\Bundles\Raven.Bundles.Replication\Data\ReplicationDocument.cs">
+      <Link>Data\ReplicationDocument.cs</Link>
+    </Compile>
     <Compile Include="Document\AbstractDocumentQuery.cs" />
     <Compile Include="Document\DocumentConvention.cs" />
     <Compile Include="Document\DocumentQuery.cs" />
@@ -87,6 +93,7 @@
     <Compile Include="Document\MultiTypeHiLoKeyGenerator.cs" />
     <Compile Include="Document\RavenClientEnlistment.cs" />
     <Compile Include="Document\ShardedDocumentQuery.cs" />
+    <Compile Include="Exceptions\ConflictException.cs" />
     <Compile Include="Exceptions\NonUniqueObjectException.cs" />
     <Compile Include="IDocumentQuery.cs" />
     <Compile Include="IDocumentSession.cs" />

@@ -44,6 +44,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\Bundles\Raven.Bundles.Replication\Data\ReplicationDestination.cs">
+      <Link>Data\ReplicationDestination.cs</Link>
+    </Compile>
+    <Compile Include="..\Bundles\Raven.Bundles.Replication\Data\ReplicationDocument.cs">
+      <Link>Data\ReplicationDocument.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client\Client\HttpJsonRequest.cs">
       <Link>Client\HttpJsonRequest.cs</Link>
     </Compile>
@@ -82,6 +88,9 @@
     </Compile>
     <Compile Include="..\Raven.Client\Document\ShardedDocumentQuery.cs">
       <Link>Document\ShardedDocumentQuery.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client\Exceptions\ConflictException.cs">
+      <Link>Exceptions\ConflictException.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client\Exceptions\NonUniqueObjectException.cs">
       <Link>Exceptions\NonUniqueObjectException.cs</Link>
