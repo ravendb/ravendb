@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -9,15 +10,22 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Bundles.Replication.Data;
 using Raven.Database;
+using Raven.Database.Extensions;
 using Raven.Database.Json;
 
 namespace Raven.Bundles.Replication.Tasks
 {
     public class ReplicationTask : IStartupTask
     {
+        public class IntHolder
+        {
+            public int Value;
+        }
+
         private DocumentDatabase docDb;
         private readonly ILog log = LogManager.GetLogger(typeof(ReplicationTask));
         private bool firstTimeFoundNoReplicationDocument = true;
+        private ConcurrentDictionary<string, IntHolder> activeReplicationTasks = new ConcurrentDictionary<string, IntHolder>();
 
         private int replicationAttempts;
 
@@ -51,8 +59,19 @@ namespace Raven.Bundles.Replication.Tasks
                         else
                         {
                             var currentReplicationAttempts = Interlocked.Increment(ref replicationAttempts);
-                            Parallel.ForEach(destinations.Where(dest=>ShouldReplicateTo(dest, currentReplicationAttempts)), 
-                                ReplicateTo);
+
+                            var destinationForReplication = destinations
+                                .Where(dest => IsNotFailing(dest, currentReplicationAttempts));
+
+                            foreach (var dest in destinationForReplication)
+                            {
+                                var destination = dest;
+                                var holder = activeReplicationTasks.GetOrAdd(destination, new IntHolder());
+                                if (Thread.VolatileRead(ref holder.Value) == 1)
+                                    continue;
+                                Thread.VolatileWrite(ref holder.Value, 1);
+                                new Task(() => ReplicateTo(destination)).Start();
+                            }
                         }
                     }
                 }
@@ -65,7 +84,7 @@ namespace Raven.Bundles.Replication.Tasks
             }
         }
 
-        private bool ShouldReplicateTo(string dest, int currentReplicationAttempts)
+        private bool IsNotFailing(string dest, int currentReplicationAttempts)
         {
             var jsonDocument = docDb.Get(ReplicationConstants.RavenReplicationDestinationsBasePath + dest, null);
             if (jsonDocument == null)
@@ -107,35 +126,43 @@ namespace Raven.Bundles.Replication.Tasks
 
         private void ReplicateTo(string destination)
         {
-            using (ReplicationContext.Enter())
+            try
             {
-                JArray jsonDocuments;
-                try
+                using (ReplicationContext.Enter())
                 {
-                    var etag = GetLastReplicatedEtagFrom(destination);
-                    if (etag == null)
-                        return;
-                    jsonDocuments = GetJsonDocuments(etag.Value);
-                    if (jsonDocuments == null || jsonDocuments.Count == 0)
-                        return;
-                }
-                catch (Exception e)
-                {
-                    log.Warn("Failed to replicate to: " + destination, e);
-                    return;
-                }
-                if (TryReplicatingData(destination, jsonDocuments) == false)// failed to replicate, start error handling strategy
-                {
-                    if (IsFirstFailue(destination))
+                    JArray jsonDocuments;
+                    try
                     {
-                        log.InfoFormat(
-                            "This is the first failure for {0}, assuming transinet failure and trying again",
-                            destination);
-                        if (TryReplicatingData(destination, jsonDocuments))// second failure!
+                        var etag = GetLastReplicatedEtagFrom(destination);
+                        if (etag == null)
+                            return;
+                        jsonDocuments = GetJsonDocuments(etag.Value);
+                        if (jsonDocuments == null || jsonDocuments.Count == 0)
                             return;
                     }
-                    IncrementFailureCount(destination);
+                    catch (Exception e)
+                    {
+                        log.Warn("Failed to replicate to: " + destination, e);
+                        return;
+                    }
+                    if (TryReplicatingData(destination, jsonDocuments) == false)// failed to replicate, start error handling strategy
+                    {
+                        if (IsFirstFailue(destination))
+                        {
+                            log.InfoFormat(
+                                "This is the first failure for {0}, assuming transinet failure and trying again",
+                                destination);
+                            if (TryReplicatingData(destination, jsonDocuments))// second failure!
+                                return;
+                        }
+                        IncrementFailureCount(destination);
+                    }
                 }
+            }
+            finally 
+            {
+                var holder = activeReplicationTasks.GetOrAdd(destination, new IntHolder());
+                Thread.VolatileWrite(ref holder.Value, 0);
             }
         }
 
