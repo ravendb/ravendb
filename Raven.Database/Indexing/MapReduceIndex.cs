@@ -34,19 +34,15 @@ namespace Raven.Database.Indexing
 		{
 			actions.SetCurrentIndexStatsTo(name);
 			var count = 0;
-			PropertyDescriptor documentIdPropertyDescriptor = null;
+			Func<object, object> documentIdFetcher= null;
 			var reduceKeys = new HashSet<string>();
 			foreach (var doc in RobustEnumeration(documents, viewGenerator.MapDefinition, actions, context))
 			{
 				count++;
 
-				if (documentIdPropertyDescriptor == null)
-				{
-					var props = TypeDescriptor.GetProperties(doc);
-					documentIdPropertyDescriptor = props.Find("__document_id", false);
-				}
+				documentIdFetcher = CreateDocumentIdFetcherIfNeeded(documentIdFetcher, doc);
 
-				var docIdValue = documentIdPropertyDescriptor.GetValue(doc);
+                var docIdValue = documentIdFetcher(doc);
 				if (docIdValue == null)
 					throw new InvalidOperationException("Could not find document id for this document");
 
@@ -61,9 +57,9 @@ namespace Raven.Database.Indexing
 
 				reduceKeys.Add(reduceKey);
 
-				var data = JObject.FromObject(doc).ToString(Formatting.None, new JsonEnumConverter(), new JsonLuceneNumberConverter());
-				
-				log.DebugFormat("Mapped result for '{0}': '{1}'", name, data);
+				string data = GetMapedData(doc);
+
+			    log.DebugFormat("Mapped result for '{0}': '{1}'", name, data);
 
 			    var hash = ComputeHash(name, reduceKey);
 
@@ -83,6 +79,37 @@ namespace Raven.Database.Indexing
 
 			log.DebugFormat("Mapped {0} documents for {1}", count, name);
 		}
+
+	    private string GetMapedData(object doc)
+	    {
+	        string data;
+	        if (doc is DynamicJsonObject)
+	            data = ((DynamicJsonObject)doc).Inner.ToString(Formatting.None, new JsonEnumConverter(), new JsonLuceneNumberConverter());
+	        else
+	            data = JObject.FromObject(doc).ToString(Formatting.None, new JsonEnumConverter(),
+	                                                    new JsonLuceneNumberConverter());
+	        return data;
+	    }
+
+	    private static Func<object, object> CreateDocumentIdFetcherIfNeeded(Func<object, object> documentIdFetcher, object doc)
+	    {
+	        if (documentIdFetcher != null)
+	        {
+	            return documentIdFetcher;
+	        }
+	        // document may be DynamicJsonObject if we are using
+	        // compiled views
+	        if (doc is DynamicJsonObject)
+	        {
+	            documentIdFetcher = i => ((dynamic) i).__document_id;
+	        }
+	        else
+	        {
+	            var docIdProp = TypeDescriptor.GetProperties(doc).Find("__document_id", false);
+	            documentIdFetcher = o => docIdProp.GetValue(o);
+	        }
+	        return documentIdFetcher;
+	    }
 
 	    public static byte[] ComputeHash(string name, string reduceKey)
 	    {
