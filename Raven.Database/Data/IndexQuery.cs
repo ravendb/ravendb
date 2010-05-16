@@ -8,6 +8,7 @@ namespace Raven.Database.Data
 		public IndexQuery()
 		{
 			TotalSize = new Reference<int>();
+		    PageSize = 128;
 		}
 
 		public string Query { get;  set; }
