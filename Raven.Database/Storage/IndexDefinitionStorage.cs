@@ -26,7 +26,7 @@ namespace Raven.Database.Storage
 		private readonly ILog logger = LogManager.GetLogger(typeof (IndexDefinitionStorage));
 		private readonly string path;
 
-		public IndexDefinitionStorage(string path, IEnumerable<AbstractViewGenerator> compiledGenerators)
+		public IndexDefinitionStorage(TransactionalStorage  transactionalStorage,string path, IEnumerable<AbstractViewGenerator> compiledGenerators)
 		{
 			this.path = Path.Combine(path, IndexDefDir);
 
@@ -57,9 +57,20 @@ namespace Raven.Database.Storage
 		            .FirstOrDefault();
 
 		        var name = displayNameAtt != null ? displayNameAtt.DisplayName : copy.GetType().Name;
+
+                transactionalStorage.Batch(actions =>
+                {
+                    if (actions.GetIndexesStats().Any(x => x.Name == name))
+                        return;
+
+                    actions.AddIndex(name);
+                });
+
 		        var indexDefinition = new IndexDefinition
 		        {
-                    Map = "Compiled index: " + generator.GetType().AssemblyQualifiedName,
+                    Map = "Compiled map function: " + generator.GetType().AssemblyQualifiedName,
+                    // need to supply this so the index storage will create map/reduce index
+                    Reduce = generator.ReduceDefinition == null ? null : "Compiled reduce function: " + generator.GetType().AssemblyQualifiedName,
 		            Indexes = generator.Indexes,
 		            Stores = generator.Stores
 		        };
