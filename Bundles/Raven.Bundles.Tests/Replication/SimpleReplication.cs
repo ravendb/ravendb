@@ -22,6 +22,7 @@ namespace Raven.Bundles.Tests.Replication
 
         private readonly List<IDocumentStore> stores = new List<IDocumentStore>();
         private readonly List<RavenDbServer> servers = new List<RavenDbServer>();
+        private int RetriesCount = 150;
 
         public SimpleReplication()
         {
@@ -111,13 +112,14 @@ namespace Raven.Bundles.Tests.Replication
             using(var session = store2.OpenSession())
             {
                 Company company = null;
-                for (int i = 0; i < 15; i++)
+                for (int i = 0; i < RetriesCount; i++)
                 {
                     company = session.Load<Company>("companies/1");
                     if (company != null)
                         break;
                     Thread.Sleep(100);
                 }
+                Assert.NotNull(company);
                 Assert.Equal("Hibernating Rhinos",company.Name);
             }
         }
@@ -152,7 +154,7 @@ namespace Raven.Bundles.Tests.Replication
             using (var session = store2.OpenSession())
             {
                 Company company = null;
-                for (int i = 0; i < 15; i++)
+                for (int i = 0; i < RetriesCount; i++)
                 {
                     company = session.Load<Company>("companies/1");
                     if (company != null)
@@ -170,7 +172,7 @@ namespace Raven.Bundles.Tests.Replication
             
 
             Company deletedCompany = null;
-            for (int i = 0; i < 15; i++)
+            for (int i = 0; i < RetriesCount; i++)
             {
                 using (var session = store2.OpenSession())
                     deletedCompany = session.Load<Company>("companies/1");
