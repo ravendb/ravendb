@@ -31,19 +31,18 @@ namespace Raven.Database.Indexing
 			Write(indexWriter =>
 			{
 				string currentId = null;
-				var converter = new AnonymousObjectToLuceneDocumentConverter();
 				PropertyDescriptorCollection properties = null;
 				foreach (var doc in RobustEnumeration(documents, viewGenerator.MapDefinition, actions, context))
 				{
 					count++;
 
-					if (properties == null)
-					{
-						properties = TypeDescriptor.GetProperties(doc);
-					}
-					var newDocId = properties.Find("__document_id", false).GetValue(doc) as string;
-					var fields = converter.Index(doc, properties, indexDefinition, Field.Store.NO);
-					if (currentId != newDocId) // new document id, so delete all old values matching it
+				    string newDocId;
+				    IEnumerable<AbstractField> fields;
+                    if (doc is DynamicJsonObject)
+                        fields = ExtractIndexDataFromDocument((DynamicJsonObject) doc, out newDocId);
+                    else
+                        fields = ExtractIndexDataFromDocument(properties, doc, out newDocId);
+				    if (currentId != newDocId) // new document id, so delete all old values matching it
 					{
                         context.IndexUpdateTriggers.Apply(trigger => trigger.OnIndexEntryDeleted(name, newDocId));
 						indexWriter.DeleteDocuments(new Term("__document_id", newDocId));
@@ -69,7 +68,24 @@ namespace Raven.Database.Indexing
 			log.DebugFormat("Indexed {0} documents for {1}", count, name);
 		}
 
-		private static void CopyFieldsToDocumentButRemoveDuplicateValues(Document luceneDoc, IEnumerable<AbstractField> fields)
+        private IEnumerable<AbstractField> ExtractIndexDataFromDocument(DynamicJsonObject dynamicJsonObject, out string newDocId)
+        {
+            newDocId = dynamicJsonObject.GetDocumentId();
+            return AnonymousObjectToLuceneDocumentConverter.Index(dynamicJsonObject.Inner, indexDefinition,
+                                                                  Field.Store.NO);
+        }
+
+	    private IEnumerable<AbstractField> ExtractIndexDataFromDocument(PropertyDescriptorCollection properties, object doc, out string newDocId)
+	    {
+	        if (properties == null)
+	        {
+	            properties = TypeDescriptor.GetProperties(doc);
+	        }
+	        newDocId = properties.Find("__document_id", false).GetValue(doc) as string;
+            return AnonymousObjectToLuceneDocumentConverter.Index(doc, properties, indexDefinition, Field.Store.NO);
+	    }
+
+	    private static void CopyFieldsToDocumentButRemoveDuplicateValues(Document luceneDoc, IEnumerable<AbstractField> fields)
 		{
 			foreach (var field in fields)
 			{

@@ -9,7 +9,12 @@ namespace Raven.Database.Linq
 	{
 		private readonly JObject obj;
 
-		public DynamicJsonObject(JObject obj)
+	    public JObject Inner
+	    {
+	        get { return obj; }
+	    }
+
+	    public DynamicJsonObject(JObject obj)
 		{
 			this.obj = obj;
 		}
@@ -70,7 +75,7 @@ namespace Raven.Database.Linq
 			return null;
 		}
 
-		private object GetDocumentId()
+	    public string GetDocumentId()
 		{
 			var metadata = obj["@metadata"];
 			if (metadata != null)
@@ -78,7 +83,7 @@ namespace Raven.Database.Linq
 				var id = metadata["@id"];
 				if (id != null)
 				{
-					return id.Value<object>();
+					return id.Value<string>();
 				}
 			}
 			return null;

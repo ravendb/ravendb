@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Threading;
 using log4net.Appender;
 using log4net.Config;
+using log4net.Filter;
 using log4net.Layout;
 using Raven.Bundles.Replication;
 using Raven.Client;
@@ -32,6 +33,18 @@ namespace Raven.Bundles.Tests.Replication
                 if(Directory.Exists("Data #" + i))
                     Directory.Delete("Data #" + i, true);
             }
+
+            var outputDebugStringAppender = new OutputDebugStringAppender
+            {
+                Layout = new SimpleLayout(),
+            };
+            outputDebugStringAppender.AddFilter(new LoggerMatchFilter
+            {
+                AcceptOnMatch = true,
+                LoggerToMatch = "Raven.Bundles"
+            });
+            outputDebugStringAppender.AddFilter(new DenyAllFilter());
+            BasicConfigurator.Configure(outputDebugStringAppender);
         }
 
         public IDocumentStore CreateStore()
@@ -109,6 +122,63 @@ namespace Raven.Bundles.Tests.Replication
                     Thread.Sleep(100);
                 }
                 Assert.Equal("Hibernating Rhinos",company.Name);
+            }
+        }
+
+        [Fact(Skip = "Requires stable ancestry")]
+        public void Can_replicate_delete_between_two_instances()
+        {
+            var store1 = CreateStore();
+            var store2 = CreateStore();
+
+            using (var session = store1.OpenSession())
+            {
+                session.Store(new ReplicationDocument()
+                {
+                    Destinations = {new ReplicationDestination
+                    {
+                        Url = servers[1].Database.Configuration.ServerUrl
+                    }}
+                });
+                session.SaveChanges();
+            }
+
+            using (var session = store1.OpenSession())
+            {
+                session.Store(new Company { Name = "Hibernating Rhinos" });
+                session.SaveChanges();
+            }
+
+            using (var session = store2.OpenSession())
+            {
+                Company company = null;
+                for (int i = 0; i < 15; i++)
+                {
+                    company = session.Load<Company>("companies/1");
+                    if (company != null)
+                        break;
+                    Thread.Sleep(100);
+                }
+                Assert.Equal("Hibernating Rhinos", company.Name);
+            }
+
+            using (var session = store1.OpenSession())
+            {
+                session.Delete(session.Load<Company>("companies/1"));
+                session.SaveChanges();
+            }
+
+            using (var session = store2.OpenSession())
+            {
+                Company company = null;
+                for (int i = 0; i < 15; i++)
+                {
+                    company = session.Load<Company>("companies/1");
+                    if (company == null)
+                        break;
+                    Thread.Sleep(100);
+                }
+                Assert.Null(company);
             }
         }
     }

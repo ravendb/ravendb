@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Server.Abstractions;
@@ -32,16 +33,20 @@ namespace Raven.Bundles.Replication
                 actions.AddDocument(id, null, document, metadata);
                 return;
             }
-            var ancestry = metadata.Value<JArray>(ReplicationConstants.RavenAncestry).Cast<JValue>().Select(x=>new Guid(x.Value<string>()));
+            var etag = metadata.Value<string>("@etag");
+
+            var ancestryMetaData = metadata.Value<JArray>(ReplicationConstants.RavenAncestry);
+            IEnumerable<Guid> ancestry = ancestryMetaData != null ? ancestryMetaData.Cast<JValue>().Select(x => new Guid(x.Value<string>())) : new Guid[0];
+            ancestry = ancestry.Concat(new[] {new Guid(etag)});
             if(ancestry.Contains(existingDoc.Etag)) // fast-forward, essentially
             {
                 actions.AddDocument(id, null, document, metadata);
                 return;
             }
-            var newDocumentConflictId = id + "/conflicts/" + metadata.Value<string>("ETag");
+            var newDocumentConflictId = id + "/conflicts/" + etag;
             actions.AddDocument(newDocumentConflictId, null, document, metadata);
 
-            if (existingDoc.Metadata[ReplicationConstants.RavenAncestry] != null) // the existing document is in conflict
+            if (existingDoc.Metadata[ReplicationConstants.RavenReplicationConflict] != null) // the existing document is in conflict
             {
                 existingDoc.DataAsJson.Value<JArray>("Conflicts").Add(JToken.FromObject(newDocumentConflictId));
                 actions.AddDocument(id, existingDoc.Etag, existingDoc.DataAsJson, existingDoc.Metadata);

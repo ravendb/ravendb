@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Web;
 using log4net;
 using Newtonsoft.Json;
@@ -18,11 +21,13 @@ namespace Raven.Database.Storage
 
 		private readonly ConcurrentDictionary<string, AbstractViewGenerator> indexCache =
 			new ConcurrentDictionary<string, AbstractViewGenerator>();
+        private readonly ConcurrentDictionary<string, IndexDefinition> indexDefinitions = 
+            new ConcurrentDictionary<string, IndexDefinition>();
 
 		private readonly ILog logger = LogManager.GetLogger(typeof (IndexDefinitionStorage));
 		private readonly string path;
 
-		public IndexDefinitionStorage(string path)
+		public IndexDefinitionStorage(TransactionalStorage  transactionalStorage,string path, IEnumerable<AbstractViewGenerator> compiledGenerators)
 		{
 			this.path = Path.Combine(path, IndexDefDir);
 
@@ -43,6 +48,37 @@ namespace Raven.Database.Storage
 					logger.Warn("Could not compile index " + index + ", skipping bad index", e);
 				}
 			}
+
+            //compiled view generators always overwrite dynamic views
+		    foreach (var generator in compiledGenerators)
+		    {
+		        var copy = generator;
+		        var displayNameAtt = TypeDescriptor.GetAttributes(copy)
+		            .OfType<DisplayNameAttribute>()
+		            .FirstOrDefault();
+
+		        var name = displayNameAtt != null ? displayNameAtt.DisplayName : copy.GetType().Name;
+
+                transactionalStorage.Batch(actions =>
+                {
+                    if (actions.GetIndexesStats().Any(x => x.Name == name))
+                        return;
+
+                    actions.AddIndex(name);
+                });
+
+		        var indexDefinition = new IndexDefinition
+		        {
+                    Map = "Compiled map function: " + generator.GetType().AssemblyQualifiedName,
+                    // need to supply this so the index storage will create map/reduce index
+                    Reduce = generator.ReduceDefinition == null ? null : "Compiled reduce function: " + generator.GetType().AssemblyQualifiedName,
+		            Indexes = generator.Indexes,
+		            Stores = generator.Stores,
+                    IsCompiled = true
+		        };
+		        indexCache.AddOrUpdate(name, copy, (s, viewGenerator) => copy);
+		        indexDefinitions.AddOrUpdate(name, indexDefinition, (s1, definition) => indexDefinition);
+		    }
 		}
 
 		public string[] IndexNames
@@ -62,6 +98,12 @@ namespace Raven.Database.Storage
 			var transformer = new DynamicViewCompiler(name, indexDefinition);
 			var generator = transformer.GenerateInstance();
 			indexCache.AddOrUpdate(name, generator, (s, viewGenerator) => generator);
+		    indexDefinitions.AddOrUpdate(name, indexDefinition, (s1, definition) =>
+		    {
+                if (definition.IsCompiled)
+                    throw new InvalidOperationException("Index " + name + " is a compiled index, and cannot be replaced");
+		        return indexDefinition;   
+		    });
 			logger.InfoFormat("New index {0}:\r\n{1}\r\nCompiled to:\r\n{2}", transformer.Name, transformer.CompiledQueryText,
 			                  transformer.CompiledQueryText);
 			return transformer;
@@ -87,10 +129,10 @@ namespace Raven.Database.Storage
 
 		public IndexDefinition GetIndexDefinition(string name)
 		{
-			var indexPath = GetIndexPath(name);
-			if (File.Exists(indexPath) == false)
-				throw new InvalidOperationException("Index file does not exists: " + indexPath);
-			return JsonConvert.DeserializeObject<IndexDefinition>(File.ReadAllText(indexPath), new JsonEnumConverter());
+		    IndexDefinition value;
+		    if(indexDefinitions.TryGetValue(name, out value)==false)
+		        throw new InvalidOperationException("Index does not exists: " + name);
+		    return value;
 		}
 
 		public AbstractViewGenerator GetViewGenerator(string name)

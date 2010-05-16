@@ -4,13 +4,15 @@ using System.ComponentModel;
 using System.Linq;
 using Lucene.Net.Documents;
 using Lucene.Net.Util;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Raven.Database.Json;
 
 namespace Raven.Database.Indexing
 {
-	public class AnonymousObjectToLuceneDocumentConverter
+    public static class AnonymousObjectToLuceneDocumentConverter
 	{
-		public IEnumerable<AbstractField> Index(object val, PropertyDescriptorCollection properties, IndexDefinition indexDefinition, Field.Store defaultStorage)
+		public static IEnumerable<AbstractField> Index(object val, PropertyDescriptorCollection properties, IndexDefinition indexDefinition, Field.Store defaultStorage)
 		{
 			return (from property in properties.Cast<PropertyDescriptor>()
 			        let name = property.Name
@@ -20,7 +22,29 @@ namespace Raven.Database.Indexing
 					select Createfield(name, value, indexDefinition, defaultStorage));
 		}
 
-		private static AbstractField Createfield(string name, object value, IndexDefinition indexDefinition, Field.Store defaultStorage)
+        public static IEnumerable<AbstractField> Index(JObject document, IndexDefinition indexDefinition, Field.Store defaultStorage)
+        {
+            return (from property in document.Cast<JProperty>()
+                    let name = property.Name
+                    where name != "__document_id"
+                    let value = GetPropertyValue(property)
+                    where value != null
+                    select Createfield(name, value, indexDefinition, defaultStorage));
+        }
+
+        private static object GetPropertyValue(JProperty property)
+        {
+            switch (property.Value.Type)
+            {
+                case JsonTokenType.Array:
+                case JsonTokenType.Object:
+                    return property.Value.ToString(Formatting.None);
+                default:
+                    return property.Value.Value<object>();
+            }
+        }
+
+        private static AbstractField Createfield(string name, object value, IndexDefinition indexDefinition, Field.Store defaultStorage)
 		{
 			if (indexDefinition.GetIndex(name, Field.Index.ANALYZED) == Field.Index.NOT_ANALYZED || value is string)
 				return new Field(name, value.ToString(), indexDefinition.GetStorage(name, defaultStorage),

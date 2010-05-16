@@ -29,37 +29,37 @@ namespace Raven.Database.Indexing
 		private readonly ConcurrentDictionary<string, Index> indexes = new ConcurrentDictionary<string, Index>();
 		private readonly ILog log = LogManager.GetLogger(typeof (IndexStorage));
 
-		public IndexStorage(IndexDefinitionStorage indexDefinitionStorage, TransactionalStorage transactionalStorage, RavenConfiguration configuration)
+		public IndexStorage(IndexDefinitionStorage indexDefinitionStorage, RavenConfiguration configuration)
 		{
-			this.configuration = configuration;
-			path = Path.Combine(configuration.DataDirectory,"Indexes");
-			if (Directory.Exists(path) == false)
-				Directory.CreateDirectory(path);
+		    this.configuration = configuration;
+		    path = Path.Combine(configuration.DataDirectory, "Indexes");
+		    if (Directory.Exists(path) == false)
+		        Directory.CreateDirectory(path);
 
-			transactionalStorage.Batch(actions =>
-			{
-				string[] indexNames = actions.GetIndexesStats().Select(x => x.Name).ToArray();
+		    foreach (var indexDirectory in indexDefinitionStorage.IndexNames)
+		    {
+		        log.DebugFormat("Loading saved index {0}", indexDirectory);
 
-				foreach (var indexDirectory in indexNames)
-				{
-					log.DebugFormat("Loading saved index {0}", indexDirectory);
-				
-					var indexDefinition = indexDefinitionStorage.GetIndexDefinition(indexDirectory);
-					if (indexDefinition == null)
-						continue;
-					indexes.TryAdd(indexDirectory,
-					               CreateIndexImplementation(indexDirectory, indexDefinition,
-															 CreateLuceneDirectory(indexDirectory)));
-				}
-			});
-
+		        var indexDefinition = indexDefinitionStorage.GetIndexDefinition(indexDirectory);
+		        if (indexDefinition == null)
+		            continue;
+		        indexes.TryAdd(indexDirectory,
+		                       CreateIndexImplementation(indexDirectory, indexDefinition,
+		                                                 OpenOrCreateLuceneDirectory(indexDirectory)));
+		    }
 		}
 
-		protected Lucene.Net.Store.Directory CreateLuceneDirectory(string indexDirectory)
+	    protected Lucene.Net.Store.Directory OpenOrCreateLuceneDirectory(string indexDirectory)
 		{
+            Lucene.Net.Store.Directory directory;
 			if (configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction)
-				return new RAMDirectory();
-			return FSDirectory.Open(new DirectoryInfo(Path.Combine(path, HttpUtility.UrlEncode(indexDirectory))));
+				directory = new RAMDirectory();
+            else
+                directory = FSDirectory.Open(new DirectoryInfo(Path.Combine(path, HttpUtility.UrlEncode(indexDirectory))));
+            //creating index structure if we need to
+            new IndexWriter(directory, new StandardAnalyzer(Version.LUCENE_CURRENT), IndexWriter.MaxFieldLength.UNLIMITED).
+                Close();
+            return directory;
 		}
 
 		private static Index CreateIndexImplementation(string name, IndexDefinition indexDefinition, Lucene.Net.Store.Directory directory)
@@ -122,10 +122,7 @@ namespace Raven.Database.Indexing
 
 			indexes.AddOrUpdate(name, n =>
 			{
-				var directory = CreateLuceneDirectory(name);
-				//creating index structure
-				new IndexWriter(directory, new StandardAnalyzer(Version.LUCENE_CURRENT), IndexWriter.MaxFieldLength.UNLIMITED).
-					Close();
+				var directory = OpenOrCreateLuceneDirectory(name);
 				return CreateIndexImplementation(name, indexDefinition, directory);
 			}, (s, index) => index);
 		}
