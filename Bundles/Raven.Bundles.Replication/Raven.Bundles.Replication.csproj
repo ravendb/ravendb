@@ -50,11 +50,11 @@
     <Compile Include="AncestryPutTrigger.cs" />
     <Compile Include="RemoveConflictOnPutTrigger.cs" />
     <Compile Include="ReplicationConstants.cs" />
+    <Compile Include="ReplicationContext.cs" />
     <Compile Include="ReplicationDocument.cs" />
     <Compile Include="ReplicationLastEtagResponser.cs" />
     <Compile Include="ReplicationResponder.cs" />
     <Compile Include="ReplicationTask.cs" />
-    <Compile Include="ReplicationUtil.cs" />
     <Compile Include="SourceReplicationInformation.cs" />
     <Compile Include="VirtualDeleteTrigger.cs" />
   </ItemGroup>
