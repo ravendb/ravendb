@@ -74,7 +74,7 @@ namespace Raven.Bundles.Replication
 
         private void ReplicateTo(string destination)
         {
-            using(ReplicationContext.Enter())
+            using (ReplicationContext.Enter())
             {
                 try
                 {
@@ -146,10 +146,12 @@ namespace Raven.Bundles.Replication
             JArray jsonDocuments = null;
             try
             {
+                var instanceId = docDb.TransactionalStorage.Id.ToString();
                 docDb.TransactionalStorage.Batch(actions =>
                 {
                     jsonDocuments = new JArray(actions.GetDocumentsAfter(etag)
                         .Where(x => x.Key.StartsWith("Raven/") == false)
+                        .Where(x => x.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource) == instanceId)
                         .Take(100)
                         .Select(x => x.ToJson()));
                 });
