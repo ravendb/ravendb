@@ -39,15 +39,18 @@ namespace Raven.Bundles.Replication
             {
                 try
                 {
-                    var destinations = GetReplicationDestinations();
+                    using (ReplicationContext.Enter())
+                    {
+                        var destinations = GetReplicationDestinations();
 
-                    if (destinations.Length == 0)
-                    {
-                        WarnIfNoReplicationTargetsWereFound();
-                    }
-                    else
-                    {
-                        Parallel.ForEach(destinations, ReplicateTo);
+                        if (destinations.Length == 0)
+                        {
+                            WarnIfNoReplicationTargetsWereFound();
+                        }
+                        else
+                        {
+                            Parallel.ForEach(destinations, ReplicateTo);
+                        }
                     }
                 }
                 catch (Exception e)
@@ -55,7 +58,7 @@ namespace Raven.Bundles.Replication
                     log.Error("Failed to perform replication", e);
                 }
 
-                context.WaitForWork();
+                context.WaitForWork(TimeSpan.FromMinutes(1));
             }
         }
 
@@ -71,19 +74,22 @@ namespace Raven.Bundles.Replication
 
         private void ReplicateTo(string destination)
         {
-            try
+            using(ReplicationContext.Enter())
             {
-                var etag = GetLastReplicatedEtagFrom(destination);
-                if (etag == null)
-                    return;
-                var jsonDocuments = GetJsonDocuments(etag.Value);
-                if (jsonDocuments == null || jsonDocuments.Count == 0)
-                    return;
-                TryReplicatingData(destination, jsonDocuments);
-            }
-            catch (Exception e)
-            {
-                log.Warn("Failed to replicate to: " + destination, e);
+                try
+                {
+                    var etag = GetLastReplicatedEtagFrom(destination);
+                    if (etag == null)
+                        return;
+                    var jsonDocuments = GetJsonDocuments(etag.Value);
+                    if (jsonDocuments == null || jsonDocuments.Count == 0)
+                        return;
+                    TryReplicatingData(destination, jsonDocuments);
+                }
+                catch (Exception e)
+                {
+                    log.Warn("Failed to replicate to: " + destination, e);
+                }
             }
         }
 
@@ -96,7 +102,7 @@ namespace Raven.Bundles.Replication
 #if DEBUG
                 if (Debugger.IsAttached)
                     request.Timeout = 500000;
-                else 
+                else
 #endif
                     request.Timeout = 1500;
                 request.Credentials = CredentialCache.DefaultNetworkCredentials;
@@ -116,12 +122,12 @@ namespace Raven.Bundles.Replication
             catch (WebException e)
             {
                 var response = e.Response as HttpWebResponse;
-                if(response != null)
+                if (response != null)
                 {
                     using (var streamReader = new StreamReader(response.GetResponseStream()))
                     {
                         var error = streamReader.ReadToEnd();
-                        log.Warn("Replication to " + destination + " had failed\r\n"+error, e);
+                        log.Warn("Replication to " + destination + " had failed\r\n" + error, e);
                     }
                 }
                 else
