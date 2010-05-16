@@ -280,7 +280,7 @@ namespace Raven.Client.Tests.Document
         }
 
         [Fact]
-        public void Can_rollback_transaction()
+        public void Can_rollback_transaction_on_insert()
         {
             using (var server = GetNewServer(port, path))
             {
