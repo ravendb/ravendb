@@ -51,7 +51,7 @@ namespace Raven.Database.Indexing
 					log.Error("Failed to execute task: " + task, e);
 				}
 				if (foundWork == false)
-					context.WaitForWork();
+					context.WaitForWork(TimeSpan.FromSeconds(1));
 			}
 		}
 	}
