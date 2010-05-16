@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -73,10 +74,10 @@ namespace Raven.Bundles.Replication
             try
             {
                 var etag = GetLastReplicatedEtagFrom(destination);
-                if(etag == null)
+                if (etag == null)
                     return;
                 var jsonDocuments = GetJsonDocuments(etag.Value);
-                if(jsonDocuments == null || jsonDocuments.Count == 0)
+                if (jsonDocuments == null || jsonDocuments.Count == 0)
                     return;
                 TryReplicatingData(destination, jsonDocuments);
             }
@@ -92,10 +93,15 @@ namespace Raven.Bundles.Replication
             {
                 var request = (HttpWebRequest)WebRequest.Create(destination + "/replication/replicate?from=" + docDb.Configuration.ServerUrl);
                 request.UseDefaultCredentials = true;
-                request.Timeout = 500;
+#if DEBUG
+                if (Debugger.IsAttached)
+                    request.Timeout = 500000;
+                else 
+#endif
+                    request.Timeout = 1500;
                 request.Credentials = CredentialCache.DefaultNetworkCredentials;
                 request.Method = "POST";
-                using(var stream = request.GetRequestStream())
+                using (var stream = request.GetRequestStream())
                 using (var streamWriter = new StreamWriter(stream))
                 {
                     jsonDocuments.WriteTo(new JsonTextWriter(streamWriter));
@@ -105,6 +111,22 @@ namespace Raven.Bundles.Replication
                 using (request.GetResponse())
                 {
                     log.InfoFormat("Replicated {0} to {1}", jsonDocuments.Count, destination);
+                }
+            }
+            catch (WebException e)
+            {
+                var response = e.Response as HttpWebResponse;
+                if(response != null)
+                {
+                    using (var streamReader = new StreamReader(response.GetResponseStream()))
+                    {
+                        var error = streamReader.ReadToEnd();
+                        log.Warn("Replication to " + destination + " had failed\r\n"+error, e);
+                    }
+                }
+                else
+                {
+                    log.Warn("Replication to " + destination + " had failed", e);
                 }
             }
             catch (Exception e)
@@ -121,7 +143,7 @@ namespace Raven.Bundles.Replication
                 docDb.TransactionalStorage.Batch(actions =>
                 {
                     jsonDocuments = new JArray(actions.GetDocumentsAfter(etag)
-                        .Where(x=>x.Key.StartsWith("Raven/") == false)
+                        .Where(x => x.Key.StartsWith("Raven/") == false)
                         .Take(100)
                         .Select(x => x.ToJson()));
                 });
@@ -151,7 +173,7 @@ namespace Raven.Bundles.Replication
             catch (WebException e)
             {
                 var response = e.Response as HttpWebResponse;
-                if(response != null && (response.StatusCode == HttpStatusCode.BadRequest || response.StatusCode==HttpStatusCode.NotFound))
+                if (response != null && (response.StatusCode == HttpStatusCode.BadRequest || response.StatusCode == HttpStatusCode.NotFound))
                     log.Warn("Replication is not enabled on: " + destination, e);
                 else
                     log.Warn("Failed to contact replication destination: " + destination, e);
