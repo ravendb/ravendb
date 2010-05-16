@@ -15,6 +15,8 @@ namespace Raven.Bundles.Replication
     {
         public override void AfterDelete(string key, TransactionInformation transactionInformation)
         {
+            if (ReplicationContext.IsInReplicationContext)
+                return;
             Database.Put(key, null, new JObject(), new JObject(new JProperty("Raven-Delete-Marker", true)),
                          transactionInformation);
         }
