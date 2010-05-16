@@ -99,12 +99,6 @@ namespace Raven.Bundles.Replication
             {
                 var request = (HttpWebRequest)WebRequest.Create(destination + "/replication/replicate?from=" + docDb.Configuration.ServerUrl);
                 request.UseDefaultCredentials = true;
-#if DEBUG
-                if (Debugger.IsAttached)
-                    request.Timeout = 500000;
-                else
-#endif
-                    request.Timeout = 1500;
                 request.Credentials = CredentialCache.DefaultNetworkCredentials;
                 request.Method = "POST";
                 using (var stream = request.GetRequestStream())
