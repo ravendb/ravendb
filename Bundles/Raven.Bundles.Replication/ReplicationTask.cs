@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -9,7 +8,6 @@ using log4net;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
-using Raven.Database.Plugins;
 using Raven.Database.Json;
 
 namespace Raven.Bundles.Replication
@@ -19,6 +17,8 @@ namespace Raven.Bundles.Replication
         private DocumentDatabase docDb;
         private readonly ILog log = LogManager.GetLogger(typeof(ReplicationTask));
         private bool firstTimeFoundNoReplicationDocument = true;
+
+        private int replicationAttempts;
 
         public void Execute(DocumentDatabase database)
         {
@@ -49,7 +49,9 @@ namespace Raven.Bundles.Replication
                         }
                         else
                         {
-                            Parallel.ForEach(destinations, ReplicateTo);
+                            var currentReplicationAttempts = Interlocked.Increment(ref replicationAttempts);
+                            Parallel.ForEach(destinations.Where(dest=>ShouldReplicateTo(dest, currentReplicationAttempts)), 
+                                ReplicateTo);
                         }
                     }
                 }
@@ -60,6 +62,36 @@ namespace Raven.Bundles.Replication
 
                 context.WaitForWork(TimeSpan.FromMinutes(1));
             }
+        }
+
+        private bool ShouldReplicateTo(string dest, int currentReplicationAttempts)
+        {
+            var jsonDocument = docDb.Get(ReplicationConstants.RavenReplicationDestinationsBasePath + dest, null);
+            if (jsonDocument == null)
+                return true;
+            var failureInformation = jsonDocument.DataAsJson.JsonDeserialization<DestinationFailureInformation>();
+            if (failureInformation.FailureCount > 1000)
+            {
+                var shouldReplicateTo = currentReplicationAttempts%1000 == 0;
+                log.DebugFormat("Failure count for {0} is {1}, skipping replication: {2}",
+                    dest, failureInformation.FailureCount, shouldReplicateTo == false);
+                return shouldReplicateTo;
+            }
+            if (failureInformation.FailureCount > 100)
+            {
+                var shouldReplicateTo = currentReplicationAttempts % 100 == 0;
+                log.DebugFormat("Failure count for {0} is {1}, skipping replication: {2}",
+                    dest, failureInformation.FailureCount, shouldReplicateTo == false);
+                return shouldReplicateTo;
+            }
+            if (failureInformation.FailureCount > 10)
+            {
+                var shouldReplicateTo = currentReplicationAttempts % 10 == 0;
+                log.DebugFormat("Failure count for {0} is {1}, skipping replication: {2}",
+                    dest, failureInformation.FailureCount, shouldReplicateTo == false);
+                return shouldReplicateTo;
+            }
+            return true;
         }
 
         private void WarnIfNoReplicationTargetsWereFound()
@@ -76,24 +108,59 @@ namespace Raven.Bundles.Replication
         {
             using (ReplicationContext.Enter())
             {
+                JArray jsonDocuments;
                 try
                 {
                     var etag = GetLastReplicatedEtagFrom(destination);
                     if (etag == null)
                         return;
-                    var jsonDocuments = GetJsonDocuments(etag.Value);
+                    jsonDocuments = GetJsonDocuments(etag.Value);
                     if (jsonDocuments == null || jsonDocuments.Count == 0)
                         return;
-                    TryReplicatingData(destination, jsonDocuments);
                 }
                 catch (Exception e)
                 {
                     log.Warn("Failed to replicate to: " + destination, e);
+                    return;
+                }
+                if (TryReplicatingData(destination, jsonDocuments) == false)// failed to replicate, start error handling strategy
+                {
+                    if (IsFirstFailue(destination))
+                    {
+                        log.InfoFormat(
+                            "This is the first failure for {0}, assuming transinet failure and trying again",
+                            destination);
+                        if (TryReplicatingData(destination, jsonDocuments))// second failure!
+                            return;
+                    }
+                    IncrementFailureCount(destination);
                 }
             }
         }
 
-        private void TryReplicatingData(string destination, JArray jsonDocuments)
+        private void IncrementFailureCount(string destination)
+        {
+            var jsonDocument = docDb.Get(ReplicationConstants.RavenReplicationDestinationsBasePath + destination, null);
+            var failureInformation = new DestinationFailureInformation {Destination = destination};
+            if (jsonDocument != null)
+            {
+                failureInformation = jsonDocument.DataAsJson.JsonDeserialization<DestinationFailureInformation>();
+            }
+            failureInformation.FailureCount += 1;
+            docDb.Put(ReplicationConstants.RavenReplicationDestinationsBasePath + destination, null,
+                      JObject.FromObject(failureInformation), new JObject(), null);
+        }
+
+        private bool IsFirstFailue(string destination)
+        {
+            var jsonDocument = docDb.Get(ReplicationConstants.RavenReplicationDestinationsBasePath+destination, null);
+            if (jsonDocument == null)
+                return true;
+            var failureInformation = jsonDocument.DataAsJson.JsonDeserialization<DestinationFailureInformation>();
+            return failureInformation.FailureCount == 0;
+        }
+
+        private bool TryReplicatingData(string destination, JArray jsonDocuments)
         {
             try
             {
@@ -112,6 +179,7 @@ namespace Raven.Bundles.Replication
                 {
                     log.InfoFormat("Replicated {0} to {1}", jsonDocuments.Count, destination);
                 }
+                return true;
             }
             catch (WebException e)
             {
@@ -128,10 +196,12 @@ namespace Raven.Bundles.Replication
                 {
                     log.Warn("Replication to " + destination + " had failed", e);
                 }
+                return false;
             }
             catch (Exception e)
             {
                 log.Warn("Replication to " + destination + " had failed", e);
+                return false;
             }
         }
 

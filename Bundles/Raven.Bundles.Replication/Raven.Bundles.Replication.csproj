@@ -45,6 +45,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DestinationFailureInformation.cs" />
     <Compile Include="HideVirtuallyDeletedDocumentsReadTrigger.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="AncestryPutTrigger.cs" />
