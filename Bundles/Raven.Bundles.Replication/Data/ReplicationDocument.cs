@@ -14,9 +14,4 @@ namespace Raven.Bundles.Replication.Data
             Id = ReplicationConstants.RavenReplicationDestinations;
         }
     }
-
-    public class ReplicationDestination
-    {
-        public string Url { get; set; }
-    }
 }
