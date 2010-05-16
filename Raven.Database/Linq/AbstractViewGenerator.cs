@@ -5,7 +5,7 @@ using Raven.Database.Indexing;
 namespace Raven.Database.Linq
 {
     [InheritedExport]
-	public class AbstractViewGenerator
+	public abstract class AbstractViewGenerator
 	{
 		public IndexingFunc MapDefinition { get; set; }
 		
@@ -19,7 +19,7 @@ namespace Raven.Database.Linq
         
         public IDictionary<string, FieldIndexing> Indexes { get; set; }
 
-        public AbstractViewGenerator()
+        protected AbstractViewGenerator()
         {
             Stores = new Dictionary<string, FieldStorage>();
             Indexes = new Dictionary<string, FieldIndexing>();
