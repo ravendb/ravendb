@@ -331,7 +331,9 @@ namespace Raven.Client.Document
 
 		public void Clear()
 		{
-			entitiesAndMetadata.Clear();
+            this.entitiesAndMetadata.Clear();
+            this.deletedEntities.Clear();
+            this.entitiesByKey.Clear();
 		}
 
 	    public bool UseOptimisticConcurrency
