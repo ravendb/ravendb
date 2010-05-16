@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Web;
 using log4net;
 using Newtonsoft.Json;
@@ -72,7 +73,8 @@ namespace Raven.Database.Storage
                     // need to supply this so the index storage will create map/reduce index
                     Reduce = generator.ReduceDefinition == null ? null : "Compiled reduce function: " + generator.GetType().AssemblyQualifiedName,
 		            Indexes = generator.Indexes,
-		            Stores = generator.Stores
+		            Stores = generator.Stores,
+                    IsCompiled = true
 		        };
 		        indexCache.AddOrUpdate(name, copy, (s, viewGenerator) => copy);
 		        indexDefinitions.AddOrUpdate(name, indexDefinition, (s1, definition) => indexDefinition);
@@ -96,7 +98,12 @@ namespace Raven.Database.Storage
 			var transformer = new DynamicViewCompiler(name, indexDefinition);
 			var generator = transformer.GenerateInstance();
 			indexCache.AddOrUpdate(name, generator, (s, viewGenerator) => generator);
-		    indexDefinitions.AddOrUpdate(name, indexDefinition, (s1, definition) => indexDefinition);
+		    indexDefinitions.AddOrUpdate(name, indexDefinition, (s1, definition) =>
+		    {
+                if (definition.IsCompiled)
+                    throw new InvalidOperationException("Index " + name + " is a compiled index, and cannot be replaced");
+		        return indexDefinition;   
+		    });
 			logger.InfoFormat("New index {0}:\r\n{1}\r\nCompiled to:\r\n{2}", transformer.Name, transformer.CompiledQueryText,
 			                  transformer.CompiledQueryText);
 			return transformer;

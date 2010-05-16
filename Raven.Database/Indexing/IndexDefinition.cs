@@ -20,6 +20,8 @@ namespace Raven.Database.Indexing
 			get { return Reduce != null; }
 		}
 
+        internal bool IsCompiled { get; set; }
+
 		public IDictionary<string, FieldStorage> Stores { get; set; }
 
 		public IDictionary<string, FieldIndexing> Indexes { get; set; }
