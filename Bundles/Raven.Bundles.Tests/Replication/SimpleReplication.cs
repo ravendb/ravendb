@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition.Hosting;
 using System.IO;
-using System.Reflection;
 using System.Threading;
 using log4net.Appender;
 using log4net.Config;
@@ -10,12 +9,10 @@ using log4net.Filter;
 using log4net.Layout;
 using Raven.Bundles.Replication;
 using Raven.Client;
-using Raven.Client.Client;
 using Raven.Client.Document;
 using Raven.Database;
 using Raven.Server;
 using Xunit;
-using System.Linq;
 
 namespace Raven.Bundles.Tests.Replication
 {
@@ -125,7 +122,7 @@ namespace Raven.Bundles.Tests.Replication
             }
         }
 
-        [Fact(Skip = "Requires stable ancestry")]
+        [Fact]
         public void Can_replicate_delete_between_two_instances()
         {
             var store1 = CreateStore();
@@ -135,17 +132,20 @@ namespace Raven.Bundles.Tests.Replication
             {
                 session.Store(new ReplicationDocument()
                 {
-                    Destinations = {new ReplicationDestination
-                    {
-                        Url = servers[1].Database.Configuration.ServerUrl
-                    }}
+                    Destinations =
+                                  {
+                                      new ReplicationDestination
+                                      {
+                                          Url = servers[1].Database.Configuration.ServerUrl
+                                      }
+                                  }
                 });
                 session.SaveChanges();
             }
 
             using (var session = store1.OpenSession())
             {
-                session.Store(new Company { Name = "Hibernating Rhinos" });
+                session.Store(new Company {Name = "Hibernating Rhinos"});
                 session.SaveChanges();
             }
 
@@ -167,19 +167,18 @@ namespace Raven.Bundles.Tests.Replication
                 session.Delete(session.Load<Company>("companies/1"));
                 session.SaveChanges();
             }
+            
 
-            using (var session = store2.OpenSession())
+            Company deletedCompany = null;
+            for (int i = 0; i < 15; i++)
             {
-                Company company = null;
-                for (int i = 0; i < 15; i++)
-                {
-                    company = session.Load<Company>("companies/1");
-                    if (company == null)
-                        break;
-                    Thread.Sleep(100);
-                }
-                Assert.Null(company);
+                using (var session = store2.OpenSession())
+                    deletedCompany = session.Load<Company>("companies/1");
+                if (deletedCompany == null)
+                    break;
+                Thread.Sleep(100);
             }
+            Assert.Null(deletedCompany);
         }
     }
 }
