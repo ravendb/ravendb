@@ -9,10 +9,9 @@ namespace Raven.Bundles.Replication
     {
         public override void OnPut(string key, JObject document, JObject metadata, TransactionInformation transactionInformation)
         {
-            var oldVersion = Database.Get(key, transactionInformation);
-            Guid? oldEtag = oldVersion != null ? oldVersion.Etag : (Guid?)null;
-            ReplicationUtil.AddAncestry(oldEtag, metadata);
-
+            if (ReplicationContext.IsInReplicationContext)
+                return;
+            metadata[ReplicationConstants.RavenReplicationSource] = JToken.FromObject(Database.TransactionalStorage.Id);
         }
     }
 }
