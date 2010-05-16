@@ -125,6 +125,56 @@ namespace Raven.Bundles.Tests.Replication
         }
 
         [Fact]
+        public void Can_replicate_large_number_of_documents_between_two_instances()
+        {
+            var store1 = CreateStore();
+            var store2 = CreateStore();
+
+            using (var session = store1.OpenSession())
+            {
+                session.Store(new ReplicationDocument()
+                {
+                    Destinations = {new ReplicationDestination
+                    {
+                        Url = servers[1].Database.Configuration.ServerUrl
+                    }}
+                });
+                session.SaveChanges();
+            }
+
+            using (var session = store1.OpenSession())
+            {
+                for (int i = 0; i < 150; i++)
+                {
+                    session.Store(new Company { Name = "Hibernating Rhinos" });
+                }
+                session.SaveChanges();
+            }
+
+
+            using (var session = store2.OpenSession())
+            {
+                bool foundAll = false;
+                for (int i = 0; i < RetriesCount; i++)
+                {
+                    var countFound = 0;
+                    for (int j = 0; j < 150; j++)
+                    {
+                        var company = session.Load<Company>("companies/" + (i + 1));
+                        if (company == null)
+                            break;
+                        countFound++;
+                    }
+                    foundAll = countFound == 150;
+                    if (foundAll)
+                        break;
+                    Thread.Sleep(100);
+                }
+                Assert.True(foundAll);
+            }
+        }
+
+        [Fact]
         public void Will_not_replicate_replicated_documents()
         {
             var store1 = CreateStore();
