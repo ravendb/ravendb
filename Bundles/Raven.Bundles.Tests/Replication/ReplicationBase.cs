@@ -7,6 +7,8 @@ using log4net.Config;
 using log4net.Filter;
 using log4net.Layout;
 using Raven.Bundles.Replication;
+using Raven.Bundles.Replication.Data;
+using Raven.Bundles.Replication.Triggers;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Database;

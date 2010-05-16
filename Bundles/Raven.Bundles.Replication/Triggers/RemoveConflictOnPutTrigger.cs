@@ -2,7 +2,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Plugins;
 
-namespace Raven.Bundles.Replication
+namespace Raven.Bundles.Replication.Triggers
 {
     public class RemoveConflictOnPutTrigger : AbstractPutTrigger
     {

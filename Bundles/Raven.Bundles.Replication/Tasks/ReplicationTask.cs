@@ -7,10 +7,11 @@ using System.Threading.Tasks;
 using log4net;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Bundles.Replication.Data;
 using Raven.Database;
 using Raven.Database.Json;
 
-namespace Raven.Bundles.Replication
+namespace Raven.Bundles.Replication.Tasks
 {
     public class ReplicationTask : IStartupTask
     {

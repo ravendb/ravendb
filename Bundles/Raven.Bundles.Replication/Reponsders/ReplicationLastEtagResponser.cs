@@ -1,9 +1,10 @@
 using System;
+using Raven.Bundles.Replication.Data;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Responders;
 using Raven.Database.Json;
 
-namespace Raven.Bundles.Replication
+namespace Raven.Bundles.Replication.Reponsders
 {
     public class ReplicationLastEtagResponser : RequestResponder
     {

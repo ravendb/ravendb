@@ -1,11 +1,12 @@
 using System;
 using log4net;
 using Newtonsoft.Json.Linq;
+using Raven.Bundles.Replication.Data;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Responders;
 using Raven.Database.Storage.StorageActions;
 
-namespace Raven.Bundles.Replication
+namespace Raven.Bundles.Replication.Reponsders
 {
     public class ReplicationResponder : RequestResponder
     {

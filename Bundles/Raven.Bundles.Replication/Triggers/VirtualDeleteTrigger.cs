@@ -1,9 +1,8 @@
-using System;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Plugins;
 
-namespace Raven.Bundles.Replication
+namespace Raven.Bundles.Replication.Triggers
 {
     /// <summary>
     /// We can't allow real deletes when using replication, because
