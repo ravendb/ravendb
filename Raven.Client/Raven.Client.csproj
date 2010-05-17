@@ -80,6 +80,7 @@
     <Compile Include="..\Bundles\Raven.Bundles.Replication\Data\ReplicationDocument.cs">
       <Link>Data\ReplicationDocument.cs</Link>
     </Compile>
+    <Compile Include="Client\JsonExtensions.cs" />
     <Compile Include="Document\AbstractDocumentQuery.cs" />
     <Compile Include="Document\DocumentConvention.cs" />
     <Compile Include="Document\DocumentQuery.cs" />

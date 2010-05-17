@@ -375,7 +375,10 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 	            path = path + "&cutOff=" + SimpleUrlEncodeOnTheClientProfile(query.Cutoff.Value.ToString("o", CultureInfo.InvariantCulture));
 	        }
 	        var request = new HttpJsonRequest(path, "GET", credentials);
-	        var serializer = new JsonSerializer();
+	        var serializer = new JsonSerializer
+	        {
+	            ContractResolver = convention.JsonContractResolver
+	        };
 	        JToken json;
 	        using (var reader = new JsonTextReader(new StringReader(request.ReadResponseString())))
 	            json = (JToken)serializer.Deserialize(reader);

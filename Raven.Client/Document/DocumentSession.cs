@@ -132,11 +132,11 @@ namespace Raven.Client.Document
 	    	{
 	    		Type type = Type.GetType(documentType);
 	    		if (type != null)
-	    			entity = (T) documentFound.Deserialize(type);
+	    			entity = (T) documentFound.Deserialize(type, Conventions.JsonContractResolver);
 	    	}
 	    	if (Equals(entity, default(T)))
 	    	{
-	    		entity = documentFound.Deserialize<T>();
+	    		entity = documentFound.Deserialize<T>(Conventions.JsonContractResolver);
 	    	}
 	    	var identityProperty = documentStore.Conventions.GetIdentityProperty(entity.GetType());
 	    	if (identityProperty != null)
