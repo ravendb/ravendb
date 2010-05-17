@@ -1,5 +1,6 @@
 using System.Net;
 using System.Threading;
+using Raven.Client.Exceptions;
 using Xunit;
 
 namespace Raven.Bundles.Tests.Replication
@@ -25,7 +26,7 @@ namespace Raven.Bundles.Tests.Replication
 
             TellFirstInstanceToReplicateToSecondInstance();
 
-            var webException = Assert.Throws<WebException>(() =>
+            var conflictException = Assert.Throws<ConflictException>(() =>
             {
                 for (int i = 0; i < RetriesCount; i++)
                 {
@@ -37,7 +38,7 @@ namespace Raven.Bundles.Tests.Replication
                 }
             });
 
-            Assert.Equal(HttpStatusCode.Conflict,((HttpWebResponse)webException.Response).StatusCode);
+            Assert.Equal("Conflict detected on companies/1, conflict must be resolved before the document will be accessible", conflictException.Message);
         }
 
         [Fact]
@@ -72,7 +73,7 @@ namespace Raven.Bundles.Tests.Replication
 
             TellInstanceToReplicateToAnotherInstance(1, 2);
 
-            var webException = Assert.Throws<WebException>(() =>
+            var conflictException = Assert.Throws<ConflictException>(() =>
             {
                 for (int i = 0; i < RetriesCount; i++)
                 {
@@ -84,7 +85,7 @@ namespace Raven.Bundles.Tests.Replication
                 }
             });
 
-            Assert.Equal(HttpStatusCode.Conflict, ((HttpWebResponse)webException.Response).StatusCode);
+            Assert.Equal("Conflict detected on companies/1, conflict must be resolved before the document will be accessible", conflictException.Message);
         }
 
         [Fact]
@@ -136,7 +137,7 @@ namespace Raven.Bundles.Tests.Replication
 
             TellInstanceToReplicateToAnotherInstance(1, 2);
 
-            var webException = Assert.Throws<WebException>(() =>
+            var conflictException = Assert.Throws<ConflictException>(() =>
             {
                 for (int i = 0; i < RetriesCount; i++)
                 {
@@ -148,7 +149,7 @@ namespace Raven.Bundles.Tests.Replication
                 }
             });
 
-            Assert.Equal(HttpStatusCode.Conflict, ((HttpWebResponse)webException.Response).StatusCode);
+            Assert.Equal("Conflict detected on companies/1, conflict must be resolved before the document will be accessible", conflictException.Message);
         }
     }
 }
