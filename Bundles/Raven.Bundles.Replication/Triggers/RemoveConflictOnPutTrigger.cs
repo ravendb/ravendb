@@ -17,9 +17,9 @@ namespace Raven.Bundles.Replication.Triggers
                    return;
                // this is a conflict document, holding document keys in the 
                // values of the properties
-               foreach (JProperty prop in oldVersion.DataAsJson)
+               foreach (var prop in oldVersion.DataAsJson)
                {
-                   Database.Delete(prop.Value<string>(), null, transactionInformation);
+                   Database.Delete(prop.Value.Value<string>(), null, transactionInformation);
                }
            }
         }
