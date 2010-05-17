@@ -34,7 +34,8 @@ namespace Raven.Client.Document
 
 	    protected override QueryResult GetQueryResult()
 		{
-	    	var sp = Stopwatch.StartNew();
+	        session.IncrementRequestCount();
+            var sp = Stopwatch.StartNew();
 			while (true) 
 			{
 				Trace.WriteLine(string.Format("Executing query '{0}' on index '{1}' in '{2}'",
