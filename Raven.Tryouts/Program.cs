@@ -45,7 +45,7 @@ namespace RavenTestbed
             }
             Console.WriteLine("starting querying");
             // Query all foos twice
-            for (var queryRun = 0; queryRun < 15; queryRun++)
+            for (var queryRun = 0; queryRun < 150; queryRun++)
             {
                 var stopWatch = new Stopwatch();
                 stopWatch.Start();
