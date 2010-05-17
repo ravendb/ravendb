@@ -40,9 +40,9 @@ namespace Raven.Database.Linq
 		{
 			switch (jToken.Type)
 			{
-				case JsonTokenType.Object:
+				case JTokenType.Object:
 					return new DynamicJsonObject((JObject) jToken);
-				case JsonTokenType.Array:
+				case JTokenType.Array:
 					return jToken.Select(TransformToValue).ToArray();
 				default:
 					var value = jToken.Value<object>();

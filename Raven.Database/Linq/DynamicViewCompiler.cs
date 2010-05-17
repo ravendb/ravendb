@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text.RegularExpressions;
 using System.Web;
 using ICSharpCode.NRefactory.Ast;
@@ -267,6 +268,16 @@ namespace Raven.Database.Linq
 		public AbstractViewGenerator GenerateInstance()
 		{
 			TransformQueryToClass();
+		    try
+		    {
+                File.Delete(Path.GetTempFileName());
+		    }
+		    catch (Exception)
+		    {
+                throw new InvalidOperationException(@"Raven could not write to the temp directory.
+This is usually the result of security settings when running in IIS.
+Raven requiers access to the temp directory in order to compile indexes.");
+		    }
 			GeneratedType = QueryParsingUtils.Compile(CSharpSafeName, CompiledQueryText);
 			return (AbstractViewGenerator) Activator.CreateInstance(GeneratedType);
 		}

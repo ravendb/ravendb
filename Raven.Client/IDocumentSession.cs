@@ -31,8 +31,10 @@ namespace Raven.Client
     	void Commit(Guid txId);
  
         void Rollback(Guid txId);
- 
-		event EntityStored Stored;
+
+        int MaxNumberOfRequestsPerSession { get; set; }
+
+        event EntityStored Stored;
 
         event EntityToDocument OnEntityConverted;
 

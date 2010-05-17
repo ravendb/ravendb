@@ -24,8 +24,9 @@ namespace Raven.Client.Document
 
 		private readonly HashSet<object> deletedEntities = new HashSet<object>();
 	    private RavenClientEnlistment enlistment;
+	    private int numberOfRequests;
 
-        public event EntityStored Stored;
+	    public event EntityStored Stored;
 	    public event EntityToDocument OnEntityConverted;
 
 	    public JObject GetMetadataFor<T>(T instance)
@@ -48,15 +49,23 @@ namespace Raven.Client.Document
 			this.documentStore = documentStore;
 			this.database = database;
 		    UseOptimisticConcurrency = false;
+		    MaxNumberOfRequestsPerSession = documentStore.Conventions.MaxNumberOfRequestsPerSession;
 		}
 
-		public T Load<T>(string id)
+        public int MaxNumberOfRequestsPerSession
+        {
+            get; set;
+        }
+
+	    public T Load<T>(string id)
 		{
 		    object existingEntity;
 		    if(entitiesByKey.TryGetValue(id, out existingEntity))
 		    {
 		        return (T)existingEntity;
 		    }
+
+	        IncrementRequestCount();
 
 			JsonDocument documentFound;
             try
@@ -77,7 +86,20 @@ namespace Raven.Client.Document
 			return TrackEntity<T>(documentFound);
 		}
 
-		private T TrackEntity<T>(JsonDocument documentFound)
+	    internal void IncrementRequestCount()
+	    {
+	        if(++numberOfRequests > MaxNumberOfRequestsPerSession)
+                throw new InvalidOperationException(string.Format(@"The maximum number of requests ({0}) allowed for this session has been reached.
+Raven limits the number of remote calls that a session is allowed to make as an early warning system. Sessions are expected to be short lived, and 
+Raven provide facilities like Load(string[] keys) to load multiple documents at once and batch saves.
+You can increase the limit by setting DocumentConvention.MaxNumberOfRequestsPerSession or DocumentSession.MaxNumberOfRequestsPerSession, but it is
+advisable that you'll look into reducing the number of remote calls first, since that will speed up your application signficantly and result in a 
+more responsible application.
+", MaxNumberOfRequestsPerSession));
+
+	    }
+
+	    private T TrackEntity<T>(JsonDocument documentFound)
 		{
 			if(documentFound.Metadata.Property("@etag") == null)
 			{
@@ -113,8 +135,9 @@ namespace Raven.Client.Document
 
 	    public T[] Load<T>(params string[] ids)
 	    {
-	    	Trace.WriteLine(string.Format("Bulk loading ids [{0}] from {1}", string.Join(", ", ids), StoreIdentifier));
-	        return documentStore.DatabaseCommands.Get(ids)
+            IncrementRequestCount();
+            Trace.WriteLine(string.Format("Bulk loading ids [{0}] from {1}", string.Join(", ", ids), StoreIdentifier));
+            return documentStore.DatabaseCommands.Get(ids)
                 .Select(TrackEntity<T>).ToArray();
 	    }
 
@@ -132,11 +155,11 @@ namespace Raven.Client.Document
 	    	{
 	    		Type type = Type.GetType(documentType);
 	    		if (type != null)
-	    			entity = (T) documentFound.Deserialize(type);
+	    			entity = (T) documentFound.Deserialize(type, Conventions.JsonContractResolver);
 	    	}
 	    	if (Equals(entity, default(T)))
 	    	{
-	    		entity = documentFound.Deserialize<T>();
+	    		entity = documentFound.Deserialize<T>(Conventions.JsonContractResolver);
 	    	}
 	    	var identityProperty = documentStore.Conventions.GetIdentityProperty(entity.GetType());
 	    	if (identityProperty != null)
@@ -158,7 +181,7 @@ namespace Raven.Client.Document
                 // Generate the key up front
                 id = Conventions.GenerateDocumentKey(entity);
 
-                if (id != null)
+                if (id != null && identityProperty != null)
                 {
                     // And store it so the client has access to to it
                     identityProperty.SetValue(entity, id, null);
@@ -268,7 +291,8 @@ namespace Raven.Client.Document
 			if (cmds.Count == 0)
 				return;
 
-			Trace.WriteLine(string.Format("Saving {0} changes to {1}", cmds.Count, StoreIdentifier));
+            IncrementRequestCount();
+            Trace.WriteLine(string.Format("Saving {0} changes to {1}", cmds.Count, StoreIdentifier));
 			UpdateBatchResults(database.Batch(cmds.ToArray()), entities);
 		}
 
@@ -358,13 +382,15 @@ namespace Raven.Client.Document
 
 	    public void Commit(Guid txId)
 	    {
-	        documentStore.DatabaseCommands.Commit(txId);
+            IncrementRequestCount();
+            documentStore.DatabaseCommands.Commit(txId);
 	        enlistment = null;
 	    }
 
 	    public void Rollback(Guid txId)
 	    {
-	        documentStore.DatabaseCommands.Rollback(txId);
+            IncrementRequestCount();
+            documentStore.DatabaseCommands.Rollback(txId);
             enlistment = null;
 	    }
 

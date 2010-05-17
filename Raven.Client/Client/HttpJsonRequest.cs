@@ -64,16 +64,16 @@ namespace Raven.Client.Client
                 return;
             }
 
-            foreach (JProperty prop in metadata)
+            foreach (var prop in metadata)
             {
                 if (prop.Value == null)
                     continue;
 
-                if (prop.Value.Type == JsonTokenType.Object ||
-                    prop.Value.Type == JsonTokenType.Array)
+                if (prop.Value.Type == JTokenType.Object ||
+                    prop.Value.Type == JTokenType.Array)
                     continue;
 
-                var headerName = prop.Name;
+                var headerName = prop.Key;
                 if (headerName == "ETag")
                     headerName = "If-Match";
                 var value = prop.Value.Value<object>().ToString();

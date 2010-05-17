@@ -6,8 +6,8 @@ namespace Raven.Database.Json
 {
 	public class JsonLuceneNumberConverter : JsonConverter
 	{
-		public override void WriteJson(JsonWriter writer, object value)
-		{
+        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+        {
 			if (value is long)
 				writer.WriteValue(NumberToString((long)value));
 			else if( value is int)
@@ -16,8 +16,8 @@ namespace Raven.Database.Json
 				throw new NotSupportedException("Only long & int are supported");
 		}
 
-		public override object ReadJson(JsonReader reader, Type objectType)
-		{
+        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+        {
 			if (reader.Value is long || reader.Value is int)
 				return reader.Value;
 			return ParseNumber((string) reader.Value);

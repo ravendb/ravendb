@@ -57,12 +57,13 @@ namespace Raven.Client.Document
 			{
 				return (T)new JsonSerializer
 				{
+                    ContractResolver = session.Conventions.JsonContractResolver,
 					Converters =
 						{
 							new JsonEnumConverter(),
 							new JsonLuceneNumberConverter(),
 						}
-				}.Deserialize(new JsonTokenReader(result), typeof(T));
+				}.Deserialize(new JTokenReader(result), typeof(T));
 			}
 			return session.TrackEntity<T>(metadata.Value<string>("@id"),
 			                              result,

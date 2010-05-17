@@ -1,4 +1,6 @@
-﻿using System;
+﻿extern alias replication;
+
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition.Hosting;
 using System.IO;
@@ -6,9 +8,6 @@ using log4net.Appender;
 using log4net.Config;
 using log4net.Filter;
 using log4net.Layout;
-using Raven.Bundles.Replication;
-using Raven.Bundles.Replication.Data;
-using Raven.Bundles.Replication.Triggers;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Database;
@@ -43,7 +42,7 @@ namespace Raven.Bundles.Tests.Replication
         }
 
         private const int PortRangeStart = 9101;
-        protected const int RetriesCount = 150;
+        protected const int RetriesCount = 15;
 
         public IDocumentStore CreateStore()
         {
@@ -52,7 +51,7 @@ namespace Raven.Bundles.Tests.Replication
             var ravenDbServer = new RavenDbServer(new RavenConfiguration
             {
                 AnonymousUserAccessMode = AnonymousUserAccessMode.All,
-                Catalog = {Catalogs = {new AssemblyCatalog(typeof (AncestryPutTrigger).Assembly)}},
+                Catalog = {Catalogs = {new AssemblyCatalog(typeof (replication::Raven.Bundles.Replication.Triggers.AncestryPutTrigger).Assembly)}},
                 DataDirectory = "Data #" + servers.Count,
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
                 Port = port
@@ -98,9 +97,9 @@ namespace Raven.Bundles.Tests.Replication
         {
             using (var session = stores[src].OpenSession())
             {
-                session.Store(new ReplicationDocument()
+                session.Store(new replication::Raven.Bundles.Replication.Data.ReplicationDocument
                 {
-                    Destinations = {new ReplicationDestination
+                    Destinations = {new replication::Raven.Bundles.Replication.Data.ReplicationDestination
                     {
                         Url = servers[dest].Database.Configuration.ServerUrl
                     }}

@@ -1,5 +1,6 @@
 using System;
 using System.Reflection;
+using Newtonsoft.Json.Serialization;
 using Raven.Client.Util;
 using System.Linq;
 
@@ -11,7 +12,11 @@ namespace Raven.Client.Document
 		{
 			FindIdentityProperty = q => q.Name == "Id";
 			FindTypeTagName = t => DefaultTypeTagName(t);
+		    JsonContractResolver = new DefaultContractResolver(shareCache: true);
+		    MaxNumberOfRequestsPerSession = 30;
 		}
+
+        public int MaxNumberOfRequestsPerSession { get; set; }
 
 		public static string GenerateDocumentKeyUsingIdentity(DocumentConvention conventions, object entity)
 		{
@@ -37,6 +42,8 @@ namespace Raven.Client.Document
 		{
 			return type.GetProperties().FirstOrDefault(FindIdentityProperty);
 		}
+
+        public IContractResolver JsonContractResolver { get; set; }
 
 		public Func<Type, string> FindTypeTagName { get; set; }
 		public Func<PropertyInfo, bool> FindIdentityProperty { get; set; }

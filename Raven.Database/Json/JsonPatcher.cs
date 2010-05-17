@@ -71,14 +71,14 @@ namespace Raven.Database.Json
             
             switch (property.Value.Type)
             {
-                case JsonTokenType.Object:
+                case JTokenType.Object:
                     foreach (var cmd in nestedCommands)
                     {
                         var nestedDoc = property.Value.Value<JObject>();
 						new JsonPatcher(nestedDoc).Apply(cmd);
                     }
                     break;
-                case JsonTokenType.Array:
+                case JTokenType.Array:
 					var position = patchCmd.Position;
 					if (position == null)
                          throw new InvalidOperationException("Cannot modify value from  '" + propName +
@@ -176,7 +176,7 @@ namespace Raven.Database.Json
 
         private void IncrementProperty(PatchRequest patchCmd, string propName)
         {
-            if(patchCmd.Value.Type != JsonTokenType.Integer)
+            if(patchCmd.Value.Type != JTokenType.Integer)
                 throw new InvalidOperationException("Cannot increment when value is not an integer");
             var property = document.Property(propName);
             EnsurePreviousValueMatchCurrentValue(patchCmd, property);
@@ -185,7 +185,7 @@ namespace Raven.Database.Json
                 property = new JProperty(propName);
                 document.Add(property);
             }
-            if (property.Value == null || property.Value.Type == JsonTokenType.Null)
+            if (property.Value == null || property.Value.Type == JTokenType.Null)
                 property.Value = patchCmd.Value;
             else
                 property.Value = JToken.FromObject(property.Value.Value<int>() + patchCmd.Value.Value<int>());
@@ -197,7 +197,7 @@ namespace Raven.Database.Json
                 return;
             switch (prevVal.Type)
             {
-                case JsonTokenType.Undefined:
+                case JTokenType.Undefined:
                     if (property != null)
                         throw new ConcurrencyException();
                     break;

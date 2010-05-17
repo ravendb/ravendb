@@ -202,5 +202,17 @@ namespace Raven.Client.Shard
 				return new List<int>();
 			});
 		}
+
+	    public int MaxNumberOfRequestsPerSession
+	    {
+	        get { return shardSessions.First().MaxNumberOfRequestsPerSession; }
+	        set
+	        {
+	            foreach (var documentSession in shardSessions)
+	            {
+	                documentSession.MaxNumberOfRequestsPerSession = value;
+	            }
+	        }
+	    }
 	}
 }
