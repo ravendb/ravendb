@@ -1,0 +1,2 @@
+Rhino Mocks is using Castle Dynamic Proxy (http://www.castleproject.org/dynamicproxy/index.html) to handle proxying the types it needs to mock.
+The Dynamic Proxy project has been invaluable resource and made creating Rhino Mocks possible.
