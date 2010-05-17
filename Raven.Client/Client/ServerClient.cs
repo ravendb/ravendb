@@ -50,26 +50,32 @@ namespace Raven.Client.Client
 
         private void UpdateReplicationInformationIfNeeded()
         {
-            lock (replicationLock)
-            {
-                if (lastReplicationUpdate.AddMinutes(5) > DateTime.Now)
-                    return;
-                lastReplicationUpdate = DateTime.Now;
-                var document = DirectGet(url, RavenReplicationDestinations);
-                failureCounts[url] = new IntHolder();// we just hit the master, so we can reset its failure count
-                if (document == null)
-                    return;
-                var replicationDocument = document.DataAsJson.JsonDeserialization<ReplicationDocument>();
-                replicationDestinations = replicationDocument.Destinations.Select(x => x.Url).ToList();
-                foreach (var replicationDestination in replicationDestinations)
-                {
-                    IntHolder value;
-                    if(failureCounts.TryGetValue(replicationDestination, out value))
-                        continue;
-                    failureCounts[replicationDestination] = new IntHolder();
-                }
-            }
+            if (lastReplicationUpdate.AddMinutes(5) > DateTime.Now)
+                return;
+            RefreshReplicationInformation();
         }
+
+	    public void RefreshReplicationInformation()
+	    {
+	        lock (replicationLock)
+	        {
+               
+	            lastReplicationUpdate = DateTime.Now;
+	            var document = DirectGet(url, RavenReplicationDestinations);
+	            failureCounts[url] = new IntHolder();// we just hit the master, so we can reset its failure count
+	            if (document == null)
+	                return;
+	            var replicationDocument = document.DataAsJson.JsonDeserialization<ReplicationDocument>();
+	            replicationDestinations = replicationDocument.Destinations.Select(x => x.Url).ToList();
+	            foreach (var replicationDestination in replicationDestinations)
+	            {
+	                IntHolder value;
+	                if(failureCounts.TryGetValue(replicationDestination, out value))
+	                    continue;
+	                failureCounts[replicationDestination] = new IntHolder();
+	            }
+	        }
+	    }
 
 	    #region IDatabaseCommands Members
 
