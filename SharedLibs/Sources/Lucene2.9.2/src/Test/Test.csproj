@@ -1,0 +1,496 @@
+﻿<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <ProjectType>Local</ProjectType>
+    <ProductVersion>8.0.50727</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{AAF68BCF-F781-45FC-98B3-2B9CEE411E01}</ProjectGuid>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ApplicationIcon>
+    </ApplicationIcon>
+    <AssemblyKeyContainerName>
+    </AssemblyKeyContainerName>
+    <AssemblyName>Lucene.Net.Test</AssemblyName>
+    <AssemblyOriginatorKeyFile>
+    </AssemblyOriginatorKeyFile>
+    <DefaultClientScript>JScript</DefaultClientScript>
+    <DefaultHTMLPageLayout>Grid</DefaultHTMLPageLayout>
+    <DefaultTargetSchema>IE50</DefaultTargetSchema>
+    <DelaySign>false</DelaySign>
+    <OutputType>Library</OutputType>
+    <RootNamespace>Lucene.Net.Test</RootNamespace>
+    <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
+    <StartupObject>
+    </StartupObject>
+    <FileUpgradeFlags>
+    </FileUpgradeFlags>
+    <UpgradeBackupLocation>
+    </UpgradeBackupLocation>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <OutputPath>bin\Debug\</OutputPath>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <BaseAddress>285212672</BaseAddress>
+    <CheckForOverflowUnderflow>false</CheckForOverflowUnderflow>
+    <ConfigurationOverrideFile>
+    </ConfigurationOverrideFile>
+    <DefineConstants>TRACE;DEBUG;SHARP_ZIP_LIB</DefineConstants>
+    <DocumentationFile>
+    </DocumentationFile>
+    <DebugSymbols>true</DebugSymbols>
+    <FileAlignment>4096</FileAlignment>
+    <NoStdLib>false</NoStdLib>
+    <NoWarn>
+    </NoWarn>
+    <Optimize>false</Optimize>
+    <RegisterForComInterop>false</RegisterForComInterop>
+    <RemoveIntegerChecks>false</RemoveIntegerChecks>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningLevel>4</WarningLevel>
+    <DebugType>full</DebugType>
+    <ErrorReport>prompt</ErrorReport>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <OutputPath>bin\Release\</OutputPath>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <BaseAddress>285212672</BaseAddress>
+    <CheckForOverflowUnderflow>false</CheckForOverflowUnderflow>
+    <ConfigurationOverrideFile>
+    </ConfigurationOverrideFile>
+    <DefineConstants>TRACE;SHARP_ZIP_LIB</DefineConstants>
+    <DocumentationFile>
+    </DocumentationFile>
+    <DebugSymbols>false</DebugSymbols>
+    <FileAlignment>4096</FileAlignment>
+    <NoStdLib>false</NoStdLib>
+    <NoWarn>
+    </NoWarn>
+    <Optimize>true</Optimize>
+    <RegisterForComInterop>false</RegisterForComInterop>
+    <RemoveIntegerChecks>false</RemoveIntegerChecks>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningLevel>4</WarningLevel>
+    <DebugType>none</DebugType>
+    <ErrorReport>prompt</ErrorReport>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="DemoLib, Version=2.9.0.1, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Demo\DemoLib\bin\Debug\DemoLib.dll</HintPath>
+    </Reference>
+    <Reference Include="ICSharpCode.SharpZipLib, Version=0.85.5.452, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\..\Lucene-2.9\SharpZipLib\netcf-20\ICSharpCode.SharpZipLib.dll</HintPath>
+    </Reference>
+    <Reference Include="nunit.framework, Version=2.5.2.9222, Culture=neutral, PublicKeyToken=96d09a1eb7f44a77, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\..\Lucene-2.9\NUnit.Net\NUnit-2.5.2.9222\bin\net-2.0\framework\nunit.framework.dll</HintPath>
+    </Reference>
+    <Reference Include="nunit.mocks, Version=2.5.2.9222, Culture=neutral, PublicKeyToken=96d09a1eb7f44a77, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\..\Lucene-2.9\NUnit.Net\NUnit-2.5.2.9222\bin\net-2.0\framework\nunit.mocks.dll</HintPath>
+    </Reference>
+    <Reference Include="System">
+      <Name>System</Name>
+    </Reference>
+    <Reference Include="System.Data">
+      <Name>System.Data</Name>
+    </Reference>
+    <Reference Include="System.Runtime.Remoting">
+      <Name>system.runtime.remoting</Name>
+    </Reference>
+    <Reference Include="System.Xml">
+      <Name>System.XML</Name>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Analysis\BaseTokenStreamTestCase.cs" />
+    <Compile Include="Analysis\Tokenattributes\TestSimpleAttributeImpls.cs" />
+    <Compile Include="Analysis\Tokenattributes\TestTermAttributeImpl.cs" />
+    <Compile Include="Analysis\TestAnalyzers.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Analysis\TestASCIIFoldingFilter.cs" />
+    <Compile Include="Analysis\TestCachingTokenFilter.cs" />
+    <Compile Include="Analysis\TestCharacterCache.cs" />
+    <Compile Include="Analysis\TestCharArraySet.cs" />
+    <Compile Include="Analysis\TestCharFilter.cs" />
+    <Compile Include="Analysis\TestISOLatin1AccentFilter.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Analysis\TestKeywordAnalyzer.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Analysis\TestLengthFilter.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Analysis\TestMappingCharFilter.cs" />
+    <Compile Include="Analysis\TestNumericTokenStream.cs" />
+    <Compile Include="Analysis\TestPerFieldAnalzyerWrapper.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Analysis\TestStandardAnalyzer.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Analysis\TestStopAnalyzer.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Analysis\TestStopFilter.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Analysis\TestTeeSinkTokenFilter.cs" />
+    <Compile Include="Analysis\TestTeeTokenFilter.cs" />
+    <Compile Include="Analysis\TestToken.cs" />
+    <Compile Include="Analysis\TestTokenStreamBWComp.cs" />
+    <Compile Include="AssemblyInfo.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Document\TestBinaryDocument.cs" />
+    <Compile Include="Document\TestDateTools.cs" />
+    <Compile Include="Document\TestDocument.cs" />
+    <Compile Include="Document\TestNumberTools.cs" />
+    <Compile Include="Index\DocHelper.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Index\MockIndexInput.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Index\TestAddIndexesNoOptimize.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Index\TestAtomicUpdate.cs" />
+    <Compile Include="Index\TestBackwardsCompatibility.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Index\TestByteSlices.cs" />
+    <Compile Include="Index\TestCheckIndex.cs" />
+    <Compile Include="Index\TestCompoundFile.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Index\TestConcurrentMergeScheduler.cs" />
+    <Compile Include="Index\TestCrash.cs" />
+    <Compile Include="Index\TestDeletionPolicy.cs" />
+    <Compile Include="Index\TestDirectoryReader.cs" />
+    <Compile Include="Index\TestDoc.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Index\TestDocumentWriter.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Index\TestFieldInfos.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Index\TestFieldsReader.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Index\TestFilterIndexReader.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Index\TestIndexFileDeleter.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Index\TestIndexInput.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Index\TestIndexModifier.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Index\TestIndexReader.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Index\TestIndexReaderClone.cs" />
+    <Compile Include="Index\TestIndexReaderCloneNorms.cs" />
+    <Compile Include="Index\TestIndexReaderReopen.cs" />
+    <Compile Include="Index\TestIndexWriter.cs" />
+    <Compile Include="Index\TestIndexWriterDelete.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Index\TestIndexWriterExceptions.cs" />
+    <Compile Include="Index\TestIndexWriterLockRelease.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Index\TestIndexWriterMergePolicy.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Index\TestIndexWriterMerging.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Index\TestIndexWriterReader.cs" />
+    <Compile Include="Index\TestLazyBug.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Index\TestLazyProxSkipping.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Index\TestMultiLevelSkipList.cs" />
+    <Compile Include="Index\TestMultiReader.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Index\TestNorms.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Index\TestNRTReaderWithThreads.cs" />
+    <Compile Include="Index\TestOmitTf.cs" />
+    <Compile Include="Index\TestParallelReader.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Index\TestParallelTermEnum.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Index\TestPayloads.cs" />
+    <Compile Include="Index\TestPositionBasedTermVectorMapper.cs" />
+    <Compile Include="Index\TestSegmentMerger.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Index\TestSegmentReader.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Index\TestSegmentTermDocs.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Index\TestSegmentTermEnum.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Index\TestStressIndexing.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Index\TestStressIndexing2.cs" />
+    <Compile Include="Index\TestTerm.cs" />
+    <Compile Include="Index\TestTermdocPerf.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Index\TestTermVectorsReader.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Index\TestThreadedOptimize.cs" />
+    <Compile Include="Index\TestTransactionRollback.cs" />
+    <Compile Include="Index\TestTransactions.cs" />
+    <Compile Include="Index\TestWordlistLoader.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Messages\MessagesTestBundle.cs" />
+    <Compile Include="Messages\TestNLS.cs" />
+    <Compile Include="QueryParser\TestMultiAnalyzer.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="QueryParser\TestMultiFieldQueryParser.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="QueryParser\TestQueryParser.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Search\BaseTestRangeFilter.cs" />
+    <Compile Include="Search\CachingWrapperFilterHelper.cs" />
+    <Compile Include="Search\CheckHits.cs" />
+    <Compile Include="Search\Function\FunctionTestSetup.cs" />
+    <Compile Include="Search\Function\JustCompileSearchSpans.cs" />
+    <Compile Include="Search\Function\TestCustomScoreQuery.cs" />
+    <Compile Include="Search\Function\TestDocValues.cs" />
+    <Compile Include="Search\Function\TestFieldScoreQuery.cs" />
+    <Compile Include="Search\Function\TestOrdValues.cs" />
+    <Compile Include="Search\Function\TestValueSource.cs" />
+    <Compile Include="Search\JustCompileSearch.cs" />
+    <Compile Include="Search\MockFilter.cs" />
+    <Compile Include="Search\Payloads\PayloadHelper.cs" />
+    <Compile Include="Search\Payloads\TestBoostingTermQuery.cs" />
+    <Compile Include="Search\Payloads\TestPayloadNearQuery.cs" />
+    <Compile Include="Search\Payloads\TestPayloadTermQuery.cs" />
+    <Compile Include="Search\QueryUtils.cs" />
+    <Compile Include="Search\SampleComparable.cs" />
+    <Compile Include="Search\SingleDocTestFilter.cs" />
+    <Compile Include="Search\Spans\JustCompileSearchSpans.cs" />
+    <Compile Include="Search\Spans\TestBasics.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Search\Spans\TestFieldMaskingSpanQuery.cs" />
+    <Compile Include="Search\Spans\TestNearSpansOrdered.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Search\Spans\TestPayloadSpans.cs" />
+    <Compile Include="Search\Spans\TestSpanExplanations.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Search\Spans\TestSpanExplanationsOfNonMatches.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Search\Spans\TestSpans.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Search\Spans\TestSpansAdvanced.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Search\Spans\TestSpansAdvanced2.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Search\TestBoolean2.cs" />
+    <Compile Include="Search\TestBooleanMinShouldMatch.cs" />
+    <Compile Include="Search\TestBooleanOr.cs" />
+    <Compile Include="Search\TestBooleanPrefixQuery.cs" />
+    <Compile Include="Search\TestBooleanQuery.cs" />
+    <Compile Include="Search\TestBooleanScorer.cs" />
+    <Compile Include="Search\TestCachingWrapperFilter.cs" />
+    <Compile Include="Search\TestComplexExplanations.cs" />
+    <Compile Include="Search\TestComplexExplanationsOfNonMatches.cs" />
+    <Compile Include="Search\TestCustomSearcherSort.cs" />
+    <Compile Include="Search\TestDateFilter.cs" />
+    <Compile Include="Search\TestDateSort.cs" />
+    <Compile Include="Search\TestDisjunctionMaxQuery.cs" />
+    <Compile Include="Search\TestDocBoost.cs" />
+    <Compile Include="Search\TestDocIdSet.cs" />
+    <Compile Include="Search\TestElevationComparator.cs" />
+    <Compile Include="Search\TestExplanations.cs" />
+    <Compile Include="Search\TestFieldCache.cs" />
+    <Compile Include="Search\TestFieldCacheRangeFilter.cs" />
+    <Compile Include="Search\TestFieldCacheTermsFilter.cs" />
+    <Compile Include="Search\TestFilteredQuery.cs" />
+    <Compile Include="Search\TestFilteredSearch.cs" />
+    <Compile Include="Search\TestFuzzyQuery.cs" />
+    <Compile Include="Search\TestMatchAllDocsQuery.cs" />
+    <Compile Include="Search\TestMultiPhraseQuery.cs" />
+    <Compile Include="Search\TestMultiSearcher.cs" />
+    <Compile Include="Search\TestMultiSearcherRanking.cs" />
+    <Compile Include="Search\TestMultiTermConstantScore.cs" />
+    <Compile Include="Search\TestMultiThreadTermVectors.cs" />
+    <Compile Include="Search\TestMultiValuedNumericRangeQuery.cs" />
+    <Compile Include="Search\TestNot.cs" />
+    <Compile Include="Search\TestNumericRangeQuery32.cs" />
+    <Compile Include="Search\TestNumericRangeQuery64.cs" />
+    <Compile Include="Search\TestParallelMultiSearcher.cs" />
+    <Compile Include="Search\TestPhrasePrefixQuery.cs" />
+    <Compile Include="Search\TestPhraseQuery.cs" />
+    <Compile Include="Search\TestPositionIncrement.cs" />
+    <Compile Include="Search\TestPositiveScoresOnlyCollector.cs" />
+    <Compile Include="Search\TestPrefixFilter.cs" />
+    <Compile Include="Search\TestPrefixInBooleanQuery.cs" />
+    <Compile Include="Search\TestPrefixQuery.cs" />
+    <Compile Include="Search\TestQueryTermVector.cs" />
+    <Compile Include="Search\TestQueryWrapperFilter.cs" />
+    <Compile Include="Search\TestScoreCachingWrappingScorer.cs" />
+    <Compile Include="Search\TestScorerPerf.cs" />
+    <Compile Include="Search\TestSearchHitsWithDeletions.cs" />
+    <Compile Include="Search\TestSetNorm.cs" />
+    <Compile Include="Search\TestSimilarity.cs" />
+    <Compile Include="Search\TestSimpleExplanations.cs" />
+    <Compile Include="Search\TestSimpleExplanationsOfNonMatches.cs" />
+    <Compile Include="Search\TestSloppyPhraseQuery.cs" />
+    <Compile Include="Search\TestSort.cs" />
+    <Compile Include="Search\TestSpanQueryFilter.cs" />
+    <Compile Include="Search\TestStressSort.cs" />
+    <Compile Include="Search\TestTermRangeFilter.cs" />
+    <Compile Include="Search\TestTermRangeQuery.cs" />
+    <Compile Include="Search\TestTermScorer.cs" />
+    <Compile Include="Search\TestTermVectors.cs" />
+    <Compile Include="Search\TestThreadSafe.cs" />
+    <Compile Include="Search\TestTimeLimitedCollector.cs" />
+    <Compile Include="Search\TestTimeLimitingCollector.cs" />
+    <Compile Include="Search\TestTopDocsCollector.cs" />
+    <Compile Include="Search\TestTopScoreDocCollector.cs" />
+    <Compile Include="Search\TestWildcard.cs" />
+    <Compile Include="Store\MockRAMDirectory.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Store\MockRAMInputStream.cs" />
+    <Compile Include="Store\MockRAMOutputStream.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Store\TestBufferedIndexInput.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Store\TestDirectory.cs" />
+    <Compile Include="Store\TestFileSwitchDirectory.cs" />
+    <Compile Include="Store\TestHugeRamFile.cs" />
+    <Compile Include="Store\TestLock.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Store\TestLockFactory.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Store\TestRAMDirectory.cs" />
+    <Compile Include="Store\TestWindowsMMap.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Store\_TestHelper.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="TestDemo.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="TestHitIterator.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="TestMergeSchedulerExternal.cs" />
+    <Compile Include="TestSearch.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="TestSearchForDuplicates.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="TestSnapshotDeletionPolicy.cs" />
+    <Compile Include="TestSupportClass.cs" />
+    <Compile Include="Util\ArrayUtilTest.cs" />
+    <Compile Include="Util\Cache\TestSimpleLRUCache.cs" />
+    <Compile Include="Util\English.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Util\LocalizedTestCase.cs" />
+    <Compile Include="Util\LuceneTestCase.cs" />
+    <Compile Include="Util\TestAttributeSource.cs" />
+    <Compile Include="Util\TestBitVector.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Util\TestCloseableThreadLocal.cs" />
+    <Compile Include="Util\TestFieldCacheSanityChecker.cs" />
+    <Compile Include="Util\TestIndexableBinaryStringTools.cs" />
+    <Compile Include="Util\TestNumericUtils.cs" />
+    <Compile Include="Util\TestOpenBitSet.cs" />
+    <Compile Include="Util\TestPriorityQueue.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Util\TestRamUsageEstimator.cs" />
+    <Compile Include="Util\TestSmallFloat.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Util\TestSortedVIntList.cs" />
+    <Compile Include="Util\TestStringHelper.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Util\TestStringIntern.cs" />
+    <Compile Include="Util\_TestUtil.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <None Include="App.config" />
+    <None Include="Index\index.19.cfs.zip" />
+    <None Include="Index\index.19.nocfs.zip" />
+    <None Include="Index\index.20.cfs.zip" />
+    <None Include="Index\index.20.nocfs.zip" />
+    <None Include="Index\index.21.cfs.zip" />
+    <None Include="Index\index.21.nocfs.zip" />
+    <None Include="Index\index.22.cfs.zip" />
+    <None Include="Index\index.22.nocfs.zip" />
+    <None Include="Index\index.23.cfs.zip" />
+    <None Include="Index\index.23.nocfs.zip" />
+    <None Include="Index\index.24.cfs.zip" />
+    <None Include="Index\index.24.nocfs.zip" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Messages\MessagesTestBundle.ja.resources">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Messages\MessagesTestBundle.resources">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Lucene.Net\Lucene.Net.csproj">
+      <Project>{5D4AD9BE-1FFB-41AB-9943-25737971BF57}</Project>
+      <Name>Lucene.Net</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PreBuildEvent>
+    </PreBuildEvent>
+    <PostBuildEvent>
+    </PostBuildEvent>
+  </PropertyGroup>
+</Project>

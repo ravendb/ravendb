@@ -1,0 +1,6 @@
+WordNet.Net History
+-------------------
+
+
+01Feb07:
+	- Release: WordNet.Net.2.0.0 build 001

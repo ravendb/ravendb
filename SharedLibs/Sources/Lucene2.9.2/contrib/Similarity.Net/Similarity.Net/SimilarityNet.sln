@@ -1,0 +1,24 @@
+Microsoft Visual Studio Solution File, Format Version 8.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Similarity.Net-2.0.0", "Similarity.Net-2.0.0.csproj", "{B9C12C92-199A-426E-B892-3531E2600217}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(DPCodeReviewSolutionGUID) = preSolution
+		DPCodeReviewSolutionGUID = {00000000-0000-0000-0000-000000000000}
+	EndGlobalSection
+	GlobalSection(SolutionConfiguration) = preSolution
+		Debug = Debug
+		Release = Release
+	EndGlobalSection
+	GlobalSection(ProjectConfiguration) = postSolution
+		{B9C12C92-199A-426E-B892-3531E2600217}.Debug.ActiveCfg = Debug|.NET
+		{B9C12C92-199A-426E-B892-3531E2600217}.Debug.Build.0 = Debug|.NET
+		{B9C12C92-199A-426E-B892-3531E2600217}.Release.ActiveCfg = Release|.NET
+		{B9C12C92-199A-426E-B892-3531E2600217}.Release.Build.0 = Release|.NET
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+	EndGlobalSection
+	GlobalSection(ExtensibilityAddIns) = postSolution
+	EndGlobalSection
+EndGlobal

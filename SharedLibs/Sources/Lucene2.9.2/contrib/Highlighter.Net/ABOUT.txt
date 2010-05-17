@@ -1,0 +1,1 @@
+Highlighter.Net is a port of Java Highlighter to C#.  The port from Java to C# of version 1.4.0 and 2.0 are done primary by George Aroush.  To contact George Aroush please visit http://www.aroush.net/
