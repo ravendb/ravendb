@@ -322,13 +322,13 @@ namespace Raven.Database.Server.Responders
 
 		public class JsonToJsonConverter : JsonConverter
 		{
-			public override void WriteJson (JsonWriter writer, object value)
+			public override void WriteJson (JsonWriter writer, object value, JsonSerializer serializer)
 			{
 				((JObject)value).WriteTo(writer);
 			}
 
-			public override object ReadJson (JsonReader reader, Type objectType)
-			{
+            public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+            {
 				throw new NotImplementedException();
 			}
 

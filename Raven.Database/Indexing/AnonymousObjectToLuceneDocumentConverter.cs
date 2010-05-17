@@ -36,8 +36,8 @@ namespace Raven.Database.Indexing
         {
             switch (property.Value.Type)
             {
-                case JsonTokenType.Array:
-                case JsonTokenType.Object:
+                case JTokenType.Array:
+                case JTokenType.Object:
                     return property.Value.ToString(Formatting.None);
                 default:
                     return property.Value.Value<object>();
