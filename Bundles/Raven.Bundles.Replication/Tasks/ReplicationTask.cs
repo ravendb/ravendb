@@ -242,8 +242,9 @@ namespace Raven.Bundles.Replication.Tasks
                 docDb.TransactionalStorage.Batch(actions =>
                 {
                     jsonDocuments = new JArray(actions.GetDocumentsAfter(etag)
-                        .Where(x => x.Key.StartsWith("Raven/") == false)
-                        .Where(x => x.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource) == instanceId)
+                        .Where(x => x.Key.StartsWith("Raven/") == false) // don't replicate system docs
+                        .Where(x => x.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource) == instanceId) // only replicate documents created on this instance
+                        .Where(x=> x.Metadata[ReplicationConstants.RavenReplicationConflict] == null) // don't replicate conflicted documents, that just propgate the conflict
                         .Take(100)
                         .Select(x => x.ToJson()));
                 });
