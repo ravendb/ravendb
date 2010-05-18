@@ -8,8 +8,8 @@
     <ProjectGuid>{B09A78D9-B609-459F-9AE1-319799330C6B}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Raven.Sample.EventSourcing.ShoppingCartAggregator</RootNamespace>
-    <AssemblyName>Raven.Sample.EventSourcing.ShoppingCartAggregator</AssemblyName>
+    <RootNamespace>Raven.Bundles.Sample.EventSourcing.ShoppingCartAggregator</RootNamespace>
+    <AssemblyName>Raven.Bundles.Sample.EventSourcing.ShoppingCartAggregator</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>

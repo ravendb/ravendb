@@ -17,7 +17,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Sample.Failover", "Ra
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Sample.EventSourcing", "Raven.Sample.EventSourcing\Raven.Sample.EventSourcing.csproj", "{C9D466E0-346D-4C68-8F2F-1391C498E07F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Sample.EventSourcing.ShoppingCartAggregator", "Raven.Sample.EventSourcing.ShoppingCartAggregator\Raven.Sample.EventSourcing.ShoppingCartAggregator.csproj", "{B09A78D9-B609-459F-9AE1-319799330C6B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Bundles.Sample.EventSourcing.ShoppingCartAggregator", "Raven.Bundles.Sample.EventSourcing.ShoppingCartAggregator\Raven.Bundles.Sample.EventSourcing.ShoppingCartAggregator.csproj", "{B09A78D9-B609-459F-9AE1-319799330C6B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
