@@ -8,8 +8,13 @@ namespace Raven.Bundles.Replication.Triggers
     {
         public override void OnPut(string key, JObject document, JObject metadata, TransactionInformation transactionInformation)
         {
+            if (ReplicationContext.IsInReplicationContext)
+                return;
+
            using(ReplicationContext.Enter())
            {
+               metadata.Remove(ReplicationConstants.RavenReplicationConflict);// you can't put conflicts
+
                var oldVersion = Database.Get(key, transactionInformation);
                if (oldVersion == null)
                    return;
@@ -17,9 +22,9 @@ namespace Raven.Bundles.Replication.Triggers
                    return;
                // this is a conflict document, holding document keys in the 
                // values of the properties
-               foreach (var prop in oldVersion.DataAsJson)
+               foreach (var prop in oldVersion.DataAsJson.Value<JArray>("Conflicts"))
                {
-                   Database.Delete(prop.Value.Value<string>(), null, transactionInformation);
+                   Database.Delete(prop.Value<string>(), null, transactionInformation);
                }
            }
         }
