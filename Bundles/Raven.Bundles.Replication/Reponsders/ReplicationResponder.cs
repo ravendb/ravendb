@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using log4net;
 using Newtonsoft.Json.Linq;
 using Raven.Bundles.Replication.Data;
@@ -20,10 +21,16 @@ namespace Raven.Bundles.Replication.Reponsders
                 context.SetStatusToBadRequest();
                 return;
             }
-            var array = context.ReadJsonArray();
+            while (src.EndsWith("/"))
+                src = src.Substring(0, src.Length - 1);// remove last /, because that has special meaning for Raven
+            if (string.IsNullOrEmpty(src))
+            {
+                context.SetStatusToBadRequest();
+                return;
+            }
+			var array = context.ReadJsonArray();
             using (ReplicationContext.Enter())
             {
-                log.DebugFormat("Got replication batch of {0} documents from {1}", array.Count, src);
                 Database.TransactionalStorage.Batch(actions =>
                 {
                     string lastEtag = Guid.Empty.ToString();
