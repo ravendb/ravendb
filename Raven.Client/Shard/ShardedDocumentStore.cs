@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using Raven.Client.Client;
 using Raven.Client.Document;
 using Raven.Client.Shard.ShardStrategy;
 
@@ -42,7 +43,12 @@ namespace Raven.Client.Shard
             return new ShardedDocumentSession(shardStrategy, shards.Select(x => x.OpenSession()).ToArray());
         }
 
-        public IDocumentStore Initialise()
+	    public IDatabaseCommands DatabaseCommands
+	    {
+	        get { throw new NotSupportedException("Sharded document store doesn't have a database commands. you need to explicitly use the shard instances to get access to the database commands"); }
+	    }
+
+	    public IDocumentStore Initialise()
 		{
 			try
 			{
