@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Client.Client;
 
 namespace Raven.Client
 {
@@ -9,6 +10,9 @@ namespace Raven.Client
 		string Identifier { get; set; }
 
         IDocumentStore Initialise();
+        
         IDocumentSession OpenSession();
+
+        IDatabaseCommands DatabaseCommands { get; }
     }
 }

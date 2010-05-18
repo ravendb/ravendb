@@ -126,7 +126,7 @@ namespace Raven.Database.Indexing
 
 		protected void Write(Func<IndexWriter, bool> action)
 		{
-			var indexWriter = new IndexWriter(directory, new StandardAnalyzer(Version.LUCENE_CURRENT), IndexWriter.MaxFieldLength.UNLIMITED);
+            var indexWriter = new IndexWriter(directory, new StandardAnalyzer(Version.LUCENE_29), IndexWriter.MaxFieldLength.UNLIMITED);
 		    bool shouldRecreateSearcher ;
 			try
 			{

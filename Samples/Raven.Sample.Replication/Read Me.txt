@@ -1,0 +1,20 @@
+This sample contains a simple example of Raven's replication and conflict resolution.
+
+Start the servers using "Start Raven.ps1", this will start two instance of Raven, one on port 8080 (Master) and one on port 8081 (Slave)
+
+Run the sample, which will create docuemnts with different content but using the same name on both instances.
+The application will let you know about that and wait for further input.
+
+You can visit the web UI for each instance to see the two different documents.
+
+Run the "Setup Master To Slave Replication.ps1" script to setup replication from the master instance to the slave instance.
+  * Note this scripts require curl (http://curl.haxx.se/latest.cgi?curl=win32-nossl) to be on your path.
+
+Visit the web UI for each instance, and note the conflicted status of the documents.
+
+Hit enter on the sample, it will proceed to try to read the conflicted value, catch the error and allow you to fix the conflict.
+The sample will then wait for further input.
+
+
+Visit the web UI for each instance, and note the conflicted status of the documents was resolved.
+Hit enter on the sample, and it will update the document. Note that the document was successfully updated on the slave.

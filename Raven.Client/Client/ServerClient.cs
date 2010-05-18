@@ -105,9 +105,9 @@ namespace Raven.Client.Client
 	            var replicationDestination = threadSafeCopy[i];
                 if (ShouldExecuteUsing(replicationDestination, currentRequest) == false)
                     continue;
-                if (TryOperation(operation, url, true, out result))
+                if (TryOperation(operation, replicationDestination, true, out result))
                     return result;
-                if (IsFirstFailure(url) && TryOperation(operation, url, threadSafeCopy.Count > i+1, out result))
+                if (IsFirstFailure(url) && TryOperation(operation, replicationDestination, threadSafeCopy.Count > i + 1, out result))
                     return result;
                 IncrementFailureCount(url);
 	        }
@@ -180,7 +180,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 	    {
 	        var metadata = new JObject();
 	        AddTransactionInformation(metadata);
-            var request = new HttpJsonRequest(serverUrl + "/docs/" + key, "GET", metadata, credentials);
+            var request = HttpJsonRequest.CreateHttpJsonRequest(this, serverUrl + "/docs/" + key, "GET", metadata, credentials);
 	        try
 	        {
 	            return new JsonDocument
@@ -199,8 +199,17 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 	            if (httpWebResponse.StatusCode == HttpStatusCode.NotFound)
 	                return null;
                 if (httpWebResponse.StatusCode == HttpStatusCode.Conflict)
+                {
+                    var conflicts = new StreamReader(httpWebResponse.GetResponseStream());
+                    var conflictsDoc = JObject.Load(new JsonTextReader(conflicts));
+                    var conflictIds = conflictsDoc.Value<JArray>("Conflicts").Select(x=>x.Value<string>()).ToArray();
+
                     throw new ConflictException("Conflict detected on " + key +
-                                                ", conflict must be resolved before the document will be accessible");
+                                                ", conflict must be resolved before the document will be accessible")
+                    {
+                        ConflictedVersionIds = conflictIds
+                    };
+                }
                 throw;
 	        }
 	    }
@@ -213,10 +222,10 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 
 		public PutResult Put(string key, Guid? etag, JObject document, JObject metadata)
 		{
-		    return ExecuteWithReplication(u => DirectGet(metadata, key, etag, document, u));
+            return ExecuteWithReplication(u => DirectPut(metadata, key, etag, document, u));
 		}
 
-	    private PutResult DirectGet(JObject metadata, string key, Guid? etag, JObject document, string operationUrl)
+	    private PutResult DirectPut(JObject metadata, string key, Guid? etag, JObject document, string operationUrl)
 	    {
 	        if (metadata == null)
 	            metadata = new JObject();
@@ -224,7 +233,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 	        AddTransactionInformation(metadata);
 	        if (etag != null)
 	            metadata["ETag"] = new JValue(etag.Value.ToString());
-	        var request = new HttpJsonRequest(operationUrl + "/docs/" + key, method, metadata, credentials);
+	        var request = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/docs/" + key, method, metadata, credentials);
 	        request.Write(document.ToString());
 
 	        string readResponseString;
@@ -268,7 +277,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 	        if (etag != null)
 	            metadata.Add("ETag", new JValue(etag.Value.ToString()));
 	        AddTransactionInformation(metadata);
-	        var httpJsonRequest = new HttpJsonRequest(operationUrl + "/docs/" + key, "DELETE", metadata, credentials);
+            var httpJsonRequest = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/docs/" + key, "DELETE", metadata, credentials);
 	        try
 	        {
 	            httpJsonRequest.ReadResponseString();
@@ -328,7 +337,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
                     throw;
             }
 
-            var request = new HttpJsonRequest(requestUri, "PUT", credentials);
+            var request = HttpJsonRequest.CreateHttpJsonRequest(this, requestUri, "PUT", credentials);
 			request.Write(JsonConvert.SerializeObject(definition, new JsonEnumConverter()));
 
 			var obj = new {index = ""};
@@ -374,7 +383,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 	        {
 	            path = path + "&cutOff=" + SimpleUrlEncodeOnTheClientProfile(query.Cutoff.Value.ToString("o", CultureInfo.InvariantCulture));
 	        }
-	        var request = new HttpJsonRequest(path, "GET", credentials);
+            var request = HttpJsonRequest.CreateHttpJsonRequest(this, path, "GET", credentials);
 	        var serializer = new JsonSerializer
 	        {
 	            ContractResolver = convention.JsonContractResolver
@@ -399,7 +408,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 	    public void DeleteIndex(string name)
 		{
 			EnsureIsNotNullOrEmpty(name, "name");
-            var request = new HttpJsonRequest(url + "/indexes/" + name, "DELETE", credentials);
+            var request = HttpJsonRequest.CreateHttpJsonRequest(this, url + "/indexes/" + name, "DELETE", credentials);
 		    request.ReadResponseString();
 		}
 
@@ -410,7 +419,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 
 	    private JsonDocument[] DirectGet(string[] ids, string operationUrl)
 	    {
-	        var request = new HttpJsonRequest(operationUrl + "/queries/", "POST", credentials);
+            var request = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/queries/", "POST", credentials);
 	        request.Write(new JArray(ids).ToString(Formatting.None));
 	        var responses = JArray.Parse(request.ReadResponseString());
 
@@ -432,11 +441,11 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
             return ExecuteWithReplication(u => DirectBatch(commandDatas, u));
 	    }
 
-	    private BatchResult[] DirectBatch(ICommandData[] commandDatas, string operationUrl)
+	    private BatchResult[] DirectBatch(IEnumerable<ICommandData> commandDatas, string operationUrl)
 	    {
 	        var metadata = new JObject();
 	        AddTransactionInformation(metadata);
-	        var req = new HttpJsonRequest(operationUrl + "/bulk_docs", "POST",metadata, credentials);
+            var req = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/bulk_docs", "POST", metadata, credentials);
 	        var jArray = new JArray(commandDatas.Select(x => x.ToJson()));
 	        req.Write(jArray.ToString(Formatting.None));
 
@@ -465,9 +474,9 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 	        });
 	    }
 
-	    private void DirectCommit(Guid txId, string s)
+	    private void DirectCommit(Guid txId, string operationUrl)
 	    {
-	        var httpJsonRequest = new HttpJsonRequest(s + "/transaction/commit?tx=" + txId, "POST", credentials);
+            var httpJsonRequest = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/transaction/commit?tx=" + txId, "POST", credentials);
 	        httpJsonRequest.ReadResponseString();
 	    }
 
@@ -482,7 +491,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 
 	    private void DirectRollback(Guid txId, string operationUrl)
 	    {
-	        var httpJsonRequest = new HttpJsonRequest(operationUrl + "/transaction/rollback?tx=" + txId, "POST", credentials);
+            var httpJsonRequest = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/transaction/rollback?tx=" + txId, "POST", credentials);
 	        httpJsonRequest.ReadResponseString();
 	    }
 

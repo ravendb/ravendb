@@ -1,11 +1,13 @@
 ﻿using System;
 using Newtonsoft.Json.Linq;
+using Raven.Client.Client;
 using Raven.Client.Document;
 
 namespace Raven.Client
 {
     public interface IDocumentSession : IDisposable
     {
+
         string StoreIdentifier { get; }
         
 		T Load<T>(string id);

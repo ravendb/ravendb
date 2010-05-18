@@ -87,6 +87,7 @@
       <Link>Data\ReplicationDocument.cs</Link>
     </Compile>
     <Compile Include="Client\JsonExtensions.cs" />
+    <Compile Include="Client\WebRequestEventArgs.cs" />
     <Compile Include="Document\AbstractDocumentQuery.cs" />
     <Compile Include="Document\DocumentConvention.cs" />
     <Compile Include="Document\DocumentQuery.cs" />

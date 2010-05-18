@@ -18,6 +18,24 @@ function Get-Git-Commit
 	}
 }
 
+
+function Delete-Sample-Data-For-Release
+{
+  param([string]$sample_dir)
+  rd "$sample_dir\bin" -force -recurse -ErrorAction SilentlyContinue
+  rd "$sample_dir\obj" -force -recurse -ErrorAction SilentlyContinue
+  
+  rd "$sample_dir\Servers\Shard1\Data" -force -recurse -ErrorAction SilentlyContinue
+  rd "$sample_dir\Servers\Shard2\Data" -force -recurse -ErrorAction SilentlyContinue
+  
+  rd "$sample_dir\Servers\Shard1\Plugins" -force -recurse -ErrorAction SilentlyContinue
+  rd "$sample_dir\Servers\Shard2\Plugins" -force -recurse -ErrorAction SilentlyContinue
+  
+  
+  del "$sample_dir\Servers\Shard1\RavenDB.exe" -force -recurse -ErrorAction SilentlyContinue
+  del "$sample_dir\Servers\Shard2\RavenDB.exe" -force -recurse -ErrorAction SilentlyContinue
+}
+
 function Generate-Assembly-Info
 {
 param(

@@ -125,22 +125,28 @@ namespace Raven.Database.Server
 
 		public void HandleActualRequest(IHttpContext ctx)
 		{
-			var curReq = Interlocked.Increment(ref reqNum);
 			var sw = Stopwatch.StartNew();
-			try
+		    bool ravenUiRequest = false;
+            try
 			{
-				DispatchRequest(ctx);
+			    ravenUiRequest = DispatchRequest(ctx);
 			}
 			catch (Exception e)
 			{
 				HandleException(ctx, e);
-				logger.WarnFormat(e, "Error on request #{0}", curReq);
+			    logger.Warn("Error on request", e);
 			}
 			finally
 			{
 				ctx.FinalizeResonse();
-				logger.DebugFormat("Request #{0,4:#,0}: {1,-7} - {2,5:#,0} ms - {3} - {4}",
-									   curReq, ctx.Request.HttpMethod, sw.ElapsedMilliseconds, ctx.Response.StatusCode, ctx.Request.Url.PathAndQuery);
+                // we filter out requests for the UI because they fill the log with information
+                // we probably don't care about
+                if (ravenUiRequest == false)
+                {
+                    var curReq = Interlocked.Increment(ref reqNum);
+                    logger.DebugFormat("Request #{0,4:#,0}: {1,-7} - {2,5:#,0} ms - {3} - {4}",
+                                       curReq, ctx.Request.HttpMethod, sw.ElapsedMilliseconds, ctx.Response.StatusCode,
+                                       ctx.Request.Url.PathAndQuery);}
 			}
 		}
 
@@ -244,22 +250,22 @@ namespace Raven.Database.Server
 			}
 		}
 
-		private void DispatchRequest(IHttpContext ctx)
+		private bool DispatchRequest(IHttpContext ctx)
 		{
 			if (AssertSecurityRights(ctx) == false)
-				return;
+			    return false;
 
 			foreach (var requestResponder in RequestResponders)
 			{
 				if (requestResponder.WillRespond(ctx))
 				{
 					requestResponder.Respond(ctx);
-					return;
+				    return requestResponder is RavenUI || requestResponder is RavenRoot || requestResponder is Favicon;
 				}
 			}
 			ctx.SetStatusToBadRequest();
             if (ctx.Request.HttpMethod == "HEAD")
-                return;
+                return false;
 			ctx.Write(
 				@"
 <html>
@@ -269,6 +275,7 @@ namespace Raven.Database.Server
     </body>
 </html>
 ");
+		    return true;
 		}
 
 		private bool AssertSecurityRights(IHttpContext ctx)

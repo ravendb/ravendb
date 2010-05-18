@@ -11,6 +11,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MvcMusicStore", "MvcMusicSt
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Client.Lightweight", "..\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj", "{4E087ECB-E7CA-4891-AC3C-3C76702715B6}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Sample.Replication", "Raven.Sample.Replication\Raven.Sample.Replication.csproj", "{9F620303-44D9-4ACE-BB37-8CE742B710EB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Sample.Failover", "Raven.Sample.Failover\Raven.Sample.Failover.csproj", "{76989E08-049F-4938-9E17-9A0EB69F70ED}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -71,6 +75,26 @@ Global
 		{4E087ECB-E7CA-4891-AC3C-3C76702715B6}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{4E087ECB-E7CA-4891-AC3C-3C76702715B6}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{4E087ECB-E7CA-4891-AC3C-3C76702715B6}.Release|x86.ActiveCfg = Release|Any CPU
+		{9F620303-44D9-4ACE-BB37-8CE742B710EB}.Debug|Any CPU.ActiveCfg = Debug|x86
+		{9F620303-44D9-4ACE-BB37-8CE742B710EB}.Debug|Mixed Platforms.ActiveCfg = Debug|x86
+		{9F620303-44D9-4ACE-BB37-8CE742B710EB}.Debug|Mixed Platforms.Build.0 = Debug|x86
+		{9F620303-44D9-4ACE-BB37-8CE742B710EB}.Debug|x86.ActiveCfg = Debug|x86
+		{9F620303-44D9-4ACE-BB37-8CE742B710EB}.Debug|x86.Build.0 = Debug|x86
+		{9F620303-44D9-4ACE-BB37-8CE742B710EB}.Release|Any CPU.ActiveCfg = Release|x86
+		{9F620303-44D9-4ACE-BB37-8CE742B710EB}.Release|Mixed Platforms.ActiveCfg = Release|x86
+		{9F620303-44D9-4ACE-BB37-8CE742B710EB}.Release|Mixed Platforms.Build.0 = Release|x86
+		{9F620303-44D9-4ACE-BB37-8CE742B710EB}.Release|x86.ActiveCfg = Release|x86
+		{9F620303-44D9-4ACE-BB37-8CE742B710EB}.Release|x86.Build.0 = Release|x86
+		{76989E08-049F-4938-9E17-9A0EB69F70ED}.Debug|Any CPU.ActiveCfg = Debug|x86
+		{76989E08-049F-4938-9E17-9A0EB69F70ED}.Debug|Mixed Platforms.ActiveCfg = Debug|x86
+		{76989E08-049F-4938-9E17-9A0EB69F70ED}.Debug|Mixed Platforms.Build.0 = Debug|x86
+		{76989E08-049F-4938-9E17-9A0EB69F70ED}.Debug|x86.ActiveCfg = Debug|x86
+		{76989E08-049F-4938-9E17-9A0EB69F70ED}.Debug|x86.Build.0 = Debug|x86
+		{76989E08-049F-4938-9E17-9A0EB69F70ED}.Release|Any CPU.ActiveCfg = Release|x86
+		{76989E08-049F-4938-9E17-9A0EB69F70ED}.Release|Mixed Platforms.ActiveCfg = Release|x86
+		{76989E08-049F-4938-9E17-9A0EB69F70ED}.Release|Mixed Platforms.Build.0 = Release|x86
+		{76989E08-049F-4938-9E17-9A0EB69F70ED}.Release|x86.ActiveCfg = Release|x86
+		{76989E08-049F-4938-9E17-9A0EB69F70ED}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

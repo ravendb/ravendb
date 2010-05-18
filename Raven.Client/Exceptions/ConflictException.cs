@@ -6,6 +6,8 @@ namespace Raven.Client.Exceptions
     [Serializable]
     public class ConflictException : Exception
     {
+        public string[] ConflictedVersionIds { get; set; }
+
         public ConflictException()
         {
         }

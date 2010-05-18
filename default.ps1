@@ -215,6 +215,23 @@ task ReleaseNoTests -depends DoRelease {
 task Release -depends Test,DoRelease { 
 }
 
+task CopySamples {
+  $samples = @("MvcMusicStore", "Raven.Sample.ShardClient", "Raven.Sample.Failover", "Raven.Sample.Replication")
+	$exclude = @("bin", "obj", "Data", "Plugins")
+	
+	foreach ($sample in $samples) {
+      echo $sample 
+      
+      Delete-Sample-Data-For-Release "$base_dir\Samples\$sample"
+      
+      cp "$base_dir\Samples\$sample" "$build_dir\Output\Samples" -recurse -force
+      
+      Delete-Sample-Data-For-Release "$build_dir\Output\Samples\$sample" 
+	}
+}
+
+
+
 task DoRelease -depends Compile {
 	
 	remove-item $build_dir\Output -Recurse -Force  -ErrorAction SilentlyContinue
@@ -257,12 +274,7 @@ task DoRelease -depends Compile {
 	cp $base_dir\readme.txt $build_dir\Output\readme.txt
 	cp $base_dir\acknowledgements.txt $build_dir\Output\acknowledgements.txt
 	
-	
-	cp $base_dir\Samples\MvcMusicStore $build_dir\Output\Samples -recurse 
-	cp $base_dir\Samples\Raven.Sample.ShardClient $build_dir\Output\Samples -recurse 
-	
-	rd $build_dir\Output\Samples\MvcMusicStore\obj -recurse 
-	rd $build_dir\Output\Samples\Raven.Sample.ShardClient\obj -recurse 
+	ExecuteTask("CopySamples")
 	
 	$old = pwd
 	

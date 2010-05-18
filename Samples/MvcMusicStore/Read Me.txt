@@ -1,0 +1,13 @@
+This sample contains a port of the MVC Music Store application (http://mvcmusicstore.codeplex.com/) to Raven.
+You need to run the "Start Raven.ps1" script in order to set the database up for the appliaction to work.
+Once that done, start the application and browse it.
+You can setup Fiddler (http://www.fiddler2.com/fiddler2/) to watch what requests are made by the Raven Client API to the Raven Server.
+
+This sample demonstrates:
+  * Setting Raven up as part of a web application infrastructure.
+  * Querying & indexing.
+  * Saving data.
+  * Data modeling for Raven.
+  
+  It is highly recommended to read the porting story for this application, which can be found here:
+  http://ayende.com/Blog/archive/2010/05/18/porting-mvc-music-store-to-raven-the-data-model.aspx
