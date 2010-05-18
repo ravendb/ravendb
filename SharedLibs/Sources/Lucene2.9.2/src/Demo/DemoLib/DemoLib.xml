@@ -1,0 +1,226 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>DemoLib</name>
+    </assembly>
+    <members>
+        <member name="T:Lucene.Net.Demo.Html.Token">
+            <summary> Describes the input token stream.</summary>
+        </member>
+        <member name="F:Lucene.Net.Demo.Html.Token.kind">
+            <summary> An integer that describes the kind of this token.  This numbering
+            system is determined by JavaCCParser, and a table of these numbers is
+            stored in the file ...Constants.java.
+            </summary>
+        </member>
+        <member name="F:Lucene.Net.Demo.Html.Token.beginLine">
+            <summary> beginLine and beginColumn describe the position of the first character
+            of this token; endLine and endColumn describe the position of the
+            last character of this token.
+            </summary>
+        </member>
+        <member name="F:Lucene.Net.Demo.Html.Token.beginColumn">
+            <summary> beginLine and beginColumn describe the position of the first character
+            of this token; endLine and endColumn describe the position of the
+            last character of this token.
+            </summary>
+        </member>
+        <member name="F:Lucene.Net.Demo.Html.Token.endLine">
+            <summary> beginLine and beginColumn describe the position of the first character
+            of this token; endLine and endColumn describe the position of the
+            last character of this token.
+            </summary>
+        </member>
+        <member name="F:Lucene.Net.Demo.Html.Token.endColumn">
+            <summary> beginLine and beginColumn describe the position of the first character
+            of this token; endLine and endColumn describe the position of the
+            last character of this token.
+            </summary>
+        </member>
+        <member name="F:Lucene.Net.Demo.Html.Token.image">
+            <summary> The string image of the token.</summary>
+        </member>
+        <member name="F:Lucene.Net.Demo.Html.Token.next">
+            <summary> A reference to the next regular (non-special) token from the input
+            stream.  If this is the last token from the input stream, or if the
+            token manager has not read tokens beyond this one, this field is
+            set to null.  This is true only if this token is also a regular
+            token.  Otherwise, see below for a description of the contents of
+            this field.
+            </summary>
+        </member>
+        <member name="F:Lucene.Net.Demo.Html.Token.specialToken">
+            <summary> This field is used to access special tokens that occur prior to this
+            token, but after the immediately preceding regular (non-special) token.
+            If there are no such special tokens, this field is set to null.
+            When there are more than one such special token, this field refers
+            to the last of these special tokens, which in turn refers to the next
+            previous special token through its specialToken field, and so on
+            until the first special token (whose specialToken field is null).
+            The next fields of special tokens refer to other special tokens that
+            immediately follow it (without an intervening regular token).  If there
+            is no such token, this field is null.
+            </summary>
+        </member>
+        <member name="M:Lucene.Net.Demo.Html.Token.ToString">
+            <summary> Returns the image.</summary>
+        </member>
+        <member name="M:Lucene.Net.Demo.Html.Token.NewToken(System.Int32)">
+            <summary> Returns a new Token object, by default. However, if you want, you
+            can create and return subclass objects based on the value of ofKind.
+            Simply add the cases to the switch for all those special cases.
+            For example, if you have a subclass of Token called IDToken that
+            you want to create if ofKind is ID, simlpy add something like :
+            
+            case MyParserConstants.ID : return new IDToken();
+            
+            to the following switch statement. Then you can cast matchedToken
+            variable to the appropriate type and use it in your lexical actions.
+            </summary>
+        </member>
+        <member name="T:Lucene.Net.Demo.Html.ParseException">
+            <summary> This exception is thrown when parse errors are encountered.
+            You can explicitly create objects of this exception type by
+            calling the method generateParseException in the generated
+            parser.
+            
+            You can modify this class to customize your error reporting
+            mechanisms so long as you retain the public fields.
+            </summary>
+        </member>
+        <!-- Badly formed XML comment ignored for member "M:Lucene.Net.Demo.Html.ParseException.#ctor(Lucene.Net.Demo.Html.Token,System.Int32[][],System.String[])" -->
+        <member name="M:Lucene.Net.Demo.Html.ParseException.#ctor">
+            <summary> The following constructors are for use by you for whatever
+            purpose you can think of.  Constructing the exception in this
+            manner makes the exception behave in the normal way - i.e., as
+            documented in the class "Throwable".  The fields "errorToken",
+            "expectedTokenSequences", and "tokenImage" do not contain
+            relevant information.  The JavaCC generated code does not use
+            these constructors.
+            </summary>
+        </member>
+        <member name="F:Lucene.Net.Demo.Html.ParseException.specialConstructor">
+            <summary> This variable determines which constructor was used to create
+            this object and thereby affects the semantics of the
+            "getMessage" method (see below).
+            </summary>
+        </member>
+        <member name="F:Lucene.Net.Demo.Html.ParseException.currentToken">
+            <summary> This is the last token that has been consumed successfully.  If
+            this object has been created due to a parse error, the token
+            followng this token will (therefore) be the first error token.
+            </summary>
+        </member>
+        <member name="F:Lucene.Net.Demo.Html.ParseException.expectedTokenSequences">
+            <summary> Each entry in this array is an array of integers.  Each array
+            of integers represents a sequence of tokens (by their ordinal
+            values) that is expected at this point of the parse.
+            </summary>
+        </member>
+        <member name="F:Lucene.Net.Demo.Html.ParseException.tokenImage">
+            <summary> This is a reference to the "tokenImage" array of the generated
+            parser within which the parse error occurred.  This array is
+            defined in the generated ...Constants interface.
+            </summary>
+        </member>
+        <member name="F:Lucene.Net.Demo.Html.ParseException.eol">
+            <summary> The end of line string for this machine.</summary>
+        </member>
+        <member name="M:Lucene.Net.Demo.Html.ParseException.Add_escapes(System.String)">
+            <summary> Used to convert raw characters to their escaped version
+            when these raw version cannot be used as part of an ASCII
+            string literal.
+            </summary>
+        </member>
+        <member name="P:Lucene.Net.Demo.Html.ParseException.Message">
+            <summary> This method has the standard behavior when this object has been
+            created using the standard constructors.  Otherwise, it uses
+            "currentToken" and "expectedTokenSequences" to generate a parse
+            error message and returns it.  If this object has been created
+            due to a parse error, and you do not catch it (it gets thrown
+            from the parser), then this method is called during the printing
+            of the final stack trace, and hence the correct error message
+            gets displayed.
+            </summary>
+        </member>
+        <member name="F:Lucene.Net.Demo.Html.Tags.WS_ELEMS">
+            <summary> contains all tags for which whitespaces have to be inserted for proper tokenization</summary>
+        </member>
+        <member name="M:Lucene.Net.Demo.Html.HTMLParser.#ctor(System.IO.FileInfo)">
+            <deprecated> Use HTMLParser(FileInputStream) instead
+            </deprecated>
+        </member>
+        <member name="T:Lucene.Net.Demo.HTMLDocument">
+            <summary>A utility for making Lucene Documents for HTML documents. </summary>
+        </member>
+        <member name="T:Lucene.Net.Demo.FileDocument">
+            <summary>A utility for making Lucene Documents from a File. </summary>
+        </member>
+        <!-- Badly formed XML comment ignored for member "M:Lucene.Net.Demo.FileDocument.Document(System.IO.FileInfo)" -->
+        <member name="F:Lucene.Net.Demo.Html.TokenMgrError.LEXICAL_ERROR">
+            <summary> Lexical error occured.</summary>
+        </member>
+        <member name="F:Lucene.Net.Demo.Html.TokenMgrError.STATIC_LEXER_ERROR">
+            <summary> An attempt wass made to create a second instance of a static token manager.</summary>
+        </member>
+        <member name="F:Lucene.Net.Demo.Html.TokenMgrError.INVALID_LEXICAL_STATE">
+            <summary> Tried to change to an invalid lexical state.</summary>
+        </member>
+        <member name="F:Lucene.Net.Demo.Html.TokenMgrError.LOOP_DETECTED">
+            <summary> Detected (and bailed out of) an infinite loop in the token manager.</summary>
+        </member>
+        <member name="F:Lucene.Net.Demo.Html.TokenMgrError.errorCode">
+            <summary> Indicates the reason why the exception is thrown. It will have
+            one of the above 4 values.
+            </summary>
+        </member>
+        <member name="M:Lucene.Net.Demo.Html.TokenMgrError.addEscapes(System.String)">
+            <summary> Replaces unprintable characters by their espaced (or unicode escaped)
+            equivalents in the given string
+            </summary>
+        </member>
+        <member name="M:Lucene.Net.Demo.Html.TokenMgrError.LexicalError(System.Boolean,System.Int32,System.Int32,System.Int32,System.String,System.Char)">
+            <summary> Returns a detailed message for the Error when it is thrown by the
+            token manager to indicate a lexical error.
+            Parameters : 
+            EOFSeen     : indicates if EOF caused the lexicl error
+            curLexState : lexical state in which this error occured
+            errorLine   : line number when the error occured
+            errorColumn : column number when the error occured
+            errorAfter  : prefix that was seen before this error occured
+            curchar     : the offending character
+            Note: You can customize the lexical error message by modifying this method.
+            </summary>
+        </member>
+        <member name="P:Lucene.Net.Demo.Html.TokenMgrError.Message">
+            <summary> You can also modify the body of this method to customize your error messages.
+            For example, cases like LOOP_DETECTED and INVALID_LEXICAL_STATE are not
+            of end-users concern, so you can return something like : 
+            
+            "Internal Error : Please file a bug report .... "
+            
+            from this method for such cases in the release version of your parser.
+            </summary>
+        </member>
+        <member name="T:Lucene.Net.Demo.Html.SimpleCharStream">
+            <summary> An implementation of interface CharStream, where the stream is assumed to
+            contain only ASCII characters (without unicode processing).
+            </summary>
+        </member>
+        <member name="M:Lucene.Net.Demo.Html.SimpleCharStream.GetColumn">
+            <deprecated> 
+            </deprecated>
+            <seealso cref="!:getEndColumn">
+            </seealso>
+        </member>
+        <member name="M:Lucene.Net.Demo.Html.SimpleCharStream.GetLine">
+            <deprecated> 
+            </deprecated>
+            <seealso cref="!:getEndLine">
+            </seealso>
+        </member>
+        <member name="M:Lucene.Net.Demo.Html.SimpleCharStream.AdjustBeginLineColumn(System.Int32,System.Int32)">
+            <summary> Method to adjust line and column numbers for the start of a token.</summary>
+        </member>
+    </members>
+</doc>

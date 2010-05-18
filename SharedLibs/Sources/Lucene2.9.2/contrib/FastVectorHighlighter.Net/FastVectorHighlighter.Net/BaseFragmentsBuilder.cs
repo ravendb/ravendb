@@ -1,0 +1,193 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+using System;
+using System.Collections.Generic;
+using System.Text;
+
+using Lucene.Net.Documents;
+using Lucene.Net.Search;
+using Lucene.Net.Index;
+
+using WeightedFragInfo = Lucene.Net.Search.Vectorhighlight.FieldFragList.WeightedFragInfo;
+using SubInfo = Lucene.Net.Search.Vectorhighlight.FieldFragList.WeightedFragInfo.SubInfo;
+using Toffs = Lucene.Net.Search.Vectorhighlight.FieldPhraseList.WeightedPhraseInfo.Toffs;
+
+namespace Lucene.Net.Search.Vectorhighlight
+{
+    public abstract class BaseFragmentsBuilder : FragmentsBuilder
+    {
+        protected String[] preTags, postTags;
+        public static String[] COLORED_PRE_TAGS = {
+            "<b style=\"background:yellow\">", "<b style=\"background:lawngreen\">", "<b style=\"background:aquamarine\">",
+            "<b style=\"background:magenta\">", "<b style=\"background:palegreen\">", "<b style=\"background:coral\">",
+            "<b style=\"background:wheat\">", "<b style=\"background:khaki\">", "<b style=\"background:lime\">",
+            "<b style=\"background:deepskyblue\">"
+        };
+
+        public static String[] COLORED_POST_TAGS = { "</b>" };
+
+        protected BaseFragmentsBuilder() : this(new String[] { "<b>" }, new String[] { "</b>" })
+        {
+            
+        }
+
+        protected BaseFragmentsBuilder(String[] preTags, String[] postTags)
+        {
+            this.preTags = preTags;
+            this.postTags = postTags;
+        }
+
+        static Object CheckTagsArgument(Object tags)
+        {
+            if (tags is String) return tags;
+            else if (tags is String[]) return tags;
+            throw new ArgumentException("type of preTags/postTags must be a String or String[]");
+        }
+
+        public abstract List<WeightedFragInfo> GetWeightedFragInfoList(List<WeightedFragInfo> src);
+
+        public String CreateFragment(IndexReader reader, int docId, String fieldName, FieldFragList fieldFragList)
+        {
+            String[] fragments = CreateFragments(reader, docId, fieldName, fieldFragList, 1);
+            if (fragments == null || fragments.Length == 0) return null;
+            return fragments[0];
+        }
+
+        public String[] CreateFragments(IndexReader reader, int docId, String fieldName, FieldFragList fieldFragList, int maxNumFragments)
+        {
+            if (maxNumFragments < 0)
+                throw new ArgumentException("maxNumFragments(" + maxNumFragments + ") must be positive number.");
+
+            List<WeightedFragInfo> fragInfos = GetWeightedFragInfoList(fieldFragList.fragInfos);
+
+            List<String> fragments = new List<String>(maxNumFragments);
+            Field[] values = GetFields(reader, docId, fieldName);
+            if (values.Length == 0) return null;
+            StringBuilder buffer = new StringBuilder();
+            int[] nextValueIndex = { 0 };
+            for (int n = 0; n < maxNumFragments && n < fragInfos.Count; n++)
+            {
+                WeightedFragInfo fragInfo = fragInfos[n];
+                fragments.Add(MakeFragment(buffer, nextValueIndex, values, fragInfo));
+            }
+            return fragments.ToArray();
+        }
+
+        [Obsolete]
+        protected String[] GetFieldValues(IndexReader reader, int docId, String fieldName)
+        {
+            Document doc = reader.Document(docId, new MapFieldSelector(new String[] { fieldName }));
+            return doc.GetValues(fieldName); // according to Document class javadoc, this never returns null
+        }
+
+        protected Field[] GetFields(IndexReader reader, int docId, String fieldName)
+        {
+            // according to javadoc, doc.getFields(fieldName) cannot be used with lazy loaded field???
+            Document doc = reader.Document(docId, new MapFieldSelector(new String[] { fieldName }));
+            return doc.GetFields(fieldName); // according to Document class javadoc, this never returns null
+        }
+
+        [Obsolete]
+        protected String MakeFragment(StringBuilder buffer, int[] index, String[] values, WeightedFragInfo fragInfo)
+        {
+            int s = fragInfo.startOffset;
+            return MakeFragment(fragInfo, GetFragmentSource(buffer, index, values, s, fragInfo.endOffset), s);
+        }
+
+        protected String MakeFragment(StringBuilder buffer, int[] index, Field[] values, WeightedFragInfo fragInfo)
+        {
+            int s = fragInfo.startOffset;
+            return MakeFragment(fragInfo, GetFragmentSource(buffer, index, values, s, fragInfo.endOffset), s);
+        }
+
+        private String MakeFragment(WeightedFragInfo fragInfo, String src, int s)
+        {
+            StringBuilder fragment = new StringBuilder();
+            int srcIndex = 0;
+            foreach (SubInfo subInfo in fragInfo.subInfos)
+            {
+                foreach (Toffs to in subInfo.termsOffsets)
+                {
+                    fragment.Append(src.Substring(srcIndex, to.startOffset - s - srcIndex)).Append(GetPreTag(subInfo.seqnum))
+                      .Append(src.Substring(to.startOffset - s, to.endOffset - s - (to.startOffset - s))).Append(GetPostTag(subInfo.seqnum));
+                    srcIndex = to.endOffset - s;
+                }
+            }
+            fragment.Append(src.Substring(srcIndex));
+            return fragment.ToString();
+        }
+
+        /*
+        [Obsolete]
+        protected String MakeFragment(StringBuilder buffer, int[] index, String[] values, WeightedFragInfo fragInfo)
+        {
+            StringBuilder fragment = new StringBuilder();
+            int s = fragInfo.startOffset;
+            String src = GetFragmentSource(buffer, index, values, s, fragInfo.endOffset);
+            int srcIndex = 0;
+            foreach (SubInfo subInfo in fragInfo.subInfos)
+            {
+                foreach (Toffs to in subInfo.termsOffsets)
+                {
+                    fragment.Append(src.Substring(srcIndex, to.startOffset - s - srcIndex)).Append(GetPreTag(subInfo.seqnum))
+                      .Append(src.Substring(to.startOffset - s, to.endOffset - s - (to.startOffset - s))).Append(GetPostTag(subInfo.seqnum));
+                    srcIndex = to.endOffset - s;
+                }
+            }
+            fragment.Append(src.Substring(srcIndex));
+            return fragment.ToString();
+        }
+        */
+
+
+        [Obsolete]
+        protected String GetFragmentSource(StringBuilder buffer, int[] index, String[] values, int startOffset, int endOffset)
+        {
+            while (buffer.Length < endOffset && index[0] < values.Length)
+            {
+                if (index[0] > 0 && values[index[0]].Length > 0)
+                    buffer.Append(' ');
+                buffer.Append(values[index[0]++]);
+            }
+            int eo = buffer.Length < endOffset ? buffer.Length : endOffset;
+            return buffer.ToString().Substring(startOffset, eo - startOffset);
+        }
+
+        protected String GetFragmentSource(StringBuilder buffer, int[] index, Field[] values, int startOffset, int endOffset)
+        {
+            while (buffer.Length < endOffset && index[0] < values.Length)
+            {
+                if (index[0] > 0 && values[index[0]].IsTokenized() && values[index[0]].StringValue().Length > 0)
+                    buffer.Append(' ');
+                buffer.Append(values[index[0]++].StringValue());
+            }
+            int eo = buffer.Length < endOffset ? buffer.Length: endOffset;
+            return buffer.ToString().Substring(startOffset, eo - startOffset );
+        }
+
+        protected String GetPreTag(int num)
+        {
+            return preTags.Length > num ? preTags[num] : preTags[0];
+        }
+
+        protected String GetPostTag(int num)
+        {
+            return postTags.Length > num ? postTags[num] : postTags[0];
+        }
+    }
+}

@@ -1,0 +1,75 @@
+
+** Populating the table
+	Apple Inc.                               AAPL $90    
+	eBay Inc.                                EBAY $14.45 
+	General Electric Company                 GE   $16.5  
+	Google Inc.                              GOOG $310.17
+	International Business Machines Corp.    IBM  $83.52  150 shares
+	Macy's Inc.                              M    $10.62 
+	MacDonald's Corp.                        MCD  $10.62 
+	3M Company                               MMM  $56.62  100 shares
+	Microsoft Corp.                          MSFT $19.65  200 shares
+	Starbucks Corp.                          SBUX $9.88  
+
+** Owned shares
+	3M Company                               MMM  $56.62  100 shares
+	International Business Machines Corp.    IBM  $83.52  150 shares
+	Microsoft Corp.                          MSFT $19.65  200 shares
+
+** Sorted by price
+	Starbucks Corp.                          SBUX $9.88  
+	Macy's Inc.                              M    $10.62 
+	MacDonald's Corp.                        MCD  $10.62 
+	eBay Inc.                                EBAY $14.45 
+	General Electric Company                 GE   $16.5  
+	Microsoft Corp.                          MSFT $19.65  200 shares
+	3M Company                               MMM  $56.62  100 shares
+	International Business Machines Corp.    IBM  $83.52  150 shares
+	Apple Inc.                               AAPL $90    
+	Google Inc.                              GOOG $310.17
+
+** Updating owned shares
+	3M Company                               MMM  $56.62  100 shares
+	International Business Machines Corp.    IBM  $83.52  150 shares
+	Microsoft Corp.                          MSFT $19.65  300 shares
+	Starbucks Corp.                          SBUX $9.88   50 shares
+
+** Deleting EBAY
+	3M Company                               MMM  $56.62  100 shares
+	Apple Inc.                               AAPL $90    
+	General Electric Company                 GE   $16.5  
+	Google Inc.                              GOOG $310.17
+	International Business Machines Corp.    IBM  $83.52  150 shares
+	MacDonald's Corp.                        MCD  $10.62 
+	Macy's Inc.                              M    $10.62 
+	Microsoft Corp.                          MSFT $19.65  300 shares
+	Starbucks Corp.                          SBUX $9.88   50 shares
+
+** Company names starting with 'app'
+	Apple Inc.                               AAPL $90    
+
+** Company names starting with 'xyz'
+
+** Company names starting with 'm'
+	MacDonald's Corp.                        MCD  $10.62 
+	Macy's Inc.                              M    $10.62 
+	Microsoft Corp.                          MSFT $19.65  300 shares
+
+** Lowest price
+	Starbucks Corp.                          SBUX $9.88   50 shares
+
+** Highest price
+	Google Inc.                              GOOG $310.17
+
+** Prices fom $10-$20
+	Macy's Inc.                              M    $10.62 
+	MacDonald's Corp.                        MCD  $10.62 
+	General Electric Company                 GE   $16.5  
+	Microsoft Corp.                          MSFT $19.65  300 shares
+
+** Select by name and price
+	General Electric Company                 GE   $16.5  
+	Macy's Inc.                              M    $10.62 
+	MacDonald's Corp.                        MCD  $10.62 
+	Microsoft Corp.                          MSFT $19.65  300 shares
+

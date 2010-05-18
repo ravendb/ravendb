@@ -20,6 +20,8 @@ namespace Raven.Client
         
 		void Store<T>(T entity);
 
+        void Refresh<T>(T entity);
+
     	void Evict<T>(T entity);
 
     	void Clear();

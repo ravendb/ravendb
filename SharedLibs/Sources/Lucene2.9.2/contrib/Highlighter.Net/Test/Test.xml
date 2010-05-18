@@ -1,0 +1,100 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Highlighter.Net.Test</name>
+    </assembly>
+    <members>
+        <member name="T:Lucene.Net.Search.Highlight.HighlighterTest">
+            <summary> JUnit Test for Highlighter class.</summary>
+            <author>  mark@searcharea.co.uk
+            </author>
+        </member>
+        <member name="M:Lucene.Net.Search.Highlight.HighlighterTest.TestSimpleHighlighter">
+            <summary> Constructor for HighlightExtractorTest.</summary>
+            <param name="">arg0
+            </param>
+        </member>
+        <member name="M:Lucene.Net.Search.Highlight.HighlighterTest.TestEncoding">
+            <summary> Demonstrates creation of an XHTML compliant doc using new encoding facilities.</summary>
+            <throws>  Exception </throws>
+        </member>
+        <member name="T:Lucene.Net.Search.Highlight.SynonymTokenizer">
+            <summary> Expands a token stream with synonyms (TODO - make the synonyms analyzed by choice of analyzer)</summary>
+            <author>  MAHarwood
+            </author>
+        </member>
+        <member name="T:Lucene.Net.Search.Highlight.Tokenizer">
+            <summary>
+            The class performs token processing in strings
+            </summary>
+        </member>
+        <member name="F:Lucene.Net.Search.Highlight.Tokenizer.currentPos">
+            Position over the string
+        </member>
+        <member name="F:Lucene.Net.Search.Highlight.Tokenizer.includeDelims">
+            Include demiliters in the results.
+        </member>
+        <member name="F:Lucene.Net.Search.Highlight.Tokenizer.chars">
+            Char representation of the String to tokenize.
+        </member>
+        <member name="M:Lucene.Net.Search.Highlight.Tokenizer.#ctor(System.String)">
+            <summary>
+            Initializes a new class instance with a specified string to process
+            </summary>
+            <param name="source">String to tokenize</param>
+        </member>
+        <member name="M:Lucene.Net.Search.Highlight.Tokenizer.#ctor(System.String,System.String)">
+            <summary>
+            Initializes a new class instance with a specified string to process
+            and the specified token delimiters to use
+            </summary>
+            <param name="source">String to tokenize</param>
+            <param name="delimiters">String containing the delimiters</param>
+        </member>
+        <member name="M:Lucene.Net.Search.Highlight.Tokenizer.#ctor(System.String,System.String,System.Boolean)">
+            <summary>
+            Initializes a new class instance with a specified string to process, the specified token 
+            delimiters to use, and whether the delimiters must be included in the results.
+            </summary>
+            <param name="source">String to tokenize</param>
+            <param name="delimiters">String containing the delimiters</param>
+            <param name="includeDelims">Determines if delimiters are included in the results.</param>
+        </member>
+        <member name="M:Lucene.Net.Search.Highlight.Tokenizer.NextToken">
+            <summary>
+            Returns the next token from the token list
+            </summary>
+            <returns>The string value of the token</returns>
+        </member>
+        <member name="M:Lucene.Net.Search.Highlight.Tokenizer.NextToken(System.String)">
+            <summary>
+            Returns the next token from the source string, using the provided
+            token delimiters
+            </summary>
+            <param name="delimiters">String containing the delimiters to use</param>
+            <returns>The string value of the token</returns>
+        </member>
+        <member name="M:Lucene.Net.Search.Highlight.Tokenizer.HasMoreTokens">
+            <summary>
+            Determines if there are more tokens to return from the source string
+            </summary>
+            <returns>True or false, depending if there are more tokens</returns>
+        </member>
+        <!-- Badly formed XML comment ignored for member "M:Lucene.Net.Search.Highlight.Tokenizer.MoveNext" -->
+        <member name="M:Lucene.Net.Search.Highlight.Tokenizer.Reset">
+            <summary>
+            Does nothing.
+            </summary>
+        </member>
+        <member name="P:Lucene.Net.Search.Highlight.Tokenizer.Count">
+            <summary>
+            Remaining tokens count
+            </summary>
+        </member>
+        <member name="P:Lucene.Net.Search.Highlight.Tokenizer.Current">
+            <summary>
+             Performs the same action as NextToken.
+            </summary>
+        </member>
+    </members>
+</doc>

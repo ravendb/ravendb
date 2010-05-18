@@ -12,9 +12,9 @@
                 "content-language",
                 "content-location",
                 "content-md5",
-                "content-type",
                 "expires",
           */
+          "content-type", // always the same for documents, no point in accepting it
           "origin",
           "allow",
           "content-range",

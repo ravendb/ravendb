@@ -1,0 +1,63 @@
+Microsoft Visual Studio Solution File, Format Version 9.00
+# Visual Studio 2005
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DemoLib", "DemoLib\DemoLib.csproj", "{F04CA2F4-E182-46A8-B914-F46AF5319E83}"
+	ProjectSection(WebsiteProperties) = preProject
+		Debug.AspNetCompiler.Debug = "True"
+		Release.AspNetCompiler.Debug = "False"
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DeleteFiles", "DeleteFiles\DeleteFiles.csproj", "{BA3A94CC-6D1E-4AA8-9C95-8C6FD896810E}"
+	ProjectSection(WebsiteProperties) = preProject
+		Debug.AspNetCompiler.Debug = "True"
+		Release.AspNetCompiler.Debug = "False"
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IndexFiles", "IndexFiles\IndexFiles.csproj", "{3E561192-4292-4998-BC67-8C1B82A56108}"
+	ProjectSection(WebsiteProperties) = preProject
+		Debug.AspNetCompiler.Debug = "True"
+		Release.AspNetCompiler.Debug = "False"
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IndexHtml", "IndexHtml\IndexHtml.csproj", "{2B86751C-0D3A-486E-A176-E995C63EB653}"
+	ProjectSection(WebsiteProperties) = preProject
+		Debug.AspNetCompiler.Debug = "True"
+		Release.AspNetCompiler.Debug = "False"
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SearchFiles", "SearchFiles\SearchFiles.csproj", "{5CF56C9F-F8DF-471E-B73A-C736464948C0}"
+	ProjectSection(WebsiteProperties) = preProject
+		Debug.AspNetCompiler.Debug = "True"
+		Release.AspNetCompiler.Debug = "False"
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F04CA2F4-E182-46A8-B914-F46AF5319E83}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F04CA2F4-E182-46A8-B914-F46AF5319E83}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F04CA2F4-E182-46A8-B914-F46AF5319E83}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F04CA2F4-E182-46A8-B914-F46AF5319E83}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BA3A94CC-6D1E-4AA8-9C95-8C6FD896810E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BA3A94CC-6D1E-4AA8-9C95-8C6FD896810E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BA3A94CC-6D1E-4AA8-9C95-8C6FD896810E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BA3A94CC-6D1E-4AA8-9C95-8C6FD896810E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3E561192-4292-4998-BC67-8C1B82A56108}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3E561192-4292-4998-BC67-8C1B82A56108}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3E561192-4292-4998-BC67-8C1B82A56108}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3E561192-4292-4998-BC67-8C1B82A56108}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2B86751C-0D3A-486E-A176-E995C63EB653}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2B86751C-0D3A-486E-A176-E995C63EB653}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2B86751C-0D3A-486E-A176-E995C63EB653}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2B86751C-0D3A-486E-A176-E995C63EB653}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5CF56C9F-F8DF-471E-B73A-C736464948C0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5CF56C9F-F8DF-471E-B73A-C736464948C0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5CF56C9F-F8DF-471E-B73A-C736464948C0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5CF56C9F-F8DF-471E-B73A-C736464948C0}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

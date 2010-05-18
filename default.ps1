@@ -259,7 +259,10 @@ task DoRelease -depends Compile {
 	
 	
 	cp $base_dir\Samples\MvcMusicStore $build_dir\Output\Samples -recurse 
+	cp $base_dir\Samples\Raven.Sample.ShardClient $build_dir\Output\Samples -recurse 
+	
 	rd $build_dir\Output\Samples\MvcMusicStore\obj -recurse 
+	rd $build_dir\Output\Samples\Raven.Sample.ShardClient\obj -recurse 
 	
 	$old = pwd
 	
@@ -270,7 +273,7 @@ task DoRelease -depends Compile {
 		EmbeddedClient\*.* `
 		Client\*.* `
 		Samples\*.* `
-		Samples\MvcMusicStore\*.* `
+		Samples\*.* `
 		Client-3.5\*.* `
 		Web\*.* `
 		Bundles\*.* `

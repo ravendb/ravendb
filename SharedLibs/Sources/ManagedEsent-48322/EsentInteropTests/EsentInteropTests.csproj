@@ -1,0 +1,180 @@
+﻿<Project ToolsVersion="3.5" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>9.0.30729</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{85B2B7BB-BF95-42DF-8CBF-348AEF63BD1F}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>InteropApiTests</RootNamespace>
+    <AssemblyName>InteropApiTests</AssemblyName>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <ProjectTypeGuids>{3AC096D0-A1C2-E12C-1390-A8335801FDAB};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>..\EsentInterop\Esent.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <DocumentationFile>bin\Debug\InteropApiTests.XML</DocumentationFile>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.VisualStudio.QualityTools.UnitTestFramework, Version=9.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
+    <Reference Include="Rhino.Mocks, Version=3.5.0.1337, Culture=neutral, PublicKeyToken=0b3305902db7183f, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\External Components\Rhino.Mocks\Rhino.Mocks.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Data" />
+    <Reference Include="System.Data.DataSetExtensions">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Xml.Linq">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Any.cs" />
+    <Compile Include="ApiTestHook.cs" />
+    <Compile Include="ApiTestHookTests.cs" />
+    <Compile Include="ApiTests.cs" />
+    <Compile Include="BasicDDLTests.cs" />
+    <Compile Include="CallbackWrappersTests.cs" />
+    <Compile Include="ColumnValueTests.cs" />
+    <Compile Include="HowDoI.cs" />
+    <Compile Include="JetGetThreadStatsTests.cs" />
+    <Compile Include="JetSetGetLs.cs" />
+    <Compile Include="MakeKeyHelpersTests.cs" />
+    <Compile Include="MultivalueIndexFixture.cs" />
+    <Compile Include="NativeRecsize2ConversionTests.cs" />
+    <Compile Include="NativeRecsizeConversionTests.cs" />
+    <Compile Include="ObjectInfoConversionTests.cs" />
+    <Compile Include="Recsize2ConversionTests.cs" />
+    <Compile Include="RecsizeAdditionTests.cs" />
+    <Compile Include="RecsizeConversionTests.cs" />
+    <Compile Include="RecsizeSubtractionTests.cs" />
+    <Compile Include="RetrieveColumnsPerfTest.cs" />
+    <Compile Include="SetColumnValidationTests.cs" />
+    <Compile Include="SetinfoTests.cs" />
+    <Compile Include="TempTableNavigationTests.cs" />
+    <Compile Include="HelpersTempTableFixtureTests.cs" />
+    <Compile Include="DatabaseFileTestHelper.cs" />
+    <Compile Include="BackupRestoreTests.cs" />
+    <Compile Include="BasicTableTests.cs" />
+    <Compile Include="Cleanup.cs" />
+    <Compile Include="ColumndefTests.cs" />
+    <Compile Include="ColumnlistTests.cs" />
+    <Compile Include="ColumnStreamTests.cs" />
+    <Compile Include="CompactDatabaseTests.cs" />
+    <Compile Include="ConditionalColumnTests.cs" />
+    <Compile Include="Constants.cs" />
+    <Compile Include="ConversionsTests.cs" />
+    <Compile Include="AsciiPathTests.cs" />
+    <Compile Include="DdlRenameTests.cs" />
+    <Compile Include="EsentStopwatchTests.cs" />
+    <Compile Include="HelperMethodErrorHandlingTests.cs" />
+    <Compile Include="MetaDataHelpersTests.cs" />
+    <Compile Include="MiscTests.cs" />
+    <Compile Include="StatusCallbackWrapperTests.cs" />
+    <Compile Include="RetrieveColumnConversionTests.cs" />
+    <Compile Include="IndexCreateChecksTests.cs" />
+    <Compile Include="RetrieveColumnTests.cs" />
+    <Compile Include="snprogconversiontests.cs" />
+    <Compile Include="VistaCompatabilityTests.cs" />
+    <Compile Include="EnumColumnidTests.cs" />
+    <Compile Include="EnumColumnTests.cs" />
+    <Compile Include="EnumColumnValueTests.cs" />
+    <Compile Include="EnumerateColumnTests.cs" />
+    <Compile Include="GCHandleCollectionTests.cs" />
+    <Compile Include="Indexcreate2Tests.cs" />
+    <Compile Include="OpenTemporaryTableConversionTests.cs" />
+    <Compile Include="EquatableTests.cs" />
+    <Compile Include="IndexcreateTests.cs" />
+    <Compile Include="IndexRangeTests.cs" />
+    <Compile Include="IntersectIndexesTests.cs" />
+    <Compile Include="MemoryCacheTests.cs" />
+    <Compile Include="RecordlistConversionTests.cs" />
+    <Compile Include="EscrowUpdateTests.cs" />
+    <Compile Include="ExceptionTests.cs" />
+    <Compile Include="IndexlistTests.cs" />
+    <Compile Include="JetIdleTests.cs" />
+    <Compile Include="EmptyTableFixture.cs" />
+    <Compile Include="IndexRangeFromTableidTests.cs" />
+    <Compile Include="SeekTests.cs" />
+    <Compile Include="TempTableFixture.cs" />
+    <Compile Include="SetColumnConversionTests.cs" />
+    <Compile Include="SimplePerfTest.cs" />
+    <Compile Include="SystemParameterTests.cs" />
+    <Compile Include="TableTests.cs" />
+    <Compile Include="TemporaryTableTests.cs" />
+    <Compile Include="ThreadstatsTests.cs" />
+    <Compile Include="UnicodeIndexTests.cs" />
+    <Compile Include="UnicodePathTests.cs" />
+    <Compile Include="UpdateTests.cs" />
+    <Compile Include="TransactionTests.cs" />
+    <Compile Include="SessionTests.cs" />
+    <Compile Include="EsentResourceTests.cs" />
+    <Compile Include="InstanceTests.cs" />
+    <Compile Include="ObjectlistConversionTests.cs" />
+    <Compile Include="DatabaseTests.cs" />
+    <Compile Include="InstanceParameterTests.cs" />
+    <Compile Include="NavigationTests.cs" />
+    <Compile Include="ParameterCheckingTests.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="InitTermTests.cs" />
+    <Compile Include="RecposTests.cs" />
+    <Compile Include="RetinfoTests.cs" />
+    <Compile Include="HelpersTests.cs" />
+    <Compile Include="SetupHelper.cs" />
+    <Compile Include="SetGetSystemParameterTests.cs" />
+    <Compile Include="ToStringTests.cs" />
+    <Compile Include="UtilityMethodsTests.cs" />
+    <Compile Include="EsentVersionTests.cs" />
+    <Compile Include="XpCompatabilityTests.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\EsentInteropSamples\DbUtil\DbUtil.csproj">
+      <Project>{E0B163B0-5AC6-4304-B932-BFC1F6A2A4EB}</Project>
+      <Name>DbUtil</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\EsentInterop\EsentInterop.csproj">
+      <Project>{E929E163-52A0-4AAC-917B-6D7FAF70C45E}</Project>
+      <Name>EsentInterop</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\EsentInterop\Esent.snk">
+      <Link>Esent.snk</Link>
+    </None>
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

@@ -1,7 +1,9 @@
 using System;
+using System.Diagnostics;
 using log4net;
 using Newtonsoft.Json.Linq;
 using Raven.Bundles.Replication.Data;
+using Raven.Database;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Responders;
 using Raven.Database.Storage.StorageActions;
@@ -20,10 +22,16 @@ namespace Raven.Bundles.Replication.Reponsders
                 context.SetStatusToBadRequest();
                 return;
             }
-            var array = context.ReadJsonArray();
+            while (src.EndsWith("/"))
+                src = src.Substring(0, src.Length - 1);// remove last /, because that has special meaning for Raven
+            if (string.IsNullOrEmpty(src))
+            {
+                context.SetStatusToBadRequest();
+                return;
+            }
+			var array = context.ReadJsonArray();
             using (ReplicationContext.Enter())
             {
-                log.DebugFormat("Got replication batch of {0} documents from {1}", array.Count, src);
                 Database.TransactionalStorage.Batch(actions =>
                 {
                     string lastEtag = Guid.Empty.ToString();
@@ -58,13 +66,10 @@ namespace Raven.Bundles.Replication.Reponsders
                 actions.AddDocument(id, Guid.Empty, document, metadata);
                 return;
             }
-            var replicationSourceId = metadata.Value<string>(ReplicationConstants.RavenReplicationSource);
-
-            var existingDocumentReplicationSourceId = existingDoc.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource);
             
             var existingDocumentIsInConflict = existingDoc.Metadata[ReplicationConstants.RavenReplicationConflict] != null;
-            if (existingDocumentIsInConflict == false &&                    // if the current document is in conflict, we have to keep conflict semantics
-                (replicationSourceId == existingDocumentReplicationSourceId)) // our last update from that server too, so we are fine with overwriting this
+            if (existingDocumentIsInConflict == false &&                    // if the current document is not in conflict, we can continue without having to keep conflict semantics
+                (IsDirectChildOfCurrentDocument(existingDoc, metadata))) // this update is direct child of the existing doc, so we are fine with overwriting this
             {
                 log.DebugFormat("Existing document {0} replicated successfully from {1}", id, src);
                 actions.AddDocument(id, null, document, metadata);
@@ -73,6 +78,7 @@ namespace Raven.Bundles.Replication.Reponsders
 
 
             var newDocumentConflictId = id + "/conflicts/" + metadata.Value<string>("@etag");
+            metadata.Add(ReplicationConstants.RavenReplicationConflict, JToken.FromObject(true));
             actions.AddDocument(newDocumentConflictId, null, document, metadata);
 
             if (existingDocumentIsInConflict) // the existing document is in conflict
@@ -89,6 +95,8 @@ namespace Raven.Bundles.Replication.Reponsders
             // we have a new conflict
             // move the existing doc to a conflict and create a conflict document
             var existingDocumentConflictId = id +"/conflicts/"+existingDoc.Etag;
+            
+            existingDoc.Metadata.Add(ReplicationConstants.RavenReplicationConflict, JToken.FromObject(true));
             actions.AddDocument(existingDocumentConflictId, null, existingDoc.DataAsJson, existingDoc.Metadata);
             actions.AddDocument(id, null,
                                 new JObject(
@@ -98,6 +106,14 @@ namespace Raven.Bundles.Replication.Reponsders
                                     new JProperty("@Http-Status-Code", 409),
                                     new JProperty("@Http-Status-Description", "Conflict")
                                     ));
+        }
+
+        private static bool IsDirectChildOfCurrentDocument(JsonDocument existingDoc, JObject metadata)
+        {
+            return JToken.DeepEquals(existingDoc.Metadata[ReplicationConstants.RavenReplicationVersion],
+                                     metadata[ReplicationConstants.RavenReplicationParentVersion]) && 
+                   JToken.DeepEquals(existingDoc.Metadata[ReplicationConstants.RavenReplicationSource],
+                                     metadata[ReplicationConstants.RavenReplicationParentSource]);
         }
 
         public override string UrlPattern

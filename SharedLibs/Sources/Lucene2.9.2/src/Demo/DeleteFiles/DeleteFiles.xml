@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>DeleteFiles</name>
+    </assembly>
+    <members>
+        <member name="T:Lucene.Net.Demo.DeleteFiles">
+            <summary>Deletes documents from an index that do not contain a term. </summary>
+        </member>
+        <member name="M:Lucene.Net.Demo.DeleteFiles.Main(System.String[])">
+            <summary>Deletes documents from an index that do not contain a term. </summary>
+        </member>
+    </members>
+</doc>

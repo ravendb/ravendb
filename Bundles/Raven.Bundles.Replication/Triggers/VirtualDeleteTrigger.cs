@@ -1,3 +1,4 @@
+using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Plugins;
@@ -12,12 +13,33 @@ namespace Raven.Bundles.Replication.Triggers
     /// </summary>
     public class VirtualDeleteTrigger : AbstractDeleteTrigger
     {
+        ThreadLocal<JToken> deletedSource = new ThreadLocal<JToken>();
+        ThreadLocal<JToken> deletedVersion = new ThreadLocal<JToken>();
+
+        public override void OnDelete(string key, TransactionInformation transactionInformation)
+        {
+            if (ReplicationContext.IsInReplicationContext)
+                return;
+
+            var document = Database.Get(key, transactionInformation);
+            if (document == null)
+                return;
+            deletedSource.Value = document.Metadata[ReplicationConstants.RavenReplicationSource];
+            deletedVersion.Value = document.Metadata[ReplicationConstants.RavenReplicationVersion];
+        }
+
         public override void AfterDelete(string key, TransactionInformation transactionInformation)
         {
             if (ReplicationContext.IsInReplicationContext)
                 return;
-            Database.Put(key, null, new JObject(), new JObject(new JProperty("Raven-Delete-Marker", true)),
-                         transactionInformation);
+            var metadata = new JObject(
+                new JProperty("Raven-Delete-Marker", true),
+                new JProperty(ReplicationConstants.RavenReplicationParentSource, deletedSource.Value),
+                new JProperty(ReplicationConstants.RavenReplicationParentVersion, deletedVersion.Value)
+                );
+            deletedVersion.Value = null;
+            deletedSource.Value = null;
+            Database.Put(key, null, new JObject(), metadata,transactionInformation);
         }
     }
 }

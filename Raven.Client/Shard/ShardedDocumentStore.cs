@@ -48,8 +48,16 @@ namespace Raven.Client.Shard
 			{
                 foreach (var shard in shards)
                 {
-                    shard.Stored += Stored;
-                    shard.Initialise();
+                    var currentShard = shard;
+                    currentShard.Stored += Stored;
+                    var defaultKeyGeneration = currentShard.Conventions.DocumentKeyGenerator == null;
+                    currentShard.Initialise();
+                    if(defaultKeyGeneration == false)
+                        continue;
+
+                    var documentKeyGenerator = currentShard.Conventions.DocumentKeyGenerator;
+                    currentShard.Conventions.DocumentKeyGenerator = entity =>
+                                                                    currentShard.Identifier + "/" + documentKeyGenerator(entity); 
                 }
 			}
 			catch (Exception)

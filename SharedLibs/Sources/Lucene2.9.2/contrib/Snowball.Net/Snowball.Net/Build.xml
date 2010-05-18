@@ -1,0 +1,87 @@
+<?xml version="1.0"?>
+
+<project name="snowball" default="default">
+
+  <description>
+    Snowball Analyzers
+  </description>
+
+  <import file="../contrib-build.xml"/>
+
+  <property name="snowball.cvsroot" value=":pserver:cvsuser@cvs.tartarus.org:/home/cvs"/>
+  <property name="snowball.cvs.password" value="anonymous"/>
+  <property name="snowball.root" value="snowball/website"/>
+  <property name="bin.dir" location="bin"/>
+
+
+  <!-- ====================================================== -->
+  <!-- Download Snowball code                                 -->
+  <!-- ====================================================== -->
+  <target name="download" depends="init">
+    <cvs cvsRoot="${snowball.cvsroot}"
+      package="${snowball.root}"
+      passfile="snowball.cvspass"/>
+  </target>
+
+  <target name="create-passfile">
+    <cvspass cvsroot="${snowball.cvsroot}"
+      password="${snowball.cvs.password}"
+      passfile="snowball.cvspass"
+      />
+  </target>
+
+  <!-- ====================================================== -->
+  <!-- Compile Snowball C code                                -->
+  <!-- ====================================================== -->
+  <target name="compile-compiler" depends="download">
+    <apply failonerror="true" executable="gcc" parallel="true">
+      <arg value="-O"/>
+      <arg value="-o"/>
+      <arg value="${bin.dir}/snowball"/>
+      <fileset dir="${snowball.root}/p" includes="*.c"/>
+    </apply>
+  </target>
+
+  <!-- ====================================================== -->
+  <!-- Generate Java code                                     -->
+  <!-- ====================================================== -->
+  <target name="generate" depends="compile-compiler">
+    <apply failonerror="true" executable="${bin.dir}/snowball.sh">
+      <srcfile/>
+      <arg value="${src.dir}/net/sf/snowball/ext"/>
+      <fileset dir="${snowball.root}" includes="**/stem.sbl"/>
+    </apply>
+
+    <copy todir="${src.dir}/net">
+      <fileset dir="${snowball.root}/net">
+        <include name="**/*.java"/>
+      </fileset>
+    </copy>
+
+  </target>
+
+
+  <target name="docs">
+    <taskdef
+      name="anakia"
+      classname="org.apache.velocity.anakia.AnakiaTask"
+      >
+      <classpath refid="anakia.classpath"/>
+    </taskdef>
+
+    <anakia
+      basedir="${docs.src}"
+      destdir="${docs.dest}/"
+      extension=".html" style="./site.vsl"
+      projectFile="stylesheets/project.xml"
+      excludes="**/stylesheets/** empty.xml"
+      includes="**/*.xml"
+      lastModifiedCheck="true"
+      templatePath="${jakarta.site2.home}/xdocs/stylesheets"
+      >
+    </anakia>
+
+  </target>
+
+
+</project>

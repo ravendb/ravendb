@@ -103,6 +103,16 @@ namespace Raven.Client.Shard
 			GetSingleShardSession(shardIds).Delete(entity);
 		}
 
+        public void Refresh<T>(T entity)
+        {
+            if (ReferenceEquals(entity, null))
+                throw new ArgumentNullException("entity");
+
+            var shardIds = shardStrategy.ShardSelectionStrategy.ShardIdForExistingObject(entity);
+
+            GetSingleShardSession(shardIds).Refresh(entity);
+        }
+
 		private IDocumentSession GetSingleShardSession(string shardId)
 		{
 			var shardSession = shardSessions.FirstOrDefault(x => x.StoreIdentifier == shardId);

@@ -1,0 +1,180 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="3.5" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>9.0.30729</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{E929E163-52A0-4AAC-917B-6D7FAF70C45E}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Esent.Interop</RootNamespace>
+    <AssemblyName>Esent.Interop</AssemblyName>
+    <TargetFrameworkVersion>v2.0</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <StartupObject>
+    </StartupObject>
+    <TargetFrameworkSubset>
+    </TargetFrameworkSubset>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>Esent.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
+    <DocumentationFile>Esent.Interop.xml</DocumentationFile>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>
+    </DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <DocumentationFile>Esent.Interop.xml</DocumentationFile>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="ApiConstants.cs" />
+    <Compile Include="BoolColumnValue.cs" />
+    <Compile Include="ByteColumnValue.cs" />
+    <Compile Include="BytesColumnValue.cs" />
+    <Compile Include="ColumnValueOfStruct.cs" />
+    <Compile Include="Conversions.cs" />
+    <Compile Include="DateTimeColumnValue.cs" />
+    <Compile Include="DoubleColumnValue.cs" />
+    <Compile Include="FloatColumnValue.cs" />
+    <Compile Include="GetLockHelpers.cs" />
+    <Compile Include="GuidColumnValue.cs" />
+    <Compile Include="Int16ColumnValue.cs" />
+    <Compile Include="Int32ColumnValue.cs" />
+    <Compile Include="Int64ColumnValue.cs" />
+    <Compile Include="JetCallbackWrapper.cs" />
+    <Compile Include="jet_callback.cs" />
+    <Compile Include="Esent\EsentJetApi.cs" />
+    <Compile Include="Esent\EsentNativeMethods.cs" />
+    <Compile Include="jet_cbtyp.cs" />
+    <Compile Include="jet_convert.cs" />
+    <Compile Include="jet_instance_info.cs" />
+    <Compile Include="jet_recsize.cs" />
+    <Compile Include="objectinfogrbit.cs" />
+    <Compile Include="Server2003Api.cs" />
+    <Compile Include="jet_enumcolumn.cs" />
+    <Compile Include="jet_enumcolumnid.cs" />
+    <Compile Include="jet_enumcolumnvalue.cs" />
+    <Compile Include="jet_pfnrealloc.cs" />
+    <Compile Include="jet_pfnstatus.cs" />
+    <Compile Include="jet_retrievecolumn.cs" />
+    <Compile Include="jet_setcolumn.cs" />
+    <Compile Include="jet_opentemporarytable.cs" />
+    <Compile Include="jet_snp.cs" />
+    <Compile Include="jet_snprog.cs" />
+    <Compile Include="jet_snt.cs" />
+    <Compile Include="jet_threadstats.cs" />
+    <Compile Include="EsentStopwatch.cs" />
+    <Compile Include="ColumnValue.cs" />
+    <Compile Include="Server2003Param.cs" />
+    <Compile Include="StringColumnValue.cs" />
+    <Compile Include="UInt16ColumnValue.cs" />
+    <Compile Include="UInt32ColumnValue.cs" />
+    <Compile Include="UInt64ColumnValue.cs" />
+    <Compile Include="VistaApi.cs" />
+    <Compile Include="VistaGrbits.cs" />
+    <Compile Include="EsentInvalidColumnException.cs" />
+    <Compile Include="GCHandleCollection.cs" />
+    <Compile Include="IJetApi.cs" />
+    <Compile Include="InternalApi.cs" />
+    <Compile Include="JetCapabilities.cs" />
+    <Compile Include="jet_conditionalcolumn.cs" />
+    <Compile Include="jet_indexcreate.cs" />
+    <Compile Include="jet_indexrange.cs" />
+    <Compile Include="jet_recordlist.cs" />
+    <Compile Include="jet_unicodeindex.cs" />
+    <Compile Include="MemoryCache.cs" />
+    <Compile Include="EsentVersion.cs" />
+    <Compile Include="VistaParam.cs" />
+    <Compile Include="EsentException.cs" />
+    <Compile Include="IndexSegment.cs" />
+    <Compile Include="IndexInfo.cs" />
+    <Compile Include="jet_idxinfo.cs" />
+    <Compile Include="jet_indexlist.cs" />
+    <Compile Include="Update.cs" />
+    <Compile Include="Table.cs" />
+    <Compile Include="Transaction.cs" />
+    <Compile Include="Session.cs" />
+    <Compile Include="EsentResource.cs" />
+    <Compile Include="Instance.cs" />
+    <Compile Include="MakeKeyHelpers.cs" />
+    <Compile Include="jet_colinfo.cs" />
+    <Compile Include="jet_objectinfo.cs" />
+    <Compile Include="ObjectInfoFlags.cs" />
+    <Compile Include="jet_objtyp.cs" />
+    <Compile Include="jet_objectlist.cs" />
+    <Compile Include="RetrieveColumnHelpers.cs" />
+    <Compile Include="Api.cs" />
+    <Compile Include="ColumnInfo.cs" />
+    <Compile Include="MoveHelpers.cs" />
+    <Compile Include="InstanceParameters.cs" />
+    <Compile Include="EsentErrorException.cs" />
+    <Compile Include="grbits.cs" />
+    <Compile Include="jet_objinfo.cs" />
+    <Compile Include="jet_columnlist.cs" />
+    <Compile Include="jet_err.cs" />
+    <Compile Include="jet_move.cs" />
+    <Compile Include="jet_param.cs" />
+    <Compile Include="jet_prep.cs" />
+    <Compile Include="jet_coltyp.cs" />
+    <Compile Include="jet_columndef.cs" />
+    <Compile Include="jet_cp.cs" />
+    <Compile Include="jet_recpos.cs" />
+    <Compile Include="jet_retinfo.cs" />
+    <Compile Include="jet_setinfo.cs" />
+    <Compile Include="ColumnStream.cs" />
+    <Compile Include="jet_wrn.cs" />
+    <Compile Include="MetaDataHelpers.cs" />
+    <Compile Include="NativeMethods.cs" />
+    <Compile Include="SetColumnHelpers.cs" />
+    <Compile Include="SystemParameters.cs" />
+    <Compile Include="Types.cs" />
+    <Compile Include="Esent\AssemblyInfo.cs" />
+    <Compile Include="JetApi.cs" />
+    <Compile Include="VistaColtyp.cs" />
+    <Compile Include="Server2003Grbits.cs" />
+    <Compile Include="Win32NativeMethods.cs" />
+    <Compile Include="Windows7Api.cs" />
+    <Compile Include="Windows7Grbits.cs" />
+    <Compile Include="Windows7Param.cs" />
+    <Compile Include="CallbackWrappers.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="ToDo.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Esent.snk" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Properties\" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

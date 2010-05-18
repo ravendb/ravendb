@@ -1,9 +1,11 @@
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Transactions;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Client;
 using System;
@@ -211,7 +213,26 @@ more responsible application.
 				entitiesByKey[id] = entity;
 		}
 
-		public void Evict<T>(T entity)
+	    public void Refresh<T>(T entity)
+	    {
+	        DocumentMetadata value;
+	        if(entitiesAndMetadata.TryGetValue(entity, out value) == false)
+	            throw new InvalidOperationException("Cannot refresh a trasient instance");
+	        var jsonDocument = documentStore.DatabaseCommands.Get(value.Key);
+            if(jsonDocument == null)
+                throw new InvalidOperationException("Document '" + value.Key + "' no longer exists and was probably deleted");
+
+	        value.Metadata = jsonDocument.Metadata;
+	        value.ETag = jsonDocument.Etag;
+	        value.OriginalValue = jsonDocument.DataAsJson;
+	        var newEntity = ConvertToEntity<T>(value.Key, jsonDocument.DataAsJson, jsonDocument.Metadata);
+	        foreach (PropertyDescriptor property in TypeDescriptor.GetProperties(entity))
+	        {
+                property.SetValue(entity, property.GetValue(newEntity));
+	        }
+	    }
+
+	    public void Evict<T>(T entity)
 		{
 		    DocumentMetadata value;
 		    if(entitiesAndMetadata.TryGetValue(entity, out value))

@@ -66,6 +66,29 @@ namespace Raven.Client.Tests.Document
             }  
         }
 
+        [Fact]
+        public void Can_refresh_entity_from_database()
+        {
+            using (var documentStore = NewDocumentStore())
+            {
+                var company = new Company {Name = "Company Name"};
+                var session = documentStore.OpenSession();
+                session.Store(company);
+                session.SaveChanges();
+
+                var session2 = documentStore.OpenSession();
+                var company2 = session2.Load<Company>(company.Id);
+                company2.Name = "Hibernating Rhinos";
+                session2.Store(company2);
+                session2.SaveChanges();
+
+                session.Refresh(company);
+
+                Assert.Equal(company2.Name, company.Name);
+              
+            }
+        }
+
 		[Fact]
 		public void Will_set_id_from_query()
 		{

@@ -1,0 +1,32 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Contrib.Net", "Contrib.Net\Contrib.Net.csproj", "{FEF899EB-610C-4D3C-A556-A01F56F4AFE0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Contrib.Net.Test", "Contrib.Net.Test\Contrib.Net.Test.csproj", "{A065904B-1EBA-48DA-8D3D-D92A85BA41FC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lucene.Net", "..\..\src\Lucene.Net\Lucene.Net.csproj", "{5D4AD9BE-1FFB-41AB-9943-25737971BF57}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{FEF899EB-610C-4D3C-A556-A01F56F4AFE0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FEF899EB-610C-4D3C-A556-A01F56F4AFE0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FEF899EB-610C-4D3C-A556-A01F56F4AFE0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FEF899EB-610C-4D3C-A556-A01F56F4AFE0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A065904B-1EBA-48DA-8D3D-D92A85BA41FC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A065904B-1EBA-48DA-8D3D-D92A85BA41FC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A065904B-1EBA-48DA-8D3D-D92A85BA41FC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A065904B-1EBA-48DA-8D3D-D92A85BA41FC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5D4AD9BE-1FFB-41AB-9943-25737971BF57}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5D4AD9BE-1FFB-41AB-9943-25737971BF57}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5D4AD9BE-1FFB-41AB-9943-25737971BF57}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5D4AD9BE-1FFB-41AB-9943-25737971BF57}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

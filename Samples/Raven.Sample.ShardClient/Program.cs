@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Raven.Client.Document;
 using Raven.Client.Shard;
 using Raven.Client;
@@ -10,19 +8,20 @@ namespace Raven.Sample.ShardClient
 {
     class Program
     {
-        static void Main(string[] args)
+        static void Main()
         {
-            var shards = new Shards { 
-                new DocumentStore { Identifier="Shard1", Url = "http://localhost:8080" }, 
-                new DocumentStore { Identifier="Shard2", Url = "http://localhost:8081" } 
+            var shards = new Shards
+            {
+                CreateShard("Asia", "http://localhost:8080"),
+                CreateShard("Middle-East", "http://localhost:8081"),
             };
 
             using (var documentStore = new ShardedDocumentStore(new ShardStrategy(), shards).Initialise())
             using (var session = documentStore.OpenSession())
             {
                 //store 2 items in the 2 shards
-                session.Store(new Company { Name = "Company 1", Region = "A" });
-                session.Store(new Company { Name = "Company 2", Region = "B" });
+                session.Store(new Company { Name = "Company 1", Region = "Asia" });
+                session.Store(new Company { Name = "Company 2", Region = "Middle East" });
                 session.SaveChanges();
 
                 //get all, should automagically retrieve from each shard
@@ -33,25 +32,15 @@ namespace Raven.Sample.ShardClient
             }
         }
 
-        static void Main2(string[] args)
+        private static DocumentStore CreateShard(string identifier, string url)
         {
-			using (var documentStore = new DocumentStore { Url = "http://localhost:8080" }.Initialise())
-            using (var session = documentStore.OpenSession())
+            var documentStore = new DocumentStore
             {
-                //session.Store(new Company { Name = "Company 1", Region = "A" });
-                //session.Store(new Company { Name = "Company 2", Region = "B" });
-                //session.SaveChanges();
+                Identifier = identifier,
+                Url = url,
+            };
 
-                var allCompanies = session
-                    .Query<Company>("regionIndex")
-                    .Where("Region:A")
-                    .WaitForNonStaleResults()
-                    .ToArray();
-
-                foreach (var company in allCompanies)
-                    Console.WriteLine(company.Name);
-            }
+            return documentStore;
         }
-
     }
 }

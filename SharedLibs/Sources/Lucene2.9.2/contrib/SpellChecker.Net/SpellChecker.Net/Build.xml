@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+
+<project name="spellchecker" default="default">
+
+  <description>
+    Spell Checker
+  </description>
+
+  <import file="../contrib-build.xml"/>
+</project>

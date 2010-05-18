@@ -1,0 +1,6 @@
+Similarity.Net History
+----------------------
+
+
+10Mar07:
+	- Release: Similarity.Net 2.0.0 build 001

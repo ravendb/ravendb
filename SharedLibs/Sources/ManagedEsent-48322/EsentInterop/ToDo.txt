@@ -1,0 +1,36 @@
+﻿ Pri 0: Tests & Bugs
+ -------------------
+  * JetConfigureProcessForCrashDump
+  * Perf tests for JetSetColumns vs JetSetColumn
+  * Verify JetSetColumn sets err member
+  * Verify SetColumns sets Error member
+  * JetEnumerateColumns on temp table
+  * ColumnValue.ToString should print columnid
+  * Test ToString method for ColumnValue
+  	
+APIs to implement
+-----------------------------
+  - JetComputeStats  
+  - JetGrowDatabase
+  - JetRenameColumn
+  - JetRenameTable
+  - JetSetColumnDefaultValue
+  - JetStopServiceInstance
+  - JetDefragment / JetDefragment2  
+  - JetGetRecordSize (Vista)
+  - JetGetSecondaryIndexBookmark
+  - JetGotoSecondaryIndexBookmark 
+  - JetPrereadKeys
+  - JetGetDatabaseInfo
+  - JetGetDatabaseFileInfo
+  - JetGetTableInfo
+  - JetGetInstanceInfo
+  - JetSetCurrentIndex2
+  - JetSetCurrentIndex3
+  - JetSetCurrentIndex4
+  - JetCreateTableColumnIndex2
+  - JetGetInstanceMiscInfo
+  - JetRegisterCallback
+  - JetUnregisterCallback
+  - JetSetDatabaseSize
+  

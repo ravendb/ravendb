@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>IndexHtml</name>
+    </assembly>
+    <members>
+        <member name="T:Lucene.Net.Demo.IndexHTML">
+            <summary>Indexer for HTML files. </summary>
+        </member>
+        <member name="M:Lucene.Net.Demo.IndexHTML.Main(System.String[])">
+            <summary>Indexer for HTML files.</summary>
+        </member>
+    </members>
+</doc>
