@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using Newtonsoft.Json;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
@@ -11,7 +9,7 @@ namespace Raven.Sample.Replication
 {
     class Program
     {
-        static void Main(string[] args)
+        static void Main()
         {
             var documentStore1 = new DocumentStore { Url = "http://localhost:8080" }.Initialise();
             var documentStore2 = new DocumentStore { Url = "http://localhost:8081" }.Initialise();
