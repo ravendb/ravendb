@@ -105,9 +105,9 @@ namespace Raven.Client.Client
 	            var replicationDestination = threadSafeCopy[i];
                 if (ShouldExecuteUsing(replicationDestination, currentRequest) == false)
                     continue;
-                if (TryOperation(operation, url, true, out result))
+                if (TryOperation(operation, replicationDestination, true, out result))
                     return result;
-                if (IsFirstFailure(url) && TryOperation(operation, url, threadSafeCopy.Count > i+1, out result))
+                if (IsFirstFailure(url) && TryOperation(operation, replicationDestination, threadSafeCopy.Count > i + 1, out result))
                     return result;
                 IncrementFailureCount(url);
 	        }
