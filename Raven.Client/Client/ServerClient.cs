@@ -199,8 +199,17 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 	            if (httpWebResponse.StatusCode == HttpStatusCode.NotFound)
 	                return null;
                 if (httpWebResponse.StatusCode == HttpStatusCode.Conflict)
+                {
+                    var conflicts = new StreamReader(httpWebResponse.GetResponseStream());
+                    var conflictsDoc = JObject.Load(new JsonTextReader(conflicts));
+                    var conflictIds = conflictsDoc.Value<JArray>("Conflicts").Select(x=>x.Value<string>()).ToArray();
+
                     throw new ConflictException("Conflict detected on " + key +
-                                                ", conflict must be resolved before the document will be accessible");
+                                                ", conflict must be resolved before the document will be accessible")
+                    {
+                        ConflictedVersionIds = conflictIds
+                    };
+                }
                 throw;
 	        }
 	    }
@@ -213,10 +222,10 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 
 		public PutResult Put(string key, Guid? etag, JObject document, JObject metadata)
 		{
-		    return ExecuteWithReplication(u => DirectGet(metadata, key, etag, document, u));
+            return ExecuteWithReplication(u => DirectPut(metadata, key, etag, document, u));
 		}
 
-	    private PutResult DirectGet(JObject metadata, string key, Guid? etag, JObject document, string operationUrl)
+	    private PutResult DirectPut(JObject metadata, string key, Guid? etag, JObject document, string operationUrl)
 	    {
 	        if (metadata == null)
 	            metadata = new JObject();
@@ -432,7 +441,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
             return ExecuteWithReplication(u => DirectBatch(commandDatas, u));
 	    }
 
-	    private BatchResult[] DirectBatch(ICommandData[] commandDatas, string operationUrl)
+	    private BatchResult[] DirectBatch(IEnumerable<ICommandData> commandDatas, string operationUrl)
 	    {
 	        var metadata = new JObject();
 	        AddTransactionInformation(metadata);
