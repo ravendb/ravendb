@@ -68,6 +68,9 @@
     <Compile Include="..\Raven.Client\Client\ServerClient.cs">
       <Link>Client\ServerClient.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client\Client\WebRequestEventArgs.cs">
+      <Link>Client\WebRequestEventArgs.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client\Document\AbstractDocumentQuery.cs">
       <Link>Document\AbstractDocumentQuery.cs</Link>
     </Compile>

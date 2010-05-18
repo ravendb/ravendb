@@ -9,16 +9,32 @@ namespace Raven.Client.Client
 {
     public class HttpJsonRequest
     {
+        public static event EventHandler<WebRequestEventArgs> ConfigureReuqest = delegate {  };
+
+        public static HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, ICredentials credentials)
+        {
+            var request = new HttpJsonRequest(url, method, credentials);
+            ConfigureReuqest(self, new WebRequestEventArgs { Request = request.webRequest });
+            return request;
+        }
+
+        public static HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, JObject metadata, ICredentials credentials)
+        {
+            var request = new HttpJsonRequest(url, method, metadata, credentials);
+            ConfigureReuqest(self, new WebRequestEventArgs { Request = request.webRequest });
+            return request;
+        }
+
         private readonly WebRequest webRequest;
 
         public NameValueCollection ResponseHeaders { get; set; }
 
-        public HttpJsonRequest(string url, string method, ICredentials credentials)
+        private HttpJsonRequest(string url, string method, ICredentials credentials)
             : this(url, method, new JObject(), credentials)
         {
         }
 
-        public HttpJsonRequest(string url, string method, JObject metadata, ICredentials credentials)
+        private HttpJsonRequest(string url, string method, JObject metadata, ICredentials credentials)
         {
             webRequest = WebRequest.Create(url);
             webRequest.Credentials = credentials;
