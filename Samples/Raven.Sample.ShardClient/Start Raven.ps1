@@ -18,8 +18,8 @@ cp $raven  .\Servers\Shard2
 mkdir .\Servers\Shard1\Plugins  -erroraction silentlycontinue
 mkdir .\Servers\Shard2\Plugins  -erroraction silentlycontinue
 
-cp $replication \Servers\Shard1\Plugins
-cp $replication \Servers\Shard2\Plugins
+cp $replication .\Servers\Shard1\Plugins
+cp $replication .\Servers\Shard2\Plugins
 
 start .\Servers\Shard1\RavenDB.exe
 start .\Servers\Shard2\RavenDB.exe
