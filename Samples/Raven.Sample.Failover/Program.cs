@@ -20,7 +20,7 @@ namespace Raven.Sample.Failover
                 Console.WriteLine(session1.Load<User>("users/ayende").Name);
             }
 
-            Console.WriteLine("Initiate server failure");
+            Console.WriteLine("Wrote one docuemnt to 8080, ready for server failure");
 
             Console.ReadLine();
 
@@ -30,11 +30,5 @@ namespace Raven.Sample.Failover
             }
 
         }
-    }
-
-    public class User
-    {
-        public string Id { get; set; }
-        public string Name { get; set; }
     }
 }

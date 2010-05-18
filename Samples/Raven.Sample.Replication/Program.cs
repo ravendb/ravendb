@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net;
 using Newtonsoft.Json;
+using Raven.Client.Client;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
 using Raven.Database;
@@ -13,7 +15,7 @@ namespace Raven.Sample.Replication
         {
             var documentStore1 = new DocumentStore { Url = "http://localhost:8080" }.Initialise();
             var documentStore2 = new DocumentStore { Url = "http://localhost:8081" }.Initialise();
-
+           
             using(var session1 = documentStore1.OpenSession())
             {
                 session1.Store(new User { Id = "users/ayende", Name = "Ayende" });
