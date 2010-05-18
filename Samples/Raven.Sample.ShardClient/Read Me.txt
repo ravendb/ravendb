@@ -1,0 +1,12 @@
+This sample contains a simple example of Raven's sharding and master/master replication.
+
+Start the servers using "Start Raven.ps1", this will start two instance of Raven, one on port 8080 and one on port 8081
+
+Run the sample, which will create a docuemnt with on each instance, then query them.
+
+You can visit the web UI for each instance to see the two different documents.
+
+Run the "Setup Master To Master Replication.ps1" script to setup replication from the master instance to the slave instance.
+  * Note this scripts require curl (http://curl.haxx.se/latest.cgi?curl=win32-nossl) to be on your path.
+
+Visit the web UI for each instance, and note that the documents has been replicated.
