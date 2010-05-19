@@ -216,7 +216,7 @@ task Release -depends Test,DoRelease {
 }
 
 task CopySamples {
-  $samples = @("MvcMusicStore", "Raven.Sample.ShardClient", "Raven.Sample.Failover", "Raven.Sample.Replication")
+  $samples = @("MvcMusicStore", "Raven.Sample.ShardClient", "Raven.Sample.Failover", "Raven.Sample.Replication", "Raven.Sample.EventSourcing", "Raven.Bundles.Sample.EventSourcing.ShoppingCartAggregator")
 	$exclude = @("bin", "obj", "Data", "Plugins")
 	
 	foreach ($sample in $samples) {
@@ -264,6 +264,7 @@ task DoRelease -depends Compile {
 	
 	cp $build_dir\RavenWeb.dll $build_dir\Output\Web\bin
 	cp $build_dir\Raven.Bundles.*.dll $build_dir\Output\Bundles
+	
 	del $build_dir\Output\Bundles\Raven.Bundles.Tests.dll
 	cp $base_dir\DefaultConfigs\web.config $build_dir\Output\Web\web.config
 	
