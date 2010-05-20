@@ -57,8 +57,16 @@ namespace Raven.Database.Indexing
             else
                 directory = FSDirectory.Open(new DirectoryInfo(Path.Combine(path, HttpUtility.UrlEncode(indexDirectory))));
             //creating index structure if we need to
-            new IndexWriter(directory, new StandardAnalyzer(Version.LUCENE_29), IndexWriter.MaxFieldLength.UNLIMITED).
-                Close();
+	        var standardAnalyzer = new StandardAnalyzer(Version.LUCENE_29);
+	        try
+	        {
+	            new IndexWriter(directory, standardAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).
+	                Close();
+	        }
+	        finally
+	        {
+	            standardAnalyzer.Close();
+	        }
             return directory;
 		}
 

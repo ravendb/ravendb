@@ -15,34 +15,42 @@ namespace Raven.Database.Indexing
 		public static Query BuildQuery(string query)
 		{
 			var matchCollection = untokenizedQuery.Matches(query);
-			if (matchCollection.Count == 0)
-                return new QueryParser(Version.LUCENE_29, "", new StandardAnalyzer(Version.LUCENE_29)).Parse(query);
-			var sb = new StringBuilder(query);
-			var booleanQuery = new BooleanQuery();
-			foreach (Match match in matchCollection)
-			{
-				BooleanClause.Occur occur;
-				switch (match.Groups[1].Value)
-				{
-					case "+":
-						occur=BooleanClause.Occur.MUST;
-						break;
-					case "-":
-						occur=BooleanClause.Occur.MUST_NOT;
-						break;
-					default:
-						occur=BooleanClause.Occur.SHOULD;
-						break;
-				}
-				booleanQuery.Add(new TermQuery(new Term(match.Groups[2].Value, match.Groups[3].Value)), occur);
-				sb.Replace(match.Value, "");
-			}
-			var remaining = sb.ToString().Trim();
-			if(remaining.Length > 0)
-			{
-                booleanQuery.Add(new QueryParser(Version.LUCENE_29, "", new StandardAnalyzer(Version.LUCENE_29)).Parse(remaining), BooleanClause.Occur.SHOULD);
-			}
-			return booleanQuery;
+		    var standardAnalyzer = new StandardAnalyzer(Version.LUCENE_29);
+		    try
+		    {
+                if (matchCollection.Count == 0)
+                    return new QueryParser(Version.LUCENE_29, "", standardAnalyzer).Parse(query);
+                var sb = new StringBuilder(query);
+                var booleanQuery = new BooleanQuery();
+                foreach (Match match in matchCollection)
+                {
+                    BooleanClause.Occur occur;
+                    switch (match.Groups[1].Value)
+                    {
+                        case "+":
+                            occur = BooleanClause.Occur.MUST;
+                            break;
+                        case "-":
+                            occur = BooleanClause.Occur.MUST_NOT;
+                            break;
+                        default:
+                            occur = BooleanClause.Occur.SHOULD;
+                            break;
+                    }
+                    booleanQuery.Add(new TermQuery(new Term(match.Groups[2].Value, match.Groups[3].Value)), occur);
+                    sb.Replace(match.Value, "");
+                }
+                var remaining = sb.ToString().Trim();
+                if (remaining.Length > 0)
+                {
+                    booleanQuery.Add(new QueryParser(Version.LUCENE_29, "", standardAnalyzer).Parse(remaining), BooleanClause.Occur.SHOULD);
+                }
+                return booleanQuery;
+		    }
+		    finally
+		    {
+		        standardAnalyzer.Close();
+		    }
 		}
 	}
 }
