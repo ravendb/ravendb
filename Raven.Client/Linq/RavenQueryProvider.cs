@@ -4,7 +4,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
-using Raven.Client.Linq.Lucene;
+using Raven.Database.Indexing;
 
 namespace Raven.Client.Linq
 {
@@ -117,7 +117,10 @@ namespace Raven.Client.Linq
 
         private void VisitLessThanOrEqual(BinaryExpression expression)
         {
-            QueryText.Append(((MemberExpression)expression.Left).Member.Name).Append(":{* TO ");
+			object value = GetValueFromExpression(expression.Right);
+			QueryText.Append(
+				GetFieldNameForRangeQuery(expression.Left, value)
+				).Append(":{NULL TO ");
 			QueryText.Append(TransformToRangeValue(GetValueFromExpression(expression.Right)));
 
             QueryText.Append("} ");
@@ -129,17 +132,17 @@ namespace Raven.Client.Linq
 				return "NULL_VALUE";
 
 			if (value is int)
-				return NumericUtils.IntToPrefixCoded((int) value);
+				return NumberUtil.NumberToString((int) value);
 			if (value is long)
-				return NumericUtils.LongToPrefixCoded((long) value);
+				return NumberUtil.NumberToString((long)value);
 			if (value is decimal)
-				return NumericUtils.DoubleToPrefixCoded((double) (decimal) value);
+				return NumberUtil.NumberToString((double)(decimal)value);
 			if (value is double)
-				return NumericUtils.DoubleToPrefixCoded((double) value);
+				return NumberUtil.NumberToString((double)value);
 			if (value is float)
-				return NumericUtils.FloatToPrefixCoded((float) value);
+				return NumberUtil.NumberToString((float)value);
 			if (value is DateTime)
-				return DateTools.DateToString((DateTime) value, DateTools.Resolution.MILLISECOND);
+				return DateTools.DateToString((DateTime)value, DateTools.Resolution.MILLISECOND);
     		
 			return value.ToString();
     	}
@@ -157,7 +160,10 @@ namespace Raven.Client.Linq
 
     	private void VisitLessThan(BinaryExpression expression)
         {
-            QueryText.Append(((MemberExpression)expression.Left).Member.Name).Append(":[* TO ");
+			object value = GetValueFromExpression(expression.Right);
+			QueryText.Append(
+				GetFieldNameForRangeQuery(expression.Left, value)
+				).Append(":[NULL TO ");
 			QueryText.Append(TransformToRangeValue(GetValueFromExpression(expression.Right)));
 
             QueryText.Append("] ");
@@ -165,22 +171,35 @@ namespace Raven.Client.Linq
 
         private void VisitGreaterThanOrEqual(BinaryExpression expression)
         {
-            QueryText.Append(((MemberExpression)expression.Left).Member.Name).Append(":{");
-			QueryText.Append(TransformToRangeValue(GetValueFromExpression(expression.Right)));
+			object value = GetValueFromExpression(expression.Right);
+			QueryText.Append(
+				GetFieldNameForRangeQuery(expression.Left, value)
+				).Append(":{");
+        	QueryText.Append(TransformToRangeValue(value));
 
-            QueryText.Append(" TO *} ");
+            QueryText.Append(" TO NULL} ");
         }
 
         private void VisitGreaterThan(BinaryExpression expression)
         {
-            QueryText.Append(((MemberExpression)expression.Left).Member.Name).Append(":[");
-			QueryText.Append(TransformToRangeValue(GetValueFromExpression(expression.Right)));
+			object value = GetValueFromExpression(expression.Right);
+			QueryText.Append(
+				GetFieldNameForRangeQuery(expression.Left, value)
+				).Append(":[");
+        	QueryText.Append(TransformToRangeValue(value));
 
-            QueryText.Append(" TO *] ");
+            QueryText.Append(" TO NULL] ");
         }
 
+    	private static string GetFieldNameForRangeQuery(Expression expression, object value)
+    	{
+			if (value is int || value is long || value is double || value is float || value is decimal)
+				return ((MemberExpression) expression).Member.Name + "_Range";
+    		return ((MemberExpression)expression).Member.Name;
+    	}
 
-        private void VisitMethodCall(MethodCallExpression expression)
+
+    	private void VisitMethodCall(MethodCallExpression expression)
         {
             if ((expression.Method.DeclaringType == typeof(Queryable)) &&
                 (expression.Method.Name == "Where"))

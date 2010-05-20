@@ -44,7 +44,7 @@ namespace Raven.Client.Tests.Linq
             var q = from user in indexedUsers
 					where user.Birthday < new DateTime(2010,05,15)
                     select user;
-			Assert.Equal("Birthday:[* TO 20100515000000000] ", q.ToString());
+			Assert.Equal("Birthday:[NULL TO 20100515000000000] ", q.ToString());
         }
 
 		[Fact]
@@ -64,7 +64,7 @@ namespace Raven.Client.Tests.Linq
             var q = from user in indexedUsers
 					where user.Birthday <= new DateTime(2010, 05, 15)
 					select user;
-			Assert.Equal("Birthday:{* TO 20100515000000000} ", q.ToString());
+			Assert.Equal("Birthday:{NULL TO 20100515000000000} ", q.ToString());
         }
 
         [Fact]
@@ -74,7 +74,7 @@ namespace Raven.Client.Tests.Linq
             var q = from user in indexedUsers
 					where user.Birthday > new DateTime(2010, 05, 15)
 					select user;
-			Assert.Equal("Birthday:[20100515000000000 TO *] ", q.ToString());
+			Assert.Equal("Birthday:[20100515000000000 TO NULL] ", q.ToString());
         }
 
         [Fact]
@@ -84,7 +84,7 @@ namespace Raven.Client.Tests.Linq
             var q = from user in indexedUsers
 					where user.Birthday >= new DateTime(2010, 05, 15)
 					select user;
-			Assert.Equal("Birthday:{20100515000000000 TO *} ", q.ToString());
+			Assert.Equal("Birthday:{20100515000000000 TO NULL} ", q.ToString());
         }
 
         [Fact]
@@ -94,7 +94,7 @@ namespace Raven.Client.Tests.Linq
             var q = from user in indexedUsers
 					where user.Birthday >= new DateTime(2010, 05, 15)
 					select user.Name;
-			Assert.Equal("<Name>: Birthday:{20100515000000000 TO *} ", q.ToString());
+			Assert.Equal("<Name>: Birthday:{20100515000000000 TO NULL} ", q.ToString());
         }
 
         [Fact]
@@ -105,7 +105,7 @@ namespace Raven.Client.Tests.Linq
         	var q = from user in indexedUsers
 					where user.Birthday >= dateTime
 					select new { user.Name, user.Age };
-			Assert.Equal("<Name, Age>: Birthday:{20100515000000000 TO *} ", q.ToString());
+			Assert.Equal("<Name, Age>: Birthday:{20100515000000000 TO NULL} ", q.ToString());
         }
 
 		[Fact]
@@ -117,6 +117,18 @@ namespace Raven.Client.Tests.Linq
 					select user;
 			Assert.Equal("Age:3 ", q.ToString());
 		}
+
+
+		[Fact]
+		public void CanUnderstandGreaterThanOnInt()
+		{
+			var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null, null));
+			var q = from user in indexedUsers
+					where user.Age > 3
+					select user;
+			Assert.Equal("Age_Range:[0x00000003 TO NULL] ", q.ToString());
+		}
+
 
 
         public class IndexedUser
