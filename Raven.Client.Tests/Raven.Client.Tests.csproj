@@ -102,6 +102,7 @@
     <Compile Include="Document\TagCloud.cs" />
     <Compile Include="Document\When_Using_Multiple_Unsharded_Servers.cs" />
     <Compile Include="Indexes\LinqIndexesFromClient.cs" />
+    <Compile Include="Linq\WhereClause.cs" />
     <Compile Include="Shard\When_Using_Parallel_Access_Strategy.cs" />
     <Compile Include="Shard\When_Using_Sharded_Servers.cs" />
     <Compile Include="Document\DocumentStoreEmbeddedTests.cs" />
