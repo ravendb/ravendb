@@ -16,7 +16,7 @@ namespace Raven.Database.Server.Responders
 
 		public override void Respond(IHttpContext context)
 		{
-			context.WriteJson(Database.GetIndexes(context.GetStart(), context.GetPageSize()));
+			context.WriteJson(Database.GetIndexes(context.GetStart(), context.GetPageSize(Database.Configuration.MaxPageSize)));
 		}
 	}
 }

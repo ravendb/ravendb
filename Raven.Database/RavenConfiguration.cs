@@ -38,6 +38,10 @@ namespace Raven.Database
 
 			IndexingBatchSize = indexBatchSizeStr != null ? int.Parse(indexBatchSizeStr) : 1024;
 
+            var maxPageSizeStr = ConfigurationManager.AppSettings["Raven/MaxPageSize"];
+
+            MaxPageSize = maxPageSizeStr != null ? int.Parse(maxPageSizeStr) : 1024;
+
 			DataDirectory = ConfigurationManager.AppSettings["Raven/DataDir"] ?? @"~\Data";
 
 			if (DataDirectory.StartsWith(@"~\"))
@@ -145,7 +149,9 @@ namespace Raven.Database
 
 		public bool RunInUnreliableYetFastModeThatIsNotSuitableForProduction { get; set; }
 
-		public void LoadLoggingSettings()
+	    public int MaxPageSize { get; set; }
+
+	    public void LoadLoggingSettings()
 		{
 			XmlConfigurator.ConfigureAndWatch(
 				new FileInfo(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "log4net.config")));

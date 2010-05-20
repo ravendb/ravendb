@@ -88,7 +88,7 @@ namespace Raven.Database.Server.Responders
 				{
 					Query = context.Request.QueryString["query"],
 					Start = context.GetStart(),
-					PageSize = context.GetPageSize(),
+					PageSize = context.GetPageSize(Database.Configuration.MaxPageSize),
                     Cutoff = context.GetCutOff(),
 					FieldsToFetch = context.Request.QueryString.GetValues("fetch"),
 					SortedFields = context.Request.QueryString.GetValues("sort")

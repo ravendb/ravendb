@@ -199,14 +199,14 @@ namespace Raven.Database.Server.Responders
 			return start;
 		}
 
-		public static int GetPageSize(this IHttpContext context)
+		public static int GetPageSize(this IHttpContext context, int maxPageSize)
 		{
 			int pageSize;
 			int.TryParse(context.Request.QueryString["pageSize"], out pageSize);
 			if (pageSize == 0)
 				pageSize = 25;
-			if (pageSize > 1024)
-				pageSize = 1024;
+			if (pageSize > maxPageSize)
+                pageSize = maxPageSize;
 			return pageSize;
 		}
 
