@@ -25,7 +25,7 @@ namespace MvcMusicStore.Controllers
         {
            var session = MvcApplication.CurrentSession;
 
-           return session.Query<Album>("AlbumsByCountSold")
+           return session.LuceneQuery<Album>("AlbumsByCountSold")
                 .Take(count)
                 .OrderBy("-Quantity")
                 .ToArray();
@@ -36,7 +36,7 @@ namespace MvcMusicStore.Controllers
             var session = MvcApplication.CurrentSession;
 
             // Get count most sold albums ids
-            var topSoldAlbumIds = session.Query<SoldAlbum>("SoldAlbums")
+            var topSoldAlbumIds = session.LuceneQuery<SoldAlbum>("SoldAlbums")
                 .OrderBy("-Quantity")
                 .Take(count)
                 .Select(x=>x.Album)
@@ -48,7 +48,7 @@ namespace MvcMusicStore.Controllers
             if(topSoldAlbums.Length < count)
             {
                 // top it off from the unsold albums
-                var justRegularAlbums = session.Query<Album>()
+                var justRegularAlbums = session.LuceneQuery<Album>()
                     .Take(count);
                 topSoldAlbums = topSoldAlbums.Concat(justRegularAlbums)
                     .Distinct()
@@ -68,7 +68,7 @@ namespace MvcMusicStore.Controllers
                     int count = 0;
                     do
                     {
-                        var albums = session.Query<Album>()
+                        var albums = session.LuceneQuery<Album>()
                             .Skip(count)
                             .Take(128)
                             .ToArray();
@@ -77,7 +77,7 @@ namespace MvcMusicStore.Controllers
 
                         foreach (var album in albums)
                         {
-                            var result = session.Query<SoldAlbum>("SoldAlbums")
+                            var result = session.LuceneQuery<SoldAlbum>("SoldAlbums")
                                 .Where("Album:" + album.Id)
                                 .SingleOrDefault();
 

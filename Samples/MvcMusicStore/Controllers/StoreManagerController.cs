@@ -17,7 +17,7 @@ namespace MvcMusicStore.Controllers
 
         public ActionResult Index()
         {
-            var albums = session.Query<Album>().ToArray();
+            var albums = session.LuceneQuery<Album>().ToArray();
 
             return View(albums);
         }
@@ -43,8 +43,8 @@ namespace MvcMusicStore.Controllers
             var viewModel = new StoreManagerViewModel
             {
                 Album = session.Load<Album>(id),
-                Genres = session.Query<Genre>().ToList(),
-                Artists = session.Query<Album.AlbumArtist>("Artists").ToList()
+                Genres = session.LuceneQuery<Genre>().ToList(),
+                Artists = session.LuceneQuery<Album.AlbumArtist>("Artists").ToList()
             };
 
             return View(viewModel);
@@ -59,8 +59,8 @@ namespace MvcMusicStore.Controllers
             var viewModel = new StoreManagerViewModel
             {
                 Album = new Album(),
-                Genres = session.Query<Genre>().ToList(),
-                Artists = session.Query<Album.AlbumArtist>("Artists").ToList()
+                Genres = session.LuceneQuery<Genre>().ToList(),
+                Artists = session.LuceneQuery<Album.AlbumArtist>("Artists").ToList()
             };
 
             return View(viewModel);

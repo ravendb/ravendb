@@ -25,7 +25,7 @@ namespace Raven.Sample.ShardClient
                 session.SaveChanges();
 
                 //get all, should automagically retrieve from each shard
-                var allCompanies = session.Query<Company>().WaitForNonStaleResults().ToArray();
+                var allCompanies = session.LuceneQuery<Company>().WaitForNonStaleResults().ToArray();
 
                 foreach (var company in allCompanies)
                     Console.WriteLine(company.Name);
