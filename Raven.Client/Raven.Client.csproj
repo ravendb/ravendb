@@ -106,11 +106,9 @@
     <Compile Include="IDocumentQuery.cs" />
     <Compile Include="IDocumentSession.cs" />
     <Compile Include="IDocumentStore.cs" />
-    <Compile Include="Linq\Lucene\DateTools.cs" />
+    <Compile Include="Linq\DateTools.cs" />
     <Compile Include="Linq\IRavenQueryable.cs" />
     <Compile Include="Linq\IRavenQueryProvider.cs" />
-    <Compile Include="Linq\Lucene\NumericUtils.cs" />
-    <Compile Include="Linq\Lucene\SupportClass.cs" />
     <Compile Include="Linq\RavenQueryable.cs" />
     <Compile Include="Linq\RavenQueryProvider.cs" />
     <Compile Include="Linq\TypeSystem.cs" />

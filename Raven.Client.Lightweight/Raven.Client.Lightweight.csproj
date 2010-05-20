@@ -116,20 +116,14 @@
     <Compile Include="..\Raven.Client\IDocumentStore.cs">
       <Link>IDocumentStore.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client\Linq\DateTools.cs">
+      <Link>Linq\DateTools.cs</Link>
+    </Compile>
     <Compile Include="..\raven.client\linq\IRavenQueryable.cs">
       <Link>Linq\IRavenQueryable.cs</Link>
     </Compile>
     <Compile Include="..\raven.client\linq\IRavenQueryProvider.cs">
       <Link>Linq\IRavenQueryProvider.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client\linq\lucene\DateTools.cs">
-      <Link>Linq\Lucene\DateTools.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client\linq\lucene\NumericUtils.cs">
-      <Link>Linq\Lucene\NumericUtils.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client\linq\lucene\SupportClass.cs">
-      <Link>Linq\Lucene\SupportClass.cs</Link>
     </Compile>
     <Compile Include="..\raven.client\linq\RavenQueryable.cs">
       <Link>Linq\RavenQueryable.cs</Link>
@@ -241,6 +235,9 @@
     </Compile>
     <Compile Include="..\Raven.Database\Indexing\IndexDefinition.cs">
       <Link>Data\IndexDefinition.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Database\Indexing\NumberUtil.cs">
+      <Link>Linq\NumberUtil.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Database\JsonDocument.cs">
       <Link>Data\JsonDocument.cs</Link>
