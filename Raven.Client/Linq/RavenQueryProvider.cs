@@ -4,6 +4,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
+using Raven.Database.Data;
 using Raven.Database.Indexing;
 
 namespace Raven.Client.Linq
@@ -14,8 +15,9 @@ namespace Raven.Client.Linq
         private readonly string indexName;
 
         private Action<IDocumentQuery<T>> customizeQuery;
+    	private IDocumentQuery<T> luceneQuery;
 
-        public IDocumentSession Session
+    	public IDocumentSession Session
         {
             get { return session; }
         }
@@ -25,7 +27,17 @@ namespace Raven.Client.Linq
             get { return indexName; }
         }
 
-        public RavenQueryProvider(IDocumentSession session, string indexName)
+    	public QueryResult QueryResult
+    	{
+    		get
+    		{
+				if (luceneQuery == null)
+					return null;
+    			return luceneQuery.QueryResult;
+    		}
+    	}
+
+    	public RavenQueryProvider(IDocumentSession session, string indexName)
         {
             this.session = session;
             this.indexName = indexName;
@@ -39,7 +51,8 @@ namespace Raven.Client.Linq
         public object Execute(Expression expression)
         {
             ProcessExpression(expression);
-            var documentQuery = session.LuceneQuery<T>(indexName)
+        	luceneQuery = session.LuceneQuery<T>(indexName);
+        	var documentQuery = luceneQuery
                 .Where(QueryText.ToString())
                 .SelectFields<T>(FieldsToFetch.ToArray());
             customizeQuery(documentQuery);

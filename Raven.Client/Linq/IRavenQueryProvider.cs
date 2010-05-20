@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using Raven.Database.Data;
 
 namespace Raven.Client.Linq
 {
@@ -8,5 +9,6 @@ namespace Raven.Client.Linq
         void Customize(Delegate action);
         IDocumentSession Session { get; }
         string IndexName { get; }
+    	QueryResult QueryResult { get; }
     }
 }
