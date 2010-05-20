@@ -378,19 +378,19 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 	        {
 	            path = query.FieldsToFetch.Aggregate(
 	                new StringBuilder(path),
-	                (sb, field) => sb.Append("&fetch=").Append(field)
+					(sb, field) => sb.Append("&fetch=").Append(Uri.EscapeUriString(field))
 	                ).ToString();
 	        }
 	        if(query.SortedFields!=null && query.SortedFields.Length>0)
 	        {
 	            path = query.SortedFields.Aggregate(
 	                new StringBuilder(path),
-	                (sb, field) => sb.Append("&sort=").Append(field.Descending ? "-" : "").Append(field.Field)
+					(sb, field) => sb.Append("&sort=").Append(field.Descending ? "-" : "").Append(Uri.EscapeUriString(field.Field))
 	                ).ToString();
 	        }
 	        if(query.Cutoff != null)
 	        {
-	            path = path + "&cutOff=" + SimpleUrlEncodeOnTheClientProfile(query.Cutoff.Value.ToString("o", CultureInfo.InvariantCulture));
+	            path = path + "&cutOff=" + Uri.EscapeUriString(query.Cutoff.Value.ToString("o", CultureInfo.InvariantCulture));
 	        }
             var request = HttpJsonRequest.CreateHttpJsonRequest(this, path, "GET", credentials);
 	        var serializer = new JsonSerializer
@@ -407,11 +407,6 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 	            Results = json["Results"].Children().Cast<JObject>().ToArray(),
 	            TotalResults =  Convert.ToInt32(json["TotalResults"].ToString())
 	        };
-	    }
-
-	    private static string SimpleUrlEncodeOnTheClientProfile(string str)
-	    {
-	        return str.Replace("+", "%2B");
 	    }
 
 	    public void DeleteIndex(string name)
