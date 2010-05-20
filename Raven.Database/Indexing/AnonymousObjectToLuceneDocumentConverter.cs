@@ -84,29 +84,29 @@ namespace Raven.Database.Indexing
 
 			if (value is int)
 			{
-				yield return new Field(name +"_Range", NumericUtils.IntToPrefixCoded((int)value), indexDefinition.GetStorage(name, defaultStorage),
+				yield return new Field(name +"_Range", NumberUtil.NumberToString((int)value), indexDefinition.GetStorage(name, defaultStorage),
 							 indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
 
 			}
 			if (value is long)
 			{
-				yield return new Field(name +"_Range", NumericUtils.LongToPrefixCoded((long)value) , indexDefinition.GetStorage(name, defaultStorage),
+				yield return new Field(name + "_Range", NumberUtil.NumberToString((long)value), indexDefinition.GetStorage(name, defaultStorage),
 							 indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
 
 			}
 			if (value is decimal)
             {
-				yield return new Field(name + "_Range", NumericUtils.DoubleToPrefixCoded((double)(decimal)value), indexDefinition.GetStorage(name, defaultStorage),
+				yield return new Field(name + "_Range", NumberUtil.NumberToString((double)(decimal)value), indexDefinition.GetStorage(name, defaultStorage),
                                  indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
             }
 			if (value is float)
             {
-				yield return new Field(name + "_Range", NumericUtils.FloatToPrefixCoded((float)value), indexDefinition.GetStorage(name, defaultStorage),
+				yield return new Field(name + "_Range", NumberUtil.NumberToString((float)value), indexDefinition.GetStorage(name, defaultStorage),
                                  indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
             }
 			if (value is double)
             {
-				yield return new Field(name + "_Range", NumericUtils.DoubleToPrefixCoded((double)value), indexDefinition.GetStorage(name, defaultStorage),
+				yield return new Field(name + "_Range", NumberUtil.NumberToString((double)value), indexDefinition.GetStorage(name, defaultStorage),
                                  indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
             }
 		}
