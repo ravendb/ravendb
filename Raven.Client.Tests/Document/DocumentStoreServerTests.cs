@@ -254,6 +254,34 @@ namespace Raven.Client.Tests.Document
             }
         }
 
+		[Fact]
+		public void Can_select_from_index_using_linq_method_chain_using_integer()
+		{
+			using (var server = GetNewServer(port, path))
+			{
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+				documentStore.Initialise();
+				var session = documentStore.OpenSession();
+				var company = new Company { Name = "Company 1", Phone = 5 };
+				session.Store(company);
+				session.SaveChanges();
+
+				documentStore.DatabaseCommands.PutIndex("company_by_name",
+														new IndexDefinition
+														{
+															Map = "from doc in docs where doc.Name != null select new { doc.Name, doc.Phone}",
+															Stores = { { "Name", FieldStorage.Yes }, { "Phone", FieldStorage.Yes } }
+														});
+
+				var q = session.Query<Company>("company_by_name")
+					.Customize(query => query.WaitForNonStaleResults())
+					.Where(x => x.Phone == 5);
+				var single = q.ToArray()[0];
+				Assert.Equal("Company 1", single.Name);
+				Assert.Equal(5, single.Phone);
+			}
+		}
+
 
         [Fact]
         public void Optimistic_concurrency()
