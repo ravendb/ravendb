@@ -69,6 +69,44 @@ namespace Raven.Client.Tests.Document
             }
         }
 
+		[Fact(Skip = "We have a problem encoding things correctly in ServerClient.DirectQuery in such a way that it would be parsed properly in the server")]
+		public void Can_query_using_special_characters()
+		{
+			using (var server = GetNewServer(port, path))
+			{
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+				documentStore.Initialise();
+
+				
+				documentStore.DatabaseCommands.PutIndex("my_index",
+													new IndexDefinition
+													{
+														Map = "from doc in docs select new { doc.Language, doc.Type}",
+														Stores = { { "Name", FieldStorage.Yes }, { "Phone", FieldStorage.Yes } }
+													});
+
+				using(var s = documentStore.OpenSession())
+				{
+					s.Store(new
+					{
+						Language = "Français",//Note the ç
+						Type = "Feats"
+					});
+					s.SaveChanges();
+				}
+
+				using (var s = documentStore.OpenSession())
+				{
+					var query = s.LuceneQuery<object>("my_index")
+						.Where("Type:Feats AND Language:Français")
+						.WaitForNonStaleResults();
+					query.ToArray();
+
+					Assert.Equal(1, query.QueryResult.TotalResults);
+				}
+			}
+		}
+
 		[Fact]
 		public void Requesting_stats()
 		{
