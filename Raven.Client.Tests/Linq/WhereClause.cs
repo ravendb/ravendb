@@ -1,3 +1,4 @@
+using System;
 using Raven.Client.Linq;
 using Xunit;
 using System.Linq;
@@ -41,9 +42,9 @@ namespace Raven.Client.Tests.Linq
         {
             var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null,null));
             var q = from user in indexedUsers
-                    where user.Age < 10
+					where user.Birthday < new DateTime(2010,05,15)
                     select user;
-            Assert.Equal("Age:[* TO 10] ", q.ToString());
+			Assert.Equal("Birthday:[* TO 20100515000000000] ", q.ToString());
         }
 
         [Fact]
@@ -51,9 +52,9 @@ namespace Raven.Client.Tests.Linq
         {
             var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null,null));
             var q = from user in indexedUsers
-                    where user.Age <= 10
-                    select user;
-            Assert.Equal("Age:{* TO 10} ", q.ToString());
+					where user.Birthday <= new DateTime(2010, 05, 15)
+					select user;
+			Assert.Equal("Birthday:{* TO 20100515000000000} ", q.ToString());
         }
 
         [Fact]
@@ -61,9 +62,9 @@ namespace Raven.Client.Tests.Linq
         {
             var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null,null));
             var q = from user in indexedUsers
-                    where user.Age > 10
-                    select user;
-            Assert.Equal("Age:[10 TO *] ", q.ToString());
+					where user.Birthday > new DateTime(2010, 05, 15)
+					select user;
+			Assert.Equal("Birthday:[20100515000000000 TO *] ", q.ToString());
         }
 
         [Fact]
@@ -71,9 +72,9 @@ namespace Raven.Client.Tests.Linq
         {
             var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null,null));
             var q = from user in indexedUsers
-                    where user.Age >= 10
-                    select user;
-            Assert.Equal("Age:{10 TO *} ", q.ToString());
+					where user.Birthday >= new DateTime(2010, 05, 15)
+					select user;
+			Assert.Equal("Birthday:{20100515000000000 TO *} ", q.ToString());
         }
 
         [Fact]
@@ -81,24 +82,37 @@ namespace Raven.Client.Tests.Linq
         {
             var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null,null));
             var q = from user in indexedUsers
-                    where user.Age >= 10
-                    select user.Name;
-            Assert.Equal("<Name>: Age:{10 TO *} ", q.ToString());
+					where user.Birthday >= new DateTime(2010, 05, 15)
+					select user.Name;
+			Assert.Equal("<Name>: Birthday:{20100515000000000 TO *} ", q.ToString());
         }
 
         [Fact]
         public void CanUnderstandProjectionOfMultipleFields()
         {
             var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null,null));
-            var q = from user in indexedUsers
-                    where user.Age >= 10
-                    select new { user.Name , user.Age};
-            Assert.Equal("<Name, Age>: Age:{10 TO *} ", q.ToString());
+        	var dateTime = new DateTime(2010, 05, 15);
+        	var q = from user in indexedUsers
+					where user.Birthday >= dateTime
+					select new { user.Name, user.Age };
+			Assert.Equal("<Name, Age>: Birthday:{20100515000000000 TO *} ", q.ToString());
         }
+
+		[Fact]
+		public void CanUnderstandSimpleEqualityOnInt()
+		{
+			var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null, null));
+			var q = from user in indexedUsers
+					where user.Age == 3
+					select user;
+			Assert.Equal("Age:3 ", q.ToString());
+		}
+
 
         public class IndexedUser
         {
-            public int Age { get; set; }
+			public int Age { get; set; }
+            public DateTime Birthday { get; set; }
             public string Name { get; set; }
             public string Email { get; set; }
         }

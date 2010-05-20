@@ -110,7 +110,6 @@
     <Compile Include="Data\BackupRequest.cs" />
     <Compile Include="Exceptions\IndexDoesNotExists.cs" />
     <Compile Include="IStartupTask.cs" />
-    <Compile Include="Json\JsonLuceneNumberConverter.cs" />
     <Compile Include="Plugins\Builtins\FilterRavenInternalDocumentsReadTrigger.cs" />
     <Compile Include="Plugins\AbstractIndexUpdateTrigger.cs" />
     <Compile Include="Plugins\AbstractReadTrigger.cs" />

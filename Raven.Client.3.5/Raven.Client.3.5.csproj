@@ -122,6 +122,15 @@
     <Compile Include="..\Raven.Client\Linq\IRavenQueryProvider.cs">
       <Link>Linq\IRavenQueryProvider.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client\Linq\Lucene\DateTools.cs">
+      <Link>Linq\Lucene\DateTools.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client\Linq\Lucene\NumericUtils.cs">
+      <Link>Linq\Lucene\NumericUtils.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client\Linq\Lucene\SupportClass.cs">
+      <Link>Linq\Lucene\SupportClass.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client\Linq\RavenQueryable.cs">
       <Link>Linq\RavenQueryable.cs</Link>
     </Compile>
@@ -235,9 +244,6 @@
     </Compile>
     <Compile Include="..\Raven.Database\Json\JsonExtensions.cs">
       <Link>Extensions\JsonExtensions.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Database\Json\JsonLuceneNumberConverter.cs">
-      <Link>Json\JsonLuceneNumberConverter.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Database\Json\PatchRequest.cs">
       <Link>Data\PatchRequest.cs</Link>
