@@ -17,7 +17,7 @@
 
 using System;
 
-namespace Raven.Client.Linq.Lucene
+namespace Raven.Client.Linq
 {
 	
 	/// <summary> Provides support for converting dates to strings and vice-versa.
