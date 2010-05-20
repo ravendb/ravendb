@@ -58,7 +58,7 @@ namespace Raven.Client.Tests.Document
 					});
 					session.SaveChanges();
 
-					IServer[] servers = session.Query<IServer>()
+					IServer[] servers = session.LuceneQuery<IServer>()
 						.WaitForNonStaleResults()
 						.ToArray();
 					Assert.Equal(2, servers.Length);

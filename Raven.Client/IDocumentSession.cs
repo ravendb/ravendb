@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Linq;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Client;
 using Raven.Client.Document;
+using Raven.Client.Linq;
 
 namespace Raven.Client
 {
@@ -16,7 +18,9 @@ namespace Raven.Client
 
         void Delete<T>(T entity);
 
-		IDocumentQuery<T> Query<T>(string indexName);
+        IRavenQueryable<T> Query<T>(string indexName);
+
+		IDocumentQuery<T> LuceneQuery<T>(string indexName);
         
 		void SaveChanges();
         

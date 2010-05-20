@@ -7,10 +7,27 @@ using System.Text;
 
 namespace Raven.Client.Linq
 {
-    public class RavenQueryProvider : QueryProvider
+    public class RavenQueryProvider<T> : IRavenQueryProvider
     {
-        public RavenQueryProvider()
+        private readonly IDocumentSession session;
+        private readonly string indexName;
+
+        private Action<IDocumentQuery<T>> customizeQuery;
+
+        public IDocumentSession Session
         {
+            get { return session; }
+        }
+
+        public string IndexName
+        {
+            get { return indexName; }
+        }
+
+        public RavenQueryProvider(IDocumentSession session, string indexName)
+        {
+            this.session = session;
+            this.indexName = indexName;
             QueryText = new StringBuilder();
             FieldsToFetch = new List<string>();
         }
@@ -18,11 +35,14 @@ namespace Raven.Client.Linq
         public StringBuilder QueryText { get; set; }
         public List<string> FieldsToFetch { get; set; }
 
-        public override object Execute(Expression expression)
+        public object Execute(Expression expression)
         {
             ProcessExpression(expression);
-            Console.WriteLine(QueryText.ToString());
-            return null;
+            var documentQuery = session.LuceneQuery<T>(indexName)
+                .Where(QueryText.ToString())
+                .SelectFields<T>(FieldsToFetch.ToArray());
+            customizeQuery(documentQuery);
+            return documentQuery;
         }
 
         public void ProcessExpression(Expression expression)
@@ -158,17 +178,16 @@ namespace Raven.Client.Linq
 
         private void VisitMethodCall(MethodCallExpression expression)
         {
-            var operand = ((UnaryExpression)expression.Arguments[1]).Operand;
             if ((expression.Method.DeclaringType == typeof(Queryable)) &&
                 (expression.Method.Name == "Where"))
             {
-                VisitExpression(operand);
+                VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
             }
             else if ((expression.Method.DeclaringType == typeof(Queryable)) &&
                 (expression.Method.Name == "Select"))
             {
                 VisitExpression(expression.Arguments[0]);
-                VisitSelect(operand);
+                VisitSelect(((UnaryExpression)expression.Arguments[1]).Operand);
             }
             else
             {
@@ -193,6 +212,41 @@ namespace Raven.Client.Linq
             }
         }
 
+        IQueryable<S> IQueryProvider.CreateQuery<S>(Expression expression)
+        {
+            return new RavenQueryable<S>(this, expression);
+        }
+
+        IQueryable IQueryProvider.CreateQuery(Expression expression)
+        {
+            Type elementType = TypeSystem.GetElementType(expression.Type);
+            try
+            {
+                return
+                    (IQueryable)
+                    Activator.CreateInstance(typeof(RavenQueryable<>).MakeGenericType(elementType),
+                                             new object[] { this, expression });
+            }
+            catch (TargetInvocationException tie)
+            {
+                throw tie.InnerException;
+            }
+        }
+
+        S IQueryProvider.Execute<S>(Expression expression)
+        {
+            return (S)Execute(expression);
+        }
+
+        object IQueryProvider.Execute(Expression expression)
+        {
+            return Execute(expression);
+        }
+
+        public void Customize(Delegate action)
+        {
+            customizeQuery = (Action<IDocumentQuery<T>>)action;
+        }
         #region Helpers
 
         private static Object GetMemberValue(MemberExpression memberExpression)

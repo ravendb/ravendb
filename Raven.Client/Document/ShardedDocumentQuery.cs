@@ -20,7 +20,7 @@ namespace Raven.Client.Document
 			queries = new IDocumentQuery<T>[shardSessions.Count];
 			for (int i = 0; i < shardSessions.Count; i++)
 			{
-				queries[i] = shardSessions[i].Query<T>(indexName);
+				queries[i] = shardSessions[i].LuceneQuery<T>(indexName);
 			}
 		}
 

@@ -71,7 +71,7 @@ namespace Raven.Client.Tests.Document
 
                     using (var session = store.OpenSession())
                     {
-                        int resultCount = session.Query<Company>().WaitForNonStaleResults().QueryResult.TotalResults;
+                        int resultCount = session.LuceneQuery<Company>().WaitForNonStaleResults().QueryResult.TotalResults;
                         Assert.Equal(2, resultCount);
                     }
                 }

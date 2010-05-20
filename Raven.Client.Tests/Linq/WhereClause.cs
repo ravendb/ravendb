@@ -9,7 +9,7 @@ namespace Raven.Client.Tests.Linq
         [Fact]
         public void CanUnderstandSimpleEquality()
         {
-            var indexedUsers = new Query<IndexedUser>(new RavenQueryProvider());
+            var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null, null));
             var q = from user in indexedUsers
                     where user.Name == "ayende"
                     select user;
@@ -19,7 +19,7 @@ namespace Raven.Client.Tests.Linq
         [Fact]
         public void CanUnderstandAnd()
         {
-            var indexedUsers = new Query<IndexedUser>(new RavenQueryProvider());
+            var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null,null));
             var q = from user in indexedUsers
                     where user.Name == "ayende" && user.Email == "ayende@ayende.com"
                     select user;
@@ -29,7 +29,7 @@ namespace Raven.Client.Tests.Linq
         [Fact]
         public void CanUnderstandOr()
         {
-            var indexedUsers = new Query<IndexedUser>(new RavenQueryProvider());
+            var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null,null));
             var q = from user in indexedUsers
                     where user.Name == "ayende" || user.Email == "ayende@ayende.com"
                     select user;
@@ -39,7 +39,7 @@ namespace Raven.Client.Tests.Linq
         [Fact]
         public void CanUnderstandLessThan()
         {
-            var indexedUsers = new Query<IndexedUser>(new RavenQueryProvider());
+            var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null,null));
             var q = from user in indexedUsers
                     where user.Age < 10
                     select user;
@@ -49,7 +49,7 @@ namespace Raven.Client.Tests.Linq
         [Fact]
         public void CanUnderstandLessThanOrEqualsTo()
         {
-            var indexedUsers = new Query<IndexedUser>(new RavenQueryProvider());
+            var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null,null));
             var q = from user in indexedUsers
                     where user.Age <= 10
                     select user;
@@ -59,7 +59,7 @@ namespace Raven.Client.Tests.Linq
         [Fact]
         public void CanUnderstandGreaterThan()
         {
-            var indexedUsers = new Query<IndexedUser>(new RavenQueryProvider());
+            var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null,null));
             var q = from user in indexedUsers
                     where user.Age > 10
                     select user;
@@ -69,7 +69,7 @@ namespace Raven.Client.Tests.Linq
         [Fact]
         public void CanUnderstandGreaterThanOrEqualsTo()
         {
-            var indexedUsers = new Query<IndexedUser>(new RavenQueryProvider());
+            var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null,null));
             var q = from user in indexedUsers
                     where user.Age >= 10
                     select user;
@@ -79,7 +79,7 @@ namespace Raven.Client.Tests.Linq
         [Fact]
         public void CanUnderstandProjectionOfOneField()
         {
-            var indexedUsers = new Query<IndexedUser>(new RavenQueryProvider());
+            var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null,null));
             var q = from user in indexedUsers
                     where user.Age >= 10
                     select user.Name;
@@ -89,7 +89,7 @@ namespace Raven.Client.Tests.Linq
         [Fact]
         public void CanUnderstandProjectionOfMultipleFields()
         {
-            var indexedUsers = new Query<IndexedUser>(new RavenQueryProvider());
+            var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null,null));
             var q = from user in indexedUsers
                     where user.Age >= 10
                     select new { user.Name , user.Age};

@@ -48,7 +48,7 @@ namespace Raven.Client.Tests.Document
 				session.Store(new Post{Title = "test", Body = "casing"});
 				session.SaveChanges();
 
-				var single = session.Query<Post>()
+				var single = session.LuceneQuery<Post>()
 					.WaitForNonStaleResults()
 					.Single();
 
@@ -66,7 +66,7 @@ namespace Raven.Client.Tests.Document
 				session.Store(entity);
 				session.SaveChanges();
 
-				var single = session.Query<Post>()
+				var single = session.LuceneQuery<Post>()
 					.WaitForNonStaleResults()
 					.Single();
 

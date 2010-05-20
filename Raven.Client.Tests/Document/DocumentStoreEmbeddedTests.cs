@@ -103,7 +103,7 @@ namespace Raven.Client.Tests.Document
 
 				using(var session2 = documentStore.OpenSession())
 				{
-					var companyFromRaven = session2.Query<Company>()
+					var companyFromRaven = session2.LuceneQuery<Company>()
 						.WaitForNonStaleResults()
 						.First();
 					Assert.Equal(companyFromRaven.Id, company.Id);
@@ -125,7 +125,7 @@ namespace Raven.Client.Tests.Document
 
 				using (var session2 = documentStore.OpenSession())
 				{
-					var companyFromRaven = session2.Query<Company>()
+					var companyFromRaven = session2.LuceneQuery<Company>()
 						.WaitForNonStaleResults()
 						.First();
 
@@ -369,7 +369,7 @@ namespace Raven.Client.Tests.Document
                                                         });
 
             	var q = session
-            		.Query<Company>("company_by_name")
+                    .LuceneQuery<Company>("company_by_name")
             		.SelectFields<Company>("Name", "Phone")
             		.WaitForNonStaleResults();
                 var single = q.Single();
@@ -396,11 +396,11 @@ namespace Raven.Client.Tests.Document
             	                                        });
 
 				// Wait until the index is built
-				session.Query<Company>("company_by_name")
+                session.LuceneQuery<Company>("company_by_name")
 					.WaitForNonStaleResults()
 					.ToArray();
 
-                var companies = session.Query<Company>("company_by_name")
+                var companies = session.LuceneQuery<Company>("company_by_name")
                     .OrderBy("Phone")
                     .WaitForNonStaleResults()
                     .ToArray();
@@ -483,7 +483,7 @@ namespace Raven.Client.Tests.Document
 			
 				session1.SaveChanges();
 				var session2 = documentStore.OpenSession();
-				var companyFound = session2.Query<Company>()
+				var companyFound = session2.LuceneQuery<Company>()
 					.WaitForNonStaleResults()
 					.ToArray();
 
@@ -513,7 +513,7 @@ namespace Raven.Client.Tests.Document
 
 					session.SaveChanges();
 
-					LinqIndexesFromClient.User single = session.Query<LinqIndexesFromClient.User>("UsersByLocation")
+                    LinqIndexesFromClient.User single = session.LuceneQuery<LinqIndexesFromClient.User>("UsersByLocation")
 						.Where("Name:Yael")
 						.WaitForNonStaleResults()
 						.Single();

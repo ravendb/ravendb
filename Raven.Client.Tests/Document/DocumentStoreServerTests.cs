@@ -217,7 +217,7 @@ namespace Raven.Client.Tests.Document
                                                         });
 
             	var q = session
-            		.Query<Company>("company_by_name")
+                    .LuceneQuery<Company>("company_by_name")
 					.SelectFields<Company>("Name","Phone")
             		.WaitForNonStaleResults();
                 var single = q.Single();
@@ -225,6 +225,35 @@ namespace Raven.Client.Tests.Document
                 Assert.Equal(5, single.Phone);
             }
         }
+
+        [Fact]
+        public void Can_select_from_index_using_linq_method_chain()
+        {
+            using (var server = GetNewServer(port, path))
+            {
+                var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+                documentStore.Initialise();
+                var session = documentStore.OpenSession();
+                var company = new Company { Name = "Company 1", Phone = 5 };
+                session.Store(company);
+                session.SaveChanges();
+
+                documentStore.DatabaseCommands.PutIndex("company_by_name",
+                                                        new IndexDefinition
+                                                        {
+                                                            Map = "from doc in docs where doc.Name != null select new { doc.Name, doc.Phone}",
+                                                            Stores = { { "Name", FieldStorage.Yes }, { "Phone", FieldStorage.Yes } }
+                                                        });
+
+                var q = session.Query<Company>("company_by_name")
+                    .Customize(query => query.WaitForNonStaleResults())
+                    .Where(x => x.Name == company.Name);
+                var single = q.ToArray()[0];
+                Assert.Equal("Company 1", single.Name);
+                Assert.Equal(5, single.Phone);
+            }
+        }
+
 
         [Fact]
         public void Optimistic_concurrency()
@@ -370,7 +399,7 @@ namespace Raven.Client.Tests.Document
 				session1.SaveChanges();
 
 				var session2 = documentStore.OpenSession();
-				var companyFound = session2.Query<Company>()
+				var companyFound = session2.LuceneQuery<Company>()
 					.WaitForNonStaleResults()
 					.ToArray();
 
@@ -400,11 +429,11 @@ namespace Raven.Client.Tests.Document
 														});
 
 				// Wait until the index is built
-				session.Query<Company>("company_by_name")
+                session.LuceneQuery<Company>("company_by_name")
 					.WaitForNonStaleResults()
 					.ToArray();
 
-				var companies = session.Query<Company>("company_by_name")
+                var companies = session.LuceneQuery<Company>("company_by_name")
 					.OrderBy("Phone")
 					.WaitForNonStaleResults()
 					.ToArray();
@@ -438,7 +467,7 @@ namespace Raven.Client.Tests.Document
 
 					session.SaveChanges();
 
-					LinqIndexesFromClient.User single = session.Query<LinqIndexesFromClient.User>("UsersByLocation")
+                    LinqIndexesFromClient.User single = session.LuceneQuery<LinqIndexesFromClient.User>("UsersByLocation")
 						.Where("Name:Yael")
 						.WaitForNonStaleResults()
 						.Single();
@@ -475,7 +504,7 @@ namespace Raven.Client.Tests.Document
 
 					session.SaveChanges();
 
-					LinqIndexesFromClient.LocationCount single = session.Query<LinqIndexesFromClient.LocationCount>("UsersCountByLocation")
+                    LinqIndexesFromClient.LocationCount single = session.LuceneQuery<LinqIndexesFromClient.LocationCount>("UsersCountByLocation")
 						.Where("Location:Tel Aviv")
 						.WaitForNonStaleResults()
 						.Single();
@@ -520,7 +549,7 @@ namespace Raven.Client.Tests.Document
 
 					session.SaveChanges();
 
-					LinqIndexesFromClient.LocationAge single = session.Query<LinqIndexesFromClient.LocationAge>("AvgAgeByLocation")
+                    LinqIndexesFromClient.LocationAge single = session.LuceneQuery<LinqIndexesFromClient.LocationAge>("AvgAgeByLocation")
 						.Where("Location:Tel Aviv")
 						.WaitForNonStaleResults()
 						.Single();

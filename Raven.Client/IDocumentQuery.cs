@@ -16,7 +16,6 @@ namespace Raven.Client
 
         IDocumentQuery<T> WaitForNonStaleResultsAsOf(DateTime cutOff);
         IDocumentQuery<T> WaitForNonStaleResultsAsOf(DateTime cutOff, TimeSpan waitTimeout);
-		
 
 		IDocumentQuery<T> WaitForNonStaleResults();
         IDocumentQuery<T> WaitForNonStaleResults(TimeSpan waitTimeout);

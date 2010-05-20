@@ -6,12 +6,12 @@ using System.Linq.Expressions;
 
 namespace Raven.Client.Linq
 {
-    public class Query<T> : IOrderedQueryable<T>
+    public class RavenQueryable<T> : IRavenQueryable<T>
     {
         private readonly Expression expression;
-        private readonly QueryProvider provider;
+        private readonly IRavenQueryProvider provider;
 
-        public Query(QueryProvider provider)
+        public RavenQueryable(IRavenQueryProvider provider)
         {
             if (provider == null)
             {
@@ -21,7 +21,7 @@ namespace Raven.Client.Linq
             expression = Expression.Constant(this);
         }
 
-        public Query(QueryProvider provider, Expression expression)
+        public RavenQueryable(IRavenQueryProvider provider, Expression expression)
         {
             if (provider == null)
             {
@@ -68,9 +68,16 @@ namespace Raven.Client.Linq
 
         #endregion
 
+        public IRavenQueryable<T> Customize(Action<IDocumentQuery<T>> action)
+        {
+            provider.Customize(action);
+            return this;
+        }
+
         public override string ToString()
         {
-            var ravenQueryProvider = new RavenQueryProvider();
+            var queryProvider = ((RavenQueryProvider<T>)provider);
+            var ravenQueryProvider = new RavenQueryProvider<T>(queryProvider.Session, queryProvider.IndexName);
             ravenQueryProvider.ProcessExpression(expression);
             string fields = "";
             if (ravenQueryProvider.FieldsToFetch.Count > 0)

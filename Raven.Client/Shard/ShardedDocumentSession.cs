@@ -3,6 +3,7 @@ using System.Linq;
 using System.Net;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Document;
+using Raven.Client.Linq;
 using Raven.Client.Shard.ShardStrategy;
 using Raven.Client.Shard.ShardStrategy.ShardResolution;
 using System;
@@ -103,7 +104,12 @@ namespace Raven.Client.Shard
 			GetSingleShardSession(shardIds).Delete(entity);
 		}
 
-        public void Refresh<T>(T entity)
+        public IRavenQueryable<T> Query<T>(string indexName)
+	    {
+	        throw new NotSupportedException("Sharded linq queries aren't supported currently");
+	    }
+
+	    public void Refresh<T>(T entity)
         {
             if (ReferenceEquals(entity, null))
                 throw new ArgumentNullException("entity");
@@ -150,7 +156,7 @@ namespace Raven.Client.Shard
 			}
 		}
 
-		public IDocumentQuery<T> Query<T>(string indexName)
+		public IDocumentQuery<T> LuceneQuery<T>(string indexName)
 		{
 			return new ShardedDocumentQuery<T>(indexName,
 											   GetAppropriateShardedSessions<T>(null));

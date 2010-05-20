@@ -41,7 +41,7 @@ namespace RavenTestbed
             // Query a single foo to wait for the index
             using (var session = documentStore.OpenSession())
             {
-                var foo = session.Query<Foo>("FooByName").Where("Name:1").WaitForNonStaleResults(TimeSpan.FromMinutes(1)).First();
+                var foo = session.LuceneQuery<Foo>("FooByName").Where("Name:1").WaitForNonStaleResults(TimeSpan.FromMinutes(1)).First();
             }
             Console.WriteLine("starting querying");
             // Query all foos twice
@@ -53,7 +53,7 @@ namespace RavenTestbed
                 {
                     using (var session = documentStore.OpenSession())
                     {
-                        var foo = session.Query<Foo>("FooByName").Where("Name:" + i.ToString()).First();
+                        var foo = session.LuceneQuery<Foo>("FooByName").Where("Name:" + i.ToString()).First();
                     }
                 }
                 stopWatch.Stop();

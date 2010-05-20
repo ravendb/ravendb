@@ -7,17 +7,17 @@ namespace Raven.Client
 	{
 		private const string Raven_DocumentByEntityName = "Raven/DocumentsByEntityName";
 
-		public static IDocumentQuery<T> Query<T>(this IDocumentSession session)
+		public static IDocumentQuery<T> LuceneQuery<T>(this IDocumentSession session)
 		{
 			var shardedDocumentSession = session as ShardedDocumentSession;
 			if(shardedDocumentSession != null)
 			{
-				var documentQuery = (ShardedDocumentQuery<T>)shardedDocumentSession.Query<T>(Raven_DocumentByEntityName);
+				var documentQuery = (ShardedDocumentQuery<T>)shardedDocumentSession.LuceneQuery<T>(Raven_DocumentByEntityName);
 				documentQuery.ForEachQuery((documentSession, query) => query.Where(GenerateQuery<T>(documentSession)));
 				return documentQuery;
 			}
 
-			return session.Query<T>(Raven_DocumentByEntityName)
+			return session.LuceneQuery<T>(Raven_DocumentByEntityName)
 				.Where(GenerateQuery<T>(session));
 		}
 

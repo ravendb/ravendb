@@ -74,7 +74,7 @@ select new { Tag = g.Key, Count = g.Sum(x => (long)x.Count) }"
 					});
 					session.SaveChanges();
 
-					var tagAndCounts = session.Query<TagAndCount>("TagCloud").WaitForNonStaleResults()
+                    var tagAndCounts = session.LuceneQuery<TagAndCount>("TagCloud").WaitForNonStaleResults()
 						.ToArray();
 
 					Assert.Equal(1, tagAndCounts.First(x=>x.Tag == "C#").Count);
@@ -120,7 +120,7 @@ select new { Tag = g.Key, Count = g.Sum(x => (long)x.Count) }"
 					});
 					session.SaveChanges();
 
-					var tagAndCounts = session.Query<TagAndCount>("TagCloud").WaitForNonStaleResults()
+                    var tagAndCounts = session.LuceneQuery<TagAndCount>("TagCloud").WaitForNonStaleResults()
 					.ToArray();
 
 					Assert.Equal(1, tagAndCounts.Single(x => x.Tag == "C#").Count);
@@ -140,7 +140,7 @@ select new { Tag = g.Key, Count = g.Sum(x => (long)x.Count) }"
 					});
 					session.SaveChanges();
 
-					tagAndCounts = session.Query<TagAndCount>("TagCloud").WaitForNonStaleResults()
+                    tagAndCounts = session.LuceneQuery<TagAndCount>("TagCloud").WaitForNonStaleResults()
 						.ToArray();
 
 					Assert.Equal(2, tagAndCounts.Single(x => x.Tag == "C#").Count);
@@ -198,7 +198,7 @@ select new
 					});
 					session.SaveChanges();
 
-					var tagAndCounts = session.Query<ActivityAndCharacterCountAmount>("EventsByActivityAndCharacterCountAmount")
+                    var tagAndCounts = session.LuceneQuery<ActivityAndCharacterCountAmount>("EventsByActivityAndCharacterCountAmount")
 						.WaitForNonStaleResults()
 						.ToArray();
 

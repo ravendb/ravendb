@@ -5,14 +5,13 @@ using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Transactions;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Client;
 using System;
 using Raven.Client.Exceptions;
+using Raven.Client.Linq;
 using Raven.Database;
 using Raven.Database.Data;
-using Raven.Database.Json;
 
 namespace Raven.Client.Document
 {
@@ -146,6 +145,11 @@ more responsible application.
 	    public void Delete<T>(T entity)
 	    {
 	        deletedEntities.Add(entity);
+	    }
+
+	    public IRavenQueryable<T> Query<T>(string indexName)
+	    {
+	        return new RavenQueryable<T>(new RavenQueryProvider<T>(this, indexName));
 	    }
 
 	    private object ConvertToEntity<T>(string id, JObject documentFound, JObject metadata)
@@ -386,7 +390,7 @@ more responsible application.
 	        get; set;
 	    }
 
-	    public IDocumentQuery<T> Query<T>(string indexName)
+	    public IDocumentQuery<T> LuceneQuery<T>(string indexName)
 		{
 	    	return new DocumentQuery<T>(this, database, indexName, null);
 		}
