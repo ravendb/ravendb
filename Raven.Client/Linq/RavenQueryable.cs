@@ -76,8 +76,7 @@ namespace Raven.Client.Linq
 
         public override string ToString()
         {
-            var queryProvider = ((RavenQueryProvider<T>)provider);
-            var ravenQueryProvider = new RavenQueryProvider<T>(queryProvider.Session, queryProvider.IndexName);
+            var ravenQueryProvider = new RavenQueryProvider<T>(provider.Session, provider.IndexName);
             ravenQueryProvider.ProcessExpression(expression);
             string fields = "";
             if (ravenQueryProvider.FieldsToFetch.Count > 0)
