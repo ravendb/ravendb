@@ -9,36 +9,35 @@ namespace Raven.Client
 {
     public interface IDocumentSession : IDisposable
     {
-
-        string StoreIdentifier { get; }
-        
-		T Load<T>(string id);
+        T Load<T>(string id);
 
         T[] Load<T>(params string[] ids);
 
-        void Delete<T>(T entity);
+        void Refresh<T>(T entity);
+
+        void Commit(Guid txId);
+
+        void Rollback(Guid txId);
 
         IRavenQueryable<T> Query<T>(string indexName);
 
 		IDocumentQuery<T> LuceneQuery<T>(string indexName);
         
 		void SaveChanges();
+
+        string StoreIdentifier { get; }
         
-		void Store<T>(T entity);
+        void Store<T>(T entity);
+        
+        void Delete<T>(T entity);
 
-        void Refresh<T>(T entity);
-
-    	void Evict<T>(T entity);
-
-    	void Clear();
-
+        void Evict<T>(T entity);
+        
+        void Clear();
+        
         bool UseOptimisticConcurrency { get; set; }
 
     	DocumentConvention Conventions { get; }
-
-    	void Commit(Guid txId);
- 
-        void Rollback(Guid txId);
 
         int MaxNumberOfRequestsPerSession { get; set; }
 
