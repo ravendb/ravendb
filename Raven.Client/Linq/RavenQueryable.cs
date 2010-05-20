@@ -81,7 +81,7 @@ namespace Raven.Client.Linq
             ravenQueryProvider.ProcessExpression(expression);
             string fields = "";
             if (ravenQueryProvider.FieldsToFetch.Count > 0)
-                fields = "<" + string.Join(", ", ravenQueryProvider.FieldsToFetch) + ">: ";
+                fields = "<" + string.Join(", ", ravenQueryProvider.FieldsToFetch.ToArray()) + ">: ";
             return 
                 fields + 
                 ravenQueryProvider.QueryText;

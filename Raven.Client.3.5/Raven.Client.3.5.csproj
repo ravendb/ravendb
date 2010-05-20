@@ -116,6 +116,21 @@
     <Compile Include="..\Raven.Client\IDocumentStore.cs">
       <Link>IDocumentStore.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client\Linq\IRavenQueryable.cs">
+      <Link>Linq\IRavenQueryable.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client\Linq\IRavenQueryProvider.cs">
+      <Link>Linq\IRavenQueryProvider.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client\Linq\RavenQueryable.cs">
+      <Link>Linq\RavenQueryable.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client\Linq\RavenQueryProvider.cs">
+      <Link>Linq\RavenQueryProvider.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client\Linq\TypeSystem.cs">
+      <Link>Linq\TypeSystem.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client\RavenExtensions.cs">
       <Link>RavenExtensions.cs</Link>
     </Compile>
