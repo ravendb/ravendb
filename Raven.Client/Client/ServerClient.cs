@@ -30,7 +30,6 @@ namespace Raven.Client.Client
         private readonly Dictionary<string, IntHolder> failureCounts = new Dictionary<string, IntHolder>();
 	    private int requestCount;
 
-
 	    private class IntHolder
 	    {
 	        public int Value;
@@ -153,11 +152,12 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 	        Interlocked.Increment(ref value.Value);
 	    }
 
-	    private static bool TryOperation<T>(Func<string, T> operation, string operationUrl, bool avoidThrowing, out T result)
+	    private bool TryOperation<T>(Func<string, T> operation, string operationUrl, bool avoidThrowing, out T result)
 	    {
 	        try
 	        {
 	            result = operation(operationUrl);
+	            ResetFailureCount(operationUrl);
 	            return true;
 	        }
 	        catch(WebException e)
@@ -169,6 +169,15 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
                     return false;
 	            throw;
 	        }
+	    }
+
+	    private  void ResetFailureCount(string operationUrl)
+	    {
+            IntHolder value;
+            if (failureCounts.TryGetValue(operationUrl, out value) == false)
+                throw new KeyNotFoundException("BUG: Could not find failure count for " + operationUrl);
+            Thread.VolatileWrite(ref value.Value, 0);
+	   
 	    }
 
 	    private static bool IsServerDown(WebException e)
