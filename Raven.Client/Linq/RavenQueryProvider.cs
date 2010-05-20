@@ -4,6 +4,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
+using Raven.Client.Linq.Lucene;
 
 namespace Raven.Client.Linq
 {
@@ -109,12 +110,7 @@ namespace Raven.Client.Linq
         private void VisitEqual(BinaryExpression expression)
         {
             QueryText.Append(((MemberExpression)expression.Left).Member.Name).Append(":");
-            if (expression.Right.NodeType == ExpressionType.Constant)
-                QueryText.Append(((ConstantExpression)expression.Right).Value);
-            else if (expression.Right.NodeType == ExpressionType.MemberAccess)
-                QueryText.Append(GetMemberValue((MemberExpression)expression.Right));
-            else
-                throw new NotSupportedException("Expression type not supported: " + expression.Right.NodeType);
+			QueryText.Append(GetValueFromExpression(expression.Right));
 
             QueryText.Append(" ");
         }
@@ -122,27 +118,36 @@ namespace Raven.Client.Linq
         private void VisitLessThanOrEqual(BinaryExpression expression)
         {
             QueryText.Append(((MemberExpression)expression.Left).Member.Name).Append(":{* TO ");
-            if (expression.Right.NodeType == ExpressionType.Constant)
-                QueryText.Append(((ConstantExpression)expression.Right).Value);
-            else if (expression.Right.NodeType == ExpressionType.MemberAccess)
-                QueryText.Append(GetMemberValue((MemberExpression)expression.Right));
-            else
-                throw new NotSupportedException("Expression type not supported: " +
-                                                expression.Right.NodeType);
+			QueryText.Append(TransformToRangeValue(GetValueFromExpression(expression.Right)));
 
             QueryText.Append("} ");
         }
 
-        private void VisitLessThan(BinaryExpression expression)
+    	private static string TransformToRangeValue(object value)
+    	{
+			if (value == null)
+				return "NULL_VALUE";
+
+			if (value is int)
+				return NumericUtils.IntToPrefixCoded((int) value);
+			if (value is long)
+				return NumericUtils.LongToPrefixCoded((long) value);
+			if (value is decimal)
+				return NumericUtils.DoubleToPrefixCoded((double) (decimal) value);
+			if (value is double)
+				return NumericUtils.DoubleToPrefixCoded((double) value);
+			if (value is float)
+				return NumericUtils.FloatToPrefixCoded((float) value);
+			if (value is DateTime)
+				return DateTools.DateToString((DateTime) value, DateTools.Resolution.MILLISECOND);
+    		
+			return value.ToString();
+    	}
+
+    	private void VisitLessThan(BinaryExpression expression)
         {
             QueryText.Append(((MemberExpression)expression.Left).Member.Name).Append(":[* TO ");
-            if (expression.Right.NodeType == ExpressionType.Constant)
-                QueryText.Append(((ConstantExpression)expression.Right).Value);
-            else if (expression.Right.NodeType == ExpressionType.MemberAccess)
-                QueryText.Append(GetMemberValue((MemberExpression)expression.Right));
-            else
-                throw new NotSupportedException("Expression type not supported: " +
-                                                expression.Right.NodeType);
+			QueryText.Append(TransformToRangeValue(GetValueFromExpression(expression.Right)));
 
             QueryText.Append("] ");
         }
@@ -150,13 +155,7 @@ namespace Raven.Client.Linq
         private void VisitGreaterThanOrEqual(BinaryExpression expression)
         {
             QueryText.Append(((MemberExpression)expression.Left).Member.Name).Append(":{");
-            if (expression.Right.NodeType == ExpressionType.Constant)
-                QueryText.Append(((ConstantExpression)expression.Right).Value);
-            else if (expression.Right.NodeType == ExpressionType.MemberAccess)
-                QueryText.Append(GetMemberValue((MemberExpression)expression.Right));
-            else
-                throw new NotSupportedException("Expression type not supported: " +
-                                                expression.Right.NodeType);
+			QueryText.Append(TransformToRangeValue(GetValueFromExpression(expression.Right)));
 
             QueryText.Append(" TO *} ");
         }
@@ -164,13 +163,7 @@ namespace Raven.Client.Linq
         private void VisitGreaterThan(BinaryExpression expression)
         {
             QueryText.Append(((MemberExpression)expression.Left).Member.Name).Append(":[");
-            if (expression.Right.NodeType == ExpressionType.Constant)
-                QueryText.Append(((ConstantExpression)expression.Right).Value);
-            else if (expression.Right.NodeType == ExpressionType.MemberAccess)
-                QueryText.Append(GetMemberValue((MemberExpression)expression.Right));
-            else
-                throw new NotSupportedException("Expression type not supported: " +
-                                                expression.Right.NodeType);
+			QueryText.Append(TransformToRangeValue(GetValueFromExpression(expression.Right)));
 
             QueryText.Append(" TO *] ");
         }
@@ -249,40 +242,59 @@ namespace Raven.Client.Linq
         }
         #region Helpers
 
-        private static Object GetMemberValue(MemberExpression memberExpression)
+        private static object GetValueFromExpression(Expression expression)
         {
-            MemberInfo memberInfo;
-            Object obj;
-
-            if (memberExpression == null)
-                throw new ArgumentNullException("memberExpression");
+            if (expression == null)
+                throw new ArgumentNullException("expression");
 
             // Get object
-            if (memberExpression.Expression is ConstantExpression)
-                obj = ((ConstantExpression)memberExpression.Expression).Value;
-            else if (memberExpression.Expression is MemberExpression)
-                obj = GetMemberValue((MemberExpression)memberExpression.Expression);
-            else
-                throw new NotSupportedException("Expression type not supported: " +
-                                                memberExpression.Expression.GetType().FullName);
-
-            // Get value
-            memberInfo = memberExpression.Member;
-            if (memberInfo is PropertyInfo)
-            {
-                var property = (PropertyInfo)memberInfo;
-                return property.GetValue(obj, null);
-            }
-            else if (memberInfo is FieldInfo)
-            {
-                var field = (FieldInfo)memberInfo;
-                return field.GetValue(obj);
-            }
-            else
-            {
-                throw new NotSupportedException("MemberInfo type not supported: " + memberInfo.GetType().FullName);
-            }
+            if (expression.NodeType == ExpressionType.Constant)
+                return ((ConstantExpression)expression).Value;
+			if(expression.NodeType == ExpressionType.MemberAccess)
+				return GetMemberValue(((MemberExpression)expression));
+			if(expression.NodeType == ExpressionType.New)
+			{
+				var newExpression = ((NewExpression)expression);
+				return Activator.CreateInstance(newExpression.Type, newExpression.Arguments.Select(GetValueFromExpression).ToArray());
+			}
+			if (expression.NodeType == ExpressionType.Lambda)
+				return ((LambdaExpression) expression).Compile().DynamicInvoke();
+        	throw new InvalidOperationException("Can't extract value from expression of type: " + expression.NodeType);
         }
+
+		private static object GetMemberValue(MemberExpression memberExpression)
+		{
+			object obj;
+
+			if (memberExpression == null)
+				throw new ArgumentNullException("memberExpression");
+
+			// Get object
+			if (memberExpression.Expression is ConstantExpression)
+				obj = ((ConstantExpression)memberExpression.Expression).Value;
+			else if (memberExpression.Expression is MemberExpression)
+				obj = GetMemberValue((MemberExpression)memberExpression.Expression);
+			else
+				throw new NotSupportedException("Expression type not supported: " + memberExpression.Expression.GetType().FullName);
+
+			// Get value
+			MemberInfo memberInfo = memberExpression.Member;
+			if (memberInfo is PropertyInfo)
+			{
+				PropertyInfo property = (PropertyInfo)memberInfo;
+				return property.GetValue(obj, null);
+			}
+			else if (memberInfo is FieldInfo)
+			{
+				object value = Expression.Lambda(memberExpression).Compile().DynamicInvoke();
+				return value;
+			}
+			else
+			{
+				throw new NotSupportedException("MemberInfo type not supported: " + memberInfo.GetType().FullName);
+			}
+		}
+
 
         #endregion Helpers
     }
