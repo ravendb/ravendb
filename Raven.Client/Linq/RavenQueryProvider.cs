@@ -110,7 +110,7 @@ namespace Raven.Client.Linq
         private void VisitEqual(BinaryExpression expression)
         {
             QueryText.Append(((MemberExpression)expression.Left).Member.Name).Append(":");
-			QueryText.Append(GetValueFromExpression(expression.Right));
+			QueryText.Append(TransformToEqualValue(GetValueFromExpression(expression.Right)));
 
             QueryText.Append(" ");
         }
@@ -143,6 +143,17 @@ namespace Raven.Client.Linq
     		
 			return value.ToString();
     	}
+
+		private static string TransformToEqualValue(object value)
+		{
+			if (value == null)
+				return "NULL_VALUE";
+
+			if (value is DateTime)
+				return DateTools.DateToString((DateTime)value, DateTools.Resolution.MILLISECOND);
+
+			return value.ToString();
+		}
 
     	private void VisitLessThan(BinaryExpression expression)
         {

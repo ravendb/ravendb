@@ -47,6 +47,16 @@ namespace Raven.Client.Tests.Linq
 			Assert.Equal("Birthday:[* TO 20100515000000000] ", q.ToString());
         }
 
+		[Fact]
+		public void CanUnderstandEqualOnDate()
+		{
+			var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null, null));
+			var q = from user in indexedUsers
+					where user.Birthday == new DateTime(2010, 05, 15)
+					select user;
+			Assert.Equal("Birthday:20100515000000000 ", q.ToString());
+		}
+
         [Fact]
         public void CanUnderstandLessThanOrEqualsTo()
         {
