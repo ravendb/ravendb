@@ -84,10 +84,9 @@ namespace Raven.Database.Indexing
         {
             string data;
             if (doc is DynamicJsonObject)
-                data = ((DynamicJsonObject)doc).Inner.ToString(Formatting.None, new JsonEnumConverter(), new JsonLuceneNumberConverter());
+                data = ((DynamicJsonObject)doc).Inner.ToString(Formatting.None, new JsonEnumConverter());
             else
-                data = JObject.FromObject(doc).ToString(Formatting.None, new JsonEnumConverter(),
-                                                        new JsonLuceneNumberConverter());
+                data = JObject.FromObject(doc).ToString(Formatting.None, new JsonEnumConverter());
             return data;
         }
 
