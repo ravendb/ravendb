@@ -52,11 +52,6 @@ namespace Raven.Database.Linq
 						if(l > int.MinValue && int.MaxValue > l)
 							return (int) l;
 					}
-					var str = value as string;
-					if(str != null && str.StartsWith("0x"))
-					{
-						return JsonLuceneNumberConverter.ParseNumber(str);
-					}
 					return value;
 			}
 		}
