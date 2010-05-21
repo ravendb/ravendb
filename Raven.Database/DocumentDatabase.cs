@@ -283,7 +283,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
                 	PutTriggers.Apply(trigger => trigger.OnPut(key, document, metadata, transactionInformation));
 
 					etag = actions.AddDocument(key, etag, document, metadata);
-					AddIndexingTask(metadata, key, actions, () => new IndexDocumentsTask { Keys = new[] { key } });
+					AddIndexingTask(actions, metadata, () => new IndexDocumentsTask { Keys = new[] { key } });
                     PutTriggers.Apply(trigger => trigger.AfterPut(key, document, metadata, transactionInformation));
                 }
                 else
@@ -304,7 +304,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 		    };
 		}
 
-		private void AddIndexingTask(JObject metadata, string key, DocumentStorageActions actions, Func<Task> taskGenerator)
+		private void AddIndexingTask(DocumentStorageActions actions, JToken metadata, Func<Task> taskGenerator)
 		{
 			foreach (var indexName in IndexDefinitionStorage.IndexNames)
 			{
@@ -371,7 +371,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
                 	JObject metadata;
                 	if (actions.DeleteDocument(key, etag, out metadata))
                     {
-						AddIndexingTask(metadata, key, actions, () => new RemoveFromIndexTask { Keys = new[] { key } });
+						AddIndexingTask(actions, metadata, () => new RemoveFromIndexTask { Keys = new[] { key } });
                         DeleteTriggers.Apply(trigger => trigger.AfterDelete(key, transactionInformation));
                     }
                 }
