@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Globalization;
 using System.Linq;
+using log4net.Util.TypeConverters;
 using Lucene.Net.Documents;
 using Lucene.Net.Util;
 using Newtonsoft.Json;
@@ -76,7 +78,13 @@ namespace Raven.Database.Indexing
 					indexDefinition.GetStorage(name, defaultStorage),
 					indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
 			}
-			else
+			else if(value is IConvertible) // we need this to store numbers in invariant format, so JSON could read them
+			{
+				var convert = ((IConvertible) value);
+				yield return new Field(name, convert.ToString(CultureInfo.InvariantCulture), indexDefinition.GetStorage(name, defaultStorage),
+				                       indexDefinition.GetIndex(name, GetDefaultIndexOption(value)));
+			}
+			else 
 			{
 				yield return new Field(name, value.ToString(), indexDefinition.GetStorage(name, defaultStorage),
 				                       indexDefinition.GetIndex(name, GetDefaultIndexOption(value)));
