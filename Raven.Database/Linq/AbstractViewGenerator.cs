@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using Raven.Database.Indexing;
@@ -19,7 +20,9 @@ namespace Raven.Database.Linq
         
         public IDictionary<string, FieldIndexing> Indexes { get; set; }
 
-        protected AbstractViewGenerator()
+    	public string ForEntityName { get; set; }
+
+    	protected AbstractViewGenerator()
         {
             Stores = new Dictionary<string, FieldStorage>();
             Indexes = new Dictionary<string, FieldIndexing>();
