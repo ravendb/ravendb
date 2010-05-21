@@ -9,9 +9,12 @@ namespace Raven.Database.Server.Abstractions
 	{
 		private readonly HttpListenerRequest request;
 
-		public HttpListenerRequestAdapter(HttpListenerRequest request)
+	    private NameValueCollection queryString;
+
+	    public HttpListenerRequestAdapter(HttpListenerRequest request)
 		{
 			this.request = request;
+		    this.queryString = System.Web.HttpUtility.ParseQueryString(Uri.UnescapeDataString(request.Url.Query));
 		}
 
 		public NameValueCollection Headers
@@ -26,7 +29,7 @@ namespace Raven.Database.Server.Abstractions
 
 		public NameValueCollection QueryString
 		{
-			get { return request.QueryString; }
+			get { return queryString; }
 		}
 
 		public Uri Url

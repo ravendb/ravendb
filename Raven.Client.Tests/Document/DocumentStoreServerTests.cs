@@ -69,7 +69,7 @@ namespace Raven.Client.Tests.Document
             }
         }
 
-		[Fact(Skip = "We have a problem encoding things correctly in ServerClient.DirectQuery in such a way that it would be parsed properly in the server")]
+        [Fact]
 		public void Can_query_using_special_characters()
 		{
 			using (var server = GetNewServer(port, path))
