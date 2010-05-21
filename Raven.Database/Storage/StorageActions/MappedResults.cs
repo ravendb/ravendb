@@ -11,14 +11,14 @@ namespace Raven.Database.Storage.StorageActions
 	public partial class DocumentStorageActions 
 	{
 
-	    public void PutMappedResult(string view, string docId, string reduceKey, string data, byte[] viewAndReduceKeyHashed)
+		public void PutMappedResult(string view, string docId, string reduceKey, string data, byte[] viewAndReduceKeyHashed)
 		{
 			Api.JetSetCurrentIndex(session, MappedResults, "by_pk");
 			Api.MakeKey(session, MappedResults, view, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			Api.MakeKey(session, MappedResults, docId, Encoding.Unicode, MakeKeyGrbit.None);
 			Api.MakeKey(session, MappedResults, reduceKey, Encoding.Unicode, MakeKeyGrbit.None);
 			var isUpdate = Api.TrySeek(session, MappedResults, SeekGrbit.SeekEQ);
-
+			
 	        Guid etag = DocumentDatabase.CreateSequentialUuid();
 
 			using (var update = new Update(session, MappedResults, isUpdate ? JET_prep.Replace : JET_prep.Insert))

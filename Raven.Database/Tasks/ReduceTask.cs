@@ -1,7 +1,4 @@
-using System;
-using System.Diagnostics;
 using System.Linq;
-using Newtonsoft.Json.Linq;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
 
