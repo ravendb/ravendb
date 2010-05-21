@@ -37,7 +37,7 @@ namespace Raven.Tests.Indexes
 			{
 				queryResult = db.Query("Raven/DocumentsByEntityName", new IndexQuery
 				{
-					Query = "Tag:`Users`",
+					Query = "Tag:[[Users]]",
 					PageSize = 10
 				});
 			} while (queryResult.IsStale);
@@ -56,7 +56,6 @@ namespace Raven.Tests.Indexes
             db.Put("users/joe", null, JObject.Parse("{'email':'joe@bloggs.com'"),
                    JObject.Parse("{'Raven-Entity-Name': 'Users'}"), null);
 
-            // This is perhaps too much code in one test, I don't know what the standards are for your tests
             QueryResult queryResultPageOne;
             QueryResult queryResultPageTwo;
             QueryResult queryResultPageThree;
@@ -64,7 +63,7 @@ namespace Raven.Tests.Indexes
             {
                 queryResultPageOne = db.Query("Raven/DocumentsByEntityName", new IndexQuery
                 {
-                    Query = "Tag:`Users`",
+                    Query = "Tag:[[Users]]",
                     Start = 0,
                     PageSize = 2
                 });
@@ -73,7 +72,7 @@ namespace Raven.Tests.Indexes
             {
                 queryResultPageTwo = db.Query("Raven/DocumentsByEntityName", new IndexQuery
                 {
-                    Query = "Tag:`Users`",
+                    Query = "Tag:[[Users]]",
                     Start = 1,
                     PageSize = 2
                 });
@@ -83,7 +82,7 @@ namespace Raven.Tests.Indexes
             {
                 queryResultPageThree = db.Query("Raven/DocumentsByEntityName", new IndexQuery
                 {
-                    Query = "Tag:`Users`",
+                    Query = "Tag:[[Users]]",
                     Start = 2,
                     PageSize = 2
                 });

@@ -23,7 +23,7 @@ namespace Raven.Client
 
 		private static string GenerateQuery<T>(IDocumentSession session)
 		{
-			return "Tag:`" + session.Conventions.GetTypeTagName(typeof(T)) +"`";
+			return "Tag:[[" + session.Conventions.GetTypeTagName(typeof(T)) +"]]";
 		}
 	}
 }

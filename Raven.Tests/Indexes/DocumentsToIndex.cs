@@ -311,7 +311,7 @@ select new{project_name = prj.name, project_num = prj.num}
             {
                 docs = db.Query("regionIndex", new IndexQuery
                 {
-					Query = "Region:`A`",
+					Query = "Region:[[A]]",
                     Start = 0,
                     PageSize = 10
                 });
