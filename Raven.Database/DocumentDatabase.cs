@@ -312,8 +312,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				if(viewGenerator==null)
 					continue;
 				var entityName = metadata.Value<string>("Raven-Entity-Name");
-				if(entityName != null && 
-					viewGenerator.ForEntityName != null && 
+				if(viewGenerator.ForEntityName != null && 
 						viewGenerator.ForEntityName != entityName)
 					continue;
 				var task = taskGenerator();
