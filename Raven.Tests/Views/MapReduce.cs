@@ -93,5 +93,100 @@ select new {
 			}
 			Assert.Equal(@"{""blog_id"":""3"",""comments_length"":""14""}", q.Results[0].ToString(Formatting.None));
 		}
+
+		[Fact]
+		public void CanUpdateReduceValue()
+		{
+			var values = new[]
+			{
+				"{blog_id: 3, comments: [{},{},{}]}",
+				"{blog_id: 5, comments: [{},{},{},{}]}",
+				"{blog_id: 6, comments: [{},{},{},{},{},{}]}",
+				"{blog_id: 7, comments: [{}]}",
+				"{blog_id: 3, comments: [{},{},{}]}",
+				"{blog_id: 3, comments: [{},{},{},{},{}]}",
+				"{blog_id: 2, comments: [{},{},{},{},{},{},{},{}]}",
+				"{blog_id: 4, comments: [{},{},{}]}",
+				"{blog_id: 5, comments: [{},{}]}",
+				"{blog_id: 3, comments: [{},{},{}]}",
+				"{blog_id: 5, comments: [{}]}",
+			};
+			for (int i = 0; i < values.Length; i++)
+			{
+				db.Put("docs/" + i, null, JObject.Parse(values[i]), new JObject(), null);
+			}
+
+			QueryResult q = null;
+
+			while (db.HasTasks)
+			{
+				Thread.Sleep(100);
+			}
+
+			db.Put("docs/0", null, JObject.Parse("{blog_id: 3, comments: [{}]}"), new JObject(), null);
+			
+			for (var i = 0; i < 5; i++)
+			{
+				do
+				{
+					q = db.Query("CommentsCountPerBlog", new IndexQuery
+					{
+						Query = "blog_id:3",
+						Start = 0,
+						PageSize = 10
+					});
+					Thread.Sleep(100);
+				} while (q.IsStale);
+			}
+			Assert.Equal(@"{""blog_id"":""3"",""comments_length"":""12""}", q.Results[0].ToString(Formatting.None));
+		}
+
+
+		[Fact(Skip = "temp")]
+		public void CanUpdateReduceValue_WhenChangingReduceKey()
+		{
+			var values = new[]
+			{
+				"{blog_id: 3, comments: [{},{},{}]}",
+				"{blog_id: 5, comments: [{},{},{},{}]}",
+				"{blog_id: 6, comments: [{},{},{},{},{},{}]}",
+				"{blog_id: 7, comments: [{}]}",
+				"{blog_id: 3, comments: [{},{},{}]}",
+				"{blog_id: 3, comments: [{},{},{},{},{}]}",
+				"{blog_id: 2, comments: [{},{},{},{},{},{},{},{}]}",
+				"{blog_id: 4, comments: [{},{},{}]}",
+				"{blog_id: 5, comments: [{},{}]}",
+				"{blog_id: 3, comments: [{},{},{}]}",
+				"{blog_id: 5, comments: [{}]}",
+			};
+			for (int i = 0; i < values.Length; i++)
+			{
+				db.Put("docs/" + i, null, JObject.Parse(values[i]), new JObject(), null);
+			}
+
+			QueryResult q = null;
+
+			while (db.HasTasks)
+			{
+				Thread.Sleep(100);
+			}
+
+			db.Put("docs/0", null, JObject.Parse("{blog_id: 7, comments: [{}]}"), new JObject(), null);
+
+			for (var i = 0; i < 5; i++)
+			{
+				do
+				{
+					q = db.Query("CommentsCountPerBlog", new IndexQuery
+					{
+						Query = "blog_id:3",
+						Start = 0,
+						PageSize = 10
+					});
+					Thread.Sleep(100);
+				} while (q.IsStale);
+			}
+			Assert.Equal(@"{""blog_id"":""3"",""comments_length"":""11""}", q.Results[0].ToString(Formatting.None));
+		}
 	}
 }

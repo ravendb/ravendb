@@ -283,7 +283,10 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
                 	PutTriggers.Apply(trigger => trigger.OnPut(key, document, metadata, transactionInformation));
 
 					etag = actions.AddDocument(key, etag, document, metadata);
-					actions.AddTask(new IndexDocumentsTask { Index = "*", Keys = new[] { key } });
+                	foreach (var indexName in IndexDefinitionStorage.IndexNames)
+                	{
+						actions.AddTask(new IndexDocumentsTask { Index = indexName, Keys = new[] { key } });
+                	}
                     PutTriggers.Apply(trigger => trigger.AfterPut(key, document, metadata, transactionInformation));
                 }
                 else
@@ -352,7 +355,10 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 
                     if (actions.DeleteDocument(key, etag))
                     {
-                        actions.AddTask(new RemoveFromIndexTask {Index = "*", Keys = new[] {key}});
+                    	foreach (var indexName in IndexDefinitionStorage.IndexNames)
+                    	{
+							actions.AddTask(new RemoveFromIndexTask { Index = indexName, Keys = new[] { key } });
+                    	}
                         DeleteTriggers.Apply(trigger => trigger.AfterDelete(key, transactionInformation));
                     }
                 }
