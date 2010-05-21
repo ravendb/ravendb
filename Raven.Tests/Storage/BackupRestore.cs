@@ -66,7 +66,7 @@ namespace Raven.Tests.Storage
 			{
 				queryResult = db.Query("Raven/DocumentsByEntityName", new IndexQuery
 				{
-					Query = "Tag:`Users`",
+					Query = "Tag:[[Users]]",
 					PageSize = 10
 				});
 			} while (queryResult.IsStale);
@@ -83,7 +83,7 @@ namespace Raven.Tests.Storage
 			{
 				queryResult = db.Query("Raven/DocumentsByEntityName", new IndexQuery
 				{
-					Query = "Tag:`Users`",
+					Query = "Tag:[[Users]]",
 					PageSize = 10
 				});
 			} while (queryResult.IsStale);
@@ -100,7 +100,7 @@ namespace Raven.Tests.Storage
 			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = "raven.db.test.esent" });
 			queryResult = db.Query("Raven/DocumentsByEntityName", new IndexQuery
 			{
-				Query = "Tag:`Users`",
+				Query = "Tag:[[Users]]",
 				PageSize = 10
 			});
 			Assert.Equal(1, queryResult.Results.Length);

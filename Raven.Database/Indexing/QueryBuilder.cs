@@ -10,7 +10,7 @@ namespace Raven.Database.Indexing
 {
 	public static class QueryBuilder
 	{
-		static readonly Regex untokenizedQuery = new Regex(@"([+-]?)([\w\d_]+?):`(.+?)`", RegexOptions.Compiled);
+		static readonly Regex untokenizedQuery = new Regex(@"([+-]?)([\w\d_]+?):\[\[(.+?)\]\]", RegexOptions.Compiled);
 
 		public static Query BuildQuery(string query)
 		{
