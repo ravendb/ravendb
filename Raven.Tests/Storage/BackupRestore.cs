@@ -10,13 +10,17 @@ using Xunit;
 
 namespace Raven.Tests.Storage
 {
-	public class BackupRestore: AbstractDocumentStorageTest
+	public class BackupRestore : AbstractDocumentStorageTest
 	{
 		private DocumentDatabase db;
 
 		public BackupRestore()
 		{
-			db = new DocumentDatabase(new RavenConfiguration {DataDirectory = "raven.db.test.esent"});
+			db = new DocumentDatabase(new RavenConfiguration
+			{
+				DataDirectory = "raven.db.test.esent",
+				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false
+			});
 		}
 
 		public override void Dispose()
@@ -116,7 +120,7 @@ namespace Raven.Tests.Storage
 				var backupStatus = jsonDocument.DataAsJson.JsonDeserialization<BackupStatus>();
 				if (backupStatus.IsRunning == false)
 					return;
-				Thread.Sleep(50);
+				Thread.Sleep(500);
 			}
 		}
 	}
