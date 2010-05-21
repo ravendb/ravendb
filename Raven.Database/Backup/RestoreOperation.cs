@@ -44,9 +44,15 @@ namespace Raven.Database.Backup
 
 			JET_INSTANCE instance;
 			Api.JetCreateInstance(out instance, "restoring " + Guid.NewGuid());
-			TransactionalStorage.ConfigureInstance(instance, databaseLocation);
-			Api.JetRestoreInstance(instance, backupLocation, databaseLocation, StatusCallback);
-			Api.JetTerm(instance);
+			try
+			{
+				TransactionalStorage.ConfigureInstance(instance, databaseLocation);
+				Api.JetRestoreInstance(instance, backupLocation, databaseLocation, StatusCallback);
+			}
+			finally
+			{
+				Api.JetTerm(instance);
+			}
 		}
 
 		private JET_err StatusCallback(JET_SESID sesid, JET_SNP snp, JET_SNT snt, object data)
