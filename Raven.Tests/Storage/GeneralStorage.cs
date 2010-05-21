@@ -38,7 +38,8 @@ namespace Raven.Tests.Storage
 			{
 				Assert.Equal(1, actions.GetDocumentsCount());
 
-				actions.DeleteDocument("a", null);
+				JObject metadata;
+				actions.DeleteDocument("a", null, out metadata);
 			});
 
 

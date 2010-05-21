@@ -122,8 +122,7 @@ namespace Raven.Database.Storage.StorageActions
                         Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["data"]).ToJObject(),
                     Etag = new Guid(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"])),
                     Metadata =
-                        Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject
-                            ()
+                        Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject()
                 };
             } while (Api.TryMoveNext(session, Documents));
         }
@@ -239,8 +238,9 @@ namespace Raven.Database.Storage.StorageActions
 		}
 
 
-		public bool DeleteDocument(string key, Guid? etag)
+		public bool DeleteDocument(string key, Guid? etag, out JObject metadata)
 		{
+			metadata = null;
 			Api.JetSetCurrentIndex(session, Documents, "by_key");
 			Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Documents, SeekGrbit.SeekEQ) == false)
@@ -253,6 +253,8 @@ namespace Raven.Database.Storage.StorageActions
 			
 			EnsureDocumentEtagMatch(key, etag, "DELETE");
 			EnsureNotLockedByTransaction(key, null);
+
+			metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
 
 			Api.JetDelete(session, Documents);
 			logger.DebugFormat("Document with key '{0}' was deleted", key);
