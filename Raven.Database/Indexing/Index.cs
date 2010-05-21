@@ -7,13 +7,11 @@ using log4net;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
-using Lucene.Net.QueryParsers;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
-using Raven.Database.Storage;
 using Raven.Database.Storage.StorageActions;
 using Version = Lucene.Net.Util.Version;
 
@@ -271,6 +269,5 @@ namespace Raven.Database.Indexing
 
             #endregion
         }
-
     }
 }
