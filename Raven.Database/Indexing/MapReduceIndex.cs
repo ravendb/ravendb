@@ -28,7 +28,7 @@ namespace Raven.Database.Indexing
 
         public override void IndexDocuments(
             AbstractViewGenerator viewGenerator,
-            IEnumerable<object> documents,
+            IEnumerable<dynamic> documents,
             WorkContext context,
             DocumentStorageActions actions)
         {
@@ -36,7 +36,16 @@ namespace Raven.Database.Indexing
             var count = 0;
             Func<object, object> documentIdFetcher = null;
             var reduceKeys = new HashSet<string>();
-            foreach (var doc in RobustEnumeration(documents, viewGenerator.MapDefinition, actions, context))
+        	var documentsWrapped = documents.Select(doc =>
+        	{
+        		var documentId = doc.__document_id;
+				foreach (var reduceKey in actions.DeleteMappedResultsForDocumentId((string)documentId, name))
+        		{
+					reduceKeys.Add(reduceKey);
+        		}
+        		return doc;
+        	});
+        	foreach (var doc in RobustEnumeration(documentsWrapped, viewGenerator.MapDefinition, actions, context))
             {
                 count++;
 
@@ -63,7 +72,7 @@ namespace Raven.Database.Indexing
 
                 var hash = ComputeHash(name, reduceKey);
 
-                actions.PutMappedResult(name, docId, reduceKey, data, hash);
+				actions.PutMappedResult(name, docId, reduceKey, data, hash);
 
                 actions.IncrementSuccessIndexing();
             }
