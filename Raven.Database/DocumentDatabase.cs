@@ -108,9 +108,9 @@ namespace Raven.Database
 		             new IndexDefinition
 		             {
 		                 Map =
-		                 @"from doc in docs 
-where doc[""@metadata""][""Raven-Entity-Name""] != null 
-select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
+						 @"from doc in docs 
+where doc[""@metadata""][""X-Raven-Entity-Name""] != null 
+select new { Tag = doc[""@metadata""][""X-Raven-Entity-Name""] };
 ",
 		                 Indexes = {{"Tag", FieldIndexing.NotAnalyzed}},
 		                 Stores = {{"Tag", FieldStorage.No}}
@@ -283,7 +283,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
                 	PutTriggers.Apply(trigger => trigger.OnPut(key, document, metadata, transactionInformation));
 
 					etag = actions.AddDocument(key, etag, document, metadata);
-					actions.AddTask(new IndexDocumentsTask { Index = "*", Keys = new[] { key } });
+					AddIndexingTask(actions, metadata, () => new IndexDocumentsTask { Keys = new[] { key } });
                     PutTriggers.Apply(trigger => trigger.AfterPut(key, document, metadata, transactionInformation));
                 }
                 else
@@ -302,6 +302,23 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 		        Key = key,
 		        ETag = (Guid)etag
 		    };
+		}
+
+		private void AddIndexingTask(DocumentStorageActions actions, JToken metadata, Func<Task> taskGenerator)
+		{
+			foreach (var indexName in IndexDefinitionStorage.IndexNames)
+			{
+				var viewGenerator = IndexDefinitionStorage.GetViewGenerator(indexName);
+				if(viewGenerator==null)
+					continue;
+				var entityName = metadata.Value<string>("X-Raven-Entity-Name");
+				if(viewGenerator.ForEntityName != null && 
+						viewGenerator.ForEntityName != entityName)
+					continue;
+				var task = taskGenerator();
+				task.Index = indexName;
+				actions.AddTask(task);
+			}
 		}
 
 		private void AssertPutOperationNotVetoed(string key, JObject metadata, JObject document, TransactionInformation transactionInformation)
@@ -350,9 +367,10 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 
                 	DeleteTriggers.Apply(trigger => trigger.OnDelete(key, transactionInformation));
 
-                    if (actions.DeleteDocument(key, etag))
+                	JObject metadata;
+                	if (actions.DeleteDocument(key, etag, out metadata))
                     {
-                        actions.AddTask(new RemoveFromIndexTask {Index = "*", Keys = new[] {key}});
+						AddIndexingTask(actions, metadata, () => new RemoveFromIndexTask { Keys = new[] { key } });
                         DeleteTriggers.Apply(trigger => trigger.AfterDelete(key, transactionInformation));
                     }
                 }

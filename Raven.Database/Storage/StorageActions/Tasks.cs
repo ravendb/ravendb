@@ -14,28 +14,14 @@ namespace Raven.Database.Storage.StorageActions
 			Api.MakeKey(session, Tasks, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Tasks, SeekGrbit.SeekEQ) == false)
 			{
-				return DoesTasksExistsForAllIndexes(cutOff);
+				return false;
 			}
             if (cutOff == null)
                 return true;
             // we are at the first row for this index
 		    var addedAt = Api.RetrieveColumnAsDateTime(session, Tasks, tableColumnsCache.TasksColumns["added_at"]).Value;
-            if (cutOff.Value > addedAt)
-                return true;
-            // we might still have an earlier index for this.
-            return DoesTasksExistsForAllIndexes(cutOff);
+			return cutOff.Value > addedAt;
 		}
-
-	    private bool DoesTasksExistsForAllIndexes(DateTime? cutOff)
-	    {
-	        Api.MakeKey(session, Tasks, "*", Encoding.Unicode, MakeKeyGrbit.NewKey);
-	        if (Api.TrySeek(session, Tasks, SeekGrbit.SeekEQ) == false)
-	            return false;
-            if (cutOff == null)
-                return true;
-	        var addedAt = Api.RetrieveColumnAsDateTime(session, Tasks, tableColumnsCache.TasksColumns["added_at"]).Value;
-	        return cutOff.Value > addedAt;
-	    }
 
 	    public void AddTask(Task task)
 		{

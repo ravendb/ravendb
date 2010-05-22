@@ -30,14 +30,14 @@ namespace Raven.Tests.Indexes
 		public void CanQueryOverDefaultIndex()
 		{
 			db.Put("users/ayende", null, JObject.Parse("{'email':'ayende@ayende.com'"),
-			       JObject.Parse("{'Raven-Entity-Name': 'Users'}"), null);
+			       JObject.Parse("{'X-Raven-Entity-Name': 'Users'}"), null);
 
 			QueryResult queryResult;
 			do
 			{
 				queryResult = db.Query("Raven/DocumentsByEntityName", new IndexQuery
 				{
-					Query = "Tag:`Users`",
+					Query = "Tag:[[Users]]",
 					PageSize = 10
 				});
 			} while (queryResult.IsStale);
@@ -50,13 +50,12 @@ namespace Raven.Tests.Indexes
         public void CanPageOverDefaultIndex()
         {
             db.Put("users/ayende", null, JObject.Parse("{'email':'ayende@ayende.com'"),
-                   JObject.Parse("{'Raven-Entity-Name': 'Users'}"), null);
+                   JObject.Parse("{'X-Raven-Entity-Name': 'Users'}"), null);
             db.Put("users/rob", null, JObject.Parse("{'email':'robashton@codeofrob.com'"),
-                   JObject.Parse("{'Raven-Entity-Name': 'Users'}"), null);
+                   JObject.Parse("{'X-Raven-Entity-Name': 'Users'}"), null);
             db.Put("users/joe", null, JObject.Parse("{'email':'joe@bloggs.com'"),
-                   JObject.Parse("{'Raven-Entity-Name': 'Users'}"), null);
+                   JObject.Parse("{'X-Raven-Entity-Name': 'Users'}"), null);
 
-            // This is perhaps too much code in one test, I don't know what the standards are for your tests
             QueryResult queryResultPageOne;
             QueryResult queryResultPageTwo;
             QueryResult queryResultPageThree;
@@ -64,7 +63,7 @@ namespace Raven.Tests.Indexes
             {
                 queryResultPageOne = db.Query("Raven/DocumentsByEntityName", new IndexQuery
                 {
-                    Query = "Tag:`Users`",
+                    Query = "Tag:[[Users]]",
                     Start = 0,
                     PageSize = 2
                 });
@@ -73,7 +72,7 @@ namespace Raven.Tests.Indexes
             {
                 queryResultPageTwo = db.Query("Raven/DocumentsByEntityName", new IndexQuery
                 {
-                    Query = "Tag:`Users`",
+                    Query = "Tag:[[Users]]",
                     Start = 1,
                     PageSize = 2
                 });
@@ -83,7 +82,7 @@ namespace Raven.Tests.Indexes
             {
                 queryResultPageThree = db.Query("Raven/DocumentsByEntityName", new IndexQuery
                 {
-                    Query = "Tag:`Users`",
+                    Query = "Tag:[[Users]]",
                     Start = 2,
                     PageSize = 2
                 });

@@ -40,7 +40,7 @@ namespace Raven.Client.Client
             webRequest.Credentials = credentials;
             WriteMetadata(metadata);
             webRequest.Method = method;
-            webRequest.ContentType = "application/json";
+            webRequest.ContentType = "application/json; charset=utf-8";
         }
 
         public string ReadResponseString()

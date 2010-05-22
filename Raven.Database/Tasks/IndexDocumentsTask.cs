@@ -42,32 +42,29 @@ namespace Raven.Database.Tasks
 					.ToArray();
 
 				var keysAsString = string.Join(", ", Keys);
-				foreach (var index in context.IndexDefinitionStorage.IndexNames)
+				var viewGenerator = context.IndexDefinitionStorage.GetViewGenerator(Index);
+				if (viewGenerator == null)
+					return; // index was deleted, probably
+				try
 				{
-					var viewGenerator = context.IndexDefinitionStorage.GetViewGenerator(index);
-					if (viewGenerator == null)
-						continue; // index was deleted, probably
-					try
+					logger.DebugFormat("Indexing documents: [{0}] for index: {1}", keysAsString, Index);
+
+					var failureRate = actions.GetFailureRate(Index);
+					if (failureRate.IsInvalidIndex)
 					{
-						logger.DebugFormat("Indexing documents: [{0}] for index: {1}", keysAsString, index);
-
-						var failureRate = actions.GetFailureRate(index);
-						if (failureRate.IsInvalidIndex)
-						{
-							logger.InfoFormat("Skipped indexing documents: [{0}] for index: {1} because failure rate is too high: {2}",
-							                  keysAsString, index,
-							                  failureRate.FailureRate);
-							continue;
-						}
-
-
-						context.IndexStorage.Index(index, viewGenerator, jsonDocuments,
-						                           context, actions);
+						logger.InfoFormat("Skipped indexing documents: [{0}] for index: {1} because failure rate is too high: {2}",
+										  keysAsString, Index,
+						                  failureRate.FailureRate);
+						return;
 					}
-					catch (Exception e)
-					{
-						logger.WarnFormat(e, "Failed to index document  [{0}] for index: {1}", keysAsString, index);
-					}
+
+
+					context.IndexStorage.Index(Index, viewGenerator, jsonDocuments,
+					                           context, actions);
+				}
+				catch (Exception e)
+				{
+					logger.WarnFormat(e, "Failed to index document  [{0}] for index: {1}", keysAsString, Index);
 				}
 			});
 		}

@@ -122,6 +122,28 @@ namespace Raven.Client.Tests.Document
 		}
 
 
+
+		[Fact]
+		public void Can_get_entity_back_with_enum()
+		{
+			using (var server = GetNewServer(port, path))
+			{
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+				documentStore.Initialise();
+
+				var company = new Company { Name = "Company Name", Type = Company.CompanyType.Private };
+				var session = documentStore.OpenSession();
+				session.Store(company);
+
+				session.SaveChanges();
+				session = documentStore.OpenSession();
+				
+				var companyFound = session.Load<Company>(company.Id);
+
+				Assert.Equal(companyFound.Type, company.Type);
+			}
+		}
+
         [Fact]
         public void Can_store_and_get_array_metadata()
         {
@@ -133,7 +155,7 @@ namespace Raven.Client.Tests.Document
                 var session = documentStore.OpenSession();
                 session.OnEntityConverted += (entity, document, metadata) =>
                 {
-                    metadata["Raven-Allowed-Users"] = new JArray("ayende", "oren", "rob");
+					metadata["X-Raven-Allowed-Users"] = new JArray("ayende", "oren", "rob");
                 };
 
                 var company = new Company { Name = "Company" };
@@ -141,7 +163,7 @@ namespace Raven.Client.Tests.Document
                 session.SaveChanges();
 
                 var metadataFromServer = session.GetMetadataFor(session.Load<Company>(company.Id));
-                var users = metadataFromServer["Raven-Allowed-Users"].OfType<JValue>().Select(x => (string) x.Value).ToArray();
+				var users = metadataFromServer["X-Raven-Allowed-Users"].OfType<JValue>().Select(x => (string)x.Value).ToArray();
                 Assert.Equal(new[]{"ayende","oren","rob"}, users);
             }
         }

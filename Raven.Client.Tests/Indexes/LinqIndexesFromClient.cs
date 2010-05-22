@@ -34,13 +34,13 @@ namespace Raven.Client.Tests.Indexes
 				GetDocumentFromString(
 				@"
                 {
-                    '@metadata': {'Raven-Entity-Name': 'Orders', '@id': 1},
+                    '@metadata': {'X-Raven-Entity-Name': 'Orders', '@id': 1},
                     'OrderLines': [{'ProductId': 2}, {'ProductId': 3}]
                 }"),
 				  GetDocumentFromString(
 				@"
                 {
-                    '@metadata': {'Raven-Entity-Name': 'Orders', '@id': 2},
+                    '@metadata': {'X-Raven-Entity-Name': 'Orders', '@id': 2},
                     'OrderLines': [{'ProductId': 5}, {'ProductId': 4}]
                 }")
 			}).Cast<object>().ToArray();

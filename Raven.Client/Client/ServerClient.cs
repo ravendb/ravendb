@@ -267,7 +267,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
                 return;
 
 	        string txInfo = string.Format("{0}, {1}", Transaction.Current.TransactionInformation.DistributedIdentifier, TransactionManager.DefaultTimeout);
-	        metadata["Raven-Transaction-Information"] = new JValue(txInfo);
+			metadata["X-Raven-Transaction-Information"] = new JValue(txInfo);
 	    }
 
 	    public void Delete(string key, Guid? etag)

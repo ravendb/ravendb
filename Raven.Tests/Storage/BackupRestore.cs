@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
@@ -7,16 +8,21 @@ using Raven.Database.Backup;
 using Raven.Database.Data;
 using Raven.Database.Json;
 using Xunit;
+using System.Linq;
 
 namespace Raven.Tests.Storage
 {
-	public class BackupRestore: AbstractDocumentStorageTest
+	public class BackupRestore : AbstractDocumentStorageTest
 	{
 		private DocumentDatabase db;
 
 		public BackupRestore()
 		{
-			db = new DocumentDatabase(new RavenConfiguration {DataDirectory = "raven.db.test.esent"});
+			db = new DocumentDatabase(new RavenConfiguration
+			{
+				DataDirectory = "raven.db.test.esent",
+				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false
+			});
 		}
 
 		public override void Dispose()
@@ -48,7 +54,7 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void AfterBackupRestoreCanQueryIndex_CreatedAfterRestore()
 		{
-			db.Put("ayende", null, JObject.Parse("{'email':'ayende@ayende.com'}"), JObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
+			db.Put("ayende", null, JObject.Parse("{'email':'ayende@ayende.com'}"), JObject.Parse("{'X-Raven-Entity-Name':'Users'}"), null);
 
 			db.StartBackup("raven.db.test.backup");
 			WaitForBackup();
@@ -66,7 +72,7 @@ namespace Raven.Tests.Storage
 			{
 				queryResult = db.Query("Raven/DocumentsByEntityName", new IndexQuery
 				{
-					Query = "Tag:`Users`",
+					Query = "Tag:[[Users]]",
 					PageSize = 10
 				});
 			} while (queryResult.IsStale);
@@ -76,14 +82,14 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void AfterBackupRestoreCanQueryIndex_CreatedBeforeRestore()
 		{
-			db.Put("ayende", null, JObject.Parse("{'email':'ayende@ayende.com'}"), JObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
+			db.Put("ayende", null, JObject.Parse("{'email':'ayende@ayende.com'}"), JObject.Parse("{'X-Raven-Entity-Name':'Users'}"), null);
 			db.SpinBackgroundWorkers();
 			QueryResult queryResult;
 			do
 			{
 				queryResult = db.Query("Raven/DocumentsByEntityName", new IndexQuery
 				{
-					Query = "Tag:`Users`",
+					Query = "Tag:[[Users]]",
 					PageSize = 10
 				});
 			} while (queryResult.IsStale);
@@ -100,7 +106,7 @@ namespace Raven.Tests.Storage
 			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = "raven.db.test.esent" });
 			queryResult = db.Query("Raven/DocumentsByEntityName", new IndexQuery
 			{
-				Query = "Tag:`Users`",
+				Query = "Tag:[[Users]]",
 				PageSize = 10
 			});
 			Assert.Equal(1, queryResult.Results.Length);
@@ -115,7 +121,13 @@ namespace Raven.Tests.Storage
 					break;
 				var backupStatus = jsonDocument.DataAsJson.JsonDeserialization<BackupStatus>();
 				if (backupStatus.IsRunning == false)
-					return;
+				{
+					var message = backupStatus.Messages.LastOrDefault(x=>x.Message.Contains("Failed"));
+
+					if (message == null)
+						return;
+					throw new InvalidOperationException(message.Message);
+				}
 				Thread.Sleep(50);
 			}
 		}

@@ -2,8 +2,10 @@ using System;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.InteropServices;
+using log4net;
 using Lucene.Net.Store;
 using Directory = System.IO.Directory;
+using Raven.Database.Extensions;
 
 namespace Raven.Database.Backup
 {
@@ -12,7 +14,14 @@ namespace Raven.Database.Backup
 		[DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
 		public static extern bool CreateHardLink(string lpFileName, string lpExistingFileName, IntPtr lpSecurityAttributes);
 
+		[DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+		public static extern bool MoveFileEx(string lpExistingFileName, string lpNewFileName, int dwFlags);
+
+		public const int MoveFileDelayUntilReboot = 0x4;
+
 		public event Action<string> Notify = delegate {  };
+
+		private ILog logger = LogManager.GetLogger(typeof (DirectoryBackup));
 
 		private readonly string source;
 		private readonly string destination;
@@ -47,7 +56,20 @@ namespace Raven.Database.Backup
 				Notify("Copied " + Path.GetFileName(file));
 			}
 
-			Directory.Delete(tempPath, true);
+			try
+			{
+				Directory.Delete(tempPath, true);
+			}
+			catch (Exception e) //cannot delete, probably because there is a file being written there
+			{
+				logger.WarnFormat(e, "Could not delete {0}, will delete those on startup", tempPath);
+
+				foreach (var file in Directory.EnumerateFiles(tempPath))
+				{
+					MoveFileEx(file, null, MoveFileDelayUntilReboot);
+				}
+				MoveFileEx(tempPath, null, MoveFileDelayUntilReboot);
+			}
 		}
 
 		public void Prepare()

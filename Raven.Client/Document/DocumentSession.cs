@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Transactions;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Client;
 using System;
@@ -12,12 +13,13 @@ using Raven.Client.Exceptions;
 using Raven.Client.Linq;
 using Raven.Database;
 using Raven.Database.Data;
+using Raven.Database.Json;
 
 namespace Raven.Client.Document
 {
 	public class DocumentSession : IDocumentSession
 	{
-		private const string RavenEntityName = "Raven-Entity-Name";
+		private const string RavenEntityName = "X-Raven-Entity-Name";
 		private readonly IDatabaseCommands database;
 		private readonly DocumentStore documentStore;
         private readonly Dictionary<object, DocumentMetadata> entitiesAndMetadata = new Dictionary<object, DocumentMetadata>();
@@ -156,7 +158,7 @@ more responsible application.
 	    {
 	    	T entity = default(T);
 
-	    	var documentType = metadata.Value<string>("Raven-Clr-Type");
+			var documentType = metadata.Value<string>("X-Raven-Clr-Type");
 	    	if (documentType != null)
 	    	{
 	    		Type type = Type.GetType(documentType);
@@ -363,13 +365,16 @@ more responsible application.
 			var entityType = entity.GetType();
 			var identityProperty = documentStore.Conventions.GetIdentityProperty(entityType);
 
-			var objectAsJson = JObject.FromObject(entity);
+			var objectAsJson = JObject.FromObject(entity,new JsonSerializer
+			{
+				Converters = { new JsonEnumConverter() }
+			});
 			if (identityProperty != null)
 			{
 				objectAsJson.Remove(identityProperty.Name);
 			}
 
-			metadata["Raven-Clr-Type"] = JToken.FromObject(entityType.FullName + ", " + entityType.Assembly.GetName().Name);
+			metadata["X-Raven-Clr-Type"] = JToken.FromObject(entityType.FullName + ", " + entityType.Assembly.GetName().Name);
 
 		    var entityConverted = OnEntityConverted;
             if(entityConverted!=null)

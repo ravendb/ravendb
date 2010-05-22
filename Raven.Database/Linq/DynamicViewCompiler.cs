@@ -40,7 +40,8 @@ namespace Raven.Database.Linq
 
 		private void TransformQueryToClass()
 		{
-			var mapDefinition = TransformMapDefinition();
+			string entityName;
+			var mapDefinition = TransformMapDefinition(out entityName);
 
 			CSharpSafeName = Regex.Replace(Name, @"[^\w\d]", "_");
 			var type = new TypeDeclaration(Modifiers.Public, new List<AttributeSection>())
@@ -58,6 +59,12 @@ namespace Raven.Database.Linq
 			                                      new List<ParameterDeclarationExpression>(), null);
 			type.Children.Add(ctor);
 			ctor.Body = new BlockStatement();
+			//this.ForEntityName = entityName;
+			ctor.Body.AddChild(new ExpressionStatement(
+								new AssignmentExpression(
+									new MemberReferenceExpression(new ThisReferenceExpression(), "ForEntityName"),
+									AssignmentOperatorType.Assign,
+									new PrimitiveExpression(entityName, entityName))));
 
 			// this.ViewText = "96E65595-1C9E-4BFB-A0E5-80BF2D6FC185"; // Will be replaced later
 			ctor.Body.AddChild(new ExpressionStatement(
@@ -149,17 +156,17 @@ namespace Raven.Database.Linq
 			                                              compiledQueryText);
 		}
 
-		private VariableDeclaration TransformMapDefinition()
+		private VariableDeclaration TransformMapDefinition(out string entityName)
 		{
 			if (indexDefinition.Map.Trim().StartsWith("from"))
-				return TransformMapDefinitionFromLinqQuerySyntax();
-			return TransformMapDefinitionFromLinqMethodSyntax();
+				return TransformMapDefinitionFromLinqQuerySyntax(out entityName);
+			return TransformMapDefinitionFromLinqMethodSyntax(out entityName);
 		}
 
-		private VariableDeclaration TransformMapDefinitionFromLinqMethodSyntax()
+		private VariableDeclaration TransformMapDefinitionFromLinqMethodSyntax(out string entityName)
 		{
 			var variableDeclaration = QueryParsingUtils.GetVariableDeclarationForLinqMethods(indexDefinition.Map);
-			AddEntityNameFilteringIfNeeded(variableDeclaration);
+			AddEntityNameFilteringIfNeeded(variableDeclaration, out entityName);
 
 			var invocationExpression = ((InvocationExpression)variableDeclaration.Initializer);
 			var targetExpression = ((MemberReferenceExpression)invocationExpression.TargetObject);
@@ -172,8 +179,9 @@ namespace Raven.Database.Linq
 			return variableDeclaration;
 		}
 
-		private void AddEntityNameFilteringIfNeeded(VariableDeclaration variableDeclaration)
+		private void AddEntityNameFilteringIfNeeded(VariableDeclaration variableDeclaration, out string entityName)
 		{
+			entityName = null;
 			var invocationExpression = ((InvocationExpression)variableDeclaration.Initializer);
 			var targetExpression = ((MemberReferenceExpression)invocationExpression.TargetObject);
 			while (targetExpression.TargetObject is InvocationExpression)
@@ -184,10 +192,11 @@ namespace Raven.Database.Linq
 			if (targetExpression.TargetObject is MemberReferenceExpression) // collection
 			{
 				var mre = (MemberReferenceExpression)targetExpression.TargetObject;
-				//doc["@metadata"]["Raven-Entity-Name"]
+				entityName = mre.MemberName;
+				//doc["@metadata"]["X-Raven-Entity-Name"]
 				var metadata = new IndexerExpression(
 					new IndexerExpression(new IdentifierExpression("__document"), new List<Expression> { new PrimitiveExpression("@metadata", "@metadata") }),
-					new List<Expression> { new PrimitiveExpression("Raven-Entity-Name", "Raven-Entity-Name") }
+					new List<Expression> { new PrimitiveExpression("X-Raven-Entity-Name", "X-Raven-Entity-Name") }
 					);
 				var whereMethod = new InvocationExpression(new MemberReferenceExpression(mre.TargetObject, "Where"),
 				                                           new List<Expression>
@@ -226,19 +235,21 @@ namespace Raven.Database.Linq
 				});
 		}
 
-		private VariableDeclaration TransformMapDefinitionFromLinqQuerySyntax()
+		private VariableDeclaration TransformMapDefinitionFromLinqQuerySyntax(out string entityName)
 		{
+			entityName = null;
 			var variableDeclaration = QueryParsingUtils.GetVariableDeclarationForLinqQuery(indexDefinition.Map);
 			var queryExpression = ((QueryExpression) variableDeclaration.Initializer);
 			var expression = queryExpression.FromClause.InExpression;
 			if(expression is MemberReferenceExpression) // collection
 			{
 				var mre = (MemberReferenceExpression)expression;
+				entityName = mre.MemberName;
 				queryExpression.FromClause.InExpression = mre.TargetObject;
-				//doc["@metadata"]["Raven-Entity-Name"]
+				//doc["@metadata"]["X-Raven-Entity-Name"]
 				var metadata = new IndexerExpression(
 					new IndexerExpression(new IdentifierExpression(queryExpression.FromClause.Identifier), new List<Expression> { new PrimitiveExpression("@metadata", "@metadata") }),
-					new List<Expression> { new PrimitiveExpression("Raven-Entity-Name", "Raven-Entity-Name") }
+					new List<Expression> { new PrimitiveExpression("X-Raven-Entity-Name", "X-Raven-Entity-Name") }
 					);
 				queryExpression.MiddleClauses.Insert(0, 
 				                                     new QueryExpressionWhereClause

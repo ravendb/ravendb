@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Exceptions;
@@ -14,16 +15,29 @@ namespace Raven.Database.Server.Responders
 {
 	public static class HttpExtensions
 	{
+		static readonly Regex findCharset = new Regex(@"charset=([\w-]+)", RegexOptions.Compiled|RegexOptions.IgnoreCase);
+
+		private static Encoding GetRequestEncoding(IHttpContext context)
+		{
+			var contentType = context.Request.Headers["Content-Type"];
+			if (contentType == null)
+				return Encoding.GetEncoding("ISO-8859-1");
+			var match = findCharset.Match(contentType);
+			if (match.Success == false)
+				return Encoding.GetEncoding("ISO-8859-1");
+			return Encoding.GetEncoding(match.Groups[1].Value);
+		}
+
 		public static JObject ReadJson(this IHttpContext context)
 		{
-			using (var streamReader = new StreamReader(context.Request.InputStream))
+			using (var streamReader = new StreamReader(context.Request.InputStream, GetRequestEncoding(context)))
 			using (var jsonReader = new JsonTextReader(streamReader))
 				return JObject.Load(jsonReader);
 		}
 
 		public static T ReadJsonObject<T>(this IHttpContext context)
 		{
-			using (var streamReader = new StreamReader(context.Request.InputStream))
+			using (var streamReader = new StreamReader(context.Request.InputStream, GetRequestEncoding(context)))
 			using (var jsonReader = new JsonTextReader(streamReader))
 				return (T)new JsonSerializer
 				{
@@ -33,14 +47,14 @@ namespace Raven.Database.Server.Responders
 
 		public static JArray ReadJsonArray(this IHttpContext context)
 		{
-			using (var streamReader = new StreamReader(context.Request.InputStream))
+			using (var streamReader = new StreamReader(context.Request.InputStream, GetRequestEncoding(context)))
 			using (var jsonReader = new JsonTextReader(streamReader))
 				return JArray.Load(jsonReader);
 		}
 
 		public static string ReadString(this IHttpContext context)
 		{
-			using (var streamReader = new StreamReader(context.Request.InputStream))
+			using (var streamReader = new StreamReader(context.Request.InputStream, GetRequestEncoding(context)))
 				return streamReader.ReadToEnd();
 		}
 

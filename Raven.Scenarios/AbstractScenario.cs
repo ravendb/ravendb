@@ -13,4 +13,8 @@ namespace Raven.Scenarios
 				).Execute();
 		}
 	}
+
+	public class PuttingDocumentUsingTransaction : AbstractScenario
+	{
+	}
 }
