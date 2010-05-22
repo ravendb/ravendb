@@ -24,9 +24,11 @@ param(
   [string]$framework = '3.5',
   [switch]$debug = $false,
   [switch]$help  = $false,
-  [switch]$timing = $false,
+  [switch]$timing = $true,
   [switch]$docs = $false
 )
+
+
 
 if($help) {
 @"
