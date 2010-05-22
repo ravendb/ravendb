@@ -99,7 +99,7 @@ namespace Raven.Tests.Linq
 				GetDocumentFromString(
 				@"
                 {
-                    '@metadata': {'Raven-Entity-Name': 'Users', '@id': 1},
+                    '@metadata': {'X-Raven-Entity-Name': 'Users', '@id': 1},
                     'Location': 'Tel Aviv'
                 }")
 			}).Cast<object>().ToArray();
@@ -134,13 +134,13 @@ namespace Raven.Tests.Linq
 				GetDocumentFromString(
 				@"
                 {
-                    '@metadata': {'Raven-Entity-Name': 'Users', '@id': 1},
+                    '@metadata': {'X-Raven-Entity-Name': 'Users', '@id': 1},
                     'Location': 'Tel Aviv'
                 }"),
 				  GetDocumentFromString(
 				@"
                 {
-                    '@metadata': {'Raven-Entity-Name': 'Users', '@id': 1},
+                    '@metadata': {'X-Raven-Entity-Name': 'Users', '@id': 1},
                     'Location': 'Tel Aviv'
                 }")
 			})).Cast<object>().ToArray();

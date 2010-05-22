@@ -108,9 +108,9 @@ namespace Raven.Database
 		             new IndexDefinition
 		             {
 		                 Map =
-		                 @"from doc in docs 
-where doc[""@metadata""][""Raven-Entity-Name""] != null 
-select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
+						 @"from doc in docs 
+where doc[""@metadata""][""X-Raven-Entity-Name""] != null 
+select new { Tag = doc[""@metadata""][""X-Raven-Entity-Name""] };
 ",
 		                 Indexes = {{"Tag", FieldIndexing.NotAnalyzed}},
 		                 Stores = {{"Tag", FieldStorage.No}}
@@ -311,7 +311,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				var viewGenerator = IndexDefinitionStorage.GetViewGenerator(indexName);
 				if(viewGenerator==null)
 					continue;
-				var entityName = metadata.Value<string>("Raven-Entity-Name");
+				var entityName = metadata.Value<string>("X-Raven-Entity-Name");
 				if(viewGenerator.ForEntityName != null && 
 						viewGenerator.ForEntityName != entityName)
 					continue;

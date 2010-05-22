@@ -155,7 +155,7 @@ namespace Raven.Client.Tests.Document
                 var session = documentStore.OpenSession();
                 session.OnEntityConverted += (entity, document, metadata) =>
                 {
-                    metadata["Raven-Allowed-Users"] = new JArray("ayende", "oren", "rob");
+					metadata["X-Raven-Allowed-Users"] = new JArray("ayende", "oren", "rob");
                 };
 
                 var company = new Company { Name = "Company" };
@@ -163,7 +163,7 @@ namespace Raven.Client.Tests.Document
                 session.SaveChanges();
 
                 var metadataFromServer = session.GetMetadataFor(session.Load<Company>(company.Id));
-                var users = metadataFromServer["Raven-Allowed-Users"].OfType<JValue>().Select(x => (string) x.Value).ToArray();
+				var users = metadataFromServer["X-Raven-Allowed-Users"].OfType<JValue>().Select(x => (string)x.Value).ToArray();
                 Assert.Equal(new[]{"ayende","oren","rob"}, users);
             }
         }

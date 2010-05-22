@@ -58,7 +58,7 @@ namespace Raven.Database.Backup
 			catch (Exception e)
 			{
 				log.Error("Failed to complete backup", e);
-				UpdateBackupStatus("Faile to complete backup because: " + e.Message);
+				UpdateBackupStatus("Failed to complete backup because: " + e.Message);
 			}
 			finally
 			{
