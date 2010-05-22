@@ -228,6 +228,7 @@ namespace Raven.Client.Tests.Document
 				session.Store(company);
 
 				session.SaveChanges();
+				session = documentStore.OpenSession();
 
 				var companyFound = session.Load<Company>(company.Id);
 
@@ -235,6 +236,24 @@ namespace Raven.Client.Tests.Document
 			}
 		}
 
+
+		[Fact]
+		public void Can_get_entity_back_with_enum()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				var company = new Company { Name = "Company Name", Type = Company.CompanyType.Private};
+				var session = documentStore.OpenSession();
+				session.Store(company);
+
+				session.SaveChanges();
+				 session = documentStore.OpenSession();
+				
+				var companyFound = session.Load<Company>(company.Id);
+
+				Assert.Equal(companyFound.Type, company.Type);
+			}
+		}
 
 		[Fact]
 		public void Will_not_store_if_entity_did_not_change()

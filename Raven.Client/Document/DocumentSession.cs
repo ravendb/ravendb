@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Transactions;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Client;
 using System;
@@ -12,6 +13,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Linq;
 using Raven.Database;
 using Raven.Database.Data;
+using Raven.Database.Json;
 
 namespace Raven.Client.Document
 {
@@ -363,7 +365,10 @@ more responsible application.
 			var entityType = entity.GetType();
 			var identityProperty = documentStore.Conventions.GetIdentityProperty(entityType);
 
-			var objectAsJson = JObject.FromObject(entity);
+			var objectAsJson = JObject.FromObject(entity,new JsonSerializer
+			{
+				Converters = { new JsonEnumConverter() }
+			});
 			if (identityProperty != null)
 			{
 				objectAsJson.Remove(identityProperty.Name);
