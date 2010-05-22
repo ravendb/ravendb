@@ -11,5 +11,12 @@ namespace Raven.Client.Tests.Document
 		public string Address3 { get; set; }
 		public List<Contact> Contacts { get; set; }
 		public int Phone { get; set; }
+		public CompanyType Type { get; set; }
+
+		public enum CompanyType
+		{
+			Public,
+			Private
+		}
 	}
 }

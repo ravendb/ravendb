@@ -122,6 +122,28 @@ namespace Raven.Client.Tests.Document
 		}
 
 
+
+		[Fact]
+		public void Can_get_entity_back_with_enum()
+		{
+			using (var server = GetNewServer(port, path))
+			{
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+				documentStore.Initialise();
+
+				var company = new Company { Name = "Company Name", Type = Company.CompanyType.Private };
+				var session = documentStore.OpenSession();
+				session.Store(company);
+
+				session.SaveChanges();
+				session = documentStore.OpenSession();
+				
+				var companyFound = session.Load<Company>(company.Id);
+
+				Assert.Equal(companyFound.Type, company.Type);
+			}
+		}
+
         [Fact]
         public void Can_store_and_get_array_metadata()
         {
