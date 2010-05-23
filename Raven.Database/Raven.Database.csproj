@@ -109,6 +109,7 @@
     <Compile Include="Backup\RestoreOperation.cs" />
     <Compile Include="Data\BackupRequest.cs" />
     <Compile Include="Exceptions\IndexDoesNotExists.cs" />
+    <Compile Include="Indexing\GatherAllCollector.cs" />
     <Compile Include="Indexing\NumberUtil.cs" />
     <Compile Include="IStartupTask.cs" />
     <Compile Include="Plugins\Builtins\FilterRavenInternalDocumentsReadTrigger.cs" />

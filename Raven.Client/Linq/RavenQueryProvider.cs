@@ -55,7 +55,8 @@ namespace Raven.Client.Linq
         	var documentQuery = luceneQuery
                 .Where(QueryText.ToString())
                 .SelectFields<T>(FieldsToFetch.ToArray());
-            customizeQuery(documentQuery);
+			if(customizeQuery != null)
+				customizeQuery(documentQuery);
             return documentQuery;
         }
 
@@ -242,6 +243,8 @@ namespace Raven.Client.Linq
                 case ExpressionType.New:
                     FieldsToFetch.AddRange(((NewExpression)body).Arguments.Cast<MemberExpression>().Select(x => x.Member.Name));
                     break;
+				case ExpressionType.Parameter:// want the full thing, so just pass it on.
+            		break;
                 default:
                     throw new NotSupportedException("Node not supported: " + body.NodeType);
 

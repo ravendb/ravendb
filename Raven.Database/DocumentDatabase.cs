@@ -478,6 +478,27 @@ select new { Tag = doc[""@metadata""][""X-Raven-Entity-Name""] };
 			};
 		}
 
+		public IEnumerable<string> QueryDocumentIds(string index, IndexQuery query, out bool stale)
+		{
+			bool isStale = false;
+			HashSet<string> loadedIds = null;
+			TransactionalStorage.Batch(
+				actions =>
+				{
+					isStale = actions.DoesTasksExistsForIndex(index, query.Cutoff);
+					var indexFailureInformation = actions.GetFailureRate(index)
+;
+					if (indexFailureInformation.IsInvalidIndex)
+					{
+						throw new IndexDisabledException(indexFailureInformation);
+					}
+					loadedIds = new HashSet<string>(from queryResult in IndexStorage.Query(index, query)
+					                                select queryResult.Key);
+				});
+			stale = isStale;
+			return loadedIds;
+		}
+
 		private static JsonDocument RetrieveDocument(DocumentStorageActions actions, IndexQueryResult queryResult,
 		                                             HashSet<string> loadedIds)
 		{
