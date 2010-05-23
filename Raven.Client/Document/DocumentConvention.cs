@@ -1,5 +1,6 @@
 using System;
 using System.Reflection;
+using System.Text;
 using Newtonsoft.Json.Serialization;
 using Raven.Client.Util;
 using System.Linq;
@@ -25,6 +26,21 @@ namespace Raven.Client.Document
 
 		public static string DefaultTypeTagName(Type t)
 		{
+			if(t.IsGenericType)
+			{
+				var name = t.GetGenericTypeDefinition().Name;
+				if(name.Contains("`"))
+				{
+					name = name.Substring(0, name.IndexOf("`"));
+				}
+				var sb = new StringBuilder(Inflector.Pluralize(name));
+				foreach (var argument in t.GetGenericArguments())
+				{
+					sb.Append("Of")
+						.Append(DefaultTypeTagName(argument));
+				}
+				return sb.ToString();
+			}
 			return Inflector.Pluralize(t.Name);
 		}
 
