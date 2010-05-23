@@ -121,12 +121,12 @@ RavenUI.ShowTemplatedDocument = function (docId, operation, elementName) {
             $(elementName).html('The document "' + docId + '" could not be found');
             return;
         }
-        var template = metadata['X-Raven-' + operation + '-Template'];
+        var template = metadata['Raven-' + operation + '-Template'];
         if (template == null) {
             $(elementName).html('No ' + operation.toLowerCase() + ' template was specified for this document.');
             return;
         }
-        $(elementName).setTemplateURL(metadata['X-Raven-' + operation + '-Template'], null, { filter_data: false });
+        $(elementName).setTemplateURL(metadata['Raven-' + operation + '-Template'], null, { filter_data: false });
         $(elementName).processTemplate(data);
     })
 }

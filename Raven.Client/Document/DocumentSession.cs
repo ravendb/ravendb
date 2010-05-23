@@ -19,7 +19,7 @@ namespace Raven.Client.Document
 {
 	public class DocumentSession : IDocumentSession
 	{
-		private const string RavenEntityName = "X-Raven-Entity-Name";
+		private const string RavenEntityName = "Raven-Entity-Name";
 		private readonly IDatabaseCommands database;
 		private readonly DocumentStore documentStore;
         private readonly Dictionary<object, DocumentMetadata> entitiesAndMetadata = new Dictionary<object, DocumentMetadata>();
@@ -158,7 +158,7 @@ more responsible application.
 	    {
 	    	T entity = default(T);
 
-			var documentType = metadata.Value<string>("X-Raven-Clr-Type");
+	    	var documentType = metadata.Value<string>("Raven-Clr-Type");
 	    	if (documentType != null)
 	    	{
 	    		Type type = Type.GetType(documentType);
@@ -374,7 +374,7 @@ more responsible application.
 				objectAsJson.Remove(identityProperty.Name);
 			}
 
-			metadata["X-Raven-Clr-Type"] = JToken.FromObject(entityType.FullName + ", " + entityType.Assembly.GetName().Name);
+			metadata["Raven-Clr-Type"] = JToken.FromObject(entityType.FullName + ", " + entityType.Assembly.GetName().Name);
 
 		    var entityConverted = OnEntityConverted;
             if(entityConverted!=null)

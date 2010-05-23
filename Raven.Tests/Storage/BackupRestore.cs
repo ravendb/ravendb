@@ -1,4 +1,3 @@
-using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
@@ -8,7 +7,6 @@ using Raven.Database.Backup;
 using Raven.Database.Data;
 using Raven.Database.Json;
 using Xunit;
-using System.Linq;
 
 namespace Raven.Tests.Storage
 {
@@ -54,7 +52,7 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void AfterBackupRestoreCanQueryIndex_CreatedAfterRestore()
 		{
-			db.Put("ayende", null, JObject.Parse("{'email':'ayende@ayende.com'}"), JObject.Parse("{'X-Raven-Entity-Name':'Users'}"), null);
+			db.Put("ayende", null, JObject.Parse("{'email':'ayende@ayende.com'}"), JObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
 
 			db.StartBackup("raven.db.test.backup");
 			WaitForBackup();
@@ -82,7 +80,7 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void AfterBackupRestoreCanQueryIndex_CreatedBeforeRestore()
 		{
-			db.Put("ayende", null, JObject.Parse("{'email':'ayende@ayende.com'}"), JObject.Parse("{'X-Raven-Entity-Name':'Users'}"), null);
+			db.Put("ayende", null, JObject.Parse("{'email':'ayende@ayende.com'}"), JObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
 			db.SpinBackgroundWorkers();
 			QueryResult queryResult;
 			do
@@ -121,14 +119,8 @@ namespace Raven.Tests.Storage
 					break;
 				var backupStatus = jsonDocument.DataAsJson.JsonDeserialization<BackupStatus>();
 				if (backupStatus.IsRunning == false)
-				{
-					var message = backupStatus.Messages.LastOrDefault(x=>x.Message.Contains("Failed"));
-
-					if (message == null)
-						return;
-					throw new InvalidOperationException(message.Message);
-				}
-				Thread.Sleep(50);
+					return;
+				Thread.Sleep(500);
 			}
 		}
 	}
