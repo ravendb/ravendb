@@ -55,7 +55,8 @@ namespace Raven.Client.Linq
         	var documentQuery = luceneQuery
                 .Where(QueryText.ToString())
                 .SelectFields<T>(FieldsToFetch.ToArray());
-            customizeQuery(documentQuery);
+			if(customizeQuery != null)
+				customizeQuery(documentQuery);
             return documentQuery;
         }
 
