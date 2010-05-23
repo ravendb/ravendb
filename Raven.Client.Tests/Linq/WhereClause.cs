@@ -17,6 +17,27 @@ namespace Raven.Client.Tests.Linq
             Assert.Equal("Name:ayende ", q.ToString());
         }
 
+		[Fact]
+		public void CanUnderstandSimpleEqualityWithVariable()
+		{
+			var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null, null));
+			var ayende = "ayende" + 1;
+			var q = from user in indexedUsers
+					where user.Name == ayende
+					select user;
+			Assert.Equal("Name:ayende1 ", q.ToString());
+		}
+
+
+		[Fact]
+		public void NoOpShouldProduceEmptyString()
+		{
+			var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null, null));
+			var q = from user in indexedUsers
+					select user;
+			Assert.Equal("", q.ToString());
+		}
+
         [Fact]
         public void CanUnderstandAnd()
         {
