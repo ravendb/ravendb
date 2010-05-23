@@ -148,6 +148,13 @@ namespace Raven.Database.Server.Responders
 			context.Response.StatusDescription = "Not Modified";
 		}
 
+
+		public static void SetStatusToNonAuthoritativeInformation(this IHttpContext context)
+		{
+			context.Response.StatusCode = 203;
+			context.Response.StatusDescription = "Non-Authoritative Information";
+		}
+		
 		public static void SetStatusToBadRequest(this IHttpContext context)
 		{
 			context.Response.StatusCode = 400;
@@ -211,6 +218,13 @@ namespace Raven.Database.Server.Responders
 			int start;
 			int.TryParse(context.Request.QueryString["start"], out start);
 			return start;
+		}
+
+		public static bool GetAllowStale(this IHttpContext context)
+		{
+			bool stale;
+			bool.TryParse(context.Request.QueryString["allowStale"], out stale);
+			return stale;
 		}
 
 		public static int GetPageSize(this IHttpContext context, int maxPageSize)
