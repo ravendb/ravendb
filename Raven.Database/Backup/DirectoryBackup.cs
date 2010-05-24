@@ -3,6 +3,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using log4net;
 using Directory = System.IO.Directory;
+using Raven.Database.Extensions;
 
 namespace Raven.Database.Backup
 {
