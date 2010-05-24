@@ -108,7 +108,7 @@ namespace Raven.Database
 		             new IndexDefinition
 		             {
 		                 Map =
-		                 @"from doc in docs 
+						 @"from doc in docs 
 where doc[""@metadata""][""Raven-Entity-Name""] != null 
 select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 ",
@@ -476,6 +476,27 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				IsStale = stale,
 				TotalResults = query.TotalSize.Value
 			};
+		}
+
+		public IEnumerable<string> QueryDocumentIds(string index, IndexQuery query, out bool stale)
+		{
+			bool isStale = false;
+			HashSet<string> loadedIds = null;
+			TransactionalStorage.Batch(
+				actions =>
+				{
+					isStale = actions.DoesTasksExistsForIndex(index, query.Cutoff);
+					var indexFailureInformation = actions.GetFailureRate(index)
+;
+					if (indexFailureInformation.IsInvalidIndex)
+					{
+						throw new IndexDisabledException(indexFailureInformation);
+					}
+					loadedIds = new HashSet<string>(from queryResult in IndexStorage.Query(index, query)
+					                                select queryResult.Key);
+				});
+			stale = isStale;
+			return loadedIds;
 		}
 
 		private static JsonDocument RetrieveDocument(DocumentStorageActions actions, IndexQueryResult queryResult,

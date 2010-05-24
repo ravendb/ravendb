@@ -69,7 +69,7 @@ namespace Raven.Client.Tests.Document
             }
         }
 
-		[Fact(Skip = "We have a problem encoding things correctly in ServerClient.DirectQuery in such a way that it would be parsed properly in the server")]
+        [Fact]
 		public void Can_query_using_special_characters()
 		{
 			using (var server = GetNewServer(port, path))
@@ -155,7 +155,7 @@ namespace Raven.Client.Tests.Document
                 var session = documentStore.OpenSession();
                 session.OnEntityConverted += (entity, document, metadata) =>
                 {
-                    metadata["Raven-Allowed-Users"] = new JArray("ayende", "oren", "rob");
+					metadata["Raven-Allowed-Users"] = new JArray("ayende", "oren", "rob");
                 };
 
                 var company = new Company { Name = "Company" };
@@ -163,7 +163,7 @@ namespace Raven.Client.Tests.Document
                 session.SaveChanges();
 
                 var metadataFromServer = session.GetMetadataFor(session.Load<Company>(company.Id));
-                var users = metadataFromServer["Raven-Allowed-Users"].OfType<JValue>().Select(x => (string) x.Value).ToArray();
+				var users = metadataFromServer["Raven-Allowed-Users"].OfType<JValue>().Select(x => (string)x.Value).ToArray();
                 Assert.Equal(new[]{"ayende","oren","rob"}, users);
             }
         }

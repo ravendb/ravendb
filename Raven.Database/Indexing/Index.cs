@@ -76,18 +76,19 @@ namespace Raven.Database.Indexing
 
         private static TopDocs ExecuteQuery(IndexSearcher searcher, IndexQuery indexQuery, Query luceneQuery)
         {
+        	if(indexQuery.PageSize == int.MaxValue) // we want all docs
+        	{
+        		var gatherAllCollector = new GatherAllCollector();
+        		searcher.Search(luceneQuery, gatherAllCollector);
+        		return gatherAllCollector.ToTopDocs();
+        	}
             // NOTE: We get Start + Pagesize results back so we have something to page on
-            TopDocs search;
-            if (indexQuery.SortedFields != null && indexQuery.SortedFields.Length > 0)
+			if (indexQuery.SortedFields != null && indexQuery.SortedFields.Length > 0)
             {
                 var sort = new Sort(indexQuery.SortedFields.Select(x => x.ToLuceneSortField()).ToArray());
-                search = searcher.Search(luceneQuery, null, indexQuery.PageSize + indexQuery.Start, sort);
+                return searcher.Search(luceneQuery, null, indexQuery.PageSize + indexQuery.Start, sort);
             }
-            else
-            {
-                search = searcher.Search(luceneQuery, null, indexQuery.PageSize + indexQuery.Start);
-            }
-            return search;
+        	return searcher.Search(luceneQuery, null, indexQuery.PageSize + indexQuery.Start);
         }
 
         private Query GetLuceneQuery(IndexQuery indexQuery)
