@@ -13,6 +13,7 @@ namespace Raven.Web
 		static ForwardToRavenRespondersFactory()
 		{
 			database = new DocumentDatabase(ravenConfiguration);
+			database.SpinBackgroundWorkers();
 			server = new HttpServer(ravenConfiguration, database);
 		}
 
