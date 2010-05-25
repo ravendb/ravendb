@@ -3,12 +3,9 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
-using log4net.Util.TypeConverters;
 using Lucene.Net.Documents;
-using Lucene.Net.Util;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Raven.Database.Json;
 
 namespace Raven.Database.Indexing
 {
@@ -86,9 +83,11 @@ namespace Raven.Database.Indexing
 			}
 			else 
 			{
-				yield return new Field(name, value.ToString(), indexDefinition.GetStorage(name, defaultStorage),
+				yield return new Field(name + "_ConvertToJson", "true", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
+				yield return new Field(name, JToken.FromObject(value).ToString(), indexDefinition.GetStorage(name, defaultStorage),
 				                       indexDefinition.GetIndex(name, GetDefaultIndexOption(value)));
 			}
+
 
 			if (value is int)
 			{
