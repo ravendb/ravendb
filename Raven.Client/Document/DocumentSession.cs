@@ -368,7 +368,8 @@ more responsive application.
 			var objectAsJson = JObject.FromObject(entity,new JsonSerializer
 			{
 				Converters = { new JsonEnumConverter() },
-				ContractResolver = Conventions.JsonContractResolver
+				ContractResolver = Conventions.JsonContractResolver,
+				ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor
 			});
 			if (identityProperty != null)
 			{
