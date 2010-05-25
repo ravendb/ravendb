@@ -10,7 +10,7 @@ requires the following includes to be on page
 
 function InitializeJSONEditor(jsonToEdit) {
     $('#editorContainer').hide().before($('<div id="editorLoading" style="width:600px;">Loading...</div>'));    
-    $('#txtJSON').val(JSON.stringify(jsonToEdit));
+    $('#txtJSON').val(JSON.stringify(jsonToEdit, null, '\t'));
 
     $('#editorTabs').tabs({
         select: function (event, ui) {
@@ -108,7 +108,7 @@ function ShowEditorForDocument(id, doc, etag, metadata, title, saveCallback, del
         }
         
         if (metadata) {
-            $(editorHtml).find('#txtJSONMetadata').val(JSON.stringify(metadata));
+            $(editorHtml).find('#txtJSONMetadata').val(JSON.stringify(metadata, null, '\t'));
         }
         else {
             $(editorHtml).find('#txtJSONMetadata').val('{}');
