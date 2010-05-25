@@ -94,10 +94,10 @@ namespace Raven.Client.Document
 	        if(++numberOfRequests > MaxNumberOfRequestsPerSession)
                 throw new InvalidOperationException(string.Format(@"The maximum number of requests ({0}) allowed for this session has been reached.
 Raven limits the number of remote calls that a session is allowed to make as an early warning system. Sessions are expected to be short lived, and 
-Raven provide facilities like Load(string[] keys) to load multiple documents at once and batch saves.
+Raven provides facilities like Load(string[] keys) to load multiple documents at once and batch saves.
 You can increase the limit by setting DocumentConvention.MaxNumberOfRequestsPerSession or DocumentSession.MaxNumberOfRequestsPerSession, but it is
 advisable that you'll look into reducing the number of remote calls first, since that will speed up your application signficantly and result in a 
-more responsible application.
+more responsive application.
 ", MaxNumberOfRequestsPerSession));
 
 	    }
@@ -367,7 +367,7 @@ more responsible application.
 
 			var objectAsJson = JObject.FromObject(entity,new JsonSerializer
 			{
-				Converters = { new JsonEnumConverter() }
+				Converters = { new JsonEnumConverter() },
 			});
 			if (identityProperty != null)
 			{
