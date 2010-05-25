@@ -288,8 +288,8 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
                 }
                 else
                 {
-                    etag = actions.AddDocumentInTransaction(transactionInformation, key, document.ToString(), etag,
-                                                     metadata.ToString());
+                    etag = actions.AddDocumentInTransaction(key, etag,
+                                                     document, metadata, transactionInformation);
                 }
 				workContext.ShouldNotifyAboutWork();
 			});
