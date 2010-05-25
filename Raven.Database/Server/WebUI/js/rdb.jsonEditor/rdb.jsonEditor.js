@@ -328,6 +328,16 @@ function GetJSONFromTree() {
 }
 
 
+function pairKeyValue(key, value) {
+    if (key == value) {
+        return value;
+    }
+
+    var childPair = {};
+    childPair[key] = value;
+    return childPair;
+}
+
 function traverseTreeJSON(json) {
     var retJSON = {};
     if (json.children) {
@@ -335,9 +345,7 @@ function traverseTreeJSON(json) {
         $(json.children).each(function () {
             var childJSON = traverseTreeJSON(this);
             $.each(childJSON, function (key, value) {
-                var childPair = {};
-                childPair[key] = value;
-                childrenJSON.push(childPair);
+                childrenJSON.push(pairKeyValue(key, value));
             });
         });
 
@@ -352,16 +360,23 @@ function traverseTreeJSON(json) {
     return retJSON;
 }
 
+
 function JSONToTreeJSON(jsonObj) {
     if (typeof jsonObj == "object") {
         var jsonArr = [];
-        $.each(jsonObj, function (key, value) {            
+        $.each(jsonObj, function (key, value) {
             if (value) {
                 // key is either an array index or object key                    
                 var children = JSONToTreeJSON(value);
 
                 if (IsArray(jsonObj)) {
-                    jsonArr.push(children);
+                    if (children == value) {
+                        jsonArr.push({ data: value, attributes: { rel: 'jsonValue', "jsonvalue": value} });
+                    }
+                    else {
+                        jsonArr.push(children);
+                    }
+
                 } else if (typeof children == "object") {
                     jsonArr.push({
                         data: key,
@@ -370,13 +385,13 @@ function JSONToTreeJSON(jsonObj) {
                 } else {
                     jsonArr.push({
                         data: key,
-                        attributes: { rel : 'jsonValue',  "jsonvalue": escape(children) }
+                        attributes: { rel: 'jsonValue', "jsonvalue": escape(children) }
                     });
                 }
             } else {
                 jsonArr.push({
                     data: key,
-                    attributes: { rel : 'jsonValue', "jsonvalue": '' }
+                    attributes: { rel: 'jsonValue', "jsonvalue": '' }
                 });
             }
         });
