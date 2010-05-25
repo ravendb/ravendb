@@ -6,12 +6,12 @@ namespace Raven.Database.Data
 		{
 			get
 			{
-				if (Errors == 0)
+				if (Attempts == 0 || Errors == 0)
 					return false;
 				// we don't have enough attempts to make a useful determination
 				if (Attempts < 10)
 					return false;
-				return (Attempts/(float) Errors) > 0.15;
+				return (Errors/(float) Attempts) > 0.15;
 			}
 		}
 
@@ -24,9 +24,9 @@ namespace Raven.Database.Data
 		{
 			get
 			{
-				if (Errors == 0)
+				if (Attempts == 0)
 					return 0;
-				return (Attempts/(float) Errors);
+				return (Errors / (float)Attempts);
 			}
 		}
 
