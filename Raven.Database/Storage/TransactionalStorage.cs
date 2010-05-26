@@ -6,6 +6,7 @@ using System.IO;
 using System.Runtime.ConstrainedExecution;
 using System.Threading;
 using Microsoft.Isam.Esent.Interop;
+using Raven.Database.Plugins;
 using Raven.Database.Storage.SchemaUpdates;
 using System.Linq;
 using Raven.Database.Storage.StorageActions;
@@ -28,6 +29,9 @@ namespace Raven.Database.Storage
 
 		[ImportMany]
 		public IEnumerable<ISchemaUpdate> Updaters { get; set; }
+
+		[ImportMany]
+		public IEnumerable<AbstractDocumentCodec> DocumentCodecs { get; set; }
 
 		public TransactionalStorage(RavenConfiguration configuration, Action onCommit)
 		{
@@ -313,7 +317,7 @@ namespace Raven.Database.Storage
 			var txMode = configuration.TransactionMode == TransactionMode.Lazy
 				? CommitTransactionGrbit.LazyFlush
 				: CommitTransactionGrbit.None;
-			using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache))
+			using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs))
 			{
 				current.Value = pht;
 				action(pht);

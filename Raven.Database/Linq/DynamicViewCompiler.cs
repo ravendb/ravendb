@@ -193,10 +193,10 @@ namespace Raven.Database.Linq
 			{
 				var mre = (MemberReferenceExpression)targetExpression.TargetObject;
 				entityName = mre.MemberName;
-				//doc["@metadata"]["X-Raven-Entity-Name"]
+				//doc["@metadata"]["Raven-Entity-Name"]
 				var metadata = new IndexerExpression(
 					new IndexerExpression(new IdentifierExpression("__document"), new List<Expression> { new PrimitiveExpression("@metadata", "@metadata") }),
-					new List<Expression> { new PrimitiveExpression("X-Raven-Entity-Name", "X-Raven-Entity-Name") }
+					new List<Expression> { new PrimitiveExpression("Raven-Entity-Name", "Raven-Entity-Name") }
 					);
 				var whereMethod = new InvocationExpression(new MemberReferenceExpression(mre.TargetObject, "Where"),
 				                                           new List<Expression>
@@ -246,10 +246,10 @@ namespace Raven.Database.Linq
 				var mre = (MemberReferenceExpression)expression;
 				entityName = mre.MemberName;
 				queryExpression.FromClause.InExpression = mre.TargetObject;
-				//doc["@metadata"]["X-Raven-Entity-Name"]
+				//doc["@metadata"]["Raven-Entity-Name"]
 				var metadata = new IndexerExpression(
 					new IndexerExpression(new IdentifierExpression(queryExpression.FromClause.Identifier), new List<Expression> { new PrimitiveExpression("@metadata", "@metadata") }),
-					new List<Expression> { new PrimitiveExpression("X-Raven-Entity-Name", "X-Raven-Entity-Name") }
+					new List<Expression> { new PrimitiveExpression("Raven-Entity-Name", "Raven-Entity-Name") }
 					);
 				queryExpression.MiddleClauses.Insert(0, 
 				                                     new QueryExpressionWhereClause

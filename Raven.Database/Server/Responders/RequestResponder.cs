@@ -35,12 +35,12 @@ namespace Raven.Database.Server.Responders
 
         protected TransactionInformation GetRequestTransaction(IHttpContext context)
         {
-			var txInfo = context.Request.Headers["X-Raven-Transaction-Information"];
+            var txInfo = context.Request.Headers["Raven-Transaction-Information"];
             if (string.IsNullOrEmpty(txInfo))
                 return null;
             var parts = txInfo.Split(new[]{", "}, StringSplitOptions.RemoveEmptyEntries);
             if(parts.Length != 2)
-				throw new ArgumentException("'X-Raven-Transaction-Information' is in invalid format, expected format is: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx, hh:mm:ss");
+                throw new ArgumentException("'Raven-Transaction-Information' is in invalid format, expected format is: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx, hh:mm:ss");
             return new TransactionInformation
             {
                 Id = new Guid(parts[0]),

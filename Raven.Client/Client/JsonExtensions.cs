@@ -10,14 +10,22 @@ namespace Raven.Client.Client
     {
         public static T Deserialize<T>(this JObject self, IContractResolver resolver)
         {
-            var jsonSerializer = new JsonSerializer{ContractResolver =  resolver};
+            var jsonSerializer = new JsonSerializer
+            {
+            	ContractResolver =  resolver,
+				ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor
+            };
             jsonSerializer.Converters.Add(new JsonEnumConverter());
             return (T)jsonSerializer.Deserialize(new JTokenReader(self), typeof(T));
         }
 
         public static object Deserialize(this JObject self, Type type, IContractResolver resolver)
         {
-            var jsonSerializer = new JsonSerializer { ContractResolver = resolver };
+            var jsonSerializer = new JsonSerializer
+            {
+				ContractResolver = resolver,
+				ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor
+            };
             jsonSerializer.Converters.Add(new JsonEnumConverter());
             return jsonSerializer.Deserialize(new JTokenReader(self), type);
         }

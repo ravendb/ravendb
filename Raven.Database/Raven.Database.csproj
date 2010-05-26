@@ -113,6 +113,7 @@
     <Compile Include="Indexing\GatherAllCollector.cs" />
     <Compile Include="Indexing\NumberUtil.cs" />
     <Compile Include="IStartupTask.cs" />
+    <Compile Include="Plugins\AbstractDocumentCodec.cs" />
     <Compile Include="Plugins\Builtins\FilterRavenInternalDocumentsReadTrigger.cs" />
     <Compile Include="Plugins\AbstractIndexUpdateTrigger.cs" />
     <Compile Include="Plugins\AbstractReadTrigger.cs" />

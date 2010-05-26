@@ -28,7 +28,7 @@ namespace Raven.Bundles.Versioning
             if (metadata.Value<string>(RavenDocumentRevisionStatus) == "Historical")
                 return;
 
-            if (excludeByEntityName.Contains(metadata.Value<string>("X-Raven-Entity-Name")))
+            if (excludeByEntityName.Contains(metadata.Value<string>("Raven-Entity-Name")))
                 return;
 
             int revision = 0;

@@ -1,9 +1,7 @@
 using System;
-using System.ComponentModel;
 using System.IO;
 using System.Runtime.InteropServices;
 using log4net;
-using Lucene.Net.Store;
 using Directory = System.IO.Directory;
 using Raven.Database.Extensions;
 
@@ -21,7 +19,7 @@ namespace Raven.Database.Backup
 
 		public event Action<string> Notify = delegate {  };
 
-		private ILog logger = LogManager.GetLogger(typeof (DirectoryBackup));
+		private ILog logger = LogManager.GetLogger(typeof(DirectoryBackup));
 
 		private readonly string source;
 		private readonly string destination;

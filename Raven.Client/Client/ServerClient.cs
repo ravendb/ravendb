@@ -267,7 +267,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
                 return;
 
 	        string txInfo = string.Format("{0}, {1}", Transaction.Current.TransactionInformation.DistributedIdentifier, TransactionManager.DefaultTimeout);
-			metadata["X-Raven-Transaction-Information"] = new JValue(txInfo);
+	        metadata["Raven-Transaction-Information"] = new JValue(txInfo);
 	    }
 
 	    public void Delete(string key, Guid? etag)
@@ -395,7 +395,8 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
             var request = HttpJsonRequest.CreateHttpJsonRequest(this, Uri.EscapeUriString(path), "GET", credentials);
 	        var serializer = new JsonSerializer
 	        {
-	            ContractResolver = convention.JsonContractResolver
+				ContractResolver = convention.JsonContractResolver,
+				ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor
 	        };
 	        JToken json;
 	        using (var reader = new JsonTextReader(new StringReader(request.ReadResponseString())))

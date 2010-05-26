@@ -36,7 +36,7 @@ namespace Raven.Tests.Indexes
 		{
 			db.Put("companies/", null,
 			       JObject.Parse("{'Name':'Hiberanting Rhinos', 'Partners': ['companies/49', 'companies/50']}"), 
-				   JObject.Parse("{'X-Raven-Entity-Name': 'Companies'}"),
+				   JObject.Parse("{'Raven-Entity-Name': 'Companies'}"),
 			       null);
 
 

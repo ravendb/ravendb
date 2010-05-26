@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
 using Newtonsoft.Json.Linq;
@@ -36,6 +37,7 @@ namespace Raven.Database.Storage.StorageActions
 		public JsonDocument DocumentByKey(string key, TransactionInformation transactionInformation)
 		{
 			byte[] data;
+			JObject metadata;
 			if (transactionInformation != null)
 			{
 				Api.JetSetCurrentIndex(session, DocumentsModifiedByTransactions, "by_key");
@@ -51,6 +53,11 @@ namespace Raven.Database.Storage.StorageActions
 							return null;
 						}
 						data = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"]);
+
+						metadata = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["metadata"]).ToJObject();
+
+						data = documentCodecs.Aggregate(data, (bytes, codec) => codec.Decode(key, metadata, bytes));
+
 						logger.DebugFormat("Document with key '{0}' was found in transaction: {1}", key, transactionInformation.Id);
 						var etag = new Guid(Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["etag"]));
 						return new JsonDocument
@@ -58,7 +65,7 @@ namespace Raven.Database.Storage.StorageActions
 							DataAsJson = data.ToJObject(),
 							Etag = etag,
 							Key = Api.RetrieveColumnAsString(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["key"], Encoding.Unicode),
-							Metadata = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["metadata"]).ToJObject()
+							Metadata = metadata
 						};
 					}
 				}
@@ -72,6 +79,10 @@ namespace Raven.Database.Storage.StorageActions
 				return null;
 			}
 			data = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["data"]);
+			metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
+
+			data = documentCodecs.Aggregate(data, (bytes, codec) => codec.Decode(key, metadata, bytes));
+
 			logger.DebugFormat("Document with key '{0}' was found", key);
 			var existingEtag = new Guid(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
 			return new JsonDocument
@@ -79,7 +90,7 @@ namespace Raven.Database.Storage.StorageActions
 				DataAsJson = data.ToJObject(),
 				Etag = existingEtag,
 				Key = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode),
-				Metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject()
+				Metadata = metadata
 			};
 		}
 
@@ -94,13 +105,19 @@ namespace Raven.Database.Storage.StorageActions
 			}
 			while (Api.TryMovePrevious(session, Documents))
 			{
+				var data = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["data"]);
+				var metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
+				var key = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode);
+
+				data = documentCodecs.Aggregate(data, (bytes, codec) => codec.Decode(key, metadata, bytes));
+
 				yield return new JsonDocument
 				{
-					Key = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode),
-					DataAsJson = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["data"]).ToJObject(),
+					Key = key,
+					DataAsJson = data.ToJObject(),
 					Etag = new Guid(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"])),
-					Metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject()
-				};	
+					Metadata = metadata
+				};
 			}
 		}
 
@@ -113,16 +130,21 @@ namespace Raven.Database.Storage.StorageActions
                 yield break;
             do
             {
-                yield return new JsonDocument
+            	var data = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["data"]);
+            	var key = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"],Encoding.Unicode);
+            	var metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
+
+				data = documentCodecs.Aggregate(data, (bytes, codec) => codec.Decode(key, metadata, bytes));
+
+            	yield return new JsonDocument
                 {
                     Key =
-                        Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"],
-                                                   Encoding.Unicode),
+                        key,
                     DataAsJson =
-                        Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["data"]).ToJObject(),
+                        data.ToJObject(),
                     Etag = new Guid(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"])),
                     Metadata =
-                        Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject()
+                        metadata
                 };
             } while (Api.TryMoveNext(session, Documents));
         }
@@ -148,12 +170,17 @@ namespace Raven.Database.Storage.StorageActions
 				var data = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["data"]);
 				logger.DebugFormat("Document with id '{0}' was found, doc length: {1}", id, data.Length);
 				var etag = new Guid(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
+				var metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
+				var key = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode);
+
+				data = documentCodecs.Aggregate(data, (bytes, codec) => codec.Decode(key, metadata, bytes));
+
 				var doc = new JsonDocument
 				{
-					Key = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode),
+					Key = key,
 					DataAsJson = data.ToJObject(),
 					Etag = etag,
-					Metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject()
+					Metadata = metadata
 				};
 				yield return new Tuple<JsonDocument, int>(doc, id);
 			} while (Api.TryMoveNext(session, Documents));
@@ -177,10 +204,12 @@ namespace Raven.Database.Storage.StorageActions
 			}
 		    Guid newEtag = DocumentDatabase.CreateSequentialUuid();
 
+			var bytes = documentCodecs.Aggregate(Encoding.UTF8.GetBytes(data.ToString()), (current, codec) => codec.Encode(key, data, metadata, current));
+
 			using (var update = new Update(session, Documents, isUpdate ? JET_prep.Replace : JET_prep.Insert))
 			{
 				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["key"], key, Encoding.Unicode);
-				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["data"], Encoding.UTF8.GetBytes(data.ToString()));
+				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["data"], bytes);
 			    Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"], newEtag.ToByteArray());
 				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"], Encoding.UTF8.GetBytes(metadata.ToString()));
 
@@ -194,7 +223,7 @@ namespace Raven.Database.Storage.StorageActions
 		}
 
 
-		public Guid AddDocumentInTransaction(TransactionInformation transactionInformation, string key, string data, Guid? etag, string metadata)
+		public Guid AddDocumentInTransaction(string key, Guid? etag, JObject data, JObject metadata, TransactionInformation transactionInformation)
 		{
 			Api.JetSetCurrentIndex(session, Documents, "by_key");
 			Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -220,19 +249,20 @@ namespace Raven.Database.Storage.StorageActions
 			Api.MakeKey(session, DocumentsModifiedByTransactions, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			var isUpdateInTransaction = Api.TrySeek(session, DocumentsModifiedByTransactions, SeekGrbit.SeekEQ);
 
+			var bytes = documentCodecs.Aggregate(Encoding.UTF8.GetBytes(data.ToString()), (current, codec) => codec.Encode(key, data, metadata, current));
 			using (var update = new Update(session, DocumentsModifiedByTransactions, isUpdateInTransaction ? JET_prep.Replace : JET_prep.Insert))
 			{
 				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["key"], key, Encoding.Unicode);
-				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"], Encoding.UTF8.GetBytes(data));
+				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"], bytes);
 				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["etag"], newEtag.ToByteArray());
-				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["metadata"], Encoding.UTF8.GetBytes(metadata));
+				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["metadata"], Encoding.UTF8.GetBytes(metadata.ToString()));
 				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["delete_document"], false);
 				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["locked_by_transaction"], transactionInformation.Id.ToByteArray());
 
 				update.Save();
 			}
-			logger.DebugFormat("Inserted a new document with key '{0}', doc length: {1}, update: {2}, in transaction: {3}",
-							   key, data.Length, isUpdate, transactionInformation.Id);
+			logger.DebugFormat("Inserted a new document with key '{0}', update: {1}, in transaction: {2}",
+							   key, isUpdate, transactionInformation.Id);
 
 			return newEtag;
 		}

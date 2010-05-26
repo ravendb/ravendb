@@ -12,6 +12,7 @@ using Raven.Database.Indexing;
 using Raven.Database.Linq;
 using Raven.Tests.Storage;
 using Xunit;
+using Raven.Database.Json;
 
 namespace Raven.Tests.Indexes
 {
@@ -137,9 +138,9 @@ namespace Raven.Tests.Indexes
             Assert.Equal(1, queryResult.Results.Length);
 
             Assert.Equal("shoppingcarts/12", queryResult.Results[0].Value<string>("Id"));
-            var cart =
-                JsonConvert.DeserializeObject<ShoppingCartEventsToShopingCart.ShoppingCart>(
-                    queryResult.Results[0].Value<string>("Aggregate"));
+        	var cart =
+        		queryResult.Results[0].Value<JObject>("Aggregate").JsonDeserialization
+        			<ShoppingCartEventsToShopingCart.ShoppingCart>();
             Assert.Equal(2, cart.Items.Count);
         }
     }
