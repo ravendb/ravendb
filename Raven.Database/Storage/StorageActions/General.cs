@@ -1,8 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 using log4net;
 using Microsoft.Isam.Esent.Interop;
+using Raven.Database.Plugins;
+using Raven.Database.Json;
 
 namespace Raven.Database.Storage.StorageActions
 {
@@ -11,12 +15,12 @@ namespace Raven.Database.Storage.StorageActions
 	{
 		public event Action OnCommit = delegate { }; 
 		private readonly TableColumnsCache tableColumnsCache;
+		private readonly IEnumerable<AbstractDocumentCodec> documentCodecs;
 		protected readonly JET_DBID dbid;
 
 		protected readonly ILog logger = LogManager.GetLogger(typeof(DocumentStorageActions));
 		protected readonly Session session;
 		private readonly Transaction transaction;
-
 
 		public Session Session
 		{
@@ -25,9 +29,10 @@ namespace Raven.Database.Storage.StorageActions
 
 		[CLSCompliant(false)]
 		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
-		public DocumentStorageActions(JET_INSTANCE instance, string database, TableColumnsCache tableColumnsCache)
+		public DocumentStorageActions(JET_INSTANCE instance, string database, TableColumnsCache tableColumnsCache, IEnumerable<AbstractDocumentCodec> documentCodecs)
 		{
 			this.tableColumnsCache = tableColumnsCache;
+			this.documentCodecs = documentCodecs;
 			try
 			{
 				session = new Session(instance);
@@ -150,13 +155,23 @@ namespace Raven.Database.Storage.StorageActions
 				// esent index ranges are approximate, and we need to check them ourselves as well
 				if (Api.RetrieveColumnAsGuid(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["locked_by_transaction"]) != txId)
 					continue;
+				var data = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"]);
+				var metadata = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["metadata"]);
+				var key = Api.RetrieveColumnAsString(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["key"], Encoding.Unicode);
+
+				if(data != null && metadata != null)
+				{
+					var metadataAsJson = metadata.ToJObject();
+					data = documentCodecs.Aggregate(data, (bytes, codec) => codec.Decode(key, metadataAsJson, bytes));
+				}
+
 				var documentInTransactionData = new DocumentInTransactionData
 				{
-					Data = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"]),
+					Data = data,
 					Delete = Api.RetrieveColumnAsBoolean(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["delete_document"]).Value,
 					Etag = new Guid(Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["etag"])),
-					Key = Api.RetrieveColumnAsString(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["key"], Encoding.Unicode),
-					Metadata = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["metadata"]),
+					Key = key,
+					Metadata = metadata,
 				};
 				Api.JetDelete(session, DocumentsModifiedByTransactions);
 				perDocumentModified(documentInTransactionData);

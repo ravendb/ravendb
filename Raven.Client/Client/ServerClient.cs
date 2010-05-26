@@ -395,7 +395,8 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
             var request = HttpJsonRequest.CreateHttpJsonRequest(this, Uri.EscapeUriString(path), "GET", credentials);
 	        var serializer = new JsonSerializer
 	        {
-	            ContractResolver = convention.JsonContractResolver
+				ContractResolver = convention.JsonContractResolver,
+				ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor
 	        };
 	        JToken json;
 	        using (var reader = new JsonTextReader(new StringReader(request.ReadResponseString())))

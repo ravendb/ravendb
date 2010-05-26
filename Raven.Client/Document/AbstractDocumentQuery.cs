@@ -58,6 +58,7 @@ namespace Raven.Client.Document
 				return (T)new JsonSerializer
 				{
                     ContractResolver = session.Conventions.JsonContractResolver,
+					ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
 					Converters =
 						{
 							new JsonEnumConverter(),

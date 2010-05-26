@@ -13,7 +13,6 @@ using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Json;
 using Raven.Database.Linq;
-using Raven.Database.Storage;
 using Raven.Database.Storage.StorageActions;
 using Raven.Database.Tasks;
 
@@ -136,26 +135,7 @@ namespace Raven.Database.Indexing
         {
             if (fieldsToFetch == null || fieldsToFetch.Length == 0)
                 fieldsToFetch = document.GetFields().OfType<Fieldable>().Select(x => x.Name()).ToArray();
-            return new IndexQueryResult
-            {
-                Key = null,
-                Projection =
-                    new JObject(
-                    fieldsToFetch.Concat(new[] { "__document_id" }).Distinct()
-                        .SelectMany(name => document.GetFields(name) ?? new Field[0])
-                        .Where(x => x != null)
-                        .Select(fld => new JProperty(fld.Name(), fld.StringValue()))
-                        .GroupBy(x => x.Name)
-                        .Select(g =>
-                        {
-                            if (g.Count() == 1)
-                                return g.First();
-                            return new JProperty(g.Key,
-                                                 g.Select(x => x.Value)
-                                );
-                        })
-                    )
-            };
+        	return base.RetrieveDocument(document, fieldsToFetch);
         }
 
         public override void Remove(string[] keys, WorkContext context)

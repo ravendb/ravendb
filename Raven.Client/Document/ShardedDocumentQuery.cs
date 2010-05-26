@@ -53,7 +53,8 @@ namespace Raven.Client.Document
 			var jsonSerializer = new JsonSerializer
 			{
                 // we assume the same json contract resolver across the entire shared sessions set
-			    ContractResolver = shardSessions.First().Conventions.JsonContractResolver
+				ContractResolver = shardSessions.First().Conventions.JsonContractResolver,
+				ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor
 			};
 			return QueryResult.Results
 				.Select(j => (T)jsonSerializer.Deserialize(new JTokenReader(j), typeof(T)))

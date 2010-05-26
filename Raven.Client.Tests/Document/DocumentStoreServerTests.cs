@@ -108,6 +108,46 @@ namespace Raven.Client.Tests.Document
 		}
 
 		[Fact]
+		public void Can_query_indexes_returning_complex_objects()
+		{
+			using (var server = GetNewServer(port, path))
+			{
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+				documentStore.Initialise();
+
+
+				documentStore.DatabaseCommands.PutIndex("my_index",
+													new IndexDefinition
+													{
+														Map = "from doc in docs select new { doc.Language, doc.Type, Value = new{ Answers = 42, Paths = 7 }  }}",
+														Stores = { { "Value", FieldStorage.Yes },  }
+													});
+
+				using (var s = documentStore.OpenSession())
+				{
+					s.Store(new
+					{
+						Language = "Français",//Note the ç
+						Type = "Feats"
+					});
+					s.SaveChanges();
+				}
+
+				using (var s = documentStore.OpenSession())
+				{
+					var query = s.LuceneQuery<object>("my_index")
+						.Where("Type:Feats AND Language:Français")
+						.SelectFields<object>("Value")
+						.WaitForNonStaleResults();
+					var first = (JObject)query.First();
+
+					Assert.Equal(42, first.Value<JObject>("Value").Value<int>("Answers"));
+					Assert.Equal(7, first.Value<JObject>("Value").Value<int>("Paths"));
+				}
+			}
+		}
+
+		[Fact]
 		public void Requesting_stats()
 		{
 			using (var server = GetNewServer(port, path))

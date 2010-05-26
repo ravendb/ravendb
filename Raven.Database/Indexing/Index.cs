@@ -9,6 +9,8 @@ using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
@@ -121,9 +123,46 @@ namespace Raven.Database.Indexing
                                             WorkContext context,
                                             DocumentStorageActions actions);
 
-        protected abstract IndexQueryResult RetrieveDocument(Document document, string[] fieldsToFetch);
+		protected virtual IndexQueryResult RetrieveDocument(Document document, string[] fieldsToFetch)
+		{
+			var shouldBuildProjection = fieldsToFetch == null || fieldsToFetch.Length == 0;
+			return new IndexQueryResult
+			{
+				Key = document.Get("__document_id"),
+				Projection = shouldBuildProjection ? null : CreateDocumentFromFields(document, fieldsToFetch)
+			};
+		}
 
-        protected void Write(Func<IndexWriter, bool> action)
+    	private static JObject CreateDocumentFromFields(Document document, string[] fieldsToFetch)
+    	{
+    		return new JObject(
+    			fieldsToFetch.Concat(new[] { "__document_id" }).Distinct()
+    				.SelectMany(name => document.GetFields(name) ?? new Field[0])
+    				.Where(x => x != null)
+    				.Select(fld => CreateProperty(fld, document))
+    				.GroupBy(x => x.Name)
+    				.Select(g =>
+    				{
+    					if (g.Count() == 1)
+    						return g.First();
+    					return new JProperty(g.Key,
+    					                     g.Select(x => x.Value)
+    						);
+    				})
+    			);
+    	}
+
+    	private static JProperty CreateProperty(Field fld, Document document)
+    	{
+			if (document.GetField(fld.Name() + "_ConvertToJson") != null)
+			{
+				var val = JsonConvert.DeserializeObject(fld.StringValue());
+				return new JProperty(fld.Name(), val);
+			}
+    		return new JProperty(fld.Name(), fld.StringValue());
+    	}
+
+    	protected void Write(Func<IndexWriter, bool> action)
         {
             bool shouldRecreateSearcher;
             var standardAnalyzer = new StandardAnalyzer(Version.LUCENE_29);
