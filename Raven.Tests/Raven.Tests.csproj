@@ -101,6 +101,7 @@
     <Compile Include="Indexes\QueryingOnDefaultIndex.cs" />
     <Compile Include="Indexes\QueryingOnStaleIndexes.cs" />
     <Compile Include="Indexes\Statistics.cs" />
+    <Compile Include="Linq\UsingRavenQueryProvider.cs" />
     <Compile Include="Linq\LinqTransformerCompilationTests.cs" />
     <Compile Include="Linq\PerformingQueries.cs" />
     <Compile Include="Patching\ArrayPatching.cs">
@@ -158,9 +159,9 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Raven.Client.Tests\Raven.Client.Tests.csproj">
-      <Project>{36B31D69-508B-4594-8F8E-85774BAA7D3F}</Project>
-      <Name>Raven.Client.Tests</Name>
+    <ProjectReference Include="..\Raven.Client\Raven.Client.csproj">
+      <Project>{9F92FD36-60B6-4655-B8C6-00125B46AB6A}</Project>
+      <Name>Raven.Client</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Database\Raven.Database.csproj">
       <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
