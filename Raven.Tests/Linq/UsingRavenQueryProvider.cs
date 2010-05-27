@@ -24,15 +24,12 @@ namespace Raven.Tests.Linq
         [Fact]
         public void Can_perform_Skip_Take_Query()
         {
-            //Trace.WriteLine("Executing Assembly:" + System.Reflection.Assembly.GetExecutingAssembly().Location + "\n");
-            //Trace.WriteLine("ApplicationBase: " + AppDomain.CurrentDomain.SetupInformation.ApplicationBase + "\n");
 
             //When running in the XUnit GUI strange things happen is we just create a path relative to 
             //the .exe itself, so make our folder in the System temp folder instead ("<user>\AppData\Local\Temp")
             string directoryName =  Path.Combine(Path.GetTempPath(), "ravendb.RavenQueryProvider");
             if (Directory.Exists(directoryName))
             {
-                //Trace.WriteLine("Deleting: " + directoryName + "\n");
                 Directory.Delete(directoryName, true);
             }           
 
