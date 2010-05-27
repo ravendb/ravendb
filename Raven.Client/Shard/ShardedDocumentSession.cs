@@ -127,7 +127,7 @@ namespace Raven.Client.Shard
 			return shardSession;
 		}
 
-		public void Store<T>(T entity)
+		public void Store(object entity)
 		{
 			string shardId = shardStrategy.ShardSelectionStrategy.ShardIdForNewObject(entity);
 			if (String.IsNullOrEmpty(shardId))

@@ -13,6 +13,7 @@ namespace Raven.Client.Client
 		JsonDocument Get(string key);
 		PutResult Put(string key, Guid? etag, JObject document, JObject metadata);
 		void Delete(string key, Guid? etag);
+
 		string PutIndex(string name, IndexDefinition indexDef);
 		string PutIndex<TDocument,TReduceResult>(string name, IndexDefinition<TDocument,TReduceResult> indexDef);
 
@@ -28,5 +29,32 @@ namespace Raven.Client.Client
         void Commit(Guid txId);
         void Rollback(Guid txId);
         IDatabaseCommands With(ICredentials credentialsForSession);
+	}
+
+
+	public interface IAsyncDatabaseCommands : IDisposable
+	{
+		IAsyncResult BeginGet(string key, AsyncCallback callback, object state);
+
+		JsonDocument EndGet(IAsyncResult result);
+
+		//PutResult Put(string key, Guid? etag, JObject document, JObject metadata);
+		//void Delete(string key, Guid? etag);
+
+		//string PutIndex(string name, IndexDefinition indexDef);
+		//string PutIndex<TDocument, TReduceResult>(string name, IndexDefinition<TDocument, TReduceResult> indexDef);
+
+		//string PutIndex(string name, IndexDefinition indexDef, bool overwrite);
+		//string PutIndex<TDocument, TReduceResult>(string name, IndexDefinition<TDocument, TReduceResult> indexDef, bool overwrite);
+
+		//QueryResult Query(string index, IndexQuery query);
+		//void DeleteIndex(string name);
+		//JsonDocument[] Get(string[] ids);
+
+		//BatchResult[] Batch(ICommandData[] commandDatas);
+
+		//void Commit(Guid txId);
+		//void Rollback(Guid txId);
+		//IDatabaseCommands With(ICredentials credentialsForSession);
 	}
 }

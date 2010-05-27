@@ -86,9 +86,11 @@
     <Compile Include="..\Bundles\Raven.Bundles.Replication\Data\ReplicationDocument.cs">
       <Link>Data\ReplicationDocument.cs</Link>
     </Compile>
+    <Compile Include="Client\AsyncServerClient.cs" />
     <Compile Include="Client\JsonExtensions.cs" />
     <Compile Include="Client\WebRequestEventArgs.cs" />
     <Compile Include="Document\AbstractDocumentQuery.cs" />
+    <Compile Include="Document\AsyncDocumentSession.cs" />
     <Compile Include="Document\DocumentConvention.cs" />
     <Compile Include="Document\DocumentQuery.cs" />
     <Compile Include="Document\DocumentSession.cs" />
@@ -103,9 +105,11 @@
     <Compile Include="Document\ShardedDocumentQuery.cs" />
     <Compile Include="Exceptions\ConflictException.cs" />
     <Compile Include="Exceptions\NonUniqueObjectException.cs" />
+    <Compile Include="IAsyncDocumentSession.cs" />
     <Compile Include="IDocumentQuery.cs" />
     <Compile Include="IDocumentSession.cs" />
     <Compile Include="IDocumentStore.cs" />
+    <Compile Include="Document\InMemoryDocumentSessionOperations.cs" />
     <Compile Include="Linq\DateTools.cs" />
     <Compile Include="Linq\IRavenQueryable.cs" />
     <Compile Include="Linq\IRavenQueryProvider.cs" />

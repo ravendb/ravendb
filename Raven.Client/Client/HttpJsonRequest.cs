@@ -11,6 +11,7 @@ namespace Raven.Client.Client
     {
         public static event EventHandler<WebRequestEventArgs> ConfigureRequest = delegate {  };
 
+    	public byte[] bytesForNextWrite;
         public static HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, ICredentials credentials)
         {
             var request = new HttpJsonRequest(url, method, credentials);
@@ -43,36 +44,51 @@ namespace Raven.Client.Client
             webRequest.ContentType = "application/json; charset=utf-8";
         }
 
-        public string ReadResponseString()
-        {
-            WebResponse response;
-            try
-            {
-                response = webRequest.GetResponse();
-            }
-            catch (WebException e)
-            {
-                var httpWebResponse = e.Response as HttpWebResponse;
-                if (httpWebResponse == null || 
-                    httpWebResponse.StatusCode == HttpStatusCode.NotFound ||
-                    httpWebResponse.StatusCode == HttpStatusCode.Conflict)
-                    throw;
-                using (var sr = new StreamReader(e.Response.GetResponseStream()))
-                {
-                    throw new InvalidOperationException(sr.ReadToEnd(), e);
-                }
-            }
-            ResponseHeaders = response.Headers;
-            using (var responseString = response.GetResponseStream())
-            {
-                var reader = new StreamReader(responseString);
-                var text = reader.ReadToEnd();
-                reader.Close();
-                return text;
-            }
-        }
+		public IAsyncResult BeginReadResponseString(AsyncCallback callback, object state)
+		{
+			return webRequest.BeginGetResponse(callback, state);
+		}
 
-        private void WriteMetadata(JObject metadata)
+		public string EndReadResponseString(IAsyncResult result)
+		{
+			return ReadStringInternal(() => webRequest.EndGetResponse(result));
+		}
+
+    	public string ReadResponseString()
+    	{
+    		return ReadStringInternal(webRequest.GetResponse);
+    	}
+
+    	private string ReadStringInternal(Func<WebResponse> getResponse)
+    	{
+    		WebResponse response;
+    		try
+    		{
+				response = getResponse();
+    		}
+    		catch (WebException e)
+    		{
+    			var httpWebResponse = e.Response as HttpWebResponse;
+    			if (httpWebResponse == null || 
+    				httpWebResponse.StatusCode == HttpStatusCode.NotFound ||
+    					httpWebResponse.StatusCode == HttpStatusCode.Conflict)
+    				throw;
+    			using (var sr = new StreamReader(e.Response.GetResponseStream()))
+    			{
+    				throw new InvalidOperationException(sr.ReadToEnd(), e);
+    			}
+    		}
+    		ResponseHeaders = response.Headers;
+    		using (var responseString = response.GetResponseStream())
+    		{
+    			var reader = new StreamReader(responseString);
+    			var text = reader.ReadToEnd();
+    			reader.Close();
+    			return text;
+    		}
+    	}
+
+    	private void WriteMetadata(JObject metadata)
         {
             if (metadata == null || metadata.Count == 0)
             {
@@ -113,6 +129,7 @@ namespace Raven.Client.Client
 
             Write(byteArray);
         }
+
         public void Write(byte[] byteArray)
         {
             webRequest.ContentLength = byteArray.Length;
@@ -123,5 +140,21 @@ namespace Raven.Client.Client
                 dataStream.Close();
             }
         }
+
+		public IAsyncResult BeginWrite(byte[] byteArray, AsyncCallback callback, object state)
+		{
+			bytesForNextWrite = byteArray;
+			return webRequest.BeginGetRequestStream(callback, state);
+		}
+
+		public void EndWrite(IAsyncResult result)
+		{
+			using (var dataStream = webRequest.EndGetRequestStream(result))
+			{
+				dataStream.Write(bytesForNextWrite, 0, bytesForNextWrite.Length);
+				dataStream.Close();
+			}
+			bytesForNextWrite = null;
+		}
     }
 }

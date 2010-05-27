@@ -74,6 +74,9 @@
     <Compile Include="..\Raven.Client\Document\AbstractDocumentQuery.cs">
       <Link>Document\AbstractDocumentQuery.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client\Document\AsyncDocumentSession.cs">
+      <Link>Document\AsyncDocumentSession.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client\Document\DocumentConvention.cs">
       <Link>Document\DocumentConvention.cs</Link>
     </Compile>
@@ -106,6 +109,9 @@
     </Compile>
     <Compile Include="..\Raven.Client\Exceptions\NonUniqueObjectException.cs">
       <Link>Exceptions\NonUniqueObjectException.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client\IAsyncDocumentSession.cs">
+      <Link>IAsyncDocumentSession.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client\IDocumentQuery.cs">
       <Link>IDocumentQuery.cs</Link>
@@ -257,6 +263,7 @@
     <Compile Include="..\Raven.Database\PutResult.cs">
       <Link>Data\PutResult.cs</Link>
     </Compile>
+    <Compile Include="Document\InMemoryDocumentSessionOperations.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

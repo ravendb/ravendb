@@ -8,6 +8,8 @@ namespace Raven.Client.Document
 	{
 		public IDatabaseCommands DatabaseCommands{ get; set;}
 
+		public IAsyncDatabaseCommands AsyncDatabaseCommands { get; set; }
+
         public event Action<string, object> Stored;
 
 		public DocumentStore()
@@ -84,7 +86,7 @@ namespace Raven.Client.Document
 
             if (DatabaseCommands == null)
                 throw new InvalidOperationException("You cannot open a session before initialising the document store. Did you forgot calling Initialise?");
-            var session = new DocumentSession(this, DatabaseCommands.With(credentialsForSession));
+            var session = new DocumentSession(this);
             session.Stored += entity =>
             {
                 var copy = Stored;
@@ -98,7 +100,7 @@ namespace Raven.Client.Document
         {
             if(DatabaseCommands == null)
                 throw new InvalidOperationException("You cannot open a session before initialising the document store. Did you forgot calling Initialise?");
-            var session = new DocumentSession(this, DatabaseCommands);
+            var session = new DocumentSession(this);
 			session.Stored += entity =>
 			{
 				var copy = Stored;
@@ -123,6 +125,7 @@ namespace Raven.Client.Document
 #endif
 				{
 					DatabaseCommands = new ServerClient(Url, Conventions, credentials);
+					AsyncDatabaseCommands = new AsyncServerClient(Url, Conventions, credentials);
 				}
                 if(Conventions.DocumentKeyGenerator == null)// don't overwrite what the user is doing
                 {
@@ -138,5 +141,25 @@ namespace Raven.Client.Document
 
             return this;
 		}
+
+#if !NET_3_5
+
+		public IAsyncDocumentSession OpenAsyncSession()
+		{
+			if (DatabaseCommands == null)
+				throw new InvalidOperationException("You cannot open a session before initialising the document store. Did you forgot calling Initialise?");
+			if (AsyncDatabaseCommands == null)
+				throw new InvalidOperationException("You cannot open an async session because it is not supported on embedded mode");
+
+			var session = new AsyncDocumentSession(this);
+			session.Stored += entity =>
+			{
+				var copy = Stored;
+				if (copy != null)
+					copy(Identifier, entity);
+			};
+			return session;
+		}
+#endif
 	}
 }

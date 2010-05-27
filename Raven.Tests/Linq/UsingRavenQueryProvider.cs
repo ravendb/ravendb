@@ -101,10 +101,10 @@ namespace Raven.Tests.Linq
 
         private void AddData(IDocumentSession documentSession)
         {
-            documentSession.Store<User>(firstUser);
-            documentSession.Store<User>(new User { Name = "James", Age = 25 });
-            documentSession.Store<User>(new User { Name = "Bob", Age = 60 });
-            documentSession.Store<User>(lastUser);
+            documentSession.Store(firstUser);
+            documentSession.Store(new User { Name = "James", Age = 25 });
+            documentSession.Store(new User { Name = "Bob", Age = 60 });
+            documentSession.Store(lastUser);
 
             documentSession.SaveChanges();
         }
