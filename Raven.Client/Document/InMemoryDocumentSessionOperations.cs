@@ -11,7 +11,7 @@ using Raven.Database.Json;
 
 namespace Raven.Client.Document
 {
-	public abstract class InMemoryDocumentSessionOperations
+	public abstract class InMemoryDocumentSessionOperations : IInMemoryDocumentSessionOperations
 	{
 		private const string RavenEntityName = "Raven-Entity-Name";
 		protected readonly HashSet<object> deletedEntities = new HashSet<object>();
@@ -263,11 +263,27 @@ more responsive application.
 			return objectAsJson;
 		}
 
+		public void Evict<T>(T entity)
+		{
+			DocumentSession.DocumentMetadata value;
+			if (entitiesAndMetadata.TryGetValue(entity, out value))
+			{
+				entitiesAndMetadata.Remove(entity);
+				entitiesByKey.Remove(value.Key);
+			}
+			deletedEntities.Remove(entity);
+		}
+
 		public void Clear()
 		{
 			this.entitiesAndMetadata.Clear();
 			this.deletedEntities.Clear();
 			this.entitiesByKey.Clear();
+		}
+
+		public virtual void Dispose()
+		{
+			
 		}
 	}
 }
