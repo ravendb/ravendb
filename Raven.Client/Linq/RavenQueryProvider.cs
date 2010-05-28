@@ -48,13 +48,27 @@ namespace Raven.Client.Linq
         public StringBuilder QueryText { get; set; }
         public List<string> FieldsToFetch { get; set; }
 
+        private int? skipValue = null;
+        private int? takeValue = null;
+
         public object Execute(Expression expression)
         {
             ProcessExpression(expression);
         	luceneQuery = session.LuceneQuery<T>(indexName);
-        	var documentQuery = luceneQuery
-                .Where(QueryText.ToString())
-                .SelectFields<T>(FieldsToFetch.ToArray());
+
+            var documentQuery = luceneQuery.Where(QueryText.ToString());
+            
+            if (skipValue.HasValue)
+            {
+                documentQuery = documentQuery.Skip(skipValue.Value);
+            }
+            if (takeValue.HasValue)
+            {
+                documentQuery = documentQuery.Take(takeValue.Value);
+            }                         
+
+            documentQuery = documentQuery.SelectFields<T>(FieldsToFetch.ToArray());            
+
 			if(customizeQuery != null)
 				customizeQuery(documentQuery);
             return documentQuery;
@@ -225,11 +239,35 @@ namespace Raven.Client.Linq
             {
                 VisitExpression(expression.Arguments[0]);
                 VisitSelect(((UnaryExpression)expression.Arguments[1]).Operand);
+            }           
+            else if ((expression.Method.DeclaringType == typeof(Queryable)) &&
+                    (expression.Method.Name == "Skip"))
+            {
+                VisitExpression(expression.Arguments[0]);
+                VisitSkip(((ConstantExpression)expression.Arguments[1]));
             }
+            else if ((expression.Method.DeclaringType == typeof(Queryable)) &&
+                    (expression.Method.Name == "Take"))
+            {
+                VisitExpression(expression.Arguments[0]);
+                VisitTake(((ConstantExpression)expression.Arguments[1]));
+            }                                    
             else
             {
                 throw new NotSupportedException("Method not supported: " + expression.Method.Name);
             }
+        }         
+
+        private void VisitSkip(ConstantExpression constantExpression)
+        {
+            //Don't have to worry about the cast, the Skip() extension method only take an int
+            skipValue = (int)constantExpression.Value;            
+        }
+
+        private void VisitTake(ConstantExpression constantExpression)
+        {            
+            //Don't have to worry about the cast, the Take() extension method only take an int
+            takeValue = (int)constantExpression.Value;            
         }
 
         private void VisitSelect(Expression operand)
