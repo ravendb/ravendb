@@ -56,6 +56,15 @@
     <Compile Include="..\Bundles\Raven.Bundles.Replication\Data\ReplicationDocument.cs">
       <Link>Data\ReplicationDocument.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client\Client\Async\AsyncServerClient.cs">
+      <Link>Client\Async\AsyncServerClient.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client\Client\Async\IAsyncDatabaseCommands.cs">
+      <Link>Client\Async\IAsyncDatabaseCommands.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client\Client\Async\WrapperAsyncData.cs">
+      <Link>Client\Async\WrapperAsyncData.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client\Client\HttpJsonRequest.cs">
       <Link>Client\HttpJsonRequest.cs</Link>
     </Compile>
@@ -74,8 +83,11 @@
     <Compile Include="..\Raven.Client\Document\AbstractDocumentQuery.cs">
       <Link>Document\AbstractDocumentQuery.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client\Document\AsyncDocumentSession.cs">
-      <Link>Document\AsyncDocumentSession.cs</Link>
+    <Compile Include="..\Raven.Client\Document\Async\AsyncDocumentSession.cs">
+      <Link>Document\Async\AsyncDocumentSession.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client\Document\Async\SyncronousLoadResult.cs">
+      <Link>Document\Async\SyncronousLoadResult.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client\Document\DocumentConvention.cs">
       <Link>Document\DocumentConvention.cs</Link>
@@ -95,6 +107,9 @@
     <Compile Include="..\Raven.Client\Document\IndexDefinition.cs">
       <Link>Document\IndexDefinition.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client\Document\InMemoryDocumentSessionOperations.cs">
+      <Link>Document\InMemoryDocumentSessionOperations.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client\Document\MultiTypeHiLoKeyGenerator.cs">
       <Link>Document\MultiTypeHiLoKeyGenerator.cs</Link>
     </Compile>
@@ -103,6 +118,12 @@
     </Compile>
     <Compile Include="..\Raven.Client\Document\ShardedDocumentQuery.cs">
       <Link>Document\ShardedDocumentQuery.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client\EntityStored.cs">
+      <Link>EntityStored.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client\EntityToDocument.cs">
+      <Link>EntityToDocument.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client\Exceptions\ConflictException.cs">
       <Link>Exceptions\ConflictException.cs</Link>
@@ -121,6 +142,12 @@
     </Compile>
     <Compile Include="..\Raven.Client\IDocumentStore.cs">
       <Link>IDocumentStore.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client\IInMemoryDocumentSessionOperations.cs">
+      <Link>IInMemoryDocumentSessionOperations.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client\ITransactionalDocumentSession.cs">
+      <Link>ITransactionalDocumentSession.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client\Linq\DateTools.cs">
       <Link>Linq\DateTools.cs</Link>
@@ -263,7 +290,6 @@
     <Compile Include="..\Raven.Database\PutResult.cs">
       <Link>Data\PutResult.cs</Link>
     </Compile>
-    <Compile Include="Document\InMemoryDocumentSessionOperations.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

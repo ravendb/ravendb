@@ -1,6 +1,8 @@
 using System;
 using System.Net;
 using Raven.Client.Client;
+using Raven.Client.Client.Async;
+using Raven.Client.Document.Async;
 
 namespace Raven.Client.Document
 {

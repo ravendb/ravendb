@@ -2,7 +2,7 @@
 using Raven.Database;
 using Raven.Database.Data;
 
-namespace Raven.Client.Client
+namespace Raven.Client.Client.Async
 {
 	public interface IAsyncDatabaseCommands : IDisposable
 	{

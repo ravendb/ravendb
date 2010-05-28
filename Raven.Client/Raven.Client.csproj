@@ -87,11 +87,13 @@
       <Link>Data\ReplicationDocument.cs</Link>
     </Compile>
     <Compile Include="Client\Async\AsyncServerClient.cs" />
+    <Compile Include="Client\Async\IAsyncDatabaseCommands.cs" />
     <Compile Include="Client\JsonExtensions.cs" />
     <Compile Include="Client\WebRequestEventArgs.cs" />
-    <Compile Include="Client\WrapperAsyncData.cs" />
+    <Compile Include="Client\Async\WrapperAsyncData.cs" />
     <Compile Include="Document\AbstractDocumentQuery.cs" />
     <Compile Include="Document\Async\AsyncDocumentSession.cs" />
+    <Compile Include="Document\Async\SyncronousLoadResult.cs" />
     <Compile Include="Document\DocumentConvention.cs" />
     <Compile Include="Document\DocumentQuery.cs" />
     <Compile Include="Document\DocumentSession.cs" />
@@ -104,6 +106,8 @@
     <Compile Include="Document\MultiTypeHiLoKeyGenerator.cs" />
     <Compile Include="Document\RavenClientEnlistment.cs" />
     <Compile Include="Document\ShardedDocumentQuery.cs" />
+    <Compile Include="EntityStored.cs" />
+    <Compile Include="EntityToDocument.cs" />
     <Compile Include="Exceptions\ConflictException.cs" />
     <Compile Include="Exceptions\NonUniqueObjectException.cs" />
     <Compile Include="IAsyncDocumentSession.cs" />
@@ -111,6 +115,8 @@
     <Compile Include="IDocumentSession.cs" />
     <Compile Include="IDocumentStore.cs" />
     <Compile Include="Document\InMemoryDocumentSessionOperations.cs" />
+    <Compile Include="IInMemoryDocumentSessionOperations.cs" />
+    <Compile Include="ITransactionalDocumentSession.cs" />
     <Compile Include="Linq\DateTools.cs" />
     <Compile Include="Linq\IRavenQueryable.cs" />
     <Compile Include="Linq\IRavenQueryProvider.cs" />

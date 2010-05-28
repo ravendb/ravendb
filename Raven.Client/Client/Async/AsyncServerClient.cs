@@ -13,7 +13,7 @@ using Raven.Database;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
 
-namespace Raven.Client.Client
+namespace Raven.Client.Client.Async
 {
 	public class AsyncServerClient : IAsyncDatabaseCommands
 	{

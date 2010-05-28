@@ -1,11 +1,11 @@
 using System;
 using System.Linq;
 using System.Net;
-using System.Threading;
 using Raven.Client.Client;
+using Raven.Client.Client.Async;
 using Raven.Database;
 
-namespace Raven.Client.Document
+namespace Raven.Client.Document.Async
 {
 	public class AsyncDocumentSession : InMemoryDocumentSessionOperations, IAsyncDocumentSession
 	{
@@ -88,44 +88,6 @@ namespace Raven.Client.Document
 		public override void Rollback(Guid txId)
 		{
 			throw new NotImplementedException();
-		}
-	}
-
-
-	public class SyncronousLoadResult : IAsyncResult
-	{
-		private readonly object state;
-		private readonly object entity;
-
-		public object Entity
-		{
-			get { return entity; }
-		}
-
-		public bool IsCompleted
-		{
-			get { return true; }
-		}
-
-		public WaitHandle AsyncWaitHandle
-		{
-			get { return null; }
-		}
-
-		public object AsyncState
-		{
-			get { return state; }
-		}
-
-		public bool CompletedSynchronously
-		{
-			get { return true; }
-		}
-
-		public SyncronousLoadResult(object state, object entity)
-		{
-			this.state = state;
-			this.entity = entity;
 		}
 	}
 }

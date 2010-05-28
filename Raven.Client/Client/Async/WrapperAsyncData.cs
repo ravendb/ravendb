@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading;
 
-namespace Raven.Client.Client
+namespace Raven.Client.Client.Async
 {
 	public class WrapperAsyncData<T> : IAsyncResult
 	{
