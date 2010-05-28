@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Net;
 using System.Threading;
 using Raven.Client.Client;
@@ -15,11 +16,6 @@ namespace Raven.Client.Document
 		private IAsyncDatabaseCommands AsyncDatabaseCommands
 		{
 			get { return documentStore.AsyncDatabaseCommands; }
-		}
-
-		public void Dispose()
-		{
-			
 		}
 
 		public IAsyncResult BeginLoad(string id, AsyncCallback asyncCallback, object state)
@@ -39,8 +35,6 @@ namespace Raven.Client.Document
 			if (syncronousLoadResult != null)
 				return (T) syncronousLoadResult.Entity;
 
-
-
 			JsonDocument documentFound;
 			try
 			{
@@ -59,44 +53,67 @@ namespace Raven.Client.Document
 			return TrackEntity<T>(documentFound);
 		}
 
-
-		public class SyncronousLoadResult : IAsyncResult
+		public IAsyncResult BeginSaveChanges(AsyncCallback asyncCallback, object state)
 		{
-			private readonly object state;
-			private readonly object entity;
-
-			public object Entity
-			{
-				get { return entity; }
-			}
-
-			public bool IsCompleted
-			{
-				get { return true; }
-			}
-
-			public WaitHandle AsyncWaitHandle
-			{
-				get { return null; }
-			}
-
-			public object AsyncState
-			{
-				get { return state; }
-			}
-
-			public bool CompletedSynchronously
-			{
-				get { return true; }
-			}
-
-			public SyncronousLoadResult(object state, object entity)
-			{
-				this.state = state;
-				this.entity = entity;
-			}
+			var data = PrepareForSaveChanges();
+			var asyncResult = AsyncDatabaseCommands.BeginBatch(data.Commands.ToArray(), asyncCallback, state);
+			return new WrapperAsyncData<DocumentSession.SaveChangesData>(asyncResult, data);
 		}
 
-		public event EntityStored Stored;
+		public void EndSaveChanges(IAsyncResult result)
+		{
+			var wrapperAsyncData = ((WrapperAsyncData<DocumentSession.SaveChangesData>)result);
+
+			var batchResults = AsyncDatabaseCommands.EndBatch(wrapperAsyncData.Inner);
+			UpdateBatchResults(batchResults, wrapperAsyncData.Wrapped.Entities);
+		}
+
+		public override void Commit(Guid txId)
+		{
+			throw new NotImplementedException();
+		}
+
+		public override void Rollback(Guid txId)
+		{
+			throw new NotImplementedException();
+		}
+	}
+
+
+	public class SyncronousLoadResult : IAsyncResult
+	{
+		private readonly object state;
+		private readonly object entity;
+
+		public object Entity
+		{
+			get { return entity; }
+		}
+
+		public bool IsCompleted
+		{
+			get { return true; }
+		}
+
+		public WaitHandle AsyncWaitHandle
+		{
+			get { return null; }
+		}
+
+		public object AsyncState
+		{
+			get { return state; }
+		}
+
+		public bool CompletedSynchronously
+		{
+			get { return true; }
+		}
+
+		public SyncronousLoadResult(object state, object entity)
+		{
+			this.state = state;
+			this.entity = entity;
+		}
 	}
 }

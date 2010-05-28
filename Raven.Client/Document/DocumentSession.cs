@@ -15,12 +15,6 @@ namespace Raven.Client.Document
 {
 	public class DocumentSession : InMemoryDocumentSessionOperations, IDocumentSession
 	{
-		private RavenClientEnlistment enlistment;
-
-		public override event EntityStored Stored;
-
-		public override event EntityToDocument OnEntityConverted;
-
 		private IDatabaseCommands DatabaseCommands
 		{
 			get { return documentStore.DatabaseCommands; }
@@ -92,64 +86,13 @@ namespace Raven.Client.Document
 	        }
 	    }
 
-	    public void Evict<T>(T entity)
-		{
-		    DocumentMetadata value;
-		    if(entitiesAndMetadata.TryGetValue(entity, out value))
-		    {
-		        entitiesAndMetadata.Remove(entity);
-		        entitiesByKey.Remove(value.Key);
-		    }
-		    deletedEntities.Remove(entity);
-		}
-
 		public void SaveChanges()
 		{
-            if(enlistment == null && Transaction.Current != null)
-            {
-                enlistment = new RavenClientEnlistment(this, Transaction.Current.TransactionInformation.DistributedIdentifier);
-                Transaction.Current.EnlistVolatile(enlistment,EnlistmentOptions.None);
-            }
-			var entities = new List<object>();
-			var cmds = new List<ICommandData>();
-		    DocumentMetadata value = null;
-		    foreach (var key in (from deletedEntity in deletedEntities
-                                 where entitiesAndMetadata.TryGetValue(deletedEntity, out value)
-                                 select value.Key))
-            {
-                Guid? etag = null;
-                object existingEntity;
-                if (entitiesByKey.TryGetValue(key, out existingEntity))
-                {
-                    DocumentMetadata metadata;
-                    if (entitiesAndMetadata.TryGetValue(existingEntity, out metadata))
-                        etag = metadata.ETag;
-                    entitiesAndMetadata.Remove(existingEntity);
-                }
+			var data = PrepareForSaveChanges();
 
-                etag = UseOptimisticConcurrency ? etag : null;
-            	entities.Add(existingEntity);
-                cmds.Add(new DeleteCommandData
-                {
-                	Etag = etag,
-					Key = key,
-                });
-            }
-            deletedEntities.Clear();
-		    foreach (var entity in entitiesAndMetadata.Where(EntityChanged))
-			{
-				entities.Add(entity.Key);
-				if (entity.Value.Key != null)
-					entitiesByKey.Remove(entity.Value.Key);
-				cmds.Add(CreatePutEntityCommand(entity.Key, entity.Value));
-			}
-			
-			if (cmds.Count == 0)
-				return;
-
-            IncrementRequestCount();
-            Trace.WriteLine(string.Format("Saving {0} changes to {1}", cmds.Count, StoreIdentifier));
-			UpdateBatchResults(DatabaseCommands.Batch(cmds.ToArray()), entities);
+			IncrementRequestCount();
+            Trace.WriteLine(string.Format("Saving {0} changes to {1}", data.Commands.Count, StoreIdentifier));
+			UpdateBatchResults(DatabaseCommands.Batch(data.Commands.ToArray()), data.Entities);
 		}
 
 		public IDocumentQuery<T> LuceneQuery<T>(string indexName)
@@ -157,28 +100,18 @@ namespace Raven.Client.Document
 			return new DocumentQuery<T>(this, DatabaseCommands, indexName, null);
 		}
 
-        #region IDisposable Members
-
-        public void Dispose()
-        {
-            //dereference all event listeners
-            Stored = null;
-        }
-
-        #endregion
-
-	    public void Commit(Guid txId)
+	    public override void Commit(Guid txId)
 	    {
             IncrementRequestCount();
             documentStore.DatabaseCommands.Commit(txId);
-	        enlistment = null;
+	        ClearEnlistment();
 	    }
 
-	    public void Rollback(Guid txId)
+		public override void Rollback(Guid txId)
 	    {
             IncrementRequestCount();
             documentStore.DatabaseCommands.Rollback(txId);
-            enlistment = null;
+			ClearEnlistment();
 	    }
 
         public class DocumentMetadata
@@ -188,5 +121,11 @@ namespace Raven.Client.Document
             public Guid? ETag { get; set; }
             public string Key { get; set; }
         }
+
+		public class SaveChangesData
+		{
+			public IList<ICommandData> Commands { get; set; }
+			public IList<object> Entities { get; set; }
+		}
 	}
 }

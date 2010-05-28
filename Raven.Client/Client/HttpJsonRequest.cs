@@ -144,6 +144,7 @@ namespace Raven.Client.Client
 		public IAsyncResult BeginWrite(byte[] byteArray, AsyncCallback callback, object state)
 		{
 			bytesForNextWrite = byteArray;
+			webRequest.ContentLength = byteArray.Length;
 			return webRequest.BeginGetRequestStream(callback, state);
 		}
 

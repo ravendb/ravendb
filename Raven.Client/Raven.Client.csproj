@@ -86,11 +86,12 @@
     <Compile Include="..\Bundles\Raven.Bundles.Replication\Data\ReplicationDocument.cs">
       <Link>Data\ReplicationDocument.cs</Link>
     </Compile>
-    <Compile Include="Client\AsyncServerClient.cs" />
+    <Compile Include="Client\Async\AsyncServerClient.cs" />
     <Compile Include="Client\JsonExtensions.cs" />
     <Compile Include="Client\WebRequestEventArgs.cs" />
+    <Compile Include="Client\WrapperAsyncData.cs" />
     <Compile Include="Document\AbstractDocumentQuery.cs" />
-    <Compile Include="Document\AsyncDocumentSession.cs" />
+    <Compile Include="Document\Async\AsyncDocumentSession.cs" />
     <Compile Include="Document\DocumentConvention.cs" />
     <Compile Include="Document\DocumentQuery.cs" />
     <Compile Include="Document\DocumentSession.cs" />

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
+using System.Transactions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Client;
@@ -15,6 +17,8 @@ namespace Raven.Client.Document
 	{
 		private const string RavenEntityName = "Raven-Entity-Name";
 		protected readonly HashSet<object> deletedEntities = new HashSet<object>();
+
+		private RavenClientEnlistment enlistment;
 
 		protected readonly Dictionary<object, DocumentSession.DocumentMetadata> entitiesAndMetadata =
 			new Dictionary<object, DocumentSession.DocumentMetadata>();
@@ -230,6 +234,53 @@ more responsive application.
 			}
 		}
 
+		protected DocumentSession.SaveChangesData PrepareForSaveChanges()
+		{
+			var result = new DocumentSession.SaveChangesData
+			{
+				Entities = new List<object>(),
+				Commands = new List<ICommandData>()
+			};
+			if (enlistment == null && Transaction.Current != null)
+			{
+				enlistment = new RavenClientEnlistment(this, Transaction.Current.TransactionInformation.DistributedIdentifier);
+				Transaction.Current.EnlistVolatile(enlistment, EnlistmentOptions.None);
+			}
+			DocumentSession.DocumentMetadata value = null;
+			foreach (var key in (from deletedEntity in deletedEntities
+								 where entitiesAndMetadata.TryGetValue(deletedEntity, out value)
+								 select value.Key))
+			{
+				Guid? etag = null;
+				object existingEntity;
+				if (entitiesByKey.TryGetValue(key, out existingEntity))
+				{
+					DocumentSession.DocumentMetadata metadata;
+					if (entitiesAndMetadata.TryGetValue(existingEntity, out metadata))
+						etag = metadata.ETag;
+					entitiesAndMetadata.Remove(existingEntity);
+				}
+
+				etag = UseOptimisticConcurrency ? etag : null;
+				result.Entities.Add(existingEntity);
+				result.Commands.Add(new DeleteCommandData
+				{
+					Etag = etag,
+					Key = key,
+				});
+			}
+			deletedEntities.Clear();
+			foreach (var entity in entitiesAndMetadata.Where(EntityChanged))
+			{
+				result.Entities.Add(entity.Key);
+				if (entity.Value.Key != null)
+					entitiesByKey.Remove(entity.Value.Key);
+				result.Commands.Add(CreatePutEntityCommand(entity.Key, entity.Value));
+			}
+
+			return result;
+		}
+
 		protected bool EntityChanged(KeyValuePair<object, DocumentSession.DocumentMetadata> kvp)
 		{
 			var newObj = ConvertEntityToJson(kvp.Key, kvp.Value.Metadata);
@@ -284,6 +335,14 @@ more responsive application.
 		public virtual void Dispose()
 		{
 			
+		}
+
+		public abstract void Commit(Guid txId);
+		public abstract void Rollback(Guid txId);
+
+		protected void ClearEnlistment()
+		{
+			enlistment = null;
 		}
 	}
 }

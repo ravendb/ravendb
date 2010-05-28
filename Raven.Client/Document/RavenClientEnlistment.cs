@@ -5,10 +5,10 @@ namespace Raven.Client.Document
 {
     public class RavenClientEnlistment : ISinglePhaseNotification
     {
-        private readonly IDocumentSession sessionImpl;
+		private readonly ITransactionalDocumentSession sessionImpl;
         private readonly Guid txId;
 
-        public RavenClientEnlistment(IDocumentSession sessionImpl, Guid txId)
+		public RavenClientEnlistment(ITransactionalDocumentSession sessionImpl, Guid txId)
         {
             this.sessionImpl = sessionImpl;
             this.txId = txId;

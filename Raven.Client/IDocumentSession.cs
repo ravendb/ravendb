@@ -5,7 +5,7 @@ using Raven.Client.Linq;
 
 namespace Raven.Client
 {
-    public interface IInMemoryDocumentSessionOperations : IDisposable
+	public interface IInMemoryDocumentSessionOperations : ITransactionalDocumentSession, IDisposable
     {
         string StoreIdentifier { get; }
         
@@ -39,15 +39,18 @@ namespace Raven.Client
 
 		void Refresh<T>(T entity);
 
-		void Commit(Guid txId);
-
-		void Rollback(Guid txId);
-
 		IRavenQueryable<T> Query<T>(string indexName);
 
 		IDocumentQuery<T> LuceneQuery<T>(string indexName);
 
 		void SaveChanges();
+	}
+
+	public interface ITransactionalDocumentSession
+	{
+		void Commit(Guid txId);
+
+		void Rollback(Guid txId);
 	}
 
 	public delegate void EntityStored(object entity);
