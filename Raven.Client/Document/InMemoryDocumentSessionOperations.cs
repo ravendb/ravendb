@@ -327,9 +327,9 @@ more responsive application.
 
 		public void Clear()
 		{
-			this.entitiesAndMetadata.Clear();
-			this.deletedEntities.Clear();
-			this.entitiesByKey.Clear();
+			entitiesAndMetadata.Clear();
+			deletedEntities.Clear();
+			entitiesByKey.Clear();
 		}
 
 		public virtual void Dispose()
