@@ -125,7 +125,7 @@ namespace Raven.Client.Document
 #endif
 				{
 					DatabaseCommands = new ServerClient(Url, Conventions, credentials);
-					AsyncDatabaseCommands = new AsyncServerClient(Url, credentials);
+					AsyncDatabaseCommands = new AsyncServerClient(Url, Conventions, credentials);
 				}
                 if(Conventions.DocumentKeyGenerator == null)// don't overwrite what the user is doing
                 {

@@ -7,6 +7,7 @@ using System.Threading;
 using System.Transactions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Client.Document;
 using Raven.Client.Exceptions;
 using Raven.Database;
 using Raven.Database.Data;
@@ -18,10 +19,12 @@ namespace Raven.Client.Client
 	{
 		private readonly string url;
 		private readonly ICredentials credentials;
+		private readonly DocumentConvention convention;
 
-		public AsyncServerClient(string url, ICredentials credentials)
+		public AsyncServerClient(string url, DocumentConvention convention, ICredentials credentials)
 		{
 			this.url = url;
+			this.convention = convention;
 			this.credentials = credentials;
 		}
 
@@ -137,6 +140,41 @@ namespace Raven.Client.Client
 						DataAsJson = doc,
 					})
 				.ToArray();
+		}
+
+		public IAsyncResult BeginQuery(string index, IndexQuery query, AsyncCallback callback, object state)
+		{
+			EnsureIsNotNullOrEmpty(index, "index");
+			string path = query.GetIndexQueryUrl(url, index);
+			var request = HttpJsonRequest.CreateHttpJsonRequest(this, path, "GET", credentials);
+
+			var asyncCallback = callback;
+			if (callback != null)
+				asyncCallback = ar => callback(new UserAsyncData(request, ar));
+
+			var asyncResult = request.BeginReadResponseString(asyncCallback, state);
+			return new UserAsyncData(request, asyncResult);
+		}
+
+		public QueryResult EndQuery(IAsyncResult result)
+		{
+			var userAsyncData = ((UserAsyncData)result);
+			var responseString = userAsyncData.Request.EndReadResponseString(userAsyncData.Result);
+			var serializer = new JsonSerializer
+			{
+				ContractResolver = convention.JsonContractResolver,
+				ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor
+			};
+			JToken json;
+			using (var reader = new JsonTextReader(new StringReader(responseString)))
+				json = (JToken)serializer.Deserialize(reader);
+
+			return new QueryResult
+			{
+				IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
+				Results = json["Results"].Children().Cast<JObject>().ToArray(),
+				TotalResults = Convert.ToInt32(json["TotalResults"].ToString())
+			};
 		}
 
 		public IAsyncResult BeginBatch(ICommandData[] commandDatas, AsyncCallback callback, object state)

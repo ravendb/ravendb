@@ -40,12 +40,10 @@ namespace Raven.Client.Client
 		IAsyncResult BeginMultiGet(string[] keys, AsyncCallback callback, object state);
 		JsonDocument[] EndMultiGet(IAsyncResult result);
 
-		//QueryResult Query(string index, IndexQuery query);
+		IAsyncResult BeginQuery(string index, IndexQuery query, AsyncCallback callback, object state);
+		QueryResult EndQuery(IAsyncResult result);
 
 		IAsyncResult BeginBatch(ICommandData[] commandDatas, AsyncCallback callback, object state);
 		BatchResult[] EndBatch(IAsyncResult result);
-
-		//void Commit(Guid txId);
-		//void Rollback(Guid txId);
 	}
 }
