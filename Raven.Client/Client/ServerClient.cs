@@ -373,26 +373,8 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 
 	    private QueryResult DirectQuery(string index, IndexQuery query, string operationUrl)
 	    {
-            var path = string.Format("{0}/indexes/{1}?query={2}&start={3}&pageSize={4}", operationUrl, index, query.Query, query.Start, query.PageSize);
-	        if (query.FieldsToFetch != null && query.FieldsToFetch.Length > 0)
-	        {
-	            path = query.FieldsToFetch.Aggregate(
-	                new StringBuilder(path),
-                    (sb, field) => sb.Append("&fetch=").Append(Uri.EscapeDataString(field))
-	                ).ToString();
-	        }
-	        if(query.SortedFields!=null && query.SortedFields.Length>0)
-	        {
-	            path = query.SortedFields.Aggregate(
-	                new StringBuilder(path),
-                    (sb, field) => sb.Append("&sort=").Append(field.Descending ? "-" : "").Append(Uri.EscapeDataString(field.Field))
-	                ).ToString();
-	        }
-	        if(query.Cutoff != null)
-	        {
-                path = path + "&cutOff=" + Uri.EscapeDataString(query.Cutoff.Value.ToString("o", CultureInfo.InvariantCulture));
-	        }
-            var request = HttpJsonRequest.CreateHttpJsonRequest(this, Uri.EscapeUriString(path), "GET", credentials);
+            string path = query.GetIndexQueryUrl(operationUrl, index);
+	    	var request = HttpJsonRequest.CreateHttpJsonRequest(this, path, "GET", credentials);
 	        var serializer = new JsonSerializer
 	        {
 				ContractResolver = convention.JsonContractResolver,
@@ -410,7 +392,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 	        };
 	    }
 
-	    public void DeleteIndex(string name)
+    	public void DeleteIndex(string name)
 		{
 			EnsureIsNotNullOrEmpty(name, "name");
             var request = HttpJsonRequest.CreateHttpJsonRequest(this, url + "/indexes/" + name, "DELETE", credentials);
