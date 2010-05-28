@@ -37,8 +37,10 @@ namespace Raven.Client.Client
 		IAsyncResult BeginGet(string key, AsyncCallback callback, object state);
 		JsonDocument EndGet(IAsyncResult result);
 
+		IAsyncResult BeginMultiGet(string[] keys, AsyncCallback callback, object state);
+		JsonDocument[] EndMultiGet(IAsyncResult result);
+
 		//QueryResult Query(string index, IndexQuery query);
-		//JsonDocument[] Get(string[] ids);
 
 		IAsyncResult BeginBatch(ICommandData[] commandDatas, AsyncCallback callback, object state);
 		BatchResult[] EndBatch(IAsyncResult result);

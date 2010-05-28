@@ -85,6 +85,60 @@ namespace Raven.Client.Client
 			}
 		}
 
+		public IAsyncResult BeginMultiGet(string[] keys, AsyncCallback callback, object state)
+		{
+			var request = HttpJsonRequest.CreateHttpJsonRequest(this, url + "/queries/", "POST", credentials);
+			var array = Encoding.UTF8.GetBytes(new JArray(keys).ToString(Formatting.None));
+			var multiStepAsyncResult = new MultiStepAsyncResult(state, request);
+			var asyncResult = request.BeginWrite(array, ContinueOperation, new Contiuation
+			{
+				Callback = callback,
+				State = state,
+				Request = request,
+				MultiAsyncResult = multiStepAsyncResult
+			});
+			if (asyncResult.CompletedSynchronously)
+			{
+				ContinueOperation(asyncResult);
+			}
+	        return multiStepAsyncResult;
+		}
+
+		public JsonDocument[] EndMultiGet(IAsyncResult result)
+		{
+			EnsureNotError(result);
+
+			var multiStepAsyncResult = ((MultiStepAsyncResult)result);
+			multiStepAsyncResult.AsyncWaitHandle.Close();
+
+			JArray responses;
+			try
+			{
+				var responseString = multiStepAsyncResult.Request.EndReadResponseString(multiStepAsyncResult.Result);
+				responses = JArray.Parse(responseString);
+			}
+			catch (WebException e)
+			{
+				var httpWebResponse = e.Response as HttpWebResponse;
+				if (httpWebResponse == null ||
+					httpWebResponse.StatusCode != HttpStatusCode.Conflict)
+					throw;
+				throw ThrowConcurrencyException(e);
+			}
+
+			return (from doc in responses.Cast<JObject>()
+					let metadata = (JObject)doc["@metadata"]
+					let _ = doc.Remove("@metadata")
+					select new JsonDocument
+					{
+						Key = metadata["@id"].Value<string>(),
+						Etag = new Guid(metadata["@etag"].Value<string>()),
+						Metadata = metadata,
+						DataAsJson = doc,
+					})
+				.ToArray();
+		}
+
 		public IAsyncResult BeginBatch(ICommandData[] commandDatas, AsyncCallback callback, object state)
 		{
 			var metadata = new JObject();

@@ -53,6 +53,18 @@ namespace Raven.Client.Document
 			return TrackEntity<T>(documentFound);
 		}
 
+		public IAsyncResult BeginMultiLoad(string[] ids, AsyncCallback asyncCallback, object state)
+		{
+			IncrementRequestCount();
+			return AsyncDatabaseCommands.BeginMultiGet(ids, asyncCallback, state);
+		}
+
+		public T[] EndMultiLoad<T>(IAsyncResult result)
+		{
+			var documents = AsyncDatabaseCommands.EndMultiGet(result);
+			return documents.Select(TrackEntity<T>).ToArray();
+		}
+
 		public IAsyncResult BeginSaveChanges(AsyncCallback asyncCallback, object state)
 		{
 			var data = PrepareForSaveChanges();
