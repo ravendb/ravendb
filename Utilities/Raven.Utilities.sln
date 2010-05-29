@@ -3,6 +3,8 @@ Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Merger", "Raven.Merger\Raven.Merger.csproj", "{42FFC01C-64D5-41CA-B29C-FA576B3E8034}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.ProjectRewriter", "Raven.ProjectRewriter\Raven.ProjectRewriter.csproj", "{CE9E7035-2502-4875-9B8A-CB7C198D04A2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x86 = Debug|x86
@@ -13,6 +15,10 @@ Global
 		{42FFC01C-64D5-41CA-B29C-FA576B3E8034}.Debug|x86.Build.0 = Debug|x86
 		{42FFC01C-64D5-41CA-B29C-FA576B3E8034}.Release|x86.ActiveCfg = Release|x86
 		{42FFC01C-64D5-41CA-B29C-FA576B3E8034}.Release|x86.Build.0 = Release|x86
+		{CE9E7035-2502-4875-9B8A-CB7C198D04A2}.Debug|x86.ActiveCfg = Debug|x86
+		{CE9E7035-2502-4875-9B8A-CB7C198D04A2}.Debug|x86.Build.0 = Debug|x86
+		{CE9E7035-2502-4875-9B8A-CB7C198D04A2}.Release|x86.ActiveCfg = Release|x86
+		{CE9E7035-2502-4875-9B8A-CB7C198D04A2}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
