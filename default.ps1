@@ -28,6 +28,9 @@ task Clean {
 }
 
 task Init -depends Verify40, Clean {
+
+	$global:uploadCategory = $uploadCategory
+	
 	Generate-Assembly-Info `
 		-file "$base_dir\Raven.Database\Properties\AssemblyInfo.cs" `
 		-title "Raven Database $version" `
@@ -224,6 +227,7 @@ task ReleaseNoTests -depends DoRelease {
 
 task Commercial {
 	$global:commercial = $true
+	$global:uploadCategory = $global:uploadCategory +"-Commercial"
 }
 
 task ReleaseCommercialNoTests -depends Commercial,DoRelease {
@@ -317,8 +321,12 @@ task DoRelease -depends Compile {
     }
     
     cd $old
+    ExecuteTask("ResetBuildArtifcats")
 }
 
+task ResetBuildArtifcats {
+    git checkout "Raven.Database\RavenDB.snk"
+}
 
 task Upload -depends ReleaseNoTests {
 	Write-Host "Starting upload"
@@ -339,3 +347,8 @@ task Upload -depends ReleaseNoTests {
 		Write-Host "could not find upload script $uploadScript, skipping upload"
 	}
 }
+
+task UploadCommercial -depends ReleaseCommercialNoTests, Upload {
+
+}
+
