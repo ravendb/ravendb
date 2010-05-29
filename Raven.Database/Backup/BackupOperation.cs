@@ -6,6 +6,7 @@ using log4net;
 using Microsoft.Isam.Esent.Interop;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Json;
+using Raven.Database.Extensions;
 
 namespace Raven.Database.Backup
 {
@@ -22,8 +23,8 @@ namespace Raven.Database.Backup
 		{
 			instance = database.TransactionalStorage.Instance;
 			this.database = database;
-			this.to = to;
-			this.src = src;
+            this.to = to.ToFullPath();
+            this.src = src.ToFullPath();
 		}
 
 		public void Execute(object ignored)

@@ -7,6 +7,7 @@ using log4net.Config;
 using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Database.Extensions;
 
 namespace Raven.Database
 {
@@ -125,7 +126,14 @@ namespace Raven.Database
 		}
 
 		public TransactionMode TransactionMode { get; set; }
-		public string DataDirectory { get; set; }
+
+        private string dataDirectory;
+        public string DataDirectory 
+        {
+            get { return dataDirectory; }
+            set { dataDirectory = value.ToFullPath(); }
+        }
+
 		public int Port { get; set; }
 		public string WebDir { get; set; }
 		public int IndexingBatchSize { get; set; }
