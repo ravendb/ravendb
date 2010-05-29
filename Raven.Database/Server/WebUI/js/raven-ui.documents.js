@@ -72,16 +72,19 @@ function ExecuteQuery() {
     });
 }
 
-function getDisplayString(docID, json) {
-    
-    var returnJSON = json;
+function getDisplayString(docID, json, metadata) {
+	var entityName = "";
+	var returnJSON = json;
+	if (metadata != null && metadata["Raven-Entity-Name"] != null) {
+		entityName = " (" + metadata["Raven-Entity-Name"] + ")";
+	}
     delete returnJSON["@metadata"];
     var jsonString = JSON.stringify(returnJSON)
 				.replace(/</g, '&lt;')
 				.replace(/>/g, '&gt;');
     if (jsonString.length > 90)
-        jsonString = jsonString.substring(0, 90) + '...';
-    return "<span style='float:right'><b>" + docID + "</b></span>" + jsonString;
+    	jsonString = jsonString.substring(0, 90) + '...';
+    return "<span style='float:right'><b>" + docID + entityName + "</b></span>" + jsonString;
 }
 
 function processDocumentResults(results, totalCount) {
@@ -107,7 +110,7 @@ function processDocumentResults(results, totalCount) {
     	}
     	var doc = this;
     	alternate = !alternate;
-    	$(searchResult).html(getDisplayString(docID, this));
+    	$(searchResult).html(getDisplayString(docID, doc, metadata));
     	$(searchResult).click(function () {
     		if (docID != "Projection") {
     			EditDocument(docID);
