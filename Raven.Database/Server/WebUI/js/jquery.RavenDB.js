@@ -326,7 +326,7 @@
                     indexSearchCache = data;
                     var indexes = new Array();
                     $(data).each(function () {
-                        if (this.name.toLowerCase().indexOf(name) > 0) {
+                        if (this.name.toLowerCase().indexOf(name) > -1) {
                             indexes.push(this.name);
                         }
                     });

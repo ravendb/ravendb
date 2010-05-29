@@ -32,7 +32,7 @@ $(document).ready(function () {
                 response(searchResult);
             });
         },
-        minLength: 2,
+        minLength: 1,
         select: function (event, ui) {
             $('#queryValueSubmit').fadeIn();
         }
