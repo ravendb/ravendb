@@ -22,11 +22,12 @@ namespace Raven.Merger
 					@"Lucene.Net.dll",
 					@"log4net.dll",
 					@"Newtonsoft.Json.dll",
-
+					@"Rhino.Licensing.dll",
 				});
 				
 				Merge("RavenWeb.dll", new[]
 				{
+					@"Rhino.Licensing.dll",
 					@"Raven.Web.dll",
 					@"Raven.Database.dll",
 					@"Esent.Interop.dll",

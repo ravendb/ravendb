@@ -9,7 +9,6 @@ namespace Raven.ProjectRewriter
 	{
 		static void Main()
 		{
-			Environment.CurrentDirectory = @"C:\Work\ravendb\";
 			var xmlns = XNamespace.Get("http://schemas.microsoft.com/developer/msbuild/2003");
 			var database = XDocument.Load(@"Raven.Database\Raven.Database.csproj");
 			foreach (var element in database.Root.Descendants(xmlns+"DefineConstants").ToArray())
