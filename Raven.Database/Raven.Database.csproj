@@ -80,6 +80,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Newtonsoft.Json.dll</HintPath>
     </Reference>
+    <Reference Include="Rhino.Licensing">
+      <HintPath>..\SharedLibs\Rhino.Licensing.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.configuration" />
@@ -107,6 +110,8 @@
     <Compile Include="Backup\DirectoryBackup.cs" />
     <Compile Include="Backup\RemoveBackupDocumentStartupTask.cs" />
     <Compile Include="Backup\RestoreOperation.cs" />
+    <Compile Include="Commercial\ValidateLicense.cs" />
+    <Compile Include="Commercial\WarningMessagesHolder.cs" />
     <Compile Include="Data\BackupRequest.cs" />
     <Compile Include="Exceptions\IndexDoesNotExists.cs" />
     <Compile Include="Indexing\GatherAllCollector.cs" />
@@ -307,6 +312,7 @@
     <Content Include="Server\WebUI\images\topNavSep.png" />
     <Content Include="Server\WebUI\index.html" />
     <Content Include="Server\WebUI\indexes.html" />
+    <Content Include="Server\WebUI\JSONTemplates\warningMsgs.html" />
     <Content Include="Server\WebUI\JSONTemplates\documentation.html" />
     <Content Include="Server\WebUI\JSONTemplates\globalStats.html" />
     <Content Include="Server\WebUI\JSONTemplates\indexPage.html" />
@@ -335,6 +341,7 @@
     <WCFMetadata Include="Service References\" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Commercial\RavenDB.public" />
     <None Include="RavenDB.snk" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
