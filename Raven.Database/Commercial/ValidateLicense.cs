@@ -1,3 +1,4 @@
+#if COMMERCIAL
 using System;
 using System.IO;
 using Newtonsoft.Json.Linq;
@@ -55,3 +56,4 @@ namespace Raven.Database.Commercial
 		}
 	}
 }
+#endif

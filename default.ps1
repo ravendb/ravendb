@@ -3,12 +3,13 @@ properties {
   $lib_dir = "$base_dir\SharedLibs"
   $build_dir = "$base_dir\build"
   $buildartifacts_dir = "$build_dir\"
-  $sln_file = "$base_dir\RavenDB.sln"
+  $sln_file = "$base_dir\zzz_RavenDB_Release.sln"
   $version = "1.0.0.0"
   $tools_dir = "$base_dir\Tools"
   $release_dir = "$base_dir\Release"
   $uploader = "..\Uploader\S3Uploader.exe"
   $uploadCategory = "RavenDB"
+  $commercial = $false
 }
 
 include .\psake_ext.ps1
@@ -174,11 +175,20 @@ task Init -depends Verify40, Clean {
 	new-item $buildartifacts_dir -itemType directory
 	
 	copy $tools_dir\xUnit\*.* $build_dir
+	 
+	write-host "Commercial: ", $global:commercial
+	if($global:commercial) {
+		exec ".\Utilities\Binaries\Raven.ProjectRewriter.exe"
+		cp "..\RavenDB_Commercial.snk" "Raven.Database\RavenDB.snk"
+	}
+	else {
+		cp "Raven.Database\Raven.Database.csproj" "Raven.Database\Raven.Database.g.csproj"
+	}
 }
 
 task Compile -depends Init {
 	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
-    exec "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" """$base_dir\RavenDB.sln"" /p:OutDir=""$buildartifacts_dir\"""
+    exec "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" """$sln_file"" /p:OutDir=""$buildartifacts_dir\"""
     
     Write-Host "Merging..."
     $old = pwd
@@ -209,6 +219,14 @@ task Test -depends Compile {
 }
 
 task ReleaseNoTests -depends DoRelease {
+
+}
+
+task Commercial {
+	$global:commercial = $true
+}
+
+task ReleaseCommercialNoTests -depends Commercial,DoRelease {
 
 }
 
