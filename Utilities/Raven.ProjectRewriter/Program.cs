@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Xml;
 using System.Xml.Linq;
 
@@ -12,14 +10,13 @@ namespace Raven.ProjectRewriter
 		static void Main()
 		{
 			Environment.CurrentDirectory = @"C:\Work\ravendb\";
+			var xmlns = XNamespace.Get("http://schemas.microsoft.com/developer/msbuild/2003");
 			var database = XDocument.Load(@"Raven.Database\Raven.Database.csproj");
-			foreach (var element in database.Root.Descendants().ToArray())
+			foreach (var element in database.Root.Descendants(xmlns+"DefineConstants").ToArray())
 			{
-				var include = element.Attribute("Include");
-				if(include != null &&  include.Value.Contains("Commercial"))
-				{
-					element.Remove();
-				}
+				if (element.Value.EndsWith(";") == false)
+					element.Value += ";";
+				element.Value += "COMMERCIAL";
 			}
 			using (var xmlWriter = XmlWriter.Create(@"Raven.Database\Raven.Database.g.csproj",
 				new XmlWriterSettings
