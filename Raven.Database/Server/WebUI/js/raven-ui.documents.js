@@ -95,49 +95,59 @@ function processDocumentResults(results, totalCount) {
     var wrapper = $('<div class="searchListWrapper ui-corner-all"></div>');
     var alternate = false;
     $(results).each(function () {
-        var docID = this['@metadata']['@id'];
-        var previewHTML = GetDocumentViewHTML(this);
-        if (alternate) {
-            var searchResult = $('<div id="' + docID + '" class="searchListItem alternate"></div>');
-        } else {
-            var searchResult = $('<div id="' + docID + '" class="searchListItem"></div>');
-        }
-        alternate = !alternate;
-        $(searchResult).html(getDisplayString(docID, this));
-        $(searchResult).click(function () {
-            EditDocument(docID);
-        });
+    	var docID = "Projection";
+    	var metadata = this['@metadata'];
+    	if (metadata != null && metadata['@id'] != null)
+    		docID = metadata['@id'];
+    	var previewHTML = GetDocumentViewHTML(this);
+    	if (alternate) {
+    		var searchResult = $('<div id="' + docID + '" class="searchListItem alternate"></div>');
+    	} else {
+    		var searchResult = $('<div id="' + docID + '" class="searchListItem"></div>');
+    	}
+    	var doc = this;
+    	alternate = !alternate;
+    	$(searchResult).html(getDisplayString(docID, this));
+    	$(searchResult).click(function () {
+    		if (docID != "Projection") {
+    			EditDocument(docID);
+    			return;
+    		}
+    		ShowEditorForDocument(docID, doc, null, metadata, 'Show Document Projection', function (id, etag, metadata, json, editor) {
+    			$('.dialogError', editor).html('You cannot modify a document projection').slideDown();
+    		});
+    	});
 
-        var previousBGColor;
-        $(searchResult).hover(function () {
-            previousBGColor = $(this).css('background-color');
-            $(this).css('background-color', '#94C2D8');
-            var x = $(this).position().left + $(this).outerWidth();
-            var y = $('.searchListWrapper').position().top;
-            var width = $('#body').width() - x - 20;
+    	var previousBGColor;
+    	$(searchResult).hover(function () {
+    		previousBGColor = $(this).css('background-color');
+    		$(this).css('background-color', '#94C2D8');
+    		var x = $(this).position().left + $(this).outerWidth();
+    		var y = $('.searchListWrapper').position().top;
+    		var width = $('#body').width() - x - 20;
 
-            var jsonPreview = $('<div class="jsonViewWrapper"></div>');
-            $(jsonPreview).html(previewHTML);
-            $(jsonPreview).find('.jsonObjectView:first').css('border', 'none').css('padding', '0').css('margin-left', '0');
-            $(jsonPreview).prepend("<h2>Click to edit this document</h2><h3>Document Preview:</h3>");
-            $('#documentPreview')
+    		var jsonPreview = $('<div class="jsonViewWrapper"></div>');
+    		$(jsonPreview).html(previewHTML);
+    		$(jsonPreview).find('.jsonObjectView:first').css('border', 'none').css('padding', '0').css('margin-left', '0');
+    		$(jsonPreview).prepend("<h2>Click to edit this document</h2><h3>Document Preview:</h3>");
+    		$('#documentPreview')
                         .css('width', width + 'px')
                         .css('position', 'absolute')
                         .css('left', x + 'px')
                         .css('top', y + 'px')
                         .html(jsonPreview);
-            if ($('#documentPreview').is(":animated"))
-                $('#documentPreview').stop().show().fadeTo("normal", 0.9);
-            else
-                $('#documentPreview').is(':visible') ? $('#documentPreview').fadeTo("normal", 0.9) : $('#documentPreview').fadeTo("normal", 0.9);
-        }, function () {
-            $(this).css('background-color', previousBGColor);
-            if ($('#documentPreview').is(':animated'))
-                $('#documentPreview').stop().fadeTo("normal", 0, function () { $(this).hide() });
-            else
-                $('#documentPreview').stop().fadeOut();
-        });
-        $(wrapper).append(searchResult);
+    		if ($('#documentPreview').is(":animated"))
+    			$('#documentPreview').stop().show().fadeTo("normal", 0.9);
+    		else
+    			$('#documentPreview').is(':visible') ? $('#documentPreview').fadeTo("normal", 0.9) : $('#documentPreview').fadeTo("normal", 0.9);
+    	}, function () {
+    		$(this).css('background-color', previousBGColor);
+    		if ($('#documentPreview').is(':animated'))
+    			$('#documentPreview').stop().fadeTo("normal", 0, function () { $(this).hide() });
+    		else
+    			$('#documentPreview').stop().fadeOut();
+    	});
+    	$(wrapper).append(searchResult);
     });
 
     $('#docList').html(wrapper);
