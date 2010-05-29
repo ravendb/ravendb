@@ -15,3 +15,4 @@ _ReSharper.*/
 /Data/system/
 /Data/temp/
 *.InstallLog
+/Raven.Database/Raven.Database.g.csproj
