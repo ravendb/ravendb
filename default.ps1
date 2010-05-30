@@ -8,13 +8,12 @@ properties {
   $tools_dir = "$base_dir\Tools"
   $release_dir = "$base_dir\Release"
   $uploader = "..\Uploader\S3Uploader.exe"
-  $uploadCategory = "RavenDB"
-  $commercial = $false
 }
 
 include .\psake_ext.ps1
 
-task default -depends Release
+task default -depends OpenSource,Release
+
 
 task Verify40 {
 	if( (ls "$env:windir\Microsoft.NET\Framework\v4.0*") -eq $null ) {
@@ -29,8 +28,6 @@ task Clean {
 
 task Init -depends Verify40, Clean {
 
-	$global:uploadCategory = $uploadCategory
-	
 	Generate-Assembly-Info `
 		-file "$base_dir\Raven.Database\Properties\AssemblyInfo.cs" `
 		-title "Raven Database $version" `
@@ -221,17 +218,18 @@ task Test -depends Compile {
   cd $old
 }
 
-task ReleaseNoTests -depends DoRelease {
+task ReleaseNoTests -depends OpenSource,DoRelease {
 
 }
 
 task Commercial {
 	$global:commercial = $true
-	$global:uploadCategory = $global:uploadCategory +"-Commercial"
+	$global:uploadCategory = "RavenDB-Commercial"
 }
 
-task ReleaseCommercialNoTests -depends Commercial,DoRelease {
-
+task OpenSource {
+	$global:commercial = $false
+	$global:uploadCategory = "RavenDB"
 }
 
 task Release -depends Test,DoRelease { 
@@ -303,8 +301,10 @@ task DoRelease -depends Compile {
 	
 	cd $build_dir\Output
 	
+	$file = "$release_dir\$global:uploadCategory-Build-$env:buildlabel.zip"
+		
 	& $tools_dir\zip.exe -9 -A -r `
-		$release_dir\Raven-Build-$env:buildlabel.zip `
+		$file `
 		EmbeddedClient\*.* `
 		Client\*.* `
 		Samples\*.* `
@@ -328,18 +328,20 @@ task ResetBuildArtifcats {
     git checkout "Raven.Database\RavenDB.snk"
 }
 
-task Upload -depends ReleaseNoTests {
+task Upload -depends DoRelease {
 	Write-Host "Starting upload"
 	if (Test-Path $uploader) {
 		$log = $env:push_msg 
-    if($log -eq $null -or $log.Length -eq 0) {
-      $log = git log -n 1 --oneline		
-    }
-		write-host "Executing: $uploader '$global:uploadCategory' '$release_dir\Raven-Build-$env:buildlabel.zip' '$log'"
-		&$uploader "$uploadCategory" "$release_dir\Raven-Build-$env:buildlabel.zip" "$log"
+		if($log -eq $null -or $log.Length -eq 0) {
+		  $log = git log -n 1 --oneline		
+		}
 		
+		$file = "$release_dir\$global:uploadCategory-Build-$env:buildlabel.zip"
+		write-host "Executing: $uploader '$global:uploadCategory' $file '$log'"
+		&$uploader "$uploadCategory" $file "$log"
+			
 		if ($lastExitCode -ne 0) {
-      write-host "Failed to upload to S3: $lastExitCode"
+			write-host "Failed to upload to S3: $lastExitCode"
 			throw "Error: Failed to publish build"
 		}
 	}
@@ -348,7 +350,6 @@ task Upload -depends ReleaseNoTests {
 	}
 }
 
-task UploadCommercial -depends ReleaseCommercialNoTests, Upload {
-
-}
-
+task UploadCommercial -depends Commercial, DoRelease, Upload {
+		
+}	
