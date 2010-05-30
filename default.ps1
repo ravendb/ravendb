@@ -353,3 +353,7 @@ task Upload -depends DoRelease {
 task UploadCommercial -depends Commercial, DoRelease, Upload {
 		
 }	
+
+task UploadOpenSource -depends OpenSource, DoRelease, Upload {
+		
+}	
