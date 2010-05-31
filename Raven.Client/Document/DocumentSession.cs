@@ -113,7 +113,12 @@ namespace Raven.Client.Document
 			ClearEnlistment();
 	    }
 
-        public class DocumentMetadata
+		public override void PromoteTransaction(Guid fromTxId, Guid toTxId)
+		{
+			documentStore.DatabaseCommands.PromoteTransaction(fromTxId, toTxId);
+		}
+
+		public class DocumentMetadata
         {
 			public JObject OriginalValue { get; set; }
             public JObject Metadata { get; set; }

@@ -244,7 +244,7 @@ more responsive application.
 			if (enlistment == null && Transaction.Current != null)
 			{
 				enlistment = new RavenClientEnlistment(this, Transaction.Current.TransactionInformation.DistributedIdentifier);
-				Transaction.Current.EnlistVolatile(enlistment, EnlistmentOptions.None);
+				Transaction.Current.EnlistPromotableSinglePhase(enlistment);
 			}
 			DocumentSession.DocumentMetadata value = null;
 			foreach (var key in (from deletedEntity in deletedEntities
@@ -339,6 +339,7 @@ more responsive application.
 
 		public abstract void Commit(Guid txId);
 		public abstract void Rollback(Guid txId);
+		public abstract void PromoteTransaction(Guid fromTxId, Guid toTxId);
 
 		protected void ClearEnlistment()
 		{

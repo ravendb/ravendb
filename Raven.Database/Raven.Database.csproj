@@ -208,6 +208,7 @@
     <Compile Include="Server\Responders\Static.cs" />
     <Compile Include="Server\Responders\Statistics.cs" />
     <Compile Include="Server\Responders\TransactionCommit.cs" />
+    <Compile Include="Server\Responders\TransactionPromote.cs" />
     <Compile Include="Server\Responders\TransactionRollback.cs" />
     <Compile Include="Storage\IndexCreationOptions.cs" />
     <Compile Include="Storage\DocumentInTransactionData.cs" />

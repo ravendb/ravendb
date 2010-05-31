@@ -219,7 +219,16 @@ namespace Raven.Client.Shard
 			});
 		}
 
-	    public int MaxNumberOfRequestsPerSession
+		public void PromoteTransaction(Guid fromTxId, Guid toTxId)
+		{
+			shardStrategy.ShardAccessStrategy.Apply(shardSessions, session =>
+			{
+				session.PromoteTransaction(fromTxId, toTxId);
+				return new List<int>();
+			});
+		}
+
+		public int MaxNumberOfRequestsPerSession
 	    {
 	        get { return shardSessions.First().MaxNumberOfRequestsPerSession; }
 	        set

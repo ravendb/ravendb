@@ -131,7 +131,12 @@ namespace Raven.Client.Client
 	        database.Rollback(txId);
 	    }
 
-	    public IDatabaseCommands With(ICredentials credentialsForSession)
+		public void PromoteTransaction(Guid fromTxId, Guid toTxId)
+		{
+			database.TransactionalStorage.Batch(actions => actions.ModifyTransactionId(fromTxId, toTxId));
+		}
+
+		public IDatabaseCommands With(ICredentials credentialsForSession)
 	    {
 	        return this;
 	    }

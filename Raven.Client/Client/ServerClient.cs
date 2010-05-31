@@ -476,7 +476,22 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
             });
 	    }
 
-	    private void DirectRollback(Guid txId, string operationUrl)
+    	public void PromoteTransaction(Guid fromTxId, Guid toTxId)
+    	{
+			ExecuteWithReplication<object>(u =>
+			{
+				DirectPromoteTransaction(fromTxId, toTxId, u);
+				return null;
+			});
+		}
+
+		private void DirectPromoteTransaction(Guid fromTxId, Guid toTxId, string operationUrl)
+    	{
+			var httpJsonRequest = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/transaction/promote?fromTxId=" + fromTxId +"&toTxId" + toTxId, "POST", credentials);
+			httpJsonRequest.ReadResponseString();
+    	}
+
+    	private void DirectRollback(Guid txId, string operationUrl)
 	    {
             var httpJsonRequest = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/transaction/rollback?tx=" + txId, "POST", credentials);
 	        httpJsonRequest.ReadResponseString();

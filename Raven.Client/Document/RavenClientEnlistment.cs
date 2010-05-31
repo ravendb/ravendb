@@ -3,15 +3,18 @@ using System.Transactions;
 
 namespace Raven.Client.Document
 {
-    public class RavenClientEnlistment : ISinglePhaseNotification
+    public class RavenClientEnlistment : IPromotableSinglePhaseNotification
     {
 		private readonly ITransactionalDocumentSession sessionImpl;
-        private readonly Guid txId;
+        private Guid txId;
+    	private CommittableTransaction promotedTx;
 
-		public RavenClientEnlistment(ITransactionalDocumentSession sessionImpl, Guid txId)
+    	public RavenClientEnlistment(ITransactionalDocumentSession sessionImpl, Guid txId)
         {
             this.sessionImpl = sessionImpl;
             this.txId = txId;
+			if (this.txId == Guid.Empty)
+				this.txId = Guid.NewGuid();
         }
 
         public void Prepare(PreparingEnlistment preparingEnlistment)
@@ -52,5 +55,14 @@ namespace Raven.Client.Document
             sessionImpl.Rollback(txId);
             singlePhaseEnlistment.Aborted();
         }
+
+    	public byte[] Promote()
+    	{
+    		promotedTx = new CommittableTransaction();
+    		var propagationToken = TransactionInterop.GetTransmitterPropagationToken(promotedTx);
+    		sessionImpl.PromoteTransaction(txId, promotedTx.TransactionInformation.DistributedIdentifier);
+    		txId = promotedTx.TransactionInformation.DistributedIdentifier;
+    		return propagationToken;
+    	}
     }
 }

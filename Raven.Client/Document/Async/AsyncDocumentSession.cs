@@ -89,5 +89,10 @@ namespace Raven.Client.Document.Async
 		{
 			throw new NotImplementedException();
 		}
+
+		public override void PromoteTransaction(Guid fromTxId, Guid toTxId)
+		{
+			throw new NotImplementedException();
+		}
 	}
 }

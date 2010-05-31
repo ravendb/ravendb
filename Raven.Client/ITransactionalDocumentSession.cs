@@ -7,5 +7,7 @@ namespace Raven.Client
 		void Commit(Guid txId);
 
 		void Rollback(Guid txId);
+
+		void PromoteTransaction(Guid fromTxId, Guid toTxId);
 	}
 }

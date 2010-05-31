@@ -28,6 +28,7 @@ namespace Raven.Client.Client
 
         void Commit(Guid txId);
         void Rollback(Guid txId);
+    	void PromoteTransaction(Guid fromTxId, Guid toTxId);
         IDatabaseCommands With(ICredentials credentialsForSession);
 	}
 }

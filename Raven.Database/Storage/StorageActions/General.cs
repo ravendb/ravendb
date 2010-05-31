@@ -136,6 +136,23 @@ namespace Raven.Database.Storage.StorageActions
 			});
 		}
 
+		public void ModifyTransactionId(Guid fromTxId, Guid toTxId)
+		{
+			CompleteTransaction(fromTxId, doc =>
+			{
+				Api.JetSetCurrentIndex(session, Documents, "by_key");
+				Api.MakeKey(session, Documents, doc.Key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+				if (Api.TrySeek(session, Documents, SeekGrbit.SeekEQ))
+				{
+					using (var update = new Update(session, Documents, JET_prep.Replace))
+					{
+						Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["locked_by_transaction"], toTxId);
+						update.Save();
+					}
+				}
+			});
+		}
+
 		public void CompleteTransaction(Guid txId, Action<DocumentInTransactionData> perDocumentModified)
 		{
 			Api.JetSetCurrentIndex(session, Transactions, "by_tx_id");
