@@ -166,6 +166,7 @@ namespace Raven.Database.Storage
 
 		public static void ConfigureInstance(JET_INSTANCE jetInstance, string path)
 		{
+			path = Path.GetFullPath(path);
 			new InstanceParameters(jetInstance)
 			{
 				CircularLog = true,
@@ -182,7 +183,8 @@ namespace Raven.Database.Storage
 				LogFileSize = 16384,
 				MaxSessions = MaxSessions,
 				MaxCursors = 2048,
-				DbExtensionSize = 4096
+				DbExtensionSize = 4096,
+				AlternateDatabaseRecoveryDirectory = path
 			};
 		}
 
