@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
 
@@ -17,12 +18,12 @@ namespace Raven.Database.Storage.StorageActions
             }
         }
 
-        public Tuple<byte[], int> PeekFromQueue(string name)
+        public IEnumerable<Tuple<byte[], int>> PeekFromQueue(string name)
         {
             Api.JetSetCurrentIndex(session, Queue,"by_name");
             Api.MakeKey(session, Queue, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
             if (Api.TrySeek(session, Queue, SeekGrbit.SeekEQ) == false)
-                return null;
+                yield break;
             Api.MakeKey(session, Queue, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
             Api.JetSetIndexRange(session, Queue, SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
             do
@@ -36,11 +37,10 @@ namespace Raven.Database.Storage.StorageActions
                     Api.JetDelete(session, Queue);
                     continue;
                 }
-                return new Tuple<byte[], int>(
+                yield return new Tuple<byte[], int>(
                     Api.RetrieveColumn(session, Queue, tableColumnsCache.QueueColumns["data"]),
                     Api.RetrieveColumnAsInt32(session, Queue, tableColumnsCache.QueueColumns["id"]).Value);
             } while (Api.TryMoveNext(session, Queue));
-            return null;
         }
 
         public void DeleteFromQueue(int id)

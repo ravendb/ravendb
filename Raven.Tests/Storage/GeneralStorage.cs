@@ -134,11 +134,11 @@ namespace Raven.Tests.Storage
         {
             db.TransactionalStorage.Batch(actions => actions.EnqueueToQueue("ayende", new byte[]{1,2}));
 
-            db.TransactionalStorage.Batch(actions => Assert.Equal(new byte[] { 1, 2 }, actions.PeekFromQueue("ayende").Item1));
+            db.TransactionalStorage.Batch(actions => Assert.Equal(new byte[] { 1, 2 }, actions.PeekFromQueue("ayende").First().Item1));
         }
 
         [Fact]
-        public void PoisonMessagesWillBeDeletes()
+        public void PoisonMessagesWillBeDeleted()
         {
             db.TransactionalStorage.Batch(actions => actions.EnqueueToQueue("ayende", new byte[] { 1, 2 }));
 
@@ -146,9 +146,9 @@ namespace Raven.Tests.Storage
             {
                 for (int i = 0; i < 6; i++)
                 {
-                    actions.PeekFromQueue("ayende");
+                    actions.PeekFromQueue("ayende").First();
                 }
-                Assert.Equal(null, actions.PeekFromQueue("ayende"));
+                Assert.Equal(null, actions.PeekFromQueue("ayende").FirstOrDefault());
             });
         }
 
@@ -159,8 +159,8 @@ namespace Raven.Tests.Storage
 
             db.TransactionalStorage.Batch(actions =>
             {
-                actions.DeleteFromQueue(actions.PeekFromQueue("ayende").Item2);
-                Assert.Equal(null, actions.PeekFromQueue("ayende"));
+                actions.DeleteFromQueue(actions.PeekFromQueue("ayende").First().Item2);
+                Assert.Equal(null, actions.PeekFromQueue("ayende").FirstOrDefault());
             });
         }
 
