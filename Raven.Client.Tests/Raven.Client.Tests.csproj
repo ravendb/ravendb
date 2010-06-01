@@ -42,6 +42,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -94,6 +95,7 @@
     <Compile Include="BaseTest.cs" />
     <Compile Include="Document\AsyncDocumentStoreServerTests.cs" />
     <Compile Include="Document\ClientKeyGeneratorTests.cs" />
+    <Compile Include="Document\DocumentStoreServerTests_DifferentProcess.cs" />
     <Compile Include="Document\TotalCountServerTest.cs" />
     <Compile Include="Document\CasingIssue.cs" />
     <Compile Include="Document\Company.cs" />
