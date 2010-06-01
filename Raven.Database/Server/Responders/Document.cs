@@ -33,6 +33,10 @@ namespace Raven.Database.Server.Responders
 						context.SetStatusToNotFound();
 						return;
 					}
+					if(doc.NonAuthoritiveInformation)
+					{
+						context.SetStatusToNonAuthoritiveInformation();
+					}
 					if (context.MatchEtag(doc.Etag))
 					{
 						context.SetStatusToNotModified();

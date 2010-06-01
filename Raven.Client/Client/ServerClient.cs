@@ -194,6 +194,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 	            return new JsonDocument
 	            {
 	                DataAsJson = JObject.Parse(request.ReadResponseString()),
+					NonAuthoritiveInformation = request.ResponseStatusCode == HttpStatusCode.NonAuthoritativeInformation,
 	                Key = key,
 	                Etag = new Guid(request.ResponseHeaders["ETag"]),
 	                Metadata = request.ResponseHeaders.FilterHeaders()
@@ -416,6 +417,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 	                {
 	                    Key = metadata["@id"].Value<string>(),
 	                    Etag = new Guid(metadata["@etag"].Value<string>()),
+						NonAuthoritiveInformation = metadata.Value<bool>("Non-Authoritive-Information"),
 	                    Metadata = metadata,
 	                    DataAsJson = doc,
 	                })

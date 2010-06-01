@@ -63,6 +63,7 @@ namespace Raven.Database.Storage.StorageActions
 						return new JsonDocument
 						{
 							DataAsJson = data.ToJObject(),
+							NonAuthoritiveInformation = false,// we are the transaction, therefor we are Authoritive
 							Etag = etag,
 							Key = Api.RetrieveColumnAsString(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["key"], Encoding.Unicode),
 							Metadata = metadata
@@ -89,6 +90,7 @@ namespace Raven.Database.Storage.StorageActions
 			{
 				DataAsJson = data.ToJObject(),
 				Etag = existingEtag,
+				NonAuthoritiveInformation = IsDocumentModifiedInsideTransaction(key),
 				Key = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode),
 				Metadata = metadata
 			};
@@ -115,6 +117,7 @@ namespace Raven.Database.Storage.StorageActions
 				{
 					Key = key,
 					DataAsJson = data.ToJObject(),
+					NonAuthoritiveInformation = IsDocumentModifiedInsideTransaction(key),
 					Etag = new Guid(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"])),
 					Metadata = metadata
 				};
@@ -138,13 +141,11 @@ namespace Raven.Database.Storage.StorageActions
 
             	yield return new JsonDocument
                 {
-                    Key =
-                        key,
-                    DataAsJson =
-                        data.ToJObject(),
+                    Key = key,
+                    DataAsJson = data.ToJObject(),
+					NonAuthoritiveInformation = IsDocumentModifiedInsideTransaction(key),
                     Etag = new Guid(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"])),
-                    Metadata =
-                        metadata
+                    Metadata = metadata
                 };
             } while (Api.TryMoveNext(session, Documents));
         }
@@ -179,6 +180,7 @@ namespace Raven.Database.Storage.StorageActions
 				{
 					Key = key,
 					DataAsJson = data.ToJObject(),
+					NonAuthoritiveInformation = IsDocumentModifiedInsideTransaction(key),
 					Etag = etag,
 					Metadata = metadata
 				};

@@ -143,6 +143,12 @@ namespace Raven.Database.Server.Responders
 			context.Response.StatusDescription = "Not Found";
 		}
 
+		public static void SetStatusToNonAuthoritiveInformation(this IHttpContext context)
+		{
+			context.Response.StatusCode = 203;
+			context.Response.StatusDescription = "Non-Authoritative Information";
+		}
+
 		public static void SetStatusToNotModified(this IHttpContext context)
 		{
 			context.Response.StatusCode = 304;

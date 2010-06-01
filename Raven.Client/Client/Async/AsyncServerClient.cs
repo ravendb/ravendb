@@ -60,6 +60,7 @@ namespace Raven.Client.Client.Async
 				return new JsonDocument
 				{
 					DataAsJson = JObject.Parse(responseString),
+					NonAuthoritiveInformation = asyncData.Request.ResponseStatusCode == HttpStatusCode.NonAuthoritativeInformation,
 					Key = asyncData.Key,
 					Etag = new Guid(asyncData.Request.ResponseHeaders["ETag"]),
 					Metadata = asyncData.Request.ResponseHeaders.FilterHeaders()
@@ -137,6 +138,7 @@ namespace Raven.Client.Client.Async
 						Key = metadata["@id"].Value<string>(),
 						Etag = new Guid(metadata["@etag"].Value<string>()),
 						Metadata = metadata,
+						NonAuthoritiveInformation = metadata.Value<bool>("Non-Authoritive-Information"),
 						DataAsJson = doc,
 					})
 				.ToArray();

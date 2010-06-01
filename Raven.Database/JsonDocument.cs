@@ -1,6 +1,5 @@
 using System;
 using Newtonsoft.Json.Linq;
-using Raven.Database.Json;
 
 namespace Raven.Database
 {
@@ -9,6 +8,7 @@ namespace Raven.Database
 		public JObject DataAsJson { get; set; }
 		public JObject Metadata { get; set; }
 		public string Key { get; set; }
+		public bool NonAuthoritiveInformation { get; set; }
 		public Guid Etag { get; set; }
 
 		public JObject Projection { get; set; }
@@ -27,6 +27,7 @@ namespace Raven.Database
 			}
 			etagProp.Value = new JValue(Etag.ToString());
 			doc.Add("@metadata", Metadata);
+			Metadata.Add("Non-Authoritive-Information",JToken.FromObject(NonAuthoritiveInformation));
 			return doc;
 		}
 	}

@@ -52,15 +52,20 @@ namespace Raven.Database.Storage.StorageActions
 
 		private void EnsureDocumentIsNotCreatedInAnotherTransaction(string key, Guid txId)
 		{
-			Api.JetSetCurrentIndex(session, DocumentsModifiedByTransactions, "by_key");
-			Api.MakeKey(session, DocumentsModifiedByTransactions, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			if (Api.TrySeek(session, DocumentsModifiedByTransactions, SeekGrbit.SeekEQ) == false)
+			if(IsDocumentModifiedInsideTransaction(key) == false)
 				return;
 			byte[] docTxId = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["locked_by_transaction"]);
 			if (new Guid(docTxId) != txId)
 			{
 				throw new ConcurrencyException("A document with key: '" + key + "' is currently created in another transaction");
 			}
+		}
+
+		private bool IsDocumentModifiedInsideTransaction(string key)
+		{
+			Api.JetSetCurrentIndex(session, DocumentsModifiedByTransactions, "by_key");
+			Api.MakeKey(session, DocumentsModifiedByTransactions, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			return Api.TrySeek(session, DocumentsModifiedByTransactions, SeekGrbit.SeekEQ);
 		}
 
 		private void EnsureTransactionExists(TransactionInformation transactionInformation)

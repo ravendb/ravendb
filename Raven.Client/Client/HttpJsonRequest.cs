@@ -79,6 +79,7 @@ namespace Raven.Client.Client
     			}
     		}
     		ResponseHeaders = response.Headers;
+    		ResponseStatusCode = ((HttpWebResponse) response).StatusCode;
     		using (var responseString = response.GetResponseStream())
     		{
     			var reader = new StreamReader(responseString);
@@ -87,6 +88,8 @@ namespace Raven.Client.Client
     			return text;
     		}
     	}
+
+    	public HttpStatusCode ResponseStatusCode { get; set; }
 
     	private void WriteMetadata(JObject metadata)
         {
