@@ -136,8 +136,14 @@ namespace Raven.Database.Storage.StorageActions
 			});
 		}
 
-		public void ModifyTransactionId(Guid fromTxId, Guid toTxId)
+		public void ModifyTransactionId(Guid fromTxId, Guid toTxId, TimeSpan timeout)
 		{
+			var transactionInformation = new TransactionInformation
+			{
+				Id = toTxId,
+				Timeout = timeout
+			};
+			EnsureTransactionExists(transactionInformation);
 			CompleteTransaction(fromTxId, doc =>
 			{
 				Api.JetSetCurrentIndex(session, Documents, "by_key");
@@ -150,6 +156,11 @@ namespace Raven.Database.Storage.StorageActions
 						update.Save();
 					}
 				}
+
+				if (doc.Delete)
+					DeleteDocumentInTransaction(transactionInformation, doc.Key, null);
+				else
+					AddDocumentInTransaction(doc.Key, null, doc.Data.ToJObject(), doc.Metadata.ToJObject(), transactionInformation);
 			});
 		}
 		
