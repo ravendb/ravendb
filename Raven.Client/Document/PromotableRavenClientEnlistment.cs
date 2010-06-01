@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Transactions;
 
 namespace Raven.Client.Document
@@ -6,24 +7,17 @@ namespace Raven.Client.Document
 	public class PromotableRavenClientEnlistment : IPromotableSinglePhaseNotification
 	{
 		private readonly ITransactionalDocumentSession session;
-		private readonly Guid txId = Guid.NewGuid();
+		private readonly TransactionInformation transaction;
 
 		public PromotableRavenClientEnlistment(ITransactionalDocumentSession session)
 		{
+			transaction = Transaction.Current.TransactionInformation;
 			this.session = session;
 		}
 
 		public byte[] Promote()
 		{
-			var promoteTransaction = session.PromoteTransaction(txId);
-			var tx = TransactionInterop.GetTransactionFromTransmitterPropagationToken(promoteTransaction);
-			tx
-				.EnlistDurable(
-					InMemoryDocumentSessionOperations.RavenDbResourceManagerId,
-					new RavenClientEnlistment(session,tx.TransactionInformation.DistributedIdentifier),
-					EnlistmentOptions.None
-				);
-			return promoteTransaction;
+			return session.PromoteTransaction(GetLocalOrDistributedTransactionId(transaction));
 		}
 
 		public void Initialize()
@@ -32,14 +26,22 @@ namespace Raven.Client.Document
 
 		public void SinglePhaseCommit(SinglePhaseEnlistment singlePhaseEnlistment)
 		{
-			session.Commit(txId);
+			session.Commit(GetLocalOrDistributedTransactionId(transaction));
 			singlePhaseEnlistment.Committed();
 		}
 
 		public void Rollback(SinglePhaseEnlistment singlePhaseEnlistment)
 		{
-			session.Rollback(txId);
+			session.Rollback(GetLocalOrDistributedTransactionId(transaction));
 			singlePhaseEnlistment.Aborted();
+		}
+
+		public static Guid GetLocalOrDistributedTransactionId(TransactionInformation transactionInformation)
+		{
+			if (transactionInformation.DistributedIdentifier != Guid.Empty)
+				return transactionInformation.DistributedIdentifier;
+			var first = transactionInformation.LocalIdentifier.Split(':').First();
+			return new Guid(first);
 		}
 	}
 }
