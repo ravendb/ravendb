@@ -5,6 +5,7 @@ using System.Threading;
 using System.Transactions;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Document;
+using Raven.Client.Exceptions;
 using Raven.Client.Tests.Indexes;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
@@ -66,6 +67,36 @@ namespace Raven.Client.Tests.Document
                 Assert.NotNull(session.Load<Company>(company.Id));
             }  
         }
+
+		[Fact]
+		public void Will_get_notification_when_reading_non_authoritive_information()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				var company = new Company { Name = "Company Name" };
+				var session = documentStore.OpenSession();
+				using (var original = documentStore.OpenSession())
+				{
+					original.Store(company);
+					original.SaveChanges();
+				}
+				using ( new TransactionScope())
+				{
+					company.Name = "Another Name";
+					session.Store(company);
+					session.SaveChanges();
+
+					using (new TransactionScope(TransactionScopeOption.Suppress))
+					{
+						using (var session2 = documentStore.OpenSession())
+						{
+							session2.AllowNonAuthoritiveInformation = false;
+							Assert.Throws<NonAuthoritiveInformationException>(()=>session2.Load<Company>(company.Id));
+						}
+					}
+				}
+			}
+		}
 
         [Fact]
         public void Can_refresh_entity_from_database()

@@ -18,6 +18,8 @@ namespace Raven.Client
         
 		bool UseOptimisticConcurrency { get; set; }
 
+		bool AllowNonAuthoritiveInformation { get; set; }
+
 		DocumentConvention Conventions { get; }
 
 		int MaxNumberOfRequestsPerSession { get; set; }

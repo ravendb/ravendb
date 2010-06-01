@@ -111,6 +111,7 @@
     <Compile Include="EntityStored.cs" />
     <Compile Include="EntityToDocument.cs" />
     <Compile Include="Exceptions\ConflictException.cs" />
+    <Compile Include="Exceptions\NonAuthoritiveInformationException.cs" />
     <Compile Include="Exceptions\NonUniqueObjectException.cs" />
     <Compile Include="IAsyncDocumentSession.cs" />
     <Compile Include="IDocumentQuery.cs" />

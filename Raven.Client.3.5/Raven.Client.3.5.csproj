@@ -131,6 +131,9 @@
     <Compile Include="..\Raven.Client\Exceptions\ConflictException.cs">
       <Link>Exceptions\ConflictException.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client\Exceptions\NonAuthoritiveInformationException.cs">
+      <Link>Exceptions\NonAuthoritiveInformationException.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client\Exceptions\NonUniqueObjectException.cs">
       <Link>Exceptions\NonUniqueObjectException.cs</Link>
     </Compile>

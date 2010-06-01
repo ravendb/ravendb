@@ -34,6 +34,7 @@ namespace Raven.Client.Document
 		{
 			this.documentStore = documentStore;
 		    UseOptimisticConcurrency = false;
+			AllowNonAuthoritiveInformation = true;
 		    MaxNumberOfRequestsPerSession = documentStore.Conventions.MaxNumberOfRequestsPerSession;
 		}
 
@@ -83,6 +84,12 @@ more responsive application.
 			{
 				documentFound.Metadata.Add("@etag", new JValue(documentFound.Etag.ToString()));
 			}
+			if(documentFound.NonAuthoritiveInformation && 
+				AllowNonAuthoritiveInformation == false)
+			{
+				throw new NonAuthoritiveInformationException("Document " + documentFound.Key +
+				" returned Non Authoritive Information (probably modified by a transaction in progress) and AllowNonAuthoritiveInformation  is set to false");
+			}
 			return TrackEntity<T>(documentFound.Key, documentFound.DataAsJson, documentFound.Metadata);
 		}
 
@@ -100,6 +107,12 @@ more responsive application.
 				return (T) entity;
 			}
 			var etag = metadata.Value<string>("@etag");
+			if(metadata.Value<bool>("Non-Authoritive-Information") && 
+				AllowNonAuthoritiveInformation == false)
+			{
+				throw new NonAuthoritiveInformationException("Document " + key +
+					" returned Non Authoritive Information (probably modified by a transaction in progress) and AllowNonAuthoritiveInformation  is set to false");
+			}
 			entitiesAndMetadata[entity] = new DocumentSession.DocumentMetadata
 			{
 				OriginalValue = document,
@@ -110,6 +123,8 @@ more responsive application.
 			entitiesByKey[key] = entity;
 			return (T) entity;
 		}
+
+		public bool AllowNonAuthoritiveInformation { get; set; }
 
 		public void Delete<T>(T entity)
 		{

@@ -35,6 +35,18 @@ namespace Raven.Client.Shard
 			}
 		}
 
+		public bool AllowNonAuthoritiveInformation
+		{
+			get { return shardSessions.First().AllowNonAuthoritiveInformation; }
+			set
+			{
+				foreach (var documentSession in shardSessions)
+				{
+					documentSession.AllowNonAuthoritiveInformation = value;
+				}
+			}
+		}
+
 		public event EntityStored Stored;
 	    public event EntityToDocument OnEntityConverted;
 
