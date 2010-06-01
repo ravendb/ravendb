@@ -13,8 +13,8 @@ namespace Raven.Sample.Replication
     {
         static void Main()
         {
-            var documentStore1 = new DocumentStore { Url = "http://localhost:8080" }.Initialise();
-            var documentStore2 = new DocumentStore { Url = "http://localhost:8081" }.Initialise();
+			var documentStore1 = new DocumentStore { Url = "http://localhost:8080" }.Initialize();
+			var documentStore2 = new DocumentStore { Url = "http://localhost:8081" }.Initialize();
            
             using(var session1 = documentStore1.OpenSession())
             {

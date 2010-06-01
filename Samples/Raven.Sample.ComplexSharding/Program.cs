@@ -63,7 +63,7 @@ namespace Raven.Sample.ComplexSharding
 				ShardResolutionStrategy = new BlogShardResolutionStrategy(3),
 			};
 			var documentStore = new ShardedDocumentStore(shardStrategy, shards);
-			documentStore.Initialise();
+			documentStore.Initialize();
 
 			using(var session = documentStore.OpenSession())
 			{

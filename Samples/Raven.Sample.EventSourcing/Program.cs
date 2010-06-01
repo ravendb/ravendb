@@ -11,7 +11,7 @@ namespace Raven.Sample.EventSourcing
     {
         static void Main()
         {
-            var documentStore1 = new DocumentStore { Url = "http://localhost:8080" }.Initialise();
+			var documentStore1 = new DocumentStore { Url = "http://localhost:8080" }.Initialize();
 
             var events = new object[]
                 {

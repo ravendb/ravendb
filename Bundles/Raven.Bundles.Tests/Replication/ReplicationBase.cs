@@ -58,7 +58,7 @@ namespace Raven.Bundles.Tests.Replication
             });
             servers.Add(ravenDbServer);
             var documentStore = new DocumentStore{Url = ravenDbServer.Database.Configuration.ServerUrl};
-            documentStore.Initialise();
+            documentStore.Initialize();
             stores.Add(documentStore);
             return documentStore;
         }

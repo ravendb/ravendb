@@ -16,7 +16,7 @@ namespace Raven.Sample.ShardClient
                 CreateShard("Middle-East", "http://localhost:8081"),
             };
 
-            using (var documentStore = new ShardedDocumentStore(new ShardStrategy(), shards).Initialise())
+            using (var documentStore = new ShardedDocumentStore(new ShardStrategy(), shards).Initialize())
             using (var session = documentStore.OpenSession())
             {
                 //store 2 items in the 2 shards

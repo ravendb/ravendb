@@ -7,7 +7,7 @@ namespace Raven.Sample.Failover
     {
         static void Main(string[] args)
         {
-            var documentStore1 = new DocumentStore { Url = "http://localhost:8080" }.Initialise();
+			var documentStore1 = new DocumentStore { Url = "http://localhost:8080" }.Initialize();
 
             using (var session1 = documentStore1.OpenSession())
             {

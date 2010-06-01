@@ -45,7 +45,7 @@ namespace Raven.Bundles.Tests
             {
                 Url = "http://localhost:58080"
             };
-            documentStore.Initialise();
+            documentStore.Initialize();
         }
 
         #region IDisposable Members

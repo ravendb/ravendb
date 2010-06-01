@@ -14,7 +14,7 @@ namespace Raven.Sample.SimpleClient
         {
 			using (var documentStore = new DocumentStore { Url = "http://localhost:8080" })
             {
-            	documentStore.Initialise();
+				documentStore.Initialize();
 				//documentStore.DatabaseCommands.PutIndex("regionIndex",
 				//                                        new IndexDefinition
 				//                                        {

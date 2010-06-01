@@ -62,7 +62,7 @@ namespace MvcMusicStore.Controllers
         {
             using (var documentStore = new DocumentStore {  Url = "http://localhost:8080" })
             {
-                documentStore.Initialise();
+				documentStore.Initialize();
                 using (var session = documentStore.OpenSession())
                 {
                     int count = 0;

@@ -20,7 +20,7 @@ namespace MvcMusicStore
         protected void Application_Start()
         {
             _documentStore = new DocumentStore { Url = "http://localhost:8080/" };
-            _documentStore.Initialise();
+            _documentStore.Initialize();
 
             AreaRegistration.RegisterAllAreas();
 
