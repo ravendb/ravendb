@@ -27,10 +27,11 @@ namespace Raven.Client.Document
             currentLo = capacity + 1;
         }
 
-        public string GenerateDocumentKey(object entity)
+        public string GenerateDocumentKey(DocumentConvention convention,object entity)
         {
-            return string.Format("{0}{1}",
+            return string.Format("{0}{1}{2}",
                                  tag,
+								 convention.IdentityPartsSeparator,
                                  NextId());
         }
 

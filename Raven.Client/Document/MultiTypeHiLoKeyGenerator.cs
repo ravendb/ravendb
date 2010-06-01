@@ -22,14 +22,14 @@ namespace Raven.Client.Document
             var tag = conventions.GetTypeTagName(entity.GetType()).ToLowerInvariant();
             HiLoKeyGenerator value;
             if (keyGeneratorsByTag.TryGetValue(tag, out value))
-                return value.GenerateDocumentKey(entity);
+				return value.GenerateDocumentKey(conventions, entity);
 
             lock(generatorLock)
             {
                 if (keyGeneratorsByTag.TryGetValue(tag, out value))
-                    return value.GenerateDocumentKey(entity);
+                    return value.GenerateDocumentKey(conventions, entity);
 
-                value = new HiLoKeyGenerator(databaseCommands, tag + conventions.IdentityPartsSeparator, capacity);
+                value = new HiLoKeyGenerator(databaseCommands, tag, capacity);
                 // doing it this way for thread safety
                 keyGeneratorsByTag = new Dictionary<string, HiLoKeyGenerator>(keyGeneratorsByTag)
                 {
@@ -37,7 +37,7 @@ namespace Raven.Client.Document
                 };
             }
 
-            return value.GenerateDocumentKey(entity);
+			return value.GenerateDocumentKey(conventions, entity);
         }
     }
 }
