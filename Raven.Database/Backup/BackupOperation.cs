@@ -38,7 +38,7 @@ namespace Raven.Database.Backup
 				directoryBackups.AddRange(from index in Directory.GetDirectories(Path.Combine(src, "Indexes"))
 										  let fromIndex = Path.Combine(src, "Indexes", Path.GetFileName(index))
 				                          let toIndex = Path.Combine(to, "Indexes", Path.GetFileName(index))
-										  let tempIndex = Path.Combine(src, "Temp" + Guid.NewGuid().ToString("N"))
+										  let tempIndex = Path.Combine(src, Path.Combine("BackupTempDirectories",Guid.NewGuid().ToString("N")))
 				                          select new DirectoryBackup(fromIndex, toIndex, tempIndex));
 
 				foreach (var directoryBackup in directoryBackups)
