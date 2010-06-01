@@ -37,7 +37,7 @@ namespace Raven.Client.Tests.Shard
         {
         	using(GetNewServer(port, path))
         	{
-                var shard1 = new DocumentStore { Url = "http://localhost:8080" }.Initialise().OpenSession();
+                var shard1 = new DocumentStore { Url = "http://localhost:8080" }.Initialize().OpenSession();
 
                 var results = new ParallelShardAccessStrategy().Apply(new[] { shard1 }, x => (IList<Company>)null);
 
@@ -50,7 +50,7 @@ namespace Raven.Client.Tests.Shard
         {
             using (GetNewServer(port, path))
             {
-                var shard1 = new DocumentStore {Url = "http://localhost:8080"}.Initialise().OpenSession();
+                var shard1 = new DocumentStore {Url = "http://localhost:8080"}.Initialize().OpenSession();
 
 
                 Assert.Throws(typeof (ApplicationException), () =>

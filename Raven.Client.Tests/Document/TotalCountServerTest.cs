@@ -41,7 +41,7 @@ namespace Raven.Client.Tests.Document
             {
                 using (var store = new DocumentStore { Url = "http://localhost:" + port })
                 {
-                    store.Initialise();
+                    store.Initialize();
 
                     using (var session = store.OpenSession())
                     {

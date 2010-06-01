@@ -37,7 +37,7 @@ namespace Raven.Client.Tests.Document
 						FindTypeTagName = type => typeof(IServer).IsAssignableFrom(type) ? "Servers" : null
 					}
 			};
-			documentStore.Initialise();
+			documentStore.Initialize();
 			return documentStore;
 		}
 

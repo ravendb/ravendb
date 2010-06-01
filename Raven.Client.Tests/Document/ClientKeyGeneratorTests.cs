@@ -34,7 +34,7 @@ namespace Raven.Client.Tests.Document
                         DataDirectory = path
                     }
             };
-            documentStore.Initialise();
+            documentStore.Initialize();
             return documentStore;
         }
 

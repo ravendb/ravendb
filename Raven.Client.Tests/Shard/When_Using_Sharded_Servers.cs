@@ -75,7 +75,7 @@ namespace Raven.Client.Tests.Shard
             using (var documentStore = new ShardedDocumentStore(shardStrategy, shards))
             {
                 documentStore.Stored += (storeServer, storeEntity) => serverPortsStoredUpon.Add(storeServer);
-                documentStore.Initialise();
+                documentStore.Initialize();
 
                 using (var session = documentStore.OpenSession())
                 {
@@ -92,7 +92,7 @@ namespace Raven.Client.Tests.Shard
         [Fact]
         public void Can_get_single_entity_from_correct_sharded_server()
         {
-            using (var documentStore = new ShardedDocumentStore(shardStrategy, shards).Initialise())
+            using (var documentStore = new ShardedDocumentStore(shardStrategy, shards).Initialize())
             using (var session = documentStore.OpenSession())
             {
                 //store item that goes in 2nd shard
@@ -113,7 +113,7 @@ namespace Raven.Client.Tests.Shard
         {
 			shardStrategy.Stub(x => x.ShardAccessStrategy).Return(new SequentialShardAccessStrategy());
 			
-			using (var documentStore = new ShardedDocumentStore(shardStrategy, shards).Initialise())
+			using (var documentStore = new ShardedDocumentStore(shardStrategy, shards).Initialize())
             using (var session = documentStore.OpenSession())
             {
                 //store item that goes in 2nd shard
@@ -136,7 +136,7 @@ namespace Raven.Client.Tests.Shard
 			//get them in simple single threaded sequence for this test
 			shardStrategy.Stub(x => x.ShardAccessStrategy).Return(new SequentialShardAccessStrategy());
 
-            using (var documentStore = new ShardedDocumentStore(shardStrategy, shards).Initialise())
+            using (var documentStore = new ShardedDocumentStore(shardStrategy, shards).Initialize())
             using (var session = documentStore.OpenSession())
             {
                 //store 2 items in 2 shards

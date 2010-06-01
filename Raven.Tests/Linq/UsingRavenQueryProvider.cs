@@ -35,7 +35,7 @@ namespace Raven.Tests.Linq
 
             using (var db = new DocumentStore() { DataDirectory = directoryName })
             {
-                db.Initialise();
+                db.Initialize();
 
                 string indexName = "UserIndex";
                 using (var session = db.OpenSession())

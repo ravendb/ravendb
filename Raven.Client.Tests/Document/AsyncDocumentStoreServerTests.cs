@@ -35,7 +35,7 @@ namespace Raven.Client.Tests.Document
 			using (var server = GetNewServer(port, path))
 			{
 				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
-				documentStore.Initialise();
+				documentStore.Initialize();
 
 				var entity = new Company { Name = "Async Company" };
 				using (var session = documentStore.OpenSession())
@@ -62,7 +62,7 @@ namespace Raven.Client.Tests.Document
 			using (var server = GetNewServer(port, path))
 			{
 				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
-				documentStore.Initialise();
+				documentStore.Initialize();
 
 				var entity = new Company { Name = "Async Company" };
 				using (var session = documentStore.OpenAsyncSession())
@@ -88,7 +88,7 @@ namespace Raven.Client.Tests.Document
 			using (var server = GetNewServer(port, path))
 			{
 				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
-				documentStore.Initialise();
+				documentStore.Initialize();
 
 				var entity1 = new Company { Name = "Async Company #1" };
 				var entity2 = new Company { Name = "Async Company #2" };

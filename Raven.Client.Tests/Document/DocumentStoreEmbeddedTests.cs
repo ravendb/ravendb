@@ -39,7 +39,7 @@ namespace Raven.Client.Tests.Document
 						RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true
 					}
 			};
-			documentStore.Initialise();
+			documentStore.Initialize();
 			return documentStore;
 		}
 

@@ -35,7 +35,7 @@ namespace Raven.Client.Tests.Document
 				}
 				
 			};
-			documentStore.Initialise();
+			documentStore.Initialize();
 			return documentStore;
 		}
 

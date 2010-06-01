@@ -37,7 +37,7 @@ namespace Raven.Client.Tests.Document
             {
                 foreach (var port in new[] { port1, port2 })
                 {
-                    using (var documentStore = new DocumentStore { Url = "http://localhost:"+ port }.Initialise())
+                    using (var documentStore = new DocumentStore { Url = "http://localhost:"+ port }.Initialize())
                     using (var session = documentStore.OpenSession())
                     {
                         documentStore.Stored += (storeServer, storeEntity) => serversStoredUpon.Add(storeServer);

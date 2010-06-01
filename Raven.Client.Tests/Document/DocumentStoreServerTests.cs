@@ -43,7 +43,7 @@ namespace Raven.Client.Tests.Document
 			using (var server = GetNewServer(port, path))
 			{
 				var documentStore = new DocumentStore { Url = "http://localhost:"+ port };
-				documentStore.Initialise();
+				documentStore.Initialize();
 
 				var session = documentStore.OpenSession();
 				var entity = new Company {Name = "Company"};
@@ -59,7 +59,7 @@ namespace Raven.Client.Tests.Document
             using (var server = GetNewServer(port, path))
             {
                 var documentStore = new DocumentStore { Url = "http://localhost:" + port };
-                documentStore.Initialise();
+                documentStore.Initialize();
 
                 documentStore.DatabaseCommands.Query("Raven/DocumentsByEntityName", new IndexQuery
                 {
@@ -75,7 +75,7 @@ namespace Raven.Client.Tests.Document
 			using (var server = GetNewServer(port, path))
 			{
 				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
-				documentStore.Initialise();
+				documentStore.Initialize();
 
 				
 				documentStore.DatabaseCommands.PutIndex("my_index",
@@ -113,7 +113,7 @@ namespace Raven.Client.Tests.Document
 			using (var server = GetNewServer(port, path))
 			{
 				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
-				documentStore.Initialise();
+				documentStore.Initialize();
 
 
 				documentStore.DatabaseCommands.PutIndex("my_index",
@@ -153,7 +153,7 @@ namespace Raven.Client.Tests.Document
 			using (var server = GetNewServer(port, path))
 			{
 				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
-				documentStore.Initialise();
+				documentStore.Initialize();
 
 				var session = documentStore.OpenSession();
 				var databaseStatistics = session.Load<DatabaseStatistics>("stats");
@@ -169,7 +169,7 @@ namespace Raven.Client.Tests.Document
 			using (var server = GetNewServer(port, path))
 			{
 				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
-				documentStore.Initialise();
+				documentStore.Initialize();
 
 				var company = new Company { Name = "Company Name", Type = Company.CompanyType.Private };
 				var session = documentStore.OpenSession();
@@ -190,7 +190,7 @@ namespace Raven.Client.Tests.Document
             using (var server = GetNewServer(port, path))
             {
                 var documentStore = new DocumentStore { Url = "http://localhost:" + port };
-                documentStore.Initialise();
+                documentStore.Initialize();
 
                 var session = documentStore.OpenSession();
                 session.OnEntityConverted += (entity, document, metadata) =>
@@ -214,7 +214,7 @@ namespace Raven.Client.Tests.Document
 			using (var server = GetNewServer(port, path))
 			{
 				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
-				documentStore.Initialise();
+				documentStore.Initialize();
 				var batchResults = documentStore
 					.DatabaseCommands
 					.Batch(new ICommandData[]
@@ -255,7 +255,7 @@ namespace Raven.Client.Tests.Document
             using (var server = GetNewServer(port, path))
             {
 				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
-				documentStore.Initialise();
+				documentStore.Initialize();
 
                 var session = documentStore.OpenSession();
                 session.Store(new Company { Name = "Company A", Id = "1"});
@@ -279,7 +279,7 @@ namespace Raven.Client.Tests.Document
             using (var server = GetNewServer(port, path))
             {
 				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
-				documentStore.Initialise();
+				documentStore.Initialize();
 
                 var session = documentStore.OpenSession();
                 var entity = new Company { Name = "Company" };
@@ -303,7 +303,7 @@ namespace Raven.Client.Tests.Document
             using (var server = GetNewServer(port, path))
             {
 				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
-				documentStore.Initialise();
+				documentStore.Initialize();
                 var session = documentStore.OpenSession();
                 var company = new Company { Name = "Company 1", Phone = 5 };
                 session.Store(company);
@@ -332,7 +332,7 @@ namespace Raven.Client.Tests.Document
             using (var server = GetNewServer(port, path))
             {
                 var documentStore = new DocumentStore { Url = "http://localhost:" + port };
-                documentStore.Initialise();
+                documentStore.Initialize();
                 var session = documentStore.OpenSession();
                 var company = new Company { Name = "Company 1", Phone = 5 };
                 session.Store(company);
@@ -360,7 +360,7 @@ namespace Raven.Client.Tests.Document
 			using (var server = GetNewServer(port, path))
 			{
 				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
-				documentStore.Initialise();
+				documentStore.Initialize();
 				var session = documentStore.OpenSession();
 				var company = new Company { Name = "Company 1", Phone = 5 };
 				session.Store(company);
@@ -389,7 +389,7 @@ namespace Raven.Client.Tests.Document
 			using (var server = GetNewServer(port, path))
 			{
 				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
-				documentStore.Initialise();
+				documentStore.Initialize();
 				var session = documentStore.OpenSession();
 				var company = new Company { Name = "Company 1", Phone = 5 };
 				session.Store(company);
@@ -417,7 +417,7 @@ namespace Raven.Client.Tests.Document
 			using (var server = GetNewServer(port, path))
 			{
 				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
-				documentStore.Initialise();
+				documentStore.Initialize();
 				var session = documentStore.OpenSession();
 				var company = new Company { Name = "Company 1", Phone = 5 };
 				session.Store(company);
@@ -445,7 +445,7 @@ namespace Raven.Client.Tests.Document
 			using (var server = GetNewServer(port, path))
 			{
 				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
-				documentStore.Initialise();
+				documentStore.Initialize();
 				var session = documentStore.OpenSession();
 				var company = new Company { Name = "Company 1", Phone = 5 };
 				session.Store(company);
@@ -473,7 +473,7 @@ namespace Raven.Client.Tests.Document
             using (var server = GetNewServer(port, path))
             {
 				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
-				documentStore.Initialise();
+				documentStore.Initialize();
 
                 var session = documentStore.OpenSession();
                 session.UseOptimisticConcurrency = true;
@@ -500,7 +500,7 @@ namespace Raven.Client.Tests.Document
             {
                 const string id = "Company/id";
                 var documentStore = new DocumentStore { Url = "http://localhost:" + port };
-                documentStore.Initialise();
+                documentStore.Initialize();
 
                 using (var session = documentStore.OpenSession())
                 {
@@ -527,7 +527,7 @@ namespace Raven.Client.Tests.Document
             {
                 string id;
                 var documentStore = new DocumentStore { Url = "http://localhost:" + port };
-                documentStore.Initialise();
+                documentStore.Initialize();
 
                 using (var session = documentStore.OpenSession())
                 {
@@ -555,7 +555,7 @@ namespace Raven.Client.Tests.Document
 			using (var server = GetNewServer(port, path))
 			{
 				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
-				documentStore.Initialise();
+				documentStore.Initialize();
 
 				var session = documentStore.OpenSession();
 				var company = new Company {Name = "Company 1"};
@@ -578,7 +578,7 @@ namespace Raven.Client.Tests.Document
 			using (var server = GetNewServer(port, path))
 			{
 				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
-				documentStore.Initialise();
+				documentStore.Initialize();
 
 				var session1 = documentStore.OpenSession();
 				var company = new Company {Name = "Company 1"};
@@ -602,7 +602,7 @@ namespace Raven.Client.Tests.Document
 			using (var server = GetNewServer(port, path))
 			{
 				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
-				documentStore.Initialise();
+				documentStore.Initialize();
 
 				var session1 = documentStore.OpenSession();
 				session1.Store(new Company {Name = "Company 1"});
@@ -625,7 +625,7 @@ namespace Raven.Client.Tests.Document
 			using (var server = GetNewServer(port, path))
 			{
 				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
-				documentStore.Initialise();
+				documentStore.Initialize();
 
 				var session = documentStore.OpenSession();
 				
@@ -661,7 +661,7 @@ namespace Raven.Client.Tests.Document
 			using (var server = GetNewServer(port, path))
 			{
 				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
-				documentStore.Initialise();
+				documentStore.Initialize();
 				documentStore.DatabaseCommands.PutIndex("UsersByLocation", new IndexDefinition<LinqIndexesFromClient.User>
 				{
 					Map = users => from user in users
@@ -695,7 +695,7 @@ namespace Raven.Client.Tests.Document
 			using (var server = GetNewServer(port, path))
 			{
 				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
-				documentStore.Initialise();
+				documentStore.Initialize();
 				documentStore.DatabaseCommands.PutIndex("UsersCountByLocation", new IndexDefinition<LinqIndexesFromClient.User, LinqIndexesFromClient.LocationCount>
 				{
 					Map = users => from user in users
@@ -733,7 +733,7 @@ namespace Raven.Client.Tests.Document
 			using (var server = GetNewServer(port, path))
 			{
 				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
-				documentStore.Initialise();
+				documentStore.Initialize();
 				documentStore.DatabaseCommands.PutIndex("AvgAgeByLocation", new IndexDefinition<LinqIndexesFromClient.User, LinqIndexesFromClient.LocationAge>
 				{
 					Map = users => from user in users

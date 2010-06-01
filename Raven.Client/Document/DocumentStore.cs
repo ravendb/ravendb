@@ -112,7 +112,7 @@ namespace Raven.Client.Document
             return session;
         }
 
-        public IDocumentStore Initialise()
+        public IDocumentStore Initialize()
 		{
 			try
 			{

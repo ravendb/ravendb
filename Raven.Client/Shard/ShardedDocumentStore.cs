@@ -48,7 +48,7 @@ namespace Raven.Client.Shard
 	        get { throw new NotSupportedException("Sharded document store doesn't have a database commands. you need to explicitly use the shard instances to get access to the database commands"); }
 	    }
 
-	    public IDocumentStore Initialise()
+	    public IDocumentStore Initialize()
 		{
 			try
 			{
@@ -57,7 +57,7 @@ namespace Raven.Client.Shard
                     var currentShard = shard;
                     currentShard.Stored += Stored;
                     var defaultKeyGeneration = currentShard.Conventions.DocumentKeyGenerator == null;
-                    currentShard.Initialise();
+                    currentShard.Initialize();
                     if(defaultKeyGeneration == false)
                         continue;
 

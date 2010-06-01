@@ -18,7 +18,7 @@ namespace RavenTestbed
                     DataDirectory = "ravendb"
                 }
             };
-            documentStore.Initialise();
+            documentStore.Initialize();
             documentStore.DatabaseCommands.PutIndex("FooByName",
                 new IndexDefinition<Foo>()
                 {

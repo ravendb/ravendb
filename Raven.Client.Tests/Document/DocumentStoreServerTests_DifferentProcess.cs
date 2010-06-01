@@ -12,7 +12,7 @@ namespace Raven.Client.Tests.Document
 		public void Can_promote_transactions()
 		{
 			var documentStore = new DocumentStore {Url = "http://localhost:8080"};
-			documentStore.Initialise();
+			documentStore.Initialize();
 
 			var company = new Company {Name = "Company Name"};
 

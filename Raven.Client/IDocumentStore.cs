@@ -9,7 +9,7 @@ namespace Raven.Client
 		
 		string Identifier { get; set; }
 
-        IDocumentStore Initialise();
+        IDocumentStore Initialize();
         
         IDocumentSession OpenSession();
 
