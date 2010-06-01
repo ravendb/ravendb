@@ -57,13 +57,13 @@ namespace Raven.Server
 			if (Environment.OSVersion.Version.Major > 5)
 			{
 				cmd = "netsh";
-				args = string.Format(@"http add urlacl url=http://+:{0}/ user={1}", port,
+				args = string.Format(@"http add urlacl url=http://+:{0}/ user=""{1}""", port,
 				                     WindowsIdentity.GetCurrent().Name);
 			}
 			else
 			{
 				cmd = "httpcfg";
-				args = string.Format("set urlacl /u http://+:{0}/ /a D:(A;;GX;;;{1})", port,
+				args = string.Format(@"set urlacl /u http://+:{0}/ /a D:(A;;GX;;;""{1}"")", port,
 				                     WindowsIdentity.GetCurrent().User);
 			}
 		}
