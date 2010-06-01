@@ -243,7 +243,7 @@ namespace Raven.Scenarios
 			var rr = new StringReader(actual.Item1);
 			var actualResponse = JToken.ReadFrom(new JsonTextReader(rr));
 			var expectedResponse = JToken.ReadFrom(new JsonTextReader(sr));
-			if (new JTokenEqualityComparer().Equals(expectedResponse, actualResponse) == false)
+			if (AreEquals(expectedResponse, actualResponse) == false)
 			{
 				var outputName = Path.GetFileNameWithoutExtension(file) + " request #" + responseNumber + ".txt";
 				var expectedString = expectedResponse.ToString(Formatting.None);
@@ -259,6 +259,30 @@ namespace Raven.Scenarios
 					string.Format("Request {0} differs. Request:\r\n{1}, output written to: {2}",
 								  responseNumber, request, outputName));
 			}
+		}
+
+		private static bool AreEquals(JToken expectedResponse, JToken actualResponse)
+		{
+			if (expectedResponse is JValue)
+				return new JTokenEqualityComparer().Equals(expectedResponse,actualResponse);
+			if(expectedResponse is JArray)
+			{
+				var expectedArray = (JArray) expectedResponse;
+				var actualArray = (JArray)actualResponse;
+				if (expectedArray.Count != actualArray.Count)
+				{
+					return false;
+				}
+				return !expectedArray.Where((t, i) => AreEquals(t, actualArray[i]) == false).Any();
+			}
+			var expectedObject = (JObject)expectedResponse;
+			var actualObject = (JObject) actualResponse;
+			foreach (var prop in expectedObject)
+			{
+				if (AreEquals(prop.Value, actualObject[prop.Key]) == false)
+					return false;
+			}
+			return true;
 		}
 
 		private void CompareContentLineByLine(Tuple<string, NameValueCollection, string> actual, StringReader sr, string request)
