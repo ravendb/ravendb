@@ -29,7 +29,7 @@ namespace Raven.Client.Document
 
         public string GenerateDocumentKey(object entity)
         {
-            return string.Format("{0}/{1}",
+            return string.Format("{0}{1}",
                                  tag,
                                  NextId());
         }

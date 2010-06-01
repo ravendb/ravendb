@@ -13,11 +13,14 @@ namespace Raven.Client.Document
 		{
 			FindIdentityProperty = q => q.Name == "Id";
 			FindTypeTagName = t => DefaultTypeTagName(t);
+			IdentityPartsSeparator = "/";
 		    JsonContractResolver = new DefaultContractResolver(shareCache: true);
 		    MaxNumberOfRequestsPerSession = 30;
 		}
 
-        public int MaxNumberOfRequestsPerSession { get; set; }
+		public string IdentityPartsSeparator { get; set; }
+
+		public int MaxNumberOfRequestsPerSession { get; set; }
 
 		public static string GenerateDocumentKeyUsingIdentity(DocumentConvention conventions, object entity)
 		{

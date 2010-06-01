@@ -29,7 +29,7 @@ namespace Raven.Client.Document
                 if (keyGeneratorsByTag.TryGetValue(tag, out value))
                     return value.GenerateDocumentKey(entity);
 
-                value = new HiLoKeyGenerator(databaseCommands, tag, capacity);
+                value = new HiLoKeyGenerator(databaseCommands, tag + conventions.IdentityPartsSeparator, capacity);
                 // doing it this way for thread safety
                 keyGeneratorsByTag = new Dictionary<string, HiLoKeyGenerator>(keyGeneratorsByTag)
                 {
