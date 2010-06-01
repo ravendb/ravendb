@@ -5,6 +5,7 @@ using Raven.Database;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
 using Raven.Client.Document;
+using Raven.Database.Json;
 
 namespace Raven.Client.Client
 {
@@ -33,5 +34,8 @@ namespace Raven.Client.Client
 		
 		IDatabaseCommands With(ICredentials credentialsForSession);
     	bool SupportsPromotableTransactions { get;  }
+
+    	void DeleteByIndex(string indexName, IndexQuery queryToDelete, bool allowStale);
+		void UpdateByIndex(string indexName, IndexQuery queryToDelete, PatchRequest[] patchRequests, bool allowStale);
 	}
 }

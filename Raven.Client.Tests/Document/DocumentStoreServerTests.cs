@@ -9,6 +9,7 @@ using Raven.Client.Tests.Indexes;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
 using Raven.Database.Indexing;
+using Raven.Database.Json;
 using Raven.Server;
 using Xunit;
 using System.Linq;
@@ -52,6 +53,73 @@ namespace Raven.Client.Tests.Document
 				Assert.NotEqual(Guid.Empty.ToString(), entity.Id);
 			}
 		}
+
+		[Fact]
+		public void Can_delete_by_index()
+		{
+			using (var server = GetNewServer(port, path))
+			{
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+				documentStore.Initialize();
+
+				var entity = new Company { Name = "Company" };
+				using (var session = documentStore.OpenSession())
+				{
+					session.Store(entity);
+					session.SaveChanges();
+
+					session.LuceneQuery<Company>().WaitForNonStaleResults().ToArray();// wait for the index to settle down
+				}
+
+				documentStore.DatabaseCommands.DeleteByIndex("Raven/DocumentsByEntityName", new IndexQuery
+				{
+					Query = "Tag:[[Companies]]"
+				}, allowStale: false);
+
+				using (var session = documentStore.OpenSession())
+				{
+					Assert.Empty(session.LuceneQuery<Company>().WaitForNonStaleResults().ToArray());
+				}
+			}
+		}
+
+		[Fact]
+		public void Can_update_by_index()
+		{
+			using (var server = GetNewServer(port, path))
+			{
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+				documentStore.Initialize();
+
+				var entity = new Company { Name = "Company" };
+				using (var session = documentStore.OpenSession())
+				{
+					session.Store(entity);
+					session.SaveChanges();
+
+					session.LuceneQuery<Company>().WaitForNonStaleResults().ToArray();// wait for the index to settle down
+				}
+
+				documentStore.DatabaseCommands.UpdateByIndex("Raven/DocumentsByEntityName", new IndexQuery
+				{
+					Query = "Tag:[[Companies]]"
+				}, new[]
+				{
+					new PatchRequest
+					{
+						Type = "Set",
+						Name = "Name",
+						Value = JToken.FromObject("Another Company")
+					},
+				}, allowStale: false);
+
+				using (var session = documentStore.OpenSession())
+				{
+					Assert.Equal("Another Company", session.Load<Company>(entity.Id).Name);
+				}
+			}
+		}
+
 
         [Fact]
         public void Can_specify_cutoff_using_server()

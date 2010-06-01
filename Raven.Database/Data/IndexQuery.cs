@@ -28,10 +28,10 @@ namespace Raven.Database.Data
 
         public DateTime? Cutoff { get; set; }
 
-		public string GetIndexQueryUrl(string operationUrl, string index)
+		public string GetIndexQueryUrl(string operationUrl, string index, string operationName)
 		{
-			var path = string.Format("{0}/indexes/{1}?query={2}&start={3}&pageSize={4}", operationUrl, index, Query,
-			                         Start, PageSize);
+			var path = string.Format("{0}/{5}/{1}?query={2}&start={3}&pageSize={4}", operationUrl, index, Query,
+			                         Start, PageSize, operationName);
 			if (FieldsToFetch != null && FieldsToFetch.Length > 0)
 			{
 				path = FieldsToFetch.Aggregate(

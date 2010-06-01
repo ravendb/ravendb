@@ -147,7 +147,7 @@ namespace Raven.Client.Client.Async
 		public IAsyncResult BeginQuery(string index, IndexQuery query, AsyncCallback callback, object state)
 		{
 			EnsureIsNotNullOrEmpty(index, "index");
-			string path = query.GetIndexQueryUrl(url, index);
+			string path = query.GetIndexQueryUrl(url, index, "indexes");
 			var request = HttpJsonRequest.CreateHttpJsonRequest(this, path, "GET", credentials);
 
 			var asyncCallback = callback;

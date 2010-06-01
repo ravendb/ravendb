@@ -7,6 +7,7 @@ using Raven.Client.Document;
 using Raven.Database;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
+using Raven.Database.Json;
 using Raven.Database.Storage;
 using TransactionInformation = Raven.Database.TransactionInformation;
 
@@ -151,6 +152,16 @@ namespace Raven.Client.Client
 		public bool SupportsPromotableTransactions
 		{
 			get { return false; }
+		}
+
+		public void DeleteByIndex(string indexName, IndexQuery queryToDelete, bool allowStale)
+		{
+			throw new NotSupportedException("SET based operations are only supported on the server version, since they are there to reduce remote calls");
+		}
+
+		public void UpdateByIndex(string indexName, IndexQuery queryToDelete, PatchRequest[] patchRequests, bool allowStale)
+		{
+			throw new NotSupportedException("SET based operations are only supported on the server version, since they are there to reduce remote calls");
 		}
 
 		#endregion

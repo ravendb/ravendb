@@ -373,7 +373,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 
 	    private QueryResult DirectQuery(string index, IndexQuery query, string operationUrl)
 	    {
-            string path = query.GetIndexQueryUrl(operationUrl, index);
+            string path = query.GetIndexQueryUrl(operationUrl, index, "indexes");
 	    	var request = HttpJsonRequest.CreateHttpJsonRequest(this, path, "GET", credentials);
 	        var serializer = new JsonSerializer
 	        {
@@ -534,6 +534,30 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
     	public bool SupportsPromotableTransactions
     	{
 			get { return true; }
+    	}
+
+    	public void DeleteByIndex(string indexName, IndexQuery queryToDelete, bool allowStale)
+    	{
+			ExecuteWithReplication<object>(operationUrl =>
+			{
+				string path = queryToDelete.GetIndexQueryUrl(operationUrl, indexName, "bulk_docs") + "&allowStale=" + allowStale;
+				var request = HttpJsonRequest.CreateHttpJsonRequest(this, path, "DELETE", credentials);
+				request.ReadResponseString();
+				return null;
+			});
+    	}
+
+    	public void UpdateByIndex(string indexName, IndexQuery queryToDelete, PatchRequest[] patchRequests, bool allowStale)
+    	{
+
+			ExecuteWithReplication<object>(operationUrl =>
+			{
+				string path = queryToDelete.GetIndexQueryUrl(operationUrl, indexName, "bulk_docs") + "&allowStale=" + allowStale;
+				var request = HttpJsonRequest.CreateHttpJsonRequest(this, path, "PATCH", credentials);
+				request.Write(new JArray(patchRequests.Select(x=>x.ToJson())).ToString(Formatting.Indented));
+				request.ReadResponseString();
+				return null;
+			});
     	}
 
     	#endregion
