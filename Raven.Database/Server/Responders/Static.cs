@@ -40,7 +40,7 @@ namespace Raven.Database.Server.Responders
 					break;
 				case "PUT":
 					Database.PutStatic(filename, context.GetEtag(), context.Request.InputStream.ReadData(),
-					                   context.Request.Headers.FilterHeaders());
+					                   context.Request.Headers.FilterHeaders(isServerDocument:false));
 					context.SetStatusToCreated("/static/" + filename);
 					break;
 				case "DELETE":

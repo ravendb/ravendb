@@ -8,7 +8,14 @@ namespace Raven.Database.Data
 {
     public static class MetadataExtensions
     {
-        private static readonly HashSet<string> HeadersToIgnore = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    	private static readonly HashSet<string> HeadersToIgnoreServerDocument =
+    		new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    		{
+				"Non-Authoritive-Information",
+				"Content-Type"
+    		};
+
+        private static readonly HashSet<string> HeadersToIgnoreClient = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 		{
 			// Entity headers - those are NOT ignored
 			/*
@@ -73,13 +80,15 @@ namespace Raven.Database.Data
 			"Warning",
 		};
 
-        public static JObject FilterHeaders(this NameValueCollection self)
+        public static JObject FilterHeaders(this NameValueCollection self, bool isServerDocument)
         {
             var metadata = new JObject();
             foreach (var header in self.AllKeys)
             {
-                if (HeadersToIgnore.Contains(header))
+                if (HeadersToIgnoreClient.Contains(header))
                     continue;
+				if(isServerDocument && HeadersToIgnoreServerDocument.Contains(header))
+					continue;
                 var values = self.GetValues(header);
                 if (values.Length == 1)
                     metadata.Add(header, new JValue(values[0]));

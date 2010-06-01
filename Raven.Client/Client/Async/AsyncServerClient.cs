@@ -63,7 +63,7 @@ namespace Raven.Client.Client.Async
 					NonAuthoritiveInformation = asyncData.Request.ResponseStatusCode == HttpStatusCode.NonAuthoritativeInformation,
 					Key = asyncData.Key,
 					Etag = new Guid(asyncData.Request.ResponseHeaders["ETag"]),
-					Metadata = asyncData.Request.ResponseHeaders.FilterHeaders()
+					Metadata = asyncData.Request.ResponseHeaders.FilterHeaders(isServerDocument: false)
 				};
 			}
 			catch (WebException e)

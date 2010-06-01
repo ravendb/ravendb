@@ -197,7 +197,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 					NonAuthoritiveInformation = request.ResponseStatusCode == HttpStatusCode.NonAuthoritativeInformation,
 	                Key = key,
 	                Etag = new Guid(request.ResponseHeaders["ETag"]),
-	                Metadata = request.ResponseHeaders.FilterHeaders()
+					Metadata = request.ResponseHeaders.FilterHeaders(isServerDocument: false)
 	            };
 	        }
 	        catch (WebException e)
