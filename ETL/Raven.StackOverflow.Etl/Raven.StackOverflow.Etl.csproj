@@ -35,26 +35,20 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Boo.Lang, Version=2.0.9.2, Culture=neutral, PublicKeyToken=32c39770e9a21a67, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\rhino etl\build\Boo.Lang.dll</HintPath>
+    <Reference Include="Boo.Lang">
+      <HintPath>..\SharedLibs\Boo.Lang.dll</HintPath>
+    </Reference>
+    <Reference Include="FileHelpers">
+      <HintPath>..\SharedLibs\FileHelpers.dll</HintPath>
     </Reference>
     <Reference Include="log4net">
-      <HintPath>..\..\rhino etl\build\log4net.dll</HintPath>
+      <HintPath>..\SharedLibs\log4net.dll</HintPath>
     </Reference>
-    <Reference Include="Newtonsoft.Json">
-      <HintPath>..\SharedLibs\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="RavenDb">
+      <HintPath>..\SharedLibs\RavenDb.exe</HintPath>
     </Reference>
-    <Reference Include="Raven.Database, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\Raven.Database\bin\Debug\Raven.Database.dll</HintPath>
-    </Reference>
-    <Reference Include="Raven.Server">
-      <HintPath>..\..\Raven.Server\bin\Debug\Raven.Server.exe</HintPath>
-    </Reference>
-    <Reference Include="Rhino.Etl.Core, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\rhino etl\build\Rhino.Etl.Core.dll</HintPath>
+    <Reference Include="Rhino.Etl.Core">
+      <HintPath>..\SharedLibs\Rhino.Etl.Core.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />

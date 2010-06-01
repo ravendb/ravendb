@@ -10,6 +10,7 @@ using log4net.Appender;
 using log4net.Config;
 using log4net.Core;
 using log4net.Layout;
+using Microsoft.Isam.Esent.Interop;
 using Raven.Database;
 using Raven.Database.Storage;
 using Raven.Server;
@@ -56,13 +57,13 @@ namespace Raven.StackOverflow.Etl
 			}))
 			{
 				ExecuteAndWaitAll(
-					LoadDataFor("Users*.json"),
-					LoadDataFor("Posts*.json")
+					LoadDataFor("Users*.json")
+					//,LoadDataFor("Posts*.json")
 					);
 				ExecuteAndWaitAll(
-					LoadDataFor("Badges*.json"),
-					LoadDataFor("Votes*.json"),
-					LoadDataFor("Comments*.json")
+					LoadDataFor("Badges*.json")
+					//,LoadDataFor("Votes*.json"),
+					//LoadDataFor("Comments*.json")
 					);
 
 				var indexing = Stopwatch.StartNew();
@@ -193,7 +194,7 @@ namespace Raven.StackOverflow.Etl
 						actions.GetDocumentsCount(),
 						sp2.Elapsed);
 
-					actions.Commit();
+					actions.Commit(CommitTransactionGrbit.LazyFlush);
 				});
 
 				Thread.Sleep(1000);
