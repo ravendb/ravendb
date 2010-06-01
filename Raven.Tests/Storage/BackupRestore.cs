@@ -29,9 +29,22 @@ namespace Raven.Tests.Storage
 			db.Dispose();
 			base.Dispose();
 		}
+
+        private void DeleteIfExists(string DirectoryName)
+        {
+            string directoryFullName = null;
+
+            if (Path.IsPathRooted(DirectoryName) == false)
+                directoryFullName = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, DirectoryName);
+            else
+                directoryFullName = DirectoryName;
+
+            if (Directory.Exists(directoryFullName))
+                Directory.Delete(directoryFullName, true);
+        }
 		
 		[Fact]
-		public void AfteBackupRestoreCanReadDocument()
+		public void AfterBackupRestoreCanReadDocument()
 		{
 			db.Put("ayende", null, JObject.Parse("{'email':'ayende@ayende.com'}"), new JObject(), null);
 
@@ -40,7 +53,7 @@ namespace Raven.Tests.Storage
 
 			db.Dispose();
 
-			Directory.Delete("raven.db.test.esent", true);
+            DeleteIfExists("raven.db.test.esent");
 
 			DocumentDatabase.Restore("raven.db.test.backup", "raven.db.test.esent");
 
@@ -60,7 +73,7 @@ namespace Raven.Tests.Storage
 
 			db.Dispose();
 
-			Directory.Delete("raven.db.test.esent", true);
+            DeleteIfExists("raven.db.test.esent");
 
 			DocumentDatabase.Restore("raven.db.test.backup", "raven.db.test.esent");
 
@@ -98,7 +111,7 @@ namespace Raven.Tests.Storage
 
 			db.Dispose();
 
-			Directory.Delete("raven.db.test.esent", true);
+            DeleteIfExists("raven.db.test.esent");
 
 			DocumentDatabase.Restore("raven.db.test.backup", "raven.db.test.esent");
 

@@ -4,6 +4,7 @@ using Lucene.Net.Store;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Database.Storage;
 using Directory = System.IO.Directory;
+using Raven.Database.Extensions;
 
 namespace Raven.Database.Backup
 {
@@ -14,8 +15,8 @@ namespace Raven.Database.Backup
 
 		public RestoreOperation(string backupLocation, string databaseLocation)
 		{
-			this.backupLocation = backupLocation;
-			this.databaseLocation = databaseLocation;
+			this.backupLocation = backupLocation.ToFullPath();
+            this.databaseLocation = databaseLocation.ToFullPath();
 		}
 
 		public void Execute()
@@ -46,9 +47,15 @@ namespace Raven.Database.Backup
 			Api.JetCreateInstance(out instance, "restoring " + Guid.NewGuid());
 			try
 			{
-				TransactionalStorage.ConfigureInstance(instance, databaseLocation);
-				Api.JetRestoreInstance(instance, backupLocation, databaseLocation, StatusCallback);
-			}
+                TransactionalStorage.ConfigureInstance(instance, databaseLocation);
+                Api.JetRestoreInstance(instance, backupLocation, databaseLocation, StatusCallback);
+                
+                var fileThatGetsCreatedButDoesntSeemLikeItShould = new FileInfo(Path.Combine(new DirectoryInfo(databaseLocation).Parent.FullName, new DirectoryInfo(databaseLocation).Name + "Data"));
+                if (fileThatGetsCreatedButDoesntSeemLikeItShould.Exists)
+                {
+                    fileThatGetsCreatedButDoesntSeemLikeItShould.MoveTo(Path.Combine(databaseLocation, "Data"));
+                }
+            }
 			finally
 			{
 				Api.JetTerm(instance);
