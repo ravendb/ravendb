@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using System.Transactions;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Client;
 using Raven.Database.Exceptions;
@@ -53,6 +54,7 @@ namespace Raven.Client.Document
 
         private long GetNextHi()
         {
+			using(new TransactionScope(TransactionScopeOption.Suppress))
             while (true)
             {
                 try
