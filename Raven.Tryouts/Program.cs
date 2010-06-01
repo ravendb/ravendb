@@ -1,11 +1,5 @@
 using System;
-using System.Linq;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Raven.Client.Document;
-using System.IO;
-using System.Diagnostics;
-using Raven.Server;
+using Raven.Database.Indexing;
 
 namespace RavenTestbed
 {
@@ -13,7 +7,7 @@ namespace RavenTestbed
     {
         static void Main(string[] args)
         {
-			Console.WriteLine(JToken.FromObject(DateTime.Now).ToString(Formatting.Indented));
+			Console.WriteLine(NumberUtil.NumberToString(decimal.MinValue));
         }
     }
 
