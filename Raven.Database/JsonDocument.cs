@@ -27,7 +27,7 @@ namespace Raven.Database
 			}
 			etagProp.Value = new JValue(Etag.ToString());
 			doc.Add("@metadata", Metadata);
-			Metadata.Add("Non-Authoritive-Information",JToken.FromObject(NonAuthoritiveInformation));
+			Metadata["Non-Authoritive-Information"] = JToken.FromObject(NonAuthoritiveInformation);
 			return doc;
 		}
 	}
