@@ -381,10 +381,19 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 				ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor
 	        };
 	        JToken json;
-	        using (var reader = new JsonTextReader(new StringReader(request.ReadResponseString())))
-	            json = (JToken)serializer.Deserialize(reader);
-
-	        return new QueryResult
+	    	try
+	    	{
+	    		using (var reader = new JsonTextReader(new StringReader(request.ReadResponseString())))
+	    			json = (JToken)serializer.Deserialize(reader);
+	    	}
+	    	catch (WebException e)
+	    	{
+	    		var httpWebResponse = e.Response as HttpWebResponse;
+				if(httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.NotFound)
+					throw new InvalidOperationException("There is no index named: " + index);
+	    		throw;
+	    	}
+	    	return new QueryResult
 	        {
 	            IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
 	            Results = json["Results"].Children().Cast<JObject>().ToArray(),
@@ -542,7 +551,17 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			{
 				string path = queryToDelete.GetIndexQueryUrl(operationUrl, indexName, "bulk_docs") + "&allowStale=" + allowStale;
 				var request = HttpJsonRequest.CreateHttpJsonRequest(this, path, "DELETE", credentials);
-				request.ReadResponseString();
+				try
+				{
+					request.ReadResponseString();
+				}
+				catch (WebException e)
+				{
+					var httpWebResponse = e.Response as HttpWebResponse;
+					if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.NotFound)
+						throw new InvalidOperationException("There is no index named: " + index);
+					throw;
+				}
 				return null;
 			});
     	}
@@ -555,7 +574,17 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 				string path = queryToDelete.GetIndexQueryUrl(operationUrl, indexName, "bulk_docs") + "&allowStale=" + allowStale;
 				var request = HttpJsonRequest.CreateHttpJsonRequest(this, path, "PATCH", credentials);
 				request.Write(new JArray(patchRequests.Select(x=>x.ToJson())).ToString(Formatting.Indented));
-				request.ReadResponseString();
+				try
+				{
+					request.ReadResponseString();
+				}
+				catch (WebException e)
+				{
+					var httpWebResponse = e.Response as HttpWebResponse;
+					if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.NotFound)
+						throw new InvalidOperationException("There is no index named: " + index);
+					throw;
+				}
 				return null;
 			});
     	}
