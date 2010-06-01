@@ -25,14 +25,14 @@ namespace Raven.Database.Backup
 		private readonly string destination;
 		private readonly string tempPath;
 
-		public DirectoryBackup(string source, string destination)
+		public DirectoryBackup(string source, string destination, string tempPath)
 		{
 			this.source = source;
 			this.destination = destination;
+			this.tempPath = tempPath;
 
-			tempPath = Path.GetTempFileName();
-			File.Delete(tempPath);
-			Directory.CreateDirectory(tempPath);
+			if (Directory.Exists(tempPath) == false)
+				Directory.CreateDirectory(tempPath);
 			if (Directory.Exists(destination) == false)
 				Directory.CreateDirectory(destination);
 		}
