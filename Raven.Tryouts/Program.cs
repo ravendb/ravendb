@@ -1,5 +1,7 @@
 using System;
 using System.Linq;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Raven.Client.Document;
 using System.IO;
 using System.Diagnostics;
@@ -11,7 +13,7 @@ namespace RavenTestbed
     {
         static void Main(string[] args)
         {
-            RavenDbServer.EnsureCanListenToWhenInNonAdminContext(8081);
+			Console.WriteLine(JToken.FromObject(DateTime.Now).ToString(Formatting.Indented));
         }
     }
 

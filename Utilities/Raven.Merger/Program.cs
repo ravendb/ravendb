@@ -24,6 +24,12 @@ namespace Raven.Merger
 					@"Newtonsoft.Json.dll",
 					@"Rhino.Licensing.dll",
 				});
+
+				Merge("RavenSmuggler.exe", new[]
+				{
+					@"Raven.Smuggler.exe",
+					@"Newtonsoft.Json.dll",
+				});
 				
 				Merge("RavenWeb.dll", new[]
 				{
