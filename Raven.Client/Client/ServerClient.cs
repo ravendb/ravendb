@@ -559,7 +559,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 				{
 					var httpWebResponse = e.Response as HttpWebResponse;
 					if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.NotFound)
-						throw new InvalidOperationException("There is no index named: " + index);
+						throw new InvalidOperationException("There is no index named: " + indexName);
 					throw;
 				}
 				return null;
@@ -582,7 +582,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 				{
 					var httpWebResponse = e.Response as HttpWebResponse;
 					if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.NotFound)
-						throw new InvalidOperationException("There is no index named: " + index);
+						throw new InvalidOperationException("There is no index named: " + indexName);
 					throw;
 				}
 				return null;
