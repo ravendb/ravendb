@@ -61,7 +61,7 @@ namespace Raven.Client.Client
                 return null;
             return new TransactionInformation
             {
-                Id = Transaction.Current.TransactionInformation.DistributedIdentifier,
+				Id = PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(Transaction.Current.TransactionInformation),
                 Timeout = TransactionManager.DefaultTimeout
             };
 	    }
@@ -145,7 +145,15 @@ namespace Raven.Client.Client
 	        return this;
 	    }
 
-	    #endregion
+		/// <summary>
+		/// It seems that we can't promote a transaction inside the same process
+		/// </summary>
+		public bool SupportsPromotableTransactions
+		{
+			get { return false; }
+		}
+
+		#endregion
 
 		public void Dispose()
 		{

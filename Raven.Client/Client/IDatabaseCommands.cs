@@ -32,5 +32,6 @@ namespace Raven.Client.Client
 		void StoreRecoveryInformation(Guid txId, byte[] recoveryInformation);
 		
 		IDatabaseCommands With(ICredentials credentialsForSession);
+    	bool SupportsPromotableTransactions { get;  }
 	}
 }

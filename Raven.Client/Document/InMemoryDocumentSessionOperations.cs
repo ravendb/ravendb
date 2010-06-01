@@ -286,11 +286,12 @@ more responsive application.
 
 
 			var transactionalSession = (ITransactionalDocumentSession)this;
-			if (Transaction.Current.EnlistPromotableSinglePhase(new PromotableRavenClientEnlistment(transactionalSession)) == false) 
+			if (documentStore.DatabaseCommands.SupportsPromotableTransactions == false ||
+				Transaction.Current.EnlistPromotableSinglePhase(new PromotableRavenClientEnlistment(transactionalSession)) == false) 
 			{
 				Transaction.Current.EnlistDurable(
 					RavenDbResourceManagerId, 
-					new RavenClientEnlistment(transactionalSession, Transaction.Current.TransactionInformation.DistributedIdentifier),
+					new RavenClientEnlistment(transactionalSession),
 					EnlistmentOptions.None);
 			}
 			hasEnlisted = true;

@@ -265,7 +265,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 	        if (Transaction.Current == null) 
                 return;
 
-	        string txInfo = string.Format("{0}, {1}", Transaction.Current.TransactionInformation.DistributedIdentifier, TransactionManager.DefaultTimeout);
+			string txInfo = string.Format("{0}, {1}", PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(Transaction.Current.TransactionInformation), TransactionManager.DefaultTimeout);
 	        metadata["Raven-Transaction-Information"] = new JValue(txInfo);
 	    }
 
@@ -505,6 +505,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
     	{
     		var webRequest = (HttpWebRequest)WebRequest.Create(operationUrl + "/transaction/promote?fromTxId=" + fromTxId);
     		webRequest.Method = "POST";
+    		webRequest.ContentLength = 0;
 			webRequest.Credentials = credentials;
     		webRequest.UseDefaultCredentials = true;
 
@@ -528,7 +529,12 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 	        return new ServerClient(url, convention, credentialsForSession);
 	    }
 
-	    #endregion
+    	public bool SupportsPromotableTransactions
+    	{
+			get { return true; }
+    	}
+
+    	#endregion
 
         #region IDisposable Members
 
