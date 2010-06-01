@@ -29,9 +29,10 @@ namespace Raven.Database.Indexing
         protected readonly string name;
         protected readonly IndexDefinition indexDefinition;
         private CurrentIndexSearcher searcher;
+		private object writeLock = new object();
+    	private volatile bool disposed;
 
-
-        protected Index(Directory directory, string name, IndexDefinition indexDefinition)
+    	protected Index(Directory directory, string name, IndexDefinition indexDefinition)
         {
             this.name = name;
             this.indexDefinition = indexDefinition;
@@ -53,8 +54,12 @@ namespace Raven.Database.Indexing
 
         public void Dispose()
         {
-            searcher.Searcher.Close();
-            directory.Close();
+			lock (writeLock)
+			{
+				disposed = true;
+				searcher.Searcher.Close();
+				directory.Close();
+			}
         }
 
         #endregion
@@ -164,28 +169,33 @@ namespace Raven.Database.Indexing
 
     	protected void Write(Func<IndexWriter, bool> action)
         {
-            bool shouldRecreateSearcher;
-            var standardAnalyzer = new StandardAnalyzer(Version.LUCENE_29);
-            try
-            {
-                var indexWriter = new IndexWriter(directory, standardAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED);
-                try
-                {
-                    shouldRecreateSearcher = action(indexWriter);
-                }
-                finally
-                {
-                    indexWriter.Close();
-                }
-            }
-            finally
-            {
-                standardAnalyzer.Close();
+			if(disposed)
+				throw new ObjectDisposedException("Index " + name + " has been disposed");
+			lock (writeLock)
+			{
+				bool shouldRecreateSearcher;
+				var standardAnalyzer = new StandardAnalyzer(Version.LUCENE_29);
+				try
+				{
+					var indexWriter = new IndexWriter(directory, standardAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED);
+					try
+					{
+						shouldRecreateSearcher = action(indexWriter);
+					}
+					finally
+					{
+						indexWriter.Close();
+					}
+				}
+				finally
+				{
+					standardAnalyzer.Close();
 
-            }
-            if (shouldRecreateSearcher)
+				}
+    		if (shouldRecreateSearcher)
                 RecreateSearcher();
-        }
+			}
+		}
 
 
         protected IEnumerable<object> RobustEnumeration(IEnumerable<object> input, IndexingFunc func,
