@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security;
@@ -387,31 +388,51 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 
         public void Commit(Guid txId)
         {
-            TransactionalStorage.Batch(actions =>
-            {
-                actions.CompleteTransaction(txId, doc =>
-                {
-                    // doc.Etag - represent the _modified_ document etag, and we already
-                    // checked etags on previous PUT/DELETE, so we don't pass it here
-                    if (doc.Delete)
-                        Delete(doc.Key, null, null);
-                    else
-                        Put(doc.Key, null,
-							doc.Data.ToJObject(),
-							doc.Metadata.ToJObject(), null);
-                });
-				actions.DeleteAttachment("transactions/recoveryInformation/" + txId, null);
-				workContext.ShouldNotifyAboutWork();
-            });
+        	try
+        	{
+        		TransactionalStorage.Batch(actions =>
+        		{
+        			actions.CompleteTransaction(txId, doc =>
+        			{
+        				// doc.Etag - represent the _modified_ document etag, and we already
+        				// checked etags on previous PUT/DELETE, so we don't pass it here
+        				if (doc.Delete)
+        					Delete(doc.Key, null, null);
+        				else
+        					Put(doc.Key, null,
+        					    doc.Data.ToJObject(),
+        					    doc.Metadata.ToJObject(), null);
+        			});
+        			actions.DeleteAttachment("transactions/recoveryInformation/" + txId, null);
+        			workContext.ShouldNotifyAboutWork();
+        		});
+        	}
+			catch (EsentErrorException e)
+			{
+				// we need to protect ourselve from rollbacks happening in an async manner
+				// after the database was already shut down.
+				if (e.Error != JET_err.InvalidInstance)
+					throw;
+			}
         }
 
         public void Rollback(Guid txId)
         {
-            TransactionalStorage.Batch(actions =>
-            {
-                actions.RollbackTransaction(txId);
-				workContext.ShouldNotifyAboutWork();
-            });
+        	try
+        	{
+        		TransactionalStorage.Batch(actions =>
+        		{
+        			actions.RollbackTransaction(txId);
+        			workContext.ShouldNotifyAboutWork();
+        		});
+        	}
+        	catch (EsentErrorException e)
+        	{
+				// we need to protect ourselve from rollbacks happening in an async manner
+				// after the database was already shut down.
+				if (e.Error != JET_err.InvalidInstance)
+					throw;
+        	}
         }
 
 		public string PutIndex(string name, IndexDefinition definition)
@@ -725,7 +746,10 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 		{
 			var committableTransaction = new CommittableTransaction();
 			var transmitterPropagationToken = TransactionInterop.GetTransmitterPropagationToken(committableTransaction);
-			TransactionalStorage.Batch(actions => actions.ModifyTransactionId(fromTxId,committableTransaction.TransactionInformation.DistributedIdentifier));
+			TransactionalStorage.Batch(
+				actions =>
+					actions.ModifyTransactionId(fromTxId, committableTransaction.TransactionInformation.DistributedIdentifier,
+					                            TransactionManager.DefaultTimeout));
 			return transmitterPropagationToken;
 		}
 	}
