@@ -15,10 +15,12 @@ namespace Raven.Client.Document
 {
 	public abstract class InMemoryDocumentSessionOperations : IInMemoryDocumentSessionOperations
 	{
+		public static readonly Guid RavenDbResourceManagerId = new Guid("E749BAA6-6F76-4EEF-A069-40A4378954F8");
+
 		private const string RavenEntityName = "Raven-Entity-Name";
 		protected readonly HashSet<object> deletedEntities = new HashSet<object>();
 
-		private RavenClientEnlistment enlistment;
+		private bool hasEnlisted;
 
 		protected readonly Dictionary<object, DocumentSession.DocumentMetadata> entitiesAndMetadata =
 			new Dictionary<object, DocumentSession.DocumentMetadata>();
@@ -241,11 +243,7 @@ more responsive application.
 				Entities = new List<object>(),
 				Commands = new List<ICommandData>()
 			};
-			if (enlistment == null && Transaction.Current != null)
-			{
-				enlistment = new RavenClientEnlistment(this, Transaction.Current.TransactionInformation.DistributedIdentifier);
-				Transaction.Current.EnlistPromotableSinglePhase(enlistment);
-			}
+			TryEnlistInAmbientTransaction();
 			DocumentSession.DocumentMetadata value = null;
 			foreach (var key in (from deletedEntity in deletedEntities
 								 where entitiesAndMetadata.TryGetValue(deletedEntity, out value)
@@ -279,6 +277,23 @@ more responsive application.
 			}
 
 			return result;
+		}
+
+		private void TryEnlistInAmbientTransaction()
+		{
+			if (hasEnlisted || Transaction.Current == null) 
+				return;
+
+
+			var transactionalSession = (ITransactionalDocumentSession)this;
+			if (Transaction.Current.EnlistPromotableSinglePhase(new PromotableRavenClientEnlistment(transactionalSession)) == false) 
+			{
+				Transaction.Current.EnlistDurable(
+					RavenDbResourceManagerId, 
+					new RavenClientEnlistment(transactionalSession, Transaction.Current.TransactionInformation.DistributedIdentifier),
+					EnlistmentOptions.None);
+			}
+			hasEnlisted = true;
 		}
 
 		protected bool EntityChanged(KeyValuePair<object, DocumentSession.DocumentMetadata> kvp)
@@ -339,11 +354,11 @@ more responsive application.
 
 		public abstract void Commit(Guid txId);
 		public abstract void Rollback(Guid txId);
-		public abstract void PromoteTransaction(Guid fromTxId, Guid toTxId);
+		public abstract byte[] PromoteTransaction(Guid fromTxId);
 
 		protected void ClearEnlistment()
 		{
-			enlistment = null;
+			hasEnlisted = false;
 		}
 	}
 }

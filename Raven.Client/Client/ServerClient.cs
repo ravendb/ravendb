@@ -1,11 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 using System.Transactions;
 using Newtonsoft.Json;
@@ -16,6 +14,7 @@ using Raven.Client.Exceptions;
 using Raven.Database;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
+using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
 
@@ -476,19 +475,46 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
             });
 	    }
 
-    	public void PromoteTransaction(Guid fromTxId, Guid toTxId)
+    	public byte[] PromoteTransaction(Guid fromTxId)
+    	{
+			return ExecuteWithReplication(u => DirectPromoteTransaction(fromTxId, u));
+		}
+
+    	public void StoreRecoveryInformation(Guid txId, byte[] recoveryInformation)
     	{
 			ExecuteWithReplication<object>(u =>
 			{
-				DirectPromoteTransaction(fromTxId, toTxId, u);
+				var webRequest = (HttpWebRequest)WebRequest.Create(u +"/static/transactions/recoveryInformation/" + txId);
+				webRequest.Method = "PUT";
+				webRequest.Credentials = credentials;
+				webRequest.UseDefaultCredentials = true;
+				
+				using(var stream = webRequest.GetRequestStream())
+				{
+					stream.Write(recoveryInformation, 0, recoveryInformation.Length);
+				}
+
+				webRequest.GetResponse()
+					.Close();
+
 				return null;
 			});
-		}
+    	}
 
-		private void DirectPromoteTransaction(Guid fromTxId, Guid toTxId, string operationUrl)
+    	private byte[] DirectPromoteTransaction(Guid fromTxId, string operationUrl)
     	{
-			var httpJsonRequest = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/transaction/promote?fromTxId=" + fromTxId +"&toTxId" + toTxId, "POST", credentials);
-			httpJsonRequest.ReadResponseString();
+    		var webRequest = (HttpWebRequest)WebRequest.Create(operationUrl + "/transaction/promote?fromTxId=" + fromTxId);
+    		webRequest.Method = "POST";
+			webRequest.Credentials = credentials;
+    		webRequest.UseDefaultCredentials = true;
+
+			using(var response = webRequest.GetResponse())
+			{
+				using(var stream = response.GetResponseStream())
+				{
+					return stream.ReadData();
+				}
+			}
     	}
 
     	private void DirectRollback(Guid txId, string operationUrl)

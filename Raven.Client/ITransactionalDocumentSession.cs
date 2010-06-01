@@ -8,6 +8,7 @@ namespace Raven.Client
 
 		void Rollback(Guid txId);
 
-		void PromoteTransaction(Guid fromTxId, Guid toTxId);
+		byte[] PromoteTransaction(Guid fromTxId);
+		void StoreRecoveryInformation(Guid txId, byte[] recoveryInformation);
 	}
 }

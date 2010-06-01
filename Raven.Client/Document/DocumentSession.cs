@@ -12,7 +12,7 @@ using Raven.Database.Data;
 
 namespace Raven.Client.Document
 {
-	public class DocumentSession : InMemoryDocumentSessionOperations, IDocumentSession
+	public class DocumentSession : InMemoryDocumentSessionOperations, IDocumentSession, ITransactionalDocumentSession
 	{
 		private IDatabaseCommands DatabaseCommands
 		{
@@ -113,9 +113,15 @@ namespace Raven.Client.Document
 			ClearEnlistment();
 	    }
 
-		public override void PromoteTransaction(Guid fromTxId, Guid toTxId)
+		public override byte[] PromoteTransaction(Guid fromTxId)
 		{
-			documentStore.DatabaseCommands.PromoteTransaction(fromTxId, toTxId);
+			return documentStore.DatabaseCommands.PromoteTransaction(fromTxId);
+		}
+
+		public void StoreRecoveryInformation(Guid txId, byte[] recoveryInformation)
+		{
+			documentStore.DatabaseCommands.StoreRecoveryInformation(txId, recoveryInformation);
+		
 		}
 
 		public class DocumentMetadata

@@ -160,13 +160,46 @@ namespace Raven.Client.Tests.Document
                         using(var session2 = documentStore.OpenSession())
                             Assert.NotNull(session2.Load<Company>(company.Id));
 
-                        tx.Complete();
                     }
+
+					tx.Complete();
                 }
                 using (var session2 = documentStore.OpenSession())
                     Assert.Null(session2.Load<Company>(company.Id));
             }
         }
+
+		[Fact]
+		public void Can_promote_transactions()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				var company = new Company { Name = "Company Name" };
+
+				using (var tx = new TransactionScope())
+				{
+					var session = documentStore.OpenSession();
+					session.Store(company);
+					session.SaveChanges();
+
+					Assert.Equal(Guid.Empty, Transaction.Current.TransactionInformation.DistributedIdentifier);
+
+					using (var session3 = documentStore.OpenSession())
+					{
+						session3.Store(new Company{ Name = "Another company"});
+						session3.SaveChanges();// force a dtc promotion
+
+						Assert.NotEqual(Guid.Empty, Transaction.Current.TransactionInformation.DistributedIdentifier);
+					}
+
+
+					tx.Complete();
+				}
+				using (var session2 = documentStore.OpenSession())
+					Assert.NotNull(session2.Load<Company>(company.Id));
+			}
+		}
+
 
 		[Fact]
 		public void Will_use_identity_for_document_key()

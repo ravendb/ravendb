@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security;
 using System.Threading;
+using System.Transactions;
 using log4net;
 using Microsoft.Isam.Esent.Interop;
 using Newtonsoft.Json;
@@ -399,6 +400,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 							doc.Data.ToJObject(),
 							doc.Metadata.ToJObject(), null);
                 });
+				actions.DeleteAttachment("transactions/recoveryInformation/" + txId, null);
 				workContext.ShouldNotifyAboutWork();
             });
         }
@@ -717,6 +719,14 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 		public static void Restore(string backupLocation, string databaseLocation)
 		{
 			new RestoreOperation(backupLocation, databaseLocation).Execute();
+		}
+
+		public byte[] PromoteTransaction(Guid fromTxId)
+		{
+			var committableTransaction = new CommittableTransaction();
+			var transmitterPropagationToken = TransactionInterop.GetTransmitterPropagationToken(committableTransaction);
+			TransactionalStorage.Batch(actions => actions.ModifyTransactionId(fromTxId,committableTransaction.TransactionInformation.DistributedIdentifier));
+			return transmitterPropagationToken;
 		}
 	}
 }

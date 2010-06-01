@@ -89,6 +89,7 @@
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
+    <Reference Include="System.Transactions" />
     <Reference Include="System.Web" />
     <Reference Include="System.Xml.Linq">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
@@ -114,6 +115,7 @@
     <Compile Include="Commercial\WarningMessagesHolder.cs" />
     <Compile Include="Data\BackupRequest.cs" />
     <Compile Include="Exceptions\IndexDoesNotExists.cs" />
+    <Compile Include="Extensions\StreamExtension.cs" />
     <Compile Include="Indexing\GatherAllCollector.cs" />
     <Compile Include="Indexing\NumberUtil.cs" />
     <Compile Include="IStartupTask.cs" />
@@ -122,6 +124,7 @@
     <Compile Include="Plugins\Builtins\FilterRavenInternalDocumentsReadTrigger.cs" />
     <Compile Include="Plugins\AbstractIndexUpdateTrigger.cs" />
     <Compile Include="Plugins\AbstractReadTrigger.cs" />
+    <Compile Include="Plugins\Builtins\PendingTransactionRecovery.cs" />
     <Compile Include="Plugins\ReadOperation.cs" />
     <Compile Include="Plugins\ReadVetoResult.cs" />
     <Compile Include="Server\Abstractions\HttpContextAdapter.cs" />

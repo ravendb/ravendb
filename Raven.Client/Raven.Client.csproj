@@ -43,6 +43,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <PlatformTarget>x86</PlatformTarget>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -104,6 +105,7 @@
     <Compile Include="Document\HiLoKeyGenerator.cs" />
     <Compile Include="Document\IndexDefinition.cs" />
     <Compile Include="Document\MultiTypeHiLoKeyGenerator.cs" />
+    <Compile Include="Document\PromotableRavenClientEnlistment.cs" />
     <Compile Include="Document\RavenClientEnlistment.cs" />
     <Compile Include="Document\ShardedDocumentQuery.cs" />
     <Compile Include="EntityStored.cs" />

@@ -1,4 +1,5 @@
 using Raven.Database.Data;
+using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 
 namespace Raven.Database.Server.Responders

@@ -8,6 +8,7 @@ using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Exceptions;
+using Raven.Database.Extensions;
 using Raven.Database.Json;
 using Raven.Database.Server.Abstractions;
 
@@ -178,39 +179,6 @@ namespace Raven.Database.Server.Responders
 			var sw = new StreamWriter(context.Response.OutputStream);
 			sw.Write(str);
 			sw.Flush();
-		}
-
-		/// <summary>
-		/// 	Reads the entire request buffer to memory and
-		/// 	return it as a byte array.
-		/// </summary>
-		public static byte[] ReadData(this Stream steram)
-		{
-			var list = new List<byte[]>();
-			const int defaultBufferSize = 1024*16;
-			var buffer = new byte[defaultBufferSize];
-			var offset = 0;
-			int read;
-			while ((read = steram.Read(buffer, offset, buffer.Length - offset)) != 0)
-			{
-				offset += read;
-				if (offset == buffer.Length)
-				{
-					list.Add(buffer);
-					buffer = new byte[defaultBufferSize];
-					offset = 0;
-				}
-			}
-			var totalSize = list.Sum(x => x.Length) + offset;
-			var result = new byte[totalSize];
-			var resultOffset = 0;
-			foreach (var partial in list)
-			{
-				Buffer.BlockCopy(partial, 0, result, resultOffset, partial.Length);
-				resultOffset += partial.Length;
-			}
-			Buffer.BlockCopy(buffer, 0, result, resultOffset, offset);
-			return result;
 		}
 
 		public static int GetStart(this IHttpContext context)

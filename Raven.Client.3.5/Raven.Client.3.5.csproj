@@ -113,6 +113,9 @@
     <Compile Include="..\Raven.Client\Document\MultiTypeHiLoKeyGenerator.cs">
       <Link>Document\MultiTypeHiLoKeyGenerator.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client\Document\PromotableRavenClientEnlistment.cs">
+      <Link>Document\PromotableRavenClientEnlistment.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client\Document\RavenClientEnlistment.cs">
       <Link>Document\RavenClientEnlistment.cs</Link>
     </Compile>
@@ -253,6 +256,9 @@
     </Compile>
     <Compile Include="..\Raven.Database\Extensions\Reference.cs">
       <Link>Data\Reference.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Database\Extensions\StreamExtension.cs">
+      <Link>Extensions\StreamExtension.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Database\Indexing\FieldIndexing.cs">
       <Link>Data\FieldIndexing.cs</Link>

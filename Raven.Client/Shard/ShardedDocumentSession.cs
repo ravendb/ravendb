@@ -201,33 +201,6 @@ namespace Raven.Client.Shard
 			get { throw new NotSupportedException("You cannot ask a sharded session for its conventions, internal sharded session may each have diffeernt conventions"); }
 		}
 
-		public void Commit(Guid txId)
-		{
-			shardStrategy.ShardAccessStrategy.Apply(shardSessions, session =>
-			{
-				session.Commit(txId);
-				return new List<int>();
-			});
-		}
-
-		public void Rollback(Guid txId)
-		{
-			shardStrategy.ShardAccessStrategy.Apply(shardSessions, session =>
-			{
-				session.Rollback(txId);
-				return new List<int>();
-			});
-		}
-
-		public void PromoteTransaction(Guid fromTxId, Guid toTxId)
-		{
-			shardStrategy.ShardAccessStrategy.Apply(shardSessions, session =>
-			{
-				session.PromoteTransaction(fromTxId, toTxId);
-				return new List<int>();
-			});
-		}
-
 		public int MaxNumberOfRequestsPerSession
 	    {
 	        get { return shardSessions.First().MaxNumberOfRequestsPerSession; }

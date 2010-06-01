@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Transactions;
@@ -131,9 +130,14 @@ namespace Raven.Client.Client
 	        database.Rollback(txId);
 	    }
 
-		public void PromoteTransaction(Guid fromTxId, Guid toTxId)
+		public byte[] PromoteTransaction(Guid fromTxId)
 		{
-			database.TransactionalStorage.Batch(actions => actions.ModifyTransactionId(fromTxId, toTxId));
+			return database.PromoteTransaction(fromTxId);
+		}
+
+		public void StoreRecoveryInformation(Guid txId, byte[] recoveryInformation)
+		{
+			database.PutStatic("transactions/recoveryInformation/" + txId, null, recoveryInformation, new JObject());
 		}
 
 		public IDatabaseCommands With(ICredentials credentialsForSession)

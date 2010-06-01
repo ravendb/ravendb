@@ -1,4 +1,5 @@
 ﻿using System;
+using Newtonsoft.Json.Linq;
 using Raven.Database.Server.Abstractions;
 
 namespace Raven.Database.Server.Responders
@@ -18,9 +19,7 @@ namespace Raven.Database.Server.Responders
 		public override void Respond(IHttpContext context)
 		{
 			var fromTxId = new Guid(context.Request.QueryString["fromTxId"]);
-			var toTxId = new Guid(context.Request.QueryString["toTxId"]);
-			Database.TransactionalStorage.Batch(actions => actions.ModifyTransactionId(fromTxId, toTxId));
-			context.WriteJson(new { Promoted = true });
+			context.WriteData(Database.PromoteTransaction(fromTxId), new JObject(), Guid.NewGuid());
 		}
 	}
 }

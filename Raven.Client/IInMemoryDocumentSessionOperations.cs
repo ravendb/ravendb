@@ -4,7 +4,7 @@ using Raven.Client.Document;
 
 namespace Raven.Client
 {
-	public interface IInMemoryDocumentSessionOperations : ITransactionalDocumentSession, IDisposable
+	public interface IInMemoryDocumentSessionOperations : IDisposable
 	{
 		string StoreIdentifier { get; }
         

@@ -3,40 +3,38 @@ using System.Transactions;
 
 namespace Raven.Client.Document
 {
-    public class RavenClientEnlistment : IPromotableSinglePhaseNotification
+    public class RavenClientEnlistment : IEnlistmentNotification
     {
-		private readonly ITransactionalDocumentSession sessionImpl;
-        private Guid txId;
-    	private CommittableTransaction promotedTx;
+		private readonly ITransactionalDocumentSession session;
+        private readonly Guid txId;
 
-    	public RavenClientEnlistment(ITransactionalDocumentSession sessionImpl, Guid txId)
+    	public RavenClientEnlistment(ITransactionalDocumentSession session, Guid txId)
         {
-            this.sessionImpl = sessionImpl;
+            this.session = session;
             this.txId = txId;
-			if (this.txId == Guid.Empty)
-				this.txId = Guid.NewGuid();
         }
 
         public void Prepare(PreparingEnlistment preparingEnlistment)
         {
+        	session.StoreRecoveryInformation(txId, preparingEnlistment.RecoveryInformation());
             preparingEnlistment.Prepared();
         }
 
         public void Commit(Enlistment enlistment)
         {
-            sessionImpl.Commit(txId);
+            session.Commit(txId);
             enlistment.Done();
         }
 
         public void Rollback(Enlistment enlistment)
         {
-            sessionImpl.Rollback(txId);
+            session.Rollback(txId);
             enlistment.Done();
         }
 
         public void InDoubt(Enlistment enlistment)
         {
-            sessionImpl.Rollback(txId);
+            session.Rollback(txId);
             enlistment.Done();
         }
 
@@ -44,25 +42,10 @@ namespace Raven.Client.Document
         {
         }
 
-        public void SinglePhaseCommit(SinglePhaseEnlistment singlePhaseEnlistment)
-        {
-            sessionImpl.Commit(txId);
-            singlePhaseEnlistment.Committed();
-        }
-
         public void Rollback(SinglePhaseEnlistment singlePhaseEnlistment)
         {
-            sessionImpl.Rollback(txId);
+            session.Rollback(txId);
             singlePhaseEnlistment.Aborted();
         }
-
-    	public byte[] Promote()
-    	{
-    		promotedTx = new CommittableTransaction();
-    		var propagationToken = TransactionInterop.GetTransmitterPropagationToken(promotedTx);
-    		sessionImpl.PromoteTransaction(txId, promotedTx.TransactionInformation.DistributedIdentifier);
-    		txId = promotedTx.TransactionInformation.DistributedIdentifier;
-    		return propagationToken;
-    	}
     }
 }

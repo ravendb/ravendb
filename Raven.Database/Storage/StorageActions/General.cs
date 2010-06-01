@@ -152,6 +152,16 @@ namespace Raven.Database.Storage.StorageActions
 				}
 			});
 		}
+		
+		public IEnumerable<Guid> GetTransactionIds()
+		{
+			Api.MoveBeforeFirst(session, Transactions);
+			while(Api.TryMoveNext(session, Transactions))
+			{
+				var guid = Api.RetrieveColumnAsGuid(session, Transactions, tableColumnsCache.TransactionsColumns["tx_id"]);
+				yield return (Guid)guid;
+			}
+		}
 
 		public void CompleteTransaction(Guid txId, Action<DocumentInTransactionData> perDocumentModified)
 		{
