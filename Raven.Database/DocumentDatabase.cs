@@ -449,25 +449,27 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 			}
 			IndexDefinitionStorage.AddIndex(name, definition);
 			IndexStorage.CreateIndexImplementation(name, definition);
-			TransactionalStorage.Batch(actions =>
-			{
-				actions.AddIndex(name);
-				var firstAndLast = actions.FirstAndLastDocumentIds();
-				if (firstAndLast.Item1 != 0 && firstAndLast.Item2 != 0)
-				{
-					for (var i = firstAndLast.Item1; i <= firstAndLast.Item2; i += Configuration.IndexingBatchSize)
-					{
-						actions.AddTask(new IndexDocumentRangeTask
-						{
-							FromId = i,
-							ToId = Math.Min(i + Configuration.IndexingBatchSize, firstAndLast.Item2),
-							Index = name
-						});
-					}
-				}
-				workContext.ShouldNotifyAboutWork();
-			});
+			TransactionalStorage.Batch(actions => AddIndexAndEnqueueIndexingTasks(actions, name));
 			return name;
+		}
+
+		private void AddIndexAndEnqueueIndexingTasks(DocumentStorageActions actions, string indexName)
+		{
+			actions.AddIndex(indexName);
+			var firstAndLast = actions.FirstAndLastDocumentIds();
+			if (firstAndLast.Item1 != 0 && firstAndLast.Item2 != 0)
+			{
+				for (var i = firstAndLast.Item1; i <= firstAndLast.Item2; i += Configuration.IndexingBatchSize)
+				{
+					actions.AddTask(new IndexDocumentRangeTask
+					{
+						FromId = i,
+						ToId = Math.Min(i + Configuration.IndexingBatchSize, firstAndLast.Item2),
+						Index = indexName
+					});
+				}
+			}
+			workContext.ShouldNotifyAboutWork();
 		}
 
 		public QueryResult Query(string index, IndexQuery query)
@@ -751,6 +753,18 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 					actions.ModifyTransactionId(fromTxId, committableTransaction.TransactionInformation.DistributedIdentifier,
 					                            TransactionManager.DefaultTimeout));
 			return transmitterPropagationToken;
+		}
+
+		public void ResetIndex(string index)
+		{
+			var indexDefinition = IndexDefinitionStorage.GetIndexDefinition(index);
+			IndexStorage.DeleteIndex(index);
+			IndexStorage.CreateIndexImplementation(index, indexDefinition);
+			TransactionalStorage.Batch(actions =>
+			{
+				actions.DeleteIndex(index);
+				AddIndexAndEnqueueIndexingTasks(actions, index);
+			});
 		}
 	}
 }
