@@ -1,3 +1,4 @@
+using System;
 using System.Globalization;
 
 namespace Raven.Database.Indexing
@@ -16,17 +17,46 @@ namespace Raven.Database.Indexing
 
 		public static string NumberToString(decimal number)
 		{
-			return number.ToString(CultureInfo.InvariantCulture);
+			return "Mx" + number.ToString(CultureInfo.InvariantCulture);
 		}
 
 		public static string NumberToString(float number)
 		{
-			return number.ToString(CultureInfo.InvariantCulture);
+			return "Fx" + number.ToString(CultureInfo.InvariantCulture);
 		}
 
 		public static string NumberToString(double number)
 		{
-			return number.ToString(CultureInfo.InvariantCulture);
+			return "Dx" + number.ToString(CultureInfo.InvariantCulture);
+		}
+
+		public static object StringToNumber(string number)
+		{
+			if(number.Length <= 2)
+				throw new ArgumentException("String must be greater than 2 characters");
+			var num = number.Substring(2);
+			var prefix = number.Substring(0, 2);
+			switch (prefix)
+			{
+				case "0x":
+					switch (num.Length)
+					{
+						case 8:
+							return int.Parse(num, NumberStyles.HexNumber);
+						case 16:
+							return long.Parse(num, NumberStyles.HexNumber);
+					}
+					break;
+				case "Mx":
+					return decimal.Parse(num, CultureInfo.InvariantCulture);
+				case "Fx":
+					return float.Parse(num, CultureInfo.InvariantCulture);
+				case "Dx":
+					return double.Parse(num, CultureInfo.InvariantCulture);
+			}
+
+			throw new ArgumentException("Could not understand how to parse: " + number);
+
 		}
 	}
 }

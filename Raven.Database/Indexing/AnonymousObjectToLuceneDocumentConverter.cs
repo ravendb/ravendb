@@ -91,30 +91,30 @@ namespace Raven.Database.Indexing
 
 			if (value is int)
 			{
-				yield return new Field(name +"_Range", NumberUtil.NumberToString((int)value), indexDefinition.GetStorage(name, defaultStorage),
-							 indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
+				yield return new NumericField(name + "_Range", indexDefinition.GetStorage(name, defaultStorage), true)
+					.SetIntValue((int)value);
 
 			}
 			if (value is long)
 			{
-				yield return new Field(name + "_Range", NumberUtil.NumberToString((long)value), indexDefinition.GetStorage(name, defaultStorage),
-							 indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
+				yield return new NumericField(name + "_Range", indexDefinition.GetStorage(name, defaultStorage), true)
+					.SetLongValue((long) value);
 
 			}
 			if (value is decimal)
             {
-				yield return new Field(name + "_Range", NumberUtil.NumberToString((double)(decimal)value), indexDefinition.GetStorage(name, defaultStorage),
-                                 indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
+				yield return new NumericField(name + "_Range", indexDefinition.GetStorage(name, defaultStorage), true)
+					.SetDoubleValue((double)(decimal)value);
             }
 			if (value is float)
             {
-				yield return new Field(name + "_Range", NumberUtil.NumberToString((float)value), indexDefinition.GetStorage(name, defaultStorage),
-                                 indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
+            	yield return new NumericField(name + "_Range", indexDefinition.GetStorage(name, defaultStorage), true)
+            		.SetFloatValue((float) value);
             }
 			if (value is double)
             {
-				yield return new Field(name + "_Range", NumberUtil.NumberToString((double)value), indexDefinition.GetStorage(name, defaultStorage),
-                                 indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
+				yield return new NumericField(name + "_Range", indexDefinition.GetStorage(name, defaultStorage), true)
+					.SetDoubleValue((double)value);
             }
 		}
 
