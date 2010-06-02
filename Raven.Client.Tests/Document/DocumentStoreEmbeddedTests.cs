@@ -143,6 +143,36 @@ namespace Raven.Client.Tests.Document
 			}
 		}
 
+
+		[Fact]
+		public void Can_escape_special_characters()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				documentStore.DatabaseCommands.PutIndex("Companies/Name", new IndexDefinition<Company>
+				{
+					Map = companies => from c in companies
+					                   select new {c.Name}
+				});
+				var company = new Company { Name = "http://hibernatingrhinos.com" };
+				using (var session1 = documentStore.OpenSession())
+				{
+					session1.Store(company);
+					session1.SaveChanges();
+				}
+
+				using (var session2 = documentStore.OpenSession())
+				{
+					var companyFromRaven = session2.Query<Company>("Companies/Name")
+						.Customize(query => query.WaitForNonStaleResults())
+						.Where(x=>x.Name == company.Name)
+						.ToArray()
+						.First();
+					Assert.Equal(companyFromRaven.Id, company.Id);
+				}
+			}
+		}
+
 		[Fact]
 		public void Will_track_entities_from_query()
 		{

@@ -208,8 +208,8 @@ namespace Raven.Client.Linq
 				return NumberUtil.NumberToString((float)value);
 			if (value is DateTime)
 				return DateTools.DateToString((DateTime)value, DateTools.Resolution.MILLISECOND);
-    		
-			return value.ToString();
+
+    		return LuceneEscape(value.ToString());
     	}
 
 		private static string TransformToEqualValue(object value)
@@ -220,8 +220,41 @@ namespace Raven.Client.Linq
 			if (value is DateTime)
 				return DateTools.DateToString((DateTime)value, DateTools.Resolution.MILLISECOND);
 
-			return value.ToString();
+			return LuceneEscape(value.ToString());
 		}
+
+    	private static string LuceneEscape(string s)
+    	{
+    		var sb = new StringBuilder(s.Length);
+			foreach (var c in s)
+			{
+				switch (c)
+				{
+					case '&':
+					case '|':
+					case '?':
+					case '*':
+					case '~':
+					case '}':
+					case '{':
+					case '\"':
+					case ']':
+					case '[':
+					case '^':
+					case ':':
+					case ')':
+					case '(':
+					case '!':
+					case '-':
+					case '+':
+					case '\\':
+						sb.Append('\\');
+						break;
+				}
+				sb.Append(c);
+			}
+    		return sb.ToString();
+    	}
 
     	private void VisitLessThan(BinaryExpression expression)
         {
