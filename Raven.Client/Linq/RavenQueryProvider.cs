@@ -419,7 +419,11 @@ namespace Raven.Client.Linq
 			}
 			if (expression.NodeType == ExpressionType.Lambda)
 				return ((LambdaExpression) expression).Compile().DynamicInvoke();
-        	throw new InvalidOperationException("Can't extract value from expression of type: " + expression.NodeType);
+            if (expression.NodeType == ExpressionType.Call)
+                return Expression.Lambda((MethodCallExpression)expression).Compile().DynamicInvoke();
+            if (expression.NodeType == ExpressionType.Convert)
+                return Expression.Lambda(((UnaryExpression)expression).Operand).Compile().DynamicInvoke();
+            throw new InvalidOperationException("Can't extract value from expression of type: " + expression.NodeType);
         }
 
 		private static object GetMemberValue(MemberExpression memberExpression)

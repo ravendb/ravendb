@@ -150,7 +150,25 @@ namespace Raven.Client.Tests.Linq
 			Assert.Equal("Age_Range:[0x00000003 TO 0x7FFFFFFF] ", q.ToString());
 		}
 
+        [Fact]
+        public void CanUnderstandMethodCalls()
+        {
+            var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null, null));
+            var q = from user in indexedUsers
+                    where user.Birthday >= DateTime.Parse("2010-05-15")
+                    select new { user.Name, user.Age };
+            Assert.Equal("<Name, Age>: Birthday:{20100515000000000 TO NULL} ", q.ToString());
+        }
 
+        [Fact]
+        public void CanUnderstandConvertExpressions()
+        {
+            var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null, null));
+            var q = from user in indexedUsers
+                    where user.Age == Convert.ToInt16("3")
+                    select user;
+            Assert.Equal("Age:3 ", q.ToString());
+        }
 
         public class IndexedUser
         {
