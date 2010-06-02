@@ -32,6 +32,8 @@ namespace Raven.Database.Indexing
 
 		public static object StringToNumber(string number)
 		{
+			if ("NULL".Equals(number, StringComparison.InvariantCultureIgnoreCase))
+				return null;
 			if(number.Length <= 2)
 				throw new ArgumentException("String must be greater than 2 characters");
 			var num = number.Substring(2);
