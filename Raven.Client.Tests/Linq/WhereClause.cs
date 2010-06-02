@@ -157,7 +157,7 @@ namespace Raven.Client.Tests.Linq
             var q = from user in indexedUsers
                     where user.Birthday >= DateTime.Parse("2010-05-15")
                     select new { user.Name, user.Age };
-            Assert.Equal("<Name, Age>: Birthday:{20100515000000000 TO NULL} ", q.ToString());
+			Assert.Equal("<Name, Age>: Birthday:{20100515000000000 TO 99991231235959999} ", q.ToString());
         }
 
         [Fact]
