@@ -104,6 +104,7 @@
     <Compile Include="Linq\UsingRavenQueryProvider.cs" />
     <Compile Include="Linq\LinqTransformerCompilationTests.cs" />
     <Compile Include="Linq\PerformingQueries.cs" />
+    <Compile Include="Linq\UsingWhereConditions.cs" />
     <Compile Include="Patching\ArrayPatching.cs">
       <SubType>Code</SubType>
     </Compile>
