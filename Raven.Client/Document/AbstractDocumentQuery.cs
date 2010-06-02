@@ -62,6 +62,7 @@ namespace Raven.Client.Document
 					Converters =
 						{
 							new JsonEnumConverter(),
+						    new JsonLuceneDateTimeConverter()
 						}
 				}.Deserialize(new JTokenReader(result), typeof(T));
 			}

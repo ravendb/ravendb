@@ -137,6 +137,48 @@ namespace Raven.Client.Tests.Document
             }
         }
 
+		[Fact]
+		public void Can_read_projected_dates()
+		{
+			using (var server = GetNewServer(port, path))
+			{
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+				documentStore.Initialize();
+
+
+				documentStore.DatabaseCommands.PutIndex("my_index",
+													new IndexDefinition
+													{
+														Map = "from doc in docs select new { doc.Date}",
+														Stores = {{"Date", FieldStorage.Yes}}
+													});
+
+				using (var s = documentStore.OpenSession())
+				{
+					s.Store(new
+					{
+						Date = new DateTime(2000, 1, 1)
+					});
+					s.SaveChanges();
+				}
+
+				using (var s = documentStore.OpenSession())
+				{
+					var query = s.LuceneQuery<object>("my_index")
+						.SelectFields<DateHolder>("Date")
+						.WaitForNonStaleResults();
+					var dateHolder = query.ToArray().First();
+
+					Assert.Equal(new DateTime(2000, 1, 1), dateHolder.Date);
+				}
+			}
+		}
+
+		public class DateHolder
+		{
+			public DateTime Date { get; set; }
+		}
+
         [Fact]
 		public void Can_query_using_special_characters()
 		{

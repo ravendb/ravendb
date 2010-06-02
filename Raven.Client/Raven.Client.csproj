@@ -90,6 +90,7 @@
     <Compile Include="Client\Async\AsyncServerClient.cs" />
     <Compile Include="Client\Async\IAsyncDatabaseCommands.cs" />
     <Compile Include="Client\JsonExtensions.cs" />
+    <Compile Include="Client\JsonLuceneDateTimeConverter.cs" />
     <Compile Include="Client\WebRequestEventArgs.cs" />
     <Compile Include="Client\Async\WrapperAsyncData.cs" />
     <Compile Include="Document\AbstractDocumentQuery.cs" />

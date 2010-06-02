@@ -74,6 +74,9 @@
     <Compile Include="..\Raven.Client\Client\JsonExtensions.cs">
       <Link>Client\JsonExtensions.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client\Client\JsonLuceneDateTimeConverter.cs">
+      <Link>Client\JsonLuceneDateTimeConverter.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client\Client\ServerClient.cs">
       <Link>Client\ServerClient.cs</Link>
     </Compile>
