@@ -279,17 +279,27 @@ namespace Raven.Database.Linq
 		public AbstractViewGenerator GenerateInstance()
 		{
 			TransformQueryToClass();
-		    try
-		    {
-                File.Delete(Path.GetTempFileName());
-		    }
-		    catch (Exception)
-		    {
-                throw new InvalidOperationException(@"Raven could not write to the temp directory.
+			string tempFileName = null;
+			try
+			{
+				try
+				{
+					tempFileName = Path.GetTempFileName();
+					File.WriteAllText(tempFileName, CompiledQueryText);
+				}
+				catch (Exception)
+				{
+					throw new InvalidOperationException(@"Raven could not write to the temp directory.
 This is usually the result of security settings when running in IIS.
 Raven requiers access to the temp directory in order to compile indexes.");
-		    }
-			GeneratedType = QueryParsingUtils.Compile(CSharpSafeName, CompiledQueryText);
+				}
+				GeneratedType = QueryParsingUtils.Compile(tempFileName, CSharpSafeName, CompiledQueryText);
+			}
+			finally
+			{
+				if (tempFileName != null)
+					File.Delete(tempFileName);
+			}
 			return (AbstractViewGenerator) Activator.CreateInstance(GeneratedType);
 		}
 	}

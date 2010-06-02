@@ -118,10 +118,10 @@ namespace Raven.Database.Linq
 		}
 
 
-		public static Type Compile(string name, string queryText)
+		public static Type Compile(string fileName, string name, string queryText)
 		{
 			var provider = new CSharpCodeProvider(new Dictionary<string, string> {{"CompilerVersion", "v4.0"}});
-			var results = provider.CompileAssemblyFromSource(new CompilerParameters
+			var results = provider.CompileAssemblyFromFile(new CompilerParameters
 			{
 				GenerateExecutable = false,
 				GenerateInMemory = false,
@@ -133,7 +133,7 @@ namespace Raven.Database.Linq
 						typeof (Enumerable).Assembly.Location,
 						typeof (Binder).Assembly.Location,
 					},
-			}, queryText);
+			}, fileName);
 
 			if (results.Errors.HasErrors)
 			{
