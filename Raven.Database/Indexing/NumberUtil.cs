@@ -42,17 +42,22 @@ namespace Raven.Database.Indexing
 					switch (num.Length)
 					{
 						case 8:
-							return int.Parse(num, NumberStyles.HexNumber);
+							var i = int.Parse(num, NumberStyles.HexNumber);
+							return i == Int32.MaxValue || i == Int32.MinValue? null : (object)i;
 						case 16:
-							return long.Parse(num, NumberStyles.HexNumber);
+							var l = long.Parse(num, NumberStyles.HexNumber);
+							return l == Int64.MaxValue || l == Int64.MinValue ? null : (object) l;
 					}
 					break;
 				case "Mx":
-					return decimal.Parse(num, CultureInfo.InvariantCulture);
+					var dec = decimal.Parse(num, CultureInfo.InvariantCulture);
+					return dec == Decimal.MaxValue || dec == Decimal.MinValue ? null : (object) dec;
 				case "Fx":
-					return float.Parse(num, CultureInfo.InvariantCulture);
+					var f = float.Parse(num, CultureInfo.InvariantCulture);
+					return f == Single.MaxValue || f == Double.MinValue ? null : (object) f;
 				case "Dx":
-					return double.Parse(num, CultureInfo.InvariantCulture);
+					var d = double.Parse(num, CultureInfo.InvariantCulture);
+					return d == Double.MaxValue || d == Double.MinValue ? null : (object) d;
 			}
 
 			throw new ArgumentException("Could not understand how to parse: " + number);

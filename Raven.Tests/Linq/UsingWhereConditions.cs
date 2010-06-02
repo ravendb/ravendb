@@ -12,7 +12,7 @@ using System.Threading;
 using System.Diagnostics;
 
 /*
- * Different test using where clasule
+ * Different test using where clause
  */
 namespace Raven.Tests.Linq
 {
@@ -26,10 +26,9 @@ namespace Raven.Tests.Linq
 		public DateTime Date { get; set; }
 		public string CommitMessage { get; set; }
     }
+
 	public class UsingWhereConditions
     {
-
-
         [Fact]
         public void Can_Use_Where()
         {

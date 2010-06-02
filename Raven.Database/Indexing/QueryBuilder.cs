@@ -15,6 +15,9 @@ namespace Raven.Database.Indexing
 		static readonly Regex rangeQuery = new Regex(@"([+-]?)([\w\d_]+_Range?):(({|\[)[ \w\d]+?(}|\]))", RegexOptions.Compiled);
 		static readonly Regex rangeValue = new Regex(@"({|\[) \s* ([\w\d]x[\w\d]+) \s* TO  \s* ([\w\d]x[\w\d]+) \s* (}|\])", RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
 
+		static readonly Regex hangingConditionAtStart = new Regex(@"^ \s* (AND|OR)", RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
+		static readonly Regex hangingConditionAtEnd = new Regex(@"(AND|OR) \s* $", RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
+
 		public static Query BuildQuery(string query)
 		{
 			var untokenizedMatches = untokenizedQuery.Matches(query);
@@ -26,10 +29,13 @@ namespace Raven.Database.Indexing
                     return new QueryParser(Version.LUCENE_29, "", standardAnalyzer).Parse(query);
                 var sb = new StringBuilder(query);
                 var booleanQuery = new BooleanQuery();
-                AddUntokenizedTerms(untokenizedMatches, booleanQuery, sb);
-		    	AddRangeTerms(rangeMatches, booleanQuery, sb);
-                var remaining = sb.ToString().Trim();
-                if (remaining.Length > 0)
+                AddUntokenizedTerms(untokenizedMatches, booleanQuery, sb, query);
+		    	AddRangeTerms(rangeMatches, booleanQuery, sb, query);
+                var remaining = sb.ToString();
+		    	remaining = hangingConditionAtStart.Replace(remaining, "");
+		    	remaining = hangingConditionAtEnd.Replace(remaining, "");
+				remaining = remaining.Trim();
+		    	if (remaining.Length > 0)
                 {
                     booleanQuery.Add(new QueryParser(Version.LUCENE_29, "", standardAnalyzer).Parse(remaining), BooleanClause.Occur.SHOULD);
                 }
@@ -41,7 +47,7 @@ namespace Raven.Database.Indexing
 		    }
 		}
 
-		private static void AddRangeTerms(MatchCollection rangeMatches, BooleanQuery booleanQuery, StringBuilder sb)
+		private static void AddRangeTerms(MatchCollection rangeMatches, BooleanQuery booleanQuery, StringBuilder sb, string query)
 		{
 			foreach (Match match in rangeMatches)
 			{
@@ -57,37 +63,37 @@ namespace Raven.Database.Indexing
 
 				NumericRangeQuery range = null;
 
-				if (from is int)
-					range = NumericRangeQuery.NewIntRange(fieldName, (int) from, (int) to, inclusiveRange, inclusiveRange);
+				if (from is int || to is int)
+					range = NumericRangeQuery.NewIntRange(fieldName, (int?) from, (int?) to, inclusiveRange, inclusiveRange);
 
-				if (from is double)
-					range = NumericRangeQuery.NewIntRange(fieldName, (double)from, (double)to, inclusiveRange, inclusiveRange);
+				if (from is double || to is double)
+					range = NumericRangeQuery.NewIntRange(fieldName, (double?)from, (double?)to, inclusiveRange, inclusiveRange);
 				
-				if (from is float)
-					range = NumericRangeQuery.NewIntRange(fieldName, (float)from, (float)to, inclusiveRange, inclusiveRange);
+				if (from is float || to is float)
+					range = NumericRangeQuery.NewIntRange(fieldName, (float?)from, (float?)to, inclusiveRange, inclusiveRange);
 				
-				if (from is decimal)
-					range = NumericRangeQuery.NewIntRange(fieldName, (double)(decimal)from, (double)(decimal)to, inclusiveRange, inclusiveRange);
+				if (from is decimal || to is decimal)
+					range = NumericRangeQuery.NewIntRange(fieldName, (double?)(decimal?)from, (double?)(decimal?)to, inclusiveRange, inclusiveRange);
 
 				if(range == null)
 					throw new InvalidOperationException("Could not understand how to parse: " + match.Value);
 
-				booleanQuery.Add(range, GetOccur(match));
+				booleanQuery.Add(range, GetOccur(query, match));
 
 				sb.Replace(match.Value, "");
 			}
 		}
 
-		private static void AddUntokenizedTerms(MatchCollection untokenizedMatches, BooleanQuery booleanQuery, StringBuilder sb)
+		private static void AddUntokenizedTerms(MatchCollection untokenizedMatches, BooleanQuery booleanQuery, StringBuilder sb, string query)
 		{
 			foreach (Match match in untokenizedMatches)
 			{
-				booleanQuery.Add(new TermQuery(new Term(match.Groups[2].Value, match.Groups[3].Value)), GetOccur(match));
+				booleanQuery.Add(new TermQuery(new Term(match.Groups[2].Value, match.Groups[3].Value)), GetOccur(query, match));
 				sb.Replace(match.Value, "");
 			}
 		}
 
-		private static BooleanClause.Occur GetOccur(Match match)
+		private static BooleanClause.Occur GetOccur(string query, Match match)
 		{
 			BooleanClause.Occur occur;
 			switch (match.Groups[1].Value)
@@ -99,7 +105,17 @@ namespace Raven.Database.Indexing
 					occur = BooleanClause.Occur.MUST_NOT;
 					break;
 				default:
-					occur = BooleanClause.Occur.SHOULD;
+					var followedByAnd = query.Substring(match.Index + match.Length).TrimStart().StartsWith("AND",StringComparison.InvariantCultureIgnoreCase);
+					var prefixedByAnd = query.Substring(0, match.Index).TrimEnd().EndsWith("AND", StringComparison.InvariantCultureIgnoreCase);
+					var prefixedByNot = query.Substring(0, match.Index).TrimEnd().EndsWith("NOT", StringComparison.InvariantCultureIgnoreCase);
+
+					if(followedByAnd || prefixedByAnd)
+						occur = BooleanClause.Occur.MUST;
+					else if (prefixedByNot)
+						occur = BooleanClause.Occur.MUST_NOT;
+					else
+						occur = BooleanClause.Occur.SHOULD;
+
 					break;
 			}
 			return occur;
