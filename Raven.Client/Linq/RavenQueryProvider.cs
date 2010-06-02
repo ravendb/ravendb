@@ -53,7 +53,8 @@ namespace Raven.Client.Linq
 
         public object Execute(Expression expression)
         {
-            ProcessExpression(expression);
+        	QueryText.Length = 0;
+			ProcessExpression(expression);
         	luceneQuery = session.LuceneQuery<T>(indexName);
 
             var documentQuery = luceneQuery.Where(QueryText.ToString());
