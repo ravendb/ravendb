@@ -18,13 +18,18 @@ namespace Raven.Tests.Linq
         public string Id { get; set; }
         public string Name { get; set; }
         public int Age { get; set; }
+
+        public User()
+        {
+            Name = String.Empty;
+            Age = default(int);            
+        }        
     }
     public class UsingRavenQueryProvider
     {
         [Fact]
         public void Can_perform_Skip_Take_Query()
         {
-
             //When running in the XUnit GUI strange things happen is we just create a path relative to 
             //the .exe itself, so make our folder in the System temp folder instead ("<user>\AppData\Local\Temp")
             string directoryName =  Path.Combine(Path.GetTempPath(), "ravendb.RavenQueryProvider");
@@ -81,6 +86,106 @@ namespace Raven.Tests.Linq
             }            
         }
 
+        [Fact]
+        public void Can_perform_First_and_FirstOrDefault_Query()
+        {
+            //When running in the XUnit GUI strange things happen is we just create a path relative to 
+            //the .exe itself, so make our folder in the System temp folder instead ("<user>\AppData\Local\Temp")
+            string directoryName =  Path.Combine(Path.GetTempPath(), "ravendb.RavenQueryProvider");
+            if (Directory.Exists(directoryName))
+            {
+                Directory.Delete(directoryName, true);
+            }
+
+            using (var db = new DocumentStore() { DataDirectory = directoryName })
+            {
+                db.Initialize();
+
+                string indexName = "UserIndex";
+                using (var session = db.OpenSession())
+                {
+                    AddData(session);
+
+                    db.DatabaseCommands.DeleteIndex(indexName);
+                    var result = db.DatabaseCommands.PutIndex<User, User>(indexName,
+                            new IndexDefinition<User, User>()
+                            {
+                                Map = docs => from doc in docs
+                                              select new { doc.Name, doc.Age },
+                            }, true);
+
+                    WaitForQueryToComplete(session, indexName);
+
+                    var firstItem = session.Query<User>(indexName)
+                                            .First();
+                    Assert.Equal(firstUser, firstItem);
+
+                    //This should pull out the 1st parson ages 60, i.e. "Bob"
+                    var firstAgeItem = session.Query<User>(indexName)
+                                            .First(x => x.Age == 60);
+                    Assert.Equal("Bob", firstAgeItem.Name);
+
+                    //No-one is aged 15, so we should get a default item back, i.e. Name = "" and Age = 0
+                    var firstDefaultItem = session.Query<User>(indexName)
+                                            .FirstOrDefault(x => x.Age == 15);
+                    Assert.Equal(String.Empty, firstDefaultItem.Name);
+                    Assert.Equal(0, firstDefaultItem.Age);
+                }
+            }
+        }
+
+        [Fact]
+        public void Can_perform_Single_and_SingleOrDefault_Query()
+        {
+            //When running in the XUnit GUI strange things happen is we just create a path relative to 
+            //the .exe itself, so make our folder in the System temp folder instead ("<user>\AppData\Local\Temp")
+            string directoryName = Path.Combine(Path.GetTempPath(), "ravendb.RavenQueryProvider");
+            if (Directory.Exists(directoryName))
+            {
+                Directory.Delete(directoryName, true);
+            }
+
+            using (var db = new DocumentStore() { DataDirectory = directoryName })
+            {
+                db.Initialize();
+
+                string indexName = "UserIndex";
+                using (var session = db.OpenSession())
+                {
+                    AddData(session);
+
+                    db.DatabaseCommands.DeleteIndex(indexName);
+                    var result = db.DatabaseCommands.PutIndex<User, User>(indexName,
+                            new IndexDefinition<User, User>()
+                            {
+                                Map = docs => from doc in docs
+                                              select new { doc.Name, doc.Age },
+                            }, true);
+
+                    WaitForQueryToComplete(session, indexName);
+
+                    var singleItem = session.Query<User>(indexName)
+                                            .Single(x => x.Name == "James");
+                    Assert.Equal(25, singleItem.Age);
+                    Assert.Equal("James", singleItem.Name);   
+
+                    //A default query should return for results, so Single() should throw
+                    Assert.Throws(typeof(InvalidOperationException), () => session.Query<User>(indexName).Single());
+                    //A query of age = 30 should return for 2 results, so Single() should throw
+                    Assert.Throws(typeof(InvalidOperationException), () => session.Query<User>(indexName).Single(x => x.Age == 30));
+
+                    //A query of age = 30 should return for 2 results, so SingleOrDefault() should also throw
+                    Assert.Throws(typeof(InvalidOperationException), () => session.Query<User>(indexName).SingleOrDefault(x => x.Age == 30));
+
+                    //A query of age = 75 should return for NO results, so SingleOrDefault() should return a default value
+                    var singleOrDefaultItem = session.Query<User>(indexName)
+                                            .SingleOrDefault(x => x.Age == 75);
+                    Assert.Equal(0, singleOrDefaultItem.Age);
+                    Assert.Equal("", singleOrDefaultItem.Name);  
+                }
+            }
+        }
+
         private static void WaitForQueryToComplete(IDocumentSession session, string indexName)
         {            
             QueryResult results;
@@ -97,7 +202,7 @@ namespace Raven.Tests.Linq
         }
 
         User firstUser = new User { Name = "Matt", Age = 30 };
-        User lastUser = new User { Name = "Matt", Age = 30 };
+        User lastUser = new User { Name = "Alan", Age = 30 };
 
         private void AddData(IDocumentSession documentSession)
         {

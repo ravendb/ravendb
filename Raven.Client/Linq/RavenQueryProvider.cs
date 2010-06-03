@@ -9,6 +9,15 @@ using Raven.Database.Indexing;
 
 namespace Raven.Client.Linq
 {
+    enum SpecialQueryType
+    {
+        First,
+        FirstOrDefault,
+        Single,
+        SingleOrDefault,
+        None
+    }
+
     public class RavenQueryProvider<T> : IRavenQueryProvider
     {
         private readonly IDocumentSession session;
@@ -50,9 +59,8 @@ namespace Raven.Client.Linq
 
         private int? skipValue = null;
         private int? takeValue = null;
-        
-        private bool firstQuery = false;
-        private bool singleQuery = false;
+
+        private SpecialQueryType queryType = SpecialQueryType.None;
 
         public object Execute(Expression expression)
         {
@@ -78,20 +86,66 @@ namespace Raven.Client.Linq
 
             //We've already specified that the Lucense query should only return 1 result, so we can do the First()/Single()
             //error handling and conversion on the client using the standard IEnumerable<T> extension methods
-            if (firstQuery)
+            switch (queryType)
             {
-                return documentQuery.First(); //use the First() method on the IEnumerable to do the work for us
+                case SpecialQueryType.First:
+                {
+                    return documentQuery.First(); //use the First() method on the IEnumerable to do the work for us                    
+                }
+                case SpecialQueryType.FirstOrDefault:
+                {
+                    //Standard FirstOrDefault doesn't handle creating a default value correctly, it does null for reference types
+                    if (documentQuery.QueryResult.TotalResults < 1)
+                    {
+                        return CreateDefaultValue();
+                    }
+                    else
+                    {
+                        return documentQuery.FirstOrDefault(); //use the First() method on the IEnumerable to do the work for us                    
+                    }
+                }
+                case SpecialQueryType.Single:
+                {
+                    if (documentQuery.QueryResult.TotalResults > 1)
+                        throw new InvalidOperationException("The input sequence contains more than one element.");
+                    return documentQuery.Single();
+                }
+                case SpecialQueryType.SingleOrDefault:
+                {
+                    if (documentQuery.QueryResult.TotalResults > 1)
+                        throw new InvalidOperationException("The input sequence contains more than one element.");
+                    else if (documentQuery.QueryResult.TotalResults < 1)                    
+                        return CreateDefaultValue();                    
+                    else
+                        return documentQuery.SingleOrDefault(); //use the SingleOrDefault() method on the IEnumerable to do the work for us                                                                              
+                }
+                case SpecialQueryType.None:
+                default:
+                    return documentQuery;                    
             }
-            else if (singleQuery)
+        }
+
+        private static object HandleSingleErrorCases(IDocumentQuery<T> documentQuery)
+        {
+            //special case, if the total possible results doess not equal 1 then throw, the built-in Single() method can't handle this for us
+            if (documentQuery.QueryResult.TotalResults == 0)
+                throw new InvalidOperationException("The input sequence is empty.");
+            else if (documentQuery.QueryResult.TotalResults > 1)
+                throw new InvalidOperationException("The input sequence contains more than one element.");
+            return documentQuery.Single(); //use the Single() method on the IEnumerable to do the work for us                    
+        }
+        
+        private T CreateDefaultValue()
+        {
+            if (typeof(T).IsValueType || typeof(T) == typeof(String))
             {
-                //special case, if the total possible results is greater that 1 the throw, the built-in Single() method can't handle this for us
-                if (documentQuery.QueryResult.TotalResults > 1)
-                    throw new InvalidOperationException("More than one element satisfies the condition in predicate.");
-                return documentQuery.Single(); //use the Single() method on the IEnumerable to do the work for us
+                return default(T);
             }
-            else // A query that isn't First() or Single()
+            else
             {
-                return documentQuery;
+                //This calls the paramterless ctor, so for fields in a class to have default values (not null)
+                //the parameterless ctor needs to set them.
+                return Activator.CreateInstance<T>();
             }
         }
 
@@ -322,7 +376,6 @@ namespace Raven.Client.Linq
     		return ((MemberExpression)expression).Member.Name;
     	}
 
-
     	private void VisitMethodCall(MethodCallExpression expression)
         {
             if ((expression.Method.DeclaringType == typeof(Queryable)) &&
@@ -349,16 +402,19 @@ namespace Raven.Client.Linq
                 VisitTake(((ConstantExpression)expression.Arguments[1]));
             }
             else if ((expression.Method.DeclaringType == typeof(Queryable)) &&
-                (expression.Method.Name == "First"))
+                (expression.Method.Name == "First" || expression.Method.Name == "FirstOrDefault"))
             {
                 VisitExpression(expression.Arguments[0]);
                 if (expression.Arguments.Count == 2)                
                     VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);                
                 
-                VisitFirst();               
+                if (expression.Method.Name == "First")
+                    VisitFirst();               
+                else if (expression.Method.Name == "FirstOrDefault")
+                    VisitFirstOrDefault();
             }
             else if ((expression.Method.DeclaringType == typeof(Queryable)) &&
-                (expression.Method.Name == "Single"))
+                (expression.Method.Name == "Single" || expression.Method.Name == "SingleOrDefault"))
             {
                 VisitExpression(expression.Arguments[0]);
                 if (expression.Arguments.Count == 2)
@@ -366,39 +422,17 @@ namespace Raven.Client.Linq
                     VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
                 }
                 
-                VisitSingle();                
+                if (expression.Method.Name == "Single")
+                    VisitSingle();                
+                else if (expression.Method.Name == "SingleOrDefault")
+                    VisitSingleOrDefault();
             }
-            else if ((expression.Method.DeclaringType == typeof(Queryable)) &&
-                    (expression.Method.Name == "OrderBy"))
-            {
-                VisitExpression(expression.Arguments[0]);
-                VisitOrderBy(((UnaryExpression)expression.Arguments[1]).Operand, true);
-            }
-            else if ((expression.Method.DeclaringType == typeof(Queryable)) &&
-                (expression.Method.Name == "OrderByDescending"))
-            {
-                VisitExpression(expression.Arguments[0]);
-                VisitOrderBy(((UnaryExpression)expression.Arguments[1]).Operand, false);
-            }   
+            
             else
             {
                 throw new NotSupportedException("Method not supported: " + expression.Method.Name);
             }
-        }
-
-        private void VisitSingle()
-        {
-            skipValue = 0;
-            takeValue = 1;
-            singleQuery = true;
-        }
-
-        private void VisitFirst()
-        {
-            skipValue = 0;
-            takeValue = 1;
-            firstQuery = true;
-        }            
+        }       
 
         private void VisitSelect(Expression operand)
         {
@@ -417,6 +451,48 @@ namespace Raven.Client.Linq
                     throw new NotSupportedException("Node not supported: " + body.NodeType);
 
             }
+        }      
+
+        private void VisitSkip(ConstantExpression constantExpression)
+        {
+            //Don't have to worry about the cast failing, the Skip() extension method only takes an int
+            skipValue = (int)constantExpression.Value;
+        }
+
+        private void VisitTake(ConstantExpression constantExpression)
+        {
+            //Don't have to worry about the cast failing, the Take() extension method only takes an int
+            takeValue = (int)constantExpression.Value;
+        }
+
+        private void VisitSingle()
+        {
+            TakeJustOneResult();            
+            queryType = SpecialQueryType.Single;
+        }
+        
+        private void VisitSingleOrDefault()
+        {
+            TakeJustOneResult();
+            queryType = SpecialQueryType.SingleOrDefault;
+        }
+
+        private void VisitFirst()
+        {
+            TakeJustOneResult();
+            queryType = SpecialQueryType.First;
+        }
+
+        private void VisitFirstOrDefault()
+        {
+            TakeJustOneResult();
+            queryType = SpecialQueryType.FirstOrDefault;
+        }
+
+        private void TakeJustOneResult()
+        {
+            skipValue = 0;
+            takeValue = 1;
         }
 
         IQueryable<S> IQueryProvider.CreateQuery<S>(Expression expression)
