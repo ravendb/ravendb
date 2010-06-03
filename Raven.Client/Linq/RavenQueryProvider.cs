@@ -9,17 +9,17 @@ using Raven.Database.Indexing;
 
 namespace Raven.Client.Linq
 {
-    enum SpecialQueryType
+	public class RavenQueryProvider<T> : IRavenQueryProvider
     {
-        First,
-        FirstOrDefault,
-        Single,
-        SingleOrDefault,
-        None
-    }
+		private enum SpecialQueryType
+		{
+			First,
+			FirstOrDefault,
+			Single,
+			SingleOrDefault,
+			None
+		} 
 
-    public class RavenQueryProvider<T> : IRavenQueryProvider
-    {
         private readonly IDocumentSession session;
         private readonly string indexName;
 
@@ -57,8 +57,8 @@ namespace Raven.Client.Linq
         public StringBuilder QueryText { get; set; }
         public List<string> FieldsToFetch { get; set; }
 
-        private int? skipValue = null;
-        private int? takeValue = null;
+        private int? skipValue;
+        private int? takeValue;
 
         private SpecialQueryType queryType = SpecialQueryType.None;
 
@@ -84,69 +84,27 @@ namespace Raven.Client.Linq
 			if(customizeQuery != null)
 				customizeQuery(documentQuery);
 
-            //We've already specified that the Lucense query should only return 1 result, so we can do the First()/Single()
-            //error handling and conversion on the client using the standard IEnumerable<T> extension methods
-            switch (queryType)
-            {
-                case SpecialQueryType.First:
-                {
-                    return documentQuery.First(); //use the First() method on the IEnumerable to do the work for us                    
-                }
-                case SpecialQueryType.FirstOrDefault:
-                {
-                    //Standard FirstOrDefault doesn't handle creating a default value correctly, it does null for reference types
-                    if (documentQuery.QueryResult.TotalResults < 1)
-                    {
-                        return CreateDefaultValue();
-                    }
-                    else
-                    {
-                        return documentQuery.FirstOrDefault(); //use the First() method on the IEnumerable to do the work for us                    
-                    }
-                }
-                case SpecialQueryType.Single:
-                {
-                    if (documentQuery.QueryResult.TotalResults > 1)
-                        throw new InvalidOperationException("The input sequence contains more than one element.");
-                    return documentQuery.Single();
-                }
-                case SpecialQueryType.SingleOrDefault:
-                {
-                    if (documentQuery.QueryResult.TotalResults > 1)
-                        throw new InvalidOperationException("The input sequence contains more than one element.");
-                    else if (documentQuery.QueryResult.TotalResults < 1)                    
-                        return CreateDefaultValue();                    
-                    else
-                        return documentQuery.SingleOrDefault(); //use the SingleOrDefault() method on the IEnumerable to do the work for us                                                                              
-                }
-                case SpecialQueryType.None:
-                default:
-                    return documentQuery;                    
-            }
-        }
-
-        private static object HandleSingleErrorCases(IDocumentQuery<T> documentQuery)
-        {
-            //special case, if the total possible results doess not equal 1 then throw, the built-in Single() method can't handle this for us
-            if (documentQuery.QueryResult.TotalResults == 0)
-                throw new InvalidOperationException("The input sequence is empty.");
-            else if (documentQuery.QueryResult.TotalResults > 1)
-                throw new InvalidOperationException("The input sequence contains more than one element.");
-            return documentQuery.Single(); //use the Single() method on the IEnumerable to do the work for us                    
-        }
-        
-        private T CreateDefaultValue()
-        {
-            if (typeof(T).IsValueType || typeof(T) == typeof(String))
-            {
-                return default(T);
-            }
-            else
-            {
-                //This calls the paramterless ctor, so for fields in a class to have default values (not null)
-                //the parameterless ctor needs to set them.
-                return Activator.CreateInstance<T>();
-            }
+			switch (queryType)
+			{
+				case SpecialQueryType.First:
+				{
+					return documentQuery.First();               
+				}
+				case SpecialQueryType.FirstOrDefault:
+				{
+					return documentQuery.FirstOrDefault();
+				}
+				case SpecialQueryType.Single:
+				{
+					return documentQuery.Single();
+				}
+				case SpecialQueryType.SingleOrDefault:
+				{
+					return documentQuery.SingleOrDefault();
+				}
+				default:
+					return documentQuery;
+			}
         }
 
         public void ProcessExpression(Expression expression)
