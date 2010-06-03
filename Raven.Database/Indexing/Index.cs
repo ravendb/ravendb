@@ -57,7 +57,9 @@ namespace Raven.Database.Indexing
 			lock (writeLock)
 			{
 				disposed = true;
-				searcher.Searcher.Close();
+				IndexSearcher _;
+				using (searcher.Use(out _))
+					searcher.MarkForDispoal();
 				directory.Close();
 			}
         }
@@ -66,14 +68,15 @@ namespace Raven.Database.Indexing
 
         public IEnumerable<IndexQueryResult> Query(IndexQuery indexQuery)
         {
-            using (searcher.Use())
+        	IndexSearcher indexSearcher;
+        	using (searcher.Use(out indexSearcher))
             {
-                var search = ExecuteQuery(searcher.Searcher, indexQuery, GetLuceneQuery(indexQuery));
+                var search = ExecuteQuery(indexSearcher, indexQuery, GetLuceneQuery(indexQuery));
                 indexQuery.TotalSize.Value = search.totalHits;
                 var previousDocuments = new HashSet<string>();
                 for (var i = indexQuery.Start; i < search.totalHits && (i - indexQuery.Start) < indexQuery.PageSize; i++)
                 {
-                    var document = searcher.Searcher.Doc(search.scoreDocs[i].doc);
+                    var document = indexSearcher.Doc(search.scoreDocs[i].doc);
                     if (IsDuplicateDocument(document, indexQuery.FieldsToFetch, previousDocuments))
                         continue;
                     yield return RetrieveDocument(document, indexQuery.FieldsToFetch);
@@ -81,7 +84,7 @@ namespace Raven.Database.Indexing
             }
         }
 
-        private static TopDocs ExecuteQuery(IndexSearcher searcher, IndexQuery indexQuery, Query luceneQuery)
+    	private static TopDocs ExecuteQuery(IndexSearcher searcher, IndexQuery indexQuery, Query luceneQuery)
         {
         	if(indexQuery.PageSize == int.MaxValue) // we want all docs
         	{
@@ -265,7 +268,8 @@ namespace Raven.Database.Indexing
 
         private void RecreateSearcher()
         {
-            using (searcher.Use())
+        	IndexSearcher _;
+        	using (searcher.Use(out _))
             {
                 searcher.MarkForDispoal();
                 searcher = new CurrentIndexSearcher
@@ -276,16 +280,17 @@ namespace Raven.Database.Indexing
             }
         }
 
-        private class CurrentIndexSearcher
+    	private class CurrentIndexSearcher
         {
             private bool shouldDisposeWhenThereAreNoUsages;
             private int useCount;
             public IndexSearcher Searcher { get; set; }
 
 
-            public IDisposable Use()
+            public IDisposable Use(out IndexSearcher indexSearcher)
             {
                 Interlocked.Increment(ref useCount);
+            	indexSearcher = Searcher;
                 return new CleanUp(this);
             }
 
