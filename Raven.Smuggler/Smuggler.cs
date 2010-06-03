@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Net;
@@ -113,6 +114,7 @@ Usage:
 
         public static void ImportData(string instanceUrl, string file)
         {
+        	var sw = Stopwatch.StartNew();
             using (var streamReader = new StreamReader(new GZipStream(File.OpenRead(file), CompressionMode.Decompress)))
             {
                 var jsonReader = new JsonTextReader(streamReader);
@@ -162,44 +164,62 @@ Usage:
                 if (jsonReader.TokenType != JsonToken.StartArray)
                     throw new InvalidDataException("StartArray was expected");
                 var batch = new List<JObject>();
+            	int totalCount = 0;
                 while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
                 {
+                	totalCount += 1;
                     var document = JToken.ReadFrom(jsonReader);
                     batch.Add((JObject)document);
-                    if (batch.Count > 128)
+                    if (batch.Count >= 128)
                         FlushBatch(instanceUrl, batch);
                 }
                 FlushBatch(instanceUrl, batch);
+            	Console.WriteLine("Imported {0:#,#} documents in {1:#,#} ms", totalCount, sw.ElapsedMilliseconds);
             }
         }
 
         private static void FlushBatch(string instanceUrl, List<JObject> batch)
         {
+        	var sw = Stopwatch.StartNew();
+        	long size;
             using (var webClient = new WebClient())
             {
                 webClient.UseDefaultCredentials = true;
                 webClient.Credentials = CredentialCache.DefaultNetworkCredentials;
-                using (var stream = webClient.OpenWrite(instanceUrl + "bulk_docs", "POST"))
-                using (var streamWriter = new StreamWriter(stream))
-                using (var jsonTextWriter = new JsonTextWriter(streamWriter))
-                {
-                    var commands = new JArray();
-                    foreach (var doc in batch)
-                    {
-                        var metadata = doc.Value<JObject>("@metadata");
-                        doc.Remove("@metadata");
-                        commands.Add(new JObject(
-                                         new JProperty("Method", "PUT"),
-                                         new JProperty("Document", doc),
-                                         new JProperty("Metadata", metadata),
-                                         new JProperty("Key", metadata.Value<string>("@id"))
-                                         ));
-                    }
-                    commands.WriteTo(jsonTextWriter);
-                    jsonTextWriter.Flush();
-                    streamWriter.Flush();
-                }
+				using (var stream = new MemoryStream())
+				{
+					using (var streamWriter = new StreamWriter(stream))
+					using (var jsonTextWriter = new JsonTextWriter(streamWriter))
+					{
+						var commands = new JArray();
+						foreach (var doc in batch)
+						{
+							var metadata = doc.Value<JObject>("@metadata");
+							doc.Remove("@metadata");
+							commands.Add(new JObject(
+											 new JProperty("Method", "PUT"),
+											 new JProperty("Document", doc),
+											 new JProperty("Metadata", metadata),
+											 new JProperty("Key", metadata.Value<string>("@id"))
+											 ));
+						}
+						commands.WriteTo(jsonTextWriter);
+						jsonTextWriter.Flush();
+						streamWriter.Flush();
+						stream.Flush();
+						size = stream.Length;
+
+						using (var netStream = webClient.OpenWrite(instanceUrl + "bulk_docs", "POST"))
+						{
+							stream.WriteTo(netStream);
+							netStream.Flush();
+						}
+					}
+				}
+                
             }
+        	Console.WriteLine("Wrote {0} documents [{1:#,#} kb] in {2:#,#} ms",
+        	                  batch.Count, Math.Round((double)size/1024, 2), sw.ElapsedMilliseconds);
             batch.Clear();
         }
     }
