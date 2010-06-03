@@ -50,6 +50,9 @@ namespace Raven.Client.Linq
 
         private int? skipValue = null;
         private int? takeValue = null;
+        
+        private bool firstQuery = false;
+        private bool singleQuery = false;
 
         public object Execute(Expression expression)
         {
@@ -72,7 +75,24 @@ namespace Raven.Client.Linq
 
 			if(customizeQuery != null)
 				customizeQuery(documentQuery);
-            return documentQuery;
+
+            //We've already specified that the Lucense query should only return 1 result, so we can do the First()/Single()
+            //error handling and conversion on the client using the standard IEnumerable<T> extension methods
+            if (firstQuery)
+            {
+                return documentQuery.First(); //use the First() method on the IEnumerable to do the work for us
+            }
+            else if (singleQuery)
+            {
+                //special case, if the total possible results is greater that 1 the throw, the built-in Single() method can't handle this for us
+                if (documentQuery.QueryResult.TotalResults > 1)
+                    throw new InvalidOperationException("More than one element satisfies the condition in predicate.");
+                return documentQuery.Single(); //use the Single() method on the IEnumerable to do the work for us
+            }
+            else // A query that isn't First() or Single()
+            {
+                return documentQuery;
+            }
         }
 
         public void ProcessExpression(Expression expression)
@@ -327,24 +347,58 @@ namespace Raven.Client.Linq
             {
                 VisitExpression(expression.Arguments[0]);
                 VisitTake(((ConstantExpression)expression.Arguments[1]));
-            }                                    
+            }
+            else if ((expression.Method.DeclaringType == typeof(Queryable)) &&
+                (expression.Method.Name == "First"))
+            {
+                VisitExpression(expression.Arguments[0]);
+                if (expression.Arguments.Count == 2)                
+                    VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);                
+                
+                VisitFirst();               
+            }
+            else if ((expression.Method.DeclaringType == typeof(Queryable)) &&
+                (expression.Method.Name == "Single"))
+            {
+                VisitExpression(expression.Arguments[0]);
+                if (expression.Arguments.Count == 2)
+                {
+                    VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
+                }
+                
+                VisitSingle();                
+            }
+            else if ((expression.Method.DeclaringType == typeof(Queryable)) &&
+                    (expression.Method.Name == "OrderBy"))
+            {
+                VisitExpression(expression.Arguments[0]);
+                VisitOrderBy(((UnaryExpression)expression.Arguments[1]).Operand, true);
+            }
+            else if ((expression.Method.DeclaringType == typeof(Queryable)) &&
+                (expression.Method.Name == "OrderByDescending"))
+            {
+                VisitExpression(expression.Arguments[0]);
+                VisitOrderBy(((UnaryExpression)expression.Arguments[1]).Operand, false);
+            }   
             else
             {
                 throw new NotSupportedException("Method not supported: " + expression.Method.Name);
             }
-        }         
+        }
 
-        private void VisitSkip(ConstantExpression constantExpression)
+        private void VisitSingle()
         {
-            //Don't have to worry about the cast, the Skip() extension method only take an int
-            skipValue = (int)constantExpression.Value;            
+            skipValue = 0;
+            takeValue = 1;
+            singleQuery = true;
         }
 
-        private void VisitTake(ConstantExpression constantExpression)
-        {            
-            //Don't have to worry about the cast, the Take() extension method only take an int
-            takeValue = (int)constantExpression.Value;            
-        }
+        private void VisitFirst()
+        {
+            skipValue = 0;
+            takeValue = 1;
+            firstQuery = true;
+        }            
 
         private void VisitSelect(Expression operand)
         {
