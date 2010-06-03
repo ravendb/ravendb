@@ -65,7 +65,7 @@ namespace Raven.Database.Storage.StorageActions
 			}
 		}
 
-		public Task GetMergedTask()
+		public Task GetMergedTask(out int countOfMergedTasks)
 		{
 			Api.MoveBeforeFirst(session, Tasks);
 			while (Api.TryMoveNext(session, Tasks))
@@ -91,14 +91,16 @@ namespace Raven.Database.Storage.StorageActions
 					continue;
 				}
 
-				MergeSimilarTasks(task);
+				MergeSimilarTasks(task, out countOfMergedTasks);
 				return task;
 			}
+			countOfMergedTasks = 0;
 			return null;
 		}
 
-		private void MergeSimilarTasks(Task task)
+		private void MergeSimilarTasks(Task task, out int taskCount)
 		{
+			taskCount = 1;
 			if (task.SupportsMerging == false)
 				return;
 
@@ -143,6 +145,7 @@ namespace Raven.Database.Storage.StorageActions
 					if (task.TryMerge(existingTask) == false)
 						continue;
 					Api.JetDelete(session, Tasks);
+					taskCount += 1;
 				}
 				catch (EsentErrorException e)
 				{

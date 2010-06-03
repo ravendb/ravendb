@@ -74,6 +74,7 @@ namespace Raven.Database
                 configuration.Container.GetExportedValues<AbstractViewGenerator>());
 			IndexStorage = new IndexStorage(IndexDefinitionStorage, configuration);
 
+			workContext.PerformanceCounters = new PerformanceCounters("Instance @ " + configuration.Port);
 			workContext.IndexStorage = IndexStorage;
 			workContext.TransactionaStorage = TransactionalStorage;
 			workContext.IndexDefinitionStorage = IndexDefinitionStorage;

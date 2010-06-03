@@ -27,9 +27,10 @@ namespace Raven.Database.Indexing
 				Task task = null;
 				try
 				{
+					int tasks = 0;
 					transactionalStorage.Batch(actions =>
 					{
-						task = actions.GetMergedTask();
+						task = actions.GetMergedTask(out tasks);
 						if (task == null)
 							return;
 
@@ -45,6 +46,7 @@ namespace Raven.Database.Indexing
 							log.WarnFormat(e, "Task {0} has failed and was deleted without completing any work", task);
 						}
 					});
+					context.PerformanceCounters.IncrementProcessedTask(tasks);
 				}
 				catch (Exception e)
 				{
