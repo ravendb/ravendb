@@ -502,7 +502,7 @@ namespace Raven.Client.Linq
 			if (expression.NodeType == ExpressionType.Lambda)
 				return ((LambdaExpression) expression).Compile().DynamicInvoke();
             if (expression.NodeType == ExpressionType.Call)
-                return Expression.Lambda((MethodCallExpression)expression).Compile().DynamicInvoke();
+                return Expression.Lambda(expression).Compile().DynamicInvoke();
             if (expression.NodeType == ExpressionType.Convert)
                 return Expression.Lambda(((UnaryExpression)expression).Operand).Compile().DynamicInvoke();
             throw new InvalidOperationException("Can't extract value from expression of type: " + expression.NodeType);
@@ -524,21 +524,18 @@ namespace Raven.Client.Linq
 				throw new NotSupportedException("Expression type not supported: " + memberExpression.Expression.GetType().FullName);
 
 			// Get value
-			MemberInfo memberInfo = memberExpression.Member;
+			var memberInfo = memberExpression.Member;
 			if (memberInfo is PropertyInfo)
 			{
-				PropertyInfo property = (PropertyInfo)memberInfo;
+				var property = (PropertyInfo)memberInfo;
 				return property.GetValue(obj, null);
 			}
-			else if (memberInfo is FieldInfo)
+			if (memberInfo is FieldInfo)
 			{
-				object value = Expression.Lambda(memberExpression).Compile().DynamicInvoke();
+				var value = Expression.Lambda(memberExpression).Compile().DynamicInvoke();
 				return value;
 			}
-			else
-			{
-				throw new NotSupportedException("MemberInfo type not supported: " + memberInfo.GetType().FullName);
-			}
+			throw new NotSupportedException("MemberInfo type not supported: " + memberInfo.GetType().FullName);
 		}
 
 
