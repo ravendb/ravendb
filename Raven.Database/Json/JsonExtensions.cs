@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
 
 namespace Raven.Database.Json
@@ -9,12 +10,21 @@ namespace Raven.Database.Json
 	{
 		public static JObject ToJObject(this byte [] self)
 		{
-			return JObject.Load(new JsonTextReader(new StreamReader(new MemoryStream(self), Encoding.UTF8)));
+			return JObject.Load(new BsonReader(new MemoryStream(self)));
+		}
+
+		public static byte[] ToBytes(this JToken self)
+		{
+			using (var memoryStream = new MemoryStream())
+			{
+				self.WriteTo(new BsonWriter(memoryStream));
+				return memoryStream.ToArray();
+			}
 		}
 
 		public static T JsonDeserialization<T>(this byte [] self)
 		{
-			return (T) new JsonSerializer().Deserialize(new JsonTextReader(new StreamReader(new MemoryStream(self))), typeof (T));
+			return (T)new JsonSerializer().Deserialize(new BsonReader(new MemoryStream(self)), typeof(T));
 		}
 
 		public static T JsonDeserialization<T>(this JObject self)
