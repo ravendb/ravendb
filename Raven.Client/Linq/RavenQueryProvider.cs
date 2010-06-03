@@ -425,34 +425,28 @@ namespace Raven.Client.Linq
 
         private void VisitSingle()
         {
-            TakeJustOneResult();            
+			takeValue = 2;           
             queryType = SpecialQueryType.Single;
         }
         
         private void VisitSingleOrDefault()
         {
-            TakeJustOneResult();
+			takeValue = 2;
             queryType = SpecialQueryType.SingleOrDefault;
         }
 
         private void VisitFirst()
         {
-            TakeJustOneResult();
+			takeValue = 1;
             queryType = SpecialQueryType.First;
         }
 
         private void VisitFirstOrDefault()
         {
-            TakeJustOneResult();
+			takeValue = 1;
             queryType = SpecialQueryType.FirstOrDefault;
         }
-
-        private void TakeJustOneResult()
-        {
-            skipValue = 0;
-            takeValue = 1;
-        }
-
+		
         IQueryable<S> IQueryProvider.CreateQuery<S>(Expression expression)
         {
             return new RavenQueryable<S>(this, expression);
