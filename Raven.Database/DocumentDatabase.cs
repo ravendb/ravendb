@@ -130,6 +130,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				};
 				TransactionalStorage.Batch(actions =>
 				{
+					result.ApproximateTaskCount = actions.ApproximateTaskCount;
 					result.CountOfDocuments = actions.GetDocumentsCount();
 					result.StaleIndexes = IndexStorage.Indexes
                         .Where(s => actions.DoesTasksExistsForIndex(s, null))

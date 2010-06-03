@@ -4,6 +4,8 @@ namespace Raven.Database.Data
 	{
 		public int CountOfIndexes { get; set; }
 
+		public int ApproximateTaskCount { get; set; }
+
 		public int CountOfDocuments { get; set; }
 
 		public string[] StaleIndexes { get; set; }
