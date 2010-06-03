@@ -65,7 +65,7 @@ namespace Raven.Database.Indexing
 
                 reduceKeys.Add(reduceKey);
 
-                string data = GetMapedData(doc);
+                var data = GetMapedData(doc);
 
                 log.DebugFormat("Mapped result for '{0}': '{1}'", name, data);
 
@@ -88,17 +88,14 @@ namespace Raven.Database.Indexing
             log.DebugFormat("Mapped {0} documents for {1}", count, name);
         }
 
-        private string GetMapedData(object doc)
+        private static JObject GetMapedData(object doc)
         {
-            string data;
-            if (doc is DynamicJsonObject)
-                data = ((DynamicJsonObject)doc).Inner.ToString(Formatting.None, new JsonEnumConverter());
-            else
-                data = JObject.FromObject(doc).ToString(Formatting.None, new JsonEnumConverter());
-            return data;
+        	if (doc is DynamicJsonObject)
+                return  ((DynamicJsonObject)doc).Inner;
+        	return JObject.FromObject(doc);
         }
 
-        private static Func<object, object> CreateDocumentIdFetcherIfNeeded(Func<object, object> documentIdFetcher, object doc)
+    	private static Func<object, object> CreateDocumentIdFetcherIfNeeded(Func<object, object> documentIdFetcher, object doc)
         {
             if (documentIdFetcher != null)
             {

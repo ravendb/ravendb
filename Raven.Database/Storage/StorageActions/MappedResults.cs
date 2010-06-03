@@ -10,8 +10,7 @@ namespace Raven.Database.Storage.StorageActions
 {
 	public partial class DocumentStorageActions 
 	{
-
-		public void PutMappedResult(string view, string docId, string reduceKey, string data, byte[] viewAndReduceKeyHashed)
+		public void PutMappedResult(string view, string docId, string reduceKey, JObject data, byte[] viewAndReduceKeyHashed)
 		{
 			Api.JetSetCurrentIndex(session, MappedResults, "by_pk");
 			Api.MakeKey(session, MappedResults, view, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -27,7 +26,7 @@ namespace Raven.Database.Storage.StorageActions
 				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["document_key"], docId, Encoding.Unicode);
 				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"], reduceKey, Encoding.Unicode);
                 Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key_and_view_hashed"], viewAndReduceKeyHashed);
-				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["data"], Encoding.UTF8.GetBytes(data));
+				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["data"], data.ToBytes());
 				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"], etag.ToByteArray());
 
 				update.Save();
