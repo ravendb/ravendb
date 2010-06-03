@@ -128,8 +128,7 @@ namespace Raven.Tests.Linq
                     //No-one is aged 15, so we should get a default item back, i.e. Name = "" and Age = 0
                     var firstDefaultItem = session.Query<User>(indexName)
                                             .FirstOrDefault(x => x.Age == 15);
-                    Assert.Equal(String.Empty, firstDefaultItem.Name);
-                    Assert.Equal(0, firstDefaultItem.Age);
+                    Assert.Null(firstDefaultItem);
                 }
             }
         }
@@ -180,8 +179,7 @@ namespace Raven.Tests.Linq
                     //A query of age = 75 should return for NO results, so SingleOrDefault() should return a default value
                     var singleOrDefaultItem = session.Query<User>(indexName)
                                             .SingleOrDefault(x => x.Age == 75);
-                    Assert.Equal(0, singleOrDefaultItem.Age);
-                    Assert.Equal("", singleOrDefaultItem.Name);  
+                    Assert.Null(singleOrDefaultItem);
                 }
             }
         }
