@@ -1,6 +1,5 @@
 ﻿using System.Text;
 using Microsoft.Isam.Esent.Interop;
-using Raven.Database.Indexing;
 
 namespace Raven.Database.Storage.SchemaUpdates
 {
