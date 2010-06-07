@@ -482,8 +482,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				actions =>
 				{
 					stale = actions.DoesTasksExistsForIndex(index, query.Cutoff);
-					var indexFailureInformation = actions.GetFailureRate(index)
-;
+					var indexFailureInformation = actions.GetFailureRate(index);
 					if (indexFailureInformation.IsInvalidIndex)
 					{
 						throw new IndexDisabledException(indexFailureInformation);

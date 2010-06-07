@@ -83,6 +83,91 @@ namespace Raven.Client.Tests.Document
 			}
 		}
 
+		
+       [Fact]
+       public void Can_create_index_with_decimal_as_firstfield()
+       {
+           using (var server = GetNewServer(port, path))
+           {
+               var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+               documentStore.Initialize();
+               var session = documentStore.OpenSession();
+               var company = new Company { Name = "Company 1", Phone= 5, AccountsReceivable = (decimal)3904.39 };
+               session.Store(company);
+               session.SaveChanges();
+
+			   documentStore.DatabaseCommands.PutIndex("company_by_name",
+                                                       new IndexDefinition
+                                                       {
+                                                           Map = "from doc in docs where doc.Name != null select new { doc.AccountsReceivable, doc.Name}",
+                                                           Stores = { { "Name", FieldStorage.Yes }, { "AccountsReceivable", FieldStorage.Yes } }
+                                                       });
+
+               var q = session.Query<Company>("company_by_name")
+                   .Customize(query => query.WaitForNonStaleResults(TimeSpan.FromHours(1)));
+               var single = q.ToList().SingleOrDefault();
+
+               Assert.NotNull(single);
+               Assert.Equal("Company 1", single.Name);
+               Assert.Equal((decimal)3904.39, single.AccountsReceivable);
+           }
+       }
+
+		[Fact] 
+        public void  Can_select_from_index_using_linq_method_chain_using_decimal_and_greater_than_or_equal() 
+        { 
+            using (var server = GetNewServer(port, path)) 
+            { 
+                var documentStore = new DocumentStore { Url = "http://localhost:" + port }; 
+                documentStore.Initialize(); 
+                var session = documentStore.OpenSession(); 
+                var company = new Company { Name = "Company 1", Phone = 5, AccountsReceivable = (decimal)3904.39 }; 
+                session.Store(company); 
+                session.SaveChanges(); 
+				documentStore.DatabaseCommands.PutIndex("company_by_name", new 
+														IndexDefinition 
+                                                        { 
+                                                            Map = "from doc in docs where doc.Name != null select new { doc.Name, doc.AccountsReceivable}", 
+                                                            Stores = { { "Name", FieldStorage.Yes }, { "AccountsReceivable", FieldStorage.Yes } } 
+                                                        }); 
+                var q = session.Query<Company>("company_by_name") 
+                    .Customize(query => query.WaitForNonStaleResults(TimeSpan.FromHours(1))) 
+                    .Where(x => x.AccountsReceivable > 1); 
+                var single = q.ToList().SingleOrDefault(); 
+                Assert.NotNull(single); 
+                Assert.Equal("Company 1", single.Name); 
+                Assert.Equal((decimal)3904.39, single.AccountsReceivable); 
+            } 
+        } 
+
+       [Fact]
+       public void Can_create_index_with_decimal_as_lastfield()
+       {
+           using (var server = GetNewServer(port, path))
+           {
+               var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+               documentStore.Initialize();
+               var session = documentStore.OpenSession();
+               var company = new Company { Name = "Company 1", Phone= 5, AccountsReceivable = (decimal)3904.39 };
+               session.Store(company);
+               session.SaveChanges();
+			   
+			   documentStore.DatabaseCommands.PutIndex("company_by_name",new IndexDefinition
+                                                       {
+                                                           Map = "from doc in docs where doc.Name != null select new {  doc.Name, doc.AccountsReceivable }",
+                                                           Stores = { { "Name", FieldStorage.Yes }, { "AccountsReceivable", FieldStorage.Yes } }
+                                                       });
+
+               var q = session.Query<Company>("company_by_name")
+                   .Customize(query => query.WaitForNonStaleResults(TimeSpan.FromHours(1)));
+               var single = q.ToList().SingleOrDefault();
+
+               Assert.NotNull(single);
+               Assert.Equal("Company 1", single.Name);
+               Assert.Equal((decimal)3904.39, single.AccountsReceivable);
+           }
+       }
+
 		[Fact]
 		public void Can_update_by_index()
 		{

@@ -12,8 +12,8 @@ namespace Raven.Database.Indexing
 	public static class QueryBuilder
 	{
 		static readonly Regex untokenizedQuery = new Regex(@"([+-]?)([\w\d_]+?):\[\[(.+?)\]\]", RegexOptions.Compiled);
-		static readonly Regex rangeQuery = new Regex(@"([+-]?)([\w\d_]+_Range?):(({|\[)[ \w\d]+?(}|\]))", RegexOptions.Compiled);
-		static readonly Regex rangeValue = new Regex(@"({|\[) \s* ([\w\d]x[\w\d]+) \s* TO  \s* ([\w\d]x[\w\d]+) \s* (}|\])", RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
+		static readonly Regex rangeQuery = new Regex(@"([+-]?)([\w\d_]+_Range?):(({|\[)[ \w\d.]+?(}|\]))", RegexOptions.Compiled);
+		static readonly Regex rangeValue = new Regex(@"({|\[) \s* (([\w\d]x[\w\d.]+)|(NULL)) \s* TO  \s* (([\w\d]x[\w\d.]+)|(NULL)) \s* (}|\])", RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
 
 		static readonly Regex hangingConditionAtStart = new Regex(@"^ \s* (AND|OR)", RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
 		static readonly Regex hangingConditionAtEnd = new Regex(@"(AND|OR) \s* $", RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
@@ -59,22 +59,23 @@ namespace Raven.Database.Indexing
 				var inclusiveRange = rangeValueMatch.Groups[1].Value == "{";
 
 				var from = NumberUtil.StringToNumber(rangeValueMatch.Groups[2].Value);
-				var to = NumberUtil.StringToNumber(rangeValueMatch.Groups[3].Value);
+				var to = NumberUtil.StringToNumber(rangeValueMatch.Groups[5].Value);
 
 				NumericRangeQuery range = null;
 
 				if (from is int || to is int)
-					range = NumericRangeQuery.NewIntRange(fieldName, (int?) from, (int?) to, inclusiveRange, inclusiveRange);
+					range = NumericRangeQuery.NewIntRange(fieldName, (int) (from ?? int.MinValue), (int) (to ?? int.MaxValue), inclusiveRange, inclusiveRange);
+
+				if (from is long || to is long)
+					range = NumericRangeQuery.NewLongRange(fieldName, (long)(from ?? long.MinValue), (long)(to ?? long.MaxValue), inclusiveRange, inclusiveRange);
 
 				if (from is double || to is double)
-					range = NumericRangeQuery.NewIntRange(fieldName, (double?)from, (double?)to, inclusiveRange, inclusiveRange);
-				
+					range = NumericRangeQuery.NewDoubleRange(fieldName, (double) (from ?? double.MinValue), (double) (to ?? double.MaxValue),
+					                                         inclusiveRange, inclusiveRange);
+			
 				if (from is float || to is float)
-					range = NumericRangeQuery.NewIntRange(fieldName, (float?)from, (float?)to, inclusiveRange, inclusiveRange);
+					range = NumericRangeQuery.NewFloatRange(fieldName, (float)(from ?? float.MinValue), (float)(to ?? float.MaxValue), inclusiveRange, inclusiveRange);
 				
-				if (from is decimal || to is decimal)
-					range = NumericRangeQuery.NewIntRange(fieldName, (double?)(decimal?)from, (double?)(decimal?)to, inclusiveRange, inclusiveRange);
-
 				if(range == null)
 					throw new InvalidOperationException("Could not understand how to parse: " + match.Value);
 

@@ -4,6 +4,7 @@ namespace Raven.Client.Tests.Document
 {
 	public class Company
 	{
+		public decimal AccountsReceivable { get; set;}
 		public string Id { get; set; }
 		public string Name { get; set; }
 		public string Address1 { get; set; }

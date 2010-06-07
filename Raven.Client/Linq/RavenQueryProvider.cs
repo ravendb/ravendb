@@ -181,47 +181,12 @@ namespace Raven.Client.Linq
 			object value = GetValueFromExpression(expression.Right);
 			QueryText.Append(
 				GetFieldNameForRangeQuery(expression.Left, value)
-				).Append(":{")
-				.Append(GetMinValueAsString(GetValueFromExpression(expression.Right)))
-				.Append(" TO ");
+				).Append(":{NULL TO ");
 			QueryText.Append(TransformToRangeValue(GetValueFromExpression(expression.Right)));
 
             QueryText.Append("} ");
         }
 
-    	private static string GetMinValueAsString(object value)
-    	{
-			if (value is int)
-				return NumberUtil.NumberToString(int.MinValue); 
-			if (value is long)
-				return NumberUtil.NumberToString(long.MinValue);
-			if (value is decimal)
-				return NumberUtil.NumberToString(decimal.MinValue);
-			if (value is double)
-				return NumberUtil.NumberToString(double.MinValue);
-			if (value is float)
-				return NumberUtil.NumberToString(float.MinValue);
-			if (value is DateTime)
-				return DateTools.DateToString(DateTime.MinValue, DateTools.Resolution.MILLISECOND);
-    		throw new InvalidOperationException("Can't figure out minimum value for " + value.GetType());
-    	}
-
-		private static string GetMaxValueAsString(object value)
-		{
-			if (value is int)
-				return NumberUtil.NumberToString(int.MaxValue);
-			if (value is long)
-				return NumberUtil.NumberToString(long.MaxValue);
-			if (value is decimal)
-				return NumberUtil.NumberToString(decimal.MaxValue);
-			if (value is double)
-				return NumberUtil.NumberToString(double.MaxValue);
-			if (value is float)
-				return NumberUtil.NumberToString(float.MaxValue);
-			if (value is DateTime)
-				return DateTools.DateToString(DateTime.MaxValue, DateTools.Resolution.MILLISECOND);
-			throw new InvalidOperationException("Can't figure out maximum value for " + value.GetType());
-		}
 
     	private static string TransformToRangeValue(object value)
     	{
@@ -233,7 +198,7 @@ namespace Raven.Client.Linq
 			if (value is long)
 				return NumberUtil.NumberToString((long)value);
 			if (value is decimal)
-				return NumberUtil.NumberToString((decimal)value);
+				return NumberUtil.NumberToString((double)(decimal)value);
 			if (value is double)
 				return NumberUtil.NumberToString((double)value);
 			if (value is float)
@@ -293,9 +258,7 @@ namespace Raven.Client.Linq
 			object value = GetValueFromExpression(expression.Right);
 			QueryText.Append(
 				GetFieldNameForRangeQuery(expression.Left, value)
-				).Append(":[")
-				.Append(GetMinValueAsString(GetValueFromExpression(expression.Right)))
-				.Append(" TO ");
+				).Append(":[NULL TO ");
 			QueryText.Append(TransformToRangeValue(GetValueFromExpression(expression.Right)));
 
             QueryText.Append("] ");
@@ -309,9 +272,7 @@ namespace Raven.Client.Linq
 				).Append(":{");
         	QueryText.Append(TransformToRangeValue(value));
 
-        	QueryText.Append(" TO ")
-        		.Append(GetMaxValueAsString(GetValueFromExpression(expression.Right)))
-        		.Append("} ");
+			QueryText.Append(" TO NULL} ");
         }
 
         private void VisitGreaterThan(BinaryExpression expression)
@@ -322,9 +283,7 @@ namespace Raven.Client.Linq
 				).Append(":[");
         	QueryText.Append(TransformToRangeValue(value));
 
-        	QueryText.Append(" TO ")
-        		.Append(GetMaxValueAsString(GetValueFromExpression(expression.Right)))
-        		.Append("] ");
+			QueryText.Append(" TO NULL] ");
         }
 
     	private static string GetFieldNameForRangeQuery(Expression expression, object value)

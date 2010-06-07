@@ -15,19 +15,14 @@ namespace Raven.Database.Indexing
 			return string.Format("0x{0:X16}", number);
 		}
 
-		public static string NumberToString(decimal number)
-		{
-			return "Mx" + number.ToString(CultureInfo.InvariantCulture);
-		}
-
 		public static string NumberToString(float number)
 		{
-			return "Fx" + number.ToString(CultureInfo.InvariantCulture);
+			return "Fx" + number.ToString("F", CultureInfo.InvariantCulture);
 		}
 
 		public static string NumberToString(double number)
 		{
-			return "Dx" + number.ToString(CultureInfo.InvariantCulture);
+			return "Dx" + number.ToString("F",CultureInfo.InvariantCulture);
 		}
 
 		public static object StringToNumber(string number)
@@ -44,22 +39,15 @@ namespace Raven.Database.Indexing
 					switch (num.Length)
 					{
 						case 8:
-							var i = int.Parse(num, NumberStyles.HexNumber);
-							return i == Int32.MaxValue || i == Int32.MinValue? null : (object)i;
+							return int.Parse(num, NumberStyles.HexNumber);
 						case 16:
-							var l = long.Parse(num, NumberStyles.HexNumber);
-							return l == Int64.MaxValue || l == Int64.MinValue ? null : (object) l;
+							return long.Parse(num, NumberStyles.HexNumber);
 					}
 					break;
-				case "Mx":
-					var dec = decimal.Parse(num, CultureInfo.InvariantCulture);
-					return dec == Decimal.MaxValue || dec == Decimal.MinValue ? null : (object) dec;
 				case "Fx":
-					var f = float.Parse(num, CultureInfo.InvariantCulture);
-					return f == Single.MaxValue || f == Double.MinValue ? null : (object) f;
+					return  float.Parse(num, CultureInfo.InvariantCulture);
 				case "Dx":
-					var d = double.Parse(num, CultureInfo.InvariantCulture);
-					return d == Double.MaxValue || d == Double.MinValue ? null : (object) d;
+					return  double.Parse(num, CultureInfo.InvariantCulture);
 			}
 
 			throw new ArgumentException("Could not understand how to parse: " + number);

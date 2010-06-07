@@ -7,7 +7,6 @@ namespace RavenTestbed
     {
         static void Main(string[] args)
         {
-			Console.WriteLine(NumberUtil.NumberToString(decimal.MinValue));
         }
     }
 
