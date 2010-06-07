@@ -54,7 +54,7 @@ namespace Raven.Database.Indexing
                         luceneDoc.Add(new Field("__document_id", newDocId, Field.Store.YES, Field.Index.NOT_ANALYZED));
 
                         currentId = newDocId;
-                        CopyFieldsToDocumentButRemoveDuplicateValues(luceneDoc, fields);
+                        CopyFieldsToDocument(luceneDoc, fields);
                         context.IndexUpdateTriggers.Apply(trigger => trigger.OnIndexEntryCreated(name, newDocId, luceneDoc));
                         log.DebugFormat("Index '{0}' resulted in: {1}", name, luceneDoc);
                         indexWriter.AddDocument(luceneDoc);
@@ -85,19 +85,10 @@ namespace Raven.Database.Indexing
             return AnonymousObjectToLuceneDocumentConverter.Index(doc, properties, indexDefinition, Field.Store.NO);
 	    }
 
-	    private static void CopyFieldsToDocumentButRemoveDuplicateValues(Document luceneDoc, IEnumerable<AbstractField> fields)
+	    private static void CopyFieldsToDocument(Document luceneDoc, IEnumerable<AbstractField> fields)
 		{
 			foreach (var field in fields)
 			{
-				var valueAlreadyExisting = false;
-				var existingFields = luceneDoc.GetFields(field.Name());
-				if (existingFields != null)
-				{
-					var fieldCopy = field;
-					valueAlreadyExisting = existingFields.Any(existingField => existingField.StringValue() == fieldCopy.StringValue());
-				}
-				if (valueAlreadyExisting)
-					continue;
 				luceneDoc.Add(field);
 			}
 		}
