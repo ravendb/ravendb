@@ -1,5 +1,6 @@
 using System.IO;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Indexing;
 
@@ -24,19 +25,17 @@ namespace Raven.Database.Tasks
 
 		public abstract bool TryMerge(Task task);
 
-		public string AsString()
+		public byte[] AsBytes()
 		{
-			var stringWriter = new StringWriter();
-			new JsonSerializer().Serialize(stringWriter, this);
-			return stringWriter.GetStringBuilder().ToString();
+			var memoryStream = new MemoryStream();
+			new JsonSerializer().Serialize(new BsonWriter(memoryStream), this);
+			return memoryStream.ToArray();
 		}
 
-		public static Task ToTask(string task)
+		public static Task ToTask(string taskType, byte[] task)
 		{
-			var json = JObject.Parse(task);
-			var typename = json.Property("Type").Value.Value<string>();
-			var type = typeof (Task).Assembly.GetType(typename);
-			return (Task) new JsonSerializer().Deserialize(new StringReader(task), type);
+			var type = typeof(Task).Assembly.GetType(taskType);
+			return (Task) new JsonSerializer().Deserialize(new BsonReader(new MemoryStream(task)), type);
 		}
 
 		/// <summary>

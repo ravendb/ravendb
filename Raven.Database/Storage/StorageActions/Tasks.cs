@@ -29,7 +29,7 @@ namespace Raven.Database.Storage.StorageActions
 			var bookmark = new byte[SystemParameters.BookmarkMost];
 			using (var update = new Update(session, Tasks, JET_prep.Insert))
 			{
-				Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["task"], task.AsString(), Encoding.Unicode);
+				Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["task"], task.AsBytes());
 				Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["for_index"], task.Index, Encoding.Unicode);
 				Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["task_type"], task.Type, Encoding.Unicode);
 				Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["supports_merging"], task.SupportsMerging);
@@ -38,8 +38,6 @@ namespace Raven.Database.Storage.StorageActions
 				update.Save(bookmark, bookmark.Length, out actualBookmarkSize);
 			}
 			Api.JetGotoBookmark(session, Tasks, bookmark, actualBookmarkSize);
-			if (logger.IsDebugEnabled)
-				logger.DebugFormat("New task '{0}'", task.AsString());
 		}
 
 
@@ -70,7 +68,8 @@ namespace Raven.Database.Storage.StorageActions
 			Api.MoveBeforeFirst(session, Tasks);
 			while (Api.TryMoveNext(session, Tasks))
 			{
-				var taskAsString = Api.RetrieveColumnAsString(session, Tasks, tableColumnsCache.TasksColumns["task"], Encoding.Unicode);
+				var taskAsBytes = Api.RetrieveColumn(session, Tasks, tableColumnsCache.TasksColumns["task"]);
+				var taskType = Api.RetrieveColumnAsString(session, Tasks, tableColumnsCache.TasksColumns["task_type"], Encoding.Unicode);
 				try
 				{
 					Api.JetDelete(session, Tasks);
@@ -83,11 +82,11 @@ namespace Raven.Database.Storage.StorageActions
 				Task task;
 				try
 				{
-					task = Task.ToTask(taskAsString);
+					task = Task.ToTask(taskType, taskAsBytes);
 				}
 				catch (Exception e)
 				{
-					logger.ErrorFormat(e, "Could not create instance of a task: {0}", taskAsString);
+					logger.ErrorFormat(e, "Could not create instance of a task: {0}", taskAsBytes);
 					continue;
 				}
 
@@ -130,15 +129,16 @@ namespace Raven.Database.Storage.StorageActions
 
 				try
 				{
-					var taskAsString = Api.RetrieveColumnAsString(session, Tasks, tableColumnsCache.TasksColumns["task"], Encoding.Unicode);
+					var taskAsBytes = Api.RetrieveColumn(session, Tasks, tableColumnsCache.TasksColumns["task"]);
+					var taskType = Api.RetrieveColumnAsString(session, Tasks, tableColumnsCache.TasksColumns["task_type"], Encoding.Unicode);
 					Task existingTask;
 					try
 					{
-						existingTask = Task.ToTask(taskAsString);
+						existingTask = Task.ToTask(taskType, taskAsBytes);
 					}
 					catch (Exception e)
 					{
-						logger.ErrorFormat(e, "Could not create instance of a task: {0}", taskAsString);
+						logger.ErrorFormat(e, "Could not create instance of a task: {0}", taskAsBytes);
 						Api.JetDelete(session, Tasks);
 						continue;
 					}
