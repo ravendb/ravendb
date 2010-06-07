@@ -233,7 +233,7 @@ namespace Raven.Client.Linq
 			if (value is long)
 				return NumberUtil.NumberToString((long)value);
 			if (value is decimal)
-				return NumberUtil.NumberToString((double)(decimal)value);
+				return NumberUtil.NumberToString((decimal)value);
 			if (value is double)
 				return NumberUtil.NumberToString((double)value);
 			if (value is float)
