@@ -160,7 +160,9 @@ select new { Tag = g.Key, Count = g.Sum(x => (long)x.Count) }"
 												  new IndexDefinition()
 				   {
 					   Map = @"
-from doc in docs select new {
+from doc in docs
+where doc.Activity != null
+select new {
 	Activity = doc.Activity,
 	Character = doc.Character,
 	Amount = doc.Amount
@@ -187,7 +189,7 @@ select new
 					session.Store(new Event
 					{
 						Activity = "Reading",
-						Character = "Dward",
+						Character = "Dwarf",
 						Amount = 7
 					});
 					session.Store(new Event
@@ -199,11 +201,11 @@ select new
 					session.SaveChanges();
 
                     var tagAndCounts = session.LuceneQuery<ActivityAndCharacterCountAmount>("EventsByActivityAndCharacterCountAmount")
-						.WaitForNonStaleResults()
+						.WaitForNonStaleResults(TimeSpan.FromHours(1))
 						.ToArray();
 
 					Assert.Equal(15, tagAndCounts.First(x => x.Activity == "Reading" && x.Character == "Elf").Amount);
-					Assert.Equal(7, tagAndCounts.First(x => x.Activity == "Reading" && x.Character == "Dward").Amount);
+					Assert.Equal(7, tagAndCounts.First(x => x.Activity == "Reading" && x.Character == "Dwarf").Amount);
 					
 				}
 			}

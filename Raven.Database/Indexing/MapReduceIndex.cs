@@ -76,14 +76,11 @@ namespace Raven.Database.Indexing
                 actions.IncrementSuccessIndexing();
             }
 
-            foreach (var reduceKey in reduceKeys)
-            {
-                actions.AddTask(new ReduceTask
-                {
-                    Index = name,
-                    ReduceKey = reduceKey
-                });
-            }
+			actions.AddTask(new ReduceTask
+			{
+				Index = name,
+				ReduceKeys = reduceKeys.ToArray()
+			});
 
             log.DebugFormat("Mapped {0} documents for {1}", count, name);
         }
@@ -148,15 +145,11 @@ namespace Raven.Database.Indexing
                         reduceKeys.Add(reduceKey);
                     }
                 }
-
-                foreach (var reduceKey in reduceKeys)
-                {
-                    actions.AddTask(new ReduceTask
-                    {
-                        Index = name,
-                        ReduceKey = reduceKey,
-                    });
-                }
+            	actions.AddTask(new ReduceTask
+            	{
+            		Index = name,
+            		ReduceKeys = reduceKeys.ToArray()
+            	});
 
             });
             Write(writer =>
@@ -174,35 +167,47 @@ namespace Raven.Database.Indexing
                                     IEnumerable<object> mappedResults,
                                     WorkContext context,
                                     DocumentStorageActions actions,
-                                    string reduceKey)
+                                    string[] reduceKeys)
         {
             actions.SetCurrentIndexStatsTo(name);
             var count = 0;
             Write(indexWriter =>
             {
-                indexWriter.DeleteDocuments(new Term("__reduce_key", reduceKey));
-                context.IndexUpdateTriggers.Apply(trigger => trigger.OnIndexEntryDeleted(name, reduceKey));
+            	foreach (var reduceKey in reduceKeys)
+            	{
+					indexWriter.DeleteDocuments(new Term("__reduce_key", reduceKey));
+					context.IndexUpdateTriggers.Apply(trigger => trigger.OnIndexEntryDeleted(name, reduceKey));
+				}
                 PropertyDescriptorCollection properties = null;
                 foreach (var doc in RobustEnumeration(mappedResults, viewGenerator.ReduceDefinition, actions, context))
                 {
                     count++;
                     var fields = GetFields(doc, ref properties);
+                	dynamic reduceKey = viewGenerator.GroupByExtraction(doc);
+					if (reduceKey == null)
+					{
+						throw new InvalidOperationException("Could not find reduce key for " + name + " in the result: " + doc);
+					}
+					string reduceKeyAsString = ReduceKeyToString(reduceKey);
 
-                    var luceneDoc = new Document();
-                    luceneDoc.Add(new Field("__reduce_key", reduceKey, Field.Store.NO, Field.Index.NOT_ANALYZED));
+                	var luceneDoc = new Document();
+                    luceneDoc.Add(new Field("__reduce_key", reduceKeyAsString, Field.Store.NO, Field.Index.NOT_ANALYZED));
                     foreach (var field in fields)
                     {
                         luceneDoc.Add(field);
                     }
-                    context.IndexUpdateTriggers.Apply(trigger => trigger.OnIndexEntryCreated(name, reduceKey, luceneDoc));
-                    log.DebugFormat("Reduce key {0} result in index {1} gave document: {2}", reduceKey, name, luceneDoc);
+                    context.IndexUpdateTriggers.Apply(trigger => trigger.OnIndexEntryCreated(name, reduceKeyAsString, luceneDoc));
+                    log.DebugFormat("Reduce key {0} result in index {1} gave document: {2}", reduceKeyAsString, name, luceneDoc);
                     indexWriter.AddDocument(luceneDoc);
                     actions.IncrementSuccessIndexing();
                 }
 
                 return true;
             });
-            log.DebugFormat("Reduce resulted in {0} entries for {1} for reduce key {2}", count, name, reduceKey);
+			if(log.IsDebugEnabled)
+			{
+				log.DebugFormat("Reduce resulted in {0} entries for {1} for reduce keys: {2}", count, name, string.Join(", ", reduceKeys));
+			}
         }
 
         private IEnumerable<AbstractField> GetFields(object doc, ref PropertyDescriptorCollection properties)

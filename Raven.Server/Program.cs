@@ -147,17 +147,17 @@ namespace Raven.Server
 
         private static void RunInDebugMode(AnonymousUserAccessMode? anonymousUserAccessMode)
         {
-            var consoleAppender = new ConsoleAppender
-            {
-                Layout = new PatternLayout(PatternLayout.DefaultConversionPattern),
-            };
-            consoleAppender.AddFilter(new LoggerMatchFilter
-            {
-                AcceptOnMatch = true,
-                LoggerToMatch = typeof(HttpServer).FullName
-            });
-            consoleAppender.AddFilter(new DenyAllFilter());
-            BasicConfigurator.Configure(consoleAppender);
+			//var consoleAppender = new ConsoleAppender
+			//{
+			//    Layout = new PatternLayout(PatternLayout.DefaultConversionPattern),
+			//};
+			//consoleAppender.AddFilter(new LoggerMatchFilter
+			//{
+			//    AcceptOnMatch = true,
+			//    LoggerToMatch = typeof(HttpServer).FullName
+			//});
+			//consoleAppender.AddFilter(new DenyAllFilter());
+			//BasicConfigurator.Configure(consoleAppender);
             var ravenConfiguration = new RavenConfiguration();
             RavenDbServer.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Port);
             if (anonymousUserAccessMode.HasValue)
