@@ -170,7 +170,7 @@ namespace Raven.Database.Indexing
 		}
 
 		public void Reduce(string index, AbstractViewGenerator viewGenerator, IEnumerable<object> mappedResults,
-		                   WorkContext context, DocumentStorageActions actions, string reduceKey)
+		                   WorkContext context, DocumentStorageActions actions, string[] reduceKeys)
 		{
 			Index value;
 			if (indexes.TryGetValue(index, out value) == false)
@@ -184,7 +184,7 @@ namespace Raven.Database.Indexing
 				log.WarnFormat("Tried to reduce on an index that is not a map/reduce index: {0}, ignoring", index);
 				return;
 			}
-			mapReduceIndex.ReduceDocuments(viewGenerator, mappedResults, context, actions, reduceKey);
+			mapReduceIndex.ReduceDocuments(viewGenerator, mappedResults, context, actions, reduceKeys);
 		}
 	}
 }

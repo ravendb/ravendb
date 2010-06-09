@@ -1,3 +1,5 @@
+using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
@@ -6,13 +8,21 @@ namespace Raven.Database.Tasks
 {
 	public class ReduceTask : Task
 	{
-		public string ReduceKey { get; set; }
+		public string[] ReduceKeys { get; set; }
+
+		public override bool SupportsMerging
+		{
+			get
+			{
+				return ReduceKeys.Length < 128;
+			}
+		}
 
 	    public override bool TryMerge(Task task)
 		{
 			var reduceTask = ((ReduceTask)task);
-			// if the reduce key is the same, either task will have the same effect
-			return reduceTask.ReduceKey == ReduceKey; 
+	    	ReduceKeys = ReduceKeys.Concat(reduceTask.ReduceKeys).Distinct().ToArray();
+	    	return true;
 		}
 
 		public override void Execute(WorkContext context)
@@ -23,10 +33,19 @@ namespace Raven.Database.Tasks
 
 			context.TransactionaStorage.Batch(actions =>
 			{
-                var mappedResults = actions.GetMappedResults(Index, ReduceKey, MapReduceIndex.ComputeHash(Index, ReduceKey))
-					.Select(JsonToExpando.Convert);
+				IEnumerable<object> mappedResults = null;
+				foreach (var reduceKey in ReduceKeys)
+				{
+					IEnumerable<object> enumerable = actions.GetMappedResults(Index, reduceKey, MapReduceIndex.ComputeHash(Index, reduceKey))
+						.Select(JsonToExpando.Convert);
 
-				context.IndexStorage.Reduce(Index, viewGenerator, mappedResults, context, actions, ReduceKey);
+					if (mappedResults == null)
+						mappedResults = enumerable;
+					else
+						mappedResults = mappedResults.Concat(enumerable);
+				}
+
+				context.IndexStorage.Reduce(Index, viewGenerator, mappedResults, context, actions, ReduceKeys);
 			});
 		}
 
@@ -35,7 +54,7 @@ namespace Raven.Database.Tasks
 			return new ReduceTask
 			{
 				Index = Index,
-				ReduceKey = ReduceKey
+				ReduceKeys = ReduceKeys
 			};
 		}
 	}

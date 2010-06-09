@@ -137,7 +137,7 @@ namespace Raven.Tests.Indexes
 
             Assert.Equal(1, queryResult.Results.Length);
 
-            Assert.Equal("shoppingcarts/12", queryResult.Results[0].Value<string>("Id"));
+			Assert.Equal("shoppingcarts/12", queryResult.Results[0].Value<string>("ShoppingCartId"));
         	var cart =
         		queryResult.Results[0].Value<JObject>("Aggregate").JsonDeserialization
         			<ShoppingCartEventsToShopingCart.ShoppingCart>();
@@ -195,7 +195,7 @@ namespace Raven.Tests.Indexes
                 }
                 yield return new
                 {
-                    cart.Id,
+					ShoppingCartId = cart.Id,
                     Aggregate = JObject.FromObject(cart)
                 };
             }
