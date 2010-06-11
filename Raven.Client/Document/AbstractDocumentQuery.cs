@@ -100,15 +100,128 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		/// <summary>
+		/// Matches substrings of the field
+		/// </summary>
+		/// <param name="fieldName"></param>
+		/// <param name="value"></param>
+		/// <returns></returns>
 		public IDocumentQuery<T> Where(string fieldName, string value)
 		{
 			// default to analyzed fields
 			return this.Where(fieldName, value, true);
 		}
 
+		/// <summary>
+		/// Matches substrings of the field or exact matches if not analyzed
+		/// </summary>
+		/// <param name="fieldName"></param>
+		/// <param name="value"></param>
+		/// <param name="isAnalyzed"></param>
+		/// <returns></returns>
 		public IDocumentQuery<T> Where(string fieldName, string value, bool isAnalyzed)
 		{
-			string whereClause = fieldName + ":" + Escape(value, isAnalyzed, false);
+			string whereClause = fieldName + ":" + EscapeTerm(value, isAnalyzed, isAnalyzed);
+
+			if (string.IsNullOrEmpty(query))
+				query = whereClause;
+			else
+				query += " " + whereClause;
+
+			return this;
+		}
+
+		/// <summary>
+		/// Matches terms with a given weighted value
+		/// </summary>
+		/// <param name="fieldName"></param>
+		/// <param name="value"></param>
+		/// <param name="boost"></param>
+		/// <returns></returns>
+		public IDocumentQuery<T> WhereBoost(string fieldName, string value, decimal boost)
+		{
+			if (boost <= 0m)
+			{
+				throw new ArgumentOutOfRangeException("Boost factor must be a positive number");
+			}
+
+			string whereClause = fieldName + ":" + EscapeTerm(value, true, false);
+			if (boost != 1m)
+			{
+				// 1.0 is the default
+				whereClause += "^" + boost;
+			}
+
+			if (string.IsNullOrEmpty(query))
+				query = whereClause;
+			else
+				query += " " + whereClause;
+
+			return this;
+		}
+
+		/// <summary>
+		/// Matches single word terms similar to the value
+		/// </summary>
+		/// <param name="fieldName"></param>
+		/// <param name="value"></param>
+		/// <param name="fuzzy"></param>
+		/// <returns></returns>
+		/// <remarks>
+		/// http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Fuzzy%20Searches
+		/// </remarks>
+		public IDocumentQuery<T> WhereFuzzy(string fieldName, string value, decimal fuzzy)
+		{
+			if (fuzzy < 0m || fuzzy > 1m)
+			{
+				throw new ArgumentOutOfRangeException("Fuzzy distance must be between 0.0 and 1.0");
+			}
+
+			value = EscapeTerm(value, true, false);
+			if (String.IsNullOrEmpty(value) || value[0] == '"')
+			{
+				throw new ArgumentException("Fuzzy value must be single word term");
+			}
+
+			string whereClause = fieldName + ":" + value + "~";
+			if (fuzzy != 0.5m)
+			{
+				// 0.5 is the default
+				whereClause += fuzzy;
+			}
+
+			if (string.IsNullOrEmpty(query))
+				query = whereClause;
+			else
+				query += " " + whereClause;
+
+			return this;
+		}
+
+		/// <summary>
+		/// Matches words in a phrase within a certain proximity
+		/// </summary>
+		/// <param name="fieldName"></param>
+		/// <param name="value"></param>
+		/// <param name="proximity"></param>
+		/// <returns></returns>
+		/// <remarks>
+		/// http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Proximity%20Searches
+		/// </remarks>
+		public IDocumentQuery<T> WhereProximity(string fieldName, string value, int proximity)
+		{
+			if (proximity <= 0m)
+			{
+				throw new ArgumentOutOfRangeException("Proximity distance must be positive number");
+			}
+
+			value = EscapeTerm(value, true, false);
+			if (String.IsNullOrEmpty(value) || value[0] != '"')
+			{
+				throw new ArgumentException("Proximity value must be a phrase");
+			}
+
+			string whereClause = fieldName + ":" + value + "~" + proximity;
 
 			if (string.IsNullOrEmpty(query))
 				query = whereClause;
@@ -128,7 +241,7 @@ namespace Raven.Client.Document
 		/// <remarks>
 		/// http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Escaping%20Special%20Characters
 		/// </remarks>
-		private static string Escape(string term, bool isAnalyzed, bool allowWildcards)
+		private static string EscapeTerm(string term, bool isAnalyzed, bool allowWildcards)
 		{
 			if (string.IsNullOrEmpty(term))
 			{
@@ -138,13 +251,13 @@ namespace Raven.Client.Document
 			bool isPhrase = false;
 			int start = 0;
 			int length = term.Length;
-			StringBuilder builder = null;
+			StringBuilder buffer = null;
 
 			if (!isAnalyzed)
 			{
 				// FieldIndexing.NotAnalyzed requires enclosing brackets
-				builder = new StringBuilder(length*2);
-				builder.Append("[[");
+				buffer = new StringBuilder(length*2);
+				buffer.Append("[[");
 			}
 
 			for (int i=start; i<length; i++)
@@ -156,7 +269,7 @@ namespace Raven.Client.Document
 					case '*':
 					case '?':
 					{
-						if (isAnalyzed && allowWildcards)
+						if (allowWildcards && isAnalyzed)
 						{
 							break;
 						}
@@ -179,19 +292,19 @@ namespace Raven.Client.Document
 					case ':':
 					case '\\':
 					{
-						if (builder == null)
+						if (buffer == null)
 						{
 							// allocate builder with headroom
-							builder = new StringBuilder(length*2);
+							buffer = new StringBuilder(length*2);
 						}
 
 						if (i > start)
 						{
 							// append any leading substring
-							builder.Append(term, start, i-start);
+							buffer.Append(term, start, i-start);
 						}
 
-						builder.Append('\\').Append(ch);
+						buffer.Append('\\').Append(ch);
 						start = i+1;
 						break;
 					}
@@ -200,13 +313,13 @@ namespace Raven.Client.Document
 					{
 						if (isAnalyzed && !isPhrase)
 						{
-							if (builder == null)
+							if (buffer == null)
 							{
 								// allocate builder with headroom
-								builder = new StringBuilder(length*2);
+								buffer = new StringBuilder(length*2);
 							}
 
-							builder.Insert(0, '"');
+							buffer.Insert(0, '"');
 							isPhrase = true;
 						}
 						break;
@@ -214,7 +327,7 @@ namespace Raven.Client.Document
 				}
 			}
 
-			if (builder == null)
+			if (buffer == null)
 			{
 				// no changes required
 				return term;
@@ -223,21 +336,21 @@ namespace Raven.Client.Document
 			if (length > start)
 			{
 				// append any trailing substring
-				builder.Append(term, start, length-start);
+				buffer.Append(term, start, length-start);
 			}
 
 			if (!isAnalyzed)
 			{
 				// FieldIndexing.NotAnalyzed requires enclosing brackets
-				builder.Append("]]");
+				buffer.Append("]]");
 			}
 			else if (isPhrase)
 			{
 				// quoted phrase
-				builder.Append('"');
+				buffer.Append('"');
 			}
 
-			return builder.ToString();
+			return buffer.ToString();
 		}
 
 		public IDocumentQuery<T> OrderBy(params string[] fields)

@@ -11,6 +11,9 @@ namespace Raven.Client
 		IDocumentQuery<T> Where(string whereClause);
 		IDocumentQuery<T> Where(string fieldName, string value);
 		IDocumentQuery<T> Where(string fieldName, string value, bool isAnalyzed);
+		IDocumentQuery<T> WhereBoost(string fieldName, string value, decimal boost);
+		IDocumentQuery<T> WhereFuzzy(string fieldName, string value, decimal fuzzy);
+		IDocumentQuery<T> WhereProximity(string fieldName, string value, int proximity);
 		IDocumentQuery<T> OrderBy(params string[] fields);
 
         IDocumentQuery<T> WaitForNonStaleResultsAsOfNow();

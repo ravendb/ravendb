@@ -104,6 +104,24 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		public IDocumentQuery<T> WhereBoost(string fieldName, string value, decimal boost)
+		{
+			ApplyForAll(query => query.WhereBoost(fieldName, value, boost));
+			return this;
+		}
+
+		public IDocumentQuery<T> WhereFuzzy(string fieldName, string value, decimal fuzzy)
+		{
+			ApplyForAll(query => query.WhereFuzzy(fieldName, value, fuzzy));
+			return this;
+		}
+
+		public IDocumentQuery<T> WhereProximity(string fieldName, string value, int proximity)
+		{
+			ApplyForAll(query => query.WhereProximity(fieldName, value, proximity));
+			return this;
+		}
+
 		public IDocumentQuery<T> OrderBy(params string[] fields)
 		{
 			ApplyForAll(query => query.OrderBy(fields));
