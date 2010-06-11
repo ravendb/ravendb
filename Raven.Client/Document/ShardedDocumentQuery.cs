@@ -5,7 +5,6 @@ using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
-using Raven.Database.Indexing;
 
 namespace Raven.Client.Document
 {
@@ -93,9 +92,15 @@ namespace Raven.Client.Document
 			return this;
 		}
 
-		public IDocumentQuery<T> Where(string field, string term, FieldIndexing fieldIndexing)
+		public IDocumentQuery<T> Where(string fieldName, string value)
 		{
-			ApplyForAll(query => query.Where(field, term, fieldIndexing));
+			ApplyForAll(query => query.Where(fieldName, value));
+			return this;
+		}
+
+		public IDocumentQuery<T> Where(string fieldName, string value, bool isAnalyzed)
+		{
+			ApplyForAll(query => query.Where(fieldName, value, isAnalyzed));
 			return this;
 		}
 

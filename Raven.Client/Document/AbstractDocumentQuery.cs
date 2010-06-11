@@ -6,7 +6,6 @@ using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
-using Raven.Database.Indexing;
 using Raven.Database.Json;
 
 namespace Raven.Client.Document
@@ -101,9 +100,15 @@ namespace Raven.Client.Document
 			return this;
 		}
 
-		public IDocumentQuery<T> Where(string field, string term, FieldIndexing fieldIndexing)
+		public IDocumentQuery<T> Where(string fieldName, string value)
 		{
-			string whereClause = field + ":" + Escape(term, fieldIndexing);
+			// default to analyzed fields
+			return this.Where(fieldName, value, true);
+		}
+
+		public IDocumentQuery<T> Where(string fieldName, string value, bool isAnalyzed)
+		{
+			string whereClause = fieldName + ":" + Escape(value, isAnalyzed, false);
 
 			if (string.IsNullOrEmpty(query))
 				query = whereClause;
@@ -117,11 +122,13 @@ namespace Raven.Client.Document
 		/// Escapes Lucene operators and quotes phrases
 		/// </summary>
 		/// <param name="term"></param>
+		/// <param name="isAnalyzed"></param>
+		/// <param name="allowWildcards"></param>
 		/// <returns>escaped term</returns>
 		/// <remarks>
 		/// http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Escaping%20Special%20Characters
 		/// </remarks>
-		private static string Escape(string term, FieldIndexing fieldIndexing)
+		private static string Escape(string term, bool isAnalyzed, bool allowWildcards)
 		{
 			if (string.IsNullOrEmpty(term))
 			{
@@ -129,15 +136,13 @@ namespace Raven.Client.Document
 			}
 
 			bool isPhrase = false;
-			bool isAnalyzed = (fieldIndexing == FieldIndexing.Analyzed);
-
 			int start = 0;
 			int length = term.Length;
 			StringBuilder builder = null;
 
 			if (!isAnalyzed)
 			{
-				// NotAnalyzed requires brackets
+				// FieldIndexing.NotAnalyzed requires enclosing brackets
 				builder = new StringBuilder(length*2);
 				builder.Append("[[");
 			}
@@ -150,7 +155,13 @@ namespace Raven.Client.Document
 					// should wildcards be included or excluded here?
 					case '*':
 					case '?':
-
+					{
+						if (isAnalyzed && allowWildcards)
+						{
+							break;
+						}
+						goto case '\\';
+					}
 					case '+':
 					case '-':
 					case '&':
@@ -217,7 +228,7 @@ namespace Raven.Client.Document
 
 			if (!isAnalyzed)
 			{
-				// exact term
+				// FieldIndexing.NotAnalyzed requires enclosing brackets
 				builder.Append("]]");
 			}
 			else if (isPhrase)
