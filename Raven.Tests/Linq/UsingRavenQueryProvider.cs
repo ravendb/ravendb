@@ -18,11 +18,15 @@ namespace Raven.Tests.Linq
         public string Id { get; set; }
         public string Name { get; set; }
         public int Age { get; set; }
+        public string Info { get; set; }
+        public bool Active { get; set; }
 
         public User()
         {
             Name = String.Empty;
-            Age = default(int);            
+            Age = default(int);
+            Info = String.Empty;
+            Active = false;
         }        
     }
     public class UsingRavenQueryProvider
@@ -182,8 +186,55 @@ namespace Raven.Tests.Linq
                     Assert.Null(singleOrDefaultItem);
                 }
             }
-        }
+        }        
 
+        [Fact]
+        public void Can_perform_Boolean_Queries()
+        {
+            //When running in the XUnit GUI strange things happen is we just create a path relative to 
+            //the .exe itself, so make our folder in the System temp folder instead ("<user>\AppData\Local\Temp")
+            string directoryName = Path.Combine(Path.GetTempPath(), "ravendb.RavenQueryProvider");
+            if (Directory.Exists(directoryName))
+            {
+                Directory.Delete(directoryName, true);
+            }
+
+            using (var db = new DocumentStore() { DataDirectory = directoryName })
+            {
+                db.Initialize();
+
+                string indexName = "UserIndex";
+                using (var session = db.OpenSession())
+                {
+                    session.Store(new User() { Name = "Matt", Info = "Male Age 25" }); //Active = false by default
+                    session.Store(new User() { Name = "Matt", Info = "Male Age 28", Active = true });
+                    session.Store(new User() { Name = "Matt", Info = "Male Age 35", Active = false });
+                    session.SaveChanges();
+
+                    db.DatabaseCommands.DeleteIndex(indexName);
+                    var result = db.DatabaseCommands.PutIndex<User, User>(indexName,
+                            new IndexDefinition<User, User>()
+                            {
+                                Map = docs => from doc in docs
+                                              select new { doc.Name, doc.Age, doc.Info, doc.Active },
+                            }, true);
+
+                    WaitForQueryToComplete(session, indexName);
+
+                    var testQuery = session.Query<User>(indexName)
+                                        .Where(x => x.Name == "Matt" && x.Active);                    
+                    Assert.Equal(1, testQuery.ToArray().Count());
+                    foreach (var testResult in testQuery)
+                        Assert.True(testResult.Active);
+                    
+                    testQuery = session.Query<User>(indexName)
+                                        .Where(x => x.Name == "Matt" && !x.Active);
+                    Assert.Equal(2, testQuery.ToArray().Count());
+                    foreach (var testResult in testQuery)
+                        Assert.False(testResult.Active);                                       
+                }
+            }
+        }
         private static void WaitForQueryToComplete(IDocumentSession session, string indexName)
         {            
             QueryResult results;
