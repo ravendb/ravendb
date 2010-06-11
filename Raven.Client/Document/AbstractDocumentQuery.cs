@@ -2,9 +2,11 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
+using Raven.Database.Indexing;
 using Raven.Database.Json;
 
 namespace Raven.Client.Document
@@ -97,6 +99,134 @@ namespace Raven.Client.Document
 			else
 				query += " " + whereClause;
 			return this;
+		}
+
+		public IDocumentQuery<T> Where(string field, string term, FieldIndexing fieldIndexing)
+		{
+			string whereClause = field + ":" + Escape(term, fieldIndexing);
+
+			if (string.IsNullOrEmpty(query))
+				query = whereClause;
+			else
+				query += " " + whereClause;
+
+			return this;
+		}
+
+		/// <summary>
+		/// Escapes Lucene operators and quotes phrases
+		/// </summary>
+		/// <param name="term"></param>
+		/// <returns>escaped term</returns>
+		/// <remarks>
+		/// http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Escaping%20Special%20Characters
+		/// </remarks>
+		private static string Escape(string term, FieldIndexing fieldIndexing)
+		{
+			if (string.IsNullOrEmpty(term))
+			{
+				return string.Empty;
+			}
+
+			bool isPhrase = false;
+			bool isAnalyzed = (fieldIndexing == FieldIndexing.Analyzed);
+
+			int start = 0;
+			int length = term.Length;
+			StringBuilder builder = null;
+
+			if (!isAnalyzed)
+			{
+				// NotAnalyzed requires brackets
+				builder = new StringBuilder(length*2);
+				builder.Append("[[");
+			}
+
+			for (int i=start; i<length; i++)
+			{
+				char ch = term[i];
+				switch (ch)
+				{
+					// should wildcards be included or excluded here?
+					case '*':
+					case '?':
+
+					case '+':
+					case '-':
+					case '&':
+					case '|':
+					case '!':
+					case '(':
+					case ')':
+					case '{':
+					case '}':
+					case '[':
+					case ']':
+					case '^':
+					case '"':
+					case '~':
+					case ':':
+					case '\\':
+					{
+						if (builder == null)
+						{
+							// allocate builder with headroom
+							builder = new StringBuilder(length*2);
+						}
+
+						if (i > start)
+						{
+							// append any leading substring
+							builder.Append(term, start, i-start);
+						}
+
+						builder.Append('\\').Append(ch);
+						start = i+1;
+						break;
+					}
+					case ' ':
+					case '\t':
+					{
+						if (isAnalyzed && !isPhrase)
+						{
+							if (builder == null)
+							{
+								// allocate builder with headroom
+								builder = new StringBuilder(length*2);
+							}
+
+							builder.Insert(0, '"');
+							isPhrase = true;
+						}
+						break;
+					}
+				}
+			}
+
+			if (builder == null)
+			{
+				// no changes required
+				return term;
+			}
+
+			if (length > start)
+			{
+				// append any trailing substring
+				builder.Append(term, start, length-start);
+			}
+
+			if (!isAnalyzed)
+			{
+				// exact term
+				builder.Append("]]");
+			}
+			else if (isPhrase)
+			{
+				// quoted phrase
+				builder.Append('"');
+			}
+
+			return builder.ToString();
 		}
 
 		public IDocumentQuery<T> OrderBy(params string[] fields)

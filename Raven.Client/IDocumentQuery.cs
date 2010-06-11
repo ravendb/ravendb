@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Database.Data;
+using Raven.Database.Indexing;
 
 namespace Raven.Client
 {
@@ -9,6 +10,7 @@ namespace Raven.Client
 		IDocumentQuery<T> Take(int count);
 		IDocumentQuery<T> Skip(int count);
 		IDocumentQuery<T> Where(string whereClause);
+		IDocumentQuery<T> Where(string field, string term, FieldIndexing fieldIndexing);
 		IDocumentQuery<T> OrderBy(params string[] fields);
 
         IDocumentQuery<T> WaitForNonStaleResultsAsOfNow();

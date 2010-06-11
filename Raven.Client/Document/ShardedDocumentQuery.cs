@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
-using System.Linq;
+using Raven.Database.Indexing;
 
 namespace Raven.Client.Document
 {
@@ -89,6 +90,12 @@ namespace Raven.Client.Document
 		public IDocumentQuery<T> Where(string whereClause)
 		{
 			ApplyForAll(query => query.Where(whereClause));
+			return this;
+		}
+
+		public IDocumentQuery<T> Where(string field, string term, FieldIndexing fieldIndexing)
+		{
+			ApplyForAll(query => query.Where(field, term, fieldIndexing));
 			return this;
 		}
 
