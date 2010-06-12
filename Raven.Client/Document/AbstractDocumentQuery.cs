@@ -7,6 +7,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
 using Raven.Database.Json;
+using Raven.Client.Linq;
 
 namespace Raven.Client.Document
 {
@@ -106,7 +107,7 @@ namespace Raven.Client.Document
 		/// <param name="fieldName"></param>
 		/// <param name="value"></param>
 		/// <returns></returns>
-		public IDocumentQuery<T> Where(string fieldName, string value)
+		public IDocumentQuery<T> Where(string fieldName, object value)
 		{
 			// default to analyzed fields
 			return this.Where(fieldName, value, true);
@@ -119,9 +120,9 @@ namespace Raven.Client.Document
 		/// <param name="value"></param>
 		/// <param name="isAnalyzed"></param>
 		/// <returns></returns>
-		public IDocumentQuery<T> Where(string fieldName, string value, bool isAnalyzed)
+		public IDocumentQuery<T> Where(string fieldName, object value, bool isAnalyzed)
 		{
-			string whereClause = fieldName + ":" + LuceneEscape(value, isAnalyzed, isAnalyzed);
+			string whereClause = fieldName + ":" + TransformToEqualValue(value, isAnalyzed, isAnalyzed);
 
 			if (string.IsNullOrEmpty(query))
 				query = whereClause;
@@ -229,6 +230,17 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		private static string TransformToEqualValue(object value, bool isAnalyzed, bool allowWildcards)
+		{
+			if (value == null)
+				return "NULL_VALUE";
+
+			if (value is DateTime)
+				return DateTools.DateToString((DateTime)value, DateTools.Resolution.MILLISECOND);
+
+			return LuceneEscape(value.ToString(), isAnalyzed, allowWildcards);
+		}
+
 		/// <summary>
 		/// Escapes Lucene operators and quotes phrases
 		/// </summary>
@@ -248,7 +260,7 @@ namespace Raven.Client.Document
 
 			if (string.IsNullOrEmpty(term))
 			{
-				return string.Empty;
+				return "\"\"";
 			}
 
 			bool isPhrase = false;

@@ -9,8 +9,8 @@ namespace Raven.Client
 		IDocumentQuery<T> Take(int count);
 		IDocumentQuery<T> Skip(int count);
 		IDocumentQuery<T> Where(string whereClause);
-		IDocumentQuery<T> Where(string fieldName, string value);
-		IDocumentQuery<T> Where(string fieldName, string value, bool isAnalyzed);
+		IDocumentQuery<T> Where(string fieldName, object value);
+		IDocumentQuery<T> Where(string fieldName, object value, bool isAnalyzed);
 
 		/// <summary>
 		/// Specifies a boost weight to the last where clause.
