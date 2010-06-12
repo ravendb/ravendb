@@ -104,21 +104,21 @@ namespace Raven.Client.Document
 			return this;
 		}
 
-		public IDocumentQuery<T> WhereBoost(string fieldName, string value, decimal boost)
+		public IDocumentQuery<T> Boost(decimal boost)
 		{
-			ApplyForAll(query => query.WhereBoost(fieldName, value, boost));
+			ApplyForAll(query => query.Boost(boost));
 			return this;
 		}
 
-		public IDocumentQuery<T> WhereFuzzy(string fieldName, string value, decimal fuzzy)
+		public IDocumentQuery<T> Fuzzy(decimal fuzzy)
 		{
-			ApplyForAll(query => query.WhereFuzzy(fieldName, value, fuzzy));
+			ApplyForAll(query => query.Fuzzy(fuzzy));
 			return this;
 		}
 
-		public IDocumentQuery<T> WhereProximity(string fieldName, string value, int proximity)
+		public IDocumentQuery<T> Proximity(int proximity)
 		{
-			ApplyForAll(query => query.WhereProximity(fieldName, value, proximity));
+			ApplyForAll(query => query.Proximity(proximity));
 			return this;
 		}
 

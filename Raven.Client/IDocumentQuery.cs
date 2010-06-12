@@ -11,9 +11,38 @@ namespace Raven.Client
 		IDocumentQuery<T> Where(string whereClause);
 		IDocumentQuery<T> Where(string fieldName, string value);
 		IDocumentQuery<T> Where(string fieldName, string value, bool isAnalyzed);
-		IDocumentQuery<T> WhereBoost(string fieldName, string value, decimal boost);
-		IDocumentQuery<T> WhereFuzzy(string fieldName, string value, decimal fuzzy);
-		IDocumentQuery<T> WhereProximity(string fieldName, string value, int proximity);
+
+		/// <summary>
+		/// Specifies a boost weight to the last where clause.
+		/// The higher the boost factor, the more relevant the term will be.
+		/// </summary>
+		/// <param name="boost">boosting factor where 1.0 is default, less than 1.0 is lower weight, greater than 1.0 is higher weight</param>
+		/// <returns></returns>
+		/// <remarks>
+		/// http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Boosting%20a%20Term
+		/// </remarks>
+		IDocumentQuery<T> Boost(decimal boost);
+
+		/// <summary>
+		/// Specifies a fuzziness factor to the single word term in the last where clause
+		/// </summary>
+		/// <param name="fuzzy">0.0 to 1.0 where 1.0 means closer match</param>
+		/// <returns></returns>
+		/// <remarks>
+		/// http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Fuzzy%20Searches
+		/// </remarks>
+		IDocumentQuery<T> Fuzzy(decimal fuzzy);
+
+		/// <summary>
+		/// Specifies a proximity distance for the phrase in the last where clause
+		/// </summary>
+		/// <param name="proximity">number of words within</param>
+		/// <returns></returns>
+		/// <remarks>
+		/// http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Proximity%20Searches
+		/// </remarks>
+		IDocumentQuery<T> Proximity(int proximity);
+
 		IDocumentQuery<T> OrderBy(params string[] fields);
 
         IDocumentQuery<T> WaitForNonStaleResultsAsOfNow();

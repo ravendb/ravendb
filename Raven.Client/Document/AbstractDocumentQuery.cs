@@ -132,101 +132,86 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
-		/// Matches terms with a given weighted value
+		/// Specifies a boost weight to the last where clause.
+		/// The higher the boost factor, the more relevant the term will be.
 		/// </summary>
-		/// <param name="fieldName"></param>
-		/// <param name="value"></param>
-		/// <param name="boost"></param>
+		/// <param name="boost">boosting factor where 1.0 is default, less than 1.0 is lower weight, greater than 1.0 is higher weight</param>
 		/// <returns></returns>
-		public IDocumentQuery<T> WhereBoost(string fieldName, string value, decimal boost)
+		/// <remarks>
+		/// http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Boosting%20a%20Term
+		/// </remarks>
+		public IDocumentQuery<T> Boost(decimal boost)
 		{
 			if (boost <= 0m)
 			{
 				throw new ArgumentOutOfRangeException("Boost factor must be a positive number");
 			}
 
-			string whereClause = fieldName + ":" + EscapeTerm(value, true, false);
+			if (string.IsNullOrEmpty(this.query))
+			{
+				throw new InvalidOperationException("Missing where clause");
+			}
+
 			if (boost != 1m)
 			{
 				// 1.0 is the default
-				whereClause += "^" + boost;
+				this.query += "^" + boost;
 			}
-
-			if (string.IsNullOrEmpty(query))
-				query = whereClause;
-			else
-				query += " " + whereClause;
 
 			return this;
 		}
 
 		/// <summary>
-		/// Matches single word terms similar to the value
+		/// Specifies a fuzziness factor to the single word term in the last where clause
 		/// </summary>
-		/// <param name="fieldName"></param>
-		/// <param name="value"></param>
-		/// <param name="fuzzy"></param>
+		/// <param name="fuzzy">0.0 to 1.0 where 1.0 means closer match</param>
 		/// <returns></returns>
 		/// <remarks>
 		/// http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Fuzzy%20Searches
 		/// </remarks>
-		public IDocumentQuery<T> WhereFuzzy(string fieldName, string value, decimal fuzzy)
+		public IDocumentQuery<T> Fuzzy(decimal fuzzy)
 		{
 			if (fuzzy < 0m || fuzzy > 1m)
 			{
 				throw new ArgumentOutOfRangeException("Fuzzy distance must be between 0.0 and 1.0");
 			}
 
-			value = EscapeTerm(value, true, false);
-			if (String.IsNullOrEmpty(value) || value[0] == '"')
+			if (string.IsNullOrEmpty(this.query) || this.query[this.query.Length-1] == '"')
 			{
-				throw new ArgumentException("Fuzzy value must be single word term");
+				throw new InvalidOperationException("Fuzzy factor can only modify single word terms");
 			}
 
-			string whereClause = fieldName + ":" + value + "~";
+			this.query += "~";
 			if (fuzzy != 0.5m)
 			{
 				// 0.5 is the default
-				whereClause += fuzzy;
+				this.query += fuzzy;
 			}
-
-			if (string.IsNullOrEmpty(query))
-				query = whereClause;
-			else
-				query += " " + whereClause;
 
 			return this;
 		}
 
 		/// <summary>
-		/// Matches words in a phrase within a certain proximity
+		/// Specifies a proximity distance for the phrase in the last where clause
 		/// </summary>
-		/// <param name="fieldName"></param>
-		/// <param name="value"></param>
-		/// <param name="proximity"></param>
+		/// <param name="proximity">number of words within</param>
 		/// <returns></returns>
 		/// <remarks>
 		/// http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Proximity%20Searches
 		/// </remarks>
-		public IDocumentQuery<T> WhereProximity(string fieldName, string value, int proximity)
+		public IDocumentQuery<T> Proximity(int proximity)
 		{
-			if (proximity <= 0m)
+			if (proximity < 1)
 			{
 				throw new ArgumentOutOfRangeException("Proximity distance must be positive number");
 			}
 
-			value = EscapeTerm(value, true, false);
-			if (String.IsNullOrEmpty(value) || value[0] != '"')
+			if (string.IsNullOrEmpty(this.query) || this.query[this.query.Length-1] != '"')
 			{
-				throw new ArgumentException("Proximity value must be a phrase");
+				throw new InvalidOperationException("Proximity distance can only modify a phrase");
 			}
 
-			string whereClause = fieldName + ":" + value + "~" + proximity;
-
-			if (string.IsNullOrEmpty(query))
-				query = whereClause;
-			else
-				query += " " + whereClause;
+			this.query += "~" + proximity;
 
 			return this;
 		}
