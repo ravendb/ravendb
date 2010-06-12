@@ -121,7 +121,7 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public IDocumentQuery<T> Where(string fieldName, string value, bool isAnalyzed)
 		{
-			string whereClause = fieldName + ":" + EscapeTerm(value, isAnalyzed, isAnalyzed);
+			string whereClause = fieldName + ":" + LuceneEscape(value, isAnalyzed, isAnalyzed);
 
 			if (string.IsNullOrEmpty(query))
 				query = whereClause;
@@ -239,8 +239,13 @@ namespace Raven.Client.Document
 		/// <remarks>
 		/// http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Escaping%20Special%20Characters
 		/// </remarks>
-		private static string EscapeTerm(string term, bool isAnalyzed, bool allowWildcards)
+		private static string LuceneEscape(string term, bool isAnalyzed, bool allowWildcards)
 		{
+			// method doesn't allocate a StringBuilder unless the string requires escaping
+			// also this copies chunks of the original string into the StringBuilder which
+			// is far more efficient than copying character by character because StringBuilder
+			// can access the underlying string data directly
+
 			if (string.IsNullOrEmpty(term))
 			{
 				return string.Empty;
