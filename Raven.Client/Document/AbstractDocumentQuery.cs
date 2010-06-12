@@ -142,14 +142,14 @@ namespace Raven.Client.Document
 		/// </remarks>
 		public IDocumentQuery<T> Boost(decimal boost)
 		{
-			if (boost <= 0m)
-			{
-				throw new ArgumentOutOfRangeException("Boost factor must be a positive number");
-			}
-
 			if (string.IsNullOrEmpty(this.query))
 			{
 				throw new InvalidOperationException("Missing where clause");
+			}
+
+			if (boost <= 0m)
+			{
+				throw new ArgumentOutOfRangeException("Boost factor must be a positive number");
 			}
 
 			if (boost != 1m)
@@ -171,13 +171,20 @@ namespace Raven.Client.Document
 		/// </remarks>
 		public IDocumentQuery<T> Fuzzy(decimal fuzzy)
 		{
+			if (string.IsNullOrEmpty(this.query))
+			{
+				throw new InvalidOperationException("Missing where clause");
+			}
+
 			if (fuzzy < 0m || fuzzy > 1m)
 			{
 				throw new ArgumentOutOfRangeException("Fuzzy distance must be between 0.0 and 1.0");
 			}
 
-			if (string.IsNullOrEmpty(this.query) || this.query[this.query.Length-1] == '"')
+			char ch = this.query[this.query.Length-1];
+			if (ch == '"' || ch == ']')
 			{
+				// this check is overly simplistic
 				throw new InvalidOperationException("Fuzzy factor can only modify single word terms");
 			}
 
@@ -201,13 +208,19 @@ namespace Raven.Client.Document
 		/// </remarks>
 		public IDocumentQuery<T> Proximity(int proximity)
 		{
+			if (string.IsNullOrEmpty(this.query))
+			{
+				throw new InvalidOperationException("Missing where clause");
+			}
+
 			if (proximity < 1)
 			{
 				throw new ArgumentOutOfRangeException("Proximity distance must be positive number");
 			}
 
-			if (string.IsNullOrEmpty(this.query) || this.query[this.query.Length-1] != '"')
+			if (this.query[this.query.Length-1] != '"')
 			{
+				// this check is overly simplistic
 				throw new InvalidOperationException("Proximity distance can only modify a phrase");
 			}
 
