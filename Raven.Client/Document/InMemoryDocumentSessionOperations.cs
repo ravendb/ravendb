@@ -259,10 +259,30 @@ more responsive application.
 				Commands = new List<ICommandData>()
 			};
 			TryEnlistInAmbientTransaction();
+
+			AddDeleteCommands(result);
+			AddPutCommands(result);
+
+			return result;
+		}
+
+		private void AddPutCommands(DocumentSession.SaveChangesData result)
+		{
+			foreach (var entity in entitiesAndMetadata.Where(EntityChanged))
+			{
+				result.Entities.Add(entity.Key);
+				if (entity.Value.Key != null)
+					entitiesByKey.Remove(entity.Value.Key);
+				result.Commands.Add(CreatePutEntityCommand(entity.Key, entity.Value));
+			}
+		}
+
+		private void AddDeleteCommands(DocumentSession.SaveChangesData result)
+		{
 			DocumentSession.DocumentMetadata value = null;
 			foreach (var key in (from deletedEntity in deletedEntities
-								 where entitiesAndMetadata.TryGetValue(deletedEntity, out value)
-								 select value.Key))
+			                     where entitiesAndMetadata.TryGetValue(deletedEntity, out value)
+			                     select value.Key))
 			{
 				Guid? etag = null;
 				object existingEntity;
@@ -283,15 +303,6 @@ more responsive application.
 				});
 			}
 			deletedEntities.Clear();
-			foreach (var entity in entitiesAndMetadata.Where(EntityChanged))
-			{
-				result.Entities.Add(entity.Key);
-				if (entity.Value.Key != null)
-					entitiesByKey.Remove(entity.Value.Key);
-				result.Commands.Add(CreatePutEntityCommand(entity.Key, entity.Value));
-			}
-
-			return result;
 		}
 
 		private void TryEnlistInAmbientTransaction()
