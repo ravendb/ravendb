@@ -65,6 +65,7 @@ namespace Raven.Client.Document
 			linqQuery = Regex.Replace(linqQuery, @"new <>[\w_]+`\d+", "new ");// remove anonymous types
 			linqQuery = Regex.Replace(linqQuery, " AndAlso ", " && "); // replace &&
 			linqQuery = Regex.Replace(linqQuery, " OrElse ", " || "); // replace ||
+			linqQuery = Regex.Replace(linqQuery, @" Not([ (])", " !$1"); // replace !
 			const string pattern = @"(\.Where\(|\.Select\(|\.GroupBy\(|\.SelectMany)";
 			linqQuery = Regex.Replace(linqQuery, pattern, "\r\n\t$1"); // formatting
 			return linqQuery;

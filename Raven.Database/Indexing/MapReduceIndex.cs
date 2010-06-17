@@ -13,6 +13,7 @@ using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Json;
 using Raven.Database.Linq;
+using Raven.Database.Storage;
 using Raven.Database.Storage.StorageActions;
 using Raven.Database.Tasks;
 
@@ -29,16 +30,16 @@ namespace Raven.Database.Indexing
             AbstractViewGenerator viewGenerator,
             IEnumerable<dynamic> documents,
             WorkContext context,
-            DocumentStorageActions actions)
+			StorageActionsAccessor actions)
         {
-            actions.SetCurrentIndexStatsTo(name);
+            actions.Indexing.SetCurrentIndexStatsTo(name);
             var count = 0;
             Func<object, object> documentIdFetcher = null;
             var reduceKeys = new HashSet<string>();
         	var documentsWrapped = documents.Select(doc =>
         	{
         		var documentId = doc.__document_id;
-				foreach (var reduceKey in actions.DeleteMappedResultsForDocumentId((string)documentId, name))
+				foreach (var reduceKey in actions.MappedResults.DeleteMappedResultsForDocumentId((string)documentId, name))
         		{
 					reduceKeys.Add(reduceKey);
         		}
@@ -71,12 +72,12 @@ namespace Raven.Database.Indexing
 
                 var hash = ComputeHash(name, reduceKey);
 
-				actions.PutMappedResult(name, docId, reduceKey, data, hash);
+				actions.MappedResults.PutMappedResult(name, docId, reduceKey, data, hash);
 
-                actions.IncrementSuccessIndexing();
+                actions.Indexing.IncrementSuccessIndexing();
             }
 
-			actions.AddTask(new ReduceTask
+			actions.Tasks.AddTask(new ReduceTask
 			{
 				Index = name,
 				ReduceKeys = reduceKeys.ToArray()
@@ -139,13 +140,13 @@ namespace Raven.Database.Indexing
                 var reduceKeys = new HashSet<string>();
                 foreach (var key in keys)
                 {
-                    var reduceKeysFromDocuments = actions.DeleteMappedResultsForDocumentId(key, name);
+                    var reduceKeysFromDocuments = actions.MappedResults.DeleteMappedResultsForDocumentId(key, name);
                     foreach (var reduceKey in reduceKeysFromDocuments)
                     {
                         reduceKeys.Add(reduceKey);
                     }
                 }
-            	actions.AddTask(new ReduceTask
+            	actions.Tasks.AddTask(new ReduceTask
             	{
             		Index = name,
             		ReduceKeys = reduceKeys.ToArray()
@@ -166,10 +167,10 @@ namespace Raven.Database.Indexing
         public void ReduceDocuments(AbstractViewGenerator viewGenerator,
                                     IEnumerable<object> mappedResults,
                                     WorkContext context,
-                                    DocumentStorageActions actions,
+									StorageActionsAccessor actions,
                                     string[] reduceKeys)
         {
-            actions.SetCurrentIndexStatsTo(name);
+            actions.Indexing.SetCurrentIndexStatsTo(name);
             var count = 0;
             Write(indexWriter =>
             {
@@ -199,7 +200,7 @@ namespace Raven.Database.Indexing
                     context.IndexUpdateTriggers.Apply(trigger => trigger.OnIndexEntryCreated(name, reduceKeyAsString, luceneDoc));
                     log.DebugFormat("Reduce key {0} result in index {1} gave document: {2}", reduceKeyAsString, name, luceneDoc);
                     indexWriter.AddDocument(luceneDoc);
-                    actions.IncrementSuccessIndexing();
+                    actions.Indexing.IncrementSuccessIndexing();
                 }
 
                 return true;

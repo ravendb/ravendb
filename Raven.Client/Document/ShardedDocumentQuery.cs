@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
-using System.Linq;
 
 namespace Raven.Client.Document
 {
@@ -89,6 +89,36 @@ namespace Raven.Client.Document
 		public IDocumentQuery<T> Where(string whereClause)
 		{
 			ApplyForAll(query => query.Where(whereClause));
+			return this;
+		}
+
+		public IDocumentQuery<T> Where(string fieldName, object value)
+		{
+			ApplyForAll(query => query.Where(fieldName, value));
+			return this;
+		}
+
+		public IDocumentQuery<T> Where(string fieldName, object value, bool isAnalyzed)
+		{
+			ApplyForAll(query => query.Where(fieldName, value, isAnalyzed));
+			return this;
+		}
+
+		public IDocumentQuery<T> Boost(decimal boost)
+		{
+			ApplyForAll(query => query.Boost(boost));
+			return this;
+		}
+
+		public IDocumentQuery<T> Fuzzy(decimal fuzzy)
+		{
+			ApplyForAll(query => query.Fuzzy(fuzzy));
+			return this;
+		}
+
+		public IDocumentQuery<T> Proximity(int proximity)
+		{
+			ApplyForAll(query => query.Proximity(proximity));
 			return this;
 		}
 

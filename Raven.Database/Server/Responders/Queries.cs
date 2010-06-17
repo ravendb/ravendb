@@ -23,7 +23,7 @@ namespace Raven.Database.Server.Responders
 			{
 				foreach (JToken item in itemsToLoad)
 				{
-					var documentByKey = actions.DocumentByKey(item.Value<string>(),
+					var documentByKey = actions.Documents.DocumentByKey(item.Value<string>(),
                         GetRequestTransaction(context));
 					if (documentByKey == null)
 						continue;

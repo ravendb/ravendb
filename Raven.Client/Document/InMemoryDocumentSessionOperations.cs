@@ -117,6 +117,7 @@ more responsive application.
 			{
 				OriginalValue = document,
 				Metadata = metadata,
+				OriginalMetadata = metadata,
 				ETag = new Guid(etag),
 				Key = key
 			};
@@ -185,13 +186,16 @@ more responsive application.
 			}
 
 			var tag = documentStore.Conventions.GetTypeTagName(entity.GetType());
+			var metadata = new JObject(new JProperty(RavenEntityName, new JValue(tag)));
 			entitiesAndMetadata.Add(entity, new DocumentSession.DocumentMetadata
 			{
 				Key = id,
-				Metadata = new JObject(new JProperty(RavenEntityName, new JValue(tag))),
+				Metadata = metadata,
+				OriginalMetadata = metadata,
 				ETag = null,
 				OriginalValue = new JObject()
 			});
+
 			if (id != null)
 				entitiesByKey[id] = entity;
 
@@ -240,6 +244,8 @@ more responsive application.
 				entitiesByKey[batchResult.Key] = entity;
 				documentMetadata.ETag = batchResult.Etag;
 				documentMetadata.Key = batchResult.Key;
+				documentMetadata.OriginalMetadata = batchResult.Metadata;
+				documentMetadata.Metadata = batchResult.Metadata;
 				documentMetadata.OriginalValue = ConvertEntityToJson(entity, documentMetadata.Metadata);
 
 				// Set/Update the id of the entity
@@ -261,10 +267,30 @@ more responsive application.
 				Commands = new List<ICommandData>()
 			};
 			TryEnlistInAmbientTransaction();
+
+			AddDeleteCommands(result);
+			AddPutCommands(result);
+
+			return result;
+		}
+
+		private void AddPutCommands(DocumentSession.SaveChangesData result)
+		{
+			foreach (var entity in entitiesAndMetadata.Where(EntityChanged))
+			{
+				result.Entities.Add(entity.Key);
+				if (entity.Value.Key != null)
+					entitiesByKey.Remove(entity.Value.Key);
+				result.Commands.Add(CreatePutEntityCommand(entity.Key, entity.Value));
+			}
+		}
+
+		private void AddDeleteCommands(DocumentSession.SaveChangesData result)
+		{
 			DocumentSession.DocumentMetadata value = null;
 			foreach (var key in (from deletedEntity in deletedEntities
-								 where entitiesAndMetadata.TryGetValue(deletedEntity, out value)
-								 select value.Key))
+			                     where entitiesAndMetadata.TryGetValue(deletedEntity, out value)
+			                     select value.Key))
 			{
 				Guid? etag = null;
 				object existingEntity;
@@ -285,15 +311,6 @@ more responsive application.
 				});
 			}
 			deletedEntities.Clear();
-			foreach (var entity in entitiesAndMetadata.Where(EntityChanged))
-			{
-				result.Entities.Add(entity.Key);
-				if (entity.Value.Key != null)
-					entitiesByKey.Remove(entity.Value.Key);
-				result.Commands.Add(CreatePutEntityCommand(entity.Key, entity.Value));
-			}
-
-			return result;
 		}
 
 		private void TryEnlistInAmbientTransaction()
@@ -319,7 +336,9 @@ more responsive application.
 			var newObj = ConvertEntityToJson(kvp.Key, kvp.Value.Metadata);
 			if (kvp.Value == null)
 				return true;
-			return new JTokenEqualityComparer().Equals(newObj, kvp.Value.OriginalValue) == false;
+			var comparer = new JTokenEqualityComparer();
+			return comparer.Equals(newObj, kvp.Value.OriginalValue) == false && 
+				comparer.Equals(kvp.Value.OriginalMetadata,kvp.Value.Metadata);
 		}
 
 		private JObject ConvertEntityToJson(object entity, JObject metadata)

@@ -6,7 +6,7 @@ using Raven.Database.Exceptions;
 
 namespace Raven.Database.Storage.StorageActions
 {
-	public partial class DocumentStorageActions 
+	public partial class DocumentStorageActions : IIndexingStorageActions
 	{
 		public void SetCurrentIndexStatsTo(string index)
 		{

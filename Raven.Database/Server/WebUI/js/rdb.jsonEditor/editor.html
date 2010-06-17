@@ -1,38 +1,13 @@
 ﻿<div style="margin: 0 auto; width:600px;" id="editorTabs">
-    <h2 id="documentId" style="display:none"></h2>
+    <p>
+		Document Id: <input type="text" id="documentId" style="width: 350px;" value="auto generated"/>
+	</p>
     <ul>
         <li><a href="#jsonViewer">View</a></li>
-        <li><a href="#fancyJSONEditor">JSON Editor</a></li>
         <li><a href="#rawJSONEditor">Raw JSON</a></li>
         <li><a href="#jsonMetadata">Document Metadata</a></li>
     </ul>
     <div id="jsonViewer"></div>
-    <div style="padding:5px;" class="ui-corner-all" id="fancyJSONEditor">
-        <div style="float:left; overflow:auto; background-color:#fff; padding:20px;" class="ui-corner-left">
-            <div id="jsonTree"></div>
-            <div class="clear"></div>
-            <br />
-            <div style="text-align:center;">
-                <button id="createArray" onclick="CreateArray();">New Array</button>
-                <button id="createValue" onclick="CreateValue();">New Value</button>
-                <button id="deleteSelected" onclick="DeleteSelected();">Delete Selected</button>
-            </div>
-        </div>
-        
-        <div id="jsonEditor" style="float:left; padding:20px; display:none;">
-            Element Name<br />
-            <input type="text" id="selectedJSONname" /><br /><br />
-            Element Value<br />
-            <textarea style="width:300px; height:100px;" id="selectedJSONval"></textarea><br /><br />
-            <button id="editorApplyChanges">Apply Changes</button><br /><br />                                    
-        </div>
-        <div id="jsonArrayEditor" style="float:left; padding:20px; display:none;">
-            Array Name<br />
-            <input type="text" id="selectedJSONArrayName" /><br /><br />
-            <button id="editorApplyChanges2">Apply Changes</button><br /><br />                                     
-        </div>
-        <div class="clear"></div>
-    </div>
     <div id="rawJSONEditor">
         Raw JSON<br />
         <textarea style="width:100%; height: 200px;" id="txtJSON"></textarea>

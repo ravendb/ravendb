@@ -19,6 +19,10 @@ namespace Raven.Database.Data
             get; set;
         }
 
+    	public JObject Metadata
+    	{
+			get { return null; }
+    	}
 
     	public void Execute(DocumentDatabase database)
     	{

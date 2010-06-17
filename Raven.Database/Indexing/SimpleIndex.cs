@@ -24,9 +24,9 @@ namespace Raven.Database.Indexing
 			AbstractViewGenerator viewGenerator, 
 			IEnumerable<object> documents,
 			WorkContext context,
-			DocumentStorageActions actions)
+			StorageActionsAccessor actions)
 		{
-			actions.SetCurrentIndexStatsTo(name);
+			actions.Indexing.SetCurrentIndexStatsTo(name);
 			var count = 0;
 			Write(indexWriter =>
 			{
@@ -60,7 +60,7 @@ namespace Raven.Database.Indexing
                         indexWriter.AddDocument(luceneDoc);
                     }
 
-					actions.IncrementSuccessIndexing();
+					actions.Indexing.IncrementSuccessIndexing();
 				}
 
 				return currentId != null;

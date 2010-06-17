@@ -29,31 +29,31 @@ namespace Raven.Tests.Storage
 		{
 			db.TransactionalStorage.Batch(actions =>
 			{
-				Assert.Equal(0, actions.GetDocumentsCount());
+				Assert.Equal(0, actions.Documents.GetDocumentsCount());
 
-				actions.AddDocument("a", null, new JObject(), new JObject());
+				actions.Documents.AddDocument("a", null, new JObject(), new JObject());
 			});
 
 			db.TransactionalStorage.Batch(actions =>
 			{
-				Assert.Equal(1, actions.GetDocumentsCount());
+				Assert.Equal(1, actions.Documents.GetDocumentsCount());
 
 				JObject metadata;
-				actions.DeleteDocument("a", null, out metadata);
+				actions.Documents.DeleteDocument("a", null, out metadata);
 			});
 
 
-			db.TransactionalStorage.Batch(actions => Assert.Equal(0, actions.GetDocumentsCount()));
+			db.TransactionalStorage.Batch(actions => Assert.Equal(0, actions.Documents.GetDocumentsCount()));
 		}
 
         [Fact]
         public void CanGetDocumentAfterEmptyEtag()
         {
-            db.TransactionalStorage.Batch(actions => actions.AddDocument("a", null, new JObject(), new JObject()));
+            db.TransactionalStorage.Batch(actions => actions.Documents.AddDocument("a", null, new JObject(), new JObject()));
 
             db.TransactionalStorage.Batch(actions =>
             {
-                var documents = actions.GetDocumentsAfter(Guid.Empty).ToArray();
+                var documents = actions.Documents.GetDocumentsAfter(Guid.Empty).ToArray();
                 Assert.Equal(1, documents.Length);
             });
         }
@@ -63,15 +63,15 @@ namespace Raven.Tests.Storage
         {
             db.TransactionalStorage.Batch(actions =>
             {
-                actions.AddDocument("a", null, new JObject(), new JObject());
-                actions.AddDocument("b", null, new JObject(), new JObject());
-                actions.AddDocument("c", null, new JObject(), new JObject());
+                actions.Documents.AddDocument("a", null, new JObject(), new JObject());
+                actions.Documents.AddDocument("b", null, new JObject(), new JObject());
+                actions.Documents.AddDocument("c", null, new JObject(), new JObject());
             });
 
             db.TransactionalStorage.Batch(actions =>
             {
-                var doc = actions.DocumentByKey("a",null);
-                var documents = actions.GetDocumentsAfter(doc.Etag).Select(x => x.Key).ToArray();
+                var doc = actions.Documents.DocumentByKey("a",null);
+                var documents = actions.Documents.GetDocumentsAfter(doc.Etag).Select(x => x.Key).ToArray();
                 Assert.Equal(2, documents.Length);
                 Assert.Equal("b", documents[0]);
                 Assert.Equal("c", documents[1]);
@@ -83,22 +83,22 @@ namespace Raven.Tests.Storage
         {
             db.TransactionalStorage.Batch(actions =>
             {
-                actions.AddDocument("a", null, new JObject(), new JObject());
-                actions.AddDocument("b", null, new JObject(), new JObject());
-                actions.AddDocument("c", null, new JObject(), new JObject());
+                actions.Documents.AddDocument("a", null, new JObject(), new JObject());
+                actions.Documents.AddDocument("b", null, new JObject(), new JObject());
+                actions.Documents.AddDocument("c", null, new JObject(), new JObject());
             });
 
             Guid guid = Guid.Empty;
             db.TransactionalStorage.Batch(actions =>
             {
-                var doc = actions.DocumentByKey("a", null);
+                var doc = actions.Documents.DocumentByKey("a", null);
                 guid = doc.Etag;
-                actions.AddDocument("a", null, new JObject(), new JObject());
+                actions.Documents.AddDocument("a", null, new JObject(), new JObject());
             });
 
             db.TransactionalStorage.Batch(actions =>
             {
-                var documents = actions.GetDocumentsAfter(guid).Select(x => x.Key).ToArray();
+                var documents = actions.Documents.GetDocumentsAfter(guid).Select(x => x.Key).ToArray();
                 Assert.Equal(3, documents.Length);
                 Assert.Equal("b", documents[0]);
                 Assert.Equal("c", documents[1]);
@@ -111,56 +111,56 @@ namespace Raven.Tests.Storage
 		{
 			db.TransactionalStorage.Batch(actions =>
 			{
-				Assert.Equal(0, actions.GetDocumentsCount());
+				Assert.Equal(0, actions.Documents.GetDocumentsCount());
 
-				actions.AddDocument("a", null, new JObject(), new JObject());
+				actions.Documents.AddDocument("a", null, new JObject(), new JObject());
 
 			});
 
 			db.TransactionalStorage.Batch(actions =>
 			{
-				Assert.Equal(1, actions.GetDocumentsCount());
+				Assert.Equal(1, actions.Documents.GetDocumentsCount());
 
-				actions.AddDocument("a", null, new JObject(), new JObject());
+				actions.Documents.AddDocument("a", null, new JObject(), new JObject());
 			});
 
 
-			db.TransactionalStorage.Batch(actions => Assert.Equal(1, actions.GetDocumentsCount()));
+			db.TransactionalStorage.Batch(actions => Assert.Equal(1, actions.Documents.GetDocumentsCount()));
 		}
 
 
         [Fact]
         public void CanEnqueueAndPeek()
         {
-            db.TransactionalStorage.Batch(actions => actions.EnqueueToQueue("ayende", new byte[]{1,2}));
+            db.TransactionalStorage.Batch(actions => actions.Queue.EnqueueToQueue("ayende", new byte[]{1,2}));
 
-            db.TransactionalStorage.Batch(actions => Assert.Equal(new byte[] { 1, 2 }, actions.PeekFromQueue("ayende").First().Item1));
+            db.TransactionalStorage.Batch(actions => Assert.Equal(new byte[] { 1, 2 }, actions.Queue.PeekFromQueue("ayende").First().Item1));
         }
 
         [Fact]
         public void PoisonMessagesWillBeDeleted()
         {
-            db.TransactionalStorage.Batch(actions => actions.EnqueueToQueue("ayende", new byte[] { 1, 2 }));
+            db.TransactionalStorage.Batch(actions => actions.Queue.EnqueueToQueue("ayende", new byte[] { 1, 2 }));
 
             db.TransactionalStorage.Batch(actions =>
             {
                 for (int i = 0; i < 6; i++)
                 {
-                    actions.PeekFromQueue("ayende").First();
+                    actions.Queue.PeekFromQueue("ayende").First();
                 }
-                Assert.Equal(null, actions.PeekFromQueue("ayende").FirstOrDefault());
+                Assert.Equal(null, actions.Queue.PeekFromQueue("ayende").FirstOrDefault());
             });
         }
 
         [Fact]
         public void CanDeleteQueuedData()
         {
-            db.TransactionalStorage.Batch(actions => actions.EnqueueToQueue("ayende", new byte[] { 1, 2 }));
+            db.TransactionalStorage.Batch(actions => actions.Queue.EnqueueToQueue("ayende", new byte[] { 1, 2 }));
 
             db.TransactionalStorage.Batch(actions =>
             {
-                actions.DeleteFromQueue(actions.PeekFromQueue("ayende").First().Item2);
-                Assert.Equal(null, actions.PeekFromQueue("ayende").FirstOrDefault());
+                actions.Queue.DeleteFromQueue(actions.Queue.PeekFromQueue("ayende").First().Item2);
+                Assert.Equal(null, actions.Queue.PeekFromQueue("ayende").FirstOrDefault());
             });
         }
 
@@ -169,11 +169,11 @@ namespace Raven.Tests.Storage
 		{
 			db.TransactionalStorage.Batch(actions=>
 			{
-				var nextIdentityValue = actions.GetNextIdentityValue("users");
+				var nextIdentityValue = actions.General.GetNextIdentityValue("users");
 
 				Assert.Equal(1, nextIdentityValue);
 
-				nextIdentityValue = actions.GetNextIdentityValue("users");
+				nextIdentityValue = actions.General.GetNextIdentityValue("users");
 
 				Assert.Equal(2, nextIdentityValue);
 
@@ -181,11 +181,11 @@ namespace Raven.Tests.Storage
 
 			db.TransactionalStorage.Batch(actions =>
 			{
-				var nextIdentityValue = actions.GetNextIdentityValue("users");
+				var nextIdentityValue = actions.General.GetNextIdentityValue("users");
 
 				Assert.Equal(3, nextIdentityValue);
 
-				nextIdentityValue = actions.GetNextIdentityValue("users");
+				nextIdentityValue = actions.General.GetNextIdentityValue("users");
 
 				Assert.Equal(4, nextIdentityValue);
 
@@ -197,11 +197,11 @@ namespace Raven.Tests.Storage
 		{
 			db.TransactionalStorage.Batch(actions =>
 			{
-				var nextIdentityValue = actions.GetNextIdentityValue("users");
+				var nextIdentityValue = actions.General.GetNextIdentityValue("users");
 
 				Assert.Equal(1, nextIdentityValue);
 
-				nextIdentityValue = actions.GetNextIdentityValue("blogs");
+				nextIdentityValue = actions.General.GetNextIdentityValue("blogs");
 
 				Assert.Equal(1, nextIdentityValue);
 
@@ -209,11 +209,11 @@ namespace Raven.Tests.Storage
 
 			db.TransactionalStorage.Batch(actions =>
 			{
-				var nextIdentityValue = actions.GetNextIdentityValue("blogs");
+				var nextIdentityValue = actions.General.GetNextIdentityValue("blogs");
 
 				Assert.Equal(2, nextIdentityValue);
 
-				nextIdentityValue = actions.GetNextIdentityValue("users");
+				nextIdentityValue = actions.General.GetNextIdentityValue("users");
 
 				Assert.Equal(2, nextIdentityValue);
 

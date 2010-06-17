@@ -11,7 +11,7 @@ using Raven.Database.Json;
 namespace Raven.Database.Storage.StorageActions
 {
 	[CLSCompliant(false)]
-	public partial class DocumentStorageActions : IDisposable
+	public partial class DocumentStorageActions : IDisposable, IGeneralStorageActions
 	{
 		public event Action OnCommit = delegate { }; 
 		private readonly TableColumnsCache tableColumnsCache;

@@ -36,7 +36,7 @@ namespace Raven.Database.Tasks
 				IEnumerable<object> mappedResults = null;
 				foreach (var reduceKey in ReduceKeys)
 				{
-					IEnumerable<object> enumerable = actions.GetMappedResults(Index, reduceKey, MapReduceIndex.ComputeHash(Index, reduceKey))
+					IEnumerable<object> enumerable = actions.MappedResults.GetMappedResults(Index, reduceKey, MapReduceIndex.ComputeHash(Index, reduceKey))
 						.Select(JsonToExpando.Convert);
 
 					if (mappedResults == null)

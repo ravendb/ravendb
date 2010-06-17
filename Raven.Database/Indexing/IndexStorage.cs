@@ -158,7 +158,7 @@ namespace Raven.Database.Indexing
 		}
 
 		public void Index(string index, AbstractViewGenerator viewGenerator, IEnumerable<dynamic> docs, WorkContext context,
-		                  DocumentStorageActions actions)
+						  StorageActionsAccessor actions)
 		{
 			Index value;
 			if (indexes.TryGetValue(index, out value) == false)
@@ -170,7 +170,7 @@ namespace Raven.Database.Indexing
 		}
 
 		public void Reduce(string index, AbstractViewGenerator viewGenerator, IEnumerable<object> mappedResults,
-		                   WorkContext context, DocumentStorageActions actions, string[] reduceKeys)
+						   WorkContext context, StorageActionsAccessor actions, string[] reduceKeys)
 		{
 			Index value;
 			if (indexes.TryGetValue(index, out value) == false)

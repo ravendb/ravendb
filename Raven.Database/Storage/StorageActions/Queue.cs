@@ -5,8 +5,8 @@ using Microsoft.Isam.Esent.Interop;
 
 namespace Raven.Database.Storage.StorageActions
 {
-    public partial class DocumentStorageActions 
-    {
+	public partial class DocumentStorageActions : IQueueStorageActions
+	{
         public void EnqueueToQueue(string name, byte[] data)
         {
             using (var update = new Update(session, Queue, JET_prep.Insert))

@@ -36,7 +36,7 @@ namespace Raven.Database.Tasks
 		{
 			context.TransactionaStorage.Batch(actions =>
 			{
-				var jsonDocuments = Keys.Select(key => actions.DocumentByKey(key, null))
+				var jsonDocuments = Keys.Select(key => actions.Documents.DocumentByKey(key, null))
 					.Where(x => x != null)
 					.Select(x => JsonToExpando.Convert(x.ToJson()))
 					.ToArray();
@@ -49,7 +49,7 @@ namespace Raven.Database.Tasks
 				{
 					logger.DebugFormat("Indexing documents: [{0}] for index: {1}", keysAsString, Index);
 
-					var failureRate = actions.GetFailureRate(Index);
+					var failureRate = actions.Indexing.GetFailureRate(Index);
 					if (failureRate.IsInvalidIndex)
 					{
 						logger.InfoFormat("Skipped indexing documents: [{0}] for index: {1} because failure rate is too high: {2}",

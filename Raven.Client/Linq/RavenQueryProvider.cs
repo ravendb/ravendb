@@ -189,10 +189,10 @@ namespace Raven.Client.Linq
 			object value = GetValueFromExpression(expression.Right);
 			QueryText.Append(
 				GetFieldNameForRangeQuery(expression.Left, value)
-				).Append(":{NULL TO ");
+				).Append(":[NULL TO ");
 			QueryText.Append(TransformToRangeValue(GetValueFromExpression(expression.Right)));
 
-            QueryText.Append("} ");
+            QueryText.Append("] ");
         }
 
         private void VisitMemberAccess(MemberExpression memberExpression, bool boolValue)
@@ -230,7 +230,7 @@ namespace Raven.Client.Linq
 			if (value is DateTime)
 				return DateTools.DateToString((DateTime)value, DateTools.Resolution.MILLISECOND);
 
-    		return LuceneEscape(value.ToString());
+			return LuceneEscape(value.ToString(), true, false);
     	}
 
 		private static string TransformToEqualValue(object value)
@@ -241,65 +241,148 @@ namespace Raven.Client.Linq
 			if (value is DateTime)
 				return DateTools.DateToString((DateTime)value, DateTools.Resolution.MILLISECOND);
 
-			return LuceneEscape(value.ToString());
+			return LuceneEscape(value.ToString(), true, false);
 		}
 
-    	private static string LuceneEscape(string s)
-    	{
-    		var sb = new StringBuilder(s.Length);
-			foreach (var c in s)
+		/// <summary>
+		/// Escapes Lucene operators and quotes phrases
+		/// </summary>
+		/// <param name="term"></param>
+		/// <param name="isAnalyzed"></param>
+		/// <param name="allowWildcards"></param>
+		/// <returns>escaped term</returns>
+		/// <remarks>
+		/// http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Escaping%20Special%20Characters
+		/// </remarks>
+		private static string LuceneEscape(string term, bool isAnalyzed, bool allowWildcards)
+		{
+			// method doesn't allocate a StringBuilder unless the string requires escaping
+			// also this copies chunks of the original string into the StringBuilder which
+			// is far more efficient than copying character by character because StringBuilder
+			// can access the underlying string data directly
+
+			if (string.IsNullOrEmpty(term))
 			{
-				switch (c)
+				return "\"\"";
+			}
+
+			bool isPhrase = false;
+			int start = 0;
+			int length = term.Length;
+			StringBuilder buffer = null;
+
+			if (!isAnalyzed)
+			{
+				// FieldIndexing.NotAnalyzed requires enclosing brackets
+				buffer = new StringBuilder(length*2);
+				buffer.Append("[[");
+			}
+
+			for (int i=start; i<length; i++)
+			{
+				char ch = term[i];
+				switch (ch)
 				{
+					// should wildcards be included or excluded here?
+					case '*':
+					case '?':
+					{
+						if (allowWildcards && isAnalyzed)
+						{
+							break;
+						}
+						goto case '\\';
+					}
+					case '+':
+					case '-':
 					case '&':
 					case '|':
-					case '?':
-					case '*':
-					case '~':
-					case '}':
-					case '{':
-					case '\"':
-					case ']':
-					case '[':
-					case '^':
-					case ':':
-					case ')':
-					case '(':
 					case '!':
-					case '-':
-					case '+':
+					case '(':
+					case ')':
+					case '{':
+					case '}':
+					case '[':
+					case ']':
+					case '^':
+					case '"':
+					case '~':
+					case ':':
 					case '\\':
-						sb.Append('\\');
+					{
+						if (buffer == null)
+						{
+							// allocate builder with headroom
+							buffer = new StringBuilder(length*2);
+						}
+
+						if (i > start)
+						{
+							// append any leading substring
+							buffer.Append(term, start, i-start);
+						}
+
+						buffer.Append('\\').Append(ch);
+						start = i+1;
 						break;
+					}
+					case ' ':
+					case '\t':
+					{
+						if (isAnalyzed && !isPhrase)
+						{
+							if (buffer == null)
+							{
+								// allocate builder with headroom
+								buffer = new StringBuilder(length*2);
+							}
+
+							buffer.Insert(0, '"');
+							isPhrase = true;
+						}
+						break;
+					}
 				}
-				sb.Append(c);
 			}
-    		return sb.ToString();
-    	}
+
+			if (buffer == null)
+			{
+				// no changes required
+				return term;
+			}
+
+			if (length > start)
+			{
+				// append any trailing substring
+				buffer.Append(term, start, length-start);
+			}
+
+			if (!isAnalyzed)
+			{
+				// FieldIndexing.NotAnalyzed requires enclosing brackets
+				buffer.Append("]]");
+			}
+			else if (isPhrase)
+			{
+				// quoted phrase
+				buffer.Append('"');
+			}
+
+			return buffer.ToString();
+		}
 
     	private void VisitLessThan(BinaryExpression expression)
         {
 			object value = GetValueFromExpression(expression.Right);
 			QueryText.Append(
 				GetFieldNameForRangeQuery(expression.Left, value)
-				).Append(":[NULL TO ");
+				).Append(":{NULL TO ");
 			QueryText.Append(TransformToRangeValue(GetValueFromExpression(expression.Right)));
 
-            QueryText.Append("] ");
+            QueryText.Append("} ");
         }
 
         private void VisitGreaterThanOrEqual(BinaryExpression expression)
-        {
-			object value = GetValueFromExpression(expression.Right);
-			QueryText.Append(
-				GetFieldNameForRangeQuery(expression.Left, value)
-				).Append(":{");
-        	QueryText.Append(TransformToRangeValue(value));
-
-			QueryText.Append(" TO NULL} ");
-        }
-
-        private void VisitGreaterThan(BinaryExpression expression)
         {
 			object value = GetValueFromExpression(expression.Right);
 			QueryText.Append(
@@ -308,6 +391,17 @@ namespace Raven.Client.Linq
         	QueryText.Append(TransformToRangeValue(value));
 
 			QueryText.Append(" TO NULL] ");
+        }
+
+        private void VisitGreaterThan(BinaryExpression expression)
+        {
+			object value = GetValueFromExpression(expression.Right);
+			QueryText.Append(
+				GetFieldNameForRangeQuery(expression.Left, value)
+				).Append(":{");
+        	QueryText.Append(TransformToRangeValue(value));
+
+			QueryText.Append(" TO NULL} ");
         }
 
     	private static string GetFieldNameForRangeQuery(Expression expression, object value)

@@ -7,7 +7,7 @@ using Raven.Database.Exceptions;
 
 namespace Raven.Database.Storage.StorageActions
 {
-	public partial class DocumentStorageActions 
+	public partial class DocumentStorageActions : IAttachmentsStorageActions
 	{
 		public void AddAttachment(string key, Guid? etag, byte[] data, string headers)
 		{

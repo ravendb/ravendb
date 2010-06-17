@@ -16,7 +16,7 @@ namespace Raven.Database.Storage
 	public class TransactionalStorage : CriticalFinalizerObject, IDisposable
 	{
 		public const int MaxSessions = 256;
-		private readonly ThreadLocal<DocumentStorageActions> current = new ThreadLocal<DocumentStorageActions>();
+		private readonly ThreadLocal<StorageActionsAccessor> current = new ThreadLocal<StorageActionsAccessor>();
 		private readonly string database;
 		private readonly RavenConfiguration configuration;
 		private readonly Action onCommit;
@@ -290,7 +290,7 @@ namespace Raven.Database.Storage
 
 		[CLSCompliant(false)]
 		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
-		public void Batch(Action<DocumentStorageActions> action)
+		public void Batch(Action<StorageActionsAccessor> action)
 		{
 			if (disposed)
 			{
@@ -314,15 +314,15 @@ namespace Raven.Database.Storage
 			}
 		}
 
-		private void ExecuteBatch(Action<DocumentStorageActions> action)
+		private void ExecuteBatch(Action<StorageActionsAccessor> action)
 		{
 			var txMode = configuration.TransactionMode == TransactionMode.Lazy
 				? CommitTransactionGrbit.LazyFlush
 				: CommitTransactionGrbit.None;
 			using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs))
 			{
-				current.Value = pht;
-				action(pht);
+				current.Value = new StorageActionsAccessor(pht);
+				action(current.Value);
 				pht.Commit(txMode);
 				onCommit();
 			}
@@ -338,7 +338,7 @@ namespace Raven.Database.Storage
 			current.Value.OnCommit += action;
 		}
 
-		internal DocumentStorageActions GetCurrentBatch()
+		internal StorageActionsAccessor GetCurrentBatch()
 		{
 			var batch = current.Value;
 			if (batch == null)
