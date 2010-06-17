@@ -61,10 +61,10 @@ namespace Raven.Database.Storage
 
                 transactionalStorage.Batch(actions =>
                 {
-                    if (actions.GetIndexesStats().Any(x => x.Name == name))
+                    if (actions.Indexing.GetIndexesStats().Any(x => x.Name == name))
                         return;
 
-                    actions.AddIndex(name);
+                    actions.Indexing.AddIndex(name);
                 });
 
 		        var indexDefinition = new IndexDefinition

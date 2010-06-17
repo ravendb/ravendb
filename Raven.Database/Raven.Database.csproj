@@ -223,6 +223,7 @@
     <Compile Include="Storage\SchemaUpdates\From23To24.cs" />
     <Compile Include="Storage\SchemaUpdates\ISchemaUpdate.cs" />
     <Compile Include="Storage\SchemaUpdates\From21To22.cs" />
+    <Compile Include="Storage\StorageActionsAccessor.cs" />
     <Compile Include="Storage\StorageActions\Attachments.cs" />
     <Compile Include="Storage\StorageActions\Documents.cs" />
     <Compile Include="Storage\StorageActions\IAttachmentsStorageActions.cs" />

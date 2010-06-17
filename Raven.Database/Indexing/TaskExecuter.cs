@@ -30,7 +30,7 @@ namespace Raven.Database.Indexing
 					int tasks = 0;
 					transactionalStorage.Batch(actions =>
 					{
-						task = actions.GetMergedTask(out tasks);
+						task = actions.Tasks.GetMergedTask(out tasks);
 						if (task == null)
 							return;
 

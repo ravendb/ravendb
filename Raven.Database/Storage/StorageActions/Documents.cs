@@ -9,7 +9,7 @@ using Raven.Database.Json;
 
 namespace Raven.Database.Storage.StorageActions
 {
-	public partial class DocumentStorageActions 
+	public partial class DocumentStorageActions : IDocumentStorageActions
 	{
 
 		public int GetDocumentsCount()

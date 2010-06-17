@@ -14,6 +14,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
+using Raven.Database.Storage;
 using Raven.Database.Storage.StorageActions;
 using Version = Lucene.Net.Util.Version;
 
@@ -129,7 +130,7 @@ namespace Raven.Database.Indexing
 
         public abstract void IndexDocuments(AbstractViewGenerator viewGenerator, IEnumerable<object> documents,
                                             WorkContext context,
-                                            DocumentStorageActions actions);
+											StorageActionsAccessor actions);
 
 		protected virtual IndexQueryResult RetrieveDocument(Document document, string[] fieldsToFetch)
 		{
@@ -202,7 +203,7 @@ namespace Raven.Database.Indexing
 
 
         protected IEnumerable<object> RobustEnumeration(IEnumerable<object> input, IndexingFunc func,
-                                                        DocumentStorageActions actions, WorkContext context)
+														StorageActionsAccessor actions, WorkContext context)
         {
             var wrapped = new StatefulEnumerableWrapper<dynamic>(input.GetEnumerator());
             IEnumerator<object> en = func(wrapped).GetEnumerator();
@@ -219,19 +220,19 @@ namespace Raven.Database.Indexing
         }
 
         private bool? MoveNext(IEnumerator en, StatefulEnumerableWrapper<object> innerEnumerator, WorkContext context,
-                               DocumentStorageActions actions)
+							   StorageActionsAccessor actions)
         {
             try
             {
-                actions.IncrementIndexingAttempt();
+                actions.Indexing.IncrementIndexingAttempt();
                 var moveNext = en.MoveNext();
                 if (moveNext == false)
-                    actions.DecrementIndexingAttempt();
+                    actions.Indexing.DecrementIndexingAttempt();
                 return moveNext;
             }
             catch (Exception e)
             {
-                actions.IncrementIndexingFailure();
+                actions.Indexing.IncrementIndexingFailure();
                 context.AddError(name,
                                  TryGetDocKey(innerEnumerator.Current),
                                  e.Message
