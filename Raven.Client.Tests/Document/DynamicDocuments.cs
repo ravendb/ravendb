@@ -98,6 +98,12 @@ namespace Raven.Client.Tests.Document
                 using (var session = db.OpenSession())
                 {
                     var idAnom = session.Store(new { Name = "Matt", Age = 19 });
+
+                    //See http://stackoverflow.com/questions/1723875/can-method-parameters-be-dynamic-in-c
+                    //and http://blogs.msdn.com/b/cburrows/archive/2008/11/14/c-dynamic-part-vi.aspx
+                    //and http://msdn.microsoft.com/en-us/library/dd264736.aspx for an explanation, 
+                    //basicially with dynamic, resolution takes place as run-time
+                    var test = session.StoreDynamic(employee);
                     var idEmployee = session.Store((object)employee);
                     var idPerson = session.Store((object)person);
                     session.SaveChanges();

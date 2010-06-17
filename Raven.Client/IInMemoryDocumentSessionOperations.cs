@@ -8,7 +8,11 @@ namespace Raven.Client
 	{
 		string StoreIdentifier { get; }
         
-		void Store(object entity);
+    #if !NET_4_0
+		string Store(object entity);        
+    #else
+        string Store(dynamic entity);
+    #endif
         
 		void Delete<T>(T entity);
 

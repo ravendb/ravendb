@@ -11,7 +11,7 @@ namespace Raven.Client.Tests.Document
     //from http://msdn.microsoft.com/en-us/library/system.dynamic.dynamicobject.aspx
     class CustomDynamicClass : DynamicObject
     {
-        // The inner dictionary.
+        // The inner dictionary, used to store the new dynamic members and their values
         Dictionary<string, object> dictionary = new Dictionary<string, object>();
 
         // This property returns the number of elements in the inner dictionary.
