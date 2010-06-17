@@ -6,7 +6,7 @@ using Raven.Database.Extensions;
 
 namespace Raven.Database.Storage.StorageActions
 {
-	public partial class DocumentStorageActions 
+	public partial class DocumentStorageActions : ITasksStorageActions
 	{
 		public bool DoesTasksExistsForIndex(string name, DateTime? cutOff)
 		{
@@ -97,7 +97,7 @@ namespace Raven.Database.Storage.StorageActions
 			return null;
 		}
 
-		private void MergeSimilarTasks(Task task, out int taskCount)
+		public void MergeSimilarTasks(Task task, out int taskCount)
 		{
 			taskCount = 1;
 			if (task.SupportsMerging == false)

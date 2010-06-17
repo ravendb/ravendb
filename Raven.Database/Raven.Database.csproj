@@ -225,7 +225,14 @@
     <Compile Include="Storage\SchemaUpdates\From21To22.cs" />
     <Compile Include="Storage\StorageActions\Attachments.cs" />
     <Compile Include="Storage\StorageActions\Documents.cs" />
+    <Compile Include="Storage\StorageActions\IAttachmentsStorageActions.cs" />
+    <Compile Include="Storage\StorageActions\IDocumentStorageActions.cs" />
+    <Compile Include="Storage\StorageActions\IGeneralStorageActions.cs" />
+    <Compile Include="Storage\StorageActions\IIndexingStorageActions.cs" />
+    <Compile Include="Storage\StorageActions\IMappedResultsStorageAction.cs" />
     <Compile Include="Storage\StorageActions\Indexing.cs" />
+    <Compile Include="Storage\StorageActions\IQueueStorageActions.cs" />
+    <Compile Include="Storage\StorageActions\ITasksStorageActions.cs" />
     <Compile Include="Storage\StorageActions\MappedResults.cs" />
     <Compile Include="Storage\StorageActions\Queue.cs" />
     <Compile Include="Storage\StorageActions\TableProperties.cs" />

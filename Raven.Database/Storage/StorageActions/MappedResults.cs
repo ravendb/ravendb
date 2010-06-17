@@ -8,7 +8,7 @@ using Raven.Database.Json;
 
 namespace Raven.Database.Storage.StorageActions
 {
-	public partial class DocumentStorageActions 
+	public partial class DocumentStorageActions : IMappedResultsStorageAction
 	{
 		public void PutMappedResult(string view, string docId, string reduceKey, JObject data, byte[] viewAndReduceKeyHashed)
 		{
