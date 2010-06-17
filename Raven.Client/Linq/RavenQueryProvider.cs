@@ -181,10 +181,10 @@ namespace Raven.Client.Linq
 			object value = GetValueFromExpression(expression.Right);
 			QueryText.Append(
 				GetFieldNameForRangeQuery(expression.Left, value)
-				).Append(":{NULL TO ");
+				).Append(":[NULL TO ");
 			QueryText.Append(TransformToRangeValue(GetValueFromExpression(expression.Right)));
 
-            QueryText.Append("} ");
+            QueryText.Append("] ");
         }
 
 
@@ -258,24 +258,13 @@ namespace Raven.Client.Linq
 			object value = GetValueFromExpression(expression.Right);
 			QueryText.Append(
 				GetFieldNameForRangeQuery(expression.Left, value)
-				).Append(":[NULL TO ");
+				).Append(":{NULL TO ");
 			QueryText.Append(TransformToRangeValue(GetValueFromExpression(expression.Right)));
 
-            QueryText.Append("] ");
+            QueryText.Append("} ");
         }
 
         private void VisitGreaterThanOrEqual(BinaryExpression expression)
-        {
-			object value = GetValueFromExpression(expression.Right);
-			QueryText.Append(
-				GetFieldNameForRangeQuery(expression.Left, value)
-				).Append(":{");
-        	QueryText.Append(TransformToRangeValue(value));
-
-			QueryText.Append(" TO NULL} ");
-        }
-
-        private void VisitGreaterThan(BinaryExpression expression)
         {
 			object value = GetValueFromExpression(expression.Right);
 			QueryText.Append(
@@ -284,6 +273,17 @@ namespace Raven.Client.Linq
         	QueryText.Append(TransformToRangeValue(value));
 
 			QueryText.Append(" TO NULL] ");
+        }
+
+        private void VisitGreaterThan(BinaryExpression expression)
+        {
+			object value = GetValueFromExpression(expression.Right);
+			QueryText.Append(
+				GetFieldNameForRangeQuery(expression.Left, value)
+				).Append(":{");
+        	QueryText.Append(TransformToRangeValue(value));
+
+			QueryText.Append(" TO NULL} ");
         }
 
     	private static string GetFieldNameForRangeQuery(Expression expression, object value)
