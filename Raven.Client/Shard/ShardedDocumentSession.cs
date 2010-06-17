@@ -139,13 +139,13 @@ namespace Raven.Client.Shard
 			return shardSession;
 		}
 
-		public void Store(object entity)
+		public string Store(object entity)
 		{
 			string shardId = shardStrategy.ShardSelectionStrategy.ShardIdForNewObject(entity);
 			if (String.IsNullOrEmpty(shardId))
 				throw new ApplicationException("Can't find a shard to use for entity: " + entity);
 
-			GetSingleShardSession(shardId).Store(entity);
+			return GetSingleShardSession(shardId).Store(entity);
 		}
 
 		public void Evict<T>(T entity)

@@ -96,6 +96,8 @@
     <Compile Include="Document\AsyncDocumentStoreServerTests.cs" />
     <Compile Include="Document\ClientKeyGeneratorTests.cs" />
     <Compile Include="Document\DocumentStoreServerTests_DifferentProcess.cs" />
+    <Compile Include="Document\DynamicDocuments.cs" />
+    <Compile Include="Document\CustomDynamicClass.cs" />
     <Compile Include="Document\TotalCountServerTest.cs" />
     <Compile Include="Document\CasingIssue.cs" />
     <Compile Include="Document\Company.cs" />

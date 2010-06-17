@@ -152,7 +152,7 @@ more responsive application.
 			return entity;
 		}
 
-		public void Store(object entity)
+		public string Store(object entity)
 		{
 			if (null == entity)
 				throw new ArgumentNullException("entity");
@@ -180,7 +180,7 @@ more responsive application.
 					&& entitiesByKey.ContainsKey(id))
 			{
 				if (ReferenceEquals(entitiesByKey[id], entity))
-					return; // calling Store twice on the same reference is a no-op
+					return id; // calling Store twice on the same reference is a no-op
 				throw new NonUniqueObjectException("Attempted to associated a different object with id '" + id + "'.");
 			}
 
@@ -194,6 +194,8 @@ more responsive application.
 			});
 			if (id != null)
 				entitiesByKey[id] = entity;
+
+            return id;
 		}
 
 		protected ICommandData CreatePutEntityCommand(object entity, DocumentSession.DocumentMetadata documentMetadata)
