@@ -137,6 +137,13 @@ namespace Raven.Client.Linq
                 case ExpressionType.LessThanOrEqual:
                     VisitLessThanOrEqual((BinaryExpression)expression);
                     break;
+                case ExpressionType.MemberAccess:
+                    VisitMemberAccess((MemberExpression)expression, true);
+                    break;
+                case ExpressionType.Not:
+                    var unaryExpressionOp = ((UnaryExpression)expression).Operand;                       
+                    VisitMemberAccess((MemberExpression)unaryExpressionOp, false);                    
+                    break;
                 default:
                     if (expression is MethodCallExpression)
                     {
@@ -149,6 +156,7 @@ namespace Raven.Client.Linq
                     break;
             }
         }
+       
 
         private void VisitAndAlso(BinaryExpression andAlso)
         {
@@ -187,6 +195,22 @@ namespace Raven.Client.Linq
             QueryText.Append("] ");
         }
 
+        private void VisitMemberAccess(MemberExpression memberExpression, bool boolValue)
+        {            
+            if (memberExpression.Type == typeof(bool))
+            {
+                QueryText.Append(memberExpression.Member.Name);
+                QueryText.Append(":");
+                if (boolValue)
+                    QueryText.Append("true");
+                else
+                    QueryText.Append("false");
+            }
+            else
+            {
+                throw new NotSupportedException("Expression type not supported: " + memberExpression.ToString());
+            }
+        }
 
     	private static string TransformToRangeValue(object value)
     	{
@@ -437,13 +461,12 @@ namespace Raven.Client.Linq
                     VisitSingle();                
                 else if (expression.Method.Name == "SingleOrDefault")
                     VisitSingleOrDefault();
-            }
-            
+            }           
             else
             {
                 throw new NotSupportedException("Method not supported: " + expression.Method.Name);
             }
-        }       
+        }           
 
         private void VisitSelect(Expression operand)
         {
@@ -498,7 +521,7 @@ namespace Raven.Client.Linq
         {
 			takeValue = 1;
             queryType = SpecialQueryType.FirstOrDefault;
-        }
+        }        
 		
         IQueryable<S> IQueryProvider.CreateQuery<S>(Expression expression)
         {
