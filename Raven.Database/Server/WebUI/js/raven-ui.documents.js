@@ -197,8 +197,8 @@ function EditDocument(id) {
 
 function CreateDocument() {
     $('#ajaxSuccess, #ajaxError').fadeOut();
-    ShowEditorForNewDocument(function (metadata, json, editor) {
-        RavenUI.SaveDocument(null, null, metadata, json, function (data) {
+    ShowEditorForNewDocument(function (id, metadata, json, editor) {
+        RavenUI.SaveDocument(id, null, metadata, json, function (data) {
             $(editor).dialog('close');
             $('#ajaxSuccess').html('Your document has been created. Click <a href="#" onclick="EditDocument(\'' + data.Key + '\'); return false;">here</a> to see it again.').fadeIn('slow');
             if (!isInQueryMode) {

@@ -48,67 +48,70 @@ function InitializeJSONEditor(jsonToEdit) {
 
 function ShowEditorForNewDocument(saveCallback) {
     ShowEditorForDocument(null, { PropertyName: '' }, {}, null, 'Create New Document', function (id, etag, metadata, json, editor) {
-        saveCallback(metadata, json, editor);
+        saveCallback(id, metadata, json, editor);
     }, null);
 }
 
 function ShowEditorForDocument(id, doc, etag, metadata, title, saveCallback, deleteCallback) {
     var editorHtml = $('<div id="editorContainer"></div>');
     $(editorHtml).load('/raven/js/rdb.jsonEditor/editor.html', function () {
-        if (id) {
-            $('#documentId', editorHtml).html(id).show();
-            var deleteButton = $('<button style="margin-top:10px;">Delete Document</button>');
-            $(deleteButton).button({
-                icons: { primary: 'ui-icon-trash' }
-            }).click(function () {
-                $('<div title="Delete Confirmation" class="ui-state-error ui-corner-all" style="padding:20px;"></div>')
+    	if (id) {
+    		$('#documentId', editorHtml).val(id);
+    		var deleteButton = $('<button style="margin-top:10px;">Delete Document</button>');
+    		$(deleteButton).button({
+    			icons: { primary: 'ui-icon-trash' }
+    		}).click(function () {
+    			$('<div title="Delete Confirmation" class="ui-state-error ui-corner-all" style="padding:20px;"></div>')
                     .html('<p><span style="float: left; margin-right: 0.3em;" class="ui-icon ui-icon-alert"></span>Are you sure you want to delete this document?</p>')
                     .dialog({
-                        modal: true,
-                        buttons: {
-                            'Delete': function () {
-                                deleteCallback(id, etag, editorHtml, this);
-                            },
-                            Cancel: function () {
-                                $(this).dialog('close');
-                            }
-                        },
-                        width: 'auto'
+                    	modal: true,
+                    	buttons: {
+                    		'Delete': function () {
+                    			deleteCallback(id, etag, editorHtml, this);
+                    		},
+                    		Cancel: function () {
+                    			$(this).dialog('close');
+                    		}
+                    	},
+                    	width: 'auto'
                     });
-            });
-            $(editorHtml).append(deleteButton);
-        }
-        
-        if (metadata) {
-            $(editorHtml).find('#txtJSONMetadata').val(JSON.stringify(metadata, null, '\t'));
-        }
-        else {
-            $(editorHtml).find('#txtJSONMetadata').val('{}');
-        }
+    		});
+    		$(editorHtml).append(deleteButton);
+    	}
 
-        $(editorHtml).css('position', 'relative').css('height', '500px');
-        $(editorHtml).dialog({
-            modal: true,
-            open: function (event, ui) {
-                InitializeJSONEditor(doc);
-            },
-            close: function () {
-                $('#editorContainer').dialog('destroy');
-                $('#editorContainer').remove();
-            },
-            buttons: {
-                Save: function () {
-                    if (ValidateRawJSON() && ValidateMetaData()) {
-                        saveCallback(id, etag, JSON.parse($('#txtJSONMetadata').val()), GetJSONFromEditor(), editorHtml);
-                    };
-                },
-                Cancel: function () {
-                    $(this).dialog('close');
-                }
-            },
-            title: title,
-            width: 'auto'
-        });
+    	if (metadata) {
+    		$(editorHtml).find('#txtJSONMetadata').val(JSON.stringify(metadata, null, '\t'));
+    	}
+    	else {
+    		$(editorHtml).find('#txtJSONMetadata').val('{}');
+    	}
+
+    	$(editorHtml).css('position', 'relative').css('height', '500px');
+    	$(editorHtml).dialog({
+    		modal: true,
+    		open: function (event, ui) {
+    			InitializeJSONEditor(doc);
+    		},
+    		close: function () {
+    			$('#editorContainer').dialog('destroy');
+    			$('#editorContainer').remove();
+    		},
+    		buttons: {
+    			Save: function () {
+    				if (ValidateRawJSON() && ValidateMetaData()) {
+    					var maybeId = $('#documentId').val();
+    					if (maybeId != 'auto generated')
+    						id = maybeId;
+    					saveCallback(id, etag, JSON.parse($('#txtJSONMetadata').val()), GetJSONFromEditor(), editorHtml);
+    				};
+    			},
+    			Cancel: function () {
+    				$(this).dialog('close');
+    			}
+    		},
+    		title: title,
+    		width: 'auto'
+    	});
 
     });
 }
