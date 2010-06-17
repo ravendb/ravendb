@@ -88,7 +88,8 @@ namespace Raven.Client.Document
 		public void SaveChanges()
 		{
 			var data = PrepareForSaveChanges();
-
+			if (data.Commands.Count == 0)
+				return; // nothing to do here
 			IncrementRequestCount();
             Trace.WriteLine(string.Format("Saving {0} changes to {1}", data.Commands.Count, StoreIdentifier));
 			UpdateBatchResults(DatabaseCommands.Batch(data.Commands.ToArray()), data.Entities);
