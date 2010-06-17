@@ -56,7 +56,7 @@ namespace Raven.Database.Indexing
 				if(rangeValueMatch.Success == false) // this is a date, no change is required
 					continue;
 
-				var inclusiveRange = rangeValueMatch.Groups[1].Value == "{";
+				var inclusiveRange = rangeValueMatch.Groups[1].Value == "[";
 
 				var from = NumberUtil.StringToNumber(rangeValueMatch.Groups[2].Value);
 				var to = NumberUtil.StringToNumber(rangeValueMatch.Groups[5].Value);
