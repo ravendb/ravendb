@@ -684,7 +684,8 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
                 	{
                 		Method = command.Method,
                 		Key = command.Key,
-                		Etag = command.Etag
+                		Etag = command.Etag,
+						Metadata = command.Metadata
                 	});
                 }
 				workContext.ShouldNotifyAboutWork();

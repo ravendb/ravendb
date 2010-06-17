@@ -10,6 +10,7 @@ namespace Raven.Database.Data
 		Guid? Etag { get; }
 #if !CLIENT
 		TransactionInformation TransactionInformation { get; set; }
+    	JObject Metadata { get; }
     	void Execute(DocumentDatabase database);
 #endif
     	JObject ToJson();

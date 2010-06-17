@@ -29,9 +29,18 @@ namespace Raven.Database.Data
 			get; set;
 		}
 
+		public JObject Metadata
+		{
+			get; set;
+		}
+
 		public void Execute(DocumentDatabase database)
 		{
 			database.ApplyPatch(Key, Etag, Patches, TransactionInformation);
+
+			var doc = database.Get(Key, TransactionInformation);
+			if (doc != null)
+				Metadata = doc.Metadata;
 		}
 #endif
 		public JObject ToJson()
