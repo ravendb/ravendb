@@ -33,57 +33,64 @@ namespace Raven.Database.Indexing
 			StorageActionsAccessor actions)
         {
             actions.Indexing.SetCurrentIndexStatsTo(name);
-            var count = 0;
-            Func<object, object> documentIdFetcher = null;
-            var reduceKeys = new HashSet<string>();
-        	var documentsWrapped = documents.Select(doc =>
+        	try
         	{
-        		var documentId = doc.__document_id;
-				foreach (var reduceKey in actions.MappedResults.DeleteMappedResultsForDocumentId((string)documentId, name))
-        		{
+				var count = 0;
+				Func<object, object> documentIdFetcher = null;
+				var reduceKeys = new HashSet<string>();
+				var documentsWrapped = documents.Select(doc =>
+				{
+					var documentId = doc.__document_id;
+					foreach (var reduceKey in actions.MappedResults.DeleteMappedResultsForDocumentId((string)documentId, name))
+					{
+						reduceKeys.Add(reduceKey);
+					}
+					return doc;
+				});
+				foreach (var doc in RobustEnumeration(documentsWrapped, viewGenerator.MapDefinition, actions, context))
+				{
+					count++;
+
+					documentIdFetcher = CreateDocumentIdFetcherIfNeeded(documentIdFetcher, doc);
+
+					var docIdValue = documentIdFetcher(doc);
+					if (docIdValue == null)
+						throw new InvalidOperationException("Could not find document id for this document");
+
+					var reduceValue = viewGenerator.GroupByExtraction(doc);
+					if (reduceValue == null)
+					{
+						log.DebugFormat("Field {0} is used as the reduce key and cannot be null, skipping document {1}", viewGenerator.GroupByExtraction, docIdValue);
+						continue;
+					}
+					var reduceKey = ReduceKeyToString(reduceValue);
+					var docId = docIdValue.ToString();
+
 					reduceKeys.Add(reduceKey);
-        		}
-        		return doc;
-        	});
-        	foreach (var doc in RobustEnumeration(documentsWrapped, viewGenerator.MapDefinition, actions, context))
-            {
-                count++;
 
-                documentIdFetcher = CreateDocumentIdFetcherIfNeeded(documentIdFetcher, doc);
+					var data = GetMapedData(doc);
 
-                var docIdValue = documentIdFetcher(doc);
-                if (docIdValue == null)
-                    throw new InvalidOperationException("Could not find document id for this document");
+					log.DebugFormat("Mapped result for '{0}': '{1}'", name, data);
 
-                var reduceValue = viewGenerator.GroupByExtraction(doc);
-                if (reduceValue == null)
-                {
-                    log.DebugFormat("Field {0} is used as the reduce key and cannot be null, skipping document {1}", viewGenerator.GroupByExtraction, docIdValue);
-                    continue;
-                }
-                var reduceKey = ReduceKeyToString(reduceValue);
-                var docId = docIdValue.ToString();
+					var hash = ComputeHash(name, reduceKey);
 
-                reduceKeys.Add(reduceKey);
+					actions.MappedResults.PutMappedResult(name, docId, reduceKey, data, hash);
 
-                var data = GetMapedData(doc);
+					actions.Indexing.IncrementSuccessIndexing();
+				}
 
-                log.DebugFormat("Mapped result for '{0}': '{1}'", name, data);
+				actions.Tasks.AddTask(new ReduceTask
+				{
+					Index = name,
+					ReduceKeys = reduceKeys.ToArray()
+				});
 
-                var hash = ComputeHash(name, reduceKey);
-
-				actions.MappedResults.PutMappedResult(name, docId, reduceKey, data, hash);
-
-                actions.Indexing.IncrementSuccessIndexing();
-            }
-
-			actions.Tasks.AddTask(new ReduceTask
-			{
-				Index = name,
-				ReduceKeys = reduceKeys.ToArray()
-			});
-
-            log.DebugFormat("Mapped {0} documents for {1}", count, name);
+				log.DebugFormat("Mapped {0} documents for {1}", count, name);
+        	}
+        	finally
+        	{
+        		actions.Indexing.FlushIndexStats();
+        	}
         }
 
         private static JObject GetMapedData(object doc)

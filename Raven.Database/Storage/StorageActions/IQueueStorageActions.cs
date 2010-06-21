@@ -6,7 +6,7 @@ namespace Raven.Database.Storage.StorageActions
 	public interface IQueueStorageActions
 	{
 		void EnqueueToQueue(string name, byte[] data);
-		IEnumerable<Tuple<byte[], int>> PeekFromQueue(string name);
-		void DeleteFromQueue(int id);
+		IEnumerable<Tuple<byte[], long>> PeekFromQueue(string name);
+		void DeleteFromQueue(string name, long id);
 	}
 }

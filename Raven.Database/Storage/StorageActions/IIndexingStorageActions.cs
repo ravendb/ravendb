@@ -6,13 +6,17 @@ namespace Raven.Database.Storage.StorageActions
 	public interface IIndexingStorageActions
 	{
 		void SetCurrentIndexStatsTo(string index);
+		void FlushIndexStats();
+
 		void IncrementIndexingAttempt();
 		void IncrementSuccessIndexing();
 		void IncrementIndexingFailure();
+		void DecrementIndexingAttempt();
+
 		IEnumerable<IndexStats> GetIndexesStats();
 		void AddIndex(string name);
 		void DeleteIndex(string name);
-		void DecrementIndexingAttempt();
+
 		IndexFailureInformation GetFailureRate(string index);
 	}
 }

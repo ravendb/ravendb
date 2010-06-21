@@ -4,18 +4,27 @@ using Newtonsoft.Json.Linq;
 
 namespace Raven.Database.Storage.StorageActions
 {
-	public interface IDocumentStorageActions
+	public interface IDocumentStorageActions 
 	{
-		int GetDocumentsCount();
-		IEnumerable<string> DocumentKeys { get; }
-		JsonDocument DocumentByKey(string key, TransactionInformation transactionInformation);
+		Tuple<int, int> FirstAndLastDocumentIds();
+		IEnumerable<Tuple<JsonDocument, int>> DocumentsById(int startId, int endId);
 		IEnumerable<JsonDocument> GetDocumentsByReverseUpdateOrder(int start);
 		IEnumerable<JsonDocument> GetDocumentsAfter(Guid etag);
-		IEnumerable<Tuple<JsonDocument, int>> DocumentsById(int startId, int endId);
-		Guid AddDocument(string key, Guid? etag, JObject data, JObject metadata);
-		Guid AddDocumentInTransaction(string key, Guid? etag, JObject data, JObject metadata, TransactionInformation transactionInformation);
+
+		IEnumerable<string> DocumentKeys { get; }
+		long GetDocumentsCount();
+		JsonDocument DocumentByKey(string key, TransactionInformation transactionInformation);
 		bool DeleteDocument(string key, Guid? etag, out JObject metadata);
+		Guid AddDocument(string key, Guid? etag, JObject data, JObject metadata);
+	}
+
+	public interface ITransactionStorageActions
+	{
+		Guid AddDocumentInTransaction(string key, Guid? etag, JObject data, JObject metadata, TransactionInformation transactionInformation);
 		void DeleteDocumentInTransaction(TransactionInformation transactionInformation, string key, Guid? etag);
-		Tuple<int, int> FirstAndLastDocumentIds();
+		void RollbackTransaction(Guid txId);
+		void ModifyTransactionId(Guid fromTxId, Guid toTxId, TimeSpan timeout);
+		void CompleteTransaction(Guid txId, Action<DocumentInTransactionData> perDocumentModified);
+		IEnumerable<Guid> GetTransactionIds();
 	}
 }

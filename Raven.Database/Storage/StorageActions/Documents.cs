@@ -9,10 +9,10 @@ using Raven.Database.Json;
 
 namespace Raven.Database.Storage.StorageActions
 {
-	public partial class DocumentStorageActions : IDocumentStorageActions
+	public partial class DocumentStorageActions : IDocumentStorageActions, ITransactionStorageActions
 	{
 
-		public int GetDocumentsCount()
+		public long GetDocumentsCount()
 		{
 			if (Api.TryMoveFirst(session, Details))
 				return Api.RetrieveColumnAsInt32(session, Details, tableColumnsCache.DetailsColumns["document_count"]).Value;

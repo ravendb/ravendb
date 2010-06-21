@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
@@ -14,6 +15,11 @@ namespace Raven.Database.Storage.StorageActions
 			Api.MakeKey(session, IndexesStats, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
 				throw new IndexDoesNotExistsException("There is no index named: " + index);
+		}
+
+		public void FlushIndexStats()
+		{
+			// nothing to do here, data will be flushed on commit
 		}
 
 		public void IncrementIndexingAttempt()

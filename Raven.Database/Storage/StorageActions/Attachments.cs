@@ -1,6 +1,7 @@
 using System;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
@@ -9,7 +10,7 @@ namespace Raven.Database.Storage.StorageActions
 {
 	public partial class DocumentStorageActions : IAttachmentsStorageActions
 	{
-		public void AddAttachment(string key, Guid? etag, byte[] data, string headers)
+		public void AddAttachment(string key, Guid? etag, byte[] data, JObject headers)
 		{
 			Api.JetSetCurrentIndex(session, Files, "by_name");
 			Api.MakeKey(session, Files, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -39,7 +40,7 @@ namespace Raven.Database.Storage.StorageActions
 				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["name"], key, Encoding.Unicode);
 				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["data"], data);
 				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["etag"], newETag.ToByteArray());
-				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["metadata"], headers, Encoding.Unicode);
+				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["metadata"], headers.ToString(Formatting.None), Encoding.Unicode);
 
 				update.Save();
 			}

@@ -49,7 +49,7 @@ namespace Raven.Database.Storage.StorageActions
 			}
 		}
 
-		public int ApproximateTaskCount
+		public long ApproximateTaskCount
 		{
 			get
 			{

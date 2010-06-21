@@ -103,7 +103,7 @@ namespace Raven.Database.Storage.StorageActions
 			OnCommit();
 		}
 
-		public int GetNextIdentityValue(string name)
+		public long GetNextIdentityValue(string name)
 		{
 			Api.JetSetCurrentIndex(session, Identity, "by_key");
 			Api.MakeKey(session, Identity, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -160,7 +160,7 @@ namespace Raven.Database.Storage.StorageActions
 				if (doc.Delete)
 					DeleteDocumentInTransaction(transactionInformation, doc.Key, null);
 				else
-					AddDocumentInTransaction(doc.Key, null, doc.Data.ToJObject(), doc.Metadata.ToJObject(), transactionInformation);
+					AddDocumentInTransaction(doc.Key, null, doc.Data, doc.Metadata, transactionInformation);
 			});
 		}
 		
@@ -205,11 +205,11 @@ namespace Raven.Database.Storage.StorageActions
 
 				var documentInTransactionData = new DocumentInTransactionData
 				{
-					Data = data,
+					Data = data.ToJObject(),
 					Delete = Api.RetrieveColumnAsBoolean(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["delete_document"]).Value,
 					Etag = new Guid(Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["etag"])),
 					Key = key,
-					Metadata = metadata,
+					Metadata = metadata.ToJObject(),
 				};
 				Api.JetDelete(session, DocumentsModifiedByTransactions);
 				perDocumentModified(documentInTransactionData);

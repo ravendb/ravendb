@@ -292,7 +292,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
                 }
                 else
                 {
-                    etag = actions.Documents.AddDocumentInTransaction(key, etag,
+                    etag = actions.Transactions.AddDocumentInTransaction(key, etag,
                                                      document, metadata, transactionInformation);
                 }
 				workContext.ShouldNotifyAboutWork();
@@ -380,7 +380,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
                 }
                 else
                 {
-                    actions.Documents.DeleteDocumentInTransaction(transactionInformation, key, etag);
+                    actions.Transactions.DeleteDocumentInTransaction(transactionInformation, key, etag);
                 }
 				workContext.ShouldNotifyAboutWork();
 			});
@@ -394,7 +394,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
         	{
         		TransactionalStorage.Batch(actions =>
         		{
-        			actions.General.CompleteTransaction(txId, doc =>
+					actions.Transactions.CompleteTransaction(txId, doc =>
         			{
         				// doc.Etag - represent the _modified_ document etag, and we already
         				// checked etags on previous PUT/DELETE, so we don't pass it here
@@ -402,8 +402,8 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
         					Delete(doc.Key, null, null);
         				else
         					Put(doc.Key, null,
-        					    doc.Data.ToJObject(),
-        					    doc.Metadata.ToJObject(), null);
+        					    doc.Data,
+        					    doc.Metadata, null);
         			});
         			actions.Attachments.DeleteAttachment("transactions/recoveryInformation/" + txId, null);
         			workContext.ShouldNotifyAboutWork();
@@ -424,7 +424,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
         	{
         		TransactionalStorage.Batch(actions =>
         		{
-        			actions.General.RollbackTransaction(txId);
+        			actions.Transactions.RollbackTransaction(txId);
         			workContext.ShouldNotifyAboutWork();
         		});
         	}
@@ -584,7 +584,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 
 		public void PutStatic(string name, Guid? etag, byte[] data, JObject metadata)
 		{
-			TransactionalStorage.Batch(actions => actions.Attachments.AddAttachment(name, etag, data, metadata.ToString(Formatting.None)));
+			TransactionalStorage.Batch(actions => actions.Attachments.AddAttachment(name, etag, data, metadata));
 		}
 
 		public void DeleteStatic(string name, Guid? etag)
@@ -707,11 +707,11 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 			}
 		}
 
-		public int ApproximateTaskCount
+		public long ApproximateTaskCount
 		{
 			get
 			{
-				int approximateTaskCount = 0;
+				long approximateTaskCount = 0;
 				TransactionalStorage.Batch(actions =>
 				{
 					approximateTaskCount = actions.Tasks.ApproximateTaskCount;
@@ -752,7 +752,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 			var transmitterPropagationToken = TransactionInterop.GetTransmitterPropagationToken(committableTransaction);
 			TransactionalStorage.Batch(
 				actions =>
-					actions.General.ModifyTransactionId(fromTxId, committableTransaction.TransactionInformation.DistributedIdentifier,
+					actions.Transactions.ModifyTransactionId(fromTxId, committableTransaction.TransactionInformation.DistributedIdentifier,
 					                            TransactionManager.DefaultTimeout));
 			return transmitterPropagationToken;
 		}

@@ -12,6 +12,11 @@ namespace Raven.Database.Storage
 			this.inner = inner;
 		}
 
+		public ITransactionStorageActions Transactions
+		{
+			get { return inner; }
+		}
+
 		public IDocumentStorageActions Documents
 		{
 			get { return inner; }

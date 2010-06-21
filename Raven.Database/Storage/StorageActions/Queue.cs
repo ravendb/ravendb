@@ -18,7 +18,7 @@ namespace Raven.Database.Storage.StorageActions
             }
         }
 
-        public IEnumerable<Tuple<byte[], int>> PeekFromQueue(string name)
+        public IEnumerable<Tuple<byte[], long>> PeekFromQueue(string name)
         {
             Api.JetSetCurrentIndex(session, Queue,"by_name");
             Api.MakeKey(session, Queue, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -37,16 +37,16 @@ namespace Raven.Database.Storage.StorageActions
                     Api.JetDelete(session, Queue);
                     continue;
                 }
-                yield return new Tuple<byte[], int>(
+				yield return new Tuple<byte[], long>(
                     Api.RetrieveColumn(session, Queue, tableColumnsCache.QueueColumns["data"]),
                     Api.RetrieveColumnAsInt32(session, Queue, tableColumnsCache.QueueColumns["id"]).Value);
             } while (Api.TryMoveNext(session, Queue));
         }
 
-        public void DeleteFromQueue(int id)
+        public void DeleteFromQueue(string name, long id)
         {
             Api.JetSetCurrentIndex(session, Queue, "by_id");
-            Api.MakeKey(session, Queue, id, MakeKeyGrbit.NewKey);
+            Api.MakeKey(session, Queue, (int)id, MakeKeyGrbit.NewKey);
             if (Api.TrySeek(session, Queue, SeekGrbit.SeekEQ) == false)
                 return;
             Api.JetDelete(session, Queue);
