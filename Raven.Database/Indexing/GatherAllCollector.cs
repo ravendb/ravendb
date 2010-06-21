@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Lucene.Net.Index;
@@ -5,6 +6,7 @@ using Lucene.Net.Search;
 
 namespace Raven.Database.Indexing
 {
+	[CLSCompliant(false)]
 	public class GatherAllCollector : Collector
 	{
 		private int _docBase;
