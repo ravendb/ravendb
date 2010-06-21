@@ -58,7 +58,7 @@ namespace Raven.Bundles.Replication.Reponsders
             }
         }
 
-        private void ReplicateDocument(StorageActionsAccessor actions, string id, JObject metadata, JObject document, string src)
+        private void ReplicateDocument(IStorageActionsAccessor actions, string id, JObject metadata, JObject document, string src)
         {
             var existingDoc = actions.Documents.DocumentByKey(id, null);
             if (existingDoc == null)

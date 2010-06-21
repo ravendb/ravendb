@@ -28,7 +28,7 @@ namespace Raven.Database.Indexing
 
 		public IndexDefinitionStorage IndexDefinitionStorage { get; set; }
 
-		public TransactionalStorage TransactionaStorage { get; set; }
+		public ITransactionalStorage TransactionaStorage { get; set; }
 
 		public ServerError[] Errors
 		{

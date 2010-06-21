@@ -54,7 +54,7 @@ namespace Raven.Database
 
 		    workContext = new WorkContext {IndexUpdateTriggers = IndexUpdateTriggers};
 
-			TransactionalStorage = new TransactionalStorage(configuration, workContext.NotifyAboutWork);
+			TransactionalStorage = configuration.CreateTransactionalStorage(workContext.NotifyAboutWork);
 			configuration.Container.SatisfyImportsOnce(TransactionalStorage);
 			
             bool newDb;
@@ -147,7 +147,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 			get; private set;
 		}
 
-		public TransactionalStorage TransactionalStorage { get; private set; }
+		public ITransactionalStorage TransactionalStorage { get; private set; }
 
 		public IndexDefinitionStorage IndexDefinitionStorage { get; private set; }
 
@@ -308,7 +308,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 		    };
 		}
 
-		private void AddIndexingTask(StorageActionsAccessor actions, JToken metadata, Func<Task> taskGenerator)
+		private void AddIndexingTask(IStorageActionsAccessor actions, JToken metadata, Func<Task> taskGenerator)
 		{
 			foreach (var indexName in IndexDefinitionStorage.IndexNames)
 			{
@@ -455,7 +455,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 			return name;
 		}
 
-		private void AddIndexAndEnqueueIndexingTasks(StorageActionsAccessor actions, string indexName)
+		private void AddIndexAndEnqueueIndexingTasks(IStorageActionsAccessor actions, string indexName)
 		{
 			actions.Indexing.AddIndex(indexName);
 			var firstAndLast = actions.Documents.FirstAndLastDocumentIds();
@@ -525,7 +525,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 			return loadedIds;
 		}
 
-		private static JsonDocument RetrieveDocument(StorageActionsAccessor actions, IndexQueryResult queryResult,
+		private static JsonDocument RetrieveDocument(IStorageActionsAccessor actions, IndexQueryResult queryResult,
 		                                             HashSet<string> loadedIds)
 		{
 			if (queryResult.Projection == null)
@@ -737,13 +737,15 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				IsRunning = true,
 			}), new JObject(), null);
 
-			var backupOperation = new BackupOperation(this, Configuration.DataDirectory, backupDestinationDirectory);
-			ThreadPool.QueueUserWorkItem(backupOperation.Execute);
+			//var backupOperation = TransactionalStorage.CreateBackupOperation(this, Configuration.DataDirectory, backupDestinationDirectory);
+			//ThreadPool.QueueUserWorkItem(backupOperation.Execute);
+			throw new NotImplementedException();
 		}
 
 		public static void Restore(string backupLocation, string databaseLocation)
 		{
-			new RestoreOperation(backupLocation, databaseLocation).Execute();
+			throw new NotImplementedException();
+			//new RestoreOperation(backupLocation, databaseLocation).Execute();
 		}
 
 		public byte[] PromoteTransaction(Guid fromTxId)

@@ -27,7 +27,7 @@ namespace Raven.Database.Storage
 		private readonly ILog logger = LogManager.GetLogger(typeof (IndexDefinitionStorage));
 		private readonly string path;
 
-		public IndexDefinitionStorage(TransactionalStorage  transactionalStorage,string path, IEnumerable<AbstractViewGenerator> compiledGenerators)
+		public IndexDefinitionStorage(ITransactionalStorage  transactionalStorage,string path, IEnumerable<AbstractViewGenerator> compiledGenerators)
 		{
 			this.path = Path.Combine(path, IndexDefDir);
 

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -15,6 +16,7 @@ namespace Raven.Database.Indexing
 {
 	public class SimpleIndex : Index
 	{
+		[CLSCompliant(false)]
 		public SimpleIndex(Directory directory, string name, IndexDefinition indexDefinition)
 			: base(directory, name, indexDefinition)
 		{
@@ -24,7 +26,7 @@ namespace Raven.Database.Indexing
 			AbstractViewGenerator viewGenerator, 
 			IEnumerable<object> documents,
 			WorkContext context,
-			StorageActionsAccessor actions)
+			IStorageActionsAccessor actions)
 		{
 			actions.Indexing.SetCurrentIndexStatsTo(name);
 			var count = 0;

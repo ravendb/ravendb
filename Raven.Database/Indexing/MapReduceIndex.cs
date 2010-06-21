@@ -21,7 +21,8 @@ namespace Raven.Database.Indexing
 {
     public class MapReduceIndex : Index
     {
-        public MapReduceIndex(Directory directory, string name, IndexDefinition indexDefinition)
+		[CLSCompliant(false)]
+		public MapReduceIndex(Directory directory, string name, IndexDefinition indexDefinition)
             : base(directory, name, indexDefinition)
         {
         }
@@ -30,7 +31,7 @@ namespace Raven.Database.Indexing
             AbstractViewGenerator viewGenerator,
             IEnumerable<dynamic> documents,
             WorkContext context,
-			StorageActionsAccessor actions)
+			IStorageActionsAccessor actions)
         {
             actions.Indexing.SetCurrentIndexStatsTo(name);
         	try
@@ -133,7 +134,8 @@ namespace Raven.Database.Indexing
             return JToken.FromObject(reduceValue).ToString(Formatting.None);
         }
 
-        protected override IndexQueryResult RetrieveDocument(Document document, string[] fieldsToFetch)
+		[CLSCompliant(false)]
+		protected override IndexQueryResult RetrieveDocument(Document document, string[] fieldsToFetch)
         {
             if (fieldsToFetch == null || fieldsToFetch.Length == 0)
                 fieldsToFetch = document.GetFields().OfType<Fieldable>().Select(x => x.Name()).ToArray();
@@ -174,7 +176,7 @@ namespace Raven.Database.Indexing
         public void ReduceDocuments(AbstractViewGenerator viewGenerator,
                                     IEnumerable<object> mappedResults,
                                     WorkContext context,
-									StorageActionsAccessor actions,
+									IStorageActionsAccessor actions,
                                     string[] reduceKeys)
         {
             actions.Indexing.SetCurrentIndexStatsTo(name);
