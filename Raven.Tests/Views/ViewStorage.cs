@@ -12,7 +12,7 @@ namespace Raven.Tests.Views
 {
 	public class ViewStorage : AbstractDocumentStorageTest
 	{
-		private readonly TransactionalStorage transactionalStorage;
+		private readonly ITransactionalStorage transactionalStorage;
 
 		public ViewStorage()
 		{

@@ -29,7 +29,7 @@ namespace Raven.Client.Client
 			get { return database.Statistics; }
 		}
 
-		public TransactionalStorage TransactionalStorage
+		public ITransactionalStorage TransactionalStorage
 		{
 			get { return database.TransactionalStorage; }
 		}
