@@ -6,12 +6,14 @@ using System.IO;
 using System.Runtime.ConstrainedExecution;
 using System.Threading;
 using Microsoft.Isam.Esent.Interop;
+using Raven.Database;
 using Raven.Database.Plugins;
-using Raven.Database.Storage.SchemaUpdates;
 using System.Linq;
-using Raven.Database.Storage.StorageActions;
+using Raven.Database.Storage;
+using Raven.Storage.Esent.SchemaUpdates;
+using Raven.Storage.Esent.StorageActions;
 
-namespace Raven.Database.Storage
+namespace Raven.Storage.Esent
 {
 	public class TransactionalStorage : CriticalFinalizerObject, IDisposable, ITransactionalStorage
 	{

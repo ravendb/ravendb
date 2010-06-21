@@ -1,6 +1,6 @@
 using Microsoft.Isam.Esent.Interop;
 
-namespace Raven.Database.Storage.StorageActions
+namespace Raven.Storage.Esent.StorageActions
 {
 	public partial class DocumentStorageActions
 	{

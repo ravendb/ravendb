@@ -5,11 +5,12 @@ using System.Linq;
 using log4net;
 using Microsoft.Isam.Esent.Interop;
 using Newtonsoft.Json.Linq;
+using Raven.Database;
+using Raven.Database.Backup;
 using Raven.Database.Json;
 using Raven.Database.Extensions;
-using Raven.Database.Storage;
 
-namespace Raven.Database.Backup
+namespace Raven.Storage.Esent.Backup
 {
 	public class BackupOperation
 	{

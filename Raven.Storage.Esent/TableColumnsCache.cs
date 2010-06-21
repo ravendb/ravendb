@@ -1,8 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Microsoft.Isam.Esent.Interop;
 
-namespace Raven.Database.Storage
+namespace Raven.Storage.Esent
 {
 	public class TableColumnsCache
 	{

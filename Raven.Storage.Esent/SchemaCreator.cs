@@ -2,7 +2,7 @@ using System;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
 
-namespace Raven.Database.Storage
+namespace Raven.Storage.Esent
 {
 	[CLSCompliant(false)]
 	public class SchemaCreator

@@ -1,9 +1,8 @@
-using System;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Database.Indexing;
 
-namespace Raven.Database.Storage.SchemaUpdates
+namespace Raven.Storage.Esent.SchemaUpdates
 {
     public class From21To22 : ISchemaUpdate
     {

@@ -1,11 +1,9 @@
 using System;
 using System.IO;
 using Microsoft.Isam.Esent.Interop;
-using Raven.Database.Storage;
-using Directory = System.IO.Directory;
 using Raven.Database.Extensions;
 
-namespace Raven.Database.Backup
+namespace Raven.Storage.Esent.Backup
 {
 	public class RestoreOperation
 	{

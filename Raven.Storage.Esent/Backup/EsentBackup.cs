@@ -1,8 +1,7 @@
 using System;
-using System.Diagnostics;
 using Microsoft.Isam.Esent.Interop;
 
-namespace Raven.Database.Backup
+namespace Raven.Storage.Esent.Backup
 {
 	public class EsentBackup
 	{

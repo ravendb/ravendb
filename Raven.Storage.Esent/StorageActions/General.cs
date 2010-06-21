@@ -5,10 +5,13 @@ using System.Linq;
 using System.Text;
 using log4net;
 using Microsoft.Isam.Esent.Interop;
+using Raven.Database;
 using Raven.Database.Plugins;
 using Raven.Database.Json;
+using Raven.Database.Storage;
+using Raven.Database.Storage.StorageActions;
 
-namespace Raven.Database.Storage.StorageActions
+namespace Raven.Storage.Esent.StorageActions
 {
 	[CLSCompliant(false)]
 	public partial class DocumentStorageActions : IDisposable, IGeneralStorageActions

@@ -1,10 +1,11 @@
 using System;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
+using Raven.Database.Storage.StorageActions;
 using Raven.Database.Tasks;
 using Raven.Database.Extensions;
 
-namespace Raven.Database.Storage.StorageActions
+namespace Raven.Storage.Esent.StorageActions
 {
 	public partial class DocumentStorageActions : ITasksStorageActions
 	{

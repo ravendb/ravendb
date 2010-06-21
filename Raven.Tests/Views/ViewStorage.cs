@@ -5,6 +5,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Indexing;
 using Raven.Database.Storage;
+using Raven.Storage.Esent;
 using Raven.Tests.Storage;
 using Xunit;
 

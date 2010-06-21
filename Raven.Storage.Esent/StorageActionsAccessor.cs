@@ -1,7 +1,9 @@
 ﻿using System;
+using Raven.Database.Storage;
 using Raven.Database.Storage.StorageActions;
+using Raven.Storage.Esent.StorageActions;
 
-namespace Raven.Database.Storage
+namespace Raven.Storage.Esent
 {
 	public class StorageActionsAccessor : IStorageActionsAccessor
 	{

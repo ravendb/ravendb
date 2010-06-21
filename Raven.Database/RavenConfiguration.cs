@@ -184,7 +184,7 @@ namespace Raven.Database
 
 		public ITransactionalStorage CreateTransactionalStorage(Action notifyAboutWork)
 		{
-			const string typeName = "Raven.Database.Storage.TransactionalStorage, Raven.Storage.Esent";
+			const string typeName = "Raven.Storage.Esent.TransactionalStorage, Raven.Storage.Esent";
 			var type = Type.GetType(typeName) ??
 				Type.GetType(typeName.Split(',').First());
 			return (ITransactionalStorage)Activator.CreateInstance(type, this, notifyAboutWork);

@@ -3,10 +3,11 @@ using System.Collections.Generic;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
 using Newtonsoft.Json.Linq;
-using Raven.Database.Indexing;
+using Raven.Database;
 using Raven.Database.Json;
+using Raven.Database.Storage.StorageActions;
 
-namespace Raven.Database.Storage.StorageActions
+namespace Raven.Storage.Esent.StorageActions
 {
 	public partial class DocumentStorageActions : IMappedResultsStorageAction
 	{

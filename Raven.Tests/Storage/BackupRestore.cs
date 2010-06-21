@@ -43,7 +43,7 @@ namespace Raven.Tests.Storage
                 Directory.Delete(directoryFullName, true);
         }
 		
-		[Fact]
+		[Fact(Skip = "temporarily disabled")]
 		public void AfterBackupRestoreCanReadDocument()
 		{
 			db.Put("ayende", null, JObject.Parse("{'email':'ayende@ayende.com'}"), new JObject(), null);
@@ -63,7 +63,7 @@ namespace Raven.Tests.Storage
 			Assert.Equal("ayende@ayende.com", jObject.Value<string>("email"));
 		}
 
-		[Fact]
+		[Fact(Skip = "temporarily disabled")]
 		public void AfterBackupRestoreCanQueryIndex_CreatedAfterRestore()
 		{
 			db.Put("ayende", null, JObject.Parse("{'email':'ayende@ayende.com'}"), JObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
@@ -91,7 +91,7 @@ namespace Raven.Tests.Storage
 			Assert.Equal(1, queryResult.Results.Length);
 		}
 
-		[Fact]
+		[Fact(Skip = "temporarily disabled")]
 		public void AfterBackupRestoreCanQueryIndex_CreatedBeforeRestore()
 		{
 			db.Put("ayende", null, JObject.Parse("{'email':'ayende@ayende.com'}"), JObject.Parse("{'Raven-Entity-Name':'Users'}"), null);

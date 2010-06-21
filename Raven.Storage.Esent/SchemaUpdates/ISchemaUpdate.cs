@@ -1,7 +1,7 @@
 using System.ComponentModel.Composition;
 using Microsoft.Isam.Esent.Interop;
 
-namespace Raven.Database.Storage.SchemaUpdates
+namespace Raven.Storage.Esent.SchemaUpdates
 {
 	[InheritedExport]
 	public interface ISchemaUpdate

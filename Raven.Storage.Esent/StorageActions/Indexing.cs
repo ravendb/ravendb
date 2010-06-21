@@ -1,11 +1,11 @@
-using System;
 using System.Collections.Generic;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
+using Raven.Database.Storage.StorageActions;
 
-namespace Raven.Database.Storage.StorageActions
+namespace Raven.Storage.Esent.StorageActions
 {
 	public partial class DocumentStorageActions : IIndexingStorageActions
 	{
