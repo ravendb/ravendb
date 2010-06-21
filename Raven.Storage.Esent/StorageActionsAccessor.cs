@@ -3,10 +3,11 @@ using Raven.Database.Storage.StorageActions;
 
 namespace Raven.Database.Storage
 {
-	public class StorageActionsAccessor
+	public class StorageActionsAccessor : IStorageActionsAccessor
 	{
 		private readonly DocumentStorageActions inner;
 
+		[CLSCompliant(false)]
 		public StorageActionsAccessor(DocumentStorageActions inner)
 		{
 			this.inner = inner;

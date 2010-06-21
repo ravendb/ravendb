@@ -7,6 +7,7 @@ using Microsoft.Isam.Esent.Interop;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Json;
 using Raven.Database.Extensions;
+using Raven.Database.Storage;
 
 namespace Raven.Database.Backup
 {
@@ -21,7 +22,7 @@ namespace Raven.Database.Backup
 
 		public BackupOperation(DocumentDatabase database, string src, string to)
 		{
-			instance = database.TransactionalStorage.Instance;
+			instance = ((TransactionalStorage)database.TransactionalStorage).Instance;
 			this.database = database;
             this.to = to.ToFullPath();
             this.src = src.ToFullPath();

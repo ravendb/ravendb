@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using Lucene.Net.Store;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Database.Storage;
 using Directory = System.IO.Directory;

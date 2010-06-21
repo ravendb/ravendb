@@ -13,7 +13,7 @@ using Raven.Database.Storage.StorageActions;
 
 namespace Raven.Database.Storage
 {
-	public class TransactionalStorage : CriticalFinalizerObject, IDisposable
+	public class TransactionalStorage : CriticalFinalizerObject, IDisposable, ITransactionalStorage
 	{
 		public const int MaxSessions = 256;
 		private readonly ThreadLocal<StorageActionsAccessor> current = new ThreadLocal<StorageActionsAccessor>();
@@ -290,11 +290,11 @@ namespace Raven.Database.Storage
 
 		[CLSCompliant(false)]
 		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
-		public void Batch(Action<StorageActionsAccessor> action)
+		public void Batch(Action<IStorageActionsAccessor> action)
 		{
 			if (disposed)
 			{
-				Trace.WriteLine("TransactionalStorage.Batch was called after it was dispoed, call was ignored.");
+				Trace.WriteLine("TransactionalStorage.Batch was called after it was disposed, call was ignored.");
 				return; // this may happen if someone is calling us from the finalizer thread, so we can't even throw on that
 			}
 			if (current.Value != null)
@@ -314,7 +314,7 @@ namespace Raven.Database.Storage
 			}
 		}
 
-		private void ExecuteBatch(Action<StorageActionsAccessor> action)
+		private void ExecuteBatch(Action<IStorageActionsAccessor> action)
 		{
 			var txMode = configuration.TransactionMode == TransactionMode.Lazy
 				? CommitTransactionGrbit.LazyFlush
