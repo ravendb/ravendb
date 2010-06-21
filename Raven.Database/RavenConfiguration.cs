@@ -67,9 +67,14 @@ namespace Raven.Database
 				PluginsDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, PluginsDirectory.Substring(2));
 
 			AnonymousUserAccessMode = GetAnonymousUserAccessMode();
+
+			StorageTypeName = ConfigurationManager.AppSettings["Raven/StorageTypeName"] ??
+				"Raven.Storage.Esent.TransactionalStorage, Raven.Storage.Esent";
 		}
 
-	    public string ServerUrl
+		public string StorageTypeName { get; set; }
+
+		public string ServerUrl
 	    {
 	        get
 	        {
@@ -184,9 +189,9 @@ namespace Raven.Database
 
 		public ITransactionalStorage CreateTransactionalStorage(Action notifyAboutWork)
 		{
-			const string typeName = "Raven.Storage.Esent.TransactionalStorage, Raven.Storage.Esent";
-			var type = Type.GetType(typeName) ??
-				Type.GetType(typeName.Split(',').First());
+			var type = 
+				Type.GetType(StorageTypeName.Split(',').First()) ?? // first try to find the merged one
+				Type.GetType(StorageTypeName); // then try full type name
 			return (ITransactionalStorage)Activator.CreateInstance(type, this, notifyAboutWork);
 		}
 
