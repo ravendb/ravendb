@@ -5,9 +5,8 @@ using System.Configuration;
 using System.IO;
 using log4net.Config;
 using System.Linq;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Raven.Database.Extensions;
+using Raven.Database.Storage;
 
 namespace Raven.Database
 {
@@ -182,5 +181,14 @@ namespace Raven.Database
                 return (T)Convert.ChangeType(value, typeof (T));
 	        return null;
 	    }
+
+		public ITransactionalStorage CreateTransactionalStorage(Action notifyAboutWork)
+		{
+			const string typeName = "Raven.Database.Storage.TransactionalStorage, Raven.Storage.Esent";
+			var type = Type.GetType(typeName) ??
+				Type.GetType(typeName.Split(',').First());
+			return (ITransactionalStorage)Activator.CreateInstance(type, this, notifyAboutWork);
+		}
+
 	}
 }
