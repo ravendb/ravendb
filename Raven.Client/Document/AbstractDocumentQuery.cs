@@ -200,7 +200,7 @@ namespace Raven.Client.Document
 			return this;
 		}
 
-		public IDocumentQuery<T> And()
+		public IDocumentQuery<T> AndAlso()
 		{
 			if (this.queryText.Length < 1)
 			{
@@ -211,7 +211,7 @@ namespace Raven.Client.Document
 			return this;
 		}
 
-		public IDocumentQuery<T> Or()
+		public IDocumentQuery<T> OrElse()
 		{
 			if (this.queryText.Length < 1)
 			{

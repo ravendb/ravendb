@@ -178,7 +178,7 @@ namespace Raven.Client.Linq
         {
             VisitExpression(andAlso.Left);
 
-			luceneQuery.And();
+			luceneQuery.AndAlso();
 
             VisitExpression(andAlso.Right);
         }
@@ -187,7 +187,7 @@ namespace Raven.Client.Linq
         {
             VisitExpression(orElse.Left);
 
-			luceneQuery.Or();
+			luceneQuery.OrElse();
 
             VisitExpression(orElse.Right);
         }

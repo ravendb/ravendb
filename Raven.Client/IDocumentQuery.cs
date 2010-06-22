@@ -15,8 +15,8 @@ namespace Raven.Client
 		IDocumentQuery<T> WhereGreaterThanOrEqual(string fieldName, object value);
 		IDocumentQuery<T> WhereLessThan(string fieldName, object value);
 		IDocumentQuery<T> WhereLessThanOrEqual(string fieldName, object value);
-		IDocumentQuery<T> And();
-		IDocumentQuery<T> Or();
+		IDocumentQuery<T> AndAlso();
+		IDocumentQuery<T> OrElse();
 
 		/// <summary>
 		/// Specifies a boost weight to the last where clause.

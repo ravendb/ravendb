@@ -128,15 +128,15 @@ namespace Raven.Client.Document
 			return this;
 		}
 
-		public IDocumentQuery<T> And()
+		public IDocumentQuery<T> AndAlso()
 		{
-			ApplyForAll(query => query.And());
+			ApplyForAll(query => query.AndAlso());
 			return this;
 		}
 
-		public IDocumentQuery<T> Or()
+		public IDocumentQuery<T> OrElse()
 		{
-			ApplyForAll(query => query.Or());
+			ApplyForAll(query => query.OrElse());
 			return this;
 		}
 
