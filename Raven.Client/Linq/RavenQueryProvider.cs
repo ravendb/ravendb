@@ -194,13 +194,17 @@ namespace Raven.Client.Linq
 
         private void VisitEqual(BinaryExpression expression)
         {
-			// this causes a lot of confusion currently because == actually means Contains
-
-			//luceneQuery.WhereEqual(
-			luceneQuery.WhereContains(
+			luceneQuery.WhereEqual(
 				((MemberExpression)expression.Left).Member.Name,
 				GetValueFromExpression(expression.Right));
         }
+
+		private void VisitContains(MethodCallExpression expression)
+		{
+			luceneQuery.WhereContains(
+				GetFieldName(expression.Object),
+				GetValueFromExpression(expression.Arguments[0]));
+		}
 
 		private void VisitGreaterThan(BinaryExpression expression)
 		{
@@ -252,17 +256,17 @@ namespace Raven.Client.Linq
             }
         }
 
-    	private static string GetFieldNameForRangeQuery(Expression expression, object value)
-    	{
-			if (value is int || value is long || value is double || value is float || value is decimal)
-				return ((MemberExpression) expression).Member.Name + "_Range";
-    		return ((MemberExpression)expression).Member.Name;
-    	}
-
     	private void VisitMethodCall(MethodCallExpression expression)
         {
 			if (expression.Method.DeclaringType != typeof(Queryable))
 			{
+				if (expression.Method.DeclaringType == typeof(String) &&
+					expression.Method.Name == "Contains")
+				{
+					VisitContains(expression);
+					return;
+				}
+
 				throw new NotSupportedException("Method not supported: " + expression.Method.Name);
 			}
 
@@ -271,25 +275,25 @@ namespace Raven.Client.Linq
 				case "Where":
 				{
 					VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
-					break;
+					return;
 				}
 				case "Select":
 				{
 					VisitExpression(expression.Arguments[0]);
 					VisitSelect(((UnaryExpression)expression.Arguments[1]).Operand);
-					break;
+					return;
 				}
 				case "Skip":
 				{
 					VisitExpression(expression.Arguments[0]);
 					VisitSkip(((ConstantExpression)expression.Arguments[1]));
-					break;
+					return;
 				}
 				case "Take":
 				{
 					VisitExpression(expression.Arguments[0]);
 					VisitTake(((ConstantExpression)expression.Arguments[1]));
-					break;
+					return;
 				}
 				case "First":
 				case "FirstOrDefault":
@@ -308,7 +312,7 @@ namespace Raven.Client.Linq
 					{
 						VisitFirstOrDefault();
 					}
-					break;
+					return;
 				}
 				case "Single":
 				case "SingleOrDefault":
@@ -327,13 +331,13 @@ namespace Raven.Client.Linq
 					{
 						VisitSingleOrDefault();
 					}
-					break;
+					return;
 				}
 				case "All":
 				{
 					VisitExpression(expression.Arguments[0]);
 					VisitAll((Expression<Func<T, bool>>)((UnaryExpression)expression.Arguments[1]).Operand);
-					break;
+					return;
 				}
 				case "Any":
 				{
@@ -344,7 +348,7 @@ namespace Raven.Client.Linq
 					}
 
 					VisitAny();
-					break;
+					return;
 				}
 				case "Count":
 				{
@@ -355,7 +359,7 @@ namespace Raven.Client.Linq
 					}
 
 					VisitCount();
-					break;
+					return;
 				}
 				default:
 				{
@@ -474,6 +478,25 @@ namespace Raven.Client.Linq
         }
 
         #region Helpers
+
+		private static string GetFieldNameForRangeQuery(Expression expression, object value)
+		{
+			if (value is int || value is long || value is double || value is float || value is decimal)
+				return ((MemberExpression)expression).Member.Name + "_Range";
+			return ((MemberExpression)expression).Member.Name;
+		}
+
+		private string GetFieldName(Expression expression)
+		{
+			MemberExpression member = expression as MemberExpression;
+
+			if (expression == null)
+			{
+				throw new NotSupportedException("Unable to determine field name from expression");
+			}
+
+			return member.Member.Name;
+		}
 
         private static object GetValueFromExpression(Expression expression)
         {
