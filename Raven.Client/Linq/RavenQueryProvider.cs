@@ -425,7 +425,7 @@ namespace Raven.Client.Linq
         {
 			if (expression.Method.DeclaringType != typeof(Queryable))
 			{
-				return;
+				throw new NotSupportedException("Method not supported: " + expression.Method.Name);
 			}
 
 			switch (expression.Method.Name)
