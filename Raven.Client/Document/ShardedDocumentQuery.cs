@@ -104,6 +104,18 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		public IDocumentQuery<T> WhereStartsWith(string fieldName, object value)
+		{
+			ApplyForAll(query => query.WhereStartsWith(fieldName, value));
+			return this;
+		}
+
+		public IDocumentQuery<T> WhereEndsWith(string fieldName, object value)
+		{
+			ApplyForAll(query => query.WhereEndsWith(fieldName, value));
+			return this;
+		}
+
 		public IDocumentQuery<T> WhereGreaterThan(string fieldName, object value)
 		{
 			ApplyForAll(query => query.WhereGreaterThan(fieldName, value));

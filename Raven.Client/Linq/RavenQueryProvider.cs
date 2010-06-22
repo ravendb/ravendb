@@ -199,9 +199,30 @@ namespace Raven.Client.Linq
 				GetValueFromExpression(expression.Right));
         }
 
+		private void VisitEqual(MethodCallExpression expression)
+		{
+			luceneQuery.WhereEqual(
+				GetFieldName(expression.Object),
+				GetValueFromExpression(expression.Arguments[0]));
+		}
+
 		private void VisitContains(MethodCallExpression expression)
 		{
 			luceneQuery.WhereContains(
+				GetFieldName(expression.Object),
+				GetValueFromExpression(expression.Arguments[0]));
+		}
+
+		private void VisitStartsWith(MethodCallExpression expression)
+		{
+			luceneQuery.WhereStartsWith(
+				GetFieldName(expression.Object),
+				GetValueFromExpression(expression.Arguments[0]));
+		}
+
+		private void VisitEndsWith(MethodCallExpression expression)
+		{
+			luceneQuery.WhereEndsWith(
 				GetFieldName(expression.Object),
 				GetValueFromExpression(expression.Arguments[0]));
 		}
@@ -258,42 +279,78 @@ namespace Raven.Client.Linq
 
     	private void VisitMethodCall(MethodCallExpression expression)
         {
-			if (expression.Method.DeclaringType != typeof(Queryable))
+			if (expression.Method.DeclaringType == typeof(Queryable))
 			{
-				if (expression.Method.DeclaringType == typeof(String) &&
-					expression.Method.Name == "Contains")
-				{
-					VisitContains(expression);
-					return;
-				}
-
-				throw new NotSupportedException("Method not supported: " + expression.Method.Name);
+				VisitQueryableMethodCall(expression);
+				return;
 			}
 
+			if (expression.Method.DeclaringType == typeof(String))
+			{
+				VisitStringMethodCall(expression);
+				return;
+			}
+
+			throw new NotSupportedException("Method not supported: " + expression.Method.DeclaringType.Name + "." + expression.Method.Name);
+		}
+
+		private void VisitStringMethodCall(MethodCallExpression expression)
+		{
+			switch (expression.Method.Name)
+			{
+				case "Contains":
+				{
+					VisitContains(expression);
+					break;
+				}
+				case "Equals":
+				{
+					VisitEqual(expression);
+					break;
+				}
+				case "StartsWith":
+				{
+					VisitStartsWith(expression);
+					break;
+				}
+				case "EndsWith":
+				{
+					VisitEndsWith(expression);
+					break;
+				}
+				default:
+				{
+					throw new NotSupportedException("Method not supported: " + expression.Method.Name);
+				}
+			}
+		}
+
+		private void VisitQueryableMethodCall(MethodCallExpression expression)
+		{
 			switch (expression.Method.Name)
 			{
 				case "Where":
 				{
 					VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
-					return;
+					break;
 				}
 				case "Select":
 				{
 					VisitExpression(expression.Arguments[0]);
 					VisitSelect(((UnaryExpression)expression.Arguments[1]).Operand);
-					return;
+					break;
 				}
 				case "Skip":
 				{
 					VisitExpression(expression.Arguments[0]);
 					VisitSkip(((ConstantExpression)expression.Arguments[1]));
-					return;
+					break;
 				}
 				case "Take":
 				{
 					VisitExpression(expression.Arguments[0]);
 					VisitTake(((ConstantExpression)expression.Arguments[1]));
-					return;
+					break;
 				}
 				case "First":
 				case "FirstOrDefault":
@@ -312,7 +369,7 @@ namespace Raven.Client.Linq
 					{
 						VisitFirstOrDefault();
 					}
-					return;
+					break;
 				}
 				case "Single":
 				case "SingleOrDefault":
@@ -331,13 +388,13 @@ namespace Raven.Client.Linq
 					{
 						VisitSingleOrDefault();
 					}
-					return;
+					break;
 				}
 				case "All":
 				{
 					VisitExpression(expression.Arguments[0]);
 					VisitAll((Expression<Func<T, bool>>)((UnaryExpression)expression.Arguments[1]).Operand);
-					return;
+					break;
 				}
 				case "Any":
 				{
@@ -348,7 +405,7 @@ namespace Raven.Client.Linq
 					}
 
 					VisitAny();
-					return;
+					break;
 				}
 				case "Count":
 				{
@@ -359,14 +416,14 @@ namespace Raven.Client.Linq
 					}
 
 					VisitCount();
-					return;
+					break;
 				}
 				default:
 				{
 					throw new NotSupportedException("Method not supported: " + expression.Method.Name);
 				}
 			}
-        }
+		}
 
         private void VisitSelect(Expression operand)
         {

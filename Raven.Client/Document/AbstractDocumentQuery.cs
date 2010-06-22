@@ -144,6 +144,16 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		public IDocumentQuery<T> WhereStartsWith(string fieldName, object value)
+		{
+			return this.WhereContains(fieldName, String.Concat(value, "*"));
+		}
+
+		public IDocumentQuery<T> WhereEndsWith(string fieldName, object value)
+		{
+			return this.WhereContains(fieldName, String.Concat("*", value));
+		}
+
 		public IDocumentQuery<T> WhereGreaterThan(string fieldName, object value)
 		{
 			if (queryText.Length > 0)
