@@ -14,6 +14,7 @@ namespace Raven.Client.Linq
 		private enum SpecialQueryType
 		{
 			None,
+			All,
 			Any,
 			Count,
 			First,
@@ -64,6 +65,8 @@ namespace Raven.Client.Linq
 
         private SpecialQueryType queryType = SpecialQueryType.None;
 
+		private Expression<Func<T, bool>> predicate;
+
         public object Execute(Expression expression)
         {
         	QueryText.Length = 0;
@@ -71,7 +74,7 @@ namespace Raven.Client.Linq
         	luceneQuery = session.LuceneQuery<T>(indexName);
 
             var documentQuery = luceneQuery.Where(QueryText.ToString());
-            
+
             if (skipValue.HasValue)
             {
                 documentQuery = documentQuery.Skip(skipValue.Value);
@@ -104,6 +107,10 @@ namespace Raven.Client.Linq
 				{
 					return documentQuery.SingleOrDefault();
 				}
+				case SpecialQueryType.All:
+				{
+					return documentQuery.AsQueryable().All(this.predicate);
+				}
 				case SpecialQueryType.Any:
 				{
 					return documentQuery.Any();
@@ -113,7 +120,9 @@ namespace Raven.Client.Linq
 					return documentQuery.QueryResult.TotalResults;
 				}
 				default:
+				{
 					return documentQuery;
+				}
 			}
         }
 
@@ -491,6 +500,12 @@ namespace Raven.Client.Linq
 					}
 					break;
 				}
+				case "All":
+				{
+					VisitExpression(expression.Arguments[0]);
+					VisitAll((Expression<Func<T, bool>>)((UnaryExpression)expression.Arguments[1]).Operand);
+					break;
+				}
 				case "Any":
 				{
 					VisitExpression(expression.Arguments[0]);
@@ -550,6 +565,12 @@ namespace Raven.Client.Linq
             //Don't have to worry about the cast failing, the Take() extension method only takes an int
             takeValue = (int)constantExpression.Value;
         }
+
+		private void VisitAll(Expression<Func<T,bool>> predicateExpression)
+		{
+			this.predicate = predicateExpression;
+			queryType = SpecialQueryType.All;
+		}
 
 		private void VisitAny()
 		{
