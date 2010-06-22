@@ -3,9 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Text;
 using Raven.Database.Data;
-using Raven.Database.Indexing;
 
 namespace Raven.Client.Linq
 {
@@ -21,7 +19,7 @@ namespace Raven.Client.Linq
 			FirstOrDefault,
 			Single,
 			SingleOrDefault
-		} 
+		}
 
         private readonly IDocumentSession session;
         private readonly string indexName;
@@ -39,6 +37,11 @@ namespace Raven.Client.Linq
             get { return indexName; }
         }
 
+		public IDocumentQuery<T> LuceneQuery
+		{
+			get { return this.luceneQuery; }
+		}
+
     	public QueryResult QueryResult
     	{
     		get
@@ -53,11 +56,9 @@ namespace Raven.Client.Linq
         {
             this.session = session;
             this.indexName = indexName;
-            QueryText = new StringBuilder();
             FieldsToFetch = new List<string>();
         }
 
-        public StringBuilder QueryText { get; set; }
         public List<string> FieldsToFetch { get; set; }
 
         private int? skipValue;
@@ -69,59 +70,56 @@ namespace Raven.Client.Linq
 
         public object Execute(Expression expression)
         {
-        	QueryText.Length = 0;
-			ProcessExpression(expression);
         	luceneQuery = session.LuceneQuery<T>(indexName);
-
-            var documentQuery = luceneQuery.Where(QueryText.ToString());
+			ProcessExpression(expression);
 
             if (skipValue.HasValue)
             {
-                documentQuery = documentQuery.Skip(skipValue.Value);
+				luceneQuery.Skip(skipValue.Value);
             }
             if (takeValue.HasValue)
             {
-                documentQuery = documentQuery.Take(takeValue.Value);
-            }                         
+				luceneQuery.Take(takeValue.Value);
+            }
 
-            documentQuery = documentQuery.SelectFields<T>(FieldsToFetch.ToArray());            
+			luceneQuery.SelectFields<T>(FieldsToFetch.ToArray());            
 
 			if (customizeQuery != null)
-				customizeQuery(documentQuery);
+				customizeQuery(luceneQuery);
 
 			switch (queryType)
 			{
 				case SpecialQueryType.First:
 				{
-					return documentQuery.First();               
+					return luceneQuery.First();               
 				}
 				case SpecialQueryType.FirstOrDefault:
 				{
-					return documentQuery.FirstOrDefault();
+					return luceneQuery.FirstOrDefault();
 				}
 				case SpecialQueryType.Single:
 				{
-					return documentQuery.Single();
+					return luceneQuery.Single();
 				}
 				case SpecialQueryType.SingleOrDefault:
 				{
-					return documentQuery.SingleOrDefault();
+					return luceneQuery.SingleOrDefault();
 				}
 				case SpecialQueryType.All:
 				{
-					return documentQuery.AsQueryable().All(this.predicate);
+					return luceneQuery.AsQueryable().All(this.predicate);
 				}
 				case SpecialQueryType.Any:
 				{
-					return documentQuery.Any();
+					return luceneQuery.Any();
 				}
 				case SpecialQueryType.Count:
 				{
-					return documentQuery.QueryResult.TotalResults;
+					return luceneQuery.QueryResult.TotalResults;
 				}
 				default:
 				{
-					return documentQuery;
+					return luceneQuery;
 				}
 			}
         }
@@ -176,12 +174,11 @@ namespace Raven.Client.Linq
             }
         }
        
-
         private void VisitAndAlso(BinaryExpression andAlso)
         {
             VisitExpression(andAlso.Left);
 
-            QueryText.Append("AND ");
+			luceneQuery.And();
 
             VisitExpression(andAlso.Right);
         }
@@ -190,237 +187,69 @@ namespace Raven.Client.Linq
         {
             VisitExpression(orElse.Left);
 
-            QueryText.Append("OR ");
+			luceneQuery.Or();
 
             VisitExpression(orElse.Right);
         }
 
         private void VisitEqual(BinaryExpression expression)
         {
-            QueryText.Append(((MemberExpression)expression.Left).Member.Name).Append(":");
-			QueryText.Append(TransformToEqualValue(GetValueFromExpression(expression.Right)));
+			// this causes a lot of confusion currently because == actually means Contains
 
-            QueryText.Append(" ");
+			//luceneQuery.WhereEqual(
+			luceneQuery.WhereContains(
+				((MemberExpression)expression.Left).Member.Name,
+				GetValueFromExpression(expression.Right));
         }
+
+		private void VisitGreaterThan(BinaryExpression expression)
+		{
+			object value = GetValueFromExpression(expression.Right);
+
+			luceneQuery.WhereGreaterThan(
+				GetFieldNameForRangeQuery(expression.Left, value),
+				value);
+		}
+
+		private void VisitGreaterThanOrEqual(BinaryExpression expression)
+		{
+			object value = GetValueFromExpression(expression.Right);
+
+			luceneQuery.WhereGreaterThanOrEqual(
+				GetFieldNameForRangeQuery(expression.Left, value),
+				value);
+		}
+
+		private void VisitLessThan(BinaryExpression expression)
+		{
+			object value = GetValueFromExpression(expression.Right);
+
+			luceneQuery.WhereLessThan(
+				GetFieldNameForRangeQuery(expression.Left, value),
+				value);
+		}
 
         private void VisitLessThanOrEqual(BinaryExpression expression)
         {
 			object value = GetValueFromExpression(expression.Right);
-			QueryText.Append(
-				GetFieldNameForRangeQuery(expression.Left, value)
-				).Append(":[NULL TO ");
-			QueryText.Append(TransformToRangeValue(GetValueFromExpression(expression.Right)));
 
-            QueryText.Append("] ");
+			luceneQuery.WhereLessThanOrEqual(
+				GetFieldNameForRangeQuery(expression.Left, value),
+				value);
         }
 
         private void VisitMemberAccess(MemberExpression memberExpression, bool boolValue)
         {            
             if (memberExpression.Type == typeof(bool))
             {
-                QueryText.Append(memberExpression.Member.Name);
-                QueryText.Append(":");
-                if (boolValue)
-                    QueryText.Append("true");
-                else
-                    QueryText.Append("false");
+				luceneQuery.WhereEqual(
+					memberExpression.Member.Name,
+					boolValue);
             }
             else
             {
                 throw new NotSupportedException("Expression type not supported: " + memberExpression.ToString());
             }
-        }
-
-    	private static string TransformToRangeValue(object value)
-    	{
-			if (value == null)
-				return "NULL_VALUE";
-
-			if (value is int)
-				return NumberUtil.NumberToString((int) value);
-			if (value is long)
-				return NumberUtil.NumberToString((long)value);
-			if (value is decimal)
-				return NumberUtil.NumberToString((double)(decimal)value);
-			if (value is double)
-				return NumberUtil.NumberToString((double)value);
-			if (value is float)
-				return NumberUtil.NumberToString((float)value);
-			if (value is DateTime)
-				return DateTools.DateToString((DateTime)value, DateTools.Resolution.MILLISECOND);
-
-			return LuceneEscape(value.ToString(), true, false);
-    	}
-
-		private static string TransformToEqualValue(object value)
-		{
-			if (value == null)
-				return "NULL_VALUE";
-
-			if (value is DateTime)
-				return DateTools.DateToString((DateTime)value, DateTools.Resolution.MILLISECOND);
-
-			return LuceneEscape(value.ToString(), true, false);
-		}
-
-		/// <summary>
-		/// Escapes Lucene operators and quotes phrases
-		/// </summary>
-		/// <param name="term"></param>
-		/// <param name="isAnalyzed"></param>
-		/// <param name="allowWildcards"></param>
-		/// <returns>escaped term</returns>
-		/// <remarks>
-		/// http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Escaping%20Special%20Characters
-		/// </remarks>
-		private static string LuceneEscape(string term, bool isAnalyzed, bool allowWildcards)
-		{
-			// method doesn't allocate a StringBuilder unless the string requires escaping
-			// also this copies chunks of the original string into the StringBuilder which
-			// is far more efficient than copying character by character because StringBuilder
-			// can access the underlying string data directly
-
-			if (string.IsNullOrEmpty(term))
-			{
-				return "\"\"";
-			}
-
-			bool isPhrase = false;
-			int start = 0;
-			int length = term.Length;
-			StringBuilder buffer = null;
-
-			if (!isAnalyzed)
-			{
-				// FieldIndexing.NotAnalyzed requires enclosing brackets
-				buffer = new StringBuilder(length*2);
-				buffer.Append("[[");
-			}
-
-			for (int i=start; i<length; i++)
-			{
-				char ch = term[i];
-				switch (ch)
-				{
-					// should wildcards be included or excluded here?
-					case '*':
-					case '?':
-					{
-						if (allowWildcards && isAnalyzed)
-						{
-							break;
-						}
-						goto case '\\';
-					}
-					case '+':
-					case '-':
-					case '&':
-					case '|':
-					case '!':
-					case '(':
-					case ')':
-					case '{':
-					case '}':
-					case '[':
-					case ']':
-					case '^':
-					case '"':
-					case '~':
-					case ':':
-					case '\\':
-					{
-						if (buffer == null)
-						{
-							// allocate builder with headroom
-							buffer = new StringBuilder(length*2);
-						}
-
-						if (i > start)
-						{
-							// append any leading substring
-							buffer.Append(term, start, i-start);
-						}
-
-						buffer.Append('\\').Append(ch);
-						start = i+1;
-						break;
-					}
-					case ' ':
-					case '\t':
-					{
-						if (isAnalyzed && !isPhrase)
-						{
-							if (buffer == null)
-							{
-								// allocate builder with headroom
-								buffer = new StringBuilder(length*2);
-							}
-
-							buffer.Insert(0, '"');
-							isPhrase = true;
-						}
-						break;
-					}
-				}
-			}
-
-			if (buffer == null)
-			{
-				// no changes required
-				return term;
-			}
-
-			if (length > start)
-			{
-				// append any trailing substring
-				buffer.Append(term, start, length-start);
-			}
-
-			if (!isAnalyzed)
-			{
-				// FieldIndexing.NotAnalyzed requires enclosing brackets
-				buffer.Append("]]");
-			}
-			else if (isPhrase)
-			{
-				// quoted phrase
-				buffer.Append('"');
-			}
-
-			return buffer.ToString();
-		}
-
-    	private void VisitLessThan(BinaryExpression expression)
-        {
-			object value = GetValueFromExpression(expression.Right);
-			QueryText.Append(
-				GetFieldNameForRangeQuery(expression.Left, value)
-				).Append(":{NULL TO ");
-			QueryText.Append(TransformToRangeValue(GetValueFromExpression(expression.Right)));
-
-            QueryText.Append("} ");
-        }
-
-        private void VisitGreaterThanOrEqual(BinaryExpression expression)
-        {
-			object value = GetValueFromExpression(expression.Right);
-			QueryText.Append(
-				GetFieldNameForRangeQuery(expression.Left, value)
-				).Append(":[");
-        	QueryText.Append(TransformToRangeValue(value));
-
-			QueryText.Append(" TO NULL] ");
-        }
-
-        private void VisitGreaterThan(BinaryExpression expression)
-        {
-			object value = GetValueFromExpression(expression.Right);
-			QueryText.Append(
-				GetFieldNameForRangeQuery(expression.Left, value)
-				).Append(":{");
-        	QueryText.Append(TransformToRangeValue(value));
-
-			QueryText.Append(" TO NULL} ");
         }
 
     	private static string GetFieldNameForRangeQuery(Expression expression, object value)
@@ -701,5 +530,5 @@ namespace Raven.Client.Linq
 		}
 
         #endregion Helpers
-    }
+	}
 }
