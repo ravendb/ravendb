@@ -92,9 +92,9 @@ namespace Raven.Client.Document
 			return this;
 		}
 
-		public IDocumentQuery<T> WhereEquals(string fieldName, object value)
+		public IDocumentQuery<T> WhereEqual(string fieldName, object value)
 		{
-			ApplyForAll(query => query.WhereEquals(fieldName, value));
+			ApplyForAll(query => query.WhereEqual(fieldName, value));
 			return this;
 		}
 

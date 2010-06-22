@@ -110,7 +110,7 @@ namespace Raven.Client.Document
 		/// <param name="fieldName"></param>
 		/// <param name="value"></param>
 		/// <returns></returns>
-		public IDocumentQuery<T> WhereEquals(string fieldName, object value)
+		public IDocumentQuery<T> WhereEqual(string fieldName, object value)
 		{
 			if (queryText.Length > 0)
 			{
@@ -529,6 +529,11 @@ namespace Raven.Client.Document
 			waitForNonStaleResults = true;
 			timeout = TimeSpan.FromSeconds(15);
 			return this;
+		}
+
+		public override string ToString()
+		{
+			return this.queryText.ToString();
 		}
 	}
 }
