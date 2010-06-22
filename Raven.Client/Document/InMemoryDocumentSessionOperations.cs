@@ -10,6 +10,12 @@ using Raven.Client.Exceptions;
 using Raven.Database;
 using Raven.Database.Data;
 using Raven.Database.Json;
+using System.Diagnostics;
+
+#if !NET_3_5
+using System.Dynamic;
+using Microsoft.CSharp.RuntimeBinder;
+#endif
 
 namespace Raven.Client.Document
 {
@@ -152,26 +158,44 @@ more responsive application.
 			return entity;
 		}
 
-		public string Store(object entity)
+		public void Store(object entity)
 		{
 			if (null == entity)
 				throw new ArgumentNullException("entity");
-			var identityProperty = GetIdentityProperty(entity.GetType());
+			
 			string id = null;
-			if (identityProperty != null)
-				id = identityProperty.GetValue(entity, null) as string;
+#if !NET_3_5
+            if (entity is IDynamicMetaObjectProvider)
+            {                
+                id = Conventions.DocumentKeyGenerator(entity);
 
-			if (id == null)
-			{
-				// Generate the key up front
-				id = Conventions.GenerateDocumentKey(entity);
+                if (id != null)
+                {
+                    // Store it back into the Id field so the client has access to to it                    
+                    dynamic temp = entity as dynamic;
+                    temp.Id = id;                                        
+                }
+            }
+            else
+#endif
+            {
+                var identityProperty = GetIdentityProperty(entity.GetType());
+                if (identityProperty != null)
+                    id = identityProperty.GetValue(entity, null) as string;
 
-				if (id != null && identityProperty != null)
-				{
-					// And store it so the client has access to to it
-					identityProperty.SetValue(entity, id, null);
-				}
-			}
+                if (id == null)
+                {
+                    // Generate the key up front
+                    id = Conventions.GenerateDocumentKey(entity);
+
+                    if (id != null && identityProperty != null)
+                    {
+                        // And store it so the client has access to to it
+                        identityProperty.SetValue(entity, id, null);
+                    }
+                }
+            }
+
 			// we make the check here even if we just generated the key
 			// users can override the key generation behavior, and we need
 			// to detect if they generate duplicates.
@@ -180,7 +204,7 @@ more responsive application.
 					&& entitiesByKey.ContainsKey(id))
 			{
 				if (ReferenceEquals(entitiesByKey[id], entity))
-					return id; // calling Store twice on the same reference is a no-op
+					return; // calling Store twice on the same reference is a no-op
 				throw new NonUniqueObjectException("Attempted to associated a different object with id '" + id + "'.");
 			}
 
@@ -194,19 +218,30 @@ more responsive application.
 			});
 			if (id != null)
 				entitiesByKey[id] = entity;
-
-            return id;
 		}
 
 		protected ICommandData CreatePutEntityCommand(object entity, DocumentSession.DocumentMetadata documentMetadata)
 		{
 			var json = ConvertEntityToJson(entity, documentMetadata.Metadata);
 			var entityType = entity.GetType();
-			var identityProperty = GetIdentityProperty(entityType);
+			
 
-			string key = null;
-			if (identityProperty != null)
-				key = (string) identityProperty.GetValue(entity, null);
+            //This fails to find the key if it's a dynamic object
+
+            string key = null;
+#if !NET_3_5			
+            if (entity is IDynamicMetaObjectProvider)
+            {
+                dynamic dynamicEntity = entity as dynamic;
+                key = dynamicEntity.Id;
+            }
+            else
+#endif
+            {
+                var identityProperty = GetIdentityProperty(entityType);
+                if (identityProperty != null)
+                    key = (string)identityProperty.GetValue(entity, null);
+            }
 			var etag = UseOptimisticConcurrency ? documentMetadata.ETag : null;
 
 			return new PutCommandData
@@ -250,7 +285,7 @@ more responsive application.
 
 				if (stored != null)
 					stored(entity);
-			}
+            }
 		}
 
 		protected DocumentSession.SaveChangesData PrepareForSaveChanges()

@@ -15,5 +15,17 @@ namespace Raven.Client
 		IDocumentQuery<T> LuceneQuery<T>(string indexName);
 
 		void SaveChanges();
-	}
+
+        //It's a bit messier, but this has to be declared here, see link below for an explanation
+        //http://stackoverflow.com/questions/3071634/strange-behaviour-when-using-dynamic-types-as-method-parameters  
+        //(swap IExtendedInterface for IDocumentSession and IActualInterface for IInMemorydocumentSessionOperations)
+
+        //The problem is that the session variable is ISession, but Store(..) doesn't exist in/on that interface
+        //C# handles this when we're not calling Store(..) with a dynamic value (i.e. resolved at run-time)
+
+        //This is the best way I can think of doing it?
+#if !NET_3_5        
+        void Store(dynamic entity);
+#endif
+    }
 }

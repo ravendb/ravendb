@@ -139,14 +139,21 @@ namespace Raven.Client.Shard
 			return shardSession;
 		}
 
-		public string Store(object entity)
+		public void Store(object entity)
 		{
 			string shardId = shardStrategy.ShardSelectionStrategy.ShardIdForNewObject(entity);
 			if (String.IsNullOrEmpty(shardId))
 				throw new ApplicationException("Can't find a shard to use for entity: " + entity);
 
-			return GetSingleShardSession(shardId).Store(entity);
+			GetSingleShardSession(shardId).Store(entity);
 		}
+
+#if !NET_3_5
+        public string StoreDynamic(dynamic entity)
+        {
+            return Store(entity);
+        }
+#endif
 
 		public void Evict<T>(T entity)
 		{
@@ -223,6 +230,6 @@ namespace Raven.Client.Shard
 	                documentSession.MaxNumberOfRequestsPerSession = value;
 	            }
 	        }
-	    }
-	}
+	    }        
+    }
 }

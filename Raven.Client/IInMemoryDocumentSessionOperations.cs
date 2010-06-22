@@ -7,12 +7,8 @@ namespace Raven.Client
 	public interface IInMemoryDocumentSessionOperations : IDisposable
 	{
 		string StoreIdentifier { get; }
-        
-    #if !NET_4_0
-		string Store(object entity);        
-    #else
-        string Store(dynamic entity);
-    #endif
+            
+		void Store(object entity);        
         
 		void Delete<T>(T entity);
 
