@@ -13,12 +13,13 @@ namespace Raven.Client.Linq
     {
 		private enum SpecialQueryType
 		{
+			None,
+			Any,
+			Count,
 			First,
 			FirstOrDefault,
 			Single,
-			SingleOrDefault,
-			Any,
-			None
+			SingleOrDefault
 		} 
 
         private readonly IDocumentSession session;
@@ -106,6 +107,10 @@ namespace Raven.Client.Linq
 				case SpecialQueryType.Any:
 				{
 					return documentQuery.Any();
+				}
+				case SpecialQueryType.Count:
+				{
+					return documentQuery.QueryResult.TotalResults;
 				}
 				default:
 					return documentQuery;
@@ -497,6 +502,17 @@ namespace Raven.Client.Linq
 					VisitAny();
 					break;
 				}
+				case "Count":
+				{
+					VisitExpression(expression.Arguments[0]);
+					if (expression.Arguments.Count == 2)
+					{
+						VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
+					}
+
+					VisitCount();
+					break;
+				}
 				default:
 				{
 					throw new NotSupportedException("Method not supported: " + expression.Method.Name);
@@ -539,6 +555,12 @@ namespace Raven.Client.Linq
 		{
 			takeValue = 1;
 			queryType = SpecialQueryType.Any;
+		}
+
+		private void VisitCount()
+		{
+			takeValue = 1;
+			queryType = SpecialQueryType.Count;
 		}
 
         private void VisitSingle()
