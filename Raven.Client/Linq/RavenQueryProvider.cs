@@ -17,6 +17,7 @@ namespace Raven.Client.Linq
 			FirstOrDefault,
 			Single,
 			SingleOrDefault,
+			Any,
 			None
 		} 
 
@@ -81,7 +82,7 @@ namespace Raven.Client.Linq
 
             documentQuery = documentQuery.SelectFields<T>(FieldsToFetch.ToArray());            
 
-			if(customizeQuery != null)
+			if (customizeQuery != null)
 				customizeQuery(documentQuery);
 
 			switch (queryType)
@@ -101,6 +102,10 @@ namespace Raven.Client.Linq
 				case SpecialQueryType.SingleOrDefault:
 				{
 					return documentQuery.SingleOrDefault();
+				}
+				case SpecialQueryType.Any:
+				{
+					return documentQuery.Any();
 				}
 				default:
 					return documentQuery;
@@ -413,60 +418,86 @@ namespace Raven.Client.Linq
 
     	private void VisitMethodCall(MethodCallExpression expression)
         {
-            if ((expression.Method.DeclaringType == typeof(Queryable)) &&
-                (expression.Method.Name == "Where"))
-            {
-                VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
-            }
-            else if ((expression.Method.DeclaringType == typeof(Queryable)) &&
-                (expression.Method.Name == "Select"))
-            {
-                VisitExpression(expression.Arguments[0]);
-                VisitSelect(((UnaryExpression)expression.Arguments[1]).Operand);
-            }           
-            else if ((expression.Method.DeclaringType == typeof(Queryable)) &&
-                    (expression.Method.Name == "Skip"))
-            {
-                VisitExpression(expression.Arguments[0]);
-                VisitSkip(((ConstantExpression)expression.Arguments[1]));
-            }
-            else if ((expression.Method.DeclaringType == typeof(Queryable)) &&
-                    (expression.Method.Name == "Take"))
-            {
-                VisitExpression(expression.Arguments[0]);
-                VisitTake(((ConstantExpression)expression.Arguments[1]));
-            }
-            else if ((expression.Method.DeclaringType == typeof(Queryable)) &&
-                (expression.Method.Name == "First" || expression.Method.Name == "FirstOrDefault"))
-            {
-                VisitExpression(expression.Arguments[0]);
-                if (expression.Arguments.Count == 2)                
-                    VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);                
-                
-                if (expression.Method.Name == "First")
-                    VisitFirst();               
-                else if (expression.Method.Name == "FirstOrDefault")
-                    VisitFirstOrDefault();
-            }
-            else if ((expression.Method.DeclaringType == typeof(Queryable)) &&
-                (expression.Method.Name == "Single" || expression.Method.Name == "SingleOrDefault"))
-            {
-                VisitExpression(expression.Arguments[0]);
-                if (expression.Arguments.Count == 2)
-                {
-                    VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
-                }
-                
-                if (expression.Method.Name == "Single")
-                    VisitSingle();                
-                else if (expression.Method.Name == "SingleOrDefault")
-                    VisitSingleOrDefault();
-            }           
-            else
-            {
-                throw new NotSupportedException("Method not supported: " + expression.Method.Name);
-            }
-        }           
+			if (expression.Method.DeclaringType != typeof(Queryable))
+			{
+				return;
+			}
+
+			switch (expression.Method.Name)
+			{
+				case "Where":
+				{
+					VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
+					break;
+				}
+				case "Select":
+				{
+					VisitExpression(expression.Arguments[0]);
+					VisitSelect(((UnaryExpression)expression.Arguments[1]).Operand);
+					break;
+				}
+				case "Skip":
+				{
+					VisitExpression(expression.Arguments[0]);
+					VisitSkip(((ConstantExpression)expression.Arguments[1]));
+					break;
+				}
+				case "Take":
+				{
+					VisitExpression(expression.Arguments[0]);
+					VisitTake(((ConstantExpression)expression.Arguments[1]));
+					break;
+				}
+				case "First":
+				case "FirstOrDefault":
+				{
+					VisitExpression(expression.Arguments[0]);
+					if (expression.Arguments.Count == 2)
+					{
+						VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
+					}
+
+					if (expression.Method.Name == "First")
+					{
+						VisitFirst();
+					}
+					else
+					{
+						VisitFirstOrDefault();
+					}
+					break;
+				}
+				case "Single":
+				case "SingleOrDefault":
+				{
+					VisitExpression(expression.Arguments[0]);
+					if (expression.Arguments.Count == 2)
+					{
+						VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
+					}
+
+					if (expression.Method.Name == "Single")
+					{
+						VisitSingle();
+					}
+					else
+					{
+						VisitSingleOrDefault();
+					}
+					break;
+				}
+				case "Any":
+				{
+					VisitExpression(expression.Arguments[0]);
+					VisitAny();
+					break;
+				}
+				default:
+				{
+					throw new NotSupportedException("Method not supported: " + expression.Method.Name);
+				}
+			}
+        }
 
         private void VisitSelect(Expression operand)
         {
@@ -485,7 +516,7 @@ namespace Raven.Client.Linq
                     throw new NotSupportedException("Node not supported: " + body.NodeType);
 
             }
-        }      
+        }
 
         private void VisitSkip(ConstantExpression constantExpression)
         {
@@ -498,6 +529,12 @@ namespace Raven.Client.Linq
             //Don't have to worry about the cast failing, the Take() extension method only takes an int
             takeValue = (int)constantExpression.Value;
         }
+
+		private void VisitAny()
+		{
+			takeValue = 1;
+			queryType = SpecialQueryType.Any;
+		}
 
         private void VisitSingle()
         {
@@ -558,6 +595,7 @@ namespace Raven.Client.Linq
         {
             customizeQuery = (Action<IDocumentQuery<T>>)action;
         }
+
         #region Helpers
 
         private static object GetValueFromExpression(Expression expression)
@@ -613,7 +651,6 @@ namespace Raven.Client.Linq
 			}
 			throw new NotSupportedException("MemberInfo type not supported: " + memberInfo.GetType().FullName);
 		}
-
 
         #endregion Helpers
     }
