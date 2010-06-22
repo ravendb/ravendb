@@ -323,10 +323,19 @@ namespace Raven.Client.Document
 		private static string TransformToEqualValue(object value, bool isAnalyzed, bool allowWildcards)
 		{
 			if (value == null)
+			{
 				return "NULL_VALUE";
+			}
+
+			if (value is bool)
+			{
+				return ((bool)value) ? "true" : "false";
+			}
 
 			if (value is DateTime)
+			{
 				return DateTools.DateToString((DateTime)value, DateTools.Resolution.MILLISECOND);
+			}
 
 			return LuceneEscape(value.ToString(), isAnalyzed, allowWildcards);
 		}
