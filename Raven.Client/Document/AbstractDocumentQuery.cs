@@ -5,9 +5,10 @@ using System.Linq;
 using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Raven.Database.Data;
-using Raven.Database.Json;
 using Raven.Client.Linq;
+using Raven.Database.Data;
+using Raven.Database.Indexing;
+using Raven.Database.Json;
 
 namespace Raven.Client.Document
 {
@@ -15,7 +16,7 @@ namespace Raven.Client.Document
 	{
 		protected readonly DocumentSession session;
 		protected string indexName;
-		protected string query = "";
+		protected StringBuilder queryText = new StringBuilder();
 		protected string[] orderByFields = new string[0];
 		protected int start;
 		protected int pageSize = 128;
@@ -94,10 +95,32 @@ namespace Raven.Client.Document
 
 		public IDocumentQuery<T> Where(string whereClause)
 		{
-			if (string.IsNullOrEmpty(query))
-				query = whereClause;
-			else
-				query += " " + whereClause;
+			if (queryText.Length > 0)
+			{
+				queryText.Append(" ");
+			}
+
+			queryText.Append(whereClause);
+			return this;
+		}
+
+		/// <summary>
+		/// Matches exactly
+		/// </summary>
+		/// <param name="fieldName"></param>
+		/// <param name="value"></param>
+		/// <returns></returns>
+		public IDocumentQuery<T> WhereEquals(string fieldName, object value)
+		{
+			if (queryText.Length > 0)
+			{
+				queryText.Append(" ");
+			}
+
+			queryText.Append(fieldName);
+			queryText.Append(":");
+			queryText.Append(TransformToEqualValue(value, false, false));
+
 			return this;
 		}
 
@@ -107,28 +130,39 @@ namespace Raven.Client.Document
 		/// <param name="fieldName"></param>
 		/// <param name="value"></param>
 		/// <returns></returns>
-		public IDocumentQuery<T> Where(string fieldName, object value)
+		public IDocumentQuery<T> WhereContains(string fieldName, object value)
 		{
-			// default to analyzed fields
-			return this.Where(fieldName, value, true);
+			if (queryText.Length > 0)
+			{
+				queryText.Append(" ");
+			}
+
+			queryText.Append(fieldName);
+			queryText.Append(":");
+			queryText.Append(TransformToEqualValue(value, true, true));
+
+			return this;
 		}
 
-		/// <summary>
-		/// Matches substrings of the field or exact matches if not analyzed
-		/// </summary>
-		/// <param name="fieldName"></param>
-		/// <param name="value"></param>
-		/// <param name="isAnalyzed"></param>
-		/// <returns></returns>
-		public IDocumentQuery<T> Where(string fieldName, object value, bool isAnalyzed)
+		public IDocumentQuery<T> And()
 		{
-			string whereClause = fieldName + ":" + TransformToEqualValue(value, isAnalyzed, isAnalyzed);
+			if (this.queryText.Length < 1)
+			{
+				throw new InvalidOperationException("Missing where clause");
+			}
 
-			if (string.IsNullOrEmpty(query))
-				query = whereClause;
-			else
-				query += " " + whereClause;
+			queryText.Append(" AND");
+			return this;
+		}
 
+		public IDocumentQuery<T> Or()
+		{
+			if (this.queryText.Length < 1)
+			{
+				throw new InvalidOperationException("Missing where clause");
+			}
+
+			queryText.Append(" OR");
 			return this;
 		}
 
@@ -143,7 +177,7 @@ namespace Raven.Client.Document
 		/// </remarks>
 		public IDocumentQuery<T> Boost(decimal boost)
 		{
-			if (string.IsNullOrEmpty(this.query))
+			if (this.queryText.Length < 1)
 			{
 				throw new InvalidOperationException("Missing where clause");
 			}
@@ -156,7 +190,7 @@ namespace Raven.Client.Document
 			if (boost != 1m)
 			{
 				// 1.0 is the default
-				this.query += "^" + boost;
+				this.queryText.Append("^").Append(boost);
 			}
 
 			return this;
@@ -172,7 +206,7 @@ namespace Raven.Client.Document
 		/// </remarks>
 		public IDocumentQuery<T> Fuzzy(decimal fuzzy)
 		{
-			if (string.IsNullOrEmpty(this.query))
+			if (this.queryText.Length < 1)
 			{
 				throw new InvalidOperationException("Missing where clause");
 			}
@@ -182,18 +216,18 @@ namespace Raven.Client.Document
 				throw new ArgumentOutOfRangeException("Fuzzy distance must be between 0.0 and 1.0");
 			}
 
-			char ch = this.query[this.query.Length-1];
+			char ch = this.queryText[this.queryText.Length-1];
 			if (ch == '"' || ch == ']')
 			{
 				// this check is overly simplistic
 				throw new InvalidOperationException("Fuzzy factor can only modify single word terms");
 			}
 
-			this.query += "~";
+			this.queryText.Append("~");
 			if (fuzzy != 0.5m)
 			{
 				// 0.5 is the default
-				this.query += fuzzy;
+				this.queryText.Append(fuzzy);
 			}
 
 			return this;
@@ -209,7 +243,7 @@ namespace Raven.Client.Document
 		/// </remarks>
 		public IDocumentQuery<T> Proximity(int proximity)
 		{
-			if (string.IsNullOrEmpty(this.query))
+			if (this.queryText.Length < 1)
 			{
 				throw new InvalidOperationException("Missing where clause");
 			}
@@ -219,13 +253,13 @@ namespace Raven.Client.Document
 				throw new ArgumentOutOfRangeException("Proximity distance must be positive number");
 			}
 
-			if (this.query[this.query.Length-1] != '"')
+			if (this.queryText[this.queryText.Length-1] != '"')
 			{
 				// this check is overly simplistic
 				throw new InvalidOperationException("Proximity distance can only modify a phrase");
 			}
 
-			this.query += "~" + proximity;
+			this.queryText.Append("~").Append(proximity);
 
 			return this;
 		}
@@ -239,6 +273,27 @@ namespace Raven.Client.Document
 				return DateTools.DateToString((DateTime)value, DateTools.Resolution.MILLISECOND);
 
 			return LuceneEscape(value.ToString(), isAnalyzed, allowWildcards);
+		}
+
+		private static string TransformToRangeValue(object value)
+		{
+			if (value == null)
+				return "NULL_VALUE";
+
+			if (value is int)
+				return NumberUtil.NumberToString((int)value);
+			if (value is long)
+				return NumberUtil.NumberToString((long)value);
+			if (value is decimal)
+				return NumberUtil.NumberToString((double)(decimal)value);
+			if (value is double)
+				return NumberUtil.NumberToString((double)value);
+			if (value is float)
+				return NumberUtil.NumberToString((float)value);
+			if (value is DateTime)
+				return DateTools.DateToString((DateTime)value, DateTools.Resolution.MILLISECOND);
+
+			return LuceneEscape(value.ToString(), true, false);
 		}
 
 		/// <summary>

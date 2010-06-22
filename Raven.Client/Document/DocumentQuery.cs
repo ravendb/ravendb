@@ -5,6 +5,7 @@ using System.Threading;
 using Raven.Client.Client;
 using Raven.Database.Data;
 using System.Linq;
+using System.Text;
 
 namespace Raven.Client.Document
 {
@@ -24,7 +25,7 @@ namespace Raven.Client.Document
 			return new DocumentQuery<TProjection>(session, databaseCommands, indexName,fields)
 	        {
 	            pageSize = pageSize,
-	            query = query,
+	            queryText = new StringBuilder(queryText.ToString()),
 	            start = start,
 				timeout = timeout,
                 cutoff = cutoff,
@@ -38,6 +39,8 @@ namespace Raven.Client.Document
             var sp = Stopwatch.StartNew();
 			while (true) 
 			{
+				string query = queryText.ToString();
+
 				Trace.WriteLine(string.Format("Executing query '{0}' on index '{1}' in '{2}'",
 								query, indexName, session.StoreIdentifier));
 				var result = databaseCommands.Query(indexName, new IndexQuery
