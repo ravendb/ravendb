@@ -20,6 +20,7 @@ namespace Raven.Tests.Linq
         public int Age { get; set; }
         public string Info { get; set; }
         public bool Active { get; set; }
+        public DateTime Created { get; set; }
 
         public User()
         {
@@ -31,17 +32,21 @@ namespace Raven.Tests.Linq
     }
     public class UsingRavenQueryProvider
     {
-        [Fact]
-        public void Can_perform_Skip_Take_Query()
+        string directoryName;
+
+        public UsingRavenQueryProvider()
         {
             //When running in the XUnit GUI strange things happen is we just create a path relative to 
             //the .exe itself, so make our folder in the System temp folder instead ("<user>\AppData\Local\Temp")
-            string directoryName =  Path.Combine(Path.GetTempPath(), "ravendb.RavenQueryProvider");
-            if (Directory.Exists(directoryName))
-            {
+            directoryName = Path.Combine(Path.GetTempPath(), "ravendb.RavenQueryProvider");
+            if (Directory.Exists(directoryName)) {
                 Directory.Delete(directoryName, true);
-            }           
+            }
+        }
 
+        [Fact]
+        public void Can_perform_Skip_Take_Query()
+        {
             using (var db = new DocumentStore() { DataDirectory = directoryName })
             {
                 db.Initialize();
@@ -93,14 +98,6 @@ namespace Raven.Tests.Linq
         [Fact]
         public void Can_perform_First_and_FirstOrDefault_Query()
         {
-            //When running in the XUnit GUI strange things happen is we just create a path relative to 
-            //the .exe itself, so make our folder in the System temp folder instead ("<user>\AppData\Local\Temp")
-            string directoryName =  Path.Combine(Path.GetTempPath(), "ravendb.RavenQueryProvider");
-            if (Directory.Exists(directoryName))
-            {
-                Directory.Delete(directoryName, true);
-            }
-
             using (var db = new DocumentStore() { DataDirectory = directoryName })
             {
                 db.Initialize();
@@ -140,14 +137,6 @@ namespace Raven.Tests.Linq
         [Fact]
         public void Can_perform_Single_and_SingleOrDefault_Query()
         {
-            //When running in the XUnit GUI strange things happen is we just create a path relative to 
-            //the .exe itself, so make our folder in the System temp folder instead ("<user>\AppData\Local\Temp")
-            string directoryName = Path.Combine(Path.GetTempPath(), "ravendb.RavenQueryProvider");
-            if (Directory.Exists(directoryName))
-            {
-                Directory.Delete(directoryName, true);
-            }
-
             using (var db = new DocumentStore() { DataDirectory = directoryName })
             {
                 db.Initialize();
@@ -186,26 +175,15 @@ namespace Raven.Tests.Linq
                     Assert.Null(singleOrDefaultItem);
                 }
             }
-        }        
+        }
 
         [Fact]
-        public void Can_perform_Boolean_Queries()
-        {
-            //When running in the XUnit GUI strange things happen is we just create a path relative to 
-            //the .exe itself, so make our folder in the System temp folder instead ("<user>\AppData\Local\Temp")
-            string directoryName = Path.Combine(Path.GetTempPath(), "ravendb.RavenQueryProvider");
-            if (Directory.Exists(directoryName))
-            {
-                Directory.Delete(directoryName, true);
-            }
-
-            using (var db = new DocumentStore() { DataDirectory = directoryName })
-            {
+        public void Can_perform_Boolean_Queries() {
+            using (var db = new DocumentStore() { DataDirectory = directoryName }) {
                 db.Initialize();
 
                 string indexName = "UserIndex";
-                using (var session = db.OpenSession())
-                {
+                using (var session = db.OpenSession()) {
                     session.Store(new User() { Name = "Matt", Info = "Male Age 25" }); //Active = false by default
                     session.Store(new User() { Name = "Matt", Info = "Male Age 28", Active = true });
                     session.Store(new User() { Name = "Matt", Info = "Male Age 35", Active = false });
@@ -213,8 +191,7 @@ namespace Raven.Tests.Linq
 
                     db.DatabaseCommands.DeleteIndex(indexName);
                     var result = db.DatabaseCommands.PutIndex<User, User>(indexName,
-                            new IndexDefinition<User, User>()
-                            {
+                            new IndexDefinition<User, User>() {
                                 Map = docs => from doc in docs
                                               select new { doc.Name, doc.Age, doc.Info, doc.Active },
                             }, true);
@@ -222,16 +199,78 @@ namespace Raven.Tests.Linq
                     WaitForQueryToComplete(session, indexName);
 
                     var testQuery = session.Query<User>(indexName)
-                                        .Where(x => x.Name == "Matt" && x.Active);                    
+                                        .Where(x => x.Name == "Matt" && x.Active);
                     Assert.Equal(1, testQuery.ToArray().Count());
                     foreach (var testResult in testQuery)
                         Assert.True(testResult.Active);
-                    
+
                     testQuery = session.Query<User>(indexName)
                                         .Where(x => x.Name == "Matt" && !x.Active);
                     Assert.Equal(2, testQuery.ToArray().Count());
                     foreach (var testResult in testQuery)
-                        Assert.False(testResult.Active);                                       
+                        Assert.False(testResult.Active);
+                }
+            }
+        }
+        [Fact]
+        public void Can_perform_DateTime_Comparison_Queries() {
+
+            DateTime firstTime = DateTime.UtcNow;
+            DateTime secondTime = firstTime.AddMonths(1);
+            DateTime thirdTime = secondTime.AddMonths(1);
+            
+            using (var db = new DocumentStore() { DataDirectory = directoryName }) {
+                db.Initialize();
+
+                string indexName = "UserIndex";
+                using (var session = db.OpenSession()) {
+                    session.Store(new User() { Name = "First", Created = firstTime });
+                    session.Store(new User() { Name = "Second", Created = secondTime});
+                    session.Store(new User() { Name = "Third", Created = thirdTime});
+                    session.SaveChanges();
+
+                    db.DatabaseCommands.DeleteIndex(indexName);
+                    var result = db.DatabaseCommands.PutIndex<User, User>(indexName,
+                            new IndexDefinition<User, User>() {
+                                Map = docs => from doc in docs
+                                              select new { doc.Name, doc.Created },
+                            }, true);
+
+                    WaitForQueryToComplete(session, indexName);
+
+                    Assert.Equal(3, session.Query<User>(indexName).ToArray().Length);
+
+                    var testQuery = session.Query<User>(indexName)
+                                        .Where(x => x.Created > secondTime)
+                                        .ToArray();
+                    Assert.Equal(1, testQuery.Count());
+                    Assert.True(testQuery.Select(q => q.Name).Contains("Third"));
+
+                    testQuery = session.Query<User>(indexName)
+                                        .Where(x => x.Created >= secondTime)
+                                        .ToArray();
+                    Assert.Equal(2, testQuery.Count());
+                    Assert.True(testQuery.Select(q => q.Name).Contains("Third"));
+                    Assert.True(testQuery.Select(q => q.Name).Contains("Second"));
+
+                    testQuery = session.Query<User>(indexName)
+                                        .Where(x => x.Created < secondTime)
+                                        .ToArray();
+                    Assert.Equal(1, testQuery.Count());
+                    Assert.True(testQuery.Select(q => q.Name).Contains("First"));
+
+                    testQuery = session.Query<User>(indexName)
+                                        .Where(x => x.Created <= secondTime)
+                                        .ToArray();
+                    Assert.Equal(2, testQuery.Count());
+                    Assert.True(testQuery.Select(q => q.Name).Contains("First"));
+                    Assert.True(testQuery.Select(q => q.Name).Contains("Second"));
+
+                    testQuery = session.Query<User>(indexName)
+                                        .Where(x => x.Created == secondTime)
+                                        .ToArray();
+                    Assert.Equal(1, testQuery.Count());
+                    Assert.True(testQuery.Select(q => q.Name).Contains("Second"));
                 }
             }
         }
