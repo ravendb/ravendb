@@ -144,6 +144,62 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		public IDocumentQuery<T> WhereGreaterThan(string fieldName, object value)
+		{
+			if (queryText.Length > 0)
+			{
+				queryText.Append(" ");
+			}
+
+			queryText.Append(fieldName).Append(":{");
+			queryText.Append(TransformToRangeValue(value));
+			queryText.Append(" TO NULL}");
+
+			return this;
+		}
+
+		public IDocumentQuery<T> WhereGreaterThanOrEqual(string fieldName, object value)
+		{
+			if (queryText.Length > 0)
+			{
+				queryText.Append(" ");
+			}
+
+			queryText.Append(fieldName).Append(":[");
+			queryText.Append(TransformToRangeValue(value));
+			queryText.Append(" TO NULL]");
+
+			return this;
+		}
+
+		public IDocumentQuery<T> WhereLessThan(string fieldName, object value)
+		{
+			if (queryText.Length > 0)
+			{
+				queryText.Append(" ");
+			}
+
+			queryText.Append(fieldName).Append(":{NULL TO ");
+			queryText.Append(TransformToRangeValue(value));
+			queryText.Append("}");
+
+			return this;
+		}
+
+		public IDocumentQuery<T> WhereLessThanOrEqual(string fieldName, object value)
+		{
+			if (queryText.Length > 0)
+			{
+				queryText.Append(" ");
+			}
+
+			queryText.Append(fieldName).Append(":[");
+			queryText.Append(TransformToRangeValue(value));
+			queryText.Append(" TO NULL] ");
+
+			return this;
+		}
+
 		public IDocumentQuery<T> And()
 		{
 			if (this.queryText.Length < 1)

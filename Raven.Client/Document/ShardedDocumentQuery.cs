@@ -104,6 +104,30 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		public IDocumentQuery<T> WhereGreaterThan(string fieldName, object value)
+		{
+			ApplyForAll(query => query.WhereGreaterThan(fieldName, value));
+			return this;
+		}
+
+		public IDocumentQuery<T> WhereGreaterThanOrEqual(string fieldName, object value)
+		{
+			ApplyForAll(query => query.WhereGreaterThanOrEqual(fieldName, value));
+			return this;
+		}
+
+		public IDocumentQuery<T> WhereLessThan(string fieldName, object value)
+		{
+			ApplyForAll(query => query.WhereLessThan(fieldName, value));
+			return this;
+		}
+
+		public IDocumentQuery<T> WhereLessThanOrEqual(string fieldName, object value)
+		{
+			ApplyForAll(query => query.WhereLessThanOrEqual(fieldName, value));
+			return this;
+		}
+
 		public IDocumentQuery<T> And()
 		{
 			ApplyForAll(query => query.And());
