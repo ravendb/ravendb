@@ -489,6 +489,11 @@ namespace Raven.Client.Linq
 				case "Any":
 				{
 					VisitExpression(expression.Arguments[0]);
+					if (expression.Arguments.Count == 2)
+					{
+						VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
+					}
+
 					VisitAny();
 					break;
 				}
