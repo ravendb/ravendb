@@ -148,7 +148,7 @@ namespace Raven.Client.Linq
                     VisitAndAlso((BinaryExpression)expression);
                     break;
                 case ExpressionType.Equal:
-                    VisitEqual((BinaryExpression)expression);
+                    VisitEquals((BinaryExpression)expression);
                     break;
                 case ExpressionType.GreaterThan:
                     VisitGreaterThan((BinaryExpression)expression);
@@ -200,38 +200,52 @@ namespace Raven.Client.Linq
             VisitExpression(orElse.Right);
         }
 
-        private void VisitEqual(BinaryExpression expression)
+        private void VisitEquals(BinaryExpression expression)
         {
-			luceneQuery.WhereEqual(
-				((MemberExpression)expression.Left).Member.Name,
-				GetValueFromExpression(expression.Right));
+			MemberInfo memberInfo = ((MemberExpression)expression.Left).Member;
+
+			luceneQuery.WhereEquals(
+				memberInfo.Name,
+				GetValueFromExpression(expression.Right),
+				GetFieldType(memberInfo) != typeof(string),
+				false);
         }
 
-		private void VisitEqual(MethodCallExpression expression)
+		private void VisitEquals(MethodCallExpression expression)
 		{
-			luceneQuery.WhereEqual(
-				GetFieldName(expression.Object),
-				GetValueFromExpression(expression.Arguments[0]));
+			MemberInfo memberInfo = ((MemberExpression)expression.Object).Member;
+
+			luceneQuery.WhereEquals(
+				memberInfo.Name,
+				GetValueFromExpression(expression.Arguments[0]),
+				GetFieldType(memberInfo) != typeof(string),
+				false);
 		}
 
 		private void VisitContains(MethodCallExpression expression)
 		{
+			MemberInfo memberInfo = ((MemberExpression)expression.Object).Member;
+
 			luceneQuery.WhereContains(
-				GetFieldName(expression.Object),
+				memberInfo.Name,
 				GetValueFromExpression(expression.Arguments[0]));
 		}
 
 		private void VisitStartsWith(MethodCallExpression expression)
 		{
+			MemberInfo memberInfo = ((MemberExpression)expression.Object).Member;
+
 			luceneQuery.WhereStartsWith(
-				GetFieldName(expression.Object),
+				memberInfo.Name,
 				GetValueFromExpression(expression.Arguments[0]));
 		}
 
 		private void VisitEndsWith(MethodCallExpression expression)
 		{
+			MemberInfo memberInfo = ((MemberExpression)expression.Object).Member;
+
 			luceneQuery.WhereEndsWith(
-				GetFieldName(expression.Object),
+				memberInfo.Name,
 				GetValueFromExpression(expression.Arguments[0]));
 		}
 
@@ -275,9 +289,11 @@ namespace Raven.Client.Linq
         {            
             if (memberExpression.Type == typeof(bool))
             {
-				luceneQuery.WhereEqual(
+				luceneQuery.WhereEquals(
 					memberExpression.Member.Name,
-					boolValue);
+					boolValue,
+					true,
+					false);
             }
             else
             {
@@ -313,7 +329,7 @@ namespace Raven.Client.Linq
 				}
 				case "Equals":
 				{
-					VisitEqual(expression);
+					VisitEquals(expression);
 					break;
 				}
 				case "StartsWith":
@@ -551,16 +567,21 @@ namespace Raven.Client.Linq
 			return ((MemberExpression)expression).Member.Name;
 		}
 
-		private string GetFieldName(Expression expression)
+		private Type GetFieldType(MemberInfo member)
 		{
-			MemberExpression member = expression as MemberExpression;
-
-			if (expression == null)
+			PropertyInfo property = member as PropertyInfo;
+			if (property != null)
 			{
-				throw new NotSupportedException("Unable to determine field name from expression");
+				return property.PropertyType;
 			}
 
-			return member.Member.Name;
+			FieldInfo field = member as FieldInfo;
+			if (field != null)
+			{
+				return field.FieldType;
+			}
+
+			throw new NotSupportedException("Unable to determine field type from expression");
 		}
 
         private static object GetValueFromExpression(Expression expression)

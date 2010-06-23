@@ -9,8 +9,9 @@ namespace Raven.Client
 		IDocumentQuery<T> Take(int count);
 		IDocumentQuery<T> Skip(int count);
 		IDocumentQuery<T> Where(string whereClause);
-		IDocumentQuery<T> WhereEqual(string fieldName, object value);
-		IDocumentQuery<T> WhereEqual(string fieldName, object value, bool isAnalyzed);
+		IDocumentQuery<T> WhereEquals(string fieldName, object value);
+		IDocumentQuery<T> WhereEquals(string fieldName, object value, bool isAnalyzed);
+		IDocumentQuery<T> WhereEquals(string fieldName, object value, bool isAnalyzed, bool allowWildcards);
 		IDocumentQuery<T> WhereContains(string fieldName, object value);
 		IDocumentQuery<T> WhereStartsWith(string fieldName, object value);
 		IDocumentQuery<T> WhereEndsWith(string fieldName, object value);

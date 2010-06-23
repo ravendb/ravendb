@@ -92,15 +92,21 @@ namespace Raven.Client.Document
 			return this;
 		}
 
-		public IDocumentQuery<T> WhereEqual(string fieldName, object value)
+		public IDocumentQuery<T> WhereEquals(string fieldName, object value)
 		{
-			ApplyForAll(query => query.WhereEqual(fieldName, value));
+			ApplyForAll(query => query.WhereEquals(fieldName, value));
 			return this;
 		}
 
-		public IDocumentQuery<T> WhereEqual(string fieldName, object value, bool isAnalyzed)
+		public IDocumentQuery<T> WhereEquals(string fieldName, object value, bool isAnalyzed)
 		{
-			ApplyForAll(query => query.WhereEqual(fieldName, value, isAnalyzed));
+			ApplyForAll(query => query.WhereEquals(fieldName, value, isAnalyzed));
+			return this;
+		}
+
+		public IDocumentQuery<T> WhereEquals(string fieldName, object value, bool isAnalyzed, bool allowWildcards)
+		{
+			ApplyForAll(query => query.WhereEquals(fieldName, value, isAnalyzed, allowWildcards));
 			return this;
 		}
 

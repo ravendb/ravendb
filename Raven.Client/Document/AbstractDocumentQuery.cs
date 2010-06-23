@@ -105,23 +105,38 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
-		/// Matches exactly
+		/// Matches exact value
 		/// </summary>
 		/// <param name="fieldName"></param>
 		/// <param name="value"></param>
 		/// <returns></returns>
-		public IDocumentQuery<T> WhereEqual(string fieldName, object value)
+		/// <remarks>Defaults to NotAnalyzed</remarks>
+		public IDocumentQuery<T> WhereEquals(string fieldName, object value)
 		{
-			return this.WhereEqual(fieldName, value, true);
+			return this.WhereEquals(fieldName, value, false, false);
 		}
 
 		/// <summary>
-		/// Matches exactly
+		/// Matches exact value
 		/// </summary>
 		/// <param name="fieldName"></param>
 		/// <param name="value"></param>
+		/// <param name="isAnalyzed"></param>
 		/// <returns></returns>
-		public IDocumentQuery<T> WhereEqual(string fieldName, object value, bool isAnalyzed)
+		/// <remarks>Defaults to allow wildcards only if analyzed</remarks>
+		public IDocumentQuery<T> WhereEquals(string fieldName, object value, bool isAnalyzed)
+		{
+			return this.WhereEquals(fieldName, value, isAnalyzed, isAnalyzed);
+		}
+
+		/// <summary>
+		/// Matches exact value
+		/// </summary>
+		/// <param name="fieldName"></param>
+		/// <param name="value"></param>
+		/// <param name="isAnalyzed"></param>
+		/// <returns></returns>
+		public IDocumentQuery<T> WhereEquals(string fieldName, object value, bool isAnalyzed, bool allowWildcards)
 		{
 			if (queryText.Length > 0)
 			{
@@ -143,29 +158,22 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public IDocumentQuery<T> WhereContains(string fieldName, object value)
 		{
-			if (queryText.Length > 0)
-			{
-				queryText.Append(" ");
-			}
-
-			queryText.Append(fieldName);
-			queryText.Append(":");
-			queryText.Append(TransformToEqualValue(value, true, true));
-
-			return this;
+			return this.WhereEquals(fieldName, value, true, true);
 		}
 
 		public IDocumentQuery<T> WhereStartsWith(string fieldName, object value)
 		{
-			return this.WhereContains(fieldName, String.Concat(value, "*"));
+			// NOTE: doesn't fully match StartsWith semantics
+			return this.WhereEquals(fieldName, String.Concat(value, "*"), true, true);
 		}
 
 		public IDocumentQuery<T> WhereEndsWith(string fieldName, object value)
 		{
 			// http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Wildcard%20Searches
-			throw new NotImplementedException("You cannot use a * or ? symbol as the first character of a search.");
+			// You cannot use a * or ? symbol as the first character of a search
 
-			// return this.WhereContains(fieldName, String.Concat("*", value));
+			// NOTE: doesn't fully match EndsWith semantics
+			return this.WhereEquals(fieldName, String.Concat("*", value), true, true);
 		}
 
 		public IDocumentQuery<T> WhereBetween(string fieldName, object start, object end)
@@ -349,7 +357,7 @@ namespace Raven.Client.Document
 
 			if (value is bool)
 			{
-				return ((bool)value) ? "true" : "false";
+				return (bool)value ? "true" : "false";
 			}
 
 			if (value is DateTime)
@@ -357,7 +365,12 @@ namespace Raven.Client.Document
 				return DateTools.DateToString((DateTime)value, DateTools.Resolution.MILLISECOND);
 			}
 
-			return LuceneEscape(value.ToString(), isAnalyzed, allowWildcards);
+			if (!isAnalyzed)
+			{
+				return String.Concat("[[", value, "]]");
+			}
+
+			return LuceneEscape(value.ToString(), allowWildcards);
 		}
 
 		private static string TransformToRangeValue(object value)
@@ -378,20 +391,19 @@ namespace Raven.Client.Document
 			if (value is DateTime)
 				return DateTools.DateToString((DateTime)value, DateTools.Resolution.MILLISECOND);
 
-			return LuceneEscape(value.ToString(), true, false);
+			return LuceneEscape(value.ToString(), false);
 		}
 
 		/// <summary>
 		/// Escapes Lucene operators and quotes phrases
 		/// </summary>
 		/// <param name="term"></param>
-		/// <param name="isAnalyzed"></param>
 		/// <param name="allowWildcards"></param>
 		/// <returns>escaped term</returns>
 		/// <remarks>
 		/// http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Escaping%20Special%20Characters
 		/// </remarks>
-		private static string LuceneEscape(string term, bool isAnalyzed, bool allowWildcards)
+		private static string LuceneEscape(string term, bool allowWildcards)
 		{
 			// method doesn't allocate a StringBuilder unless the string requires escaping
 			// also this copies chunks of the original string into the StringBuilder which
@@ -408,13 +420,6 @@ namespace Raven.Client.Document
 			int length = term.Length;
 			StringBuilder buffer = null;
 
-			if (!isAnalyzed)
-			{
-				// FieldIndexing.NotAnalyzed requires enclosing brackets
-				buffer = new StringBuilder(length*2);
-				buffer.Append("[[");
-			}
-
 			for (int i=start; i<length; i++)
 			{
 				char ch = term[i];
@@ -424,7 +429,7 @@ namespace Raven.Client.Document
 					case '*':
 					case '?':
 					{
-						if (allowWildcards && isAnalyzed)
+						if (allowWildcards)
 						{
 							break;
 						}
@@ -466,7 +471,7 @@ namespace Raven.Client.Document
 					case ' ':
 					case '\t':
 					{
-						if (isAnalyzed && !isPhrase)
+						if (!isPhrase)
 						{
 							if (buffer == null)
 							{
@@ -493,13 +498,7 @@ namespace Raven.Client.Document
 				// append any trailing substring
 				buffer.Append(term, start, length-start);
 			}
-
-			if (!isAnalyzed)
-			{
-				// FieldIndexing.NotAnalyzed requires enclosing brackets
-				buffer.Append("]]");
-			}
-			else if (isPhrase)
+			if (isPhrase)
 			{
 				// quoted phrase
 				buffer.Append('"');
