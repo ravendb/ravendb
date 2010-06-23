@@ -55,7 +55,7 @@ namespace Raven.Tests.Storage
 
             DeleteIfExists("raven.db.test.esent");
 
-			DocumentDatabase.Restore("raven.db.test.backup", "raven.db.test.esent");
+			DocumentDatabase.Restore(new RavenConfiguration(), "raven.db.test.backup", "raven.db.test.esent");
 
 			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = "raven.db.test.esent"});
 
@@ -75,7 +75,7 @@ namespace Raven.Tests.Storage
 
             DeleteIfExists("raven.db.test.esent");
 
-			DocumentDatabase.Restore("raven.db.test.backup", "raven.db.test.esent");
+			DocumentDatabase.Restore(new RavenConfiguration(), "raven.db.test.backup", "raven.db.test.esent");
 
 			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = "raven.db.test.esent" });
 			db.SpinBackgroundWorkers();
@@ -113,7 +113,7 @@ namespace Raven.Tests.Storage
 
             DeleteIfExists("raven.db.test.esent");
 
-			DocumentDatabase.Restore("raven.db.test.backup", "raven.db.test.esent");
+			DocumentDatabase.Restore(new RavenConfiguration(), "raven.db.test.backup", "raven.db.test.esent");
 
 			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = "raven.db.test.esent" });
 			queryResult = db.Query("Raven/DocumentsByEntityName", new IndexQuery

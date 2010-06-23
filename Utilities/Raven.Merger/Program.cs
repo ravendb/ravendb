@@ -17,6 +17,7 @@ namespace Raven.Merger
 				{
 					@"Raven.Server.exe",
 					@"Raven.Database.dll",
+					@"Raven.Storage.Esent.dll",
 					@"Esent.Interop.dll",
 					@"ICSharpCode.NRefactory.dll",
 					@"Lucene.Net.dll",
@@ -35,6 +36,7 @@ namespace Raven.Merger
 				{
 					@"Rhino.Licensing.dll",
 					@"Raven.Web.dll",
+					@"Raven.Storage.Esent.dll",
 					@"Raven.Database.dll",
 					@"Esent.Interop.dll",
 					@"ICSharpCode.NRefactory.dll",

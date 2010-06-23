@@ -36,7 +36,8 @@ namespace Raven.Database.Plugins
         ///  You may modify the provided lucene document, changes made to the document
         ///  will be written to the Lucene index
         ///  </remarks><param name="indexName">The updated index name</param><param name="entryKey">The entry key</param><param name="document">The lucene document about to be written</param>
-        public virtual void OnIndexEntryCreated(string indexName, string entryKey, Document document){}
+		[CLSCompliant(false)]
+		public virtual void OnIndexEntryCreated(string indexName, string entryKey, Document document) { }
 
         public void Initialize(DocumentDatabase database)
         {

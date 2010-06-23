@@ -45,9 +45,16 @@ namespace Raven.Client.Document
 			var result = new Dictionary<string, TValue>();
 			foreach (var value in input)
 			{
-				result[((MemberExpression) value.Key.Body).Member.Name] = value.Value;
+				result[(GetMemberExpression(value.Key)).Member.Name] = value.Value;
 			}
 			return result;
+		}
+
+		private static MemberExpression GetMemberExpression(Expression<Func<TReduceResult, object>> value)
+		{
+			if(value.Body is UnaryExpression)
+				return (MemberExpression)((UnaryExpression) value.Body).Operand;
+			return (MemberExpression) value.Body;
 		}
 
 

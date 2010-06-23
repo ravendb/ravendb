@@ -29,7 +29,7 @@ namespace Raven.Database.Server
 
 		// concurrent requests
 		// we set 1/4 aside for handling background tasks
-		private readonly SemaphoreSlim concurretRequestSemaphore = new SemaphoreSlim(TransactionalStorage.MaxSessions - (TransactionalStorage.MaxSessions / 4));
+		private readonly SemaphoreSlim concurretRequestSemaphore = new SemaphoreSlim(192);
 
 		public HttpServer(RavenConfiguration configuration, DocumentDatabase database)
 		{

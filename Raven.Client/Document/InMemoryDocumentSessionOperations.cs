@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Transactions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -10,6 +11,14 @@ using Raven.Client.Exceptions;
 using Raven.Database;
 using Raven.Database.Data;
 using Raven.Database.Json;
+using System.Diagnostics;
+
+#if !NET_3_5
+using System.Dynamic;
+using Microsoft.CSharp.RuntimeBinder;
+using Binder = Microsoft.CSharp.RuntimeBinder.Binder;
+
+#endif
 
 namespace Raven.Client.Document
 {
@@ -28,7 +37,6 @@ namespace Raven.Client.Document
 		protected readonly Dictionary<string, object> entitiesByKey = new Dictionary<string, object>();
 		protected DocumentStore documentStore;
 		private int numberOfRequests;
-
 
 		protected InMemoryDocumentSessionOperations(DocumentStore documentStore)
 		{
@@ -117,7 +125,6 @@ more responsive application.
 			{
 				OriginalValue = document,
 				Metadata = metadata,
-				OriginalMetadata = metadata,
 				ETag = new Guid(etag),
 				Key = key
 			};
@@ -157,22 +164,42 @@ more responsive application.
 		{
 			if (null == entity)
 				throw new ArgumentNullException("entity");
-			var identityProperty = GetIdentityProperty(entity.GetType());
+			
 			string id = null;
-			if (identityProperty != null)
-				id = identityProperty.GetValue(entity, null) as string;
-
-			if (id == null)
-			{
-				// Generate the key up front
-				id = Conventions.GenerateDocumentKey(entity);
-
-				if (id != null && identityProperty != null)
+#if !NET_3_5
+            if (entity is IDynamicMetaObjectProvider)
+            {
+            	if(TryGetId(entity,out id) == false)
 				{
-					// And store it so the client has access to to it
-					identityProperty.SetValue(entity, id, null);
+					id = Conventions.DocumentKeyGenerator(entity);
+
+					if (id != null)
+					{
+						// Store it back into the Id field so the client has access to to it                    
+						((dynamic) entity).Id = id;
+					}
 				}
-			}
+            }
+            else
+#endif
+            {
+                var identityProperty = GetIdentityProperty(entity.GetType());
+                if (identityProperty != null)
+                    id = identityProperty.GetValue(entity, null) as string;
+
+                if (id == null)
+                {
+                    // Generate the key up front
+                    id = Conventions.GenerateDocumentKey(entity);
+
+                    if (id != null && identityProperty != null)
+                    {
+                        // And store it so the client has access to to it
+                        identityProperty.SetValue(entity, id, null);
+                    }
+                }
+            }
+
 			// we make the check here even if we just generated the key
 			// users can override the key generation behavior, and we need
 			// to detect if they generate duplicates.
@@ -186,29 +213,54 @@ more responsive application.
 			}
 
 			var tag = documentStore.Conventions.GetTypeTagName(entity.GetType());
-			var metadata = new JObject(new JProperty(RavenEntityName, new JValue(tag)));
 			entitiesAndMetadata.Add(entity, new DocumentSession.DocumentMetadata
 			{
 				Key = id,
-				Metadata = metadata,
-				OriginalMetadata = metadata,
+				Metadata = new JObject(new JProperty(RavenEntityName, new JValue(tag))),
 				ETag = null,
 				OriginalValue = new JObject()
 			});
-
 			if (id != null)
 				entitiesByKey[id] = entity;
 		}
+
+#if !NET_3_5
+		private static bool TryGetId(dynamic entity, out string id)
+		{
+			try
+			{
+				id = entity.Id;
+				return true;
+			}
+			catch (RuntimeBinderException)
+			{
+				id = null;
+				return false;
+			}
+		}
+#endif
 
 		protected ICommandData CreatePutEntityCommand(object entity, DocumentSession.DocumentMetadata documentMetadata)
 		{
 			var json = ConvertEntityToJson(entity, documentMetadata.Metadata);
 			var entityType = entity.GetType();
-			var identityProperty = GetIdentityProperty(entityType);
+			
 
-			string key = null;
-			if (identityProperty != null)
-				key = (string) identityProperty.GetValue(entity, null);
+            //This fails to find the key if it's a dynamic object
+
+            string key = null;
+#if !NET_3_5			
+            if (entity is IDynamicMetaObjectProvider)
+            {
+            	TryGetId(entity,out key);
+            }
+            else
+#endif
+            {
+                var identityProperty = GetIdentityProperty(entityType);
+                if (identityProperty != null)
+                    key = (string)identityProperty.GetValue(entity, null);
+            }
 			var etag = UseOptimisticConcurrency ? documentMetadata.ETag : null;
 
 			return new PutCommandData
@@ -242,8 +294,6 @@ more responsive application.
 				entitiesByKey[batchResult.Key] = entity;
 				documentMetadata.ETag = batchResult.Etag;
 				documentMetadata.Key = batchResult.Key;
-				documentMetadata.OriginalMetadata = batchResult.Metadata;
-				documentMetadata.Metadata = batchResult.Metadata;
 				documentMetadata.OriginalValue = ConvertEntityToJson(entity, documentMetadata.Metadata);
 
 				// Set/Update the id of the entity
@@ -254,7 +304,7 @@ more responsive application.
 
 				if (stored != null)
 					stored(entity);
-			}
+            }
 		}
 
 		protected DocumentSession.SaveChangesData PrepareForSaveChanges()
@@ -265,30 +315,10 @@ more responsive application.
 				Commands = new List<ICommandData>()
 			};
 			TryEnlistInAmbientTransaction();
-
-			AddDeleteCommands(result);
-			AddPutCommands(result);
-
-			return result;
-		}
-
-		private void AddPutCommands(DocumentSession.SaveChangesData result)
-		{
-			foreach (var entity in entitiesAndMetadata.Where(EntityChanged))
-			{
-				result.Entities.Add(entity.Key);
-				if (entity.Value.Key != null)
-					entitiesByKey.Remove(entity.Value.Key);
-				result.Commands.Add(CreatePutEntityCommand(entity.Key, entity.Value));
-			}
-		}
-
-		private void AddDeleteCommands(DocumentSession.SaveChangesData result)
-		{
 			DocumentSession.DocumentMetadata value = null;
 			foreach (var key in (from deletedEntity in deletedEntities
-			                     where entitiesAndMetadata.TryGetValue(deletedEntity, out value)
-			                     select value.Key))
+								 where entitiesAndMetadata.TryGetValue(deletedEntity, out value)
+								 select value.Key))
 			{
 				Guid? etag = null;
 				object existingEntity;
@@ -309,6 +339,15 @@ more responsive application.
 				});
 			}
 			deletedEntities.Clear();
+			foreach (var entity in entitiesAndMetadata.Where(EntityChanged))
+			{
+				result.Entities.Add(entity.Key);
+				if (entity.Value.Key != null)
+					entitiesByKey.Remove(entity.Value.Key);
+				result.Commands.Add(CreatePutEntityCommand(entity.Key, entity.Value));
+			}
+
+			return result;
 		}
 
 		private void TryEnlistInAmbientTransaction()
@@ -334,9 +373,7 @@ more responsive application.
 			var newObj = ConvertEntityToJson(kvp.Key, kvp.Value.Metadata);
 			if (kvp.Value == null)
 				return true;
-			var comparer = new JTokenEqualityComparer();
-			return comparer.Equals(newObj, kvp.Value.OriginalValue) == false && 
-				comparer.Equals(kvp.Value.OriginalMetadata,kvp.Value.Metadata);
+			return new JTokenEqualityComparer().Equals(newObj, kvp.Value.OriginalValue) == false;
 		}
 
 		private JObject ConvertEntityToJson(object entity, JObject metadata)

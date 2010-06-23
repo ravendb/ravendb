@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System;
+using System.Globalization;
 
 namespace Raven.Database.Data
 {
@@ -24,7 +25,8 @@ namespace Raven.Database.Data
 		public string Field { get; set; }
 		public bool Descending { get; set; }
 #if !CLIENT
-		public  Lucene.Net.Search.SortField ToLuceneSortField()
+		[CLSCompliant(false)]
+		public Lucene.Net.Search.SortField ToLuceneSortField()
 		{
 			return new  Lucene.Net.Search.SortField(Field, CultureInfo.InvariantCulture, Descending);
 		}

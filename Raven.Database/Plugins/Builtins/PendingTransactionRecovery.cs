@@ -12,11 +12,11 @@ namespace Raven.Database.Plugins.Builtins
 		{
 			database.TransactionalStorage.Batch(actions =>
 			{
-				foreach (var txId in actions.General.GetTransactionIds())
+				foreach (var txId in actions.Transactions.GetTransactionIds())
 				{
 					var attachment = actions.Attachments.GetAttachment("transactions/recoveryInformation/" + txId);
 					if (attachment == null)//Prepare was not called, there is no recovery information
-						actions.General.RollbackTransaction(txId);
+						actions.Transactions.RollbackTransaction(txId);
 					else
 						TransactionManager.Reenlist(RavenDbResourceManagerId, attachment.Data, new InternalEnlistment(database, txId));
 				}

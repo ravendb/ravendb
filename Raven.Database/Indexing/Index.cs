@@ -30,10 +30,11 @@ namespace Raven.Database.Indexing
         protected readonly string name;
         protected readonly IndexDefinition indexDefinition;
         private CurrentIndexSearcher searcher;
-		private object writeLock = new object();
+		private readonly object writeLock = new object();
     	private volatile bool disposed;
 
-    	protected Index(Directory directory, string name, IndexDefinition indexDefinition)
+		[CLSCompliant(false)]
+		protected Index(Directory directory, string name, IndexDefinition indexDefinition)
         {
             this.name = name;
             this.indexDefinition = indexDefinition;
@@ -130,8 +131,9 @@ namespace Raven.Database.Indexing
 
         public abstract void IndexDocuments(AbstractViewGenerator viewGenerator, IEnumerable<object> documents,
                                             WorkContext context,
-											StorageActionsAccessor actions);
+											IStorageActionsAccessor actions);
 
+		[CLSCompliant(false)]
 		protected virtual IndexQueryResult RetrieveDocument(Document document, string[] fieldsToFetch)
 		{
 			var shouldBuildProjection = fieldsToFetch == null || fieldsToFetch.Length == 0;
@@ -142,7 +144,7 @@ namespace Raven.Database.Indexing
 			};
 		}
 
-    	private static JObject CreateDocumentFromFields(Document document, string[] fieldsToFetch)
+		private static JObject CreateDocumentFromFields(Document document, string[] fieldsToFetch)
     	{
     		return new JObject(
     			fieldsToFetch.Concat(new[] { "__document_id" }).Distinct()
@@ -203,7 +205,7 @@ namespace Raven.Database.Indexing
 
 
         protected IEnumerable<object> RobustEnumeration(IEnumerable<object> input, IndexingFunc func,
-														StorageActionsAccessor actions, WorkContext context)
+														IStorageActionsAccessor actions, WorkContext context)
         {
             var wrapped = new StatefulEnumerableWrapper<dynamic>(input.GetEnumerator());
             IEnumerator<object> en = func(wrapped).GetEnumerator();
@@ -220,7 +222,7 @@ namespace Raven.Database.Indexing
         }
 
         private bool? MoveNext(IEnumerator en, StatefulEnumerableWrapper<object> innerEnumerator, WorkContext context,
-							   StorageActionsAccessor actions)
+							   IStorageActionsAccessor actions)
         {
             try
             {

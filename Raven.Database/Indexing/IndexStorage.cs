@@ -49,7 +49,8 @@ namespace Raven.Database.Indexing
 		    }
 		}
 
-	    protected Lucene.Net.Store.Directory OpenOrCreateLuceneDirectory(string indexDirectory)
+		[CLSCompliant(false)]
+		protected Lucene.Net.Store.Directory OpenOrCreateLuceneDirectory(string indexDirectory)
 		{
             Lucene.Net.Store.Directory directory;
 			if (configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction)
@@ -158,7 +159,7 @@ namespace Raven.Database.Indexing
 		}
 
 		public void Index(string index, AbstractViewGenerator viewGenerator, IEnumerable<dynamic> docs, WorkContext context,
-						  StorageActionsAccessor actions)
+						  IStorageActionsAccessor actions)
 		{
 			Index value;
 			if (indexes.TryGetValue(index, out value) == false)
@@ -170,7 +171,7 @@ namespace Raven.Database.Indexing
 		}
 
 		public void Reduce(string index, AbstractViewGenerator viewGenerator, IEnumerable<object> mappedResults,
-						   WorkContext context, StorageActionsAccessor actions, string[] reduceKeys)
+						   WorkContext context, IStorageActionsAccessor actions, string[] reduceKeys)
 		{
 			Index value;
 			if (indexes.TryGetValue(index, out value) == false)

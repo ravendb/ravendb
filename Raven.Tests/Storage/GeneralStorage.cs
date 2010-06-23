@@ -159,7 +159,7 @@ namespace Raven.Tests.Storage
 
             db.TransactionalStorage.Batch(actions =>
             {
-                actions.Queue.DeleteFromQueue(actions.Queue.PeekFromQueue("ayende").First().Item2);
+                actions.Queue.DeleteFromQueue("ayende", actions.Queue.PeekFromQueue("ayende").First().Item2);
                 Assert.Equal(null, actions.Queue.PeekFromQueue("ayende").FirstOrDefault());
             });
         }
