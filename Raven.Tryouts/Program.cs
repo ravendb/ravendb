@@ -1,5 +1,6 @@
 using System;
 using Raven.Database.Indexing;
+using Raven.Client.Tests.Document;
 
 namespace RavenTestbed
 {
@@ -7,6 +8,8 @@ namespace RavenTestbed
     {
         static void Main(string[] args)
         {
+            DynamicDocuments dynamicTest = new DynamicDocuments();
+            dynamicTest.Can_store_dynamic_documents();
         }
     }
 

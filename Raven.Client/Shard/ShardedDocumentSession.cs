@@ -148,6 +148,13 @@ namespace Raven.Client.Shard
 			GetSingleShardSession(shardId).Store(entity);
 		}
 
+#if !NET_3_5
+        public string StoreDynamic(dynamic entity)
+        {
+            return Store(entity);
+        }
+#endif
+
 		public void Evict<T>(T entity)
 		{
 			string shardId = shardStrategy.ShardSelectionStrategy.ShardIdForExistingObject(entity);
@@ -223,6 +230,6 @@ namespace Raven.Client.Shard
 	                documentSession.MaxNumberOfRequestsPerSession = value;
 	            }
 	        }
-	    }
-	}
+	    }        
+    }
 }
