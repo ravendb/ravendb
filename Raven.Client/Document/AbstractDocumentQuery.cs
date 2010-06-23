@@ -146,15 +146,15 @@ namespace Raven.Client.Document
 
 		public IDocumentQuery<T> WhereStartsWith(string fieldName, object value)
 		{
-			// http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Wildcard%20Searches
-			throw new NotImplementedException("You cannot use a * or ? symbol as the first character of a search.");
-
-			//return this.WhereContains(fieldName, String.Concat(value, "*"));
+			return this.WhereContains(fieldName, String.Concat(value, "*"));
 		}
 
 		public IDocumentQuery<T> WhereEndsWith(string fieldName, object value)
 		{
-			return this.WhereContains(fieldName, String.Concat("*", value));
+			// http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Wildcard%20Searches
+			throw new NotImplementedException("You cannot use a * or ? symbol as the first character of a search.");
+
+			// return this.WhereContains(fieldName, String.Concat("*", value));
 		}
 
 		public IDocumentQuery<T> WhereBetween(string fieldName, object start, object end)
