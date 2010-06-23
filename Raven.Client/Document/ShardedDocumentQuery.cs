@@ -116,6 +116,18 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		public IDocumentQuery<T> WhereBetween(string fieldName, object start, object end)
+		{
+			ApplyForAll(query => query.WhereBetween(fieldName, start, end));
+			return this;
+		}
+
+		public IDocumentQuery<T> WhereBetweenOrEqual(string fieldName, object start, object end)
+		{
+			ApplyForAll(query => query.WhereBetweenOrEqual(fieldName, start, end));
+			return this;
+		}
+
 		public IDocumentQuery<T> WhereGreaterThan(string fieldName, object value)
 		{
 			ApplyForAll(query => query.WhereGreaterThan(fieldName, value));

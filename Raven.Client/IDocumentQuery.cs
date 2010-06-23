@@ -13,6 +13,8 @@ namespace Raven.Client
 		IDocumentQuery<T> WhereContains(string fieldName, object value);
 		IDocumentQuery<T> WhereStartsWith(string fieldName, object value);
 		IDocumentQuery<T> WhereEndsWith(string fieldName, object value);
+		IDocumentQuery<T> WhereBetween(string fieldName, object start, object end);
+		IDocumentQuery<T> WhereBetweenOrEqual(string fieldName, object start, object end);
 		IDocumentQuery<T> WhereGreaterThan(string fieldName, object value);
 		IDocumentQuery<T> WhereGreaterThanOrEqual(string fieldName, object value);
 		IDocumentQuery<T> WhereLessThan(string fieldName, object value);

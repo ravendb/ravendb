@@ -154,7 +154,7 @@ namespace Raven.Client.Document
 			return this.WhereContains(fieldName, String.Concat("*", value));
 		}
 
-		public IDocumentQuery<T> WhereGreaterThan(string fieldName, object value)
+		public IDocumentQuery<T> WhereBetween(string fieldName, object start, object end)
 		{
 			if (queryText.Length > 0)
 			{
@@ -162,41 +162,15 @@ namespace Raven.Client.Document
 			}
 
 			queryText.Append(fieldName).Append(":{");
-			queryText.Append(TransformToRangeValue(value));
-			queryText.Append(" TO NULL}");
-
-			return this;
-		}
-
-		public IDocumentQuery<T> WhereGreaterThanOrEqual(string fieldName, object value)
-		{
-			if (queryText.Length > 0)
-			{
-				queryText.Append(" ");
-			}
-
-			queryText.Append(fieldName).Append(":[");
-			queryText.Append(TransformToRangeValue(value));
-			queryText.Append(" TO NULL]");
-
-			return this;
-		}
-
-		public IDocumentQuery<T> WhereLessThan(string fieldName, object value)
-		{
-			if (queryText.Length > 0)
-			{
-				queryText.Append(" ");
-			}
-
-			queryText.Append(fieldName).Append(":{NULL TO ");
-			queryText.Append(TransformToRangeValue(value));
+			queryText.Append(start == null ? "NULL" : TransformToRangeValue(start));
+			queryText.Append(" TO ");
+			queryText.Append(end == null ? "NULL" : TransformToRangeValue(end));
 			queryText.Append("}");
 
 			return this;
 		}
 
-		public IDocumentQuery<T> WhereLessThanOrEqual(string fieldName, object value)
+		public IDocumentQuery<T> WhereBetweenOrEqual(string fieldName, object start, object end)
 		{
 			if (queryText.Length > 0)
 			{
@@ -204,10 +178,32 @@ namespace Raven.Client.Document
 			}
 
 			queryText.Append(fieldName).Append(":[");
-			queryText.Append(TransformToRangeValue(value));
-			queryText.Append(" TO NULL] ");
+			queryText.Append(start == null ? "NULL" : TransformToRangeValue(start));
+			queryText.Append(" TO ");
+			queryText.Append(end == null ? "NULL" : TransformToRangeValue(end));
+			queryText.Append("]");
 
 			return this;
+		}
+
+		public IDocumentQuery<T> WhereGreaterThan(string fieldName, object value)
+		{
+			return this.WhereBetween(fieldName, value, null);
+		}
+
+		public IDocumentQuery<T> WhereGreaterThanOrEqual(string fieldName, object value)
+		{
+			return this.WhereBetweenOrEqual(fieldName, value, null);
+		}
+
+		public IDocumentQuery<T> WhereLessThan(string fieldName, object value)
+		{
+			return this.WhereBetween(fieldName, null, value);
+		}
+
+		public IDocumentQuery<T> WhereLessThanOrEqual(string fieldName, object value)
+		{
+			return this.WhereBetweenOrEqual(fieldName, null, value);
 		}
 
 		public IDocumentQuery<T> AndAlso()
