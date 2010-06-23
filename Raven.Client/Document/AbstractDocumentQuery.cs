@@ -112,6 +112,17 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public IDocumentQuery<T> WhereEqual(string fieldName, object value)
 		{
+			return this.WhereEqual(fieldName, value, true);
+		}
+
+		/// <summary>
+		/// Matches exactly
+		/// </summary>
+		/// <param name="fieldName"></param>
+		/// <param name="value"></param>
+		/// <returns></returns>
+		public IDocumentQuery<T> WhereEqual(string fieldName, object value, bool isAnalyzed)
+		{
 			if (queryText.Length > 0)
 			{
 				queryText.Append(" ");
@@ -119,7 +130,7 @@ namespace Raven.Client.Document
 
 			queryText.Append(fieldName);
 			queryText.Append(":");
-			queryText.Append(TransformToEqualValue(value, false, false));
+			queryText.Append(TransformToEqualValue(value, isAnalyzed, isAnalyzed));
 
 			return this;
 		}

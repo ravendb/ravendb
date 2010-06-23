@@ -98,6 +98,12 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		public IDocumentQuery<T> WhereEqual(string fieldName, object value, bool isAnalyzed)
+		{
+			ApplyForAll(query => query.WhereEqual(fieldName, value, isAnalyzed));
+			return this;
+		}
+
 		public IDocumentQuery<T> WhereContains(string fieldName, object value)
 		{
 			ApplyForAll(query => query.WhereContains(fieldName, value));
