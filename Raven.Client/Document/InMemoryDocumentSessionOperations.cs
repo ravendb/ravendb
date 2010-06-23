@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Transactions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -15,6 +16,8 @@ using System.Diagnostics;
 #if !NET_3_5
 using System.Dynamic;
 using Microsoft.CSharp.RuntimeBinder;
+using Binder = Microsoft.CSharp.RuntimeBinder.Binder;
+
 #endif
 
 namespace Raven.Client.Document
@@ -34,7 +37,6 @@ namespace Raven.Client.Document
 		protected readonly Dictionary<string, object> entitiesByKey = new Dictionary<string, object>();
 		protected DocumentStore documentStore;
 		private int numberOfRequests;
-
 
 		protected InMemoryDocumentSessionOperations(DocumentStore documentStore)
 		{
@@ -167,16 +169,14 @@ more responsive application.
 #if !NET_3_5
             if (entity is IDynamicMetaObjectProvider)
             {
-            	dynamic dynamicEntity = entity;
-            	id = dynamicEntity.Id;
-				if(id == null)
+            	if(TryGetId(entity,out id) == false)
 				{
 					id = Conventions.DocumentKeyGenerator(entity);
 
 					if (id != null)
 					{
 						// Store it back into the Id field so the client has access to to it                    
-						dynamicEntity.Id = id;                                        
+						((dynamic) entity).Id = id;
 					}
 				}
             }
@@ -224,6 +224,22 @@ more responsive application.
 				entitiesByKey[id] = entity;
 		}
 
+#if !NET_3_5
+		private static bool TryGetId(dynamic entity, out string id)
+		{
+			try
+			{
+				id = entity.Id;
+				return true;
+			}
+			catch (RuntimeBinderException)
+			{
+				id = null;
+				return false;
+			}
+		}
+#endif
+
 		protected ICommandData CreatePutEntityCommand(object entity, DocumentSession.DocumentMetadata documentMetadata)
 		{
 			var json = ConvertEntityToJson(entity, documentMetadata.Metadata);
@@ -236,8 +252,7 @@ more responsive application.
 #if !NET_3_5			
             if (entity is IDynamicMetaObjectProvider)
             {
-                dynamic dynamicEntity = entity as dynamic;
-                key = dynamicEntity.Id;
+            	TryGetId(entity,out key);
             }
             else
 #endif
