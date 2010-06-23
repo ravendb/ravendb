@@ -25,7 +25,7 @@ namespace Raven.Client
 
         //This is the best way I can think of doing it?
 #if !NET_3_5        
-        void Store(dynamic entity);
+        new void Store(dynamic entity);
 #endif
     }
 }
