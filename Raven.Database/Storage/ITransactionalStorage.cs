@@ -3,13 +3,14 @@ using Raven.Database.Storage.StorageActions;
 
 namespace Raven.Database.Storage
 {
-	public interface ITransactionalStorage
+	public interface ITransactionalStorage : IDisposable
 	{
 		Guid Id { get; }
 		void Batch(Action<IStorageActionsAccessor> action);
 		void ExecuteImmediatelyOrRegisterForSyncronization(Action action);
 		bool Initialize();
-		void Dispose();
+		void StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory);
+		void Restore(string backupLocation, string databaseLocation);
 	}
 
 	public interface IStorageActionsAccessor

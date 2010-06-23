@@ -10,6 +10,7 @@ using Raven.Database;
 using Raven.Database.Plugins;
 using System.Linq;
 using Raven.Database.Storage;
+using Raven.Storage.Esent.Backup;
 using Raven.Storage.Esent.SchemaUpdates;
 using Raven.Storage.Esent.StorageActions;
 
@@ -93,6 +94,17 @@ namespace Raven.Storage.Esent
 				disposed = true;
 				disposerLock.ExitWriteLock();
 			}
+		}
+
+		public void StartBackupOperation(DocumentDatabase docDb,string backupDestinationDirectory)
+		{
+			var backupOperation = new BackupOperation(docDb, docDb.Configuration.DataDirectory, backupDestinationDirectory);
+			ThreadPool.QueueUserWorkItem(backupOperation.Execute);
+		}
+
+		public void Restore(string backupLocation, string databaseLocation)
+		{
+			new RestoreOperation(backupLocation, databaseLocation).Execute();
 		}
 
 		#endregion

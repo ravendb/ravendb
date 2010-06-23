@@ -43,7 +43,7 @@ namespace Raven.Tests.Storage
                 Directory.Delete(directoryFullName, true);
         }
 		
-		[Fact(Skip = "temporarily disabled")]
+		[Fact]
 		public void AfterBackupRestoreCanReadDocument()
 		{
 			db.Put("ayende", null, JObject.Parse("{'email':'ayende@ayende.com'}"), new JObject(), null);
@@ -55,7 +55,7 @@ namespace Raven.Tests.Storage
 
             DeleteIfExists("raven.db.test.esent");
 
-			DocumentDatabase.Restore("raven.db.test.backup", "raven.db.test.esent");
+			DocumentDatabase.Restore(new RavenConfiguration(), "raven.db.test.backup", "raven.db.test.esent");
 
 			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = "raven.db.test.esent"});
 
@@ -63,7 +63,7 @@ namespace Raven.Tests.Storage
 			Assert.Equal("ayende@ayende.com", jObject.Value<string>("email"));
 		}
 
-		[Fact(Skip = "temporarily disabled")]
+		[Fact]
 		public void AfterBackupRestoreCanQueryIndex_CreatedAfterRestore()
 		{
 			db.Put("ayende", null, JObject.Parse("{'email':'ayende@ayende.com'}"), JObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
@@ -75,7 +75,7 @@ namespace Raven.Tests.Storage
 
             DeleteIfExists("raven.db.test.esent");
 
-			DocumentDatabase.Restore("raven.db.test.backup", "raven.db.test.esent");
+			DocumentDatabase.Restore(new RavenConfiguration(), "raven.db.test.backup", "raven.db.test.esent");
 
 			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = "raven.db.test.esent" });
 			db.SpinBackgroundWorkers();
@@ -91,7 +91,7 @@ namespace Raven.Tests.Storage
 			Assert.Equal(1, queryResult.Results.Length);
 		}
 
-		[Fact(Skip = "temporarily disabled")]
+		[Fact]
 		public void AfterBackupRestoreCanQueryIndex_CreatedBeforeRestore()
 		{
 			db.Put("ayende", null, JObject.Parse("{'email':'ayende@ayende.com'}"), JObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
@@ -113,7 +113,7 @@ namespace Raven.Tests.Storage
 
             DeleteIfExists("raven.db.test.esent");
 
-			DocumentDatabase.Restore("raven.db.test.backup", "raven.db.test.esent");
+			DocumentDatabase.Restore(new RavenConfiguration(), "raven.db.test.backup", "raven.db.test.esent");
 
 			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = "raven.db.test.esent" });
 			queryResult = db.Query("Raven/DocumentsByEntityName", new IndexQuery

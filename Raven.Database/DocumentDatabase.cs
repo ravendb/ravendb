@@ -737,15 +737,15 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				IsRunning = true,
 			}), new JObject(), null);
 
-			//var backupOperation = TransactionalStorage.CreateBackupOperation(this, Configuration.DataDirectory, backupDestinationDirectory);
-			//ThreadPool.QueueUserWorkItem(backupOperation.Execute);
-			throw new NotImplementedException();
+			TransactionalStorage.StartBackupOperation(this,backupDestinationDirectory);
 		}
 
-		public static void Restore(string backupLocation, string databaseLocation)
+		public static void Restore(RavenConfiguration configuration, string backupLocation, string databaseLocation)
 		{
-			throw new NotImplementedException();
-			//new RestoreOperation(backupLocation, databaseLocation).Execute();
+			using(var transactionalStorage = configuration.CreateTransactionalStorage(() => { }))
+			{
+				transactionalStorage.Restore(backupLocation, databaseLocation);
+			}
 		}
 
 		public byte[] PromoteTransaction(Guid fromTxId)
