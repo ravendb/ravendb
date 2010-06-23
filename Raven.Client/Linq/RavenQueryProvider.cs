@@ -70,7 +70,6 @@ namespace Raven.Client.Linq
 
         public object Execute(Expression expression)
         {
-        	luceneQuery = session.LuceneQuery<T>(indexName);
 			ProcessExpression(expression);
 
             if (skipValue.HasValue)
@@ -126,7 +125,16 @@ namespace Raven.Client.Linq
 
         public void ProcessExpression(Expression expression)
         {
-            VisitExpression(expression);
+			if (session == null)
+			{
+				// this is to support unit testing
+				luceneQuery = new Raven.Client.Document.DocumentQuery<T>(null, null, indexName, null);
+			}
+			else
+			{
+				luceneQuery = session.LuceneQuery<T>(indexName);
+			}
+			VisitExpression(expression);
         }
 
         private void VisitExpression(Expression expression)
