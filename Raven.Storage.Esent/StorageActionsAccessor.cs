@@ -5,6 +5,7 @@ using Raven.Storage.Esent.StorageActions;
 
 namespace Raven.Storage.Esent
 {
+	[CLSCompliant(false)]
 	public class StorageActionsAccessor : IStorageActionsAccessor
 	{
 		private readonly DocumentStorageActions inner;

@@ -8,8 +8,6 @@ namespace RavenTestbed
     {
         static void Main(string[] args)
         {
-            DynamicDocuments dynamicTest = new DynamicDocuments();
-            dynamicTest.Can_store_dynamic_documents();
         }
     }
 
