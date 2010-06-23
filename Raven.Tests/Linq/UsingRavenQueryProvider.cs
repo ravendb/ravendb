@@ -168,7 +168,7 @@ namespace Raven.Tests.Linq
                     WaitForQueryToComplete(session, indexName);
 
                     var singleItem = session.Query<User>(indexName)
-                                            .Single(x => x.Name == "James");
+                                            .Single(x => x.Name.Contains("James"));
                     Assert.Equal(25, singleItem.Age);
                     Assert.Equal("James", singleItem.Name);   
 
@@ -222,13 +222,13 @@ namespace Raven.Tests.Linq
                     WaitForQueryToComplete(session, indexName);
 
                     var testQuery = session.Query<User>(indexName)
-                                        .Where(x => x.Name == "Matt" && x.Active);                    
+                                        .Where(x => x.Name.Contains("Matt") && x.Active);                    
                     Assert.Equal(1, testQuery.ToArray().Count());
                     foreach (var testResult in testQuery)
                         Assert.True(testResult.Active);
                     
                     testQuery = session.Query<User>(indexName)
-                                        .Where(x => x.Name == "Matt" && !x.Active);
+										.Where(x => x.Name.Contains("Matt") && !x.Active);
                     Assert.Equal(2, testQuery.ToArray().Count());
                     foreach (var testResult in testQuery)
                         Assert.False(testResult.Active);                                       

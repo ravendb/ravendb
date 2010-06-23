@@ -165,7 +165,7 @@ namespace Raven.Client.Tests.Document
 				{
 					var companyFromRaven = session2.Query<Company>("Companies/Name")
 						.Customize(query => query.WaitForNonStaleResults())
-						.Where(x=>x.Name == company.Name)
+						.Where(x=>x.Name.Contains(company.Name))
 						.ToArray()
 						.First();
 					Assert.Equal(companyFromRaven.Id, company.Id);
