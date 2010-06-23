@@ -166,15 +166,19 @@ more responsive application.
 			string id = null;
 #if !NET_3_5
             if (entity is IDynamicMetaObjectProvider)
-            {                
-                id = Conventions.DocumentKeyGenerator(entity);
+            {
+            	dynamic dynamicEntity = entity;
+            	id = dynamicEntity.Id;
+				if(id == null)
+				{
+					id = Conventions.DocumentKeyGenerator(entity);
 
-                if (id != null)
-                {
-                    // Store it back into the Id field so the client has access to to it                    
-                    dynamic temp = entity as dynamic;
-                    temp.Id = id;                                        
-                }
+					if (id != null)
+					{
+						// Store it back into the Id field so the client has access to to it                    
+						dynamicEntity.Id = id;                                        
+					}
+				}
             }
             else
 #endif
