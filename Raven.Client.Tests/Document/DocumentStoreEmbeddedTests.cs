@@ -98,7 +98,35 @@ namespace Raven.Client.Tests.Document
 			}
 		}
 
-        [Fact]
+		[Fact]
+		public void Will_process_all_different_documents_enlisted_in_a_transaction()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				using (var tx = new TransactionScope())
+				{
+					using (var session = documentStore.OpenSession())
+					{
+						// Remark: Don't change the order of the stored classes!
+						// This test will only fail if the classes are not
+						// stored in their alphabetical order!
+						session.Store(new Contact {FirstName = "Contact"});
+						session.Store(new Company {Name = "Company"});
+						session.SaveChanges();
+					}
+					tx.Complete();
+				}
+				Thread.Sleep(100);
+				using (var session = documentStore.OpenSession())
+				{
+					Assert.NotNull(session.Load<Contact>("contacts/1"));
+					Assert.NotNull(session.Load<Company>("companies/1"));
+					session.SaveChanges();
+				}
+			}
+		}
+
+		[Fact]
         public void Can_refresh_entity_from_database()
         {
             using (var documentStore = NewDocumentStore())

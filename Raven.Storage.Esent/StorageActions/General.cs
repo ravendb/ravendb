@@ -216,7 +216,7 @@ namespace Raven.Storage.Esent.StorageActions
 				};
 				Api.JetDelete(session, DocumentsModifiedByTransactions);
 				perDocumentModified(documentInTransactionData);
-			} while (Api.TryMoveNext(session, DocumentsModifiedByTransactions));
+			} while (Api.TryMoveFirst(session, DocumentsModifiedByTransactions));
 		}
 
 		private void ResetTransactionOnCurrentDocument()
