@@ -9,6 +9,7 @@ using Raven.Client.Linq;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
+using System.Globalization;
 
 namespace Raven.Client.Document
 {
@@ -365,8 +366,13 @@ namespace Raven.Client.Document
 				return DateTools.DateToString((DateTime)value, DateTools.Resolution.MILLISECOND);
 			}
 
-			// everything gets properly escaped
-			string escaped = LuceneEscape(Convert.ToString(value), allowWildcards && isAnalyzed);
+			if (!(value is string))
+			{
+				return Convert.ToString(value, CultureInfo.InvariantCulture);
+			}
+
+			// all strings get properly escaped
+			string escaped = LuceneEscape(Convert.ToString(value, CultureInfo.InvariantCulture), allowWildcards && isAnalyzed);
 
 			if (!isAnalyzed)
 			{
