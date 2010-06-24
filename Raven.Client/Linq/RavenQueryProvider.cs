@@ -61,9 +61,6 @@ namespace Raven.Client.Linq
 
         public List<string> FieldsToFetch { get; set; }
 
-        private int? skipValue;
-        private int? takeValue;
-
         private SpecialQueryType queryType = SpecialQueryType.None;
 
 		private Expression<Func<T, bool>> predicate;
@@ -71,15 +68,6 @@ namespace Raven.Client.Linq
         public object Execute(Expression expression)
         {
 			ProcessExpression(expression);
-
-            if (skipValue.HasValue)
-            {
-				luceneQuery.Skip(skipValue.Value);
-            }
-            if (takeValue.HasValue)
-            {
-				luceneQuery.Take(takeValue.Value);
-            }
 
 			luceneQuery.SelectFields<T>(FieldsToFetch.ToArray());            
 
@@ -471,13 +459,13 @@ namespace Raven.Client.Linq
         private void VisitSkip(ConstantExpression constantExpression)
         {
             //Don't have to worry about the cast failing, the Skip() extension method only takes an int
-            skipValue = (int)constantExpression.Value;
+			luceneQuery.Skip((int)constantExpression.Value);
         }
 
         private void VisitTake(ConstantExpression constantExpression)
         {
             //Don't have to worry about the cast failing, the Take() extension method only takes an int
-            takeValue = (int)constantExpression.Value;
+			luceneQuery.Take((int)constantExpression.Value);
         }
 
 		private void VisitAll(Expression<Func<T,bool>> predicateExpression)
@@ -488,38 +476,38 @@ namespace Raven.Client.Linq
 
 		private void VisitAny()
 		{
-			takeValue = 1;
+			luceneQuery.Take(1);
 			queryType = SpecialQueryType.Any;
 		}
 
 		private void VisitCount()
 		{
-			takeValue = 1;
+			luceneQuery.Take(1);
 			queryType = SpecialQueryType.Count;
 		}
 
         private void VisitSingle()
         {
-			takeValue = 2;           
+			luceneQuery.Take(2);
             queryType = SpecialQueryType.Single;
         }
         
         private void VisitSingleOrDefault()
         {
-			takeValue = 2;
-            queryType = SpecialQueryType.SingleOrDefault;
+			luceneQuery.Take(2);
+			queryType = SpecialQueryType.SingleOrDefault;
         }
 
         private void VisitFirst()
         {
-			takeValue = 1;
+			luceneQuery.Take(1);
             queryType = SpecialQueryType.First;
         }
 
         private void VisitFirstOrDefault()
         {
-			takeValue = 1;
-            queryType = SpecialQueryType.FirstOrDefault;
+			luceneQuery.Take(1);
+			queryType = SpecialQueryType.FirstOrDefault;
         }        
 		
         IQueryable<S> IQueryProvider.CreateQuery<S>(Expression expression)
