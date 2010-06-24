@@ -365,12 +365,16 @@ namespace Raven.Client.Document
 				return DateTools.DateToString((DateTime)value, DateTools.Resolution.MILLISECOND);
 			}
 
+			// everything gets properly escaped
+			string escaped = LuceneEscape(Convert.ToString(value), allowWildcards && isAnalyzed);
+
 			if (!isAnalyzed)
 			{
-				return String.Concat("[[", value, "]]");
+				// QueryBuilder will remove the braces without analyzing contents
+				return String.Concat("[[", escaped, "]]");
 			}
 
-			return LuceneEscape(value.ToString(), allowWildcards);
+			return escaped;
 		}
 
 		private static string TransformToRangeValue(object value)
