@@ -69,7 +69,7 @@ namespace Raven.Client.Linq
         {
 			ProcessExpression(expression);
 
-			luceneQuery.SelectFields<T>(FieldsToFetch.ToArray());            
+			luceneQuery = luceneQuery.SelectFields<T>(FieldsToFetch.ToArray());            
 
 			if (customizeQuery != null)
 				customizeQuery(luceneQuery);

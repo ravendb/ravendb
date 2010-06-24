@@ -46,6 +46,11 @@ namespace Raven.Client.Document
 			get { return queryResult ?? (queryResult = GetQueryResult()); }
 		}
 
+		public IEnumerable<string> ProjectionFields
+		{
+			get { return this.projectionFields ?? Enumerable.Empty<string>(); }
+		}
+
 		public IEnumerator<T> GetEnumerator()
 		{
 			return QueryResult.Results
