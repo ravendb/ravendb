@@ -106,12 +106,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Backup\BackupOperation.cs" />
     <Compile Include="Backup\BackupStatus.cs" />
-    <Compile Include="Backup\EsentBackup.cs" />
     <Compile Include="Backup\DirectoryBackup.cs" />
     <Compile Include="Backup\RemoveBackupDocumentStartupTask.cs" />
-    <Compile Include="Backup\RestoreOperation.cs" />
     <Compile Include="Commercial\ValidateLicense.cs" />
     <Compile Include="Commercial\WarningMessagesHolder.cs" />
     <Compile Include="Data\BackupRequest.cs" />
@@ -216,41 +213,23 @@
     <Compile Include="Server\Responders\TransactionCommit.cs" />
     <Compile Include="Server\Responders\TransactionPromote.cs" />
     <Compile Include="Server\Responders\TransactionRollback.cs" />
-    <Compile Include="Storage\IndexCreationOptions.cs" />
     <Compile Include="Storage\DocumentInTransactionData.cs" />
-    <Compile Include="Storage\SchemaUpdates\From24To25.cs" />
-    <Compile Include="Storage\SchemaUpdates\From22To23.cs" />
-    <Compile Include="Storage\SchemaUpdates\From23To24.cs" />
-    <Compile Include="Storage\SchemaUpdates\ISchemaUpdate.cs" />
-    <Compile Include="Storage\SchemaUpdates\From21To22.cs" />
-    <Compile Include="Storage\StorageActionsAccessor.cs" />
-    <Compile Include="Storage\StorageActions\Attachments.cs" />
-    <Compile Include="Storage\StorageActions\Documents.cs" />
-    <Compile Include="Storage\StorageActions\IAttachmentsStorageActions.cs" />
-    <Compile Include="Storage\StorageActions\IDocumentStorageActions.cs" />
-    <Compile Include="Storage\StorageActions\IGeneralStorageActions.cs" />
-    <Compile Include="Storage\StorageActions\IIndexingStorageActions.cs" />
-    <Compile Include="Storage\StorageActions\IMappedResultsStorageAction.cs" />
-    <Compile Include="Storage\StorageActions\Indexing.cs" />
-    <Compile Include="Storage\StorageActions\IQueueStorageActions.cs" />
-    <Compile Include="Storage\StorageActions\ITasksStorageActions.cs" />
-    <Compile Include="Storage\StorageActions\MappedResults.cs" />
-    <Compile Include="Storage\StorageActions\Queue.cs" />
-    <Compile Include="Storage\StorageActions\TableProperties.cs" />
-    <Compile Include="Storage\StorageActions\Tasks.cs" />
-    <Compile Include="Storage\StorageActions\Util.cs" />
-    <Compile Include="Storage\TableColumnsCache.cs" />
+    <Compile Include="Storage\IAttachmentsStorageActions.cs" />
+    <Compile Include="Storage\IDocumentStorageActions.cs" />
+    <Compile Include="Storage\IGeneralStorageActions.cs" />
+    <Compile Include="Storage\IIndexingStorageActions.cs" />
+    <Compile Include="Storage\IMappedResultsStorageAction.cs" />
+    <Compile Include="Storage\IndexCreationOptions.cs" />
+    <Compile Include="Storage\IndexDefinitionStorage.cs" />
+    <Compile Include="Storage\IQueueStorageActions.cs" />
+    <Compile Include="Storage\ITasksStorageActions.cs" />
+    <Compile Include="Storage\ITransactionalStorage.cs" />
     <Compile Include="Tasks\IndexDocumentRangeTask.cs" />
     <Compile Include="Tasks\IndexDocumentsTask.cs" />
     <Compile Include="Tasks\ReduceTask.cs" />
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
     <Compile Include="Tasks\Task.cs" />
-    <Compile Include="Storage\TransactionalStorage.cs" />
-    <Compile Include="Storage\EsentExtension.cs" />
-    <Compile Include="Storage\StorageActions\General.cs" />
     <Compile Include="Indexing\IndexStorage.cs" />
-    <Compile Include="Storage\SchemaCreator.cs" />
-    <Compile Include="Storage\IndexDefinitionStorage.cs" />
     <Compile Include="TransactionInformation.cs" />
     <Compile Include="TransactionMode.cs" />
   </ItemGroup>

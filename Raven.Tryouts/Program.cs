@@ -1,5 +1,6 @@
 using System;
 using Raven.Database.Indexing;
+using Raven.Client.Tests.Document;
 
 namespace RavenTestbed
 {

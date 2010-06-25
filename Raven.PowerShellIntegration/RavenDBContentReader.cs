@@ -12,7 +12,7 @@ namespace Raven.PowerShellIntegration
 	{
 		private readonly DocumentDatabase _db;
 		private readonly bool _typeIsDocument;
-		private int _currentOffset;
+		private long _currentOffset;
 
 		public RavenDBContentReader(DocumentDatabase db, bool typeIsDocument)
 		{
@@ -31,9 +31,9 @@ namespace Raven.PowerShellIntegration
 		{
 			JArray retVal;
 			if (this._typeIsDocument)
-				retVal = this._db.GetDocuments(_currentOffset, Convert.ToInt32(readCount), null);
+				retVal = this._db.GetDocuments((int)_currentOffset, Convert.ToInt32(readCount), null);
 			else
-				retVal = this._db.GetIndexes(_currentOffset, Convert.ToInt32(readCount));
+				retVal = this._db.GetIndexes((int)_currentOffset, Convert.ToInt32(readCount));
 
 			if (retVal == null || retVal.Count == 0)
 				return null;
@@ -44,7 +44,7 @@ namespace Raven.PowerShellIntegration
 
 		public void Seek(long offset, SeekOrigin origin)
 		{
-			int totalCount;
+			long totalCount;
 			if (this._typeIsDocument)
 				totalCount = this._db.Statistics.CountOfDocuments;
 			else

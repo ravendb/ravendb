@@ -11,9 +11,9 @@ namespace Raven.Database.Indexing
 	{
 		private readonly WorkContext context;
 		private readonly ILog log = LogManager.GetLogger(typeof (TaskExecuter));
-		private readonly TransactionalStorage transactionalStorage;
+		private readonly ITransactionalStorage transactionalStorage;
 
-		public TaskExecuter(TransactionalStorage transactionalStorage, WorkContext context)
+		public TaskExecuter(ITransactionalStorage transactionalStorage, WorkContext context)
 		{
 			this.transactionalStorage = transactionalStorage;
 			this.context = context;

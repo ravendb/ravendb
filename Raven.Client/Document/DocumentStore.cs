@@ -112,16 +112,20 @@ namespace Raven.Client.Document
             return session;
         }
 
-        public IDocumentStore Initialize()
+#if !CLIENT
+		public Raven.Database.DocumentDatabase DocumentDatabase { get; set; }
+#endif
+
+		public IDocumentStore Initialize()
 		{
 			try
 			{
 #if !CLIENT
 				if (configuration != null)
 				{
-					var embeddedDatabase = new Raven.Database.DocumentDatabase(configuration);
-					embeddedDatabase.SpinBackgroundWorkers();
-					DatabaseCommands = new EmbededDatabaseCommands(embeddedDatabase, Conventions);
+					DocumentDatabase = new Raven.Database.DocumentDatabase(configuration);
+					DocumentDatabase.SpinBackgroundWorkers();
+					DatabaseCommands = new EmbededDatabaseCommands(DocumentDatabase, Conventions);
 				}
 				else
 #endif

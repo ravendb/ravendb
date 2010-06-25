@@ -13,8 +13,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Client", "Raven.Clien
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Client.Tests", "Raven.Client.Tests\Raven.Client.Tests.csproj", "{36B31D69-508B-4594-8F8E-85774BAA7D3F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.PowerShellIntegration", "Raven.PowerShellIntegration\Raven.PowerShellIntegration.csproj", "{39AEF13E-8F87-4976-B09A-13944F59C97E}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Web", "Raven.Web\Raven.Web.csproj", "{F49C2ED0-1844-44B4-A595-5FD152853B9C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Client.3.5", "Raven.Client.3.5\Raven.Client.3.5.csproj", "{FCAF4299-10DF-4ECF-A81E-28BA158174BF}"
@@ -24,6 +22,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Tryouts", "Raven.Tryouts\Raven.Tryouts.csproj", "{68BC3141-C2EF-487A-B4A6-A0AD7E754FB1}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Smuggler", "Raven.Smuggler\Raven.Smuggler.csproj", "{3E6401AC-3E33-4B61-A460-49953654A207}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Storage.Esent", "Raven.Storage.Esent\Raven.Storage.Esent.csproj", "{9DEE8674-D0CD-430D-BD9B-6CD95F3CAB22}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -95,16 +95,6 @@ Global
 		{36B31D69-508B-4594-8F8E-85774BAA7D3F}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{36B31D69-508B-4594-8F8E-85774BAA7D3F}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{36B31D69-508B-4594-8F8E-85774BAA7D3F}.Release|x86.ActiveCfg = Release|Any CPU
-		{39AEF13E-8F87-4976-B09A-13944F59C97E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{39AEF13E-8F87-4976-B09A-13944F59C97E}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{39AEF13E-8F87-4976-B09A-13944F59C97E}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{39AEF13E-8F87-4976-B09A-13944F59C97E}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{39AEF13E-8F87-4976-B09A-13944F59C97E}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{39AEF13E-8F87-4976-B09A-13944F59C97E}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{39AEF13E-8F87-4976-B09A-13944F59C97E}.Release|Any CPU.Build.0 = Release|Any CPU
-		{39AEF13E-8F87-4976-B09A-13944F59C97E}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{39AEF13E-8F87-4976-B09A-13944F59C97E}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{39AEF13E-8F87-4976-B09A-13944F59C97E}.Release|x86.ActiveCfg = Release|Any CPU
 		{F49C2ED0-1844-44B4-A595-5FD152853B9C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{F49C2ED0-1844-44B4-A595-5FD152853B9C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F49C2ED0-1844-44B4-A595-5FD152853B9C}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
@@ -155,6 +145,16 @@ Global
 		{3E6401AC-3E33-4B61-A460-49953654A207}.Release|Mixed Platforms.Build.0 = Release|x86
 		{3E6401AC-3E33-4B61-A460-49953654A207}.Release|x86.ActiveCfg = Release|x86
 		{3E6401AC-3E33-4B61-A460-49953654A207}.Release|x86.Build.0 = Release|x86
+		{9DEE8674-D0CD-430D-BD9B-6CD95F3CAB22}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9DEE8674-D0CD-430D-BD9B-6CD95F3CAB22}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9DEE8674-D0CD-430D-BD9B-6CD95F3CAB22}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{9DEE8674-D0CD-430D-BD9B-6CD95F3CAB22}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{9DEE8674-D0CD-430D-BD9B-6CD95F3CAB22}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{9DEE8674-D0CD-430D-BD9B-6CD95F3CAB22}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9DEE8674-D0CD-430D-BD9B-6CD95F3CAB22}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9DEE8674-D0CD-430D-BD9B-6CD95F3CAB22}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{9DEE8674-D0CD-430D-BD9B-6CD95F3CAB22}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{9DEE8674-D0CD-430D-BD9B-6CD95F3CAB22}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

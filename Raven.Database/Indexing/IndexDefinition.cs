@@ -28,6 +28,7 @@ namespace Raven.Database.Indexing
 
 #if !CLIENT
 
+		[CLSCompliant(false)]
 		public Field.Store GetStorage(string name, Field.Store defaultStorage)
 		{
 			if(Stores == null)
@@ -48,6 +49,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
+		[CLSCompliant(false)]
 		public Field.Index GetIndex(string name, Field.Index defaultIndex)
 		{
 			if (Indexes == null)

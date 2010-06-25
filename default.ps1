@@ -36,7 +36,7 @@ task Init -depends Verify40, Clean {
 		-product "Raven Database $version" `
 		-version $version `
 		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2010" `
-		-clsCompliant "false"
+		-clsCompliant "true"
 		
 	Generate-Assembly-Info `
 		-file "$base_dir\Raven.Smuggler\Properties\AssemblyInfo.cs" `

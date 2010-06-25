@@ -5,6 +5,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Indexing;
 using Raven.Database.Storage;
+using Raven.Storage.Esent;
 using Raven.Tests.Storage;
 using Xunit;
 
@@ -12,7 +13,7 @@ namespace Raven.Tests.Views
 {
 	public class ViewStorage : AbstractDocumentStorageTest
 	{
-		private readonly TransactionalStorage transactionalStorage;
+		private readonly ITransactionalStorage transactionalStorage;
 
 		public ViewStorage()
 		{

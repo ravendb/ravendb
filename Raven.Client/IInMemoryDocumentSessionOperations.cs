@@ -7,8 +7,8 @@ namespace Raven.Client
 	public interface IInMemoryDocumentSessionOperations : IDisposable
 	{
 		string StoreIdentifier { get; }
-        
-		void Store(object entity);
+            
+		void Store(object entity);        
         
 		void Delete<T>(T entity);
 

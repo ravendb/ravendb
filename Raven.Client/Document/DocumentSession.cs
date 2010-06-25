@@ -140,5 +140,5 @@ namespace Raven.Client.Document
 			public IList<ICommandData> Commands { get; set; }
 			public IList<object> Entities { get; set; }
 		}
-	}
+    }
 }

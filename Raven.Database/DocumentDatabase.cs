@@ -54,7 +54,7 @@ namespace Raven.Database
 
 		    workContext = new WorkContext {IndexUpdateTriggers = IndexUpdateTriggers};
 
-			TransactionalStorage = new TransactionalStorage(configuration, workContext.NotifyAboutWork);
+			TransactionalStorage = configuration.CreateTransactionalStorage(workContext.NotifyAboutWork);
 			configuration.Container.SatisfyImportsOnce(TransactionalStorage);
 			
             bool newDb;
@@ -147,7 +147,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 			get; private set;
 		}
 
-		public TransactionalStorage TransactionalStorage { get; private set; }
+		public ITransactionalStorage TransactionalStorage { get; private set; }
 
 		public IndexDefinitionStorage IndexDefinitionStorage { get; private set; }
 
@@ -292,7 +292,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
                 }
                 else
                 {
-                    etag = actions.Documents.AddDocumentInTransaction(key, etag,
+                    etag = actions.Transactions.AddDocumentInTransaction(key, etag,
                                                      document, metadata, transactionInformation);
                 }
 				workContext.ShouldNotifyAboutWork();
@@ -308,7 +308,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 		    };
 		}
 
-		private void AddIndexingTask(StorageActionsAccessor actions, JToken metadata, Func<Task> taskGenerator)
+		private void AddIndexingTask(IStorageActionsAccessor actions, JToken metadata, Func<Task> taskGenerator)
 		{
 			foreach (var indexName in IndexDefinitionStorage.IndexNames)
 			{
@@ -380,7 +380,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
                 }
                 else
                 {
-                    actions.Documents.DeleteDocumentInTransaction(transactionInformation, key, etag);
+                    actions.Transactions.DeleteDocumentInTransaction(transactionInformation, key, etag);
                 }
 				workContext.ShouldNotifyAboutWork();
 			});
@@ -394,7 +394,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
         	{
         		TransactionalStorage.Batch(actions =>
         		{
-        			actions.General.CompleteTransaction(txId, doc =>
+					actions.Transactions.CompleteTransaction(txId, doc =>
         			{
         				// doc.Etag - represent the _modified_ document etag, and we already
         				// checked etags on previous PUT/DELETE, so we don't pass it here
@@ -402,8 +402,8 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
         					Delete(doc.Key, null, null);
         				else
         					Put(doc.Key, null,
-        					    doc.Data.ToJObject(),
-        					    doc.Metadata.ToJObject(), null);
+        					    doc.Data,
+        					    doc.Metadata, null);
         			});
         			actions.Attachments.DeleteAttachment("transactions/recoveryInformation/" + txId, null);
         			workContext.ShouldNotifyAboutWork();
@@ -424,7 +424,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
         	{
         		TransactionalStorage.Batch(actions =>
         		{
-        			actions.General.RollbackTransaction(txId);
+        			actions.Transactions.RollbackTransaction(txId);
         			workContext.ShouldNotifyAboutWork();
         		});
         	}
@@ -455,7 +455,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 			return name;
 		}
 
-		private void AddIndexAndEnqueueIndexingTasks(StorageActionsAccessor actions, string indexName)
+		private void AddIndexAndEnqueueIndexingTasks(IStorageActionsAccessor actions, string indexName)
 		{
 			actions.Indexing.AddIndex(indexName);
 			var firstAndLast = actions.Documents.FirstAndLastDocumentIds();
@@ -525,7 +525,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 			return loadedIds;
 		}
 
-		private static JsonDocument RetrieveDocument(StorageActionsAccessor actions, IndexQueryResult queryResult,
+		private static JsonDocument RetrieveDocument(IStorageActionsAccessor actions, IndexQueryResult queryResult,
 		                                             HashSet<string> loadedIds)
 		{
 			if (queryResult.Projection == null)
@@ -584,7 +584,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 
 		public void PutStatic(string name, Guid? etag, byte[] data, JObject metadata)
 		{
-			TransactionalStorage.Batch(actions => actions.Attachments.AddAttachment(name, etag, data, metadata.ToString(Formatting.None)));
+			TransactionalStorage.Batch(actions => actions.Attachments.AddAttachment(name, etag, data, metadata));
 		}
 
 		public void DeleteStatic(string name, Guid? etag)
@@ -707,11 +707,11 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 			}
 		}
 
-		public int ApproximateTaskCount
+		public long ApproximateTaskCount
 		{
 			get
 			{
-				int approximateTaskCount = 0;
+				long approximateTaskCount = 0;
 				TransactionalStorage.Batch(actions =>
 				{
 					approximateTaskCount = actions.Tasks.ApproximateTaskCount;
@@ -737,13 +737,15 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				IsRunning = true,
 			}), new JObject(), null);
 
-			var backupOperation = new BackupOperation(this, Configuration.DataDirectory, backupDestinationDirectory);
-			ThreadPool.QueueUserWorkItem(backupOperation.Execute);
+			TransactionalStorage.StartBackupOperation(this,backupDestinationDirectory);
 		}
 
-		public static void Restore(string backupLocation, string databaseLocation)
+		public static void Restore(RavenConfiguration configuration, string backupLocation, string databaseLocation)
 		{
-			new RestoreOperation(backupLocation, databaseLocation).Execute();
+			using(var transactionalStorage = configuration.CreateTransactionalStorage(() => { }))
+			{
+				transactionalStorage.Restore(backupLocation, databaseLocation);
+			}
 		}
 
 		public byte[] PromoteTransaction(Guid fromTxId)
@@ -752,7 +754,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 			var transmitterPropagationToken = TransactionInterop.GetTransmitterPropagationToken(committableTransaction);
 			TransactionalStorage.Batch(
 				actions =>
-					actions.General.ModifyTransactionId(fromTxId, committableTransaction.TransactionInformation.DistributedIdentifier,
+					actions.Transactions.ModifyTransactionId(fromTxId, committableTransaction.TransactionInformation.DistributedIdentifier,
 					                            TransactionManager.DefaultTimeout));
 			return transmitterPropagationToken;
 		}

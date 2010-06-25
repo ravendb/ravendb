@@ -5,9 +5,8 @@ using System.Configuration;
 using System.IO;
 using log4net.Config;
 using System.Linq;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Raven.Database.Extensions;
+using Raven.Database.Storage;
 
 namespace Raven.Database
 {
@@ -68,9 +67,14 @@ namespace Raven.Database
 				PluginsDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, PluginsDirectory.Substring(2));
 
 			AnonymousUserAccessMode = GetAnonymousUserAccessMode();
+
+			StorageTypeName = ConfigurationManager.AppSettings["Raven/StorageTypeName"] ??
+				"Raven.Storage.Esent.TransactionalStorage, Raven.Storage.Esent";
 		}
 
-	    public string ServerUrl
+		public string StorageTypeName { get; set; }
+
+		public string ServerUrl
 	    {
 	        get
 	        {
@@ -182,5 +186,14 @@ namespace Raven.Database
                 return (T)Convert.ChangeType(value, typeof (T));
 	        return null;
 	    }
+
+		public ITransactionalStorage CreateTransactionalStorage(Action notifyAboutWork)
+		{
+			var type = 
+				Type.GetType(StorageTypeName.Split(',').First()) ?? // first try to find the merged one
+				Type.GetType(StorageTypeName); // then try full type name
+			return (ITransactionalStorage)Activator.CreateInstance(type, this, notifyAboutWork);
+		}
+
 	}
 }

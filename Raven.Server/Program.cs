@@ -97,7 +97,7 @@ namespace Raven.Server
         {
             try
             {
-                DocumentDatabase.Restore(backupLocation, databaseLocation);
+                DocumentDatabase.Restore(new RavenConfiguration(), backupLocation, databaseLocation);
             }
             catch (Exception e)
             {

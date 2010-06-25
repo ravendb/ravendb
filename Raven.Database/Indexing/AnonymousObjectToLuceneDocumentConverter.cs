@@ -9,7 +9,8 @@ using Newtonsoft.Json.Linq;
 
 namespace Raven.Database.Indexing
 {
-    public static class AnonymousObjectToLuceneDocumentConverter
+	[CLSCompliant(false)]
+	public static class AnonymousObjectToLuceneDocumentConverter
 	{
 		public static IEnumerable<AbstractField> Index(object val, PropertyDescriptorCollection properties, IndexDefinition indexDefinition, Field.Store defaultStorage)
 		{

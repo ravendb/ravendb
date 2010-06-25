@@ -78,6 +78,7 @@
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
     <Reference Include="System.Transactions" />
+    <Reference Include="System.Web" />
     <Reference Include="System.Xml.Linq">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
@@ -93,9 +94,13 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BaseTest.cs" />
+    <Compile Include="Bugs\BaseClientTest.cs" />
+    <Compile Include="Bugs\ProjectingDates.cs" />
     <Compile Include="Document\AsyncDocumentStoreServerTests.cs" />
     <Compile Include="Document\ClientKeyGeneratorTests.cs" />
     <Compile Include="Document\DocumentStoreServerTests_DifferentProcess.cs" />
+    <Compile Include="Document\DynamicDocuments.cs" />
+    <Compile Include="Document\CustomDynamicClass.cs" />
     <Compile Include="Document\TotalCountServerTest.cs" />
     <Compile Include="Document\CasingIssue.cs" />
     <Compile Include="Document\Company.cs" />
@@ -128,6 +133,10 @@
     <ProjectReference Include="..\Raven.Database\Raven.Database.csproj">
       <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
       <Name>Raven.Database</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Storage.Esent\Raven.Storage.Esent.csproj">
+      <Project>{9DEE8674-D0CD-430D-BD9B-6CD95F3CAB22}</Project>
+      <Name>Raven.Storage.Esent</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
