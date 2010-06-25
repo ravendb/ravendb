@@ -41,17 +41,19 @@ namespace Raven.Tests.Indexes
 		[Fact]
 		public void Can_parse_NotAnalyzed_simple_phrase()
 		{
-			var query = QueryBuilder.BuildQuery("Name:[[\"Simple Phrase\"]]");
+			var query = QueryBuilder.BuildQuery("Name:[[Simple Phrase]]");
 
-			Assert.Equal("Name:\"Simple Phrase\"", query.ToString());
+			// NOTE: this looks incorrect (looks like Name:Simple Text:Phrase)
+			// but internally it is a correct term
+			Assert.Equal("Name:Simple Phrase", query.ToString());
 		}
 
 		[Fact]
 		public void Can_parse_NotAnalyzed_escaped_phrase()
 		{
-			var query = QueryBuilder.BuildQuery("Name:[[\"Escaped\\+\\-\\&\\|\\!\\(\\)\\{\\}\\[\\]\\^\\\"\\~\\*\\?\\:\\\\Phrase\"]]");
+			var query = QueryBuilder.BuildQuery("Name:[[Escaped\\+\\-\\&\\|\\!\\(\\)\\{\\}\\[\\]\\^\\\"\\~\\*\\?\\:\\\\Phrase]]");
 
-			Assert.Equal("Name:\"Escaped\\+\\-\\&\\|\\!\\(\\)\\{\\}\\[\\]\\^\\\"\\~\\*\\?\\:\\\\Phrase\"", query.ToString());
+			Assert.Equal("Name:Escaped\\+\\-\\&\\|\\!\\(\\)\\{\\}\\[\\]\\^\\\"\\~\\*\\?\\:\\\\Phrase", query.ToString());
 		}
 	}
 }

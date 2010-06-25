@@ -376,16 +376,7 @@ namespace Raven.Client.Document
 				return Convert.ToString(value, CultureInfo.InvariantCulture);
 			}
 
-			// all strings get properly escaped
-			string escaped = LuceneEscape(Convert.ToString(value, CultureInfo.InvariantCulture), allowWildcards && isAnalyzed);
-
-			if (!isAnalyzed)
-			{
-				// QueryBuilder will remove the braces without analyzing contents
-				return String.Concat("[[", escaped, "]]");
-			}
-
-			return escaped;
+			return LuceneEscape(Convert.ToString(value, CultureInfo.InvariantCulture), isAnalyzed, allowWildcards);
 		}
 
 		private static string TransformToRangeValue(object value)
@@ -406,7 +397,7 @@ namespace Raven.Client.Document
 			if (value is DateTime)
 				return DateTools.DateToString((DateTime)value, DateTools.Resolution.MILLISECOND);
 
-			return LuceneEscape(value.ToString(), false);
+			return LuceneEscape(value.ToString(), true, false);
 		}
 
 		/// <summary>
@@ -418,7 +409,7 @@ namespace Raven.Client.Document
 		/// <remarks>
 		/// http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Escaping%20Special%20Characters
 		/// </remarks>
-		private static string LuceneEscape(string term, bool allowWildcards)
+		private static string LuceneEscape(string term, bool isAnalyzed, bool allowWildcards)
 		{
 			// method doesn't allocate a StringBuilder unless the string requires escaping
 			// also this copies chunks of the original string into the StringBuilder which
@@ -427,13 +418,20 @@ namespace Raven.Client.Document
 
 			if (string.IsNullOrEmpty(term))
 			{
-				return "\"\"";
+				return isAnalyzed ? "\"\"" : "[[]]";
 			}
 
 			bool isPhrase = false;
 			int start = 0;
 			int length = term.Length;
 			StringBuilder buffer = null;
+
+			if (!isAnalyzed)
+			{
+				// FieldIndexing.NotAnalyzed requires enclosing brackets
+				buffer = new StringBuilder(length*2);
+				buffer.Append("[[");
+			}
 
 			for (int i=start; i<length; i++)
 			{
@@ -444,7 +442,7 @@ namespace Raven.Client.Document
 					case '*':
 					case '?':
 					{
-						if (allowWildcards)
+						if (allowWildcards && isAnalyzed)
 						{
 							break;
 						}
@@ -486,7 +484,7 @@ namespace Raven.Client.Document
 					case ' ':
 					case '\t':
 					{
-						if (!isPhrase)
+						if (isAnalyzed && !isPhrase)
 						{
 							if (buffer == null)
 							{
@@ -513,7 +511,13 @@ namespace Raven.Client.Document
 				// append any trailing substring
 				buffer.Append(term, start, length-start);
 			}
-			if (isPhrase)
+
+			if (!isAnalyzed)
+			{
+				// FieldIndexing.NotAnalyzed requires enclosing brackets
+				buffer.Append("]]");
+			}
+			else if (isPhrase)
 			{
 				// quoted phrase
 				buffer.Append('"');
@@ -521,6 +525,7 @@ namespace Raven.Client.Document
 
 			return buffer.ToString();
 		}
+
 
 		public IDocumentQuery<T> OrderBy(params string[] fields)
 		{
