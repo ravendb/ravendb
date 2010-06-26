@@ -35,8 +35,7 @@ namespace Raven.Client.Tests
         }
 
         [Fact]
-        public void can_encode_and_decode_IndexQuery_Query() 
-        {
+        public void can_encode_and_decode_IndexQuery_Query() {
             //  Fails when at least '&' is in the Query, not sure if that is acceptable
             //  Fails because the value has not by url decoded, I couldn't find code doing the url decode
             //  after GetIndexQueryFromHttpContext() so there may be another bug.
@@ -58,7 +57,6 @@ namespace Raven.Client.Tests
         [Fact]
         public void can_encode_and_decode_IndexQuery_Query_pound() 
         {
-            
             var expected = Some.String() + '#' + Some.String();
 
             var indexQuery = new IndexQuery();
