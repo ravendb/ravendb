@@ -61,14 +61,12 @@ namespace Raven.Database.Server.Responders
     		Database.TransactionalStorage.Batch(actions =>
     		{
     			bool stale;
-    			var queryResults = Database.QueryDocumentIds(index, new IndexQuery
-    			{
-    				Query = context.Request.QueryString["query"],
-    				Start = context.GetStart(),
-    				PageSize = int.MaxValue, // get all
-    				Cutoff = context.GetCutOff(),
-    				FieldsToFetch = new[] { "__document_id" }
-    			}, out stale);
+                var indexQuery = Index.GetIndexQueryFromHttpContext(context);
+
+                indexQuery.PageSize = int.MaxValue; // get all
+                indexQuery.FieldsToFetch = new[] { "__document_id" };
+
+                var queryResults = Database.QueryDocumentIds(index, indexQuery, out stale);
 
     			if (stale)
     			{
