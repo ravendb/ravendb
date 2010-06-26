@@ -376,7 +376,9 @@ namespace Raven.Client.Document
 				return Convert.ToString(value, CultureInfo.InvariantCulture);
 			}
 
-			return LuceneEscape(Convert.ToString(value, CultureInfo.InvariantCulture), isAnalyzed, allowWildcards);
+			string escaped = LuceneEscape(Convert.ToString(value, CultureInfo.InvariantCulture), allowWildcards && isAnalyzed);
+
+			return isAnalyzed ? escaped : String.Concat("[[", escaped, "]]");
 		}
 
 		private static string TransformToRangeValue(object value)
@@ -397,7 +399,7 @@ namespace Raven.Client.Document
 			if (value is DateTime)
 				return DateTools.DateToString((DateTime)value, DateTools.Resolution.MILLISECOND);
 
-			return LuceneEscape(value.ToString(), true, false);
+			return LuceneEscape(value.ToString(), false);
 		}
 
 		/// <summary>
@@ -409,7 +411,7 @@ namespace Raven.Client.Document
 		/// <remarks>
 		/// http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Escaping%20Special%20Characters
 		/// </remarks>
-		private static string LuceneEscape(string term, bool isAnalyzed, bool allowWildcards)
+		private static string LuceneEscape(string term, bool allowWildcards)
 		{
 			// method doesn't allocate a StringBuilder unless the string requires escaping
 			// also this copies chunks of the original string into the StringBuilder which
@@ -418,20 +420,13 @@ namespace Raven.Client.Document
 
 			if (string.IsNullOrEmpty(term))
 			{
-				return isAnalyzed ? "\"\"" : "[[]]";
+				return "\"\"";
 			}
 
 			bool isPhrase = false;
 			int start = 0;
 			int length = term.Length;
 			StringBuilder buffer = null;
-
-			if (!isAnalyzed)
-			{
-				// FieldIndexing.NotAnalyzed requires enclosing brackets
-				buffer = new StringBuilder(length*2);
-				buffer.Append("[[");
-			}
 
 			for (int i=start; i<length; i++)
 			{
@@ -442,7 +437,7 @@ namespace Raven.Client.Document
 					case '*':
 					case '?':
 					{
-						if (allowWildcards && isAnalyzed)
+						if (allowWildcards)
 						{
 							break;
 						}
@@ -484,7 +479,7 @@ namespace Raven.Client.Document
 					case ' ':
 					case '\t':
 					{
-						if (isAnalyzed && !isPhrase)
+						if (!isPhrase)
 						{
 							if (buffer == null)
 							{
@@ -512,12 +507,7 @@ namespace Raven.Client.Document
 				buffer.Append(term, start, length-start);
 			}
 
-			if (!isAnalyzed)
-			{
-				// FieldIndexing.NotAnalyzed requires enclosing brackets
-				buffer.Append("]]");
-			}
-			else if (isPhrase)
+			if (isPhrase)
 			{
 				// quoted phrase
 				buffer.Append('"');
