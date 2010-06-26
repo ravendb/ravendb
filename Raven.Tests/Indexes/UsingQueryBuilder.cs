@@ -1,4 +1,6 @@
 ﻿using System;
+
+using Lucene.Net.Search;
 using Raven.Database.Indexing;
 using Xunit;
 
@@ -12,6 +14,9 @@ namespace Raven.Tests.Indexes
 			var query = QueryBuilder.BuildQuery("Name:SingleTerm");
 
 			Assert.Equal("Name:singleterm", query.ToString());
+			Assert.True(query is TermQuery);
+			Assert.Equal(((TermQuery)query).GetTerm().Field(), "Name");
+			Assert.Equal(((TermQuery)query).GetTerm().Text(), "singleterm");
 		}
 
 		[Fact]
@@ -20,6 +25,12 @@ namespace Raven.Tests.Indexes
 			var query = QueryBuilder.BuildQuery("Name:\"Simple Phrase\"");
 
 			Assert.Equal("Name:\"simple phrase\"", query.ToString());
+			Assert.True(query is PhraseQuery);
+			var terms = ((PhraseQuery)query).GetTerms();
+			Assert.Equal(terms[0].Field(), "Name");
+			Assert.Equal(terms[0].Text(), "simple");
+			Assert.Equal(terms[1].Field(), "Name");
+			Assert.Equal(terms[1].Text(), "phrase");
 		}
 
 		[Fact]
@@ -28,6 +39,12 @@ namespace Raven.Tests.Indexes
 			var query = QueryBuilder.BuildQuery("Name:\"Escaped\\+\\-\\&\\|\\!\\(\\)\\{\\}\\[\\]\\^\\\"\\~\\*\\?\\:\\\\Phrase\"");
 
 			Assert.Equal("Name:\"escaped phrase\"", query.ToString());
+			Assert.True(query is PhraseQuery);
+			var terms = ((PhraseQuery)query).GetTerms();
+			Assert.Equal(terms[0].Field(), "Name");
+			Assert.Equal(terms[0].Text(), "escaped");
+			Assert.Equal(terms[1].Field(), "Name");
+			Assert.Equal(terms[1].Text(), "phrase");
 		}
 
 		[Fact]
@@ -36,6 +53,9 @@ namespace Raven.Tests.Indexes
 			var query = QueryBuilder.BuildQuery("Name:[[SingleTerm]]");
 
 			Assert.Equal("Name:SingleTerm", query.ToString());
+			Assert.True(query is TermQuery);
+			Assert.Equal(((TermQuery)query).GetTerm().Field(), "Name");
+			Assert.Equal(((TermQuery)query).GetTerm().Text(), "SingleTerm");
 		}
 
 		[Fact]
@@ -43,8 +63,10 @@ namespace Raven.Tests.Indexes
 		{
 			var query = QueryBuilder.BuildQuery("Name:[[\"Simple Phrase\"]]");
 
-			// NOTE: this looks incorrect (looks like "Name:Simple OR DEFAULT_FIELD:Phrase") but internally it is a single phrase
 			Assert.Equal("Name:Simple Phrase", query.ToString());
+			Assert.True(query is TermQuery);
+			Assert.Equal(((TermQuery)query).GetTerm().Field(), "Name");
+			Assert.Equal(((TermQuery)query).GetTerm().Text(), "Simple Phrase");
 		}
 
 		[Fact]
@@ -52,8 +74,10 @@ namespace Raven.Tests.Indexes
 		{
 			var query = QueryBuilder.BuildQuery("Name:[[Escaped\\+\\-\\&\\|\\!\\(\\)\\{\\}\\[\\]\\^\\\"\\~\\*\\?\\:\\\\Phrase]]");
 
-			// QueryBuilder should know how to properly unescape
 			Assert.Equal("Name:Escaped+-&|!(){}[]^\"~*?:\\Phrase", query.ToString());
+			Assert.True(query is TermQuery);
+			Assert.Equal(((TermQuery)query).GetTerm().Field(), "Name");
+			Assert.Equal(((TermQuery)query).GetTerm().Text(), "Escaped+-&|!(){}[]^\"~*?:\\Phrase");
 		}
 
 		[Fact]
@@ -78,6 +102,9 @@ namespace Raven.Tests.Indexes
 			var query = QueryBuilder.BuildQuery("Age_Range:{0x00000003 TO NULL}");
 
 			Assert.Equal("Age_Range:{3 TO 2147483647}", query.ToString());
+			Assert.True(query is NumericRangeQuery);
+			Assert.True(((NumericRangeQuery)query).GetMin() is int);
+			Assert.True(((NumericRangeQuery)query).GetMax() is int);
 		}
 
 		[Fact]
@@ -86,6 +113,42 @@ namespace Raven.Tests.Indexes
 			var query = QueryBuilder.BuildQuery("Age_Range:[0x00000003 TO NULL]");
 
 			Assert.Equal("Age_Range:[3 TO 2147483647]", query.ToString());
+			Assert.True(query is NumericRangeQuery);
+			Assert.True(((NumericRangeQuery)query).GetMin() is int);
+			Assert.True(((NumericRangeQuery)query).GetMax() is int);
+		}
+
+		[Fact]
+		public void Can_parse_GreaterThanOrEqual_on_long()
+		{
+			var query = QueryBuilder.BuildQuery("Age_Range:[0x0000000000000003 TO NULL]");
+
+			Assert.Equal("Age_Range:[3 TO 9223372036854775807]", query.ToString());
+			Assert.True(query is NumericRangeQuery);
+			Assert.True(((NumericRangeQuery)query).GetMin() is long);
+			Assert.True(((NumericRangeQuery)query).GetMax() is long);
+		}
+
+		[Fact]
+		public void Can_parse_GreaterThanOrEqual_on_double()
+		{
+			var query = QueryBuilder.BuildQuery("Price_Range:[Dx1.0 TO NULL]");
+
+			Assert.Equal("Price_Range:[1 TO 1.79769313486232E+308]", query.ToString());
+			Assert.True(query is NumericRangeQuery);
+			Assert.True(((NumericRangeQuery)query).GetMin() is double);
+			Assert.True(((NumericRangeQuery)query).GetMax() is double);
+		}
+
+		[Fact]
+		public void Can_parse_LessThan_on_float()
+		{
+			var query = QueryBuilder.BuildQuery("Price_Range:{NULL TO Fx1.0}");
+
+			Assert.Equal("Price_Range:{-3.402823E+38 TO 1}", query.ToString());
+			Assert.True(query is NumericRangeQuery);
+			Assert.True(((NumericRangeQuery)query).GetMin() is float);
+			Assert.True(((NumericRangeQuery)query).GetMax() is float);
 		}
 
 		[Fact]
@@ -94,6 +157,9 @@ namespace Raven.Tests.Indexes
 			var query = QueryBuilder.BuildQuery("Age_Range:{0x00000003 TO 0x00000009}");
 
 			Assert.Equal("Age_Range:{3 TO 9}", query.ToString());
+			Assert.True(query is NumericRangeQuery);
+			Assert.True(((NumericRangeQuery)query).GetMin() is int);
+			Assert.True(((NumericRangeQuery)query).GetMax() is int);
 		}
 
 		[Fact]
