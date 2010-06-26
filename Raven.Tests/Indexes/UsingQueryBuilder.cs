@@ -43,8 +43,7 @@ namespace Raven.Tests.Indexes
 		{
 			var query = QueryBuilder.BuildQuery("Name:[[Simple Phrase]]");
 
-			// NOTE: this looks incorrect (looks like Name:Simple Text:Phrase)
-			// but internally it is a correct term
+			// NOTE: this looks incorrect (looks like "Name:Simple OR DEFAULT_FIELD:Phrase") but internally it is a single phrase
 			Assert.Equal("Name:Simple Phrase", query.ToString());
 		}
 
@@ -87,6 +86,55 @@ namespace Raven.Tests.Indexes
 			var query = QueryBuilder.BuildQuery("Age_Range:[0x00000003 TO NULL]");
 
 			Assert.Equal("Age_Range:[3 TO 2147483647]", query.ToString());
+		}
+
+		[Fact]
+		public void Can_parse_conjunctions_within_disjunction_query()
+		{
+			var query = QueryBuilder.BuildQuery("(Name:\"Simple Phrase\" AND Name:SingleTerm) OR (Age:3 AND Birthday:20100515000000000)");
+
+			Assert.Equal("(+Name:\"simple phrase\" +Name:singleterm) (+Age:3 +Birthday:20100515000000000)", query.ToString());
+		}
+
+		[Fact]
+		public void Can_parse_disjunctions_within_conjunction_query()
+		{
+			var query = QueryBuilder.BuildQuery("(Name:\"Simple Phrase\" OR Name:SingleTerm) AND (Age:3 OR Birthday:20100515000000000)");
+
+			Assert.Equal("+(Name:\"simple phrase\" Name:singleterm) +(Age:3 Birthday:20100515000000000)", query.ToString());
+		}
+
+		[Fact]
+		public void Can_parse_conjunctions_within_disjunction_query_with_int_range()
+		{
+			var query = QueryBuilder.BuildQuery("(Name:\"Simple Phrase\" AND Name:SingleTerm) OR (Age_Range:{0x00000003 TO NULL} AND Birthday:20100515000000000)");
+
+			Assert.Equal("(+Name:\"simple phrase\" +Name:singleterm) (+Age_Range:{3 TO 2147483647} +Birthday:20100515000000000)", query.ToString());
+		}
+
+		[Fact]
+		public void Can_parse_disjunctions_within_conjunction_query_with_date_range()
+		{
+			var query = QueryBuilder.BuildQuery("(Name:\"Simple Phrase\" OR Name:SingleTerm) AND (Age_Range:3 OR Birthday:[NULL TO 20100515000000000])");
+
+			Assert.Equal("+(Name:\"escaped phrase\" Name:singleterm) +(Age_Range:3 Birthday:[null TO 20100515000000000])", query.ToString());
+		}
+
+		[Fact]
+		public void Can_parse_conjunctions_within_disjunction_query_with_NotAnalyzed_field()
+		{
+			var query = QueryBuilder.BuildQuery("(Name:\"Simple Phrase\" AND Name:[[Simple Phrase]]) OR (Age_Range:3 AND Birthday:20100515000000000)");
+
+			// NOTE: this looks incorrect (looks like "Name:Simple OR DEFAULT_FIELD:Phrase") but internally it is a single phrase
+			Assert.Equal("(+Name:\"simple phrase\" +Name:Simple Phrase) (+Age_Range:3 +Birthday:20100515000000000)", query.ToString());
+		}
+
+		[Fact]
+		public void Can_parse_disjunctions_within_conjunction_query_with_escaped_field()
+		{
+			var query = QueryBuilder.BuildQuery("(Name:\"Escaped\\+\\-\\&\\|\\!\\(\\)\\{\\}\\[\\]\\^\\\"\\~\\*\\?\\:\\\\Phrase\" OR Name:SingleTerm) AND (Age_Range:3 OR Birthday:20100515000000000)");
+
+			Assert.Equal("+(Name:\"escaped phrase\" Name:singleterm) +(Age_Range:3 Birthday:20100515000000000)", query.ToString());
 		}
 	}
 }
