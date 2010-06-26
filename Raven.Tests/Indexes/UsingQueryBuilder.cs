@@ -41,7 +41,7 @@ namespace Raven.Tests.Indexes
 		[Fact]
 		public void Can_parse_NotAnalyzed_simple_phrase()
 		{
-			var query = QueryBuilder.BuildQuery("Name:[[Simple Phrase]]");
+			var query = QueryBuilder.BuildQuery("Name:[[\"Simple Phrase\"]]");
 
 			// NOTE: this looks incorrect (looks like "Name:Simple OR DEFAULT_FIELD:Phrase") but internally it is a single phrase
 			Assert.Equal("Name:Simple Phrase", query.ToString());
@@ -89,6 +89,14 @@ namespace Raven.Tests.Indexes
 		}
 
 		[Fact]
+		public void Can_parse_fixed_range_on_int()
+		{
+			var query = QueryBuilder.BuildQuery("Age_Range:{0x00000003 TO 0x00000009}");
+
+			Assert.Equal("Age_Range:{3 TO 9}", query.ToString());
+		}
+
+		[Fact]
 		public void Can_parse_conjunctions_within_disjunction_query()
 		{
 			var query = QueryBuilder.BuildQuery("(Name:\"Simple Phrase\" AND Name:SingleTerm) OR (Age:3 AND Birthday:20100515000000000)");
@@ -117,16 +125,16 @@ namespace Raven.Tests.Indexes
 		{
 			var query = QueryBuilder.BuildQuery("(Name:\"Simple Phrase\" OR Name:SingleTerm) AND (Age_Range:3 OR Birthday:[NULL TO 20100515000000000])");
 
-			Assert.Equal("+(Name:\"escaped phrase\" Name:singleterm) +(Age_Range:3 Birthday:[null TO 20100515000000000])", query.ToString());
+			Assert.Equal("+(Name:\"simple phrase\" Name:singleterm) +(Age_Range:3 Birthday:[null TO 20100515000000000])", query.ToString());
 		}
 
 		[Fact]
 		public void Can_parse_conjunctions_within_disjunction_query_with_NotAnalyzed_field()
 		{
-			var query = QueryBuilder.BuildQuery("(Name:\"Simple Phrase\" AND Name:[[Simple Phrase]]) OR (Age_Range:3 AND Birthday:20100515000000000)");
+			var query = QueryBuilder.BuildQuery("(AnalyzedName:\"Simple Phrase\" AND NotAnalyzedName:[[\"Simple Phrase\"]]) OR (Age_Range:3 AND Birthday:20100515000000000)");
 
 			// NOTE: this looks incorrect (looks like "Name:Simple OR DEFAULT_FIELD:Phrase") but internally it is a single phrase
-			Assert.Equal("(+Name:\"simple phrase\" +Name:Simple Phrase) (+Age_Range:3 +Birthday:20100515000000000)", query.ToString());
+			Assert.Equal("(+AnalyzedName:\"simple phrase\" +NotAnalyzedName:Simple Phrase) (+Age_Range:3 +Birthday:20100515000000000)", query.ToString());
 		}
 
 		[Fact]
