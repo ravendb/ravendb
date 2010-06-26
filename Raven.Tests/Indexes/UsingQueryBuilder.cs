@@ -53,7 +53,8 @@ namespace Raven.Tests.Indexes
 		{
 			var query = QueryBuilder.BuildQuery("Name:[[Escaped\\+\\-\\&\\|\\!\\(\\)\\{\\}\\[\\]\\^\\\"\\~\\*\\?\\:\\\\Phrase]]");
 
-			Assert.Equal("Name:Escaped\\+\\-\\&\\|\\!\\(\\)\\{\\}\\[\\]\\^\\\"\\~\\*\\?\\:\\\\Phrase", query.ToString());
+			// QueryBuilder should know how to properly unescape
+			Assert.Equal("Name:Escaped+-&|!(){}[]^\"~*?:\\Phrase", query.ToString());
 		}
 	}
 }
