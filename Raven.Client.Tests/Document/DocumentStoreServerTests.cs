@@ -966,5 +966,46 @@ namespace Raven.Client.Tests.Document
 				}
 			}
 		}
+
+        [Fact]
+        public void Can_get_correct_maximum_from_map_reduce_index() {
+            using (var server = GetNewServer(port, path)) {
+                var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+                documentStore.Initialize();
+                documentStore.DatabaseCommands.PutIndex("MaxAge", new IndexDefinition<LinqIndexesFromClient.User, LinqIndexesFromClient.LocationAge> {
+                    Map = users => from user in users
+                                   select new { user.Age },
+                    Reduce = results => from result in results
+                                        let allResults = results
+                                        select new { Age = allResults.Max() },
+                });
+
+                using (var session = documentStore.OpenSession()) {
+
+                    session.Store(new LinqIndexesFromClient.User {
+                        Age = 27,
+                        Name = "Foo"
+                    });
+
+                    session.Store(new LinqIndexesFromClient.User {
+                        Age = 33,
+                        Name = "Bar"
+                    });
+
+                    session.Store(new LinqIndexesFromClient.User {
+                        Age = 29,
+                        Name = "Bar"
+                    });
+
+                    session.SaveChanges();
+
+                    LinqIndexesFromClient.LocationAge single = session.LuceneQuery<LinqIndexesFromClient.LocationAge>("MaxAge")
+                        .WaitForNonStaleResults()
+                        .Single();
+
+                    Assert.Equal(33, single.Age);
+                }
+            }
+        }
 	}
 }

@@ -217,6 +217,8 @@ namespace Raven.Database.Server.Responders
             var etagAsString = context.Request.QueryString["cutOff"];
             if (etagAsString != null)
             {
+                etagAsString = Uri.UnescapeDataString(etagAsString);
+
                 DateTime result;
                 if (DateTime.TryParseExact(etagAsString, "o", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out result))
                     return result;
