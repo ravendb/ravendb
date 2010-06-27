@@ -106,7 +106,7 @@ namespace Raven.Database.Server.Responders
 	    {
 	        return new IndexQuery
 	        {
-	            Query = context.Request.QueryString["query"],
+	            Query = Uri.UnescapeDataString(context.Request.QueryString["query"]),
 	            Start = context.GetStart(),
 	            Cutoff = context.GetCutOff(),
 	            FieldsToFetch = context.Request.QueryString.GetValues("fetch"),
