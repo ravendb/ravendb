@@ -45,6 +45,12 @@ namespace Newtonsoft.Json.Bson
     private BsonToken _parent;
     private string _propertyName;
 
+  	public bool NoDateTimeUniversalConversion
+  	{
+		get { return _writer.NoDateTimeUniversalConversion; }
+		set { _writer.NoDateTimeUniversalConversion = value;}
+  	}
+
     /// <summary>
     /// Initializes a new instance of the <see cref="BsonWriter"/> class.
     /// </summary>
