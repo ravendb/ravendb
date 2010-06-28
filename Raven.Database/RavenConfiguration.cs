@@ -195,6 +195,10 @@ namespace Raven.Database
 			var type = 
 				Type.GetType(StorageTypeName.Split(',').First()) ?? // first try to find the merged one
 				Type.GetType(StorageTypeName); // then try full type name
+
+			if(type == null)
+				throw new InvalidOperationException("Could not find transactional storage type: " + StorageTypeName);
+
 			return (ITransactionalStorage)Activator.CreateInstance(type, this, notifyAboutWork);
 		}
 
