@@ -90,8 +90,6 @@ select new { Tag = g.Key, Count = g.Sum(x => (long)x.Count) }"
 			//  Only supporting accuracy up to the millisecond
 			expectedTime = new DateTime(expectedTime.Year, expectedTime.Month, expectedTime.Day, expectedTime.Hour, expectedTime.Minute, expectedTime.Second, expectedTime.Millisecond, expectedTime.Kind);
 
-			string id = null;
-
 			using (var store = NewDocumentStore())
 			{
 				using (var session = store.OpenSession())
