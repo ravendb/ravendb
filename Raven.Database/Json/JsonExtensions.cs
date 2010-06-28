@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Text;
 using Newtonsoft.Json;
@@ -10,14 +11,20 @@ namespace Raven.Database.Json
 	{
 		public static JObject ToJObject(this byte [] self)
 		{
-			return JObject.Load(new BsonReader(new MemoryStream(self)));
+			return JObject.Load(new BsonReader(new MemoryStream(self))
+			{
+				DateTimeKindHandling = DateTimeKind.Utc,
+			});
 		}
 
 		public static byte[] ToBytes(this JToken self)
 		{
 			using (var memoryStream = new MemoryStream())
 			{
-				self.WriteTo(new BsonWriter(memoryStream));
+				self.WriteTo(new BsonWriter(memoryStream)
+				{
+					NoDateTimeUniversalConversion = true
+				});
 				return memoryStream.ToArray();
 			}
 		}

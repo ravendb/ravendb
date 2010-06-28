@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Transactions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -11,7 +10,6 @@ using Raven.Client.Exceptions;
 using Raven.Database;
 using Raven.Database.Data;
 using Raven.Database.Json;
-using System.Diagnostics;
 
 #if !NET_3_5
 using System.Dynamic;
@@ -71,6 +69,24 @@ namespace Raven.Client.Document
 			return value.Metadata;
 		}
 
+		public bool HasChanges
+		{
+			get 
+			{
+				return deletedEntities.Count > 0 ||
+						entitiesAndMetadata.Where(pair => EntityChanged(pair.Key, pair.Value)).Any();
+			}
+		}
+
+
+		public bool HasChanged(object entity)
+		{
+			DocumentSession.DocumentMetadata value;
+			if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
+				return false;
+			return EntityChanged(entity, value);
+		}
+
 		internal void IncrementRequestCount()
 		{
 			if (++numberOfRequests > MaxNumberOfRequestsPerSession)
@@ -125,6 +141,7 @@ more responsive application.
 			{
 				OriginalValue = document,
 				Metadata = metadata,
+				OriginalMetadata = metadata,
 				ETag = new Guid(etag),
 				Key = key
 			};
@@ -217,6 +234,7 @@ more responsive application.
 			{
 				Key = id,
 				Metadata = new JObject(new JProperty(RavenEntityName, new JValue(tag))),
+				OriginalMetadata = new JObject(),
 				ETag = null,
 				OriginalValue = new JObject()
 			});
@@ -294,6 +312,7 @@ more responsive application.
 				entitiesByKey[batchResult.Key] = entity;
 				documentMetadata.ETag = batchResult.Etag;
 				documentMetadata.Key = batchResult.Key;
+				documentMetadata.OriginalMetadata = batchResult.Metadata;
 				documentMetadata.OriginalValue = ConvertEntityToJson(entity, documentMetadata.Metadata);
 
 				// Set/Update the id of the entity
@@ -339,7 +358,7 @@ more responsive application.
 				});
 			}
 			deletedEntities.Clear();
-			foreach (var entity in entitiesAndMetadata.Where(EntityChanged))
+			foreach (var entity in entitiesAndMetadata.Where(pair => EntityChanged(pair.Key, pair.Value)))
 			{
 				result.Entities.Add(entity.Key);
 				if (entity.Value.Key != null)
@@ -368,12 +387,14 @@ more responsive application.
 			hasEnlisted = true;
 		}
 
-		protected bool EntityChanged(KeyValuePair<object, DocumentSession.DocumentMetadata> kvp)
+		protected bool EntityChanged(object entity, DocumentSession.DocumentMetadata documentMetadata)
 		{
-			var newObj = ConvertEntityToJson(kvp.Key, kvp.Value.Metadata);
-			if (kvp.Value == null)
-				return true;
-			return new JTokenEqualityComparer().Equals(newObj, kvp.Value.OriginalValue) == false;
+			if (documentMetadata == null)
+				return true; 
+			var newObj = ConvertEntityToJson(entity, documentMetadata.Metadata);
+			var equalityComparer = new JTokenEqualityComparer();
+			return equalityComparer.Equals(newObj, documentMetadata.OriginalValue) == false ||
+				equalityComparer.Equals(documentMetadata.Metadata, documentMetadata.OriginalMetadata) == false;
 		}
 
 		private JObject ConvertEntityToJson(object entity, JObject metadata)

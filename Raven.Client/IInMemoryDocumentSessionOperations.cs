@@ -30,5 +30,8 @@ namespace Raven.Client
 
 		JObject GetMetadataFor<T>(T instance);
 
+		bool HasChanges { get; }
+
+		bool HasChanged(object entity);
 	}
 }

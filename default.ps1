@@ -272,6 +272,8 @@ task DoRelease -depends Compile {
 	cp $build_dir\Lucene.Net.dll $build_dir\Output\EmbeddedClient
 	cp $build_dir\log4net.dll $build_dir\Output\EmbeddedClient
 	cp $build_dir\Newtonsoft.Json.dll $build_dir\Output\EmbeddedClient
+	cp $build_dir\Raven.Storage.Esent.dll $build_dir\Output\EmbeddedClient
+	cp $build_dir\Raven.Storage.Managed.dll $build_dir\Output\EmbeddedClient
 	
 	cp $build_dir\RavenSmuggler.exe $build_dir\Output
 	

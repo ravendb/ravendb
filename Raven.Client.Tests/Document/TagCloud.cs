@@ -85,6 +85,47 @@ select new { Tag = g.Key, Count = g.Sum(x => (long)x.Count) }"
 			}
 		}
 
+		public void CanStoreAndRetrieveTime(DateTime expectedTime)
+		{
+			//  Only supporting accuracy up to the millisecond
+			expectedTime = new DateTime(expectedTime.Year, expectedTime.Month, expectedTime.Day, expectedTime.Hour, expectedTime.Minute, expectedTime.Second, expectedTime.Millisecond, expectedTime.Kind);
+
+			using (var store = NewDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Post
+					{
+						PostedAt = expectedTime,
+						Tags = new List<string> { "C#", "Programming", "NoSql" }
+					});
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession())
+				{
+					var posts = session.Query<Post>("Raven/DocumentsByEntityName")
+						.Customize(q => q.WaitForNonStaleResultsAsOfNow(TimeSpan.FromSeconds(5)))
+						.ToArray();
+
+					Assert.Equal(1, posts.Length);
+					Assert.Equal(expectedTime, posts[0].PostedAt);
+				}
+			}
+		}
+
+		[Fact]
+		public void CanStoreAndRetrieveTimeLocal()
+		{
+			CanStoreAndRetrieveTime(DateTime.Now);
+		}
+
+		[Fact]
+		public void CanStoreAndRetrieveTimeUtc()
+		{
+			CanStoreAndRetrieveTime(DateTime.UtcNow);
+		}
+
 		[Fact]
 		public void CanQueryMapReduceIndex_WithUpdates()
 		{

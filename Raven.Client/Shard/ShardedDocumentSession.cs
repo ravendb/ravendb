@@ -56,7 +56,22 @@ namespace Raven.Client.Shard
 	        return GetSingleShardSession(shardIds).GetMetadataFor(instance);
 	    }
 
-	    public ShardedDocumentSession(IShardStrategy shardStrategy, params IDocumentSession[] shardSessions)
+		public bool HasChanges
+		{
+			get
+			{
+				return shardSessions.Any(x => x.HasChanges);
+			}
+		}
+
+		public bool HasChanged(object entity)
+		{
+			var shardIds = shardStrategy.ShardSelectionStrategy.ShardIdForExistingObject(entity);
+
+			return GetSingleShardSession(shardIds).HasChanged(entity);
+		}
+
+		public ShardedDocumentSession(IShardStrategy shardStrategy, params IDocumentSession[] shardSessions)
 		{
 			this.shardStrategy = shardStrategy;
 			this.shardSessions = shardSessions;

@@ -107,7 +107,10 @@ namespace Newtonsoft.Json.Bson
             if (value.Value is DateTime)
             {
               DateTime dateTime = (DateTime) value.Value;
-              dateTime = dateTime.ToUniversalTime();
+			  if (NoDateTimeUniversalConversion == false)
+			  	dateTime = dateTime.ToUniversalTime();
+			  else // pretend that this is UTC date
+			  	dateTime = new DateTime(dateTime.Ticks, DateTimeKind.Utc);
               ticks = JsonConvert.ConvertDateTimeToJavaScriptTicks(dateTime);
             }
 #if !PocketPC && !NET20
@@ -152,7 +155,9 @@ namespace Newtonsoft.Json.Bson
       }
     }
 
-    private void WriteString(string s, int byteCount, int? calculatedlengthPrefix)
+  	public bool NoDateTimeUniversalConversion { get; set; }
+
+  	private void WriteString(string s, int byteCount, int? calculatedlengthPrefix)
     {
       if (calculatedlengthPrefix != null)
         _writer.Write(calculatedlengthPrefix.Value);
