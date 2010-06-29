@@ -16,3 +16,4 @@ _ReSharper.*/
 /Data/temp/
 *.InstallLog
 /Raven.Database/Raven.Database.g.csproj
+/test/storage.raven

@@ -45,11 +45,19 @@ namespace Raven.Storage.Managed
 									FileShare.Delete | FileShare.Read,
 									16 * 1024,
 									FileOptions.WriteThrough | FileOptions.SequentialScan);
-			binaryWriter = new BinaryWriterWith7BitEncoding(writer);
-			isNewDatabase = writer.Length == 0;
-			if (isNewDatabase)
-				CreateFromScratch();
-			TryReadingExistingFile();
+			try
+			{
+				binaryWriter = new BinaryWriterWith7BitEncoding(writer);
+				isNewDatabase = writer.Length == 0;
+				if (isNewDatabase)
+					CreateFromScratch();
+				TryReadingExistingFile();
+			}
+			catch (Exception)
+			{
+				Dispose();
+				throw;
+			}
 		}
 
 		private void TryReadingExistingFile()
