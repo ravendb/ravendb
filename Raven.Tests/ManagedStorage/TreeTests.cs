@@ -18,6 +18,22 @@ namespace Raven.Storage.Tests
 			Assert.Equal(13, docPos);
 		}
 
+		[Fact(Skip = "The impl is broken :-(")]
+		public void CanAddAndSearch()
+		{
+			var buffer = new byte[1024];
+			var tree = new Tree(new MemoryStream(buffer), new MemoryStream(buffer), StartMode.Create);
+			for (int i = 0; i < 7; i++)
+			{
+				tree.Add("commitinfos/" + (i + 1), i);
+			}
+
+			for (int i = 0; i < 7; i++)
+			{
+				Assert.NotNull(tree.FindNode("commitinfos/" + (i + 1)));
+			}
+		}
+
 		[Fact]
 		public void PartialSearches_ShouldResultInIndexScan()
 		{
