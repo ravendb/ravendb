@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
@@ -15,10 +16,7 @@ namespace Raven.Database.Tasks
 		{
 			get
 			{
-				var type = GetType();
-				if (type.Assembly == typeof(Task).Assembly)
-					return type.FullName;
-				return type.AssemblyQualifiedName;
+				return GetType().AssemblyQualifiedName;
 			}
 		}
 
