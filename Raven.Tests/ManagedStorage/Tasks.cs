@@ -20,6 +20,23 @@ namespace Raven.Storage.Tests
 		}
 
 		[Fact]
+		public void CanCheckForExistanceOfTasksAfterTaskWasRemoved()
+		{
+			using (var tx = new TransactionalStorage("test"))
+			{
+				tx.Read(viewer => Assert.False(viewer.Tasks.DoesTasksExistsForIndex("test", null)));
+				tx.Write(mutator => mutator.Tasks.AddTask(new MyTask { Index = "test" }));
+				tx.Read(viewer => Assert.True(viewer.Tasks.DoesTasksExistsForIndex("test", null))); 
+				
+				int tasks = 0;
+				tx.Write(mutator => mutator.Tasks.GetMergedTask(out tasks));
+				Assert.Equal(1, tasks);
+				tx.Read(viewer => Assert.False(viewer.Tasks.DoesTasksExistsForIndex("test", null)));
+			}
+		}
+
+
+		[Fact]
 		public void CanCheckForExistanceOfTasksWithCutOffs()
 		{
 			using (var tx = new TransactionalStorage("test"))

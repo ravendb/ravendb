@@ -31,6 +31,7 @@ namespace Raven.Storage.Managed.StroageActions
 		public void AddTask(Task task)
 		{
 			var pos = Writer.Position;
+			BinaryWriter.Write(task.Index);
 			BinaryWriter.Write(task.Type);
 			new JsonSerializer().Serialize(new BsonWriter(Writer), task);
 			Mutator.IncrementTaskCount();
@@ -60,15 +61,22 @@ namespace Raven.Storage.Managed.StroageActions
 			foreach (var tuple in Mutator.Tasks.Scan())
 			{
 				Reader.Position = tuple.Item1;
+
+				var taskIndex = BinaryReader.ReadString();
+				if(task != null && task.Index != taskIndex)
+					continue;
+
 				var taskTypeName = BinaryReader.ReadString();
 				var taskType = Type.GetType(taskTypeName);
-
+				if(taskType == null)
+					throw new InvalidOperationException("Could not find task type: " + taskTypeName);
 				if (task != null && task.GetType() != taskType)
 				{
-					break;
+					continue;
 				}
-				
-				var currentTask = (Task) new JsonSerializer().Deserialize(new BsonReader(Reader), taskType);
+
+				var deserialize = new JsonSerializer().Deserialize(new BsonReader(Reader), taskType);
+				var currentTask = (Task) deserialize;
 
 				if (task == null)
 				{
@@ -90,6 +98,13 @@ namespace Raven.Storage.Managed.StroageActions
 			foreach (var idToRemove in idsToRemove)
 			{
 				Mutator.Tasks.Remove(idToRemove);
+				if(task == null)
+					continue;
+
+				Mutator.TasksByIndex.Remove(new JObject(
+										new JProperty("Index", task.Index), // all the tasks are for the same index
+										new JProperty("Id", idToRemove)
+										));
 			}
 			return task;
 		}
