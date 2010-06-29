@@ -67,7 +67,7 @@ namespace Raven.Storage.Managed.StroageActions
 					continue;
 
 				var taskTypeName = BinaryReader.ReadString();
-				var taskType = Type.GetType(taskTypeName);
+				var taskType = GetTaskType(taskTypeName);
 				if(taskType == null)
 					throw new InvalidOperationException("Could not find task type: " + taskTypeName);
 				if (task != null && task.GetType() != taskType)
@@ -109,5 +109,9 @@ namespace Raven.Storage.Managed.StroageActions
 			return task;
 		}
 
+		private static Type GetTaskType(string taskTypeName)
+		{
+			return typeof (Task).Assembly.GetType(taskTypeName) ?? Type.GetType(taskTypeName);
+		}
 	}
 }

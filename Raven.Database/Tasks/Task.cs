@@ -16,7 +16,12 @@ namespace Raven.Database.Tasks
 		{
 			get
 			{
-				return GetType().AssemblyQualifiedName;
+				var type = GetType();
+				if(type.Assembly == typeof(Task).Assembly)
+				{
+					return type.FullName;
+				}
+				return type.AssemblyQualifiedName;
 			}
 		}
 
