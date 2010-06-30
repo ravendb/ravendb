@@ -213,7 +213,7 @@ namespace Raven.Tests.Linq
             }
         }
         
-        [Fact(Skip="apparent bug for datetime comparisons...")]
+        [Fact]
         public void Can_perform_DateTime_Comparison_Queries() {
 
             DateTime firstTime = DateTime.UtcNow;

@@ -190,7 +190,7 @@ namespace Raven.Client.Document
 			}
 
 			queryText.Append(fieldName).Append(":{");
-			queryText.Append(start == null ? "NULL" : TransformToRangeValue(start));
+			queryText.Append(start == null ? "*" : TransformToRangeValue(start));
 			queryText.Append(" TO ");
 			queryText.Append(end == null ? "NULL" : TransformToRangeValue(end));
 			queryText.Append("}");
@@ -206,7 +206,7 @@ namespace Raven.Client.Document
 			}
 
 			queryText.Append(fieldName).Append(":[");
-			queryText.Append(start == null ? "NULL" : TransformToRangeValue(start));
+			queryText.Append(start == null ? "*" : TransformToRangeValue(start));
 			queryText.Append(" TO ");
 			queryText.Append(end == null ? "NULL" : TransformToRangeValue(end));
 			queryText.Append("]");
