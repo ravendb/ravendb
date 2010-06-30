@@ -27,7 +27,8 @@ namespace Raven.Database.Indexing
 
 		public static object StringToNumber(string number)
 		{
-			if ("NULL".Equals(number, StringComparison.InvariantCultureIgnoreCase))
+			if ("NULL".Equals(number, StringComparison.InvariantCultureIgnoreCase) || 
+				"*".Equals(number,StringComparison.InvariantCultureIgnoreCase))
 				return null;
 			if(number.Length <= 2)
 				throw new ArgumentException("String must be greater than 2 characters");
