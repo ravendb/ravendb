@@ -16,24 +16,24 @@ namespace Raven.Database.Indexing
 
 		public static Query BuildQuery(string query)
 		{
-			PerFieldAnalyzerWrapper analyzer = new PerFieldAnalyzerWrapper(new StandardAnalyzer(Version.LUCENE_29));
-		    try
+			var analyzer = new PerFieldAnalyzerWrapper(new StandardAnalyzer(Version.LUCENE_29));
+			var keywordAnalyzer = new KeywordAnalyzer();
+			try
 		    {
-				query = PreProcessUntokenizedTerms(analyzer, query);
+		    	query = PreProcessUntokenizedTerms(analyzer, query, keywordAnalyzer);
 				return new RangeQueryParser(Version.LUCENE_29, "", analyzer).Parse(query);
 			}
 		    finally
 		    {
 		        analyzer.Close();
+				keywordAnalyzer.Close();
 		    }
 		}
 
 		/// <summary>
 		/// Detects untokenized fields and sets as NotAnalyzed in analyzer
 		/// </summary>
-		/// <param name="analyzer"></param>
-		/// <param name="sb"></param>
-		private static string PreProcessUntokenizedTerms(PerFieldAnalyzerWrapper analyzer, string query)
+		private static string PreProcessUntokenizedTerms(PerFieldAnalyzerWrapper analyzer, string query, Analyzer keywordAnlyzer)
 		{
 			var untokenizedMatches = untokenizedQuery.Matches(query);
 			if (untokenizedMatches.Count < 1)
@@ -44,7 +44,6 @@ namespace Raven.Database.Indexing
 			var sb = new StringBuilder(query);
 
 			// KeywordAnalyzer will not tokenize the values
-			KeywordAnalyzer keywordAnlyzer = new KeywordAnalyzer();
 
 			// process in reverse order to leverage match string indexes
 			for (int i=untokenizedMatches.Count; i>0; i--)
