@@ -95,20 +95,26 @@ namespace Raven.Database.Server.Responders
 				context.WriteJson(new {Index = Database.IndexDefinitionStorage.GetIndexDefinition(index)});
 			}
 			else
-			{
-                context.WriteJson(Database.Query(index, new IndexQuery
-				{
-					Query = context.Request.QueryString["query"],
-					Start = context.GetStart(),
-					PageSize = context.GetPageSize(Database.Configuration.MaxPageSize),
-                    Cutoff = context.GetCutOff(),
-					FieldsToFetch = context.Request.QueryString.GetValues("fetch"),
-					SortedFields = context.Request.QueryString.GetValues("sort")
-						.EmptyIfNull()
-						.Select(x => new SortedField(x))
-						.ToArray()
-				}));
+            {
+                IndexQuery indexQuery = GetIndexQueryFromHttpContext(context);
+                indexQuery.PageSize = Database.Configuration.MaxPageSize;
+                context.WriteJson(Database.Query(index, indexQuery));
 			}
 		}
+
+	    static public IndexQuery GetIndexQueryFromHttpContext(IHttpContext context)
+	    {
+	        return new IndexQuery
+	        {
+	            Query = Uri.UnescapeDataString(context.Request.QueryString["query"]),
+	            Start = context.GetStart(),
+	            Cutoff = context.GetCutOff(),
+	            FieldsToFetch = context.Request.QueryString.GetValues("fetch"),
+	            SortedFields = context.Request.QueryString.GetValues("sort")
+	                .EmptyIfNull()
+	                .Select(x => new SortedField(x))
+	                .ToArray()
+	        };
+	    }
 	}
 }

@@ -30,7 +30,8 @@ namespace Raven.Database.Data
 
 		public string GetIndexQueryUrl(string operationUrl, string index, string operationName)
 		{
-			var path = string.Format("{0}/{5}/{1}?query={2}&start={3}&pageSize={4}", operationUrl, index, Query,
+			var path = string.Format("{0}/{5}/{1}?query={2}&start={3}&pageSize={4}", operationUrl, index, 
+                                     Uri.EscapeDataString(Query),
 			                         Start, PageSize, operationName);
 			if (FieldsToFetch != null && FieldsToFetch.Length > 0)
 			{
