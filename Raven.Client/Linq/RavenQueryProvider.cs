@@ -3,9 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Text;
 using Raven.Database.Data;
-using Raven.Database.Indexing;
 
 namespace Raven.Client.Linq
 {
@@ -13,12 +11,15 @@ namespace Raven.Client.Linq
     {
 		private enum SpecialQueryType
 		{
+			None,
+			All,
+			Any,
+			Count,
 			First,
 			FirstOrDefault,
 			Single,
-			SingleOrDefault,
-			None
-		} 
+			SingleOrDefault
+		}
 
         private readonly IDocumentSession session;
         private readonly string indexName;
@@ -36,6 +37,11 @@ namespace Raven.Client.Linq
             get { return indexName; }
         }
 
+		public IDocumentQuery<T> LuceneQuery
+		{
+			get { return this.luceneQuery; }
+		}
+
     	public QueryResult QueryResult
     	{
     		get
@@ -50,66 +56,73 @@ namespace Raven.Client.Linq
         {
             this.session = session;
             this.indexName = indexName;
-            QueryText = new StringBuilder();
             FieldsToFetch = new List<string>();
         }
 
-        public StringBuilder QueryText { get; set; }
         public List<string> FieldsToFetch { get; set; }
-
-        private int? skipValue;
-        private int? takeValue;
 
         private SpecialQueryType queryType = SpecialQueryType.None;
 
+		private Expression<Func<T, bool>> predicate;
+
         public object Execute(Expression expression)
         {
-        	QueryText.Length = 0;
 			ProcessExpression(expression);
-        	luceneQuery = session.LuceneQuery<T>(indexName);
 
-            var documentQuery = luceneQuery.Where(QueryText.ToString());
-            
-            if (skipValue.HasValue)
-            {
-                documentQuery = documentQuery.Skip(skipValue.Value);
-            }
-            if (takeValue.HasValue)
-            {
-                documentQuery = documentQuery.Take(takeValue.Value);
-            }                         
+			luceneQuery = luceneQuery.SelectFields<T>(FieldsToFetch.ToArray());            
 
-            documentQuery = documentQuery.SelectFields<T>(FieldsToFetch.ToArray());            
-
-			if(customizeQuery != null)
-				customizeQuery(documentQuery);
+			if (customizeQuery != null)
+				customizeQuery(luceneQuery);
 
 			switch (queryType)
 			{
 				case SpecialQueryType.First:
 				{
-					return documentQuery.First();               
+					return luceneQuery.First();               
 				}
 				case SpecialQueryType.FirstOrDefault:
 				{
-					return documentQuery.FirstOrDefault();
+					return luceneQuery.FirstOrDefault();
 				}
 				case SpecialQueryType.Single:
 				{
-					return documentQuery.Single();
+					return luceneQuery.Single();
 				}
 				case SpecialQueryType.SingleOrDefault:
 				{
-					return documentQuery.SingleOrDefault();
+					return luceneQuery.SingleOrDefault();
+				}
+				case SpecialQueryType.All:
+				{
+					return luceneQuery.AsQueryable().All(this.predicate);
+				}
+				case SpecialQueryType.Any:
+				{
+					return luceneQuery.Any();
+				}
+				case SpecialQueryType.Count:
+				{
+					return luceneQuery.QueryResult.TotalResults;
 				}
 				default:
-					return documentQuery;
+				{
+					return luceneQuery;
+				}
 			}
         }
 
         public void ProcessExpression(Expression expression)
         {
-            VisitExpression(expression);
+			if (session == null)
+			{
+				// this is to support unit testing
+				luceneQuery = new Raven.Client.Document.DocumentQuery<T>(null, null, indexName, null);
+			}
+			else
+			{
+				luceneQuery = session.LuceneQuery<T>(indexName);
+			}
+			VisitExpression(expression);
         }
 
         private void VisitExpression(Expression expression)
@@ -123,7 +136,7 @@ namespace Raven.Client.Linq
                     VisitAndAlso((BinaryExpression)expression);
                     break;
                 case ExpressionType.Equal:
-                    VisitEqual((BinaryExpression)expression);
+                    VisitEquals((BinaryExpression)expression);
                     break;
                 case ExpressionType.GreaterThan:
                     VisitGreaterThan((BinaryExpression)expression);
@@ -157,12 +170,11 @@ namespace Raven.Client.Linq
             }
         }
        
-
         private void VisitAndAlso(BinaryExpression andAlso)
         {
             VisitExpression(andAlso.Left);
 
-            QueryText.Append("AND ");
+			luceneQuery.AndAlso();
 
             VisitExpression(andAlso.Right);
         }
@@ -171,40 +183,105 @@ namespace Raven.Client.Linq
         {
             VisitExpression(orElse.Left);
 
-            QueryText.Append("OR ");
+			luceneQuery.OrElse();
 
             VisitExpression(orElse.Right);
         }
 
-        private void VisitEqual(BinaryExpression expression)
+        private void VisitEquals(BinaryExpression expression)
         {
-            QueryText.Append(((MemberExpression)expression.Left).Member.Name).Append(":");
-			QueryText.Append(TransformToEqualValue(GetValueFromExpression(expression.Right)));
+			MemberInfo memberInfo = ((MemberExpression)expression.Left).Member;
 
-            QueryText.Append(" ");
+			luceneQuery.WhereEquals(
+				memberInfo.Name,
+				GetValueFromExpression(expression.Right),
+				GetFieldType(memberInfo) != typeof(string),
+				false);
         }
+
+		private void VisitEquals(MethodCallExpression expression)
+		{
+			MemberInfo memberInfo = ((MemberExpression)expression.Object).Member;
+
+			luceneQuery.WhereEquals(
+				memberInfo.Name,
+				GetValueFromExpression(expression.Arguments[0]),
+				GetFieldType(memberInfo) != typeof(string),
+				false);
+		}
+
+		private void VisitContains(MethodCallExpression expression)
+		{
+			MemberInfo memberInfo = ((MemberExpression)expression.Object).Member;
+
+			luceneQuery.WhereContains(
+				memberInfo.Name,
+				GetValueFromExpression(expression.Arguments[0]));
+		}
+
+		private void VisitStartsWith(MethodCallExpression expression)
+		{
+			MemberInfo memberInfo = ((MemberExpression)expression.Object).Member;
+
+			luceneQuery.WhereStartsWith(
+				memberInfo.Name,
+				GetValueFromExpression(expression.Arguments[0]));
+		}
+
+		private void VisitEndsWith(MethodCallExpression expression)
+		{
+			MemberInfo memberInfo = ((MemberExpression)expression.Object).Member;
+
+			luceneQuery.WhereEndsWith(
+				memberInfo.Name,
+				GetValueFromExpression(expression.Arguments[0]));
+		}
+
+		private void VisitGreaterThan(BinaryExpression expression)
+		{
+			object value = GetValueFromExpression(expression.Right);
+
+			luceneQuery.WhereGreaterThan(
+				GetFieldNameForRangeQuery(expression.Left, value),
+				value);
+		}
+
+		private void VisitGreaterThanOrEqual(BinaryExpression expression)
+		{
+			object value = GetValueFromExpression(expression.Right);
+
+			luceneQuery.WhereGreaterThanOrEqual(
+				GetFieldNameForRangeQuery(expression.Left, value),
+				value);
+		}
+
+		private void VisitLessThan(BinaryExpression expression)
+		{
+			object value = GetValueFromExpression(expression.Right);
+
+			luceneQuery.WhereLessThan(
+				GetFieldNameForRangeQuery(expression.Left, value),
+				value);
+		}
 
         private void VisitLessThanOrEqual(BinaryExpression expression)
         {
 			object value = GetValueFromExpression(expression.Right);
-			QueryText.Append(
-				GetFieldNameForRangeQuery(expression.Left, value)
-				).Append(":[NULL TO ");
-			QueryText.Append(TransformToRangeValue(GetValueFromExpression(expression.Right)));
 
-            QueryText.Append("] ");
+			luceneQuery.WhereLessThanOrEqual(
+				GetFieldNameForRangeQuery(expression.Left, value),
+				value);
         }
 
         private void VisitMemberAccess(MemberExpression memberExpression, bool boolValue)
         {            
             if (memberExpression.Type == typeof(bool))
             {
-                QueryText.Append(memberExpression.Member.Name);
-                QueryText.Append(":");
-                if (boolValue)
-                    QueryText.Append("true");
-                else
-                    QueryText.Append("false");
+				luceneQuery.WhereEquals(
+					memberExpression.Member.Name,
+					boolValue,
+					true,
+					false);
             }
             else
             {
@@ -212,261 +289,153 @@ namespace Raven.Client.Linq
             }
         }
 
-    	private static string TransformToRangeValue(object value)
-    	{
-			if (value == null)
-				return "NULL_VALUE";
-
-			if (value is int)
-				return NumberUtil.NumberToString((int) value);
-			if (value is long)
-				return NumberUtil.NumberToString((long)value);
-			if (value is decimal)
-				return NumberUtil.NumberToString((double)(decimal)value);
-			if (value is double)
-				return NumberUtil.NumberToString((double)value);
-			if (value is float)
-				return NumberUtil.NumberToString((float)value);
-			if (value is DateTime)
-				return DateTools.DateToString((DateTime)value, DateTools.Resolution.MILLISECOND);
-
-			return LuceneEscape(value.ToString(), true, false);
-    	}
-
-		private static string TransformToEqualValue(object value)
-		{
-			if (value == null)
-				return "NULL_VALUE";
-
-			if (value is DateTime)
-				return DateTools.DateToString((DateTime)value, DateTools.Resolution.MILLISECOND);
-
-			return LuceneEscape(value.ToString(), true, false);
-		}
-
-		/// <summary>
-		/// Escapes Lucene operators and quotes phrases
-		/// </summary>
-		/// <param name="term"></param>
-		/// <param name="isAnalyzed"></param>
-		/// <param name="allowWildcards"></param>
-		/// <returns>escaped term</returns>
-		/// <remarks>
-		/// http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Escaping%20Special%20Characters
-		/// </remarks>
-		private static string LuceneEscape(string term, bool isAnalyzed, bool allowWildcards)
-		{
-			// method doesn't allocate a StringBuilder unless the string requires escaping
-			// also this copies chunks of the original string into the StringBuilder which
-			// is far more efficient than copying character by character because StringBuilder
-			// can access the underlying string data directly
-
-			if (string.IsNullOrEmpty(term))
-			{
-				return "\"\"";
-			}
-
-			bool isPhrase = false;
-			int start = 0;
-			int length = term.Length;
-			StringBuilder buffer = null;
-
-			if (!isAnalyzed)
-			{
-				// FieldIndexing.NotAnalyzed requires enclosing brackets
-				buffer = new StringBuilder(length*2);
-				buffer.Append("[[");
-			}
-
-			for (int i=start; i<length; i++)
-			{
-				char ch = term[i];
-				switch (ch)
-				{
-					// should wildcards be included or excluded here?
-					case '*':
-					case '?':
-					{
-						if (allowWildcards && isAnalyzed)
-						{
-							break;
-						}
-						goto case '\\';
-					}
-					case '+':
-					case '-':
-					case '&':
-					case '|':
-					case '!':
-					case '(':
-					case ')':
-					case '{':
-					case '}':
-					case '[':
-					case ']':
-					case '^':
-					case '"':
-					case '~':
-					case ':':
-					case '\\':
-					{
-						if (buffer == null)
-						{
-							// allocate builder with headroom
-							buffer = new StringBuilder(length*2);
-						}
-
-						if (i > start)
-						{
-							// append any leading substring
-							buffer.Append(term, start, i-start);
-						}
-
-						buffer.Append('\\').Append(ch);
-						start = i+1;
-						break;
-					}
-					case ' ':
-					case '\t':
-					{
-						if (isAnalyzed && !isPhrase)
-						{
-							if (buffer == null)
-							{
-								// allocate builder with headroom
-								buffer = new StringBuilder(length*2);
-							}
-
-							buffer.Insert(0, '"');
-							isPhrase = true;
-						}
-						break;
-					}
-				}
-			}
-
-			if (buffer == null)
-			{
-				// no changes required
-				return term;
-			}
-
-			if (length > start)
-			{
-				// append any trailing substring
-				buffer.Append(term, start, length-start);
-			}
-
-			if (!isAnalyzed)
-			{
-				// FieldIndexing.NotAnalyzed requires enclosing brackets
-				buffer.Append("]]");
-			}
-			else if (isPhrase)
-			{
-				// quoted phrase
-				buffer.Append('"');
-			}
-
-			return buffer.ToString();
-		}
-
-    	private void VisitLessThan(BinaryExpression expression)
-        {
-			object value = GetValueFromExpression(expression.Right);
-			QueryText.Append(
-				GetFieldNameForRangeQuery(expression.Left, value)
-				).Append(":{NULL TO ");
-			QueryText.Append(TransformToRangeValue(GetValueFromExpression(expression.Right)));
-
-            QueryText.Append("} ");
-        }
-
-        private void VisitGreaterThanOrEqual(BinaryExpression expression)
-        {
-			object value = GetValueFromExpression(expression.Right);
-			QueryText.Append(
-				GetFieldNameForRangeQuery(expression.Left, value)
-				).Append(":[");
-        	QueryText.Append(TransformToRangeValue(value));
-
-			QueryText.Append(" TO NULL] ");
-        }
-
-        private void VisitGreaterThan(BinaryExpression expression)
-        {
-			object value = GetValueFromExpression(expression.Right);
-			QueryText.Append(
-				GetFieldNameForRangeQuery(expression.Left, value)
-				).Append(":{");
-        	QueryText.Append(TransformToRangeValue(value));
-
-			QueryText.Append(" TO NULL} ");
-        }
-
-    	private static string GetFieldNameForRangeQuery(Expression expression, object value)
-    	{
-			if (value is int || value is long || value is double || value is float || value is decimal)
-				return ((MemberExpression) expression).Member.Name + "_Range";
-    		return ((MemberExpression)expression).Member.Name;
-    	}
-
     	private void VisitMethodCall(MethodCallExpression expression)
         {
-            if ((expression.Method.DeclaringType == typeof(Queryable)) &&
-                (expression.Method.Name == "Where"))
-            {
-                VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
-            }
-            else if ((expression.Method.DeclaringType == typeof(Queryable)) &&
-                (expression.Method.Name == "Select"))
-            {
-                VisitExpression(expression.Arguments[0]);
-                VisitSelect(((UnaryExpression)expression.Arguments[1]).Operand);
-            }           
-            else if ((expression.Method.DeclaringType == typeof(Queryable)) &&
-                    (expression.Method.Name == "Skip"))
-            {
-                VisitExpression(expression.Arguments[0]);
-                VisitSkip(((ConstantExpression)expression.Arguments[1]));
-            }
-            else if ((expression.Method.DeclaringType == typeof(Queryable)) &&
-                    (expression.Method.Name == "Take"))
-            {
-                VisitExpression(expression.Arguments[0]);
-                VisitTake(((ConstantExpression)expression.Arguments[1]));
-            }
-            else if ((expression.Method.DeclaringType == typeof(Queryable)) &&
-                (expression.Method.Name == "First" || expression.Method.Name == "FirstOrDefault"))
-            {
-                VisitExpression(expression.Arguments[0]);
-                if (expression.Arguments.Count == 2)                
-                    VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);                
-                
-                if (expression.Method.Name == "First")
-                    VisitFirst();               
-                else if (expression.Method.Name == "FirstOrDefault")
-                    VisitFirstOrDefault();
-            }
-            else if ((expression.Method.DeclaringType == typeof(Queryable)) &&
-                (expression.Method.Name == "Single" || expression.Method.Name == "SingleOrDefault"))
-            {
-                VisitExpression(expression.Arguments[0]);
-                if (expression.Arguments.Count == 2)
-                {
-                    VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
-                }
-                
-                if (expression.Method.Name == "Single")
-                    VisitSingle();                
-                else if (expression.Method.Name == "SingleOrDefault")
-                    VisitSingleOrDefault();
-            }           
-            else
-            {
-                throw new NotSupportedException("Method not supported: " + expression.Method.Name);
-            }
-        }           
+			if (expression.Method.DeclaringType == typeof(Queryable))
+			{
+				VisitQueryableMethodCall(expression);
+				return;
+			}
+
+			if (expression.Method.DeclaringType == typeof(String))
+			{
+				VisitStringMethodCall(expression);
+				return;
+			}
+
+			throw new NotSupportedException("Method not supported: " + expression.Method.DeclaringType.Name + "." + expression.Method.Name);
+		}
+
+		private void VisitStringMethodCall(MethodCallExpression expression)
+		{
+			switch (expression.Method.Name)
+			{
+				case "Contains":
+				{
+					VisitContains(expression);
+					break;
+				}
+				case "Equals":
+				{
+					VisitEquals(expression);
+					break;
+				}
+				case "StartsWith":
+				{
+					VisitStartsWith(expression);
+					break;
+				}
+				case "EndsWith":
+				{
+					VisitEndsWith(expression);
+					break;
+				}
+				default:
+				{
+					throw new NotSupportedException("Method not supported: " + expression.Method.Name);
+				}
+			}
+		}
+
+		private void VisitQueryableMethodCall(MethodCallExpression expression)
+		{
+			switch (expression.Method.Name)
+			{
+				case "Where":
+				{
+					VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
+					break;
+				}
+				case "Select":
+				{
+					VisitExpression(expression.Arguments[0]);
+					VisitSelect(((UnaryExpression)expression.Arguments[1]).Operand);
+					break;
+				}
+				case "Skip":
+				{
+					VisitExpression(expression.Arguments[0]);
+					VisitSkip(((ConstantExpression)expression.Arguments[1]));
+					break;
+				}
+				case "Take":
+				{
+					VisitExpression(expression.Arguments[0]);
+					VisitTake(((ConstantExpression)expression.Arguments[1]));
+					break;
+				}
+				case "First":
+				case "FirstOrDefault":
+				{
+					VisitExpression(expression.Arguments[0]);
+					if (expression.Arguments.Count == 2)
+					{
+						VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
+					}
+
+					if (expression.Method.Name == "First")
+					{
+						VisitFirst();
+					}
+					else
+					{
+						VisitFirstOrDefault();
+					}
+					break;
+				}
+				case "Single":
+				case "SingleOrDefault":
+				{
+					VisitExpression(expression.Arguments[0]);
+					if (expression.Arguments.Count == 2)
+					{
+						VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
+					}
+
+					if (expression.Method.Name == "Single")
+					{
+						VisitSingle();
+					}
+					else
+					{
+						VisitSingleOrDefault();
+					}
+					break;
+				}
+				case "All":
+				{
+					VisitExpression(expression.Arguments[0]);
+					VisitAll((Expression<Func<T, bool>>)((UnaryExpression)expression.Arguments[1]).Operand);
+					break;
+				}
+				case "Any":
+				{
+					VisitExpression(expression.Arguments[0]);
+					if (expression.Arguments.Count == 2)
+					{
+						VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
+					}
+
+					VisitAny();
+					break;
+				}
+				case "Count":
+				{
+					VisitExpression(expression.Arguments[0]);
+					if (expression.Arguments.Count == 2)
+					{
+						VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
+					}
+
+					VisitCount();
+					break;
+				}
+				default:
+				{
+					throw new NotSupportedException("Method not supported: " + expression.Method.Name);
+				}
+			}
+		}
 
         private void VisitSelect(Expression operand)
         {
@@ -485,42 +454,60 @@ namespace Raven.Client.Linq
                     throw new NotSupportedException("Node not supported: " + body.NodeType);
 
             }
-        }      
+        }
 
         private void VisitSkip(ConstantExpression constantExpression)
         {
             //Don't have to worry about the cast failing, the Skip() extension method only takes an int
-            skipValue = (int)constantExpression.Value;
+			luceneQuery.Skip((int)constantExpression.Value);
         }
 
         private void VisitTake(ConstantExpression constantExpression)
         {
             //Don't have to worry about the cast failing, the Take() extension method only takes an int
-            takeValue = (int)constantExpression.Value;
+			luceneQuery.Take((int)constantExpression.Value);
         }
+
+		private void VisitAll(Expression<Func<T,bool>> predicateExpression)
+		{
+			this.predicate = predicateExpression;
+			queryType = SpecialQueryType.All;
+		}
+
+		private void VisitAny()
+		{
+			luceneQuery.Take(1);
+			queryType = SpecialQueryType.Any;
+		}
+
+		private void VisitCount()
+		{
+			luceneQuery.Take(1);
+			queryType = SpecialQueryType.Count;
+		}
 
         private void VisitSingle()
         {
-			takeValue = 2;           
+			luceneQuery.Take(2);
             queryType = SpecialQueryType.Single;
         }
         
         private void VisitSingleOrDefault()
         {
-			takeValue = 2;
-            queryType = SpecialQueryType.SingleOrDefault;
+			luceneQuery.Take(2);
+			queryType = SpecialQueryType.SingleOrDefault;
         }
 
         private void VisitFirst()
         {
-			takeValue = 1;
+			luceneQuery.Take(1);
             queryType = SpecialQueryType.First;
         }
 
         private void VisitFirstOrDefault()
         {
-			takeValue = 1;
-            queryType = SpecialQueryType.FirstOrDefault;
+			luceneQuery.Take(1);
+			queryType = SpecialQueryType.FirstOrDefault;
         }        
 		
         IQueryable<S> IQueryProvider.CreateQuery<S>(Expression expression)
@@ -558,7 +545,32 @@ namespace Raven.Client.Linq
         {
             customizeQuery = (Action<IDocumentQuery<T>>)action;
         }
+
         #region Helpers
+
+		private static string GetFieldNameForRangeQuery(Expression expression, object value)
+		{
+			if (value is int || value is long || value is double || value is float || value is decimal)
+				return ((MemberExpression)expression).Member.Name + "_Range";
+			return ((MemberExpression)expression).Member.Name;
+		}
+
+		private Type GetFieldType(MemberInfo member)
+		{
+			PropertyInfo property = member as PropertyInfo;
+			if (property != null)
+			{
+				return property.PropertyType;
+			}
+
+			FieldInfo field = member as FieldInfo;
+			if (field != null)
+			{
+				return field.FieldType;
+			}
+
+			throw new NotSupportedException("Unable to determine field type from expression");
+		}
 
         private static object GetValueFromExpression(Expression expression)
         {
@@ -614,7 +626,6 @@ namespace Raven.Client.Linq
 			throw new NotSupportedException("MemberInfo type not supported: " + memberInfo.GetType().FullName);
 		}
 
-
         #endregion Helpers
-    }
+	}
 }

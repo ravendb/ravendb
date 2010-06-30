@@ -92,15 +92,87 @@ namespace Raven.Client.Document
 			return this;
 		}
 
-		public IDocumentQuery<T> Where(string fieldName, object value)
+		public IDocumentQuery<T> WhereEquals(string fieldName, object value)
 		{
-			ApplyForAll(query => query.Where(fieldName, value));
+			ApplyForAll(query => query.WhereEquals(fieldName, value));
 			return this;
 		}
 
-		public IDocumentQuery<T> Where(string fieldName, object value, bool isAnalyzed)
+		public IDocumentQuery<T> WhereEquals(string fieldName, object value, bool isAnalyzed)
 		{
-			ApplyForAll(query => query.Where(fieldName, value, isAnalyzed));
+			ApplyForAll(query => query.WhereEquals(fieldName, value, isAnalyzed));
+			return this;
+		}
+
+		public IDocumentQuery<T> WhereEquals(string fieldName, object value, bool isAnalyzed, bool allowWildcards)
+		{
+			ApplyForAll(query => query.WhereEquals(fieldName, value, isAnalyzed, allowWildcards));
+			return this;
+		}
+
+		public IDocumentQuery<T> WhereContains(string fieldName, object value)
+		{
+			ApplyForAll(query => query.WhereContains(fieldName, value));
+			return this;
+		}
+
+		public IDocumentQuery<T> WhereStartsWith(string fieldName, object value)
+		{
+			ApplyForAll(query => query.WhereStartsWith(fieldName, value));
+			return this;
+		}
+
+		public IDocumentQuery<T> WhereEndsWith(string fieldName, object value)
+		{
+			ApplyForAll(query => query.WhereEndsWith(fieldName, value));
+			return this;
+		}
+
+		public IDocumentQuery<T> WhereBetween(string fieldName, object start, object end)
+		{
+			ApplyForAll(query => query.WhereBetween(fieldName, start, end));
+			return this;
+		}
+
+		public IDocumentQuery<T> WhereBetweenOrEqual(string fieldName, object start, object end)
+		{
+			ApplyForAll(query => query.WhereBetweenOrEqual(fieldName, start, end));
+			return this;
+		}
+
+		public IDocumentQuery<T> WhereGreaterThan(string fieldName, object value)
+		{
+			ApplyForAll(query => query.WhereGreaterThan(fieldName, value));
+			return this;
+		}
+
+		public IDocumentQuery<T> WhereGreaterThanOrEqual(string fieldName, object value)
+		{
+			ApplyForAll(query => query.WhereGreaterThanOrEqual(fieldName, value));
+			return this;
+		}
+
+		public IDocumentQuery<T> WhereLessThan(string fieldName, object value)
+		{
+			ApplyForAll(query => query.WhereLessThan(fieldName, value));
+			return this;
+		}
+
+		public IDocumentQuery<T> WhereLessThanOrEqual(string fieldName, object value)
+		{
+			ApplyForAll(query => query.WhereLessThanOrEqual(fieldName, value));
+			return this;
+		}
+
+		public IDocumentQuery<T> AndAlso()
+		{
+			ApplyForAll(query => query.AndAlso());
+			return this;
+		}
+
+		public IDocumentQuery<T> OrElse()
+		{
+			ApplyForAll(query => query.OrElse());
 			return this;
 		}
 
@@ -174,6 +246,18 @@ namespace Raven.Client.Document
 	    public QueryResult QueryResult
 		{
 			get { return queryResult ?? (queryResult = GetQueryResult()); }
+		}
+
+		public IEnumerable<string> ProjectionFields
+		{
+			get
+			{
+				// union all projection fields from underlying queries
+				return
+					from query in queries
+					from field in query.ProjectionFields
+					select field;
+			}
 		}
 	}
 }

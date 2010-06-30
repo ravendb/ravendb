@@ -542,7 +542,7 @@ namespace Raven.Client.Tests.Document
 
                 var q = session.Query<Company>("company_by_name")
                     .Customize(query => query.WaitForNonStaleResults())
-                    .Where(x => x.Name == company.Name);
+                    .Where(x => x.Name.Contains(company.Name));
                 var single = q.ToArray()[0];
                 Assert.Equal("Company 1", single.Name);
                 Assert.Equal(5, single.Phone);
@@ -571,7 +571,7 @@ namespace Raven.Client.Tests.Document
 				var name = company.Name;
 				var q = session.Query<Company>("company_by_name")
 					.Customize(query => query.WaitForNonStaleResults())
-					.Where(x => x.Name == name);
+					.Where(x => x.Name.Contains(name));
 				var single = q.ToArray()[0];
 				Assert.Equal("Company 1", single.Name);
 				Assert.Equal(5, single.Phone);

@@ -89,7 +89,7 @@ namespace Raven.Client.Linq
                 fields = "<" + string.Join(", ", ravenQueryProvider.FieldsToFetch.ToArray()) + ">: ";
             return 
                 fields + 
-                ravenQueryProvider.QueryText;
+                ravenQueryProvider.LuceneQuery;
         }
     }
 }
