@@ -65,13 +65,17 @@ namespace Raven.Storage.Managed
 			using (var reader = OpenReader())
 			using (var binaryReader = new BinaryReaderWith7BitEncoding(reader))
 			{
-				if (new Guid(binaryReader.ReadBytes(16)) != HeaderSignatureGuid)
+				var headerSignature = binaryReader.ReadBytes(16);
+				if (headerSignature .Length != 16 || new Guid(headerSignature) != HeaderSignatureGuid)
 					throw new Exceptions.InvalidFileFormatException("File signature is invalid, probably not a valid Raven storage file, or a corrupted one");
 				var version = binaryReader.Read7BitEncodedInt();
 				if (version != Version)
 					throw new Exceptions.InvalidFileFormatException("File signature is valid, but the version information is " +
 						version + ", while " + Version + " was expected");
-				Id = new Guid(binaryReader.ReadBytes(16));
+				var fileId = binaryReader.ReadBytes(16);
+				if(fileId.Length!=16)
+					throw new Exceptions.InvalidFileFormatException("File signature is valid, but the file ID has been truncated");
+				Id = new Guid(fileId);
 
 				var pos = reader.Length;
 				while (pos > 16)
