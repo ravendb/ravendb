@@ -20,7 +20,8 @@ namespace Raven.Client.Document
 		}
 
 
-		public DocumentSession(DocumentStore documentStore) : base(documentStore)
+		public DocumentSession(DocumentStore documentStore, IDocumentStoreListener[] storeListeners, IDocumentDeleteListener[] deleteListeners)
+			: base(documentStore, storeListeners, deleteListeners)
 		{
 		}
 

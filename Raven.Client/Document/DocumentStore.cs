@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Net;
 using Raven.Client.Client;
 using Raven.Client.Client.Async;
 using Raven.Client.Document.Async;
+using System.Linq;
 
 namespace Raven.Client.Document
 {
@@ -20,7 +22,9 @@ namespace Raven.Client.Document
 		}
 
 		private string identifier;
-        private ICredentials credentials = CredentialCache.DefaultNetworkCredentials;
+		private IDocumentDeleteListener[] deleteListeners = new IDocumentDeleteListener[0];
+		private IDocumentStoreListener[] storeListeners = new IDocumentStoreListener[0];
+		private ICredentials credentials = CredentialCache.DefaultNetworkCredentials;
 
 	    public ICredentials Credentials
 	    {
@@ -42,7 +46,8 @@ namespace Raven.Client.Document
 		}
 #if !CLIENT
 		private Raven.Database.RavenConfiguration configuration;
-        public Raven.Database.RavenConfiguration Configuration
+		
+		public Raven.Database.RavenConfiguration Configuration
 		{
 			get
 			{
@@ -88,7 +93,7 @@ namespace Raven.Client.Document
 
             if (DatabaseCommands == null)
                 throw new InvalidOperationException("You cannot open a session before initialising the document store. Did you forgot calling Initialise?");
-            var session = new DocumentSession(this);
+            var session = new DocumentSession(this, storeListeners, deleteListeners);
             session.Stored += entity =>
             {
                 var copy = Stored;
@@ -98,11 +103,17 @@ namespace Raven.Client.Document
             return session;
         }
 
-        public IDocumentSession OpenSession()
+		public IDocumentStore RegisterListener(IDocumentStoreListener documentStoreListener)
+		{
+			storeListeners = storeListeners.Concat(new[] {documentStoreListener}).ToArray();
+			return this;
+		}
+
+		public IDocumentSession OpenSession()
         {
             if(DatabaseCommands == null)
                 throw new InvalidOperationException("You cannot open a session before initialising the document store. Did you forgot calling Initialise?");
-            var session = new DocumentSession(this);
+            var session = new DocumentSession(this, storeListeners, deleteListeners);
 			session.Stored += entity =>
 			{
 				var copy = Stored;
@@ -148,6 +159,12 @@ namespace Raven.Client.Document
             return this;
 		}
 
+		public IDocumentStore RegisterListener(IDocumentDeleteListener deleteListener)
+		{
+			deleteListeners = deleteListeners.Concat(new[] {deleteListener}).ToArray();
+			return this;
+		}
+
 #if !NET_3_5
 
 		public IAsyncDocumentSession OpenAsyncSession()
@@ -157,7 +174,7 @@ namespace Raven.Client.Document
 			if (AsyncDatabaseCommands == null)
 				throw new InvalidOperationException("You cannot open an async session because it is not supported on embedded mode");
 
-			var session = new AsyncDocumentSession(this);
+			var session = new AsyncDocumentSession(this, storeListeners, deleteListeners);
 			session.Stored += entity =>
 			{
 				var copy = Stored;

@@ -9,7 +9,8 @@ namespace Raven.Client.Document.Async
 {
 	public class AsyncDocumentSession : InMemoryDocumentSessionOperations, IAsyncDocumentSession
 	{
-		public AsyncDocumentSession(DocumentStore documentStore) : base(documentStore)
+		public AsyncDocumentSession(DocumentStore documentStore, IDocumentStoreListener[] storeListeners, IDocumentDeleteListener[] deleteListeners)
+			: base(documentStore, storeListeners, deleteListeners)
 		{
 		}
 

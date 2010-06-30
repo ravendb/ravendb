@@ -34,4 +34,14 @@ namespace Raven.Client
 
 		bool HasChanged(object entity);
 	}
+
+	public interface IDocumentDeleteListener
+	{
+		void BeforeDelete(string key, object entityInstance, JObject metadata);
+	}
+
+	public interface IDocumentStoreListener
+	{
+		void BeforeStore(string key, object entityInstance, JObject metadata);
+	}
 }

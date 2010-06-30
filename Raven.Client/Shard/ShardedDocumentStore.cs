@@ -38,7 +38,16 @@ namespace Raven.Client.Shard
 
 		#endregion
 
-        public IDocumentSession OpenSession()
+		public IDocumentStore RegisterListener(IDocumentStoreListener documentStoreListener)
+		{
+			foreach (var shard in shards)
+			{
+				shard.RegisterListener(documentStoreListener);
+			}
+			return this;
+		}
+
+		public IDocumentSession OpenSession()
         {
             return new ShardedDocumentSession(shardStrategy, shards.Select(x => x.OpenSession()).ToArray());
         }
@@ -73,6 +82,15 @@ namespace Raven.Client.Shard
 			}
 
             return this;
+		}
+
+		public IDocumentStore RegisterListener(IDocumentDeleteListener deleteListener)
+		{
+			foreach (var shard in shards)
+			{
+				shard.RegisterListener(deleteListener);
+			}
+			return this;
 		}
 	}
 }

@@ -10,7 +10,11 @@ namespace Raven.Client
 		string Identifier { get; set; }
 
         IDocumentStore Initialize();
-        
+
+    	IDocumentStore RegisterListener(IDocumentDeleteListener deleteListener);
+
+		IDocumentStore RegisterListener(IDocumentStoreListener documentStoreListener);
+
         IDocumentSession OpenSession();
 
         IDatabaseCommands DatabaseCommands { get; }

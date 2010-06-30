@@ -36,10 +36,16 @@ namespace Raven.Client.Document
 		protected DocumentStore documentStore;
 		private int numberOfRequests;
 
-		protected InMemoryDocumentSessionOperations(DocumentStore documentStore)
+		private IDocumentDeleteListener[] deleteListeners;
+		private IDocumentStoreListener[] storeListeners;
+
+
+		protected InMemoryDocumentSessionOperations(DocumentStore documentStore, IDocumentStoreListener[] storeListeners, IDocumentDeleteListener[] deleteListeners)
 		{
 			this.documentStore = documentStore;
-		    UseOptimisticConcurrency = false;
+			this.deleteListeners = deleteListeners;
+			this.storeListeners = storeListeners;
+			UseOptimisticConcurrency = false;
 			AllowNonAuthoritiveInformation = true;
 		    MaxNumberOfRequestsPerSession = documentStore.Conventions.MaxNumberOfRequestsPerSession;
 		}
@@ -341,9 +347,9 @@ more responsive application.
 			{
 				Guid? etag = null;
 				object existingEntity;
+				DocumentSession.DocumentMetadata metadata = null;
 				if (entitiesByKey.TryGetValue(key, out existingEntity))
 				{
-					DocumentSession.DocumentMetadata metadata;
 					if (entitiesAndMetadata.TryGetValue(existingEntity, out metadata))
 						etag = metadata.ETag;
 					entitiesAndMetadata.Remove(existingEntity);
@@ -352,6 +358,12 @@ more responsive application.
 
 				etag = UseOptimisticConcurrency ? etag : null;
 				result.Entities.Add(existingEntity);
+
+				foreach (var deleteListener in deleteListeners)
+				{
+					deleteListener.BeforeDelete(key, existingEntity, metadata != null ? metadata.Metadata : null);
+				}
+
 				result.Commands.Add(new DeleteCommandData
 				{
 					Etag = etag,
@@ -361,6 +373,10 @@ more responsive application.
 			deletedEntities.Clear();
 			foreach (var entity in entitiesAndMetadata.Where(pair => EntityChanged(pair.Key, pair.Value)))
 			{
+				foreach (var documentStoreListener in storeListeners)
+				{
+					documentStoreListener.BeforeStore(entity.Value.Key, entity.Key, entity.Value.Metadata);
+				}
 				result.Entities.Add(entity.Key);
 				if (entity.Value.Key != null)
 					entitiesByKey.Remove(entity.Value.Key);
