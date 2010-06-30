@@ -975,9 +975,8 @@ namespace Raven.Client.Tests.Document
                 documentStore.DatabaseCommands.PutIndex("MaxAge", new IndexDefinition<LinqIndexesFromClient.User, LinqIndexesFromClient.LocationAge> {
                     Map = users => from user in users
                                    select new { user.Age },
-                    Reduce = results => from result in results
-                                        let allResults = results
-                                        select new { Age = allResults.Max() },
+					Indexes = {{x=>x.Age, FieldIndexing.Analyzed}},
+					Stores = {{x=>x.Age, FieldStorage.Yes}}
                 });
 
                 using (var session = documentStore.OpenSession()) {
@@ -999,11 +998,13 @@ namespace Raven.Client.Tests.Document
 
                     session.SaveChanges();
 
-                    LinqIndexesFromClient.LocationAge single = session.LuceneQuery<LinqIndexesFromClient.LocationAge>("MaxAge")
+					var user = session.LuceneQuery<LinqIndexesFromClient.User>("MaxAge")
+						.OrderBy("-Age")
+						.Take(1)
                         .WaitForNonStaleResults()
                         .Single();
 
-                    Assert.Equal(33, single.Age);
+                    Assert.Equal(33, user.Age);
                 }
             }
         }
