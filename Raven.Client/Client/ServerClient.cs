@@ -335,6 +335,8 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
             {
                 var webRequest = (HttpWebRequest)WebRequest.Create(requestUri);
                 webRequest.Method = "HEAD";
+				webRequest.Credentials = credentials;
+
                 webRequest.GetResponse().Close();
                 if(overwrite == false)
                     throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
