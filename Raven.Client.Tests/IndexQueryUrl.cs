@@ -159,7 +159,7 @@ namespace Raven.Client.Tests
             context.Stub(c => c.Request).Return(request);
             request.Stub(r => r.QueryString).Return(HttpUtility.ParseQueryString(indexQueryQuerystring));
 
-            return Index.GetIndexQueryFromHttpContext(context);
+            return context.GetIndexQueryFromHttpContext(1024);
         }
     }
 }

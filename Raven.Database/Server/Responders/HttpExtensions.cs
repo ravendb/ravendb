@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Database.Data;
 using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
 using Raven.Database.Json;
@@ -238,6 +239,22 @@ namespace Raven.Database.Server.Responders
 			    throw new BadRequestException("Could not parse If-Match header as Guid");
 			}
 		    return null;
+		}
+
+		public static IndexQuery GetIndexQueryFromHttpContext(this IHttpContext context, int maxPageSize)
+		{
+			return new IndexQuery
+			{
+				Query = Uri.UnescapeDataString(context.Request.QueryString["query"] ?? ""),
+				Start = context.GetStart(),
+				Cutoff = context.GetCutOff(),
+				PageSize = context.GetPageSize(maxPageSize),
+				FieldsToFetch = context.Request.QueryString.GetValues("fetch"),
+				SortedFields = context.Request.QueryString.GetValues("sort")
+					.EmptyIfNull()
+					.Select(x => new SortedField(x))
+					.ToArray()
+			};
 		}
 
         public static Guid? GetEtagFromQueryString(this IHttpContext context)

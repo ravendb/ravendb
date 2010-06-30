@@ -96,25 +96,10 @@ namespace Raven.Database.Server.Responders
 			}
 			else
             {
-                IndexQuery indexQuery = GetIndexQueryFromHttpContext(context);
-                indexQuery.PageSize = Database.Configuration.MaxPageSize;
+				IndexQuery indexQuery = context.GetIndexQueryFromHttpContext(Database.Configuration.MaxPageSize);
                 context.WriteJson(Database.Query(index, indexQuery));
 			}
 		}
 
-	    static public IndexQuery GetIndexQueryFromHttpContext(IHttpContext context)
-	    {
-	        return new IndexQuery
-	        {
-	            Query = Uri.UnescapeDataString(context.Request.QueryString["query"] ?? ""),
-	            Start = context.GetStart(),
-	            Cutoff = context.GetCutOff(),
-	            FieldsToFetch = context.Request.QueryString.GetValues("fetch"),
-	            SortedFields = context.Request.QueryString.GetValues("sort")
-	                .EmptyIfNull()
-	                .Select(x => new SortedField(x))
-	                .ToArray()
-	        };
-	    }
 	}
 }
