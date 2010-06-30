@@ -347,6 +347,7 @@ more responsive application.
 					if (entitiesAndMetadata.TryGetValue(existingEntity, out metadata))
 						etag = metadata.ETag;
 					entitiesAndMetadata.Remove(existingEntity);
+					entitiesByKey.Remove(key);
 				}
 
 				etag = UseOptimisticConcurrency ? etag : null;
