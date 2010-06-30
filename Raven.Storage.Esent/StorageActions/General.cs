@@ -190,7 +190,8 @@ namespace Raven.Storage.Esent.StorageActions
 				return;
 			Api.MakeKey(session, DocumentsModifiedByTransactions, txId, MakeKeyGrbit.NewKey);
 			Api.JetSetIndexRange(session, DocumentsModifiedByTransactions, SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
-
+			var bookmarksToDelete = new List<byte[]>();
+			var documentsInTransaction = new List<DocumentInTransactionData>();
 			do
 			{
 				// esent index ranges are approximate, and we need to check them ourselves as well
@@ -206,17 +207,30 @@ namespace Raven.Storage.Esent.StorageActions
 					data = documentCodecs.Aggregate(data, (bytes, codec) => codec.Decode(key, metadataAsJson, bytes));
 				}
 
-				var documentInTransactionData = new DocumentInTransactionData
+				documentsInTransaction.Add(new DocumentInTransactionData
 				{
 					Data = data.ToJObject(),
-					Delete = Api.RetrieveColumnAsBoolean(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["delete_document"]).Value,
-					Etag = new Guid(Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["etag"])),
+					Delete =
+						Api.RetrieveColumnAsBoolean(session, DocumentsModifiedByTransactions,
+						                            tableColumnsCache.DocumentsModifiedByTransactionsColumns["delete_document"]).Value,
+					Etag =
+						new Guid(Api.RetrieveColumn(session, DocumentsModifiedByTransactions,
+						                            tableColumnsCache.DocumentsModifiedByTransactionsColumns["etag"])),
 					Key = key,
 					Metadata = metadata.ToJObject(),
-				};
+				});
+				bookmarksToDelete.Add(Api.GetBookmark(session, DocumentsModifiedByTransactions));
+			} while (Api.TryMoveNext(session, DocumentsModifiedByTransactions));
+
+			foreach (var bookmark in bookmarksToDelete)
+			{
+				Api.JetGotoBookmark(session, DocumentsModifiedByTransactions, bookmark, bookmark.Length);
 				Api.JetDelete(session, DocumentsModifiedByTransactions);
+			}
+			foreach (var documentInTransactionData in documentsInTransaction)
+			{
 				perDocumentModified(documentInTransactionData);
-			} while (Api.TryMoveFirst(session, DocumentsModifiedByTransactions));
+			}
 		}
 
 		private void ResetTransactionOnCurrentDocument()

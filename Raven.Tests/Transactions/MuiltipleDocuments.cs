@@ -34,6 +34,32 @@ namespace Raven.Tests.Transactions
             Assert.NotNull(db.Get("ayende2", null));
         }
 
+		[Fact]
+		public void CommittingWillOnlyCommitSingleTransaction()
+		{
+			var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
+			db.Put("ayende1", null, JObject.Parse("{ayende:'rahien'}"), new JObject(), transactionInformation);
+			db.Put("ayende2", null, JObject.Parse("{ayende:'rahien'}"), new JObject(), new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) });
+
+			db.Commit(transactionInformation.Id);
+
+			Assert.NotNull(db.Get("ayende1", null));
+			Assert.Null(db.Get("ayende2", null));
+		}
+
+		[Fact]
+		public void PutTwoDocumentsAndThenCommitReversedOrder()
+		{
+			var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
+			db.Put("ayende2", null, JObject.Parse("{ayende:'rahien'}"), new JObject(), transactionInformation);
+			db.Put("ayende1", null, JObject.Parse("{ayende:'rahien'}"), new JObject(), transactionInformation);
+
+			db.Commit(transactionInformation.Id);
+
+			Assert.NotNull(db.Get("ayende1", null));
+			Assert.NotNull(db.Get("ayende2", null));
+		}
+
         [Fact]
         public void WhileUpdatingSeveralDocumentsCannotAccessAnyOfThem()
         {
