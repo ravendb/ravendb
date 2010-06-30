@@ -430,6 +430,13 @@ namespace Raven.Client.Linq
 					VisitCount();
 					break;
 				}
+				case "OrderBy":
+				case "ThenBy":
+				case "ThenByDescending":
+				case "OrderByDescending":
+					VisitExpression(expression.Arguments[0]);
+					VisitOrderBy((LambdaExpression)((UnaryExpression)expression.Arguments[1]).Operand, expression.Method.Name.EndsWith("Descending"));
+					break;
 				default:
 				{
 					throw new NotSupportedException("Method not supported: " + expression.Method.Name);
@@ -437,7 +444,13 @@ namespace Raven.Client.Linq
 			}
 		}
 
-        private void VisitSelect(Expression operand)
+		private void VisitOrderBy(LambdaExpression expression, bool descending)
+		{
+			var name = ((MemberExpression)expression.Body).Member.Name;
+			luceneQuery.AddOrder(name, descending);
+		}
+
+		private void VisitSelect(Expression operand)
         {
             var body = ((LambdaExpression)operand).Body;
             switch (body.NodeType)

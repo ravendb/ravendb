@@ -51,6 +51,13 @@ namespace Raven.Client.Document
 			get { return this.projectionFields ?? Enumerable.Empty<string>(); }
 		}
 
+		public IDocumentQuery<T> AddOrder(string fieldName, bool descending)
+		{
+			fieldName = descending ? "-" + fieldName : fieldName;
+			orderByFields = orderByFields.Concat(new[] {fieldName}).ToArray();
+			return this;
+		}
+
 		public IEnumerator<T> GetEnumerator()
 		{
 			return QueryResult.Results

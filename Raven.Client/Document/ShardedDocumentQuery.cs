@@ -259,5 +259,11 @@ namespace Raven.Client.Document
 					select field;
 			}
 		}
+
+		public IDocumentQuery<T> AddOrder(string fieldName, bool descending)
+		{
+			ApplyForAll(ts => ts.AddOrder(fieldName, descending));
+			return this;
+		}
 	}
 }

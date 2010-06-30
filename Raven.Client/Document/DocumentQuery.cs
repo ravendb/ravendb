@@ -29,7 +29,8 @@ namespace Raven.Client.Document
 	            start = start,
 				timeout = timeout,
                 cutoff = cutoff,
-	            waitForNonStaleResults = waitForNonStaleResults
+	            waitForNonStaleResults = waitForNonStaleResults,
+				orderByFields = orderByFields,
 	        };
 	    }
 

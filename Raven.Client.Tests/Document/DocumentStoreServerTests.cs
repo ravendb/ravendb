@@ -83,6 +83,75 @@ namespace Raven.Client.Tests.Document
 			}
 		}
 
+
+		[Fact]
+		public void Can_order_by_using_linq()
+		{
+			using (var server = GetNewServer(port, path))
+			{
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+				documentStore.Initialize();
+
+				documentStore.DatabaseCommands.PutIndex("CompaniesByName", new IndexDefinition
+				{
+					Map = "from company in docs.Companies select new { company.Name, company.Phone }",
+				});
+
+				using (var session = documentStore.OpenSession())
+				{
+					session.Store(new Company { Name = "A", Phone = 4 });
+					session.Store(new Company { Name = "B", Phone = 3 });
+					session.Store(new Company { Name = "B", Phone = 4 });
+					session.SaveChanges();
+
+					session.LuceneQuery<Company>("CompaniesByName").WaitForNonStaleResults().ToArray();// wait for the index to settle down
+				}
+
+				using (var session = documentStore.OpenSession())
+				{
+					var q = from company in session.Query<Company>("CompaniesByName")
+					        orderby company.Name descending 
+					        select company;
+
+					var companies = q.ToArray();
+					Assert.Equal("B", companies[0].Name);
+					Assert.Equal("B", companies[1].Name);
+					Assert.Equal("A", companies[2].Name);
+
+					q = from company in session.Query<Company>("CompaniesByName")
+							orderby company.Name 
+							select company;
+
+					companies = q.ToArray();
+					Assert.Equal("A", companies[0].Name);
+					Assert.Equal("B", companies[1].Name);
+					Assert.Equal("B", companies[2].Name);
+
+
+					q = from company in session.Query<Company>("CompaniesByName")
+						orderby company.Phone
+						select company;
+
+					companies = q.ToArray();
+					Assert.Equal(3, companies[0].Phone);
+					Assert.Equal(4, companies[1].Phone);
+					Assert.Equal(4, companies[2].Phone);
+					
+					q = from company in session.Query<Company>("CompaniesByName")
+						orderby company.Phone, company.Name
+						select company;
+
+					companies = q.ToArray();
+					Assert.Equal(3, companies[0].Phone);
+					Assert.Equal(4, companies[1].Phone);
+					Assert.Equal(4, companies[2].Phone);
+					Assert.Equal("B", companies[0].Name);
+					Assert.Equal("A", companies[1].Name);
+					Assert.Equal("B", companies[2].Name);
+				}
+			}
+		}
+
 		
        [Fact]
        public void Can_create_index_with_decimal_as_firstfield()

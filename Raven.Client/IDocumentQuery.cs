@@ -69,5 +69,6 @@ namespace Raven.Client
 
 		QueryResult QueryResult { get; }
 		IEnumerable<string> ProjectionFields { get; }
+		IDocumentQuery<T> AddOrder(string fieldName, bool descending);
 	}
 }
