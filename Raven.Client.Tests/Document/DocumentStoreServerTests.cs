@@ -55,6 +55,27 @@ namespace Raven.Client.Tests.Document
 		}
 
 		[Fact]
+		public void Can_get_index_def()
+		{
+			using (var server = GetNewServer(port, path))
+			{
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+				documentStore.Initialize();
+
+				documentStore.DatabaseCommands.PutIndex("Companies/Name", new IndexDefinition<Company, Company>
+				{
+					Map = companies => from c in companies
+									   select new { c.Name },
+					Indexes = { { x => x.Name, FieldIndexing.NotAnalyzed } }
+				});
+				var indexDefinition = documentStore.DatabaseCommands.GetIndex("Companies/Name");
+				Assert.Equal(@"docs.Companies
+	.Select(c => new {Name = c.Name})", indexDefinition.Map);
+				Assert.Equal(FieldIndexing.NotAnalyzed, indexDefinition.Indexes["Name"]);
+			}
+		}
+
+		[Fact]
 		public void Can_delete_by_index()
 		{
 			using (var server = GetNewServer(port, path))

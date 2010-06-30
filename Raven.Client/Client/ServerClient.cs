@@ -280,7 +280,23 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 	        });
 	    }
 
-	    private void DirectDelete(string key, Guid? etag, string operationUrl)
+    	public IndexDefinition GetIndex(string name)
+    	{
+			EnsureIsNotNullOrEmpty(name, "name");
+			return ExecuteWithReplication(u => DirectGetIndex(name, u));
+    	}
+
+    	private IndexDefinition DirectGetIndex(string indexName, string operationUrl)
+    	{
+			var httpJsonRequest = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/indexes/" + indexName +"?definition=yes", "GET", credentials);
+    		var indexDefAsString = httpJsonRequest.ReadResponseString();
+    		var indexDefResultAsJson = JObject.Load(new JsonTextReader(new StringReader(indexDefAsString)));
+    		return new JsonSerializer().Deserialize<IndexDefinition>(
+				new JTokenReader(indexDefResultAsJson["Index"])
+				);
+    	}
+
+    	private void DirectDelete(string key, Guid? etag, string operationUrl)
 	    {
 	        var metadata = new JObject();
 	        if (etag != null)

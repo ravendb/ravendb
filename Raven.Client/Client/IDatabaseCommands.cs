@@ -15,6 +15,7 @@ namespace Raven.Client.Client
 		PutResult Put(string key, Guid? etag, JObject document, JObject metadata);
 		void Delete(string key, Guid? etag);
 
+    	IndexDefinition GetIndex(string name);
 		string PutIndex(string name, IndexDefinition indexDef);
 		string PutIndex<TDocument,TReduceResult>(string name, IndexDefinition<TDocument,TReduceResult> indexDef);
 

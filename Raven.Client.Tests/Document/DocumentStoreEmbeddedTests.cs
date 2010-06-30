@@ -202,6 +202,25 @@ namespace Raven.Client.Tests.Document
 		}
 
 		[Fact]
+		public void Can_get_index_def()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				documentStore.DatabaseCommands.PutIndex("Companies/Name", new IndexDefinition<Company, Company>
+				{
+					Map = companies => from c in companies
+					                   select new {c.Name},
+					Indexes = {{x => x.Name, FieldIndexing.NotAnalyzed}}
+				});
+				var indexDefinition = documentStore.DatabaseCommands.GetIndex("Companies/Name");
+				Assert.Equal(@"docs.Companies
+	.Select(c => new {Name = c.Name})", indexDefinition.Map);
+				Assert.Equal(FieldIndexing.NotAnalyzed, indexDefinition.Indexes["Name"]);
+			}
+		}
+
+
+		[Fact]
 		public void Will_track_entities_from_query()
 		{
 			using (var documentStore = NewDocumentStore())

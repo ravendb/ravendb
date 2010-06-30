@@ -72,6 +72,11 @@ namespace Raven.Client.Client
             database.Delete(key, etag, GetTransactionInformation());
 		}
 
+		public IndexDefinition GetIndex(string name)
+		{
+			return database.GetIndexDefinition(name);
+		}
+
 		public string PutIndex(string name, IndexDefinition definition)
 		{
 		    return PutIndex(name, definition, false);

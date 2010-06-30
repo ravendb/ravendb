@@ -92,7 +92,7 @@ namespace Raven.Database.Server.Responders
 			var definition = context.Request.QueryString["definition"];
 		    if ("yes".Equals(definition, StringComparison.InvariantCultureIgnoreCase))
 			{
-				context.WriteJson(new {Index = Database.IndexDefinitionStorage.GetIndexDefinition(index)});
+				context.WriteJson(new {Index = Database.GetIndexDefinition(index)});
 			}
 			else
             {

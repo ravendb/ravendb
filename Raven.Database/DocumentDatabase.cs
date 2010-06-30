@@ -770,5 +770,10 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				AddIndexAndEnqueueIndexingTasks(actions, index);
 			});
 		}
+
+		public IndexDefinition GetIndexDefinition(string index)
+		{
+			return IndexDefinitionStorage.GetIndexDefinition(index);
+		}
 	}
 }
