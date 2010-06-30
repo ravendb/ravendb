@@ -282,7 +282,7 @@ namespace Raven.Database.Server
 		{
 			if (Configuration.AnonymousUserAccessMode == AnonymousUserAccessMode.Get &&
 				(ctx.User == null || ctx.User.Identity == null || ctx.User.Identity.IsAuthenticated == false) &&
-					ctx.Request.HttpMethod != "GET"
+					(ctx.Request.HttpMethod != "GET" && ctx.Request.HttpMethod != "HEAD")
 				)
 			{
 				ctx.SetStatusToUnauthorized();
