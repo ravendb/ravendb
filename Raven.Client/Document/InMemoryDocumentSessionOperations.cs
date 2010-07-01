@@ -14,6 +14,7 @@ using Raven.Database.Json;
 #if !NET_3_5
 using System.Dynamic;
 using Microsoft.CSharp.RuntimeBinder;
+using Raven.Database.Linq;
 using Binder = Microsoft.CSharp.RuntimeBinder.Binder;
 
 #endif
@@ -178,6 +179,13 @@ more responsive application.
 			if (Equals(entity, default(T)))
 			{
 				entity = documentFound.Deserialize<T>(Conventions.JsonContractResolver);
+#if !NET_3_5
+				var document = entity as JObject;
+				if (document != null)
+				{
+					entity = (T)(object)(new DynamicJsonObject(document));
+				}
+#endif
 			}
 			var identityProperty = documentStore.Conventions.GetIdentityProperty(entity.GetType());
 			if (identityProperty != null)

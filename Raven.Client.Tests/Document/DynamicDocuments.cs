@@ -55,20 +55,21 @@ namespace Raven.Client.Tests.Document
                     Assert.False(String.IsNullOrEmpty(idPerson));
 
                     session.SaveChanges();
-                    
+                    session.Clear();
                     //Pull the docs back out of RavenDB and see if the values are the same
                     dynamic employeeLoad = session.Load<dynamic>(idEmployee);
-                    Assert.Same("John Smith", employee.Name);
-                    Assert.Same("0111 123123", employee.Phones.Home);
-                    Assert.Same("0772 321123", employee.Phones.Office);
-                    Assert.Contains(123.4M, employee.Prices);
-                    Assert.Contains(123432.54M, employee.Prices);
-                    Assert.Throws<RuntimeBinderException>(() => employee.Address);
+					Assert.Equal("John Smith", employeeLoad.Name);
+					Assert.Equal("0111 123123", employeeLoad.Phones.Home);
+					Assert.Equal("0772 321123", employeeLoad.Phones.Office);
+					Assert.Contains(123.4D, employeeLoad.Prices);
+					Assert.Contains(123432.54D, employeeLoad.Prices);
+					Assert.Null(employeeLoad.Address);
 
                     dynamic personLoad = session.Load<CustomDynamicClass>(idPerson);
-                    Assert.Same("Ellen", person.FirstName);
-                    Assert.Same("Adams", person.LastName);
-                    Assert.Throws<RuntimeBinderException>(() => person.Age);
+					Assert.Equal("Ellen", personLoad.FirstName);
+					Assert.Equal("Adams", personLoad.LastName);
+					Assert.Throws<RuntimeBinderException>(()=>personLoad.Age);
+
                 }
             }
         }
