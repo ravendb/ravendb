@@ -160,7 +160,7 @@
         	}
         	if (index.Indexes != null) {
         		for (var field in index.Indexes) {
-        			var contained = $.inArray(fields, field);
+        			var contained = $.inArray(field, fields);
         			if (contained == -1)
         				fields.push(field);
         		}
