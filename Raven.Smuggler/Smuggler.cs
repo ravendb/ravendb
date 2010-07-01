@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Net;
+using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -136,6 +137,7 @@ Usage:
                 using (var webClient = new WebClient())
                 {
                     webClient.UseDefaultCredentials = true;
+					webClient.Headers.Add("Content-Type", "application/json; charset=utf-8");
                     webClient.Credentials = CredentialCache.DefaultNetworkCredentials; 
                     while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
                     {
