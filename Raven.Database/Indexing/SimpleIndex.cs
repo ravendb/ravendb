@@ -32,9 +32,20 @@ namespace Raven.Database.Indexing
 			var count = 0;
 			Write(indexWriter =>
 			{
-				string currentId = null;
+				bool madeChanges = false;
 				PropertyDescriptorCollection properties = null;
-				foreach (var doc in RobustEnumeration(documents, viewGenerator.MapDefinition, actions, context))
+				var processedKeys = new HashSet<string>();
+				var documentsWrapped = documents.Select((dynamic doc) =>
+				{
+					var documentId = doc.__document_id.ToString();
+					if (processedKeys.Add(documentId) == false)
+						return doc;
+					madeChanges = true;
+					context.IndexUpdateTriggers.Apply(trigger => trigger.OnIndexEntryDeleted(name, documentId));
+					indexWriter.DeleteDocuments(new Term("__document_id", documentId));
+					return doc;
+				});
+				foreach (var doc in RobustEnumeration(documentsWrapped, viewGenerator.MapDefinition, actions, context))
 				{
 					count++;
 
@@ -44,18 +55,13 @@ namespace Raven.Database.Indexing
                         fields = ExtractIndexDataFromDocument((DynamicJsonObject) doc, out newDocId);
                     else
                         fields = ExtractIndexDataFromDocument(properties, doc, out newDocId);
-				    if (currentId != newDocId) // new document id, so delete all old values matching it
-					{
-                        context.IndexUpdateTriggers.Apply(trigger => trigger.OnIndexEntryDeleted(name, newDocId));
-						indexWriter.DeleteDocuments(new Term("__document_id", newDocId));
-					}
-
+				   
                     if (newDocId != null)
                     {
                         var luceneDoc = new Document();
                         luceneDoc.Add(new Field("__document_id", newDocId, Field.Store.YES, Field.Index.NOT_ANALYZED));
 
-                        currentId = newDocId;
+                    	madeChanges = true;
                         CopyFieldsToDocument(luceneDoc, fields);
                         context.IndexUpdateTriggers.Apply(trigger => trigger.OnIndexEntryCreated(name, newDocId, luceneDoc));
                         log.DebugFormat("Index '{0}' resulted in: {1}", name, luceneDoc);
@@ -65,7 +71,7 @@ namespace Raven.Database.Indexing
 					actions.Indexing.IncrementSuccessIndexing();
 				}
 
-				return currentId != null;
+				return madeChanges;
 			});
 			log.DebugFormat("Indexed {0} documents for {1}", count, name);
 		}

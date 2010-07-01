@@ -70,6 +70,54 @@ namespace Raven.Tests.Indexes
 		}
 
 		[Fact]
+		public void Can_update_values_in_index_with_where_clause()
+		{
+			db.PutIndex("pagesByTitle2",
+					   new IndexDefinition
+					   {
+						   Map = @"
+                    from doc in docs
+                    where doc.type == ""page""
+                    select new { doc.some };
+                "
+					   });
+			 db.Put("1", null,
+				   JObject.Parse(
+					@"{ type: 'page', name: 'ayende' }"),
+				   new JObject(), null);
+
+			QueryResult docs;
+			do
+			{
+				docs = db.Query("pagesByTitle2", new IndexQuery
+				{
+					Start = 0,
+					PageSize = 10
+				});
+				if (docs.IsStale)
+					Thread.Sleep(100);
+			} while (docs.IsStale);
+			Assert.Equal(1, docs.Results.Length);
+
+			db.Put("1", null,
+				   JObject.Parse(
+					@"{ type: 'bar', name: 'ayende' }"),
+				   new JObject(), null);
+
+			do
+			{
+				docs = db.Query("pagesByTitle2", new IndexQuery
+				{
+					Start = 0,
+					PageSize = 10
+				});
+				if (docs.IsStale)
+					Thread.Sleep(100);
+			} while (docs.IsStale);
+			Assert.Equal(0, docs.Results.Length);
+		}
+
+		[Fact]
 		public void Can_Read_Values_Using_Deep_Nesting()
 		{
 			db.PutIndex(@"DocsByProject",
