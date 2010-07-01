@@ -159,6 +159,8 @@ more responsive application.
 
 		public void Delete<T>(T entity)
 		{
+			if(entitiesAndMetadata.ContainsKey(entity)==false)
+				throw new InvalidOperationException(entity+" is not associated with the session, cannot delete unknown entity instance");
 			deletedEntities.Add(entity);
 		}
 
