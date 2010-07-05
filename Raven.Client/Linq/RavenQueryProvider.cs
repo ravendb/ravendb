@@ -26,6 +26,7 @@ namespace Raven.Client.Linq
 
         private Action<IDocumentQuery<T>> customizeQuery;
     	private IDocumentQuery<T> luceneQuery;
+		private bool chainedWhere;
 
     	public IDocumentSession Session
         {
@@ -67,6 +68,7 @@ namespace Raven.Client.Linq
 
         public object Execute(Expression expression)
         {
+        	chainedWhere = false;
 			ProcessExpression(expression);
 
 			luceneQuery = luceneQuery.SelectFields<T>(FieldsToFetch.ToArray());            
@@ -344,7 +346,9 @@ namespace Raven.Client.Linq
 				case "Where":
 				{
 					VisitExpression(expression.Arguments[0]);
+					if (chainedWhere) luceneQuery.AndAlso();
 					VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
+					chainedWhere = true;
 					break;
 				}
 				case "Select":

@@ -190,6 +190,16 @@ namespace Raven.Client.Tests.Linq
             Assert.Equal("Age:3", q.ToString());
         }
 
+		[Fact]
+		public void CanChainMultipleWhereClauses()
+		{
+			var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null, null));
+			var q = indexedUsers
+				.Where(x => x.Age == 3)
+			    .Where(x => x.Name == "ayende");
+			Assert.Equal("Age:3 AND Name:[[ayende]]", q.ToString());
+		}
+
         public class IndexedUser
         {
 			public int Age { get; set; }
