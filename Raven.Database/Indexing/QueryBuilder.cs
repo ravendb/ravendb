@@ -21,7 +21,9 @@ namespace Raven.Database.Indexing
 			try
 		    {
 		    	query = PreProcessUntokenizedTerms(analyzer, query, keywordAnalyzer);
-				return new RangeQueryParser(Version.LUCENE_29, "", analyzer).Parse(query);
+		    	var queryParser = new RangeQueryParser(Version.LUCENE_29, "", analyzer);
+				queryParser.SetAllowLeadingWildcard(true);
+		    	return queryParser.Parse(query);;
 			}
 		    finally
 		    {
