@@ -134,7 +134,7 @@ namespace Raven.Tests.Indexes
 		{
 			var query = QueryBuilder.BuildQuery("Price_Range:[Dx1.0 TO NULL]");
 
-			Assert.Equal("Price_Range:[1 TO 1.79769313486232E+308]", query.ToString());
+			Assert.Equal("Price_Range:[1 TO " + Double.MaxValue + "]", query.ToString());
 			Assert.True(query is NumericRangeQuery);
 			Assert.True(((NumericRangeQuery)query).GetMin() is double);
 			Assert.True(((NumericRangeQuery)query).GetMax() is double);
@@ -145,7 +145,7 @@ namespace Raven.Tests.Indexes
 		{
 			var query = QueryBuilder.BuildQuery("Price_Range:{NULL TO Fx1.0}");
 
-			Assert.Equal("Price_Range:{-3.402823E+38 TO 1}", query.ToString());
+			Assert.Equal("Price_Range:{" + float.MinValue + " TO 1}", query.ToString());
 			Assert.True(query is NumericRangeQuery);
 			Assert.True(((NumericRangeQuery)query).GetMin() is float);
 			Assert.True(((NumericRangeQuery)query).GetMax() is float);
