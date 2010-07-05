@@ -343,6 +343,7 @@ namespace Raven.Client.Linq
 			{
 				case "Where":
 				{
+					VisitExpression(expression.Arguments[0]);
 					VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
 					break;
 				}
