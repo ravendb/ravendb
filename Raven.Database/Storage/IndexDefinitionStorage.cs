@@ -12,6 +12,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Database.Linq;
+using Raven.Database.Plugins;
 
 namespace Raven.Database.Storage
 {
@@ -26,8 +27,9 @@ namespace Raven.Database.Storage
 
 		private readonly ILog logger = LogManager.GetLogger(typeof (IndexDefinitionStorage));
 		private readonly string path;
+		private AbstractDynamicCompilationExtension[] extensions;
 
-		public IndexDefinitionStorage(ITransactionalStorage  transactionalStorage,string path, IEnumerable<AbstractViewGenerator> compiledGenerators)
+		public IndexDefinitionStorage(ITransactionalStorage  transactionalStorage,string path, IEnumerable<AbstractViewGenerator> compiledGenerators, AbstractDynamicCompilationExtension[] extensions)
 		{
 			this.path = Path.Combine(path, IndexDefDir);
 
@@ -79,6 +81,7 @@ namespace Raven.Database.Storage
 		        indexCache.AddOrUpdate(name, copy, (s, viewGenerator) => copy);
 		        indexDefinitions.AddOrUpdate(name, indexDefinition, (s1, definition) => indexDefinition);
 		    }
+			this.extensions = extensions;
 		}
 
 		public string[] IndexNames
@@ -95,7 +98,7 @@ namespace Raven.Database.Storage
 
 		private DynamicViewCompiler AddAndCompileIndex(string name, IndexDefinition indexDefinition)
 		{
-			var transformer = new DynamicViewCompiler(name, indexDefinition);
+			var transformer = new DynamicViewCompiler(name, indexDefinition, extensions);
 			var generator = transformer.GenerateInstance();
 			indexCache.AddOrUpdate(name, generator, (s, viewGenerator) => generator);
 		    indexDefinitions.AddOrUpdate(name, indexDefinition, (s1, definition) =>

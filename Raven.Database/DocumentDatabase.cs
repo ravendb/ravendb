@@ -40,6 +40,9 @@ namespace Raven.Database
 		[ImportMany]
 		public IEnumerable<AbstractReadTrigger> ReadTriggers { get; set; }
 
+		[ImportMany]
+		public AbstractDynamicCompilationExtension[] Extensions { get; set; }
+
 		private readonly WorkContext workContext;
 
 		private Thread[] backgroundWorkers = new Thread[0];
@@ -71,7 +74,8 @@ namespace Raven.Database
 			IndexDefinitionStorage = new IndexDefinitionStorage(
                 TransactionalStorage,
                 configuration.DataDirectory, 
-                configuration.Container.GetExportedValues<AbstractViewGenerator>());
+                configuration.Container.GetExportedValues<AbstractViewGenerator>(),
+				Extensions);
 			IndexStorage = new IndexStorage(IndexDefinitionStorage, configuration);
 
 			workContext.PerformanceCounters = new PerformanceCounters("Instance @ " + configuration.Port);
@@ -445,7 +449,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 					return name;
 				case IndexCreationOptions.Update:
 					// ensure that the code can compile
-					new DynamicViewCompiler(name, definition).GenerateInstance();
+					new DynamicViewCompiler(name, definition, Extensions).GenerateInstance();
 					DeleteIndex(name);
 					break;
 			}

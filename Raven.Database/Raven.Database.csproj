@@ -122,6 +122,7 @@
     <Compile Include="PerformanceCounters.cs" />
     <Compile Include="Plugins\AbstractBackgroundTask.cs" />
     <Compile Include="Plugins\AbstractDocumentCodec.cs" />
+    <Compile Include="Plugins\AbstractDynamicCompilationExtension.cs" />
     <Compile Include="Plugins\Builtins\FilterRavenInternalDocumentsReadTrigger.cs" />
     <Compile Include="Plugins\AbstractIndexUpdateTrigger.cs" />
     <Compile Include="Plugins\AbstractReadTrigger.cs" />

@@ -7,6 +7,7 @@ using ICSharpCode.NRefactory.Ast;
 using ICSharpCode.NRefactory.PrettyPrinter;
 using Raven.Database.Indexing;
 using System.Linq;
+using Raven.Database.Plugins;
 
 namespace Raven.Database.Linq
 {
@@ -18,13 +19,15 @@ namespace Raven.Database.Linq
 	public class DynamicViewCompiler
 	{
 		private readonly IndexDefinition indexDefinition;
+		private readonly AbstractDynamicCompilationExtension[] extensions;
 		private const string mapReduceTextToken = "96E65595-1C9E-4BFB-A0E5-80BF2D6FC185";
 
 		private readonly string name;
 
-		public DynamicViewCompiler(string name, IndexDefinition indexDefinition)
+		public DynamicViewCompiler(string name, IndexDefinition indexDefinition, AbstractDynamicCompilationExtension[] extensions)
 		{
 			this.indexDefinition = indexDefinition;
+			this.extensions = extensions;
 			this.name = HttpUtility.UrlEncode(name);
 		}
 
@@ -144,7 +147,7 @@ namespace Raven.Database.Linq
 				                   		})));
 			}
 
-			CompiledQueryText = QueryParsingUtils.GenerateText(type);
+			CompiledQueryText = QueryParsingUtils.GenerateText(type, extensions);
 			var compiledQueryText = "@\"" + indexDefinition.Map.Replace("\"", "\"\"");
 			if (indexDefinition.Reduce != null)
 			{
@@ -293,7 +296,7 @@ namespace Raven.Database.Linq
 This is usually the result of security settings when running in IIS.
 Raven requiers access to the temp directory in order to compile indexes.");
 				}
-				GeneratedType = QueryParsingUtils.Compile(tempFileName, CSharpSafeName, CompiledQueryText);
+				GeneratedType = QueryParsingUtils.Compile(tempFileName, CSharpSafeName, CompiledQueryText, extensions);
 			}
 			finally
 			{

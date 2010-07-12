@@ -1,9 +1,11 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Database.Linq;
+using Raven.Database.Plugins;
 using Xunit;
 
 namespace Raven.Tests.Linq
@@ -27,7 +29,7 @@ namespace Raven.Tests.Linq
 {'type':'page', title: 'there', content: 'foobar 2', size: 3, '@metadata': {'@id': 2} },
 {'type':'revision', size: 4, _id: 3}
 ]");
-			var transformer = new DynamicViewCompiler("pagesByTitle", new IndexDefinition { Map = query });
+			var transformer = new DynamicViewCompiler("pagesByTitle", new IndexDefinition { Map = query }, new AbstractDynamicCompilationExtension[0]);
 			var compiledQuery = transformer.GenerateInstance();
 			var actual = compiledQuery.MapDefinition(documents)
 				.Cast<object>().ToArray();
@@ -44,9 +46,66 @@ namespace Raven.Tests.Linq
 			}
 		}
 
+		[Fact]
+		public void Can_extend_queries()
+		{
+			var documents =
+				GetDocumentsFromString(
+					@"[{loc: 4, lang: 3, '@metadata': {'@id': 1}}]");
+			var transformer = new DynamicViewCompiler("pagesByTitle", new IndexDefinition {Map = @"
+from doc in docs
+select new { GeoHash = SampleGeoLocation.GeoHash(doc.loc, doc.lang) }
+"
+			},
+			                                          new AbstractDynamicCompilationExtension[]
+			                                          {
+			                                          	new SampleDynamicCompilationExtension()
+			                                          });
+			var compiledQuery = transformer.GenerateInstance();
+			var actual = compiledQuery.MapDefinition(documents)
+				.Cast<object>().ToArray();
+			var expected = new[]
+			{
+				"{ GeoHash = 4#3, __document_id = 1 }",
+			};
+
+			Assert.Equal(expected.Length, actual.Length);
+			for (var i = 0; i < expected.Length; i++)
+			{
+				Assert.Equal(expected[i], actual[i].ToString());
+			}
+		}
+
 		public static IEnumerable<dynamic> GetDocumentsFromString(string json)
 		{
 			return JArray.Parse(json).Cast<JObject>().Select(JsonToExpando.Convert);
+		}
+	}
+
+	public class SampleDynamicCompilationExtension : AbstractDynamicCompilationExtension
+	{
+		public override string[] GetNamespacesToImport()
+		{
+			return new[]
+			{
+				typeof (SampleGeoLocation).Namespace
+			};
+		}
+
+		public override string[] GetAssembliesToReference()
+		{
+			return new[]
+			{
+				typeof (SampleGeoLocation).Assembly.Location
+			};
+		}
+	}
+
+	public static class SampleGeoLocation
+	{
+		public static string GeoHash(int lon, int lang)
+		{
+			return lon + "#" + lang;
 		}
 	}
 }

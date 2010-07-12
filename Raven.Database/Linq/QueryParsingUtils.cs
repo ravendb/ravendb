@@ -11,6 +11,7 @@ using ICSharpCode.NRefactory.PrettyPrinter;
 using Microsoft.CSharp;
 using Microsoft.CSharp.RuntimeBinder;
 using Raven.Database.Linq.PrivateExtensions;
+using Raven.Database.Plugins;
 
 namespace Raven.Database.Linq
 {
@@ -23,15 +24,31 @@ namespace Raven.Database.Linq
 			return (output.Text);
 		}
 
-		public static string GenerateText(TypeDeclaration type)
+		public static string GenerateText(TypeDeclaration type, AbstractDynamicCompilationExtension[] extensions)
 		{
 			var unit = new CompilationUnit();
-			unit.AddChild(new Using(typeof (AbstractViewGenerator).Namespace));
-			unit.AddChild(new Using(typeof (Enumerable).Namespace));
-			unit.AddChild(new Using(typeof (int).Namespace));
-			unit.AddChild(new Using(typeof (LinqOnDynamic).Namespace));
-			unit.AddChild(type);
 
+			var namespaces = new HashSet<string>
+			{
+				typeof (AbstractViewGenerator).Namespace,
+				typeof (Enumerable).Namespace,
+				typeof (int).Namespace,
+				typeof (LinqOnDynamic).Namespace
+			};
+			foreach (var extension in extensions)
+			{
+				foreach (var ns in extension.GetNamespacesToImport())
+				{
+					namespaces.Add(ns);
+				}
+			}
+
+			foreach (var ns in namespaces)
+			{
+				unit.AddChild(new Using(ns));
+			}
+
+			unit.AddChild(type);
 			var output = new CSharpOutputVisitor();
 			unit.AcceptVisitor(output, null);
 
@@ -118,22 +135,35 @@ namespace Raven.Database.Linq
 		}
 
 
-		public static Type Compile(string fileName, string name, string queryText)
+		public static Type Compile(string fileName, string name, string queryText, AbstractDynamicCompilationExtension[] extensions)
 		{
 			var provider = new CSharpCodeProvider(new Dictionary<string, string> {{"CompilerVersion", "v4.0"}});
-			var results = provider.CompileAssemblyFromFile(new CompilerParameters
+			var assemblies = new HashSet<string>
+			{
+				typeof (AbstractViewGenerator).Assembly.Location,
+				typeof (NameValueCollection).Assembly.Location,
+				typeof (Enumerable).Assembly.Location,
+				typeof (Binder).Assembly.Location,
+			};
+			foreach (var extension in extensions)
+			{
+				foreach (var assembly in extension.GetAssembliesToReference())
+				{
+					assemblies.Add(assembly);
+				}
+			}
+			var compilerParameters = new CompilerParameters
 			{
 				GenerateExecutable = false,
 				GenerateInMemory = false,
 				IncludeDebugInformation = true,
-				ReferencedAssemblies =
-					{
-						typeof (AbstractViewGenerator).Assembly.Location,
-						typeof (NameValueCollection).Assembly.Location,
-						typeof (Enumerable).Assembly.Location,
-						typeof (Binder).Assembly.Location,
-					},
-			}, fileName);
+			};
+			foreach (var assembly in assemblies)
+			{
+				compilerParameters.ReferencedAssemblies.Add(assembly);
+			}
+			var compileAssemblyFromFile = provider.CompileAssemblyFromFile(compilerParameters, fileName);
+			var results = compileAssemblyFromFile;
 
 			if (results.Errors.HasErrors)
 			{

@@ -4,6 +4,7 @@ using System.Linq;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Indexing;
 using Raven.Database.Linq;
+using Raven.Database.Plugins;
 using Xunit;
 
 namespace Raven.Tests.Views
@@ -49,7 +50,7 @@ select new {
 		[Fact]
 		public void CanDetectGroupByTarget()
 		{
-			var abstractViewGenerator = new DynamicViewCompiler("test", new IndexDefinition { Map = map, Reduce = reduce }).GenerateInstance();
+			var abstractViewGenerator = new DynamicViewCompiler("test", new IndexDefinition { Map = map, Reduce = reduce }, new AbstractDynamicCompilationExtension[0]).GenerateInstance();
 			var expandoObject = new ExpandoObject();
 			((IDictionary<string,object>)expandoObject).Add("blog_id","1");
 			Assert.Equal("1", abstractViewGenerator.GroupByExtraction(expandoObject));
@@ -58,14 +59,14 @@ select new {
 		[Fact]
 		public void CanCompileQuery()
 		{
-			var abstractViewGenerator = new DynamicViewCompiler("test", new IndexDefinition { Map = map, Reduce = reduce }).GenerateInstance();
+			var abstractViewGenerator = new DynamicViewCompiler("test", new IndexDefinition { Map = map, Reduce = reduce }, new AbstractDynamicCompilationExtension[0]).GenerateInstance();
 			Assert.NotNull(abstractViewGenerator);
 		}
 
 		[Fact]
 		public void CanExecuteQuery()
 		{
-			var dynamicViewCompiler = new DynamicViewCompiler("test", new IndexDefinition { Map = map, Reduce = reduce });
+			var dynamicViewCompiler = new DynamicViewCompiler("test", new IndexDefinition { Map = map, Reduce = reduce }, new AbstractDynamicCompilationExtension[0]);
 			var abstractViewGenerator = dynamicViewCompiler.GenerateInstance();
 			var mapResults = abstractViewGenerator.MapDefinition(source).ToArray();
 			var results = abstractViewGenerator.ReduceDefinition(mapResults).ToArray();

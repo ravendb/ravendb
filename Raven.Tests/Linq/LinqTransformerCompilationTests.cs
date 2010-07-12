@@ -4,6 +4,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Database.Linq;
+using Raven.Database.Plugins;
 using Xunit;
 
 namespace Raven.Tests.Linq
@@ -20,7 +21,7 @@ namespace Raven.Tests.Linq
 		[Fact]
 		public void Will_compile_query_successfully()
 		{
-			var dynamicQueryCompiler = new DynamicViewCompiler("pagesByTitle", new IndexDefinition { Map = query });
+			var dynamicQueryCompiler = new DynamicViewCompiler("pagesByTitle", new IndexDefinition { Map = query }, new AbstractDynamicCompilationExtension[0]);
 			dynamicQueryCompiler.GenerateInstance();
 			var compiled = dynamicQueryCompiler.GeneratedType;
 			Assert.NotNull(compiled);
@@ -29,7 +30,7 @@ namespace Raven.Tests.Linq
 		[Fact]
 		public void Can_create_new_instance_from_query()
 		{
-			var dynamicQueryCompiler = new DynamicViewCompiler("pagesByTitle", new IndexDefinition { Map = query });
+			var dynamicQueryCompiler = new DynamicViewCompiler("pagesByTitle", new IndexDefinition { Map = query }, new AbstractDynamicCompilationExtension[0]);
 			dynamicQueryCompiler.GenerateInstance();
 			var compiled = dynamicQueryCompiler.GeneratedType;
 			Activator.CreateInstance(compiled);
@@ -38,7 +39,7 @@ namespace Raven.Tests.Linq
 		[Fact]
 		public void Can_execute_query()
 		{
-			var dynamicQueryCompiler = new DynamicViewCompiler("pagesByTitle", new IndexDefinition { Map = query });
+			var dynamicQueryCompiler = new DynamicViewCompiler("pagesByTitle", new IndexDefinition { Map = query }, new AbstractDynamicCompilationExtension[0]);
 			var generator = dynamicQueryCompiler.GenerateInstance();
 			var results = generator.MapDefinition(new[]
 			{
@@ -91,7 +92,7 @@ namespace Raven.Tests.Linq
 				Map = @"docs.Users
 	.Select(user => new {Location = user.Location, Count = 1})
 	.Select(user => new {Location = user.Location})"
-			}).GenerateInstance();
+			}, new AbstractDynamicCompilationExtension[0]).GenerateInstance();
 
 
 			var results = viewGenerator.MapDefinition(new[]
@@ -126,7 +127,7 @@ namespace Raven.Tests.Linq
 					@"results
 	.GroupBy(agg => agg.Location)
 	.Select(g => new {Loction = g.Key, Count = g.Sum(x => x.Count}))"
-			}).GenerateInstance();
+			}, new AbstractDynamicCompilationExtension[0]).GenerateInstance();
 
 
 			var results = viewGenerator.ReduceDefinition(viewGenerator.MapDefinition(new[]

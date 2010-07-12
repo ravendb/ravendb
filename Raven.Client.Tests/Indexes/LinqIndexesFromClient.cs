@@ -10,6 +10,7 @@ using Raven.Client.Tests.Document;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Database.Linq;
+using Raven.Database.Plugins;
 using Xunit;
 
 namespace Raven.Client.Tests.Indexes
@@ -25,7 +26,7 @@ namespace Raven.Client.Tests.Indexes
                                 from line in order.OrderLines
                                 select new { line.ProductId }
             }.ToIndexDefinition(new DocumentConvention());
-            var generator = new DynamicViewCompiler("test", indexDefinition)
+			var generator = new DynamicViewCompiler("test", indexDefinition, new AbstractDynamicCompilationExtension[0])
                 .GenerateInstance();
 
 
