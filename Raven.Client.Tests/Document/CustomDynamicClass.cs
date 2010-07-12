@@ -12,13 +12,13 @@ namespace Raven.Client.Tests.Document
     class CustomDynamicClass : DynamicObject
     {
         // The inner dictionary, used to store the new dynamic members and their values
-		public Dictionary<string, object> Properties { get; set; }
+        Dictionary<string, object> dictionary = new Dictionary<string, object>();
 
-    	public CustomDynamicClass()
-    	{
-			Properties = new Dictionary<string, object>();
-    	}
-
+        // This property returns the number of elements in the inner dictionary.
+        public int Count
+        {
+            get { return dictionary.Count; }
+        }
 
         // If you try to get a value of a property not defined in the class, this method is called.
         public override bool TryGetMember(GetMemberBinder binder, out object result)
@@ -28,14 +28,14 @@ namespace Raven.Client.Tests.Document
 
             // If the property name is found in a dictionary, set the result parameter to the 
             // property value and return true. Otherwise, return false.
-            return Properties.TryGetValue(name, out result);
+            return dictionary.TryGetValue(name, out result);
         }
 
         // If you try to set a value of a property that is not defined in the class, this method is called.
         public override bool TrySetMember(SetMemberBinder binder, object value)
         {            
             // Converting the property name to lowercase so that property names become case-insensitive.
-            Properties[binder.Name.ToLower()] = value;            
+            dictionary[binder.Name.ToLower()] = value;            
 
             // You can always add a value to a dictionary,
             // so this method always returns true.
@@ -44,7 +44,7 @@ namespace Raven.Client.Tests.Document
 
         public override IEnumerable<string> GetDynamicMemberNames()
         {
-            return Properties.Keys;
+            return dictionary.Keys;
         }
     }    
 }
