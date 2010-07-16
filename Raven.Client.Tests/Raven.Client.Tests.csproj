@@ -97,6 +97,7 @@
     <Compile Include="Bugs\BaseClientTest.cs" />
     <Compile Include="Bugs\CanDetectChanges.cs" />
     <Compile Include="Bugs\ExtendingClientSideViaListeners.cs" />
+    <Compile Include="Bugs\IndexWithTwoProperties.cs" />
     <Compile Include="Bugs\SinglePropertyDocument.cs" />
     <Compile Include="Bugs\ProjectingDates.cs" />
     <Compile Include="Document\AsyncDocumentStoreServerTests.cs" />
