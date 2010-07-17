@@ -36,7 +36,8 @@ namespace Raven.Database.Storage
 			if (Directory.Exists(this.path) == false)
 				Directory.CreateDirectory(this.path);
 
-			foreach (var index in Directory.GetFiles(this.path, "*.index"))
+            this.extensions = extensions;
+            foreach (var index in Directory.GetFiles(this.path, "*.index"))
 			{
 				try
 				{
@@ -81,7 +82,6 @@ namespace Raven.Database.Storage
 		        indexCache.AddOrUpdate(name, copy, (s, viewGenerator) => copy);
 		        indexDefinitions.AddOrUpdate(name, indexDefinition, (s1, definition) => indexDefinition);
 		    }
-			this.extensions = extensions;
 		}
 
 		public string[] IndexNames
