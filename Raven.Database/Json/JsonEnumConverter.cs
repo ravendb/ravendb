@@ -10,9 +10,9 @@ namespace Raven.Database.Json
 			writer.WriteValue(value.ToString());
 		}
 
-	    public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
-	    {
-			return Enum.Parse(objectType, (string)reader.Value);
+		public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+		{
+			return Enum.Parse(objectType, reader.Value.ToString());
 		}
 
 		public override bool CanConvert(Type objectType)
