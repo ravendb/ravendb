@@ -91,10 +91,16 @@ namespace Raven.Database.Server.Responders
 		{
 			var definition = context.Request.QueryString["definition"];
 		    if ("yes".Equals(definition, StringComparison.InvariantCultureIgnoreCase))
-			{
-				context.WriteJson(new {Index = Database.GetIndexDefinition(index)});
-			}
-			else
+		    {
+		    	var indexDefinition = Database.GetIndexDefinition(index);
+				if(indexDefinition == null)
+				{
+					context.SetStatusToNotFound();
+					return;
+				}
+		    	context.WriteJson(new {Index = indexDefinition});
+		    }
+		    else
             {
 				IndexQuery indexQuery = context.GetIndexQueryFromHttpContext(Database.Configuration.MaxPageSize);
                 context.WriteJson(Database.Query(index, indexQuery));

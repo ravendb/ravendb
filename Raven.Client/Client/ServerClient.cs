@@ -289,7 +289,19 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
     	private IndexDefinition DirectGetIndex(string indexName, string operationUrl)
     	{
 			var httpJsonRequest = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/indexes/" + indexName +"?definition=yes", "GET", credentials);
-    		var indexDefAsString = httpJsonRequest.ReadResponseString();
+			string indexDefAsString;
+			try
+    		{
+    			indexDefAsString = httpJsonRequest.ReadResponseString();
+    		}
+    		catch (WebException e)
+    		{
+				var httpWebResponse = e.Response as HttpWebResponse;
+				if (httpWebResponse != null &&
+					httpWebResponse.StatusCode == HttpStatusCode.NotFound)
+					return null;
+    			throw;
+    		}
     		var indexDefResultAsJson = JObject.Load(new JsonTextReader(new StringReader(indexDefAsString)));
     		return new JsonSerializer().Deserialize<IndexDefinition>(
 				new JTokenReader(indexDefResultAsJson["Index"])
