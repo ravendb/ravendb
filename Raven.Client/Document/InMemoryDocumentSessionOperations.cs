@@ -326,6 +326,7 @@ more responsive application.
 				if (entitiesAndMetadata.TryGetValue(entity, out documentMetadata) == false)
 					continue;
 
+				batchResult.Metadata["@etag"] = new JValue(batchResult.Etag.ToString());
 				entitiesByKey[batchResult.Key] = entity;
 				documentMetadata.ETag = batchResult.Etag;
 				documentMetadata.Key = batchResult.Key;
