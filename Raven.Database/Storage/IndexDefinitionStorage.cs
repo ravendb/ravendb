@@ -27,10 +27,15 @@ namespace Raven.Database.Storage
 
 		private readonly ILog logger = LogManager.GetLogger(typeof (IndexDefinitionStorage));
 		private readonly string path;
-		private AbstractDynamicCompilationExtension[] extensions;
+		private readonly AbstractDynamicCompilationExtension[] extensions;
 
-		public IndexDefinitionStorage(ITransactionalStorage  transactionalStorage,string path, IEnumerable<AbstractViewGenerator> compiledGenerators, AbstractDynamicCompilationExtension[] extensions)
+		public IndexDefinitionStorage(
+			ITransactionalStorage  transactionalStorage,
+			string path, 
+			IEnumerable<AbstractViewGenerator> compiledGenerators, 
+			AbstractDynamicCompilationExtension[] extensions)
 		{
+			this.extensions = extensions;// this is used later in the ctor, so it must appears first
 			this.path = Path.Combine(path, IndexDefDir);
 
 			if (Directory.Exists(this.path) == false)
@@ -81,7 +86,6 @@ namespace Raven.Database.Storage
 		        indexCache.AddOrUpdate(name, copy, (s, viewGenerator) => copy);
 		        indexDefinitions.AddOrUpdate(name, indexDefinition, (s1, definition) => indexDefinition);
 		    }
-			this.extensions = extensions;
 		}
 
 		public string[] IndexNames
