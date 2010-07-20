@@ -193,11 +193,7 @@ task Compile -depends Init {
     Write-Host "Merging..."
     $old = pwd
     cd $build_dir
-    
-    remove-item $build_dir\RavenDb.exe  -ErrorAction SilentlyContinue
-    remove-item $build_dir\RavenClient.dll -ErrorAction SilentlyContinue
-    remove-item $build_dir\RavenWeb.dll  -ErrorAction SilentlyContinue
-    
+     
     exec "..\Utilities\Binaries\Raven.Merger.exe"
     
     cd $old
@@ -284,13 +280,34 @@ task DoRelease -depends Compile {
 	cp $build_dir\Raven.Client-3.5.dll $build_dir\Output\Client-3.5
 	
 	
-	cp $build_dir\RavenWeb.dll $build_dir\Output\Web\bin
-	cp $build_dir\Raven.Bundles.*.dll $build_dir\Output\Bundles
+	cp $build_dir\Raven.Web.dll $build_dir\Output\Web\bin
+	cp $build_dir\log4net.dll $build_dir\Output\Web\bin
+	cp $build_dir\Newtonsoft.Json.dll $build_dir\Output\Web\bin
+	cp $build_dir\Lucene.Net.dll $build_dir\Output\Web\bin
+	cp $build_dir\ICSharpCode.NRefactory.dll $build_dir\Output\Web\bin
+	cp $build_dir\Rhino.Licensing.dll $build_dir\Output\Web\bin
+	cp $build_dir\Esent.Interop.dll $build_dir\Output\Web\bin
+	cp $build_dir\Raven.Database.dll $build_dir\Output\Web\bin
+	cp $build_dir\Raven.Storage.Managed.dll $build_dir\Output\Web\bin
+	cp $build_dir\Raven.Storage.Esent.dll $build_dir\Output\Web\bin
 	
-	del $build_dir\Output\Bundles\Raven.Bundles.Tests.dll
 	cp $base_dir\DefaultConfigs\web.config $build_dir\Output\Web\web.config
 	
-	cp $build_dir\RavenDb.exe $build_dir\Output\Server
+	
+	cp $build_dir\Raven.Bundles.*.dll $build_dir\Output\Bundles
+	del $build_dir\Output\Bundles\Raven.Bundles.Tests.dll
+	
+	
+	cp $build_dir\Raven.Server.exe $build_dir\Output\Server
+	cp $build_dir\log4net.dll $build_dir\Output\Server
+	cp $build_dir\Newtonsoft.Json.dll $build_dir\Output\Server
+	cp $build_dir\Lucene.Net.dll $build_dir\Output\Server
+	cp $build_dir\ICSharpCode.NRefactory.dll $build_dir\Output\Server
+	cp $build_dir\Rhino.Licensing.dll $build_dir\Output\Server
+	cp $build_dir\Esent.Interop.dll $build_dir\Output\Server
+	cp $build_dir\Raven.Database.dll $build_dir\Output\Server
+	cp $build_dir\Raven.Storage.Managed.dll $build_dir\Output\Server
+	cp $build_dir\Raven.Storage.Esent.dll $build_dir\Output\Server
 	cp $base_dir\DefaultConfigs\RavenDb.exe.config $build_dir\Output\Server\RavenDb.exe.config
 	
 	cp $base_dir\license.txt $build_dir\Output\license.txt
