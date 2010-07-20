@@ -436,7 +436,7 @@ more responsive application.
 				objectAsJson.Remove(identityProperty.Name);
 			}
 
-			metadata["Raven-Clr-Type"] = JToken.FromObject(entityType.FullName + ", " + entityType.Assembly.GetName().Name);
+			metadata["Raven-Clr-Type"] = JToken.FromObject(ReflectionUtil.GetFullNameWithoutVersionInformation(entityType));
 
 			var entityConverted = OnEntityConverted;
 			if (entityConverted != null)

@@ -109,6 +109,7 @@
     <Compile Include="Document\MultiTypeHiLoKeyGenerator.cs" />
     <Compile Include="Document\PromotableRavenClientEnlistment.cs" />
     <Compile Include="Document\RavenClientEnlistment.cs" />
+    <Compile Include="Document\ReflectionUtil.cs" />
     <Compile Include="Document\ShardedDocumentQuery.cs" />
     <Compile Include="EntityStored.cs" />
     <Compile Include="EntityToDocument.cs" />

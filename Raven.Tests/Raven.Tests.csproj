@@ -155,6 +155,7 @@
     <Compile Include="Triggers\PutTriggers.cs" />
     <Compile Include="Triggers\ReadTriggers.cs" />
     <Compile Include="Triggers\VetoCapitalNamesPutTrigger.cs" />
+    <Compile Include="Util\ReflectionUtil.cs" />
     <Compile Include="Views\MapReduce.cs" />
     <Compile Include="Views\ViewCompilation.cs" />
     <Compile Include="Views\ViewStorage.cs" />
