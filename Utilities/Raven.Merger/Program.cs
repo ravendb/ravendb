@@ -73,6 +73,7 @@ namespace Raven.Merger
 				OutputFile = outputFile,
 				TargetKind = ILMerge.Kind.SameAsPrimaryAssembly,
 				Version = new Version(4, 0),
+				KeyFile = @"..\Raven.Database\RavenDB.snk"
 			};
 			merge.SetInputAssemblies(inputAssemblies);
 			merge.SetTargetPlatform("4", Path.GetDirectoryName(typeof(object).Assembly.Location));
