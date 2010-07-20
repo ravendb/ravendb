@@ -158,8 +158,6 @@ namespace Raven.Server
 			});
 			consoleAppender.AddFilter(new DenyAllFilter());
 			BasicConfigurator.Configure(consoleAppender);
-        	Console.WriteLine("Press any key to start...");
-        	Console.ReadLine();
             var ravenConfiguration = new RavenConfiguration();
             RavenDbServer.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Port);
             if (anonymousUserAccessMode.HasValue)
