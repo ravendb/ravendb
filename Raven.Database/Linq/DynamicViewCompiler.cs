@@ -46,7 +46,7 @@ namespace Raven.Database.Linq
 			string entityName;
 			var mapDefinition = TransformMapDefinition(out entityName);
 
-			CSharpSafeName = Regex.Replace(Name, @"[^\w\d]", "_");
+			CSharpSafeName = "Index_"+ Regex.Replace(Name, @"[^\w\d]", "_");
 			var type = new TypeDeclaration(Modifiers.Public, new List<AttributeSection>())
 			{
 				BaseTypes =
