@@ -189,7 +189,7 @@ more responsive application.
 #endif
 			}
 			var identityProperty = documentStore.Conventions.GetIdentityProperty(entity.GetType());
-			if (identityProperty != null)
+			if (identityProperty != null && identityProperty.CanWrite)
 				identityProperty.SetValue(entity, id, null);
 			return entity;
 		}
@@ -226,7 +226,7 @@ more responsive application.
                     // Generate the key up front
                     id = Conventions.GenerateDocumentKey(entity);
 
-                    if (id != null && identityProperty != null)
+					if (id != null && identityProperty != null && identityProperty.CanWrite)
                     {
                         // And store it so the client has access to to it
                         identityProperty.SetValue(entity, id, null);

@@ -308,7 +308,7 @@ task DoRelease -depends Compile {
 	cp $build_dir\Raven.Database.dll $build_dir\Output\Server
 	cp $build_dir\Raven.Storage.Managed.dll $build_dir\Output\Server
 	cp $build_dir\Raven.Storage.Esent.dll $build_dir\Output\Server
-	cp $base_dir\DefaultConfigs\RavenDb.exe.config $build_dir\Output\Server\RavenDb.exe.config
+	cp $base_dir\DefaultConfigs\RavenDb.exe.config $build_dir\Output\Server\Raven.Server.exe.config
 	
 	cp $base_dir\license.txt $build_dir\Output\license.txt
 	cp $base_dir\readme.txt $build_dir\Output\readme.txt

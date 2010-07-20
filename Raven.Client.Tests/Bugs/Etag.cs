@@ -19,7 +19,6 @@ namespace Raven.Client.Tests.Bugs
 					session.SaveChanges();
 
 					var metadata = session.GetMetadataFor(foo);
-					// TODO: THIS FAILS
 					Assert.NotNull(metadata.Value<string>("@etag"));
 				}
 
