@@ -766,6 +766,8 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 		public void ResetIndex(string index)
 		{
 			var indexDefinition = IndexDefinitionStorage.GetIndexDefinition(index);
+			if(indexDefinition == null)
+				throw new InvalidOperationException("There is no index named: " + index);
 			IndexStorage.DeleteIndex(index);
 			IndexStorage.CreateIndexImplementation(index, indexDefinition);
 			TransactionalStorage.Batch(actions =>

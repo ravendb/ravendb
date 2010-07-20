@@ -137,8 +137,7 @@ namespace Raven.Database.Storage
 		public IndexDefinition GetIndexDefinition(string name)
 		{
 		    IndexDefinition value;
-		    if(indexDefinitions.TryGetValue(name, out value)==false)
-		        throw new InvalidOperationException("Index does not exists: " + name);
+			indexDefinitions.TryGetValue(name, out value);
 		    return value;
 		}
 
