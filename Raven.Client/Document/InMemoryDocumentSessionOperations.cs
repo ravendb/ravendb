@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Transactions;
 using Newtonsoft.Json;
@@ -429,12 +430,7 @@ more responsive application.
 			var entityType = entity.GetType();
 			var identityProperty = documentStore.Conventions.GetIdentityProperty(entityType);
 
-			var objectAsJson = JObject.FromObject(entity, new JsonSerializer
-			{
-				Converters = {new JsonEnumConverter()},
-				ContractResolver = Conventions.JsonContractResolver,
-				ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor
-			});
+			var objectAsJson = GetObjectAsJson(entity);
 			if (identityProperty != null)
 			{
 				objectAsJson.Remove(identityProperty.Name);
@@ -447,6 +443,16 @@ more responsive application.
 				entityConverted(entity, objectAsJson, metadata);
 
 			return objectAsJson;
+		}
+
+		private JObject GetObjectAsJson(object entity)
+		{
+			return JObject.FromObject(entity, new JsonSerializer
+			{
+				Converters = {new JsonEnumConverter()},
+				ContractResolver = Conventions.JsonContractResolver,
+				ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor
+			});
 		}
 
 		public void Evict<T>(T entity)
