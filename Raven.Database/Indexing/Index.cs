@@ -73,34 +73,52 @@ namespace Raven.Database.Indexing
         	IndexSearcher indexSearcher;
         	using (searcher.Use(out indexSearcher))
             {
-                var search = ExecuteQuery(indexSearcher, indexQuery, GetLuceneQuery(indexQuery));
-                indexQuery.TotalSize.Value = search.totalHits;
-                var previousDocuments = new HashSet<string>();
-                for (var i = indexQuery.Start; i < search.totalHits && (i - indexQuery.Start) < indexQuery.PageSize; i++)
-                {
-                    var document = indexSearcher.Doc(search.scoreDocs[i].doc);
-                    if (IsDuplicateDocument(document, indexQuery.FieldsToFetch, previousDocuments))
-                        continue;
-                    yield return RetrieveDocument(document, indexQuery.FieldsToFetch);
-                }
+				var previousDocuments = new HashSet<string>();
+            	var luceneQuery = GetLuceneQuery(indexQuery);
+            	var start = indexQuery.Start;
+            	var pageSize = indexQuery.PageSize;
+            	var skippedDocs = 0;
+            	var returnedResults = 0;
+            	do
+            	{
+					if(skippedDocs > 0)
+					{
+						start = start + pageSize;
+						pageSize = skippedDocs;
+						skippedDocs = 0;
+					}
+					var search = ExecuteQuery(indexSearcher, luceneQuery, start, pageSize, indexQuery.SortedFields);
+					indexQuery.TotalSize.Value = search.totalHits;
+					for (var i = start; i < search.totalHits && (i - start) < pageSize; i++)
+					{
+						var document = indexSearcher.Doc(search.scoreDocs[i].doc);
+						if (IsDuplicateDocument(document, indexQuery.FieldsToFetch, previousDocuments))
+						{
+							skippedDocs++;
+							continue;
+						}
+						returnedResults++;
+						yield return RetrieveDocument(document, indexQuery.FieldsToFetch);
+					}
+				} while (skippedDocs > 0 && returnedResults < indexQuery.PageSize);
             }
         }
 
-    	private static TopDocs ExecuteQuery(IndexSearcher searcher, IndexQuery indexQuery, Query luceneQuery)
+    	private static TopDocs ExecuteQuery(IndexSearcher searcher, Query luceneQuery, int start, int pageSize, SortedField[] sortedFields)
         {
-        	if(indexQuery.PageSize == int.MaxValue) // we want all docs
+        	if(pageSize == int.MaxValue) // we want all docs
         	{
         		var gatherAllCollector = new GatherAllCollector();
         		searcher.Search(luceneQuery, gatherAllCollector);
         		return gatherAllCollector.ToTopDocs();
         	}
             // NOTE: We get Start + Pagesize results back so we have something to page on
-			if (indexQuery.SortedFields != null && indexQuery.SortedFields.Length > 0)
+			if (sortedFields != null && sortedFields.Length > 0)
             {
-                var sort = new Sort(indexQuery.SortedFields.Select(x => x.ToLuceneSortField()).ToArray());
-                return searcher.Search(luceneQuery, null, indexQuery.PageSize + indexQuery.Start, sort);
+                var sort = new Sort(sortedFields.Select(x => x.ToLuceneSortField()).ToArray());
+                return searcher.Search(luceneQuery, null, pageSize + start, sort);
             }
-        	return searcher.Search(luceneQuery, null, indexQuery.PageSize + indexQuery.Start);
+        	return searcher.Search(luceneQuery, null, pageSize + start);
         }
 
         private Query GetLuceneQuery(IndexQuery indexQuery)

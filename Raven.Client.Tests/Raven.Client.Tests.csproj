@@ -99,6 +99,7 @@
     <Compile Include="Bugs\Etag.cs" />
     <Compile Include="Bugs\ExtendingClientSideViaListeners.cs" />
     <Compile Include="Bugs\IndexWithTwoProperties.cs" />
+    <Compile Include="Bugs\MultipleResultsPerDocumentAndPaging.cs" />
     <Compile Include="Bugs\SinglePropertyDocument.cs" />
     <Compile Include="Bugs\ProjectingDates.cs" />
     <Compile Include="Document\AsyncDocumentStoreServerTests.cs" />
