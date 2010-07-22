@@ -193,7 +193,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 		}
 
 		[SuppressUnmanagedCodeSecurity]
-		[DllImport("rpcrt4.dll", SetLastError = true)]
+		[DllImport("rpcrt4.dll", EntryPoint = "UuidCreateSequential", SetLastError = true)]
 		private static extern int UuidCreateSequentialNative(out Guid value);
 
 		private static void UuidCreateSequential(out Guid value)
