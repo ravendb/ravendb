@@ -1,4 +1,5 @@
 using Xunit;
+using Newtonsoft.Json.Linq;
 
 namespace Raven.Client.Tests.Bugs
 {
@@ -35,7 +36,7 @@ namespace Raven.Client.Tests.Bugs
 					var foo = session.Load<IndexWithTwoProperties.Foo>(id);
 					var metadata = session.GetMetadataFor(foo);
 
-					Assert.Equal("bar", metadata["foo"]);
+					Assert.Equal("bar", metadata["foo"].Value<string>());
 				}
 			}
 		}
