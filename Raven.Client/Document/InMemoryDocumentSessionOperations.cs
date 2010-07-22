@@ -149,7 +149,7 @@ more responsive application.
 			{
 				OriginalValue = document,
 				Metadata = metadata,
-				OriginalMetadata = metadata,
+				OriginalMetadata = new JObject(metadata),
 				ETag = new Guid(etag),
 				Key = key
 			};
@@ -330,7 +330,8 @@ more responsive application.
 				entitiesByKey[batchResult.Key] = entity;
 				documentMetadata.ETag = batchResult.Etag;
 				documentMetadata.Key = batchResult.Key;
-				documentMetadata.OriginalMetadata = batchResult.Metadata;
+				documentMetadata.OriginalMetadata = new JObject(batchResult.Metadata);
+				documentMetadata.Metadata = batchResult.Metadata;
 				documentMetadata.OriginalValue = ConvertEntityToJson(entity, documentMetadata.Metadata);
 
 				// Set/Update the id of the entity

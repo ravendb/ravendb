@@ -77,7 +77,7 @@ namespace Raven.Client.Document
                 throw new InvalidOperationException("Document '" + value.Key + "' no longer exists and was probably deleted");
 
 	        value.Metadata = jsonDocument.Metadata;
-			value.OriginalMetadata = jsonDocument.Metadata;
+			value.OriginalMetadata = new JObject(jsonDocument.Metadata);
 	        value.ETag = jsonDocument.Etag;
 	        value.OriginalValue = jsonDocument.DataAsJson;
 	        var newEntity = ConvertToEntity<T>(value.Key, jsonDocument.DataAsJson, jsonDocument.Metadata);
