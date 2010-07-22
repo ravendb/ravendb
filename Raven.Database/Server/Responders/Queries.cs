@@ -12,12 +12,16 @@ namespace Raven.Database.Server.Responders
 
 		public override string[] SupportedVerbs
 		{
-			get { return new[] {"POST"}; }
+			get { return new[] {"POST","GET"}; }
 		}
 
 		public override void Respond(IHttpContext context)
 		{
-			var itemsToLoad = context.ReadJsonArray();
+			JArray itemsToLoad;
+			if(context.Request.HttpMethod == "POST")
+				itemsToLoad = context.ReadJsonArray();
+			else
+				itemsToLoad = new JArray(context.Request.QueryString.GetValues("id"));
 			var results = new JArray();
 			Database.TransactionalStorage.Batch(actions =>
 			{
