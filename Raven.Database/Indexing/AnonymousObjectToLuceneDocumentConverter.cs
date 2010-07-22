@@ -18,7 +18,7 @@ namespace Raven.Database.Indexing
 			        let name = property.Name
 			        where name != "__document_id"
 			        let value = property.GetValue(val)
-			        from field in Createfields(name, value, indexDefinition, defaultStorage)
+			        from field in CreateFields(name, value, indexDefinition, defaultStorage)
 			        select field);
 		}
 
@@ -28,7 +28,7 @@ namespace Raven.Database.Indexing
         	        let name = property.Name
         	        where name != "__document_id"
         	        let value = GetPropertyValue(property)
-        	        from field in Createfields(name, value, indexDefinition, defaultStorage)
+        	        from field in CreateFields(name, value, indexDefinition, defaultStorage)
         	        select field);
         }
 
@@ -54,7 +54,7 @@ namespace Raven.Database.Indexing
 		///		1. with the supplied name, containing the numeric value as an unanalyzed string - useful for direct queries
 		///		2. with the name: name +'_Range', containing the numeric value in a form that allows range queries
 		/// </summary>
-		private static IEnumerable<AbstractField> Createfields(string name, object value, IndexDefinition indexDefinition, Field.Store defaultStorage)
+		private static IEnumerable<AbstractField> CreateFields(string name, object value, IndexDefinition indexDefinition, Field.Store defaultStorage)
 		{
 			if (value == null)
 			{
