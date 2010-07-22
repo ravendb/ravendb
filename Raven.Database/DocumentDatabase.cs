@@ -194,18 +194,23 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 
 		[SuppressUnmanagedCodeSecurity]
 		[DllImport("rpcrt4.dll", SetLastError = true)]
-		private static extern int UuidCreateSequential(out Guid value);
+		private static extern int UuidCreateSequentialNative(out Guid value);
 
-        public static Guid CreateSequentialUuid()
+		private static void UuidCreateSequential(out Guid value)
+		{
+			Marshal.ThrowExceptionForHR(UuidCreateSequentialNative(out value));
+		}
+
+		public static Guid CreateSequentialUuid()
         {
             Guid value;
-            UuidCreateSequential(out value);
+        	UuidCreateSequential(out value);
             var byteArray = value.ToByteArray();
             Array.Reverse(byteArray);
             return new Guid(byteArray);
         }
 
-	    public JsonDocument Get(string key, TransactionInformation transactionInformation)
+		public JsonDocument Get(string key, TransactionInformation transactionInformation)
 		{
 			JsonDocument document = null;
 			TransactionalStorage.Batch(actions =>
@@ -292,7 +297,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 
 					etag = actions.Documents.AddDocument(key, etag, document, metadata);
 					AddIndexingTask(actions, metadata, () => new IndexDocumentsTask { Keys = new[] { key } });
-                    PutTriggers.Apply(trigger => trigger.AfterPut(key, document, metadata, transactionInformation));
+                    PutTriggers.Apply(trigger => trigger.AfterPut(key, document, metadata, etag.Value, transactionInformation));
                 }
                 else
                 {
@@ -303,12 +308,12 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 			});
 
 			TransactionalStorage
-				.ExecuteImmediatelyOrRegisterForSyncronization(() => PutTriggers.Apply(trigger => trigger.AfterCommit(key, document, metadata)));
+				.ExecuteImmediatelyOrRegisterForSyncronization(() => PutTriggers.Apply(trigger => trigger.AfterCommit(key, document, metadata, etag.Value)));
 	
 		    return new PutResult
 		    {
 		        Key = key,
-		        ETag = (Guid)etag
+		        ETag = etag.Value
 		    };
 		}
 
