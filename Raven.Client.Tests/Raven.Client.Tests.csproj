@@ -65,6 +65,7 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\log4net.dll</HintPath>
     </Reference>
+    <Reference Include="Lucene.Net, Version=2.9.2.1, Culture=neutral, PublicKeyToken=02f879aa45933051, processorArchitecture=MSIL" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Newtonsoft.Json, Version=3.5.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -94,6 +95,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BaseTest.cs" />
+    <Compile Include="Bugs\AnalyzerPerField.cs" />
     <Compile Include="Bugs\BaseClientTest.cs" />
     <Compile Include="Bugs\CanDetectChanges.cs" />
     <Compile Include="Bugs\Etag.cs" />

@@ -14,9 +14,8 @@ namespace Raven.Database.Indexing
 	{
 		static readonly Regex untokenizedQuery = new Regex(@"([\w\d_]+?):(\[\[.+?\]\])", RegexOptions.Compiled);
 
-		public static Query BuildQuery(string query)
+		public static Query BuildQuery(string query, PerFieldAnalyzerWrapper analyzer)
 		{
-			var analyzer = new PerFieldAnalyzerWrapper(new StandardAnalyzer(Version.LUCENE_29));
 			var keywordAnalyzer = new KeywordAnalyzer();
 			try
 		    {
@@ -25,7 +24,6 @@ namespace Raven.Database.Indexing
 			}
 		    finally
 		    {
-		        analyzer.Close();
 				keywordAnalyzer.Close();
 		    }
 		}

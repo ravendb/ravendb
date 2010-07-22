@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using log4net;
+using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
@@ -135,7 +136,23 @@ namespace Raven.Database.Indexing
             else
             {
                 log.DebugFormat("Issuing query on index {0} for: {1}", name, query);
-                luceneQuery = QueryBuilder.BuildQuery(query);
+            	var toDispose = new List<Action>();
+            	PerFieldAnalyzerWrapper analyzer = null;
+				try
+				{
+					analyzer = CreateAnalyzer(toDispose);
+
+					luceneQuery = QueryBuilder.BuildQuery(query, analyzer);
+				}
+				finally
+				{
+					if(analyzer != null)
+						analyzer.Close();
+					foreach (var dispose in toDispose)
+					{
+						dispose();
+					}
+				}
             }
             return luceneQuery;
         }
@@ -200,10 +217,12 @@ namespace Raven.Database.Indexing
 			lock (writeLock)
 			{
 				bool shouldRecreateSearcher;
-				var standardAnalyzer = new StandardAnalyzer(Version.LUCENE_29);
+				var toDispose = new List<Action>();
+				Analyzer analyzer = null;
 				try
 				{
-					var indexWriter = new IndexWriter(directory, standardAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED);
+					analyzer = CreateAnalyzer(toDispose);
+					var indexWriter = new IndexWriter(directory, analyzer, IndexWriter.MaxFieldLength.UNLIMITED);
 					try
 					{
 						shouldRecreateSearcher = action(indexWriter);
@@ -215,16 +234,36 @@ namespace Raven.Database.Indexing
 				}
 				finally
 				{
-					standardAnalyzer.Close();
-
+					if (analyzer != null)
+						analyzer.Close();
+					foreach (var dispose in toDispose)
+					{
+						dispose();
+					}
 				}
     		if (shouldRecreateSearcher)
                 RecreateSearcher();
 			}
 		}
 
+		private PerFieldAnalyzerWrapper CreateAnalyzer(ICollection<Action> toDispose)
+    	{
+    		var standardAnalyzer = new StandardAnalyzer(Version.LUCENE_29);
+			toDispose.Add(standardAnalyzer.Close);
+    		var perFieldAnalyzerWrapper = new PerFieldAnalyzerWrapper(standardAnalyzer);
+    		foreach (var analyzer in indexDefinition.Analyzers)
+    		{
+    			var analyzerInstance = indexDefinition.CreateAnalyzerInstance(analyzer.Key, analyzer.Value);
+				if(analyzerInstance == null)
+					continue;
+				toDispose.Add(analyzerInstance.Close);
+    			perFieldAnalyzerWrapper.AddAnalyzer(analyzer.Key, analyzerInstance);
+    		}
+    		return perFieldAnalyzerWrapper;
+    	}
 
-        protected IEnumerable<object> RobustEnumeration(IEnumerable<object> input, IndexingFunc func,
+
+    	protected IEnumerable<object> RobustEnumeration(IEnumerable<object> input, IndexingFunc func,
 														IStorageActionsAccessor actions, WorkContext context)
         {
             var wrapped = new StatefulEnumerableWrapper<dynamic>(input.GetEnumerator());

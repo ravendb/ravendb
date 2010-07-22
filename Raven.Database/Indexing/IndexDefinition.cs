@@ -4,7 +4,11 @@ using System.Collections.Generic;
 #if !CLIENT
 using System.Linq.Expressions;
 using System.Text.RegularExpressions;
+using Lucene.Net.Analysis;
+using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
+using Version = Lucene.Net.Util.Version;
+
 #endif
 
 namespace Raven.Database.Indexing
@@ -26,7 +30,28 @@ namespace Raven.Database.Indexing
 
 		public IDictionary<string, FieldIndexing> Indexes { get; set; }
 
+		public IDictionary<string, string> Analyzers { get; set; }
+		
 #if !CLIENT
+		[CLSCompliant(false)]
+		public Analyzer GetAnalyzer(string name)
+		{
+			if (Analyzers == null)
+				return null;
+			string analyzerTypeAsString;
+			if(Analyzers.TryGetValue(name, out analyzerTypeAsString) == false)
+				return null;
+			return CreateAnalyzerInstance(name, analyzerTypeAsString);
+		}
+
+		public Analyzer CreateAnalyzerInstance(string name, string analyzerTypeAsString)
+		{
+			var analyzerType = typeof (StandardAnalyzer).Assembly.GetType(analyzerTypeAsString) ??
+				Type.GetType(analyzerTypeAsString);
+			if(analyzerType == null)
+				throw new InvalidOperationException("Cannot find type '" + analyzerTypeAsString + "' for field: " + name);
+			return (Analyzer) Activator.CreateInstance(analyzerType);
+		}
 
 		[CLSCompliant(false)]
 		public Field.Store GetStorage(string name, Field.Store defaultStorage)
@@ -76,6 +101,7 @@ namespace Raven.Database.Indexing
 		{
 			Indexes = new Dictionary<string, FieldIndexing>();
 			Stores = new Dictionary<string, FieldStorage>();
+			Analyzers = new Dictionary<string, string>();
 		}
 
 		public bool Equals(IndexDefinition other)
