@@ -84,7 +84,9 @@ namespace Raven.Database.Indexing
 					if(skippedDocs > 0)
 					{
 						start = start + pageSize;
-						pageSize = skippedDocs;
+						// trying to guesstimate how many results we will need to read from the index
+						// to get enough unique documents to match the page size
+						pageSize = skippedDocs * indexQuery.PageSize; 
 						skippedDocs = 0;
 					}
 					var search = ExecuteQuery(indexSearcher, luceneQuery, start, pageSize, indexQuery.SortedFields);
