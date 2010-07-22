@@ -10,6 +10,7 @@ using Raven.Database.Data;
 using Raven.Database.Exceptions;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
+using Raven.Database.Server;
 using Raven.Server;
 using Xunit;
 using System.Linq;
@@ -25,7 +26,7 @@ namespace Raven.Client.Tests.Document
 		{
             port = 8080;
             path = GetPath("TestDb");
-			RavenDbServer.EnsureCanListenToWhenInNonAdminContext(8080);
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8080);
 		}
 
 		#region IDisposable Members

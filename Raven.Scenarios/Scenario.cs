@@ -12,6 +12,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Extensions;
+using Raven.Database.Server;
 using Raven.Database.Server.Responders;
 using Raven.Server;
 using Xunit;
@@ -56,7 +57,7 @@ namespace Raven.Scenarios
 			File.Delete(tempFileName);
 			try
 			{
-				RavenDbServer.EnsureCanListenToWhenInNonAdminContext(testPort);
+				NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(testPort);
 				using (var ravenDbServer = new RavenDbServer(new RavenConfiguration
 				{
 					DataDirectory = tempFileName,

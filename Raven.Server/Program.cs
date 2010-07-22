@@ -159,7 +159,7 @@ namespace Raven.Server
 			consoleAppender.AddFilter(new DenyAllFilter());
 			BasicConfigurator.Configure(consoleAppender);
             var ravenConfiguration = new RavenConfiguration();
-            RavenDbServer.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Port);
+            NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Port);
             if (anonymousUserAccessMode.HasValue)
                 ravenConfiguration.AnonymousUserAccessMode = anonymousUserAccessMode.Value;
             using (new RavenDbServer(ravenConfiguration))
