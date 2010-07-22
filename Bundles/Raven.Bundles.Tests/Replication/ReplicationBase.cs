@@ -11,6 +11,7 @@ using log4net.Layout;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Database;
+using Raven.Database.Server;
 using Raven.Server;
 
 namespace Raven.Bundles.Tests.Replication
@@ -47,7 +48,7 @@ namespace Raven.Bundles.Tests.Replication
         public IDocumentStore CreateStore()
         {
             var port = PortRangeStart + servers.Count;
-            RavenDbServer.EnsureCanListenToWhenInNonAdminContext(port);
+            NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
             var ravenDbServer = new RavenDbServer(new RavenConfiguration
             {
                 AnonymousUserAccessMode = AnonymousUserAccessMode.All,
