@@ -10,6 +10,7 @@ namespace Raven.Client.Client
 {
 	public static class RavenTransactionAccessor
 	{
+#if !NET_3_5
 		private static readonly ThreadLocal<Stack<TransactionInformation>> currentRavenTransactions = new ThreadLocal<Stack<TransactionInformation>>(() => new Stack<TransactionInformation>());
 
 		public static IDisposable StartTransaction()
@@ -26,11 +27,13 @@ namespace Raven.Client.Client
 			});
 			return new DisposableAction(() => currentRavenTransactions.Value.Pop());
 		}
-
+#endif
 		public static TransactionInformation GetTransactionInformation()
 		{
+			#if !NET_3_5
 			if (currentRavenTransactions.Value.Count >0)
 				return currentRavenTransactions.Value.Peek();
+			#endif
 			if (Transaction.Current == null)
 				return null;
 			return new TransactionInformation
