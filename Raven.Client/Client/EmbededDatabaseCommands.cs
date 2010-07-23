@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Net;
-using System.Transactions;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Document;
 using Raven.Database;
@@ -9,7 +8,6 @@ using Raven.Database.Data;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Database.Storage;
-using TransactionInformation = Raven.Database.TransactionInformation;
 
 namespace Raven.Client.Client
 {
@@ -48,28 +46,17 @@ namespace Raven.Client.Client
 
 		public JsonDocument Get(string key)
 		{
-			return database.Get(key,GetTransactionInformation());
+			return database.Get(key, RavenTransactionAccessor.GetTransactionInformation());
 		}
 
 		public PutResult Put(string key, Guid? etag, JObject document, JObject metadata)
 		{
-            return database.Put(key, etag, document, metadata, GetTransactionInformation());
+			return database.Put(key, etag, document, metadata, RavenTransactionAccessor.GetTransactionInformation());
 		}
-
-	    private static TransactionInformation GetTransactionInformation()
-	    {
-            if (Transaction.Current == null)
-                return null;
-            return new TransactionInformation
-            {
-				Id = PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(Transaction.Current.TransactionInformation),
-                Timeout = TransactionManager.DefaultTimeout
-            };
-	    }
 
 	    public void Delete(string key, Guid? etag)
 		{
-            database.Delete(key, etag, GetTransactionInformation());
+			database.Delete(key, etag, RavenTransactionAccessor.GetTransactionInformation());
 		}
 
 		public IndexDefinition GetIndex(string name)
@@ -112,7 +99,7 @@ namespace Raven.Client.Client
         public JsonDocument[] Get(string[] ids)
 	    {
             return ids
-                .Select(id => database.Get(id, GetTransactionInformation()))
+				.Select(id => database.Get(id, RavenTransactionAccessor.GetTransactionInformation()))
                 .Where(document => document != null)
                 .ToArray();
 	    }
@@ -121,7 +108,7 @@ namespace Raven.Client.Client
 		{
 			foreach (var commandData in commandDatas)
 			{
-				commandData.TransactionInformation = GetTransactionInformation();
+				commandData.TransactionInformation = RavenTransactionAccessor.GetTransactionInformation();
 			}
 			return database.Batch(commandDatas);
 		}

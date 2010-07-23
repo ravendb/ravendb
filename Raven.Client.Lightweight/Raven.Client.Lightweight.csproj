@@ -78,6 +78,9 @@
     <Compile Include="..\Raven.Client\Client\JsonLuceneDateTimeConverter.cs">
       <Link>Client\JsonLuceneDateTimeConverter.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client\Client\RavenTransactionAccessor.cs">
+      <Link>Client\RavenTransactionAccessor.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client\Client\ServerClient.cs">
       <Link>Client\ServerClient.cs</Link>
     </Compile>
@@ -231,6 +234,9 @@
     <Compile Include="..\Raven.Database\Data\DeleteCommandData.cs">
       <Link>Commands\DeleteCommandData.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Database\Data\DisposableAction.cs">
+      <Link>Data\DisposableAction.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Database\Data\ICommandData.cs">
       <Link>Commands\ICommandData.cs</Link>
     </Compile>
@@ -308,6 +314,9 @@
     </Compile>
     <Compile Include="..\Raven.Database\PutResult.cs">
       <Link>Data\PutResult.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Database\TransactionInformation.cs">
+      <Link>Data\TransactionInformation.cs</Link>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

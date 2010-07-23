@@ -44,6 +44,7 @@ namespace Raven.Database.Indexing
 			return CreateAnalyzerInstance(name, analyzerTypeAsString);
 		}
 
+		[CLSCompliant(false)]
 		public Analyzer CreateAnalyzerInstance(string name, string analyzerTypeAsString)
 		{
 			var analyzerType = typeof (StandardAnalyzer).Assembly.GetType(analyzerTypeAsString) ??

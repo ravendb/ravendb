@@ -263,10 +263,11 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 
 	    private static void AddTransactionInformation(JObject metadata)
 	    {
-	        if (Transaction.Current == null) 
-                return;
+	    	var transactionInformation = RavenTransactionAccessor.GetTransactionInformation();
+			if (transactionInformation == null)
+				return;
 
-			string txInfo = string.Format("{0}, {1}", PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(Transaction.Current.TransactionInformation), TransactionManager.DefaultTimeout);
+			string txInfo = string.Format("{0}, {1}", transactionInformation.Id, transactionInformation.Timeout);
 	        metadata["Raven-Transaction-Information"] = new JValue(txInfo);
 	    }
 
