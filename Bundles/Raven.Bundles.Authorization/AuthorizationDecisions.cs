@@ -45,21 +45,22 @@ namespace Raven.Bundles.Authorization
 				return false;
 			}
 			IEnumerable<IPermission> permissions =
-				from permission in documentAuthorization.Permissions // permissions for user on document
-				where permission.User == userId
+				from permission in documentAuthorization.Permissions // permissions for user / role directly on document
+				where DocumentPermisionMatchesUser(permission, user, userId)
 				where OperationMatches(permission.Operation, operation)
 				select permission;
 
-			permissions.Concat( // permissions on user matching the document's tags
+			permissions = permissions.Concat( // permissions on user matching the document's tags
 				from tag in documentAuthorization.Tags
 				from permission in user.Permissions
 				where TagMatches(permission.Tag, tag)
 				select permission
 				);
 
-			permissions.Concat( // permissions on all user's roles with tags matching the document
+			permissions = permissions.Concat( // permissions on all user's roles with tags matching the document
 				from roleName in GetHierarchicalNames(user.Roles)
 				let role = GetDocumentAsEntityWithCaching<AuthorizationRole>(roleName)
+				where role != null
 				from permission in role.Permissions
 				where OperationMatches(permission.Operation, operation)
 				from tag in documentAuthorization.Tags
@@ -88,6 +89,16 @@ namespace Raven.Bundles.Authorization
 			}
 
 			return decidingPermission.Allow;
+		}
+
+		private static bool DocumentPermisionMatchesUser(DocumentPermission permission, AuthorizationUser user, string userId)
+		{
+			if (permission.User != null)
+				return permission.User == userId;
+			if (permission.Role == null)
+				return false;
+
+			return GetHierarchicalNames(user.Roles).Any(role => permission.Role == role);
 		}
 
 		private static string GetParentName(string operationName)
@@ -120,17 +131,19 @@ namespace Raven.Bundles.Authorization
 			return tag2.StartsWith(tag1);
 		}
 
-		private T GetDocumentAsEntityWithCaching<T>(string userId)
+		private T GetDocumentAsEntityWithCaching<T>(string documentId) where T : class
 		{
-			var cacheKey = CachePrefix + userId;
+			var cacheKey = CachePrefix + documentId;
 			var cachedUser = HttpRuntime.Cache[cacheKey];
 			if (cachedUser != null)
 				return ((T) cachedUser);
 
-			var userDocument = database.Get(userId, null);
-			var user = userDocument.DataAsJson.JsonDeserialization<T>();
-			HttpRuntime.Cache[cacheKey] = user;
-			return user;
+			var document = database.Get(documentId, null);
+			if (document == null)
+				return null;
+			var entity = document.DataAsJson.JsonDeserialization<T>();
+			HttpRuntime.Cache[cacheKey] = entity;
+			return entity;
 		}
 	}
 }
