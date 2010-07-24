@@ -6,6 +6,7 @@ using System.Transactions;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
+using Raven.Client.Indexes;
 using Raven.Client.Tests.Indexes;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
@@ -116,7 +117,7 @@ namespace Raven.Client.Tests.Document
 					}
 					tx.Complete();
 				}
-				Thread.Sleep(100);
+				Thread.Sleep(500);
 				using (var session = documentStore.OpenSession())
 				{
 					Assert.NotNull(session.Load<Contact>("contacts/1"));
