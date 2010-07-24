@@ -11,6 +11,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Bundles.Replication.Data;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
+using Raven.Client.Indexes;
 using Raven.Database;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;

@@ -6,6 +6,7 @@ using log4net.Appender;
 using log4net.Config;
 using log4net.Layout;
 using Raven.Client.Document;
+using Raven.Client.Indexes;
 using Raven.Database.Indexing;
 using Xunit;
 

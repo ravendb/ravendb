@@ -1,6 +1,7 @@
 using System;
 using System.Net;
 using Newtonsoft.Json.Linq;
+using Raven.Client.Indexes;
 using Raven.Database;
 using Raven.Database.Data;
 using Raven.Database.Indexing;

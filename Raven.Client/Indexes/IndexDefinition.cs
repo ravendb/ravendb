@@ -1,14 +1,12 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
-using System.Text;
 using System.Text.RegularExpressions;
+using Raven.Client.Document;
 using Raven.Database.Indexing;
 
-namespace Raven.Client.Document
+namespace Raven.Client.Indexes
 {
 	/// <summary>
 	/// This class attempts to provide a strongly typed index defintion on the client.

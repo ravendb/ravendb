@@ -5,6 +5,7 @@ using System.Transactions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Document;
+using Raven.Client.Indexes;
 using Raven.Client.Tests.Indexes;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;

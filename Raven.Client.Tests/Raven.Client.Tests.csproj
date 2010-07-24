@@ -75,6 +75,7 @@
       <HintPath>..\SharedLibs\Rhino.Mocks.dll</HintPath>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
@@ -96,6 +97,7 @@
   <ItemGroup>
     <Compile Include="BaseTest.cs" />
     <Compile Include="Bugs\AnalyzerPerField.cs" />
+    <Compile Include="Bugs\AutoCreateIndexes.cs" />
     <Compile Include="Bugs\BaseClientTest.cs" />
     <Compile Include="Bugs\CanDetectChanges.cs" />
     <Compile Include="Bugs\Etag.cs" />

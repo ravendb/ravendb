@@ -1,5 +1,6 @@
 ﻿using System;
 using Raven.Client.Client;
+using Raven.Client.Document;
 
 namespace Raven.Client
 {
@@ -18,5 +19,7 @@ namespace Raven.Client
         IDocumentSession OpenSession();
 
         IDatabaseCommands DatabaseCommands { get; }
+
+    	DocumentConvention Conventions { get; }
     }
 }
