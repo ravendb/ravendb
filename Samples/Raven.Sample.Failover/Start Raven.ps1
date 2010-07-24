@@ -3,12 +3,10 @@
 
 $raven = "..\..\Server" #release path
 $replication = "..\..\Bundles\Raven.Bundles.Replication.dll"
-$replication_pdb = "..\..\Bundles\Raven.Bundles.Replication.pdb"
 if( (test-path $raven) -eq $false)
 {
   $raven = "..\..\build" #src path
   $replication = "..\..\build\Raven.Bundles.Replication.dll"
-  $replication_pdb = "..\..\build\Raven.Bundles.Replication.pdb"
 }
 
 rd .\Servers\Shard1\Data -force -recurse -erroraction silentlycontinue
@@ -42,8 +40,6 @@ mkdir .\Servers\Shard2\Plugins  -erroraction silentlycontinue
 cp $replication .\Servers\Shard1\Plugins
 cp $replication .\Servers\Shard2\Plugins
 
-cp $replication_pdb .\Servers\Shard1\Plugins
-cp $replication_pdb .\Servers\Shard2\Plugins
 
 start .\Servers\Shard1\Raven.Server.exe
 start .\Servers\Shard2\Raven.Server.exe
