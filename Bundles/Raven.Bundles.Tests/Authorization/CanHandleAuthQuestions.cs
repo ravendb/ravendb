@@ -1,7 +1,9 @@
 using System;
+using System.Collections;
 using System.ComponentModel.Composition.Hosting;
 using System.IO;
-using Newtonsoft.Json.Linq;
+using System.Web;
+using System.Web.Caching;
 using Raven.Bundles.Authorization;
 using Raven.Bundles.Authorization.Model;
 using Raven.Client.Document;
@@ -33,7 +35,12 @@ namespace Raven.Bundles.Tests.Authorization
 			});
 			store = new DocumentStore { Url = server.Database.Configuration.ServerUrl };
 			store.Initialize();
-			authorizationDecisions = new AuthorizationDecisions(server.Database);
+			foreach (DictionaryEntry de in HttpRuntime.Cache)
+			{
+				HttpRuntime.Cache.Remove((string)de.Key);
+			}
+
+			authorizationDecisions = new AuthorizationDecisions(server.Database, HttpRuntime.Cache);
 		}
 
 		[Fact]

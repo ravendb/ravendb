@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Web;
+using System.Web.Caching;
 using Newtonsoft.Json.Linq;
 using Raven.Bundles.Authorization.Model;
 using Raven.Database;
@@ -16,10 +17,12 @@ namespace Raven.Bundles.Authorization
 		public const string RavenDocumentAuthorization = "Raven-Document-Authorization";
 
 		private readonly DocumentDatabase database;
+		private readonly Cache cache;
 
-		public AuthorizationDecisions(DocumentDatabase database)
+		public AuthorizationDecisions(DocumentDatabase database, Cache cache)
 		{
 			this.database = database;
+			this.cache = cache;
 		}
 
 		public bool IsAllowed(
@@ -134,7 +137,7 @@ namespace Raven.Bundles.Authorization
 		private T GetDocumentAsEntityWithCaching<T>(string documentId) where T : class
 		{
 			var cacheKey = CachePrefix + documentId;
-			var cachedUser = HttpRuntime.Cache[cacheKey];
+			var cachedUser = cache[cacheKey];
 			if (cachedUser != null)
 				return ((T) cachedUser);
 
@@ -142,7 +145,7 @@ namespace Raven.Bundles.Authorization
 			if (document == null)
 				return null;
 			var entity = document.DataAsJson.JsonDeserialization<T>();
-			HttpRuntime.Cache[cacheKey] = entity;
+			cache[cacheKey] = entity;
 			return entity;
 		}
 	}
