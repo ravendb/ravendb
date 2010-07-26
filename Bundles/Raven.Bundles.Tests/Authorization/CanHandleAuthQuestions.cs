@@ -3,7 +3,6 @@ using System.Collections;
 using System.ComponentModel.Composition.Hosting;
 using System.IO;
 using System.Web;
-using System.Web.Caching;
 using Raven.Bundles.Authorization;
 using Raven.Bundles.Authorization.Model;
 using Raven.Client.Document;
@@ -80,6 +79,56 @@ namespace Raven.Bundles.Tests.Authorization
 			var jsonDocument = server.Database.Get(company.Id, null);
 			var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
 			Assert.True(isAllowed);
+		}
+
+
+		[Fact]
+		public void GivingPermissionForAllowAndDenyOnSameLevelWithReturnDeny()
+		{
+			var company = new Company
+			{
+				Name = "Hibernating Rhinos"
+			};
+			using (var s = store.OpenSession())
+			{
+				s.Store(new AuthorizationUser
+				{
+					Id = userId,
+					Name = "Ayende Rahien",
+					Roles = { "/Raven/Authorization/Roles/Managers" },
+					Permissions =
+						{
+							new OperationPermission()
+							{
+								Allow = false,
+								Operation = operation,
+								Tag = "/Important"
+							}
+						}
+				});
+
+				s.Store(company);
+
+				s.SetAuthorizationFor(company, new DocumentAuthorization
+				{
+					Tags = { "/Important"},
+					Permissions =
+						{
+							new DocumentPermission
+							{
+								Allow = true,
+								Operation = operation,
+								Role = "/Raven/Authorization/Roles/Managers"
+							}
+						}
+				});
+
+				s.SaveChanges();
+			}
+
+			var jsonDocument = server.Database.Get(company.Id, null);
+			var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
+			Assert.False(isAllowed);
 		}
 
 		[Fact]
