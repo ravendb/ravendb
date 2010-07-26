@@ -18,7 +18,7 @@ namespace Raven.Bundles.Tests.Authorization
 		private readonly DocumentStore store;
 		private readonly RavenDbServer server;
 		private readonly AuthorizationDecisions authorizationDecisions;
-		const string userId = "/Raven/Authorization/Users/Ayende";
+		const string userId= "/Raven/Authorization/Users/Ayende";
 		private const string operation = "/Company/Solicit";
 
 		public CanHandleAuthQuestions()
@@ -71,6 +71,52 @@ namespace Raven.Bundles.Tests.Authorization
 								Role = "/Raven/Authorization/Roles/Managers"
 							}
 						}
+				});
+
+				s.SaveChanges();
+			}
+
+			var jsonDocument = server.Database.Get(company.Id, null);
+			var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
+			Assert.True(isAllowed);
+		}
+
+
+		[Fact]
+		public void GivingPermissionToRoleOnTagAssociatedWithRoleWillAllow()
+		{
+			var company = new Company
+			{
+				Name = "Hibernating Rhinos"
+			};
+			using (var s = store.OpenSession())
+			{
+				s.Store(new AuthorizationUser
+				{
+					Id = userId,
+					Name = "Ayende Rahien",
+					Roles = { "/Raven/Authorization/Roles/Managers" }
+				});
+
+				s.Store(new AuthorizationRole
+				{
+					Id = "/Raven/Authorization/Roles/Managers",
+					Permissions =
+						{
+							new OperationPermission
+							{
+								Allow = true,
+								Operation = operation,
+								Tag = "Fortune 500"
+							}
+						}
+				});
+
+				s.Store(company);
+
+				s.SetAuthorizationFor(company, new DocumentAuthorization
+				{
+					Tags = { "Fortune 500"}
 				});
 
 				s.SaveChanges();

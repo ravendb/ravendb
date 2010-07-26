@@ -107,6 +107,8 @@ namespace Raven.Bundles.Authorization
 		private static string GetParentName(string operationName)
 		{
 			int lastIndex = operationName.LastIndexOf('/');
+			if (lastIndex == -1)
+				return "";
 			return operationName.Substring(0, lastIndex);
 		}
 
