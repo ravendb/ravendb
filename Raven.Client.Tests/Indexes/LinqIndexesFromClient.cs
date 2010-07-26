@@ -58,6 +58,27 @@ namespace Raven.Client.Tests.Indexes
             return JsonToExpando.Convert(JObject.Parse(json));
         }
 
+		[Fact]
+		public void CanCompileComplexQuery()
+		{
+			var indexDefinition = new IndexDefinition<Person>()
+			{
+				Map = people => from person in people
+				                from role in person.Roles
+				                where role == "Student"
+				                select new { role }
+			}.ToIndexDefinition(new DocumentConvention());
+
+			new DynamicViewCompiler("test", indexDefinition, new AbstractDynamicCompilationExtension[0])
+                .GenerateInstance();
+		}
+
+		public class Person
+		{
+			public string[] Roles { get; set; }
+		}
+
+
 	    [Fact]
 		public void Convert_simple_query()
 		{
