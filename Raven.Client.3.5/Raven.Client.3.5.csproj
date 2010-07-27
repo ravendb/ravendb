@@ -143,6 +143,9 @@
     <Compile Include="..\Raven.Client\Exceptions\NonUniqueObjectException.cs">
       <Link>Exceptions\NonUniqueObjectException.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client\Exceptions\ReadVetoException.cs">
+      <Link>Exceptions\ReadVetoException.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client\IAsyncDocumentSession.cs">
       <Link>IAsyncDocumentSession.cs</Link>
     </Compile>

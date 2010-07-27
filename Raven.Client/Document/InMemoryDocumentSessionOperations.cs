@@ -167,7 +167,7 @@ more responsive application.
 		protected object ConvertToEntity<T>(string id, JObject documentFound, JObject metadata)
 		{
 			var entity = default(T);
-
+			EnsureNotReadVetoed(metadata);
 			var documentType = metadata.Value<string>("Raven-Clr-Type");
 			if (documentType != null)
 			{
@@ -190,6 +190,20 @@ more responsive application.
 			if (identityProperty != null && identityProperty.CanWrite)
 				identityProperty.SetValue(entity, id, null);
 			return entity;
+		}
+
+		private static void EnsureNotReadVetoed(JObject metadata)
+		{
+			var value = metadata.Value<bool?>("Raven-Read-Veto");
+			if (value != true)
+				return;
+
+			var s = metadata.Value<string>("Raven-Read-Veto-Reason");
+			throw new ReadVetoException(
+				"Document could not be read because of a read veto."+Environment.NewLine +
+				"The read was vetoed by: " + metadata.Value<string>("Raven-Read-Veto-Trigger") + Environment.NewLine + 
+				"Veto reason: " + s
+				);
 		}
 
 		public void Store(object entity)
