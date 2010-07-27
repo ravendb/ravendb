@@ -244,19 +244,11 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 					case ReadVetoResult.ReadAllow.Deny:
 						return new JsonDocument
 						{
-							DataAsJson = 
-								JObject.FromObject(new
-								{
-									Message = "The document exists, but it is hidden by a read trigger",
-									DocumentHidden = true,
-									readVetoResult.Reason
-								}),
-							Metadata = JObject.FromObject(
-								new
-								{
-									ReadVeto = true,
-									VetoingTrigger = readTrigger.ToString()
-								}
+							DataAsJson = new JObject(),
+							Metadata = new JObject(
+								new JProperty("Raven-Read-Veto-Reason",  readVetoResult.Reason),
+								new JProperty("Raven-Read-Veto",  true),
+								new JProperty("Raven-Read-Veto-Trigger",  readTrigger.ToString())
 								)
 						};
 					case ReadVetoResult.ReadAllow.Ignore:
