@@ -21,18 +21,21 @@ namespace Raven.Bundles.Authorization.Triggers
 			if (AuthorizationContext.IsInAuthorizationContext)
 				return ReadVetoResult.Allowed;
 
-			var user = CurrentRavenOperation.Headers.Value[Constants.RavenAuthorizationUser];
-			var operation = CurrentRavenOperation.Headers.Value[Constants.RavenAuthorizationOperation];
-			if (string.IsNullOrEmpty(operation) || string.IsNullOrEmpty(user))
-				return ReadVetoResult.Allowed;
+			using(AuthorizationContext.Enter())
+			{
+				var user = CurrentRavenOperation.Headers.Value[Constants.RavenAuthorizationUser];
+				var operation = CurrentRavenOperation.Headers.Value[Constants.RavenAuthorizationOperation];
+				if (string.IsNullOrEmpty(operation) || string.IsNullOrEmpty(user))
+					return ReadVetoResult.Allowed;
 
-			var sw = new StringWriter();
-			var isAllowed = AuthorizationDecisions.IsAllowed(user, operation, key, metadata, sw.WriteLine);
-			if (isAllowed)
-				return ReadVetoResult.Allowed;
-			return readOperation == ReadOperation.Query ? 
-				ReadVetoResult.Ignore : 
-				ReadVetoResult.Deny(sw.GetStringBuilder().ToString());
+				var sw = new StringWriter();
+				var isAllowed = AuthorizationDecisions.IsAllowed(user, operation, key, metadata, sw.WriteLine);
+				if (isAllowed)
+					return ReadVetoResult.Allowed;
+				return readOperation == ReadOperation.Query ?
+					ReadVetoResult.Ignore :
+					ReadVetoResult.Deny(sw.GetStringBuilder().ToString());
+			}
 		}
 	}
 }
