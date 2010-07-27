@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Web;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Plugins;
@@ -8,6 +9,14 @@ namespace Raven.Bundles.Authorization.Triggers
 {
 	public class AuthorizationPutTrigger : AbstractPutTrigger
 	{
+
+		public AuthorizationDecisions AuthorizationDecisions { get; set; }
+
+		public override void Initialize()
+		{
+			AuthorizationDecisions = new AuthorizationDecisions(Database, HttpRuntime.Cache);
+		}
+
 		/// <summary>
 		/// Reset the cache for the newly put document if it is a raven authorization document
 		/// </summary>
@@ -31,9 +40,8 @@ namespace Raven.Bundles.Authorization.Triggers
 			var previousDocument = Database.Get(key, transactionInformation);
 			var metadataForAuthorization = previousDocument != null ? previousDocument.Metadata : metadata;
 
-			var authorizationDecisions = AuthorizationDecisions.GetOrCreateSingleton(Database);
 			var sw = new StringWriter();
-			var isAllowed = authorizationDecisions.IsAllowed(user, operation, key, metadataForAuthorization, sw.WriteLine);
+			var isAllowed = AuthorizationDecisions.IsAllowed(user, operation, key, metadataForAuthorization, sw.WriteLine);
 			return isAllowed ? 
 				VetoResult.Allowed : 
 				VetoResult.Deny(sw.GetStringBuilder().ToString());

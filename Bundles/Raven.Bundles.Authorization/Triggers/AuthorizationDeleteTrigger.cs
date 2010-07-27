@@ -1,4 +1,5 @@
 using System.IO;
+using System.Web;
 using Raven.Database;
 using Raven.Database.Plugins;
 
@@ -6,7 +7,14 @@ namespace Raven.Bundles.Authorization.Triggers
 {
 	public class AuthorizationDeleteTrigger : AbstractDeleteTrigger
 	{
-		public override VetoResult AllowDelete(string key, Database.TransactionInformation transactionInformation)
+		public AuthorizationDecisions AuthorizationDecisions { get; set; }
+
+		public override void Initialize()
+		{
+			AuthorizationDecisions = new AuthorizationDecisions(Database, HttpRuntime.Cache);
+		}
+
+		public override VetoResult AllowDelete(string key, TransactionInformation transactionInformation)
 		{
 			if (AuthorizationContext.IsInAuthorizationContext)
 				return VetoResult.Allowed;
@@ -20,9 +28,8 @@ namespace Raven.Bundles.Authorization.Triggers
 			if(previousDocument == null)
 				return VetoResult.Allowed;
 
-			var authorizationDecisions = AuthorizationDecisions.GetOrCreateSingleton(Database);
 			var sw = new StringWriter();
-			var isAllowed = authorizationDecisions.IsAllowed(user, operation, key, previousDocument.Metadata, sw.WriteLine);
+			var isAllowed = AuthorizationDecisions.IsAllowed(user, operation, key, previousDocument.Metadata, sw.WriteLine);
 			return isAllowed ?
 				VetoResult.Allowed :
 				VetoResult.Deny(sw.GetStringBuilder().ToString());

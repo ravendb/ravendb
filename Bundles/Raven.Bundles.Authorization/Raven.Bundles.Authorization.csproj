@@ -44,7 +44,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AuthorizationContext.cs" />
     <Compile Include="AuthorizationDecisions.cs" />
+    <Compile Include="Constants.cs" />
     <Compile Include="Model\AuthorizationRole.cs" />
     <Compile Include="Model\AuthorizationUser.cs" />
     <Compile Include="Model\DocumentAuthorization.cs" />
@@ -52,6 +54,9 @@
     <Compile Include="Model\IPermission.cs" />
     <Compile Include="Model\OperationPermission.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Triggers\AuthorizationDeleteTrigger.cs" />
+    <Compile Include="Triggers\AuthorizationPutTrigger.cs" />
+    <Compile Include="Triggers\AuthorizationReadTrigger.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Raven.Database\Raven.Database.csproj">

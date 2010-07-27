@@ -1,4 +1,5 @@
 using System.IO;
+using System.Web;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Plugins;
@@ -7,6 +8,13 @@ namespace Raven.Bundles.Authorization.Triggers
 {
 	public class AuthorizationReadTrigger : AbstractReadTrigger
 	{
+		public AuthorizationDecisions AuthorizationDecisions { get; set; }
+
+		public override void Initialize()
+		{
+			AuthorizationDecisions = new AuthorizationDecisions(Database, HttpRuntime.Cache);	
+		}
+
 		public override ReadVetoResult AllowRead(string key, JObject document, JObject metadata, ReadOperation readOperation,
 		                                         TransactionInformation transactionInformation)
 		{
@@ -18,9 +26,8 @@ namespace Raven.Bundles.Authorization.Triggers
 			if (string.IsNullOrEmpty(operation) || string.IsNullOrEmpty(user))
 				return ReadVetoResult.Allowed;
 
-			var authorizationDecisions = AuthorizationDecisions.GetOrCreateSingleton(Database);
 			var sw = new StringWriter();
-			var isAllowed = authorizationDecisions.IsAllowed(user, operation, key, metadata, sw.WriteLine);
+			var isAllowed = AuthorizationDecisions.IsAllowed(user, operation, key, metadata, sw.WriteLine);
 			if (isAllowed)
 				return ReadVetoResult.Allowed;
 			return readOperation == ReadOperation.Query ? 

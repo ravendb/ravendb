@@ -13,11 +13,18 @@ namespace Raven.Bundles.Authorization
 {
 	public class AuthorizationDecisions
 	{
-		private const string CachePrefix = "Raven.Bundles.Authorization.AuthorizationDecisions.CachePrefix";
+		private const string CachePrefix = "Raven.Bundles.Authorization.AuthorizationDecisions.CachePrefix:";
+
 		public const string RavenDocumentAuthorization = "Raven-Document-Authorization";
 
 		private readonly DocumentDatabase database;
+
 		private readonly Cache cache;
+
+		public static void RemoveDocumentFromCache(string document)
+		{
+			HttpRuntime.Cache.Remove(CachePrefix + document);
+		}
 
 		public AuthorizationDecisions(DocumentDatabase database, Cache cache)
 		{
@@ -87,7 +94,7 @@ namespace Raven.Bundles.Authorization
 			if(decidingPermission == null)
 			{
 				if (logger != null)
-					logger("Could not find any permission for operation: " + operation + " on " + documentId);
+					logger("Could not find any permissions for operation: " + operation + " on " + documentId);
 				return false;
 			}
 
@@ -126,6 +133,7 @@ namespace Raven.Bundles.Authorization
 			}
 			return hierarchicalNames;
 		}
+
 		private static bool OperationMatches(string op1, string op2)
 		{
 			return op2.StartsWith(op1);

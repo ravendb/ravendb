@@ -98,7 +98,7 @@ namespace Raven.Database.Server.Responders
 			{
 				if (header.Name.StartsWith("@"))
 					continue;
-				context.Response.Headers[header.Name] = StringQuotesIfNeeded(header.Value.ToString());
+				context.Response.Headers[header.Name] = StringQuotesIfNeeded(header.Value.ToString(Formatting.None));
 			}
             if (headers["@Http-Status-Code"] != null)
             {

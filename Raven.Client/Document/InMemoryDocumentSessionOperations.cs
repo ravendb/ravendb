@@ -194,9 +194,11 @@ more responsive application.
 
 		private static void EnsureNotReadVetoed(JObject metadata)
 		{
-			var readVeto = metadata.Value<JObject>("Raven-Read-Veto");
-			if (readVeto == null)
+			var readVetoAsString = metadata.Value<string>("Raven-Read-Veto");
+			if (readVetoAsString == null)
 				return;
+
+			var readVeto = JObject.Parse(readVetoAsString);
 
 			var s = readVeto.Value<string>("Reason");
 			throw new ReadVetoException(
