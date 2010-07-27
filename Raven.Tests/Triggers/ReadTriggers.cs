@@ -47,7 +47,7 @@ namespace Raven.Tests.Triggers
 			var jsonDocument = db.Get("abc", null);
 
 			Assert.Equal("Upper case characters in the 'name' property means the document is a secret!",
-				jsonDocument.DataAsJson.Value<string>("Reason"));
+				jsonDocument.Metadata.Value<JObject>("Raven-Read-Veto").Value<string>("Reason"));
 		}
 
 		[Fact]
@@ -58,7 +58,7 @@ namespace Raven.Tests.Triggers
 			var jsonDocument = db.GetDocuments(0,25,null).First();
 
 			Assert.Equal("Upper case characters in the 'name' property means the document is a secret!",
-				jsonDocument.Value<string>("Reason"));
+				jsonDocument.Value<JObject>("@metadata").Value<JObject>("Raven-Read-Veto").Value<string>("Reason"));
 		}
 
 		[Fact]
@@ -77,7 +77,7 @@ namespace Raven.Tests.Triggers
 			} while (queryResult.IsStale);
 
 			Assert.Equal("Upper case characters in the 'name' property means the document is a secret!",
-				queryResult.Results[0].Value<string>("Reason"));
+				queryResult.Results[0].Value<JObject>("@metadata").Value<JObject>("Raven-Read-Veto").Value<string>("Reason"));
 		}
 
 		[Fact]

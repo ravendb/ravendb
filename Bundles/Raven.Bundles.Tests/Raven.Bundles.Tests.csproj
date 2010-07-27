@@ -53,7 +53,9 @@
   <ItemGroup>
     <Compile Include="Authorization\AuthorizationTest.cs" />
     <Compile Include="Authorization\CanHandleAuthQuestions.cs" />
+    <Compile Include="Authorization\Deleting.cs" />
     <Compile Include="Authorization\Reading.cs" />
+    <Compile Include="Authorization\Writing.cs" />
     <Compile Include="Replication\ConflictWhenReplicating.cs" />
     <Compile Include="Replication\FailureHandling.cs" />
     <Compile Include="Replication\ReplicationBase.cs" />
