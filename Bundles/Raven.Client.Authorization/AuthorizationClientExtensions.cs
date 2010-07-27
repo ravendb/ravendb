@@ -1,5 +1,6 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Bundles.Authorization;
 using Raven.Bundles.Authorization.Model;
 
 namespace Raven.Client.Authorization
@@ -27,6 +28,12 @@ namespace Raven.Client.Authorization
 			{
 				ContractResolver = session.Conventions.JsonContractResolver,
 			});
+		}
+
+		public static void SecureFor(this IDocumentSession session, string userId, string operation)
+		{
+			session.DatabaseCommands.OperationsHeaders[Constants.RavenAuthorizationUser] = userId;
+			session.DatabaseCommands.OperationsHeaders[Constants.RavenAuthorizationOperation] = operation;
 		}
 	}
 }

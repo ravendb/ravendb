@@ -194,14 +194,14 @@ more responsive application.
 
 		private static void EnsureNotReadVetoed(JObject metadata)
 		{
-			var value = metadata.Value<bool?>("Raven-Read-Veto");
-			if (value != true)
+			var readVeto = metadata.Value<JObject>("Raven-Read-Veto");
+			if (readVeto == null)
 				return;
 
-			var s = metadata.Value<string>("Raven-Read-Veto-Reason");
+			var s = readVeto.Value<string>("Reason");
 			throw new ReadVetoException(
 				"Document could not be read because of a read veto."+Environment.NewLine +
-				"The read was vetoed by: " + metadata.Value<string>("Raven-Read-Veto-Trigger") + Environment.NewLine + 
+				"The read was vetoed by: " + readVeto.Value<string>("Trigger") + Environment.NewLine + 
 				"Veto reason: " + s
 				);
 		}

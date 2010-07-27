@@ -246,9 +246,9 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 						{
 							DataAsJson = new JObject(),
 							Metadata = new JObject(
-								new JProperty("Raven-Read-Veto-Reason",  readVetoResult.Reason),
-								new JProperty("Raven-Read-Veto",  true),
-								new JProperty("Raven-Read-Veto-Trigger",  readTrigger.ToString())
+								new JProperty("Raven-Read-Veto", new JObject(new JProperty("Reason", readVetoResult.Reason),
+								                                             new JProperty("Trigger", readTrigger.ToString())
+								                                 	))
 								)
 						};
 					case ReadVetoResult.ReadAllow.Ignore:

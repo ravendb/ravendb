@@ -1,44 +1,19 @@
-using System;
-using System.Collections;
-using System.ComponentModel.Composition.Hosting;
-using System.IO;
 using System.Web;
 using Raven.Bundles.Authorization;
 using Raven.Bundles.Authorization.Model;
-using Raven.Client.Document;
-using Raven.Database;
-using Raven.Server;
 using Xunit;
 using Raven.Client.Authorization;
 
 namespace Raven.Bundles.Tests.Authorization
 {
-	public class CanHandleAuthQuestions : IDisposable
+	public class CanHandleAuthQuestions : AuthorizationTest
 	{
-		private readonly DocumentStore store;
-		private readonly RavenDbServer server;
 		private readonly AuthorizationDecisions authorizationDecisions;
 		const string userId= "/Raven/Authorization/Users/Ayende";
 		private const string operation = "/Company/Solicit";
 
 		public CanHandleAuthQuestions()
 		{
-			if (Directory.Exists("Data"))
-				Directory.Delete("Data", true);
-			server = new RavenDbServer(new RavenConfiguration
-			{
-				AnonymousUserAccessMode = AnonymousUserAccessMode.All,
-				Catalog = { Catalogs = { new AssemblyCatalog(typeof(AuthorizationDecisions).Assembly) } },
-				DataDirectory = "Data",
-				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-			});
-			store = new DocumentStore { Url = server.Database.Configuration.ServerUrl };
-			store.Initialize();
-			foreach (DictionaryEntry de in HttpRuntime.Cache)
-			{
-				HttpRuntime.Cache.Remove((string)de.Key);
-			}
-
 			authorizationDecisions = new AuthorizationDecisions(server.Database, HttpRuntime.Cache);
 		}
 
@@ -144,7 +119,7 @@ namespace Raven.Bundles.Tests.Authorization
 					Roles = { "/Raven/Authorization/Roles/Managers" },
 					Permissions =
 						{
-							new OperationPermission()
+							new OperationPermission
 							{
 								Allow = false,
 								Operation = operation,
@@ -381,12 +356,6 @@ namespace Raven.Bundles.Tests.Authorization
 			var jsonDocument = server.Database.Get(company.Id, null);
 			var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
 			Assert.True(isAllowed);
-		}
-
-		public void Dispose()
-		{
-			store.Dispose();
-			server.Dispose();
 		}
 	}
 }
