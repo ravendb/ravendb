@@ -11,20 +11,26 @@ namespace Raven.Database.Plugins
     [InheritedExport]
     public abstract class AbstractReadTrigger : IRequiresDocumentDatabaseInitialization
     {
-        /// <summary>
-        ///  Ask the trigger whatever the document should be read by the user.
-        ///  </summary><remarks>
-        ///  The document and metadata instances SHOULD NOT be modified.
-        ///  </remarks><param name="key">The key of the read document - can be null if reading a projection</param><param name="document">The document being read</param><param name="metadata">The document metadata</param><param name="operation">Whatever the operation is a load or a query</param><param name="transactionInformation">The transaction information, if any</param><returns>
-        ///  * If the result is Allow, the operation contiues as usual. 
-        ///  * If the result is Deny, the opeartion will return an error to the user 
-        ///    if asking for a particular document, or an error document in place of 
-        ///    the result if asking for a query.
-        ///  * If the result is Ignore, the operation will return null to the user if
-        ///    asking for a particular document, or skip including the result entirely 
-        ///    in the query results.
-        ///  </returns>
-        public virtual ReadVetoResult AllowRead(string key, JObject document, JObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
+    	/// <summary>
+    	///  Ask the trigger whatever the document should be read by the user.
+    	///  </summary><remarks>
+    	///  The document and metadata instances SHOULD NOT be modified.
+    	///  </remarks>
+    	/// <param name="key">The key of the read document - can be null if reading a projection</param>
+    	/// <param name="document">The document being read</param>
+    	/// <param name="metadata">The document metadata</param>
+    	/// <param name="operation">Whatever the operation is a load or a query</param>
+    	/// <param name="transactionInformation">The transaction information, if any</param>
+    	/// <returns>
+    	///  * If the result is Allow, the operation contiues as usual. 
+    	///  * If the result is Deny, the opeartion will return an error to the user 
+    	///    if asking for a particular document, or an error document in place of 
+    	///    the result if asking for a query.
+    	///  * If the result is Ignore, the operation will return null to the user if
+    	///    asking for a particular document, or skip including the result entirely 
+    	///    in the query results.
+    	///  </returns>
+		public virtual ReadVetoResult AllowRead(string key, JObject document, JObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
         {
             return ReadVetoResult.Allowed;
         }
