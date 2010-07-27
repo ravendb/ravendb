@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Reflection;
 using System.Transactions;
 using Newtonsoft.Json;
@@ -16,8 +16,6 @@ using Raven.Database.Json;
 using System.Dynamic;
 using Microsoft.CSharp.RuntimeBinder;
 using Raven.Database.Linq;
-using Binder = Microsoft.CSharp.RuntimeBinder.Binder;
-
 #endif
 
 namespace Raven.Client.Document
@@ -38,8 +36,8 @@ namespace Raven.Client.Document
 		protected DocumentStore documentStore;
 		private int numberOfRequests;
 
-		private IDocumentDeleteListener[] deleteListeners;
-		private IDocumentStoreListener[] storeListeners;
+		private readonly IDocumentDeleteListener[] deleteListeners;
+		private readonly IDocumentStoreListener[] storeListeners;
 
 
 		protected InMemoryDocumentSessionOperations(DocumentStore documentStore, IDocumentStoreListener[] storeListeners, IDocumentDeleteListener[] deleteListeners)

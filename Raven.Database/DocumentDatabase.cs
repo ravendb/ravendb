@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
-using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security;
@@ -9,7 +8,6 @@ using System.Threading;
 using System.Transactions;
 using log4net;
 using Microsoft.Isam.Esent.Interop;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Backup;
 using Raven.Database.Data;
@@ -20,7 +18,6 @@ using Raven.Database.Json;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
-using Raven.Database.Storage.StorageActions;
 using Raven.Database.Tasks;
 
 namespace Raven.Database

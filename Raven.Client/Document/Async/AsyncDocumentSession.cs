@@ -9,15 +9,14 @@ namespace Raven.Client.Document.Async
 {
 	public class AsyncDocumentSession : InMemoryDocumentSessionOperations, IAsyncDocumentSession
 	{
+
 		public AsyncDocumentSession(DocumentStore documentStore, IDocumentStoreListener[] storeListeners, IDocumentDeleteListener[] deleteListeners)
 			: base(documentStore, storeListeners, deleteListeners)
 		{
+			AsyncDatabaseCommands = documentStore.AsyncDatabaseCommands;
 		}
 
-		private IAsyncDatabaseCommands AsyncDatabaseCommands
-		{
-			get { return documentStore.AsyncDatabaseCommands; }
-		}
+		public IAsyncDatabaseCommands AsyncDatabaseCommands { get; private set; }
 
 		public IAsyncResult BeginLoad(string id, AsyncCallback asyncCallback, object state)
 		{

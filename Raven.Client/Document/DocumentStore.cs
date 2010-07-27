@@ -10,11 +10,19 @@ namespace Raven.Client.Document
 {
 	public class DocumentStore : IDocumentStore
 	{
-		public IDatabaseCommands DatabaseCommands{ get; set;}
+		private Func<IDatabaseCommands> databaseCommandsGenerator;
+		public IDatabaseCommands DatabaseCommands
+		{
+			get { return databaseCommandsGenerator(); }
+		}
 
-		public IAsyncDatabaseCommands AsyncDatabaseCommands { get; set; }
+		private Func<IAsyncDatabaseCommands> asyncDatabaseCommandsGenerator;
+		public IAsyncDatabaseCommands AsyncDatabaseCommands
+		{
+			get { return asyncDatabaseCommandsGenerator(); }
+		}
 
-        public event Action<string, object> Stored;
+		public event Action<string, object> Stored;
 
 		public DocumentStore()
 		{
@@ -136,13 +144,13 @@ namespace Raven.Client.Document
 				{
 					DocumentDatabase = new Raven.Database.DocumentDatabase(configuration);
 					DocumentDatabase.SpinBackgroundWorkers();
-					DatabaseCommands = new EmbededDatabaseCommands(DocumentDatabase, Conventions);
+					databaseCommandsGenerator = () => new EmbededDatabaseCommands(DocumentDatabase, Conventions);
 				}
 				else
 #endif
 				{
-					DatabaseCommands = new ServerClient(Url, Conventions, credentials);
-					AsyncDatabaseCommands = new AsyncServerClient(Url, Conventions, credentials);
+					databaseCommandsGenerator = ()=>new ServerClient(Url, Conventions, credentials);
+					asyncDatabaseCommandsGenerator = ()=>new AsyncServerClient(Url, Conventions, credentials);
 				}
                 if(Conventions.DocumentKeyGenerator == null)// don't overwrite what the user is doing
                 {

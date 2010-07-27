@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using Newtonsoft.Json.Linq;
+using Raven.Client.Client;
 using Raven.Client.Document;
 using Raven.Client.Linq;
 using Raven.Client.Shard.ShardStrategy;
@@ -85,6 +86,11 @@ namespace Raven.Client.Shard
 
 		private readonly IShardStrategy shardStrategy;
 		private readonly IDocumentSession[] shardSessions;
+
+		public IDatabaseCommands DatabaseCommands
+		{
+			get { throw new NotSupportedException("You cannot ask a sharded session for its DatabaseCommands, internal sharded session each have diffeernt DatabaseCommands"); }
+		}
 
 		public T Load<T>(string id)
 		{

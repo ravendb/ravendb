@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Specialized;
 using System.Net;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Indexes;
@@ -12,6 +13,8 @@ namespace Raven.Client.Client
 {
     public interface IDatabaseCommands : IDisposable
 	{
+		NameValueCollection OperationsHeaders { get; set; }
+		
 		JsonDocument Get(string key);
 		PutResult Put(string key, Guid? etag, JObject document, JObject metadata);
 		void Delete(string key, Guid? etag);

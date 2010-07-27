@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Specialized;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Document;
 

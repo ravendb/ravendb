@@ -255,6 +255,7 @@ namespace Raven.Database.Server
 			if (AssertSecurityRights(ctx) == false)
 			    return false;
 
+			RecordRequestHeaders(ctx);
 			foreach (var requestResponder in RequestResponders)
 			{
 				if (requestResponder.WillRespond(ctx))
@@ -276,6 +277,11 @@ namespace Raven.Database.Server
 </html>
 ");
 		    return true;
+		}
+
+		private static void RecordRequestHeaders(IHttpContext ctx)
+		{
+			CurrentRavenOperation.Headers.Value = ctx.Request.Headers;
 		}
 
 		private bool AssertSecurityRights(IHttpContext ctx)

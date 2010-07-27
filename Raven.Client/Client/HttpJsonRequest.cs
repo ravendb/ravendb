@@ -160,5 +160,13 @@ namespace Raven.Client.Client
 			}
 			bytesForNextWrite = null;
 		}
+
+    	public void AddOperationHeaders(NameValueCollection operationsHeaders)
+    	{
+			foreach (string header in operationsHeaders)
+			{
+				webRequest.Headers[header] = operationsHeaders[header];
+			}
+    	}
     }
 }
