@@ -628,12 +628,12 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			});
     	}
 
-    	public void UpdateByIndex(string indexName, IndexQuery queryToDelete, PatchRequest[] patchRequests, bool allowStale)
+    	public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale)
     	{
 
 			ExecuteWithReplication<object>(operationUrl =>
 			{
-				string path = queryToDelete.GetIndexQueryUrl(operationUrl, indexName, "bulk_docs") + "&allowStale=" + allowStale;
+				string path = queryToUpdate.GetIndexQueryUrl(operationUrl, indexName, "bulk_docs") + "&allowStale=" + allowStale;
 				var request = HttpJsonRequest.CreateHttpJsonRequest(this, path, "PATCH", credentials);
 				request.AddOperationHeaders(OperationsHeaders);
 				request.Write(new JArray(patchRequests.Select(x=>x.ToJson())).ToString(Formatting.Indented));
