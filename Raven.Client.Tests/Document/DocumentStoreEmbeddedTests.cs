@@ -11,6 +11,7 @@ using Raven.Client.Tests.Indexes;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
 using Raven.Database.Indexing;
+using Raven.Database.Json;
 using Xunit;
 using System.Linq;
 
@@ -660,5 +661,66 @@ namespace Raven.Client.Tests.Document
 				}
 			}
 		}
+
+		[Fact]
+		public void Can_delete_by_index()
+		{
+			using (var store = NewDocumentStore())
+			{
+				var entity = new Company { Name = "Company" };
+				using (var session = store.OpenSession())
+				{
+					session.Store(entity);
+					session.SaveChanges();
+
+					session.LuceneQuery<Company>().WaitForNonStaleResults().ToArray();// wait for the index to settle down
+				}
+
+				store.DatabaseCommands.DeleteByIndex("Raven/DocumentsByEntityName", new IndexQuery
+				{
+					Query = "Tag:[[Companies]]"
+				}, allowStale: false);
+
+				using (var session = store.OpenSession())
+				{
+					Assert.Empty(session.LuceneQuery<Company>().WaitForNonStaleResults().ToArray());
+				}
+			}
+		}
+
+		[Fact]
+		public void Can_update_by_index()
+		{
+			using (var store = NewDocumentStore())
+			{
+				var entity = new Company { Name = "Company" };
+				using (var session = store.OpenSession())
+				{
+					session.Store(entity);
+					session.SaveChanges();
+
+					session.LuceneQuery<Company>().WaitForNonStaleResults().ToArray();// wait for the index to settle down
+				}
+
+				store.DatabaseCommands.UpdateByIndex("Raven/DocumentsByEntityName", new IndexQuery
+				{
+					Query = "Tag:[[Companies]]"
+				}, new[]
+				{
+					new PatchRequest
+					{
+						Type = "Set",
+						Name = "Name",
+						Value = JToken.FromObject("Another Company")
+					},
+				}, allowStale: false);
+
+				using (var session = store.OpenSession())
+				{
+					Assert.Equal("Another Company", session.Load<Company>(entity.Id).Name);
+				}
+			}
+		}
+
 	}
 }
