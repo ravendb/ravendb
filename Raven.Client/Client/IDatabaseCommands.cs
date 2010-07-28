@@ -41,6 +41,6 @@ namespace Raven.Client.Client
     	bool SupportsPromotableTransactions { get;  }
 
     	void DeleteByIndex(string indexName, IndexQuery queryToDelete, bool allowStale);
-		void UpdateByIndex(string indexName, IndexQuery queryToDelete, PatchRequest[] patchRequests, bool allowStale);
+		void UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale);
 	}
 }
