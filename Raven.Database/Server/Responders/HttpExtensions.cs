@@ -69,7 +69,7 @@ namespace Raven.Database.Server.Responders
 				Converters = {new JsonToJsonConverter(), new JsonEnumConverter()},
 			}.Serialize(new JsonTextWriter(streamWriter)
 			{
-				Formatting = Formatting.Indented
+				Formatting = Formatting.None
 			}, obj);
 			streamWriter.Flush();
 		}
@@ -80,7 +80,7 @@ namespace Raven.Database.Server.Responders
 			var streamWriter = new StreamWriter(context.Response.OutputStream);
 			var jsonTextWriter = new JsonTextWriter(streamWriter)
 			{
-				Formatting = Formatting.Indented
+				Formatting = Formatting.None
 			};
 			obj.WriteTo(jsonTextWriter, new JsonEnumConverter());
 			jsonTextWriter.Flush();
@@ -89,7 +89,7 @@ namespace Raven.Database.Server.Responders
 
 		public static void WriteData(this IHttpContext context, JObject data, JObject headers, Guid etag)
 		{
-			WriteData(context, Encoding.UTF8.GetBytes(data.ToString(Formatting.Indented)), headers, etag);
+			WriteData(context, Encoding.UTF8.GetBytes(data.ToString(Formatting.None)), headers, etag);
 		}
 
 		public static void WriteData(this IHttpContext context, byte[] data, JObject headers, Guid etag)
