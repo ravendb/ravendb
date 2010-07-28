@@ -1,6 +1,4 @@
 using System;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
 using Raven.Database.Json;
 
@@ -23,6 +21,15 @@ namespace Raven.Database
 			{
 				database.Delete(docId, null, tx);
 				return new { Document = docId, Deleted = true };
+			});
+		}
+
+		public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale)
+		{
+			PerformBulkOperation(indexName, queryToUpdate, allowStale, (docId, tx) =>
+			{
+				var patchResult = database.ApplyPatch(docId, null, patchRequests, tx);
+				return new { Document = docId, Result = patchResult };
 			});
 		}
 
@@ -52,11 +59,9 @@ namespace Raven.Database
 					}
 				}
 
-				var array = new JArray();
 				foreach (var documentId in queryResults)
 				{
-					var result = batchOperation(documentId, transactionInformation);
-					array.Add(JObject.FromObject(result, new JsonSerializer { Converters = { new JsonEnumConverter() } }));
+					batchOperation(documentId, transactionInformation);
 				}
 			});
 		}
