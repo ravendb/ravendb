@@ -112,6 +112,7 @@
     <Compile Include="Commercial\ValidateLicense.cs" />
     <Compile Include="Commercial\WarningMessagesHolder.cs" />
     <Compile Include="CurrentRavenOperation.cs" />
+    <Compile Include="DatabaseBulkOperations.cs" />
     <Compile Include="Data\BackupRequest.cs" />
     <Compile Include="Data\DisposableAction.cs" />
     <Compile Include="Exceptions\IndexDoesNotExists.cs" />

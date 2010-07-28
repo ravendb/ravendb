@@ -167,7 +167,8 @@ namespace Raven.Client.Client
 
 		public void DeleteByIndex(string indexName, IndexQuery queryToDelete, bool allowStale)
 		{
-			throw new NotSupportedException("SET based operations are only supported on the server version, since they are there to reduce remote calls");
+			var databaseBulkOperations = new DatabaseBulkOperations(database, RavenTransactionAccessor.GetTransactionInformation());
+			databaseBulkOperations.DeleteByIndex(indexName, queryToDelete, allowStale);
 		}
 
 		public void UpdateByIndex(string indexName, IndexQuery queryToDelete, PatchRequest[] patchRequests, bool allowStale)
