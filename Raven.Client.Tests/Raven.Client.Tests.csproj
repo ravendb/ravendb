@@ -104,6 +104,7 @@
     <Compile Include="Bugs\ExplicitTransaction.cs" />
     <Compile Include="Bugs\ExtendingClientSideViaListeners.cs" />
     <Compile Include="Bugs\IndexWithTwoProperties.cs" />
+    <Compile Include="Bugs\KeyGeneration.cs" />
     <Compile Include="Bugs\MetadataUpdates.cs" />
     <Compile Include="Bugs\MultipleResultsPerDocumentAndPaging.cs" />
     <Compile Include="Bugs\OperationHeaders.cs" />
