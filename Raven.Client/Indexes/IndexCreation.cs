@@ -11,7 +11,7 @@ namespace Raven.Client.Indexes
 			CreateIndexes(catalog, documentStore);
 		}
 
-		public static void CreateIndexes(CompositionContainer catalogToGetnIndexingTasksFrom, IDocumentStore documentStore)
+		public static void CreateIndexes(ExportProvider catalogToGetnIndexingTasksFrom, IDocumentStore documentStore)
 		{
 			var tasks = catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>();
 			foreach (var task in tasks)
