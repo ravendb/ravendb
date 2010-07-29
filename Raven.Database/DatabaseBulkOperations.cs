@@ -1,4 +1,6 @@
 using System;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
 using Raven.Database.Json;
 
@@ -15,26 +17,27 @@ namespace Raven.Database
 			this.transactionInformation = transactionInformation;
 		}
 
-		public void DeleteByIndex(string indexName, IndexQuery queryToDelete, bool allowStale)
+		public JArray DeleteByIndex(string indexName, IndexQuery queryToDelete, bool allowStale)
 		{
-			PerformBulkOperation(indexName, queryToDelete, allowStale, (docId, tx) =>
+			return PerformBulkOperation(indexName, queryToDelete, allowStale, (docId, tx) =>
 			{
 				database.Delete(docId, null, tx);
 				return new { Document = docId, Deleted = true };
 			});
 		}
 
-		public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale)
+		public JArray UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale)
 		{
-			PerformBulkOperation(indexName, queryToUpdate, allowStale, (docId, tx) =>
+			return PerformBulkOperation(indexName, queryToUpdate, allowStale, (docId, tx) =>
 			{
 				var patchResult = database.ApplyPatch(docId, null, patchRequests, tx);
 				return new { Document = docId, Result = patchResult };
 			});
 		}
 
-		private void PerformBulkOperation(string index, IndexQuery indexQuery, bool allowStale, Func<string, TransactionInformation, object> batchOperation)
+		private JArray PerformBulkOperation(string index, IndexQuery indexQuery, bool allowStale, Func<string, TransactionInformation, object> batchOperation)
 		{
+			var array = new JArray();
 			database.TransactionalStorage.Batch(actions =>
 			{
 				var bulkIndexQuery = new IndexQuery
@@ -61,9 +64,11 @@ namespace Raven.Database
 
 				foreach (var documentId in queryResults)
 				{
-					batchOperation(documentId, transactionInformation);
+					var result = batchOperation(documentId, transactionInformation);
+					array.Add(JObject.FromObject(result, new JsonSerializer { Converters = { new JsonEnumConverter() } }));
 				}
 			});
+			return array;
 		}
 	}
 }
