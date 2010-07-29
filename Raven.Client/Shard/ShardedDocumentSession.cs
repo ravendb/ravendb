@@ -4,6 +4,7 @@ using System.Net;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Client;
 using Raven.Client.Document;
+using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Raven.Client.Shard.ShardStrategy;
 using Raven.Client.Shard.ShardStrategy.ShardResolution;
@@ -142,7 +143,12 @@ namespace Raven.Client.Shard
 	        throw new NotSupportedException("Sharded linq queries aren't supported currently");
 	    }
 
-	    public void Refresh<T>(T entity)
+		public IRavenQueryable<T> Query<T, TIndexCreator>(string indexName) where TIndexCreator : AbstractIndexCreationTask, new()
+		{
+			throw new NotSupportedException("Sharded linq queries aren't supported currently");
+		}
+
+		public void Refresh<T>(T entity)
         {
             if (ReferenceEquals(entity, null))
                 throw new ArgumentNullException("entity");

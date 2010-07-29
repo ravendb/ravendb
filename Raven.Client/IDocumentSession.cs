@@ -1,4 +1,5 @@
 ﻿using Raven.Client.Client;
+using Raven.Client.Indexes;
 using Raven.Client.Linq;
 
 namespace Raven.Client
@@ -14,6 +15,8 @@ namespace Raven.Client
 		void Refresh<T>(T entity);
 
 		IRavenQueryable<T> Query<T>(string indexName);
+
+		IRavenQueryable<T> Query<T, TIndexCreator>(string indexName) where TIndexCreator : AbstractIndexCreationTask, new();
 
 		IDocumentQuery<T> LuceneQuery<T>(string indexName);
 

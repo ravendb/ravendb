@@ -6,6 +6,7 @@ using System.Net;
 using Newtonsoft.Json.Linq;
 using System;
 using Raven.Client.Client;
+using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Raven.Database;
 using Raven.Database.Data;
@@ -63,6 +64,12 @@ namespace Raven.Client.Document
 	    {
 	        return new RavenQueryable<T>(new RavenQueryProvider<T>(this, indexName));
 	    }
+
+		public IRavenQueryable<T> Query<T, TIndexCreator>(string indexName) where TIndexCreator : AbstractIndexCreationTask, new()
+		{
+			var indexCreator = new TIndexCreator();
+			return Query<T>(indexCreator.IndexName);
+		}
 
 		public void Refresh<T>(T entity)
 	    {
