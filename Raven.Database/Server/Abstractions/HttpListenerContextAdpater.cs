@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Net;
 using System.Security.Principal;
 
@@ -14,7 +15,7 @@ namespace Raven.Database.Server.Abstractions
 			this.ctx = ctx;
 			this.configuration = configuration;
 			Request = new HttpListenerRequestAdapter(ctx.Request);
-			Response = new HttpListenerResponseAdapter(ctx.Response);
+			ResponseInternal = new HttpListenerResponseAdapter(ctx.Response);
 		}
 
 		public RavenConfiguration Configuration
@@ -28,10 +29,11 @@ namespace Raven.Database.Server.Abstractions
 			set;
 		}
 
+		protected HttpListenerResponseAdapter ResponseInternal { get; set; }
+		
 		public IHttpResponse Response
 		{
-			get;
-			set;
+			get { return ResponseInternal; }
 		}
 
 		public IPrincipal User
@@ -43,12 +45,18 @@ namespace Raven.Database.Server.Abstractions
 		{
 			try
 			{
-				ctx.Response.OutputStream.Flush();
+				ResponseInternal.OutputStream.Flush();
+				ResponseInternal.OutputStream.Dispose(); // this is required when using compressing stream
 				ctx.Response.Close();
 			}
 			catch
 			{
 			}
+		}
+
+		public void SetResponseFilter(Func<Stream, Stream> responseFilter)
+		{
+			ResponseInternal.OutputStream = responseFilter(ResponseInternal.OutputStream);
 		}
 	}
 }
