@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Security.Principal;
 
 namespace Raven.Database.Server.Abstractions
@@ -10,6 +11,7 @@ namespace Raven.Database.Server.Abstractions
 		IHttpResponse Response { get; }
 		IPrincipal User { get; }
 		void FinalizeResonse();
+		void SetResponseFilter(Func<Stream, Stream> responseFilter);
 	}
 
 	public static class UrlExtension

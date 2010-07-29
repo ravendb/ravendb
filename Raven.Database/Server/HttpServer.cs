@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Net;
 using System.Threading;
 using log4net;
@@ -256,6 +257,7 @@ namespace Raven.Database.Server
 			    return false;
 
 			RecordRequestHeaders(ctx);
+			AddHttpCompressionIfClientCanAcceptIt(ctx);
 			foreach (var requestResponder in RequestResponders)
 			{
 				if (requestResponder.WillRespond(ctx))
@@ -277,6 +279,26 @@ namespace Raven.Database.Server
 </html>
 ");
 		    return true;
+		}
+
+		private static void AddHttpCompressionIfClientCanAcceptIt(IHttpContext ctx)
+		{
+			var acceptEncoding = ctx.Request.Headers["Accept-Encoding"];
+
+			if (string.IsNullOrEmpty(acceptEncoding))
+				return;
+
+			if (acceptEncoding.IndexOf("deflate", StringComparison.InvariantCultureIgnoreCase) != -1)
+			{
+				ctx.SetResponseFilter(s => new DeflateStream(s, CompressionMode.Compress, true));
+				ctx.Response.Headers["Content-Encoding"] = "deflate";
+			}
+			else if ((acceptEncoding.IndexOf("gzip", StringComparison.InvariantCultureIgnoreCase) != -1))
+			{
+				ctx.SetResponseFilter(s => new GZipStream(s, CompressionMode.Compress, true));
+				ctx.Response.Headers["Content-Encoding"] = "gzip";
+			}
+
 		}
 
 		private static void RecordRequestHeaders(IHttpContext ctx)

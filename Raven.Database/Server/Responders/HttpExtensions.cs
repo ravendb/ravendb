@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -63,7 +62,7 @@ namespace Raven.Database.Server.Responders
 		public static void WriteJson(this IHttpContext context, object obj)
 		{
 			context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
-			var streamWriter = new StreamWriter(context.Response.OutputStream);
+			var streamWriter = new StreamWriter(context.Response.OutputStream, Encoding.UTF8);
 			new JsonSerializer
 			{
 				Converters = {new JsonToJsonConverter(), new JsonEnumConverter()},
@@ -77,7 +76,7 @@ namespace Raven.Database.Server.Responders
 		public static void WriteJson(this IHttpContext context, JToken obj)
 		{
 			context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
-			var streamWriter = new StreamWriter(context.Response.OutputStream);
+			var streamWriter = new StreamWriter(context.Response.OutputStream, Encoding.UTF8);
 			var jsonTextWriter = new JsonTextWriter(streamWriter)
 			{
 				Formatting = Formatting.None
@@ -108,7 +107,6 @@ namespace Raven.Database.Server.Responders
 			context.Response.Headers["ETag"] = etag.ToString();
 			context.Response.ContentLength64 = data.Length;
 			context.Response.OutputStream.Write(data, 0, data.Length);
-			context.Response.OutputStream.Flush();
 		}
 
 		private static string StringQuotesIfNeeded(string str)
@@ -312,7 +310,6 @@ namespace Raven.Database.Server.Responders
 				context.Response.Headers["ETag"] = fileEtag;
 			}
 			context.Response.OutputStream.Write(bytes, 0, bytes.Length);
-			context.Response.OutputStream.Flush();
 		}
 
 		private static string GetContentType(string docPath)

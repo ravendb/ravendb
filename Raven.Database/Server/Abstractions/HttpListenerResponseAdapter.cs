@@ -12,6 +12,7 @@ namespace Raven.Database.Server.Abstractions
 		public HttpListenerResponseAdapter(HttpListenerResponse response)
 		{
 			this.response = response;
+			OutputStream = response.OutputStream;
 		}
 
 		public NameValueCollection Headers
@@ -19,10 +20,7 @@ namespace Raven.Database.Server.Abstractions
 			get { return response.Headers; }
 		}
 
-		public Stream OutputStream
-		{
-			get { return response.OutputStream; }
-		}
+		public Stream OutputStream { get; set; }
 
 		public long ContentLength64
 		{
@@ -55,6 +53,7 @@ namespace Raven.Database.Server.Abstractions
 
 		public void Close()
 		{
+			OutputStream.Dispose();
 			response.Close();
 		}
 	}
