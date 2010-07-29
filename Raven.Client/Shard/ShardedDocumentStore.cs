@@ -8,7 +8,7 @@ namespace Raven.Client.Shard
 {
 	public class ShardedDocumentStore : IDocumentStore
 	{
-        public event Action<string, object> Stored;
+		public event EventHandler<StoredEntityEventArgs> Stored;
 
         public ShardedDocumentStore(IShardStrategy shardStrategy, Shards shards)
         {

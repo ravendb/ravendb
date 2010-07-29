@@ -22,7 +22,7 @@ namespace Raven.Client.Document
 			get { return asyncDatabaseCommandsGenerator(); }
 		}
 
-		public event Action<string, object> Stored;
+		public event EventHandler<StoredEntityEventArgs> Stored;
 
 		public DocumentStore()
 		{
@@ -102,14 +102,19 @@ namespace Raven.Client.Document
             if (DatabaseCommands == null)
                 throw new InvalidOperationException("You cannot open a session before initialising the document store. Did you forgot calling Initialise?");
             var session = new DocumentSession(this, storeListeners, deleteListeners);
-            session.Stored += entity =>
-            {
-                var copy = Stored;
-                if (copy != null)
-                    copy(Identifier, entity);
-            };
+			session.Stored += OnSessionStored;
             return session;
         }
+
+		private void OnSessionStored(object entity)
+		{
+			var copy = Stored;
+			if (copy != null)
+				copy(this, new StoredEntityEventArgs
+				{
+					SessionIdentifier = Identifier, EntityInstance = entity
+				});
+		}
 
 		public IDocumentStore RegisterListener(IDocumentStoreListener documentStoreListener)
 		{
@@ -122,12 +127,7 @@ namespace Raven.Client.Document
             if(DatabaseCommands == null)
                 throw new InvalidOperationException("You cannot open a session before initialising the document store. Did you forgot calling Initialise?");
             var session = new DocumentSession(this, storeListeners, deleteListeners);
-			session.Stored += entity =>
-			{
-				var copy = Stored;
-				if (copy != null) 
-					copy(Identifier, entity);
-			};
+			session.Stored += OnSessionStored;
             return session;
         }
 
@@ -183,12 +183,7 @@ namespace Raven.Client.Document
 				throw new InvalidOperationException("You cannot open an async session because it is not supported on embedded mode");
 
 			var session = new AsyncDocumentSession(this, storeListeners, deleteListeners);
-			session.Stored += entity =>
-			{
-				var copy = Stored;
-				if (copy != null)
-					copy(Identifier, entity);
-			};
+			session.Stored += OnSessionStored;
 			return session;
 		}
 #endif

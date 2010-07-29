@@ -41,7 +41,7 @@ namespace Raven.Client.Tests.Document
                     using (var documentStore = new DocumentStore { Url = "http://localhost:"+ port }.Initialize())
                     using (var session = documentStore.OpenSession())
                     {
-                        documentStore.Stored += (storeServer, storeEntity) => serversStoredUpon.Add(storeServer);
+                        documentStore.Stored += (sender, args) => serversStoredUpon.Add(args.SessionIdentifier);
 
                         var entity = new Company { Name = "Company" };
                         session.Store(entity);
