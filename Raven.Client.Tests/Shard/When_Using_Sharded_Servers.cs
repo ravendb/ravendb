@@ -75,7 +75,8 @@ namespace Raven.Client.Tests.Shard
 
             using (var documentStore = new ShardedDocumentStore(shardStrategy, shards))
             {
-                documentStore.Stored += (storeServer, storeEntity) => serverPortsStoredUpon.Add(storeServer);
+				documentStore.Stored += (sender, args) => serverPortsStoredUpon.Add(args.SessionIdentifier);
+
                 documentStore.Initialize();
 
                 using (var session = documentStore.OpenSession())

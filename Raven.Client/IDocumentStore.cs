@@ -6,7 +6,7 @@ namespace Raven.Client
 {
     public interface IDocumentStore : IDisposable
     {
-		event Action<string, object> Stored;
+		event EventHandler<StoredEntityEventArgs> Stored;
 		
 		string Identifier { get; set; }
 
@@ -22,4 +22,10 @@ namespace Raven.Client
 
     	DocumentConvention Conventions { get; }
     }
+
+	public class StoredEntityEventArgs : EventArgs
+	{
+		public string SessionIdentifier { get; set; }
+		public object EntityInstance { get; set; }
+	}
 }
