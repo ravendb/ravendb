@@ -653,13 +653,5 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
     	}
 
     	#endregion
-
-        #region IDisposable Members
-
-        public void Dispose()
-        {
-        }
-
-        #endregion
     }
 }

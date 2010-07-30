@@ -179,11 +179,6 @@ namespace Raven.Client.Client
 
 		#endregion
 
-		public void Dispose()
-		{
-			database.Dispose();
-		}
-
 		public void SpinBackgroundWorkers()
 		{
 			database.SpinBackgroundWorkers();

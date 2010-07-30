@@ -11,7 +11,7 @@ using Raven.Database.Json;
 
 namespace Raven.Client.Client
 {
-    public interface IDatabaseCommands : IDisposable
+    public interface IDatabaseCommands
 	{
 		NameValueCollection OperationsHeaders { get; set; }
 		

@@ -99,9 +99,10 @@ namespace Raven.Client.Document
 		public void Dispose()
 		{
             Stored = null;
-
-            if (DatabaseCommands != null)
-                DatabaseCommands.Dispose();
+#if !CLIENT
+			if (DocumentDatabase != null)
+				DocumentDatabase.Dispose();
+#endif
 		}
 
 		#endregion
