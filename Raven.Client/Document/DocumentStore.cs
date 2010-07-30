@@ -13,13 +13,23 @@ namespace Raven.Client.Document
 		private Func<IDatabaseCommands> databaseCommandsGenerator;
 		public IDatabaseCommands DatabaseCommands
 		{
-			get { return databaseCommandsGenerator(); }
+			get
+			{
+				if (databaseCommandsGenerator == null)
+					return null;
+				return databaseCommandsGenerator();
+			}
 		}
 
 		private Func<IAsyncDatabaseCommands> asyncDatabaseCommandsGenerator;
 		public IAsyncDatabaseCommands AsyncDatabaseCommands
 		{
-			get { return asyncDatabaseCommandsGenerator(); }
+			get
+			{
+				if (asyncDatabaseCommandsGenerator == null)
+					return null;
+				return asyncDatabaseCommandsGenerator();
+			}
 		}
 
 		public event EventHandler<StoredEntityEventArgs> Stored;
