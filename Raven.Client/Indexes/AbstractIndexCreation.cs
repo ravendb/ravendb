@@ -1,9 +1,10 @@
-using System.ComponentModel.Composition;
 using Raven.Database.Indexing;
 
 namespace Raven.Client.Indexes
 {
-	[InheritedExport]
+#if !NET_3_5
+	[System.ComponentModel.Composition.InheritedExport]
+#endif
 	public abstract class AbstractIndexCreationTask
 	{
 		public abstract IndexDefinition CreateIndexDefinition();
