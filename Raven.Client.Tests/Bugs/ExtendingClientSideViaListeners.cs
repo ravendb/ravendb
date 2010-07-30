@@ -60,5 +60,10 @@ namespace Raven.Client.Tests.Bugs
 		{
 			throw new NotImplementedException();
 		}
+
+		public void AfterStore(string key, object entityInstance, JObject metadata)
+		{
+			throw new NotImplementedException();
+		}
 	}
 }
