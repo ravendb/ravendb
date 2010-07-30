@@ -356,6 +356,11 @@ more responsive application.
 
 				if (stored != null)
 					stored(entity);
+
+				foreach (var documentStoreListener in storeListeners)
+				{
+					documentStoreListener.AfterStore(batchResult.Key, entity, batchResult.Metadata);
+				}
             }
 		}
 
