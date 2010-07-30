@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using System.Web;
 using ICSharpCode.NRefactory.Ast;
 using ICSharpCode.NRefactory.PrettyPrinter;
+using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using System.Linq;
 using Raven.Database.Plugins;
@@ -28,7 +29,7 @@ namespace Raven.Database.Linq
 		{
 			this.indexDefinition = indexDefinition;
 			this.extensions = extensions;
-			this.name = HttpUtility.UrlEncode(name);
+			this.name = MonoHttpUtility.UrlEncode(name);
 		}
 
 		public string CompiledQueryText { get; set; }
