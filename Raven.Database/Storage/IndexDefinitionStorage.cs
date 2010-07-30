@@ -9,6 +9,7 @@ using System.Web;
 using log4net;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Database.Linq;
@@ -46,7 +47,7 @@ namespace Raven.Database.Storage
 				try
 				{
 					AddAndCompileIndex(
-						HttpUtility.UrlDecode(Path.GetFileNameWithoutExtension(index)),
+						MonoHttpUtility.UrlDecode(Path.GetFileNameWithoutExtension(index)),
 						JsonConvert.DeserializeObject<IndexDefinition>(File.ReadAllText(index), new JsonEnumConverter())
 						);
 				}
@@ -126,12 +127,12 @@ namespace Raven.Database.Storage
 
 		private string GetIndexSourcePath(string name)
 		{
-			return Path.Combine(path, HttpUtility.UrlEncode(name) + ".index.cs");
+			return Path.Combine(path, MonoHttpUtility.UrlEncode(name) + ".index.cs");
 		}
 
 		private string GetIndexPath(string name)
 		{
-			return Path.Combine(path, HttpUtility.UrlEncode(name) + ".index");
+			return Path.Combine(path, MonoHttpUtility.UrlEncode(name) + ".index");
 		}
 
 		public IndexDefinition GetIndexDefinition(string name)
