@@ -1,9 +1,11 @@
 using System;
 using System.Reflection;
 using System.Text;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using Raven.Client.Util;
 using System.Linq;
+using Raven.Database.Json;
 
 namespace Raven.Client.Document
 {
@@ -16,7 +18,10 @@ namespace Raven.Client.Document
 			IdentityPartsSeparator = "/";
 		    JsonContractResolver = new DefaultContractResolver(shareCache: true);
 		    MaxNumberOfRequestsPerSession = 30;
+			CustomizeJsonSerializer = serializer => { };
 		}
+
+		public Action<JsonSerializer> CustomizeJsonSerializer { get; set; }
 
 		public string IdentityPartsSeparator { get; set; }
 
@@ -68,5 +73,21 @@ namespace Raven.Client.Document
 		public Func<PropertyInfo, bool> FindIdentityProperty { get; set; }
 
 		public Func<object, string> DocumentKeyGenerator { get; set; }
+
+		public JsonSerializer CreateSerializer()
+		{
+			var jsonSerializer = new JsonSerializer
+			{
+				ContractResolver = JsonContractResolver,
+				ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
+				Converters =
+					{
+						new JsonEnumConverter(),
+						new JsonLuceneDateTimeConverter()
+					}
+			};
+			CustomizeJsonSerializer(jsonSerializer);
+			return jsonSerializer;
+		}
 	}
 }

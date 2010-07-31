@@ -19,7 +19,7 @@ namespace Raven.Database.Server.Responders
 		static readonly Regex findCharset = new Regex(@"charset=([\w-]+)", RegexOptions.Compiled|RegexOptions.IgnoreCase);
 
 		private static readonly string EmbeddedLastChangedDate =
-			File.GetLastWriteTime(typeof (HttpExtensions).Assembly.Location).Ticks..ToString("G");
+			File.GetLastWriteTime(typeof (HttpExtensions).Assembly.Location).Ticks.ToString("G");
 
 		private static Encoding GetRequestEncoding(IHttpContext context)
 		{

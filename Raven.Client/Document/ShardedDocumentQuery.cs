@@ -50,12 +50,9 @@ namespace Raven.Client.Document
 
 		public IEnumerator<T> GetEnumerator()
 		{
-			var jsonSerializer = new JsonSerializer
-			{
+			var jsonSerializer =
                 // we assume the same json contract resolver across the entire shared sessions set
-				ContractResolver = shardSessions.First().Conventions.JsonContractResolver,
-				ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor
-			};
+				shardSessions.First().Conventions.CreateSerializer();
 			return QueryResult.Results
 				.Select(j => (T)jsonSerializer.Deserialize(new JTokenReader(j), typeof(T)))
 				.GetEnumerator();

@@ -429,11 +429,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
             string path = query.GetIndexQueryUrl(operationUrl, index, "indexes");
 	    	var request = HttpJsonRequest.CreateHttpJsonRequest(this, path, "GET", credentials);
 			request.AddOperationHeaders(OperationsHeaders);
-	        var serializer = new JsonSerializer
-	        {
-				ContractResolver = convention.JsonContractResolver,
-				ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor
-	        };
+	    	var serializer = convention.CreateSerializer();
 	        JToken json;
 	    	try
 	    	{
