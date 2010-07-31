@@ -44,9 +44,6 @@ namespace Raven.Database
 
 			DataDirectory = ConfigurationManager.AppSettings["Raven/DataDir"] ?? @"~\Data";
 
-			if (DataDirectory.StartsWith(@"~\"))
-				DataDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, DataDirectory.Substring(2));
-
 			WebDir = ConfigurationManager.AppSettings["Raven/WebDir"] ?? GetDefaultWebDir();
 
 			var transactionMode = ConfigurationManager.AppSettings["Raven/TransactionMode"];
