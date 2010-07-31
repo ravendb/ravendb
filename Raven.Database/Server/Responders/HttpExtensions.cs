@@ -18,6 +18,9 @@ namespace Raven.Database.Server.Responders
 	{
 		static readonly Regex findCharset = new Regex(@"charset=([\w-]+)", RegexOptions.Compiled|RegexOptions.IgnoreCase);
 
+		private static readonly string EmbeddedLastChangedDate =
+			File.GetLastWriteTime(typeof (HttpExtensions).Assembly.Location).Ticks..ToString("G");
+
 		private static Encoding GetRequestEncoding(IHttpContext context)
 		{
 			var contentType = context.Request.Headers["Content-Type"];
@@ -281,12 +284,12 @@ namespace Raven.Database.Server.Responders
 			context.Response.ContentType = GetContentType(docPath);
 			if (File.Exists(filePath) == false)
 			{
-				string resourceName = "Raven.Database.Server.WebUI." + docPath.Replace("/", ".");
-				if (etagValue == resourceName)
+				if (etagValue == EmbeddedLastChangedDate)
 				{
 					context.SetStatusToNotModified();
 					return;
 				}
+				string resourceName = "Raven.Database.Server.WebUI." + docPath.Replace("/", "."); 
 				using (var resource = typeof(HttpExtensions).Assembly.GetManifestResourceStream(resourceName))
 				{
 					if (resource == null)
@@ -296,7 +299,7 @@ namespace Raven.Database.Server.Responders
 					}
 					bytes = resource.ReadData();
 				}
-				context.Response.Headers["ETag"] = resourceName;
+				context.Response.Headers["ETag"] = EmbeddedLastChangedDate;
 			}
 			else
 			{
