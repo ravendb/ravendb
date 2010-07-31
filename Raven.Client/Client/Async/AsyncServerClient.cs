@@ -162,14 +162,9 @@ namespace Raven.Client.Client.Async
 		{
 			var userAsyncData = ((UserAsyncData)result);
 			var responseString = userAsyncData.Request.EndReadResponseString(userAsyncData.Result);
-			var serializer = new JsonSerializer
-			{
-				ContractResolver = convention.JsonContractResolver,
-				ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor
-			};
 			JToken json;
 			using (var reader = new JsonTextReader(new StringReader(responseString)))
-				json = (JToken)serializer.Deserialize(reader);
+				json = (JToken)convention.CreateSerializer().Deserialize(reader);
 
 			return new QueryResult
 			{

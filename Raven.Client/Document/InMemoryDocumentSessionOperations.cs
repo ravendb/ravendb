@@ -468,12 +468,7 @@ more responsive application.
 
 		private JObject GetObjectAsJson(object entity)
 		{
-			return JObject.FromObject(entity, new JsonSerializer
-			{
-				Converters = {new JsonEnumConverter()},
-				ContractResolver = Conventions.JsonContractResolver,
-				ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor
-			});
+			return JObject.FromObject(entity, Conventions.CreateSerializer());
 		}
 
 		public void Evict<T>(T entity)
