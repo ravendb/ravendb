@@ -15,6 +15,8 @@ namespace Raven.Client.Tests.Bugs
 
 		public void Dispose()
 		{
+			if (path == null)
+				return;
 			Directory.Delete(path, true);
 		}
 

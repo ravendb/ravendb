@@ -315,7 +315,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
     			throw;
     		}
     		var indexDefResultAsJson = JObject.Load(new JsonTextReader(new StringReader(indexDefAsString)));
-    		return new JsonSerializer().Deserialize<IndexDefinition>(
+    		return convention.CreateSerializer().Deserialize<IndexDefinition>(
 				new JTokenReader(indexDefResultAsJson["Index"])
 				);
     	}
