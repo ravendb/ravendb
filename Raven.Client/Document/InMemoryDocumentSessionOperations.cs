@@ -173,11 +173,11 @@ more responsive application.
 			{
 				var type = Type.GetType(documentType);
 				if (type != null)
-					entity = (T) documentFound.Deserialize(type, Conventions.JsonContractResolver);
+					entity = (T) documentFound.Deserialize(type, Conventions);
 			}
 			if (Equals(entity, default(T)))
 			{
-				entity = documentFound.Deserialize<T>(Conventions.JsonContractResolver);
+				entity = documentFound.Deserialize<T>(Conventions);
 #if !NET_3_5
 				var document = entity as JObject;
 				if (document != null)
