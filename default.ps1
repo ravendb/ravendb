@@ -269,7 +269,6 @@ task DoRelease -depends Compile {
 	cp $build_dir\log4net.dll $build_dir\Output\EmbeddedClient
 	cp $build_dir\Newtonsoft.Json.dll $build_dir\Output\EmbeddedClient
 	cp $build_dir\Raven.Storage.Esent.dll $build_dir\Output\EmbeddedClient
-	cp $build_dir\Raven.Storage.Managed.dll $build_dir\Output\EmbeddedClient
 	
 	cp $build_dir\RavenSmuggler.exe $build_dir\Output
 	
@@ -288,7 +287,6 @@ task DoRelease -depends Compile {
 	cp $build_dir\Rhino.Licensing.dll $build_dir\Output\Web\bin
 	cp $build_dir\Esent.Interop.dll $build_dir\Output\Web\bin
 	cp $build_dir\Raven.Database.dll $build_dir\Output\Web\bin
-	cp $build_dir\Raven.Storage.Managed.dll $build_dir\Output\Web\bin
 	cp $build_dir\Raven.Storage.Esent.dll $build_dir\Output\Web\bin
 	
 	cp $base_dir\DefaultConfigs\web.config $build_dir\Output\Web\web.config
@@ -306,7 +304,6 @@ task DoRelease -depends Compile {
 	cp $build_dir\Rhino.Licensing.dll $build_dir\Output\Server
 	cp $build_dir\Esent.Interop.dll $build_dir\Output\Server
 	cp $build_dir\Raven.Database.dll $build_dir\Output\Server
-	cp $build_dir\Raven.Storage.Managed.dll $build_dir\Output\Server
 	cp $build_dir\Raven.Storage.Esent.dll $build_dir\Output\Server
 	cp $base_dir\DefaultConfigs\RavenDb.exe.config $build_dir\Output\Server\Raven.Server.exe.config
 	

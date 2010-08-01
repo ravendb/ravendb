@@ -106,22 +106,6 @@
     <Compile Include="Linq\LinqTransformerCompilationTests.cs" />
     <Compile Include="Linq\PerformingQueries.cs" />
     <Compile Include="Linq\UsingWhereConditions.cs" />
-    <Compile Include="ManagedStorage\Attachments.cs" />
-    <Compile Include="ManagedStorage\BagTests.cs" />
-    <Compile Include="ManagedStorage\DocEtag.cs" />
-    <Compile Include="ManagedStorage\DocumentIds.cs" />
-    <Compile Include="ManagedStorage\DocumentKeys.cs" />
-    <Compile Include="ManagedStorage\Documents.cs" />
-    <Compile Include="ManagedStorage\EncodingUsing7Bits.cs" />
-    <Compile Include="ManagedStorage\General.cs" />
-    <Compile Include="ManagedStorage\Indexes.cs" />
-    <Compile Include="ManagedStorage\MappedResults.cs" />
-    <Compile Include="ManagedStorage\Queues.cs" />
-    <Compile Include="ManagedStorage\Storage.cs" />
-    <Compile Include="ManagedStorage\Tasks.cs" />
-    <Compile Include="ManagedStorage\Transactions.cs" />
-    <Compile Include="ManagedStorage\TreeTests.cs" />
-    <Compile Include="ManagedStorage\TxStorageTest.cs" />
     <Compile Include="Patching\ArrayPatching.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -189,10 +173,6 @@
     <ProjectReference Include="..\Raven.Storage.Esent\Raven.Storage.Esent.csproj">
       <Project>{9DEE8674-D0CD-430D-BD9B-6CD95F3CAB22}</Project>
       <Name>Raven.Storage.Esent</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Raven.Storage.Managed\Raven.Storage.Managed.csproj">
-      <Project>{DA99A419-E137-40DB-9495-0C363B479D4B}</Project>
-      <Name>Raven.Storage.Managed</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
