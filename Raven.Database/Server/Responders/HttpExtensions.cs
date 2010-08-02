@@ -108,7 +108,6 @@ namespace Raven.Database.Server.Responders
                 context.Response.StatusDescription = headers.Value<string>("@Http-Status-Description");
             }
 			context.Response.Headers["ETag"] = etag.ToString();
-			context.Response.ContentLength64 = data.Length;
 			context.Response.OutputStream.Write(data, 0, data.Length);
 		}
 
