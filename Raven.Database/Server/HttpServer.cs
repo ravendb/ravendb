@@ -242,13 +242,12 @@ namespace Raven.Database.Server
 
 		private static void SerializeError(IHttpContext ctx, object error)
 		{
-			using (var sw = new StreamWriter(ctx.Response.OutputStream))
+			var sw = new StreamWriter(ctx.Response.OutputStream);
+			new JsonSerializer().Serialize(new JsonTextWriter(sw)
 			{
-				new JsonSerializer().Serialize(new JsonTextWriter(sw)
-				{
-					Formatting = Formatting.Indented,
-				}, error);
-			}
+				Formatting = Formatting.Indented,
+			}, error);
+			sw.Flush();
 		}
 
 		private bool DispatchRequest(IHttpContext ctx)
