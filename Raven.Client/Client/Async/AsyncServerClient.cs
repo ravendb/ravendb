@@ -12,6 +12,7 @@ using Raven.Client.Exceptions;
 using Raven.Database;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
+using Raven.Client.Client;
 
 namespace Raven.Client.Client.Async
 {
@@ -75,7 +76,7 @@ namespace Raven.Client.Client.Async
 					return null;
 				if (httpWebResponse.StatusCode == HttpStatusCode.Conflict)
 				{
-					var conflicts = new StreamReader(httpWebResponse.GetResponseStream());
+					var conflicts = new StreamReader(httpWebResponse.GetResponseStreamWithHttpDecompression());
 					var conflictsDoc = JObject.Load(new JsonTextReader(conflicts));
 					var conflictIds = conflictsDoc.Value<JArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
 
@@ -224,7 +225,7 @@ namespace Raven.Client.Client.Async
 
 		private static Exception ThrowConcurrencyException(WebException e)
 		{
-			using (var sr = new StreamReader(e.Response.GetResponseStream()))
+			using (var sr = new StreamReader(e.Response.GetResponseStreamWithHttpDecompression()))
 			{
 				var text = sr.ReadToEnd();
 				var errorResults = JsonConvert.DeserializeAnonymousType(text, new

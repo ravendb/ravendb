@@ -218,7 +218,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 	                return null;
                 if (httpWebResponse.StatusCode == HttpStatusCode.Conflict)
                 {
-                    var conflicts = new StreamReader(httpWebResponse.GetResponseStream());
+                    var conflicts = new StreamReader(httpWebResponse.GetResponseStreamWithHttpDecompression());
                     var conflictsDoc = JObject.Load(new JsonTextReader(conflicts));
                     var conflictIds = conflictsDoc.Value<JArray>("Conflicts").Select(x=>x.Value<string>()).ToArray();
 
@@ -344,7 +344,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 
 	    private static Exception ThrowConcurrencyException(WebException e)
 	    {
-	        using (var sr = new StreamReader(e.Response.GetResponseStream()))
+			using (var sr = new StreamReader(e.Response.GetResponseStreamWithHttpDecompression()))
 	        {
 	            var text = sr.ReadToEnd();
 	            var errorResults = JsonConvert.DeserializeAnonymousType(text, new
@@ -578,7 +578,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 
 			using(var response = webRequest.GetResponse())
 			{
-				using(var stream = response.GetResponseStream())
+				using (var stream = response.GetResponseStreamWithHttpDecompression())
 				{
 					return stream.ReadData();
 				}
