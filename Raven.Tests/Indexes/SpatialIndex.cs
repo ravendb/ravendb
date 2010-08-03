@@ -1,0 +1,218 @@
+﻿using System;
+using System.IO;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.ComponentModel.Composition.Hosting;
+using System.Linq;
+using System.Threading;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Raven.Database;
+using Raven.Database.Data;
+using Raven.Database.Indexing;
+using Raven.Database.Linq;
+using Raven.Tests.Storage;
+using Xunit;
+using Raven.Database.Json;
+
+namespace Raven.Tests.Indexes
+{
+	public class SpatialIndex : AbstractDocumentStorageTest
+	{
+		private readonly DocumentDatabase db;
+
+		public SpatialIndex()
+		{
+			db = new DocumentDatabase(new RavenConfiguration
+			{
+				DataDirectory = "raven.db.test.esent",
+				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true
+			});
+			db.SpinBackgroundWorkers();
+		}
+
+		#region IDisposable Members
+
+		public override void Dispose()
+		{
+			db.Dispose();
+			base.Dispose();
+		}
+
+		#endregion
+
+		private void CreateSpatialIndexDefinitionFromJson(string indexName)
+		{
+			// this is how the index looks like in JSON
+
+			var jsonIndexDefinition = @"
+{
+	""Map"" : ""
+		from e in docs.Events
+		select new {
+		   Tag = \""Event\"",
+		   _lat = SpatialIndex.Lat(e.Latitude),
+		   _lng = SpatialIndex.Lng(e.Longitude),
+		   _tier_2 = SpatialIndex.Tier(2, e.Latitude, e.Longitude),
+		   _tier_3 = SpatialIndex.Tier(3, e.Latitude, e.Longitude),
+		   _tier_4 = SpatialIndex.Tier(4, e.Latitude, e.Longitude),
+		   _tier_5 = SpatialIndex.Tier(5, e.Latitude, e.Longitude),
+		   _tier_6 = SpatialIndex.Tier(6, e.Latitude, e.Longitude),
+		   _tier_7 = SpatialIndex.Tier(7, e.Latitude, e.Longitude),
+		   _tier_8 = SpatialIndex.Tier(8, e.Latitude, e.Longitude),
+		   _tier_9 = SpatialIndex.Tier(9, e.Latitude, e.Longitude),
+		   _tier_10 = SpatialIndex.Tier(10, e.Latitude, e.Longitude),
+		   _tier_11 = SpatialIndex.Tier(11, e.Latitude, e.Longitude),
+		   _tier_12 = SpatialIndex.Tier(12, e.Latitude, e.Longitude),
+		   _tier_13 = SpatialIndex.Tier(13, e.Latitude, e.Longitude),
+		   _tier_14 = SpatialIndex.Tier(14, e.Latitude, e.Longitude),
+		   _tier_15 = SpatialIndex.Tier(15, e.Latitude, e.Longitude)	
+		}"",
+	""Stores"" :{
+		   ""_lat"" : ""Yes"",
+		   ""_lng"" : ""Yes"",
+		   ""_tier_2"" : ""Yes"",
+		   ""_tier_3"" : ""Yes"",
+		   ""_tier_4"" : ""Yes"",
+		   ""_tier_5"" : ""Yes"",
+		   ""_tier_6"" : ""Yes"",
+		   ""_tier_7"" : ""Yes"",
+		   ""_tier_8"" : ""Yes"",
+		   ""_tier_9"" : ""Yes"",
+		   ""_tier_10"" : ""Yes"",
+		   ""_tier_11"" : ""Yes"",
+		   ""_tier_12"" : ""Yes"",
+		   ""_tier_13"" : ""Yes"",
+		   ""_tier_14"" : ""Yes"",
+		   ""_tier_15"" : ""Yes""			
+		},
+
+	""Indexes"" :{
+		   ""Tag"" : ""NotAnalyzed"",
+		   ""_lat"" : ""NotAnalyzed"",
+		   ""_lng"" : ""NotAnalyzed"",
+		   ""_tier_2"" : ""NotAnalyzedNoNorms"",
+		   ""_tier_3"" : ""NotAnalyzedNoNorms"",
+		   ""_tier_4"" : ""NotAnalyzedNoNorms"",
+		   ""_tier_5"" : ""NotAnalyzedNoNorms"",
+		   ""_tier_6"" : ""NotAnalyzedNoNorms"",
+		   ""_tier_7"" : ""NotAnalyzedNoNorms"",
+		   ""_tier_8"" : ""NotAnalyzedNoNorms"",
+		   ""_tier_9"" : ""NotAnalyzedNoNorms"",
+		   ""_tier_10"" : ""NotAnalyzedNoNorms"",
+		   ""_tier_11"" : ""NotAnalyzedNoNorms"",
+		   ""_tier_12"" : ""NotAnalyzedNoNorms"",
+		   ""_tier_13"" : ""NotAnalyzedNoNorms"",
+		   ""_tier_14"" : ""NotAnalyzedNoNorms"",
+		   ""_tier_15"" : ""NotAnalyzedNoNorms""
+		}
+}";
+
+			// Console.WriteLine(jsonIndexDefinition);
+
+			IndexDefinition indexDefinition = null;
+
+			using(var stringReader = new StringReader(jsonIndexDefinition))
+			using (var jsonReader = new JsonTextReader(stringReader))
+			{
+				indexDefinition =  new JsonSerializer
+				{
+					Converters = { new JsonEnumConverter() }
+				}.Deserialize<IndexDefinition>(jsonReader);
+			}
+
+			db.PutIndex(indexName, indexDefinition);
+		}
+
+		// same test as in Spatial.Net test cartisian
+		[Fact]
+		public void CanPerformSpatialSearch()
+		{
+			CreateSpatialIndexDefinitionFromJson("eventsByLatLng");
+
+			#region Create Events
+
+			var events = new Event[]
+            {
+				new Event("McCormick &amp, Schmick's Seafood Restaurant", 38.9579000, -77.3572000),
+				new Event("Jimmy's Old Town Tavern", 38.9690000, -77.3862000),
+				new Event("Ned Devine's", 38.9510000, -77.4107000),
+				new Event("Old Brogue Irish Pub", 38.9955000, -77.2884000),
+				new Event("Alf Laylah Wa Laylah", 38.8956000, -77.4258000),
+				new Event("Sully's Restaurant &amp, Supper", 38.9003000, -77.4467000),
+				new Event("TGI Friday", 38.8725000, -77.3829000),
+				new Event("Potomac Swing Dance Club", 38.9027000, -77.2639000),
+				new Event("White Tiger Restaurant", 38.9027000, -77.2638000),
+				new Event("Jammin' Java", 38.9039000, -77.2622000),
+				new Event("Potomac Swing Dance Club", 38.9027000, -77.2639000),
+				new Event("WiseAcres Comedy Club", 38.9248000, -77.2344000),
+				new Event("Glen Echo Spanish Ballroom", 38.9691000, -77.1400000),
+				new Event("Whitlow's on Wilson", 38.8889000, -77.0926000),
+				new Event("Iota Club and Cafe", 38.8890000, -77.0923000),
+				new Event("Hilton Washington Embassy Row", 38.9103000, -77.0451000),
+				new Event("HorseFeathers, Bar & Grill", 39.01220000000001, -77.3942),
+				new Event("Marshall Island Airfield", 7.06, 171.2),
+				new Event("Midway Island", 25.7, -171.7),
+				new Event("North Pole Way", 55.0, 4.0),
+
+            };
+
+			for (int i = 0; i < events.Length; i++)
+			{
+
+				db.Put("Events/" + (i + 1), null,
+					JObject.FromObject(events[i]),
+					JObject.Parse("{'Raven-Entity-Name': 'Events'}"), null);
+			}
+
+			#endregion
+
+			const double lat = 38.96939, lng = -77.386398;
+			const double miles = 6.0;
+
+			QueryResult queryResult;
+			do
+			{
+				queryResult = db.Query("eventsByLatLng", new SpatialIndexQuery()
+				{
+					Query = "Tag:[[Event]]",
+					Latitude = lat,
+					Longitude = lng,
+					Miles = miles,
+					SortByDistance = true
+				});
+				if (queryResult.IsStale)
+					Thread.Sleep(100);
+			} while (queryResult.IsStale);
+
+			Assert.Equal(7, queryResult.Results.Length);
+
+			foreach (var r in queryResult.Results)
+			{
+				Event e = r.JsonDeserialization<Event>();
+
+				double distance = Raven.Database.Indexing.SpatialIndex.GetDistanceMi(lat, lng, e.Latitude, e.Longitude);
+
+				Console.WriteLine("Venue: " + e.Venue + ", Distance " + distance);
+
+				Assert.True(distance < miles);
+			}
+		}
+
+		public class Event
+		{
+			public Event() { }
+
+			public Event(string venue, double lat, double lng)
+			{
+				this.Venue = venue;
+				this.Latitude = lat;
+				this.Longitude = lng;
+			}
+
+			public string Venue { get; set; }
+			public double Latitude { get; set; }
+			public double Longitude { get; set; }
+		}
+	}
+}

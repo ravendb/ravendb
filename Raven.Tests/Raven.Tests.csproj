@@ -103,6 +103,7 @@
     <Compile Include="Indexes\ComplexIndexOnNotAnalyzedField.cs" />
     <Compile Include="Indexes\QueryingOnDefaultIndex.cs" />
     <Compile Include="Indexes\QueryingOnStaleIndexes.cs" />
+    <Compile Include="Indexes\SpatialIndex.cs" />
     <Compile Include="Indexes\Statistics.cs" />
     <Compile Include="Indexes\UsingQueryBuilder.cs" />
     <Compile Include="Linq\UsingRavenQueryProvider.cs" />

@@ -54,5 +54,10 @@ namespace Raven.Database.Indexing
 
 			return NumericUtils.DoubleToPrefixCoded(boxId);
 		}
+
+		public static double GetDistanceMi(double x1, double y1, double x2, double y2)
+		{
+			return DistanceUtils.GetInstance().GetDistanceMi(x1, y1, x2, y2);
+		}
 	}
 }
