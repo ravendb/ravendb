@@ -57,7 +57,7 @@ namespace Raven.Database.Indexing
 				// introduce " " around the term
 				var startIndex = term.Index;
 				var length = term.Length-2;
-				if (sb[startIndex + length - 2] != '"')
+				if (sb[startIndex + length - 1] != '"')
 				{
 					sb.Insert(startIndex + length, '"');
 					length += 1;
