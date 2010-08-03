@@ -48,6 +48,10 @@ namespace Raven.Client.Document
                         currentLo = 1;
                         incrementedCurrentLow = 1;
                     }
+					else
+                    {
+                    	incrementedCurrentLow = Interlocked.Increment(ref currentLo);
+                    }
                 }
             }
             return (currentHi - 1)*capacity + (incrementedCurrentLow);
@@ -82,6 +86,13 @@ namespace Raven.Client.Document
                 {
                    // expected, we need to retry
                 }
+				catch(InvalidOperationException e)
+				{
+
+					if (e.Message.Contains("JET_errKeyDuplicate") == false && // Can happen if two threads create the document for the first time
+						e.Message.Contains("JET_errWriteConflict") == false) // Can happen if two threads update the document at the same time
+						throw;
+				}
             }
         }
 
