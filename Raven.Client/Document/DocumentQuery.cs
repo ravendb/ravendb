@@ -44,15 +44,39 @@ namespace Raven.Client.Document
 
 				Trace.WriteLine(string.Format("Executing query '{0}' on index '{1}' in '{2}'",
 								query, indexName, session.StoreIdentifier));
-				var result = databaseCommands.Query(indexName, new IndexQuery
+
+				IndexQuery indexQuery = null;
+
+				if (lat != 0 && lng != 0 && miles != 0)
 				{
-					Query = query,
-					PageSize = pageSize,
-					Start = start,
-                    Cutoff = cutoff,
-					SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
-					FieldsToFetch = projectionFields
-				});
+					indexQuery = new SpatialIndexQuery
+					{
+						Query = query,
+						PageSize = pageSize,
+						Start = start,
+						Cutoff = cutoff,
+						SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
+						FieldsToFetch = projectionFields,
+						Latitude = lat,
+						Longitude = lng,
+						Miles = miles
+					};
+				}
+				else
+				{
+					indexQuery = new IndexQuery
+					{
+						Query = query,
+						PageSize = pageSize,
+						Start = start,
+						Cutoff = cutoff,
+						SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
+						FieldsToFetch = projectionFields
+					};
+				}
+
+				var result = databaseCommands.Query(indexName, indexQuery);
+
 				if(waitForNonStaleResults && result.IsStale)
 				{
 					if (sp.Elapsed > timeout)

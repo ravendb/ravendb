@@ -27,6 +27,9 @@ namespace Raven.Client.Document
         private QueryResult queryResult;
 	    protected DateTime? cutoff;
 
+		// spatial hack
+		protected double lat, lng, miles;
+
 	    protected AbstractDocumentQuery(DocumentSession session)
 		{
 			this.session = session;
@@ -349,6 +352,15 @@ namespace Raven.Client.Document
 			}
 
 			this.queryText.Append("~").Append(proximity);
+
+			return this;
+		}
+
+		public IDocumentQuery<T> WithinRadiusOfLatLng(double miles, double lat, double lng)
+		{
+			this.miles = miles;
+			this.lat = lat;
+			this.lng = lng;
 
 			return this;
 		}

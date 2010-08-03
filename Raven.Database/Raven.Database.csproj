@@ -118,6 +118,7 @@
     <Compile Include="DatabaseBulkOperations.cs" />
     <Compile Include="Data\BackupRequest.cs" />
     <Compile Include="Data\DisposableAction.cs" />
+    <Compile Include="Data\SpatialIndexQuery.cs" />
     <Compile Include="Exceptions\IndexDoesNotExists.cs" />
     <Compile Include="Extensions\MonoHttpEncoder.cs">
       <SubType>Code</SubType>
@@ -128,6 +129,7 @@
     <Compile Include="Indexing\GatherAllCollector.cs" />
     <Compile Include="Indexing\NumberUtil.cs" />
     <Compile Include="Indexing\RangeQueryParser.cs" />
+    <Compile Include="Indexing\SpatialIndex.cs" />
     <Compile Include="IStartupTask.cs" />
     <Compile Include="PerformanceCounters.cs" />
     <Compile Include="Plugins\AbstractBackgroundTask.cs" />
@@ -137,6 +139,7 @@
     <Compile Include="Plugins\AbstractIndexUpdateTrigger.cs" />
     <Compile Include="Plugins\AbstractReadTrigger.cs" />
     <Compile Include="Plugins\Builtins\PendingTransactionRecovery.cs" />
+    <Compile Include="Plugins\Builtins\SpatialDynamicCompilationExtension.cs" />
     <Compile Include="Plugins\ReadOperation.cs" />
     <Compile Include="Plugins\ReadVetoResult.cs" />
     <Compile Include="Server\Abstractions\HttpContextAdapter.cs" />

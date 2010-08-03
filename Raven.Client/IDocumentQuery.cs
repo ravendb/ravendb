@@ -55,6 +55,8 @@ namespace Raven.Client
 		/// </remarks>
 		IDocumentQuery<T> Proximity(int proximity);
 
+		IDocumentQuery<T> WithinRadiusOfLatLng(double miles, double lat, double lng);
+
 		IDocumentQuery<T> OrderBy(params string[] fields);
 
         IDocumentQuery<T> WaitForNonStaleResultsAsOfNow();

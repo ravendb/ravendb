@@ -10,6 +10,8 @@ using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
+using Lucene.Net.Spatial.Tier;
+using Lucene.Net.Spatial.Tier.Projectors;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
@@ -90,7 +92,7 @@ namespace Raven.Database.Indexing
 						pageSize = skippedDocs * indexQuery.PageSize; 
 						skippedDocs = 0;
 					}
-					var search = ExecuteQuery(indexSearcher, luceneQuery, start, pageSize, indexQuery.SortedFields);
+					var search = ExecuteQuery(indexSearcher, luceneQuery, start, pageSize, indexQuery.SortedFields, indexQuery as SpatialIndexQuery);
 					indexQuery.TotalSize.Value = search.totalHits;
 					for (var i = start; i < search.totalHits && (i - start) < pageSize; i++)
 					{
@@ -107,21 +109,44 @@ namespace Raven.Database.Indexing
             }
         }
 
-    	private static TopDocs ExecuteQuery(IndexSearcher searcher, Query luceneQuery, int start, int pageSize, SortedField[] sortedFields)
+    	private static TopDocs ExecuteQuery(IndexSearcher searcher, Query luceneQuery, int start, int pageSize, SortedField[] sortedFields, SpatialIndexQuery spatialQuery)
         {
+			Filter filter = null;
+			Sort sortByDistance = null;
+
+			if (spatialQuery != null)
+			{
+				var dq = new DistanceQueryBuilder(
+					spatialQuery.Latitude, spatialQuery.Longitude, spatialQuery.Miles,
+					SpatialIndex.LatField, SpatialIndex.LngField, CartesianTierPlotter.DefaltFieldPrefix, true);
+
+				filter = dq.Filter;
+
+				if (spatialQuery.SortByDistance)
+				{
+					var dsort = new DistanceFieldComparatorSource(dq.DistanceFilter);
+					sortByDistance = new Sort(new SortField("foo", dsort, false));
+				}
+			}
+
+			if (sortByDistance != null)
+			{
+				return searcher.Search(luceneQuery, filter, pageSize + start, sortByDistance);
+			}
+
         	if(pageSize == int.MaxValue) // we want all docs
         	{
         		var gatherAllCollector = new GatherAllCollector();
-        		searcher.Search(luceneQuery, gatherAllCollector);
+        		searcher.Search(luceneQuery, filter, gatherAllCollector);
         		return gatherAllCollector.ToTopDocs();
         	}
             // NOTE: We get Start + Pagesize results back so we have something to page on
 			if (sortedFields != null && sortedFields.Length > 0)
             {
                 var sort = new Sort(sortedFields.Select(x => x.ToLuceneSortField()).ToArray());
-                return searcher.Search(luceneQuery, null, pageSize + start, sort);
+                return searcher.Search(luceneQuery, filter, pageSize + start, sort);
             }
-        	return searcher.Search(luceneQuery, null, pageSize + start);
+        	return searcher.Search(luceneQuery, filter, pageSize + start);
         }
 
         private Query GetLuceneQuery(IndexQuery indexQuery)

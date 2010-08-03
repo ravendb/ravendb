@@ -271,6 +271,9 @@
     <Compile Include="..\Raven.Database\Data\SortedField.cs">
       <Link>Data\SortedField.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Database\Data\SpatialIndexQuery.cs">
+      <Link>Data\SpatialIndexQuery.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Database\Exceptions\BadRequestException.cs">
       <Link>Exceptions\BadRequestException.cs</Link>
     </Compile>
