@@ -77,6 +77,9 @@
     <Compile Include="..\Raven.Client\Client\JsonLuceneDateTimeConverter.cs">
       <Link>Client\JsonLuceneDateTimeConverter.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client\Client\RavenQuery.cs">
+      <Link>Client\RavenQuery.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client\Client\RavenTransactionAccessor.cs">
       <Link>Client\RavenTransactionAccessor.cs</Link>
     </Compile>
@@ -187,6 +190,9 @@
     </Compile>
     <Compile Include="..\Raven.Client\Linq\RavenQueryProvider.cs">
       <Link>Linq\RavenQueryProvider.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client\Linq\RavenQueryProviderProcessor.cs">
+      <Link>Linq\RavenQueryProviderProcessor.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client\Linq\TypeSystem.cs">
       <Link>Linq\TypeSystem.cs</Link>

@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using Raven.Database.Data;
 
 namespace Raven.Client.Linq
 {
@@ -75,14 +74,9 @@ namespace Raven.Client.Linq
             return this;
         }
 
-    	public QueryResult QueryResult
-    	{
-    		get { return provider.QueryResult; }
-    	}
-
     	public override string ToString()
         {
-            var ravenQueryProvider = new RavenQueryProvider<T>(provider.Session, provider.IndexName);
+            var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.Session, null, provider.IndexName);
             ravenQueryProvider.ProcessExpression(expression);
             string fields = "";
             if (ravenQueryProvider.FieldsToFetch.Count > 0)

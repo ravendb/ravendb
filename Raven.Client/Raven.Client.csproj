@@ -135,6 +135,7 @@
     <Compile Include="Linq\IRavenQueryProvider.cs" />
     <Compile Include="Linq\RavenQueryable.cs" />
     <Compile Include="Linq\RavenQueryProvider.cs" />
+    <Compile Include="Linq\RavenQueryProviderProcessor.cs" />
     <Compile Include="Linq\TypeSystem.cs" />
     <Compile Include="RavenExtensions.cs" />
     <Compile Include="Shard\ShardStrategy\ShardAccess\IShardAccessStrategy.cs" />
