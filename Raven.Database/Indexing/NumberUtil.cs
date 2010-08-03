@@ -17,12 +17,12 @@ namespace Raven.Database.Indexing
 
 		public static string NumberToString(float number)
 		{
-			return "Fx" + number.ToString("F", CultureInfo.InvariantCulture);
+			return "Fx" + number.ToString("G", CultureInfo.InvariantCulture);
 		}
 
 		public static string NumberToString(double number)
 		{
-			return "Dx" + number.ToString("F",CultureInfo.InvariantCulture);
+			return "Dx" + number.ToString("G",CultureInfo.InvariantCulture);
 		}
 
 		public static object StringToNumber(string number)
