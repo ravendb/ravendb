@@ -111,6 +111,7 @@
     <Compile Include="Bugs\OperationHeaders.cs" />
     <Compile Include="Bugs\Polymorphic.cs" />
     <Compile Include="Bugs\QueryingByNull.cs" />
+    <Compile Include="Bugs\QueryWithReservedCharacters.cs" />
     <Compile Include="Bugs\SerializingDates.cs" />
     <Compile Include="Bugs\SinglePropertyDocument.cs" />
     <Compile Include="Bugs\ProjectingDates.cs" />

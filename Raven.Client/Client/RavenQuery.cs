@@ -4,6 +4,10 @@ namespace Raven.Client.Client
 {
 	public static class RavenQuery
 	{
+		public static string Escape(string term)
+		{
+			return Escape(term, false);
+		}
 		/// <summary>
 		/// Escapes Lucene operators and quotes phrases
 		/// </summary>
