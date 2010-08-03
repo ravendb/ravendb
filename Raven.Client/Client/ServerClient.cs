@@ -426,7 +426,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 
 	    private QueryResult DirectQuery(string index, IndexQuery query, string operationUrl)
 	    {
-            string path = query.GetIndexQueryUrl(operationUrl, index, "indexes");
+            string path = query.GetIndexQueryUrl(operationUrl, index, "indexes");			
 	    	var request = HttpJsonRequest.CreateHttpJsonRequest(this, path, "GET", credentials);
 			request.AddOperationHeaders(OperationsHeaders);
 	    	var serializer = convention.CreateSerializer();

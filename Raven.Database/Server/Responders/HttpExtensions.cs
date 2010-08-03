@@ -286,11 +286,7 @@ namespace Raven.Database.Server.Responders
 
 			double lat = context.GetLat(), lng = context.GetLng(), miles = context.GetMiles();
 
-			if (lat != 0 && lng != 0 && miles != 0)
-			{
-				return query;
-			}
-			else
+			if (lat != 0 || lng != 0 || miles != 0)
 			{
 				return new SpatialIndexQuery
 				{
@@ -305,6 +301,10 @@ namespace Raven.Database.Server.Responders
 					Miles = miles,
 					SortByDistance = context.SortByDistance()
 				};
+			}
+			else
+			{
+				return query;
 			}
 		}
 
