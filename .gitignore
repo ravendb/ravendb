@@ -17,11 +17,4 @@ _ReSharper.*/
 *.InstallLog
 /Raven.Database/Raven.Database.g.csproj
 /test/storage.raven
-/Raven.Web/Data/Data
-/Raven.Web/Data/IndexDefinitions/Raven%2fDocumentsByEntityName.index
-/Raven.Web/Data/Indexes/Raven%2fDocumentsByEntityName/segments.gen
-/Raven.Web/Data/Indexes/Raven%2fDocumentsByEntityName/segments_1
-/Raven.Web/Data/logs/RVN.log
-/Raven.Web/Data/logs/RVNres00001.jrs
-/Raven.Web/Data/logs/RVNres00002.jrs
-/Raven.Web/Data/system/RVN.chk
+/Raven.Web/Data/
