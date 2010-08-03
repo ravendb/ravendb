@@ -357,7 +357,7 @@ namespace Raven.Client.Document
 		{
 			if (value == null)
 			{
-				return "NULL_VALUE";
+				return "[[NULL_VALUE]]";
 			}
 
 			if (value is bool)
@@ -383,7 +383,7 @@ namespace Raven.Client.Document
 		private static string TransformToRangeValue(object value)
 		{
 			if (value == null)
-				return "NULL_VALUE";
+				return "[[NULL_VALUE]]";
 
 			if (value is int)
 				return NumberUtil.NumberToString((int)value);
