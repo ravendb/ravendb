@@ -100,6 +100,7 @@
     <Compile Include="Bugs\AutoCreateIndexes.cs" />
     <Compile Include="Bugs\BaseClientTest.cs" />
     <Compile Include="Bugs\CanDetectChanges.cs" />
+    <Compile Include="Bugs\CustomEntityName.cs" />
     <Compile Include="Bugs\Etag.cs" />
     <Compile Include="Bugs\ExplicitTransaction.cs" />
     <Compile Include="Bugs\ExtendingClientSideViaListeners.cs" />
