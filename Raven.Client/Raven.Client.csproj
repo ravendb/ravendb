@@ -93,6 +93,7 @@
     <Compile Include="Client\Async\IAsyncDatabaseCommands.cs" />
     <Compile Include="Client\JsonExtensions.cs" />
     <Compile Include="Client\JsonLuceneDateTimeConverter.cs" />
+    <Compile Include="Client\RavenQuery.cs" />
     <Compile Include="Client\RavenTransactionAccessor.cs" />
     <Compile Include="Client\WebRequestEventArgs.cs" />
     <Compile Include="Client\Async\WrapperAsyncData.cs" />
