@@ -160,7 +160,8 @@ namespace Raven.Client.Document
 				else
 #endif
 				{
-					databaseCommandsGenerator = ()=>new ServerClient(Url, Conventions, credentials);
+					var replicationInformer = new ReplicationInformer();
+					databaseCommandsGenerator = ()=>new ServerClient(Url, Conventions, credentials, replicationInformer);
 					asyncDatabaseCommandsGenerator = ()=>new AsyncServerClient(Url, Conventions, credentials);
 				}
                 if(Conventions.DocumentKeyGenerator == null)// don't overwrite what the user is doing

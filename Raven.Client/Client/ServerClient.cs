@@ -24,59 +24,23 @@ namespace Raven.Client.Client
 {
     public class ServerClient : IDatabaseCommands
 	{
-        private const string RavenReplicationDestinations = "Raven/Replication/Destinations";
-        private DateTime lastReplicationUpdate = DateTime.MinValue;
-        private readonly object replicationLock = new object();
-	    private List<string> replicationDestinations = new List<string>();
-        private readonly Dictionary<string, IntHolder> failureCounts = new Dictionary<string, IntHolder>();
-	    private int requestCount;
-
-	    private class IntHolder
-	    {
-	        public int Value;
-	    }
+        private int requestCount;
 
 	    private readonly string url;
 		private readonly DocumentConvention convention;
 	    private readonly ICredentials credentials;
+    	private readonly ReplicationInformer replicationInformer;
 
-	    public ServerClient(string url, DocumentConvention convention, ICredentials credentials)
+    	public ServerClient(string url, DocumentConvention convention, ICredentials credentials, ReplicationInformer replicationInformer)
 		{
 	        this.credentials = credentials;
-	        this.url = url;
+	    	this.replicationInformer = replicationInformer;
+	    	this.url = url;
 			this.convention = convention;
 			OperationsHeaders = new NameValueCollection();
-			UpdateReplicationInformationIfNeeded();
+    		replicationInformer.UpdateReplicationInformationIfNeeded(this);
 		}
-
-        private void UpdateReplicationInformationIfNeeded()
-        {
-            if (lastReplicationUpdate.AddMinutes(5) > DateTime.Now)
-                return;
-            RefreshReplicationInformation();
-        }
-
-	    public void RefreshReplicationInformation()
-	    {
-	        lock (replicationLock)
-	        {
-               
-	            lastReplicationUpdate = DateTime.Now;
-	            var document = DirectGet(url, RavenReplicationDestinations);
-	            failureCounts[url] = new IntHolder();// we just hit the master, so we can reset its failure count
-	            if (document == null)
-	                return;
-	            var replicationDocument = document.DataAsJson.JsonDeserialization<ReplicationDocument>();
-	            replicationDestinations = replicationDocument.Destinations.Select(x => x.Url).ToList();
-	            foreach (var replicationDestination in replicationDestinations)
-	            {
-	                IntHolder value;
-	                if(failureCounts.TryGetValue(replicationDestination, out value))
-	                    continue;
-	                failureCounts[replicationDestination] = new IntHolder();
-	            }
-	        }
-	    }
+	   
 
 	    #region IDatabaseCommands Members
 
@@ -96,26 +60,26 @@ namespace Raven.Client.Client
 	    {
 	        var currentRequest = Interlocked.Increment(ref requestCount);
 	        T result;
-	        var threadSafeCopy = replicationDestinations;
-            if (ShouldExecuteUsing(url, currentRequest))
+			var threadSafeCopy = replicationInformer.ReplicationDestinations;
+            if (replicationInformer.ShouldExecuteUsing(url, currentRequest))
             {
                 if (TryOperation(operation, url, true, out result))
                     return result;
-                if (IsFirstFailure(url) && TryOperation(operation, url, threadSafeCopy.Count>0, out result))
+				if (replicationInformer.IsFirstFailure(url) && TryOperation(operation, url, threadSafeCopy.Count > 0, out result))
                     return result;
-                IncrementFailureCount(url);
+				replicationInformer.IncrementFailureCount(url);
             }
 
 	        for (int i = 0; i < threadSafeCopy.Count; i++)
 	        {
 	            var replicationDestination = threadSafeCopy[i];
-                if (ShouldExecuteUsing(replicationDestination, currentRequest) == false)
+				if (replicationInformer.ShouldExecuteUsing(replicationDestination, currentRequest) == false)
                     continue;
                 if (TryOperation(operation, replicationDestination, true, out result))
                     return result;
-                if (IsFirstFailure(url) && TryOperation(operation, replicationDestination, threadSafeCopy.Count > i + 1, out result))
+				if (replicationInformer.IsFirstFailure(url) && TryOperation(operation, replicationDestination, threadSafeCopy.Count > i + 1, out result))
                     return result;
-                IncrementFailureCount(url);
+				replicationInformer.IncrementFailureCount(url);
 	        }
             // this should not be thrown, but since I know the value of should...
             throw new InvalidOperationException(@"Attempted to conect to master and all replicas has failed, giving up.
@@ -123,48 +87,14 @@ There is a high probability of a network problem preventing access to all the re
 Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven instances.");
 	    }
 
-	    private bool ShouldExecuteUsing(string operationUrl, int currentRequest)
-	    {
-            IntHolder value;
-            if (failureCounts.TryGetValue(operationUrl, out value) == false)
-                throw new KeyNotFoundException("BUG: Could not find failure count for " + operationUrl);
-	        if (value.Value > 1000)
-            {
-                return currentRequest % 1000 == 0;
-            }
-            if (value.Value > 100)
-            {
-                return currentRequest % 100 == 0;
-            }
-            if (value.Value > 10)
-            {
-                return currentRequest % 10 == 0;
-            }
-            return true;
-	    }
-
-	    private bool IsFirstFailure(string operationUrl)
-	    {
-            IntHolder value;
-            if (failureCounts.TryGetValue(operationUrl, out value) == false)
-                throw new KeyNotFoundException("BUG: Could not find failure count for " + operationUrl);
-	        return Thread.VolatileRead(ref value.Value) == 0;
-	    }
-
-	    private void IncrementFailureCount(string operationUrl)
-	    {
-	        IntHolder value;
-            if (failureCounts.TryGetValue(operationUrl, out value) == false)
-                throw new KeyNotFoundException("BUG: Could not find failure count for " + operationUrl);
-	        Interlocked.Increment(ref value.Value);
-	    }
+	    
 
 	    private bool TryOperation<T>(Func<string, T> operation, string operationUrl, bool avoidThrowing, out T result)
 	    {
 	        try
 	        {
 	            result = operation(operationUrl);
-	            ResetFailureCount(operationUrl);
+	            replicationInformer.ResetFailureCount(operationUrl);
 	            return true;
 	        }
 	        catch(WebException e)
@@ -178,21 +108,12 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 	        }
 	    }
 
-	    private  void ResetFailureCount(string operationUrl)
-	    {
-            IntHolder value;
-            if (failureCounts.TryGetValue(operationUrl, out value) == false)
-                throw new KeyNotFoundException("BUG: Could not find failure count for " + operationUrl);
-            Thread.VolatileWrite(ref value.Value, 0);
-	   
-	    }
-
 	    private static bool IsServerDown(WebException e)
 	    {
 	        return e.InnerException is SocketException;
 	    }
 
-	    private JsonDocument DirectGet(string serverUrl, string key)
+    	public JsonDocument DirectGet(string serverUrl, string key)
 	    {
 	        var metadata = new JObject();
 	        AddTransactionInformation(metadata);
@@ -464,7 +385,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 	        return ExecuteWithReplication(u => DirectGet(ids, u));
 	    }
 
-	    private JsonDocument[] DirectGet(string[] ids, string operationUrl)
+    	public JsonDocument[] DirectGet(string[] ids, string operationUrl)
 	    {
             var request = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/queries/", "POST", credentials);
 			request.AddOperationHeaders(OperationsHeaders);
@@ -594,13 +515,21 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 
 	    public IDatabaseCommands With(ICredentials credentialsForSession)
 	    {
-	        return new ServerClient(url, convention, credentialsForSession);
+	        return new ServerClient(url, convention, credentialsForSession, replicationInformer);
 	    }
 
     	public bool SupportsPromotableTransactions
     	{
 			get { return true; }
     	}
+
+		public string Url
+		{
+			get
+			{
+				return url;
+			}
+		}
 
     	public void DeleteByIndex(string indexName, IndexQuery queryToDelete, bool allowStale)
     	{
@@ -650,4 +579,99 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 
     	#endregion
     }
+
+	public class ReplicationInformer
+	{
+		private const string RavenReplicationDestinations = "Raven/Replication/Destinations";
+		private DateTime lastReplicationUpdate = DateTime.MinValue;
+		private readonly object replicationLock = new object();
+		private List<string> replicationDestinations = new List<string>();
+
+		public List<string> ReplicationDestinations
+		{
+			get { return replicationDestinations; }
+		}
+
+		private readonly Dictionary<string, IntHolder> failureCounts = new Dictionary<string, IntHolder>();
+
+		public void UpdateReplicationInformationIfNeeded(ServerClient serverClient)
+		{
+			if (lastReplicationUpdate.AddMinutes(5) > DateTime.Now)
+				return;
+			RefreshReplicationInformation(serverClient);
+		}
+
+		private class IntHolder
+		{
+			public int Value;
+		}
+
+		public bool ShouldExecuteUsing(string operationUrl, int currentRequest)
+		{
+			IntHolder value;
+			if (failureCounts.TryGetValue(operationUrl, out value) == false)
+				throw new KeyNotFoundException("BUG: Could not find failure count for " + operationUrl);
+			if (value.Value > 1000)
+			{
+				return currentRequest % 1000 == 0;
+			}
+			if (value.Value > 100)
+			{
+				return currentRequest % 100 == 0;
+			}
+			if (value.Value > 10)
+			{
+				return currentRequest % 10 == 0;
+			}
+			return true;
+		}
+
+		public bool IsFirstFailure(string operationUrl)
+		{
+			IntHolder value;
+			if (failureCounts.TryGetValue(operationUrl, out value) == false)
+				throw new KeyNotFoundException("BUG: Could not find failure count for " + operationUrl);
+			return Thread.VolatileRead(ref value.Value) == 0;
+		}
+
+		public void IncrementFailureCount(string operationUrl)
+		{
+			IntHolder value;
+			if (failureCounts.TryGetValue(operationUrl, out value) == false)
+				throw new KeyNotFoundException("BUG: Could not find failure count for " + operationUrl);
+			Interlocked.Increment(ref value.Value);
+		}
+
+		public void RefreshReplicationInformation(ServerClient commands)
+		{
+			lock (replicationLock)
+			{
+
+				lastReplicationUpdate = DateTime.Now;
+				var document = commands.DirectGet(commands.Url, RavenReplicationDestinations);
+				failureCounts[commands.Url] = new IntHolder();// we just hit the master, so we can reset its failure count
+				if (document == null)
+					return;
+				var replicationDocument = document.DataAsJson.JsonDeserialization<ReplicationDocument>();
+				replicationDestinations = replicationDocument.Destinations.Select(x => x.Url).ToList();
+				foreach (var replicationDestination in replicationDestinations)
+				{
+					IntHolder value;
+					if (failureCounts.TryGetValue(replicationDestination, out value))
+						continue;
+					failureCounts[replicationDestination] = new IntHolder();
+				}
+			}
+		}
+
+
+		public void ResetFailureCount(string operationUrl)
+		{
+			IntHolder value;
+			if (failureCounts.TryGetValue(operationUrl, out value) == false)
+				throw new KeyNotFoundException("BUG: Could not find failure count for " + operationUrl);
+			Thread.VolatileWrite(ref value.Value, 0);
+
+		}
+	}
 }
