@@ -961,8 +961,16 @@ namespace Raven.Client.Tests.Document
 
 				session.SaveChanges();
 
-				documentStore.DatabaseCommands.PutIndex(
-					"eventsByLatLng", SpatialIndexTestHelper.CreateIndexDefinition());
+				var indexDefinition = new IndexDefinition
+				{
+					Map = "from e in docs.Events select new { Tag = \"Event\" }",
+					Indexes = {
+						{ "Tag", FieldIndexing.NotAnalyzed }
+					}
+				}
+				.ToSpatial("e.Latitude", "e.Longitude");
+
+				documentStore.DatabaseCommands.PutIndex("eventsByLatLng", indexDefinition);
 
 				// Wait until the index is built
 				session.LuceneQuery<Event>("eventsByLatLng")

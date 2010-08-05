@@ -45,7 +45,16 @@ namespace Raven.Tests.Spatial
 		[Fact]
 		public void CanPerformSpatialSearch()
 		{
-			db.PutIndex("eventsByLatLng", SpatialIndexTestHelper.CreateIndexDefinition());
+			var indexDefinition = new IndexDefinition 
+			{
+				Map = "from e in docs.Events select new { Tag = \"Event\" }",
+				Indexes = {
+					{ "Tag", FieldIndexing.NotAnalyzed }
+				}
+			}
+			.ToSpatial("e.Latitude", "e.Longitude");
+
+			db.PutIndex("eventsByLatLng", indexDefinition);
 
 			var events = SpatialIndexTestHelper.GetEvents();
 
