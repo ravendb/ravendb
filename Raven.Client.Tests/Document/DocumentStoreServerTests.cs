@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Net;
 using System.Threading;
 using System.Transactions;
 using Newtonsoft.Json;
@@ -927,6 +928,16 @@ namespace Raven.Client.Tests.Document
 
 				Assert.Equal(2, companyFound.Length);
 			}
+		}
+
+		[Fact]
+		public void Can_read_credentials_from_connection_string()
+		{
+			var documentStore = new DocumentStore {ConnectionStringName = "Secure"};
+			Assert.NotNull(documentStore.Credentials);
+			var networkCredential = (NetworkCredential)documentStore.Credentials;
+			Assert.Equal("beam", networkCredential.UserName);
+			Assert.Equal("up", networkCredential.Password);
 		}
 
 		[Fact]

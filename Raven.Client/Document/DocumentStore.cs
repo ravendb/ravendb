@@ -12,8 +12,10 @@ namespace Raven.Client.Document
 {
 	public class DocumentStore : IDocumentStore
 	{
-		private static Regex connectionStringRegex = new Regex(@"(\w+) \s* = \s* (.*)", 
+		private static readonly Regex connectionStringRegex = new Regex(@"(\w+) \s* = \s* (.*)", 
 			RegexOptions.Compiled|RegexOptions.IgnorePatternWhitespace);
+		private static readonly Regex connectionStringArgumentsSplitterRegex = new Regex(@"; (?=\s* \w+ \s* =)",
+			RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
 
 		private Func<IDatabaseCommands> databaseCommandsGenerator;
 		public IDatabaseCommands DatabaseCommands
@@ -106,22 +108,43 @@ namespace Raven.Client.Document
 				var connectionString = ConfigurationManager.ConnectionStrings[connectionStringName];
 				if(connectionString == null)
 					throw new ArgumentException("Could not find connection string name: " + connectionStringName);
-				var match = connectionStringRegex.Match(connectionString.ConnectionString);
-				if(match.Success == false)
-					throw new ArgumentException("Connection string name: " + connectionStringName + " could not be parsed");
-				switch (match.Groups[1].Value.ToLower())
+				string user = null;
+				string pass = null;
+				var strings = connectionStringArgumentsSplitterRegex.Split(connectionString.ConnectionString);
+				foreach(var arg in strings)
 				{
-#if !CLIENT
-					case "datadir":
-						DataDirectory = match.Groups[2].Value;
-						break;
-#endif
-					case "url":
-						Url = match.Groups[2].Value;
-						break;
-					default:
+					var match = connectionStringRegex.Match(arg);
+					if (match.Success == false)
 						throw new ArgumentException("Connection string name: " + connectionStringName + " could not be parsed");
+					switch (match.Groups[1].Value.ToLower())
+					{
+#if !CLIENT
+						case "datadir":
+							DataDirectory = match.Groups[2].Value.Trim();
+							break;
+#endif
+						case "url":
+							Url = match.Groups[2].Value.Trim();
+							break;
+
+						case "user":
+							user = match.Groups[2].Value.Trim();
+							break;
+						case "password":
+								pass = match.Groups[2].Value.Trim();
+							break;
+
+						default:
+							throw new ArgumentException("Connection string name: " + connectionStringName + " could not be parsed, unknown option: " + match.Groups[1].Value);
+					}
 				}
+
+				if (user == null && pass == null) 
+					return;
+
+				if(user == null || pass == null)
+					throw new ArgumentException("User and Password must both be specified in the connection string: " + connectionStringName);
+				Credentials = new NetworkCredential(user, pass);
 			}
 		}
 
