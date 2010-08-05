@@ -1,5 +1,6 @@
 using System;
 using System.Reflection;
+using System.Runtime.Serialization.Formatters;
 using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
@@ -79,6 +80,8 @@ namespace Raven.Client.Document
 			var jsonSerializer = new JsonSerializer
 			{
 				ContractResolver = JsonContractResolver,
+				TypeNameHandling = TypeNameHandling.Auto,
+				TypeNameAssemblyFormat = FormatterAssemblyStyle.Simple,
 				ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
 				Converters =
 					{
