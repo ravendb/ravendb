@@ -631,6 +631,36 @@ namespace Raven.Client.Tests.Document
 		}
 
 		[Fact]
+		public void Should_retrieve_all_entities_using_connection_string()
+		{
+			using (var documentStore =  new DocumentStore
+			{
+				ConnectionStringName = "Local",
+				Configuration =
+					{
+						RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true
+					}
+			})
+			{
+				path = documentStore.DataDirectory;
+
+				documentStore.Initialize();
+
+				var session1 = documentStore.OpenSession();
+				session1.Store(new Company { Name = "Company 1" });
+				session1.Store(new Company { Name = "Company 2" });
+
+				session1.SaveChanges();
+				var session2 = documentStore.OpenSession();
+				var companyFound = session2.LuceneQuery<Company>()
+					.WaitForNonStaleResults()
+					.ToArray();
+
+				Assert.Equal(2, companyFound.Length);
+			}
+		}
+
+		[Fact]
 		public void Can_create_index_using_linq_from_client()
 		{
 			using (var store = NewDocumentStore())

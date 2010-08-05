@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Net;
+using System.Text.RegularExpressions;
 using Raven.Client.Client;
 using Raven.Client.Client.Async;
 using Raven.Client.Document.Async;
@@ -10,6 +12,9 @@ namespace Raven.Client.Document
 {
 	public class DocumentStore : IDocumentStore
 	{
+		private static Regex connectionStringRegex = new Regex(@"(\w+) \s* = \s* (.*)", 
+			RegexOptions.Compiled|RegexOptions.IgnorePatternWhitespace);
+
 		private Func<IDatabaseCommands> databaseCommandsGenerator;
 		public IDatabaseCommands DatabaseCommands
 		{
@@ -90,6 +95,36 @@ namespace Raven.Client.Document
 			}
 		}
 #endif
+		private string connectionStringName;
+
+		public string ConnectionStringName
+		{
+			get { return connectionStringName; }
+			set
+			{
+				connectionStringName = value;
+				var connectionString = ConfigurationManager.ConnectionStrings[connectionStringName];
+				if(connectionString == null)
+					throw new ArgumentException("Could not find connection string name: " + connectionStringName);
+				var match = connectionStringRegex.Match(connectionString.ConnectionString);
+				if(match.Success == false)
+					throw new ArgumentException("Connection string name: " + connectionStringName + " could not be parsed");
+				switch (match.Groups[1].Value.ToLower())
+				{
+#if !CLIENT
+					case "datadir":
+						DataDirectory = match.Groups[2].Value;
+						break;
+#endif
+					case "url":
+						Url = match.Groups[2].Value;
+						break;
+					default:
+						throw new ArgumentException("Connection string name: " + connectionStringName + " could not be parsed");
+				}
+			}
+		}
+
 		public string Url { get; set; }
 
 		public DocumentConvention Conventions { get; set; }
@@ -109,7 +144,6 @@ namespace Raven.Client.Document
 
         public IDocumentSession OpenSession(ICredentials credentialsForSession)
         {
-
             if (DatabaseCommands == null)
                 throw new InvalidOperationException("You cannot open a session before initialising the document store. Did you forgot calling Initialise?");
             var session = new DocumentSession(this, storeListeners, deleteListeners);
