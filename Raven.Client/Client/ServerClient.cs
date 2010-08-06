@@ -6,7 +6,6 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
-using System.Transactions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Bundles.Replication.Data;
@@ -211,6 +210,80 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 	            return null;
 	        });
 	    }
+
+    	public void PutAttachment(string key, Guid? etag, byte[] data, JObject metadata)
+    	{
+    		var webRequest = WebRequest.Create(url + "/static/" + key);
+    		webRequest.Method = "PUT";
+			foreach (var header in metadata.Properties())
+			{
+				if (header.Name.StartsWith("@"))
+					continue;
+				webRequest.Headers[header.Name] = StripQuotesIfNeeded(header.Value.ToString(Formatting.None));
+			}
+			if(etag != null)
+			{
+				webRequest.Headers[" If-None-Match"] = etag.Value.ToString();
+			}
+			using(var stream = webRequest.GetRequestStream())
+			{
+				stream.Write(data, 0, data.Length);
+				stream.Flush();
+			}
+			using(webRequest.GetResponse())
+			{
+				
+			}
+    	}
+
+		private static string StripQuotesIfNeeded(string str)
+		{
+			if (str.StartsWith("\"") && str.EndsWith("\""))
+				return str.Substring(1, str.Length - 2);
+			return str;
+		}
+
+    	public Attachment GetAttachment(string key)
+    	{
+			var webRequest = WebRequest.Create(url + "/static/" + key);
+    		try
+    		{
+    			using(var response = webRequest.GetResponse())
+    			using(var responseStream = response.GetResponseStream())
+    			{
+    				return new Attachment
+    				{
+    					Data = responseStream.ReadData(),
+						Etag = new Guid(response.Headers["ETag"]),
+						Metadata = response.Headers.FilterHeaders(isServerDocument: false)
+					};
+    			}
+    		}
+    		catch (WebException e)
+    		{
+    			var httpWebResponse = e.Response as HttpWebResponse;
+				if (httpWebResponse == null)
+					throw;
+				if (httpWebResponse.StatusCode == HttpStatusCode.NotFound)
+					return null;
+    			throw;
+    		}
+    	}
+
+    	public void DeleteAttachment(string key, Guid? etag)
+    	{
+			var webRequest = WebRequest.Create(url + "/static/" + key);
+			webRequest.Method = "DELETE";
+			if (etag != null)
+			{
+				webRequest.Headers[" If-None-Match"] = etag.Value.ToString();
+			}
+			
+			using (webRequest.GetResponse())
+			{
+
+			}
+    	}
 
     	public IndexDefinition GetIndex(string name)
     	{

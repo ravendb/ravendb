@@ -1095,9 +1095,11 @@ namespace Raven.Client.Tests.Document
 
         [Fact]
         public void Can_get_correct_maximum_from_map_reduce_index() {
-            using (var server = GetNewServer(port, path)) {
+            using (var server = GetNewServer(port, path))
+			{
                 var documentStore = new DocumentStore { Url = "http://localhost:" + port };
                 documentStore.Initialize();
+
                 documentStore.DatabaseCommands.PutIndex("MaxAge", new IndexDefinition<LinqIndexesFromClient.User, LinqIndexesFromClient.LocationAge> {
                     Map = users => from user in users
                                    select new { user.Age },
@@ -1134,5 +1136,32 @@ namespace Raven.Client.Tests.Document
                 }
             }
         }
+
+		[Fact]
+		public void Using_attachments()
+		{
+			using (var server = GetNewServer(port, path))
+			{
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+				documentStore.Initialize();
+
+				var attachment = documentStore.DatabaseCommands.GetAttachment("ayende");
+				Assert.Null(attachment);
+
+				documentStore.DatabaseCommands.PutAttachment("ayende", null, new byte[] { 1, 2, 3 }, new JObject(new JProperty("Hello", "World")));
+
+				attachment = documentStore.DatabaseCommands.GetAttachment("ayende");
+				Assert.NotNull(attachment);
+
+				Assert.Equal(new byte[] { 1, 2, 3 }, attachment.Data);
+				Assert.Equal("World", attachment.Metadata.Value<string>("Hello"));
+
+				documentStore.DatabaseCommands.DeleteAttachment("ayende", null);
+
+				attachment = documentStore.DatabaseCommands.GetAttachment("ayende");
+				Assert.Null(attachment);
+
+			}
+		}
 	}
 }

@@ -100,7 +100,7 @@ namespace Raven.Database.Server.Responders
 			{
 				if (header.Name.StartsWith("@"))
 					continue;
-				context.Response.Headers[header.Name] = StringQuotesIfNeeded(header.Value.ToString(Formatting.None));
+				context.Response.Headers[header.Name] = StripQuotesIfNeeded(header.Value.ToString(Formatting.None));
 			}
             if (headers["@Http-Status-Code"] != null)
             {
@@ -111,7 +111,7 @@ namespace Raven.Database.Server.Responders
 			context.Response.OutputStream.Write(data, 0, data.Length);
 		}
 
-		private static string StringQuotesIfNeeded(string str)
+		private static string StripQuotesIfNeeded(string str)
 		{
 			if (str.StartsWith("\"") && str.EndsWith("\""))
 				return str.Substring(1, str.Length - 2);

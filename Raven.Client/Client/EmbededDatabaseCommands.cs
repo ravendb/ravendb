@@ -67,6 +67,21 @@ namespace Raven.Client.Client
 			database.Delete(key, etag, RavenTransactionAccessor.GetTransactionInformation());
 		}
 
+		public void PutAttachment(string key, Guid? etag, byte[] data, JObject metadata)
+		{
+			database.PutStatic(key, etag, data, metadata);
+		}
+
+		public Attachment GetAttachment(string key)
+		{
+			return database.GetStatic(key);
+		}
+
+		public void DeleteAttachment(string key, Guid? etag)
+		{
+			database.DeleteStatic(key, etag);
+		}
+
 		public IndexDefinition GetIndex(string name)
 		{
 			CurrentRavenOperation.Headers.Value = OperationsHeaders;

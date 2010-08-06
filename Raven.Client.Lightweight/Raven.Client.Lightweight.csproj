@@ -248,6 +248,9 @@
     <Compile Include="..\Raven.Database\BatchResult.cs">
       <Link>Data\BatchResult.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Database\Data\Attachment.cs">
+      <Link>Data\Attachment.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Database\Data\DeleteCommandData.cs">
       <Link>Commands\DeleteCommandData.cs</Link>
     </Compile>

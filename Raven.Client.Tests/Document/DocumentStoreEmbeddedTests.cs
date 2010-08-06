@@ -71,6 +71,31 @@ namespace Raven.Client.Tests.Document
         }
 
 		[Fact]
+		public void Using_attachments()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				var attachment = documentStore.DatabaseCommands.GetAttachment("ayende");
+				Assert.Null(attachment);
+
+				documentStore.DatabaseCommands.PutAttachment("ayende", null, new byte[] { 1, 2, 3 }, new JObject(new JProperty("Hello", "World")));
+
+				attachment = documentStore.DatabaseCommands.GetAttachment("ayende");
+				Assert.NotNull(attachment);
+
+				Assert.Equal(new byte[]{1,2,3}, attachment.Data);
+				Assert.Equal("World", attachment.Metadata.Value<string>("Hello"));
+
+				documentStore.DatabaseCommands.DeleteAttachment("ayende", null);
+
+				attachment = documentStore.DatabaseCommands.GetAttachment("ayende");
+				Assert.Null(attachment);
+
+			}
+		}
+
+
+		[Fact]
 		public void Will_get_notification_when_reading_non_authoritive_information()
 		{
 			using (var documentStore = NewDocumentStore())
