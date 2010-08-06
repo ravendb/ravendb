@@ -8,6 +8,7 @@ properties {
   $tools_dir = "$base_dir\Tools"
   $release_dir = "$base_dir\Release"
   $uploader = "..\Uploader\S3Uploader.exe"
+  $gemPusher = "..\Uploader\push_gem.ps1"
 }
 
 include .\psake_ext.ps1
@@ -214,14 +215,15 @@ task CopyDocFiles {
 	cp $base_dir\acknowledgements.txt $build_dir\Output\acknowledgements.txt
 }
 
-task CreateGem  {
+task CreateGem -depends CopyGems {
 	exec { 		
 		$currentDate = [System.DateTime]::Today.ToString("yyyyMMdd")
 		[System.IO.File]::WriteAllText( "$build_dir\Output\VERSION", "$version.$env:buildlabel.$currentDate", [System.Text.Encoding]::ASCII)
+		$global:gem_result = "ravendb-$version.$env:buildlabel.$currentDate.gem"
 		$old = pwd
 		cd $build_dir\Output
 		del $build_dir\Output\*.gem
-		& "$tools_dir\IronRuby\bin\igem.bat" build "$base_dir\ravendb.gemspec"
+		exec { & "$tools_dir\IronRuby\bin\igem.bat" build "$base_dir\ravendb.gemspec" }
 		cd $old
 	}
 }
@@ -270,6 +272,10 @@ task ResetBuildArtifcats {
     git checkout "Raven.Database\RavenDB.snk"
 }
 
+task PushGem -depends CreateGem {
+	exec { & "$tools_dir\IronRuby\bin\igem.bat" push "$global:gem_result" }
+}
+
 task Upload -depends DoRelease {
 	Write-Host "Starting upload"
 	if (Test-Path $uploader) {
@@ -290,6 +296,8 @@ task Upload -depends DoRelease {
 	else {
 		Write-Host "could not find upload script $uploadScript, skipping upload"
 	}
+	
+	
 }
 
 task UploadCommercial -depends Commercial, DoRelease, Upload {
