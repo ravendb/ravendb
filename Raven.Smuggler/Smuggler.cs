@@ -65,7 +65,7 @@ Usage:
                     int totalCount = 0;
                     while (true)
                     {
-						var documents = Encoding.UTF8.GetString(webClient.DownloadData(instanceUrl + "indexes?pageSize=128&start=" + totalCount));
+						var documents = GetString(webClient.DownloadData(instanceUrl + "indexes?pageSize=128&start=" + totalCount));
                         var array = JArray.Parse(documents);
                         if (array.Count == 0)
                         {
@@ -90,7 +90,7 @@ Usage:
                     int totalCount = 0;
                     while (true)
                     {
-						var documents = Encoding.UTF8.GetString(webClient.DownloadData(instanceUrl + "docs?pageSize=128&etag=" + lastEtag));
+						var documents = GetString(webClient.DownloadData(instanceUrl + "docs?pageSize=128&etag=" + lastEtag));
                         var array = JArray.Parse(documents);
                         if (array.Count == 0)
                         {
@@ -113,7 +113,13 @@ Usage:
             }
         }
 
-        public static void ImportData(string instanceUrl, string file)
+    	private static string GetString(byte[] downloadData)
+    	{
+    		var ms = new MemoryStream(downloadData);
+    		return new StreamReader(ms, Encoding.UTF8).ReadToEnd();
+    	}
+
+    	public static void ImportData(string instanceUrl, string file)
         {
         	var sw = Stopwatch.StartNew();
             using (var streamReader = new StreamReader(new GZipStream(File.OpenRead(file), CompressionMode.Decompress)))
