@@ -222,7 +222,7 @@ function Write-Documentation {
 function exec([scriptblock]$command, [string]$errorMsg) {    
     & $command 
     if ($lastExitCode -ne 0) {
-        throw errorMsg
+        throw $errorMsg
     }
 }
 

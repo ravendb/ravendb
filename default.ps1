@@ -27,7 +27,11 @@ task Clean {
 }
 
 task Init -depends Verify40, Clean {
-
+	
+	if($env:buildlabel -eq $null) {
+		$env:buildlabel = "13"
+	}
+	
 	$asmInfos = ls -path $base_dir -include AssemblyInfo.cs -recurse | 
 					Where { $_ -notmatch "SharedLibs" } | 
 					Where { $_ -notmatch "Tools" }
@@ -210,11 +214,15 @@ task CopyDocFiles {
 	cp $base_dir\acknowledgements.txt $build_dir\Output\acknowledgements.txt
 }
 
-task CreateGem -depends Compile, CopyGems {
+task CreateGem  {
 	exec { 		
 		$currentDate = [System.DateTime]::Today.ToString("yyyyMMdd")
-		Write-Host "$version.$env:buildlabel.$currentDate" > $base_dir\VERSION
-		#& "$tools_dir\IronRuby\bin\igem.bat" build "$base_dir\ravendb.gemspec"
+		[System.IO.File]::WriteAllText( "$build_dir\Output\VERSION", "$version.$env:buildlabel.$currentDate", [System.Text.Encoding]::ASCII)
+		$old = pwd
+		cd $build_dir\Output
+		del $build_dir\Output\*.gem
+		& "$tools_dir\IronRuby\bin\igem.bat" build "$base_dir\ravendb.gemspec"
+		cd $old
 	}
 }
 

@@ -4,7 +4,7 @@ Gem::Specification.new do |spec|
 	spec.platform    = Gem::Platform::RUBY
 	spec.name        = "ravendb"
 	spec.version     = version
-	spec.files 		 = Dir['build/Output/gems/**/*']
+	spec.files 		 = Dir['gems/**/*']
 	spec.summary     = "Raven is an Open Source (with a commercial option) document database for the .NET/Windows platform."
 	spec.description = <<-EOF
 		Raven is an Open Source (with a commercial option) document database for the .NET/Windows platform. Raven offers a 
