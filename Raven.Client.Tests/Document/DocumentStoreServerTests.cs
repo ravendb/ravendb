@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Net;
 using System.Threading;
 using System.Transactions;
 using Newtonsoft.Json;
@@ -904,6 +905,39 @@ namespace Raven.Client.Tests.Document
 
 				Assert.Equal(2, companyFound.Length);
 			}
+		}
+
+		[Fact]
+		public void Should_retrieve_all_entities_using_connection_string()
+		{
+			using (var server = GetNewServer(port, path))
+			{
+				var documentStore = new DocumentStore { ConnectionStringName = "Server"};
+				documentStore.Initialize();
+
+				var session1 = documentStore.OpenSession();
+				session1.Store(new Company { Name = "Company 1" });
+				session1.Store(new Company { Name = "Company 2" });
+
+				session1.SaveChanges();
+
+				var session2 = documentStore.OpenSession();
+				var companyFound = session2.LuceneQuery<Company>()
+					.WaitForNonStaleResults()
+					.ToArray();
+
+				Assert.Equal(2, companyFound.Length);
+			}
+		}
+
+		[Fact]
+		public void Can_read_credentials_from_connection_string()
+		{
+			var documentStore = new DocumentStore {ConnectionStringName = "Secure"};
+			Assert.NotNull(documentStore.Credentials);
+			var networkCredential = (NetworkCredential)documentStore.Credentials;
+			Assert.Equal("beam", networkCredential.UserName);
+			Assert.Equal("up", networkCredential.Password);
 		}
 
 		[Fact]

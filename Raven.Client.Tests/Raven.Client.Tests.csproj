@@ -102,6 +102,7 @@
     <Compile Include="Bugs\CanDetectChanges.cs" />
     <Compile Include="Bugs\CustomEntityName.cs" />
     <Compile Include="Bugs\DecimalPrecision.cs" />
+    <Compile Include="Bugs\EntityWithDate.cs" />
     <Compile Include="Bugs\Etag.cs" />
     <Compile Include="Bugs\ExplicitTransaction.cs" />
     <Compile Include="Bugs\ExtendingClientSideViaListeners.cs" />
@@ -185,6 +186,7 @@
     <None Include="..\Raven.Database\RavenDB.snk">
       <Link>RavenDB.snk</Link>
     </None>
+    <None Include="App.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

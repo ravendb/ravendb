@@ -23,7 +23,7 @@ namespace Raven.Database.Json
 			{
 				self.WriteTo(new BsonWriter(memoryStream)
 				{
-					NoDateTimeUniversalConversion = true
+					DateTimeKindHandling = DateTimeKind.Unspecified
 				});
 				return memoryStream.ToArray();
 			}
