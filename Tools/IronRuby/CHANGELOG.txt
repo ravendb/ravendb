@@ -1,0 +1,5 @@
+For a detailed changelog from this release see GitHub:
+http://github.com/ironruby/ironruby/commits/v1.1
+
+For a detailed changelog from v1.0 or prior, see the 1.0 release:
+http://ironruby.codeplex.com/releases/view/25901
