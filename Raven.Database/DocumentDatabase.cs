@@ -558,14 +558,9 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 					});
 					return;
 				}
-				catch (EsentErrorException e)
+				catch (ConcurrencyException)
 				{
-					if(e.Error==JET_err.WriteConflict)
-					{
-						Thread.Sleep(100);
-						continue;
-					}
-					throw;
+					Thread.Sleep(100);
 				}
 			}
 		}
