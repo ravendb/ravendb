@@ -28,148 +28,26 @@ task Clean {
 
 task Init -depends Verify40, Clean {
 
-	Generate-Assembly-Info `
-		-file "$base_dir\Raven.Database\Properties\AssemblyInfo.cs" `
-		-title "Raven Database $version" `
-		-description "A linq enabled document database for .NET" `
-		-company "Hibernating Rhinos" `
-		-product "Raven Database $version" `
-		-version $version `
-		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2010" `
-		-clsCompliant "true"
-		
-	Generate-Assembly-Info `
-		-file "$base_dir\Raven.Smuggler\Properties\AssemblyInfo.cs" `
-		-title "Raven Database $version" `
-		-description "A linq enabled document database for .NET" `
-		-company "Hibernating Rhinos" `
-		-product "Raven Database $version" `
-		-version $version `
-		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2010" `
-		-clsCompliant "false"
-		
-	Generate-Assembly-Info `
-		-file "$base_dir\Samples\Raven.Sample.SimpleClient\Properties\AssemblyInfo.cs" `
-		-title "Raven Database $version" `
-		-description "A linq enabled document database for .NET" `
-		-company "Hibernating Rhinos" `
-		-product "Raven Database $version" `
-		-version $version `
-		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2010" `
-		-clsCompliant "false"
-		
-	Generate-Assembly-Info `
-		-file "$base_dir\Samples\Raven.Sample.ComplexSharding\Properties\AssemblyInfo.cs" `
-		-title "Raven Database $version" `
-		-description "A linq enabled document database for .NET" `
-		-company "Hibernating Rhinos" `
-		-product "Raven Database $version" `
-		-version $version `
-		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2010" `
-		-clsCompliant "false"
+	$asmInfos = ls -path $base_dir -include AssemblyInfo.cs -recurse | 
+					Where { $_ -notmatch "SharedLibs" } | 
+					Where { $_ -notmatch "Tools" }
 	
-	Generate-Assembly-Info `
-		-file "$base_dir\Samples\Raven.Sample.ShardClient\Properties\AssemblyInfo.cs" `
-		-title "Raven Sample Shard Client $version" `
-		-description "A linq enabled document database for .NET" `
-		-company "Hibernating Rhinos" `
-		-product "Raven Sample Shard Client $version" `
-		-version $version `
-		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2010" `
-		-clsCompliant "false"
-
-	Generate-Assembly-Info `
-		-file "$base_dir\Raven.Client\Properties\AssemblyInfo.cs" `
-		-title "Raven Database Client $version" `
-		-description "A linq enabled document database for .NET" `
-		-company "Hibernating Rhinos" `
-		-product "Raven Database $version" `
-		-version $version `
-		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2010" `
-		-clsCompliant "false"
-	
-	Generate-Assembly-Info `
-		-file "$base_dir\Raven.Client.Tests\Properties\AssemblyInfo.cs" `
-		-title "Raven Database Client $version" `
-		-description "A linq enabled document database for .NET" `
-		-company "Hibernating Rhinos" `
-		-product "Raven Database $version" `
-		-version $version `
-		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2010" `
-		-clsCompliant "false"
-
-	Generate-Assembly-Info `
-		-file "$base_dir\Raven.Server\Properties\AssemblyInfo.cs" `
-		-title "Raven Database $version" `
-		-description "A linq enabled document database for .NET" `
-		-company "Hibernating Rhinos" `
-		-product "Raven Database $version" `
-		-version $version `
-		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2010" `
-		-clsCompliant "false"
-
-	Generate-Assembly-Info `
-		-file "$base_dir\Raven.Web\Properties\AssemblyInfo.cs" `
-		-title "Raven Database $version" `
-		-description "A linq enabled document database for .NET" `
-		-company "Hibernating Rhinos" `
-		-product "Raven Database $version" `
-		-version $version `
-		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2010" `
-		-clsCompliant "false"
-
-
-	Generate-Assembly-Info `
-		-file "$base_dir\Raven.Scenarios\Properties\AssemblyInfo.cs" `
-		-title "Raven Database $version" `
-		-description "A linq enabled document database for .NET" `
-		-company "Hibernating Rhinos" `
-		-product "Raven Database $version" `
-		-version $version `
-		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2010" `
-		-clsCompliant "false"
-
-	Generate-Assembly-Info `
-		-file "$base_dir\Raven.Tests\Properties\AssemblyInfo.cs" `
-		-title "Raven Database $version" `
-		-description "A linq enabled document database for .NET" `
-		-company "Hibernating Rhinos" `
-		-product "Raven Database $version" `
-		-version $version `
-		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2010" `
-		-clsCompliant "false"
-
-
-	Generate-Assembly-Info `
-		-file "$base_dir\Raven.Tryouts\Properties\AssemblyInfo.cs" `
-		-title "Raven Database $version" `
-		-description "A linq enabled document database for .NET" `
-		-company "Hibernating Rhinos" `
-		-product "Raven Database $version" `
-		-version $version `
-		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2010" `
-		-clsCompliant "false"
+	foreach($asmInfo in $asmInfos) {
 		
+		$propertiesDir = [System.IO.Path]::GetDirectoryName($asmInfo.FullName)
+		$projectDir = [System.IO.Path]::GetDirectoryName($propertiesDir)
+		$projectName = [System.IO.Path]::GetFileName($projectDir)
 		
-	Generate-Assembly-Info `
-		-file "$base_dir\Bundles\Raven.Bundles.Tests\Properties\AssemblyInfo.cs" `
-		-title "Raven Database $version" `
-		-description "A linq enabled document database for .NET" `
-		-company "Hibernating Rhinos" `
-		-product "Raven Database $version" `
-		-version $version `
-		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2010" `
-		-clsCompliant "false"
-	
-	Generate-Assembly-Info `
-		-file "$base_dir\Bundles\Raven.Bundles.Versioning\Properties\AssemblyInfo.cs" `
-		-title "Raven Database $version" `
-		-description "A linq enabled document database for .NET" `
-		-company "Hibernating Rhinos" `
-		-product "Raven Database $version" `
-		-version $version `
-		-copyright "Hibernating Rhinos & Ayende Rahien 2004 - 2010" `
-		-clsCompliant "false"
+		Generate-Assembly-Info `
+			-file $asmInfo.FullName `
+			-title "$projectName $version" `
+			-description "A linq enabled document database for .NET" `
+			-company "Hibernating Rhinos" `
+			-product "RavenDB $version" `
+			-version $version `
+			-copyright "Copyright © Hibernating Rhinos and Ayende Rahien 2004 - 2010" `
+			-clsCompliant "true"
+	}
 		
 	new-item $release_dir -itemType directory
 	new-item $buildartifacts_dir -itemType directory
