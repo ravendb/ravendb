@@ -219,10 +219,10 @@ function Write-Documentation {
   $list | Sort 'Name' | Format-Table -Auto
 }
 
-function exec([string]$command, [string]$parameters) {    
-    & $command $parameters
+function exec([scriptblock]$command, [string]$errorMsg) {    
+    & $command 
     if ($lastExitCode -ne 0) {
-        throw "Error: Failed to execute ""$command"" with parameters ""$parameters"""
+        throw errorMsg
     }
 }
 

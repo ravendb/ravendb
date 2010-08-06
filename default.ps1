@@ -56,7 +56,7 @@ task Init -depends Verify40, Clean {
 	 
 	write-host "Commercial: ", $global:commercial
 	if($global:commercial) {
-		exec ".\Utilities\Binaries\Raven.ProjectRewriter.exe"
+		exec { .\Utilities\Binaries\Raven.ProjectRewriter.exe }
 		cp "..\RavenDB_Commercial.snk" "Raven.Database\RavenDB.snk"
 	}
 	else {
@@ -66,29 +66,29 @@ task Init -depends Verify40, Clean {
 
 task Compile -depends Init {
 	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
-    exec "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" """$sln_file"" /p:OutDir=""$buildartifacts_dir\"""
+    exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$sln_file" /p:OutDir="$buildartifacts_dir\" }
     
     Write-Host "Merging..."
     $old = pwd
     cd $build_dir
      
-    exec "..\Utilities\Binaries\Raven.Merger.exe"
+    exec { ..\Utilities\Binaries\Raven.Merger.exe }
     
     cd $old
     
     Write-Host "Finished merging"
     
-    exec "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" """$base_dir\Bundles\Raven.Bundles.sln"" /p:OutDir=""$buildartifacts_dir\"""
-    exec "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" """$base_dir\Samples\Raven.Samples.sln"" /p:OutDir=""$buildartifacts_dir\"""
+    exec { & "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Bundles\Raven.Bundles.sln" /p:OutDir="$buildartifacts_dir\" }
+    exec { & "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Samples\Raven.Samples.sln" /p:OutDir="$buildartifacts_dir\" }
 }
 
 task Test -depends Compile {
   $old = pwd
   cd $build_dir
-  exec "$build_dir\xunit.console.exe" "$build_dir\Raven.Tests.dll"
-  exec "$build_dir\xunit.console.exe" "$build_dir\Raven.Scenarios.dll"
-  exec "$build_dir\xunit.console.exe" "$build_dir\Raven.Client.Tests.dll"
-  exec "$build_dir\xunit.console.exe" "$build_dir\Raven.Bundles.Tests.dll"
+  exec { &"$build_dir\xunit.console.exe" "$build_dir\Raven.Tests.dll" } 
+  exec { &"$build_dir\xunit.console.exe" "$build_dir\Raven.Scenarios.dll" }
+  exec { &"$build_dir\xunit.console.exe" "$build_dir\Raven.Client.Tests.dll" }
+  exec { &"$build_dir\xunit.console.exe" "$build_dir\Raven.Bundles.Tests.dll" }
   cd $old
 }
 
@@ -124,7 +124,7 @@ task CopySamples {
 	}
 }
 
-task CreateOutpuDirectories {
+task CreateOutpuDirectories -depends CleanOutputDirectory {
 	mkdir $build_dir\Output
 	mkdir $build_dir\Output\Gems
 	mkdir $build_dir\Output\Web
@@ -187,7 +187,7 @@ task CopyBundles {
 	del $build_dir\Output\Bundles\Raven.Bundles.Tests.dll
 }
 
-task CopyGems {
+task CopyGems -depends CreateOutpuDirectories {
 	cp $build_dir\Raven.Client.Lightweight.dll $build_dir\Output\Gems
 }
 
@@ -210,9 +210,11 @@ task CopyDocFiles {
 	cp $base_dir\acknowledgements.txt $build_dir\Output\acknowledgements.txt
 }
 
-task CreateGem -depends Compile, CleanOutputDirectory, CopyGems {
-	exec { 
-		&$base_dir\Tools\IronRuby\bin\igem.bat build $base_dir\ravendb.gemspec
+task CreateGem -depends Compile, CopyGems {
+	exec { 		
+		$currentDate = [System.DateTime]::Today.ToString("yyyyMMdd")
+		Write-Host "$version.$env:buildlabel.$currentDate" > $base_dir\VERSION
+		#& "$tools_dir\IronRuby\bin\igem.bat" build "$base_dir\ravendb.gemspec"
 	}
 }
 
