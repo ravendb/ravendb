@@ -124,12 +124,9 @@ task CopySamples {
 	}
 }
 
-
-
-task DoRelease -depends Compile {
-	
-	remove-item $build_dir\Output -Recurse -Force  -ErrorAction SilentlyContinue
+task CreateOutpuDirectories {
 	mkdir $build_dir\Output
+	mkdir $build_dir\Output\Gems
 	mkdir $build_dir\Output\Web
 	mkdir $build_dir\Output\Web\bin
 	mkdir $build_dir\Output\Server
@@ -138,7 +135,13 @@ task DoRelease -depends Compile {
 	mkdir $build_dir\Output\Client
 	mkdir $build_dir\Output\Bundles
 	mkdir $build_dir\Output\Samples
-	
+}
+
+task CleanOutputDirectory { 
+	remove-item $build_dir\Output -Recurse -Force  -ErrorAction SilentlyContinue
+}
+
+task CopyEmbeddedClient { 
 	cp $build_dir\Raven.Client.dll $build_dir\Output\EmbeddedClient
 	cp $build_dir\Raven.Database.dll $build_dir\Output\EmbeddedClient
 	cp $build_dir\Esent.Interop.dll $build_dir\Output\EmbeddedClient
@@ -147,16 +150,24 @@ task DoRelease -depends Compile {
 	cp $build_dir\log4net.dll $build_dir\Output\EmbeddedClient
 	cp $build_dir\Newtonsoft.Json.dll $build_dir\Output\EmbeddedClient
 	cp $build_dir\Raven.Storage.Esent.dll $build_dir\Output\EmbeddedClient
-	
+
+}
+
+task CopySmuggler { 
 	cp $build_dir\RavenSmuggler.exe $build_dir\Output
-	
+}
+
+task CopyClient {
 	cp $build_dir\Newtonsoft.Json.dll $build_dir\Output\Client
 	cp $build_dir\Raven.Client.Lightweight.dll $build_dir\Output\Client
-	
+}
+
+task CopyClient35 {
 	cp $build_dir\Newtonsoft.Json.dll $build_dir\Output\Client-3.5
 	cp $build_dir\Raven.Client-3.5.dll $build_dir\Output\Client-3.5
-	
-	
+}
+
+task CopyWeb { 
 	cp $build_dir\Raven.Web.dll $build_dir\Output\Web\bin
 	cp $build_dir\log4net.dll $build_dir\Output\Web\bin
 	cp $build_dir\Newtonsoft.Json.dll $build_dir\Output\Web\bin
@@ -169,11 +180,18 @@ task DoRelease -depends Compile {
 	
 	cp $base_dir\DefaultConfigs\web.config $build_dir\Output\Web\web.config
 	
-	
+}
+
+task CopyBundles {
 	cp $build_dir\Raven.Bundles.*.dll $build_dir\Output\Bundles
 	del $build_dir\Output\Bundles\Raven.Bundles.Tests.dll
-	
-	
+}
+
+task CopyGems {
+	cp $build_dir\Raven.Client.Lightweight.dll $build_dir\Output\Gems
+}
+
+task CopyServer {
 	cp $build_dir\Raven.Server.exe $build_dir\Output\Server
 	cp $build_dir\log4net.dll $build_dir\Output\Server
 	cp $build_dir\Newtonsoft.Json.dll $build_dir\Output\Server
@@ -184,12 +202,34 @@ task DoRelease -depends Compile {
 	cp $build_dir\Raven.Database.dll $build_dir\Output\Server
 	cp $build_dir\Raven.Storage.Esent.dll $build_dir\Output\Server
 	cp $base_dir\DefaultConfigs\RavenDb.exe.config $build_dir\Output\Server\Raven.Server.exe.config
-	
+}
+
+task CopyDocFiles {
 	cp $base_dir\license.txt $build_dir\Output\license.txt
 	cp $base_dir\readme.txt $build_dir\Output\readme.txt
 	cp $base_dir\acknowledgements.txt $build_dir\Output\acknowledgements.txt
-	
-	ExecuteTask("CopySamples")
+}
+
+task CreateGem -depends Compile, CleanOutputDirectory, CopyGems {
+	exec { 
+		&$base_dir\Tools\IronRuby\bin\igem.bat build $base_dir\ravendb.gemspec
+	}
+}
+
+task DoRelease -depends Compile, `
+	CleanOutputDirectory,`
+	CreateOutpuDirectories, `
+	CopyEmbeddedClient, `
+	CopySmuggler, `
+	CopyClient, `
+	CopyClient35, `
+	CopyWeb, `
+	CopyBundles, `
+	CopyGems, `
+	CopyServer, `
+	CopyDocFiles, `
+	CopySamples, `
+	CreateGem {
 	
 	$old = pwd
 	
@@ -197,23 +237,21 @@ task DoRelease -depends Compile {
 	
 	$file = "$release_dir\$global:uploadCategory-Build-$env:buildlabel.zip"
 		
-	& $tools_dir\zip.exe -9 -A -r `
-		$file `
-		EmbeddedClient\*.* `
-		Client\*.* `
-		Samples\*.* `
-		Samples\*.* `
-		Client-3.5\*.* `
-		Web\*.* `
-		Bundles\*.* `
-		Web\bin\*.* `
-		Server\*.* `
-		*.*
-		
-	if ($lastExitCode -ne 0) {
-        throw "Error: Failed to execute ZIP command"
-    }
-    
+	exec { 
+		& $tools_dir\zip.exe -9 -A -r `
+			$file `
+			EmbeddedClient\*.* `
+			Client\*.* `
+			Samples\*.* `
+			Samples\*.* `
+			Client-3.5\*.* `
+			Web\*.* `
+			Bundles\*.* `
+			Web\bin\*.* `
+			Server\*.* `
+			*.*
+	}
+	
     cd $old
     ExecuteTask("ResetBuildArtifcats")
 }
