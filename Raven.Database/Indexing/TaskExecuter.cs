@@ -53,6 +53,14 @@ namespace Raven.Database.Indexing
 					{
 						foreach (var indexesStat in actions.Indexing.GetIndexesStats())
 						{
+							var failureRate = actions.Indexing.GetFailureRate(indexesStat.Name);
+							if (failureRate.IsInvalidIndex)
+							{
+								log.InfoFormat("Skipped indexing documents for index: {0} because failure rate is too high: {1}",
+												  indexesStat.Name,
+												  failureRate.FailureRate);
+								continue;
+							}
 							if (!actions.Tasks.IsIndexStale(indexesStat.Name, null)) 
 								continue;
 							// in order to ensure fairness, we only process one stale index 
@@ -89,27 +97,22 @@ namespace Raven.Database.Indexing
 			try
 			{
 				log.DebugFormat("Indexing {0} documents for index: {1}", jsonDocs.Length, index);
-
-				var failureRate = actions.Indexing.GetFailureRate(index);
-				if (failureRate.IsInvalidIndex)
-				{
-					log.InfoFormat("Skipped indexing documents for index: {0} because failure rate is too high: {1}",
-					                  index,
-					                  failureRate.FailureRate);
-					return false;
-				}
-
 				context.IndexStorage.Index(index, viewGenerator, jsonDocs.Select(x => JsonToExpando.Convert(x.ToJson())),
 				                           context, actions);
 
-				var last = jsonDocs.Last();
-				actions.Indexing.UpdateLastIndexed(index, last.Etag, last.LastModified);
 				return true;
 			}
 			catch (Exception e)
 			{
 				log.WarnFormat(e, "Failed to index documents for index: {0}", index);
 				return false;
+			}
+			finally
+			{
+				// whatever we succeeded in indexing or not, we have to update this
+				// because otherwise we keep trying to re-index failed documents
+				var last = jsonDocs.Last();
+				actions.Indexing.UpdateLastIndexed(index, last.Etag, last.LastModified);
 			}
 			
 		}
