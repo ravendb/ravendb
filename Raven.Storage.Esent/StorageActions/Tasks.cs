@@ -9,8 +9,31 @@ namespace Raven.Storage.Esent.StorageActions
 {
 	public partial class DocumentStorageActions : ITasksStorageActions
 	{
-		public bool DoesTasksExistsForIndex(string name, DateTime? cutOff)
+		public bool IsIndexStale(string name, DateTime? cutOff)
 		{
+			Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
+			Api.MakeKey(session, IndexesStats, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
+			{
+				return false;
+			}
+			var lastIndexedEtag = new Guid(
+				Api.RetrieveColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"])
+				);
+			Api.JetSetCurrentIndex(session, Documents, "by_etag");
+			if(Api.TryMoveLast(session, Documents))
+			{
+				var lastEtag = new Guid(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
+				if (lastEtag.CompareTo(lastIndexedEtag) > 0)
+					return true;
+			}
+			if(cutOff != null)
+			{
+				var lastIndexedTimestamp = Api.RetrieveColumnAsDateTime(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"]).Value;
+				if (cutOff.Value > lastIndexedTimestamp)
+					return true;
+			}
+
 			Api.JetSetCurrentIndex(session, Tasks, "by_index");
 			Api.MakeKey(session, Tasks, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Tasks, SeekGrbit.SeekEQ) == false)
@@ -34,7 +57,7 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["for_index"], task.Index, Encoding.Unicode);
 				Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["task_type"], task.Type, Encoding.Unicode);
 				Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["supports_merging"], task.SupportsMerging);
-                Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["added_at"], DateTime.Now);
+                Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["added_at"], DateTime.UtcNow);
 
 				update.Save(bookmark, bookmark.Length, out actualBookmarkSize);
 			}
