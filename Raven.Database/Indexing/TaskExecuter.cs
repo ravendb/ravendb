@@ -80,6 +80,7 @@ namespace Raven.Database.Indexing
 
 			var jsonDocs = actions.Documents.GetDocumentsAfter(etagToIndexFrom)
 				.Where(x => x != null)
+				.Take(10000) // ensure that we won't go overboard with reading and blow up with OOM
 				.ToArray();
 
 			if(jsonDocs.Length == 0)
