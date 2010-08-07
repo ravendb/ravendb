@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -126,6 +127,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 					NonAuthoritiveInformation = request.ResponseStatusCode == HttpStatusCode.NonAuthoritativeInformation,
 	                Key = key,
 	                Etag = new Guid(request.ResponseHeaders["ETag"]),
+					LastModified = DateTime.ParseExact(request.ResponseHeaders["Last-Modified"], "r", CultureInfo.InvariantCulture),
 					Metadata = request.ResponseHeaders.FilterHeaders(isServerDocument: false)
 	            };
 	        }
@@ -471,7 +473,8 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 	                select new JsonDocument
 	                {
 	                    Key = metadata["@id"].Value<string>(),
-	                    Etag = new Guid(metadata["@etag"].Value<string>()),
+						LastModified = DateTime.ParseExact(metadata["Last-Modified"].Value<string>(), "r", CultureInfo.InvariantCulture),
+						Etag = new Guid(metadata["@etag"].Value<string>()),
 						NonAuthoritiveInformation = metadata.Value<bool>("Non-Authoritive-Information"),
 	                    Metadata = metadata,
 	                    DataAsJson = doc,
@@ -669,7 +672,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 
 		public void UpdateReplicationInformationIfNeeded(ServerClient serverClient)
 		{
-			if (lastReplicationUpdate.AddMinutes(5) > DateTime.Now)
+			if (lastReplicationUpdate.AddMinutes(5) > DateTime.UtcNow)
 				return;
 			RefreshReplicationInformation(serverClient);
 		}
@@ -720,7 +723,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			lock (replicationLock)
 			{
 
-				lastReplicationUpdate = DateTime.Now;
+				lastReplicationUpdate = DateTime.UtcNow;
 				var document = commands.DirectGet(commands.Url, RavenReplicationDestinations);
 				failureCounts[commands.Url] = new IntHolder();// we just hit the master, so we can reset its failure count
 				if (document == null)

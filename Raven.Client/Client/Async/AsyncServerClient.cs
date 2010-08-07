@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -63,6 +64,7 @@ namespace Raven.Client.Client.Async
 					DataAsJson = JObject.Parse(responseString),
 					NonAuthoritiveInformation = asyncData.Request.ResponseStatusCode == HttpStatusCode.NonAuthoritativeInformation,
 					Key = asyncData.Key,
+					LastModified = DateTime.ParseExact(asyncData.Request.ResponseHeaders["Last-Modified"], "r", CultureInfo.InvariantCulture),
 					Etag = new Guid(asyncData.Request.ResponseHeaders["ETag"]),
 					Metadata = asyncData.Request.ResponseHeaders.FilterHeaders(isServerDocument: false)
 				};
@@ -137,6 +139,7 @@ namespace Raven.Client.Client.Async
 					select new JsonDocument
 					{
 						Key = metadata["@id"].Value<string>(),
+						LastModified = DateTime.ParseExact(metadata["Last-Modified"].Value<string>(), "r", CultureInfo.InvariantCulture),
 						Etag = new Guid(metadata["@etag"].Value<string>()),
 						Metadata = metadata,
 						NonAuthoritiveInformation = metadata.Value<bool>("Non-Authoritive-Information"),
