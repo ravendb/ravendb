@@ -92,7 +92,8 @@ namespace Raven.Scenarios
 			}
 			finally
 			{
-				Directory.Delete(tempFileName, true);
+				if (Directory.Exists(tempFileName))
+					Directory.Delete(tempFileName, true);
 			}
 		}
 
