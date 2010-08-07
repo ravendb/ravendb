@@ -125,6 +125,7 @@
     </Compile>
     <Compile Include="Indexes\DocumentsToIndex.cs" />
     <Compile Include="Storage\GeneralStorage.cs" />
+    <Compile Include="Storage\IndexStaleViaEtags.cs" />
     <Compile Include="Storage\WithDebugging.cs" />
     <Compile Include="Transactions\Deletes.cs" />
     <Compile Include="Transactions\Etags.cs" />

@@ -25,13 +25,18 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				var lastEtag = new Guid(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
 				if (lastEtag.CompareTo(lastIndexedEtag) > 0)
-					return true;
-			}
-			if(cutOff != null)
-			{
-				var lastIndexedTimestamp = Api.RetrieveColumnAsDateTime(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"]).Value;
-				if (cutOff.Value > lastIndexedTimestamp)
-					return true;
+				{
+					if (cutOff != null)
+					{
+						var lastIndexedTimestamp = Api.RetrieveColumnAsDateTime(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"]).Value;
+						if (cutOff.Value > lastIndexedTimestamp)
+							return true;
+					}
+					else
+					{
+						return true;
+					}
+				}
 			}
 
 			Api.JetSetCurrentIndex(session, Tasks, "by_index");
