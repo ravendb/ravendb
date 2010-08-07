@@ -135,7 +135,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 					result.ApproximateTaskCount = actions.Tasks.ApproximateTaskCount;
 					result.CountOfDocuments = actions.Documents.GetDocumentsCount();
 					result.StaleIndexes = IndexStorage.Indexes
-                        .Where(s => actions.Tasks.DoesTasksExistsForIndex(s, null))
+                        .Where(s => actions.Tasks.IsIndexStale(s, null))
 						.ToArray();
 					result.Indexes = actions.Indexing.GetIndexesStats().ToArray();
 				});
@@ -273,7 +273,6 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 			RemoveReservedProperties(metadata);
 			TransactionalStorage.Batch(actions =>
 			{
-			    metadata["Last-Modified"] = JToken.FromObject(DateTime.UtcNow.ToString("r"));
 				if (key.EndsWith("/"))
 				{
 					key += actions.General.GetNextIdentityValue(key);
@@ -285,7 +284,8 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
                 	PutTriggers.Apply(trigger => trigger.OnPut(key, document, metadata, transactionInformation));
 
 					etag = actions.Documents.AddDocument(key, etag, document, metadata);
-					AddIndexingTask(actions, metadata, () => new IndexDocumentsTask { Keys = new[] { key } });
+					// We detect this by using the etags
+					// AddIndexingTask(actions, metadata, () => new IndexDocumentsTask { Keys = new[] { key } });
                     PutTriggers.Apply(trigger => trigger.AfterPut(key, document, metadata, etag.Value, transactionInformation));
                 }
                 else
@@ -479,7 +479,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 			TransactionalStorage.Batch(
 				actions =>
 				{
-					stale = actions.Tasks.DoesTasksExistsForIndex(index, query.Cutoff);
+					stale = actions.Tasks.IsIndexStale(index, query.Cutoff);
 					var indexFailureInformation = actions.Indexing.GetFailureRate(index);
 					if (indexFailureInformation.IsInvalidIndex)
 					{
@@ -509,7 +509,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 			TransactionalStorage.Batch(
 				actions =>
 				{
-					isStale = actions.Tasks.DoesTasksExistsForIndex(index, query.Cutoff);
+					isStale = actions.Tasks.IsIndexStale(index, query.Cutoff);
 					var indexFailureInformation = actions.Indexing.GetFailureRate(index)
 ;
 					if (indexFailureInformation.IsInvalidIndex)
