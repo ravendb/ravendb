@@ -372,14 +372,14 @@ namespace Raven.Client.Document
 		public IDocumentQuery<T> WaitForNonStaleResultsAsOfNow()
 		{
 			waitForNonStaleResults = true;
-			cutoff = DateTime.Now;
+			cutoff = DateTime.UtcNow;
 			return this;
 		}
 
 		public IDocumentQuery<T> WaitForNonStaleResultsAsOfNow(TimeSpan waitTimeout)
 		{
 			waitForNonStaleResults = true;
-			cutoff = DateTime.Now;
+			cutoff = DateTime.UtcNow;
 			timeout = waitTimeout;
 			return this;
 		}
@@ -387,14 +387,14 @@ namespace Raven.Client.Document
 		public IDocumentQuery<T> WaitForNonStaleResultsAsOf(DateTime cutOff)
 		{
 			waitForNonStaleResults = true;
-			this.cutoff = cutOff;
+			this.cutoff = cutOff.ToUniversalTime();
 			return this;
 		}
 
 		public IDocumentQuery<T> WaitForNonStaleResultsAsOf(DateTime cutOff, TimeSpan waitTimeout)
 		{
 			waitForNonStaleResults = true;
-			this.cutoff = cutOff;
+			this.cutoff = cutOff.ToUniversalTime();
 			timeout = waitTimeout;
 			return this;
 		}
