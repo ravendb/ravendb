@@ -131,7 +131,7 @@ task CopySamples {
 
 task CreateOutpuDirectories -depends CleanOutputDirectory {
 	mkdir $build_dir\Output
-	mkdir $build_dir\Output\Gems
+	mkdir $build_dir\Output\lib
 	mkdir $build_dir\Output\Web
 	mkdir $build_dir\Output\Web\bin
 	mkdir $build_dir\Output\Server
@@ -193,7 +193,7 @@ task CopyBundles {
 }
 
 task CopyGems -depends CreateOutpuDirectories {
-	cp $build_dir\Raven.Client.Lightweight.dll $build_dir\Output\Gems
+	cp $build_dir\Raven.Client.Lightweight.dll $build_dir\Output\lib
 }
 
 task CopyServer {
