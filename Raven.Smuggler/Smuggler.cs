@@ -113,7 +113,7 @@ Usage:
             }
         }
 
-    	private static string GetString(byte[] downloadData)
+    	public static string GetString(byte[] downloadData)
     	{
     		var ms = new MemoryStream(downloadData);
     		return new StreamReader(ms, Encoding.UTF8).ReadToEnd();
