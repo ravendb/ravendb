@@ -20,6 +20,7 @@ namespace Raven.Database
 
 			var doc = new JObject(DataAsJson);//clone the document
 			var metadata = new JObject(Metadata);// clone the metadata
+			metadata["Last-Modified"] = JToken.FromObject(LastModified.ToString("r"));
 			var etagProp = metadata.Property("@etag");
 			if (etagProp == null)
 			{
@@ -29,7 +30,6 @@ namespace Raven.Database
 			etagProp.Value = new JValue(Etag.ToString());
 			doc.Add("@metadata", metadata);
 			Metadata["Non-Authoritive-Information"] = JToken.FromObject(NonAuthoritiveInformation);
-			Metadata["Last-Modified"] = JToken.FromObject(LastModified.ToString("r"));
 			return doc;
 		}
 	}
