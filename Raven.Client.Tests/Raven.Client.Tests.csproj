@@ -118,6 +118,7 @@
     <Compile Include="Bugs\SerializingDates.cs" />
     <Compile Include="Bugs\SinglePropertyDocument.cs" />
     <Compile Include="Bugs\ProjectingDates.cs" />
+    <Compile Include="Bugs\WithPrivateProtectedSetter.cs" />
     <Compile Include="Document\AsyncDocumentStoreServerTests.cs" />
     <Compile Include="Document\ClientKeyGeneratorTests.cs" />
     <Compile Include="Document\DocumentStoreServerTests_DifferentProcess.cs" />

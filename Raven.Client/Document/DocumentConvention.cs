@@ -17,7 +17,10 @@ namespace Raven.Client.Document
 			FindIdentityProperty = q => q.Name == "Id";
 			FindTypeTagName = t => DefaultTypeTagName(t);
 			IdentityPartsSeparator = "/";
-		    JsonContractResolver = new DefaultContractResolver(shareCache: true);
+		    JsonContractResolver = new DefaultContractResolver(shareCache: true)
+		    {
+		    	DefaultMembersSearchFlags = BindingFlags.Public|BindingFlags.NonPublic|BindingFlags.Instance
+		    };
 		    MaxNumberOfRequestsPerSession = 30;
 			CustomizeJsonSerializer = serializer => { };
 		}
