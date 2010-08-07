@@ -167,6 +167,15 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 			}
 		}
 
+		public void StopBackgroundWokers()
+		{
+			workContext.StopWork();
+			foreach (var backgroundWorker in backgroundWorkers)
+			{
+				backgroundWorker.Join();
+			}	
+		}
+
 		public WorkContext WorkContext
 		{
 			get { return workContext; }
@@ -176,6 +185,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 
 		public void SpinBackgroundWorkers()
 		{
+			workContext.StartWork();
 			const int threadCount = 1; // Environment.ProcessorCount;
 			backgroundWorkers = new Thread[threadCount];
 			for (var i = 0; i < threadCount; i++)
@@ -726,7 +736,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 			}
 			Put(BackupStatus.RavenBackupStatusDocumentKey, null, JObject.FromObject(new BackupStatus
 			{
-				Started = DateTime.Now,
+				Started = DateTime.UtcNow,
 				IsRunning = true,
 			}), new JObject(), null);
 
