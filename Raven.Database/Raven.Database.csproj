@@ -234,7 +234,6 @@
     <Compile Include="Storage\IQueueStorageActions.cs" />
     <Compile Include="Storage\ITasksStorageActions.cs" />
     <Compile Include="Storage\ITransactionalStorage.cs" />
-    <Compile Include="Tasks\IndexDocumentRangeTask.cs" />
     <Compile Include="Tasks\ReduceTask.cs" />
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
     <Compile Include="Tasks\Task.cs" />
