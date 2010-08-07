@@ -466,19 +466,6 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 		private void AddIndexAndEnqueueIndexingTasks(IStorageActionsAccessor actions, string indexName)
 		{
 			actions.Indexing.AddIndex(indexName);
-			var firstAndLast = actions.Documents.FirstAndLastDocumentIds();
-			if (firstAndLast.Item1 != 0 && firstAndLast.Item2 != 0)
-			{
-				for (var i = firstAndLast.Item1; i <= firstAndLast.Item2; i += Configuration.IndexingBatchSize)
-				{
-					actions.Tasks.AddTask(new IndexDocumentRangeTask
-					{
-						FromId = i,
-						ToId = Math.Min(i + Configuration.IndexingBatchSize, firstAndLast.Item2),
-						Index = indexName
-					});
-				}
-			}
 			workContext.ShouldNotifyAboutWork();
 		}
 
