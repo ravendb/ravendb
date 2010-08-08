@@ -6,7 +6,6 @@ using Raven.Client.Indexes;
 using Raven.Database;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
-using Raven.Client.Document;
 using Raven.Database.Json;
 
 namespace Raven.Client.Client
