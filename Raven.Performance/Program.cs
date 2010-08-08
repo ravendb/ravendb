@@ -469,7 +469,7 @@ namespace Raven.Performance
 			"VINCENZO", "SHON", "LYNWOOD", "JERE", "HAI", "ELDEN", "DORSEY", "DARELL", "BRODERICK", "ALONSO"
 		};
 
-		static void Main(string[] args)
+		static void Main()
 		{
 			using (var store = new DocumentStore
 			{
