@@ -34,7 +34,8 @@ namespace Raven.Client.Tests.Bugs
 				store.DatabaseCommands.PutIndex("long",
 				                                new IndexDefinition
 				                                {
-				                                	Map = "from doc in docs select new { doc.Value }"
+				                                	Map = "from doc in docs select new { doc.Value }",
+													SortOptions = {{"Value", SortOptions.Long}}
 				                                });
 
 				using (var session = store.OpenSession())
@@ -57,6 +58,11 @@ namespace Raven.Client.Tests.Bugs
 		{
 			public string Id { get; set; }
 			public long Value { get; set; }
+
+			public override string ToString()
+			{
+				return string.Format("Id: {0}, Value: {1}", Id, Value);
+			}
 		}
 	}
 }

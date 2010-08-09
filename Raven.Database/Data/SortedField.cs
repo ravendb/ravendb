@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Globalization;
+using Raven.Database.Indexing;
 
 namespace Raven.Database.Data
 {
@@ -26,9 +27,12 @@ namespace Raven.Database.Data
 		public bool Descending { get; set; }
 #if !CLIENT
 		[CLSCompliant(false)]
-		public Lucene.Net.Search.SortField ToLuceneSortField()
+		public Lucene.Net.Search.SortField ToLuceneSortField(IndexDefinition definition)
 		{
-			return new  Lucene.Net.Search.SortField(Field, CultureInfo.InvariantCulture, Descending);
+			var sortOptions = definition.GetSortOption(Field);
+			if(sortOptions == null)
+				return new  Lucene.Net.Search.SortField(Field, CultureInfo.InvariantCulture, Descending);
+			return new Lucene.Net.Search.SortField(Field, (int)sortOptions.Value);
 		}
 #endif
 	}

@@ -83,42 +83,15 @@ namespace Raven.Database.Indexing
 			SortOptions value;
 			if (!SortOptions.TryGetValue(name, out value))
 			{
-				return null;
+				if (!name.EndsWith("_Range"))
+				{
+					return null;
+				}
+				var nameWithoutRange = name.Substring(0, name.Length - "_Range".Length);
+				if (!SortOptions.TryGetValue(nameWithoutRange, out value))
+					return null;
 			}
 			return value;
-		}
-
-
-		public SortField GetSort(string name)
-		{
-			SortOptions value;
-			if (!SortOptions.TryGetValue(name, out value))
-			{
-				return null;
-			}
-			switch (value)
-			{
-				case Indexing.SortOptions.String:
-					return new SortField(name, SortField.STRING);
-				case Indexing.SortOptions.Int:
-					return new SortField(name, SortField.INT);
-				case Indexing.SortOptions.Float:
-					return new SortField(name, SortField.FLOAT);
-				case Indexing.SortOptions.Long:
-					return new SortField(name, SortField.LONG);
-				case Indexing.SortOptions.Double:
-					return new SortField(name, SortField.DOUBLE);
-				case Indexing.SortOptions.Short:
-					return new SortField(name, SortField.SHORT);
-				case Indexing.SortOptions.Custom:
-					return new SortField(name, SortField.CUSTOM);
-				case Indexing.SortOptions.Byte:
-					return new SortField(name, SortField.BYTE);
-				case Indexing.SortOptions.StringVal:
-					return new SortField(name, SortField.STRING_VAL);
-				default:
-					throw new ArgumentOutOfRangeException();
-			}
 		}
 
 		[CLSCompliant(false)]
