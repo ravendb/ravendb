@@ -20,6 +20,16 @@ namespace Raven.Client.Tests.Bugs
 			Assert.Equal("Middle East", deserializeObject.Region);
 		}
 
+		[Fact]
+		public void WillNotSerializeFields()
+		{
+			var serializer = new DocumentConvention().CreateSerializer();
+			var stringWriter = new StringWriter();
+			serializer.Serialize(stringWriter, new Company("Hibernating Rhinos", "Middle East"));
+			var s = stringWriter.GetStringBuilder().ToString();
+			Assert.DoesNotContain("k__BackingField", s);
+		}
+
 		public class Company
 		{
 			public Company()

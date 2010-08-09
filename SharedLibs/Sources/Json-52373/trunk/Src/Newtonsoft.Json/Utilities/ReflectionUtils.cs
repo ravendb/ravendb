@@ -29,6 +29,7 @@ using System.Reflection;
 using System.Collections;
 using System.Linq;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Runtime.Serialization.Formatters;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -838,7 +839,8 @@ namespace Newtonsoft.Json.Utilities
       // manually find private fields from base class
       GetChildPrivateFields(fieldInfos, targetType, bindingAttr);
 
-      return fieldInfos.Cast<FieldInfo>();
+    	return fieldInfos.Cast<FieldInfo>()
+    		.Where(f => f.GetCustomAttributes(typeof (CompilerGeneratedAttribute), false).Length == 0);
     }
 
     private static void GetChildPrivateFields(IList<MemberInfo> initialFields, Type targetType, BindingFlags bindingAttr)
