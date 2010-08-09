@@ -128,8 +128,14 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				var result = new DatabaseStatistics
 				{
 					CountOfIndexes = IndexStorage.Indexes.Length,
-					Errors = workContext.Errors
+					Errors = workContext.Errors,
+					Triggers = PutTriggers.Select(x=>new DatabaseStatistics.TriggerInfo{Name = x.ToString(), Type = "Put"})
+								.Concat(DeleteTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Delete" }))
+								.Concat(ReadTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Read" }))
+								.Concat(IndexUpdateTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Index Update" }))
+								.ToArray()
 				};
+
 				TransactionalStorage.Batch(actions =>
 				{
 					result.ApproximateTaskCount = actions.Tasks.ApproximateTaskCount;

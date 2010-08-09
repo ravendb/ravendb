@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Threading;
-using Lucene.Net.Analysis;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Database.Data;

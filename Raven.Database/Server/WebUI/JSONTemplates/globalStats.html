@@ -19,6 +19,15 @@
             </li>
         </ul>
         {#/foreach} {#/if} </li>
+	<li><strong>Triggers</strong>: 
+		{#if $T.Triggers.length == 0} None {#else}
+		<ul class="triggerDescription">
+			 {#foreach $T.Triggers as t}
+				<li>{$T.t.Type}: {$T.t.Name}</li>
+			 {#/foreach}
+        </ul>
+		{#/if} 
+	</li>
     <li><strong>Errors</strong>: {#if $T.Errors.length == 0} None {#else} {#foreach $T.Errors
         as e}
         <ul class="errorDescription">
