@@ -156,7 +156,7 @@ namespace Raven.Database.Storage
 		{
 			if (indexCache.ContainsKey(name))
 			{
-				return GetIndexDefinition(name) == indexDef
+				return GetIndexDefinition(name).Equals(indexDef)
 					? IndexCreationOptions.Noop
 					: IndexCreationOptions.Update;
 			}
