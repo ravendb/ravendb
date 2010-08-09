@@ -29,38 +29,41 @@ namespace Raven.Database.Json
                 throw new InvalidOperationException("Patch property must have a type property");
             if (patchCmd.Name == null)
                 throw new InvalidOperationException("Patch property must have a name property");
+        	var token = document.SelectToken(patchCmd.Name);
+        	JProperty property = null;
+			if (token != null)
+				property = token.Parent as JProperty;
         	switch (patchCmd.Type.ToLowerInvariant())
             {
                 case "set":
-                    AddProperty(patchCmd, patchCmd.Name);
+					AddProperty(patchCmd, patchCmd.Name, property);
                     break;
                 case "unset":
-                    RemoveProperty(patchCmd, patchCmd.Name);
+					RemoveProperty(patchCmd, patchCmd.Name, property);
                     break;
                 case "add":
-                    AddValue(patchCmd, patchCmd.Name);
+					AddValue(patchCmd, patchCmd.Name, property);
                     break;
                 case "insert":
-                    InsertValue(patchCmd, patchCmd.Name);
+					InsertValue(patchCmd, patchCmd.Name, property);
                     break;
                 case "remove":
-                    RemoveValue(patchCmd, patchCmd.Name);
+					RemoveValue(patchCmd, patchCmd.Name, property);
                     break;
                 case "modify":
-                    ModifyValue(patchCmd, patchCmd.Name);
+					ModifyValue(patchCmd, patchCmd.Name, property);
                     break;
                 case "inc":
-                    IncrementProperty(patchCmd, patchCmd.Name);
+					IncrementProperty(patchCmd, patchCmd.Name, property);
                     break;
                 default:
 					throw new ArgumentException("Cannot understand command: " + patchCmd.Type);
             }
         }
 
-		private void ModifyValue(PatchRequest patchCmd, string propName)
+		private void ModifyValue(PatchRequest patchCmd, string propName, JProperty property)
         {
-            var property = document.Property(propName);
-            EnsurePreviousValueMatchCurrentValue(patchCmd, property);
+			EnsurePreviousValueMatchCurrentValue(patchCmd, property);
             if (property == null)
                 throw new InvalidOperationException("Cannot modify value from  '" + propName + "' because it was not found");
 
@@ -94,10 +97,9 @@ namespace Raven.Database.Json
             }
         }
 
-        private void RemoveValue(PatchRequest patchCmd, string propName)
+        private void RemoveValue(PatchRequest patchCmd, string propName, JProperty property)
         {
-            var property = document.Property(propName);
-            EnsurePreviousValueMatchCurrentValue(patchCmd, property);
+        	EnsurePreviousValueMatchCurrentValue(patchCmd, property);
             if (property == null)
             {
                 property = new JProperty(propName, new JArray());
@@ -115,10 +117,9 @@ namespace Raven.Database.Json
             array.RemoveAt(position.Value);
         }
 
-		private void InsertValue(PatchRequest patchCmd, string propName)
+		private void InsertValue(PatchRequest patchCmd, string propName, JProperty property)
         {
-            var property = document.Property(propName);
-            EnsurePreviousValueMatchCurrentValue(patchCmd, property);
+			EnsurePreviousValueMatchCurrentValue(patchCmd, property);
             if (property == null)
             {
                 property = new JProperty(propName, new JArray());
@@ -136,10 +137,9 @@ namespace Raven.Database.Json
             array.Insert(position.Value, patchCmd.Value);
         }
 
-		private void AddValue(PatchRequest patchCmd, string propName)
+		private void AddValue(PatchRequest patchCmd, string propName, JProperty property)
         {
-            var property = document.Property(propName);
-            EnsurePreviousValueMatchCurrentValue(patchCmd, property);
+			EnsurePreviousValueMatchCurrentValue(patchCmd, property);
             if (property == null)
             {
                 property = new JProperty(propName, new JArray());
@@ -152,19 +152,17 @@ namespace Raven.Database.Json
             array.Add(patchCmd.Value);
         }
 
-		private void RemoveProperty(PatchRequest patchCmd, string propName)
+		private void RemoveProperty(PatchRequest patchCmd, string propName, JProperty property)
         {
-            var property = document.Property(propName);
-            EnsurePreviousValueMatchCurrentValue(patchCmd, property);
+			EnsurePreviousValueMatchCurrentValue(patchCmd, property);
             EnsurePreviousValueMatchCurrentValue(patchCmd, property);
             if (property != null)
                 property.Remove();
         }
 
-        private void AddProperty(PatchRequest patchCmd, string propName)
+        private void AddProperty(PatchRequest patchCmd, string propName, JProperty property)
         {
-            var property = document.Property(propName);
-            EnsurePreviousValueMatchCurrentValue(patchCmd, property);
+        	EnsurePreviousValueMatchCurrentValue(patchCmd, property);
             if (property == null)
             {
                 property = new JProperty(propName);
@@ -174,12 +172,11 @@ namespace Raven.Database.Json
         }
 
 
-        private void IncrementProperty(PatchRequest patchCmd, string propName)
+        private void IncrementProperty(PatchRequest patchCmd, string propName, JProperty property)
         {
             if(patchCmd.Value.Type != JTokenType.Integer)
                 throw new InvalidOperationException("Cannot increment when value is not an integer");
-            var property = document.Property(propName);
-            EnsurePreviousValueMatchCurrentValue(patchCmd, property);
+        	EnsurePreviousValueMatchCurrentValue(patchCmd, property);
             if (property == null)
             {
                 property = new JProperty(propName);
