@@ -20,11 +20,13 @@ namespace Raven.Client.Indexes
 
 		public IDictionary<Expression<Func<TReduceResult, object>>, FieldStorage> Stores { get; set; }
 		public IDictionary<Expression<Func<TReduceResult, object>>, FieldIndexing> Indexes { get; set; }
+		public IDictionary<Expression<Func<TReduceResult, object>>, SortOptions> SortOptions { get; set; }
 
 		public IndexDefinition()
 		{
 			Stores = new Dictionary<Expression<Func<TReduceResult, object>>, FieldStorage>();
 			Indexes = new Dictionary<Expression<Func<TReduceResult, object>>, FieldIndexing>();
+			SortOptions = new Dictionary<Expression<Func<TReduceResult, object>>, SortOptions>();
 		}
 
 		public IndexDefinition ToIndexDefinition(DocumentConvention convention)
@@ -34,7 +36,8 @@ namespace Raven.Client.Indexes
 				Map = PruneToFailureLinqQueryAsStringToWorkableCode(Map, "docs." + convention.GetTypeTagName(typeof(TDocument))),
 				Reduce = PruneToFailureLinqQueryAsStringToWorkableCode(Reduce, "results"),
 				Indexes = ConvertToStringDictionary(Indexes),
-				Stores = ConvertToStringDictionary(Stores)
+				Stores = ConvertToStringDictionary(Stores),
+				SortOptions = ConvertToStringDictionary(SortOptions)
 			};
 		}
 

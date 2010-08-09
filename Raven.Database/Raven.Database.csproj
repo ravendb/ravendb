@@ -125,6 +125,7 @@
     <Compile Include="Indexing\GatherAllCollector.cs" />
     <Compile Include="Indexing\NumberUtil.cs" />
     <Compile Include="Indexing\RangeQueryParser.cs" />
+    <Compile Include="Indexing\SortOptions.cs" />
     <Compile Include="IStartupTask.cs" />
     <Compile Include="PerformanceCounters.cs" />
     <Compile Include="Plugins\AbstractBackgroundTask.cs" />

@@ -314,6 +314,9 @@
     <Compile Include="..\Raven.Database\Indexing\NumberUtil.cs">
       <Link>Linq\NumberUtil.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Database\Indexing\SortOptions.cs">
+      <Link>Data\SortOptions.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Database\JsonDocument.cs">
       <Link>Data\JsonDocument.cs</Link>
     </Compile>

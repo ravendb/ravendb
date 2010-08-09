@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
+using Lucene.Net.Search;
 using Version = Lucene.Net.Util.Version;
 
 #endif
@@ -29,6 +30,8 @@ namespace Raven.Database.Indexing
 		public IDictionary<string, FieldStorage> Stores { get; set; }
 
 		public IDictionary<string, FieldIndexing> Indexes { get; set; }
+
+		public IDictionary<string, SortOptions> SortOptions { get; set; }
 
 		public IDictionary<string, string> Analyzers { get; set; }
 		
@@ -75,6 +78,49 @@ namespace Raven.Database.Indexing
 			}
 		}
 
+		public SortOptions? GetSortOption(string name)
+		{
+			SortOptions value;
+			if (!SortOptions.TryGetValue(name, out value))
+			{
+				return null;
+			}
+			return value;
+		}
+
+
+		public SortField GetSort(string name)
+		{
+			SortOptions value;
+			if (!SortOptions.TryGetValue(name, out value))
+			{
+				return null;
+			}
+			switch (value)
+			{
+				case Indexing.SortOptions.String:
+					return new SortField(name, SortField.STRING);
+				case Indexing.SortOptions.Int:
+					return new SortField(name, SortField.INT);
+				case Indexing.SortOptions.Float:
+					return new SortField(name, SortField.FLOAT);
+				case Indexing.SortOptions.Long:
+					return new SortField(name, SortField.LONG);
+				case Indexing.SortOptions.Double:
+					return new SortField(name, SortField.DOUBLE);
+				case Indexing.SortOptions.Short:
+					return new SortField(name, SortField.SHORT);
+				case Indexing.SortOptions.Custom:
+					return new SortField(name, SortField.CUSTOM);
+				case Indexing.SortOptions.Byte:
+					return new SortField(name, SortField.BYTE);
+				case Indexing.SortOptions.StringVal:
+					return new SortField(name, SortField.STRING_VAL);
+				default:
+					throw new ArgumentOutOfRangeException();
+			}
+		}
+
 		[CLSCompliant(false)]
 		public Field.Index GetIndex(string name, Field.Index defaultIndex)
 		{
@@ -98,11 +144,13 @@ namespace Raven.Database.Indexing
 			}
 		}
 #endif
+
 		public IndexDefinition()
 		{
 			Indexes = new Dictionary<string, FieldIndexing>();
 			Stores = new Dictionary<string, FieldStorage>();
 			Analyzers = new Dictionary<string, string>();
+			SortOptions = new Dictionary<string, SortOptions>();
 		}
 
 		public bool Equals(IndexDefinition other)

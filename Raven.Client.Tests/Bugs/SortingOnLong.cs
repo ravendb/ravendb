@@ -15,7 +15,7 @@ namespace Raven.Client.Tests.Bugs
 				{
 					session.Store(new Foo
 					{
-						Value = 7147483647
+						Value = 30000000000
 					});
 
 					session.Store(new Foo
@@ -34,21 +34,21 @@ namespace Raven.Client.Tests.Bugs
 				store.DatabaseCommands.PutIndex("long",
 				                                new IndexDefinition
 				                                {
-				                                	Map = "from doc in docs select new { doc.Value}"
+				                                	Map = "from doc in docs select new { doc.Value }"
 				                                });
 
 				using (var session = store.OpenSession())
 				{
 					var foos = session.LuceneQuery<Foo>("long")
 						.WaitForNonStaleResults()
-						.OrderBy("Value")
+						.OrderBy("Value_Range")
 						.ToList();
 
 					Assert.Equal(3, foos.Count);
 
 					Assert.Equal(25, foos[0].Value);
 					Assert.Equal(3147483647, foos[1].Value);
-					Assert.Equal(7147483647, foos[2].Value);
+					Assert.Equal(30000000000, foos[2].Value);
 				}
 			}
 		}
