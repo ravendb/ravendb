@@ -146,9 +146,6 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// 	Matches exact value
 		/// </summary>
-		/// <param name = "fieldName"></param>
-		/// <param name = "value"></param>
-		/// <param name = "isAnalyzed"></param>
 		/// <returns></returns>
 		public IDocumentQuery<T> WhereEquals(string fieldName, object value, bool isAnalyzed, bool allowWildcards)
 		{
