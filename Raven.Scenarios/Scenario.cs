@@ -157,8 +157,9 @@ namespace Raven.Scenarios
 
 				var webResponse = GetResponse(req);
 				{
+					var readToEnd = new StreamReader(webResponse.GetResponseStream(), Encoding.UTF8).ReadToEnd();
 					return new Tuple<string, NameValueCollection, string>(
-						new StreamReader(webResponse.GetResponseStream()).ReadToEnd(),
+						readToEnd,
 						webResponse.Headers,
 						"HTTP/" + webResponse.ProtocolVersion + " " + (int)webResponse.StatusCode + " " +
 							webResponse.StatusDescription);
@@ -244,7 +245,8 @@ namespace Raven.Scenarios
 			}
 			var rr = new StringReader(actual.Item1);
 			var actualResponse = JToken.ReadFrom(new JsonTextReader(rr));
-			var expectedResponse = JToken.ReadFrom(new JsonTextReader(sr));
+			var remainingText = sr.ReadToEnd();
+			var expectedResponse = JToken.ReadFrom(new JsonTextReader(new StringReader(remainingText)));
 			if (AreEquals(expectedResponse, actualResponse) == false)
 			{
 				var outputName = Path.GetFileNameWithoutExtension(file) + " request #" + responseNumber + ".txt";
@@ -393,7 +395,10 @@ namespace Raven.Scenarios
 			sb.AppendLine(); //separator line
 			if (sb.ToString().Contains("Transfer-Encoding: chunked") == false)
 			{
-				sb.Append(streamReader.ReadToEnd());
+				memoryStream.Position = streamReader.CurrentEncoding.GetByteCount(sb.ToString());
+				streamReader = new StreamReader(memoryStream, Encoding.UTF8, true);
+				var readToEnd = streamReader.ReadToEnd();
+				sb.Append(readToEnd);
 				return sb.ToString();
 			}
 
