@@ -256,7 +256,10 @@ namespace Raven.Database.Server
 			    return false;
 
 			RecordRequestHeaders(ctx);
-			AddHttpCompressionIfClientCanAcceptIt(ctx);
+
+			if (Configuration.HttpCompression)
+				AddHttpCompressionIfClientCanAcceptIt(ctx);
+
 			foreach (var requestResponder in RequestResponders)
 			{
 				if (requestResponder.WillRespond(ctx))

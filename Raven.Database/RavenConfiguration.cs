@@ -46,6 +46,11 @@ namespace Raven.Database
 
 			WebDir = ConfigurationManager.AppSettings["Raven/WebDir"] ?? GetDefaultWebDir();
 
+			bool httpCompressionTemp;
+			if (bool.TryParse(ConfigurationManager.AppSettings["Raven/HttpCompression"], out httpCompressionTemp) == false)
+				httpCompressionTemp = true;
+			HttpCompression = httpCompressionTemp;
+
 			var transactionMode = ConfigurationManager.AppSettings["Raven/TransactionMode"];
 			TransactionMode result;
 			if(Enum.TryParse(transactionMode, true, out result) == false)
@@ -160,6 +165,8 @@ namespace Raven.Database
 		public AggregateCatalog Catalog { get; set; }
 
 		public bool RunInUnreliableYetFastModeThatIsNotSuitableForProduction { get; set; }
+
+		public bool HttpCompression { get; set; }
 
 	    public int MaxPageSize { get; set; }
 
