@@ -135,7 +135,7 @@ namespace Raven.Tests.Indexes
                     Thread.Sleep(100);
             } while (queryResult.IsStale);
 
-            Assert.Equal(1, queryResult.Results.Length);
+			Assert.Equal(1, queryResult.Results.Count);
 
 			Assert.Equal("shoppingcarts/12", queryResult.Results[0].Value<string>("ShoppingCartId"));
         	var cart =

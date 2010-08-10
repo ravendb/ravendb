@@ -499,7 +499,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				});
 			return new QueryResult
 			{
-				Results = list.ToArray(),
+				Results = list,
 				IsStale = stale,
 				TotalResults = query.TotalSize.Value
 			};

@@ -442,7 +442,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 	    	return new QueryResult
 	        {
 	            IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
-	            Results = json["Results"].Children().Cast<JObject>().ToArray(),
+	            Results = json["Results"].Children().Cast<JObject>().ToList(),
 	            TotalResults =  Convert.ToInt32(json["TotalResults"].ToString())
 	        };
 	    }

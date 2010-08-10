@@ -89,17 +89,17 @@ namespace Raven.Tests.Indexes
             } while (queryResultPageThree.IsStale);
 
             // Page one
-            Assert.Equal(2, queryResultPageOne.Results.Length);
+			Assert.Equal(2, queryResultPageOne.Results.Count);
             Assert.Equal("ayende@ayende.com", queryResultPageOne.Results[0].Value<string>("email"));
             Assert.Equal("robashton@codeofrob.com", queryResultPageOne.Results[1].Value<string>("email"));
 
             // Page two
-            Assert.Equal(2, queryResultPageTwo.Results.Length);
+			Assert.Equal(2, queryResultPageTwo.Results.Count);
             Assert.Equal("robashton@codeofrob.com", queryResultPageTwo.Results[0].Value<string>("email"));
             Assert.Equal("joe@bloggs.com", queryResultPageTwo.Results[1].Value<string>("email"));
 
             // Page three
-            Assert.Equal(1, queryResultPageThree.Results.Length);
+			Assert.Equal(1, queryResultPageThree.Results.Count);
             Assert.Equal("joe@bloggs.com", queryResultPageThree.Results[0].Value<string>("email"));
         }
 		

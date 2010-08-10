@@ -35,7 +35,7 @@ namespace Raven.Client.Document
 			return new QueryResult
 			{
 				IsStale = queryResults.Any(x => x.IsStale),
-				Results = queryResults.SelectMany(x => x.Results).ToArray(),
+				Results = queryResults.SelectMany(x => x.Results).ToList(),
 				TotalResults = queryResults.Sum(x => x.TotalResults)
 			};
 		}

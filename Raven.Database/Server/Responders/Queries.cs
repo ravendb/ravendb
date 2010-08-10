@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
+using Raven.Database.Data;
 using Raven.Database.Server.Abstractions;
 
 namespace Raven.Database.Server.Responders
@@ -22,19 +24,28 @@ namespace Raven.Database.Server.Responders
 				itemsToLoad = context.ReadJsonArray();
 			else
 				itemsToLoad = new JArray(context.Request.QueryString.GetValues("id"));
-			var results = new JArray();
+			var result = new MultiLoadResult();
+			var loadedIds = new HashSet<string>();
+			var includes = context.Request.QueryString.GetValues("include") ?? new string[0];
+			var transactionInformation = GetRequestTransaction(context);
 			Database.TransactionalStorage.Batch(actions =>
 			{
+				var addIncludesCommand = new AddIncludesCommand(Database, transactionInformation, result.Includes.Add, includes, loadedIds);
 				foreach (JToken item in itemsToLoad)
 				{
-					var documentByKey = actions.Documents.DocumentByKey(item.Value<string>(),
-                        GetRequestTransaction(context));
+					var value = item.Value<string>();
+					if(loadedIds.Add(value)==false)
+						continue;
+					var documentByKey = actions.Documents.DocumentByKey(value,
+                        transactionInformation);
 					if (documentByKey == null)
 						continue;
-					results.Add(documentByKey.ToJson());
+					result.Results.Add(documentByKey.ToJson());
+
+					addIncludesCommand.Execute(documentByKey.DataAsJson);
 				}
             });
-			context.WriteJson(results);
+			context.WriteJson(result);
 		}
 	}
 }

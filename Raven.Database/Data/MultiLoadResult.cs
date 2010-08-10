@@ -1,16 +1,14 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 
 namespace Raven.Database.Data
 {
-	public class QueryResult
+	public class MultiLoadResult
 	{
 		public List<JObject> Results { get; set; }
 		public List<JObject> Includes { get; set; }
-		public bool IsStale { get; set; }
-		public int TotalResults { get; set; }
 
-		public QueryResult()
+		public MultiLoadResult()
 		{
 			Results = new List<JObject>();
 			Includes = new List<JObject>();

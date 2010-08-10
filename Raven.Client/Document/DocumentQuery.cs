@@ -438,7 +438,7 @@ namespace Raven.Client.Document
 					Thread.Sleep(100);
 					continue;
 				}
-				Trace.WriteLine(string.Format("Query returned {0}/{1} results", result.Results.Length, result.TotalResults));
+				Trace.WriteLine(string.Format("Query returned {0}/{1} results", result.Results.Count, result.TotalResults));
 				return result;
 			}
 		}

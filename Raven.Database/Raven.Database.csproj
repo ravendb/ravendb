@@ -115,6 +115,7 @@
     <Compile Include="DatabaseBulkOperations.cs" />
     <Compile Include="Data\BackupRequest.cs" />
     <Compile Include="Data\DisposableAction.cs" />
+    <Compile Include="Data\MultiLoadResult.cs" />
     <Compile Include="Exceptions\IndexDoesNotExists.cs" />
     <Compile Include="Extensions\MonoHttpEncoder.cs">
       <SubType>Code</SubType>
@@ -205,6 +206,7 @@
     <Compile Include="RavenConfiguration.cs" />
     <Compile Include="Server\HttpServer.cs" />
     <Compile Include="Server\NonAdminHttp.cs" />
+    <Compile Include="Server\Responders\AddIncludesCommand.cs" />
     <Compile Include="Server\Responders\AdminBackup.cs" />
     <Compile Include="Server\Responders\Docs.cs" />
     <Compile Include="Server\Responders\Document.cs" />

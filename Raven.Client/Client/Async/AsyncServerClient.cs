@@ -173,7 +173,7 @@ namespace Raven.Client.Client.Async
 			return new QueryResult
 			{
 				IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
-				Results = json["Results"].Children().Cast<JObject>().ToArray(),
+				Results = json["Results"].Children().Cast<JObject>().ToList(),
 				TotalResults = Convert.ToInt32(json["TotalResults"].ToString())
 			};
 		}

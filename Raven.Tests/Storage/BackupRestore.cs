@@ -88,7 +88,7 @@ namespace Raven.Tests.Storage
 					PageSize = 10
 				});
 			} while (queryResult.IsStale);
-			Assert.Equal(1, queryResult.Results.Length);
+			Assert.Equal(1, queryResult.Results.Count);
 		}
 
 		[Fact]
@@ -105,7 +105,7 @@ namespace Raven.Tests.Storage
 					PageSize = 10
 				});
 			} while (queryResult.IsStale);
-			Assert.Equal(1, queryResult.Results.Length);
+			Assert.Equal(1, queryResult.Results.Count);
 
 			db.StartBackup("raven.db.test.backup");
 			WaitForBackup();
@@ -123,7 +123,7 @@ namespace Raven.Tests.Storage
 				Query = "Tag:[[Users]]",
 				PageSize = 10
 			});
-			Assert.Equal(1, queryResult.Results.Length);
+			Assert.Equal(1, queryResult.Results.Count);
 		}
 
 		private void WaitForBackup()
