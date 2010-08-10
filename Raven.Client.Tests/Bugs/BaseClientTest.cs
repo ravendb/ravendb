@@ -13,7 +13,7 @@ namespace Raven.Client.Tests.Bugs
 
 		#region IDisposable Members
 
-		public void Dispose()
+		public virtual void Dispose()
 		{
 			if (path == null)
 				return;

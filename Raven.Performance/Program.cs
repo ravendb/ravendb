@@ -535,7 +535,7 @@ namespace Raven.Performance
 			{
 				Thread.Sleep(100);
 				queryResult = store.DatabaseCommands.Query("Users/ByName",
-				                                           new IndexQuery {Query = "Name:ELDEN"});
+				                                           new IndexQuery {Query = "Name:ELDEN"}, null);
 			} while (queryResult.IsStale);
 
 			Console.WriteLine("Finished indexing in {0:#,#}ms after last document write", sp.ElapsedMilliseconds);

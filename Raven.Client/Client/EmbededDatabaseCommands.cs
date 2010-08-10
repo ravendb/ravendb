@@ -112,7 +112,7 @@ namespace Raven.Client.Client
 			return PutIndex(name, indexDef.ToIndexDefinition(convention), overwrite);
         }
 
-		public QueryResult Query(string index, IndexQuery query)
+		public QueryResult Query(string index, IndexQuery query, string[] ignored)
 		{
 			CurrentRavenOperation.Headers.Value = OperationsHeaders; 
 			return database.Query(index, query);
@@ -124,13 +124,17 @@ namespace Raven.Client.Client
 			database.DeleteIndex(name);
 		}
 
-        public JsonDocument[] Get(string[] ids)
+		public MultiLoadResult Get(string[] ids, string[] includes)
 	    {
 			CurrentRavenOperation.Headers.Value = OperationsHeaders;
-			return ids
-				.Select(id => database.Get(id, RavenTransactionAccessor.GetTransactionInformation()))
-                .Where(document => document != null)
-                .ToArray();
+			return new MultiLoadResult
+			{
+				Results = ids
+					.Select(id => database.Get(id, RavenTransactionAccessor.GetTransactionInformation()))
+					.Where(document => document != null)
+					.Select(x => x.ToJson())
+					.ToList()
+			};
 	    }
 
 		public BatchResult[] Batch(ICommandData[] commandDatas)

@@ -311,7 +311,7 @@ namespace Raven.Client.Tests.Document
                 {
                     PageSize = 10,
                     Cutoff = DateTime.Now.AddHours(-1)
-                });
+                }, null);
             }
         }
 

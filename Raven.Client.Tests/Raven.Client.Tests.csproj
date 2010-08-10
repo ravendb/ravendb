@@ -107,6 +107,7 @@
     <Compile Include="Bugs\Etag.cs" />
     <Compile Include="Bugs\ExplicitTransaction.cs" />
     <Compile Include="Bugs\ExtendingClientSideViaListeners.cs" />
+    <Compile Include="Bugs\Includes.cs" />
     <Compile Include="Bugs\IndexWithTwoProperties.cs" />
     <Compile Include="Bugs\KeyGeneration.cs" />
     <Compile Include="Bugs\MetadataUpdates.cs" />

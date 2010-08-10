@@ -272,6 +272,9 @@
     <Compile Include="..\Raven.Database\Data\MetadataExtensions.cs">
       <Link>Data\MetadataExtensions.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Database\Data\MultiLoadResult.cs">
+      <Link>Data\MultiLoadResult.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Database\Data\PatchCommandData.cs">
       <Link>Commands\PatchCommandData.cs</Link>
     </Compile>

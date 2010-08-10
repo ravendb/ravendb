@@ -71,6 +71,12 @@ namespace Raven.Client.Document
 			return GetEnumerator();
 		}
 
+		public IDocumentQuery<T> Include(string path)
+		{
+			ApplyForAll(x => x.Include(path));
+			return this;
+		}
+
 		public IDocumentQuery<T> Take(int count)
 		{
 			ApplyForAll(query => query.Take(count));

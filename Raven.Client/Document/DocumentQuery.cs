@@ -28,6 +28,7 @@ namespace Raven.Client.Document
 		private int start;
 		private TimeSpan timeout;
 		private bool waitForNonStaleResults;
+		private readonly HashSet<string> includes = new HashSet<string>();
 
 		public DocumentQuery(DocumentSession session, IDatabaseCommands databaseCommands, string indexName,
 		                     string[] projectionFields)
@@ -80,6 +81,14 @@ namespace Raven.Client.Document
 
 		public IEnumerator<T> GetEnumerator()
 		{
+			foreach (var include in QueryResult.Includes)
+			{
+				var metadata = include.Value<JObject>("@metadata");
+				
+				session.TrackEntity<object>(metadata.Value<string>("@id"),
+										 include,
+										 metadata);
+			}
 			return QueryResult.Results
 				.Select(Deserialize)
 				.GetEnumerator();
@@ -89,6 +98,12 @@ namespace Raven.Client.Document
 		IEnumerator IEnumerable.GetEnumerator()
 		{
 			return GetEnumerator();
+		}
+
+		public IDocumentQuery<T> Include(string path)
+		{
+			includes.Add(path);
+			return this;
 		}
 
 		public IDocumentQuery<T> Take(int count)
@@ -423,7 +438,7 @@ namespace Raven.Client.Document
 					Cutoff = cutoff,
 					SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
 					FieldsToFetch = projectionFields
-				});
+				}, includes.ToArray());
 				if (waitForNonStaleResults && result.IsStale)
 				{
 					if (sp.Elapsed > timeout)
@@ -446,7 +461,6 @@ namespace Raven.Client.Document
 		private T Deserialize(JObject result)
 		{
 			var metadata = result.Value<JObject>("@metadata");
-			result.Remove("@metadata");
 			if (projectionFields != null && projectionFields.Length > 0 // we asked for a projection directly from the index
 				|| metadata == null) // we aren't querying a document, we are probably querying a map reduce index result
 			{

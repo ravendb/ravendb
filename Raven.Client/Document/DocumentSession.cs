@@ -53,12 +53,26 @@ namespace Raven.Client.Document
 		}
 
 		public T[] Load<T>(params string[] ids)
-	    {
-            IncrementRequestCount();
-            Trace.WriteLine(string.Format("Bulk loading ids [{0}] from {1}", string.Join(", ", ids), StoreIdentifier));
-			return documentStore.DatabaseCommands.Get(ids)
-                .Select(TrackEntity<T>).ToArray();
-	    }
+		{
+			return LoadInternal<T>(ids, null);
+		}
+
+
+		internal T[] LoadInternal<T>(string[] ids, string[] includes)
+		{
+			IncrementRequestCount();
+			Trace.WriteLine(string.Format("Bulk loading ids [{0}] from {1}", string.Join(", ", ids), StoreIdentifier));
+			var multiLoadResult = documentStore.DatabaseCommands.Get(ids, includes);
+
+			foreach (var include in SerializationHelper.JObjectsToJsonDocuments(multiLoadResult.Includes))
+			{
+				TrackEntity<object>(include);
+			}
+
+			return SerializationHelper.JObjectsToJsonDocuments(multiLoadResult.Results)
+				.Select(TrackEntity<T>)
+				.ToArray();
+		}
 
 		public IRavenQueryable<T> Query<T>(string indexName)
 	    {
@@ -90,6 +104,11 @@ namespace Raven.Client.Document
                 property.SetValue(entity, property.GetValue(newEntity));
 	        }
 	    }
+
+		public ILoaderWithInclude Include(string path)
+		{
+			return new MultiLoaderWithInclude(this).Include(path);
+		}
 
 		public void SaveChanges()
 		{
@@ -145,4 +164,39 @@ namespace Raven.Client.Document
 			public IList<object> Entities { get; set; }
 		}
     }
+
+	public interface ILoaderWithInclude
+	{
+		MultiLoaderWithInclude Include(string path);
+		T[] Load<T>(params string[] ids);
+
+		T Load<T>(string id);
+	}
+
+	public class MultiLoaderWithInclude : ILoaderWithInclude
+	{
+		private readonly DocumentSession session;
+		private readonly List<string> includes = new List<string>();
+
+		public MultiLoaderWithInclude Include(string path)
+		{
+			includes.Add(path);
+			return this;
+		}
+
+		public MultiLoaderWithInclude(DocumentSession session)
+		{
+			this.session = session;
+		}
+
+		public T[] Load<T>(params string[] ids)
+		{
+			return session.LoadInternal<T>(ids, includes.ToArray());
+		}
+
+		public T Load<T>(string id)
+		{
+			return Load<T>(new[] {id}).FirstOrDefault();
+		}
+	}
 }
