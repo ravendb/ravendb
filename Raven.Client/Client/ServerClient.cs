@@ -465,24 +465,13 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
             var request = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/queries/", "POST", credentials);
 			request.AddOperationHeaders(OperationsHeaders);
 	        request.Write(new JArray(ids).ToString(Formatting.None));
-	        var responses = JArray.Parse(request.ReadResponseString());
+	        var result = JObject.Parse(request.ReadResponseString());
 
-	        return (from doc in responses.Cast<JObject>()
-	                let metadata = (JObject) doc["@metadata"]
-	                let _ = doc.Remove("@metadata")
-	                select new JsonDocument
-	                {
-	                    Key = metadata["@id"].Value<string>(),
-						LastModified = DateTime.ParseExact(metadata["Last-Modified"].Value<string>(), "r", CultureInfo.InvariantCulture),
-						Etag = new Guid(metadata["@etag"].Value<string>()),
-						NonAuthoritiveInformation = metadata.Value<bool>("Non-Authoritive-Information"),
-	                    Metadata = metadata,
-	                    DataAsJson = doc,
-	                })
+	        return SerializationHelper.JObjectsToJsonDocuments(result.Value<JArray>("Results").Cast<JObject>())
 	            .ToArray();
 	    }
 
-	    public BatchResult[] Batch(ICommandData[] commandDatas)
+    	public BatchResult[] Batch(ICommandData[] commandDatas)
 	    {
             return ExecuteWithReplication(u => DirectBatch(commandDatas, u));
 	    }

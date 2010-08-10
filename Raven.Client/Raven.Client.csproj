@@ -96,6 +96,7 @@
     <Compile Include="Client\JsonLuceneDateTimeConverter.cs" />
     <Compile Include="Client\RavenQuery.cs" />
     <Compile Include="Client\RavenTransactionAccessor.cs" />
+    <Compile Include="Client\SerializationHelper.cs" />
     <Compile Include="Client\WebRequestEventArgs.cs" />
     <Compile Include="Client\Async\WrapperAsyncData.cs" />
     <Compile Include="Client\WebResponseExtensions.cs" />

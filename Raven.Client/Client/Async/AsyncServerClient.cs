@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -14,6 +15,7 @@ using Raven.Database;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
 using Raven.Client.Client;
+using System.Collections.Generic;
 
 namespace Raven.Client.Client.Async
 {
@@ -122,7 +124,7 @@ namespace Raven.Client.Client.Async
 			try
 			{
 				var responseString = multiStepAsyncResult.Request.EndReadResponseString(multiStepAsyncResult.Result);
-				responses = JArray.Parse(responseString);
+				responses = JObject.Parse(responseString).Value<JArray>("Results");
 			}
 			catch (WebException e)
 			{
@@ -133,18 +135,7 @@ namespace Raven.Client.Client.Async
 				throw ThrowConcurrencyException(e);
 			}
 
-			return (from doc in responses.Cast<JObject>()
-					let metadata = (JObject)doc["@metadata"]
-					let _ = doc.Remove("@metadata")
-					select new JsonDocument
-					{
-						Key = metadata["@id"].Value<string>(),
-						LastModified = DateTime.ParseExact(metadata["Last-Modified"].Value<string>(), "r", CultureInfo.InvariantCulture),
-						Etag = new Guid(metadata["@etag"].Value<string>()),
-						Metadata = metadata,
-						NonAuthoritiveInformation = metadata.Value<bool>("Non-Authoritive-Information"),
-						DataAsJson = doc,
-					})
+			return SerializationHelper.JObjectsToJsonDocuments(responses.Cast<JObject>())
 				.ToArray();
 		}
 

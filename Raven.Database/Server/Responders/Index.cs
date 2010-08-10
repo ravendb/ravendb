@@ -109,7 +109,8 @@ namespace Raven.Database.Server.Responders
             	var includes = context.Request.QueryString.GetValues("include") ?? new string[0];
             	var loadedIds = new HashSet<string>(
             		queryResult.Results
-						.Select(x => x["@metadata"].Value<string>("@id"))
+            			.Where(x => x["@metadata"] != null)
+            			.Select(x => x["@metadata"].Value<string>("@id"))
             			.Where(x => x != null)
             		);
             	var command = new AddIncludesCommand(Database, GetRequestTransaction(context), queryResult.Includes.Add,includes, loadedIds);
