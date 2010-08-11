@@ -231,51 +231,11 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				document = actions.Documents.DocumentByKey(key, transactionInformation);
 			});
 
-			return ExecuteReadTriggersOnRead(ProcessReadVetoes(document, transactionInformation, ReadOperation.Load), transactionInformation, ReadOperation.Load);
+		    return new DocumentRetriever(null, ReadTriggers).ExecuteReadTriggers(document, transactionInformation,
+		                                                                         ReadOperation.Load);
 		}
 
-		private JsonDocument ExecuteReadTriggersOnRead(JsonDocument resultingDocument, TransactionInformation transactionInformation, ReadOperation operation)
-		{
-			if (resultingDocument == null)
-				return null;
-
-			foreach (var readTrigger in ReadTriggers)
-			{
-				readTrigger.OnRead(resultingDocument.Key, resultingDocument.DataAsJson, resultingDocument.Metadata, operation, transactionInformation);
-			}
-			return resultingDocument;
-		}
-
-		private JsonDocument ProcessReadVetoes(JsonDocument document, TransactionInformation transactionInformation, ReadOperation operation)
-		{
-			if (document == null)
-				return document;
-			foreach (var readTrigger in ReadTriggers)
-			{
-				var readVetoResult = readTrigger.AllowRead(document.Key, document.DataAsJson, document.Metadata, operation, transactionInformation);
-				switch (readVetoResult.Veto)
-				{
-					case ReadVetoResult.ReadAllow.Allow:
-						break;
-					case ReadVetoResult.ReadAllow.Deny:
-						return new JsonDocument
-						{
-							DataAsJson = new JObject(),
-							Metadata = new JObject(
-								new JProperty("Raven-Read-Veto", new JObject(new JProperty("Reason", readVetoResult.Reason),
-								                                             new JProperty("Trigger", readTrigger.ToString())
-								                                 	))
-								)
-						};
-					case ReadVetoResult.ReadAllow.Ignore:
-						return null;
-					default:
-						throw new ArgumentOutOfRangeException(readVetoResult.Veto.ToString());
-				}
-			}
-
-			return document;
-		}
+		
 
 		public PutResult Put(string key, Guid? etag, JObject document, JObject metadata, TransactionInformation transactionInformation)
 		{
@@ -488,13 +448,12 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 					{
 						throw new IndexDisabledException(indexFailureInformation);
 					}
-					var loadedIds = new HashSet<string>();
-					var collection = from queryResult in IndexStorage.Query(index, query)
-					                 select RetrieveDocument(actions, queryResult, loadedIds)
+				    var docRetriever = new DocumentRetriever(actions, ReadTriggers);
+					var collection = from queryResult in IndexStorage.Query(index, query, docRetriever.ShouldIncludeResultInQuery)
+					                 select docRetriever.RetrieveDocumentForQuery(queryResult)
 					                 into doc
-										 let processedDoc = ExecuteReadTriggersOnRead(ProcessReadVetoes(doc, null, ReadOperation.Query), null, ReadOperation.Query)
-										 where processedDoc != null
-										 select processedDoc.ToJson();
+										 where doc!= null
+										 select doc.ToJson();
 					list.AddRange(collection);
 				});
 			return new QueryResult
@@ -519,29 +478,13 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 					{
 						throw new IndexDisabledException(indexFailureInformation);
 					}
-					loadedIds = new HashSet<string>(from queryResult in IndexStorage.Query(index, query)
+					loadedIds = new HashSet<string>(from queryResult in IndexStorage.Query(index, query, result => true)
 					                                select queryResult.Key);
 				});
 			stale = isStale;
 			return loadedIds;
 		}
 
-		private static JsonDocument RetrieveDocument(IStorageActionsAccessor actions, IndexQueryResult queryResult,
-		                                             HashSet<string> loadedIds)
-		{
-			if (queryResult.Projection == null)
-			{
-				if (loadedIds.Add(queryResult.Key))
-					return actions.Documents.DocumentByKey(queryResult.Key, null);
-				return null;
-			}
-
-			return new JsonDocument
-			{
-				Key = queryResult.Key,
-				Projection = queryResult.Projection,
-			};
-		}
 
 		public void DeleteIndex(string name)
 		{
@@ -598,10 +541,10 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
                     documents = actions.Documents.GetDocumentsByReverseUpdateOrder(start);
                 else
                     documents = actions.Documents.GetDocumentsAfter(etag.Value);
-			    foreach (var doc in  documents
-                    .Take(pageSize))
+			    var documentRetriever = new DocumentRetriever(actions, ReadTriggers);
+			    foreach (var doc in  documents.Take(pageSize))
 				{
-					var document = ExecuteReadTriggersOnRead(ProcessReadVetoes(doc, null, ReadOperation.Query), null, ReadOperation.Query);
+				    var document = documentRetriever.ExecuteReadTriggers(doc, null, ReadOperation.Query);
 					if(document == null)
 						continue;
 					if (document.Metadata.Property("@id") == null)

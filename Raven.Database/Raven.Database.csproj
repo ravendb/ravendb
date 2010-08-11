@@ -116,6 +116,7 @@
     <Compile Include="Data\BackupRequest.cs" />
     <Compile Include="Data\DisposableAction.cs" />
     <Compile Include="Data\MultiLoadResult.cs" />
+    <Compile Include="DocumentRetriever.cs" />
     <Compile Include="Exceptions\IndexDoesNotExists.cs" />
     <Compile Include="Extensions\MonoHttpEncoder.cs">
       <SubType>Code</SubType>

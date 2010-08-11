@@ -69,12 +69,11 @@ namespace Raven.Database.Indexing
 
         #endregion
 
-        public IEnumerable<IndexQueryResult> Query(IndexQuery indexQuery)
+        public IEnumerable<IndexQueryResult> Query(IndexQuery indexQuery, Func<IndexQueryResult, bool> shouldIncludeInResults)
         {
         	IndexSearcher indexSearcher;
         	using (searcher.Use(out indexSearcher))
             {
-				var previousDocuments = new HashSet<string>();
             	var luceneQuery = GetLuceneQuery(indexQuery);
             	var start = indexQuery.Start;
             	var pageSize = indexQuery.PageSize;
@@ -95,13 +94,14 @@ namespace Raven.Database.Indexing
 					for (var i = start; i < search.totalHits && (i - start) < pageSize; i++)
 					{
 						var document = indexSearcher.Doc(search.scoreDocs[i].doc);
-						if (IsDuplicateDocument(document, indexQuery.FieldsToFetch, previousDocuments))
-						{
-							skippedDocs++;
-							continue;
-						}
-						returnedResults++;
-						yield return RetrieveDocument(document, indexQuery.FieldsToFetch);
+						var indexQueryResult = RetrieveDocument(document, indexQuery.FieldsToFetch);
+                        if (shouldIncludeInResults(indexQueryResult) == false)
+                        {
+                            skippedDocs++;
+                            continue;
+                        }
+                        returnedResults++;
+                        yield return indexQueryResult;
 					}
 				} while (skippedDocs > 0 && returnedResults < indexQuery.PageSize);
             }
@@ -156,15 +156,6 @@ namespace Raven.Database.Indexing
 				}
             }
             return luceneQuery;
-        }
-
-        private static bool IsDuplicateDocument(Document document, ICollection<string> fieldsToFetch, ISet<string> previousDocuments)
-        {
-            var docId = document.Get("__document_id");
-            if (fieldsToFetch != null && fieldsToFetch.Count > 1 ||
-                string.IsNullOrEmpty(docId))
-                return false;
-            return previousDocuments.Add(docId) == false;
         }
 
         public abstract void IndexDocuments(AbstractViewGenerator viewGenerator, IEnumerable<object> documents,
