@@ -118,6 +118,7 @@
     <Compile Include="Data\MultiLoadResult.cs" />
     <Compile Include="DocumentRetriever.cs" />
     <Compile Include="Exceptions\IndexDoesNotExists.cs" />
+    <Compile Include="Extensions\ExpressionExtensions.cs" />
     <Compile Include="Extensions\MonoHttpEncoder.cs">
       <SubType>Code</SubType>
     </Compile>

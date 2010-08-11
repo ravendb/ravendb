@@ -99,6 +99,30 @@ namespace Raven.Client.Tests.Bugs
 			}
 		}
 
+        [Fact]
+        public void CanIncludeExtensionWithQuery() {
+            using (var session = store.OpenSession()) {
+                var orders = session
+                    .LuceneQuery<Order>("Orders/ByName")
+                    .WaitForNonStaleResults()
+                    .Include(o => o.Customer.Id)
+                    .Take(2)
+                    .ToList();
+
+                Assert.Equal(1, session.NumberOfRequests);
+
+                var customer1 = session.Load<Customer>(orders[0].Customer.Id);
+                var customer2 = session.Load<Customer>(orders[1].Customer.Id);
+
+                Assert.NotNull(customer1);
+                Assert.NotNull(customer2);
+
+                Assert.NotSame(customer1, customer2);
+
+                Assert.Equal(1, session.NumberOfRequests);
+            }
+        }
+
 		[Fact]
 		public void CanIncludeWithMultiLoad()
 		{

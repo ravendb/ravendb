@@ -90,10 +90,10 @@ task Compile -depends Init {
 task Test -depends Compile {
   $old = pwd
   cd $build_dir
-  exec { &"$build_dir\xunit.console.exe" "$build_dir\Raven.Tests.dll" } 
-  exec { &"$build_dir\xunit.console.exe" "$build_dir\Raven.Scenarios.dll" }
-  exec { &"$build_dir\xunit.console.exe" "$build_dir\Raven.Client.Tests.dll" }
-  exec { &"$build_dir\xunit.console.exe" "$build_dir\Raven.Bundles.Tests.dll" }
+  exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\Raven.Tests.dll" } 
+  exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\Raven.Scenarios.dll" }
+  exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\Raven.Client.Tests.dll" }
+  exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\Raven.Bundles.Tests.dll" }
   cd $old
 }
 
