@@ -9,6 +9,7 @@ namespace Raven.Database.Data
 		public List<JObject> Includes { get; set; }
 		public bool IsStale { get; set; }
 		public int TotalResults { get; set; }
+        public int SkippedResults { get; set; }
 
 		public QueryResult()
 		{

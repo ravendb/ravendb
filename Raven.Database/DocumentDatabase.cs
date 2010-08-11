@@ -439,7 +439,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 		{
 			var list = new List<JObject>();
 			var stale = false;
-			TransactionalStorage.Batch(
+            TransactionalStorage.Batch(
 				actions =>
 				{
 					stale = actions.Tasks.IsIndexStale(index, query.Cutoff);
@@ -449,7 +449,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 						throw new IndexDisabledException(indexFailureInformation);
 					}
 				    var docRetriever = new DocumentRetriever(actions, ReadTriggers);
-					var collection = from queryResult in IndexStorage.Query(index, query, docRetriever.ShouldIncludeResultInQuery)
+				    var collection = from queryResult in IndexStorage.Query(index, query, docRetriever.ShouldIncludeResultInQuery)
 					                 select docRetriever.RetrieveDocumentForQuery(queryResult)
 					                 into doc
 										 where doc!= null
@@ -460,6 +460,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 			{
 				Results = list,
 				IsStale = stale,
+                SkippedResults = query.SkippedResults.Value,
 				TotalResults = query.TotalSize.Value
 			};
 		}

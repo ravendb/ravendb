@@ -77,17 +77,17 @@ namespace Raven.Database.Indexing
             	var luceneQuery = GetLuceneQuery(indexQuery);
             	var start = indexQuery.Start;
             	var pageSize = indexQuery.PageSize;
-            	var skippedDocs = 0;
             	var returnedResults = 0;
+                var skippedResultsInCurrentLoop = 0;
             	do
             	{
-					if(skippedDocs > 0)
+                    if (skippedResultsInCurrentLoop > 0)
 					{
 						start = start + pageSize;
 						// trying to guesstimate how many results we will need to read from the index
 						// to get enough unique documents to match the page size
-						pageSize = skippedDocs * indexQuery.PageSize; 
-						skippedDocs = 0;
+                        pageSize = skippedResultsInCurrentLoop * indexQuery.PageSize;
+                        skippedResultsInCurrentLoop = 0;
 					}
 					var search = ExecuteQuery(indexSearcher, luceneQuery, start, pageSize, indexQuery.SortedFields);
 					indexQuery.TotalSize.Value = search.totalHits;
@@ -97,13 +97,16 @@ namespace Raven.Database.Indexing
 						var indexQueryResult = RetrieveDocument(document, indexQuery.FieldsToFetch);
                         if (shouldIncludeInResults(indexQueryResult) == false)
                         {
-                            skippedDocs++;
+                            indexQuery.SkippedResults.Value++;
+                            skippedResultsInCurrentLoop++;
                             continue;
                         }
                         returnedResults++;
                         yield return indexQueryResult;
+                        if(returnedResults == indexQuery.PageSize)
+                            yield break;
 					}
-				} while (skippedDocs > 0 && returnedResults < indexQuery.PageSize);
+                } while (skippedResultsInCurrentLoop > 0 && returnedResults < indexQuery.PageSize);
             }
         }
 

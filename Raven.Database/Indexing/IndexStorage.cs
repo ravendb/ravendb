@@ -138,7 +138,10 @@ namespace Raven.Database.Indexing
 			}, (s, index) => index);
 		}
 
-		public IEnumerable<IndexQueryResult> Query(string index, IndexQuery query, Func<IndexQueryResult, bool> shouldIncludeInResults)
+		public IEnumerable<IndexQueryResult> Query(
+            string index, 
+            IndexQuery query, 
+            Func<IndexQueryResult, bool> shouldIncludeInResults)
 		{
 			Index value;
 			if (indexes.TryGetValue(index, out value) == false)

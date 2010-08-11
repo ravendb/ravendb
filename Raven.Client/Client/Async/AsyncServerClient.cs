@@ -165,7 +165,8 @@ namespace Raven.Client.Client.Async
 			{
 				IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
 				Results = json["Results"].Children().Cast<JObject>().ToList(),
-				TotalResults = Convert.ToInt32(json["TotalResults"].ToString())
+				TotalResults = Convert.ToInt32(json["TotalResults"].ToString()),
+                SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString())
 			};
 		}
 
