@@ -4,42 +4,24 @@ using Microsoft.Isam.Esent.Interop;
 using Raven.Database.Storage.StorageActions;
 using Raven.Database.Tasks;
 using Raven.Database.Extensions;
+using Raven.Database.Json;
 
 namespace Raven.Storage.Esent.StorageActions
 {
 	public partial class DocumentStorageActions : ITasksStorageActions
 	{
-		public bool IsIndexStale(string name, DateTime? cutOff)
+		public bool IsIndexStale(string name, DateTime? cutOff, string entityName)
 		{
-			Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
+		    Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
 			Api.MakeKey(session, IndexesStats, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
 			{
 				return false;
 			}
-			var lastIndexedEtag = new Guid(
-				Api.RetrieveColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"])
-				);
-			Api.JetSetCurrentIndex(session, Documents, "by_etag");
-			if(Api.TryMoveLast(session, Documents))
-			{
-				var lastEtag = new Guid(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
-				if (lastEtag.CompareTo(lastIndexedEtag) > 0)
-				{
-					if (cutOff != null)
-					{
-						var lastIndexedTimestamp = Api.RetrieveColumnAsDateTime(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"]).Value;
-						if (cutOff.Value > lastIndexedTimestamp)
-							return true;
-					}
-					else
-					{
-						return true;
-					}
-				}
-			}
+			if (IsStaleByEtag(entityName, cutOff)) 
+                return true;
 
-			Api.JetSetCurrentIndex(session, Tasks, "by_index");
+		    Api.JetSetCurrentIndex(session, Tasks, "by_index");
 			Api.MakeKey(session, Tasks, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Tasks, SeekGrbit.SeekEQ) == false)
 			{
@@ -51,6 +33,49 @@ namespace Raven.Storage.Esent.StorageActions
 		    var addedAt = Api.RetrieveColumnAsDateTime(session, Tasks, tableColumnsCache.TasksColumns["added_at"]).Value;
 			return cutOff.Value > addedAt;
 		}
+
+	    private bool IsStaleByEtag(string entityName, DateTime? cutOff)
+	    {
+	        var lastIndexedEtag = new Guid(
+	            Api.RetrieveColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"])
+	            );
+	        Api.JetSetCurrentIndex(session, Documents, "by_etag");
+	        if (!Api.TryMoveLast(session, Documents))
+	        {
+	            return false;
+	        }
+	        do
+	        {
+	            var lastEtag =
+	                new Guid(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
+	            if (lastEtag.CompareTo(lastIndexedEtag) <= 0)
+	                break;
+
+	            if (entityName != null)
+	            {
+	                var metadata =
+	                    Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).
+	                        ToJObject();
+	                if (metadata.Value<string>("Raven-Entity-Name") != entityName)
+	                    continue;
+	            }
+
+	            if (cutOff != null)
+	            {
+	                var lastIndexedTimestamp =
+	                    Api.RetrieveColumnAsDateTime(session, IndexesStats,
+	                                                 tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"])
+	                        .Value;
+	                if (cutOff.Value > lastIndexedTimestamp)
+	                    return true;
+	            }
+	            else
+	            {
+	                return true;
+	            }
+	        } while (Api.TryMovePrevious(session, Documents));
+	        return false;
+	    }
 
 	    public void AddTask(Task task)
 		{

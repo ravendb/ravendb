@@ -5,7 +5,7 @@ namespace Raven.Database.Storage.StorageActions
 {
 	public interface ITasksStorageActions
 	{
-		bool IsIndexStale(string name, DateTime? cutOff);
+		bool IsIndexStale(string name, DateTime? cutOff, string entityName);
 		void AddTask(Task task);
 		bool HasTasks { get; }
 		long ApproximateTaskCount { get; }

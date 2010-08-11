@@ -61,7 +61,7 @@ namespace Raven.Database.Indexing
 												  failureRate.FailureRate);
 								continue;
 							}
-							if (!actions.Tasks.IsIndexStale(indexesStat.Name, null)) 
+							if (!actions.Tasks.IsIndexStale(indexesStat.Name, null, null)) 
 								continue;
 							// in order to ensure fairness, we only process one stale index 
 							// then move to process pending tasks, then process more staleness
