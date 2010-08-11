@@ -100,6 +100,7 @@
     <Compile Include="Client\WebRequestEventArgs.cs" />
     <Compile Include="Client\Async\WrapperAsyncData.cs" />
     <Compile Include="Client\WebResponseExtensions.cs" />
+    <Compile Include="DocumentQueryExtensions.cs" />
     <Compile Include="Document\Async\AsyncDocumentSession.cs" />
     <Compile Include="Document\Async\SyncronousLoadResult.cs" />
     <Compile Include="Document\DocumentConvention.cs" />
