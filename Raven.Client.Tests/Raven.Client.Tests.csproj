@@ -103,6 +103,7 @@
     <Compile Include="Bugs\CanDetectChanges.cs" />
     <Compile Include="Bugs\CanSelectFieldsFromIndex.cs" />
     <Compile Include="Bugs\CustomEntityName.cs" />
+    <Compile Include="Bugs\DateRanges.cs" />
     <Compile Include="Bugs\DecimalPrecision.cs" />
     <Compile Include="Bugs\EntityWithDate.cs" />
     <Compile Include="Bugs\Etag.cs" />
