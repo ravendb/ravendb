@@ -153,7 +153,7 @@ namespace Raven.Client.Shard
 	        throw new NotSupportedException("Sharded linq queries aren't supported currently");
 	    }
 
-		public IRavenQueryable<T> Query<T, TIndexCreator>(string indexName) where TIndexCreator : AbstractIndexCreationTask, new()
+		public IRavenQueryable<T> Query<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
 		{
 			throw new NotSupportedException("Sharded linq queries aren't supported currently");
 		}

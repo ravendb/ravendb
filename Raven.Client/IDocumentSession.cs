@@ -17,7 +17,7 @@ namespace Raven.Client
 
 		IRavenQueryable<T> Query<T>(string indexName);
 
-		IRavenQueryable<T> Query<T, TIndexCreator>(string indexName) where TIndexCreator : AbstractIndexCreationTask, new();
+		IRavenQueryable<T> Query<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new();
 
 		IDocumentQuery<T> LuceneQuery<T>(string indexName);
 

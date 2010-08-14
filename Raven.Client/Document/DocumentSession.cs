@@ -79,7 +79,7 @@ namespace Raven.Client.Document
 	        return new RavenQueryable<T>(new RavenQueryProvider<T>(this, indexName));
 	    }
 
-		public IRavenQueryable<T> Query<T, TIndexCreator>(string indexName) where TIndexCreator : AbstractIndexCreationTask, new()
+		public IRavenQueryable<T> Query<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
 		{
 			var indexCreator = new TIndexCreator();
 			return Query<T>(indexCreator.IndexName);
