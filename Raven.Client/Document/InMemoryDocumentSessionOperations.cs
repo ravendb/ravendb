@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Reflection;
 using System.Transactions;
@@ -15,8 +16,6 @@ using Raven.Database.Json;
 using System.Dynamic;
 using Microsoft.CSharp.RuntimeBinder;
 using Raven.Database.Linq;
-using Binder = Microsoft.CSharp.RuntimeBinder.Binder;
-
 #endif
 
 namespace Raven.Client.Document
@@ -35,11 +34,11 @@ namespace Raven.Client.Document
 
 		protected readonly Dictionary<string, object> entitiesByKey = new Dictionary<string, object>();
 		protected DocumentStore documentStore;
-		private int numberOfRequests;
 
-		private IDocumentDeleteListener[] deleteListeners;
-		private IDocumentStoreListener[] storeListeners;
+		public int NumberOfRequests { get; private set; }
 
+		private readonly IDocumentDeleteListener[] deleteListeners;
+		private readonly IDocumentStoreListener[] storeListeners;
 
 		protected InMemoryDocumentSessionOperations(DocumentStore documentStore, IDocumentStoreListener[] storeListeners, IDocumentDeleteListener[] deleteListeners)
 		{
@@ -50,7 +49,6 @@ namespace Raven.Client.Document
 			AllowNonAuthoritiveInformation = true;
 		    MaxNumberOfRequestsPerSession = documentStore.Conventions.MaxNumberOfRequestsPerSession;
 		}
-
 
 		public string StoreIdentifier
 		{
@@ -96,7 +94,7 @@ namespace Raven.Client.Document
 
 		internal void IncrementRequestCount()
 		{
-			if (++numberOfRequests > MaxNumberOfRequestsPerSession)
+			if (++NumberOfRequests > MaxNumberOfRequestsPerSession)
 				throw new InvalidOperationException(
 					string.Format(
 						@"The maximum number of requests ({0}) allowed for this session has been reached.
@@ -115,8 +113,7 @@ more responsive application.
 			{
 				documentFound.Metadata.Add("@etag", new JValue(documentFound.Etag.ToString()));
 			}
-			if(documentFound.NonAuthoritiveInformation && 
-				AllowNonAuthoritiveInformation == false)
+			if(documentFound.NonAuthoritiveInformation && AllowNonAuthoritiveInformation == false)
 			{
 				throw new NonAuthoritiveInformationException("Document " + documentFound.Key +
 				" returned Non Authoritive Information (probably modified by a transaction in progress) and AllowNonAuthoritiveInformation  is set to false");
@@ -138,6 +135,7 @@ more responsive application.
 				return (T) entity;
 			}
 			var etag = metadata.Value<string>("@etag");
+			document.Remove("@metadata");
 			if(metadata.Value<bool>("Non-Authoritive-Information") && 
 				AllowNonAuthoritiveInformation == false)
 			{
@@ -148,7 +146,7 @@ more responsive application.
 			{
 				OriginalValue = document,
 				Metadata = metadata,
-				OriginalMetadata = metadata,
+				OriginalMetadata = new JObject(metadata),
 				ETag = new Guid(etag),
 				Key = key
 			};
@@ -168,17 +166,17 @@ more responsive application.
 		protected object ConvertToEntity<T>(string id, JObject documentFound, JObject metadata)
 		{
 			var entity = default(T);
-
+			EnsureNotReadVetoed(metadata);
 			var documentType = metadata.Value<string>("Raven-Clr-Type");
 			if (documentType != null)
 			{
 				var type = Type.GetType(documentType);
 				if (type != null)
-					entity = (T) documentFound.Deserialize(type, Conventions.JsonContractResolver);
+					entity = (T) documentFound.Deserialize(type, Conventions);
 			}
 			if (Equals(entity, default(T)))
 			{
-				entity = documentFound.Deserialize<T>(Conventions.JsonContractResolver);
+				entity = documentFound.Deserialize<T>(Conventions);
 #if !NET_3_5
 				var document = entity as JObject;
 				if (document != null)
@@ -188,9 +186,25 @@ more responsive application.
 #endif
 			}
 			var identityProperty = documentStore.Conventions.GetIdentityProperty(entity.GetType());
-			if (identityProperty != null)
+			if (identityProperty != null && identityProperty.CanWrite)
 				identityProperty.SetValue(entity, id, null);
 			return entity;
+		}
+
+		private static void EnsureNotReadVetoed(JObject metadata)
+		{
+			var readVetoAsString = metadata.Value<string>("Raven-Read-Veto");
+			if (readVetoAsString == null)
+				return;
+
+			var readVeto = JObject.Parse(readVetoAsString);
+
+			var s = readVeto.Value<string>("Reason");
+			throw new ReadVetoException(
+				"Document could not be read because of a read veto."+Environment.NewLine +
+				"The read was vetoed by: " + readVeto.Value<string>("Trigger") + Environment.NewLine + 
+				"Veto reason: " + s
+				);
 		}
 
 		public void Store(object entity)
@@ -225,7 +239,7 @@ more responsive application.
                     // Generate the key up front
                     id = Conventions.GenerateDocumentKey(entity);
 
-                    if (id != null && identityProperty != null)
+					if (id != null && identityProperty != null && identityProperty.CanWrite)
                     {
                         // And store it so the client has access to to it
                         identityProperty.SetValue(entity, id, null);
@@ -325,10 +339,12 @@ more responsive application.
 				if (entitiesAndMetadata.TryGetValue(entity, out documentMetadata) == false)
 					continue;
 
+				batchResult.Metadata["@etag"] = new JValue(batchResult.Etag.ToString());
 				entitiesByKey[batchResult.Key] = entity;
 				documentMetadata.ETag = batchResult.Etag;
 				documentMetadata.Key = batchResult.Key;
-				documentMetadata.OriginalMetadata = batchResult.Metadata;
+				documentMetadata.OriginalMetadata = new JObject(batchResult.Metadata);
+				documentMetadata.Metadata = batchResult.Metadata;
 				documentMetadata.OriginalValue = ConvertEntityToJson(entity, documentMetadata.Metadata);
 
 				// Set/Update the id of the entity
@@ -339,6 +355,11 @@ more responsive application.
 
 				if (stored != null)
 					stored(entity);
+
+				foreach (var documentStoreListener in storeListeners)
+				{
+					documentStoreListener.AfterStore(batchResult.Key, entity, batchResult.Metadata);
+				}
             }
 		}
 
@@ -429,24 +450,24 @@ more responsive application.
 			var entityType = entity.GetType();
 			var identityProperty = documentStore.Conventions.GetIdentityProperty(entityType);
 
-			var objectAsJson = JObject.FromObject(entity, new JsonSerializer
-			{
-				Converters = {new JsonEnumConverter()},
-				ContractResolver = Conventions.JsonContractResolver,
-				ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor
-			});
+			var objectAsJson = GetObjectAsJson(entity);
 			if (identityProperty != null)
 			{
 				objectAsJson.Remove(identityProperty.Name);
 			}
 
-			metadata["Raven-Clr-Type"] = JToken.FromObject(entityType.FullName + ", " + entityType.Assembly.GetName().Name);
+			metadata["Raven-Clr-Type"] = JToken.FromObject(ReflectionUtil.GetFullNameWithoutVersionInformation(entityType));
 
 			var entityConverted = OnEntityConverted;
 			if (entityConverted != null)
 				entityConverted(entity, objectAsJson, metadata);
 
 			return objectAsJson;
+		}
+
+		private JObject GetObjectAsJson(object entity)
+		{
+			return JObject.FromObject(entity, Conventions.CreateSerializer());
 		}
 
 		public void Evict<T>(T entity)

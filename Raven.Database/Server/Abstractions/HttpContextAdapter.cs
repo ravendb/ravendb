@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Security.Principal;
 using System.Web;
 
@@ -41,7 +42,12 @@ namespace Raven.Database.Server.Abstractions
 
 		public void FinalizeResonse()
 		{
-			// here it is a no op
+			
+		}
+
+		public void SetResponseFilter(Func<Stream, Stream> responseFilter)
+		{
+			context.Response.Filter = responseFilter(context.Response.Filter);
 		}
 	}
 }

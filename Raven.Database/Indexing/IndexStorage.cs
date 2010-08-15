@@ -6,11 +6,13 @@ using System.Linq;
 using System.Runtime.ConstrainedExecution;
 using System.Threading;
 using System.Web;
+using System.Web.Util;
 using log4net;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
 using Raven.Database.Data;
+using Raven.Database.Extensions;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
 using Raven.Database.Storage.StorageActions;
@@ -52,11 +54,11 @@ namespace Raven.Database.Indexing
 		[CLSCompliant(false)]
 		protected Lucene.Net.Store.Directory OpenOrCreateLuceneDirectory(string indexDirectory)
 		{
-            Lucene.Net.Store.Directory directory;
+			Lucene.Net.Store.Directory directory;
 			if (configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction)
 				directory = new RAMDirectory();
             else
-                directory = FSDirectory.Open(new DirectoryInfo(Path.Combine(path, HttpUtility.UrlEncode(indexDirectory))));
+                directory = FSDirectory.Open(new DirectoryInfo(Path.Combine(path, MonoHttpUtility.UrlEncode(indexDirectory))));
             //creating index structure if we need to
 	        var standardAnalyzer = new StandardAnalyzer(Version.LUCENE_29);
 	        try
@@ -106,7 +108,7 @@ namespace Raven.Database.Indexing
 			log.InfoFormat("Deleting index {0}", name);
 			value.Dispose();
 			Index ignored;
-			var dirOnDisk = Path.Combine(path, HttpUtility.UrlEncode(name));
+			var dirOnDisk = Path.Combine(path, MonoHttpUtility.UrlEncode(name));
 			
 			if (!indexes.TryRemove(name, out ignored) || !Directory.Exists(dirOnDisk)) 
 				return;
@@ -136,7 +138,10 @@ namespace Raven.Database.Indexing
 			}, (s, index) => index);
 		}
 
-		public IEnumerable<IndexQueryResult> Query(string index, IndexQuery query)
+		public IEnumerable<IndexQueryResult> Query(
+            string index, 
+            IndexQuery query, 
+            Func<IndexQueryResult, bool> shouldIncludeInResults)
 		{
 			Index value;
 			if (indexes.TryGetValue(index, out value) == false)
@@ -144,7 +149,7 @@ namespace Raven.Database.Indexing
 				log.DebugFormat("Query on non existing index {0}", index);
 				throw new InvalidOperationException("Index " + index + " does not exists");
 			}
-			return value.Query(query);
+			return value.Query(query, shouldIncludeInResults);
 		}
 
 		public void RemoveFromIndex(string index, string[] keys, WorkContext context)

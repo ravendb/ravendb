@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Net;
 using System.Threading;
 using log4net;
@@ -241,19 +242,23 @@ namespace Raven.Database.Server
 
 		private static void SerializeError(IHttpContext ctx, object error)
 		{
-			using (var sw = new StreamWriter(ctx.Response.OutputStream))
+			var sw = new StreamWriter(ctx.Response.OutputStream);
+			new JsonSerializer().Serialize(new JsonTextWriter(sw)
 			{
-				new JsonSerializer().Serialize(new JsonTextWriter(sw)
-				{
-					Formatting = Formatting.Indented,
-				}, error);
-			}
+				Formatting = Formatting.Indented,
+			}, error);
+			sw.Flush();
 		}
 
 		private bool DispatchRequest(IHttpContext ctx)
 		{
 			if (AssertSecurityRights(ctx) == false)
 			    return false;
+
+			RecordRequestHeaders(ctx);
+
+			if (Configuration.HttpCompression)
+				AddHttpCompressionIfClientCanAcceptIt(ctx);
 
 			foreach (var requestResponder in RequestResponders)
 			{
@@ -276,6 +281,34 @@ namespace Raven.Database.Server
 </html>
 ");
 		    return true;
+		}
+
+		private static void AddHttpCompressionIfClientCanAcceptIt(IHttpContext ctx)
+		{
+			var acceptEncoding = ctx.Request.Headers["Accept-Encoding"];
+
+			if (string.IsNullOrEmpty(acceptEncoding))
+				return;
+
+			// gzip must be first, because chrome has a bug accepting deflate data
+			// when sending it json text
+			if ((acceptEncoding.IndexOf("gzip", StringComparison.InvariantCultureIgnoreCase) != -1))
+			{
+				ctx.SetResponseFilter(s => new GZipStream(s, CompressionMode.Compress, true));
+				ctx.Response.Headers["Content-Encoding"] = "gzip";
+			}
+			else if (acceptEncoding.IndexOf("deflate", StringComparison.InvariantCultureIgnoreCase) != -1)
+			{
+				ctx.SetResponseFilter(s => new DeflateStream(s, CompressionMode.Compress, true));
+				ctx.Response.Headers["Content-Encoding"] = "deflate";
+			}
+			 
+
+		}
+
+		private static void RecordRequestHeaders(IHttpContext ctx)
+		{
+			CurrentRavenOperation.Headers.Value = ctx.Request.Headers;
 		}
 
 		private bool AssertSecurityRights(IHttpContext ctx)

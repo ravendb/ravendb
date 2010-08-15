@@ -1,21 +1,39 @@
 # starts the server in debug mode in the shard1 and shard2 directories, 
 # meaning that they will use the specified configuration
 
-$raven = "..\..\Server\RavenDB.exe" #release path
+$raven = "..\..\Server" #release path
 $replication = "..\..\Bundles\Raven.Bundles.Replication.dll"
-$replication_pdb = "..\..\Bundles\Raven.Bundles.Replication.pdb"
 if( (test-path $raven) -eq $false)
 {
-  $raven = "..\..\build\RavenDB.exe" #src path
+  $raven = "..\..\build" #src path
   $replication = "..\..\build\Raven.Bundles.Replication.dll"
-  $replication_pdb = "..\..\build\Raven.Bundles.Replication.pdb"
 }
 
 rd .\Servers\Shard1\Data -force -recurse -erroraction silentlycontinue
 rd .\Servers\Shard2\Data -force -recurse -erroraction silentlycontinue
 
-cp $raven .\Servers\Shard1
-cp $raven  .\Servers\Shard2
+cp $raven\Raven.Server.exe .\Servers\Shard1
+cp $raven\log4net.dll .\Servers\Shard1
+cp $raven\Newtonsoft.Json.dll .\Servers\Shard1
+cp $raven\Lucene.Net.dll .\Servers\Shard1
+cp $raven\ICSharpCode.NRefactory.dll .\Servers\Shard1
+cp $raven\Rhino.Licensing.dll .\Servers\Shard1
+cp $raven\Esent.Interop.dll .\Servers\Shard1
+cp $raven\Raven.Database.dll .\Servers\Shard1
+cp $raven\Raven.Storage.Managed.dll .\Servers\Shard1
+cp $raven\Raven.Storage.Esent.dll .\Servers\Shard1
+
+cp $raven\Raven.Server.exe .\Servers\Shard2
+cp $raven\log4net.dll .\Servers\Shard2
+cp $raven\Newtonsoft.Json.dll .\Servers\Shard2
+cp $raven\Lucene.Net.dll .\Servers\Shard2
+cp $raven\ICSharpCode.NRefactory.dll .\Servers\Shard2
+cp $raven\Rhino.Licensing.dll .\Servers\Shard2
+cp $raven\Esent.Interop.dll .\Servers\Shard2
+cp $raven\Raven.Database.dll .\Servers\Shard2
+cp $raven\Raven.Storage.Managed.dll .\Servers\Shard2
+cp $raven\Raven.Storage.Esent.dll .\Servers\Shard2
+
 
 mkdir .\Servers\Shard1\Plugins  -erroraction silentlycontinue
 mkdir .\Servers\Shard2\Plugins  -erroraction silentlycontinue
@@ -23,8 +41,6 @@ mkdir .\Servers\Shard2\Plugins  -erroraction silentlycontinue
 cp $replication .\Servers\Shard1\Plugins
 cp $replication .\Servers\Shard2\Plugins
 
-cp $replication_pdb .\Servers\Shard1\Plugins
-cp $replication_pdb .\Servers\Shard2\Plugins
 
-start .\Servers\Shard1\RavenDB.exe
-start .\Servers\Shard2\RavenDB.exe
+start .\Servers\Shard1\Raven.Server.exe
+start .\Servers\Shard2\Raven.Server.exe

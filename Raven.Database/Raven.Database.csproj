@@ -38,7 +38,7 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;NET_4_0</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <NoWarn>1607</NoWarn>
@@ -111,13 +111,24 @@
     <Compile Include="Backup\RemoveBackupDocumentStartupTask.cs" />
     <Compile Include="Commercial\ValidateLicense.cs" />
     <Compile Include="Commercial\WarningMessagesHolder.cs" />
+    <Compile Include="CurrentRavenOperation.cs" />
+    <Compile Include="DatabaseBulkOperations.cs" />
     <Compile Include="Data\BackupRequest.cs" />
+    <Compile Include="Data\DisposableAction.cs" />
+    <Compile Include="Data\MultiLoadResult.cs" />
+    <Compile Include="DocumentRetriever.cs" />
     <Compile Include="Exceptions\IndexDoesNotExists.cs" />
+    <Compile Include="Extensions\ExpressionExtensions.cs" />
+    <Compile Include="Extensions\MonoHttpEncoder.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Extensions\MonoHttpUtility.cs" />
     <Compile Include="Extensions\StreamExtension.cs" />
     <Compile Include="Extensions\IOExtensions.cs" />
     <Compile Include="Indexing\GatherAllCollector.cs" />
     <Compile Include="Indexing\NumberUtil.cs" />
     <Compile Include="Indexing\RangeQueryParser.cs" />
+    <Compile Include="Indexing\SortOptions.cs" />
     <Compile Include="IStartupTask.cs" />
     <Compile Include="PerformanceCounters.cs" />
     <Compile Include="Plugins\AbstractBackgroundTask.cs" />
@@ -196,6 +207,8 @@
     <Compile Include="PutResult.cs" />
     <Compile Include="RavenConfiguration.cs" />
     <Compile Include="Server\HttpServer.cs" />
+    <Compile Include="Server\NonAdminHttp.cs" />
+    <Compile Include="Server\Responders\AddIncludesCommand.cs" />
     <Compile Include="Server\Responders\AdminBackup.cs" />
     <Compile Include="Server\Responders\Docs.cs" />
     <Compile Include="Server\Responders\Document.cs" />
@@ -226,8 +239,6 @@
     <Compile Include="Storage\IQueueStorageActions.cs" />
     <Compile Include="Storage\ITasksStorageActions.cs" />
     <Compile Include="Storage\ITransactionalStorage.cs" />
-    <Compile Include="Tasks\IndexDocumentRangeTask.cs" />
-    <Compile Include="Tasks\IndexDocumentsTask.cs" />
     <Compile Include="Tasks\ReduceTask.cs" />
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
     <Compile Include="Tasks\Task.cs" />

@@ -9,6 +9,7 @@ using System.Web;
 using log4net;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Database.Linq;
@@ -27,10 +28,15 @@ namespace Raven.Database.Storage
 
 		private readonly ILog logger = LogManager.GetLogger(typeof (IndexDefinitionStorage));
 		private readonly string path;
-		private AbstractDynamicCompilationExtension[] extensions;
+		private readonly AbstractDynamicCompilationExtension[] extensions;
 
-		public IndexDefinitionStorage(ITransactionalStorage  transactionalStorage,string path, IEnumerable<AbstractViewGenerator> compiledGenerators, AbstractDynamicCompilationExtension[] extensions)
+		public IndexDefinitionStorage(
+			ITransactionalStorage  transactionalStorage,
+			string path, 
+			IEnumerable<AbstractViewGenerator> compiledGenerators, 
+			AbstractDynamicCompilationExtension[] extensions)
 		{
+			this.extensions = extensions;// this is used later in the ctor, so it must appears first
 			this.path = Path.Combine(path, IndexDefDir);
 
 			if (Directory.Exists(this.path) == false)
@@ -42,7 +48,7 @@ namespace Raven.Database.Storage
 				try
 				{
 					AddAndCompileIndex(
-						HttpUtility.UrlDecode(Path.GetFileNameWithoutExtension(index)),
+						MonoHttpUtility.UrlDecode(Path.GetFileNameWithoutExtension(index)),
 						JsonConvert.DeserializeObject<IndexDefinition>(File.ReadAllText(index), new JsonEnumConverter())
 						);
 				}
@@ -114,27 +120,28 @@ namespace Raven.Database.Storage
 
 		public void RemoveIndex(string name)
 		{
-			AbstractViewGenerator _;
-			indexCache.TryRemove(name, out _);
+			AbstractViewGenerator ignoredViewGenerator;
+			indexCache.TryRemove(name, out ignoredViewGenerator);
+			IndexDefinition ignoredIndexDefinition;
+			indexDefinitions.TryRemove(name, out ignoredIndexDefinition);
 			File.Delete(GetIndexPath(name));
 			File.Delete(GetIndexSourcePath(name));
 		}
 
 		private string GetIndexSourcePath(string name)
 		{
-			return Path.Combine(path, HttpUtility.UrlEncode(name) + ".index.cs");
+			return Path.Combine(path, MonoHttpUtility.UrlEncode(name) + ".index.cs");
 		}
 
 		private string GetIndexPath(string name)
 		{
-			return Path.Combine(path, HttpUtility.UrlEncode(name) + ".index");
+			return Path.Combine(path, MonoHttpUtility.UrlEncode(name) + ".index");
 		}
 
 		public IndexDefinition GetIndexDefinition(string name)
 		{
 		    IndexDefinition value;
-		    if(indexDefinitions.TryGetValue(name, out value)==false)
-		        throw new InvalidOperationException("Index does not exists: " + name);
+			indexDefinitions.TryGetValue(name, out value);
 		    return value;
 		}
 
@@ -150,7 +157,7 @@ namespace Raven.Database.Storage
 		{
 			if (indexCache.ContainsKey(name))
 			{
-				return GetIndexDefinition(name) == indexDef
+				return GetIndexDefinition(name).Equals(indexDef)
 					? IndexCreationOptions.Noop
 					: IndexCreationOptions.Update;
 			}

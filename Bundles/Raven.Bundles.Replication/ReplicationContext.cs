@@ -1,4 +1,5 @@
 using System;
+using Raven.Database.Data;
 using Raven.Database.Indexing;
 
 namespace Raven.Bundles.Replication
@@ -19,7 +20,7 @@ namespace Raven.Bundles.Replication
         {
             var old = _currentlyInContext;
             _currentlyInContext = true;
-            return new WorkContext.DisposableAction(() => _currentlyInContext = old);
+            return new DisposableAction(() => _currentlyInContext = old);
         }
     }
 }

@@ -8,7 +8,7 @@ namespace Raven.Client.Shard
 {
 	public class ShardedDocumentStore : IDocumentStore
 	{
-        public event Action<string, object> Stored;
+		public event EventHandler<StoredEntityEventArgs> Stored;
 
         public ShardedDocumentStore(IShardStrategy shardStrategy, Shards shards)
         {
@@ -57,7 +57,12 @@ namespace Raven.Client.Shard
 	        get { throw new NotSupportedException("Sharded document store doesn't have a database commands. you need to explicitly use the shard instances to get access to the database commands"); }
 	    }
 
-	    public IDocumentStore Initialize()
+		public DocumentConvention Conventions
+		{
+			get { throw new NotSupportedException("Sharded document store doesn't have a database conventions. you need to explicitly use the shard instances to get access to the database commands"); }
+		}
+
+		public IDocumentStore Initialize()
 		{
 			try
 			{

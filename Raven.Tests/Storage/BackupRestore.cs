@@ -88,7 +88,7 @@ namespace Raven.Tests.Storage
 					PageSize = 10
 				});
 			} while (queryResult.IsStale);
-			Assert.Equal(1, queryResult.Results.Length);
+			Assert.Equal(1, queryResult.Results.Count);
 		}
 
 		[Fact]
@@ -105,6 +105,7 @@ namespace Raven.Tests.Storage
 					PageSize = 10
 				});
 			} while (queryResult.IsStale);
+			Assert.Equal(1, queryResult.Results.Count);
 
 			db.StartBackup("raven.db.test.backup");
 			WaitForBackup();
@@ -116,12 +117,13 @@ namespace Raven.Tests.Storage
 			DocumentDatabase.Restore(new RavenConfiguration(), "raven.db.test.backup", "raven.db.test.esent");
 
 			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = "raven.db.test.esent" });
+
 			queryResult = db.Query("Raven/DocumentsByEntityName", new IndexQuery
 			{
 				Query = "Tag:[[Users]]",
 				PageSize = 10
 			});
-			Assert.Equal(1, queryResult.Results.Length);
+			Assert.Equal(1, queryResult.Results.Count);
 		}
 
 		private void WaitForBackup()

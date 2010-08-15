@@ -23,6 +23,7 @@ namespace Raven.Client
 		DocumentConvention Conventions { get; }
 
 		int MaxNumberOfRequestsPerSession { get; set; }
+		int NumberOfRequests { get; }
 
 		event EntityStored Stored;
 
@@ -43,5 +44,6 @@ namespace Raven.Client
 	public interface IDocumentStoreListener
 	{
 		void BeforeStore(string key, object entityInstance, JObject metadata);
+		void AfterStore(string key, object entityInstance, JObject metadata);
 	}
 }

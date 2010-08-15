@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -18,6 +17,9 @@ namespace Raven.Database.Server.Responders
 	public static class HttpExtensions
 	{
 		static readonly Regex findCharset = new Regex(@"charset=([\w-]+)", RegexOptions.Compiled|RegexOptions.IgnoreCase);
+
+		private static readonly string EmbeddedLastChangedDate =
+			File.GetLastWriteTime(typeof (HttpExtensions).Assembly.Location).Ticks.ToString("G");
 
 		private static Encoding GetRequestEncoding(IHttpContext context)
 		{
@@ -63,13 +65,13 @@ namespace Raven.Database.Server.Responders
 		public static void WriteJson(this IHttpContext context, object obj)
 		{
 			context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
-			var streamWriter = new StreamWriter(context.Response.OutputStream);
+			var streamWriter = new StreamWriter(context.Response.OutputStream, Encoding.UTF8);
 			new JsonSerializer
 			{
 				Converters = {new JsonToJsonConverter(), new JsonEnumConverter()},
 			}.Serialize(new JsonTextWriter(streamWriter)
 			{
-				Formatting = Formatting.Indented
+				Formatting = Formatting.None
 			}, obj);
 			streamWriter.Flush();
 		}
@@ -77,10 +79,10 @@ namespace Raven.Database.Server.Responders
 		public static void WriteJson(this IHttpContext context, JToken obj)
 		{
 			context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
-			var streamWriter = new StreamWriter(context.Response.OutputStream);
+			var streamWriter = new StreamWriter(context.Response.OutputStream, Encoding.UTF8);
 			var jsonTextWriter = new JsonTextWriter(streamWriter)
 			{
-				Formatting = Formatting.Indented
+				Formatting = Formatting.None
 			};
 			obj.WriteTo(jsonTextWriter, new JsonEnumConverter());
 			jsonTextWriter.Flush();
@@ -89,7 +91,7 @@ namespace Raven.Database.Server.Responders
 
 		public static void WriteData(this IHttpContext context, JObject data, JObject headers, Guid etag)
 		{
-			WriteData(context, Encoding.UTF8.GetBytes(data.ToString(Formatting.Indented)), headers, etag);
+			WriteData(context, Encoding.UTF8.GetBytes(data.ToString(Formatting.None)), headers, etag);
 		}
 
 		public static void WriteData(this IHttpContext context, byte[] data, JObject headers, Guid etag)
@@ -98,7 +100,7 @@ namespace Raven.Database.Server.Responders
 			{
 				if (header.Name.StartsWith("@"))
 					continue;
-				context.Response.Headers[header.Name] = StringQuotesIfNeeded(header.Value.ToString());
+				context.Response.Headers[header.Name] = StripQuotesIfNeeded(header.Value.ToString(Formatting.None));
 			}
             if (headers["@Http-Status-Code"] != null)
             {
@@ -106,12 +108,10 @@ namespace Raven.Database.Server.Responders
                 context.Response.StatusDescription = headers.Value<string>("@Http-Status-Description");
             }
 			context.Response.Headers["ETag"] = etag.ToString();
-			context.Response.ContentLength64 = data.Length;
 			context.Response.OutputStream.Write(data, 0, data.Length);
-			context.Response.OutputStream.Flush();
 		}
 
-		private static string StringQuotesIfNeeded(string str)
+		private static string StripQuotesIfNeeded(string str)
 		{
 			if (str.StartsWith("\"") && str.EndsWith("\""))
 				return str.Substring(1, str.Length - 2);
@@ -283,12 +283,12 @@ namespace Raven.Database.Server.Responders
 			context.Response.ContentType = GetContentType(docPath);
 			if (File.Exists(filePath) == false)
 			{
-				string resourceName = "Raven.Database.Server.WebUI." + docPath.Replace("/", ".");
-				if (etagValue == resourceName)
+				if (etagValue == EmbeddedLastChangedDate)
 				{
 					context.SetStatusToNotModified();
 					return;
 				}
+				string resourceName = "Raven.Database.Server.WebUI." + docPath.Replace("/", "."); 
 				using (var resource = typeof(HttpExtensions).Assembly.GetManifestResourceStream(resourceName))
 				{
 					if (resource == null)
@@ -298,7 +298,7 @@ namespace Raven.Database.Server.Responders
 					}
 					bytes = resource.ReadData();
 				}
-				context.Response.Headers["ETag"] = resourceName;
+				context.Response.Headers["ETag"] = EmbeddedLastChangedDate;
 			}
 			else
 			{
@@ -312,7 +312,6 @@ namespace Raven.Database.Server.Responders
 				context.Response.Headers["ETag"] = fileEtag;
 			}
 			context.Response.OutputStream.Write(bytes, 0, bytes.Length);
-			context.Response.OutputStream.Flush();
 		}
 
 		private static string GetContentType(string docPath)

@@ -7,6 +7,7 @@ using Raven.Client.Shard.ShardStrategy.ShardAccess;
 using Raven.Client.Shard.ShardStrategy.ShardResolution;
 using Raven.Client.Shard.ShardStrategy.ShardSelection;
 using Raven.Client.Tests.Document;
+using Raven.Database.Server;
 using Raven.Server;
 using Xunit;
 using System.Collections.Generic;
@@ -28,8 +29,8 @@ namespace Raven.Client.Tests.Shard
             path1 = GetPath("TestShardedDb1");
             path2 = GetPath("TestShardedDb2");
 
-            RavenDbServer.EnsureCanListenToWhenInNonAdminContext(port1);
-            RavenDbServer.EnsureCanListenToWhenInNonAdminContext(port2);
+            NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port1);
+            NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port2);
 
             company1 = new Company { Name = "Company1" };
             company2 = new Company { Name = "Company2" };
@@ -74,7 +75,8 @@ namespace Raven.Client.Tests.Shard
 
             using (var documentStore = new ShardedDocumentStore(shardStrategy, shards))
             {
-                documentStore.Stored += (storeServer, storeEntity) => serverPortsStoredUpon.Add(storeServer);
+				documentStore.Stored += (sender, args) => serverPortsStoredUpon.Add(args.SessionIdentifier);
+
                 documentStore.Initialize();
 
                 using (var session = documentStore.OpenSession())

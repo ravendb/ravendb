@@ -1,0 +1,149 @@
+﻿<UserControl
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+	xmlns:local="clr-namespace:TutorialSL"
+	xmlns:control="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls"
+	xmlns:syswin="clr-namespace:System.Windows;assembly=System.Windows.Controls"
+
+	x:Class="TutorialSL.MainPage" Width="Auto" d:DesignWidth="604.333" d:DesignHeight="513.333">
+	<UserControl.Resources>
+		<Storyboard x:Key="tutorial_nav_OnMouseEnter" AutoReverse="False">
+			<DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Storyboard.TargetName="tutorial_nav" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.X)">
+				<SplineDoubleKeyFrame KeyTime="00:00:00.2000000" Value="0" KeySpline="0.5,0,0.5,1"/>
+			</DoubleAnimationUsingKeyFrames>
+		</Storyboard>
+		<Storyboard x:Key="tutorial_nav_OnMouseLeave">
+			<DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Storyboard.TargetName="tutorial_nav" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.X)">
+				<SplineDoubleKeyFrame KeyTime="00:00:00.2000000" Value="275" KeySpline="0.5,0,0.5,1"/>
+			</DoubleAnimationUsingKeyFrames>
+		</Storyboard>
+		<Storyboard x:Key="action_MouseEnter">
+			<ColorAnimationUsingKeyFrames BeginTime="00:00:00" Storyboard.TargetName="action" Storyboard.TargetProperty="(TextElement.Foreground).(SolidColorBrush.Color)">
+				<SplineColorKeyFrame KeyTime="00:00:00.1000000" Value="#FFE5E5E5" KeySpline="0.5,0,0.5,1"/>
+			</ColorAnimationUsingKeyFrames>
+			<ColorAnimationUsingKeyFrames BeginTime="00:00:00" Storyboard.TargetName="action" Storyboard.TargetProperty="(TextElement.Background).(GradientBrush.GradientStops)[1].(GradientStop.Color)">
+				<SplineColorKeyFrame KeyTime="00:00:00.1000000" Value="#FF424242" KeySpline="0.5,0,0.5,1"/>
+			</ColorAnimationUsingKeyFrames>
+			<ColorAnimationUsingKeyFrames BeginTime="00:00:00" Storyboard.TargetName="action" Storyboard.TargetProperty="(TextElement.Background).(GradientBrush.GradientStops)[0].(GradientStop.Color)">
+				<SplineColorKeyFrame KeyTime="00:00:00.1000000" Value="#FF5F5F5F" KeySpline="0.5,0,0.5,1"/>
+			</ColorAnimationUsingKeyFrames>
+		</Storyboard>
+		<Storyboard x:Key="action_MouseLeave">
+			<ColorAnimationUsingKeyFrames BeginTime="00:00:00" Storyboard.TargetName="action" Storyboard.TargetProperty="(TextElement.Foreground).(SolidColorBrush.Color)">
+				<SplineColorKeyFrame KeyTime="00:00:00.1000000" Value="#FFC1C1C1" KeySpline="0.5,0,0.5,1"/>
+			</ColorAnimationUsingKeyFrames>
+			<ColorAnimationUsingKeyFrames BeginTime="00:00:00" Storyboard.TargetName="action" Storyboard.TargetProperty="(TextElement.Background).(GradientBrush.GradientStops)[0].(GradientStop.Color)">
+				<SplineColorKeyFrame KeyTime="00:00:00.1000000" Value="#FF424242" KeySpline="0.5,0,0.5,1"/>
+			</ColorAnimationUsingKeyFrames>
+		</Storyboard>
+		<Storyboard x:Key="header_navigation_MouseEnter">
+			<DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Storyboard.TargetName="header_navigation" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.Y)">
+				<SplineDoubleKeyFrame KeyTime="00:00:00.2000000" Value="0" KeySpline="0.5,0,0.5,1"/>
+			</DoubleAnimationUsingKeyFrames>
+		</Storyboard>
+		<Storyboard x:Key="header_navigation_MouseLeave">
+			<DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Storyboard.TargetName="header_navigation" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.Y)">
+				<SplineDoubleKeyFrame KeyTime="00:00:00.2000000" Value="-18" KeySpline="0.5,0,0.5,1"/>
+			</DoubleAnimationUsingKeyFrames>
+		</Storyboard>
+	</UserControl.Resources>
+
+	<Grid x:Name="LayoutRoot" Margin="0">
+		<Grid x:Name="loading" Background="#BF545454" Visibility="Collapsed">
+			<Border BorderBrush="#FF484848" BorderThickness="10" Margin="150" CornerRadius="10" Background="White">
+				<Border.Effect>
+					<DropShadowEffect BlurRadius="37" Direction="180"/>
+				</Border.Effect>
+				<TextBlock FontSize="48" Text="Loading ..." TextWrapping="Wrap" Margin="0" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+			</Border>
+		</Grid>
+		<Grid x:Name="Page">
+			<Border x:Name="header" BorderBrush="Black" BorderThickness="0" Padding="8,10,8,20" Margin="0" VerticalAlignment="Top" Canvas.ZIndex="10">
+				<Border.Background>
+					<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+						<GradientStop Color="#55000000" Offset="0.777"/>
+						<GradientStop Offset="1"/>
+						<GradientStop Color="#FFEFEFEF" Offset="0.773"/>
+					</LinearGradientBrush>
+				</Border.Background>
+				<TextBlock x:Name="header_name" HorizontalAlignment="Left" FontSize="32" Text="Pick a tutorial" TextWrapping="Wrap" Margin="0,0,0,-8" FontFamily="Segoe UI"/>
+			</Border>
+			<Border x:Name="header_navigation" VerticalAlignment="Top" BorderBrush="#FF424242" BorderThickness="1" Margin="5,0" d:LayoutOverrides="Width" Background="#FF424242" CornerRadius="0,0,10,10" RenderTransformOrigin="0.5,0.5" Canvas.ZIndex="100" Visibility="Collapsed">
+				<Border.RenderTransform>
+					<TransformGroup>
+						<ScaleTransform/>
+						<SkewTransform/>
+						<RotateTransform/>
+						<TranslateTransform Y="-18"/>
+					</TransformGroup>
+				</Border.RenderTransform>
+				<StackPanel Background="{x:Null}" Orientation="Horizontal" Margin="0" VerticalAlignment="Top" >
+					<TextBlock x:Name="action" Cursor="Hand" Margin="10,0,5,0" Foreground="#FFC1C1C1" Padding="5,3" Text="&lt; back" TextWrapping="Wrap" FontFamily="Segoe UI" FontSize="10.667"/>
+				</StackPanel>
+			</Border>
+			<Grid x:Name="body" Margin="0,50,0,25" Background="White">
+				<ScrollViewer x:Name="tutorial_scroll" Margin="0,0,25,0" Padding="0" VerticalScrollBarVisibility="Auto">
+					<local:TutorialPage Margin="0" Background="{x:Null}" Padding="0"/>
+				</ScrollViewer>
+				<ScrollViewer x:Name="main_scroll" Margin="0" Padding="8,0,8,16" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+					<StackPanel x:Name="main" VerticalAlignment="Top" Background="White" Margin="0,15,0,0">
+						<local:TutorialControl Margin="0"/>
+						<local:TutorialControl Margin="0"/>
+					</StackPanel>
+				</ScrollViewer>
+			</Grid>
+			<Border x:Name="tutorial_nav" HorizontalAlignment="Right" Width="300" Background="White" BorderBrush="#FF7B7B7B" BorderThickness="5,2,0,2" CornerRadius="10,0,0,10" Padding="2,2,0,2" Margin="0,30,0,10" RenderTransformOrigin="0.5,0.5" Canvas.ZIndex="20" Visibility="Collapsed">
+				<Border.Resources>
+					<!-- Chapter TEMPLATE -->
+					<!--<DataTemplate x:Key="ChapterTemplate">
+						<TextBlock Text="{Binding name}" />
+					</DataTemplate>-->
+
+					<!-- Section TEMPLATE -->
+					<!--<syswin:HierarchicalDataTemplate 
+						x:Key="SectionTemplate"
+						ItemsSource="{Binding chapters}"
+						ItemTemplate="{StaticResource ChapterTemplate}"
+          >
+						<TextBlock Text="{Binding name}" />
+					</syswin:HierarchicalDataTemplate>-->
+				</Border.Resources>
+				<Border.RenderTransform>
+					<TransformGroup>
+						<ScaleTransform/>
+						<SkewTransform/>
+						<RotateTransform/>
+						<TranslateTransform X="275"/>
+					</TransformGroup>
+				</Border.RenderTransform>
+				<Grid>
+					<TextBlock Margin="0" Width="130" Height="18" RenderTransformOrigin="0.5,0.5" Text="Jump to another section" HorizontalAlignment="Left" VerticalAlignment="Center" FontFamily="Segoe UI" FontSize="12" >
+						<TextBlock.RenderTransform>
+							<TransformGroup>
+								<ScaleTransform/>
+								<SkewTransform/>
+								<RotateTransform Angle="-90"/>
+								<TranslateTransform X="-58"/>
+							</TransformGroup>
+						</TextBlock.RenderTransform>
+					</TextBlock>
+					<control:TreeView x:Name="chapters" BorderBrush="{x:Null}" FontSize="13.333" Margin="20,0,0,0" RenderTransformOrigin="0.5,0.5" Padding="0" BorderThickness="0" d:LayoutOverrides="Width" Background="{x:Null}" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" MaxWidth="293" FontFamily="Segoe UI">
+					</control:TreeView>
+				</Grid>
+
+				<!--<ListView Margin="0" Background="White" BorderBrush="White" BorderThickness="0" IsSynchronizedWithCurrentItem="True" FontSize="16">
+				<ListView.View>
+					<GridView>
+						<GridViewColumn/>
+					</GridView>
+				</ListView.View>
+				<ListViewItem Margin="0" Content="Chapter 1"/>
+				<ListViewItem Margin="0" Content="Chapter 2"/>
+			</ListView>-->
+			</Border>
+		</Grid>
+	</Grid>
+</UserControl>

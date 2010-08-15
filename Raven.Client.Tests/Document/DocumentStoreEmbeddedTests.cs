@@ -6,10 +6,12 @@ using System.Transactions;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
+using Raven.Client.Indexes;
 using Raven.Client.Tests.Indexes;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
 using Raven.Database.Indexing;
+using Raven.Database.Json;
 using Xunit;
 using System.Linq;
 
@@ -69,6 +71,31 @@ namespace Raven.Client.Tests.Document
         }
 
 		[Fact]
+		public void Using_attachments()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				var attachment = documentStore.DatabaseCommands.GetAttachment("ayende");
+				Assert.Null(attachment);
+
+				documentStore.DatabaseCommands.PutAttachment("ayende", null, new byte[] { 1, 2, 3 }, new JObject(new JProperty("Hello", "World")));
+
+				attachment = documentStore.DatabaseCommands.GetAttachment("ayende");
+				Assert.NotNull(attachment);
+
+				Assert.Equal(new byte[]{1,2,3}, attachment.Data);
+				Assert.Equal("World", attachment.Metadata.Value<string>("Hello"));
+
+				documentStore.DatabaseCommands.DeleteAttachment("ayende", null);
+
+				attachment = documentStore.DatabaseCommands.GetAttachment("ayende");
+				Assert.Null(attachment);
+
+			}
+		}
+
+
+		[Fact]
 		public void Will_get_notification_when_reading_non_authoritive_information()
 		{
 			using (var documentStore = NewDocumentStore())
@@ -116,7 +143,7 @@ namespace Raven.Client.Tests.Document
 					}
 					tx.Complete();
 				}
-				Thread.Sleep(100);
+				Thread.Sleep(500);
 				using (var session = documentStore.OpenSession())
 				{
 					Assert.NotNull(session.Load<Contact>("contacts/1"));
@@ -629,6 +656,36 @@ namespace Raven.Client.Tests.Document
 		}
 
 		[Fact]
+		public void Should_retrieve_all_entities_using_connection_string()
+		{
+			using (var documentStore =  new DocumentStore
+			{
+				ConnectionStringName = "Local",
+				Configuration =
+					{
+						RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true
+					}
+			})
+			{
+				path = documentStore.DataDirectory;
+
+				documentStore.Initialize();
+
+				var session1 = documentStore.OpenSession();
+				session1.Store(new Company { Name = "Company 1" });
+				session1.Store(new Company { Name = "Company 2" });
+
+				session1.SaveChanges();
+				var session2 = documentStore.OpenSession();
+				var companyFound = session2.LuceneQuery<Company>()
+					.WaitForNonStaleResults()
+					.ToArray();
+
+				Assert.Equal(2, companyFound.Length);
+			}
+		}
+
+		[Fact]
 		public void Can_create_index_using_linq_from_client()
 		{
 			using (var store = NewDocumentStore())
@@ -659,5 +716,66 @@ namespace Raven.Client.Tests.Document
 				}
 			}
 		}
+
+		[Fact]
+		public void Can_delete_by_index()
+		{
+			using (var store = NewDocumentStore())
+			{
+				var entity = new Company { Name = "Company" };
+				using (var session = store.OpenSession())
+				{
+					session.Store(entity);
+					session.SaveChanges();
+
+					session.LuceneQuery<Company>().WaitForNonStaleResults().ToArray();// wait for the index to settle down
+				}
+
+				store.DatabaseCommands.DeleteByIndex("Raven/DocumentsByEntityName", new IndexQuery
+				{
+					Query = "Tag:[[Companies]]"
+				}, allowStale: false);
+
+				using (var session = store.OpenSession())
+				{
+					Assert.Empty(session.LuceneQuery<Company>().WaitForNonStaleResults().ToArray());
+				}
+			}
+		}
+
+		[Fact]
+		public void Can_update_by_index()
+		{
+			using (var store = NewDocumentStore())
+			{
+				var entity = new Company { Name = "Company" };
+				using (var session = store.OpenSession())
+				{
+					session.Store(entity);
+					session.SaveChanges();
+
+					session.LuceneQuery<Company>().WaitForNonStaleResults().ToArray();// wait for the index to settle down
+				}
+
+				store.DatabaseCommands.UpdateByIndex("Raven/DocumentsByEntityName", new IndexQuery
+				{
+					Query = "Tag:[[Companies]]"
+				}, new[]
+				{
+					new PatchRequest
+					{
+						Type = "Set",
+						Name = "Name",
+						Value = JToken.FromObject("Another Company")
+					},
+				}, allowStale: false);
+
+				using (var session = store.OpenSession())
+				{
+					Assert.Equal("Another Company", session.Load<Company>(entity.Id).Name);
+				}
+			}
+		}
+
 	}
 }

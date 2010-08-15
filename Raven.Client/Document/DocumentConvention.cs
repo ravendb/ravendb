@@ -1,9 +1,12 @@
 using System;
 using System.Reflection;
+using System.Runtime.Serialization.Formatters;
 using System.Text;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using Raven.Client.Util;
 using System.Linq;
+using Raven.Database.Json;
 
 namespace Raven.Client.Document
 {
@@ -14,9 +17,16 @@ namespace Raven.Client.Document
 			FindIdentityProperty = q => q.Name == "Id";
 			FindTypeTagName = t => DefaultTypeTagName(t);
 			IdentityPartsSeparator = "/";
-		    JsonContractResolver = new DefaultContractResolver(shareCache: true);
+			JsonContractResolver = new DefaultContractResolver(shareCache: true)
+			{
+				DefaultMembersSearchFlags =
+					BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance
+			};
 		    MaxNumberOfRequestsPerSession = 30;
+			CustomizeJsonSerializer = serializer => { };
 		}
+
+		public Action<JsonSerializer> CustomizeJsonSerializer { get; set; }
 
 		public string IdentityPartsSeparator { get; set; }
 
@@ -68,5 +78,23 @@ namespace Raven.Client.Document
 		public Func<PropertyInfo, bool> FindIdentityProperty { get; set; }
 
 		public Func<object, string> DocumentKeyGenerator { get; set; }
+
+		public JsonSerializer CreateSerializer()
+		{
+			var jsonSerializer = new JsonSerializer
+			{
+				ContractResolver = JsonContractResolver,
+				TypeNameHandling = TypeNameHandling.Auto,
+				TypeNameAssemblyFormat = FormatterAssemblyStyle.Simple,
+				ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
+				Converters =
+					{
+						new JsonEnumConverter(),
+						new JsonLuceneDateTimeConverter()
+					}
+			};
+			CustomizeJsonSerializer(jsonSerializer);
+			return jsonSerializer;
+		}
 	}
 }

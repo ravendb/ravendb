@@ -1,0 +1,17 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tutorial", "Tutorial\Tutorial.csproj", "{3FC113C8-95CA-451C-BD99-146E21BE7B9B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		v2Debug|Any CPU = v2Debug|Any CPU
+		v2Release|Any CPU = v2Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{3FC113C8-95CA-451C-BD99-146E21BE7B9B}.v2Debug|Any CPU.ActiveCfg = v2Debug|Any CPU
+		{3FC113C8-95CA-451C-BD99-146E21BE7B9B}.v2Debug|Any CPU.Build.0 = v2Debug|Any CPU
+		{3FC113C8-95CA-451C-BD99-146E21BE7B9B}.v2Release|Any CPU.ActiveCfg = v2Release|Any CPU
+		{3FC113C8-95CA-451C-BD99-146E21BE7B9B}.v2Release|Any CPU.Build.0 = v2Release|Any CPU
+	EndGlobalSection
+EndGlobal

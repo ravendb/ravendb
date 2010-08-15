@@ -10,7 +10,7 @@ namespace Raven.Database
 		public string Key { get; set; }
 		public bool NonAuthoritiveInformation { get; set; }
 		public Guid Etag { get; set; }
-
+		public DateTime LastModified { get; set; }
 		public JObject Projection { get; set; }
 
 		public JObject ToJson()
@@ -18,15 +18,17 @@ namespace Raven.Database
 			if (Projection != null)
 				return Projection;
 
-			var doc = DataAsJson;
-			var etagProp = Metadata.Property("@etag");
+			var doc = new JObject(DataAsJson);//clone the document
+			var metadata = new JObject(Metadata);// clone the metadata
+			metadata["Last-Modified"] = JToken.FromObject(LastModified.ToString("r"));
+			var etagProp = metadata.Property("@etag");
 			if (etagProp == null)
 			{
 				etagProp = new JProperty("@etag");
-				Metadata.Add(etagProp);
+				metadata.Add(etagProp);
 			}
 			etagProp.Value = new JValue(Etag.ToString());
-			doc.Add("@metadata", Metadata);
+			doc.Add("@metadata", metadata);
 			Metadata["Non-Authoritive-Information"] = JToken.FromObject(NonAuthoritiveInformation);
 			return doc;
 		}

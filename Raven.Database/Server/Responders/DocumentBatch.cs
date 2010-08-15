@@ -23,32 +23,25 @@ namespace Raven.Database.Server.Responders
 
         public override void Respond(IHttpContext context)
         {
-            switch (context.Request.HttpMethod)
+        	var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(context));
+        	switch (context.Request.HttpMethod)
             {                
                 case "POST":
                     Batch(context);
                     break;
 				case "DELETE":
-					OnBulkOperation(context, (docId, tx) =>
-					{
-						Database.Delete(docId, null, tx);
-						return new { Document = docId, Deleted = true };
-				
-					} );
+					OnBulkOperation(context, databaseBulkOperations.DeleteByIndex);
             		break;
 				case "PATCH":
 					var patchRequestJson = context.ReadJsonArray();
 					var patchRequests = patchRequestJson.Cast<JObject>().Select(PatchRequest.FromJson).ToArray();
-					OnBulkOperation(context, (docId, tx) =>
-					{
-						var patchResult = Database.ApplyPatch(docId, null, patchRequests, tx);
-						return new {Document = docId, Result = patchResult};
-					});
+					OnBulkOperation(context, (index, query, allowStale) =>
+						databaseBulkOperations.UpdateByIndex(index, query, patchRequests, allowStale));
             		break;
             }
         }
 
-    	private void OnBulkOperation(IHttpContext context, Func<string, TransactionInformation, object> batchOperation)
+    	private void OnBulkOperation(IHttpContext context, Func<string, IndexQuery, bool, JArray> batchOperation)
     	{
     		var match = urlMatcher.Match(context.GetRequestUrl());
     		var index = match.Groups[2].Value;
@@ -58,34 +51,12 @@ namespace Raven.Database.Server.Responders
     			return;
     		}
     		var allowStale = context.GetAllowStale();
-    		Database.TransactionalStorage.Batch(actions =>
-    		{
-    			bool stale;
-				var indexQuery = context.GetIndexQueryFromHttpContext(maxPageSize:int.MaxValue);
+    		var indexQuery = context.GetIndexQueryFromHttpContext(maxPageSize: int.MaxValue);
 
-                indexQuery.FieldsToFetch = new[] { "__document_id" };
+    		var array = batchOperation(index, indexQuery, allowStale);
 
-                var queryResults = Database.QueryDocumentIds(index, indexQuery, out stale);
+			context.WriteJson(array);
 
-    			if (stale)
-    			{
-    				context.SetStatusToNonAuthoritativeInformation();
-    				if (allowStale == false)
-    				{
-    					throw new InvalidOperationException(
-    						"Bulk operation cancelled because the index is stale and allowStale is false");
-    				}
-    			}
-
-				var transactionInformation = GetRequestTransaction(context);
-    			var array = new JArray();
-				foreach (var documentId in queryResults)
-    			{
-    				var result = batchOperation(documentId, transactionInformation);
-					array.Add(JObject.FromObject(result, new JsonSerializer { Converters = { new JsonEnumConverter() } }));
-    			}
-    			context.WriteJson(array);
-    		});
     	}
 		
     	private void Batch(IHttpContext context)

@@ -32,12 +32,13 @@ namespace Raven.Client.Document
 	    protected QueryResult GetQueryResult()
 		{
 			var queryResults = queries.Select(x => x.QueryResult).ToArray();
-			return new QueryResult
-			{
-				IsStale = queryResults.Any(x => x.IsStale),
-				Results = queryResults.SelectMany(x => x.Results).ToArray(),
-				TotalResults = queryResults.Sum(x => x.TotalResults)
-			};
+	        return new QueryResult
+	        {
+	            IsStale = queryResults.Any(x => x.IsStale),
+	            Results = queryResults.SelectMany(x => x.Results).ToList(),
+	            TotalResults = queryResults.Sum(x => x.TotalResults),
+	            SkippedResults = queryResults.Sum(x => x.SkippedResults)
+	        };
 		}
 
 		private void ApplyForAll(Action<IDocumentQuery<T>> act)
@@ -50,12 +51,9 @@ namespace Raven.Client.Document
 
 		public IEnumerator<T> GetEnumerator()
 		{
-			var jsonSerializer = new JsonSerializer
-			{
+			var jsonSerializer =
                 // we assume the same json contract resolver across the entire shared sessions set
-				ContractResolver = shardSessions.First().Conventions.JsonContractResolver,
-				ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor
-			};
+				shardSessions.First().Conventions.CreateSerializer();
 			return QueryResult.Results
 				.Select(j => (T)jsonSerializer.Deserialize(new JTokenReader(j), typeof(T)))
 				.GetEnumerator();
@@ -72,6 +70,12 @@ namespace Raven.Client.Document
 		IEnumerator IEnumerable.GetEnumerator()
 		{
 			return GetEnumerator();
+		}
+
+		public IDocumentQuery<T> Include(string path)
+		{
+			ApplyForAll(x => x.Include(path));
+			return this;
 		}
 
 		public IDocumentQuery<T> Take(int count)

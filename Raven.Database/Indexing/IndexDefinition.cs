@@ -4,7 +4,12 @@ using System.Collections.Generic;
 #if !CLIENT
 using System.Linq.Expressions;
 using System.Text.RegularExpressions;
+using Lucene.Net.Analysis;
+using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
+using Lucene.Net.Search;
+using Version = Lucene.Net.Util.Version;
+
 #endif
 
 namespace Raven.Database.Indexing
@@ -26,7 +31,31 @@ namespace Raven.Database.Indexing
 
 		public IDictionary<string, FieldIndexing> Indexes { get; set; }
 
+		public IDictionary<string, SortOptions> SortOptions { get; set; }
+
+		public IDictionary<string, string> Analyzers { get; set; }
+		
 #if !CLIENT
+		[CLSCompliant(false)]
+		public Analyzer GetAnalyzer(string name)
+		{
+			if (Analyzers == null)
+				return null;
+			string analyzerTypeAsString;
+			if(Analyzers.TryGetValue(name, out analyzerTypeAsString) == false)
+				return null;
+			return CreateAnalyzerInstance(name, analyzerTypeAsString);
+		}
+
+		[CLSCompliant(false)]
+		public Analyzer CreateAnalyzerInstance(string name, string analyzerTypeAsString)
+		{
+			var analyzerType = typeof (StandardAnalyzer).Assembly.GetType(analyzerTypeAsString) ??
+				Type.GetType(analyzerTypeAsString);
+			if(analyzerType == null)
+				throw new InvalidOperationException("Cannot find type '" + analyzerTypeAsString + "' for field: " + name);
+			return (Analyzer) Activator.CreateInstance(analyzerType);
+		}
 
 		[CLSCompliant(false)]
 		public Field.Store GetStorage(string name, Field.Store defaultStorage)
@@ -47,6 +76,22 @@ namespace Raven.Database.Indexing
 				default:
 					throw new ArgumentOutOfRangeException();
 			}
+		}
+
+		public SortOptions? GetSortOption(string name)
+		{
+			SortOptions value;
+			if (!SortOptions.TryGetValue(name, out value))
+			{
+				if (!name.EndsWith("_Range"))
+				{
+					return null;
+				}
+				var nameWithoutRange = name.Substring(0, name.Length - "_Range".Length);
+				if (!SortOptions.TryGetValue(nameWithoutRange, out value))
+					return null;
+			}
+			return value;
 		}
 
 		[CLSCompliant(false)]
@@ -72,10 +117,13 @@ namespace Raven.Database.Indexing
 			}
 		}
 #endif
+
 		public IndexDefinition()
 		{
 			Indexes = new Dictionary<string, FieldIndexing>();
 			Stores = new Dictionary<string, FieldStorage>();
+			Analyzers = new Dictionary<string, string>();
+			SortOptions = new Dictionary<string, SortOptions>();
 		}
 
 		public bool Equals(IndexDefinition other)

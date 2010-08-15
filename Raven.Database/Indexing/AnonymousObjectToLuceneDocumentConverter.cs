@@ -18,7 +18,7 @@ namespace Raven.Database.Indexing
 			        let name = property.Name
 			        where name != "__document_id"
 			        let value = property.GetValue(val)
-			        from field in Createfields(name, value, indexDefinition, defaultStorage)
+			        from field in CreateFields(name, value, indexDefinition, defaultStorage)
 			        select field);
 		}
 
@@ -28,7 +28,7 @@ namespace Raven.Database.Indexing
         	        let name = property.Name
         	        where name != "__document_id"
         	        let value = GetPropertyValue(property)
-        	        from field in Createfields(name, value, indexDefinition, defaultStorage)
+        	        from field in CreateFields(name, value, indexDefinition, defaultStorage)
         	        select field);
         }
 
@@ -54,7 +54,7 @@ namespace Raven.Database.Indexing
 		///		1. with the supplied name, containing the numeric value as an unanalyzed string - useful for direct queries
 		///		2. with the name: name +'_Range', containing the numeric value in a form that allows range queries
 		/// </summary>
-		private static IEnumerable<AbstractField> Createfields(string name, object value, IndexDefinition indexDefinition, Field.Store defaultStorage)
+		private static IEnumerable<AbstractField> CreateFields(string name, object value, IndexDefinition indexDefinition, Field.Store defaultStorage)
 		{
 			if (value == null)
 			{
@@ -90,31 +90,35 @@ namespace Raven.Database.Indexing
 			}
 
 
+			var numericField = new NumericField(name + "_Range", indexDefinition.GetStorage(name, defaultStorage), true);
 			if (value is int)
 			{
-				yield return new NumericField(name + "_Range", indexDefinition.GetStorage(name, defaultStorage), true)
-					.SetIntValue((int)value);
-
+				if(indexDefinition.GetSortOption(name) == SortOptions.Long)
+					yield return numericField.SetLongValue((int)value);
+				else
+					yield return numericField.SetIntValue((int)value);
 			}
 			if (value is long)
 			{
-				yield return new NumericField(name + "_Range", indexDefinition.GetStorage(name, defaultStorage), true)
+				yield return numericField
 					.SetLongValue((long) value);
 
 			}
 			if (value is decimal)
             {
-				yield return new NumericField(name + "_Range", indexDefinition.GetStorage(name, defaultStorage), true)
+				yield return numericField
 					.SetDoubleValue((double)(decimal)value);
             }
 			if (value is float)
             {
-            	yield return new NumericField(name + "_Range", indexDefinition.GetStorage(name, defaultStorage), true)
-            		.SetFloatValue((float) value);
+				if (indexDefinition.GetSortOption(name) == SortOptions.Double)
+					yield return numericField.SetDoubleValue((float)value);
+				else
+            		yield return numericField.SetFloatValue((float) value);
             }
 			if (value is double)
             {
-				yield return new NumericField(name + "_Range", indexDefinition.GetStorage(name, defaultStorage), true)
+				yield return numericField
 					.SetDoubleValue((double)value);
             }
 		}

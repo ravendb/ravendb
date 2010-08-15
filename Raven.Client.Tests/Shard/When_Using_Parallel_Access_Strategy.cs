@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading;
 using Raven.Client.Document;
 using Raven.Client.Tests.Document;
+using Raven.Database.Server;
 using Raven.Server;
 using Xunit;
 using System.Collections.Generic;
@@ -20,7 +21,7 @@ namespace Raven.Client.Tests.Shard
 		{
             port = 8080;
             path = GetPath("TestDb");
-			RavenDbServer.EnsureCanListenToWhenInNonAdminContext(8080);
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8080);
 		}
 
 		#region IDisposable Members

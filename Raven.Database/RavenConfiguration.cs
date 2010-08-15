@@ -44,10 +44,12 @@ namespace Raven.Database
 
 			DataDirectory = ConfigurationManager.AppSettings["Raven/DataDir"] ?? @"~\Data";
 
-			if (DataDirectory.StartsWith(@"~\"))
-				DataDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, DataDirectory.Substring(2));
-
 			WebDir = ConfigurationManager.AppSettings["Raven/WebDir"] ?? GetDefaultWebDir();
+
+			bool httpCompressionTemp;
+			if (bool.TryParse(ConfigurationManager.AppSettings["Raven/HttpCompression"], out httpCompressionTemp) == false)
+				httpCompressionTemp = true;
+			HttpCompression = httpCompressionTemp;
 
 			var transactionMode = ConfigurationManager.AppSettings["Raven/TransactionMode"];
 			TransactionMode result;
@@ -164,6 +166,8 @@ namespace Raven.Database
 
 		public bool RunInUnreliableYetFastModeThatIsNotSuitableForProduction { get; set; }
 
+		public bool HttpCompression { get; set; }
+
 	    public int MaxPageSize { get; set; }
 
 	    public void LoadLoggingSettings()
@@ -198,6 +202,8 @@ namespace Raven.Database
 
 			if(type == null)
 				throw new InvalidOperationException("Could not find transactional storage type: " + StorageTypeName);
+
+			Catalog.Catalogs.Add(new AssemblyCatalog(type.Assembly));
 
 			return (ITransactionalStorage)Activator.CreateInstance(type, this, notifyAboutWork);
 		}

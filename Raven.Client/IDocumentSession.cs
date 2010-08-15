@@ -1,9 +1,14 @@
-﻿using Raven.Client.Linq;
+﻿using Raven.Client.Client;
+using Raven.Client.Document;
+using Raven.Client.Indexes;
+using Raven.Client.Linq;
 
 namespace Raven.Client
 {
 	public interface IDocumentSession : IInMemoryDocumentSessionOperations
 	{
+		IDatabaseCommands DatabaseCommands { get; }
+
 		T Load<T>(string id);
 
 		T[] Load<T>(params string[] ids);
@@ -12,7 +17,11 @@ namespace Raven.Client
 
 		IRavenQueryable<T> Query<T>(string indexName);
 
+		IRavenQueryable<T> Query<T, TIndexCreator>(string indexName) where TIndexCreator : AbstractIndexCreationTask, new();
+
 		IDocumentQuery<T> LuceneQuery<T>(string indexName);
+
+		ILoaderWithInclude Include(string path);
 
 		void SaveChanges();
 

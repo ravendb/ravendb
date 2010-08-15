@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -12,6 +14,8 @@ using Raven.Client.Exceptions;
 using Raven.Database;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
+using Raven.Client.Client;
+using System.Collections.Generic;
 
 namespace Raven.Client.Client.Async
 {
@@ -62,6 +66,7 @@ namespace Raven.Client.Client.Async
 					DataAsJson = JObject.Parse(responseString),
 					NonAuthoritiveInformation = asyncData.Request.ResponseStatusCode == HttpStatusCode.NonAuthoritativeInformation,
 					Key = asyncData.Key,
+					LastModified = DateTime.ParseExact(asyncData.Request.ResponseHeaders["Last-Modified"], "r", CultureInfo.InvariantCulture),
 					Etag = new Guid(asyncData.Request.ResponseHeaders["ETag"]),
 					Metadata = asyncData.Request.ResponseHeaders.FilterHeaders(isServerDocument: false)
 				};
@@ -75,7 +80,7 @@ namespace Raven.Client.Client.Async
 					return null;
 				if (httpWebResponse.StatusCode == HttpStatusCode.Conflict)
 				{
-					var conflicts = new StreamReader(httpWebResponse.GetResponseStream());
+					var conflicts = new StreamReader(httpWebResponse.GetResponseStreamWithHttpDecompression());
 					var conflictsDoc = JObject.Load(new JsonTextReader(conflicts));
 					var conflictIds = conflictsDoc.Value<JArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
 
@@ -119,7 +124,7 @@ namespace Raven.Client.Client.Async
 			try
 			{
 				var responseString = multiStepAsyncResult.Request.EndReadResponseString(multiStepAsyncResult.Result);
-				responses = JArray.Parse(responseString);
+				responses = JObject.Parse(responseString).Value<JArray>("Results");
 			}
 			catch (WebException e)
 			{
@@ -130,17 +135,7 @@ namespace Raven.Client.Client.Async
 				throw ThrowConcurrencyException(e);
 			}
 
-			return (from doc in responses.Cast<JObject>()
-					let metadata = (JObject)doc["@metadata"]
-					let _ = doc.Remove("@metadata")
-					select new JsonDocument
-					{
-						Key = metadata["@id"].Value<string>(),
-						Etag = new Guid(metadata["@etag"].Value<string>()),
-						Metadata = metadata,
-						NonAuthoritiveInformation = metadata.Value<bool>("Non-Authoritive-Information"),
-						DataAsJson = doc,
-					})
+			return SerializationHelper.JObjectsToJsonDocuments(responses.Cast<JObject>())
 				.ToArray();
 		}
 
@@ -162,20 +157,16 @@ namespace Raven.Client.Client.Async
 		{
 			var userAsyncData = ((UserAsyncData)result);
 			var responseString = userAsyncData.Request.EndReadResponseString(userAsyncData.Result);
-			var serializer = new JsonSerializer
-			{
-				ContractResolver = convention.JsonContractResolver,
-				ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor
-			};
 			JToken json;
 			using (var reader = new JsonTextReader(new StringReader(responseString)))
-				json = (JToken)serializer.Deserialize(reader);
+				json = (JToken)convention.CreateSerializer().Deserialize(reader);
 
 			return new QueryResult
 			{
 				IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
-				Results = json["Results"].Children().Cast<JObject>().ToArray(),
-				TotalResults = Convert.ToInt32(json["TotalResults"].ToString())
+				Results = json["Results"].Children().Cast<JObject>().ToList(),
+				TotalResults = Convert.ToInt32(json["TotalResults"].ToString()),
+                SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString())
 			};
 		}
 
@@ -229,7 +220,7 @@ namespace Raven.Client.Client.Async
 
 		private static Exception ThrowConcurrencyException(WebException e)
 		{
-			using (var sr = new StreamReader(e.Response.GetResponseStream()))
+			using (var sr = new StreamReader(e.Response.GetResponseStreamWithHttpDecompression()))
 			{
 				var text = sr.ReadToEnd();
 				var errorResults = JsonConvert.DeserializeAnonymousType(text, new

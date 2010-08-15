@@ -3,7 +3,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 
 using Lucene.Net.Analysis;
-using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Search;
 using Version = Lucene.Net.Util.Version;
 
@@ -14,18 +13,18 @@ namespace Raven.Database.Indexing
 	{
 		static readonly Regex untokenizedQuery = new Regex(@"([\w\d_]+?):(\[\[.+?\]\])", RegexOptions.Compiled);
 
-		public static Query BuildQuery(string query)
+		public static Query BuildQuery(string query, PerFieldAnalyzerWrapper analyzer)
 		{
-			var analyzer = new PerFieldAnalyzerWrapper(new StandardAnalyzer(Version.LUCENE_29));
 			var keywordAnalyzer = new KeywordAnalyzer();
 			try
 		    {
 		    	query = PreProcessUntokenizedTerms(analyzer, query, keywordAnalyzer);
-				return new RangeQueryParser(Version.LUCENE_29, "", analyzer).Parse(query);
+		    	var queryParser = new RangeQueryParser(Version.LUCENE_29, "", analyzer);
+				queryParser.SetAllowLeadingWildcard(true);
+		    	return queryParser.Parse(query);;
 			}
 		    finally
 		    {
-		        analyzer.Close();
 				keywordAnalyzer.Close();
 		    }
 		}
@@ -46,18 +45,32 @@ namespace Raven.Database.Indexing
 			// KeywordAnalyzer will not tokenize the values
 
 			// process in reverse order to leverage match string indexes
-			for (int i=untokenizedMatches.Count; i>0; i--)
+			for (int i = untokenizedMatches.Count; i > 0; i--)
 			{
-				Match match = untokenizedMatches[i-1];
+				Match match = untokenizedMatches[i - 1];
 
 				// specify that term for this field should not be tokenized
 				analyzer.AddAnalyzer(match.Groups[1].Value, keywordAnlyzer);
 
 				Group term = match.Groups[2];
 
+				// introduce " " around the term
+				var startIndex = term.Index;
+				var length = term.Length-2;
+				if (sb[startIndex + length - 1] != '"')
+				{
+					sb.Insert(startIndex + length, '"');
+					length += 1;
+				}
+				if (sb[startIndex+2] != '"')
+				{
+					sb.Insert(startIndex+2, '"');
+					length += 1;
+				}
 				// remove enclosing "[[" "]]" from term value (again in reverse order)
-				sb.Remove(term.Index+term.Length-2, 2);
-				sb.Remove(term.Index, 2);
+				sb.Remove(startIndex + length, 2);
+				sb.Remove(startIndex, 2);
+				
 			}
 
 			return sb.ToString();

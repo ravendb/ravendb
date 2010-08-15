@@ -2,7 +2,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using Newtonsoft.Json.Linq;
+using Raven.Client.Client;
 using Raven.Client.Document;
+using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Raven.Client.Shard.ShardStrategy;
 using Raven.Client.Shard.ShardStrategy.ShardResolution;
@@ -47,6 +49,11 @@ namespace Raven.Client.Shard
 			}
 		}
 
+		public int NumberOfRequests
+		{
+			get { return shardSessions.Sum(x => x.NumberOfRequests); }
+		}
+
 		public event EntityStored Stored;
 	    public event EntityToDocument OnEntityConverted;
 
@@ -86,6 +93,11 @@ namespace Raven.Client.Shard
 		private readonly IShardStrategy shardStrategy;
 		private readonly IDocumentSession[] shardSessions;
 
+		public IDatabaseCommands DatabaseCommands
+		{
+			get { throw new NotSupportedException("You cannot ask a sharded session for its DatabaseCommands, internal sharded session each have diffeernt DatabaseCommands"); }
+		}
+
 		public T Load<T>(string id)
 		{
 
@@ -121,6 +133,11 @@ namespace Raven.Client.Shard
 			return shardStrategy.ShardAccessStrategy.Apply(GetAppropriateShardedSessions<T>(null), sessions => sessions.Load<T>(ids)).ToArray();
 		}
 
+		public ILoaderWithInclude Include(string path)
+		{
+			throw new NotSupportedException("Sharded load queries with include aren't supported currently");
+		}
+
 		public void Delete<T>(T entity)
 		{
 			if (ReferenceEquals(entity, null))
@@ -136,7 +153,12 @@ namespace Raven.Client.Shard
 	        throw new NotSupportedException("Sharded linq queries aren't supported currently");
 	    }
 
-	    public void Refresh<T>(T entity)
+		public IRavenQueryable<T> Query<T, TIndexCreator>(string indexName) where TIndexCreator : AbstractIndexCreationTask, new()
+		{
+			throw new NotSupportedException("Sharded linq queries aren't supported currently");
+		}
+
+		public void Refresh<T>(T entity)
         {
             if (ReferenceEquals(entity, null))
                 throw new ArgumentNullException("entity");

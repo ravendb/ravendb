@@ -103,6 +103,11 @@
             Gets the version of xunit.dll used by the test assembly.
             </summary>
         </member>
+        <member name="M:Xunit.ExecutorWrapper.#cctor">
+            <summary>
+            Initializes the <see cref="T:Xunit.ExecutorWrapper"/> class.
+            </summary>
+        </member>
         <member name="M:Xunit.ExecutorWrapper.#ctor(System.String,System.String,System.Boolean)">
             <summary>
             Initializes a new instance of the <see cref="T:Xunit.ExecutorWrapper"/> class.
@@ -143,21 +148,43 @@
         <member name="P:Xunit.ExecutorWrapper.XunitVersion">
             <inheritdoc/>
         </member>
-        <member name="T:Xunit.ExecutorWrapper.CallbackHandler`1">
+        <member name="T:Xunit.ExecutorWrapper.IntCallbackHandler">
             <summary>
             THIS CLASS IS FOR INTERNAL USE ONLY.
             </summary>
         </member>
-        <member name="M:Xunit.ExecutorWrapper.CallbackHandler`1.#ctor">
+        <member name="M:Xunit.ExecutorWrapper.IntCallbackHandler.InitializeLifetimeService">
             <summary/>
         </member>
-        <member name="M:Xunit.ExecutorWrapper.CallbackHandler`1.#ctor(`0)">
+        <member name="P:Xunit.ExecutorWrapper.IntCallbackHandler.Result">
             <summary/>
         </member>
-        <member name="M:Xunit.ExecutorWrapper.CallbackHandler`1.InitializeLifetimeService">
+        <member name="T:Xunit.ExecutorWrapper.IntCallbackHandlerWithIMessageSink">
+            <summary>
+            THIS CLASS IS FOR INTERNAL USE ONLY.
+            </summary>
+        </member>
+        <member name="M:Xunit.ExecutorWrapper.IntCallbackHandlerWithIMessageSink.System#Runtime#Remoting#Messaging#IMessageSink#AsyncProcessMessage(System.Runtime.Remoting.Messaging.IMessage,System.Runtime.Remoting.Messaging.IMessageSink)">
             <summary/>
         </member>
-        <member name="P:Xunit.ExecutorWrapper.CallbackHandler`1.Result">
+        <member name="M:Xunit.ExecutorWrapper.IntCallbackHandlerWithIMessageSink.System#Runtime#Remoting#Messaging#IMessageSink#SyncProcessMessage(System.Runtime.Remoting.Messaging.IMessage)">
+            <summary/>
+        </member>
+        <member name="P:Xunit.ExecutorWrapper.IntCallbackHandlerWithIMessageSink.System#Runtime#Remoting#Messaging#IMessageSink#NextSink">
+            <summary/>
+        </member>
+        <member name="T:Xunit.ExecutorWrapper.IntCallbackHandlerWithICallbackEventHandler">
+            <summary>
+            THIS CLASS IS FOR INTERNAL USE ONLY.
+            </summary>
+        </member>
+        <member name="M:Xunit.ExecutorWrapper.IntCallbackHandlerWithICallbackEventHandler.GetCallbackResult">
+            <summary/>
+        </member>
+        <member name="M:Xunit.ExecutorWrapper.IntCallbackHandlerWithICallbackEventHandler.RaiseCallbackEvent(System.String)">
+            <summary/>
+        </member>
+        <member name="M:Xunit.ExecutorWrapper.IntCallbackHandlerWithICallbackEventHandler.InitializeLifetimeService">
             <summary/>
         </member>
         <member name="T:Xunit.ExecutorWrapper.XmlNodeCallbackHandler">
@@ -165,7 +192,10 @@
             THIS CLASS IS FOR INTERNAL USE ONLY.
             </summary>
         </member>
-        <member name="M:Xunit.ExecutorWrapper.XmlNodeCallbackHandler.#ctor(System.Predicate{System.Xml.XmlNode})">
+        <member name="F:Xunit.ExecutorWrapper.XmlNodeCallbackHandler.callback">
+            <summary/>
+        </member>
+        <member name="F:Xunit.ExecutorWrapper.XmlNodeCallbackHandler.lastNodeName">
             <summary/>
         </member>
         <member name="M:Xunit.ExecutorWrapper.XmlNodeCallbackHandler.#ctor(System.Predicate{System.Xml.XmlNode},System.String)">
@@ -178,6 +208,37 @@
             <summary/>
         </member>
         <member name="P:Xunit.ExecutorWrapper.XmlNodeCallbackHandler.LastNodeArrived">
+            <summary/>
+        </member>
+        <member name="T:Xunit.ExecutorWrapper.XmlNodeCallbackHandlerWithIMessageSink">
+            <summary>
+            THIS CLASS IS FOR INTERNAL USE ONLY.
+            </summary>
+        </member>
+        <member name="M:Xunit.ExecutorWrapper.XmlNodeCallbackHandlerWithIMessageSink.#ctor(System.Predicate{System.Xml.XmlNode},System.String)">
+            <summary/>
+        </member>
+        <member name="M:Xunit.ExecutorWrapper.XmlNodeCallbackHandlerWithIMessageSink.System#Runtime#Remoting#Messaging#IMessageSink#AsyncProcessMessage(System.Runtime.Remoting.Messaging.IMessage,System.Runtime.Remoting.Messaging.IMessageSink)">
+            <summary/>
+        </member>
+        <member name="M:Xunit.ExecutorWrapper.XmlNodeCallbackHandlerWithIMessageSink.System#Runtime#Remoting#Messaging#IMessageSink#SyncProcessMessage(System.Runtime.Remoting.Messaging.IMessage)">
+            <summary/>
+        </member>
+        <member name="P:Xunit.ExecutorWrapper.XmlNodeCallbackHandlerWithIMessageSink.System#Runtime#Remoting#Messaging#IMessageSink#NextSink">
+            <summary/>
+        </member>
+        <member name="T:Xunit.ExecutorWrapper.XmlNodeCallbackHandlerWithICallbackEventHandler">
+            <summary>
+            THIS CLASS IS FOR INTERNAL USE ONLY.
+            </summary>
+        </member>
+        <member name="M:Xunit.ExecutorWrapper.XmlNodeCallbackHandlerWithICallbackEventHandler.#ctor(System.Predicate{System.Xml.XmlNode},System.String)">
+            <summary/>
+        </member>
+        <member name="M:Xunit.ExecutorWrapper.XmlNodeCallbackHandlerWithICallbackEventHandler.RaiseCallbackEvent(System.String)">
+            <summary/>
+        </member>
+        <member name="M:Xunit.ExecutorWrapper.XmlNodeCallbackHandlerWithICallbackEventHandler.GetCallbackResult">
             <summary/>
         </member>
         <member name="T:Xunit.ExecutorWrapper.OutgoingMessage">

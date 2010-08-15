@@ -65,6 +65,7 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\log4net.dll</HintPath>
     </Reference>
+    <Reference Include="Lucene.Net, Version=2.9.2.1, Culture=neutral, PublicKeyToken=02f879aa45933051, processorArchitecture=MSIL" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Newtonsoft.Json, Version=3.5.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -74,6 +75,7 @@
       <HintPath>..\SharedLibs\Rhino.Mocks.dll</HintPath>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
@@ -94,11 +96,35 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BaseTest.cs" />
+    <Compile Include="Bugs\AnalyzerPerField.cs" />
+    <Compile Include="Bugs\AutoCreateIndexes.cs" />
+    <Compile Include="Bugs\AutoDetectAnaylzersForQuery.cs" />
     <Compile Include="Bugs\BaseClientTest.cs" />
     <Compile Include="Bugs\CanDetectChanges.cs" />
+    <Compile Include="Bugs\CanSelectFieldsFromIndex.cs" />
+    <Compile Include="Bugs\CustomEntityName.cs" />
+    <Compile Include="Bugs\DateRanges.cs" />
+    <Compile Include="Bugs\DecimalPrecision.cs" />
+    <Compile Include="Bugs\EntityWithDate.cs" />
+    <Compile Include="Bugs\Etag.cs" />
+    <Compile Include="Bugs\ExplicitTransaction.cs" />
     <Compile Include="Bugs\ExtendingClientSideViaListeners.cs" />
+    <Compile Include="Bugs\Includes.cs" />
+    <Compile Include="Bugs\IndexWithTwoProperties.cs" />
+    <Compile Include="Bugs\KeyGeneration.cs" />
+    <Compile Include="Bugs\MetadataUpdates.cs" />
+    <Compile Include="Bugs\MultipleResultsPerDocumentAndPaging.cs" />
+    <Compile Include="Bugs\OperationHeaders.cs" />
+    <Compile Include="Bugs\Polymorphic.cs" />
+    <Compile Include="Bugs\QueryingByNull.cs" />
+    <Compile Include="Bugs\QueryWithReservedCharacters.cs" />
+    <Compile Include="Bugs\ReuseQuery.cs" />
+    <Compile Include="Bugs\SerializingDates.cs" />
     <Compile Include="Bugs\SinglePropertyDocument.cs" />
     <Compile Include="Bugs\ProjectingDates.cs" />
+    <Compile Include="Bugs\SortingOnLong.cs" />
+    <Compile Include="Bugs\StalenessWontAffectUnrelatedIndexes.cs" />
+    <Compile Include="Bugs\WithPrivateProtectedSetter.cs" />
     <Compile Include="Document\AsyncDocumentStoreServerTests.cs" />
     <Compile Include="Document\ClientKeyGeneratorTests.cs" />
     <Compile Include="Document\DocumentStoreServerTests_DifferentProcess.cs" />
@@ -167,6 +193,7 @@
     <None Include="..\Raven.Database\RavenDB.snk">
       <Link>RavenDB.snk</Link>
     </None>
+    <None Include="App.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

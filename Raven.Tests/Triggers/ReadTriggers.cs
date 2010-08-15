@@ -47,7 +47,7 @@ namespace Raven.Tests.Triggers
 			var jsonDocument = db.Get("abc", null);
 
 			Assert.Equal("Upper case characters in the 'name' property means the document is a secret!",
-				jsonDocument.DataAsJson.Value<string>("Reason"));
+				jsonDocument.Metadata.Value<JObject>("Raven-Read-Veto").Value<string>("Reason"));
 		}
 
 		[Fact]
@@ -58,7 +58,7 @@ namespace Raven.Tests.Triggers
 			var jsonDocument = db.GetDocuments(0,25,null).First();
 
 			Assert.Equal("Upper case characters in the 'name' property means the document is a secret!",
-				jsonDocument.Value<string>("Reason"));
+				jsonDocument.Value<JObject>("@metadata").Value<JObject>("Raven-Read-Veto").Value<string>("Reason"));
 		}
 
 		[Fact]
@@ -77,7 +77,7 @@ namespace Raven.Tests.Triggers
 			} while (queryResult.IsStale);
 
 			Assert.Equal("Upper case characters in the 'name' property means the document is a secret!",
-				queryResult.Results[0].Value<string>("Reason"));
+				queryResult.Results[0].Value<JObject>("@metadata").Value<JObject>("Raven-Read-Veto").Value<string>("Reason"));
 		}
 
 		[Fact]
@@ -116,6 +116,85 @@ namespace Raven.Tests.Triggers
 
 			Assert.Empty(queryResult.Results);
 		}
+
+
+        [Fact]
+        public void CanPageThroughFilteredQuery()
+        {
+            for (int i = 0; i < 15; i++)
+            {
+                db.Put(i.ToString(), null, new JObject(
+                                               new JProperty("hidden", i%2 == 0)), new JObject(), null);
+            }
+
+            QueryResult queryResult;
+            do
+            {
+                queryResult = db.Query("ByName", new IndexQuery
+                {
+                    PageSize = 10
+                });
+            } while (queryResult.IsStale);
+
+            Assert.Equal(7,queryResult.Results.Count);
+            Assert.Equal(15, queryResult.TotalResults);
+        }
+
+        [Fact]
+        public void CanPageThroughFilteredQuery_Page1()
+        {
+            for (int i = 0; i < 15; i++)
+            {
+                db.Put(i.ToString(), null, new JObject(
+                                               new JProperty("hidden", i % 2 == 0)), new JObject(), null);
+            }
+
+            QueryResult queryResult;
+            do
+            {
+                queryResult = db.Query("ByName", new IndexQuery
+                {
+                    PageSize = 3
+                });
+            } while (queryResult.IsStale);
+
+            Assert.Equal(3, queryResult.Results.Count);
+            var array = queryResult.Results.Select(x => int.Parse(x["@metadata"].Value<string>("@id"))).OrderBy(x => x).ToArray();
+            Assert.Equal(1, array[0]);
+            Assert.Equal(3, array[1]);
+            Assert.Equal(5, array[2]);
+        }
+
+        [Fact]
+        public void CanPageThroughFilteredQuery_Page2()
+        {
+            for (int i = 0; i < 15; i++)
+            {
+                db.Put(i.ToString(), null, new JObject(
+                                               new JProperty("hidden", i % 2 == 0)), new JObject(), null);
+            }
+
+            QueryResult queryResult;
+            do
+            {
+                queryResult = db.Query("ByName", new IndexQuery
+                {
+                    PageSize = 3,
+                });
+            } while (queryResult.IsStale);
+
+            queryResult = db.Query("ByName", new IndexQuery
+            {
+                PageSize = 3,
+                Start = queryResult.SkippedResults + queryResult.Results.Count
+            });
+
+            Assert.Equal(3, queryResult.Results.Count);
+            var array = queryResult.Results.Select(x => int.Parse(x["@metadata"].Value<string>("@id"))).OrderBy(x => x).ToArray();
+            Assert.Equal(7, array[0]);
+            Assert.Equal(9, array[1]);
+            Assert.Equal(11, array[2]);
+        }
 
 
 		[Fact]

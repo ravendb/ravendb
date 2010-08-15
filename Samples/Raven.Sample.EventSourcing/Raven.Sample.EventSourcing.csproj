@@ -55,9 +55,13 @@
       <Project>{4E087ECB-E7CA-4891-AC3C-3C76702715B6}</Project>
       <Name>Raven.Client.Lightweight</Name>
     </ProjectReference>
+    <ProjectReference Include="..\..\Raven.Database\Raven.Database.csproj">
+      <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
+      <Name>Raven.Database</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Bundles.Sample.EventSourcing.ShoppingCartAggregator\Raven.Bundles.Sample.EventSourcing.ShoppingCartAggregator.csproj">
       <Project>{B09A78D9-B609-459F-9AE1-319799330C6B}</Project>
-      <Name>Raven.Sample.EventSourcing.ShoppingCartAggregator</Name>
+      <Name>Raven.Bundles.Sample.EventSourcing.ShoppingCartAggregator</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

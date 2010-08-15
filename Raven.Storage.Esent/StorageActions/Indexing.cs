@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
@@ -51,6 +52,10 @@ namespace Raven.Storage.Esent.StorageActions
 						Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["successes"]).Value,
 					IndexingErrors =
 						Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["errors"]).Value,
+					LastIndexedEtag = 
+						Api.RetrieveColumnAsGuid(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"]).Value,
+					LastIndexedTimestamp= 
+						Api.RetrieveColumnAsDateTime(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"]).Value,
 				};
 			}
 		}
@@ -60,7 +65,8 @@ namespace Raven.Storage.Esent.StorageActions
 			using (var update = new Update(session, IndexesStats, JET_prep.Insert))
 			{
 				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["key"], name, Encoding.Unicode);
-
+				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"], Guid.Empty);
+				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"], DateTime.MinValue);
 				update.Save();
 			}
 		}
@@ -89,6 +95,21 @@ namespace Raven.Storage.Esent.StorageActions
 				Errors = Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["errors"]).Value,
 				Successes = Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["successes"]).Value
 			};
+		}
+
+		public void UpdateLastIndexed(string index, Guid etag, DateTime timestamp)
+		{
+			SetCurrentIndexStatsTo(index);
+			using(var update = new Update(session, IndexesStats, JET_prep.Replace))
+			{
+				Api.SetColumn(session, IndexesStats,
+				              tableColumnsCache.IndexesStatsColumns["last_indexed_etag"],
+				              etag);
+				Api.SetColumn(session, IndexesStats,
+							  tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"],
+							  timestamp);
+				update.Save();
+			}
 		}
 	}
 }

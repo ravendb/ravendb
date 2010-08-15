@@ -62,6 +62,11 @@ namespace Raven.Database.Indexing
 			}
 		}
 
+		public void StartWork()
+		{
+			doWork = true;
+		}
+
 		public void StopWork()
 		{
 			log.Debug("Stopping background workers"); 
@@ -79,7 +84,7 @@ namespace Raven.Database.Indexing
 				Document = key,
 				Error = error,
 				Index = index,
-				Timestamp = DateTime.Now
+				Timestamp = DateTime.UtcNow
 			});
 			if (serverErrors.Count <= 50)
 				return;
@@ -97,21 +102,6 @@ namespace Raven.Database.Indexing
 		{
 			readerWriterLockSlim.EnterWriteLock();
 			return new DisposableAction(readerWriterLockSlim.ExitWriteLock);
-		}
-
-		public class DisposableAction : IDisposable
-		{
-			private readonly Action action;
-
-			public DisposableAction(Action action)
-			{
-				this.action = action;
-			}
-
-			public void Dispose()
-			{
-				action();
-			}
 		}
 	}
 }

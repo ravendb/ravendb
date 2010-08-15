@@ -41,6 +41,7 @@ namespace Raven.Client.Client
             webRequest.Credentials = credentials;
             WriteMetadata(metadata);
             webRequest.Method = method;
+        	webRequest.Headers["Accept-Encoding"] = "deflate,gzip";
             webRequest.ContentType = "application/json; charset=utf-8";
         }
 
@@ -73,21 +74,22 @@ namespace Raven.Client.Client
     				httpWebResponse.StatusCode == HttpStatusCode.NotFound ||
     					httpWebResponse.StatusCode == HttpStatusCode.Conflict)
     				throw;
-    			using (var sr = new StreamReader(e.Response.GetResponseStream()))
+				using (var sr = new StreamReader(e.Response.GetResponseStreamWithHttpDecompression()))
     			{
     				throw new InvalidOperationException(sr.ReadToEnd(), e);
     			}
     		}
     		ResponseHeaders = response.Headers;
     		ResponseStatusCode = ((HttpWebResponse) response).StatusCode;
-    		using (var responseString = response.GetResponseStream())
+			using (var responseStream = response.GetResponseStreamWithHttpDecompression())
     		{
-    			var reader = new StreamReader(responseString);
+				var reader = new StreamReader(responseStream);
     			var text = reader.ReadToEnd();
     			reader.Close();
     			return text;
     		}
     	}
+
 
     	public HttpStatusCode ResponseStatusCode { get; set; }
 
@@ -160,5 +162,13 @@ namespace Raven.Client.Client
 			}
 			bytesForNextWrite = null;
 		}
+
+    	public void AddOperationHeaders(NameValueCollection operationsHeaders)
+    	{
+			foreach (string header in operationsHeaders)
+			{
+				webRequest.Headers[header] = operationsHeaders[header];
+			}
+    	}
     }
 }

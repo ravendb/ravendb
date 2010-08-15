@@ -11,7 +11,6 @@ $(document).ready(function () {
 	$('#body').css('min-height', minBodySize + 'px');
 
 	RavenUI.GetDocument("Raven/WarningMessages", function (doc, etag, metadata) {
-		debugger;
 		if (doc == null)
 			return;
 		$('#content').prepend("<div id='system_warning'/>")

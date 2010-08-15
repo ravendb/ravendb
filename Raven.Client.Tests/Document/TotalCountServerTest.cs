@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Raven.Database.Server;
 using Xunit;
 using Raven.Client.Document;
 using Raven.Client.Tests.Document;
@@ -21,7 +22,7 @@ namespace Raven.Client.Tests.Document
 		{
             port = 8080;
             path = GetPath("TestDb");
-			RavenDbServer.EnsureCanListenToWhenInNonAdminContext(8080);
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8080);
 		}
 
 		#region IDisposable Members

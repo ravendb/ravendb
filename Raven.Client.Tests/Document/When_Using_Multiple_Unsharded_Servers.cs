@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Threading;
 using Raven.Client.Document;
+using Raven.Database.Server;
 using Raven.Server;
 using Xunit;
 using System.Collections.Generic;
@@ -23,8 +24,8 @@ namespace Raven.Client.Tests.Document
             path1 = GetPath("TestUnshardedDb1");
             path2 = GetPath("TestUnshardedDb2");
 
-            RavenDbServer.EnsureCanListenToWhenInNonAdminContext(port1);
-            RavenDbServer.EnsureCanListenToWhenInNonAdminContext(port2);
+            NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port1);
+            NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port2);
         }
 
         [Fact]
@@ -40,7 +41,7 @@ namespace Raven.Client.Tests.Document
                     using (var documentStore = new DocumentStore { Url = "http://localhost:"+ port }.Initialize())
                     using (var session = documentStore.OpenSession())
                     {
-                        documentStore.Stored += (storeServer, storeEntity) => serversStoredUpon.Add(storeServer);
+                        documentStore.Stored += (sender, args) => serversStoredUpon.Add(args.SessionIdentifier);
 
                         var entity = new Company { Name = "Company" };
                         session.Store(entity);

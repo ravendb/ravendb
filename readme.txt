@@ -3,7 +3,7 @@ Raven DB
 This release contains the following:
 
 /Server - The files required to run Raven in server / service mode.
-		  Execute /Server/RavenDB.exe /install to register and start the Raven service
+		  Execute /Server/Raven.Server.exe /install to register and start the Raven service
 		  
 /Web	- The files required to run Raven under IIS.
 		  Create an IIS site in the /Web directory to start the Raven site.
@@ -31,7 +31,7 @@ This release contains the following:
 /Raven.Smuggler.exe
     - The Import/Export utility for Raven
 		  
-You can start the Raven Service by executing /server/ravendb.exe, you can then visit
+You can start the Raven Service by executing /server/raven.server.exe, you can then visit
 http://localhost:8080 for looking at the UI.
 
 For any questions, please visit: http://groups.google.com/group/ravendb/

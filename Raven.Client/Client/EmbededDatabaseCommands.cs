@@ -1,15 +1,15 @@
 ﻿using System;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Net;
-using System.Transactions;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Document;
+using Raven.Client.Indexes;
 using Raven.Database;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Database.Storage;
-using TransactionInformation = Raven.Database.TransactionInformation;
 
 namespace Raven.Client.Client
 {
@@ -22,6 +22,7 @@ namespace Raven.Client.Client
 		{
 			this.database = database;
 			this.convention = convention;
+			OperationsHeaders = new NameValueCollection();
 		}
 
 		public DatabaseStatistics Statistics
@@ -46,45 +47,57 @@ namespace Raven.Client.Client
 
 		#region IDatabaseCommands Members
 
+		public NameValueCollection OperationsHeaders { get; set; }
+
 		public JsonDocument Get(string key)
 		{
-			return database.Get(key,GetTransactionInformation());
+			CurrentRavenOperation.Headers.Value = OperationsHeaders;
+			return database.Get(key, RavenTransactionAccessor.GetTransactionInformation());
 		}
 
 		public PutResult Put(string key, Guid? etag, JObject document, JObject metadata)
 		{
-            return database.Put(key, etag, document, metadata, GetTransactionInformation());
+			CurrentRavenOperation.Headers.Value = OperationsHeaders;
+			return database.Put(key, etag, document, metadata, RavenTransactionAccessor.GetTransactionInformation());
 		}
-
-	    private static TransactionInformation GetTransactionInformation()
-	    {
-            if (Transaction.Current == null)
-                return null;
-            return new TransactionInformation
-            {
-				Id = PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(Transaction.Current.TransactionInformation),
-                Timeout = TransactionManager.DefaultTimeout
-            };
-	    }
 
 	    public void Delete(string key, Guid? etag)
 		{
-            database.Delete(key, etag, GetTransactionInformation());
+			CurrentRavenOperation.Headers.Value = OperationsHeaders;
+			database.Delete(key, etag, RavenTransactionAccessor.GetTransactionInformation());
+		}
+
+		public void PutAttachment(string key, Guid? etag, byte[] data, JObject metadata)
+		{
+			database.PutStatic(key, etag, data, metadata);
+		}
+
+		public Attachment GetAttachment(string key)
+		{
+			return database.GetStatic(key);
+		}
+
+		public void DeleteAttachment(string key, Guid? etag)
+		{
+			database.DeleteStatic(key, etag);
 		}
 
 		public IndexDefinition GetIndex(string name)
 		{
+			CurrentRavenOperation.Headers.Value = OperationsHeaders;
 			return database.GetIndexDefinition(name);
 		}
 
 		public string PutIndex(string name, IndexDefinition definition)
 		{
+			CurrentRavenOperation.Headers.Value = OperationsHeaders;
 		    return PutIndex(name, definition, false);
 		}
 
         public string PutIndex(string name, IndexDefinition definition, bool overwrite)
         {
-            if(overwrite == false && database.IndexStorage.Indexes.Contains(name))
+			CurrentRavenOperation.Headers.Value = OperationsHeaders;
+			if (overwrite == false && database.IndexStorage.Indexes.Contains(name))
                 throw new InvalidOperationException("Cannot put index: " + name + ", index already exists"); 
             return database.PutIndex(name, definition);
         }
@@ -96,53 +109,65 @@ namespace Raven.Client.Client
 
         public string PutIndex<TDocument, TReduceResult>(string name, IndexDefinition<TDocument, TReduceResult> indexDef, bool overwrite)
         {
-            return PutIndex(name, indexDef.ToIndexDefinition(convention), overwrite);
+			return PutIndex(name, indexDef.ToIndexDefinition(convention), overwrite);
         }
 
-		public QueryResult Query(string index, IndexQuery query)
+		public QueryResult Query(string index, IndexQuery query, string[] ignored)
 		{
+			CurrentRavenOperation.Headers.Value = OperationsHeaders; 
 			return database.Query(index, query);
 		}
 
 		public void DeleteIndex(string name)
 		{
+			CurrentRavenOperation.Headers.Value = OperationsHeaders; 
 			database.DeleteIndex(name);
 		}
 
-        public JsonDocument[] Get(string[] ids)
+		public MultiLoadResult Get(string[] ids, string[] includes)
 	    {
-            return ids
-                .Select(id => database.Get(id, GetTransactionInformation()))
-                .Where(document => document != null)
-                .ToArray();
+			CurrentRavenOperation.Headers.Value = OperationsHeaders;
+			return new MultiLoadResult
+			{
+				Results = ids
+					.Select(id => database.Get(id, RavenTransactionAccessor.GetTransactionInformation()))
+					.Where(document => document != null)
+					.Select(x => x.ToJson())
+					.ToList()
+			};
 	    }
 
 		public BatchResult[] Batch(ICommandData[] commandDatas)
 		{
 			foreach (var commandData in commandDatas)
 			{
-				commandData.TransactionInformation = GetTransactionInformation();
+				commandData.TransactionInformation = RavenTransactionAccessor.GetTransactionInformation();
 			}
+			CurrentRavenOperation.Headers.Value = OperationsHeaders; 
 			return database.Batch(commandDatas);
 		}
 
 		public void Commit(Guid txId)
 	    {
-	        database.Commit(txId);
+			CurrentRavenOperation.Headers.Value = OperationsHeaders;
+			database.Commit(txId);
 	    }
 
 	    public void Rollback(Guid txId)
 	    {
-	        database.Rollback(txId);
+			CurrentRavenOperation.Headers.Value = OperationsHeaders; 
+			database.Rollback(txId);
 	    }
 
 		public byte[] PromoteTransaction(Guid fromTxId)
 		{
+			CurrentRavenOperation.Headers.Value = OperationsHeaders; 
 			return database.PromoteTransaction(fromTxId);
 		}
 
 		public void StoreRecoveryInformation(Guid txId, byte[] recoveryInformation)
 		{
+			CurrentRavenOperation.Headers.Value = OperationsHeaders; 
 			database.PutStatic("transactions/recoveryInformation/" + txId, null, recoveryInformation, new JObject());
 		}
 
@@ -161,20 +186,17 @@ namespace Raven.Client.Client
 
 		public void DeleteByIndex(string indexName, IndexQuery queryToDelete, bool allowStale)
 		{
-			throw new NotSupportedException("SET based operations are only supported on the server version, since they are there to reduce remote calls");
+			var databaseBulkOperations = new DatabaseBulkOperations(database, RavenTransactionAccessor.GetTransactionInformation());
+			databaseBulkOperations.DeleteByIndex(indexName, queryToDelete, allowStale);
 		}
 
-		public void UpdateByIndex(string indexName, IndexQuery queryToDelete, PatchRequest[] patchRequests, bool allowStale)
+		public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale)
 		{
-			throw new NotSupportedException("SET based operations are only supported on the server version, since they are there to reduce remote calls");
+			var databaseBulkOperations = new DatabaseBulkOperations(database, RavenTransactionAccessor.GetTransactionInformation());
+			databaseBulkOperations.UpdateByIndex(indexName, queryToUpdate, patchRequests, allowStale);
 		}
 
 		#endregion
-
-		public void Dispose()
-		{
-			database.Dispose();
-		}
 
 		public void SpinBackgroundWorkers()
 		{
@@ -183,16 +205,19 @@ namespace Raven.Client.Client
 
 		public Attachment GetStatic(string name)
 		{
+			CurrentRavenOperation.Headers.Value = OperationsHeaders; 
 			return database.GetStatic(name);
 		}
 
 		public void PutStatic(string name, Guid? etag, byte[] data, JObject metadata)
 		{
+			CurrentRavenOperation.Headers.Value = OperationsHeaders; 
 			database.PutStatic(name, etag, data, metadata);
 		}
 
 		public void DeleteStatic(string name, Guid? etag)
 		{
+			CurrentRavenOperation.Headers.Value = OperationsHeaders; 
 			database.DeleteStatic(name, etag);
 		}
 	}

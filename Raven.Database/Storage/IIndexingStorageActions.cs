@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Raven.Database.Data;
 
 namespace Raven.Database.Storage.StorageActions
@@ -18,5 +19,6 @@ namespace Raven.Database.Storage.StorageActions
 		void DeleteIndex(string name);
 
 		IndexFailureInformation GetFailureRate(string index);
+		void UpdateLastIndexed(string index, Guid etag, DateTime timestamp);
 	}
 }

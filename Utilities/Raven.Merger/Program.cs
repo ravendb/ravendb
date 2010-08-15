@@ -13,19 +13,19 @@ namespace Raven.Merger
 		{
 		  try
 			{
-				Merge("RavenDb.exe", new[]
-				{
-					@"Raven.Server.exe",
-					@"Raven.Database.dll",
-					@"Raven.Storage.Esent.dll",
-					@"Raven.Storage.Managed.dll",
-					@"Esent.Interop.dll",
-					@"ICSharpCode.NRefactory.dll",
-					@"Lucene.Net.dll",
-					@"log4net.dll",
-					@"Newtonsoft.Json.dll",
-					@"Rhino.Licensing.dll",
-				});
+				//Merge("RavenDb.exe", new[]
+				//{
+				//    @"Raven.Server.exe",
+				//    @"Raven.Database.dll",
+				//    @"Raven.Storage.Esent.dll",
+				//    @"Raven.Storage.Managed.dll",
+				//    @"Esent.Interop.dll",
+				//    @"ICSharpCode.NRefactory.dll",
+				//    @"Lucene.Net.dll",
+				//    @"log4net.dll",
+				//    @"Newtonsoft.Json.dll",
+				//    @"Rhino.Licensing.dll",
+				//});
 
 				Merge("RavenSmuggler.exe", new[]
 				{
@@ -33,19 +33,19 @@ namespace Raven.Merger
 					@"Newtonsoft.Json.dll",
 				});
 				
-				Merge("RavenWeb.dll", new[]
-				{
-					@"Rhino.Licensing.dll",
-					@"Raven.Web.dll",
-					@"Raven.Storage.Esent.dll",
-					@"Raven.Storage.Managed.dll",
-					@"Raven.Database.dll",
-					@"Esent.Interop.dll",
-					@"ICSharpCode.NRefactory.dll",
-					@"Lucene.Net.dll",
-					@"log4net.dll",
-					@"Newtonsoft.Json.dll",
-				});
+				//Merge("RavenWeb.dll", new[]
+				//{
+				//    @"Rhino.Licensing.dll",
+				//    @"Raven.Web.dll",
+				//    @"Raven.Storage.Esent.dll",
+				//    @"Raven.Storage.Managed.dll",
+				//    @"Raven.Database.dll",
+				//    @"Esent.Interop.dll",
+				//    @"ICSharpCode.NRefactory.dll",
+				//    @"Lucene.Net.dll",
+				//    @"log4net.dll",
+				//    @"Newtonsoft.Json.dll",
+				//});
 
 				//Merge("RavenClient.dll", new[]
 				//{
@@ -73,6 +73,7 @@ namespace Raven.Merger
 				OutputFile = outputFile,
 				TargetKind = ILMerge.Kind.SameAsPrimaryAssembly,
 				Version = new Version(4, 0),
+				KeyFile = @"..\Raven.Database\RavenDB.snk"
 			};
 			merge.SetInputAssemblies(inputAssemblies);
 			merge.SetTargetPlatform("4", Path.GetDirectoryName(typeof(object).Assembly.Location));

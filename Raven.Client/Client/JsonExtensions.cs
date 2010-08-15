@@ -2,32 +2,21 @@ using System;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
+using Raven.Client.Document;
 using Raven.Database.Json;
 
 namespace Raven.Client.Client
 {
     public static class JsonExtensions
     {
-        public static T Deserialize<T>(this JObject self, IContractResolver resolver)
+        public static T Deserialize<T>(this JObject self, DocumentConvention convention)
         {
-            var jsonSerializer = new JsonSerializer
-            {
-            	ContractResolver =  resolver,
-				ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor
-            };
-            jsonSerializer.Converters.Add(new JsonEnumConverter());
-            return (T)jsonSerializer.Deserialize(new JTokenReader(self), typeof(T));
+			return (T)convention.CreateSerializer().Deserialize(new JTokenReader(self), typeof(T));
         }
 
-        public static object Deserialize(this JObject self, Type type, IContractResolver resolver)
+        public static object Deserialize(this JObject self, Type type, DocumentConvention convention)
         {
-            var jsonSerializer = new JsonSerializer
-            {
-				ContractResolver = resolver,
-				ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor
-            };
-            jsonSerializer.Converters.Add(new JsonEnumConverter());
-            return jsonSerializer.Deserialize(new JTokenReader(self), type);
+			return convention.CreateSerializer().Deserialize(new JTokenReader(self), type);
         }
     }
 }

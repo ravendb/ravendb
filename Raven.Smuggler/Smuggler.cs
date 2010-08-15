@@ -65,7 +65,7 @@ Usage:
                     int totalCount = 0;
                     while (true)
                     {
-                        var documents = webClient.DownloadString(instanceUrl + "indexes?pageSize=128&start=" + totalCount);
+						var documents = GetString(webClient.DownloadData(instanceUrl + "indexes?pageSize=128&start=" + totalCount));
                         var array = JArray.Parse(documents);
                         if (array.Count == 0)
                         {
@@ -90,7 +90,7 @@ Usage:
                     int totalCount = 0;
                     while (true)
                     {
-                        var documents = webClient.DownloadString(instanceUrl + "docs?pageSize=128&etag=" + lastEtag);
+						var documents = GetString(webClient.DownloadData(instanceUrl + "docs?pageSize=128&etag=" + lastEtag));
                         var array = JArray.Parse(documents);
                         if (array.Count == 0)
                         {
@@ -113,7 +113,13 @@ Usage:
             }
         }
 
-        public static void ImportData(string instanceUrl, string file)
+    	public static string GetString(byte[] downloadData)
+    	{
+    		var ms = new MemoryStream(downloadData);
+    		return new StreamReader(ms, Encoding.UTF8).ReadToEnd();
+    	}
+
+    	public static void ImportData(string instanceUrl, string file)
         {
         	var sw = Stopwatch.StartNew();
             using (var streamReader = new StreamReader(new GZipStream(File.OpenRead(file), CompressionMode.Decompress)))
@@ -186,11 +192,12 @@ Usage:
         	long size;
             using (var webClient = new WebClient())
             {
-                webClient.UseDefaultCredentials = true;
+				webClient.Headers.Add("Content-Type", "application/json; charset=utf-8");
+				webClient.UseDefaultCredentials = true;
                 webClient.Credentials = CredentialCache.DefaultNetworkCredentials;
 				using (var stream = new MemoryStream())
 				{
-					using (var streamWriter = new StreamWriter(stream))
+					using (var streamWriter = new StreamWriter(stream, Encoding.UTF8))
 					using (var jsonTextWriter = new JsonTextWriter(streamWriter))
 					{
 						var commands = new JArray();

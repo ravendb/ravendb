@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Raven.Client.Indexes;
 using Xunit;
 using Raven.Database.Data;
 using Raven.Client;
@@ -275,7 +276,42 @@ namespace Raven.Tests.Linq
                 }
             }
         }
-        private static void WaitForQueryToComplete(IDocumentSession session, string indexName)
+
+		[Fact] // See issue #105 (http://github.com/ravendb/ravendb/issues/#issue/105)
+		public void Does_Not_Ignore_Expressions_Before_Where()
+		{
+			using (var db = new DocumentStore() { DataDirectory = directoryName })
+			{
+				db.Initialize();
+
+				string indexName = "UserIndex";
+				using (var session = db.OpenSession())
+				{
+					session.Store(new User() { Name = "Third", Age = 18});
+					session.Store(new User() { Name = "First" , Age = 10});
+					session.Store(new User() { Name = "Second", Age = 20});
+					session.SaveChanges();
+
+					db.DatabaseCommands.DeleteIndex(indexName);
+					db.DatabaseCommands.PutIndex<User, User>(indexName,
+							new IndexDefinition<User, User>()
+							{
+								Map = docs => from doc in docs select new { doc.Name, doc.Age },
+							}, true);
+
+					WaitForQueryToComplete(session, indexName);
+
+					var result = session.Query<User>(indexName).OrderBy(x => x.Name).Where(x => x.Age >= 18).ToList();
+
+					Assert.Equal(2, result.Count());
+
+					Assert.Equal("Second", result[0].Name);
+					Assert.Equal("Third", result[1].Name);
+				}
+			}
+		}
+
+		private static void WaitForQueryToComplete(IDocumentSession session, string indexName)
         {            
             QueryResult results;
             do
