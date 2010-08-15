@@ -76,7 +76,7 @@ namespace Raven.Tests.Spatial
 					Query = "Tag:[[Event]]",
 					Latitude = lat,
 					Longitude = lng,
-					Miles = miles,
+					Radius = miles,
 					SortByDistance = true
 				});
 				if (queryResult.IsStale)

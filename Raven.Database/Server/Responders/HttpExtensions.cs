@@ -244,27 +244,33 @@ namespace Raven.Database.Server.Responders
 		public static double GetLat(this IHttpContext context)
 		{
 			double lat;
-			double.TryParse(context.Request.QueryString["lat"], out lat);
+			double.TryParse(context.Request.QueryString["_lat"], out lat);
 			return lat;
 		}
 
 		public static double GetLng(this IHttpContext context)
 		{
 			double lng;
-			double.TryParse(context.Request.QueryString["lng"], out lng);
+			double.TryParse(context.Request.QueryString["_lng"], out lng);
 			return lng;
 		}
 
 		public static double GetMiles(this IHttpContext context)
 		{
 			double miles;
-			double.TryParse(context.Request.QueryString["miles"], out miles);
+			double.TryParse(context.Request.QueryString["_radius"], out miles);
 			return miles;
+		}
+
+		public static bool IsSpatialIndex(this IHttpContext context)
+		{
+			var spatial = context.Request.QueryString["_spatial"];
+			return spatial != null && "true" == spatial.ToLower();
 		}
 
 		public static bool SortByDistance(this IHttpContext context)
 		{
-			var sort = context.Request.QueryString["sortByDistance"];
+			var sort = context.Request.QueryString["_sortByDistance"];
 			return sort != null && "true" == sort.ToLower();
 		}
 
@@ -281,12 +287,12 @@ namespace Raven.Database.Server.Responders
 					.EmptyIfNull()
 					.Select(x => new SortedField(x))
 					.ToArray()
-			};
+			};			
 
-			double lat = context.GetLat(), lng = context.GetLng(), miles = context.GetMiles();
-
-			if (lat != 0 || lng != 0 || miles != 0)
+			if (context.IsSpatialIndex())
 			{
+				double lat = context.GetLat(), lng = context.GetLng(), miles = context.GetMiles();
+
 				return new SpatialIndexQuery
 				{
 					Query = query.Query,
@@ -297,7 +303,7 @@ namespace Raven.Database.Server.Responders
 					SortedFields = query.SortedFields,
 					Latitude = lat,
 					Longitude = lng,
-					Miles = miles,
+					Radius = miles,
 					SortByDistance = context.SortByDistance()
 				};
 			}

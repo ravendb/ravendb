@@ -458,7 +458,7 @@ namespace Raven.Client.Document
 						FieldsToFetch = projectionFields,
 						Latitude = lat,
 						Longitude = lng,
-						Miles = miles
+						Radius = miles
 					};
 				}
 				else

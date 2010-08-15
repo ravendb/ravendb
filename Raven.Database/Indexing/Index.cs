@@ -120,7 +120,7 @@ namespace Raven.Database.Indexing
 			if (spatialQuery != null)
 			{
 				var dq = new DistanceQueryBuilder(
-					spatialQuery.Latitude, spatialQuery.Longitude, spatialQuery.Miles,
+					spatialQuery.Latitude, spatialQuery.Longitude, spatialQuery.Radius,
 					SpatialIndex.LatField, SpatialIndex.LngField, CartesianTierPlotter.DefaltFieldPrefix, true);
 
 				filter = dq.Filter;
