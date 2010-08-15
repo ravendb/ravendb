@@ -7,6 +7,7 @@ using System.Runtime.ConstrainedExecution;
 using System.Threading;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Database;
+using Raven.Database.Exceptions;
 using Raven.Database.Plugins;
 using System.Linq;
 using Raven.Database.Storage;
@@ -96,7 +97,7 @@ namespace Raven.Storage.Esent
 			}
 		}
 
-		public void StartBackupOperation(DocumentDatabase docDb,string backupDestinationDirectory)
+		public void StartBackupOperation(DocumentDatabase docDb, string backupDestinationDirectory)
 		{
 			var backupOperation = new BackupOperation(docDb, docDb.Configuration.DataDirectory, backupDestinationDirectory);
 			ThreadPool.QueueUserWorkItem(backupOperation.Execute);
@@ -115,7 +116,7 @@ namespace Raven.Storage.Esent
 			{
 				ConfigureInstance(instance, path);
 
-				if(configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction)
+				if (configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction)
 				{
 					new InstanceParameters(instance)
 					{
@@ -167,8 +168,8 @@ namespace Raven.Storage.Esent
 						tableColumnsCache.IdentityColumns = Api.GetColumnDictionary(session, identity);
 					using (var details = new Table(session, dbid, "details", OpenTableGrbit.None))
 						tableColumnsCache.DetailsColumns = Api.GetColumnDictionary(session, details);
-                    using (var queue = new Table(session, dbid, "queue", OpenTableGrbit.None))
-                        tableColumnsCache.QueueColumns = Api.GetColumnDictionary(session, queue);
+					using (var queue = new Table(session, dbid, "queue", OpenTableGrbit.None))
+						tableColumnsCache.QueueColumns = Api.GetColumnDictionary(session, queue);
 				}
 				finally
 				{
@@ -224,7 +225,7 @@ namespace Raven.Storage.Esent
 								throw new InvalidOperationException(string.Format("The version on disk ({0}) is different that the version supported by this library: {1}{2}You need to migrate the disk version to the library version, alternatively, if the data isn't important, you can delete the file and it will be re-created (with no data) with the library version.", schemaVersion, SchemaCreator.SchemaVersion, Environment.NewLine));
 							updater.Update(session, dbid);
 							schemaVersion = Api.RetrieveColumnAsString(session, details, columnids["schema_version"]);
-						}while(schemaVersion != SchemaCreator.SchemaVersion);
+						} while (schemaVersion != SchemaCreator.SchemaVersion);
 					}
 				});
 			}
@@ -320,6 +321,18 @@ namespace Raven.Storage.Esent
 			try
 			{
 				ExecuteBatch(action);
+			}
+			catch (EsentErrorException e)
+			{
+				switch (e.Error)
+				{
+					case JET_err.WriteConflict:
+					case JET_err.SessionWriteConflict:
+					case JET_err.WriteConflictPrimaryIndex:
+						throw new ConcurrencyException("Concurrent modification to the same document are not allowed");
+					default:
+						throw;
+				}
 			}
 			finally
 			{

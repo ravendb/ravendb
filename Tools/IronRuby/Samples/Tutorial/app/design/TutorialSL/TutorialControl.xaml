@@ -1,0 +1,30 @@
+﻿<UserControl
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	mc:Ignorable="d"
+	x:Class="TutorialSL.TutorialControl"
+	d:DesignWidth="591" d:DesignHeight="97.373" Margin="0">
+	<UserControl.Resources>
+		<Storyboard x:Key="tutorial_id_OnMouseEnter">
+			<ColorAnimationUsingKeyFrames BeginTime="00:00:00" Storyboard.TargetName="tutorial_id" Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)">
+				<SplineColorKeyFrame KeyTime="00:00:00.0560000" Value="#FFFFFF4C"/>
+			</ColorAnimationUsingKeyFrames>
+		</Storyboard>
+		<Storyboard x:Key="tutorial_id_OnMouseLeave">
+			<ColorAnimationUsingKeyFrames BeginTime="00:00:00" Storyboard.TargetName="tutorial_id" Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)">
+				<SplineColorKeyFrame KeyTime="00:00:00.0610000" Value="#FFC8C8C8"/>
+			</ColorAnimationUsingKeyFrames>
+		</Storyboard>
+	</UserControl.Resources>
+	
+	<StackPanel Margin="0,0,0,15">
+		<Border x:Name="tutorial_id" BorderBrush="#FFC8C8C8" BorderThickness="5" CornerRadius="10" Padding="0" Margin="0" Background="White" OpacityMask="{x:Null}" d:LayoutOverrides="Width" Cursor="Hand">
+			<StackPanel Margin="0">
+				<TextBlock x:Name="tutorial_title_id" Margin="8" VerticalAlignment="Bottom" FontSize="21.333" Padding="0" TextWrapping="Wrap" Cursor="Hand" FontFamily="Segoe UI"><Run Text="Example tu"/><Run Text="torial"/></TextBlock>
+				<TextBlock x:Name="tutorial_desc_id" HorizontalAlignment="Left" FontSize="13.333" Padding="0" Margin="32,0,8,8" RenderTransformOrigin="0.5,0.5" Cursor="Hand" FontFamily="Segoe UI" Text="This tutorial blah blah blah ..."/>
+			</StackPanel>
+		</Border>
+	</StackPanel>
+</UserControl>

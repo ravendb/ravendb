@@ -1,5 +1,6 @@
 using System;
 using System.Reflection;
+using System.Runtime.Serialization.Formatters;
 using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
@@ -16,7 +17,11 @@ namespace Raven.Client.Document
 			FindIdentityProperty = q => q.Name == "Id";
 			FindTypeTagName = t => DefaultTypeTagName(t);
 			IdentityPartsSeparator = "/";
-		    JsonContractResolver = new DefaultContractResolver(shareCache: true);
+			JsonContractResolver = new DefaultContractResolver(shareCache: true)
+			{
+				DefaultMembersSearchFlags =
+					BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance
+			};
 		    MaxNumberOfRequestsPerSession = 30;
 			CustomizeJsonSerializer = serializer => { };
 		}
@@ -79,6 +84,8 @@ namespace Raven.Client.Document
 			var jsonSerializer = new JsonSerializer
 			{
 				ContractResolver = JsonContractResolver,
+				TypeNameHandling = TypeNameHandling.Auto,
+				TypeNameAssemblyFormat = FormatterAssemblyStyle.Simple,
 				ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
 				Converters =
 					{

@@ -119,7 +119,10 @@
     <Compile Include="Data\BackupRequest.cs" />
     <Compile Include="Data\DisposableAction.cs" />
     <Compile Include="Data\SpatialIndexQuery.cs" />
+    <Compile Include="Data\MultiLoadResult.cs" />
+    <Compile Include="DocumentRetriever.cs" />
     <Compile Include="Exceptions\IndexDoesNotExists.cs" />
+    <Compile Include="Extensions\ExpressionExtensions.cs" />
     <Compile Include="Extensions\MonoHttpEncoder.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -130,6 +133,7 @@
     <Compile Include="Indexing\NumberUtil.cs" />
     <Compile Include="Indexing\RangeQueryParser.cs" />
     <Compile Include="Indexing\SpatialIndex.cs" />
+    <Compile Include="Indexing\SortOptions.cs" />
     <Compile Include="IStartupTask.cs" />
     <Compile Include="PerformanceCounters.cs" />
     <Compile Include="Plugins\AbstractBackgroundTask.cs" />
@@ -210,6 +214,7 @@
     <Compile Include="RavenConfiguration.cs" />
     <Compile Include="Server\HttpServer.cs" />
     <Compile Include="Server\NonAdminHttp.cs" />
+    <Compile Include="Server\Responders\AddIncludesCommand.cs" />
     <Compile Include="Server\Responders\AdminBackup.cs" />
     <Compile Include="Server\Responders\Docs.cs" />
     <Compile Include="Server\Responders\Document.cs" />
@@ -240,8 +245,6 @@
     <Compile Include="Storage\IQueueStorageActions.cs" />
     <Compile Include="Storage\ITasksStorageActions.cs" />
     <Compile Include="Storage\ITransactionalStorage.cs" />
-    <Compile Include="Tasks\IndexDocumentRangeTask.cs" />
-    <Compile Include="Tasks\IndexDocumentsTask.cs" />
     <Compile Include="Tasks\ReduceTask.cs" />
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
     <Compile Include="Tasks\Task.cs" />

@@ -1,0 +1,21 @@
+animations between tasks
+add tutorial on how to use tutorial =)
+standalone REPL
+nested sections (sections can have either more sections or tasks, ordered).
+Multi-step tasks with hinting for next step
+UI surface for WPF tutorials, embedding external content, etc
+Silverlight support
+Mocha/Flexmock integration so task success condition can be written in terms of mock/stub expectations. (Get rid of Tutorial::Stub)
+Use Task.legal_notice (needs some UI to show the copyright notices)
+Use Task.source_files (need to show a button which can open the source file)
+Silverlight support
+- scroll wheel functionality: http://blogs.microsoft.co.il/blogs/maxim/archive/2009/04/03/mouse-wheel-helper-for-silverlight.aspx
+Voting feedback
+Active task border color
+REPL improvements
+- Ruby syntax colorization
+- member completion on typing "x."
+- Input history navigation using Up/Down keys (to select previous commands)
+Integration with RubyGems to download tutorial gems
+Advanced tasks (where the user does not see the code snippet to type)
+More tutorial content

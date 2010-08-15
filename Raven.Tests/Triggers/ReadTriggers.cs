@@ -118,6 +118,85 @@ namespace Raven.Tests.Triggers
 		}
 
 
+        [Fact]
+        public void CanPageThroughFilteredQuery()
+        {
+            for (int i = 0; i < 15; i++)
+            {
+                db.Put(i.ToString(), null, new JObject(
+                                               new JProperty("hidden", i%2 == 0)), new JObject(), null);
+            }
+
+            QueryResult queryResult;
+            do
+            {
+                queryResult = db.Query("ByName", new IndexQuery
+                {
+                    PageSize = 10
+                });
+            } while (queryResult.IsStale);
+
+            Assert.Equal(7,queryResult.Results.Count);
+            Assert.Equal(15, queryResult.TotalResults);
+        }
+
+        [Fact]
+        public void CanPageThroughFilteredQuery_Page1()
+        {
+            for (int i = 0; i < 15; i++)
+            {
+                db.Put(i.ToString(), null, new JObject(
+                                               new JProperty("hidden", i % 2 == 0)), new JObject(), null);
+            }
+
+            QueryResult queryResult;
+            do
+            {
+                queryResult = db.Query("ByName", new IndexQuery
+                {
+                    PageSize = 3
+                });
+            } while (queryResult.IsStale);
+
+            Assert.Equal(3, queryResult.Results.Count);
+            var array = queryResult.Results.Select(x => int.Parse(x["@metadata"].Value<string>("@id"))).OrderBy(x => x).ToArray();
+            Assert.Equal(1, array[0]);
+            Assert.Equal(3, array[1]);
+            Assert.Equal(5, array[2]);
+        }
+
+        [Fact]
+        public void CanPageThroughFilteredQuery_Page2()
+        {
+            for (int i = 0; i < 15; i++)
+            {
+                db.Put(i.ToString(), null, new JObject(
+                                               new JProperty("hidden", i % 2 == 0)), new JObject(), null);
+            }
+
+            QueryResult queryResult;
+            do
+            {
+                queryResult = db.Query("ByName", new IndexQuery
+                {
+                    PageSize = 3,
+                });
+            } while (queryResult.IsStale);
+
+            queryResult = db.Query("ByName", new IndexQuery
+            {
+                PageSize = 3,
+                Start = queryResult.SkippedResults + queryResult.Results.Count
+            });
+
+            Assert.Equal(3, queryResult.Results.Count);
+            var array = queryResult.Results.Select(x => int.Parse(x["@metadata"].Value<string>("@id"))).OrderBy(x => x).ToArray();
+            Assert.Equal(7, array[0]);
+            Assert.Equal(9, array[1]);
+            Assert.Equal(11, array[2]);
+        }
+
+
 		[Fact]
 		public void CanModifyDocumentUsingTrigger()
 		{

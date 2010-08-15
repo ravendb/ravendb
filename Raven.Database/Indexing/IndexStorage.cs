@@ -138,7 +138,10 @@ namespace Raven.Database.Indexing
 			}, (s, index) => index);
 		}
 
-		public IEnumerable<IndexQueryResult> Query(string index, IndexQuery query)
+		public IEnumerable<IndexQueryResult> Query(
+            string index, 
+            IndexQuery query, 
+            Func<IndexQueryResult, bool> shouldIncludeInResults)
 		{
 			Index value;
 			if (indexes.TryGetValue(index, out value) == false)
@@ -146,7 +149,7 @@ namespace Raven.Database.Indexing
 				log.DebugFormat("Query on non existing index {0}", index);
 				throw new InvalidOperationException("Index " + index + " does not exists");
 			}
-			return value.Query(query);
+			return value.Query(query, shouldIncludeInResults);
 		}
 
 		public void RemoveFromIndex(string index, string[] keys, WorkContext context)

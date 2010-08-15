@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
 using System.Linq;
@@ -102,8 +104,21 @@ namespace Raven.Database.Server.Responders
 		    }
 		    else
             {
-				IndexQuery indexQuery = context.GetIndexQueryFromHttpContext(Database.Configuration.MaxPageSize);
-                context.WriteJson(Database.Query(index, indexQuery));
+				var indexQuery = context.GetIndexQueryFromHttpContext(Database.Configuration.MaxPageSize);
+            	var queryResult = Database.Query(index, indexQuery);
+            	var includes = context.Request.QueryString.GetValues("include") ?? new string[0];
+            	var loadedIds = new HashSet<string>(
+            		queryResult.Results
+            			.Where(x => x["@metadata"] != null)
+            			.Select(x => x["@metadata"].Value<string>("@id"))
+            			.Where(x => x != null)
+            		);
+            	var command = new AddIncludesCommand(Database, GetRequestTransaction(context), queryResult.Includes.Add,includes, loadedIds);
+            	foreach (var result in queryResult.Results)
+            	{
+            		command.Execute(result);
+            	}
+            	context.WriteJson(queryResult);
 			}
 		}
 

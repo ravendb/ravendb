@@ -49,6 +49,11 @@ namespace Raven.Client.Shard
 			}
 		}
 
+		public int NumberOfRequests
+		{
+			get { return shardSessions.Sum(x => x.NumberOfRequests); }
+		}
+
 		public event EntityStored Stored;
 	    public event EntityToDocument OnEntityConverted;
 
@@ -126,6 +131,11 @@ namespace Raven.Client.Shard
 		public T[] Load<T>(params string[] ids)
 		{
 			return shardStrategy.ShardAccessStrategy.Apply(GetAppropriateShardedSessions<T>(null), sessions => sessions.Load<T>(ids)).ToArray();
+		}
+
+		public ILoaderWithInclude Include(string path)
+		{
+			throw new NotSupportedException("Sharded load queries with include aren't supported currently");
 		}
 
 		public void Delete<T>(T entity)

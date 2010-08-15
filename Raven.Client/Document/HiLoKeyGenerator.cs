@@ -48,6 +48,10 @@ namespace Raven.Client.Document
                         currentLo = 1;
                         incrementedCurrentLow = 1;
                     }
+					else
+                    {
+                    	incrementedCurrentLow = Interlocked.Increment(ref currentLo);
+                    }
                 }
             }
             return (currentHi - 1)*capacity + (incrementedCurrentLow);

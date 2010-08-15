@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Net;
 using System.Threading;
 using System.Transactions;
 using Newtonsoft.Json;
@@ -312,7 +313,7 @@ namespace Raven.Client.Tests.Document
                 {
                     PageSize = 10,
                     Cutoff = DateTime.Now.AddHours(-1)
-                });
+                }, null);
             }
         }
 
@@ -909,6 +910,39 @@ namespace Raven.Client.Tests.Document
 		}
 
 		[Fact]
+		public void Should_retrieve_all_entities_using_connection_string()
+		{
+			using (var server = GetNewServer(port, path))
+			{
+				var documentStore = new DocumentStore { ConnectionStringName = "Server"};
+				documentStore.Initialize();
+
+				var session1 = documentStore.OpenSession();
+				session1.Store(new Company { Name = "Company 1" });
+				session1.Store(new Company { Name = "Company 2" });
+
+				session1.SaveChanges();
+
+				var session2 = documentStore.OpenSession();
+				var companyFound = session2.LuceneQuery<Company>()
+					.WaitForNonStaleResults()
+					.ToArray();
+
+				Assert.Equal(2, companyFound.Length);
+			}
+		}
+
+		[Fact]
+		public void Can_read_credentials_from_connection_string()
+		{
+			var documentStore = new DocumentStore {ConnectionStringName = "Secure"};
+			Assert.NotNull(documentStore.Credentials);
+			var networkCredential = (NetworkCredential)documentStore.Credentials;
+			Assert.Equal("beam", networkCredential.UserName);
+			Assert.Equal("up", networkCredential.Password);
+		}
+
+		[Fact]
 		public void Can_sort_from_index()
 		{
 			using (var server = GetNewServer(port, path))
@@ -1116,9 +1150,11 @@ namespace Raven.Client.Tests.Document
 
         [Fact]
         public void Can_get_correct_maximum_from_map_reduce_index() {
-            using (var server = GetNewServer(port, path)) {
+            using (var server = GetNewServer(port, path))
+			{
                 var documentStore = new DocumentStore { Url = "http://localhost:" + port };
                 documentStore.Initialize();
+
                 documentStore.DatabaseCommands.PutIndex("MaxAge", new IndexDefinition<LinqIndexesFromClient.User, LinqIndexesFromClient.LocationAge> {
                     Map = users => from user in users
                                    select new { user.Age },
@@ -1155,5 +1191,32 @@ namespace Raven.Client.Tests.Document
                 }
             }
         }
+
+		[Fact]
+		public void Using_attachments()
+		{
+			using (var server = GetNewServer(port, path))
+			{
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+				documentStore.Initialize();
+
+				var attachment = documentStore.DatabaseCommands.GetAttachment("ayende");
+				Assert.Null(attachment);
+
+				documentStore.DatabaseCommands.PutAttachment("ayende", null, new byte[] { 1, 2, 3 }, new JObject(new JProperty("Hello", "World")));
+
+				attachment = documentStore.DatabaseCommands.GetAttachment("ayende");
+				Assert.NotNull(attachment);
+
+				Assert.Equal(new byte[] { 1, 2, 3 }, attachment.Data);
+				Assert.Equal("World", attachment.Metadata.Value<string>("Hello"));
+
+				documentStore.DatabaseCommands.DeleteAttachment("ayende", null);
+
+				attachment = documentStore.DatabaseCommands.GetAttachment("ayende");
+				Assert.Null(attachment);
+
+			}
+		}
 	}
 }

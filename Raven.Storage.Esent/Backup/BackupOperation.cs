@@ -81,7 +81,7 @@ namespace Raven.Storage.Esent.Backup
 
 				var backupStatus = jsonDocument.DataAsJson.JsonDeserialization<BackupStatus>();
 				backupStatus.IsRunning = false;
-				backupStatus.Completed = DateTime.Now;
+				backupStatus.Completed = DateTime.UtcNow;
 				database.Put(BackupStatus.RavenBackupStatusDocumentKey, null, JObject.FromObject(backupStatus),
 				             jsonDocument.Metadata,
 				             null);
@@ -112,7 +112,7 @@ namespace Raven.Storage.Esent.Backup
 				backupStatus.Messages.Add(new BackupStatus.BackupMessage
 				{
 					Message = newMsg,
-					Timestamp = DateTime.Now
+					Timestamp = DateTime.UtcNow
 				});
 				database.Put(BackupStatus.RavenBackupStatusDocumentKey, null, JObject.FromObject(backupStatus), jsonDocument.Metadata,
 				             null);

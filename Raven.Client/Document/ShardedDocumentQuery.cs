@@ -32,12 +32,13 @@ namespace Raven.Client.Document
 	    protected QueryResult GetQueryResult()
 		{
 			var queryResults = queries.Select(x => x.QueryResult).ToArray();
-			return new QueryResult
-			{
-				IsStale = queryResults.Any(x => x.IsStale),
-				Results = queryResults.SelectMany(x => x.Results).ToArray(),
-				TotalResults = queryResults.Sum(x => x.TotalResults)
-			};
+	        return new QueryResult
+	        {
+	            IsStale = queryResults.Any(x => x.IsStale),
+	            Results = queryResults.SelectMany(x => x.Results).ToList(),
+	            TotalResults = queryResults.Sum(x => x.TotalResults),
+	            SkippedResults = queryResults.Sum(x => x.SkippedResults)
+	        };
 		}
 
 		private void ApplyForAll(Action<IDocumentQuery<T>> act)
@@ -69,6 +70,12 @@ namespace Raven.Client.Document
 		IEnumerator IEnumerable.GetEnumerator()
 		{
 			return GetEnumerator();
+		}
+
+		public IDocumentQuery<T> Include(string path)
+		{
+			ApplyForAll(x => x.Include(path));
+			return this;
 		}
 
 		public IDocumentQuery<T> Take(int count)

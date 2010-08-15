@@ -1,3 +1,4 @@
+using System;
 using System.Data;
 using System.Linq;
 using Raven.Database.Plugins;
@@ -24,6 +25,7 @@ namespace Raven.Tests.Triggers
             }
         }
 
+		[CLSCompliant(false)]
         public override void OnIndexEntryCreated(string indexName, string entryKey, Lucene.Net.Documents.Document document)
         {
             DataTable.Rows.Add(entryKey, document.GetField("Project").StringValue());

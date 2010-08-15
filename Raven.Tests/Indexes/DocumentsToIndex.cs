@@ -66,7 +66,7 @@ namespace Raven.Tests.Indexes
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);
-			Assert.Equal(1, docs.Results.Length);
+			Assert.Equal(1, docs.Results.Count);
 		}
 
 		[Fact]
@@ -97,7 +97,7 @@ namespace Raven.Tests.Indexes
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);
-			Assert.Equal(1, docs.Results.Length);
+			Assert.Equal(1, docs.Results.Count);
 
 			db.Put("1", null,
 				   JObject.Parse(
@@ -114,7 +114,7 @@ namespace Raven.Tests.Indexes
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);
-			Assert.Equal(0, docs.Results.Length);
+			Assert.Equal(0, docs.Results.Count);
 		}
 
 		[Fact]
@@ -147,7 +147,7 @@ select new{project_name = prj.name}
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);
-			Assert.Equal(1, docs.Results.Length);
+			Assert.Equal(1, docs.Results.Count);
 			var jProperty = docs.Results[0].Property("name");
 			Assert.Equal("ayende", jProperty.Value.Value<string>());
 		}
@@ -181,7 +181,7 @@ select new{project_name = prj.name, project_num = prj.num}
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);
-			Assert.Equal(0, docs.Results.Length);
+			Assert.Equal(0, docs.Results.Count);
 		}
 
 		[Fact]
@@ -223,7 +223,7 @@ select new{project_name = prj.name, project_num = prj.num}
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);
-			Assert.Equal(1, docs.Results.Length);
+			Assert.Equal(1, docs.Results.Count);
 		}
 
 		[Fact]
@@ -265,7 +265,7 @@ select new{project_name = prj.name, project_num = prj.num}
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);
-			Assert.Equal(1, docs.Results.Length);
+			Assert.Equal(1, docs.Results.Count);
 		}
 
 		[Fact]
@@ -297,7 +297,7 @@ select new{project_name = prj.name, project_num = prj.num}
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);
-			Assert.Equal(1, docs.Results.Length);
+			Assert.Equal(1, docs.Results.Count);
 		}
 
 		[Fact]
@@ -333,7 +333,7 @@ select new{project_name = prj.name, project_num = prj.num}
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);
-			Assert.Equal(2, docs.Results.Length);
+			Assert.Equal(2, docs.Results.Count);
 		}
 
         [Fact]
@@ -366,7 +366,7 @@ select new{project_name = prj.name, project_num = prj.num}
                 if (docs.IsStale)
                     Thread.Sleep(100);
             } while (docs.IsStale);
-            Assert.Equal(1, docs.Results.Length);
+			Assert.Equal(1, docs.Results.Count);
         }
 
     }

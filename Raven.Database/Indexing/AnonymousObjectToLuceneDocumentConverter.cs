@@ -90,31 +90,35 @@ namespace Raven.Database.Indexing
 			}
 
 
+			var numericField = new NumericField(name + "_Range", indexDefinition.GetStorage(name, defaultStorage), true);
 			if (value is int)
 			{
-				yield return new NumericField(name + "_Range", indexDefinition.GetStorage(name, defaultStorage), true)
-					.SetIntValue((int)value);
-
+				if(indexDefinition.GetSortOption(name) == SortOptions.Long)
+					yield return numericField.SetLongValue((int)value);
+				else
+					yield return numericField.SetIntValue((int)value);
 			}
 			if (value is long)
 			{
-				yield return new NumericField(name + "_Range", indexDefinition.GetStorage(name, defaultStorage), true)
+				yield return numericField
 					.SetLongValue((long) value);
 
 			}
 			if (value is decimal)
             {
-				yield return new NumericField(name + "_Range", indexDefinition.GetStorage(name, defaultStorage), true)
+				yield return numericField
 					.SetDoubleValue((double)(decimal)value);
             }
 			if (value is float)
             {
-            	yield return new NumericField(name + "_Range", indexDefinition.GetStorage(name, defaultStorage), true)
-            		.SetFloatValue((float) value);
+				if (indexDefinition.GetSortOption(name) == SortOptions.Double)
+					yield return numericField.SetDoubleValue((float)value);
+				else
+            		yield return numericField.SetFloatValue((float) value);
             }
 			if (value is double)
             {
-				yield return new NumericField(name + "_Range", indexDefinition.GetStorage(name, defaultStorage), true)
+				yield return numericField
 					.SetDoubleValue((double)value);
             }
 		}

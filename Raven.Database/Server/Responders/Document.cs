@@ -42,6 +42,7 @@ namespace Raven.Database.Server.Responders
 						context.SetStatusToNotModified();
 						return;
 					}
+					doc.Metadata["Last-Modified"] = doc.LastModified.ToString("r");
 					context.WriteData(doc.DataAsJson, doc.Metadata, doc.Etag);
 					break;
 				case "DELETE":

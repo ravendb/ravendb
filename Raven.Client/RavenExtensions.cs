@@ -5,7 +5,7 @@ namespace Raven.Client
 {
 	public static class RavenExtensions
 	{
-		private const string Raven_DocumentByEntityName = "Raven/DocumentsByEntityName";
+		public const string Raven_DocumentByEntityName = "Raven/DocumentsByEntityName";
 
 		public static IDocumentQuery<T> LuceneQuery<T>(this IDocumentSession session)
 		{

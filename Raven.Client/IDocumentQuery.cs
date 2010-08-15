@@ -6,6 +6,8 @@ namespace Raven.Client
 {
 	public interface IDocumentQuery<T> : IEnumerable<T>
 	{
+		IDocumentQuery<T> Include(string path);
+
 		IDocumentQuery<T> Take(int count);
 		IDocumentQuery<T> Skip(int count);
 		IDocumentQuery<T> Where(string whereClause);

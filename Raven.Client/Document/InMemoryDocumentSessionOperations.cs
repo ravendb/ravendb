@@ -34,11 +34,11 @@ namespace Raven.Client.Document
 
 		protected readonly Dictionary<string, object> entitiesByKey = new Dictionary<string, object>();
 		protected DocumentStore documentStore;
-		private int numberOfRequests;
+
+		public int NumberOfRequests { get; private set; }
 
 		private readonly IDocumentDeleteListener[] deleteListeners;
 		private readonly IDocumentStoreListener[] storeListeners;
-
 
 		protected InMemoryDocumentSessionOperations(DocumentStore documentStore, IDocumentStoreListener[] storeListeners, IDocumentDeleteListener[] deleteListeners)
 		{
@@ -49,7 +49,6 @@ namespace Raven.Client.Document
 			AllowNonAuthoritiveInformation = true;
 		    MaxNumberOfRequestsPerSession = documentStore.Conventions.MaxNumberOfRequestsPerSession;
 		}
-
 
 		public string StoreIdentifier
 		{
@@ -95,7 +94,7 @@ namespace Raven.Client.Document
 
 		internal void IncrementRequestCount()
 		{
-			if (++numberOfRequests > MaxNumberOfRequestsPerSession)
+			if (++NumberOfRequests > MaxNumberOfRequestsPerSession)
 				throw new InvalidOperationException(
 					string.Format(
 						@"The maximum number of requests ({0}) allowed for this session has been reached.
@@ -114,8 +113,7 @@ more responsive application.
 			{
 				documentFound.Metadata.Add("@etag", new JValue(documentFound.Etag.ToString()));
 			}
-			if(documentFound.NonAuthoritiveInformation && 
-				AllowNonAuthoritiveInformation == false)
+			if(documentFound.NonAuthoritiveInformation && AllowNonAuthoritiveInformation == false)
 			{
 				throw new NonAuthoritiveInformationException("Document " + documentFound.Key +
 				" returned Non Authoritive Information (probably modified by a transaction in progress) and AllowNonAuthoritiveInformation  is set to false");
@@ -137,6 +135,7 @@ more responsive application.
 				return (T) entity;
 			}
 			var etag = metadata.Value<string>("@etag");
+			document.Remove("@metadata");
 			if(metadata.Value<bool>("Non-Authoritive-Information") && 
 				AllowNonAuthoritiveInformation == false)
 			{

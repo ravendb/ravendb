@@ -119,8 +119,10 @@ namespace Raven.Database.Storage
 
 		public void RemoveIndex(string name)
 		{
-			AbstractViewGenerator _;
-			indexCache.TryRemove(name, out _);
+			AbstractViewGenerator ignoredViewGenerator;
+			indexCache.TryRemove(name, out ignoredViewGenerator);
+			IndexDefinition ignoredIndexDefinition;
+			indexDefinitions.TryRemove(name, out ignoredIndexDefinition);
 			File.Delete(GetIndexPath(name));
 			File.Delete(GetIndexSourcePath(name));
 		}
@@ -154,7 +156,7 @@ namespace Raven.Database.Storage
 		{
 			if (indexCache.ContainsKey(name))
 			{
-				return GetIndexDefinition(name) == indexDef
+				return GetIndexDefinition(name).Equals(indexDef)
 					? IndexCreationOptions.Noop
 					: IndexCreationOptions.Update;
 			}

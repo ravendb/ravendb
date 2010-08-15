@@ -44,6 +44,7 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Transactions" />
     <Reference Include="System.Xml.Linq" />
@@ -79,8 +80,14 @@
     <Compile Include="..\Raven.Client\Client\JsonLuceneDateTimeConverter.cs">
       <Link>Client\JsonLuceneDateTimeConverter.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client\Client\RavenQuery.cs">
+      <Link>Client\RavenQuery.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client\Client\RavenTransactionAccessor.cs">
       <Link>Client\RavenTransactionAccessor.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client\Client\SerializationHelper.cs">
+      <Link>Client\SerializationHelper.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client\Client\ServerClient.cs">
       <Link>Client\ServerClient.cs</Link>
@@ -88,8 +95,8 @@
     <Compile Include="..\Raven.Client\Client\WebRequestEventArgs.cs">
       <Link>Client\WebRequestEventArgs.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client\Document\AbstractDocumentQuery.cs">
-      <Link>Document\AbstractDocumentQuery.cs</Link>
+    <Compile Include="..\Raven.Client\Client\WebResponseExtensions.cs">
+      <Link>Client\WebResponseExtensions.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client\Document\Async\AsyncDocumentSession.cs">
       <Link>Document\Async\AsyncDocumentSession.cs</Link>
@@ -190,6 +197,9 @@
     <Compile Include="..\raven.client\linq\RavenQueryProvider.cs">
       <Link>Linq\RavenQueryProvider.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client\Linq\RavenQueryProviderProcessor.cs">
+      <Link>Linq\RavenQueryProviderProcessor.cs</Link>
+    </Compile>
     <Compile Include="..\raven.client\linq\TypeSystem.cs">
       <Link>Linq\TypeSystem.cs</Link>
     </Compile>
@@ -241,6 +251,9 @@
     <Compile Include="..\Raven.Database\BatchResult.cs">
       <Link>Data\BatchResult.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Database\Data\Attachment.cs">
+      <Link>Data\Attachment.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Database\Data\DeleteCommandData.cs">
       <Link>Commands\DeleteCommandData.cs</Link>
     </Compile>
@@ -258,6 +271,9 @@
     </Compile>
     <Compile Include="..\Raven.Database\Data\MetadataExtensions.cs">
       <Link>Data\MetadataExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Database\Data\MultiLoadResult.cs">
+      <Link>Data\MultiLoadResult.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Database\Data\PatchCommandData.cs">
       <Link>Commands\PatchCommandData.cs</Link>
@@ -306,6 +322,9 @@
     </Compile>
     <Compile Include="..\Raven.Database\Indexing\NumberUtil.cs">
       <Link>Linq\NumberUtil.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Database\Indexing\SortOptions.cs">
+      <Link>Data\SortOptions.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Database\JsonDocument.cs">
       <Link>Data\JsonDocument.cs</Link>

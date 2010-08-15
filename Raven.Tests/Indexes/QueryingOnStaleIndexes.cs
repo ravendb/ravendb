@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Data;
@@ -41,13 +42,43 @@ namespace Raven.Tests.Indexes
         [Fact]
         public void WillGetNonStaleResultWhenAskingWithCutoffDate()
         {
+			db.SpinBackgroundWorkers();
             db.Put("a", null, new JObject(), new JObject(), null);
 
-            Assert.False(db.Query("Raven/DocumentsByEntityName", new IndexQuery
+        	for (int i = 0; i < 50; i++)
+        	{
+        		var queryResult = db.Query("Raven/DocumentsByEntityName", new IndexQuery
+        		{
+        			PageSize = 2,
+        			Start = 0,
+        		});
+        		if (queryResult.IsStale == false)
+					break;
+				Thread.Sleep(100);
+        	}
+
+			Assert.False(db.Query("Raven/DocumentsByEntityName", new IndexQuery
+			{
+				PageSize = 2,
+				Start = 0,
+			}).IsStale);
+
+			db.StopBackgroundWokers();
+
+			db.Put("a", null, new JObject(), new JObject(), null);
+
+
+			Assert.True(db.Query("Raven/DocumentsByEntityName", new IndexQuery
+			{
+				PageSize = 2,
+				Start = 0,
+			}).IsStale);
+
+        	Assert.False(db.Query("Raven/DocumentsByEntityName", new IndexQuery
             {
                 PageSize = 2,
                 Start = 0,
-                Cutoff = DateTime.Now.AddHours(-1)
+				Cutoff = DateTime.UtcNow.AddHours(-1)
             }).IsStale);
         }
         

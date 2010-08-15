@@ -7,7 +7,7 @@ namespace Raven.Storage.Esent
 	[CLSCompliant(false)]
 	public class SchemaCreator
 	{
-		public const string SchemaVersion = "2.5";
+		public const string SchemaVersion = "2.6";
 		private readonly Session session;
 
 		public SchemaCreator(Session session)
@@ -91,6 +91,19 @@ namespace Raven.Storage.Esent
 				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnEscrowUpdate
 			}, defaultValue, defaultValue.Length, out columnid);
 
+			Api.JetAddColumn(session, tableid, "last_indexed_etag", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.Binary,
+				cbMax = 16,
+				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
+			}, null, 0, out columnid);
+
+
+			Api.JetAddColumn(session, tableid, "last_indexed_timestamp", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.DateTime,
+				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
+			}, null, 0, out columnid);
 
 			Api.JetAddColumn(session, tableid, "attempts", new JET_COLUMNDEF
 			{
@@ -160,6 +173,12 @@ namespace Raven.Storage.Esent
 				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL,
 			}, null, 0, out columnid);
 
+			Api.JetAddColumn(session, tableid, "last_modified", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.DateTime,
+				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL,
+			}, null, 0, out columnid);
+
             Api.JetAddColumn(session, tableid, "locked_by_transaction", new JET_COLUMNDEF
             {
                 cbMax = 16,
@@ -219,6 +238,12 @@ namespace Raven.Storage.Esent
                 coltyp = JET_coltyp.Binary,
                 grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL,
             }, null, 0, out columnid);
+
+			Api.JetAddColumn(session, tableid, "last_modified", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.DateTime,
+				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL,
+			}, null, 0, out columnid);
 
             Api.JetAddColumn(session, tableid, "locked_by_transaction", new JET_COLUMNDEF
             {

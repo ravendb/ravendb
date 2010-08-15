@@ -34,6 +34,16 @@
             <param name="comparer">The comparer used to equate objects in the collection with the expected object</param>
             <exception cref="T:Xunit.Sdk.ContainsException">Thrown when the object is not present in the collection</exception>
         </member>
+        <member name="M:Xunit.Assert.Contains(System.String,System.Collections.Generic.IEnumerable{System.String},System.StringComparer)">
+            <summary>
+            Verifies that a collection contains a given string, using a string comparer.
+            </summary>
+            <typeparam name="T">The type of the object to be verified</typeparam>
+            <param name="expected">The string expected to be in the collection</param>
+            <param name="collection">The collection to be inspected</param>
+            <param name="comparer">The comparer used to equate objects in the collection with the expected string</param>
+            <exception cref="T:Xunit.Sdk.ContainsException">Thrown when the string is not present in the collection</exception>
+        </member>
         <member name="M:Xunit.Assert.Contains``1(``0,System.Collections.Generic.IEnumerable{``0},System.Collections.Generic.IComparer{``0})">
             <summary>
             Verifies that a collection contains a given object, using a comparer.
@@ -79,6 +89,16 @@
             <param name="collection">The collection to be inspected</param>
             <param name="comparer">The comparer used to equate objects in the collection with the expected object</param>
             <exception cref="T:Xunit.Sdk.DoesNotContainException">Thrown when the object is present inside the container</exception>
+        </member>
+        <member name="M:Xunit.Assert.DoesNotContain(System.String,System.Collections.Generic.IEnumerable{System.String},System.StringComparer)">
+            <summary>
+            Verifies that a collection does not contain a given string, using a string comparer.
+            </summary>
+            <typeparam name="T">The type of the string to be compared</typeparam>
+            <param name="expected">The string that is expected not to be in the collection</param>
+            <param name="collection">The collection to be inspected</param>
+            <param name="comparer">The comparer used to equate strings in the collection with the expected string</param>
+            <exception cref="T:Xunit.Sdk.DoesNotContainException">Thrown when the string is present inside the container</exception>
         </member>
         <member name="M:Xunit.Assert.DoesNotContain``1(``0,System.Collections.Generic.IEnumerable{``0},System.Collections.Generic.IComparer{``0})">
             <summary>
@@ -139,6 +159,16 @@
             <param name="actual">The value to be compared against</param>
             <param name="comparer">The comparer used to compare the two objects</param>
             <exception cref="T:Xunit.Sdk.EqualException">Thrown when the objects are not equal</exception>
+        </member>
+        <member name="M:Xunit.Assert.Equal(System.String,System.String,System.StringComparer)">
+            <summary>
+            Verifies that two strings are equal, using the given string comparer.
+            </summary>
+            <typeparam name="T">The type of the strings to be compared</typeparam>
+            <param name="expected">The expected value</param>
+            <param name="actual">The value to be compared against</param>
+            <param name="comparer">The comparer used to compare the two strings</param>
+            <exception cref="T:Xunit.Sdk.EqualException">Thrown when the strings are not equal</exception>
         </member>
         <member name="M:Xunit.Assert.Equal``1(``0,``0,System.Collections.Generic.IComparer{``0})">
             <summary>
@@ -266,6 +296,16 @@
             <param name="comparer">The comparer used to examine the objects</param>
             <exception cref="T:Xunit.Sdk.NotEqualException">Thrown when the objects are equal</exception>
         </member>
+        <member name="M:Xunit.Assert.NotEqual(System.String,System.String,System.StringComparer)">
+            <summary>
+            Verifies that two strings are not equal, using the given string comparer.
+            </summary>
+            <typeparam name="T">The type of the strings to be compared</typeparam>
+            <param name="expected">The expected string</param>
+            <param name="actual">The actual string</param>
+            <param name="comparer">The comparer used to examine the strings</param>
+            <exception cref="T:Xunit.Sdk.NotEqualException">Thrown when the strings are equal</exception>
+        </member>
         <member name="M:Xunit.Assert.NotEqual``1(``0,``0,System.Collections.Generic.IComparer{``0})">
             <summary>
             Verifies that two objects are not equal, using a custom comparer.
@@ -347,6 +387,18 @@
             <returns>The single item in the collection.</returns>
             <exception cref="T:Xunit.Sdk.SingleException">Thrown when the collection does not contain
             exactly one element.</exception>
+        </member>
+        <member name="M:Xunit.Assert.Single``1(System.Collections.Generic.IEnumerable{``0},System.Predicate{``0})">
+            <summary>
+            Verifies that the given collection contains only a single
+            element of the given type which matches the given predicate.
+            </summary>
+            <typeparam name="T">The collection type.</typeparam>
+            <param name="collection">The collection.</param>
+            <param name="predicate">The item matching predicate.</param>
+            <returns>The single item in the filtered collection.</returns>
+            <exception cref="T:Xunit.Sdk.SingleException">Thrown when the filtered collection does
+            not contain exactly one element.</exception>
         </member>
         <member name="M:Xunit.Assert.Throws``1(Xunit.Assert.ThrowsDelegate)">
             <summary>

@@ -1,0 +1,48 @@
+﻿<UserControl
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	mc:Ignorable="d"
+	xmlns:local="clr-namespace:Tutorial"
+	x:Class="Tutorial.TutorialPage"
+	x:Name="TutorialPageUserControl"
+	d:DesignWidth="624" d:DesignHeight="450" Background="White">
+
+	<StackPanel x:Name="tutorial_page" VerticalAlignment="Top" Margin="0,8,0,0">
+        <RichTextBox x:Name="pre_exercise" Focusable="False" IsReadOnly="True" IsUndoEnabled="False" BorderThickness="0" HorizontalAlignment="Left" FontSize="13.333" Padding="4,8" Visibility="Collapsed">
+			<FlowDocument>
+				<Paragraph><Run Text="This section blah blah blah ..."/></Paragraph>
+			</FlowDocument>
+		</RichTextBox>
+        <RichTextBox x:Name="exercise" Focusable="False" IsReadOnly="True" IsUndoEnabled="False" BorderThickness="0" HorizontalAlignment="Left" FontSize="13.333" Padding="4,8" Background="{x:Null}">
+        	<FlowDocument>
+        		<Paragraph><Run Text="This section blah blah blah ..."/></Paragraph>
+        	</FlowDocument>
+        </RichTextBox>
+        <StackPanel x:Name="start_tutorial" Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8,0,8,8" Visibility="Collapsed">
+        	<Button Content="Start tutorial"/>
+        </StackPanel>
+		<StackPanel x:Name="tutorial_body" Margin="8,0" VerticalAlignment="Top">
+			<local:StepControl />
+			<local:StepControl />
+		</StackPanel>
+		<StackPanel x:Name="complete">
+			<TextBlock x:Name="complete_title" Text="Section complete!" TextWrapping="Wrap" Margin="13,0,13,8" FontSize="16" FontWeight="Bold"/>
+			<Border x:Name="complete_wrapper" BorderBrush="#FFC8C8C8" BorderThickness="5" CornerRadius="10" Margin="8,0,8,8">
+				<DockPanel Margin="0">
+					<RichTextBox x:Name="complete_body" VerticalAlignment="Top" FontSize="16" Padding="4,6,4,0" Focusable="False" IsReadOnly="True" IsUndoEnabled="False" BorderThickness="0"  DockPanel.Dock="Top" HorizontalAlignment="Left" Background="{x:Null}" >
+						<FlowDocument>
+							<Paragraph><Run Text="Section complete!"/></Paragraph>
+						</FlowDocument>
+					</RichTextBox>
+					<StackPanel Margin="8" Orientation="Horizontal" DockPanel.Dock="Bottom" d:LayoutOverrides="HorizontalAlignment">
+						<Button x:Name="next_chapter" Content="Move onto next chapter" Padding="3"/>
+						<TextBlock Margin="5,5,5,0" Text="or" TextWrapping="Wrap" Visibility="Collapsed"/>
+						<Button Content="select another" Padding="3" Visibility="Collapsed"/>
+					</StackPanel>
+				</DockPanel>
+			</Border>
+		</StackPanel>
+	</StackPanel>
+</UserControl>

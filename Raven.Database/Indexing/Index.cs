@@ -71,45 +71,48 @@ namespace Raven.Database.Indexing
 
         #endregion
 
-        public IEnumerable<IndexQueryResult> Query(IndexQuery indexQuery)
+        public IEnumerable<IndexQueryResult> Query(IndexQuery indexQuery, Func<IndexQueryResult, bool> shouldIncludeInResults)
         {
         	IndexSearcher indexSearcher;
         	using (searcher.Use(out indexSearcher))
             {
-				var previousDocuments = new HashSet<string>();
             	var luceneQuery = GetLuceneQuery(indexQuery);
             	var start = indexQuery.Start;
             	var pageSize = indexQuery.PageSize;
-            	var skippedDocs = 0;
             	var returnedResults = 0;
+                var skippedResultsInCurrentLoop = 0;
             	do
             	{
-					if(skippedDocs > 0)
+                    if (skippedResultsInCurrentLoop > 0)
 					{
 						start = start + pageSize;
 						// trying to guesstimate how many results we will need to read from the index
 						// to get enough unique documents to match the page size
-						pageSize = skippedDocs * indexQuery.PageSize; 
-						skippedDocs = 0;
+                        pageSize = skippedResultsInCurrentLoop * indexQuery.PageSize;
+                        skippedResultsInCurrentLoop = 0;
 					}
 					var search = ExecuteQuery(indexSearcher, luceneQuery, start, pageSize, indexQuery.SortedFields, indexQuery as SpatialIndexQuery);
 					indexQuery.TotalSize.Value = search.totalHits;
 					for (var i = start; i < search.totalHits && (i - start) < pageSize; i++)
 					{
 						var document = indexSearcher.Doc(search.scoreDocs[i].doc);
-						if (IsDuplicateDocument(document, indexQuery.FieldsToFetch, previousDocuments))
-						{
-							skippedDocs++;
-							continue;
-						}
-						returnedResults++;
-						yield return RetrieveDocument(document, indexQuery.FieldsToFetch);
+						var indexQueryResult = RetrieveDocument(document, indexQuery.FieldsToFetch);
+                        if (shouldIncludeInResults(indexQueryResult) == false)
+                        {
+                            indexQuery.SkippedResults.Value++;
+                            skippedResultsInCurrentLoop++;
+                            continue;
+                        }
+                        returnedResults++;
+                        yield return indexQueryResult;
+                        if(returnedResults == indexQuery.PageSize)
+                            yield break;
 					}
-				} while (skippedDocs > 0 && returnedResults < indexQuery.PageSize);
+                } while (skippedResultsInCurrentLoop > 0 && returnedResults < indexQuery.PageSize);
             }
         }
 
-    	private static TopDocs ExecuteQuery(IndexSearcher searcher, Query luceneQuery, int start, int pageSize, SortedField[] sortedFields, SpatialIndexQuery spatialQuery)
+    	private TopDocs ExecuteQuery(IndexSearcher searcher, Query luceneQuery, int start, int pageSize, SortedField[] sortedFields, SpatialIndexQuery spatialQuery)
         {
 			Filter filter = null;
 			Sort sortByDistance = null;
@@ -128,7 +131,7 @@ namespace Raven.Database.Indexing
 					sortByDistance = new Sort(new SortField("foo", dsort, false));
 				}
 			}
-
+				
 			if (sortByDistance != null)
 			{
 				return searcher.Search(luceneQuery, filter, pageSize + start, sortByDistance);
@@ -143,7 +146,8 @@ namespace Raven.Database.Indexing
             // NOTE: We get Start + Pagesize results back so we have something to page on
 			if (sortedFields != null && sortedFields.Length > 0)
             {
-                var sort = new Sort(sortedFields.Select(x => x.ToLuceneSortField()).ToArray());
+                var sort = new Sort(sortedFields.Select(x => x.ToLuceneSortField(indexDefinition)).ToArray());
+				
                 return searcher.Search(luceneQuery, filter, pageSize + start, sort);
             }
         	return searcher.Search(luceneQuery, filter, pageSize + start);
@@ -180,15 +184,6 @@ namespace Raven.Database.Indexing
 				}
             }
             return luceneQuery;
-        }
-
-        private static bool IsDuplicateDocument(Document document, ICollection<string> fieldsToFetch, ISet<string> previousDocuments)
-        {
-            var docId = document.Get("__document_id");
-            if (fieldsToFetch != null && fieldsToFetch.Count > 1 ||
-                string.IsNullOrEmpty(docId))
-                return false;
-            return previousDocuments.Add(docId) == false;
         }
 
         public abstract void IndexDocuments(AbstractViewGenerator viewGenerator, IEnumerable<object> documents,
@@ -284,6 +279,22 @@ namespace Raven.Database.Indexing
 				toDispose.Add(analyzerInstance.Close);
     			perFieldAnalyzerWrapper.AddAnalyzer(analyzer.Key, analyzerInstance);
     		}
+			KeywordAnalyzer keywordAnalyzer = null;
+			foreach (var fieldIndexing in indexDefinition.Indexes)
+			{
+				switch (fieldIndexing.Value)
+				{
+					case FieldIndexing.NotAnalyzedNoNorms:
+					case FieldIndexing.NotAnalyzed:
+						if(keywordAnalyzer  == null)
+						{
+							keywordAnalyzer = new KeywordAnalyzer();
+							toDispose.Add(keywordAnalyzer.Close);
+						}
+						perFieldAnalyzerWrapper.AddAnalyzer(fieldIndexing.Key, keywordAnalyzer);
+						break;
+				}
+			}
     		return perFieldAnalyzerWrapper;
     	}
 

@@ -28,8 +28,10 @@ namespace Raven.Database.Data
             "Content-Range",
             "Content-Type",
             "Expires",
-            "Last-Modified",
+            
              */
+			// ignoring this header, we handle this internally
+			"Last-Modified",
 			// Ignoring this header, since it may
 			// very well change due to things like encoding,
 			// adding metadata, etc

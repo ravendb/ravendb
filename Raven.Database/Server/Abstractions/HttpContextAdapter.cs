@@ -42,9 +42,7 @@ namespace Raven.Database.Server.Abstractions
 
 		public void FinalizeResonse()
 		{
-			context.Response.OutputStream.Flush();
-			context.Response.Filter.Flush();
-			context.Response.Filter.Dispose();
+			
 		}
 
 		public void SetResponseFilter(Func<Stream, Stream> responseFilter)
