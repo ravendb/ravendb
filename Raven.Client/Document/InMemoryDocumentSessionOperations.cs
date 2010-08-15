@@ -185,10 +185,15 @@ more responsive application.
 				}
 #endif
 			}
+			TrySetIdentity(entity, id);
+			return entity;
+		}
+
+		protected void TrySetIdentity<T>(T entity, string id)
+		{
 			var identityProperty = documentStore.Conventions.GetIdentityProperty(entity.GetType());
 			if (identityProperty != null && identityProperty.CanWrite)
 				identityProperty.SetValue(entity, id, null);
-			return entity;
 		}
 
 		private static void EnsureNotReadVetoed(JObject metadata)
@@ -229,23 +234,11 @@ more responsive application.
             }
             else
 #endif
-            {
-                var identityProperty = GetIdentityProperty(entity.GetType());
-                if (identityProperty != null)
-                    id = identityProperty.GetValue(entity, null) as string;
+			{
+				id = TryGetIdentity(entity, id);
 
-                if (id == null)
-                {
-                    // Generate the key up front
-                    id = Conventions.GenerateDocumentKey(entity);
-
-					if (id != null && identityProperty != null && identityProperty.CanWrite)
-                    {
-                        // And store it so the client has access to to it
-                        identityProperty.SetValue(entity, id, null);
-                    }
-                }
-            }
+				TrySetIdentity(entity, id);
+			}
 
 			// we make the check here even if we just generated the key
 			// users can override the key generation behavior, and we need
@@ -270,6 +263,21 @@ more responsive application.
 			});
 			if (id != null)
 				entitiesByKey[id] = entity;
+		}
+
+		protected string TryGetIdentity(object entity, string id)
+		{
+			var identityProperty = GetIdentityProperty(entity.GetType());
+			if (identityProperty != null)
+				id = identityProperty.GetValue(entity, null) as string;
+
+			if (id == null)
+			{
+				// Generate the key up front
+				id = Conventions.GenerateDocumentKey(entity);
+
+			}
+			return id;
 		}
 
 #if !NET_3_5

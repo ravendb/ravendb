@@ -138,6 +138,16 @@ namespace Raven.Client.Shard
 			throw new NotSupportedException("Sharded load queries with include aren't supported currently");
 		}
 
+		public string GetDocumentUrl(object entity)
+		{
+			if (ReferenceEquals(entity, null))
+				throw new ArgumentNullException("entity");
+
+			var shardIds = shardStrategy.ShardSelectionStrategy.ShardIdForExistingObject(entity);
+
+			return GetSingleShardSession(shardIds).GetDocumentUrl(entity);
+		}
+
 		public void Delete<T>(T entity)
 		{
 			if (ReferenceEquals(entity, null))
@@ -153,7 +163,7 @@ namespace Raven.Client.Shard
 	        throw new NotSupportedException("Sharded linq queries aren't supported currently");
 	    }
 
-		public IRavenQueryable<T> Query<T, TIndexCreator>(string indexName) where TIndexCreator : AbstractIndexCreationTask, new()
+		public IRavenQueryable<T> Query<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
 		{
 			throw new NotSupportedException("Sharded linq queries aren't supported currently");
 		}

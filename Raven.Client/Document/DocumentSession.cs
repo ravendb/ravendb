@@ -110,6 +110,21 @@ namespace Raven.Client.Document
 			return new MultiLoaderWithInclude(this).Include(path);
 		}
 
+		public string GetDocumentUrl(object entity)
+		{
+			if (string.IsNullOrEmpty(documentStore.Url))
+				throw new InvalidOperationException("Could not provide document url for embedded instance");
+
+			DocumentMetadata value;
+			string baseUrl = documentStore.Url.EndsWith("/") ? documentStore.Url + "docs/" : documentStore.Url + "/docs/";
+			if(entitiesAndMetadata.TryGetValue(entity, out value) == false)
+			{
+				return baseUrl + TryGetIdentity(entity, null);
+			}
+
+			return baseUrl + value.Key;
+		}
+
 		public void SaveChanges()
 		{
 			var data = PrepareForSaveChanges();
