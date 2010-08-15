@@ -125,6 +125,7 @@
     <Compile Include="Bugs\ProjectingDates.cs" />
     <Compile Include="Bugs\SortingOnLong.cs" />
     <Compile Include="Bugs\StalenessWontAffectUnrelatedIndexes.cs" />
+    <Compile Include="Bugs\UsingEnumInLinq.cs" />
     <Compile Include="Bugs\WithPrivateProtectedSetter.cs" />
     <Compile Include="Document\AsyncDocumentStoreServerTests.cs" />
     <Compile Include="Document\ClientKeyGeneratorTests.cs" />

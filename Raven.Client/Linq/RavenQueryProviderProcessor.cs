@@ -98,56 +98,78 @@ namespace Raven.Client.Linq
 
 		private void VisitEquals(BinaryExpression expression)
 		{
-			var memberInfo = ((MemberExpression) expression.Left).Member;
+			var memberInfo = GetMember(expression.Left);
 
 			luceneQuery.WhereEquals(
 				memberInfo.Name,
-				GetValueFromExpression(expression.Right),
+				GetValueFromExpression(expression.Right, GetMemberType(memberInfo)),
 				GetFieldType(memberInfo) != typeof (string),
 				false);
 		}
 
+		private static Type GetMemberType(MemberInfo memberInfo)
+		{
+			switch (memberInfo.MemberType)
+			{
+				case MemberTypes.Field:
+					return ((FieldInfo) memberInfo).FieldType;
+				case MemberTypes.Property:
+					return ((PropertyInfo) memberInfo).PropertyType;
+				default:
+					throw new ArgumentOutOfRangeException();
+			}
+		}
+
+		private static MemberInfo GetMember(Expression expression)
+		{
+			var unaryExpression = expression as UnaryExpression;
+			if(unaryExpression != null)
+				expression = unaryExpression.Operand;
+			return ((MemberExpression) expression).Member;
+		}
+
 		private void VisitEquals(MethodCallExpression expression)
 		{
-			var memberInfo = ((MemberExpression) expression.Object).Member;
+			var memberInfo = GetMember(expression.Object);
 
 			luceneQuery.WhereEquals(
 				memberInfo.Name,
-				GetValueFromExpression(expression.Arguments[0]),
+				GetValueFromExpression(expression.Arguments[0], GetMemberType(memberInfo)),
 				GetFieldType(memberInfo) != typeof (string),
 				false);
 		}
 
 		private void VisitContains(MethodCallExpression expression)
 		{
-			var memberInfo = ((MemberExpression) expression.Object).Member;
+			var memberInfo = GetMember(expression.Object);
 
 			luceneQuery.WhereContains(
 				memberInfo.Name,
-				GetValueFromExpression(expression.Arguments[0]));
+				GetValueFromExpression(expression.Arguments[0], GetMemberType(memberInfo)));
 		}
 
 		private void VisitStartsWith(MethodCallExpression expression)
 		{
-			var memberInfo = ((MemberExpression) expression.Object).Member;
+			var memberInfo = GetMember(expression.Object);
 
 			luceneQuery.WhereStartsWith(
 				memberInfo.Name,
-				GetValueFromExpression(expression.Arguments[0]));
+				GetValueFromExpression(expression.Arguments[0], GetMemberType(memberInfo)));
 		}
 
 		private void VisitEndsWith(MethodCallExpression expression)
 		{
-			var memberInfo = ((MemberExpression) expression.Object).Member;
+			var memberInfo = GetMember(expression.Object);
 
 			luceneQuery.WhereEndsWith(
 				memberInfo.Name,
-				GetValueFromExpression(expression.Arguments[0]));
+				GetValueFromExpression(expression.Arguments[0], GetMemberType(memberInfo)));
 		}
 
 		private void VisitGreaterThan(BinaryExpression expression)
 		{
-			var value = GetValueFromExpression(expression.Right);
+			var memberInfo = GetMember(expression.Left);
+			var value = GetValueFromExpression(expression.Right, GetMemberType(memberInfo));
 
 			luceneQuery.WhereGreaterThan(
 				GetFieldNameForRangeQuery(expression.Left, value),
@@ -156,7 +178,8 @@ namespace Raven.Client.Linq
 
 		private void VisitGreaterThanOrEqual(BinaryExpression expression)
 		{
-			var value = GetValueFromExpression(expression.Right);
+			var memberInfo = GetMember(expression.Left);
+			var value = GetValueFromExpression(expression.Right, GetMemberType(memberInfo));
 
 			luceneQuery.WhereGreaterThanOrEqual(
 				GetFieldNameForRangeQuery(expression.Left, value),
@@ -165,7 +188,8 @@ namespace Raven.Client.Linq
 
 		private void VisitLessThan(BinaryExpression expression)
 		{
-			var value = GetValueFromExpression(expression.Right);
+			var memberInfo = GetMember(expression.Left);
+			var value = GetValueFromExpression(expression.Right, GetMemberType(memberInfo));
 
 			luceneQuery.WhereLessThan(
 				GetFieldNameForRangeQuery(expression.Left, value),
@@ -174,7 +198,8 @@ namespace Raven.Client.Linq
 
 		private void VisitLessThanOrEqual(BinaryExpression expression)
 		{
-			var value = GetValueFromExpression(expression.Right);
+			var memberInfo = GetMember(expression.Left);
+			var value = GetValueFromExpression(expression.Right, GetMemberType(memberInfo));
 
 			luceneQuery.WhereLessThanOrEqual(
 				GetFieldNameForRangeQuery(expression.Left, value),
@@ -459,28 +484,63 @@ namespace Raven.Client.Linq
 			throw new NotSupportedException("Unable to determine field type from expression");
 		}
 
-		private static object GetValueFromExpression(Expression expression)
+		private static object GetValueFromExpression(Expression expression, Type type)
 		{
 			if (expression == null)
 				throw new ArgumentNullException("expression");
 
 			// Get object
+			object value;
+			if (GetValueFromExpressionWithoutConversion(expression, out value))
+			{
+				if (type.IsEnum)
+					return Enum.GetName(type, value);
+				return value;
+			}
+			throw new InvalidOperationException("Can't extract value from expression of type: " + expression.NodeType);
+		}
+
+		private static bool GetValueFromExpressionWithoutConversion(Expression expression, out object value)
+		{
 			if (expression.NodeType == ExpressionType.Constant)
-				return ((ConstantExpression) expression).Value;
+			{
+				value = ((ConstantExpression) expression).Value;
+				return true;
+			}
 			if (expression.NodeType == ExpressionType.MemberAccess)
-				return GetMemberValue(((MemberExpression) expression));
+			{
+				value = GetMemberValue(((MemberExpression) expression));
+				return true;
+			}
 			if (expression.NodeType == ExpressionType.New)
 			{
 				var newExpression = ((NewExpression) expression);
-				return Activator.CreateInstance(newExpression.Type, newExpression.Arguments.Select(GetValueFromExpression).ToArray());
+				value = Activator.CreateInstance(newExpression.Type, newExpression.Arguments.Select(e =>
+				{
+					object o;
+					if (GetValueFromExpressionWithoutConversion(e, out o))
+						return o;
+					throw new InvalidOperationException("Can't extract value from expression of type: " + expression.NodeType);
+				}).ToArray());
+				return true;
 			}
 			if (expression.NodeType == ExpressionType.Lambda)
-				return ((LambdaExpression) expression).Compile().DynamicInvoke();
+			{
+				value = ((LambdaExpression) expression).Compile().DynamicInvoke();
+				return true;
+			}
 			if (expression.NodeType == ExpressionType.Call)
-				return Expression.Lambda(expression).Compile().DynamicInvoke();
+			{
+				value = Expression.Lambda(expression).Compile().DynamicInvoke();
+				return true;
+			}
 			if (expression.NodeType == ExpressionType.Convert)
-				return Expression.Lambda(((UnaryExpression) expression).Operand).Compile().DynamicInvoke();
-			throw new InvalidOperationException("Can't extract value from expression of type: " + expression.NodeType);
+			{
+				value = Expression.Lambda(((UnaryExpression) expression).Operand).Compile().DynamicInvoke();
+				return true;
+			}
+			value = null;
+			return false;
 		}
 
 		private static object GetMemberValue(MemberExpression memberExpression)
