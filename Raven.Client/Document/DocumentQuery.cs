@@ -356,32 +356,32 @@ namespace Raven.Client.Document
 		/// </remarks>
 		public IDocumentQuery<T> Proximity(int proximity)
 		{
-			if (this.queryText.Length < 1)
+			if (queryText.Length < 1)
 			{
 				throw new InvalidOperationException("Missing where clause");
 			}
 
 			if (proximity < 1)
 			{
-				throw new ArgumentOutOfRangeException("Proximity distance must be positive number");
+				throw new ArgumentOutOfRangeException("proximity","Proximity distance must be positive number");
 			}
 
-			if (this.queryText[this.queryText.Length - 1] != '"')
+			if (queryText[queryText.Length - 1] != '"')
 			{
 				// this check is overly simplistic
 				throw new InvalidOperationException("Proximity distance can only modify a phrase");
 			}
 
-			this.queryText.Append("~").Append(proximity);
+			queryText.Append("~").Append(proximity);
 
 			return this;
 		}
 
-		public IDocumentQuery<T> WithinRadiusOfLatLng(double radius, double lat, double lng)
+		public IDocumentQuery<T> WithinRadiusOf(double theRadius, double latitude, double longitude)
 		{
-			this.radius = radius;
-			this.lat = lat;
-			this.lng = lng;
+			radius = theRadius;
+			lat = latitude;
+			lng = longitude;
 
 			return this;
 		}
