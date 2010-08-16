@@ -91,7 +91,7 @@ namespace Raven.Database.Indexing
                         pageSize = skippedResultsInCurrentLoop * indexQuery.PageSize;
                         skippedResultsInCurrentLoop = 0;
 					}
-					var search = ExecuteQuery(indexSearcher, luceneQuery, start, pageSize, indexQuery as SpatialIndexQuery);
+					var search = ExecuteQuery(indexSearcher, luceneQuery, start, pageSize, indexQuery);
 					indexQuery.TotalSize.Value = search.totalHits;
 					for (var i = start; i < search.totalHits && (i - start) < pageSize; i++)
 					{
