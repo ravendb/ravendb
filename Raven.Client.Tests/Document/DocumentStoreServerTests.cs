@@ -1012,11 +1012,11 @@ namespace Raven.Client.Tests.Document
 					.ToArray();
 
 				const double lat = 38.96939, lng = -77.386398;
-				const double miles = 6.0;
+				const double radius = 6.0;
 
 				var events = session.LuceneQuery<Event>("eventsByLatLng")
 					.WhereEquals("Tag", "Event")
-					.WithinRadiusOfLatLng(miles, lat, lng)
+					.WithinRadiusOfLatLng(radius, lat, lng)
 					.WaitForNonStaleResults()
 					.ToArray();
 
@@ -1026,7 +1026,7 @@ namespace Raven.Client.Tests.Document
 				{
 					double distance = Raven.Database.Indexing.SpatialIndex.GetDistanceMi(lat, lng, e.Latitude, e.Longitude);
 					Console.WriteLine("Venue: " + e.Venue + ", Distance " + distance);
-					Assert.True(distance < miles);
+					Assert.True(distance < radius);
 				}
 			}
 		}

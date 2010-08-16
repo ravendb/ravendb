@@ -198,9 +198,9 @@ namespace Raven.Client.Document
 			return this;
 		}
 
-		public IDocumentQuery<T> WithinRadiusOfLatLng(double miles, double lat, double lng)
+		public IDocumentQuery<T> WithinRadiusOfLatLng(double radius, double lat, double lng)
 		{
-			ApplyForAll(query => query.WithinRadiusOfLatLng(miles, lat, lng));
+			ApplyForAll(query => query.WithinRadiusOfLatLng(radius, lat, lng));
 			return this;
 		}
 

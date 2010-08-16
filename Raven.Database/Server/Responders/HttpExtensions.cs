@@ -255,11 +255,11 @@ namespace Raven.Database.Server.Responders
 			return lng;
 		}
 
-		public static double GetMiles(this IHttpContext context)
+		public static double GetRadius(this IHttpContext context)
 		{
-			double miles;
-			double.TryParse(context.Request.QueryString["_radius"], out miles);
-			return miles;
+			double radius;
+			double.TryParse(context.Request.QueryString["_radius"], out radius);
+			return radius;
 		}
 
 		public static bool IsSpatialIndex(this IHttpContext context)
@@ -291,7 +291,7 @@ namespace Raven.Database.Server.Responders
 
 			if (context.IsSpatialIndex())
 			{
-				double lat = context.GetLat(), lng = context.GetLng(), miles = context.GetMiles();
+				double lat = context.GetLat(), lng = context.GetLng(), radius = context.GetRadius();
 
 				return new SpatialIndexQuery
 				{
@@ -303,7 +303,7 @@ namespace Raven.Database.Server.Responders
 					SortedFields = query.SortedFields,
 					Latitude = lat,
 					Longitude = lng,
-					Radius = miles,
+					Radius = radius,
 					SortByDistance = context.SortByDistance()
 				};
 			}

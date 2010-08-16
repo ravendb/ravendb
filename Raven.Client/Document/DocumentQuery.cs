@@ -31,7 +31,7 @@ namespace Raven.Client.Document
 		private readonly HashSet<string> includes = new HashSet<string>();
 
 		// spatial hack
-		protected double lat, lng, miles;
+		protected double lat, lng, radius;
 
 		public DocumentQuery(DocumentSession session, IDatabaseCommands databaseCommands, string indexName,
 		                     string[] projectionFields)
@@ -377,9 +377,9 @@ namespace Raven.Client.Document
 			return this;
 		}
 
-		public IDocumentQuery<T> WithinRadiusOfLatLng(double miles, double lat, double lng)
+		public IDocumentQuery<T> WithinRadiusOfLatLng(double radius, double lat, double lng)
 		{
-			this.miles = miles;
+			this.radius = radius;
 			this.lat = lat;
 			this.lng = lng;
 
@@ -446,7 +446,7 @@ namespace Raven.Client.Document
 
 				IndexQuery indexQuery = null;
 
-				if (lat != 0 && lng != 0 && miles != 0)
+				if (lat != 0 && lng != 0 && radius != 0)
 				{
 					indexQuery = new SpatialIndexQuery
 					{
@@ -458,7 +458,7 @@ namespace Raven.Client.Document
 						FieldsToFetch = projectionFields,
 						Latitude = lat,
 						Longitude = lng,
-						Radius = miles
+						Radius = radius
 					};
 				}
 				else

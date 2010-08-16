@@ -66,7 +66,7 @@ namespace Raven.Tests.Spatial
 			}
 
 			const double lat = 38.96939, lng = -77.386398;
-			const double miles = 6.0;
+			const double radius = 6.0;
 
 			QueryResult queryResult;
 			do
@@ -76,7 +76,7 @@ namespace Raven.Tests.Spatial
 					Query = "Tag:[[Event]]",
 					Latitude = lat,
 					Longitude = lng,
-					Radius = miles,
+					Radius = radius,
 					SortByDistance = true
 				});
 				if (queryResult.IsStale)
@@ -93,7 +93,7 @@ namespace Raven.Tests.Spatial
 
 				Console.WriteLine("Venue: " + e.Venue + ", Distance " + distance);
 
-				Assert.True(distance < miles);
+				Assert.True(distance < radius);
 			}
 		}
 	}
