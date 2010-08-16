@@ -142,7 +142,6 @@ namespace Raven.Bundles.Tests
                 var metadata = session.GetMetadataFor(company2);
                 Assert.Equal(company.Name, company2.Name);
                 Assert.Equal("Historical", metadata.Value<string>("Raven-Document-Revision-Status"));
-                Assert.Equal(1, metadata.Value<int>("Raven-Document-Revision"));
             }
         }
 
