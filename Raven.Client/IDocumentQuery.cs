@@ -72,7 +72,6 @@ namespace Raven.Client
 		IDocumentQuery<TProjection> SelectFields<TProjection>(params string[] fields);
 
 		QueryResult QueryResult { get; }
-		IEnumerable<string> ProjectionFields { get; }
 		IDocumentQuery<T> AddOrder(string fieldName, bool descending);
 	}
 }

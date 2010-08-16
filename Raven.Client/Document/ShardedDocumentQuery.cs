@@ -258,18 +258,6 @@ namespace Raven.Client.Document
 			get { return queryResult ?? (queryResult = GetQueryResult()); }
 		}
 
-		public IEnumerable<string> ProjectionFields
-		{
-			get
-			{
-				// union all projection fields from underlying queries
-				return
-					from query in queries
-					from field in query.ProjectionFields
-					select field;
-			}
-		}
-
 		public IDocumentQuery<T> AddOrder(string fieldName, bool descending)
 		{
 			ApplyForAll(ts => ts.AddOrder(fieldName, descending));

@@ -1016,7 +1016,7 @@ namespace Raven.Client.Tests.Document
 
 				var events = session.LuceneQuery<Event>("eventsByLatLng")
 					.WhereEquals("Tag", "Event")
-					.WithinRadiusOfLatLng(radius, lat, lng)
+					.WithinRadiusOf(radius, lat, lng)
 					.WaitForNonStaleResults()
 					.ToArray();
 

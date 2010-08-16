@@ -18,20 +18,17 @@ namespace Raven.Client.Document
 	{
 		private readonly IDatabaseCommands databaseCommands;
 		private readonly string indexName;
-		private readonly string[] projectionFields;
+		protected readonly string[] projectionFields;
 		private readonly DocumentSession session;
-		private DateTime? cutoff;
-		private string[] orderByFields = new string[0];
-		private int pageSize = 128;
+		protected DateTime? cutoff;
+		protected string[] orderByFields = new string[0];
+		protected int pageSize = 128;
 		private QueryResult queryResult;
 		private StringBuilder queryText = new StringBuilder();
-		private int start;
+		protected int start;
 		private TimeSpan timeout;
 		private bool waitForNonStaleResults;
 		private readonly HashSet<string> includes = new HashSet<string>();
-
-		// spatial hack
-		protected double lat, lng, radius;
 
 		public DocumentQuery(DocumentSession session, IDatabaseCommands databaseCommands, string indexName,
 		                     string[] projectionFields)
@@ -40,6 +37,22 @@ namespace Raven.Client.Document
 			this.projectionFields = projectionFields;
 			this.indexName = indexName;
 			this.session = session;
+		}
+
+		protected DocumentQuery(DocumentQuery<T> other)
+		{
+			databaseCommands = other.databaseCommands;
+			indexName = other.indexName;
+			projectionFields = other.projectionFields;
+			session = other.session;
+			cutoff = other.cutoff;
+			orderByFields = other.orderByFields;
+			pageSize = other.pageSize;
+			queryText = other.queryText;
+			start = other.start;
+			timeout = other.timeout;
+			waitForNonStaleResults = other.waitForNonStaleResults;
+			includes = other.includes;
 		}
 
 		#region IDocumentQuery<T> Members
@@ -70,9 +83,9 @@ namespace Raven.Client.Document
 			get { return queryResult ?? (queryResult = GetQueryResult()); }
 		}
 
-		public IEnumerable<string> ProjectionFields
+		public IEnumerable<string> GetProjectionFields()
 		{
-			get { return this.projectionFields ?? Enumerable.Empty<string>(); }
+			return projectionFields ?? Enumerable.Empty<string>();
 		}
 
 		public IDocumentQuery<T> AddOrder(string fieldName, bool descending)
@@ -377,16 +390,10 @@ namespace Raven.Client.Document
 			return this;
 		}
 
-		public IDocumentQuery<T> WithinRadiusOf(double theRadius, double latitude, double longitude)
+		public IDocumentQuery<T> WithinRadiusOf(double radius, double latitude, double longitude)
 		{
-			radius = theRadius;
-			lat = latitude;
-			lng = longitude;
-
-			return this;
+			return new SpatialDocumentQuery<T>(this, radius, latitude, longitude);
 		}
-
-
 
 		public IDocumentQuery<T> OrderBy(params string[] fields)
 		{
@@ -444,35 +451,7 @@ namespace Raven.Client.Document
 				Trace.WriteLine(string.Format("Executing query '{0}' on index '{1}' in '{2}'",
 				                              query, indexName, session.StoreIdentifier));
 
-				IndexQuery indexQuery = null;
-
-				if (lat != 0 && lng != 0 && radius != 0)
-				{
-					indexQuery = new SpatialIndexQuery
-					{
-						Query = query,
-						PageSize = pageSize,
-						Start = start,
-						Cutoff = cutoff,
-						SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
-						FieldsToFetch = projectionFields,
-						Latitude = lat,
-						Longitude = lng,
-						Radius = radius
-					};
-				}
-				else
-				{
-					indexQuery = new IndexQuery
-					{
-					    Query = query,
-					    PageSize = pageSize,
-					    Start = start,
-					    Cutoff = cutoff,
-					    SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
-					    FieldsToFetch = projectionFields
-					};
-				}
+				IndexQuery indexQuery = GenerateIndexQuery(query);
 
 				var result = databaseCommands.Query(indexName, indexQuery, includes.ToArray());
 				if (waitForNonStaleResults && result.IsStale)
@@ -492,6 +471,19 @@ namespace Raven.Client.Document
 				Trace.WriteLine(string.Format("Query returned {0}/{1} results", result.Results.Count, result.TotalResults));
 				return result;
 			}
+		}
+
+		protected virtual IndexQuery GenerateIndexQuery(string query)
+		{
+			return new IndexQuery
+			{
+				Query = query,
+				PageSize = pageSize,
+				Start = start,
+				Cutoff = cutoff,
+				SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
+				FieldsToFetch = projectionFields
+			};
 		}
 
 		private T Deserialize(JObject result)

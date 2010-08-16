@@ -135,6 +135,9 @@
     <Compile Include="..\Raven.Client\Document\ShardedDocumentQuery.cs">
       <Link>Document\ShardedDocumentQuery.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client\Document\SpatialDocumentQuery.cs">
+      <Link>Document\SpatialDocumentQuery.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client\EntityStored.cs">
       <Link>Document\EntityStored.cs</Link>
     </Compile>

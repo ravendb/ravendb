@@ -123,9 +123,9 @@ namespace Raven.Client.Tests.Querying
 		{
 			var q = new DocumentQuery<IndexedUser>(null, null, "IndexName", null)
 				.WhereGreaterThanOrEqual("Birthday", new DateTime(2010, 05, 15))
-				.SelectFields<IndexedUser>("Name");
-			string fields = q.ProjectionFields.Any() ?
-				"<" + String.Join(", ", q.ProjectionFields.ToArray()) + ">: " : "";
+				.SelectFields<IndexedUser>("Name") as DocumentQuery<IndexedUser>;
+			string fields = q.GetProjectionFields().Any() ?
+				"<" + String.Join(", ", q.GetProjectionFields().ToArray()) + ">: " : "";
 			Assert.Equal("<Name>: Birthday:[20100515000000000 TO NULL]", fields + q.ToString());
 		}
 
@@ -134,9 +134,9 @@ namespace Raven.Client.Tests.Querying
 		{
 			var q = new DocumentQuery<IndexedUser>(null, null, "IndexName", null)
 				.WhereGreaterThanOrEqual("Birthday", new DateTime(2010, 05, 15))
-				.SelectFields<IndexedUser>("Name", "Age");
-			string fields = q.ProjectionFields.Any() ?
-				"<" + String.Join(", ", q.ProjectionFields.ToArray()) + ">: " : "";
+				.SelectFields<IndexedUser>("Name", "Age") as DocumentQuery<IndexedUser>;
+			string fields = q.GetProjectionFields().Any() ?
+				"<" + String.Join(", ", q.GetProjectionFields().ToArray()) + ">: " : "";
 			Assert.Equal("<Name, Age>: Birthday:[20100515000000000 TO NULL]", fields + q.ToString());
 		}
 
