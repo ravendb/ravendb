@@ -64,8 +64,11 @@ namespace Raven.Client.Indexes
 			if (expr == null)
 				return null;
 
-
-			var linqQuery = expr.Body.ToString();
+#if NET_4_0        
+            var linqQuery = ExpressionStringBuilder.ExpressionToString(expr.Body);
+#else
+            var linqQuery = expr.Body.ToString();
+#endif
 
 			linqQuery = querySource + linqQuery.Substring(expr.Parameters[0].Name.Length);
 

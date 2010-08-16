@@ -112,6 +112,7 @@
     <Compile Include="Client\IDatabaseCommands.cs" />
     <Compile Include="Document\HiLoKeyGenerator.cs" />
     <Compile Include="Exceptions\ReadVetoException.cs" />
+    <Compile Include="Indexes\ExpressionStringBuilder.cs" />
     <Compile Include="Indexes\IndexDefinition.cs" />
     <Compile Include="Document\MultiTypeHiLoKeyGenerator.cs" />
     <Compile Include="Document\PromotableRavenClientEnlistment.cs" />
