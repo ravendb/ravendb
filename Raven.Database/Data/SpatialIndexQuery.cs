@@ -27,7 +27,7 @@ namespace Raven.Database.Data
 
 		protected override string GetCustomQueryStringVariables()
 		{
-			return string.Format("_lat={0}&_lng={1}&_radius={2}&_sortByDistance={3}",
+			return string.Format("latitude={0}&longitude={1}&radius={2}&sortByDistance={3}",
 				Uri.EscapeDataString(Latitude.ToString()),
 				Uri.EscapeDataString(Longitude.ToString()),
 				Uri.EscapeDataString(Radius.ToString()),

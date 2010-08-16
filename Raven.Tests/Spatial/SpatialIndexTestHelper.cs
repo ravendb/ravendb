@@ -67,8 +67,8 @@ namespace Raven.Tests.Spatial
 		   _tier_15 = SpatialIndex.Tier(15, e.Latitude, e.Longitude)	
 		}"",
 	""Stores"" :{
-		   ""_lat"" : ""Yes"",
-		   ""_lng"" : ""Yes"",
+		   ""latitude"" : ""Yes"",
+		   ""longitude"" : ""Yes"",
 		   ""_tier_2"" : ""Yes"",
 		   ""_tier_3"" : ""Yes"",
 		   ""_tier_4"" : ""Yes"",
@@ -87,8 +87,8 @@ namespace Raven.Tests.Spatial
 
 	""Indexes"" :{
 		   ""Tag"" : ""NotAnalyzed"",
-		   ""_lat"" : ""NotAnalyzed"",
-		   ""_lng"" : ""NotAnalyzed"",
+		   ""latitude"" : ""NotAnalyzed"",
+		   ""longitude"" : ""NotAnalyzed"",
 		   ""_tier_2"" : ""NotAnalyzedNoNorms"",
 		   ""_tier_3"" : ""NotAnalyzedNoNorms"",
 		   ""_tier_4"" : ""NotAnalyzedNoNorms"",

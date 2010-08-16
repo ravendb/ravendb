@@ -20,8 +20,8 @@ namespace Raven.Database.Indexing
 		private const int MinTier = 2;
 		private const int MaxTier = 15;
 
-		public const string LatField = "_lat";
-		public const string LngField = "_lng";
+		public const string LatField = "latitude";
+		public const string LngField = "longitude";
 
 		static SpatialIndex()
 		{
@@ -78,8 +78,8 @@ namespace Raven.Database.Indexing
 
 			var fields = new StringBuilder();
 
-			fields.AppendFormat(", _lat = SpatialIndex.Lat({0})", latAccessor);
-			fields.AppendFormat(", _lng = SpatialIndex.Lng({0})", lngAccessor);
+			fields.AppendFormat(", latitude = SpatialIndex.Lat({0})", latAccessor);
+			fields.AppendFormat(", longitude = SpatialIndex.Lng({0})", lngAccessor);
 
 			for (int id = MinTier; id <= MaxTier; ++id)
 			{
@@ -88,16 +88,16 @@ namespace Raven.Database.Indexing
 
 			definition.Map = RegexSelectNew.Replace(definition.Map, "select new { $1 " + fields + " }");
 
-			definition.Stores["_lat"] = FieldStorage.Yes;
-			definition.Stores["_lng"] = FieldStorage.Yes;
+			definition.Stores["latitude"] = FieldStorage.Yes;
+			definition.Stores["longitude"] = FieldStorage.Yes;
 
 			for (int id = MinTier; id <= MaxTier; ++id)
 			{
 				definition.Stores["_tier_" + id] = FieldStorage.Yes;
 			}
 
-			definition.Indexes["_lat"] = FieldIndexing.NotAnalyzed;
-			definition.Indexes["_lng"] = FieldIndexing.NotAnalyzed;
+			definition.Indexes["latitude"] = FieldIndexing.NotAnalyzed;
+			definition.Indexes["longitude"] = FieldIndexing.NotAnalyzed;
 
 			for (int id = MinTier; id <= MaxTier; ++id)
 			{

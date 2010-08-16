@@ -244,28 +244,30 @@ namespace Raven.Database.Server.Responders
 		public static double GetLat(this IHttpContext context)
 		{
 			double lat;
-			double.TryParse(context.Request.QueryString["_lat"], out lat);
+			double.TryParse(context.Request.QueryString["latitude"], out lat);
 			return lat;
 		}
 
 		public static double GetLng(this IHttpContext context)
 		{
 			double lng;
-			double.TryParse(context.Request.QueryString["_lng"], out lng);
+			double.TryParse(context.Request.QueryString["longitude"], out lng);
 			return lng;
 		}
 
 		public static double GetRadius(this IHttpContext context)
 		{
 			double radius;
-			double.TryParse(context.Request.QueryString["_radius"], out radius);
+			double.TryParse(context.Request.QueryString["radius"], out radius);
 			return radius;
 		}
 
 		public static bool SortByDistance(this IHttpContext context)
 		{
-			var sort = context.Request.QueryString["_sortByDistance"];
-			return sort != null && "true" == sort.ToLower();
+			var sortAsString = context.Request.QueryString["sortByDistance"];
+			bool sort;
+			bool.TryParse(sortAsString, out sort);
+			return sort;
 		}
 
 		public static IndexQuery GetIndexQueryFromHttpContext(this IHttpContext context, int maxPageSize)
