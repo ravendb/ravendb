@@ -41,11 +41,11 @@ namespace Raven.Client.Document
 	        };
 		}
 
-		private void ApplyForAll(Action<IDocumentQuery<T>> act)
+		private void ApplyForAll(Func<IDocumentQuery<T>, IDocumentQuery<T>> transformQuery)
 		{
-			foreach (var query in queries)
+			for (int i = 0; i < queries.Length; i++)
 			{
-				act(query);
+				queries[i] = transformQuery(queries[i]);
 			}
 		}
 
