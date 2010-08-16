@@ -122,32 +122,60 @@ namespace Raven.Client.Tests.Indexes
 			Assert.Equal(original, generated);
 		}
 
-		[Fact]
-		public void Convert_map_reduce_query()
-		{
-			IndexDefinition generated = new IndexDefinition<User, LocationCount>
-			{
-				Map = users => from user in users
-							   select new { user.Location, Count = 1 },
-				Reduce = counts => from agg in counts
-								   group agg by agg.Location
-									   into g
-									   select new { Location = g.Key, Count = g.Sum(x => x.Count) },
-			}.ToIndexDefinition(new DocumentConvention());
-			var original = new IndexDefinition
-			{
-				Map = @"docs.Users
+        [Fact]
+        public void Convert_map_reduce_query()
+        {
+            IndexDefinition generated = new IndexDefinition<User, LocationCount>
+            {
+                Map = users => from user in users
+                               select new { user.Location, Count = 1 },
+                Reduce = counts => from agg in counts
+                                   group agg by agg.Location
+                                       into g
+                                       select new { Location = g.Key, Count = g.Sum(x => x.Count) },
+            }.ToIndexDefinition(new DocumentConvention());
+            var original = new IndexDefinition
+            {
+                Map = @"docs.Users
 	.Select(user => new {Location = user.Location, Count = 1})",
-				Reduce = @"results
+                Reduce = @"results
 	.GroupBy(agg => agg.Location)
 	.Select(g => new {Location = g.Key, Count = g.Sum(x => x.Count)})"
-			};
+            };
 
-			Assert.Equal(original, generated);
-		}
+            Assert.Equal(original, generated);
+        }
 
 
-		public class User
+#if !NET_3_5        
+
+        [Fact]
+        public void Convert_map_reduce_query_with_trinary_conditional()
+        {
+            IndexDefinition generated = new IndexDefinition<User, LocationCount>
+            {
+                Map = users => from user in users
+                               select new { user.Location, Count = user.Age >= 1 ? 1 : 0 },
+                Reduce = counts => from agg in counts
+                                   group agg by agg.Location
+                                       into g
+                                       select new { Location = g.Key, Count = g.Sum(x => x.Count) },
+            }.ToIndexDefinition(new DocumentConvention());
+            var original = new IndexDefinition
+            {
+                Map = @"docs.Users
+	.Select(user => new {Location = user.Location, Count = ((user.Age >= 1))?(1):(0)})",
+                Reduce = @"results
+	.GroupBy(agg => agg.Location)
+	.Select(g => new {Location = g.Key, Count = g.Sum(x => x.Count)})"
+            };
+
+            Assert.Equal(original, generated);
+        }
+#endif
+
+
+        public class User
 		{
 			public string Id { get; set; }
 			public string Name { get; set; }
