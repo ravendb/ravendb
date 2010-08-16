@@ -262,12 +262,6 @@ namespace Raven.Database.Server.Responders
 			return radius;
 		}
 
-		public static bool IsSpatialIndex(this IHttpContext context)
-		{
-			var spatial = context.Request.QueryString["_spatial"];
-			return spatial != null && "true" == spatial.ToLower();
-		}
-
 		public static bool SortByDistance(this IHttpContext context)
 		{
 			var sort = context.Request.QueryString["_sortByDistance"];
@@ -287,33 +281,23 @@ namespace Raven.Database.Server.Responders
 					.EmptyIfNull()
 					.Select(x => new SortedField(x))
 					.ToArray()
-			};			
+			};
 
-			if (context.IsSpatialIndex())
+			double lat = context.GetLat(), lng = context.GetLng(), radius = context.GetRadius();
+			if (lat != 0 || lng != 0 || radius != 0)
 			{
-				double lat = context.GetLat(), lng = context.GetLng(), radius = context.GetRadius();
-
-				return new SpatialIndexQuery
+				return new SpatialIndexQuery(query)
 				{
-					Query = query.Query,
-					Start = query.Start,
-					Cutoff = query.Cutoff,
-					PageSize = query.PageSize,
-					FieldsToFetch = query.FieldsToFetch,
-					SortedFields = query.SortedFields,
 					Latitude = lat,
 					Longitude = lng,
 					Radius = radius,
 					SortByDistance = context.SortByDistance()
 				};
 			}
-			else
-			{
-				return query;
-			}
+			return query;
 		}
 
-        public static Guid? GetEtagFromQueryString(this IHttpContext context)
+		public static Guid? GetEtagFromQueryString(this IHttpContext context)
         {
             var etagAsString = context.Request.QueryString["etag"];
             if (etagAsString != null)
