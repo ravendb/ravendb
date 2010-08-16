@@ -30,6 +30,9 @@ namespace Raven.Client.Document
 		private bool waitForNonStaleResults;
 		private readonly HashSet<string> includes = new HashSet<string>();
 
+		// spatial hack
+		protected double lat, lng, miles;
+
 		public DocumentQuery(DocumentSession session, IDatabaseCommands databaseCommands, string indexName,
 		                     string[] projectionFields)
 		{
@@ -374,6 +377,16 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		public IDocumentQuery<T> WithinRadiusOfLatLng(double miles, double lat, double lng)
+		{
+			this.miles = miles;
+			this.lat = lat;
+			this.lng = lng;
+
+			return this;
+		}
+
+
 
 		public IDocumentQuery<T> OrderBy(params string[] fields)
 		{
@@ -430,15 +443,38 @@ namespace Raven.Client.Document
 
 				Trace.WriteLine(string.Format("Executing query '{0}' on index '{1}' in '{2}'",
 				                              query, indexName, session.StoreIdentifier));
-				var result = databaseCommands.Query(indexName, new IndexQuery
+
+				IndexQuery indexQuery = null;
+
+				if (lat != 0 && lng != 0 && miles != 0)
 				{
-					Query = query,
-					PageSize = pageSize,
-					Start = start,
-					Cutoff = cutoff,
-					SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
-					FieldsToFetch = projectionFields
-				}, includes.ToArray());
+					indexQuery = new SpatialIndexQuery
+					{
+						Query = query,
+						PageSize = pageSize,
+						Start = start,
+						Cutoff = cutoff,
+						SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
+						FieldsToFetch = projectionFields,
+						Latitude = lat,
+						Longitude = lng,
+						Radius = miles
+					};
+				}
+				else
+				{
+					indexQuery = new IndexQuery
+					{
+					    Query = query,
+					    PageSize = pageSize,
+					    Start = start,
+					    Cutoff = cutoff,
+					    SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
+					    FieldsToFetch = projectionFields
+					};
+				}
+
+				var result = databaseCommands.Query(indexName, indexQuery, includes.ToArray());
 				if (waitForNonStaleResults && result.IsStale)
 				{
 					if (sp.Elapsed > timeout)

@@ -241,9 +241,42 @@ namespace Raven.Database.Server.Responders
 		    return null;
 		}
 
+		public static double GetLat(this IHttpContext context)
+		{
+			double lat;
+			double.TryParse(context.Request.QueryString["_lat"], out lat);
+			return lat;
+		}
+
+		public static double GetLng(this IHttpContext context)
+		{
+			double lng;
+			double.TryParse(context.Request.QueryString["_lng"], out lng);
+			return lng;
+		}
+
+		public static double GetMiles(this IHttpContext context)
+		{
+			double miles;
+			double.TryParse(context.Request.QueryString["_radius"], out miles);
+			return miles;
+		}
+
+		public static bool IsSpatialIndex(this IHttpContext context)
+		{
+			var spatial = context.Request.QueryString["_spatial"];
+			return spatial != null && "true" == spatial.ToLower();
+		}
+
+		public static bool SortByDistance(this IHttpContext context)
+		{
+			var sort = context.Request.QueryString["_sortByDistance"];
+			return sort != null && "true" == sort.ToLower();
+		}
+
 		public static IndexQuery GetIndexQueryFromHttpContext(this IHttpContext context, int maxPageSize)
 		{
-			return new IndexQuery
+			var query = new IndexQuery
 			{
 				Query = Uri.UnescapeDataString(context.Request.QueryString["query"] ?? ""),
 				Start = context.GetStart(),
@@ -254,7 +287,30 @@ namespace Raven.Database.Server.Responders
 					.EmptyIfNull()
 					.Select(x => new SortedField(x))
 					.ToArray()
-			};
+			};			
+
+			if (context.IsSpatialIndex())
+			{
+				double lat = context.GetLat(), lng = context.GetLng(), miles = context.GetMiles();
+
+				return new SpatialIndexQuery
+				{
+					Query = query.Query,
+					Start = query.Start,
+					Cutoff = query.Cutoff,
+					PageSize = query.PageSize,
+					FieldsToFetch = query.FieldsToFetch,
+					SortedFields = query.SortedFields,
+					Latitude = lat,
+					Longitude = lng,
+					Radius = miles,
+					SortByDistance = context.SortByDistance()
+				};
+			}
+			else
+			{
+				return query;
+			}
 		}
 
         public static Guid? GetEtagFromQueryString(this IHttpContext context)

@@ -34,8 +34,8 @@ task Init -depends Verify40, Clean {
 	}
 	
 	$asmInfos = ls -path $base_dir -include AssemblyInfo.cs -recurse | 
-					Where { $_ -notmatch "SharedLibs" } | 
-					Where { $_ -notmatch "Tools" }
+					Where { $_ -notmatch [regex]::Escape($lib_dir) } | 
+					Where { $_ -notmatch [regex]::Escape($tools_dir) }
 	
 	foreach($asmInfo in $asmInfos) {
 		

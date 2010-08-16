@@ -54,7 +54,19 @@ namespace Raven.Database.Data
             {
                 path = path + "&cutOff=" + Uri.EscapeDataString(Cutoff.Value.ToString("o", CultureInfo.InvariantCulture));
             }
-            return Uri.EscapeUriString(path);
-        }
-    }
+			var vars = GetCustomQueryStringVariables();
+
+			if (!string.IsNullOrEmpty(vars))
+			{
+				path += vars.StartsWith("&") ? vars : ("&" + vars);
+			}
+		
+			return Uri.EscapeUriString(path);
+		}
+
+		protected virtual string GetCustomQueryStringVariables()
+		{
+			return string.Empty;
+		}
+	}
 }
