@@ -91,7 +91,7 @@ namespace Raven.Database.Indexing
                         pageSize = skippedResultsInCurrentLoop * indexQuery.PageSize;
                         skippedResultsInCurrentLoop = 0;
 					}
-					var search = ExecuteQuery(indexSearcher, luceneQuery, start, pageSize, indexQuery.SortedFields, indexQuery as SpatialIndexQuery);
+					var search = ExecuteQuery(indexSearcher, luceneQuery, start, pageSize, indexQuery as SpatialIndexQuery);
 					indexQuery.TotalSize.Value = search.totalHits;
 					for (var i = start; i < search.totalHits && (i - start) < pageSize; i++)
 					{
@@ -112,30 +112,10 @@ namespace Raven.Database.Indexing
             }
         }
 
-    	private TopDocs ExecuteQuery(IndexSearcher indexSearcher, Query luceneQuery, int start, int pageSize, SortedField[] sortedFields, SpatialIndexQuery spatialQuery)
+    	private TopDocs ExecuteQuery(IndexSearcher indexSearcher, Query luceneQuery, int start, int pageSize, IndexQuery indexQuery)
         {
-			Filter filter = null;
-			Sort sortByDistance = null;
-
-			if (spatialQuery != null)
-			{
-				var dq = new DistanceQueryBuilder(
-					spatialQuery.Latitude, spatialQuery.Longitude, spatialQuery.Radius,
-					SpatialIndex.LatField, SpatialIndex.LngField, CartesianTierPlotter.DefaltFieldPrefix, true);
-
-				filter = dq.Filter;
-
-				if (spatialQuery.SortByDistance)
-				{
-					var dsort = new DistanceFieldComparatorSource(dq.DistanceFilter);
-					sortByDistance = new Sort(new SortField("foo", dsort, false));
-				}
-			}
-				
-			if (sortByDistance != null)
-			{
-				return indexSearcher.Search(luceneQuery, filter, pageSize + start, sortByDistance);
-			}
+			Filter filter = indexQuery.GetFilter();
+			Sort sort = indexQuery.GetSort(indexDefinition);
 
         	if(pageSize == int.MaxValue) // we want all docs
         	{
@@ -144,10 +124,8 @@ namespace Raven.Database.Indexing
         		return gatherAllCollector.ToTopDocs();
         	}
             // NOTE: We get Start + Pagesize results back so we have something to page on
-			if (sortedFields != null && sortedFields.Length > 0)
+			if (sort != null)
             {
-                var sort = new Sort(sortedFields.Select(x => x.ToLuceneSortField(indexDefinition)).ToArray());
-				
                 return indexSearcher.Search(luceneQuery, filter, pageSize + start, sort);
             }
         	return indexSearcher.Search(luceneQuery, filter, pageSize + start);

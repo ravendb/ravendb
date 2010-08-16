@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Database.Indexing;
 
 namespace Raven.Database.Data
 {
@@ -32,5 +33,34 @@ namespace Raven.Database.Data
 				Uri.EscapeDataString(Radius.ToString()),
 				Uri.EscapeDataString(SortByDistance ? "true" : "false"));
 		}
+
+#if !CLIENT
+		internal override Lucene.Net.Search.Filter GetFilter()
+		{
+			var dq = new Lucene.Net.Spatial.Tier.DistanceQueryBuilder(
+					Latitude, Longitude, Radius,
+					SpatialIndex.LatField, 
+					SpatialIndex.LngField, 
+					Lucene.Net.Spatial.Tier.Projectors.CartesianTierPlotter.DefaltFieldPrefix, 
+					true);
+
+			return dq.Filter;
+		}
+
+		internal override Lucene.Net.Search.Sort GetSort(IndexDefinition indexDefinition)
+		{
+			if (SortByDistance == false)
+				return base.GetSort(indexDefinition);
+
+			var dq = new Lucene.Net.Spatial.Tier.DistanceQueryBuilder(
+					Latitude, Longitude, Radius,
+					SpatialIndex.LatField,
+					SpatialIndex.LngField,
+					Lucene.Net.Spatial.Tier.Projectors.CartesianTierPlotter.DefaltFieldPrefix,
+					true);
+			var dsort = new Lucene.Net.Spatial.Tier.DistanceFieldComparatorSource(dq.DistanceFilter);
+			return new Lucene.Net.Search.Sort(new Lucene.Net.Search.SortField("foo", dsort, false));
+		}
+#endif
 	}
 }

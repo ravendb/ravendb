@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using Raven.Database.Extensions;
+using Raven.Database.Indexing;
 
 namespace Raven.Database.Data
 {
@@ -68,5 +69,18 @@ namespace Raven.Database.Data
 		{
 			return string.Empty;
 		}
+#if !CLIENT
+		internal virtual Lucene.Net.Search.Filter GetFilter()
+		{
+			return null;
+		}
+
+		internal virtual Lucene.Net.Search.Sort GetSort(IndexDefinition indexDefinition)
+		{
+			if (SortedFields != null && SortedFields.Length > 0)
+				return new Lucene.Net.Search.Sort(SortedFields.Select(x => x.ToLuceneSortField(indexDefinition)).ToArray());
+			return null;
+		}
+#endif
 	}
 }
