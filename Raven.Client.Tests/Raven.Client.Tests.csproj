@@ -124,6 +124,7 @@
     <Compile Include="Bugs\SinglePropertyDocument.cs" />
     <Compile Include="Bugs\ProjectingDates.cs" />
     <Compile Include="Bugs\SortingOnLong.cs" />
+    <Compile Include="Bugs\SortingWithWildcardQuery.cs" />
     <Compile Include="Bugs\StalenessWontAffectUnrelatedIndexes.cs" />
     <Compile Include="Bugs\UsingEnumInLinq.cs" />
     <Compile Include="Bugs\WithPrivateProtectedSetter.cs" />
