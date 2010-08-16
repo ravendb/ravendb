@@ -6,11 +6,9 @@ namespace Raven.Bundles.Versioning
 {
     public class VersioningDeleteTrigger : AbstractDeleteTrigger
     {
-        [ThreadStatic] internal static bool allowDeletiongOfHistoricalDocuments;
-
         public override VetoResult AllowDelete(string key, TransactionInformation transactionInformation)
         {
-            if(allowDeletiongOfHistoricalDocuments)
+            if(VersioningContext.IsInVersioningContext)
                 return VetoResult.Allowed;
             JsonDocument document = Database.Get(key, transactionInformation);
             if (document == null)
