@@ -112,7 +112,7 @@ namespace Raven.Database.Indexing
             }
         }
 
-    	private TopDocs ExecuteQuery(IndexSearcher searcher, Query luceneQuery, int start, int pageSize, SortedField[] sortedFields, SpatialIndexQuery spatialQuery)
+    	private TopDocs ExecuteQuery(IndexSearcher indexSearcher, Query luceneQuery, int start, int pageSize, SortedField[] sortedFields, SpatialIndexQuery spatialQuery)
         {
 			Filter filter = null;
 			Sort sortByDistance = null;
@@ -134,13 +134,13 @@ namespace Raven.Database.Indexing
 				
 			if (sortByDistance != null)
 			{
-				return searcher.Search(luceneQuery, filter, pageSize + start, sortByDistance);
+				return indexSearcher.Search(luceneQuery, filter, pageSize + start, sortByDistance);
 			}
 
         	if(pageSize == int.MaxValue) // we want all docs
         	{
         		var gatherAllCollector = new GatherAllCollector();
-        		searcher.Search(luceneQuery, filter, gatherAllCollector);
+        		indexSearcher.Search(luceneQuery, filter, gatherAllCollector);
         		return gatherAllCollector.ToTopDocs();
         	}
             // NOTE: We get Start + Pagesize results back so we have something to page on
@@ -148,9 +148,9 @@ namespace Raven.Database.Indexing
             {
                 var sort = new Sort(sortedFields.Select(x => x.ToLuceneSortField(indexDefinition)).ToArray());
 				
-                return searcher.Search(luceneQuery, filter, pageSize + start, sort);
+                return indexSearcher.Search(luceneQuery, filter, pageSize + start, sort);
             }
-        	return searcher.Search(luceneQuery, filter, pageSize + start);
+        	return indexSearcher.Search(luceneQuery, filter, pageSize + start);
         }
 
         private Query GetLuceneQuery(IndexQuery indexQuery)
