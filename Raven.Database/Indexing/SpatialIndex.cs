@@ -1,13 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 
 using Lucene.Net.Util;
-
-using Lucene.Net.Spatial.GeoHash;
-using Lucene.Net.Spatial.Geometry;
 using Lucene.Net.Spatial.Tier;
 using Lucene.Net.Spatial.Tier.Projectors;
 
@@ -16,10 +12,10 @@ namespace Raven.Database.Indexing
 {
 	public static class SpatialIndex
 	{
-		private static readonly List<CartesianTierPlotter> _ctps = new List<CartesianTierPlotter>();
-		private static readonly IProjector _projector = new SinusoidalProjector();
+		private static readonly List<CartesianTierPlotter> Ctps = new List<CartesianTierPlotter>();
+		private static readonly IProjector Projector = new SinusoidalProjector();
 
-		private static Regex _regexSelectNew = new Regex(@"select\s+new\s*\{([^\}]+)\}", RegexOptions.IgnoreCase);
+		private static readonly Regex RegexSelectNew = new Regex(@"select\s+new\s*\{([^\}]+)\}", RegexOptions.IgnoreCase);
 
 		private const int MinTier = 2;
 		private const int MaxTier = 15;
@@ -31,7 +27,7 @@ namespace Raven.Database.Indexing
 		{
 			for (int tier = MinTier; tier <= MaxTier; ++tier)
 			{
-				_ctps.Add(new CartesianTierPlotter(tier, _projector, CartesianTierPlotter.DefaltFieldPrefix));
+				Ctps.Add(new CartesianTierPlotter(tier, Projector, CartesianTierPlotter.DefaltFieldPrefix));
 			}
 		}
 
@@ -50,10 +46,10 @@ namespace Raven.Database.Indexing
 			if (id < MinTier || id > MaxTier)
 			{
 				throw new ArgumentException(
-					string.Format("id should be between {0} and {1}", MinTier, MaxTier), "id");
+					string.Format("tier id should be between {0} and {1}", MinTier, MaxTier), "id");
 			}
 
-			var boxId = _ctps[id - MinTier].GetTierBoxId(lat, lng);
+			var boxId = Ctps[id - MinTier].GetTierBoxId(lat, lng);
 
 			return NumericUtils.DoubleToPrefixCoded(boxId);
 		}
@@ -75,7 +71,7 @@ namespace Raven.Database.Indexing
 				throw new ArgumentException("IndexDefinition.ToSpatial() not supported for linq method indexes");
 			}
 
-			if (!_regexSelectNew.IsMatch(definition.Map))
+			if (!RegexSelectNew.IsMatch(definition.Map))
 			{
 				throw new ArgumentException("IndexDefinition.ToSpatial() supported only for indexes like select new { ... }");
 			}
@@ -90,7 +86,7 @@ namespace Raven.Database.Indexing
 				fields.AppendFormat(", _tier_{0} = SpatialIndex.Tier({0}, {1}, {2})", id, latAccessor, lngAccessor);
 			}
 
-			definition.Map = _regexSelectNew.Replace(definition.Map, "select new { $1 " + fields + " }");
+			definition.Map = RegexSelectNew.Replace(definition.Map, "select new { $1 " + fields + " }");
 
 			definition.Stores["_lat"] = FieldStorage.Yes;
 			definition.Stores["_lng"] = FieldStorage.Yes;
