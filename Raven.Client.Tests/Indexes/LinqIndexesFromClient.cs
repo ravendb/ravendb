@@ -1,8 +1,10 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Document;
@@ -148,7 +150,6 @@ namespace Raven.Client.Tests.Indexes
 
 
 #if !NET_3_5        
-
         [Fact]
         public void Convert_map_reduce_query_with_trinary_conditional()
         {
@@ -172,8 +173,40 @@ namespace Raven.Client.Tests.Indexes
 
             Assert.Equal(original, generated);
         }
+
+        [Fact]
+        public void Convert_map_reduce_query_with_enum_comparison()
+        {
+            IndexDefinition generated = new IndexDefinition<User, LocationCount>
+            {
+                Map = users => from user in users
+                               select new { user.Location, Count = user.Gender == Gender.Female ? 1 : 0 },
+                Reduce = counts => from agg in counts
+                                   group agg by agg.Location
+                                       into g
+                                       select new { Location = g.Key, Count = g.Sum(x => x.Count) },
+            }.ToIndexDefinition(new DocumentConvention());
+            var original = new IndexDefinition
+            {
+                Map = @"docs.Users
+	.Select(user => new {Location = user.Location, Count = (user.Age == ""Female"")?(1):(0)})",
+                Reduce = @"results
+	.GroupBy(agg => agg.Location)
+	.Select(g => new {Location = g.Key, Count = g.Sum(x => x.Count)})"
+            };
+
+            Assert.Equal(original, generated);
+        }
+
+
+
 #endif
 
+        public enum Gender
+        {
+            Male,
+            Female
+        }
 
         public class User
 		{
@@ -182,6 +215,7 @@ namespace Raven.Client.Tests.Indexes
 			public string Location { get; set; }
 
 			public int Age { get; set; }
+            public Gender Gender { get; set; }
 		}
 
 		public class Named
