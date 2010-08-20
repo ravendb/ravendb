@@ -61,7 +61,7 @@ namespace Raven.Database.Server
 			string virtualDirectory = Configuration.VirtualDirectory;
 			if (virtualDirectory.EndsWith("/") == false)
 				virtualDirectory = virtualDirectory + "/";
-			listener.Prefixes.Add("http://+:" + Configuration.Port + virtualDirectory);
+			listener.Prefixes.Add("http://" + (Configuration.HostName ?? "+") + ":" + Configuration.Port + virtualDirectory);
 			switch (Configuration.AnonymousUserAccessMode)
 			{
 				case AnonymousUserAccessMode.None:
