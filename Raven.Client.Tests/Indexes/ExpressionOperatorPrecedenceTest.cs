@@ -34,7 +34,7 @@ namespace Raven.Client.Tests.Indexes
         {
             Assert.False(ExpressionOperatorPrecedence.ParenthesisNotNeeded.NeedsParenthesisFor(ExpressionOperatorPrecedence.Additive));
             Assert.False(ExpressionOperatorPrecedence.ParenthesisNotNeeded.NeedsParenthesisFor(ExpressionOperatorPrecedence.Multiplicative));
-            Assert.False(ExpressionOperatorPrecedence.Multiplicative.NeedsParenthesisFor(ExpressionOperatorPrecedence.Additive));
+            Assert.False(ExpressionOperatorPrecedence.Multiplicative.NeedsParenthesisFor(ExpressionOperatorPrecedence.ParenthesisNotNeeded));
             Assert.False(ExpressionOperatorPrecedence.Multiplicative.NeedsParenthesisFor(ExpressionOperatorPrecedence.ParenthesisNotNeeded));
         }
 
