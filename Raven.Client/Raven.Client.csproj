@@ -133,6 +133,7 @@
     <Compile Include="IInMemoryDocumentSessionOperations.cs" />
     <Compile Include="Indexes\AbstractIndexCreation.cs" />
     <Compile Include="Indexes\IndexCreation.cs" />
+    <Compile Include="Indexes\ExpressionOperatorPrecedence.cs" />
     <Compile Include="ITransactionalDocumentSession.cs" />
     <Compile Include="Linq\DateTools.cs" />
     <Compile Include="Linq\IRavenQueryable.cs" />

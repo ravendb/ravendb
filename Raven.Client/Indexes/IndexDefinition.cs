@@ -74,9 +74,6 @@ namespace Raven.Client.Indexes
 
 			linqQuery = ReplaceAnonymousTypeBraces(linqQuery);
 			linqQuery = Regex.Replace(linqQuery, @"new <>[\w_]+`\d+", "new ");// remove anonymous types
-			linqQuery = Regex.Replace(linqQuery, " AndAlso ", " && "); // replace &&
-			linqQuery = Regex.Replace(linqQuery, " OrElse ", " || "); // replace ||
-			linqQuery = Regex.Replace(linqQuery, @" Not([ (])", " !$1"); // replace !
 			linqQuery = Regex.Replace(linqQuery, @"<>([a-z])_", "__$1_"); // replace <>h_ in transperant identifiers
 			const string pattern = @"(\.Where\(|\.Select\(|\.GroupBy\(|\.SelectMany)";
 			linqQuery = Regex.Replace(linqQuery, pattern, "\r\n\t$1"); // formatting

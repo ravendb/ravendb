@@ -176,6 +176,9 @@
     <Compile Include="..\Raven.Client\Indexes\AbstractIndexCreation.cs">
       <Link>Indexes\AbstractIndexCreation.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client\Indexes\ExpressionOperatorPrecedence.cs">
+      <Link>Indexes\ExpressionOperatorPrecedence.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client\Indexes\ExpressionStringBuilder.cs">
       <Link>Indexes\ExpressionStringBuilder.cs</Link>
     </Compile>

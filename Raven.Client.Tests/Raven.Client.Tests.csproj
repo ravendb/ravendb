@@ -143,6 +143,7 @@
     <Compile Include="Document\Game.cs" />
     <Compile Include="Document\Inheritance.cs" />
     <Compile Include="Document\TagCloud.cs" />
+    <Compile Include="Indexes\ExpressionOperatorPrecedenceTest.cs" />
     <Compile Include="Querying\UsingDocumentQuery.cs" />
     <Compile Include="Document\When_Using_Multiple_Unsharded_Servers.cs" />
     <Compile Include="Indexes\LinqIndexesFromClient.cs" />
