@@ -936,7 +936,7 @@ namespace Raven.Client.Indexes
             switch (node.NodeType)
             {
             case ExpressionType.TypeIs:
-                op = " Is ";
+                op = " is ";
                 break;
 
             case ExpressionType.TypeEqual:
