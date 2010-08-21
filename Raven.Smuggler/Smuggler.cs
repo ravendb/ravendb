@@ -113,34 +113,57 @@ Usage:
             }
         }
 
-    	public static string GetString(byte[] downloadData)
-    	{
+        public static string GetString(byte[] downloadData)
+        {
     		var ms = new MemoryStream(downloadData);
     		return new StreamReader(ms, Encoding.UTF8).ReadToEnd();
-    	}
+        }
 
-    	public static void ImportData(string instanceUrl, string file)
+        public static void ImportData(string instanceUrl, string file)
         {
-        	var sw = Stopwatch.StartNew();
-            using (var streamReader = new StreamReader(new GZipStream(File.OpenRead(file), CompressionMode.Decompress)))
+            var sw = Stopwatch.StartNew();
+
+            using (FileStream fileStream = File.OpenRead(file))
             {
-                var jsonReader = new JsonTextReader(streamReader);
-                if (jsonReader.Read() == false)
-                    return;
+                // Try to read the stream compressed, otherwise continue uncompressed.
+                JsonTextReader jsonReader;
+                
+                try
+                {
+                    StreamReader streamReader = new StreamReader(new GZipStream(fileStream, CompressionMode.Decompress));
+
+                    jsonReader = new JsonTextReader(streamReader);
+                
+                    if (jsonReader.Read() == false)
+                        return;
+                }
+                catch(InvalidDataException)
+                {
+                    fileStream.Seek(0, SeekOrigin.Begin);
+
+                    StreamReader streamReader = new StreamReader(fileStream);    
+
+                    jsonReader = new JsonTextReader(streamReader);
+                
+                    if (jsonReader.Read() == false)
+                        return;
+                }
+
                 if (jsonReader.TokenType != JsonToken.StartObject)
                     throw new InvalidDataException("StartObject was expected");
+
                 // should read indexes now
                 if (jsonReader.Read() == false)
-                    return;
-                if (jsonReader.TokenType != JsonToken.PropertyName)
-                    throw new InvalidDataException("PropertyName was expected");
-                if (Equals("Indexes", jsonReader.Value) == false)
-                    throw new InvalidDataException("Indexes property was expected");
-                if (jsonReader.Read() == false)
-                    return;
-                if (jsonReader.TokenType != JsonToken.StartArray)
-                    throw new InvalidDataException("StartArray was expected");
-                using (var webClient = new WebClient())
+					return;
+				if (jsonReader.TokenType != JsonToken.PropertyName)
+					throw new InvalidDataException("PropertyName was expected");
+				if (Equals("Indexes", jsonReader.Value) == false)
+					throw new InvalidDataException("Indexes property was expected");
+				if (jsonReader.Read() == false)
+					return;
+				if (jsonReader.TokenType != JsonToken.StartArray)
+					throw new InvalidDataException("StartArray was expected");
+				using (var webClient = new WebClient())
                 {
                     webClient.UseDefaultCredentials = true;
 					webClient.Headers.Add("Content-Type", "application/json; charset=utf-8");
