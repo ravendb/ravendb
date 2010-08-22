@@ -7,26 +7,19 @@ using Raven.Database;
 
 namespace Raven.Client.Tests
 {
-	public abstract class LocalClientTest : IDisposable
+	public abstract class LocalClientTest
 	{
 		private string path;
-
-		#region IDisposable Members
-
-		public virtual void Dispose()
-		{
-			if (path == null)
-				return;
-			Directory.Delete(path, true);
-		}
-
-		#endregion
 
 		protected DocumentStore NewDocumentStore()
 		{
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
 			path = Path.Combine(path, "TestDb").Substring(6);
-			var documentStore = new DocumentStore
+
+            if (Directory.Exists(path))
+                Directory.Delete(path, true);
+            
+            var documentStore = new DocumentStore
 			{
 				Configuration = new RavenConfiguration
 				{
