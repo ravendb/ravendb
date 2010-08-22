@@ -9,7 +9,7 @@ using System.Collections.Generic;
 
 namespace Raven.Client.Tests.Document
 {
-    public class When_Using_Multiple_Unsharded_Servers : BaseTest, IDisposable
+    public class When_Using_Multiple_Unsharded_Servers : RemoteClientTest, IDisposable
 	{
         private readonly string path1;
         private readonly string path2;

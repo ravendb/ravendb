@@ -9,7 +9,7 @@ using System.Linq;
 
 namespace Raven.Client.Tests.Document
 {
-	public class TagCloud : BaseTest, IDisposable
+	public class TagCloud : RemoteClientTest, IDisposable
 	{
 		private string path;
 

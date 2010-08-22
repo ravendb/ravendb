@@ -8,7 +8,7 @@ using System.Linq;
 
 namespace Raven.Client.Tests.Document
 {
-	public class CasingIssue : BaseTest, IDisposable
+	public class CasingIssue : RemoteClientTest, IDisposable
 	{
 		private string path;
 

@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace Raven.Client.Tests.Bugs
 {
-	public class AutoDetectAnaylzersForQuery : BaseClientTest
+	public class AutoDetectAnaylzersForQuery : LocalClientTest
 	{
 		[Fact]
 		public void WillDetectAnalyzerAutomatically()

@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace Raven.Client.Tests.Bugs
 {
-    public class DateRanges : BaseClientTest
+    public class DateRanges : LocalClientTest
     {
         [Fact]
         public void CanQueryByDate()

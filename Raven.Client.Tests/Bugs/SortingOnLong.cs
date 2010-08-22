@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace Raven.Client.Tests.Bugs
 {
-	public class SortingOnLong : BaseClientTest
+	public class SortingOnLong : LocalClientTest
 	{
 		[Fact]
 		public void CanSortOnLong()

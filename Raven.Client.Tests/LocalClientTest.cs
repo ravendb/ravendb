@@ -1,13 +1,13 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Reflection;
 using Raven.Client.Document;
 using Raven.Client.Tests.Document;
 using Raven.Database;
 
-namespace Raven.Client.Tests.Bugs
+namespace Raven.Client.Tests
 {
-	public abstract class BaseClientTest : BaseTest, IDisposable
+	public abstract class LocalClientTest : IDisposable
 	{
 		private string path;
 

@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Raven.Client.Tests.Bugs
 {
-	public class Polymorphic : BaseClientTest
+	public class Polymorphic : LocalClientTest
 	{
 		public interface IVegetable
 		{

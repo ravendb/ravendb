@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace Raven.Client.Tests.Bugs
 {
-	public class ReuseQuery : BaseClientTest
+	public class ReuseQuery : LocalClientTest
 	{
 		[Fact]
 		public void CanReuseQuery()

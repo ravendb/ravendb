@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Raven.Client.Tests.Bugs
 {
-	public class ProjectingDates : BaseClientTest
+	public class ProjectingDates : LocalClientTest
 	{
 		[Fact]
 		public void CanSaveCachedVery()

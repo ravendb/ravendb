@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Raven.Client.Tests.Document
 {
-	public class AsyncDocumentStoreServerTests : BaseTest, IDisposable
+	public class AsyncDocumentStoreServerTests : RemoteClientTest, IDisposable
 	{
 		private readonly string path;
 		private readonly int port;

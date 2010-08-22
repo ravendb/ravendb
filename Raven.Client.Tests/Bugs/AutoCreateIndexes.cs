@@ -7,7 +7,7 @@ using Raven.Client.Document;
 
 namespace Raven.Client.Tests.Bugs
 {
-	public class AutoCreateIndexes : BaseClientTest
+	public class AutoCreateIndexes : LocalClientTest
 	{
 		[Fact]
 		public void CanAutomaticallyCreateIndexes()

@@ -7,7 +7,7 @@ using System.Reflection;
 
 namespace Raven.Client.Tests
 {
-	public class BaseTest
+	public class RemoteClientTest
 	{
 		protected const string DbDirectory = @".\TestDb\";
 		protected const string DbName = DbDirectory + @"DocDb.esb";
@@ -22,9 +22,8 @@ namespace Raven.Client.Tests
             string retPath = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
             return Path.Combine(retPath, subFolderName).Substring(6); //remove leading file://
         }
-
-
-		public BaseTest()
+        
+		public RemoteClientTest()
 		{
 			try
 			{

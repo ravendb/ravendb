@@ -17,7 +17,7 @@ using System.Linq;
 
 namespace Raven.Client.Tests.Shard
 {
-    public class When_Using_Sharded_Servers : BaseTest, IDisposable
+    public class When_Using_Sharded_Servers : RemoteClientTest, IDisposable
 	{
         public When_Using_Sharded_Servers()
 		{

@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Raven.Client.Tests.Bugs
 {
-    public class CanSelectFieldsFromIndex : BaseClientTest
+    public class CanSelectFieldsFromIndex : LocalClientTest
     {
         [Fact]
         public void SelectFieldsFromIndex()

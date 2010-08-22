@@ -3,7 +3,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Raven.Client.Tests.Bugs
 {
-	public class MetadataUpdates : BaseClientTest
+	public class MetadataUpdates : LocalClientTest
 	{
 
 		[Fact]

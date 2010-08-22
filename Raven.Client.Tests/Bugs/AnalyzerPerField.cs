@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace Raven.Client.Tests.Bugs
 {
-	public class AnalyzerPerField : BaseClientTest
+	public class AnalyzerPerField : LocalClientTest
 	{
 		[Fact]
 		public void CanUseAnalyzerPerField()
