@@ -70,7 +70,7 @@ namespace Raven.Client.Tests.Indexes
                 {
 
                     var result = session.LuceneQuery<Entity>("someIndex").WaitForNonStaleResults()
-                        .Where("Name:" + searchString)
+                        .WhereEquals("Name", searchString, true, false)
                         .ToArray();
 
                     Assert.Equal(1, result.Length);
