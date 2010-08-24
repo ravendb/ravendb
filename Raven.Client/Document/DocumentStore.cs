@@ -223,7 +223,7 @@ namespace Raven.Client.Document
 				}
                 if(Conventions.DocumentKeyGenerator == null)// don't overwrite what the user is doing
                 {
-                    var generator = new MultiTypeHiLoKeyGenerator(DatabaseCommands, 1024);
+                    var generator = new MultiTypeHiLoKeyGenerator(this, 1024);
                     Conventions.DocumentKeyGenerator = entity => generator.GenerateDocumentKey(Conventions, entity);
                 }
 			}
