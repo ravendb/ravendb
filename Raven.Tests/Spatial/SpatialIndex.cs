@@ -47,12 +47,11 @@ namespace Raven.Tests.Spatial
 		{
 			var indexDefinition = new IndexDefinition 
 			{
-				Map = "from e in docs.Events select new { Tag = \"Event\" }",
+				Map = "from e in docs.Events select new { Tag = \"Event\", _ = SpatialIndex.Generate(e.Latitude, e.Longitude) }",
 				Indexes = {
 					{ "Tag", FieldIndexing.NotAnalyzed }
 				}
-			}
-			.ToSpatial("e.Latitude", "e.Longitude");
+			};
 
 			db.PutIndex("eventsByLatLng", indexDefinition);
 

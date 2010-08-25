@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
-
+using Lucene.Net.Documents;
 using Lucene.Net.Util;
 using Lucene.Net.Spatial.Tier;
 using Lucene.Net.Spatial.Tier.Projectors;
@@ -14,8 +14,6 @@ namespace Raven.Database.Indexing
 	{
 		private static readonly List<CartesianTierPlotter> Ctps = new List<CartesianTierPlotter>();
 		private static readonly IProjector Projector = new SinusoidalProjector();
-
-		private static readonly Regex RegexSelectNew = new Regex(@"select\s+new\s*\{([^\}]+)\}", RegexOptions.IgnoreCase);
 
 		private const int MinTier = 2;
 		private const int MaxTier = 15;
@@ -59,52 +57,15 @@ namespace Raven.Database.Indexing
 			return DistanceUtils.GetInstance().GetDistanceMi(x1, y1, x2, y2);
 		}
 
-		public static IndexDefinition ToSpatial(this IndexDefinition definition, string latAccessor, string lngAccessor)
+		public static IEnumerable<AbstractField> Generate(double lat, double lng)
 		{
-			if (!string.IsNullOrEmpty(definition.Reduce))
+			yield return new Field("latitude", Lat(lat),Field.Store.YES, Field.Index.NOT_ANALYZED);
+			yield return new Field("longitude", Lng(lng), Field.Store.YES, Field.Index.NOT_ANALYZED);
+
+			for (var id = MinTier; id <= MaxTier; ++id)
 			{
-				throw new ArgumentException("IndexDefinition.ToSpatial() not supported for map reduce indexes");
+				yield return new Field("_tier_" + id, Tier(id, lat, lng),Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
 			}
-
-			if (definition.Map.Contains("=>"))
-			{
-				throw new ArgumentException("IndexDefinition.ToSpatial() not supported for linq method indexes");
-			}
-
-			if (!RegexSelectNew.IsMatch(definition.Map))
-			{
-				throw new ArgumentException("IndexDefinition.ToSpatial() supported only for indexes like select new { ... }");
-			}
-
-			var fields = new StringBuilder();
-
-			fields.AppendFormat(", latitude = SpatialIndex.Lat({0})", latAccessor);
-			fields.AppendFormat(", longitude = SpatialIndex.Lng({0})", lngAccessor);
-
-			for (int id = MinTier; id <= MaxTier; ++id)
-			{
-				fields.AppendFormat(", _tier_{0} = SpatialIndex.Tier({0}, {1}, {2})", id, latAccessor, lngAccessor);
-			}
-
-			definition.Map = RegexSelectNew.Replace(definition.Map, "select new { $1 " + fields + " }");
-
-			definition.Stores["latitude"] = FieldStorage.Yes;
-			definition.Stores["longitude"] = FieldStorage.Yes;
-
-			for (int id = MinTier; id <= MaxTier; ++id)
-			{
-				definition.Stores["_tier_" + id] = FieldStorage.Yes;
-			}
-
-			definition.Indexes["latitude"] = FieldIndexing.NotAnalyzed;
-			definition.Indexes["longitude"] = FieldIndexing.NotAnalyzed;
-
-			for (int id = MinTier; id <= MaxTier; ++id)
-			{
-				definition.Indexes["_tier_" + id] = FieldIndexing.NotAnalyzedNoNorms;
-			}
-
-			return definition;
 		}
 	}
 }

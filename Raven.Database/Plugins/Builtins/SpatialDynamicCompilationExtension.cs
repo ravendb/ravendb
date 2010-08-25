@@ -1,4 +1,5 @@
 ﻿using System;
+using Lucene.Net.Documents;
 using Raven.Database.Indexing;
 
 namespace Raven.Database.Plugins.Builtins
@@ -15,7 +16,10 @@ namespace Raven.Database.Plugins.Builtins
 
 		public override string[] GetAssembliesToReference()
 		{
-			return new string[0];
+			return new string[]
+			{
+				typeof (AbstractField).Assembly.Location
+			};
 		}
 	}
 }
