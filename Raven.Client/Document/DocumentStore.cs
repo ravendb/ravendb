@@ -18,13 +18,19 @@ namespace Raven.Client.Document
 			RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
 
 		private Func<IDatabaseCommands> databaseCommandsGenerator;
+		private IDatabaseCommands databaseCommands;
+
 		public IDatabaseCommands DatabaseCommands
 		{
 			get
 			{
 				if (databaseCommandsGenerator == null)
 					return null;
-				return databaseCommandsGenerator();
+
+				if (databaseCommands == null)
+					databaseCommands = databaseCommandsGenerator();
+
+				return databaseCommands;
 			}
 		}
 
@@ -165,14 +171,27 @@ namespace Raven.Client.Document
 
 		#endregion
 
-        public IDocumentSession OpenSession(ICredentials credentialsForSession)
-        {
-            if (DatabaseCommands == null)
-                throw new InvalidOperationException("You cannot open a session before initialising the document store. Did you forgot calling Initialise?");
-            var session = new DocumentSession(this, storeListeners, deleteListeners);
+		public IDocumentSession OpenSession(ICredentials credentialsForSession)
+		{
+			if (DatabaseCommands == null)
+				throw new InvalidOperationException("You cannot open a session before initialising the document store. Did you forgot calling Initialise?");
+			var session = new DocumentSession(this, storeListeners, deleteListeners, CloneDatabaseCommands());
 			session.Stored += OnSessionStored;
-            return session;
-        }
+			return session;
+		}
+
+		// Invokes the commands generator and copies over the operation headers, so that per-store headers are 
+		// also available per-session.
+		private IDatabaseCommands CloneDatabaseCommands()
+		{
+			var result = databaseCommandsGenerator();
+			foreach (string header in databaseCommands.OperationsHeaders)
+			{
+				result.OperationsHeaders[header] = databaseCommands.OperationsHeaders[header];
+			}
+
+			return result;
+		}
 
 		private void OnSessionStored(object entity)
 		{
@@ -191,13 +210,13 @@ namespace Raven.Client.Document
 		}
 
 		public IDocumentSession OpenSession()
-        {
-            if(DatabaseCommands == null)
-                throw new InvalidOperationException("You cannot open a session before initialising the document store. Did you forgot calling Initialise?");
-            var session = new DocumentSession(this, storeListeners, deleteListeners);
+		{
+			if (DatabaseCommands == null)
+				throw new InvalidOperationException("You cannot open a session before initialising the document store. Did you forgot calling Initialise?");
+			var session = new DocumentSession(this, storeListeners, deleteListeners, CloneDatabaseCommands());
 			session.Stored += OnSessionStored;
-            return session;
-        }
+			return session;
+		}
 
 #if !CLIENT
 		public Raven.Database.DocumentDatabase DocumentDatabase { get; set; }
