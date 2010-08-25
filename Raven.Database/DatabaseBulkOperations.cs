@@ -61,8 +61,7 @@ namespace Raven.Database
 			}
 
 			var enumerator = queryResults.GetEnumerator();
-			// Todo: What's a good batch size? Make this configurable somewhere or pass it to each bulk operation?
-			const int batchSize = 1280;
+			const int batchSize = 1024;
 			while (true)
 			{
 				var batchCount = 0;
