@@ -1,8 +1,10 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Document;
@@ -93,7 +95,7 @@ namespace Raven.Client.Tests.Indexes
 			{
 				Stores = { { "Name", FieldStorage.Yes } },
 				Map = @"docs.Users
-	.Where(user => (user.Location == ""Tel Aviv""))
+	.Where(user => user.Location == ""Tel Aviv"")
 	.Select(user => new {Name = user.Name})"
 			};
 
@@ -115,7 +117,7 @@ namespace Raven.Client.Tests.Indexes
 				Stores = {{"Name", FieldStorage.Yes}},
 				Map =
 					@"docs.Users
-	.Where(user => !((user.Location == ""Te(l) (A)viv"")))
+	.Where(user => !(user.Location == ""Te(l) (A)viv""))
 	.Select(user => new {Name = user.Name})"
 			};
 
@@ -148,14 +150,11 @@ namespace Raven.Client.Tests.Indexes
 
 
 #if !NET_3_5        
-
-        [Fact]
-        public void Convert_map_reduce_query_with_trinary_conditional()
+        public void Convert_map_reduce_query_with_map_(Expression<Func<IEnumerable<User>, IEnumerable>> mapExpression, string expectedIndexString)
         {
             IndexDefinition generated = new IndexDefinition<User, LocationCount>
             {
-                Map = users => from user in users
-                               select new { user.Location, Count = user.Age >= 1 ? 1 : 0 },
+                Map = mapExpression,
                 Reduce = counts => from agg in counts
                                    group agg by agg.Location
                                        into g
@@ -163,8 +162,7 @@ namespace Raven.Client.Tests.Indexes
             }.ToIndexDefinition(new DocumentConvention());
             var original = new IndexDefinition
             {
-                Map = @"docs.Users
-	.Select(user => new {Location = user.Location, Count = ((user.Age >= 1))?(1):(0)})",
+                Map = expectedIndexString,
                 Reduce = @"results
 	.GroupBy(agg => agg.Location)
 	.Select(g => new {Location = g.Key, Count = g.Sum(x => x.Count)})"
@@ -172,8 +170,56 @@ namespace Raven.Client.Tests.Indexes
 
             Assert.Equal(original, generated);
         }
+
+        [Fact]
+        public void Convert_map_reduce_preserving_parenthesis()
+        {
+            Convert_map_reduce_query_with_map_(
+users => from user in users
+         select new { Location = user.Location, Count = (user.Age + 3) * (user.Age + 4) },
+@"docs.Users
+	.Select(user => new {Location = user.Location, Count = (user.Age + 3) * (user.Age + 4)})");
+        }
+
+        [Fact]
+        public void Convert_map_reduce_query_with_trinary_conditional()
+        {
+            Convert_map_reduce_query_with_map_(
+users => from user in users
+         select new { Location = user.Location, Count = user.Age >= 1 ? 1 : 0 }, 
+@"docs.Users
+	.Select(user => new {Location = user.Location, Count = user.Age >= 1 ? 1 : 0})");
+        }
+
+        [Fact(Skip = "Enum comparisons in map reduce query end up as failed int comparisons")]
+        public void Convert_map_reduce_query_with_enum_comparison()
+        {
+            Convert_map_reduce_query_with_map_(
+users => from user in users
+        select new { Location = user.Location, Count = user.Gender == Gender.Female ? 1 : 0},
+@"docs.Users
+	.Select(user => new {Location = user.Location, Count = user.Age == ""Female"" ? 1 : 0})");
+        }
+
+        [Fact]
+        public void Convert_map_reduce_query_with_type_check()
+        {
+            Convert_map_reduce_query_with_map_(
+users => from user in users
+         select new { Location = user.Location, Count = user.Location is String ? 1 : 0 },
+@"docs.Users
+	.Select(user => new {Location = user.Location, Count = user.Location is String ? 1 : 0})");
+        }
+
+
+
 #endif
 
+        public enum Gender
+        {
+            Male,
+            Female
+        }
 
         public class User
 		{
@@ -182,6 +228,7 @@ namespace Raven.Client.Tests.Indexes
 			public string Location { get; set; }
 
 			public int Age { get; set; }
+            public Gender Gender { get; set; }
 		}
 
 		public class Named

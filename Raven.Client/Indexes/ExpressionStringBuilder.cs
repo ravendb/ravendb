@@ -8,13 +8,18 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 
+
 namespace Raven.Client.Indexes
 {
+    /// <summary>
+    /// Based off of System.Linq.Expressions.ExpressionStringBuilder
+    /// </summary>
     public class ExpressionStringBuilder : ExpressionVisitor
     {
         // Fields
         private Dictionary<object, int> _ids;
         private StringBuilder _out = new StringBuilder();
+        ExpressionOperatorPrecedence _currentPrecedence;
 
         // Methods
         private ExpressionStringBuilder()
@@ -73,7 +78,7 @@ namespace Raven.Client.Indexes
         public static string ExpressionToString(Expression node)
         {
             ExpressionStringBuilder builder = new ExpressionStringBuilder();
-            builder.Visit(node);
+            builder.Visit(node, ExpressionOperatorPrecedence.ParenthesisNotNeeded);
             return builder.ToString();
         }
 
@@ -212,204 +217,285 @@ namespace Raven.Client.Indexes
             return this._out.ToString();
         }
 
+        private void SometimesParenthesis(ExpressionOperatorPrecedence outer, ExpressionOperatorPrecedence inner, Action visitor)
+        {
+            bool needParenthesis = outer.NeedsParenthesisFor(inner);
+
+            if (needParenthesis)
+                this.Out("(");
+
+            visitor();
+
+            if (needParenthesis)
+                this.Out(")");
+        }
+
+        private void Visit(Expression node, ExpressionOperatorPrecedence outerPrecedence)
+        {
+            ExpressionOperatorPrecedence previous = _currentPrecedence;
+            _currentPrecedence = outerPrecedence;
+            Visit(node);
+            _currentPrecedence = previous;
+        }
+
         protected override Expression VisitBinary(BinaryExpression node)
         {
+            return VisitBinary(node, _currentPrecedence);
+        }
+
+        private Expression VisitBinary(BinaryExpression node, ExpressionOperatorPrecedence outerPrecedence)
+        {
+            ExpressionOperatorPrecedence innerPrecedence;
+            
             string str;
             switch (node.NodeType)
             {
             case ExpressionType.Add:
                 str = "+";
+                innerPrecedence = ExpressionOperatorPrecedence.Additive;
                 break;
 
             case ExpressionType.AddChecked:
                 str = "+";
+                innerPrecedence = ExpressionOperatorPrecedence.Additive;
                 break;
 
             case ExpressionType.And:
                 if ((node.Type != typeof(bool)) && (node.Type != typeof(bool?)))
                 {
                     str = "&";
+                    innerPrecedence = ExpressionOperatorPrecedence.LogicalAND;
                 } else
                 {
                     str = "And";
+                    innerPrecedence = ExpressionOperatorPrecedence.ConditionalAND;
                 }
                 break;
 
             case ExpressionType.AndAlso:
-                str = "AndAlso";
+                str = "&&";
+                innerPrecedence = ExpressionOperatorPrecedence.ConditionalAND;
                 break;
 
             case ExpressionType.Coalesce:
                 str = "??";
+                innerPrecedence = ExpressionOperatorPrecedence.NullCoalescing;
                 break;
 
             case ExpressionType.Divide:
                 str = "/";
+                innerPrecedence = ExpressionOperatorPrecedence.Multiplicative;
                 break;
 
             case ExpressionType.Equal:
                 str = "==";
+                innerPrecedence = ExpressionOperatorPrecedence.Equality;
                 break;
 
             case ExpressionType.ExclusiveOr:
                 str = "^";
+                innerPrecedence = ExpressionOperatorPrecedence.LogicalXOR;
                 break;
 
             case ExpressionType.GreaterThan:
                 str = ">";
+                innerPrecedence = ExpressionOperatorPrecedence.RelationalAndTypeTesting;
                 break;
 
             case ExpressionType.GreaterThanOrEqual:
                 str = ">=";
+                innerPrecedence = ExpressionOperatorPrecedence.RelationalAndTypeTesting;
                 break;
 
             case ExpressionType.LeftShift:
                 str = "<<";
+                innerPrecedence = ExpressionOperatorPrecedence.Shift;
                 break;
 
             case ExpressionType.LessThan:
                 str = "<";
+                innerPrecedence = ExpressionOperatorPrecedence.RelationalAndTypeTesting;
                 break;
 
             case ExpressionType.LessThanOrEqual:
                 str = "<=";
+                innerPrecedence = ExpressionOperatorPrecedence.RelationalAndTypeTesting;
                 break;
 
             case ExpressionType.Modulo:
                 str = "%";
+                innerPrecedence = ExpressionOperatorPrecedence.Multiplicative;
                 break;
 
             case ExpressionType.Multiply:
                 str = "*";
+                innerPrecedence = ExpressionOperatorPrecedence.Multiplicative;
                 break;
 
             case ExpressionType.MultiplyChecked:
                 str = "*";
+                innerPrecedence = ExpressionOperatorPrecedence.Multiplicative;
                 break;
 
             case ExpressionType.NotEqual:
                 str = "!=";
+                innerPrecedence = ExpressionOperatorPrecedence.RelationalAndTypeTesting;
                 break;
 
             case ExpressionType.Or:
                 if ((node.Type != typeof(bool)) && (node.Type != typeof(bool?)))
                 {
                     str = "|";
+                    innerPrecedence = ExpressionOperatorPrecedence.LogicalOR;
                 } else
                 {
                     str = "Or";
+                    innerPrecedence = ExpressionOperatorPrecedence.LogicalOR;
                 }
                 break;
 
             case ExpressionType.OrElse:
-                str = "OrElse";
+                str = "||";
+                innerPrecedence = ExpressionOperatorPrecedence.ConditionalOR;
                 break;
 
             case ExpressionType.Power:
                 str = "^";
+                innerPrecedence = ExpressionOperatorPrecedence.LogicalXOR;
                 break;
 
             case ExpressionType.RightShift:
                 str = ">>";
+                innerPrecedence = ExpressionOperatorPrecedence.Shift;
                 break;
 
             case ExpressionType.Subtract:
                 str = "-";
+                innerPrecedence = ExpressionOperatorPrecedence.Additive;
                 break;
 
             case ExpressionType.SubtractChecked:
                 str = "-";
+                innerPrecedence = ExpressionOperatorPrecedence.Additive;
                 break;
 
             case ExpressionType.Assign:
                 str = "=";
+                innerPrecedence = ExpressionOperatorPrecedence.Assignment;
                 break;
 
             case ExpressionType.AddAssign:
                 str = "+=";
+                innerPrecedence = ExpressionOperatorPrecedence.Assignment;
                 break;
 
             case ExpressionType.AndAssign:
                 if ((node.Type != typeof(bool)) && (node.Type != typeof(bool?)))
                 {
                     str = "&=";
-                } else
+                    innerPrecedence = ExpressionOperatorPrecedence.Assignment;
+                }
+                else
                 {
                     str = "&&=";
+                    innerPrecedence = ExpressionOperatorPrecedence.Assignment;
                 }
                 break;
 
             case ExpressionType.DivideAssign:
                 str = "/=";
+                innerPrecedence = ExpressionOperatorPrecedence.Assignment;
                 break;
 
             case ExpressionType.ExclusiveOrAssign:
                 str = "^=";
+                innerPrecedence = ExpressionOperatorPrecedence.Assignment;
                 break;
 
             case ExpressionType.LeftShiftAssign:
                 str = "<<=";
+                innerPrecedence = ExpressionOperatorPrecedence.Assignment;
                 break;
 
             case ExpressionType.ModuloAssign:
                 str = "%=";
+                innerPrecedence = ExpressionOperatorPrecedence.Assignment;
                 break;
 
             case ExpressionType.MultiplyAssign:
                 str = "*=";
+                innerPrecedence = ExpressionOperatorPrecedence.Assignment;
                 break;
 
             case ExpressionType.OrAssign:
                 if ((node.Type != typeof(bool)) && (node.Type != typeof(bool?)))
                 {
                     str = "|=";
-                } else
+                    innerPrecedence = ExpressionOperatorPrecedence.Assignment;
+                }
+                else
                 {
                     str = "||=";
+                    innerPrecedence = ExpressionOperatorPrecedence.Assignment;
                 }
                 break;
 
             case ExpressionType.PowerAssign:
                 str = "**=";
+                innerPrecedence = ExpressionOperatorPrecedence.Assignment;
                 break;
 
             case ExpressionType.RightShiftAssign:
                 str = ">>=";
+                innerPrecedence = ExpressionOperatorPrecedence.Assignment;
                 break;
 
             case ExpressionType.SubtractAssign:
                 str = "-=";
+                innerPrecedence = ExpressionOperatorPrecedence.Assignment;
                 break;
 
             case ExpressionType.AddAssignChecked:
                 str = "+=";
+                innerPrecedence = ExpressionOperatorPrecedence.Assignment;
                 break;
 
             case ExpressionType.MultiplyAssignChecked:
                 str = "*=";
+                innerPrecedence = ExpressionOperatorPrecedence.Assignment;
                 break;
 
             case ExpressionType.SubtractAssignChecked:
                 str = "-=";
+                innerPrecedence = ExpressionOperatorPrecedence.Assignment;
                 break;
 
             case ExpressionType.ArrayIndex:
-                this.Visit(node.Left);
-                this.Out("[");
-                this.Visit(node.Right);
-                this.Out("]");
+
+                innerPrecedence = ExpressionOperatorPrecedence.Primary;
+
+                SometimesParenthesis(outerPrecedence, innerPrecedence, delegate()
+                    {
+                        this.Visit(node.Left, innerPrecedence);
+                        this.Out("[");
+                        this.Visit(node.Right, innerPrecedence);
+                        this.Out("]");
+                    });
                 return node;
 
             default:
                 throw new InvalidOperationException();
             }
-            this.Out("(");
-            this.Visit(node.Left);
-            this.Out(' ');
-            this.Out(str);
-            this.Out(' ');
-            this.Visit(node.Right);
-            this.Out(")");
+
+            SometimesParenthesis(outerPrecedence, innerPrecedence, delegate()
+                {
+                    this.Visit(node.Left, innerPrecedence);
+                    this.Out(' ');
+                    this.Out(str);
+                    this.Out(' ');
+                    this.Visit(node.Right, innerPrecedence);
+                });
+
             return node;
         }
 
@@ -439,13 +525,21 @@ namespace Raven.Client.Indexes
 
         protected override Expression VisitConditional(ConditionalExpression node)
         {
-            this.Out("(");
-            this.Visit(node.Test);
-            this.Out(")?(");
-            this.Visit(node.IfTrue);
-            this.Out("):(");
-            this.Visit(node.IfFalse);
-            this.Out(")");
+            return VisitConditional(node, _currentPrecedence);
+        }
+
+        private Expression VisitConditional(ConditionalExpression node, ExpressionOperatorPrecedence outerPrecedence)
+        {
+            ExpressionOperatorPrecedence innerPrecedence = ExpressionOperatorPrecedence.Conditional;
+
+            SometimesParenthesis(outerPrecedence, innerPrecedence, delegate() {
+                this.Visit(node.Test, innerPrecedence);
+                this.Out(" ? ");
+                this.Visit(node.IfTrue, innerPrecedence);
+                this.Out(" : ");
+                this.Visit(node.IfFalse, innerPrecedence);
+            });
+
             return node;
         }
 
@@ -519,7 +613,7 @@ namespace Raven.Client.Indexes
                     {
                         this.Out(", ");
                     }
-                    this.Visit(local);
+                    this.Visit(local, ExpressionOperatorPrecedence.ParenthesisNotNeeded);
                 }
             }
             this.Out(close);
@@ -653,7 +747,7 @@ namespace Raven.Client.Indexes
             return assignment;
         }
 
-        protected  override Expression VisitMemberInit(MemberInitExpression node)
+        protected override Expression VisitMemberInit(MemberInitExpression node)
         {
             if ((node.NewExpression.Arguments.Count == 0) && node.NewExpression.Type.Name.Contains("<"))
             {
@@ -832,33 +926,50 @@ namespace Raven.Client.Indexes
 
         protected override Expression VisitTypeBinary(TypeBinaryExpression node)
         {
-            this.Out("(");
-            this.Visit(node.Expression);
+            return VisitTypeBinary(node, ExpressionOperatorPrecedence.ParenthesisNotNeeded);
+        }
+
+        private Expression VisitTypeBinary(TypeBinaryExpression node, ExpressionOperatorPrecedence outerPrecedence)
+        {
+            ExpressionOperatorPrecedence currentPrecedence = ExpressionOperatorPrecedence.RelationalAndTypeTesting;
+            string op;
             switch (node.NodeType)
             {
             case ExpressionType.TypeIs:
-                this.Out(" Is ");
+                op = " is ";
                 break;
 
             case ExpressionType.TypeEqual:
-                this.Out(" TypeEqual ");
-                goto Label_0043;
+                op= " TypeEqual ";
+                break;
+            default:
+                throw new InvalidOperationException();
             }
-        Label_0043:
+
+
+            this.Visit(node.Expression, currentPrecedence);
+            this.Out(op);
             this.Out(node.TypeOperand.Name);
-            this.Out(")");
             return node;
         }
 
         protected override Expression VisitUnary(UnaryExpression node)
         {
+            return VisitUnary(node, _currentPrecedence);
+        }
+
+        private Expression VisitUnary(UnaryExpression node, ExpressionOperatorPrecedence outerPrecedence)
+        {
+            ExpressionOperatorPrecedence innerPrecedence = ExpressionOperatorPrecedence.Unary;
+
             switch (node.NodeType)
             {
             case ExpressionType.TypeAs:
-                this.Out("(");
+                innerPrecedence = ExpressionOperatorPrecedence.RelationalAndTypeTesting;
                 break;
 
             case ExpressionType.Decrement:
+                innerPrecedence = ExpressionOperatorPrecedence.ParenthesisNotNeeded;
                 this.Out("Decrement(");
                 break;
 
@@ -872,18 +983,20 @@ namespace Raven.Client.Indexes
                 break;
 
             case ExpressionType.Not:
-                this.Out("Not(");
+                this.Out("!");
                 break;
 
             case ExpressionType.Quote:
                 break;
 
             case ExpressionType.Increment:
+                innerPrecedence = ExpressionOperatorPrecedence.ParenthesisNotNeeded;
                 this.Out("Increment(");
                 break;
 
             case ExpressionType.Throw:
-                this.Out("throw(");
+                innerPrecedence = ExpressionOperatorPrecedence.ParenthesisNotNeeded;
+                this.Out("throw ");
                 break;
 
             case ExpressionType.PreIncrementAssign:
@@ -895,44 +1008,57 @@ namespace Raven.Client.Indexes
                 break;
 
             case ExpressionType.OnesComplement:
-                this.Out("~(");
+                this.Out("~");
                 break;
 
             default:
+                innerPrecedence = ExpressionOperatorPrecedence.ParenthesisNotNeeded;
                 this.Out(node.NodeType.ToString());
                 this.Out("(");
                 break;
             }
-            this.Visit(node.Operand);
+
+            SometimesParenthesis(outerPrecedence, innerPrecedence, delegate()
+                {
+                    this.Visit(node.Operand, innerPrecedence);
+                });
+
             switch (node.NodeType)
             {
-            case ExpressionType.PreIncrementAssign:
-            case ExpressionType.PreDecrementAssign:
-                return node;
-
-            case ExpressionType.PostIncrementAssign:
-                this.Out("++");
-                return node;
-
-            case ExpressionType.PostDecrementAssign:
-                this.Out("--");
-                return node;
-
             case ExpressionType.TypeAs:
                 this.Out(" As ");
                 this.Out(node.Type.Name);
+                break;
+
+            case ExpressionType.Decrement:
+            case ExpressionType.Increment:
                 this.Out(")");
-                return node;
+                break;
 
             case ExpressionType.Negate:
             case ExpressionType.UnaryPlus:
             case ExpressionType.NegateChecked:
-                return node;
-
+            case ExpressionType.Not:
             case ExpressionType.Quote:
-                return node;
+            case ExpressionType.Throw:
+            case ExpressionType.PreIncrementAssign:
+            case ExpressionType.PreDecrementAssign:
+            case ExpressionType.OnesComplement:
+                break;
+
+            case ExpressionType.PostIncrementAssign:
+                this.Out("++");
+                break;
+
+            case ExpressionType.PostDecrementAssign:
+                this.Out("--");
+                break;
+
+            default:
+                this.Out(")");
+                break;
             }
-            this.Out(")");
+
             return node;
         }
     }
