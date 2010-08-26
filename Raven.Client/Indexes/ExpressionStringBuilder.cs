@@ -7,6 +7,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
+using Raven.Client.Document;
 
 
 namespace Raven.Client.Indexes
@@ -20,13 +21,15 @@ namespace Raven.Client.Indexes
         private Dictionary<object, int> _ids;
         private StringBuilder _out = new StringBuilder();
         ExpressionOperatorPrecedence _currentPrecedence;
+    	private DocumentConvention convention;
 
-        // Methods
-        private ExpressionStringBuilder()
+    	// Methods
+        private ExpressionStringBuilder(DocumentConvention convention)
         {
+        	this.convention = convention;
         }
 
-        private void AddLabel(LabelTarget label)
+    	private void AddLabel(LabelTarget label)
         {
             if (this._ids == null)
             {
@@ -50,9 +53,9 @@ namespace Raven.Client.Indexes
             }
         }
 
-        internal static string CatchBlockToString(CatchBlock node)
+        internal string CatchBlockToString(CatchBlock node)
         {
-            ExpressionStringBuilder builder = new ExpressionStringBuilder();
+            ExpressionStringBuilder builder = new ExpressionStringBuilder(convention);
             builder.VisitCatchBlock(node);
             return builder.ToString();
         }
@@ -68,16 +71,16 @@ namespace Raven.Client.Indexes
             }
         }
 
-        internal static string ElementInitBindingToString(ElementInit node)
+        internal string ElementInitBindingToString(ElementInit node)
         {
-            ExpressionStringBuilder builder = new ExpressionStringBuilder();
+            ExpressionStringBuilder builder = new ExpressionStringBuilder(convention);
             builder.VisitElementInit(node);
             return builder.ToString();
         }
 
-        public static string ExpressionToString(Expression node)
+        public static string ExpressionToString(DocumentConvention convention, Expression node)
         {
-            ExpressionStringBuilder builder = new ExpressionStringBuilder();
+        	ExpressionStringBuilder builder = new ExpressionStringBuilder(convention);
             builder.Visit(node, ExpressionOperatorPrecedence.ParenthesisNotNeeded);
             return builder.ToString();
         }
@@ -176,9 +179,9 @@ namespace Raven.Client.Indexes
             return count;
         }
 
-        internal static string MemberBindingToString(MemberBinding node)
+        internal string MemberBindingToString(MemberBinding node)
         {
-            ExpressionStringBuilder builder = new ExpressionStringBuilder();
+            ExpressionStringBuilder builder = new ExpressionStringBuilder(convention);
             builder.VisitMemberBinding(node);
             return builder.ToString();
         }
@@ -195,19 +198,24 @@ namespace Raven.Client.Indexes
 
         private void OutMember(Expression instance, MemberInfo member)
         {
-            if (instance != null)
+        	var name = member.Name;
+        	var identityProperty = convention.GetIdentityProperty(member.DeclaringType);
+			if (identityProperty == member)
+				name = "__document_id";
+        	if (instance != null)
             {
                 this.Visit(instance);
-                this.Out("." + member.Name);
-            } else
+                this.Out("." + name);
+            } 
+			else
             {
-                this.Out(member.DeclaringType.Name + "." + member.Name);
+                this.Out(member.DeclaringType.Name + "." + name);
             }
         }
 
-        internal static string SwitchCaseToString(SwitchCase node)
+    	internal string SwitchCaseToString(SwitchCase node)
         {
-            ExpressionStringBuilder builder = new ExpressionStringBuilder();
+            ExpressionStringBuilder builder = new ExpressionStringBuilder(convention);
             builder.VisitSwitchCase(node);
             return builder.ToString();
         }
