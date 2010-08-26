@@ -121,6 +121,7 @@
     <Compile Include="Bugs\MetadataUpdates.cs" />
     <Compile Include="Bugs\MultipleResultsPerDocumentAndPaging.cs" />
     <Compile Include="Bugs\OperationHeaders.cs" />
+    <Compile Include="Bugs\Patching.cs" />
     <Compile Include="Bugs\Polymorphic.cs" />
     <Compile Include="Bugs\QueryingByNull.cs" />
     <Compile Include="Bugs\QueryWithReservedCharacters.cs" />
