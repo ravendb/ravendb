@@ -350,8 +350,8 @@
     <Compile Include="..\Raven.Database\Json\PatchRequest.cs">
       <Link>Data\PatchRequest.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Database\Linq\DynamicExpandoObject.cs">
-      <Link>Json\DynamicExpandoObject.cs</Link>
+    <Compile Include="..\Raven.Database\Linq\DynamicJsonObject.cs">
+      <Link>Json\DynamicJsonObject.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Database\PatchResult.cs">
       <Link>Data\PatchResult.cs</Link>
