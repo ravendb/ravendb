@@ -1,5 +1,6 @@
 using System;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Runtime.Serialization.Formatters;
 using System.Text;
 using Newtonsoft.Json;
@@ -17,10 +18,9 @@ namespace Raven.Client.Document
 			FindIdentityProperty = q => q.Name == "Id";
 			FindTypeTagName = t => DefaultTypeTagName(t);
 			IdentityPartsSeparator = "/";
-			JsonContractResolver = new DefaultContractResolver(shareCache: true)
+			JsonContractResolver = new DefaultRavenContractResolver(shareCache: true)
 			{
-				DefaultMembersSearchFlags =
-					BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance
+				DefaultMembersSearchFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance
 			};
 		    MaxNumberOfRequestsPerSession = 30;
 			CustomizeJsonSerializer = serializer => { };
@@ -95,6 +95,35 @@ namespace Raven.Client.Document
 			};
 			CustomizeJsonSerializer(jsonSerializer);
 			return jsonSerializer;
+		}
+	}
+
+	public class DefaultRavenContractResolver : DefaultContractResolver
+	{
+		public DefaultRavenContractResolver(bool shareCache) : base(shareCache)
+		{
+		}
+
+		protected override System.Collections.Generic.List<MemberInfo> GetSerializableMembers(Type objectType)
+		{
+			var serializableMembers = base.GetSerializableMembers(objectType);
+			foreach (var toRemove in serializableMembers
+				.Where(MembersToFilterOut)
+				.ToArray())
+			{
+				serializableMembers.Remove(toRemove);
+			}
+			return serializableMembers;
+		}
+
+		private static bool MembersToFilterOut(MemberInfo info)
+		{
+			if (info is EventInfo)
+				return true;
+			var fieldInfo = info as FieldInfo;
+			if (fieldInfo != null && !fieldInfo.IsPublic)
+				return true;
+			return info.GetCustomAttributes(typeof(CompilerGeneratedAttribute),true).Length > 0;
 		}
 	}
 }
