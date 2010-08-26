@@ -590,6 +590,21 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
             return list;
         }
 
+		public AttachmentInformation[] GetAttachments(int start, int pageSize, Guid? etag)
+		{
+			AttachmentInformation[] documents = null;
+
+			TransactionalStorage.Batch(actions =>
+			{
+				if (etag == null)
+					documents = actions.Attachments.GetAttachmentsByReverseUpdateOrder(start).Take(pageSize).ToArray();
+				else
+					documents = actions.Attachments.GetAttachmentsAfter(etag.Value).Take(pageSize).ToArray();
+				
+			});
+			return documents;
+		}
+
         public JArray GetIndexNames(int start, int pageSize)
         {
             return new JArray(

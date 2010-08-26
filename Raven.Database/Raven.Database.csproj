@@ -230,6 +230,7 @@
     <Compile Include="Server\Responders\RequestResponder.cs" />
     <Compile Include="Server\Responders\Root.cs" />
     <Compile Include="Server\Responders\Static.cs" />
+    <Compile Include="Server\Responders\Statics.cs" />
     <Compile Include="Server\Responders\Statistics.cs" />
     <Compile Include="Server\Responders\TransactionCommit.cs" />
     <Compile Include="Server\Responders\TransactionPromote.cs" />

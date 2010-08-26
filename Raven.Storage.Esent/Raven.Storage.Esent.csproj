@@ -67,6 +67,7 @@
     <Compile Include="SchemaUpdates\From23To24.cs" />
     <Compile Include="SchemaUpdates\From24To25.cs" />
     <Compile Include="SchemaUpdates\From25To26.cs" />
+    <Compile Include="SchemaUpdates\From26To27.cs" />
     <Compile Include="SchemaUpdates\ISchemaUpdate.cs" />
     <Compile Include="StorageActionsAccessor.cs" />
     <Compile Include="StorageActions\Attachments.cs" />
