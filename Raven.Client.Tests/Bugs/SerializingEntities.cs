@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using Newtonsoft.Json;
 using Raven.Client.Document;
+using Raven.Database;
+using Raven.Server;
 using Xunit;
 
 namespace Raven.Client.Tests.Bugs
@@ -35,10 +38,85 @@ namespace Raven.Client.Tests.Bugs
 			}
 		}
 
+		public class Product
+		{
+			public string Id { get; set; }
+			public string Name { get; set; }
+			public decimal Cost { get; set; }
+		}
+
+		public class Order
+		{
+			public string Id { get; set; }
+			public string Customer { get; set; }
+			public IList<OrderLine> OrderLines { get; set; }
+
+			public Order()
+			{
+				OrderLines = new List<OrderLine>();
+			}
+		}
+
+		public class OrderLine
+		{
+			public string ProductId { get; set; }
+			public int Quantity { get; set; }
+		}
+
+		[Fact]
+		public void Daniil_CanSaveProperly()
+		{
+			if (Directory.Exists("Data"))
+				Directory.Delete("Data", true);
+			try
+			{
+				using(new RavenDbServer(new RavenConfiguration
+				{
+					DataDirectory = "Data"
+				}))
+				using (var documentStore = new DocumentStore
+				{
+					Url = "http://localhost:8080"
+				}.Initialize())
+				{
+					
+					var session = documentStore.OpenSession();
+
+					var product = new Product
+					{
+						Cost = 3.99m,
+						Name = "Milk",
+					};
+					session.Store(product);
+					session.SaveChanges();
+
+					session.Store(new Order
+					{
+						Customer = "customers/ayende",
+						OrderLines =
+                                {
+                                    new OrderLine
+                                    {
+                                        ProductId = product.Id,
+                                        Quantity = 3
+                                    },
+                                }
+					});
+					session.SaveChanges();
+
+				}
+			}
+			finally
+			{
+				if (Directory.Exists("Data"))
+					Directory.Delete("Data", true);
+			}
+		}
+
 		[Fact]
 		public void WillNotSerializeEvents()
 		{
-			if (Directory.Exists("Data")) 
+			if (Directory.Exists("Data"))
 				Directory.Delete("Data", true);
 			try
 			{
