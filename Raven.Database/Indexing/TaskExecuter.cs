@@ -12,15 +12,13 @@ namespace Raven.Database.Indexing
 	public class TaskExecuter
 	{
 		private readonly WorkContext context;
-		private readonly RavenConfiguration configuration;
 		private readonly ILog log = LogManager.GetLogger(typeof (TaskExecuter));
 		private readonly ITransactionalStorage transactionalStorage;
 
-		public TaskExecuter(ITransactionalStorage transactionalStorage, WorkContext context, RavenConfiguration configuration)
+		public TaskExecuter(ITransactionalStorage transactionalStorage, WorkContext context)
 		{
 			this.transactionalStorage = transactionalStorage;
 			this.context = context;
-			this.configuration = configuration;
 		}
 
 		public void Execute()
@@ -77,8 +75,7 @@ namespace Raven.Database.Indexing
 					log.Error("Failed to execute task: " + task, e);
 				}
 				if (foundWork == false)
-					context.WaitForWork(configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction ?
-						TimeSpan.FromMilliseconds(10) : TimeSpan.FromSeconds(1));
+					context.WaitForWork(TimeSpan.FromSeconds(1));
 			}
 		}
 
