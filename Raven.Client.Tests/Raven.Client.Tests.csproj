@@ -99,6 +99,7 @@
       <Link>Spatial\SpatialIndexTestHelper.cs</Link>
     </Compile>
     <Compile Include="BaseTest.cs" />
+    <Compile Include="Bugs\AccurateCount.cs" />
     <Compile Include="Bugs\AnalyzerPerField.cs" />
     <Compile Include="Bugs\AutoCreateIndexes.cs" />
     <Compile Include="Bugs\AutoDetectAnaylzersForQuery.cs" />
