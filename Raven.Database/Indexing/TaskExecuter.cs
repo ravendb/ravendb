@@ -63,6 +63,7 @@ namespace Raven.Database.Indexing
 							}
 							if (!actions.Tasks.IsIndexStale(indexesStat.Name, null, null)) 
 								continue;
+							foundWork = true;
 							// in order to ensure fairness, we only process one stale index 
 							// then move to process pending tasks, then process more staleness
 							if (IndexDocuments(actions, indexesStat.Name, indexesStat.LastIndexedEtag))
