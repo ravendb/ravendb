@@ -103,11 +103,11 @@ namespace Raven.Client.Tests.Bugs
 
 			}.Initialize())
 			{
-				documentStore.DatabaseCommands.OperationsHeaders["Hello"] = "World";
 
 				RecordOperationHeaders.Hello = null;
 				using (var session = documentStore.OpenSession())
 				{
+					session.DatabaseCommands.OperationsHeaders["Hello"] = "World";
 					session.Store(new { Bar = "foo" });
 					session.SaveChanges();
 

@@ -17,10 +17,10 @@ namespace Raven.Client.Document
 	{
 		public IDatabaseCommands DatabaseCommands { get; private set; }
 
-		public DocumentSession(DocumentStore documentStore, IDocumentStoreListener[] storeListeners, IDocumentDeleteListener[] deleteListeners, IDatabaseCommands databaseCommands)
+		public DocumentSession(DocumentStore documentStore, IDocumentStoreListener[] storeListeners, IDocumentDeleteListener[] deleteListeners)
 			: base(documentStore, storeListeners, deleteListeners)
 		{
-			DatabaseCommands = databaseCommands;
+			DatabaseCommands = documentStore.DatabaseCommands;
 		}
 
 		public T Load<T>(string id)
