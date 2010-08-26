@@ -204,7 +204,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
             backgroundWorkers = new Thread[threadCount];
             for (var i = 0; i < threadCount; i++)
             {
-                backgroundWorkers[i] = new Thread(new TaskExecuter(TransactionalStorage, workContext, Configuration).Execute)
+                backgroundWorkers[i] = new Thread(new TaskExecuter(TransactionalStorage, workContext).Execute)
                 {
                     IsBackground = true,
                     Name = "RavenDB Background Worker #" + i,
