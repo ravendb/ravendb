@@ -13,6 +13,12 @@ namespace Raven.Client.Tests.Bugs
 		{
 			public string Id { get; set; }
 			public event PropertyChangedEventHandler PropertyChanged;
+
+			public void InvokePropertyChanged(PropertyChangedEventArgs e)
+			{
+				PropertyChangedEventHandler handler = PropertyChanged;
+				if (handler != null) handler(this, e);
+			}
 		}
 
 		public class Bar
