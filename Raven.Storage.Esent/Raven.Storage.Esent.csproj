@@ -81,6 +81,7 @@
     <Compile Include="StorageActions\Util.cs" />
     <Compile Include="TableColumnsCache.cs" />
     <Compile Include="TransactionalStorage.cs" />
+    <Compile Include="TransactionalStorageConfigurator.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Raven.Database\Raven.Database.csproj">

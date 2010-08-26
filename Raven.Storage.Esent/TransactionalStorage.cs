@@ -19,7 +19,6 @@ namespace Raven.Storage.Esent
 {
 	public class TransactionalStorage : CriticalFinalizerObject, IDisposable, ITransactionalStorage
 	{
-		public const int MaxSessions = 256;
 		private readonly ThreadLocal<StorageActionsAccessor> current = new ThreadLocal<StorageActionsAccessor>();
 		private readonly string database;
 		private readonly RavenConfiguration configuration;
@@ -47,7 +46,7 @@ namespace Raven.Storage.Esent
 				path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, database);
 			database = Path.Combine(path, "Data");
 
-			LimitSystemCache();
+			new TransactionalStorageConfigurator(configuration).LimitSystemCache();
 
 			Api.JetCreateInstance(out instance, database + Guid.NewGuid());
 		}
@@ -55,15 +54,6 @@ namespace Raven.Storage.Esent
 		public TableColumnsCache TableColumnsCache
 		{
 			get { return tableColumnsCache; }
-		}
-
-		private static void LimitSystemCache()
-		{
-			var cacheSizeMax = 1024 * 1024 * 1024 / SystemParameters.DatabasePageSize;
-			if (SystemParameters.CacheSizeMax > cacheSizeMax)
-			{
-				SystemParameters.CacheSizeMax = cacheSizeMax; // 1 GB
-			}
 		}
 
 		public JET_INSTANCE Instance
@@ -114,7 +104,7 @@ namespace Raven.Storage.Esent
 		{
 			try
 			{
-				ConfigureInstance(instance, path);
+				new TransactionalStorageConfigurator(configuration).ConfigureInstance(instance, path);
 
 				if (configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction)
 				{
@@ -179,30 +169,6 @@ namespace Raven.Storage.Esent
 			}
 		}
 
-		public static void ConfigureInstance(JET_INSTANCE jetInstance, string path)
-		{
-			path = Path.GetFullPath(path);
-			new InstanceParameters(jetInstance)
-			{
-				CircularLog = true,
-				Recovery = true,
-				NoInformationEvent = false,
-				CreatePathIfNotExist = true,
-				TempDirectory = Path.Combine(path, "temp"),
-				SystemDirectory = Path.Combine(path, "system"),
-				LogFileDirectory = Path.Combine(path, "logs"),
-				MaxVerPages = 4096, // 256 MB
-				BaseName = "RVN",
-				EventSource = "Raven",
-				LogBuffers = 256,
-				LogFileSize = 16384,
-				MaxSessions = MaxSessions,
-				MaxCursors = 2048,
-				DbExtensionSize = 4096,
-				AlternateDatabaseRecoveryDirectory = path
-			};
-		}
-
 		private void SetIdFromDb()
 		{
 			try
@@ -259,7 +225,7 @@ namespace Raven.Storage.Esent
 								recoverInstance.Init();
 								using (var recoverSession = new Session(recoverInstance))
 								{
-									ConfigureInstance(recoverInstance.JetInstance, path);
+									new TransactionalStorageConfigurator(configuration).ConfigureInstance(recoverInstance.JetInstance, path);
 									Api.JetAttachDatabase(recoverSession, database,
 														  AttachDatabaseGrbit.DeleteCorruptIndexes);
 									Api.JetDetachDatabase(recoverSession, database);

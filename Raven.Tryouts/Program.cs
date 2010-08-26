@@ -11,7 +11,7 @@ namespace RavenTestbed
         {
         	new DocumentStore
         	{
-        		Url = "http://localhost:8080"
+        		DataDirectory = "data"
         	}.Initialize();
         }
     }

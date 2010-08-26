@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using Microsoft.Isam.Esent.Interop;
+using Raven.Database;
 using Raven.Database.Extensions;
 
 namespace Raven.Storage.Esent.Backup
@@ -44,7 +45,7 @@ namespace Raven.Storage.Esent.Backup
 			Api.JetCreateInstance(out instance, "restoring " + Guid.NewGuid());
 			try
 			{
-                TransactionalStorage.ConfigureInstance(instance, databaseLocation);
+				new TransactionalStorageConfigurator(new RavenConfiguration()).ConfigureInstance(instance, databaseLocation);
                 Api.JetRestoreInstance(instance, backupLocation, databaseLocation, StatusCallback);
                 
                 var fileThatGetsCreatedButDoesntSeemLikeItShould = new FileInfo(Path.Combine(new DirectoryInfo(databaseLocation).Parent.FullName, new DirectoryInfo(databaseLocation).Name + "Data"));
