@@ -70,6 +70,7 @@ namespace Raven.Database.Indexing
 				{
 					yield return field;
 				}
+				yield break;
 			}
 
 			if (indexDefinition.GetIndex(name, Field.Index.ANALYZED) == Field.Index.NOT_ANALYZED || value is string)
