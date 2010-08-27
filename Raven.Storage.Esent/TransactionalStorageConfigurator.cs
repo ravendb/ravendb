@@ -31,7 +31,7 @@ namespace Raven.Storage.Esent
 				BaseName = "RVN",
 				EventSource = "Raven",
 				LogBuffers = TranslateToSizeInDatabasePages(GetValueFromConfiguration("Raven/Esent/LogBuffers", 16)) / 2,
-				LogFileSize = GetValueFromConfiguration("Raven/Esent/LogFileSize", 32) * 1024,
+				LogFileSize = GetValueFromConfiguration("Raven/Esent/LogFileSize", 16) * 1024,
 				MaxSessions = MaxSessions,
 				MaxCursors = GetValueFromConfiguration("Raven/Esent/MaxCursors", 2048),
 				DbExtensionSize = TranslateToSizeInDatabasePages(GetValueFromConfiguration("Raven/Esent/DbExtensionSize", 16)),
