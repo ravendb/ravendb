@@ -56,19 +56,14 @@ namespace Raven.Storage.Esent
 
 		private int GetValueFromConfiguration(string name, int defaultValue)
 		{
-			int cacheSizeMax;
 			string valueAsStr;
 			int value;
 			if (configuration.Settings.TryGetValue(name, out valueAsStr) &&
 				int.TryParse(valueAsStr, out value))
 			{
-				cacheSizeMax = value;
+				return value;
 			}
-			else
-			{
-				cacheSizeMax = defaultValue;
-			}
-			return cacheSizeMax;
+			return defaultValue;
 		}
 	}
 }
