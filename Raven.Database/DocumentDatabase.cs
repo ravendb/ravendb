@@ -235,8 +235,8 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
             byte[] msecsArray = BitConverter.GetBytes((long)(msecs.TotalMilliseconds / 3.333333));
 
             // Copy the bytes into the guid 
-            Array.Copy(daysArray, daysArray.Length - 2, guidArray, guidArray.Length - 6, 2);
-            Array.Copy(msecsArray, msecsArray.Length - 4, guidArray, guidArray.Length - 4, 4);
+            Array.Copy(daysArray, 0, guidArray, guidArray.Length - 6, 2);
+            Array.Copy(msecsArray, 0, guidArray, guidArray.Length - 4, 4);
 
             value = new Guid(guidArray);
         }
