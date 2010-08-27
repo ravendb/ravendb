@@ -110,8 +110,22 @@ namespace Raven.Storage.Esent
 				{
 					new InstanceParameters(instance)
 					{
+						CircularLog = true,
 						Recovery = false,
-						CircularLog = false,
+						NoInformationEvent = false,
+						CreatePathIfNotExist = true,
+						TempDirectory = Path.Combine(path, "temp"),
+						SystemDirectory = Path.Combine(path, "system"),
+						LogFileDirectory = Path.Combine(path, "logs"),
+						MaxVerPages = 128,
+						BaseName = "RVN",
+						EventSource = "Raven",
+						LogBuffers = 8192,
+						LogFileSize = 256,
+						MaxSessions = TransactionalStorageConfigurator.MaxSessions,
+						MaxCursors = 1024,
+						DbExtensionSize = 128,
+						AlternateDatabaseRecoveryDirectory = path
 					};
 				}
 
