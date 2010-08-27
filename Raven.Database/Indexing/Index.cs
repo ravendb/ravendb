@@ -164,9 +164,10 @@ namespace Raven.Database.Indexing
             return luceneQuery;
         }
 
-        public abstract void IndexDocuments(AbstractViewGenerator viewGenerator, IEnumerable<object> documents,
-                                            WorkContext context,
-											IStorageActionsAccessor actions);
+    	public abstract void IndexDocuments(AbstractViewGenerator viewGenerator,
+    	                                    IEnumerable<object> documents,
+    	                                    WorkContext context,
+    	                                    IStorageActionsAccessor actions);
 
 		[CLSCompliant(false)]
 		protected virtual IndexQueryResult RetrieveDocument(Document document, string[] fieldsToFetch)

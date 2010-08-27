@@ -52,7 +52,11 @@ namespace Raven.Database
 
             configuration.Container.SatisfyImportsOnce(this);
 
-            workContext = new WorkContext { IndexUpdateTriggers = IndexUpdateTriggers };
+            workContext = new WorkContext
+            {
+            	IndexUpdateTriggers = IndexUpdateTriggers,
+				ReadTriggers = ReadTriggers
+            };
 
             TransactionalStorage = configuration.CreateTransactionalStorage(workContext.NotifyAboutWork);
             configuration.Container.SatisfyImportsOnce(TransactionalStorage);

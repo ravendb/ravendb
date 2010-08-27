@@ -115,6 +115,7 @@
     <Compile Include="Bugs\ExplicitTransaction.cs" />
     <Compile Include="Bugs\ExtendingClientSideViaListeners.cs" />
     <Compile Include="Bugs\Includes.cs" />
+    <Compile Include="Bugs\IndexingRavenDocuments.cs" />
     <Compile Include="Bugs\IndexWithTwoProperties.cs" />
     <Compile Include="Bugs\JsonSerializationBothWays.cs" />
     <Compile Include="Bugs\KeyGeneration.cs" />
