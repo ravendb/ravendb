@@ -34,7 +34,7 @@ namespace Raven.Storage.Esent
 				LogFileSize = GetValueFromConfiguration("Raven/Esent/LogFileSize", 16) * 1024,
 				MaxSessions = MaxSessions,
 				MaxCursors = GetValueFromConfiguration("Raven/Esent/MaxCursors", 2048),
-				DbExtensionSize = TranslateToSizeInDatabasePages(GetValueFromConfiguration("Raven/Esent/MaxVerPages", 16)),
+				DbExtensionSize = TranslateToSizeInDatabasePages(GetValueFromConfiguration("Raven/Esent/DbExtensionSize", 16)),
 				AlternateDatabaseRecoveryDirectory = path
 			};
 		}
