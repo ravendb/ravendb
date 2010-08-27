@@ -238,6 +238,8 @@ namespace Raven.Tests.Triggers
 		{
 			public override ReadVetoResult AllowRead(string key, JObject document, JObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
 			{
+				if (operation == ReadOperation.Index)
+					return ReadVetoResult.Allowed; 
 				var name = document["hidden"];
 				if (name != null && name.Value<bool>())
 				{
@@ -251,6 +253,8 @@ namespace Raven.Tests.Triggers
 		{
             public override ReadVetoResult AllowRead(string key, JObject document, JObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
 			{
+				if (operation == ReadOperation.Index)
+					return ReadVetoResult.Allowed;
 				var name = document["name"];
 				if (name != null && name.Value<string>().Any(char.IsUpper))
 				{
