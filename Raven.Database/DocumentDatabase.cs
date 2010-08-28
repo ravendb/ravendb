@@ -52,7 +52,11 @@ namespace Raven.Database
 
             configuration.Container.SatisfyImportsOnce(this);
 
-            workContext = new WorkContext { IndexUpdateTriggers = IndexUpdateTriggers };
+            workContext = new WorkContext
+            {
+            	IndexUpdateTriggers = IndexUpdateTriggers,
+				ReadTriggers = ReadTriggers
+            };
 
             TransactionalStorage = configuration.CreateTransactionalStorage(workContext.NotifyAboutWork);
             configuration.Container.SatisfyImportsOnce(TransactionalStorage);
@@ -213,22 +217,13 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
             }
         }
 
-        [SuppressUnmanagedCodeSecurity]
-        [DllImport("rpcrt4.dll", EntryPoint = "UuidCreateSequential", SetLastError = true)]
-        private static extern int UuidCreateSequentialNative(out Guid value);
-
-        private static void UuidCreateSequential(out Guid value)
-        {
-            Marshal.ThrowExceptionForHR(UuidCreateSequentialNative(out value));
-        }
-
         public static Guid CreateSequentialUuid()
         {
-            Guid value;
-            UuidCreateSequential(out value);
-            var byteArray = value.ToByteArray();
-            Array.Reverse(byteArray);
-            return new Guid(byteArray);
+        	var ticksAsBytes = BitConverter.GetBytes(DateTime.Now.Ticks);
+        	var bytes = new byte[16];
+			Array.Copy(ticksAsBytes, 0, bytes,0, ticksAsBytes.Length);
+			Array.Reverse(bytes);
+        	return new Guid(bytes);
         }
 
         public JsonDocument Get(string key, TransactionInformation transactionInformation)
@@ -249,9 +244,9 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
         {
             if (string.IsNullOrEmpty(key))
             {
-                Guid value;
-                UuidCreateSequential(out value);
-                key = value.ToString();
+				// we no longer sort by the key, so it doesn't matter
+				// that the key is no longer sequential
+            	key = Guid.NewGuid().ToString();
             }
             RemoveReservedProperties(document);
             RemoveReservedProperties(metadata);
@@ -570,6 +565,21 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
             });
             return list;
         }
+
+		public AttachmentInformation[] GetAttachments(int start, int pageSize, Guid? etag)
+		{
+			AttachmentInformation[] documents = null;
+
+			TransactionalStorage.Batch(actions =>
+			{
+				if (etag == null)
+					documents = actions.Attachments.GetAttachmentsByReverseUpdateOrder(start).Take(pageSize).ToArray();
+				else
+					documents = actions.Attachments.GetAttachmentsAfter(etag.Value).Take(pageSize).ToArray();
+				
+			});
+			return documents;
+		}
 
         public JArray GetIndexNames(int start, int pageSize)
         {

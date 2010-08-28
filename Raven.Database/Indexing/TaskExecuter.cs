@@ -4,6 +4,7 @@ using System.Linq;
 using log4net;
 using Raven.Database.Extensions;
 using Raven.Database.Json;
+using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
 
@@ -63,6 +64,7 @@ namespace Raven.Database.Indexing
 							}
 							if (!actions.Tasks.IsIndexStale(indexesStat.Name, null, null)) 
 								continue;
+							foundWork = true;
 							// in order to ensure fairness, we only process one stale index 
 							// then move to process pending tasks, then process more staleness
 							if (IndexDocuments(actions, indexesStat.Name, indexesStat.LastIndexedEtag))
@@ -93,12 +95,16 @@ namespace Raven.Database.Indexing
 
 			if(jsonDocs.Length == 0)
 				return false;
-			
+
+			var documentRetriever = new DocumentRetriever(null, this.context.ReadTriggers);
 			try
 			{
 				log.DebugFormat("Indexing {0} documents for index: {1}", jsonDocs.Length, index);
-				context.IndexStorage.Index(index, viewGenerator, jsonDocs.Select(x => JsonToExpando.Convert(x.ToJson())),
-				                           context, actions);
+				context.IndexStorage.Index(index, viewGenerator, 
+					jsonDocs
+					.Select(doc => documentRetriever.ProcessReadVetoes(doc, null, ReadOperation.Index))
+					.Where(doc => doc != null)
+					.Select(x => JsonToExpando.Convert(x.ToJson())), context, actions);
 
 				return true;
 			}

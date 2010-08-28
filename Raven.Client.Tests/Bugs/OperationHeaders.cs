@@ -85,6 +85,37 @@ namespace Raven.Client.Tests.Bugs
 			}
 		}
 
+		[Fact]
+		public void CanPassOperationHeadersSetBeforeSessionUsingServer()
+		{
+			using (new RavenDbServer(new RavenConfiguration
+			{
+				Catalog =
+				{
+					Catalogs = { new TypeCatalog(typeof(RecordOperationHeaders)) }
+				},
+				DataDirectory = path,
+				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true
+			}))
+			using (var documentStore = new DocumentStore
+			{
+				Url = "http://localhost:8080"
+
+			}.Initialize())
+			{
+				documentStore.SharedOperationsHeaders["Hello"] = "World";
+
+				RecordOperationHeaders.Hello = null;
+				using (var session = documentStore.OpenSession())
+				{
+					session.Store(new { Bar = "foo" });
+					session.SaveChanges();
+
+					Assert.Equal("World", RecordOperationHeaders.Hello);
+				}
+			}
+		}
+
 		public class RecordOperationHeaders : AbstractPutTrigger
 		{
 			public static string Hello;

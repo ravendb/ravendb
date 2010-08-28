@@ -76,7 +76,7 @@ namespace Raven.Database
             return resultingDocument;
         }
 
-        private JsonDocument ProcessReadVetoes(JsonDocument document, TransactionInformation transactionInformation, ReadOperation operation)
+    	public JsonDocument ProcessReadVetoes(JsonDocument document, TransactionInformation transactionInformation, ReadOperation operation)
         {
             if (document == null)
                 return document;

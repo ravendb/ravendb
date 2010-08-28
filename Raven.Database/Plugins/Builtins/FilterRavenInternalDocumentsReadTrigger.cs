@@ -9,8 +9,19 @@ namespace Raven.Database.Plugins.Builtins
         {
             if(key == null)
                 return ReadVetoResult.Allowed;
-            if (key.StartsWith("Raven/") && operation == ReadOperation.Query)
-                return ReadVetoResult.Ignore; // hide Raven's documentation from queries
+            if (key.StartsWith("Raven/"))
+            {
+            	switch (operation)
+            	{
+            		case ReadOperation.Load:
+            			return ReadVetoResult.Allowed;
+            		case ReadOperation.Query:
+            		case ReadOperation.Index:
+            			return ReadVetoResult.Ignore;
+            		default:
+            			throw new ArgumentOutOfRangeException("operation");
+            	}
+            }
             return ReadVetoResult.Allowed;
         }
     }

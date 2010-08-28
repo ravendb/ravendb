@@ -38,37 +38,46 @@ namespace Raven.Database
 		private JArray PerformBulkOperation(string index, IndexQuery indexQuery, bool allowStale, Func<string, TransactionInformation, object> batchOperation)
 		{
 			var array = new JArray();
-			database.TransactionalStorage.Batch(actions =>
+			var bulkIndexQuery = new IndexQuery
 			{
-				var bulkIndexQuery = new IndexQuery
-				{
-					Query = indexQuery.Query,
-					Start = indexQuery.Start,
-					Cutoff = indexQuery.Cutoff,
-					PageSize = int.MaxValue,
-					FieldsToFetch = new[] { "__document_id" },
-					SortedFields = indexQuery.SortedFields
-				};
+				Query = indexQuery.Query,
+				Start = indexQuery.Start,
+				Cutoff = indexQuery.Cutoff,
+				PageSize = int.MaxValue,
+				FieldsToFetch = new[] { "__document_id" },
+				SortedFields = indexQuery.SortedFields
+			};
 
-				bool stale;
-				var queryResults = database.QueryDocumentIds(index, bulkIndexQuery, out stale);
+			bool stale;
+			var queryResults = database.QueryDocumentIds(index, bulkIndexQuery, out stale);
 
-				if (stale)
+			if (stale)
+			{
+				if (allowStale == false)
 				{
-					if (allowStale == false)
+					throw new InvalidOperationException(
+						"Bulk operation cancelled because the index is stale and allowStale is false");
+				}
+			}
+
+			var enumerator = queryResults.GetEnumerator();
+			const int batchSize = 1024;
+			while (true)
+			{
+				var batchCount = 0;
+				database.TransactionalStorage.Batch(actions =>
+				{
+					while (batchCount < batchSize  && enumerator.MoveNext())
 					{
-						throw new InvalidOperationException(
-							"Bulk operation cancelled because the index is stale and allowStale is false");
+						batchCount++;
+						var result = batchOperation(enumerator.Current, transactionInformation);
+						array.Add(JObject.FromObject(result, new JsonSerializer { Converters = { new JsonEnumConverter() } }));
 					}
-				}
-
-				foreach (var documentId in queryResults)
-				{
-					var result = batchOperation(documentId, transactionInformation);
-					array.Add(JObject.FromObject(result, new JsonSerializer { Converters = { new JsonEnumConverter() } }));
-				}
-			});
+				});
+				if (batchCount < batchSize) break;
+			}
 			return array;
 		}
+
 	}
 }

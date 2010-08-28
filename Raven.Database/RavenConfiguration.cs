@@ -36,10 +36,6 @@ namespace Raven.Database
 
 			Port = portStr != null ? int.Parse(portStr) : 8080;
 
-			var indexBatchSizeStr = ConfigurationManager.AppSettings["Raven/IndexingBatchSize"];
-
-			IndexingBatchSize = indexBatchSizeStr != null ? int.Parse(indexBatchSizeStr) : 1024;
-
             var maxPageSizeStr = ConfigurationManager.AppSettings["Raven/MaxPageSize"];
 
             MaxPageSize = maxPageSizeStr != null ? int.Parse(maxPageSizeStr) : 1024;
@@ -151,7 +147,6 @@ namespace Raven.Database
         public string HostName { get; set;  } 
 		public int Port { get; set; }
 		public string WebDir { get; set; }
-		public int IndexingBatchSize { get; set; }
 		public AnonymousUserAccessMode AnonymousUserAccessMode { get; set; }
 
 		public string VirtualDirectory { get; set; }

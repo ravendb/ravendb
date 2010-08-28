@@ -11,17 +11,17 @@ namespace Raven.Client.Document
     public class HiLoKeyGenerator
     {
         private const string RavenKeyGeneratorsHilo = "Raven/Hilo/";
-        private readonly IDatabaseCommands commands;
+		private readonly IDocumentStore documentStore;
         private readonly string tag;
         private readonly long capacity;
         private readonly object generatorLock = new object();
         private long currentHi;
         private long currentLo;
 
-        public HiLoKeyGenerator(IDatabaseCommands commands, string tag, long capacity)
+        public HiLoKeyGenerator(IDocumentStore documentStore, string tag, long capacity)
         {
             currentHi = 0;
-            this.commands = commands;
+            this.documentStore = documentStore;
             this.tag = tag;
             this.capacity = capacity;
             currentLo = capacity + 1;
@@ -64,10 +64,11 @@ namespace Raven.Client.Document
             {
                 try
                 {
-                    var document = commands.Get(RavenKeyGeneratorsHilo + tag);
+                	var databaseCommands = documentStore.DatabaseCommands;
+                	var document = databaseCommands.Get(RavenKeyGeneratorsHilo + tag);
                     if (document == null)
                     {
-                        commands.Put(RavenKeyGeneratorsHilo + tag,
+						databaseCommands.Put(RavenKeyGeneratorsHilo + tag,
                                      Guid.Empty,
                                      // sending empty guid means - ensure the that the document does NOT exists
                                      JObject.FromObject(new HiLoKey{ServerHi = 2}),
@@ -77,7 +78,7 @@ namespace Raven.Client.Document
                     var hiLoKey = document.DataAsJson.JsonDeserialization<HiLoKey>();
                     var newHi = hiLoKey.ServerHi;
                     hiLoKey.ServerHi += 1;
-                    commands.Put(RavenKeyGeneratorsHilo + tag, document.Etag,
+					databaseCommands.Put(RavenKeyGeneratorsHilo + tag, document.Etag,
                                  JObject.FromObject(hiLoKey),
                                  document.Metadata);
                     return newHi;

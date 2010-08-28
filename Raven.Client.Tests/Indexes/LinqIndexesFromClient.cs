@@ -103,6 +103,27 @@ namespace Raven.Client.Tests.Indexes
 		}
 
 		[Fact]
+		public void Convert_using_id()
+		{
+			IndexDefinition generated = new IndexDefinition<User, Named>
+			{
+				Map = users => from user in users
+							   where user.Location == "Tel Aviv"
+							   select new { user.Name, user.Id },
+				Stores = { { user => user.Name, FieldStorage.Yes } }
+			}.ToIndexDefinition(new DocumentConvention());
+			var original = new IndexDefinition
+			{
+				Stores = { { "Name", FieldStorage.Yes } },
+				Map = @"docs.Users
+	.Where(user => user.Location == ""Tel Aviv"")
+	.Select(user => new {Name = user.Name, Id = user.__document_id})"
+			};
+
+			Assert.Equal(original, generated);
+		}
+
+		[Fact]
 		public void Convert_simple_query_with_not_operator_and_nested_braces()
 		{
 			IndexDefinition generated = new IndexDefinition<User, Named>

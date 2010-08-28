@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
 using Newtonsoft.Json;
@@ -73,6 +74,46 @@ namespace Raven.Storage.Esent.StorageActions
 
 			Api.JetDelete(session, Files);
 			logger.DebugFormat("Attachment with key '{0}' was deleted", key);
+		}
+
+		public IEnumerable<AttachmentInformation> GetAttachmentsByReverseUpdateOrder(int start)
+		{
+			Api.JetSetCurrentIndex(session, Files, "by_etag");
+			Api.MoveAfterLast(session, Files);
+			for (int i = 0; i < start; i++)
+			{
+				if (Api.TryMovePrevious(session, Files) == false)
+					yield break;
+			}
+			while (Api.TryMovePrevious(session, Files))
+			{
+				yield return new AttachmentInformation
+				{
+					Size =  Api.RetrieveColumnSize(session, Files, tableColumnsCache.FilesColumns["data"]).Value,
+					Etag = new Guid(Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"])),
+					Key = Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["name"], Encoding.UTF8),
+					Metadata = JObject.Parse(Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["metadata"], Encoding.Unicode))
+				};
+			}
+		}
+
+		public IEnumerable<AttachmentInformation> GetAttachmentsAfter(Guid etag)
+		{
+			Api.JetSetCurrentIndex(session, Files, "by_etag");
+			var byteArray = etag.ToByteArray();
+			Api.MakeKey(session, Files, byteArray, MakeKeyGrbit.NewKey);
+			if (Api.TrySeek(session, Files, SeekGrbit.SeekGT) == false)
+				yield break;
+			do
+			{
+				yield return new AttachmentInformation
+				{
+					Size = Api.RetrieveColumnSize(session, Files, tableColumnsCache.FilesColumns["data"]).Value,
+					Etag = new Guid(Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"])),
+					Key = Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["name"], Encoding.UTF8),
+					Metadata = JObject.Parse(Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["metadata"], Encoding.Unicode))
+				};
+			} while (Api.TryMoveNext(session, Files));
 		}
 
 		public Attachment GetAttachment(string key)

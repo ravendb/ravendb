@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Configuration;
 using System.Net;
 using System.Text.RegularExpressions;
@@ -18,13 +19,26 @@ namespace Raven.Client.Document
 			RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
 
 		private Func<IDatabaseCommands> databaseCommandsGenerator;
+		public NameValueCollection SharedOperationsHeaders { get; private set; }
+
 		public IDatabaseCommands DatabaseCommands
 		{
 			get
 			{
 				if (databaseCommandsGenerator == null)
 					return null;
-				return databaseCommandsGenerator();
+				var commands = databaseCommandsGenerator();
+				foreach (string key in SharedOperationsHeaders)
+				{
+					var values = SharedOperationsHeaders.GetValues(key);
+					if(values == null)
+						continue;
+					foreach (var value in values)
+					{
+						commands.OperationsHeaders[key] = value;
+					}
+				}
+				return commands;
 			}
 		}
 
@@ -43,6 +57,7 @@ namespace Raven.Client.Document
 
 		public DocumentStore()
 		{
+			SharedOperationsHeaders = new NameValueCollection();
 			Conventions = new DocumentConvention();
 		}
 
@@ -223,7 +238,7 @@ namespace Raven.Client.Document
 				}
                 if(Conventions.DocumentKeyGenerator == null)// don't overwrite what the user is doing
                 {
-                    var generator = new MultiTypeHiLoKeyGenerator(DatabaseCommands, 1024);
+                    var generator = new MultiTypeHiLoKeyGenerator(this, 1024);
                     Conventions.DocumentKeyGenerator = entity => generator.GenerateDocumentKey(Conventions, entity);
                 }
 			}

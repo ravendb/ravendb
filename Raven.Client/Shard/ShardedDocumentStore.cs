@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Specialized;
 using System.Linq;
 using Raven.Client.Client;
 using Raven.Client.Document;
@@ -8,6 +9,11 @@ namespace Raven.Client.Shard
 {
 	public class ShardedDocumentStore : IDocumentStore
 	{
+		public NameValueCollection SharedOperationsHeaders
+		{
+			get { throw new NotSupportedException("Sharded document store doesn't have a SharedOperationsHeaders. you need to explicitly use the shard instances to get access to the SharedOperationsHeaders"); }
+		}
+
 		public event EventHandler<StoredEntityEventArgs> Stored;
 
         public ShardedDocumentStore(IShardStrategy shardStrategy, Shards shards)

@@ -18,6 +18,7 @@ namespace Raven.Database.Indexing
 		private readonly ThreadLocal<bool> shouldNotifyOnWork = new ThreadLocal<bool>();
 		private readonly ReaderWriterLockSlim readerWriterLockSlim = new ReaderWriterLockSlim();
         public IEnumerable<AbstractIndexUpdateTrigger> IndexUpdateTriggers{ get; set;}
+		public IEnumerable<AbstractReadTrigger> ReadTriggers { get; set; }
 		public PerformanceCounters PerformanceCounters { get; set; }
 		public bool DoWork
 		{

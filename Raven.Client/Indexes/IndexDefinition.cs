@@ -33,8 +33,8 @@ namespace Raven.Client.Indexes
 		{
 			return new IndexDefinition
 			{
-				Map = PruneToFailureLinqQueryAsStringToWorkableCode(Map, "docs." + convention.GetTypeTagName(typeof(TDocument))),
-				Reduce = PruneToFailureLinqQueryAsStringToWorkableCode(Reduce, "results"),
+				Map = PruneToFailureLinqQueryAsStringToWorkableCode(Map, convention, "docs." + convention.GetTypeTagName(typeof(TDocument))),
+				Reduce = PruneToFailureLinqQueryAsStringToWorkableCode(Reduce, convention, "results"),
 				Indexes = ConvertToStringDictionary(Indexes),
 				Stores = ConvertToStringDictionary(Stores),
 				SortOptions = ConvertToStringDictionary(SortOptions)
@@ -59,13 +59,16 @@ namespace Raven.Client.Indexes
 		}
 
 
-		private static string PruneToFailureLinqQueryAsStringToWorkableCode<T>(Expression<Func<IEnumerable<T>, IEnumerable>> expr, string querySource)
+		private static string PruneToFailureLinqQueryAsStringToWorkableCode<T>(
+			Expression<Func<IEnumerable<T>, IEnumerable>> expr, 
+			DocumentConvention convention,
+			string querySource)
 		{
 			if (expr == null)
 				return null;
 
 #if !NET_3_5
-            var linqQuery = ExpressionStringBuilder.ExpressionToString(expr.Body);
+			var linqQuery = ExpressionStringBuilder.ExpressionToString(convention, expr.Body);
 #else
             var linqQuery = expr.Body.ToString();
 #endif

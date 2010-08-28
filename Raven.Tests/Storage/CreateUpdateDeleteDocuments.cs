@@ -49,16 +49,6 @@ namespace Raven.Tests.Storage
 		}
 
 		[Fact]
-		public void When_creating_documents_with_no_id_specified_will_return_guids_in_sequencal_order()
-		{
-			var documentId1 = db.Put(null, Guid.Empty, JObject.Parse("{ first_name: 'ayende', last_name: 'rahien'}"),
-                                     new JObject(), null);
-			var documentId2 = db.Put(null, Guid.Empty, JObject.Parse("{ first_name: 'ayende', last_name: 'rahien'}"),
-                                     new JObject(), null);
-            Assert.Equal(1, new Guid(documentId2.Key).CompareTo(new Guid(documentId1.Key)));
-		}
-
-		[Fact]
 		public void Can_create_and_read_document()
 		{
             db.Put("1", Guid.Empty, JObject.Parse("{  first_name: 'ayende', last_name: 'rahien'}"), new JObject(), null);
