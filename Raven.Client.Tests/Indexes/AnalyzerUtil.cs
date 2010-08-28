@@ -5,26 +5,27 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Lucene.Net.Analysis;
+using Lucene.Net.Analysis.Tokenattributes;
 
 namespace Raven.Client.Tests.Indexes
 {
     public class LuceneAnalyzerUtils
     {
-        public static Token[] TokensFromAnalysis(Analyzer analyzer, String text)
+        public static IEnumerable<string> TokensFromAnalysis(Analyzer analyzer, String text)
         {
             TokenStream stream = analyzer.TokenStream("contents", new StringReader(text));
-            ArrayList tokenList = new ArrayList();
+            List<string> result = new List<string>();
+            TermAttribute tokenAttr = (TermAttribute)stream.GetAttribute(typeof(TermAttribute));
 
-            while (true)
+            while (stream.IncrementToken())
             {
-                Token token = stream.Next();
-                if (token == null)
-                {
-                    break;
-                }
-                tokenList.Add(token);
+                result.Add(tokenAttr.Term());
             }
-            return (Token[])tokenList.ToArray(typeof(Token));
+
+            stream.End();
+            stream.Close();
+
+            return result;
         }
     }
 }

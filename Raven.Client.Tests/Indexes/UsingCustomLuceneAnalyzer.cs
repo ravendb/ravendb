@@ -34,7 +34,7 @@ namespace Raven.Client.Tests.Indexes
         {
             var tokens = LuceneAnalyzerUtils.TokensFromAnalysis(new CustomAnalyzer(), entityName);
 
-            Assert.Equal(analyzedName, tokens.Single().TermText());
+            Assert.Equal(analyzedName, tokens.Single());
         }
 
         public void with_index_and_single_entity(Action<IDocumentSession> action)
