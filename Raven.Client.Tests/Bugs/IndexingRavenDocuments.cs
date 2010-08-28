@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace Raven.Client.Tests.Bugs
 {
-	public class IndexingRavenDocuments : BaseClientTest
+	public class IndexingRavenDocuments : LocalClientTest
 	{
 		[Fact]
 		public void WillNotIndexRavenDocuments()
