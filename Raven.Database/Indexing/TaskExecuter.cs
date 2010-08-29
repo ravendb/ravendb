@@ -73,25 +73,35 @@ namespace Raven.Database.Indexing
 			if (indexesToWorkOn.Count == 0)
 				return false;
 
-			//var threadingTasks = new ThreadingTask [indexesToWorkOn.Count];
-			//for (int i = 0; i < indexesToWorkOn.Count; i++)
-			//{
-			//    var indexToWorkOn = indexesToWorkOn[i];
-			//    threadingTasks[i] = new ThreadingTask(() => 
-			//                                            transactionalStorage.Batch(actions => 
-			//                                                                        IndexDocuments(actions, indexToWorkOn.IndexName, indexToWorkOn.LastIndexedEtag)));
+			//ExecuteIndexingWorkOnMultipleThreads(indexesToWorkOn);
 
-			//    threadingTasks[i].Start();
-			//}
-			//ThreadingTask.WaitAll(threadingTasks);
+			ExecuteIndexingWorkOnSingleThread(indexesToWorkOn);
 
+			return true;
+		}
+
+		private void ExecuteIndexingWorkOnMultipleThreads(List<IndexToWorkOn> indexesToWorkOn)
+		{
+			var threadingTasks = new ThreadingTask[indexesToWorkOn.Count];
+			for (int i = 0; i < indexesToWorkOn.Count; i++)
+			{
+				var indexToWorkOn = indexesToWorkOn[i];
+				threadingTasks[i] = new ThreadingTask(() =>
+					transactionalStorage.Batch(actions =>
+						IndexDocuments(actions, indexToWorkOn.IndexName, indexToWorkOn.LastIndexedEtag)));
+
+				threadingTasks[i].Start();
+			}
+			ThreadingTask.WaitAll(threadingTasks);
+		}
+
+		private void ExecuteIndexingWorkOnSingleThread(List<IndexToWorkOn> indexesToWorkOn)
+		{
 			foreach (var indexToWorkOn in indexesToWorkOn)
 			{
 				transactionalStorage.Batch(actions => 
 					IndexDocuments(actions, indexToWorkOn.IndexName, indexToWorkOn.LastIndexedEtag));
 			}
-
-			return true;
 		}
 
 		private bool ExecuteTasks()
