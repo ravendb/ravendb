@@ -16,11 +16,15 @@ namespace Raven.Client.Linq
 		private IDocumentQuery<T> luceneQuery;
 		private Expression<Func<T, bool>> predicate;
 		private SpecialQueryType queryType = SpecialQueryType.None;
+		private Type newExpressionType;
 
-		public RavenQueryProviderProcessor(IDocumentSession session, Action<IDocumentQuery<T>> customizeQuery,
-		                                   string indexName)
+		public RavenQueryProviderProcessor(
+			IDocumentSession session,
+			Action<IDocumentQuery<T>> customizeQuery,
+			string indexName)
 		{
 			FieldsToFetch = new List<string>();
+			newExpressionType = typeof (T);
 			this.session = session;
 			this.indexName = indexName;
 			this.customizeQuery = customizeQuery;
@@ -397,7 +401,9 @@ namespace Raven.Client.Linq
 					FieldsToFetch.Add(((MemberExpression) body).Member.Name);
 					break;
 				case ExpressionType.New:
-					FieldsToFetch.AddRange(((NewExpression) body).Arguments.Cast<MemberExpression>().Select(x => x.Member.Name));
+					var newExpression = ((NewExpression) body);
+					newExpressionType = newExpression.Type;
+					FieldsToFetch.AddRange(newExpression.Arguments.Cast<MemberExpression>().Select(x => x.Member.Name));
 					break;
 				case ExpressionType.Parameter: // want the full thing, so just pass it on.
 					break;
@@ -593,44 +599,55 @@ namespace Raven.Client.Linq
 			chainedWhere = false;
 			ProcessExpression(expression);
 
-			luceneQuery = luceneQuery.SelectFields<T>(FieldsToFetch.ToArray());
-
 			if (customizeQuery != null)
 				customizeQuery(luceneQuery);
+
+			if(newExpressionType == typeof(T))
+				return ExecuteQuery<T>();
+
+			var genericExecuteQuery = GetType().GetMethod("ExecuteQuery", BindingFlags.Instance|BindingFlags.NonPublic);
+			var executeQueryWithProjectionType = genericExecuteQuery.MakeGenericMethod(newExpressionType);
+			return executeQueryWithProjectionType.Invoke(this, new object[0]);
+		}
+
+		private object ExecuteQuery<TProjection>()
+		{
+			var finalQuery = luceneQuery.SelectFields<TProjection>(FieldsToFetch.ToArray());
 
 			switch (queryType)
 			{
 				case SpecialQueryType.First:
 				{
-					return luceneQuery.First();
+					return finalQuery.First();
 				}
 				case SpecialQueryType.FirstOrDefault:
 				{
-					return luceneQuery.FirstOrDefault();
+					return finalQuery.FirstOrDefault();
 				}
 				case SpecialQueryType.Single:
 				{
-					return luceneQuery.Single();
+					return finalQuery.Single();
 				}
 				case SpecialQueryType.SingleOrDefault:
 				{
-					return luceneQuery.SingleOrDefault();
+					return finalQuery.SingleOrDefault();
 				}
 				case SpecialQueryType.All:
 				{
-					return luceneQuery.AsQueryable().All(predicate);
+					var pred = predicate.Compile();
+					return finalQuery.AsQueryable().All(projection => pred((T)(object)projection));
 				}
 				case SpecialQueryType.Any:
 				{
-					return luceneQuery.Any();
+					return finalQuery.Any();
 				}
 				case SpecialQueryType.Count:
 				{
-					return luceneQuery.QueryResult.TotalResults;
+					return finalQuery.QueryResult.TotalResults;
 				}
 				default:
 				{
-					return luceneQuery;
+					return finalQuery;
 				}
 			}
 		}

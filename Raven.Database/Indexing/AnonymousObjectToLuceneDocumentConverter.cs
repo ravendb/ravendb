@@ -6,6 +6,7 @@ using System.Linq;
 using Lucene.Net.Documents;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Database.Linq;
 
 namespace Raven.Database.Indexing
 {
@@ -91,6 +92,13 @@ namespace Raven.Database.Indexing
 				var convert = ((IConvertible) value);
 				yield return new Field(name, convert.ToString(CultureInfo.InvariantCulture), indexDefinition.GetStorage(name, defaultStorage),
 				                       indexDefinition.GetIndex(name, GetDefaultIndexOption(value)));
+			}
+			else if (value is DynamicJsonObject)
+			{
+				var inner = ((DynamicJsonObject)value).Inner;
+				yield return new Field(name + "_ConvertToJson", "true", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
+				yield return new Field(name, inner.ToString(), indexDefinition.GetStorage(name, defaultStorage),
+									   indexDefinition.GetIndex(name, GetDefaultIndexOption(value)));
 			}
 			else 
 			{
