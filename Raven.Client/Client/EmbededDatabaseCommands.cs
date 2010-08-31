@@ -88,6 +88,11 @@ namespace Raven.Client.Client
 				.Select(x => x.Value<string>()).ToArray();
 		}
 
+		public void ResetIndex(string name)
+		{
+			database.ResetIndex(name);
+		}
+
 		public IndexDefinition GetIndex(string name)
 		{
 			CurrentRavenOperation.Headers.Value = OperationsHeaders;
