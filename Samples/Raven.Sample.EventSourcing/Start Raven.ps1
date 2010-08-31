@@ -21,7 +21,6 @@ cp $raven\ICSharpCode.NRefactory.dll .\Server
 cp $raven\Rhino.Licensing.dll .\Server
 cp $raven\Esent.Interop.dll .\Server
 cp $raven\Raven.Database.dll .\Server
-cp $raven\Raven.Storage.Managed.dll .\Server
 cp $raven\Raven.Storage.Esent.dll .\Server
 
 mkdir .\Server\Plugins  -erroraction silentlycontinue
