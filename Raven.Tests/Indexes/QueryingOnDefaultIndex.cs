@@ -65,7 +65,8 @@ namespace Raven.Tests.Indexes
                 {
                     Query = "Tag:[[Users]]",
                     Start = 0,
-                    PageSize = 2
+					PageSize = 2,
+					SortedFields = new [] { new SortedField("__document_id"), }
                 });
             } while (queryResultPageOne.IsStale);
             do
@@ -74,7 +75,8 @@ namespace Raven.Tests.Indexes
                 {
                     Query = "Tag:[[Users]]",
                     Start = 1,
-                    PageSize = 2
+					PageSize = 2,
+					SortedFields = new [] { new SortedField("__document_id"), }
                 });
             } while (queryResultPageTwo.IsStale);
 
@@ -84,23 +86,24 @@ namespace Raven.Tests.Indexes
                 {
                     Query = "Tag:[[Users]]",
                     Start = 2,
-                    PageSize = 2
+                    PageSize = 2,
+					SortedFields = new []{new SortedField("__document_id"), }
                 });
             } while (queryResultPageThree.IsStale);
 
             // Page one
 			Assert.Equal(2, queryResultPageOne.Results.Count);
-            Assert.Equal("ayende@ayende.com", queryResultPageOne.Results[0].Value<string>("email"));
-            Assert.Equal("robashton@codeofrob.com", queryResultPageOne.Results[1].Value<string>("email"));
+			Assert.Equal("ayende@ayende.com", queryResultPageOne.Results[0].Value<string>("email"));
+			Assert.Equal("joe@bloggs.com", queryResultPageOne.Results[1].Value<string>("email"));
 
             // Page two
 			Assert.Equal(2, queryResultPageTwo.Results.Count);
-            Assert.Equal("robashton@codeofrob.com", queryResultPageTwo.Results[0].Value<string>("email"));
-            Assert.Equal("joe@bloggs.com", queryResultPageTwo.Results[1].Value<string>("email"));
+			Assert.Equal("joe@bloggs.com", queryResultPageTwo.Results[0].Value<string>("email"));
+			Assert.Equal("robashton@codeofrob.com", queryResultPageTwo.Results[1].Value<string>("email"));
 
             // Page three
 			Assert.Equal(1, queryResultPageThree.Results.Count);
-            Assert.Equal("joe@bloggs.com", queryResultPageThree.Results[0].Value<string>("email"));
+			Assert.Equal("robashton@codeofrob.com", queryResultPageThree.Results[0].Value<string>("email"));
         }
 		
 	}

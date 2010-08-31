@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Raven.Client.Indexes;
+using Raven.Database.Indexing;
 using Xunit;
 using Raven.Database.Data;
 using Raven.Client;
@@ -58,33 +59,34 @@ namespace Raven.Tests.Linq
                     AddData(session);                    
 
                     db.DatabaseCommands.DeleteIndex(indexName);
-                    var result = db.DatabaseCommands.PutIndex<User, User>(indexName,
+                    db.DatabaseCommands.PutIndex<User, User>(indexName,
                             new IndexDefinition<User, User>()
                             {
                                 Map = docs => from doc in docs
                                               select new { doc.Name, doc.Age },
+								SortOptions = {{x=>x.Name, SortOptions.StringVal}}
                             }, true);                    
 
                     WaitForQueryToComplete(session, indexName);
 
-                    var allResults = session.Query<User>(indexName)
+					var allResults = session.Query<User>(indexName).OrderBy(x => x.Name)
                                             .Where(x => x.Age > 0);
                     Assert.Equal(4, allResults.ToArray().Count());
 
-                    var takeResults = session.Query<User>(indexName)
+					var takeResults = session.Query<User>(indexName).OrderBy(x => x.Name)
                                             .Where(x => x.Age > 0)
                                             .Take(3);
                     //There are 4 items of data in the db, but using Take(1) means we should only see 4
                     Assert.Equal(3, takeResults.ToArray().Count());
 
-                    var skipResults = session.Query<User>(indexName)
+					var skipResults = session.Query<User>(indexName).OrderBy(x => x.Name)
                                             .Where(x => x.Age > 0)
                                             .Skip(1);
                     //Using Skip(1) means we should only see the last 3
                     Assert.Equal(3, skipResults.ToArray().Count());
-                    Assert.DoesNotContain<User>(firstUser, skipResults.ToArray());                    
+                    Assert.DoesNotContain(firstUser, skipResults.ToArray());
 
-                    var skipTakeResults = session.Query<User>(indexName)
+					var skipTakeResults = session.Query<User>(indexName).OrderBy(x => x.Name)
                                             .Where(x => x.Age > 0)
                                             .Skip(1)
                                             .Take(2);
@@ -326,8 +328,8 @@ namespace Raven.Tests.Linq
             } while (results.IsStale);            
         }
 
-        User firstUser = new User { Name = "Matt", Age = 30 };
-        User lastUser = new User { Name = "Alan", Age = 30 };
+		private readonly User firstUser = new User { Name = "Alan", Age = 30 };
+    	private readonly User lastUser = new User {Name = "Zoe", Age = 30};
 
         private void AddData(IDocumentSession documentSession)
         {
