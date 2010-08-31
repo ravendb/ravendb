@@ -60,7 +60,7 @@ namespace Raven.Database.Json
 				case PatchCommandType.Copy:
 					CopyProperty(patchCmd, patchCmd.Name, property);
             		break;
-				case PatchCommandType.Move:
+				case PatchCommandType.Rename:
 					RenameProperty(patchCmd, patchCmd.Name, property);
 					break;
                 default:
