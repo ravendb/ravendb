@@ -33,8 +33,8 @@ namespace Raven.Database.Linq
 			{
 				typeof (AbstractViewGenerator).Namespace,
 				typeof (Enumerable).Namespace,
-				typeof(IEnumerable<>).Namespace,
-				typeof(IEnumerable).Namespace,
+				typeof (IEnumerable<>).Namespace,
+				typeof (IEnumerable).Namespace,
 				typeof (int).Namespace,
 				typeof (LinqOnDynamic).Namespace
 			};
