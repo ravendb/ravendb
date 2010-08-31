@@ -219,8 +219,13 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 		public static Guid CreateSequentialUuid()
 		{
 			var ticksAsBytes = BitConverter.GetBytes(DateTime.Now.Ticks);
+			Array.Reverse(ticksAsBytes);
+			Array.Reverse(ticksAsBytes, 0, 4);
+			Array.Reverse(ticksAsBytes, 4, 2);
+			Array.Reverse(ticksAsBytes, 6, 2);
 			var increment = Interlocked.Increment(ref sequentialUuidCounter);
 			var currentAsBytes = BitConverter.GetBytes(increment);
+			Array.Reverse(currentAsBytes);
 			var bytes = new byte[16];
 			Array.Copy(ticksAsBytes, 0, bytes, 0, ticksAsBytes.Length);
 			Array.Copy(currentAsBytes, 0, bytes, 12, currentAsBytes.Length);
