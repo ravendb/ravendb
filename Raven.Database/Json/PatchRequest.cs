@@ -49,7 +49,7 @@ namespace Raven.Database.Json
 
 			return new PatchRequest
 			{
-				Type = (PatchCommandType)Enum.Parse(typeof(PatchCommandType), patchRequestJson.Value<string>("Type")),
+				Type = (PatchCommandType)Enum.Parse(typeof(PatchCommandType), patchRequestJson.Value<string>("Type"), true),
 				Name = patchRequestJson.Value<string>("Name"),
 				Nested = nested,
 				Position = (int?)patchRequestJson.Value<object>("Position"),
