@@ -61,14 +61,14 @@ namespace Raven.Database.Json
 					CopyProperty(patchCmd, patchCmd.Name, property);
             		break;
 				case PatchCommandType.Move:
-					MoveProperty(patchCmd, patchCmd.Name, property);
+					RenameProperty(patchCmd, patchCmd.Name, property);
 					break;
                 default:
 					throw new ArgumentException("Cannot understand command: " + patchCmd.Type);
             }
         }
 
-		private void MoveProperty(PatchRequest patchCmd, string propName, JProperty property)
+		private void RenameProperty(PatchRequest patchCmd, string propName, JProperty property)
 		{
 			EnsurePreviousValueMatchCurrentValue(patchCmd, property);
 			if (property == null)

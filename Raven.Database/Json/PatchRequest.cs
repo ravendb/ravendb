@@ -14,7 +14,7 @@ namespace Raven.Database.Json
 		Modify,
 		Inc,
 		Copy,
-		Move
+		Rename
 	}
 
 	public class PatchRequest
