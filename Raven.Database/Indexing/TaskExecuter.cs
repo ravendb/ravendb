@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Threading.Tasks;
 using log4net;
 using Raven.Database.Extensions;
 using Raven.Database.Json;
@@ -72,7 +70,7 @@ namespace Raven.Database.Indexing
 
 			if (indexesToWorkOn.Count == 0)
 				return false;
-
+			
 			ExecuteIndexingWorkOnMultipleThreads(indexesToWorkOn);
 
 			//ExecuteIndexingWorkOnSingleThread(indexesToWorkOn);
@@ -138,7 +136,7 @@ namespace Raven.Database.Indexing
 
 		public bool IndexDocuments(IStorageActionsAccessor actions, string index, Guid etagToIndexFrom)
 		{
-
+			log.DebugFormat("Indexing documents for {0}, etag to index from: {1}", index, etagToIndexFrom);
 			var viewGenerator = context.IndexDefinitionStorage.GetViewGenerator(index);
 			if (viewGenerator == null)
 				return false; // index was deleted, probably
