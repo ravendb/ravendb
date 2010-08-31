@@ -83,9 +83,6 @@ namespace Raven.Tests.Spatial
 					Thread.Sleep(100);
 			} while (queryResult.IsStale);
 
-			if (queryResult.Results.Count != 7)
-				Debugger.Break();
-
 			Assert.Equal(7, queryResult.Results.Count);
 
 			foreach (var r in queryResult.Results)
