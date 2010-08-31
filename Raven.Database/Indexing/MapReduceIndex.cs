@@ -61,7 +61,7 @@ namespace Raven.Database.Indexing
 					var reduceValue = viewGenerator.GroupByExtraction(doc);
 					if (reduceValue == null)
 					{
-						log.DebugFormat("Field {0} is used as the reduce key and cannot be null, skipping document {1}", viewGenerator.GroupByExtraction, docIdValue);
+						logIndexing.DebugFormat("Field {0} is used as the reduce key and cannot be null, skipping document {1}", viewGenerator.GroupByExtraction, docIdValue);
 						continue;
 					}
 					var reduceKey = ReduceKeyToString(reduceValue);
@@ -71,7 +71,7 @@ namespace Raven.Database.Indexing
 
 					var data = GetMapedData(doc);
 
-					log.DebugFormat("Mapped result for '{0}': '{1}'", name, data);
+					logIndexing.DebugFormat("Mapped result for '{0}': '{1}'", name, data);
 
 					var hash = ComputeHash(name, reduceKey);
 
@@ -86,7 +86,7 @@ namespace Raven.Database.Indexing
 					ReduceKeys = reduceKeys.ToArray()
 				});
 
-				log.DebugFormat("Mapped {0} documents for {1}", count, name);
+				logIndexing.DebugFormat("Mapped {0} documents for {1}", count, name);
         	}
         	finally
         	{
@@ -164,9 +164,9 @@ namespace Raven.Database.Indexing
             });
             Write(writer =>
             {
-                if (log.IsDebugEnabled)
+				if (logIndexing.IsDebugEnabled)
                 {
-                    log.DebugFormat("Deleting ({0}) from {1}", string.Format(", ", keys), name);
+					logIndexing.DebugFormat("Deleting ({0}) from {1}", string.Format(", ", keys), name);
                 }
                 writer.DeleteDocuments(keys.Select(k => new Term("__document_id", k)).ToArray());
                 return true;
@@ -207,16 +207,16 @@ namespace Raven.Database.Indexing
                         luceneDoc.Add(field);
                     }
                     context.IndexUpdateTriggers.Apply(trigger => trigger.OnIndexEntryCreated(name, reduceKeyAsString, luceneDoc));
-                    log.DebugFormat("Reduce key {0} result in index {1} gave document: {2}", reduceKeyAsString, name, luceneDoc);
+					logIndexing.DebugFormat("Reduce key {0} result in index {1} gave document: {2}", reduceKeyAsString, name, luceneDoc);
                     indexWriter.AddDocument(luceneDoc);
                     actions.Indexing.IncrementSuccessIndexing();
                 }
 
                 return true;
             });
-			if(log.IsDebugEnabled)
+			if (logIndexing.IsDebugEnabled)
 			{
-				log.DebugFormat("Reduce resulted in {0} entries for {1} for reduce keys: {2}", count, name, string.Join(", ", reduceKeys));
+				logIndexing.DebugFormat("Reduce resulted in {0} entries for {1} for reduce keys: {2}", count, name, string.Join(", ", reduceKeys));
 			}
         }
 
