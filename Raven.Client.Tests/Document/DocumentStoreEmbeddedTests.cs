@@ -81,6 +81,15 @@ namespace Raven.Client.Tests.Document
 		}
 
 		[Fact]
+		public void Can_reset_builtin_index()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				documentStore.DocumentDatabase.ResetIndex("Raven/DocumentsByEntityName");
+			}
+		}
+
+		[Fact]
 		public void Using_attachments()
 		{
 			using (var documentStore = NewDocumentStore())
