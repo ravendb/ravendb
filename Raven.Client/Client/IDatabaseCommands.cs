@@ -24,6 +24,8 @@ namespace Raven.Client.Client
     	Attachment GetAttachment(string key);
     	void DeleteAttachment(string key, Guid? etag);
 
+    	string[] GetIndexNames(int start, int pageSize);
+
     	IndexDefinition GetIndex(string name);
 		string PutIndex(string name, IndexDefinition indexDef);
 		string PutIndex<TDocument,TReduceResult>(string name, IndexDefinition<TDocument,TReduceResult> indexDef);

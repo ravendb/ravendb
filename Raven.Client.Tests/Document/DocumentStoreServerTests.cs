@@ -60,6 +60,18 @@ namespace Raven.Client.Tests.Document
 		}
 
 		[Fact]
+		public void Can_get_index_names()
+		{
+			using (var server = GetNewServer(port, path))
+			{
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+				documentStore.Initialize();
+				Assert.Equal(new[] { "Raven/DocumentsByEntityName" },
+					documentStore.DatabaseCommands.GetIndexNames(0, 25));
+			}
+		}
+
+		[Fact]
 		public void Can_get_index_def()
 		{
 			using (var server = GetNewServer(port, path))

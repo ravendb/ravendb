@@ -71,6 +71,16 @@ namespace Raven.Client.Tests.Document
         }
 
 		[Fact]
+		public void Can_get_index_names()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				Assert.Equal(new[] { "Raven/DocumentsByEntityName" },
+					documentStore.DatabaseCommands.GetIndexNames(0, 25));
+			}
+		}
+
+		[Fact]
 		public void Using_attachments()
 		{
 			using (var documentStore = NewDocumentStore())
