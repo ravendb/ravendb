@@ -26,8 +26,6 @@ namespace Raven.Database.Json
 
         private void Apply(PatchRequest patchCmd)
         {
-            if (patchCmd.Type == null)
-                throw new InvalidOperationException("Patch property must have a type property");
             if (patchCmd.Name == null)
                 throw new InvalidOperationException("Patch property must have a name property");
         	var token = document.SelectToken(patchCmd.Name);

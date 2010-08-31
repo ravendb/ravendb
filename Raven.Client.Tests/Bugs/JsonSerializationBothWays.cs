@@ -105,7 +105,7 @@ namespace Raven.Client.Tests.Bugs
 			public readonly IList<User> CoAuthors;
 #pragma warning disable 0649
 			public int Id;
-#pragma warning enable 0649
+#pragma warning restore 0649
 			public Page()
 			{
 				CoAuthors = new List<User>();

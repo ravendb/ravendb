@@ -55,7 +55,7 @@ namespace Raven.Tests.Patching
         		{
         			new PatchRequest
         			{
-        				Type = PatchCommandType.Move,
+        				Type = PatchCommandType.Rename,
         				Name = "comments",
         				Value = new JValue("cmts")
         			},
