@@ -2,8 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Linq;
-using System.Runtime.InteropServices;
-using System.Security;
 using System.Threading;
 using System.Transactions;
 using log4net;
@@ -217,14 +215,17 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
             }
         }
 
-        public static Guid CreateSequentialUuid()
-        {
-        	var ticksAsBytes = BitConverter.GetBytes(DateTime.Now.Ticks);
-        	var bytes = new byte[16];
-			Array.Copy(ticksAsBytes, 0, bytes,0, ticksAsBytes.Length);
-			Array.Reverse(bytes);
-        	return new Guid(bytes);
-        }
+		private static int sequentialUuidCounter;
+		public static Guid CreateSequentialUuid()
+		{
+			var ticksAsBytes = BitConverter.GetBytes(DateTime.Now.Ticks);
+			var increment = Interlocked.Increment(ref sequentialUuidCounter);
+			var currentAsBytes = BitConverter.GetBytes(increment);
+			var bytes = new byte[16];
+			Array.Copy(ticksAsBytes, 0, bytes, 0, ticksAsBytes.Length);
+			Array.Copy(currentAsBytes, 0, bytes, 12, currentAsBytes.Length);
+			return new Guid(bytes);
+		}
 
         public JsonDocument Get(string key, TransactionInformation transactionInformation)
         {
