@@ -73,9 +73,9 @@ namespace Raven.Database.Indexing
 			if (indexesToWorkOn.Count == 0)
 				return false;
 
-			//ExecuteIndexingWorkOnMultipleThreads(indexesToWorkOn);
+			ExecuteIndexingWorkOnMultipleThreads(indexesToWorkOn);
 
-			ExecuteIndexingWorkOnSingleThread(indexesToWorkOn);
+			//ExecuteIndexingWorkOnSingleThread(indexesToWorkOn);
 
 			return true;
 		}

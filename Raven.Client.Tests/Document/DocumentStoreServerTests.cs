@@ -287,7 +287,7 @@ namespace Raven.Client.Tests.Document
 				{
 					new PatchRequest
 					{
-						Type = "Set",
+						Type = PatchCommandType.Set,
 						Name = "Name",
 						Value = JToken.FromObject("Another Company")
 					},

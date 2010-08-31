@@ -18,11 +18,11 @@ namespace Raven.Tests.Patching
         		{
         			new PatchRequest
         			{
-        				Type = "modify",
+        				Type = PatchCommandType.Modify,
         				Name = "user",
         				Nested = new[]
         				{
-        					new PatchRequest {Type = "set", Name = "name", Value = new JValue("rahien")},
+        					new PatchRequest {Type = PatchCommandType.Set, Name = "name", Value = new JValue("rahien")},
         				}
         			},
         		});
@@ -39,12 +39,12 @@ namespace Raven.Tests.Patching
         		{
         			new PatchRequest
         			{
-        				Type = "modify",
+        				Type = PatchCommandType.Modify,
         				Name = "user",
 						PrevVal = JObject.Parse(@"{ ""name"": ""ayende"", ""id"": 13}"),
         				Nested = new[]
         				{
-        					new PatchRequest {Type = "set", Name = "name", Value = new JValue("rahien")},
+        					new PatchRequest {Type = PatchCommandType.Set, Name = "name", Value = new JValue("rahien")},
         				}
         			},
         		});
@@ -61,12 +61,12 @@ namespace Raven.Tests.Patching
         		{
         			new PatchRequest
         			{
-        				Type = "modify",
+        				Type = PatchCommandType.Modify,
         				Name = "user",
         				PrevVal = JObject.Parse(@"{ ""name"": ""ayende"", ""id"": 14}"),
         				Nested = new[]
         				{
-        					new PatchRequest {Type = "set", Name = "name", Value = new JValue("rahien")},
+        					new PatchRequest {Type = PatchCommandType.Set, Name = "name", Value = new JValue("rahien")},
         				}
         			},
         		}));
@@ -81,12 +81,12 @@ namespace Raven.Tests.Patching
         		{
         			new PatchRequest
         			{
-        				Type = "modify",
+        				Type = PatchCommandType.Modify,
         				Name = "user",
         				PrevVal = JObject.Parse(@"{ ""name"": ""ayende"", ""id"": 13}"),
         				Nested = new[]
         				{
-        					new PatchRequest {Type = "unset", Name = "name" },
+        					new PatchRequest {Type = PatchCommandType.Unset, Name = "name" },
         				}
         			},
         		});
@@ -103,12 +103,12 @@ namespace Raven.Tests.Patching
         		{
         			new PatchRequest
         			{
-        				Type = "modify",
+        				Type = PatchCommandType.Modify,
         				Name = "comments",
 						Position = 1,
         				Nested = new[]
         				{
-        					new PatchRequest {Type = "set", Name = "author", Value = new JValue("oren")},
+        					new PatchRequest {Type = PatchCommandType.Set, Name = "author", Value = new JValue("oren")},
         				}
         			},
         		});

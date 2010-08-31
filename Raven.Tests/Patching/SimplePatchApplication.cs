@@ -19,7 +19,7 @@ namespace Raven.Tests.Patching
         		{
         			new PatchRequest
         			{
-        				Type = "set",
+        				Type = PatchCommandType.Set,
         				Name = "blog_id",
         				Value = new JValue(1)
         			},
@@ -29,6 +29,41 @@ namespace Raven.Tests.Patching
                 patchedDoc.ToString(Formatting.None));
         }
 
+		[Fact]
+		public void PropertyCopy()
+		{
+			var patchedDoc = new JsonPatcher(doc).Apply(
+				new[]
+        		{
+        			new PatchRequest
+        			{
+        				Type = PatchCommandType.Copy,
+        				Name = "comments",
+        				Value = new JValue("cmts")
+        			},
+        		});
+
+			Assert.Equal(@"{""title"":""A Blog Post"",""body"":""html markup"",""comments"":[{""author"":""ayende"",""text"":""good post""}],""cmts"":[{""author"":""ayende"",""text"":""good post""}]}",
+				patchedDoc.ToString(Formatting.None));
+		}
+
+		[Fact]
+		public void PropertyMove()
+		{
+			var patchedDoc = new JsonPatcher(doc).Apply(
+				new[]
+        		{
+        			new PatchRequest
+        			{
+        				Type = PatchCommandType.Move,
+        				Name = "comments",
+        				Value = new JValue("cmts")
+        			},
+        		});
+
+			Assert.Equal(@"{""title"":""A Blog Post"",""body"":""html markup"",""cmts"":[{""author"":""ayende"",""text"":""good post""}]}",
+				patchedDoc.ToString(Formatting.None));
+		}
 
         [Fact]
         public void PropertyIncrement()
@@ -38,7 +73,7 @@ namespace Raven.Tests.Patching
         		{
         			new PatchRequest
         			{
-        				Type = "set",
+        				Type = PatchCommandType.Set,
         				Name = "blog_id",
         				Value = new JValue(1)
         			},
@@ -49,7 +84,7 @@ namespace Raven.Tests.Patching
         		{
         			new PatchRequest
         			{
-        				Type = "inc",
+        				Type = PatchCommandType.Inc,
         				Name = "blog_id",
         				Value = new JValue(1)
         			},
@@ -67,7 +102,7 @@ namespace Raven.Tests.Patching
         		{
         			new PatchRequest
         			{
-        				Type = "set",
+        				Type = PatchCommandType.Set,
         				Name = "blog_id",
         				Value = new JValue(1),
 						PrevVal = JObject.Parse("{'a': undefined}").Property("a").Value
@@ -86,7 +121,7 @@ namespace Raven.Tests.Patching
         		{
         			new PatchRequest
         			{
-        				Type = "set",
+        				Type = PatchCommandType.Set,
         				Name = "blog_id",
         				Value = new JValue(1),
         				PrevVal = new JValue((object)null)
@@ -102,7 +137,7 @@ namespace Raven.Tests.Patching
         		{
         			new PatchRequest
         			{
-        				Type = "set",
+        				Type = PatchCommandType.Set,
         				Name = "blog_id",
         				Value = new JValue(1),
         				PrevVal =  new JValue(2)
@@ -118,7 +153,7 @@ namespace Raven.Tests.Patching
         		{
         			new PatchRequest
         			{
-        				Type = "set",
+        				Type = PatchCommandType.Set,
         				Name = "body",
         				Value = new JValue("differnt markup"),
         				PrevVal = new JValue("html markup")
@@ -137,7 +172,7 @@ namespace Raven.Tests.Patching
         		{
         			new PatchRequest
         			{
-        				Type = "set",
+        				Type = PatchCommandType.Set,
         				Name = "title",
         				Value = new JValue("another")
         			},
@@ -154,7 +189,7 @@ namespace Raven.Tests.Patching
         		{
         			new PatchRequest
         			{
-        				Type = "set",
+        				Type = PatchCommandType.Set,
         				Name = "title",
         				Value = new JValue((object)null)
         			},
@@ -171,7 +206,7 @@ namespace Raven.Tests.Patching
         		{
         			new PatchRequest
         			{
-        				Type = "unset",
+        				Type = PatchCommandType.Unset,
         				Name = "body",
         			},
         		});
@@ -187,7 +222,7 @@ namespace Raven.Tests.Patching
         		{
         			new PatchRequest
         			{
-        				Type = "unset",
+        				Type = PatchCommandType.Unset,
         				Name = "body",
 						PrevVal = new JValue("html markup")
         			},
@@ -204,7 +239,7 @@ namespace Raven.Tests.Patching
         		{
         			new PatchRequest
         			{
-        				Type = "unset",
+        				Type = PatchCommandType.Unset,
         				Name = "body",
 						PrevVal = new JValue("bad markup")
         			},
@@ -219,7 +254,7 @@ namespace Raven.Tests.Patching
         		{
         			new PatchRequest
         			{
-        				Type = "unset",
+        				Type = PatchCommandType.Unset,
         				Name = "ip",
         			},
         		});

@@ -45,14 +45,14 @@ namespace Raven.Client.Tests.Bugs
 							new PatchRequest
 							{
 								Name = "Comments",
-								Type = "modify",
+								Type = PatchCommandType.Modify,
 								Position = 0,
 								Nested = new PatchRequest[]
 								{
 									new PatchRequest
 									{
 										Name = "AuthorId",
-										Type = "Set",
+										Type = PatchCommandType.Set,
 										Value = "authors/456"
 
 									},

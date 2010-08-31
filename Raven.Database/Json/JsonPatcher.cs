@@ -1,10 +1,11 @@
 using System;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Exceptions;
 
 namespace Raven.Database.Json
 {
+	
+
     public class JsonPatcher
     {
         private readonly JObject document;
@@ -33,35 +34,60 @@ namespace Raven.Database.Json
         	JProperty property = null;
 			if (token != null)
 				property = token.Parent as JProperty;
-        	switch (patchCmd.Type.ToLowerInvariant())
+        	switch (patchCmd.Type)
             {
-                case "set":
+                case PatchCommandType.Set:
 					AddProperty(patchCmd, patchCmd.Name, property);
                     break;
-                case "unset":
+                case PatchCommandType.Unset:
 					RemoveProperty(patchCmd, patchCmd.Name, property);
                     break;
-                case "add":
+                case PatchCommandType.Add:
 					AddValue(patchCmd, patchCmd.Name, property);
                     break;
-                case "insert":
+                case PatchCommandType.Insert:
 					InsertValue(patchCmd, patchCmd.Name, property);
                     break;
-                case "remove":
+                case PatchCommandType.Remove:
 					RemoveValue(patchCmd, patchCmd.Name, property);
                     break;
-                case "modify":
+                case PatchCommandType.Modify:
 					ModifyValue(patchCmd, patchCmd.Name, property);
                     break;
-                case "inc":
+                case PatchCommandType.Inc:
 					IncrementProperty(patchCmd, patchCmd.Name, property);
                     break;
+				case PatchCommandType.Copy:
+					CopyProperty(patchCmd, patchCmd.Name, property);
+            		break;
+				case PatchCommandType.Move:
+					MoveProperty(patchCmd, patchCmd.Name, property);
+					break;
                 default:
 					throw new ArgumentException("Cannot understand command: " + patchCmd.Type);
             }
         }
 
-		private void ModifyValue(PatchRequest patchCmd, string propName, JProperty property)
+		private void MoveProperty(PatchRequest patchCmd, string propName, JProperty property)
+		{
+			EnsurePreviousValueMatchCurrentValue(patchCmd, property);
+			if (property == null)
+				throw new InvalidOperationException("Cannot copy value from  '" + propName + "' because it was not found");
+
+			document[patchCmd.Value.Value<string>()] = property.Value;
+			document.Remove(propName);
+		}
+
+		private void CopyProperty(PatchRequest patchCmd, string propName, JProperty property)
+    	{
+			EnsurePreviousValueMatchCurrentValue(patchCmd, property);
+			if (property == null)
+				throw new InvalidOperationException("Cannot copy value from  '" + propName + "' because it was not found");
+
+			document[patchCmd.Value.Value<string>()] = property.Value;
+    	}
+
+    	private void ModifyValue(PatchRequest patchCmd, string propName, JProperty property)
         {
 			EnsurePreviousValueMatchCurrentValue(patchCmd, property);
             if (property == null)

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -81,6 +82,9 @@ namespace Raven.Tests.Spatial
 				if (queryResult.IsStale)
 					Thread.Sleep(100);
 			} while (queryResult.IsStale);
+
+			if (queryResult.Results.Count != 7)
+				Debugger.Break();
 
 			Assert.Equal(7, queryResult.Results.Count);
 
