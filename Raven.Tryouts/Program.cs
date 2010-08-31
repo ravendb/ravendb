@@ -1,87 +1,50 @@
 using System;
-using System.Diagnostics;
 using System.IO;
-using System.Threading;
-using Newtonsoft.Json.Linq;
-using Raven.Client.Document;
-using Raven.Client.Indexes;
-using System.Linq;
+using log4net;
+using log4net.Appender;
+using log4net.Config;
+using log4net.Layout;
+using Raven.Tests.Indexes;
+using Raven.Tests.Triggers;
 
 namespace Raven.Tryouts
 {
-	class Program
+	internal class Program
 	{
-		static void Main()
+		private static void Main()
 		{
-			if (Directory.Exists("Data"))
-				Directory.Delete("Data", true);
-
-			using (var documentStore = new DocumentStore())
+			foreach (var file in Directory.GetFiles(".", "*.log"))
 			{
-				documentStore.Configuration.DataDirectory = "Data";
-				documentStore.Initialize();
-
-				documentStore.DatabaseCommands.PutIndex("Foo1", new IndexDefinition<Foo>
-				{
-					Map = docs => from doc in docs select new { doc.PropertyA }
-				});
-				documentStore.DatabaseCommands.PutIndex("Foo2", new IndexDefinition<Foo>
-				{
-					Map = docs => from doc in docs select new { doc.PropertyA }
-				});
-				documentStore.DatabaseCommands.PutIndex("Foo3", new IndexDefinition<Foo>
-				{
-					Map = docs => from doc in docs select new { doc.PropertyA }
-				});
-
-				Thread.Sleep(5000); // just in case there are any background tasks still running
-
-				for (var i = 1; i <= 128; i++)
-				{
-					InsertNewDocumentsAndWaitForStaleIndexes(documentStore, i);
-				}
-				for (var i = 2; i <= 30; i++)
-				{
-					InsertNewDocumentsAndWaitForStaleIndexes(documentStore, i * 128);
-				}
+				File.Delete(file);
 			}
-		}
 
-		private static void InsertNewDocumentsAndWaitForStaleIndexes(DocumentStore documentStore, int numberOfDocs)
-		{
-			var stopwatch = Stopwatch.StartNew();
-			var docsToWrite = numberOfDocs;
-			while (docsToWrite > 0)
+			for (var i = 0; i < 100; i++)
 			{
-				using (var session = documentStore.OpenSession())
+				var file = i + ".log";
+				Console.WriteLine(file);
+				var fileAppender = new FileAppender
 				{
-					for (var i = 0; (numberOfDocs > 0) && (i < 128); i++, docsToWrite--)
+					Layout = new PatternLayout(PatternLayout.DetailConversionPattern),
+					File = file,
+				};
+				fileAppender.ActivateOptions();
+				BasicConfigurator.Configure(fileAppender);
+				try
+				{
+					using (var x = new ReadTriggers())
 					{
-						session.Store(new Foo { PropertyA = "abc def geh" });
+						x.CanPageThroughFilteredQuery();
 					}
-					session.SaveChanges();
+					using (var x = new QueryingOnDefaultIndex())
+					{
+						x.CanPageOverDefaultIndex();
+					}
 				}
-			}
-			var insertTime = stopwatch.ElapsedMilliseconds;
-			stopwatch.Restart();
-			using (var session = documentStore.OpenSession())
-			{
-				foreach (var index in documentStore.DocumentDatabase.GetIndexNames(0, int.MaxValue))
+				finally
 				{
-					var indexName = ((JValue)index).Value as string;
-					session.LuceneQuery<object>(indexName).WaitForNonStaleResults(TimeSpan.MaxValue)
-						.Take(1)
-						.FirstOrDefault();
+					LogManager.Shutdown();
 				}
 			}
-			var indexingTime = stopwatch.ElapsedMilliseconds;
-			Console.WriteLine("{0}, {1}, {2}", numberOfDocs, insertTime, indexingTime);
 		}
-	}
-
-	public class Foo
-	{
-		public string Id { get; set; }
-		public string PropertyA { get; set; }
 	}
 }
