@@ -314,7 +314,7 @@ namespace Raven.Tests.Linq
 			}
 		}
 
-        [Fact] // See issue #105 (http://github.com/ravendb/ravendb/issues/#issue/145)
+        [Fact] // See issue #145 (http://github.com/ravendb/ravendb/issues/#issue/145)
         public void Can_Use_Static_Fields_In_Where_Clauses()
         {
             using (var db = new DocumentStore() { DataDirectory = directoryName })
