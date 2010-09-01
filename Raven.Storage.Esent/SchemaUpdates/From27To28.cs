@@ -6,7 +6,7 @@ using Raven.Database.Extensions;
 
 namespace Raven.Storage.Esent.SchemaUpdates
 {
-	public class From27To271 : ISchemaUpdate
+	public class From27To28 : ISchemaUpdate
 	{
 		public string FromSchemaVersion
 		{
@@ -144,7 +144,7 @@ namespace Raven.Storage.Esent.SchemaUpdates
 
 					using (var update = new Update(session, details, JET_prep.Replace))
 					{
-						Api.SetColumn(session, details, columnids["schema_version"], "2.71", Encoding.Unicode);
+						Api.SetColumn(session, details, columnids["schema_version"], "2.8", Encoding.Unicode);
 
 						update.Save();
 					}
