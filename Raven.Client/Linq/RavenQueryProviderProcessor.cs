@@ -47,6 +47,9 @@ namespace Raven.Client.Linq
 				case ExpressionType.AndAlso:
 					VisitAndAlso((BinaryExpression) expression);
 					break;
+				case ExpressionType.NotEqual:
+					VisitNotEquals((BinaryExpression) expression);
+					break;
 				case ExpressionType.Equal:
 					VisitEquals((BinaryExpression) expression);
 					break;
@@ -108,6 +111,17 @@ namespace Raven.Client.Linq
 				memberInfo.Name,
 				GetValueFromExpression(expression.Right, GetMemberType(memberInfo)),
 				GetFieldType(memberInfo) != typeof (string),
+				false);
+		}
+
+		private void VisitNotEquals(BinaryExpression expression)
+		{
+			var memberInfo = GetMember(expression.Left);
+
+			luceneQuery.Not.WhereEquals(
+				memberInfo.Name,
+				GetValueFromExpression(expression.Right, GetMemberType(memberInfo)),
+				GetFieldType(memberInfo) != typeof(string),
 				false);
 		}
 

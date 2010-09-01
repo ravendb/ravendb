@@ -78,6 +78,15 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		public IDocumentQuery<T> Not
+		{
+			get
+			{
+				ApplyForAll(query => query.Not);
+				return this;
+			}
+		}
+
 		public IDocumentQuery<T> Take(int count)
 		{
 			ApplyForAll(query => query.Take(count));

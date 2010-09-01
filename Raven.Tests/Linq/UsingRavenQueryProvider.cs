@@ -362,6 +362,45 @@ namespace Raven.Tests.Linq
             }
         }
 
+		[Fact] // See issue #145 (http://github.com/ravendb/ravendb/issues/#issue/145)
+		public void Can_use_inequality_to_compare_dates()
+		{
+			using (var db = new DocumentStore() { DataDirectory = directoryName })
+			{
+				db.Initialize();
+
+				db.DatabaseCommands.PutIndex("DateTime",
+						new IndexDefinition
+						{
+							Map = @"from info in docs.DateTimeInfos                                    
+                                    select new { info.TimeOfDay }",
+						});
+
+				var currentTime = DateTime.Now;
+				using (var s = db.OpenSession())
+				{
+					s.Store(new DateTimeInfo { TimeOfDay = currentTime + TimeSpan.FromHours(1) });
+					s.Store(new DateTimeInfo { TimeOfDay = currentTime + TimeSpan.FromHours(2) });
+					s.Store(new DateTimeInfo { TimeOfDay = currentTime + TimeSpan.FromMinutes(1) });
+					s.Store(new DateTimeInfo { TimeOfDay = currentTime + TimeSpan.FromSeconds(10) });
+
+					s.SaveChanges();
+				}
+
+				using (var s = db.OpenSession())
+				{
+					//Just issue a blank query to make sure there are no stale results                    
+					var test = s.Query<DateTimeInfo>("DateTime")
+								.Customize(x => x.WaitForNonStaleResults())
+								.Where(x => x.TimeOfDay > currentTime)
+								.ToArray();
+
+
+					Assert.Empty(s.Query<DateTimeInfo>("DateTime").Where(x => x.TimeOfDay != DateTime.MinValue));
+				}
+			}
+		}
+
         private class DateTimeInfo
         {
             public string Id { get; set; }
