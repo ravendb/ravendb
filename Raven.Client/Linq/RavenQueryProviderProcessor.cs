@@ -551,18 +551,21 @@ namespace Raven.Client.Linq
 
 		private static object GetMemberValue(MemberExpression memberExpression)
 		{
-			object obj;
+			object obj = null;
 
 			if (memberExpression == null)
 				throw new ArgumentNullException("memberExpression");
 
 			// Get object
-			if (memberExpression.Expression is ConstantExpression)
-				obj = ((ConstantExpression) memberExpression.Expression).Value;
-			else if (memberExpression.Expression is MemberExpression)
-				obj = GetMemberValue((MemberExpression) memberExpression.Expression);
-			else
-				throw new NotSupportedException("Expression type not supported: " + memberExpression.Expression.GetType().FullName);
+            if (memberExpression.Expression is ConstantExpression)
+                obj = ((ConstantExpression)memberExpression.Expression).Value;
+            else if (memberExpression.Expression is MemberExpression)
+                obj = GetMemberValue((MemberExpression)memberExpression.Expression);
+            //Fix for the issue here http://github.com/ravendb/ravendb/issues/#issue/145
+            //Needed to allow things like ".Where(x => x.TimeOfDay > DateTime.MinValue)", where Expression is null
+            //can just leave obj as it is because it's not used below (because Member is a FieldInfo), so won't cause a problem
+            else if ((memberExpression.Expression == null && memberExpression.Member is FieldInfo) == false)
+                throw new NotSupportedException("Expression type not supported: " + memberExpression.Expression.GetType().FullName);
 
 			// Get value
 			var memberInfo = memberExpression.Member;
