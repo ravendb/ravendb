@@ -7,6 +7,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Json;
 using Raven.Database.Storage.StorageActions;
+using Raven.Database.Extensions;
 
 namespace Raven.Storage.Esent.StorageActions
 {
@@ -60,7 +61,7 @@ namespace Raven.Storage.Esent.StorageActions
 						data = documentCodecs.Aggregate(data, (bytes, codec) => codec.Decode(key, metadata, bytes));
 
 						logger.DebugFormat("Document with key '{0}' was found in transaction: {1}", key, transactionInformation.Id);
-						var etag = new Guid(Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["etag"]));
+						var etag = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["etag"]).TransfromToGuidWithProperSorting();
 						return new JsonDocument
 						{
 							DataAsJson = data.ToJObject(),
@@ -87,7 +88,7 @@ namespace Raven.Storage.Esent.StorageActions
 			data = documentCodecs.Aggregate(data, (bytes, codec) => codec.Decode(key, metadata, bytes));
 
 			logger.DebugFormat("Document with key '{0}' was found", key);
-			var existingEtag = new Guid(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
+			var existingEtag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]).TransfromToGuidWithProperSorting();
 			return new JsonDocument
 			{
 				DataAsJson = data.ToJObject(),
@@ -122,7 +123,7 @@ namespace Raven.Storage.Esent.StorageActions
 					DataAsJson = data.ToJObject(),
 					NonAuthoritiveInformation = IsDocumentModifiedInsideTransaction(key),
 					LastModified = Api.RetrieveColumnAsDateTime(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"]).Value,
-					Etag = new Guid(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"])),
+					Etag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]).TransfromToGuidWithProperSorting(),
 					Metadata = metadata
 				};
 			}
@@ -131,8 +132,8 @@ namespace Raven.Storage.Esent.StorageActions
         public IEnumerable<JsonDocument> GetDocumentsAfter(Guid etag)
         {
             Api.JetSetCurrentIndex(session, Documents, "by_etag");
-            var byteArray = etag.ToByteArray();
-            Api.MakeKey(session, Documents, byteArray, MakeKeyGrbit.NewKey);
+            var etagAsString = etag.TransformToValueForEsentSorting();
+            Api.MakeKey(session, Documents, etagAsString, Encoding.ASCII, MakeKeyGrbit.NewKey);
             if(Api.TrySeek(session, Documents, SeekGrbit.SeekGT)==false)
                 yield break;
             do
@@ -149,7 +150,7 @@ namespace Raven.Storage.Esent.StorageActions
                     DataAsJson = data.ToJObject(),
 					NonAuthoritiveInformation = IsDocumentModifiedInsideTransaction(key),
 					LastModified = Api.RetrieveColumnAsDateTime(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"]).Value,
-					Etag = new Guid(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"])),
+					Etag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]).TransfromToGuidWithProperSorting(),
                     Metadata = metadata
                 };
             } while (Api.TryMoveNext(session, Documents));
@@ -175,7 +176,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 				var data = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["data"]);
 				logger.DebugFormat("Document with id '{0}' was found, doc length: {1}", id, data.Length);
-				var etag = new Guid(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
+				var etag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]).TransfromToGuidWithProperSorting();
 				var metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
 				var key = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode);
 				var modified = Api.RetrieveColumnAsDateTime(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"]);
@@ -218,7 +219,7 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["key"], key, Encoding.Unicode);
 				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["data"], bytes);
-			    Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"], newEtag.ToByteArray());
+			    Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"], newEtag.TransformToValueForEsentSorting(), Encoding.ASCII);
 				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"], DateTime.UtcNow);
 				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"], metadata.ToBytes());
 
@@ -263,7 +264,9 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["key"], key, Encoding.Unicode);
 				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"], bytes);
-				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["etag"], newEtag.ToByteArray());
+				Api.SetColumn(session, DocumentsModifiedByTransactions,
+				              tableColumnsCache.DocumentsModifiedByTransactionsColumns["etag"],
+				              newEtag.TransformToValueForEsentSorting(), Encoding.ASCII);
 				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["metadata"], metadata.ToBytes());
 				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["last_modified"], DateTime.UtcNow);
 				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["delete_document"], false);
@@ -333,7 +336,9 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["key"], key, Encoding.Unicode);
 				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"],
 					Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["data"]));
-				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["etag"], newEtag.ToByteArray());
+				Api.SetColumn(session, DocumentsModifiedByTransactions,
+				              tableColumnsCache.DocumentsModifiedByTransactionsColumns["etag"],
+				              newEtag.TransformToValueForEsentSorting(), Encoding.ASCII);
 				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["last_modified"],
 					Api.RetrieveColumnAsDateTime(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"]).Value);
 				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["metadata"],

@@ -8,6 +8,7 @@ using Raven.Database;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
 using Raven.Database.Storage.StorageActions;
+using Raven.Database.Extensions;
 
 namespace Raven.Storage.Esent.StorageActions
 {
@@ -20,7 +21,7 @@ namespace Raven.Storage.Esent.StorageActions
 			var isUpdate = Api.TrySeek(session, Files, SeekGrbit.SeekEQ);
 			if (isUpdate)
 			{
-				var existingEtag = new Guid(Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]));
+				var existingEtag = Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]).TransfromToGuidWithProperSorting();
 				if (existingEtag != etag && etag != null)
 				{
 					throw new ConcurrencyException("PUT attempted on attachment '" + key +
@@ -42,7 +43,7 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["name"], key, Encoding.Unicode);
 				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["data"], data);
-				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["etag"], newETag.ToByteArray());
+				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["etag"], newETag.TransformToValueForEsentSorting(), Encoding.ASCII);
 				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["metadata"], headers.ToString(Formatting.None), Encoding.Unicode);
 
 				update.Save();
@@ -61,7 +62,7 @@ namespace Raven.Storage.Esent.StorageActions
 				logger.DebugFormat("Attachment with key '{0}' was not found, and considered deleted", key);
 				return;
 			}
-			var fileEtag = new Guid(Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]));
+			var fileEtag = Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]).TransfromToGuidWithProperSorting();
 			if (fileEtag != etag && etag != null)
 			{
 				throw new ConcurrencyException("DELETE attempted on attachment '" + key +
@@ -90,7 +91,7 @@ namespace Raven.Storage.Esent.StorageActions
 				yield return new AttachmentInformation
 				{
 					Size =  Api.RetrieveColumnSize(session, Files, tableColumnsCache.FilesColumns["data"]).Value,
-					Etag = new Guid(Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"])),
+					Etag = Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]).TransfromToGuidWithProperSorting(),
 					Key = Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["name"], Encoding.UTF8),
 					Metadata = JObject.Parse(Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["metadata"], Encoding.Unicode))
 				};
@@ -100,8 +101,8 @@ namespace Raven.Storage.Esent.StorageActions
 		public IEnumerable<AttachmentInformation> GetAttachmentsAfter(Guid etag)
 		{
 			Api.JetSetCurrentIndex(session, Files, "by_etag");
-			var byteArray = etag.ToByteArray();
-			Api.MakeKey(session, Files, byteArray, MakeKeyGrbit.NewKey);
+			var etagAsString = etag.TransformToValueForEsentSorting();
+			Api.MakeKey(session, Files, etagAsString , Encoding.ASCII, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Files, SeekGrbit.SeekGT) == false)
 				yield break;
 			do
@@ -109,7 +110,7 @@ namespace Raven.Storage.Esent.StorageActions
 				yield return new AttachmentInformation
 				{
 					Size = Api.RetrieveColumnSize(session, Files, tableColumnsCache.FilesColumns["data"]).Value,
-					Etag = new Guid(Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"])),
+					Etag = Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]).TransfromToGuidWithProperSorting(),
 					Key = Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["name"], Encoding.UTF8),
 					Metadata = JObject.Parse(Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["metadata"], Encoding.Unicode))
 				};
@@ -129,7 +130,7 @@ namespace Raven.Storage.Esent.StorageActions
 			return new Attachment
 			{
 				Data = Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["data"]),
-				Etag = new Guid(Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"])),
+				Etag = Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]).TransfromToGuidWithProperSorting(),
 				Metadata = JObject.Parse(metadata)
 			};
 		}

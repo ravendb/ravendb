@@ -116,11 +116,12 @@ namespace Raven.Tests.Linq
                             {
                                 Map = docs => from doc in docs
                                               select new { doc.Name, doc.Age },
+								SortOptions = {{x=>x.Name, SortOptions.StringVal}}
                             }, true);
 
                     WaitForQueryToComplete(session, indexName);
 
-                    var firstItem = session.Query<User>(indexName)
+                    var firstItem = session.Query<User>(indexName).OrderBy(x=>x.Name)
                                             .First();
                     Assert.Equal(firstUser, firstItem);
 
@@ -129,7 +130,7 @@ namespace Raven.Tests.Linq
                                             .First(x => x.Age == 60);
                     Assert.Equal("Bob", firstAgeItem.Name);
 
-                    //No-one is aged 15, so we should get a default item back, i.e. Name = "" and Age = 0
+                    //No-one is aged 15, so we should get null
                     var firstDefaultItem = session.Query<User>(indexName)
                                             .FirstOrDefault(x => x.Age == 15);
                     Assert.Null(firstDefaultItem);

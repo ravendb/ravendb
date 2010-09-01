@@ -1,6 +1,7 @@
 using System;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
+using Microsoft.Isam.Esent.Interop.Vista;
 
 namespace Raven.Storage.Esent
 {
@@ -93,8 +94,9 @@ namespace Raven.Storage.Esent
 
 			Api.JetAddColumn(session, tableid, "last_indexed_etag", new JET_COLUMNDEF
 			{
-				coltyp = JET_coltyp.Binary,
-				cbMax = 16,
+				coltyp = JET_coltyp.Text,
+				cp = JET_CP.ASCII,
+				cbMax = 32,
 				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
 			}, null, 0, out columnid);
 
@@ -168,8 +170,9 @@ namespace Raven.Storage.Esent
 
 			Api.JetAddColumn(session, tableid, "etag", new JET_COLUMNDEF
 			{
-				cbMax = 16,
-				coltyp = JET_coltyp.Binary,
+				cbMax = 32,
+				cp = JET_CP.ASCII,
+				coltyp = JET_coltyp.Text,
 				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL,
 			}, null, 0, out columnid);
 
@@ -234,8 +237,9 @@ namespace Raven.Storage.Esent
 
             Api.JetAddColumn(session, tableid, "etag", new JET_COLUMNDEF
             {
-                cbMax = 16,
-                coltyp = JET_coltyp.Binary,
+                cbMax = 32,
+				cp = JET_CP.ASCII,
+				coltyp = JET_coltyp.Text,
                 grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL,
             }, null, 0, out columnid);
 
@@ -343,8 +347,9 @@ namespace Raven.Storage.Esent
 
 			Api.JetAddColumn(session, tableid, "etag", new JET_COLUMNDEF
 			{
-				cbMax = 16,
-				coltyp = JET_coltyp.Binary,
+				cbMax = 32,
+				cp = JET_CP.ASCII,
+				coltyp = JET_coltyp.Text,
 				grbit = ColumndefGrbit.ColumnNotNULL|ColumndefGrbit.ColumnFixed
 			}, null, 0, out columnid);
 
@@ -464,8 +469,9 @@ namespace Raven.Storage.Esent
 
 			Api.JetAddColumn(session, tableid, "etag", new JET_COLUMNDEF
 			{
-				cbMax = 16,
-				coltyp = JET_coltyp.Binary,
+				cbMax = 32,
+				cp = JET_CP.ASCII,
+				coltyp = JET_coltyp.Text,
 				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL,
 			}, null, 0, out columnid);
 

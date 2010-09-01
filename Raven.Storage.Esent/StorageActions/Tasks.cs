@@ -36,9 +36,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 	    private bool IsStaleByEtag(string entityName, DateTime? cutOff)
 	    {
-	        var lastIndexedEtag = new Guid(
-	            Api.RetrieveColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"])
-	            );
+	        var lastIndexedEtag = Api.RetrieveColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"]).TransfromToGuidWithProperSorting();
 	        Api.JetSetCurrentIndex(session, Documents, "by_etag");
 	        if (!Api.TryMoveLast(session, Documents))
 	        {
@@ -46,8 +44,7 @@ namespace Raven.Storage.Esent.StorageActions
 	        }
 	        do
 	        {
-	            var lastEtag =
-	                new Guid(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
+	            var lastEtag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]).TransfromToGuidWithProperSorting();
 	            if (lastEtag.CompareTo(lastIndexedEtag) <= 0)
 	                break;
 

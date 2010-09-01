@@ -232,7 +232,8 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 			return new Guid(bytes);
 		}
 
-        public JsonDocument Get(string key, TransactionInformation transactionInformation)
+
+    	public JsonDocument Get(string key, TransactionInformation transactionInformation)
         {
             JsonDocument document = null;
             TransactionalStorage.Batch(actions =>
