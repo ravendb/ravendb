@@ -15,7 +15,8 @@ namespace Raven.Storage.Esent.SchemaUpdates
 
 		public void Update(Session session, JET_DBID dbid)
 		{
-			using (var tx = new Transaction(session))
+			Transaction tx;
+			using (tx = new Transaction(session))
 			{
 				int count = 0;
 				const int rowsInTxCount = 100;
@@ -31,9 +32,15 @@ namespace Raven.Storage.Esent.SchemaUpdates
 							update.Save();
 						}
 						if(count++ % rowsInTxCount == 0)
+						{
 							tx.Commit(CommitTransactionGrbit.LazyFlush);
+							tx.Dispose();
+							tx = new Transaction(session);
+						}
 					}
 					tx.Commit(CommitTransactionGrbit.LazyFlush);
+					tx.Dispose();
+					tx = new Transaction(session);
 				}
 
 				using (var documents = new Table(session, dbid, "documents", OpenTableGrbit.None))
@@ -48,10 +55,15 @@ namespace Raven.Storage.Esent.SchemaUpdates
 							update.Save();
 						}
 						if (count++ % rowsInTxCount == 0)
+						{
 							tx.Commit(CommitTransactionGrbit.LazyFlush);
+							tx.Dispose();
+							tx = new Transaction(session);
+						}
 					}
 					tx.Commit(CommitTransactionGrbit.LazyFlush);
-			
+					tx.Dispose();
+					tx = new Transaction(session);
 				}
 
 				using (var indexesStats = new Table(session, dbid, "indexes_stats", OpenTableGrbit.None))
@@ -66,10 +78,15 @@ namespace Raven.Storage.Esent.SchemaUpdates
 							update.Save();
 						}
 						if (count++ % rowsInTxCount == 0)
+						{
 							tx.Commit(CommitTransactionGrbit.LazyFlush);
+							tx.Dispose();
+							tx = new Transaction(session);
+						}
 					}
 					tx.Commit(CommitTransactionGrbit.LazyFlush);
-			
+					tx.Dispose();
+					tx = new Transaction(session);
 				}
 
 				using (var documentsModifiedByTransaction = new Table(session, dbid, "documents_modified_by_transaction", OpenTableGrbit.None))
@@ -84,10 +101,16 @@ namespace Raven.Storage.Esent.SchemaUpdates
 							update.Save();
 						}
 						if (count++ % rowsInTxCount == 0)
+						{
 							tx.Commit(CommitTransactionGrbit.LazyFlush);
+							tx.Dispose();
+							tx = new Transaction(session);
+						}
 					}
 					tx.Commit(CommitTransactionGrbit.LazyFlush);
-			
+					tx.Dispose();
+					tx = new Transaction(session);
+				
 				}
 
 				using (var mappedResults = new Table(session, dbid, "mapped_results", OpenTableGrbit.None))
@@ -100,10 +123,17 @@ namespace Raven.Storage.Esent.SchemaUpdates
 						{
 							Api.SetColumn(session, mappedResults, columnid, DocumentDatabase.CreateSequentialUuid().TransformToValueForEsentSorting());
 							update.Save();
-						} if (count++ % rowsInTxCount == 0)
+						} 
+						if (count++ % rowsInTxCount == 0)
+						{
 							tx.Commit(CommitTransactionGrbit.LazyFlush);
+							tx.Dispose();
+							tx = new Transaction(session);
+						}
 					}
 					tx.Commit(CommitTransactionGrbit.LazyFlush);
+					tx.Dispose();
+					tx = new Transaction(session);
 			
 				}
 
