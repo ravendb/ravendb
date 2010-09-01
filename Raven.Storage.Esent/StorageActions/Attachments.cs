@@ -43,7 +43,7 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["name"], key, Encoding.Unicode);
 				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["data"], data);
-				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["etag"], newETag.TransformToValueForEsentSorting(), Encoding.ASCII);
+				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["etag"], newETag.TransformToValueForEsentSorting());
 				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["metadata"], headers.ToString(Formatting.None), Encoding.Unicode);
 
 				update.Save();
@@ -101,8 +101,7 @@ namespace Raven.Storage.Esent.StorageActions
 		public IEnumerable<AttachmentInformation> GetAttachmentsAfter(Guid etag)
 		{
 			Api.JetSetCurrentIndex(session, Files, "by_etag");
-			var etagAsString = etag.TransformToValueForEsentSorting();
-			Api.MakeKey(session, Files, etagAsString , Encoding.ASCII, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, Files, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Files, SeekGrbit.SeekGT) == false)
 				yield break;
 			do

@@ -8,7 +8,7 @@ namespace Raven.Storage.Esent
 	[CLSCompliant(false)]
 	public class SchemaCreator
 	{
-		public const string SchemaVersion = "2.8";
+		public const string SchemaVersion = "2.7";
 		private readonly Session session;
 
 		public SchemaCreator(Session session)
@@ -94,9 +94,8 @@ namespace Raven.Storage.Esent
 
 			Api.JetAddColumn(session, tableid, "last_indexed_etag", new JET_COLUMNDEF
 			{
-				coltyp = JET_coltyp.Text,
-				cp = JET_CP.ASCII,
-				cbMax = 32,
+				coltyp = JET_coltyp.Binary,
+				cbMax = 16,
 				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
 			}, null, 0, out columnid);
 
@@ -170,9 +169,8 @@ namespace Raven.Storage.Esent
 
 			Api.JetAddColumn(session, tableid, "etag", new JET_COLUMNDEF
 			{
-				cbMax = 32,
-				cp = JET_CP.ASCII,
-				coltyp = JET_coltyp.Text,
+				cbMax = 16,
+				coltyp = JET_coltyp.Binary,
 				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL,
 			}, null, 0, out columnid);
 
@@ -237,9 +235,8 @@ namespace Raven.Storage.Esent
 
             Api.JetAddColumn(session, tableid, "etag", new JET_COLUMNDEF
             {
-                cbMax = 32,
-				cp = JET_CP.ASCII,
-				coltyp = JET_coltyp.Text,
+                cbMax = 16,
+				coltyp = JET_coltyp.Binary,
                 grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL,
             }, null, 0, out columnid);
 
@@ -347,9 +344,8 @@ namespace Raven.Storage.Esent
 
 			Api.JetAddColumn(session, tableid, "etag", new JET_COLUMNDEF
 			{
-				cbMax = 32,
-				cp = JET_CP.ASCII,
-				coltyp = JET_coltyp.Text,
+				cbMax = 16,
+				coltyp = JET_coltyp.Binary,
 				grbit = ColumndefGrbit.ColumnNotNULL|ColumndefGrbit.ColumnFixed
 			}, null, 0, out columnid);
 
@@ -469,9 +465,8 @@ namespace Raven.Storage.Esent
 
 			Api.JetAddColumn(session, tableid, "etag", new JET_COLUMNDEF
 			{
-				cbMax = 32,
-				cp = JET_CP.ASCII,
-				coltyp = JET_coltyp.Text,
+				cbMax = 16,
+				coltyp = JET_coltyp.Binary,
 				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL,
 			}, null, 0, out columnid);
 

@@ -66,7 +66,7 @@ namespace Raven.Storage.Esent.StorageActions
 			using (var update = new Update(session, IndexesStats, JET_prep.Insert))
 			{
 				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["key"], name, Encoding.Unicode);
-				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"], Guid.Empty.TransformToValueForEsentSorting(),Encoding.ASCII);
+				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"], Guid.Empty.TransformToValueForEsentSorting());
 				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"], DateTime.MinValue);
 				update.Save();
 			}
@@ -105,8 +105,7 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				Api.SetColumn(session, IndexesStats,
 				              tableColumnsCache.IndexesStatsColumns["last_indexed_etag"],
-				              etag.TransformToValueForEsentSorting(),
-							  Encoding.ASCII);
+				              etag.TransformToValueForEsentSorting());
 				Api.SetColumn(session, IndexesStats,
 							  tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"],
 							  timestamp);
