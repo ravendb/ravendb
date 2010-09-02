@@ -221,7 +221,18 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			{
 				if (header.Name.StartsWith("@"))
 					continue;
-				webRequest.Headers[header.Name] = StripQuotesIfNeeded(header.Value.ToString(Formatting.None));
+
+                //need to handle some header differently, see http://msdn.microsoft.com/en-us/library/system.net.webheadercollection.aspx
+                string matchString = header.Name;
+                string formattedHeaderValue = StripQuotesIfNeeded(header.Value.ToString(Formatting.None));
+
+                //Just let an exceptions (from Parse(..) functions) bubble-up, so that the user can see they've provided an invalid value
+                if (matchString == "Content-Length")
+                    webRequest.ContentLength = long.Parse(formattedHeaderValue); 
+                else if (matchString == "Content-Type")
+                    webRequest.ContentType = formattedHeaderValue;                
+                else
+                    webRequest.Headers[header.Name] = formattedHeaderValue;
 			}
 			if (etag != null)
 			{
