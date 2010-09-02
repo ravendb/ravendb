@@ -30,7 +30,7 @@ namespace Raven.Database
 			}
 			catch (Exception e)
 			{
-				logger.Warn("Could not initailize performance counters. Performance counters will be disabled", e);
+				logger.Warn("Could not initailize performance counter: " + instnaceName +". Performance counters will be disabled", e);
 				recordPerfCounter = false;
 			}
 		}

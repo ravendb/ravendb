@@ -16,11 +16,15 @@ namespace Raven.Client.Linq
 		private IDocumentQuery<T> luceneQuery;
 		private Expression<Func<T, bool>> predicate;
 		private SpecialQueryType queryType = SpecialQueryType.None;
+		private Type newExpressionType;
 
-		public RavenQueryProviderProcessor(IDocumentSession session, Action<IDocumentQuery<T>> customizeQuery,
-		                                   string indexName)
+		public RavenQueryProviderProcessor(
+			IDocumentSession session,
+			Action<IDocumentQuery<T>> customizeQuery,
+			string indexName)
 		{
 			FieldsToFetch = new List<string>();
+			newExpressionType = typeof (T);
 			this.session = session;
 			this.indexName = indexName;
 			this.customizeQuery = customizeQuery;
@@ -42,6 +46,9 @@ namespace Raven.Client.Linq
 					break;
 				case ExpressionType.AndAlso:
 					VisitAndAlso((BinaryExpression) expression);
+					break;
+				case ExpressionType.NotEqual:
+					VisitNotEquals((BinaryExpression) expression);
 					break;
 				case ExpressionType.Equal:
 					VisitEquals((BinaryExpression) expression);
@@ -104,6 +111,17 @@ namespace Raven.Client.Linq
 				memberInfo.Name,
 				GetValueFromExpression(expression.Right, GetMemberType(memberInfo)),
 				GetFieldType(memberInfo) != typeof (string),
+				false);
+		}
+
+		private void VisitNotEquals(BinaryExpression expression)
+		{
+			var memberInfo = GetMember(expression.Left);
+
+			luceneQuery.Not.WhereEquals(
+				memberInfo.Name,
+				GetValueFromExpression(expression.Right, GetMemberType(memberInfo)),
+				GetFieldType(memberInfo) != typeof(string),
 				false);
 		}
 
@@ -397,7 +415,9 @@ namespace Raven.Client.Linq
 					FieldsToFetch.Add(((MemberExpression) body).Member.Name);
 					break;
 				case ExpressionType.New:
-					FieldsToFetch.AddRange(((NewExpression) body).Arguments.Cast<MemberExpression>().Select(x => x.Member.Name));
+					var newExpression = ((NewExpression) body);
+					newExpressionType = newExpression.Type;
+					FieldsToFetch.AddRange(newExpression.Arguments.Cast<MemberExpression>().Select(x => x.Member.Name));
 					break;
 				case ExpressionType.Parameter: // want the full thing, so just pass it on.
 					break;
@@ -545,18 +565,21 @@ namespace Raven.Client.Linq
 
 		private static object GetMemberValue(MemberExpression memberExpression)
 		{
-			object obj;
+			object obj = null;
 
 			if (memberExpression == null)
 				throw new ArgumentNullException("memberExpression");
 
 			// Get object
-			if (memberExpression.Expression is ConstantExpression)
-				obj = ((ConstantExpression) memberExpression.Expression).Value;
-			else if (memberExpression.Expression is MemberExpression)
-				obj = GetMemberValue((MemberExpression) memberExpression.Expression);
-			else
-				throw new NotSupportedException("Expression type not supported: " + memberExpression.Expression.GetType().FullName);
+            if (memberExpression.Expression is ConstantExpression)
+                obj = ((ConstantExpression)memberExpression.Expression).Value;
+            else if (memberExpression.Expression is MemberExpression)
+                obj = GetMemberValue((MemberExpression)memberExpression.Expression);
+            //Fix for the issue here http://github.com/ravendb/ravendb/issues/#issue/145
+            //Needed to allow things like ".Where(x => x.TimeOfDay > DateTime.MinValue)", where Expression is null
+            //can just leave obj as it is because it's not used below (because Member is a FieldInfo), so won't cause a problem
+            else if ((memberExpression.Expression == null && memberExpression.Member is FieldInfo) == false)
+                throw new NotSupportedException("Expression type not supported: " + memberExpression.Expression.GetType().FullName);
 
 			// Get value
 			var memberInfo = memberExpression.Member;
@@ -593,44 +616,55 @@ namespace Raven.Client.Linq
 			chainedWhere = false;
 			ProcessExpression(expression);
 
-			luceneQuery = luceneQuery.SelectFields<T>(FieldsToFetch.ToArray());
-
 			if (customizeQuery != null)
 				customizeQuery(luceneQuery);
+
+			if(newExpressionType == typeof(T))
+				return ExecuteQuery<T>();
+
+			var genericExecuteQuery = GetType().GetMethod("ExecuteQuery", BindingFlags.Instance|BindingFlags.NonPublic);
+			var executeQueryWithProjectionType = genericExecuteQuery.MakeGenericMethod(newExpressionType);
+			return executeQueryWithProjectionType.Invoke(this, new object[0]);
+		}
+
+		private object ExecuteQuery<TProjection>()
+		{
+			var finalQuery = luceneQuery.SelectFields<TProjection>(FieldsToFetch.ToArray());
 
 			switch (queryType)
 			{
 				case SpecialQueryType.First:
 				{
-					return luceneQuery.First();
+					return finalQuery.First();
 				}
 				case SpecialQueryType.FirstOrDefault:
 				{
-					return luceneQuery.FirstOrDefault();
+					return finalQuery.FirstOrDefault();
 				}
 				case SpecialQueryType.Single:
 				{
-					return luceneQuery.Single();
+					return finalQuery.Single();
 				}
 				case SpecialQueryType.SingleOrDefault:
 				{
-					return luceneQuery.SingleOrDefault();
+					return finalQuery.SingleOrDefault();
 				}
 				case SpecialQueryType.All:
 				{
-					return luceneQuery.AsQueryable().All(predicate);
+					var pred = predicate.Compile();
+					return finalQuery.AsQueryable().All(projection => pred((T)(object)projection));
 				}
 				case SpecialQueryType.Any:
 				{
-					return luceneQuery.Any();
+					return finalQuery.Any();
 				}
 				case SpecialQueryType.Count:
 				{
-					return luceneQuery.QueryResult.TotalResults;
+					return finalQuery.QueryResult.TotalResults;
 				}
 				default:
 				{
-					return luceneQuery;
+					return finalQuery;
 				}
 			}
 		}

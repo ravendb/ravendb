@@ -6,6 +6,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Json;
 using Raven.Database.Storage.StorageActions;
+using Raven.Database.Extensions;
 
 namespace Raven.Storage.Esent.StorageActions
 {
@@ -28,7 +29,7 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"], reduceKey, Encoding.Unicode);
                 Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key_and_view_hashed"], viewAndReduceKeyHashed);
 				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["data"], data.ToBytes());
-				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"], etag.ToByteArray());
+				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"], etag.TransformToValueForEsentSorting());
 
 				update.Save();
 			}

@@ -287,6 +287,32 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			}
 		}
 
+		public string[] GetIndexNames(int start, int pageSize)
+		{
+			return ExecuteWithReplication(u => DirectGetIndexNames(start, pageSize, u));
+		}
+
+		public void ResetIndex(string name)
+		{
+			ExecuteWithReplication(u => DirectResetIndex(name, u));
+		}
+
+		private object DirectResetIndex(string name, string operationUrl)
+		{
+			var httpJsonRequest = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/indexes/" + name, "RESET", credentials);
+			httpJsonRequest.AddOperationHeaders(OperationsHeaders);
+			httpJsonRequest.ReadResponseString();
+			return null;
+		}
+
+		private string[] DirectGetIndexNames(int start, int pageSize, string operationUrl)
+		{
+			var httpJsonRequest = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/indexes/?namesOnly=true&start="+start+"&pageSize="+pageSize, "GET", credentials);
+			httpJsonRequest.AddOperationHeaders(OperationsHeaders);
+			var responseString = httpJsonRequest.ReadResponseString();
+			return JArray.Parse(responseString).Select(x => x.Value<string>()).ToArray();
+		}
+
 		public IndexDefinition GetIndex(string name)
 		{
 			EnsureIsNotNullOrEmpty(name, "name");

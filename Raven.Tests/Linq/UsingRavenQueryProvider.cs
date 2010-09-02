@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Raven.Client.Indexes;
+using Raven.Database.Indexing;
 using Xunit;
 using Raven.Database.Data;
 using Raven.Client;
@@ -58,33 +59,34 @@ namespace Raven.Tests.Linq
                     AddData(session);                    
 
                     db.DatabaseCommands.DeleteIndex(indexName);
-                    var result = db.DatabaseCommands.PutIndex<User, User>(indexName,
+                    db.DatabaseCommands.PutIndex<User, User>(indexName,
                             new IndexDefinition<User, User>()
                             {
                                 Map = docs => from doc in docs
                                               select new { doc.Name, doc.Age },
+								SortOptions = {{x=>x.Name, SortOptions.StringVal}}
                             }, true);                    
 
                     WaitForQueryToComplete(session, indexName);
 
-                    var allResults = session.Query<User>(indexName)
+					var allResults = session.Query<User>(indexName).OrderBy(x => x.Name)
                                             .Where(x => x.Age > 0);
                     Assert.Equal(4, allResults.ToArray().Count());
 
-                    var takeResults = session.Query<User>(indexName)
+					var takeResults = session.Query<User>(indexName).OrderBy(x => x.Name)
                                             .Where(x => x.Age > 0)
                                             .Take(3);
                     //There are 4 items of data in the db, but using Take(1) means we should only see 4
                     Assert.Equal(3, takeResults.ToArray().Count());
 
-                    var skipResults = session.Query<User>(indexName)
+					var skipResults = session.Query<User>(indexName).OrderBy(x => x.Name)
                                             .Where(x => x.Age > 0)
                                             .Skip(1);
                     //Using Skip(1) means we should only see the last 3
                     Assert.Equal(3, skipResults.ToArray().Count());
-                    Assert.DoesNotContain<User>(firstUser, skipResults.ToArray());                    
+                    Assert.DoesNotContain(firstUser, skipResults.ToArray());
 
-                    var skipTakeResults = session.Query<User>(indexName)
+					var skipTakeResults = session.Query<User>(indexName).OrderBy(x => x.Name)
                                             .Where(x => x.Age > 0)
                                             .Skip(1)
                                             .Take(2);
@@ -114,11 +116,12 @@ namespace Raven.Tests.Linq
                             {
                                 Map = docs => from doc in docs
                                               select new { doc.Name, doc.Age },
+								SortOptions = {{x=>x.Name, SortOptions.StringVal}}
                             }, true);
 
                     WaitForQueryToComplete(session, indexName);
 
-                    var firstItem = session.Query<User>(indexName)
+                    var firstItem = session.Query<User>(indexName).OrderBy(x=>x.Name)
                                             .First();
                     Assert.Equal(firstUser, firstItem);
 
@@ -127,7 +130,7 @@ namespace Raven.Tests.Linq
                                             .First(x => x.Age == 60);
                     Assert.Equal("Bob", firstAgeItem.Name);
 
-                    //No-one is aged 15, so we should get a default item back, i.e. Name = "" and Age = 0
+                    //No-one is aged 15, so we should get null
                     var firstDefaultItem = session.Query<User>(indexName)
                                             .FirstOrDefault(x => x.Age == 15);
                     Assert.Null(firstDefaultItem);
@@ -311,6 +314,99 @@ namespace Raven.Tests.Linq
 			}
 		}
 
+        [Fact] // See issue #145 (http://github.com/ravendb/ravendb/issues/#issue/145)
+        public void Can_Use_Static_Fields_In_Where_Clauses()
+        {
+            using (var db = new DocumentStore() { DataDirectory = directoryName })
+            {
+                db.Initialize();
+
+                db.DatabaseCommands.PutIndex("DateTime",
+                        new IndexDefinition
+                        {
+                            Map = @"from info in docs.DateTimeInfos                                    
+                                    select new { info.TimeOfDay }",
+                        });
+
+                var currentTime = DateTime.Now;
+                using (var s = db.OpenSession())
+                {
+                    s.Store(new DateTimeInfo { TimeOfDay = currentTime + TimeSpan.FromHours(1) });
+                    s.Store(new DateTimeInfo { TimeOfDay = currentTime + TimeSpan.FromHours(2) });
+                    s.Store(new DateTimeInfo { TimeOfDay = currentTime + TimeSpan.FromMinutes(1) });
+                    s.Store(new DateTimeInfo { TimeOfDay = currentTime + TimeSpan.FromSeconds(10) });                    
+
+                    s.SaveChanges();
+                }
+                
+                using (var s = db.OpenSession())
+                {
+                    //Just issue a blank query to make sure there are no stale results                    
+                    var test = s.Query<DateTimeInfo>("DateTime")
+                                .Customize(x => x.WaitForNonStaleResults())
+                                .Where(x => x.TimeOfDay > currentTime)
+                                .ToArray();
+
+                    IQueryable<DateTimeInfo> testFail = null;
+                    Assert.DoesNotThrow(() =>
+                        {
+                            testFail = s.Query<DateTimeInfo>("DateTime").Where(x => x.TimeOfDay > DateTime.MinValue); // =====> Throws an exception
+                        });
+                    Assert.NotEqual(null, testFail);
+                                        
+                    var dt = DateTime.MinValue;
+                    var testPass = s.Query<DateTimeInfo>("DateTime").Where(x => x.TimeOfDay > dt); //=====>Works
+
+                    Assert.Equal(testPass.Count(), testFail.Count());
+                }
+            }
+        }
+
+		[Fact] // See issue #145 (http://github.com/ravendb/ravendb/issues/#issue/145)
+		public void Can_use_inequality_to_compare_dates()
+		{
+			using (var db = new DocumentStore() { DataDirectory = directoryName })
+			{
+				db.Initialize();
+
+				db.DatabaseCommands.PutIndex("DateTime",
+						new IndexDefinition
+						{
+							Map = @"from info in docs.DateTimeInfos                                    
+                                    select new { info.TimeOfDay }",
+						});
+
+				var currentTime = DateTime.Now;
+				using (var s = db.OpenSession())
+				{
+					s.Store(new DateTimeInfo { TimeOfDay = currentTime + TimeSpan.FromHours(1) });
+					s.Store(new DateTimeInfo { TimeOfDay = currentTime + TimeSpan.FromHours(2) });
+					s.Store(new DateTimeInfo { TimeOfDay = currentTime + TimeSpan.FromMinutes(1) });
+					s.Store(new DateTimeInfo { TimeOfDay = currentTime + TimeSpan.FromSeconds(10) });
+
+					s.SaveChanges();
+				}
+
+				using (var s = db.OpenSession())
+				{
+					//Just issue a blank query to make sure there are no stale results                    
+					var test = s.Query<DateTimeInfo>("DateTime")
+								.Customize(x => x.WaitForNonStaleResults())
+								.Where(x => x.TimeOfDay > currentTime)
+								.ToArray();
+
+
+					Assert.Empty(s.Query<DateTimeInfo>("DateTime").Where(x => x.TimeOfDay != DateTime.MinValue));
+				}
+			}
+		}
+
+        private class DateTimeInfo
+        {
+            public string Id { get; set; }
+            public DateTime TimeOfDay { get; set; }
+        }
+
 		private static void WaitForQueryToComplete(IDocumentSession session, string indexName)
         {            
             QueryResult results;
@@ -326,8 +422,8 @@ namespace Raven.Tests.Linq
             } while (results.IsStale);            
         }
 
-        User firstUser = new User { Name = "Matt", Age = 30 };
-        User lastUser = new User { Name = "Alan", Age = 30 };
+		private readonly User firstUser = new User { Name = "Alan", Age = 30 };
+    	private readonly User lastUser = new User {Name = "Zoe", Age = 30};
 
         private void AddData(IDocumentSession documentSession)
         {

@@ -16,6 +16,7 @@ namespace Raven.Client.Document
 {
 	public class DocumentQuery<T> : IDocumentQuery<T>
 	{
+		private bool negate;
 		private readonly IDatabaseCommands databaseCommands;
 		private readonly string indexName;
 		protected readonly string[] projectionFields;
@@ -122,6 +123,15 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		public IDocumentQuery<T> Not
+		{
+			get
+			{
+				negate = true;
+				return this;
+			}
+		}
+
 		public IDocumentQuery<T> Take(int count)
 		{
 			pageSize = count;
@@ -185,11 +195,21 @@ namespace Raven.Client.Document
 				queryText.Append(" ");
 			}
 
+			NegateIfNeeded();
+
 			queryText.Append(fieldName);
 			queryText.Append(":");
 			queryText.Append(TransformToEqualValue(value, isAnalyzed, isAnalyzed));
 
 			return this;
+		}
+
+		private void NegateIfNeeded()
+		{
+			if (negate == false)
+				return;
+			negate = false;
+			queryText.Append("-");
 		}
 
 		/// <summary>
@@ -225,6 +245,8 @@ namespace Raven.Client.Document
 				queryText.Append(" ");
 			}
 
+			NegateIfNeeded();
+			
 			queryText.Append(fieldName).Append(":{");
 			queryText.Append(start == null ? "*" : TransformToRangeValue(start));
 			queryText.Append(" TO ");
@@ -241,6 +263,8 @@ namespace Raven.Client.Document
 				queryText.Append(" ");
 			}
 
+			NegateIfNeeded();
+			
 			queryText.Append(fieldName).Append(":[");
 			queryText.Append(start == null ? "*" : TransformToRangeValue(start));
 			queryText.Append(" TO ");
@@ -392,7 +416,13 @@ namespace Raven.Client.Document
 
 		public IDocumentQuery<T> WithinRadiusOf(double radius, double latitude, double longitude)
 		{
-			return new SpatialDocumentQuery<T>(this, radius, latitude, longitude);
+			IDocumentQuery<T> spatialDocumentQuery = new SpatialDocumentQuery<T>(this, radius, latitude, longitude);
+			if (negate)
+			{
+				negate = false;
+				spatialDocumentQuery = spatialDocumentQuery.Not;
+			}
+			return spatialDocumentQuery.Not;
 		}
 
 		public IDocumentQuery<T> OrderBy(params string[] fields)

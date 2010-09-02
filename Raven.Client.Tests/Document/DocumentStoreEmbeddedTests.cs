@@ -71,6 +71,25 @@ namespace Raven.Client.Tests.Document
         }
 
 		[Fact]
+		public void Can_get_index_names()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				Assert.Equal(new[] { "Raven/DocumentsByEntityName" },
+					documentStore.DatabaseCommands.GetIndexNames(0, 25));
+			}
+		}
+
+		[Fact]
+		public void Can_reset_builtin_index()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				documentStore.DocumentDatabase.ResetIndex("Raven/DocumentsByEntityName");
+			}
+		}
+
+		[Fact]
 		public void Using_attachments()
 		{
 			using (var documentStore = NewDocumentStore())
@@ -764,7 +783,7 @@ namespace Raven.Client.Tests.Document
 				{
 					new PatchRequest
 					{
-						Type = "Set",
+						Type = PatchCommandType.Set,
 						Name = "Name",
 						Value = JToken.FromObject("Another Company")
 					},

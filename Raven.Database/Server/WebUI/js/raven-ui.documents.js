@@ -26,6 +26,12 @@ $(document).ready(function () {
         ExecuteQuery();
     });
 
+    $('#executeGetByDoumentId').button({
+        icons: { primary: 'ui-icon-circle-triangle-e' }
+    }).click(function () {
+        EditDocument($('#txtDocumentId').val());
+    });
+
     $('#txtIndexName').autocomplete({
         source: function (request, response) {
             RavenUI.SearchIndexes(request.term, function (searchResult) {
@@ -168,6 +174,12 @@ function pagerClick(newPageNumber) {
 function EditDocument(id) {
     $('#ajaxSuccess, #ajaxError').fadeOut();
     RavenUI.GetDocument(id, function (doc, etag, metadata) {
+
+        if (doc == null) {
+            $('#ajaxError').html('Document with id ' + id + ' could not be found').slideDown().delay(1400).slideUp();
+            return;
+        }
+
         ShowEditorForDocument(id, doc, etag, metadata, 'Edit Document', function (id, etag, metadata, json, editor) {
             RavenUI.SaveDocument(id, etag, metadata, json, function () {
                 $(editor).dialog('close');

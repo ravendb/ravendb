@@ -18,7 +18,7 @@ namespace Raven.Tests.Patching
         		{
         			new PatchRequest
         			{
-        				Type = "add",
+        				Type = PatchCommandType.Add,
         				Name = "comments",
         				Value = JObject.Parse(@"{""author"":""oren"",""text"":""agreed""}")
 
@@ -37,7 +37,7 @@ namespace Raven.Tests.Patching
         		{
         			new PatchRequest
         			{
-        				Type = "add",
+        				Type = PatchCommandType.Add,
         				Name = "comments",
 						PrevVal = JArray.Parse(@"[{""author"":""ayende"",""text"":""good post 1""},{author: ""ayende"", text:""good post 2""}]"),
         				Value = JObject.Parse(@"{""author"":""oren"",""text"":""agreed""}")
@@ -57,7 +57,7 @@ namespace Raven.Tests.Patching
         		{
         			new PatchRequest
         			{
-        				Type = "add",
+        				Type = PatchCommandType.Add,
         				Name = "comments",
         				PrevVal =
         					JArray.Parse(
@@ -77,7 +77,7 @@ namespace Raven.Tests.Patching
         		{
         			new PatchRequest
         			{
-        				Type = "add",
+        				Type = PatchCommandType.Add,
         				Name = "blog_id",
         				Value = new JValue(1),
         			}
@@ -95,7 +95,7 @@ namespace Raven.Tests.Patching
         		{
         			new PatchRequest
         			{
-        				Type = "add",
+        				Type = PatchCommandType.Add,
         				Name = "blog_id",
         				Value = new JValue(1),
 						PrevVal = JObject.Parse("{'a': undefined}").Property("a").Value
@@ -115,7 +115,7 @@ namespace Raven.Tests.Patching
         		{
         			new PatchRequest
         			{
-        				Type = "add",
+        				Type = PatchCommandType.Add,
         				Name = "blog_id",
         				Value = new JValue(1),
         				PrevVal = new JArray()
@@ -131,19 +131,19 @@ namespace Raven.Tests.Patching
         		{
         			new PatchRequest
         			{
-        				Type = "add",
+        				Type = PatchCommandType.Add,
         				Name = "blog_id",
         				Value = new JValue(1)
         			},
 					new PatchRequest
         			{
-        				Type = "add",
+        				Type = PatchCommandType.Add,
         				Name = "blog_id",
         				Value = new JValue(2)
         			},
 					new PatchRequest
         			{
-        				Type = "set",
+        				Type = PatchCommandType.Set,
         				Name = "title",
         				Value = new JValue("abc")
         			},
@@ -161,7 +161,7 @@ namespace Raven.Tests.Patching
         		{
         			new PatchRequest
         			{
-        				Type = "remove",
+        				Type = PatchCommandType.Remove,
         				Name = "comments",
 						Position = 0
         			},
@@ -179,7 +179,7 @@ namespace Raven.Tests.Patching
         		{
         			new PatchRequest
         			{
-        				Type = "remove",
+        				Type = PatchCommandType.Remove,
         				Name = "comments",
 						Position = 0,
 						PrevVal = JArray.Parse(@"[{""author"":""ayende"",""text"":""good post 1""},{author: ""ayende"", text:""good post 2""}]")
@@ -199,7 +199,7 @@ namespace Raven.Tests.Patching
         		{
         			new PatchRequest
         			{
-        				Type = "remove",
+        				Type = PatchCommandType.Remove,
         				Name = "comments",
 						Position = 0,
 						PrevVal = JArray.Parse(@"[{""author"":""ayende"",""text"":""diffrent value""},{author: ""ayende"", text:""good post 2""}]")
@@ -215,7 +215,7 @@ namespace Raven.Tests.Patching
         		{
         			new PatchRequest
         			{
-        				Type = "insert",
+        				Type = PatchCommandType.Insert,
         				Name = "comments",
 						Position = 1,
 						Value = JObject.Parse(@"{""author"":""ayende"",""text"":""good post 1.5""}")
@@ -234,7 +234,7 @@ namespace Raven.Tests.Patching
         		{
         			new PatchRequest
         			{
-        				Type = "insert",
+        				Type = PatchCommandType.Insert,
         				Name = "comments",
 						Position = 1,
 						Value = JObject.Parse(@"{""author"":""ayende"",""text"":""good post 1.5""}"),
@@ -254,7 +254,7 @@ namespace Raven.Tests.Patching
         		{
         			new PatchRequest
         			{
-        				Type = "insert",
+        				Type = PatchCommandType.Insert,
         				Name = "comments",
 						Position = 1,
 						Value = JObject.Parse(@"{""author"":""yet another author"",""text"":""good post 1.5""}"),

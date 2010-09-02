@@ -10,15 +10,12 @@ using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
-using Lucene.Net.Spatial.Tier;
-using Lucene.Net.Spatial.Tier.Projectors;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
-using Raven.Database.Storage.StorageActions;
 using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Database.Indexing
@@ -29,7 +26,8 @@ namespace Raven.Database.Indexing
     public abstract class Index : IDisposable
     {
         private readonly Directory directory;
-        protected readonly ILog log = LogManager.GetLogger(typeof(Index));
+        protected readonly ILog logIndexing = LogManager.GetLogger(typeof(Index)+  ".Indexing");
+		protected readonly ILog logQuerying = LogManager.GetLogger(typeof(Index) + ".Querying");
         protected readonly string name;
         protected readonly IndexDefinition indexDefinition;
         private CurrentIndexSearcher searcher;
@@ -41,7 +39,7 @@ namespace Raven.Database.Indexing
         {
             this.name = name;
             this.indexDefinition = indexDefinition;
-            log.DebugFormat("Creating index for {0}", name);
+            logIndexing.DebugFormat("Creating index for {0}", name);
             this.directory = directory;
 
             // clear any locks that are currently held
@@ -137,12 +135,12 @@ namespace Raven.Database.Indexing
             Query luceneQuery;
             if (string.IsNullOrEmpty(query))
             {
-                log.DebugFormat("Issuing query on index {0} for all documents", name);
+                logQuerying.DebugFormat("Issuing query on index {0} for all documents", name);
                 luceneQuery = new MatchAllDocsQuery();
             }
             else
             {
-                log.DebugFormat("Issuing query on index {0} for: {1}", name, query);
+				logQuerying.DebugFormat("Issuing query on index {0} for: {1}", name, query);
             	var toDispose = new List<Action>();
             	PerFieldAnalyzerWrapper analyzer = null;
 				try
@@ -313,7 +311,7 @@ namespace Raven.Database.Indexing
                                  TryGetDocKey(innerEnumerator.Current),
                                  e.Message
                     );
-                log.WarnFormat(e, "Failed to execute indexing function on {0} on {1}", name,
+                logIndexing.WarnFormat(e, "Failed to execute indexing function on {0} on {1}", name,
                                GetDocId(innerEnumerator));
             }
             return null;
