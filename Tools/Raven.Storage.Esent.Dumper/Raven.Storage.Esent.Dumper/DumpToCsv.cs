@@ -90,7 +90,7 @@ namespace Microsoft.Isam.Esent.Utilities
         /// Dump a table in CSV format.
         /// </summary>
         /// <param name="args">Arguments for the command.</param>
-        private void DumpToCsv(string[] args)
+        public void DumpToCsv(string[] args)
         {
             if (args.Length != 1)
             {

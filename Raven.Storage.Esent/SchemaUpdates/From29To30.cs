@@ -6,11 +6,11 @@ using Raven.Database.Extensions;
 
 namespace Raven.Storage.Esent.SchemaUpdates
 {
-	public class From27To271 : ISchemaUpdate
+	public class From29To30 : ISchemaUpdate
 	{
 		public string FromSchemaVersion
 		{
-			get { return "2.7"; }
+			get { return "2.9"; }
 		}
 
 		public void Update(Session session, JET_DBID dbid)
@@ -24,14 +24,14 @@ namespace Raven.Storage.Esent.SchemaUpdates
 				{
 					var columnid = Api.GetColumnDictionary(session, files)["etag"];
 					Api.MoveBeforeFirst(session, files);
-					while(Api.TryMoveNext(session, files))
+					while (Api.TryMoveNext(session, files))
 					{
-						using(var update = new Update(session, files, JET_prep.Replace))
+						using (var update = new Update(session, files, JET_prep.Replace))
 						{
 							Api.SetColumn(session, files, columnid, DocumentDatabase.CreateSequentialUuid().TransformToValueForEsentSorting());
 							update.Save();
 						}
-						if(count++ % rowsInTxCount == 0)
+						if (count++ % rowsInTxCount == 0)
 						{
 							tx.Commit(CommitTransactionGrbit.LazyFlush);
 							tx.Dispose();
@@ -110,7 +110,7 @@ namespace Raven.Storage.Esent.SchemaUpdates
 					tx.Commit(CommitTransactionGrbit.LazyFlush);
 					tx.Dispose();
 					tx = new Transaction(session);
-				
+
 				}
 
 				using (var mappedResults = new Table(session, dbid, "mapped_results", OpenTableGrbit.None))
@@ -123,7 +123,7 @@ namespace Raven.Storage.Esent.SchemaUpdates
 						{
 							Api.SetColumn(session, mappedResults, columnid, DocumentDatabase.CreateSequentialUuid().TransformToValueForEsentSorting());
 							update.Save();
-						} 
+						}
 						if (count++ % rowsInTxCount == 0)
 						{
 							tx.Commit(CommitTransactionGrbit.LazyFlush);
@@ -134,7 +134,7 @@ namespace Raven.Storage.Esent.SchemaUpdates
 					tx.Commit(CommitTransactionGrbit.LazyFlush);
 					tx.Dispose();
 					tx = new Transaction(session);
-			
+
 				}
 
 				using (var details = new Table(session, dbid, "details", OpenTableGrbit.None))
@@ -144,7 +144,7 @@ namespace Raven.Storage.Esent.SchemaUpdates
 
 					using (var update = new Update(session, details, JET_prep.Replace))
 					{
-						Api.SetColumn(session, details, columnids["schema_version"], "2.71", Encoding.Unicode);
+						Api.SetColumn(session, details, columnids["schema_version"], "3.0", Encoding.Unicode);
 
 						update.Save();
 					}
