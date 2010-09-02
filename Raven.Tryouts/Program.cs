@@ -18,8 +18,11 @@ namespace RavenTestbed
     {
         static void Main(string[] args)
         {
-            var test = new Raven.Tests.Linq.UsingRavenQueryProvider();
-            test.Can_Use_Static_Fields_In_Where_Clauses();
+            //var test = new Raven.Tests.Linq.UsingRavenQueryProvider();
+            //test.Can_Use_Static_Fields_In_Where_Clauses();
+
+            var test = new Raven.Client.Tests.Document.DocumentStoreServerTests();
+            test.Using_attachments_can_properly_set_WebRequest_Headers();
 
             //DynamicCheckPropertyExistence.Test.RunTest();
 
