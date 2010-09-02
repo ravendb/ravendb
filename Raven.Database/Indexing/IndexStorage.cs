@@ -5,8 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Runtime.ConstrainedExecution;
 using System.Threading;
-using System.Web;
-using System.Web.Util;
 using log4net;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Index;
@@ -15,7 +13,6 @@ using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
-using Raven.Database.Storage.StorageActions;
 using Directory = System.IO.Directory;
 using Version = Lucene.Net.Util.Version;
 
@@ -57,8 +54,8 @@ namespace Raven.Database.Indexing
 			Lucene.Net.Store.Directory directory;
 			if (configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction)
 				directory = new RAMDirectory();
-            else
-                directory = FSDirectory.Open(new DirectoryInfo(Path.Combine(path, MonoHttpUtility.UrlEncode(indexDirectory))));
+			else
+				directory = FSDirectory.Open(new DirectoryInfo(Path.Combine(path, MonoHttpUtility.UrlEncode(indexDirectory))));
             //creating index structure if we need to
 	        var standardAnalyzer = new StandardAnalyzer(Version.LUCENE_29);
 	        try
