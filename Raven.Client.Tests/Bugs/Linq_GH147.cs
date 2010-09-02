@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Raven.Client.Tests.Bugs
 {
-	public class LinqGitHub147 : BaseClientTest
+	public class LinqGitHub147 : LocalClientTest
 	{
 		public class Order
 		{

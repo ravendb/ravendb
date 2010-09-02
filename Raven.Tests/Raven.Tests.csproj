@@ -99,7 +99,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Bugs\ComparingGuids.cs" />
     <Compile Include="Bugs\IndexingBehavior.cs" />
     <Compile Include="Bugs\ReadDataFromServer.cs" />
     <Compile Include="Indexes\CompiledIndex.cs" />
