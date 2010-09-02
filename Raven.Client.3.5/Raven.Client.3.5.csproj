@@ -84,6 +84,9 @@
     <Compile Include="..\Raven.Client\Client\RavenTransactionAccessor.cs">
       <Link>Client\RavenTransactionAccessor.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client\Client\ReplicationInformer.cs">
+      <Link>Client\ReplicationInformer.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client\Client\SerializationHelper.cs">
       <Link>Client\SerializationHelper.cs</Link>
     </Compile>
@@ -134,6 +137,9 @@
     </Compile>
     <Compile Include="..\Raven.Client\Document\ShardedDocumentQuery.cs">
       <Link>Document\ShardedDocumentQuery.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client\Document\SpatialDocumentQuery.cs">
+      <Link>Document\SpatialDocumentQuery.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client\EntityStored.cs">
       <Link>Document\EntityStored.cs</Link>
@@ -275,6 +281,9 @@
     </Compile>
     <Compile Include="..\Raven.Database\Data\SortedField.cs">
       <Link>Data\SortedField.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Database\Data\SpatialIndexQuery.cs">
+      <Link>Data\SpatialIndexQuery.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Database\Exceptions\BadRequestException.cs">
       <Link>Exceptions\BadRequestException.cs</Link>

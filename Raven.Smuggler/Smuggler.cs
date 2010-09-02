@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Net;
 using System.Text;
 using Newtonsoft.Json;
@@ -14,7 +15,7 @@ namespace Raven.Smuggler
     {
         static void Main(string[] args)
         {
-            if (args.Length != 3 || args[0] != "in" && args[0] != "out")
+            if (args.Length < 3 || args[0] != "in" && args[0] != "out")
             {
                 Console.WriteLine(@"
 Raven Smuggler - Import/Export utility
@@ -22,8 +23,13 @@ Usage:
     - Import the dump.raven file to a local instance:
         Raven.Smuggler in http://localhost:8080/ dump.raven
     - Export a local instance to dump.raven:
-        Raven.Smuggle out http://localhost:8080/ dump.raven
+        Raven.Smuggler out http://localhost:8080/ dump.raven
+
+      Optional arguments (after required arguments): 
+            --only-indexes : exports only index definitions
 ");
+
+                Environment.Exit(-1);
             }
 
             try
@@ -38,7 +44,8 @@ Usage:
                         ImportData(instanceUrl, file);
                         break;
                     case "out":
-                        ExportData(instanceUrl, file);
+                        bool exportIndexesOnly = args.Any(arg => arg.Equals("--only-indexes"));
+                        ExportData(instanceUrl, file, exportIndexesOnly);
                         break;
                 }
             }
@@ -49,7 +56,7 @@ Usage:
             }
         }
 
-        private static void ExportData(string instanceUrl, string file)
+        private static void ExportData(string instanceUrl, string file, bool exportIndexesOnly)
         {
             using (var streamWriter = new StreamWriter(new GZipStream(File.Create(file), CompressionMode.Compress)))
             {
@@ -84,27 +91,32 @@ Usage:
                 jsonWriter.WriteEndArray();
                 jsonWriter.WritePropertyName("Docs");
                 jsonWriter.WriteStartArray();
-                using (var webClient = new WebClient())
+
+                if (!exportIndexesOnly)
                 {
-                    var lastEtag = Guid.Empty;
-                    int totalCount = 0;
-                    while (true)
+                    using (var webClient = new WebClient())
                     {
-						var documents = GetString(webClient.DownloadData(instanceUrl + "docs?pageSize=128&etag=" + lastEtag));
-                        var array = JArray.Parse(documents);
-                        if (array.Count == 0)
+                        var lastEtag = Guid.Empty;
+                        int totalCount = 0;
+                        while (true)
                         {
-                            Console.WriteLine("Done with reading documents, total: {0}", totalCount);
-                            break;
+                            var documents =
+                                GetString(webClient.DownloadData(instanceUrl + "docs?pageSize=128&etag=" + lastEtag));
+                            var array = JArray.Parse(documents);
+                            if (array.Count == 0)
+                            {
+                                Console.WriteLine("Done with reading documents, total: {0}", totalCount);
+                                break;
+                            }
+                            totalCount += array.Count;
+                            Console.WriteLine("Reading batch of {0,3} documents, read so far: {1,10:#,#}", array.Count,
+                                              totalCount);
+                            foreach (JToken item in array)
+                            {
+                                item.WriteTo(jsonWriter);
+                            }
+                            lastEtag = new Guid(array.Last.Value<JObject>("@metadata").Value<string>("@etag"));
                         }
-                        totalCount += array.Count;
-                        Console.WriteLine("Reading batch of {0,3} documents, read so far: {1,10:#,#}", array.Count,
-                                          totalCount);
-                        foreach (JToken item in array)
-                        {
-                            item.WriteTo(jsonWriter);
-                        }
-                        lastEtag = new Guid(array.Last.Value<JObject>("@metadata").Value<string>("@etag"));
                     }
                 }
                 jsonWriter.WriteEndArray();
@@ -113,34 +125,57 @@ Usage:
             }
         }
 
-    	public static string GetString(byte[] downloadData)
-    	{
+        public static string GetString(byte[] downloadData)
+        {
     		var ms = new MemoryStream(downloadData);
     		return new StreamReader(ms, Encoding.UTF8).ReadToEnd();
-    	}
+        }
 
-    	public static void ImportData(string instanceUrl, string file)
+        public static void ImportData(string instanceUrl, string file)
         {
-        	var sw = Stopwatch.StartNew();
-            using (var streamReader = new StreamReader(new GZipStream(File.OpenRead(file), CompressionMode.Decompress)))
+            var sw = Stopwatch.StartNew();
+
+            using (FileStream fileStream = File.OpenRead(file))
             {
-                var jsonReader = new JsonTextReader(streamReader);
-                if (jsonReader.Read() == false)
-                    return;
+                // Try to read the stream compressed, otherwise continue uncompressed.
+                JsonTextReader jsonReader;
+                
+                try
+                {
+                    StreamReader streamReader = new StreamReader(new GZipStream(fileStream, CompressionMode.Decompress));
+
+                    jsonReader = new JsonTextReader(streamReader);
+                
+                    if (jsonReader.Read() == false)
+                        return;
+                }
+                catch(InvalidDataException)
+                {
+                    fileStream.Seek(0, SeekOrigin.Begin);
+
+                    StreamReader streamReader = new StreamReader(fileStream);    
+
+                    jsonReader = new JsonTextReader(streamReader);
+                
+                    if (jsonReader.Read() == false)
+                        return;
+                }
+
                 if (jsonReader.TokenType != JsonToken.StartObject)
                     throw new InvalidDataException("StartObject was expected");
+
                 // should read indexes now
                 if (jsonReader.Read() == false)
-                    return;
-                if (jsonReader.TokenType != JsonToken.PropertyName)
-                    throw new InvalidDataException("PropertyName was expected");
-                if (Equals("Indexes", jsonReader.Value) == false)
-                    throw new InvalidDataException("Indexes property was expected");
-                if (jsonReader.Read() == false)
-                    return;
-                if (jsonReader.TokenType != JsonToken.StartArray)
-                    throw new InvalidDataException("StartArray was expected");
-                using (var webClient = new WebClient())
+					return;
+				if (jsonReader.TokenType != JsonToken.PropertyName)
+					throw new InvalidDataException("PropertyName was expected");
+				if (Equals("Indexes", jsonReader.Value) == false)
+					throw new InvalidDataException("Indexes property was expected");
+				if (jsonReader.Read() == false)
+					return;
+				if (jsonReader.TokenType != JsonToken.StartArray)
+					throw new InvalidDataException("StartArray was expected");
+				using (var webClient = new WebClient())
                 {
                     webClient.UseDefaultCredentials = true;
 					webClient.Headers.Add("Content-Type", "application/json; charset=utf-8");

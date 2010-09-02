@@ -17,6 +17,8 @@ using Raven.Server;
 using Xunit;
 using System.Linq;
 
+using Raven.Tests.Spatial;
+
 namespace Raven.Client.Tests.Document
 {
 	public class DocumentStoreServerTests : BaseTest, IDisposable
@@ -54,6 +56,18 @@ namespace Raven.Client.Tests.Document
 				session.Store(entity);
 				session.SaveChanges();
 				Assert.NotEqual(Guid.Empty.ToString(), entity.Id);
+			}
+		}
+
+		[Fact]
+		public void Can_get_index_names()
+		{
+			using (var server = GetNewServer(port, path))
+			{
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+				documentStore.Initialize();
+				Assert.Equal(new[] { "Raven/DocumentsByEntityName" },
+					documentStore.DatabaseCommands.GetIndexNames(0, 25));
 			}
 		}
 
@@ -285,7 +299,7 @@ namespace Raven.Client.Tests.Document
 				{
 					new PatchRequest
 					{
-						Type = "Set",
+						Type = PatchCommandType.Set,
 						Name = "Name",
 						Value = JToken.FromObject("Another Company")
 					},
@@ -973,6 +987,58 @@ namespace Raven.Client.Tests.Document
 
 				Assert.Equal("Company 2", companies[0].Name);
 				Assert.Equal("Company 1", companies[1].Name);
+			}
+		}
+
+		[Fact]
+		public void Can_query_from_spatial_index()
+		{
+			using (var server = GetNewServer(port, path))
+			{
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+				documentStore.Initialize();
+
+				var session = documentStore.OpenSession();
+
+				foreach (Event @event in SpatialIndexTestHelper.GetEvents())
+				{
+					session.Store(@event);
+				}
+
+				session.SaveChanges();
+
+				var indexDefinition = new IndexDefinition
+				{
+					Map = "from e in docs.Events select new { Tag = \"Event\", _ = SpatialIndex.Generate(e.Latitude, e.Longitude) }",
+					Indexes = {
+						{ "Tag", FieldIndexing.NotAnalyzed }
+					}
+				};
+
+				documentStore.DatabaseCommands.PutIndex("eventsByLatLng", indexDefinition);
+
+				// Wait until the index is built
+				session.LuceneQuery<Event>("eventsByLatLng")
+					.WaitForNonStaleResults()
+					.ToArray();
+
+				const double lat = 38.96939, lng = -77.386398;
+				const double radius = 6.0;
+
+				var events = session.LuceneQuery<Event>("eventsByLatLng")
+					.WhereEquals("Tag", "Event")
+					.WithinRadiusOf(radius, lat, lng)
+					.WaitForNonStaleResults()
+					.ToArray();
+
+				Assert.Equal(7, events.Length);
+
+				foreach (var e in events)
+				{
+					double distance = Raven.Database.Indexing.SpatialIndex.GetDistanceMi(lat, lng, e.Latitude, e.Longitude);
+					Console.WriteLine("Venue: " + e.Venue + ", Distance " + distance);
+					Assert.True(distance < radius);
+				}
 			}
 		}
 

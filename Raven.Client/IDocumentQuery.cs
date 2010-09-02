@@ -8,6 +8,8 @@ namespace Raven.Client
 	{
 		IDocumentQuery<T> Include(string path);
 
+		IDocumentQuery<T> Not { get; }
+
 		IDocumentQuery<T> Take(int count);
 		IDocumentQuery<T> Skip(int count);
 		IDocumentQuery<T> Where(string whereClause);
@@ -57,6 +59,8 @@ namespace Raven.Client
 		/// </remarks>
 		IDocumentQuery<T> Proximity(int proximity);
 
+		IDocumentQuery<T> WithinRadiusOf(double radius, double latitude, double longitude);
+
 		IDocumentQuery<T> OrderBy(params string[] fields);
 
         IDocumentQuery<T> WaitForNonStaleResultsAsOfNow();
@@ -70,7 +74,6 @@ namespace Raven.Client
 		IDocumentQuery<TProjection> SelectFields<TProjection>(params string[] fields);
 
 		QueryResult QueryResult { get; }
-		IEnumerable<string> ProjectionFields { get; }
 		IDocumentQuery<T> AddOrder(string fieldName, bool descending);
 	}
 }

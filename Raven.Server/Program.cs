@@ -172,7 +172,7 @@ namespace Raven.Server
                 }
 
                 Console.WriteLine("Raven is ready to process requests.");
-                Console.WriteLine("Data directory: {0}, Port: {1}", ravenConfiguration.DataDirectory, ravenConfiguration.Port);
+                Console.WriteLine("Data directory: {0}, HostName: {1} Port: {2}", ravenConfiguration.DataDirectory, ravenConfiguration.HostName ?? "<any>", ravenConfiguration.Port);
                 Console.WriteLine("Press the enter key to stop the server or enter 'cls' and then enter to clear the log");
                 while (true)
                 {

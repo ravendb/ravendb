@@ -41,11 +41,11 @@ namespace Raven.Client.Document
 	        };
 		}
 
-		private void ApplyForAll(Action<IDocumentQuery<T>> act)
+		private void ApplyForAll(Func<IDocumentQuery<T>, IDocumentQuery<T>> transformQuery)
 		{
-			foreach (var query in queries)
+			for (int i = 0; i < queries.Length; i++)
 			{
-				act(query);
+				queries[i] = transformQuery(queries[i]);
 			}
 		}
 
@@ -76,6 +76,15 @@ namespace Raven.Client.Document
 		{
 			ApplyForAll(x => x.Include(path));
 			return this;
+		}
+
+		public IDocumentQuery<T> Not
+		{
+			get
+			{
+				ApplyForAll(query => query.Not);
+				return this;
+			}
 		}
 
 		public IDocumentQuery<T> Take(int count)
@@ -198,6 +207,12 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		public IDocumentQuery<T> WithinRadiusOf(double radius, double lat, double lng)
+		{
+			ApplyForAll(query => query.WithinRadiusOf(radius, lat, lng));
+			return this;
+		}
+
 		public IDocumentQuery<T> OrderBy(params string[] fields)
 		{
 			ApplyForAll(query => query.OrderBy(fields));
@@ -250,18 +265,6 @@ namespace Raven.Client.Document
 	    public QueryResult QueryResult
 		{
 			get { return queryResult ?? (queryResult = GetQueryResult()); }
-		}
-
-		public IEnumerable<string> ProjectionFields
-		{
-			get
-			{
-				// union all projection fields from underlying queries
-				return
-					from query in queries
-					from field in query.ProjectionFields
-					select field;
-			}
 		}
 
 		public IDocumentQuery<T> AddOrder(string fieldName, bool descending)

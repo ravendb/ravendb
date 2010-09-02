@@ -3,6 +3,7 @@ using System.Text;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Database;
 using Raven.Database.Exceptions;
+using Raven.Database.Extensions;
 
 namespace Raven.Storage.Esent.StorageActions
 {
@@ -11,7 +12,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 		private void EnsureDocumentEtagMatch(string key, Guid? etag, string method)
 		{
-			var existingEtag = new Guid(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
+			var existingEtag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]).TransfromToGuidWithProperSorting();
 			if (existingEtag != etag && etag != null)
 			{
 				throw new ConcurrencyException(method + " attempted on document '" + key +
@@ -32,11 +33,11 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				if (Api.RetrieveColumnAsBoolean(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["delete_document"]) == true)
 					return; // we ignore etags on deleted documents
-				existingEtag = new Guid(Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["etag"]));
+				existingEtag = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["etag"]).TransfromToGuidWithProperSorting();
 			}
 			else
 			{
-				existingEtag = new Guid(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
+				existingEtag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]).TransfromToGuidWithProperSorting();
 			}
 			if (existingEtag != etag && etag != null)
 			{

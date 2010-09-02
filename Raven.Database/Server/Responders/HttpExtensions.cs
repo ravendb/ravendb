@@ -241,9 +241,38 @@ namespace Raven.Database.Server.Responders
 		    return null;
 		}
 
+		public static double GetLat(this IHttpContext context)
+		{
+			double lat;
+			double.TryParse(context.Request.QueryString["latitude"], out lat);
+			return lat;
+		}
+
+		public static double GetLng(this IHttpContext context)
+		{
+			double lng;
+			double.TryParse(context.Request.QueryString["longitude"], out lng);
+			return lng;
+		}
+
+		public static double GetRadius(this IHttpContext context)
+		{
+			double radius;
+			double.TryParse(context.Request.QueryString["radius"], out radius);
+			return radius;
+		}
+
+		public static bool SortByDistance(this IHttpContext context)
+		{
+			var sortAsString = context.Request.QueryString["sortByDistance"];
+			bool sort;
+			bool.TryParse(sortAsString, out sort);
+			return sort;
+		}
+
 		public static IndexQuery GetIndexQueryFromHttpContext(this IHttpContext context, int maxPageSize)
 		{
-			return new IndexQuery
+			var query = new IndexQuery
 			{
 				Query = Uri.UnescapeDataString(context.Request.QueryString["query"] ?? ""),
 				Start = context.GetStart(),
@@ -255,9 +284,22 @@ namespace Raven.Database.Server.Responders
 					.Select(x => new SortedField(x))
 					.ToArray()
 			};
+
+			double lat = context.GetLat(), lng = context.GetLng(), radius = context.GetRadius();
+			if (lat != 0 || lng != 0 || radius != 0)
+			{
+				return new SpatialIndexQuery(query)
+				{
+					Latitude = lat,
+					Longitude = lng,
+					Radius = radius,
+					SortByDistance = context.SortByDistance()
+				};
+			}
+			return query;
 		}
 
-        public static Guid? GetEtagFromQueryString(this IHttpContext context)
+		public static Guid? GetEtagFromQueryString(this IHttpContext context)
         {
             var etagAsString = context.Request.QueryString["etag"];
             if (etagAsString != null)

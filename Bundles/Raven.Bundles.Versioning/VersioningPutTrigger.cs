@@ -9,43 +9,56 @@ namespace Raven.Bundles.Versioning
     public class VersioningPutTrigger : AbstractPutTrigger
     {
         public const string RavenDocumentRevision = "Raven-Document-Revision";
-        public const string RavenDocumentRevisionStatus = "Raven-Document-Revision-Status";
+		public const string RavenDocumentParentRevision = "Raven-Document-Parent-Revision"; 
+		public const string RavenDocumentRevisionStatus = "Raven-Document-Revision-Status";
+
         private int? maxRevisions;
         private string[] excludeByEntityName = new string[0];
 
         public override VetoResult AllowPut(string key, JObject document, JObject metadata, TransactionInformation transactionInformation)
         {
-            if (metadata.Value<string>(RavenDocumentRevisionStatus) != "Historical")
-                return VetoResult.Allowed;
-            if (Database.Get(key, transactionInformation) == null)
-                return VetoResult.Allowed;
-          
-            return VetoResult.Deny("Modifying a historical revision is not allowed");
+			if (VersioningContext.IsInVersioningContext)
+				return VetoResult.Allowed;
+			
+			if (metadata.Value<string>(RavenDocumentRevisionStatus) == "Historical")
+				return VetoResult.Deny("Modifying a historical revision is not allowed");
+			return VetoResult.Allowed;
         }
 
         public override void OnPut(string key, JObject document, JObject metadata, TransactionInformation transactionInformation)
         {
-            if (metadata.Value<string>(RavenDocumentRevisionStatus) == "Historical")
-                return;
+			if (VersioningContext.IsInVersioningContext)
+				return;
+			if (key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase))
+				return;
 
-            if (excludeByEntityName.Contains(metadata.Value<string>("Raven-Entity-Name")))
-                return;
+			if (excludeByEntityName.Contains(metadata.Value<string>("Raven-Entity-Name")))
+				return;
 
-            int revision = 0;
-            if (metadata[RavenDocumentRevision] != null)
-                revision = metadata.Value<int>(RavenDocumentRevision);
+			if (metadata.Value<string>(RavenDocumentRevisionStatus) == "Historical")
+				return;
 
-            var copyMetadata = new JObject(metadata);
-            copyMetadata[RavenDocumentRevisionStatus] = JToken.FromObject("Historical");
-            copyMetadata[RavenDocumentRevision] = JToken.FromObject(revision +1);
-            PutResult newDoc = Database.Put(key + "/revisions/", null, document, copyMetadata,
-                                         transactionInformation);
-            revision = int.Parse(newDoc.Key.Split('/').Last());
+			using(VersioningContext.Enter())
+			{
+				var copyMetadata = new JObject(metadata);
+				copyMetadata[RavenDocumentRevisionStatus] = JToken.FromObject("Historical");
+				copyMetadata.Remove(RavenDocumentRevision);
+				var parentRevision = metadata.Value<string>(RavenDocumentRevision);
+				if(parentRevision!=null)
+				{
+					copyMetadata[RavenDocumentParentRevision] = key + "/revisions/" + parentRevision;
+					metadata[RavenDocumentParentRevision] = key + "/revisions/" + parentRevision;
+				}
 
-            RemoveOldRevisions(key, revision, transactionInformation);
+				PutResult newDoc = Database.Put(key + "/revisions/", null, document, copyMetadata,
+											 transactionInformation);
+				int revision = int.Parse(newDoc.Key.Split('/').Last());
 
-            metadata[RavenDocumentRevisionStatus] = JToken.FromObject("Current");
-            metadata[RavenDocumentRevision] = JToken.FromObject(revision);
+				RemoveOldRevisions(key, revision, transactionInformation);
+
+				metadata[RavenDocumentRevisionStatus] = JToken.FromObject("Current");
+				metadata[RavenDocumentRevision] = JToken.FromObject(revision);
+			}
         }
 
         private void RemoveOldRevisions(string key, int revision, TransactionInformation transactionInformation)
@@ -57,16 +70,9 @@ namespace Raven.Bundles.Versioning
             if (latestValidRevision <= 1)
                 return;
 
-            VersioningDeleteTrigger.allowDeletiongOfHistoricalDocuments = true;
-            try
-            {
-                Database.Delete(key + "/revisions/" + (latestValidRevision - 1), null, transactionInformation);
-            }
-            finally
-            {
-                VersioningDeleteTrigger.allowDeletiongOfHistoricalDocuments = false;    
-            }
+        	Database.Delete(key + "/revisions/" + (latestValidRevision - 1), null, transactionInformation);
         }
+
         public override void Initialize()
         {
             maxRevisions = Database.Configuration.GetConfigurationValue<int>("Raven/Versioning/MaxRevisions");

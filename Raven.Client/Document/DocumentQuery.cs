@@ -16,16 +16,17 @@ namespace Raven.Client.Document
 {
 	public class DocumentQuery<T> : IDocumentQuery<T>
 	{
+		private bool negate;
 		private readonly IDatabaseCommands databaseCommands;
 		private readonly string indexName;
-		private readonly string[] projectionFields;
+		protected readonly string[] projectionFields;
 		private readonly DocumentSession session;
-		private DateTime? cutoff;
-		private string[] orderByFields = new string[0];
-		private int pageSize = 128;
+		protected DateTime? cutoff;
+		protected string[] orderByFields = new string[0];
+		protected int pageSize = 128;
 		private QueryResult queryResult;
 		private StringBuilder queryText = new StringBuilder();
-		private int start;
+		protected int start;
 		private TimeSpan timeout;
 		private bool waitForNonStaleResults;
 		private readonly HashSet<string> includes = new HashSet<string>();
@@ -37,6 +38,22 @@ namespace Raven.Client.Document
 			this.projectionFields = projectionFields;
 			this.indexName = indexName;
 			this.session = session;
+		}
+
+		protected DocumentQuery(DocumentQuery<T> other)
+		{
+			databaseCommands = other.databaseCommands;
+			indexName = other.indexName;
+			projectionFields = other.projectionFields;
+			session = other.session;
+			cutoff = other.cutoff;
+			orderByFields = other.orderByFields;
+			pageSize = other.pageSize;
+			queryText = other.queryText;
+			start = other.start;
+			timeout = other.timeout;
+			waitForNonStaleResults = other.waitForNonStaleResults;
+			includes = other.includes;
 		}
 
 		#region IDocumentQuery<T> Members
@@ -67,9 +84,9 @@ namespace Raven.Client.Document
 			get { return queryResult ?? (queryResult = GetQueryResult()); }
 		}
 
-		public IEnumerable<string> ProjectionFields
+		public IEnumerable<string> GetProjectionFields()
 		{
-			get { return this.projectionFields ?? Enumerable.Empty<string>(); }
+			return projectionFields ?? Enumerable.Empty<string>();
 		}
 
 		public IDocumentQuery<T> AddOrder(string fieldName, bool descending)
@@ -104,6 +121,15 @@ namespace Raven.Client.Document
 		{
 			includes.Add(path);
 			return this;
+		}
+
+		public IDocumentQuery<T> Not
+		{
+			get
+			{
+				negate = true;
+				return this;
+			}
 		}
 
 		public IDocumentQuery<T> Take(int count)
@@ -169,11 +195,21 @@ namespace Raven.Client.Document
 				queryText.Append(" ");
 			}
 
+			NegateIfNeeded();
+
 			queryText.Append(fieldName);
 			queryText.Append(":");
 			queryText.Append(TransformToEqualValue(value, isAnalyzed, isAnalyzed));
 
 			return this;
+		}
+
+		private void NegateIfNeeded()
+		{
+			if (negate == false)
+				return;
+			negate = false;
+			queryText.Append("-");
 		}
 
 		/// <summary>
@@ -209,6 +245,8 @@ namespace Raven.Client.Document
 				queryText.Append(" ");
 			}
 
+			NegateIfNeeded();
+			
 			queryText.Append(fieldName).Append(":{");
 			queryText.Append(start == null ? "*" : TransformToRangeValue(start));
 			queryText.Append(" TO ");
@@ -225,6 +263,8 @@ namespace Raven.Client.Document
 				queryText.Append(" ");
 			}
 
+			NegateIfNeeded();
+			
 			queryText.Append(fieldName).Append(":[");
 			queryText.Append(start == null ? "*" : TransformToRangeValue(start));
 			queryText.Append(" TO ");
@@ -353,27 +393,37 @@ namespace Raven.Client.Document
 		/// </remarks>
 		public IDocumentQuery<T> Proximity(int proximity)
 		{
-			if (this.queryText.Length < 1)
+			if (queryText.Length < 1)
 			{
 				throw new InvalidOperationException("Missing where clause");
 			}
 
 			if (proximity < 1)
 			{
-				throw new ArgumentOutOfRangeException("Proximity distance must be positive number");
+				throw new ArgumentOutOfRangeException("proximity","Proximity distance must be positive number");
 			}
 
-			if (this.queryText[this.queryText.Length - 1] != '"')
+			if (queryText[queryText.Length - 1] != '"')
 			{
 				// this check is overly simplistic
 				throw new InvalidOperationException("Proximity distance can only modify a phrase");
 			}
 
-			this.queryText.Append("~").Append(proximity);
+			queryText.Append("~").Append(proximity);
 
 			return this;
 		}
 
+		public IDocumentQuery<T> WithinRadiusOf(double radius, double latitude, double longitude)
+		{
+			IDocumentQuery<T> spatialDocumentQuery = new SpatialDocumentQuery<T>(this, radius, latitude, longitude);
+			if (negate)
+			{
+				negate = false;
+				spatialDocumentQuery = spatialDocumentQuery.Not;
+			}
+			return spatialDocumentQuery.Not;
+		}
 
 		public IDocumentQuery<T> OrderBy(params string[] fields)
 		{
@@ -430,15 +480,10 @@ namespace Raven.Client.Document
 
 				Trace.WriteLine(string.Format("Executing query '{0}' on index '{1}' in '{2}'",
 				                              query, indexName, session.StoreIdentifier));
-				var result = databaseCommands.Query(indexName, new IndexQuery
-				{
-					Query = query,
-					PageSize = pageSize,
-					Start = start,
-					Cutoff = cutoff,
-					SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
-					FieldsToFetch = projectionFields
-				}, includes.ToArray());
+
+				IndexQuery indexQuery = GenerateIndexQuery(query);
+
+				var result = databaseCommands.Query(indexName, indexQuery, includes.ToArray());
 				if (waitForNonStaleResults && result.IsStale)
 				{
 					if (sp.Elapsed > timeout)
@@ -456,6 +501,19 @@ namespace Raven.Client.Document
 				Trace.WriteLine(string.Format("Query returned {0}/{1} results", result.Results.Count, result.TotalResults));
 				return result;
 			}
+		}
+
+		protected virtual IndexQuery GenerateIndexQuery(string query)
+		{
+			return new IndexQuery
+			{
+				Query = query,
+				PageSize = pageSize,
+				Start = start,
+				Cutoff = cutoff,
+				SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
+				FieldsToFetch = projectionFields
+			};
 		}
 
 		private T Deserialize(JObject result)

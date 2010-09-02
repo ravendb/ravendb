@@ -36,9 +36,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 	    private bool IsStaleByEtag(string entityName, DateTime? cutOff)
 	    {
-	        var lastIndexedEtag = new Guid(
-	            Api.RetrieveColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"])
-	            );
+	        var lastIndexedEtag = Api.RetrieveColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"]);
 	        Api.JetSetCurrentIndex(session, Documents, "by_etag");
 	        if (!Api.TryMoveLast(session, Documents))
 	        {
@@ -46,9 +44,8 @@ namespace Raven.Storage.Esent.StorageActions
 	        }
 	        do
 	        {
-	            var lastEtag =
-	                new Guid(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
-	            if (lastEtag.CompareTo(lastIndexedEtag) <= 0)
+	            var lastEtag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]);
+	            if (CompareArrays(lastEtag,lastIndexedEtag) <= 0)
 	                break;
 
 	            if (entityName != null)
@@ -76,6 +73,18 @@ namespace Raven.Storage.Esent.StorageActions
 	        } while (Api.TryMovePrevious(session, Documents));
 	        return false;
 	    }
+
+		private static int CompareArrays(byte[] docEtagBinary, byte[] indexEtagBinary)
+		{
+			for (int i = 0; i < docEtagBinary.Length; i++)
+			{
+				if (docEtagBinary[i].CompareTo(indexEtagBinary[i]) != 0)
+				{
+					return docEtagBinary[i].CompareTo(indexEtagBinary[i]);
+				}
+			}
+			return 0;
+		}
 
 	    public void AddTask(Task task)
 		{

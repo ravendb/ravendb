@@ -142,7 +142,6 @@ namespace Raven.Bundles.Tests
                 var metadata = session.GetMetadataFor(company2);
                 Assert.Equal(company.Name, company2.Name);
                 Assert.Equal("Historical", metadata.Value<string>("Raven-Document-Revision-Status"));
-                Assert.Equal(1, metadata.Value<int>("Raven-Document-Revision"));
             }
         }
 
@@ -154,26 +153,28 @@ namespace Raven.Bundles.Tests
             {
                 session.Store(company);
                 session.SaveChanges();
+				Assert.Equal(1, session.GetMetadataFor(company).Value<int>("Raven-Document-Revision"));
             }
             using (var session = documentStore.OpenSession())
             {
                 var company3 = session.Load<Company>(company.Id);
                 company3.Name = "Hibernating Rhinos";
                 session.SaveChanges();
-            }
+				Assert.Equal(2, session.GetMetadataFor(company3).Value<int>("Raven-Document-Revision"));
+			}
             using (var session = documentStore.OpenSession())
             {
                 var company2 = session.Load<Company>(company.Id + "/revisions/1");
                 var metadata = session.GetMetadataFor(company2);
                 Assert.Equal("Company Name", company2.Name);
                 Assert.Equal("Historical", metadata.Value<string>("Raven-Document-Revision-Status"));
-                Assert.Equal(1, metadata.Value<int>("Raven-Document-Revision"));
+                Assert.Null(metadata.Value<string>("Raven-Document-Parent-Revision"));
 
                 company2 = session.Load<Company>(company.Id + "/revisions/2");
                 metadata = session.GetMetadataFor(company2);
                 Assert.Equal("Hibernating Rhinos", company2.Name);
                 Assert.Equal("Historical", metadata.Value<string>("Raven-Document-Revision-Status"));
-                Assert.Equal(2, metadata.Value<int>("Raven-Document-Revision"));
+				Assert.Equal("companies/1/revisions/1", metadata.Value<string>("Raven-Document-Parent-Revision"));
             }
         }
 

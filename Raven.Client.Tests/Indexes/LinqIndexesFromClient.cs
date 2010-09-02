@@ -1,8 +1,10 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Document;
@@ -93,8 +95,29 @@ namespace Raven.Client.Tests.Indexes
 			{
 				Stores = { { "Name", FieldStorage.Yes } },
 				Map = @"docs.Users
-	.Where(user => (user.Location == ""Tel Aviv""))
+	.Where(user => user.Location == ""Tel Aviv"")
 	.Select(user => new {Name = user.Name})"
+			};
+
+			Assert.Equal(original, generated);
+		}
+
+		[Fact]
+		public void Convert_using_id()
+		{
+			IndexDefinition generated = new IndexDefinition<User, Named>
+			{
+				Map = users => from user in users
+							   where user.Location == "Tel Aviv"
+							   select new { user.Name, user.Id },
+				Stores = { { user => user.Name, FieldStorage.Yes } }
+			}.ToIndexDefinition(new DocumentConvention());
+			var original = new IndexDefinition
+			{
+				Stores = { { "Name", FieldStorage.Yes } },
+				Map = @"docs.Users
+	.Where(user => user.Location == ""Tel Aviv"")
+	.Select(user => new {Name = user.Name, Id = user.__document_id})"
 			};
 
 			Assert.Equal(original, generated);
@@ -115,45 +138,118 @@ namespace Raven.Client.Tests.Indexes
 				Stores = {{"Name", FieldStorage.Yes}},
 				Map =
 					@"docs.Users
-	.Where(user => !((user.Location == ""Te(l) (A)viv"")))
+	.Where(user => !(user.Location == ""Te(l) (A)viv""))
 	.Select(user => new {Name = user.Name})"
 			};
 
 			Assert.Equal(original, generated);
 		}
 
-		[Fact]
-		public void Convert_map_reduce_query()
-		{
-			IndexDefinition generated = new IndexDefinition<User, LocationCount>
-			{
-				Map = users => from user in users
-							   select new { user.Location, Count = 1 },
-				Reduce = counts => from agg in counts
-								   group agg by agg.Location
-									   into g
-									   select new { Location = g.Key, Count = g.Sum(x => x.Count) },
-			}.ToIndexDefinition(new DocumentConvention());
-			var original = new IndexDefinition
-			{
-				Map = @"docs.Users
+        [Fact]
+        public void Convert_map_reduce_query()
+        {
+            IndexDefinition generated = new IndexDefinition<User, LocationCount>
+            {
+                Map = users => from user in users
+                               select new { user.Location, Count = 1 },
+                Reduce = counts => from agg in counts
+                                   group agg by agg.Location
+                                       into g
+                                       select new { Location = g.Key, Count = g.Sum(x => x.Count) },
+            }.ToIndexDefinition(new DocumentConvention());
+            var original = new IndexDefinition
+            {
+                Map = @"docs.Users
 	.Select(user => new {Location = user.Location, Count = 1})",
-				Reduce = @"results
+                Reduce = @"results
 	.GroupBy(agg => agg.Location)
 	.Select(g => new {Location = g.Key, Count = g.Sum(x => x.Count)})"
-			};
+            };
 
-			Assert.Equal(original, generated);
-		}
+            Assert.Equal(original, generated);
+        }
 
 
-		public class User
+#if !NET_3_5        
+        public void Convert_map_reduce_query_with_map_(Expression<Func<IEnumerable<User>, IEnumerable>> mapExpression, string expectedIndexString)
+        {
+            IndexDefinition generated = new IndexDefinition<User, LocationCount>
+            {
+                Map = mapExpression,
+                Reduce = counts => from agg in counts
+                                   group agg by agg.Location
+                                       into g
+                                       select new { Location = g.Key, Count = g.Sum(x => x.Count) },
+            }.ToIndexDefinition(new DocumentConvention());
+            var original = new IndexDefinition
+            {
+                Map = expectedIndexString,
+                Reduce = @"results
+	.GroupBy(agg => agg.Location)
+	.Select(g => new {Location = g.Key, Count = g.Sum(x => x.Count)})"
+            };
+
+            Assert.Equal(original, generated);
+        }
+
+        [Fact]
+        public void Convert_map_reduce_preserving_parenthesis()
+        {
+            Convert_map_reduce_query_with_map_(
+users => from user in users
+         select new { Location = user.Location, Count = (user.Age + 3) * (user.Age + 4) },
+@"docs.Users
+	.Select(user => new {Location = user.Location, Count = (user.Age + 3) * (user.Age + 4)})");
+        }
+
+        [Fact]
+        public void Convert_map_reduce_query_with_trinary_conditional()
+        {
+            Convert_map_reduce_query_with_map_(
+users => from user in users
+         select new { Location = user.Location, Count = user.Age >= 1 ? 1 : 0 }, 
+@"docs.Users
+	.Select(user => new {Location = user.Location, Count = user.Age >= 1 ? 1 : 0})");
+        }
+
+        [Fact(Skip = "Enum comparisons in map reduce query end up as failed int comparisons")]
+        public void Convert_map_reduce_query_with_enum_comparison()
+        {
+            Convert_map_reduce_query_with_map_(
+users => from user in users
+        select new { Location = user.Location, Count = user.Gender == Gender.Female ? 1 : 0},
+@"docs.Users
+	.Select(user => new {Location = user.Location, Count = user.Age == ""Female"" ? 1 : 0})");
+        }
+
+        [Fact]
+        public void Convert_map_reduce_query_with_type_check()
+        {
+            Convert_map_reduce_query_with_map_(
+users => from user in users
+         select new { Location = user.Location, Count = user.Location is String ? 1 : 0 },
+@"docs.Users
+	.Select(user => new {Location = user.Location, Count = user.Location is String ? 1 : 0})");
+        }
+
+
+
+#endif
+
+        public enum Gender
+        {
+            Male,
+            Female
+        }
+
+        public class User
 		{
 			public string Id { get; set; }
 			public string Name { get; set; }
 			public string Location { get; set; }
 
 			public int Age { get; set; }
+            public Gender Gender { get; set; }
 		}
 
 		public class Named

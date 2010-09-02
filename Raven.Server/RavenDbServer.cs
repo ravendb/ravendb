@@ -23,9 +23,20 @@ namespace Raven.Server
 		{
 			settings.LoadLoggingSettings();
 			database = new DocumentDatabase(settings);
-			database.SpinBackgroundWorkers();
-			server = new HttpServer(settings, database);
-			server.Start();
+
+			try
+			{
+				database.SpinBackgroundWorkers();
+				server = new HttpServer(settings, database);
+				server.Start();
+			}
+			catch (Exception)
+			{
+				database.Dispose();
+				database = null;
+				
+				throw;
+			}
 		}
 
 		#region IDisposable Members

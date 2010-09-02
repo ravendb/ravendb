@@ -2,8 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Linq;
-using System.Runtime.InteropServices;
-using System.Security;
 using System.Threading;
 using System.Transactions;
 using log4net;
@@ -52,7 +50,11 @@ namespace Raven.Database
 
             configuration.Container.SatisfyImportsOnce(this);
 
-            workContext = new WorkContext { IndexUpdateTriggers = IndexUpdateTriggers };
+            workContext = new WorkContext
+            {
+            	IndexUpdateTriggers = IndexUpdateTriggers,
+				ReadTriggers = ReadTriggers
+            };
 
             TransactionalStorage = configuration.CreateTransactionalStorage(workContext.NotifyAboutWork);
             configuration.Container.SatisfyImportsOnce(TransactionalStorage);
@@ -213,44 +215,22 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
             }
         }
 
-        [SuppressUnmanagedCodeSecurity]
-        [DllImport("rpcrt4.dll", EntryPoint = "UuidCreateSequential", SetLastError = true)]
-        private static extern int UuidCreateSequentialNative(out Guid value);
+		private static int sequentialUuidCounter;
+		public static Guid CreateSequentialUuid()
+		{
+			var ticksAsBytes = BitConverter.GetBytes(DateTime.Now.Ticks);
+			Array.Reverse(ticksAsBytes);
+			var increment = Interlocked.Increment(ref sequentialUuidCounter);
+			var currentAsBytes = BitConverter.GetBytes(increment);
+			Array.Reverse(currentAsBytes);
+			var bytes = new byte[16];
+			Array.Copy(ticksAsBytes, 0, bytes, 0, ticksAsBytes.Length);
+			Array.Copy(currentAsBytes, 0, bytes, 12, currentAsBytes.Length);
+			return bytes.TransfromToGuidWithProperSorting();
+		}
 
-        private static void UuidCreateSequential(out Guid value)
-        {
-            Marshal.ThrowExceptionForHR(UuidCreateSequentialNative(out value));
-            byte[] guidArray = value.ToByteArray();
 
-            DateTime baseDate = new DateTime(1900, 1, 1);
-            DateTime now = DateTime.Now;
-
-            // Get the days and milliseconds which will be used to build the byte string 
-            TimeSpan days = new TimeSpan(now.Ticks - baseDate.Ticks);
-            TimeSpan msecs = new TimeSpan(now.Ticks - (new DateTime(now.Year, now.Month, now.Day).Ticks));
-
-            // Convert to a byte array 
-            // Note that SQL Server is accurate to 1/300th of a millisecond so we divide by 3.333333 
-            byte[] daysArray = BitConverter.GetBytes(days.Days);
-            byte[] msecsArray = BitConverter.GetBytes((long)(msecs.TotalMilliseconds / 3.333333));
-
-            // Copy the bytes into the guid 
-            Array.Copy(daysArray, 0, guidArray, guidArray.Length - 6, 2);
-            Array.Copy(msecsArray, 0, guidArray, guidArray.Length - 4, 4);
-
-            value = new Guid(guidArray);
-        }
-
-        public static Guid CreateSequentialUuid()
-        {
-            Guid value;
-            UuidCreateSequential(out value);
-            var byteArray = value.ToByteArray();
-            Array.Reverse(byteArray);
-            return new Guid(byteArray);
-        }
-
-        public JsonDocument Get(string key, TransactionInformation transactionInformation)
+    	public JsonDocument Get(string key, TransactionInformation transactionInformation)
         {
             JsonDocument document = null;
             TransactionalStorage.Batch(actions =>
@@ -268,9 +248,9 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
         {
             if (string.IsNullOrEmpty(key))
             {
-                Guid value;
-                UuidCreateSequential(out value);
-                key = value.ToString();
+				// we no longer sort by the key, so it doesn't matter
+				// that the key is no longer sequential
+            	key = Guid.NewGuid().ToString();
             }
             RemoveReservedProperties(document);
             RemoveReservedProperties(metadata);
@@ -589,6 +569,21 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
             });
             return list;
         }
+
+		public AttachmentInformation[] GetAttachments(int start, int pageSize, Guid? etag)
+		{
+			AttachmentInformation[] documents = null;
+
+			TransactionalStorage.Batch(actions =>
+			{
+				if (etag == null)
+					documents = actions.Attachments.GetAttachmentsByReverseUpdateOrder(start).Take(pageSize).ToArray();
+				else
+					documents = actions.Attachments.GetAttachmentsAfter(etag.Value).Take(pageSize).ToArray();
+				
+			});
+			return documents;
+		}
 
         public JArray GetIndexNames(int start, int pageSize)
         {

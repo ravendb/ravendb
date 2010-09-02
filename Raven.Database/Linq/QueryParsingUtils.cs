@@ -1,5 +1,6 @@
 ﻿using System;
 using System.CodeDom.Compiler;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
@@ -32,6 +33,8 @@ namespace Raven.Database.Linq
 			{
 				typeof (AbstractViewGenerator).Namespace,
 				typeof (Enumerable).Namespace,
+				typeof (IEnumerable<>).Namespace,
+				typeof (IEnumerable).Namespace,
 				typeof (int).Namespace,
 				typeof (LinqOnDynamic).Namespace
 			};
@@ -113,8 +116,8 @@ namespace Raven.Database.Linq
 			if (variable.Initializer as InvocationExpression == null)
 				throw new InvalidOperationException("Variable declaration must have an initializer which is a method invocation expression");
 
-			var targetObject = ((InvocationExpression) variable.Initializer).TargetObject as MemberReferenceExpression;
-			if(targetObject == null)
+			var targetObject = ((InvocationExpression)variable.Initializer).TargetObject as MemberReferenceExpression;
+			if (targetObject == null)
 				throw new InvalidOperationException("Variable initializer must be invoked on a method reference expression");
 
 			if (targetObject.MemberName != "Select" && targetObject.MemberName != "SelectMany")
@@ -130,14 +133,14 @@ namespace Raven.Database.Linq
 
 			if (objectCreateExpression.IsAnonymousType == false)
 				throw new InvalidOperationException("Variable initializer select must have a lambda expression creating an anoynmous type");
-			
+
 			return variable;
 		}
 
 
 		public static Type Compile(string fileName, string name, string queryText, AbstractDynamicCompilationExtension[] extensions)
 		{
-			var provider = new CSharpCodeProvider(new Dictionary<string, string> {{"CompilerVersion", "v4.0"}});
+			var provider = new CSharpCodeProvider(new Dictionary<string, string> { { "CompilerVersion", "v4.0" } });
 			var assemblies = new HashSet<string>
 			{
 				typeof (AbstractViewGenerator).Assembly.Location,

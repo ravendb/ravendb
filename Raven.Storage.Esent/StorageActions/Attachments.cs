@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
 using Newtonsoft.Json;
@@ -7,6 +8,7 @@ using Raven.Database;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
 using Raven.Database.Storage.StorageActions;
+using Raven.Database.Extensions;
 
 namespace Raven.Storage.Esent.StorageActions
 {
@@ -19,7 +21,7 @@ namespace Raven.Storage.Esent.StorageActions
 			var isUpdate = Api.TrySeek(session, Files, SeekGrbit.SeekEQ);
 			if (isUpdate)
 			{
-				var existingEtag = new Guid(Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]));
+				var existingEtag = Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]).TransfromToGuidWithProperSorting();
 				if (existingEtag != etag && etag != null)
 				{
 					throw new ConcurrencyException("PUT attempted on attachment '" + key +
@@ -41,7 +43,7 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["name"], key, Encoding.Unicode);
 				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["data"], data);
-				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["etag"], newETag.ToByteArray());
+				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["etag"], newETag.TransformToValueForEsentSorting());
 				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["metadata"], headers.ToString(Formatting.None), Encoding.Unicode);
 
 				update.Save();
@@ -60,7 +62,7 @@ namespace Raven.Storage.Esent.StorageActions
 				logger.DebugFormat("Attachment with key '{0}' was not found, and considered deleted", key);
 				return;
 			}
-			var fileEtag = new Guid(Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]));
+			var fileEtag = Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]).TransfromToGuidWithProperSorting();
 			if (fileEtag != etag && etag != null)
 			{
 				throw new ConcurrencyException("DELETE attempted on attachment '" + key +
@@ -73,6 +75,45 @@ namespace Raven.Storage.Esent.StorageActions
 
 			Api.JetDelete(session, Files);
 			logger.DebugFormat("Attachment with key '{0}' was deleted", key);
+		}
+
+		public IEnumerable<AttachmentInformation> GetAttachmentsByReverseUpdateOrder(int start)
+		{
+			Api.JetSetCurrentIndex(session, Files, "by_etag");
+			Api.MoveAfterLast(session, Files);
+			for (int i = 0; i < start; i++)
+			{
+				if (Api.TryMovePrevious(session, Files) == false)
+					yield break;
+			}
+			while (Api.TryMovePrevious(session, Files))
+			{
+				yield return new AttachmentInformation
+				{
+					Size =  Api.RetrieveColumnSize(session, Files, tableColumnsCache.FilesColumns["data"]).Value,
+					Etag = Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]).TransfromToGuidWithProperSorting(),
+					Key = Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["name"], Encoding.UTF8),
+					Metadata = JObject.Parse(Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["metadata"], Encoding.Unicode))
+				};
+			}
+		}
+
+		public IEnumerable<AttachmentInformation> GetAttachmentsAfter(Guid etag)
+		{
+			Api.JetSetCurrentIndex(session, Files, "by_etag");
+			Api.MakeKey(session, Files, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
+			if (Api.TrySeek(session, Files, SeekGrbit.SeekGT) == false)
+				yield break;
+			do
+			{
+				yield return new AttachmentInformation
+				{
+					Size = Api.RetrieveColumnSize(session, Files, tableColumnsCache.FilesColumns["data"]).Value,
+					Etag = Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]).TransfromToGuidWithProperSorting(),
+					Key = Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["name"], Encoding.UTF8),
+					Metadata = JObject.Parse(Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["metadata"], Encoding.Unicode))
+				};
+			} while (Api.TryMoveNext(session, Files));
 		}
 
 		public Attachment GetAttachment(string key)
@@ -88,7 +129,7 @@ namespace Raven.Storage.Esent.StorageActions
 			return new Attachment
 			{
 				Data = Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["data"]),
-				Etag = new Guid(Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"])),
+				Etag = Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]).TransfromToGuidWithProperSorting(),
 				Metadata = JObject.Parse(metadata)
 			};
 		}

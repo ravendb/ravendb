@@ -5,6 +5,7 @@ using Microsoft.Isam.Esent.Interop;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
 using Raven.Database.Storage.StorageActions;
+using Raven.Database.Extensions;
 
 namespace Raven.Storage.Esent.StorageActions
 {
@@ -53,7 +54,7 @@ namespace Raven.Storage.Esent.StorageActions
 					IndexingErrors =
 						Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["errors"]).Value,
 					LastIndexedEtag = 
-						Api.RetrieveColumnAsGuid(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"]).Value,
+						Api.RetrieveColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"]).TransfromToGuidWithProperSorting(),
 					LastIndexedTimestamp= 
 						Api.RetrieveColumnAsDateTime(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"]).Value,
 				};
@@ -65,7 +66,7 @@ namespace Raven.Storage.Esent.StorageActions
 			using (var update = new Update(session, IndexesStats, JET_prep.Insert))
 			{
 				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["key"], name, Encoding.Unicode);
-				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"], Guid.Empty);
+				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"], Guid.Empty.TransformToValueForEsentSorting());
 				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"], DateTime.MinValue);
 				update.Save();
 			}
@@ -104,7 +105,7 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				Api.SetColumn(session, IndexesStats,
 				              tableColumnsCache.IndexesStatsColumns["last_indexed_etag"],
-				              etag);
+				              etag.TransformToValueForEsentSorting());
 				Api.SetColumn(session, IndexesStats,
 							  tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"],
 							  timestamp);

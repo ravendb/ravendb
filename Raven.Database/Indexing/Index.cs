@@ -16,7 +16,6 @@ using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
-using Raven.Database.Storage.StorageActions;
 using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Database.Indexing
@@ -27,7 +26,8 @@ namespace Raven.Database.Indexing
     public abstract class Index : IDisposable
     {
         private readonly Directory directory;
-        protected readonly ILog log = LogManager.GetLogger(typeof(Index));
+        protected readonly ILog logIndexing = LogManager.GetLogger(typeof(Index)+  ".Indexing");
+		protected readonly ILog logQuerying = LogManager.GetLogger(typeof(Index) + ".Querying");
         protected readonly string name;
         protected readonly IndexDefinition indexDefinition;
         private CurrentIndexSearcher searcher;
@@ -39,7 +39,7 @@ namespace Raven.Database.Indexing
         {
             this.name = name;
             this.indexDefinition = indexDefinition;
-            log.DebugFormat("Creating index for {0}", name);
+            logIndexing.DebugFormat("Creating index for {0}", name);
             this.directory = directory;
 
             // clear any locks that are currently held
@@ -89,7 +89,7 @@ namespace Raven.Database.Indexing
                         pageSize = skippedResultsInCurrentLoop * indexQuery.PageSize;
                         skippedResultsInCurrentLoop = 0;
 					}
-					var search = ExecuteQuery(indexSearcher, luceneQuery, start, pageSize, indexQuery.SortedFields);
+					var search = ExecuteQuery(indexSearcher, luceneQuery, start, pageSize, indexQuery);
 					indexQuery.TotalSize.Value = search.totalHits;
 					for (var i = start; i < search.totalHits && (i - start) < pageSize; i++)
 					{
@@ -110,22 +110,23 @@ namespace Raven.Database.Indexing
             }
         }
 
-    	private TopDocs ExecuteQuery(IndexSearcher searcher, Query luceneQuery, int start, int pageSize, SortedField[] sortedFields)
+    	private TopDocs ExecuteQuery(IndexSearcher indexSearcher, Query luceneQuery, int start, int pageSize, IndexQuery indexQuery)
         {
+			Filter filter = indexQuery.GetFilter();
+			Sort sort = indexQuery.GetSort(indexDefinition);
+
         	if(pageSize == int.MaxValue) // we want all docs
         	{
         		var gatherAllCollector = new GatherAllCollector();
-        		searcher.Search(luceneQuery, gatherAllCollector);
+        		indexSearcher.Search(luceneQuery, filter, gatherAllCollector);
         		return gatherAllCollector.ToTopDocs();
         	}
             // NOTE: We get Start + Pagesize results back so we have something to page on
-			if (sortedFields != null && sortedFields.Length > 0)
+			if (sort != null)
             {
-                var sort = new Sort(sortedFields.Select(x => x.ToLuceneSortField(indexDefinition)).ToArray());
-				
-                return searcher.Search(luceneQuery, null, pageSize + start, sort);
+                return indexSearcher.Search(luceneQuery, filter, pageSize + start, sort);
             }
-        	return searcher.Search(luceneQuery, null, pageSize + start);
+        	return indexSearcher.Search(luceneQuery, filter, pageSize + start);
         }
 
         private Query GetLuceneQuery(IndexQuery indexQuery)
@@ -134,12 +135,12 @@ namespace Raven.Database.Indexing
             Query luceneQuery;
             if (string.IsNullOrEmpty(query))
             {
-                log.DebugFormat("Issuing query on index {0} for all documents", name);
+                logQuerying.DebugFormat("Issuing query on index {0} for all documents", name);
                 luceneQuery = new MatchAllDocsQuery();
             }
             else
             {
-                log.DebugFormat("Issuing query on index {0} for: {1}", name, query);
+				logQuerying.DebugFormat("Issuing query on index {0} for: {1}", name, query);
             	var toDispose = new List<Action>();
             	PerFieldAnalyzerWrapper analyzer = null;
 				try
@@ -161,9 +162,10 @@ namespace Raven.Database.Indexing
             return luceneQuery;
         }
 
-        public abstract void IndexDocuments(AbstractViewGenerator viewGenerator, IEnumerable<object> documents,
-                                            WorkContext context,
-											IStorageActionsAccessor actions);
+    	public abstract void IndexDocuments(AbstractViewGenerator viewGenerator,
+    	                                    IEnumerable<object> documents,
+    	                                    WorkContext context,
+    	                                    IStorageActionsAccessor actions);
 
 		[CLSCompliant(false)]
 		protected virtual IndexQueryResult RetrieveDocument(Document document, string[] fieldsToFetch)
@@ -309,7 +311,7 @@ namespace Raven.Database.Indexing
                                  TryGetDocKey(innerEnumerator.Current),
                                  e.Message
                     );
-                log.WarnFormat(e, "Failed to execute indexing function on {0} on {1}", name,
+                logIndexing.WarnFormat(e, "Failed to execute indexing function on {0} on {1}", name,
                                GetDocId(innerEnumerator));
             }
             return null;

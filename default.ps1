@@ -34,8 +34,8 @@ task Init -depends Verify40, Clean {
 	}
 	
 	$asmInfos = ls -path $base_dir -include AssemblyInfo.cs -recurse | 
-					Where { $_ -notmatch "SharedLibs" } | 
-					Where { $_ -notmatch "Tools" }
+					Where { $_ -notmatch [regex]::Escape($lib_dir) } | 
+					Where { $_ -notmatch [regex]::Escape($tools_dir) }
 	
 	foreach($asmInfo in $asmInfos) {
 		
@@ -152,6 +152,7 @@ task CopyEmbeddedClient {
 	cp $build_dir\Esent.Interop.dll $build_dir\Output\EmbeddedClient
 	cp $build_dir\ICSharpCode.NRefactory.dll $build_dir\Output\EmbeddedClient
 	cp $build_dir\Lucene.Net.dll $build_dir\Output\EmbeddedClient
+	cp $build_dir\Spatial.Net.dll $build_dir\Output\EmbeddedClient
 	cp $build_dir\log4net.dll $build_dir\Output\EmbeddedClient
 	cp $build_dir\Newtonsoft.Json.dll $build_dir\Output\EmbeddedClient
 	cp $build_dir\Raven.Storage.Esent.dll $build_dir\Output\EmbeddedClient
@@ -177,6 +178,7 @@ task CopyWeb {
 	cp $build_dir\log4net.dll $build_dir\Output\Web\bin
 	cp $build_dir\Newtonsoft.Json.dll $build_dir\Output\Web\bin
 	cp $build_dir\Lucene.Net.dll $build_dir\Output\Web\bin
+	cp $build_dir\Spatial.Net.dll $build_dir\Output\Web\bin
 	cp $build_dir\ICSharpCode.NRefactory.dll $build_dir\Output\Web\bin
 	cp $build_dir\Rhino.Licensing.dll $build_dir\Output\Web\bin
 	cp $build_dir\Esent.Interop.dll $build_dir\Output\Web\bin
@@ -201,6 +203,7 @@ task CopyServer {
 	cp $build_dir\log4net.dll $build_dir\Output\Server
 	cp $build_dir\Newtonsoft.Json.dll $build_dir\Output\Server
 	cp $build_dir\Lucene.Net.dll $build_dir\Output\Server
+	cp $build_dir\Spatial.Net.dll $build_dir\Output\Server
 	cp $build_dir\ICSharpCode.NRefactory.dll $build_dir\Output\Server
 	cp $build_dir\Rhino.Licensing.dll $build_dir\Output\Server
 	cp $build_dir\Esent.Interop.dll $build_dir\Output\Server

@@ -30,13 +30,11 @@ namespace Raven.Database
 
 			Catalog.Changed += (sender, args) => ResetContainer();
 
+			HostName = ConfigurationManager.AppSettings["Raven/HostName"];
+
 			var portStr = ConfigurationManager.AppSettings["Raven/Port"];
 
 			Port = portStr != null ? int.Parse(portStr) : 8080;
-
-			var indexBatchSizeStr = ConfigurationManager.AppSettings["Raven/IndexingBatchSize"];
-
-			IndexingBatchSize = indexBatchSizeStr != null ? int.Parse(indexBatchSizeStr) : 1024;
 
             var maxPageSizeStr = ConfigurationManager.AppSettings["Raven/MaxPageSize"];
 
@@ -83,7 +81,7 @@ namespace Raven.Database
 	    {
 	        get
 	        {
-	            return "http://" + Environment.MachineName + ":" + Port + VirtualDirectory;
+	            return "http://" + (HostName ?? Environment.MachineName) + ":" + Port + VirtualDirectory;
 	        }
 	    }
 
@@ -143,16 +141,20 @@ namespace Raven.Database
             set { dataDirectory = value.ToFullPath(); }
         }
 
+        /// <summary>
+        /// null to accept any hostname or address
+        /// </summary>
+        public string HostName { get; set;  } 
 		public int Port { get; set; }
 		public string WebDir { get; set; }
-		public int IndexingBatchSize { get; set; }
 		public AnonymousUserAccessMode AnonymousUserAccessMode { get; set; }
 
 		public string VirtualDirectory { get; set; }
 
 		private bool containerExternallySet;
 		private CompositionContainer container;
-		public CompositionContainer Container
+
+	    public CompositionContainer Container
 		{
 			get { return container ?? (container = new CompositionContainer(Catalog)); }
 			set

@@ -1,3 +1,4 @@
+using Newtonsoft.Json.Linq;
 using Raven.Database.Server.Abstractions;
 
 namespace Raven.Database.Server.Responders
@@ -16,7 +17,14 @@ namespace Raven.Database.Server.Responders
 
 		public override void Respond(IHttpContext context)
 		{
-			context.WriteJson(Database.GetIndexes(context.GetStart(), context.GetPageSize(Database.Configuration.MaxPageSize)));
+			var namesOnlyString = context.Request.QueryString["namesOnly"];
+			bool namesOnly;
+			JArray indexes;
+			if(bool.TryParse(namesOnlyString, out namesOnly) && namesOnly)
+				indexes = Database.GetIndexNames(context.GetStart(), context.GetPageSize(Database.Configuration.MaxPageSize));
+			else
+				indexes = Database.GetIndexes(context.GetStart(), context.GetPageSize(Database.Configuration.MaxPageSize));
+			context.WriteJson(indexes);
 		}
 	}
 }

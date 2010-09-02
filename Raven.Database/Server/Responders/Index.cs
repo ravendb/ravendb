@@ -38,8 +38,6 @@ namespace Raven.Database.Server.Responders
 					Put(context, index);
 					break;
 				case "RESET":
-					if (BuiltinIndex(index, context))
-						return;
 					Database.ResetIndex(index);
 					context.WriteJson(new {Reset = index});
 					break;

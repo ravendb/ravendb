@@ -1,13 +1,14 @@
 using System;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
+using Microsoft.Isam.Esent.Interop.Vista;
 
 namespace Raven.Storage.Esent
 {
 	[CLSCompliant(false)]
 	public class SchemaCreator
 	{
-		public const string SchemaVersion = "2.6";
+		public const string SchemaVersion = "3.0";
 		private readonly Session session;
 
 		public SchemaCreator(Session session)
@@ -235,7 +236,7 @@ namespace Raven.Storage.Esent
             Api.JetAddColumn(session, tableid, "etag", new JET_COLUMNDEF
             {
                 cbMax = 16,
-                coltyp = JET_coltyp.Binary,
+				coltyp = JET_coltyp.Binary,
                 grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL,
             }, null, 0, out columnid);
 
@@ -481,6 +482,11 @@ namespace Raven.Storage.Esent
 
 			indexDef = "+id\0\0";
 			Api.JetCreateIndex(session, tableid, "by_id", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
+							   100);
+
+
+			indexDef = "+etag\0\0";
+			Api.JetCreateIndex(session, tableid, "by_etag", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
 							   100);
 		}
 

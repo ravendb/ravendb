@@ -96,6 +96,7 @@
     <Compile Include="Client\JsonLuceneDateTimeConverter.cs" />
     <Compile Include="Client\RavenQuery.cs" />
     <Compile Include="Client\RavenTransactionAccessor.cs" />
+    <Compile Include="Client\ReplicationInformer.cs" />
     <Compile Include="Client\SerializationHelper.cs" />
     <Compile Include="Client\WebRequestEventArgs.cs" />
     <Compile Include="Client\Async\WrapperAsyncData.cs" />
@@ -111,7 +112,9 @@
     <Compile Include="Client\HttpJsonRequest.cs" />
     <Compile Include="Client\IDatabaseCommands.cs" />
     <Compile Include="Document\HiLoKeyGenerator.cs" />
+    <Compile Include="Document\SpatialDocumentQuery.cs" />
     <Compile Include="Exceptions\ReadVetoException.cs" />
+    <Compile Include="Indexes\ExpressionStringBuilder.cs" />
     <Compile Include="Indexes\IndexDefinition.cs" />
     <Compile Include="Document\MultiTypeHiLoKeyGenerator.cs" />
     <Compile Include="Document\PromotableRavenClientEnlistment.cs" />
@@ -131,6 +134,7 @@
     <Compile Include="IInMemoryDocumentSessionOperations.cs" />
     <Compile Include="Indexes\AbstractIndexCreation.cs" />
     <Compile Include="Indexes\IndexCreation.cs" />
+    <Compile Include="Indexes\ExpressionOperatorPrecedence.cs" />
     <Compile Include="ITransactionalDocumentSession.cs" />
     <Compile Include="Linq\DateTools.cs" />
     <Compile Include="Linq\IRavenQueryable.cs" />

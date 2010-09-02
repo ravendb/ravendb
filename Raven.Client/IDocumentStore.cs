@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Specialized;
 using Raven.Client.Client;
 using Raven.Client.Document;
 
@@ -6,6 +7,8 @@ namespace Raven.Client
 {
     public interface IDocumentStore : IDisposable
     {
+		NameValueCollection SharedOperationsHeaders { get; }
+		
 		event EventHandler<StoredEntityEventArgs> Stored;
 		
 		string Identifier { get; set; }

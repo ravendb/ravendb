@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
@@ -79,7 +80,7 @@ namespace Raven.Client.Document
 	        return new RavenQueryable<T>(new RavenQueryProvider<T>(this, indexName));
 	    }
 
-		public IRavenQueryable<T> Query<T, TIndexCreator>(string indexName) where TIndexCreator : AbstractIndexCreationTask, new()
+		public IRavenQueryable<T> Query<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
 		{
 			var indexCreator = new TIndexCreator();
 			return Query<T>(indexCreator.IndexName);
@@ -108,6 +109,21 @@ namespace Raven.Client.Document
 		public ILoaderWithInclude Include(string path)
 		{
 			return new MultiLoaderWithInclude(this).Include(path);
+		}
+
+		public string GetDocumentUrl(object entity)
+		{
+			if (string.IsNullOrEmpty(documentStore.Url))
+				throw new InvalidOperationException("Could not provide document url for embedded instance");
+
+			DocumentMetadata value;
+			string baseUrl = documentStore.Url.EndsWith("/") ? documentStore.Url + "docs/" : documentStore.Url + "/docs/";
+			if(entitiesAndMetadata.TryGetValue(entity, out value) == false)
+			{
+				return baseUrl + TryGetIdentity(entity, null);
+			}
+
+			return baseUrl + value.Key;
 		}
 
 		public void SaveChanges()

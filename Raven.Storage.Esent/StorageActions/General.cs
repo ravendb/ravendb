@@ -10,6 +10,7 @@ using Raven.Database.Plugins;
 using Raven.Database.Json;
 using Raven.Database.Storage;
 using Raven.Database.Storage.StorageActions;
+using Raven.Database.Extensions;
 
 namespace Raven.Storage.Esent.StorageActions
 {
@@ -213,9 +214,8 @@ namespace Raven.Storage.Esent.StorageActions
 					Delete =
 						Api.RetrieveColumnAsBoolean(session, DocumentsModifiedByTransactions,
 						                            tableColumnsCache.DocumentsModifiedByTransactionsColumns["delete_document"]).Value,
-					Etag =
-						new Guid(Api.RetrieveColumn(session, DocumentsModifiedByTransactions,
-						                            tableColumnsCache.DocumentsModifiedByTransactionsColumns["etag"])),
+					Etag = Api.RetrieveColumn(session, DocumentsModifiedByTransactions,
+						                            tableColumnsCache.DocumentsModifiedByTransactionsColumns["etag"]).TransfromToGuidWithProperSorting(),
 					Key = key,
 					Metadata = metadata.ToJObject(),
 				});

@@ -33,8 +33,8 @@ namespace Raven.Client.Indexes
 		{
 			return new IndexDefinition
 			{
-				Map = PruneToFailureLinqQueryAsStringToWorkableCode(Map, "docs." + convention.GetTypeTagName(typeof(TDocument))),
-				Reduce = PruneToFailureLinqQueryAsStringToWorkableCode(Reduce, "results"),
+				Map = PruneToFailureLinqQueryAsStringToWorkableCode(Map, convention, "docs." + convention.GetTypeTagName(typeof(TDocument))),
+				Reduce = PruneToFailureLinqQueryAsStringToWorkableCode(Reduce, convention, "results"),
 				Indexes = ConvertToStringDictionary(Indexes),
 				Stores = ConvertToStringDictionary(Stores),
 				SortOptions = ConvertToStringDictionary(SortOptions)
@@ -59,21 +59,24 @@ namespace Raven.Client.Indexes
 		}
 
 
-		private static string PruneToFailureLinqQueryAsStringToWorkableCode<T>(Expression<Func<IEnumerable<T>, IEnumerable>> expr, string querySource)
+		private static string PruneToFailureLinqQueryAsStringToWorkableCode<T>(
+			Expression<Func<IEnumerable<T>, IEnumerable>> expr, 
+			DocumentConvention convention,
+			string querySource)
 		{
 			if (expr == null)
 				return null;
 
-
-			var linqQuery = expr.Body.ToString();
+#if !NET_3_5
+			var linqQuery = ExpressionStringBuilder.ExpressionToString(convention, expr.Body);
+#else
+            var linqQuery = expr.Body.ToString();
+#endif
 
 			linqQuery = querySource + linqQuery.Substring(expr.Parameters[0].Name.Length);
 
 			linqQuery = ReplaceAnonymousTypeBraces(linqQuery);
 			linqQuery = Regex.Replace(linqQuery, @"new <>[\w_]+`\d+", "new ");// remove anonymous types
-			linqQuery = Regex.Replace(linqQuery, " AndAlso ", " && "); // replace &&
-			linqQuery = Regex.Replace(linqQuery, " OrElse ", " || "); // replace ||
-			linqQuery = Regex.Replace(linqQuery, @" Not([ (])", " !$1"); // replace !
 			linqQuery = Regex.Replace(linqQuery, @"<>([a-z])_", "__$1_"); // replace <>h_ in transperant identifiers
 			const string pattern = @"(\.Where\(|\.Select\(|\.GroupBy\(|\.SelectMany)";
 			linqQuery = Regex.Replace(linqQuery, pattern, "\r\n\t$1"); // formatting

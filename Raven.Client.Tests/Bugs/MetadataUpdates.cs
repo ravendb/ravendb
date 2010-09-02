@@ -20,10 +20,7 @@ namespace Raven.Client.Tests.Bugs
 				using (var session = store.OpenSession())
 				{
 					session.Store(foo);
-					// Temporary hack for setting metadata on build 101.
-
-
-					session.OnEntityConverted += (entity, document, metadata) => metadata["bar"] = "baz";
+					session.GetMetadataFor(foo)["bar"] = "baz";
 					session.SaveChanges();
 				}
 

@@ -1,11 +1,13 @@
 using System;
-using System.Diagnostics;
+using System.Collections.Generic;
 using System.Linq;
 using log4net;
 using Raven.Database.Extensions;
 using Raven.Database.Json;
+using Raven.Database.Plugins;
 using Raven.Database.Storage;
-using Raven.Database.Tasks;
+using Task = Raven.Database.Tasks.Task;
+using ThreadingTask = System.Threading.Tasks.Task;
 
 namespace Raven.Database.Indexing
 {
@@ -26,62 +28,115 @@ namespace Raven.Database.Indexing
 			while (context.DoWork)
 			{
 				var foundWork = false;
-				Task task = null;
 				try
 				{
-					int tasks = 0;
-					transactionalStorage.Batch(actions =>
-					{
-						task = actions.Tasks.GetMergedTask(out tasks);
-						if (task == null)
-							return;
-
-						log.DebugFormat("Executing {0}", task);
-						foundWork = true;
-
-						try
-						{
-							task.Execute(context);
-						}
-						catch (Exception e)
-						{
-							log.WarnFormat(e, "Task {0} has failed and was deleted without completing any work", task);
-						}
-					});
-					context.PerformanceCounters.IncrementProcessedTask(tasks);
-					transactionalStorage.Batch(actions =>
-					{
-						foreach (var indexesStat in actions.Indexing.GetIndexesStats())
-						{
-							var failureRate = actions.Indexing.GetFailureRate(indexesStat.Name);
-							if (failureRate.IsInvalidIndex)
-							{
-								log.InfoFormat("Skipped indexing documents for index: {0} because failure rate is too high: {1}",
-												  indexesStat.Name,
-												  failureRate.FailureRate);
-								continue;
-							}
-							if (!actions.Tasks.IsIndexStale(indexesStat.Name, null, null)) 
-								continue;
-							// in order to ensure fairness, we only process one stale index 
-							// then move to process pending tasks, then process more staleness
-							if (IndexDocuments(actions, indexesStat.Name, indexesStat.LastIndexedEtag))
-								break;
-						}
-					});
+					foundWork |= ExecuteTasks();
+					foundWork |= ExecuteIndexing();
 				}
 				catch (Exception e)
 				{
-					log.Error("Failed to execute task: " + task, e);
+					log.Error("Failed to execute indexing", e);
 				}
 				if (foundWork == false)
 					context.WaitForWork(TimeSpan.FromSeconds(1));
 			}
 		}
 
+
+		private bool ExecuteIndexing()
+		{
+			var indexesToWorkOn = new List<IndexToWorkOn>();
+			transactionalStorage.Batch(actions =>
+			{
+				foreach (var indexesStat in actions.Indexing.GetIndexesStats())
+				{
+					var failureRate = actions.Indexing.GetFailureRate(indexesStat.Name);
+					if (failureRate.IsInvalidIndex)
+					{
+						log.InfoFormat("Skipped indexing documents for index: {0} because failure rate is too high: {1}",
+						               indexesStat.Name,
+						               failureRate.FailureRate);
+						continue;
+					}
+					if (!actions.Tasks.IsIndexStale(indexesStat.Name, null, null)) 
+						continue;
+					indexesToWorkOn.Add(new IndexToWorkOn
+					{
+						IndexName = indexesStat.Name,
+						LastIndexedEtag = indexesStat.LastIndexedEtag
+					});
+				}
+			});
+
+			if (indexesToWorkOn.Count == 0)
+				return false;
+			
+			ExecuteIndexingWorkOnMultipleThreads(indexesToWorkOn);
+
+			//ExecuteIndexingWorkOnSingleThread(indexesToWorkOn);
+
+			return true;
+		}
+
+		private void ExecuteIndexingWorkOnMultipleThreads(List<IndexToWorkOn> indexesToWorkOn)
+		{
+			var threadingTasks = new ThreadingTask[indexesToWorkOn.Count];
+			for (int i = 0; i < indexesToWorkOn.Count; i++)
+			{
+				var indexToWorkOn = indexesToWorkOn[i];
+				threadingTasks[i] = new ThreadingTask(() =>
+					transactionalStorage.Batch(actions =>
+						IndexDocuments(actions, indexToWorkOn.IndexName, indexToWorkOn.LastIndexedEtag)));
+
+				threadingTasks[i].Start();
+			}
+			ThreadingTask.WaitAll(threadingTasks);
+		}
+
+		private void ExecuteIndexingWorkOnSingleThread(List<IndexToWorkOn> indexesToWorkOn)
+		{
+			foreach (var indexToWorkOn in indexesToWorkOn)
+			{
+				transactionalStorage.Batch(actions => 
+					IndexDocuments(actions, indexToWorkOn.IndexName, indexToWorkOn.LastIndexedEtag));
+			}
+		}
+
+		private bool ExecuteTasks()
+		{
+			bool foundWork = false;
+			int tasks = 0;
+			transactionalStorage.Batch(actions =>
+			{
+				Task task = actions.Tasks.GetMergedTask(out tasks);
+				if (task == null)
+					return;
+
+				log.DebugFormat("Executing {0}", task);
+				foundWork = true;
+
+				try
+				{
+					task.Execute(context);
+				}
+				catch (Exception e)
+				{
+					log.WarnFormat(e, "Task {0} has failed and was deleted without completing any work", task);
+				}
+			});
+			context.PerformanceCounters.IncrementProcessedTask(tasks);
+			return foundWork;
+		}
+
+		public class IndexToWorkOn
+		{
+			public string IndexName { get; set; }
+			public Guid LastIndexedEtag { get; set; }
+		}
+
 		public bool IndexDocuments(IStorageActionsAccessor actions, string index, Guid etagToIndexFrom)
 		{
-
+			log.DebugFormat("Indexing documents for {0}, etag to index from: {1}", index, etagToIndexFrom);
 			var viewGenerator = context.IndexDefinitionStorage.GetViewGenerator(index);
 			if (viewGenerator == null)
 				return false; // index was deleted, probably
@@ -93,12 +148,16 @@ namespace Raven.Database.Indexing
 
 			if(jsonDocs.Length == 0)
 				return false;
-			
+
+			var documentRetriever = new DocumentRetriever(null, this.context.ReadTriggers);
 			try
 			{
 				log.DebugFormat("Indexing {0} documents for index: {1}", jsonDocs.Length, index);
-				context.IndexStorage.Index(index, viewGenerator, jsonDocs.Select(x => JsonToExpando.Convert(x.ToJson())),
-				                           context, actions);
+				context.IndexStorage.Index(index, viewGenerator, 
+					jsonDocs
+					.Select(doc => documentRetriever.ProcessReadVetoes(doc, null, ReadOperation.Index))
+					.Where(doc => doc != null)
+					.Select(x => JsonToExpando.Convert(x.ToJson())), context, actions);
 
 				return true;
 			}

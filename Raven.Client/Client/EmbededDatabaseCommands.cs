@@ -82,6 +82,17 @@ namespace Raven.Client.Client
 			database.DeleteStatic(key, etag);
 		}
 
+		public string[] GetIndexNames(int start, int pageSize)
+		{
+			return database.GetIndexNames(start, pageSize)
+				.Select(x => x.Value<string>()).ToArray();
+		}
+
+		public void ResetIndex(string name)
+		{
+			database.ResetIndex(name);
+		}
+
 		public IndexDefinition GetIndex(string name)
 		{
 			CurrentRavenOperation.Headers.Value = OperationsHeaders;
