@@ -414,13 +414,22 @@ namespace Raven.Client.Linq
 				case ExpressionType.MemberAccess:
 					FieldsToFetch.Add(((MemberExpression) body).Member.Name);
 					break;
-				case ExpressionType.New:
+                //Anonomyous types come through here .Select(x => new { x.Cost } ) doesn't use a member initializer, even though it looks like it does
+                //See http://blogs.msdn.com/b/sreekarc/archive/2007/04/03/immutable-the-new-anonymous-type.aspx
+				case ExpressionType.New:                
 					var newExpression = ((NewExpression) body);
 					newExpressionType = newExpression.Type;
 					FieldsToFetch.AddRange(newExpression.Arguments.Cast<MemberExpression>().Select(x => x.Member.Name));
 					break;
+                //for example .Select(x => new SomeType { x.Cost } ), it's member init because it's using the object initializer
+                case ExpressionType.MemberInit:
+                    var memberInitExpression = ((MemberInitExpression)body);
+                    newExpressionType = memberInitExpression.NewExpression.Type;
+                    FieldsToFetch.AddRange(memberInitExpression.Bindings.Cast<MemberAssignment>().Select(x => x.Member.Name));
+                    break;
 				case ExpressionType.Parameter: // want the full thing, so just pass it on.
 					break;
+                
 				default:
 					throw new NotSupportedException("Node not supported: " + body.NodeType);
 			}
