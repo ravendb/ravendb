@@ -31,7 +31,8 @@ namespace Raven.Database.Indexing
 				try
 				{
 					foundWork |= ExecuteTasks();
-					foundWork |= ExecuteIndexing();
+					if (foundWork == false)
+						foundWork |= ExecuteIndexing();
 				}
 				catch (Exception e)
 				{
@@ -71,9 +72,9 @@ namespace Raven.Database.Indexing
 			if (indexesToWorkOn.Count == 0)
 				return false;
 			
-			ExecuteIndexingWorkOnMultipleThreads(indexesToWorkOn);
+			//ExecuteIndexingWorkOnMultipleThreads(indexesToWorkOn);
 
-			//ExecuteIndexingWorkOnSingleThread(indexesToWorkOn);
+			ExecuteIndexingWorkOnSingleThread(indexesToWorkOn);
 
 			return true;
 		}
