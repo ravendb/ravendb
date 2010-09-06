@@ -99,7 +99,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Bugs\HierarchicalData.cs" />
     <Compile Include="Bugs\IndexingBehavior.cs" />
+    <Compile Include="Bugs\OverwriteDocuments.cs" />
     <Compile Include="Bugs\ReadDataFromServer.cs" />
     <Compile Include="Indexes\CompiledIndex.cs" />
     <Compile Include="Indexes\ComplexIndexOnNotAnalyzedField.cs" />
