@@ -258,7 +258,7 @@ more responsive application.
 				Key = id,
 				Metadata = new JObject(new JProperty(RavenEntityName, new JValue(tag))),
 				OriginalMetadata = new JObject(),
-				ETag = null,
+				ETag = UseOptimisticConcurrency ? (Guid?)Guid.Empty : null,
 				OriginalValue = new JObject()
 			});
 			if (id != null)
