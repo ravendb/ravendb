@@ -35,7 +35,7 @@ namespace Raven.Client.Tests.Bugs
 												new IndexDefinition
 												{
 													Map = "from doc in docs select new { doc.Value }",
-													SortOptions = { { "Value", SortOptions.Long } }
+													SortOptions = { { "Value", SortOptions.Long } },
 												});
 
 				using (var session = store.OpenSession())
@@ -53,6 +53,24 @@ namespace Raven.Client.Tests.Bugs
 				var foos1 = session.LuceneQuery<Foo>("long")
 					.WaitForNonStaleResults()
 					.OrderBy("Value_Range")
+					.ToList();
+
+				Assert.Equal(3, foos1.Count);
+
+				Assert.Equal(25, foos1[0].Value);
+				Assert.Equal(3147483647, foos1[1].Value);
+				Assert.Equal(30000000000, foos1[2].Value);
+			});
+		}
+
+		[Fact]
+		public void CanLinqSortOnLong()
+		{
+			UsingDatabaseOfFoos(delegate(IDocumentSession session)
+			{
+				var foos1 = session.Query<Foo>("long")
+					.Customize(q => q.WaitForNonStaleResults())
+					.OrderBy(f => f.Value)
 					.ToList();
 
 				Assert.Equal(3, foos1.Count);
