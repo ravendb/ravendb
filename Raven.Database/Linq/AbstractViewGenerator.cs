@@ -1,7 +1,9 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using Raven.Database.Indexing;
+using Raven.Database.Linq.PrivateExtensions;
 
 namespace Raven.Database.Linq
 {
@@ -27,5 +29,18 @@ namespace Raven.Database.Linq
             Stores = new Dictionary<string, FieldStorage>();
             Indexes = new Dictionary<string, FieldIndexing>();
         }
+
+		protected IEnumerable<dynamic> Hierarchy(object source, string name)
+		{
+			var djo = (DynamicJsonObject)source;
+			foreach (var item in ((IEnumerable)djo.GetValue(name)))
+			{
+				yield return item;
+				foreach (var subItem in Hierarchy(item, name))
+				{
+					yield return subItem;
+				}
+			}
+		}
 	}
 }
