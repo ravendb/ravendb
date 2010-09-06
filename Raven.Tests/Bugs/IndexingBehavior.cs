@@ -101,5 +101,37 @@ namespace Raven.Tests.Bugs
 
 			Assert.Throws<IndexDisabledException>(() => db.Query("test", new IndexQuery { Query = "Name:Ayende" }));
 		}
+
+		[Fact]
+		public void AfterDeletingAndStoringTheDocumentIsIndexed()
+		{
+			db.PutIndex(@"DocsByProject", new IndexDefinition
+			{
+				Map = @"from doc in docs select new{ doc.Something}"
+			});
+
+			db.Put("foos/1", null, JObject.Parse("{'Something':'something'"),
+			  JObject.Parse("{'Raven-Entity-Name': 'Foos'}"), null);
+
+			var document = db.Get("foos/1", null);
+			db.Delete("foos/1", document.Etag, null);
+
+			db.Put("foos/1", null, JObject.Parse("{'Something':'something'"),
+			JObject.Parse("{'Raven-Entity-Name': 'Foos'}"), null);
+
+			db.SpinBackgroundWorkers();
+
+			QueryResult queryResult;
+			do
+			{
+				queryResult = db.Query("Raven/DocumentsByEntityName", new IndexQuery
+				{
+					Query = "Tag:[[Foos]]",
+					PageSize = 10
+				});
+			} while (queryResult.IsStale);
+
+			Assert.Equal(1, queryResult.TotalResults);
+		}
 	}
 }
