@@ -557,7 +557,7 @@ namespace Raven.Performance
 					Name = name
 				});
 
-				if(batch == 128)
+				if(batch % 128 == 0)
 				{
 					session.SaveChanges();
 					session.Dispose();
