@@ -493,7 +493,7 @@ namespace Raven.Client.Document
 						                                         sp.ElapsedMilliseconds));
 					}
 					Trace.WriteLine(
-						string.Format("Stale query results on non stable query '{0}' on index '{1}' in '{2}', query will be retired",
+						string.Format("Stale query results on non stable query '{0}' on index '{1}' in '{2}', query will be retried",
 						              query, indexName, session.StoreIdentifier));
 					Thread.Sleep(100);
 					continue;
