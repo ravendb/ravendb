@@ -66,17 +66,26 @@ namespace Raven.Client.Indexes
 		{
 			if (expr == null)
 				return null;
+			var expression = expr.Body;
+
+			switch (expression.NodeType)
+			{
+				case ExpressionType.ConvertChecked:
+				case ExpressionType.Convert:
+					expression = ((UnaryExpression) expression).Operand;
+					break;
+			}
 
 #if !NET_3_5
-			var linqQuery = ExpressionStringBuilder.ExpressionToString(convention, expr.Body);
+			var linqQuery = ExpressionStringBuilder.ExpressionToString(convention, expression);
 #else
-            var linqQuery = expr.Body.ToString();
+            var linqQuery =expression.ToString();
 #endif
 
 			linqQuery = querySource + linqQuery.Substring(expr.Parameters[0].Name.Length);
 
 			linqQuery = ReplaceAnonymousTypeBraces(linqQuery);
-			linqQuery = Regex.Replace(linqQuery, @"new <>[\w_]+`\d+", "new ");// remove anonymous types
+			linqQuery = Regex.Replace(linqQuery, @"new ((VB\$)|(<>))[\w_]+`\d+", "new ");// remove anonymous types
 			linqQuery = Regex.Replace(linqQuery, @"<>([a-z])_", "__$1_"); // replace <>h_ in transperant identifiers
 			const string pattern = @"(\.Where\(|\.Select\(|\.GroupBy\(|\.SelectMany)";
 			linqQuery = Regex.Replace(linqQuery, pattern, "\r\n\t$1"); // formatting
@@ -85,7 +94,8 @@ namespace Raven.Client.Indexes
 
 		private static string ReplaceAnonymousTypeBraces(string linqQuery)
 		{
-			var matches = Regex.Matches(linqQuery, @"new <>[\w_]+`\d+");
+			const string pattern = @"new ((VB\$)|(<>))[\w_]+`\d+";
+			var matches = Regex.Matches(linqQuery, pattern);
 			for (int i = 0; i < matches.Count; i++ )
 			{
 				var match = matches[i];
@@ -118,7 +128,7 @@ namespace Raven.Client.Indexes
 					s += linqQuery.Substring(startIndex + 1, endBrace - startIndex - 1) + "}";
 					s += linqQuery.Substring(endBrace + 1);
 					linqQuery = s;
-					matches = Regex.Matches(linqQuery, @"new <>[\w_]+`\d+");
+					matches = Regex.Matches(linqQuery, pattern);
 					continue;
 				}
 				break;
