@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Raven.Client.Tests.Bugs
 {
-	public class Patching : BaseClientTest
+	public class Patching : LocalClientTest
 	{
 		public class Post
 		{

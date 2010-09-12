@@ -3,7 +3,7 @@ using Xunit;
 
 namespace Raven.Client.Tests.Bugs
 {
-	public class SerializingDates : BaseClientTest
+	public class SerializingDates : LocalClientTest
 	{
 		[Fact]
 		public void CanSaveAndReadDates()

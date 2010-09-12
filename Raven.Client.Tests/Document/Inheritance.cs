@@ -7,7 +7,7 @@ using System.Linq;
 
 namespace Raven.Client.Tests.Document
 {
-	public class Inheritance : BaseTest, IDisposable
+	public class Inheritance : RemoteClientTest, IDisposable
 	{
 		private string path;
 

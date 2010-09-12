@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Raven.Client.Tests.Bugs
 {
-	public class QueryingByNull : BaseClientTest
+	public class QueryingByNull : LocalClientTest
 	{
 		[Fact]
 		public void CanQueryByNullUsingLinq()

@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Raven.Client.Tests.Bugs
 {
-	public class CanDetectChanges : BaseClientTest
+	public class CanDetectChanges : LocalClientTest
 	{
 		[Fact]
 		public void CanDetectChangesOnNewItem()

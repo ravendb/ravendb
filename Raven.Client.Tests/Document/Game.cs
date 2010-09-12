@@ -12,7 +12,7 @@ using Xunit;
 
 namespace Raven.Client.Tests.Document
 {
-	public class Game : BaseTest, IDisposable
+	public class Game : RemoteClientTest, IDisposable
 	{
 		private string path;
 

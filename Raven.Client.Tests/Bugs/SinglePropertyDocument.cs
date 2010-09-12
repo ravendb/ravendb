@@ -3,7 +3,7 @@ using Xunit;
 
 namespace Raven.Client.Tests.Bugs
 {
-	public class SinglePropertyDocument : BaseClientTest
+	public class SinglePropertyDocument : LocalClientTest
 	{
 		[Fact]
 		public void CanSaveDocumentWithJustId()

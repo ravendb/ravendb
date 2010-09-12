@@ -3,7 +3,7 @@ using Xunit;
 
 namespace Raven.Client.Tests.Bugs
 {
-	public class KeyGeneration : BaseClientTest
+	public class KeyGeneration : LocalClientTest
 	{
 		[Fact]
 		public void KeysGeneratedFromDifferentSessionsAreConsecutive()

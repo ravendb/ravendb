@@ -1,32 +1,25 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Reflection;
 using Raven.Client.Document;
 using Raven.Client.Tests.Document;
 using Raven.Database;
 
-namespace Raven.Client.Tests.Bugs
+namespace Raven.Client.Tests
 {
-	public abstract class BaseClientTest : BaseTest, IDisposable
+	public abstract class LocalClientTest
 	{
 		private string path;
-
-		#region IDisposable Members
-
-		public virtual void Dispose()
-		{
-			if (path == null)
-				return;
-			Directory.Delete(path, true);
-		}
-
-		#endregion
 
 		protected DocumentStore NewDocumentStore()
 		{
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
 			path = Path.Combine(path, "TestDb").Substring(6);
-			var documentStore = new DocumentStore
+
+            if (Directory.Exists(path))
+                Directory.Delete(path, true);
+            
+            var documentStore = new DocumentStore
 			{
 				Configuration = new RavenConfiguration
 				{

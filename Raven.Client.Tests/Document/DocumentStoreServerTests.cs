@@ -21,7 +21,7 @@ using Raven.Tests.Spatial;
 
 namespace Raven.Client.Tests.Document
 {
-	public class DocumentStoreServerTests : BaseTest, IDisposable
+	public class DocumentStoreServerTests : RemoteClientTest, IDisposable
 	{
 		private readonly string path;
         private readonly int port;

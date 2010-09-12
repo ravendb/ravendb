@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Raven.Client.Tests.Bugs
 {
-    public class StalenessWontAffectUnrelatedIndexes : BaseClientTest
+    public class StalenessWontAffectUnrelatedIndexes : LocalClientTest
     {
         [Fact]
         public void AddingUnrealtedDocumentWontChagneIndexStaleness()

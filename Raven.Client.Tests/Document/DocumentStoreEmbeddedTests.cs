@@ -17,7 +17,7 @@ using System.Linq;
 
 namespace Raven.Client.Tests.Document
 {
-	public class DocumentStoreEmbeddedTests : BaseTest, IDisposable
+	public class DocumentStoreEmbeddedTests : RemoteClientTest, IDisposable
 	{
 		private string path;
 

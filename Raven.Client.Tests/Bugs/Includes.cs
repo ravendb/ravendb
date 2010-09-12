@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Raven.Client.Tests.Bugs
 {
-	public class Includes : BaseTest, IDisposable
+	public class Includes : RemoteClientTest, IDisposable
 	{
 		private readonly IDocumentStore store;
 		private readonly RavenDbServer server;

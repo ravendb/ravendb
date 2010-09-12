@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Raven.Client.Tests.Bugs
 {
-	public class ExplicitTransaction : BaseClientTest
+	public class ExplicitTransaction : LocalClientTest
 	{
 		[Fact]
 		public void Can_use_transactions_to_isolate_saves()

@@ -13,7 +13,7 @@ using System.Threading;
 
 namespace Raven.Client.Tests.Document
 {
-    public class TotalCountServerTest : BaseTest, IDisposable
+    public class TotalCountServerTest : RemoteClientTest, IDisposable
     {
 		private readonly string path;
         private readonly int port;

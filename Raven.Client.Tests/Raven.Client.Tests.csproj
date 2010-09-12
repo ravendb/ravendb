@@ -98,12 +98,14 @@
     <Compile Include="..\Raven.Tests\Spatial\SpatialIndexTestHelper.cs">
       <Link>Spatial\SpatialIndexTestHelper.cs</Link>
     </Compile>
-    <Compile Include="BaseTest.cs" />
+    <Compile Include="Indexes\AnalyzerUtil.cs" />
+    <Compile Include="Indexes\UsingCustomLuceneAnalyzer.cs" />
+    <Compile Include="LocalClientTest.cs" />
+    <Compile Include="RemoteClientTest.cs" />
     <Compile Include="Bugs\AccurateCount.cs" />
     <Compile Include="Bugs\AnalyzerPerField.cs" />
     <Compile Include="Bugs\AutoCreateIndexes.cs" />
     <Compile Include="Bugs\AutoDetectAnaylzersForQuery.cs" />
-    <Compile Include="Bugs\BaseClientTest.cs" />
     <Compile Include="Bugs\CanDetectChanges.cs" />
     <Compile Include="Bugs\DocumentUrl.cs" />
     <Compile Include="Bugs\CanSelectFieldsFromIndex.cs" />

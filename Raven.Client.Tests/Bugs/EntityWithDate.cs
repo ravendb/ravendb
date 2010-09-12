@@ -3,7 +3,7 @@ using Xunit;
 
 namespace Raven.Client.Tests.Bugs
 {
-	public class EntityWithDate : BaseClientTest
+	public class EntityWithDate : LocalClientTest
 	{
 		[Fact]
 		public void CanSerializeAndDeserializeEntityWithDates()

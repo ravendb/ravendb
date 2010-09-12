@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Raven.Client.Tests.Document
 {
-    public class ClientKeyGeneratorTests : BaseTest, IDisposable
+    public class ClientKeyGeneratorTests : RemoteClientTest, IDisposable
     {
         private string path;
 

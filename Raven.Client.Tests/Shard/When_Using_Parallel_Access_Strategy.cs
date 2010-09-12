@@ -12,7 +12,7 @@ using System.Linq;
 
 namespace Raven.Client.Tests.Shard
 {
-    public class When_Using_Parallel_Access_Strategy  : BaseTest, IDisposable
+    public class When_Using_Parallel_Access_Strategy  : RemoteClientTest, IDisposable
 	{
 		private readonly string path;
         private readonly int port;

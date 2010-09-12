@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Raven.Client.Tests.Bugs
 {
-	public class SortingWithWildcardQuery : BaseTest
+	public class SortingWithWildcardQuery : RemoteClientTest
 	{
 		private readonly string path;
 		private readonly int port;

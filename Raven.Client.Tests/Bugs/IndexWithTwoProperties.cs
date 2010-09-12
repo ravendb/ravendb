@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Raven.Client.Tests.Bugs
 {
-	public class IndexWithTwoProperties : BaseClientTest
+	public class IndexWithTwoProperties : LocalClientTest
 	{
 		[Fact]
 		public void CanCreateIndexByTwoProperties()
