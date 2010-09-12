@@ -315,6 +315,6 @@ task UploadOpenSource -depends OpenSource, DoRelease, Upload {
 		
 }	
 
-task UploadUnstable -depends OpenSource, DoRelease, Upload {
+task UploadUnstable -depends Unstable, DoRelease, Upload {
 		
 }	
