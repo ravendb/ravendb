@@ -302,7 +302,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
                     continue;
                 var task = taskGenerator();
                 task.Index = indexName;
-                actions.Tasks.AddTask(task);
+                actions.Tasks.AddTask(task, DateTime.UtcNow);
             }
         }
 

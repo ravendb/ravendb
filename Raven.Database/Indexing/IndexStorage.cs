@@ -160,8 +160,12 @@ namespace Raven.Database.Indexing
 			value.Remove(keys, context);
 		}
 
-		public void Index(string index, AbstractViewGenerator viewGenerator, IEnumerable<dynamic> docs, WorkContext context,
-						  IStorageActionsAccessor actions)
+		public void Index(string index, 
+			AbstractViewGenerator viewGenerator, 
+			IEnumerable<dynamic> docs, 
+			WorkContext context,
+			IStorageActionsAccessor actions,
+			DateTime minimumTimestamp)
 		{
 			Index value;
 			if (indexes.TryGetValue(index, out value) == false)
@@ -169,7 +173,7 @@ namespace Raven.Database.Indexing
 				log.DebugFormat("Tried to index on a non existant index {0}, ignoring", index);
 				return;
 			}
-			value.IndexDocuments(viewGenerator, docs, context, actions);
+			value.IndexDocuments(viewGenerator, docs, context, actions, minimumTimestamp);
 		}
 
 		public void Reduce(string index, AbstractViewGenerator viewGenerator, IEnumerable<object> mappedResults,

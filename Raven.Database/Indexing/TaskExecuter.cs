@@ -150,6 +150,8 @@ namespace Raven.Database.Indexing
 			if(jsonDocs.Length == 0)
 				return false;
 
+			var dateTime = jsonDocs.Select(x=>x.LastModified).Min();
+
 			var documentRetriever = new DocumentRetriever(null, this.context.ReadTriggers);
 			try
 			{
@@ -158,7 +160,7 @@ namespace Raven.Database.Indexing
 					jsonDocs
 					.Select(doc => documentRetriever.ProcessReadVetoes(doc, null, ReadOperation.Index))
 					.Where(doc => doc != null)
-					.Select(x => JsonToExpando.Convert(x.ToJson())), context, actions);
+					.Select(x => JsonToExpando.Convert(x.ToJson())), context, actions, dateTime);
 
 				return true;
 			}
