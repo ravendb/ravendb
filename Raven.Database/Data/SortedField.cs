@@ -32,7 +32,7 @@ namespace Raven.Database.Data
 			var sortOptions = definition.GetSortOption(Field);
 			if(sortOptions == null)
 				return new  Lucene.Net.Search.SortField(Field, CultureInfo.InvariantCulture, Descending);
-			return new Lucene.Net.Search.SortField(Field, (int)sortOptions.Value);
+			return new Lucene.Net.Search.SortField(Field, (int)sortOptions.Value, Descending);
 		}
 #endif
 	}
