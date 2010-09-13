@@ -256,7 +256,12 @@ namespace Raven.Client.Indexes
             ExpressionOperatorPrecedence innerPrecedence;
             
             string str;
-            switch (node.NodeType)
+        	var leftOp = node.Left;
+        	var rightOp = node.Right;
+
+			FixupEnumBinaryExpression(ref leftOp, ref rightOp);
+
+        	switch (node.NodeType)
             {
             case ExpressionType.Add:
                 str = "+";
@@ -484,9 +489,9 @@ namespace Raven.Client.Indexes
 
                 SometimesParenthesis(outerPrecedence, innerPrecedence, delegate()
                     {
-                        this.Visit(node.Left, innerPrecedence);
+                        this.Visit(leftOp, innerPrecedence);
                         this.Out("[");
-                        this.Visit(node.Right, innerPrecedence);
+                        this.Visit(rightOp, innerPrecedence);
                         this.Out("]");
                     });
                 return node;
@@ -495,19 +500,38 @@ namespace Raven.Client.Indexes
                 throw new InvalidOperationException();
             }
 
+
             SometimesParenthesis(outerPrecedence, innerPrecedence, delegate()
                 {
-                    this.Visit(node.Left, innerPrecedence);
+                    this.Visit(leftOp, innerPrecedence);
                     this.Out(' ');
                     this.Out(str);
                     this.Out(' ');
-                    this.Visit(node.Right, innerPrecedence);
+                    this.Visit(rightOp, innerPrecedence);
                 });
 
             return node;
         }
 
-        protected override Expression VisitBlock(BlockExpression node)
+    	private static void FixupEnumBinaryExpression(ref Expression left, ref Expression right)
+    	{
+    		switch (left.NodeType)
+    		{
+    			case ExpressionType.ConvertChecked:
+    			case ExpressionType.Convert:
+    				var expression = ((UnaryExpression)left).Operand;
+					if (expression.Type.IsEnum == false)
+						return;
+    				var constantExpression = right as ConstantExpression;
+					if (constantExpression == null)
+						return;
+    				left = expression;
+					right = Expression.Constant(Enum.ToObject(expression.Type, constantExpression.Value).ToString());
+    				break;
+    		}
+    	}
+
+    	protected override Expression VisitBlock(BlockExpression node)
         {
             this.Out("{");
             foreach (ParameterExpression expression in node.Variables)
