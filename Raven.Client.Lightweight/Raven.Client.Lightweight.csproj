@@ -341,6 +341,12 @@
     <Compile Include="..\Raven.Database\JsonDocument.cs">
       <Link>Data\JsonDocument.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Database\Json\DynamicUtil.cs">
+      <Link>Util\DynamicUtil.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Database\Json\JsonDynamicConverter.cs">
+      <Link>Json\JsonDynamicConverter.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Database\Json\JsonEnumConverter.cs">
       <Link>Json\JsonEnumConverter.cs</Link>
     </Compile>
@@ -351,7 +357,7 @@
       <Link>Data\PatchRequest.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Database\Linq\DynamicJsonObject.cs">
-      <Link>Json\DynamicJsonObject.cs</Link>
+      <Link>Linq\DynamicJsonObject.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Database\PatchResult.cs">
       <Link>Data\PatchResult.cs</Link>
