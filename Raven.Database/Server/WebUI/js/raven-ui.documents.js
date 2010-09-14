@@ -264,17 +264,17 @@ function GetHTMLForDefaultView(jsonObj) {
                 var children = GetHTMLForDefaultView(value);
 
                 if (typeof children == "object") {
-                    $(jsonDiv).append('<span class="arrayNameView">' + key + '</span>');
+                    $(jsonDiv).append('<span class="arrayNameView">' +escape(key) + '</span>');
                     $(jsonDiv).append(children);
                 } else {
                     var childDiv = $('<div class="jsonObjectMemberView"></div>');
-                    $(childDiv).append('<span class="memberNameView">' + key + '</span>');
-                    $(childDiv).append('<span class="memberValueView">' + children + '</span>');
+                    $(childDiv).append('<span class="memberNameView">' + escape(key) + '</span>');
+                    $(childDiv).append('<span class="memberValueView">' + escape(children) + '</span>');
                     $(jsonDiv).append(childDiv);
                 }
             } else {
                 var childDiv = $('<div class="jsonObjectMemberView"></div>');
-                $(childDiv).append('<span class="memberNameView">' + key + '</span>');
+                $(childDiv).append('<span class="memberNameView">' + escape(key) + '</span>');
                 $(childDiv).append('<span class="memberValueView"></span>');
                 $(jsonDiv).append(childDiv);
             }

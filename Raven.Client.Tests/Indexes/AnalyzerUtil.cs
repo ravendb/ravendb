@@ -11,6 +11,7 @@ namespace Raven.Client.Tests.Indexes
 {
     public class LuceneAnalyzerUtils
     {
+		[CLSCompliant(false)]
         public static IEnumerable<string> TokensFromAnalysis(Analyzer analyzer, String text)
         {
             TokenStream stream = analyzer.TokenStream("contents", new StringReader(text));

@@ -31,7 +31,7 @@ namespace Raven.Storage.Esent.StorageActions
                 return true;
             // we are at the first row for this index
 		    var addedAt = Api.RetrieveColumnAsDateTime(session, Tasks, tableColumnsCache.TasksColumns["added_at"]).Value;
-			return cutOff.Value > addedAt;
+			return cutOff.Value >= addedAt;
 		}
 
 	    private bool IsStaleByEtag(string entityName, DateTime? cutOff)
@@ -63,7 +63,7 @@ namespace Raven.Storage.Esent.StorageActions
 	                    Api.RetrieveColumnAsDateTime(session, IndexesStats,
 	                                                 tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"])
 	                        .Value;
-	                if (cutOff.Value > lastIndexedTimestamp)
+	                if (cutOff.Value >= lastIndexedTimestamp)
 	                    return true;
 	            }
 	            else
@@ -86,7 +86,7 @@ namespace Raven.Storage.Esent.StorageActions
 			return 0;
 		}
 
-	    public void AddTask(Task task)
+	    public void AddTask(Task task, DateTime addedAt)
 		{
 			int actualBookmarkSize;
 			var bookmark = new byte[SystemParameters.BookmarkMost];
@@ -96,7 +96,7 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["for_index"], task.Index, Encoding.Unicode);
 				Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["task_type"], task.Type, Encoding.Unicode);
 				Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["supports_merging"], task.SupportsMerging);
-                Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["added_at"], DateTime.UtcNow);
+                Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["added_at"], addedAt);
 
 				update.Save(bookmark, bookmark.Length, out actualBookmarkSize);
 			}

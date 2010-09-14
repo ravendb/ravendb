@@ -14,7 +14,7 @@ namespace Raven.Client.Tests.Document
 {        
     public class DynamicDocuments
     {
-        [Fact(Skip = "Cannot convert dynamic documents to json currently")]
+        [Fact]
         public void Can_Store_and_Load_Dynamic_Documents()
         {                                          
             //When running in the XUnit GUI strange things happen is we just create a path relative to 
@@ -65,10 +65,10 @@ namespace Raven.Client.Tests.Document
 					Assert.Contains(123432.54D, employeeLoad.Prices);
 					Assert.Null(employeeLoad.Address);
 
-                    dynamic personLoad = session.Load<CustomDynamicClass>(idPerson);
+                    dynamic personLoad = session.Load<dynamic>(idPerson);
 					Assert.Equal("Ellen", personLoad.FirstName);
 					Assert.Equal("Adams", personLoad.LastName);
-					Assert.Throws<RuntimeBinderException>(()=>personLoad.Age);
+					Assert.Null(personLoad.Age);
 
                 }
             }

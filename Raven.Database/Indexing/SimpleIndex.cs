@@ -20,11 +20,7 @@ namespace Raven.Database.Indexing
 		{
 		}
 
-		public override void IndexDocuments(
-			AbstractViewGenerator viewGenerator, 
-			IEnumerable<object> documents,
-			WorkContext context,
-			IStorageActionsAccessor actions)
+		public override void IndexDocuments(AbstractViewGenerator viewGenerator, IEnumerable<object> documents, WorkContext context, IStorageActionsAccessor actions, DateTime minimumTimestamp)
 		{
 			actions.Indexing.SetCurrentIndexStatsTo(name);
 			var count = 0;

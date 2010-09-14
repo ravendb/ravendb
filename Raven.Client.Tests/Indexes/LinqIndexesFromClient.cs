@@ -212,14 +212,14 @@ users => from user in users
 	.Select(user => new {Location = user.Location, Count = user.Age >= 1 ? 1 : 0})");
         }
 
-        [Fact(Skip = "Enum comparisons in map reduce query end up as failed int comparisons")]
+        [Fact]
         public void Convert_map_reduce_query_with_enum_comparison()
         {
             Convert_map_reduce_query_with_map_(
 users => from user in users
         select new { Location = user.Location, Count = user.Gender == Gender.Female ? 1 : 0},
 @"docs.Users
-	.Select(user => new {Location = user.Location, Count = user.Age == ""Female"" ? 1 : 0})");
+	.Select(user => new {Location = user.Location, Count = user.Gender == ""Female"" ? 1 : 0})");
         }
 
         [Fact]

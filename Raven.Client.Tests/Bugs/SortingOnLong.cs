@@ -81,7 +81,7 @@ namespace Raven.Client.Tests.Bugs
 			});
 		}
 
-		[Fact(Skip = "Fails with foos1[0]==25, not 30000000000")]
+		[Fact]
 		public void CanSortOnLongDescending()
 		{
 			UsingDatabaseOfFoos(delegate(IDocumentSession session)
@@ -99,7 +99,7 @@ namespace Raven.Client.Tests.Bugs
 			});
 		}
 
-		[Fact(Skip = "Fails with foos1[0]==25, not 30000000000")]
+		[Fact]
 		public void CanLinqSortOnLongDescending()
 		{
 			UsingDatabaseOfFoos(delegate(IDocumentSession session)

@@ -4,6 +4,7 @@ using log4net;
 using log4net.Appender;
 using log4net.Config;
 using log4net.Layout;
+using Raven.Client.Tests.Indexes;
 using Raven.Tests.Indexes;
 using Raven.Tests.Triggers;
 
@@ -31,13 +32,9 @@ namespace Raven.Tryouts
 				BasicConfigurator.Configure(fileAppender);
 				try
 				{
-					using (var x = new ReadTriggers())
+					var x = new UsingCustomLuceneAnalyzer();
 					{
-						x.CanPageThroughFilteredQuery();
-					}
-					using (var x = new QueryingOnDefaultIndex())
-					{
-						x.CanPageOverDefaultIndex();
+						x.find_matching_document_with_lucene_query_and_without_redundant_wait();
 					}
 				}
 				finally

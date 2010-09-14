@@ -1,21 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Linq;
 using System.Reflection;
 using System.Transactions;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Client;
 using Raven.Client.Exceptions;
 using Raven.Database;
 using Raven.Database.Data;
-using Raven.Database.Json;
 
 #if !NET_3_5
 using System.Dynamic;
 using Microsoft.CSharp.RuntimeBinder;
 using Raven.Database.Linq;
+
 #endif
 
 namespace Raven.Client.Document
@@ -477,6 +475,8 @@ more responsive application.
 		{
 			return JObject.FromObject(entity, Conventions.CreateSerializer());
 		}
+
+
 
 		public void Evict<T>(T entity)
 		{

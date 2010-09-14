@@ -12,7 +12,8 @@ using Xunit;
 
 namespace Raven.Client.Tests.Indexes
 {
-    public class CustomAnalyzer : KeywordAnalyzer
+	[CLSCompliant(false)]
+	public class CustomAnalyzer : KeywordAnalyzer
     {
         public override TokenStream TokenStream(string fieldName, TextReader reader)
         {
@@ -123,16 +124,11 @@ namespace Raven.Client.Tests.Indexes
             using (var session = store.OpenSession())
             {
                 //doesn't matter what the query is here, just want to see if it's stale or not
-                var results = session.LuceneQuery<string>(indexName)
-                                                .Where("")
-                                                .WaitForNonStaleResultsAsOfNow(TimeSpan.FromSeconds(5))
-                                                .QueryResult;
+				session.LuceneQuery<object>(indexName)
+            		.Where("")
+            		.WaitForNonStaleResultsAsOfNow(TimeSpan.FromSeconds(5))
+            		.ToArray();
 
-                //if (results.TotalResults > 0)
-                //    throw new Exception("no-op query was't really a no-op");
-
-                if (results.IsStale)
-                    throw new Exception("result still stale");
             }
         }
     }

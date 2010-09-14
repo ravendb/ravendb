@@ -90,7 +90,10 @@ namespace Raven.Client.Document
 				Converters =
 					{
 						new JsonEnumConverter(),
-						new JsonLuceneDateTimeConverter()
+						new JsonLuceneDateTimeConverter(),
+#if !NET_3_5
+						new JsonDynamicConverter()
+#endif
 					}
 			};
 			CustomizeJsonSerializer(jsonSerializer);

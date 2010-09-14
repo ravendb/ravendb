@@ -11,10 +11,8 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
-using Raven.Database.Json;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
-using Raven.Database.Storage.StorageActions;
 using Raven.Database.Tasks;
 
 namespace Raven.Database.Indexing
@@ -28,10 +26,11 @@ namespace Raven.Database.Indexing
         }
 
         public override void IndexDocuments(
-            AbstractViewGenerator viewGenerator,
-            IEnumerable<dynamic> documents,
-            WorkContext context,
-			IStorageActionsAccessor actions)
+			AbstractViewGenerator viewGenerator, 
+			IEnumerable<dynamic> documents, 
+			WorkContext context, 
+			IStorageActionsAccessor actions, 
+			DateTime minimumTimestamp)
         {
             actions.Indexing.SetCurrentIndexStatsTo(name);
         	try
@@ -84,7 +83,7 @@ namespace Raven.Database.Indexing
 				{
 					Index = name,
 					ReduceKeys = reduceKeys.ToArray()
-				});
+				}, minimumTimestamp);
 
 				logIndexing.DebugFormat("Mapped {0} documents for {1}", count, name);
         	}
@@ -159,7 +158,7 @@ namespace Raven.Database.Indexing
             	{
             		Index = name,
             		ReduceKeys = reduceKeys.ToArray()
-            	});
+            	}, DateTime.UtcNow);
 
             });
             Write(writer =>

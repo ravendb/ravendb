@@ -59,7 +59,6 @@ task Init -depends Verify40, Clean {
 	
 	copy $tools_dir\xUnit\*.* $build_dir
 	 
-	write-host "Commercial: ", $global:commercial
 	if($global:commercial) {
 		exec { .\Utilities\Binaries\Raven.ProjectRewriter.exe }
 		cp "..\RavenDB_Commercial.snk" "Raven.Database\RavenDB.snk"
@@ -104,6 +103,11 @@ task ReleaseNoTests -depends OpenSource,DoRelease {
 task Commercial {
 	$global:commercial = $true
 	$global:uploadCategory = "RavenDB-Commercial"
+}
+
+task Unstable {
+	$global:commercial = $false
+	$global:uploadCategory = "RavenDB-Unstable"
 }
 
 task OpenSource {
@@ -308,5 +312,9 @@ task UploadCommercial -depends Commercial, DoRelease, Upload {
 }	
 
 task UploadOpenSource -depends OpenSource, DoRelease, Upload {
+		
+}	
+
+task UploadUnstable -depends Unstable, DoRelease, Upload {
 		
 }	
