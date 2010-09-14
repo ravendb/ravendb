@@ -558,7 +558,10 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
                 var documentRetriever = new DocumentRetriever(actions, ReadTriggers);
                 foreach (var doc in documents.Take(pageSize))
                 {
-                    var document = documentRetriever.ExecuteReadTriggers(doc, null, ReadOperation.Query);
+                    var document = documentRetriever.ExecuteReadTriggers(doc, null,
+						// here we want to have the Load semantic, not Query, because we need this to be
+						// as close as possible to the full database contents
+						ReadOperation.Load); 
                     if (document == null)
                         continue;
                     if (document.Metadata.Property("@id") == null)

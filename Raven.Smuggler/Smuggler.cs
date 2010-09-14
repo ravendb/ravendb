@@ -56,7 +56,7 @@ Usage:
             }
         }
 
-        private static void ExportData(string instanceUrl, string file, bool exportIndexesOnly)
+    	public static void ExportData(string instanceUrl, string file, bool exportIndexesOnly)
         {
             using (var streamWriter = new StreamWriter(new GZipStream(File.Create(file), CompressionMode.Compress)))
             {
