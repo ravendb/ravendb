@@ -38,5 +38,5 @@ namespace Raven.Client
 #if !NET_3_5        
         new void Store(dynamic entity);
 #endif
-    }
+	}
 }

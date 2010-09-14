@@ -63,6 +63,12 @@ namespace Raven.Client.Shard
 	        return GetSingleShardSession(shardIds).GetMetadataFor(instance);
 	    }
 
+		public string GetDocumentId(object instance)
+		{
+			var shardIds = shardStrategy.ShardSelectionStrategy.ShardIdForExistingObject(instance);
+			return GetSingleShardSession(shardIds).GetDocumentId(instance);
+		}
+
 		public bool HasChanges
 		{
 			get

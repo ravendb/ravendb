@@ -72,6 +72,13 @@ namespace Raven.Client.Document
 			return value.Metadata;
 		}
 
+		public string GetDocumentId(object instance)
+		{
+			DocumentSession.DocumentMetadata value;
+			if (entitiesAndMetadata.TryGetValue(instance, out value) == false)
+				return null;
+			return value.Key;
+		}
 		public bool HasChanges
 		{
 			get 
@@ -297,31 +304,14 @@ more responsive application.
 		protected ICommandData CreatePutEntityCommand(object entity, DocumentSession.DocumentMetadata documentMetadata)
 		{
 			var json = ConvertEntityToJson(entity, documentMetadata.Metadata);
-			var entityType = entity.GetType();
-			
 
-            //This fails to find the key if it's a dynamic object
-
-            string key = null;
-#if !NET_3_5			
-            if (entity is IDynamicMetaObjectProvider)
-            {
-            	TryGetId(entity,out key);
-            }
-            else
-#endif
-            {
-                var identityProperty = GetIdentityProperty(entityType);
-                if (identityProperty != null)
-                    key = (string)identityProperty.GetValue(entity, null);
-            }
 			var etag = UseOptimisticConcurrency ? documentMetadata.ETag : null;
 
 			return new PutCommandData
 			{
 				Document = json,
 				Etag = etag,
-				Key = key,
+				Key = documentMetadata.Key,
 				Metadata = documentMetadata.Metadata,
 			};
 		}

@@ -31,6 +31,9 @@ namespace Raven.Client
 
 		JObject GetMetadataFor<T>(T instance);
 
+		string GetDocumentId(object entity);
+
+
 		bool HasChanges { get; }
 
 		bool HasChanged(object entity);
