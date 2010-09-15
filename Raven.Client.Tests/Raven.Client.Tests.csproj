@@ -98,6 +98,7 @@
     <Compile Include="..\Raven.Tests\Spatial\SpatialIndexTestHelper.cs">
       <Link>Spatial\SpatialIndexTestHelper.cs</Link>
     </Compile>
+    <Compile Include="Bugs\AsyncCommit.cs" />
     <Compile Include="Bugs\EntityWithoutId.cs" />
     <Compile Include="Indexes\AnalyzerUtil.cs" />
     <Compile Include="Indexes\UsingCustomLuceneAnalyzer.cs" />

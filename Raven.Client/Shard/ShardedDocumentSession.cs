@@ -49,6 +49,18 @@ namespace Raven.Client.Shard
 			}
 		}
 
+		public TimeSpan NonAuthoritiveInformationTimeout
+		{
+			get { return shardSessions.First().NonAuthoritiveInformationTimeout; }
+			set
+			{
+				foreach (var documentSession in shardSessions)
+				{
+					documentSession.NonAuthoritiveInformationTimeout = value;
+				}
+			}
+		}
+
 		public int NumberOfRequests
 		{
 			get { return shardSessions.Sum(x => x.NumberOfRequests); }

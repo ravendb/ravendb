@@ -45,8 +45,11 @@ namespace Raven.Client.Document
 			this.storeListeners = storeListeners;
 			UseOptimisticConcurrency = false;
 			AllowNonAuthoritiveInformation = true;
+			NonAuthoritiveInformationTimeout = TimeSpan.FromSeconds(15);
 		    MaxNumberOfRequestsPerSession = documentStore.Conventions.MaxNumberOfRequestsPerSession;
 		}
+
+		public TimeSpan NonAuthoritiveInformationTimeout { get; set; }
 
 		public string StoreIdentifier
 		{

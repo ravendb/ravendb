@@ -26,29 +26,38 @@ namespace Raven.Client.Document
 
 		public T Load<T>(string id)
 		{
-		    object existingEntity;
-		    if(entitiesByKey.TryGetValue(id, out existingEntity))
-		    {
-		        return (T)existingEntity;
-		    }
+			object existingEntity;
+			if (entitiesByKey.TryGetValue(id, out existingEntity))
+			{
+				return (T) existingEntity;
+			}
 
-	        IncrementRequestCount();
-
+			IncrementRequestCount();
+			var sp = Stopwatch.StartNew();
 			JsonDocument documentFound;
-            try
-            {
-				Trace.WriteLine(string.Format("Loading document [{0}] from {1}", id, StoreIdentifier));
-				documentFound = DatabaseCommands.Get(id);
-            }
-            catch (WebException ex)
-            {
-            	var httpWebResponse = ex.Response as HttpWebResponse;
-            	if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.NotFound)
-                    return default(T);
-            	throw;
-            }
-			if (documentFound == null)
-				return default(T);
+			do
+			{
+				try
+				{
+					Trace.WriteLine(string.Format("Loading document [{0}] from {1}", id, StoreIdentifier));
+					documentFound = DatabaseCommands.Get(id);
+				}
+				catch (WebException ex)
+				{
+					var httpWebResponse = ex.Response as HttpWebResponse;
+					if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.NotFound)
+						return default(T);
+					throw;
+				}
+				if (documentFound == null)
+					return default(T);
+
+			} while (
+				documentFound.NonAuthoritiveInformation &&
+				AllowNonAuthoritiveInformation == false &&
+				sp.Elapsed < NonAuthoritiveInformationTimeout
+				);
+			
 
 			return TrackEntity<T>(documentFound);
 		}
@@ -63,14 +72,27 @@ namespace Raven.Client.Document
 		{
 			IncrementRequestCount();
 			Trace.WriteLine(string.Format("Bulk loading ids [{0}] from {1}", string.Join(", ", ids), StoreIdentifier));
-			var multiLoadResult = documentStore.DatabaseCommands.Get(ids, includes);
+			MultiLoadResult multiLoadResult;
+			JsonDocument[] includeResults;
+			JsonDocument[] results;
+			var sp = Stopwatch.StartNew();
+			do
+			{
+				multiLoadResult = documentStore.DatabaseCommands.Get(ids, includes);
+				includeResults = SerializationHelper.JObjectsToJsonDocuments(multiLoadResult.Includes).ToArray();
+				results = SerializationHelper.JObjectsToJsonDocuments(multiLoadResult.Results).ToArray();
+			} while (
+				AllowNonAuthoritiveInformation == false && 
+				results.Any(x=>x.NonAuthoritiveInformation) && 
+				sp.Elapsed < NonAuthoritiveInformationTimeout
+				);
 
-			foreach (var include in SerializationHelper.JObjectsToJsonDocuments(multiLoadResult.Includes))
+			foreach (var include in includeResults)
 			{
 				TrackEntity<object>(include);
 			}
 
-			return SerializationHelper.JObjectsToJsonDocuments(multiLoadResult.Results)
+			return results
 				.Select(TrackEntity<T>)
 				.ToArray();
 		}

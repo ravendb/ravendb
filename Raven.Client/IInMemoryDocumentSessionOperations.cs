@@ -20,6 +20,8 @@ namespace Raven.Client
 
 		bool AllowNonAuthoritiveInformation { get; set; }
 
+		TimeSpan NonAuthoritiveInformationTimeout { get; set; }
+
 		DocumentConvention Conventions { get; }
 
 		int MaxNumberOfRequestsPerSession { get; set; }
