@@ -228,7 +228,13 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 
                 //Just let an exceptions (from Parse(..) functions) bubble-up, so that the user can see they've provided an invalid value
                 if (matchString == "Content-Length")
-                    webRequest.ContentLength = long.Parse(formattedHeaderValue); 
+                {
+					// we filter out content length, because getting it wrong will cause errors 
+					// in the server side when serving the wrong value for this header.
+					// worse, if we are using http compression, this value is known to be wrong
+					// instead, we rely on the actual size of the data provided for us
+					//webRequest.ContentLength = long.Parse(formattedHeaderValue); 	
+                }
                 else if (matchString == "Content-Type")
                     webRequest.ContentType = formattedHeaderValue;                
                 else

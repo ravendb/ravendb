@@ -1235,7 +1235,7 @@ namespace Raven.Client.Tests.Document
         //The issue only shows up in Server/Client mode, not in Embedded mode!!!
         public void Using_attachments_can_properly_set_WebRequest_Headers()
         {
-            using (var server = GetNewServer(port, path))
+            using (var server = GetNewServer(port, path) )
             {
                 var documentStore = new DocumentStore { Url = "http://localhost:" + port };
                 documentStore.Initialize();

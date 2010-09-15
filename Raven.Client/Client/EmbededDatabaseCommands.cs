@@ -69,6 +69,11 @@ namespace Raven.Client.Client
 
 		public void PutAttachment(string key, Guid? etag, byte[] data, JObject metadata)
 		{
+			// we filter out content length, because getting it wrong will cause errors 
+			// in the server side when serving the wrong value for this header.
+			// worse, if we are using http compression, this value is known to be wrong
+			// instead, we rely on the actual size of the data provided for us
+			metadata.Remove("Content-Length");
 			database.PutStatic(key, etag, data, metadata);
 		}
 
