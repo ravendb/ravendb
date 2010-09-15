@@ -4,11 +4,18 @@ using System.Transactions;
 
 namespace Raven.Client.Document
 {
+	/// <summary>
+	/// An implementation of <see cref="IPromotableSinglePhaseNotification"/> for RavenDB Client API
+	/// </summary>
 	public class PromotableRavenClientEnlistment : IPromotableSinglePhaseNotification
 	{
 		private readonly ITransactionalDocumentSession session;
 		private readonly TransactionInformation transaction;
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="PromotableRavenClientEnlistment"/> class.
+		/// </summary>
+		/// <param name="session">The session.</param>
 		public PromotableRavenClientEnlistment(ITransactionalDocumentSession session)
 		{
 			transaction = Transaction.Current.TransactionInformation;

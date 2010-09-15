@@ -3,21 +3,33 @@ using Raven.Client.Shard;
 
 namespace Raven.Client
 {
+	/// <summary>
+	/// Extensions that provide nicer API for using Raven Client API
+	/// </summary>
 	public static class RavenExtensions
 	{
-		public const string Raven_DocumentByEntityName = "Raven/DocumentsByEntityName";
+		/// <summary>
+		/// Constant for the builtin index 
+		/// </summary>
+		public const string RavenDocumentByEntityName = "Raven/DocumentsByEntityName";
 
+		/// <summary>
+		/// Query the "Raven/DocumentsByEntityName" index for all instances of a specified tag.
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="session">The session.</param>
+		/// <returns></returns>
 		public static IDocumentQuery<T> LuceneQuery<T>(this IDocumentSession session)
 		{
 			var shardedDocumentSession = session as ShardedDocumentSession;
 			if(shardedDocumentSession != null)
 			{
-				var documentQuery = (ShardedDocumentQuery<T>)shardedDocumentSession.LuceneQuery<T>(Raven_DocumentByEntityName);
+				var documentQuery = (ShardedDocumentQuery<T>)shardedDocumentSession.LuceneQuery<T>(RavenDocumentByEntityName);
 				documentQuery.ForEachQuery((documentSession, query) => query.Where(GenerateQuery<T>(documentSession)));
 				return documentQuery;
 			}
 
-			return session.LuceneQuery<T>(Raven_DocumentByEntityName)
+			return session.LuceneQuery<T>(RavenDocumentByEntityName)
 				.Where(GenerateQuery<T>(session));
 		}
 

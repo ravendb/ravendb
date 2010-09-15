@@ -3,11 +3,18 @@ using System.Threading;
 
 namespace Raven.Client.Document.Async
 {
+	/// <summary>
+	/// An <see cref="IAsyncResult"/> for a syncronous load
+	/// </summary>
 	public class SyncronousLoadResult : IAsyncResult
 	{
 		private readonly object state;
 		private readonly object entity;
 
+		/// <summary>
+		/// Gets the entity.
+		/// </summary>
+		/// <value>The entity.</value>
 		public object Entity
 		{
 			get { return entity; }
@@ -33,6 +40,11 @@ namespace Raven.Client.Document.Async
 			get { return true; }
 		}
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="SyncronousLoadResult"/> class.
+		/// </summary>
+		/// <param name="state">The state.</param>
+		/// <param name="entity">The entity.</param>
 		public SyncronousLoadResult(object state, object entity)
 		{
 			this.state = state;

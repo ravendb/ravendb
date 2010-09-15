@@ -3,11 +3,19 @@ using System.Transactions;
 
 namespace Raven.Client.Document
 {
+	/// <summary>
+	/// An implementation of <see cref="IEnlistmentNotification"/> for the Raven Client API, allowing Raven
+	/// Client API to participate in Distributed Transactions
+	/// </summary>
     public class RavenClientEnlistment : IEnlistmentNotification
     {
 		private readonly ITransactionalDocumentSession session;
 		private readonly TransactionInformation transaction;
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="RavenClientEnlistment"/> class.
+		/// </summary>
+		/// <param name="session">The session.</param>
     	public RavenClientEnlistment(ITransactionalDocumentSession session)
         {
     		transaction = Transaction.Current.TransactionInformation;

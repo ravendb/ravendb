@@ -3,18 +3,44 @@ using Raven.Database.Indexing;
 
 namespace Raven.Database.Data
 {
+	/// <summary>
+	/// A query using spatial filtering
+	/// </summary>
 	public class SpatialIndexQuery : IndexQuery
 	{
+		/// <summary>
+		/// Gets or sets the latitude.
+		/// </summary>
+		/// <value>The latitude.</value>
 		public double Latitude { get; set; }
+		/// <summary>
+		/// Gets or sets the longitude.
+		/// </summary>
+		/// <value>The longitude.</value>
 		public double Longitude { get; set; }
+		/// <summary>
+		/// Gets or sets the radius.
+		/// </summary>
+		/// <value>The radius.</value>
 		public double Radius { get; set; }
+		/// <summary>
+		/// Gets or sets a value indicating whether [sort by distance].
+		/// </summary>
+		/// <value><c>true</c> if [sort by distance]; otherwise, <c>false</c>.</value>
 		public bool SortByDistance { get; set; }
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="SpatialIndexQuery"/> class.
+		/// </summary>
 		public SpatialIndexQuery()
 		{
 			
 		}
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="SpatialIndexQuery"/> class.
+		/// </summary>
+		/// <param name="query">The query.</param>
 		public SpatialIndexQuery(IndexQuery query)
 		{
 			Query = query.Query;

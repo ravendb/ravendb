@@ -2,8 +2,14 @@ using System.Text;
 
 namespace Raven.Client.Client
 {
+	/// <summary>
+	/// Helper class that provide a way to escape query terms
+	/// </summary>
 	public static class RavenQuery
 	{
+		/// <summary>
+		/// Escapes Lucene operators and quotes phrases
+		/// </summary>
 		public static string Escape(string term)
 		{
 			return Escape(term, false);
