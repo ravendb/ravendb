@@ -27,11 +27,11 @@ namespace Raven.Client.Indexes
         /// </summary>
         Additive = 120,
         /// <summary>
-        /// <<  >>
+        /// &lt;&lt; &gt;&gt;
         /// </summary>
         Shift = 110,    
         /// <summary>
-        /// <  >  <=  >=  is  as
+        /// &lt;  &gt;  &lt;=  &gt;=  is  as
         /// </summary>
         RelationalAndTypeTesting = 100,             
         /// <summary>
@@ -39,7 +39,7 @@ namespace Raven.Client.Indexes
         /// </summary>
         Equality = 90,               
         /// <summary>
-        /// &
+        /// &amp;
         /// </summary>
         LogicalAND = 80,             
         /// <summary>
@@ -51,7 +51,7 @@ namespace Raven.Client.Indexes
         /// </summary>
         LogicalOR = 60,
         /// <summary>
-        /// && (AndAlso in VB)
+		/// &amp;&amp; (AndAlso in VB)
         /// </summary>
         ConditionalAND = 50,
         /// <summary>
@@ -67,10 +67,9 @@ namespace Raven.Client.Indexes
         /// </summary>
         Conditional = 20,            
         /// <summary>
-        /// =  *=  /=  %=  +=  -=  <<=  >>=  &=  ^=  |=
+        /// =  *=  /=  %=  +=  -=  &lt;&lt;=  &gt;&gt;=  &=  ^=  |=
         /// </summary>
         Assignment = 10,
-
         /// <summary>
         /// pseudo operator for comparisons
         /// </summary>

@@ -33,6 +33,11 @@ namespace Raven.Client.Client.Async
 			get { return inner.IsCompleted; }
 		}
 
+		/// <summary>
+		/// Gets a <see cref="T:System.Threading.WaitHandle"/> that is used to wait for an asynchronous operation to complete.
+		/// </summary>
+		/// <value></value>
+		/// <returns>A <see cref="T:System.Threading.WaitHandle"/> that is used to wait for an asynchronous operation to complete.</returns>
 		public WaitHandle AsyncWaitHandle
 		{
 			get

@@ -33,6 +33,10 @@ namespace Raven.Client.Document
 			return session.PromoteTransaction(GetLocalOrDistributedTransactionId(transaction));
 		}
 
+		/// <summary>
+		/// Notifies a transaction participant that enlistment has completed successfully.
+		/// </summary>
+		/// <exception cref="T:System.Transactions.TransactionException">An attempt to enlist or serialize a transaction.</exception>
 		public void Initialize()
 		{
 		}

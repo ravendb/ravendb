@@ -29,13 +29,22 @@ namespace Raven.Client.Document
 		public static readonly Guid RavenDbResourceManagerId = new Guid("E749BAA6-6F76-4EEF-A069-40A4378954F8");
 
 		private const string RavenEntityName = "Raven-Entity-Name";
+		/// <summary>
+		/// The entities waiting to be deleted
+		/// </summary>
 		protected readonly HashSet<object> deletedEntities = new HashSet<object>();
 
 		private bool hasEnlisted;
 
+		/// <summary>
+		/// hold the data required to manage the data for RavenDB's Unit of Work
+		/// </summary>
 		protected readonly Dictionary<object, DocumentSession.DocumentMetadata> entitiesAndMetadata =
 			new Dictionary<object, DocumentSession.DocumentMetadata>();
 
+		/// <summary>
+		/// Translate between a key and its associated entity
+		/// </summary>
 		protected readonly Dictionary<string, object> entitiesByKey = new Dictionary<string, object>();
 		protected DocumentStore documentStore;
 

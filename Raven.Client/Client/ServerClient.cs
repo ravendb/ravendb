@@ -33,6 +33,13 @@ namespace Raven.Client.Client
 		private readonly ICredentials credentials;
 		private readonly ReplicationInformer replicationInformer;
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="ServerClient"/> class.
+		/// </summary>
+		/// <param name="url">The URL.</param>
+		/// <param name="convention">The convention.</param>
+		/// <param name="credentials">The credentials.</param>
+		/// <param name="replicationInformer">The replication informer.</param>
 		public ServerClient(string url, DocumentConvention convention, ICredentials credentials, ReplicationInformer replicationInformer)
 		{
 			this.credentials = credentials;
@@ -46,12 +53,21 @@ namespace Raven.Client.Client
 
 		#region IDatabaseCommands Members
 
+		/// <summary>
+		/// Gets or sets the operations headers.
+		/// </summary>
+		/// <value>The operations headers.</value>
 		public NameValueCollection OperationsHeaders
 		{
 			get;
 			set;
 		}
 
+		/// <summary>
+		/// Gets the docuent for the specified key.
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <returns></returns>
 		public JsonDocument Get(string key)
 		{
 			EnsureIsNotNullOrEmpty(key, "key");
@@ -116,6 +132,12 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			return e.InnerException is SocketException;
 		}
 
+		/// <summary>
+		/// Perform a direct get for a document with the specified key on the sepcified server URL.
+		/// </summary>
+		/// <param name="serverUrl">The server URL.</param>
+		/// <param name="key">The key.</param>
+		/// <returns></returns>
 		public JsonDocument DirectGet(string serverUrl, string key)
 		{
 			var metadata = new JObject();

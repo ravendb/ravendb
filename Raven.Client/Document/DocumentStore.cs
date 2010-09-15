@@ -27,6 +27,10 @@ namespace Raven.Client.Document
 		/// <value>The shared operations headers.</value>
 		public NameValueCollection SharedOperationsHeaders { get; private set; }
 
+		/// <summary>
+		/// Gets the database commands.
+		/// </summary>
+		/// <value>The database commands.</value>
 		public IDatabaseCommands DatabaseCommands
 		{
 			get

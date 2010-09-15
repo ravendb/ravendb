@@ -35,11 +35,41 @@ namespace Raven.Client.Client
 		/// <returns></returns>
 		MultiLoadResult Get(string[] ids, string[] includes);
 
+		/// <summary>
+		/// Puts the document with the specified key in the database
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <param name="etag">The etag.</param>
+		/// <param name="document">The document.</param>
+		/// <param name="metadata">The metadata.</param>
+		/// <returns></returns>
 		PutResult Put(string key, Guid? etag, JObject document, JObject metadata);
+		/// <summary>
+		/// Deletes the document with the specified key.
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <param name="etag">The etag.</param>
 		void Delete(string key, Guid? etag);
 
+		/// <summary>
+		/// Puts the attachment with the specified key
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <param name="etag">The etag.</param>
+		/// <param name="data">The data.</param>
+		/// <param name="metadata">The metadata.</param>
     	void PutAttachment(string key, Guid? etag, byte[] data, JObject metadata);
+		/// <summary>
+		/// Gets the attachment by the specified key
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <returns></returns>
     	Attachment GetAttachment(string key);
+		/// <summary>
+		/// Deletes the attachment with the specified key
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <param name="etag">The etag.</param>
     	void DeleteAttachment(string key, Guid? etag);
 
     	string[] GetIndexNames(int start, int pageSize);

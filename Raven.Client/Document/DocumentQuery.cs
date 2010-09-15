@@ -27,8 +27,17 @@ namespace Raven.Client.Document
 		/// </summary>
 		protected readonly string[] projectionFields;
 		private readonly DocumentSession session;
+		/// <summary>
+		/// The cutoff date to use for detecting staleness in the index
+		/// </summary>
 		protected DateTime? cutoff;
+		/// <summary>
+		/// The fields to order the results by
+		/// </summary>
 		protected string[] orderByFields = new string[0];
+		/// <summary>
+		/// The page size to use when querying the index
+		/// </summary>
 		protected int pageSize = 128;
 		private QueryResult queryResult;
 		private StringBuilder queryText = new StringBuilder();

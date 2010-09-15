@@ -25,12 +25,24 @@ namespace Raven.Client.Document
 		/// <value>The database commands.</value>
 		public IDatabaseCommands DatabaseCommands { get; private set; }
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="DocumentSession"/> class.
+		/// </summary>
+		/// <param name="documentStore">The document store.</param>
+		/// <param name="storeListeners">The store listeners.</param>
+		/// <param name="deleteListeners">The delete listeners.</param>
 		public DocumentSession(DocumentStore documentStore, IDocumentStoreListener[] storeListeners, IDocumentDeleteListener[] deleteListeners)
 			: base(documentStore, storeListeners, deleteListeners)
 		{
 			DatabaseCommands = documentStore.DatabaseCommands;
 		}
 
+		/// <summary>
+		/// Loads the specified entity with the specified id.
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="id">The id.</param>
+		/// <returns></returns>
 		public T Load<T>(string id)
 		{
 			object existingEntity;

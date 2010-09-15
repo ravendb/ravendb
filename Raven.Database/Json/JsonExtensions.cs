@@ -39,7 +39,7 @@ namespace Raven.Database.Json
 
 
 		/// <summary>
-		/// Deserialize a <see cref="self"/> to an instance of <see cref="T"/>
+		/// Deserialize a <param name="self"/> to an instance of <typeparam name="T"/>
 		/// </summary>
 		public static T JsonDeserialization<T>(this byte [] self)
 		{
@@ -47,7 +47,7 @@ namespace Raven.Database.Json
 		}
 
 		/// <summary>
-		/// Deserialize a <see cref="self"/> to an instance of <see cref="T"/>
+		/// Deserialize a <param name="self"/> to an instance of<typeparam name="T"/>
 		/// </summary>
 		public static T JsonDeserialization<T>(this JObject self)
 		{

@@ -9,6 +9,7 @@ using Raven.Client.Linq;
 using Raven.Client.Shard.ShardStrategy;
 using Raven.Client.Shard.ShardStrategy.ShardResolution;
 using System;
+using Raven.Database.Exceptions;
 
 namespace Raven.Client.Shard
 {
@@ -29,6 +30,12 @@ namespace Raven.Client.Shard
 			}
 		}
 
+		/// <summary>
+		/// Gets or sets a value indicating whether the session should use optimistic concurrency.
+		/// When set to <c>true</c>, a check is made so that a change made behind the session back would fail
+		/// and raise <see cref="ConcurrencyException"/>.
+		/// </summary>
+		/// <value></value>
 		public bool UseOptimisticConcurrency
 		{
 			get
