@@ -76,23 +76,36 @@ namespace Raven.Client.Linq
             }
         }
 
+		/// <summary>
+		/// Executes the specified expression.
+		/// </summary>
+		/// <typeparam name="S"></typeparam>
+		/// <param name="expression">The expression.</param>
+		/// <returns></returns>
         S IQueryProvider.Execute<S>(Expression expression)
         {
             return (S)Execute(expression);
         }
 
+		/// <summary>
+		/// Executes the query represented by a specified expression tree.
+		/// </summary>
+		/// <param name="expression">An expression tree that represents a LINQ query.</param>
+		/// <returns>
+		/// The value that results from executing the specified query.
+		/// </returns>
         object IQueryProvider.Execute(Expression expression)
         {
             return Execute(expression);
         }
 
+		/// <summary>
+		/// Customizes the query using the specified action
+		/// </summary>
+		/// <param name="action">The action.</param>
         public void Customize(Delegate action)
         {
             customizeQuery = (Action<IDocumentQuery<T>>)action;
         }
-
-        #region Helpers
-
-		#endregion Helpers
 	}
 }

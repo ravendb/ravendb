@@ -181,6 +181,11 @@ namespace Raven.Client.Document
 		{
 		}
 
+		/// <summary>
+		/// Gets the serializable members for the type.
+		/// </summary>
+		/// <param name="objectType">The type to get serializable members for.</param>
+		/// <returns>The serializable members for the type.</returns>
 		protected override System.Collections.Generic.List<MemberInfo> GetSerializableMembers(Type objectType)
 		{
 			var serializableMembers = base.GetSerializableMembers(objectType);

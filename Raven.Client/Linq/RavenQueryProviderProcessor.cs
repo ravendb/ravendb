@@ -54,6 +54,10 @@ namespace Raven.Client.Linq
 		/// <value>The fields to fetch.</value>
 		public List<string> FieldsToFetch { get; set; }
 
+		/// <summary>
+		/// Visits the expression and generate the lucene query
+		/// </summary>
+		/// <param name="expression">The expression.</param>
 		protected void VisitExpression(Expression expression)
 		{
 			switch (expression.NodeType)
@@ -622,6 +626,10 @@ namespace Raven.Client.Linq
 			throw new NotSupportedException("MemberInfo type not supported: " + memberInfo.GetType().FullName);
 		}
 
+		/// <summary>
+		/// Processes the expression.
+		/// </summary>
+		/// <param name="expression">The expression.</param>
 		public void ProcessExpression(Expression expression)
 		{
 			if (session == null)
@@ -637,6 +645,11 @@ namespace Raven.Client.Linq
 		}
 
 
+		/// <summary>
+		/// Executes the specified expression.
+		/// </summary>
+		/// <param name="expression">The expression.</param>
+		/// <returns></returns>
 		public object Execute(Expression expression)
 		{
 			chainedWhere = false;
@@ -697,15 +710,42 @@ namespace Raven.Client.Linq
 
 		#region Nested type: SpecialQueryType
 
+		/// <summary>
+		/// Different query types 
+		/// </summary>
 		protected enum SpecialQueryType
 		{
+			/// <summary>
+			/// 
+			/// </summary>
 			None,
+			/// <summary>
+			/// 
+			/// </summary>
 			All,
+			/// <summary>
+			/// 
+			/// </summary>
 			Any,
+			/// <summary>
+			/// Get count of items for the query
+			/// </summary>
 			Count,
+			/// <summary>
+			/// Get only the first item
+			/// </summary>
 			First,
+			/// <summary>
+			/// Get only the first item (or null)
+			/// </summary>
 			FirstOrDefault,
+			/// <summary>
+			/// Get only the first item (or throw if there are more than one)
+			/// </summary>
 			Single,
+			/// <summary>
+			/// Get only the first item (or throw if there are more than one) or null if empty
+			/// </summary>
 			SingleOrDefault
 		}
 

@@ -72,30 +72,127 @@ namespace Raven.Client.Client
 		/// <param name="etag">The etag.</param>
     	void DeleteAttachment(string key, Guid? etag);
 
+		/// <summary>
+		/// Gets the index names from the server
+		/// </summary>
+		/// <param name="start">Paging start</param>
+		/// <param name="pageSize">Size of the page.</param>
+		/// <returns></returns>
     	string[] GetIndexNames(int start, int pageSize);
 
+		/// <summary>
+		/// Resets the specified index
+		/// </summary>
+		/// <param name="name">The name.</param>
     	void ResetIndex(string name);
+		/// <summary>
+		/// Gets the index definition for the specified name
+		/// </summary>
+		/// <param name="name">The name.</param>
     	IndexDefinition GetIndex(string name);
+		/// <summary>
+		/// Puts the index definition for the specified name
+		/// </summary>
+		/// <param name="name">The name.</param>
+		/// <param name="indexDef">The index def.</param>
 		string PutIndex(string name, IndexDefinition indexDef);
+		/// <summary>
+		/// Puts the index definition for the specified name
+		/// </summary>
+		/// <typeparam name="TDocument">The type of the document.</typeparam>
+		/// <typeparam name="TReduceResult">The type of the reduce result.</typeparam>
+		/// <param name="name">The name.</param>
+		/// <param name="indexDef">The index def.</param>
+		/// <returns></returns>
 		string PutIndex<TDocument,TReduceResult>(string name, IndexDefinition<TDocument,TReduceResult> indexDef);
 
+		/// <summary>
+		/// Puts the index for the specified name
+		/// </summary>
+		/// <param name="name">The name.</param>
+		/// <param name="indexDef">The index def.</param>
+		/// <param name="overwrite">if set to <c>true</c> [overwrite].</param>
         string PutIndex(string name, IndexDefinition indexDef, bool overwrite);
+		/// <summary>
+		/// Puts the index for the specified name
+		/// </summary>
+		/// <typeparam name="TDocument">The type of the document.</typeparam>
+		/// <typeparam name="TReduceResult">The type of the reduce result.</typeparam>
+		/// <param name="name">The name.</param>
+		/// <param name="indexDef">The index def.</param>
+		/// <param name="overwrite">if set to <c>true</c> [overwrite].</param>
         string PutIndex<TDocument, TReduceResult>(string name, IndexDefinition<TDocument, TReduceResult> indexDef, bool overwrite);
-		
+
+		/// <summary>
+		/// Queries the specified index.
+		/// </summary>
+		/// <param name="index">The index.</param>
+		/// <param name="query">The query.</param>
+		/// <param name="includes">The includes.</param>
         QueryResult Query(string index, IndexQuery query, string [] includes);
+		/// <summary>
+		/// Deletes the index.
+		/// </summary>
+		/// <param name="name">The name.</param>
 		void DeleteIndex(string name);
 
+		/// <summary>
+		/// Executed the specified commands as a single batch
+		/// </summary>
+		/// <param name="commandDatas">The command datas.</param>
 		BatchResult[] Batch(ICommandData[] commandDatas);
 
+		/// <summary>
+		/// Commits the specified tx id.
+		/// </summary>
+		/// <param name="txId">The tx id.</param>
         void Commit(Guid txId);
+		/// <summary>
+		/// Rollbacks the specified tx id.
+		/// </summary>
+		/// <param name="txId">The tx id.</param>
         void Rollback(Guid txId);
+		/// <summary>
+		/// Promotes the transaction.
+		/// </summary>
+		/// <param name="fromTxId">From tx id.</param>
+		/// <returns></returns>
     	byte[] PromoteTransaction(Guid fromTxId);
+		/// <summary>
+		/// Stores the recovery information.
+		/// </summary>
+		/// <param name="txId">The tx id.</param>
+		/// <param name="recoveryInformation">The recovery information.</param>
 		void StoreRecoveryInformation(Guid txId, byte[] recoveryInformation);
-		
+
+		/// <summary>
+		/// Returns a new <see cref="IDatabaseCommands "/> using the specified credentials
+		/// </summary>
+		/// <param name="credentialsForSession">The credentials for session.</param>
+		/// <returns></returns>
 		IDatabaseCommands With(ICredentials credentialsForSession);
+		/// <summary>
+		/// Gets a value indicating whether [supports promotable transactions].
+		/// </summary>
+		/// <value>
+		/// 	<c>true</c> if [supports promotable transactions]; otherwise, <c>false</c>.
+		/// </value>
     	bool SupportsPromotableTransactions { get;  }
 
+		/// <summary>
+		/// Perform a set based deletes using the specified index.
+		/// </summary>
+		/// <param name="indexName">Name of the index.</param>
+		/// <param name="queryToDelete">The query to delete.</param>
+		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
     	void DeleteByIndex(string indexName, IndexQuery queryToDelete, bool allowStale);
+		/// <summary>
+		/// Perform a set based update using the specified index.
+		/// </summary>
+		/// <param name="indexName">Name of the index.</param>
+		/// <param name="queryToUpdate">The query to update.</param>
+		/// <param name="patchRequests">The patch requests.</param>
+		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
 		void UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale);
 	}
 }

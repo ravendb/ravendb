@@ -4,6 +4,7 @@ using System.Net;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Client;
 using Raven.Client.Document;
+using Raven.Client.Exceptions;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Raven.Client.Shard.ShardStrategy;
@@ -51,6 +52,17 @@ namespace Raven.Client.Shard
 			}
 		}
 
+		/// <summary>
+		/// Gets or sets a value indicating whether non authoritive information is allowed.
+		/// Non authoritive information is document that has been modified by a transaction that hasn't been committed.
+		/// The server provides the latest committed version, but it is known that attempting to write to a non authoritive document
+		/// will fail, because it is already modified.
+		/// If set to <c>false</c>, the session will wait <see cref="NonAuthoritiveInformationTimeout"/> for the transaction to commit to get an
+		/// authoritive information. If the wait is longer than <see cref="NonAuthoritiveInformationTimeout"/>, <see cref="NonAuthoritiveInformationException"/> is thrown.
+		/// </summary>
+		/// <value>
+		/// 	<c>true</c> if non authoritive information is allowed; otherwise, <c>false</c>.
+		/// </value>
 		public bool AllowNonAuthoritiveInformation
 		{
 			get { return shardSessions.First().AllowNonAuthoritiveInformation; }
@@ -63,6 +75,10 @@ namespace Raven.Client.Shard
 			}
 		}
 
+		/// <summary>
+		/// Gets or sets the timeout to wait for authoritive information if encountered non authoritive document.
+		/// </summary>
+		/// <value></value>
 		public TimeSpan NonAuthoritiveInformationTimeout
 		{
 			get { return shardSessions.First().NonAuthoritiveInformationTimeout; }
@@ -75,6 +91,10 @@ namespace Raven.Client.Shard
 			}
 		}
 
+		/// <summary>
+		/// Gets the number of requests for this session
+		/// </summary>
+		/// <value></value>
 		public int NumberOfRequests
 		{
 			get { return shardSessions.Sum(x => x.NumberOfRequests); }
@@ -90,18 +110,33 @@ namespace Raven.Client.Shard
 		/// </summary>
 	    public event EntityToDocument OnEntityConverted;
 
+		/// <summary>
+		/// Gets the metadata for the specified entity.
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="instance">The instance.</param>
+		/// <returns></returns>
 	    public JObject GetMetadataFor<T>(T instance)
 	    {
 	        var shardIds = shardStrategy.ShardSelectionStrategy.ShardIdForExistingObject(instance);
 	        return GetSingleShardSession(shardIds).GetMetadataFor(instance);
 	    }
 
+		/// <summary>
+		/// Gets the document id.
+		/// </summary>
+		/// <param name="instance">The instance.</param>
+		/// <returns></returns>
 		public string GetDocumentId(object instance)
 		{
 			var shardIds = shardStrategy.ShardSelectionStrategy.ShardIdForExistingObject(instance);
 			return GetSingleShardSession(shardIds).GetDocumentId(instance);
 		}
 
+		/// <summary>
+		/// Gets a value indicating whether any of the entities tracked by the session has changes.
+		/// </summary>
+		/// <value></value>
 		public bool HasChanges
 		{
 			get
@@ -110,6 +145,13 @@ namespace Raven.Client.Shard
 			}
 		}
 
+		/// <summary>
+		/// Determines whether the specified entity has changed.
+		/// </summary>
+		/// <param name="entity">The entity.</param>
+		/// <returns>
+		/// 	<c>true</c> if the specified entity has changed; otherwise, <c>false</c>.
+		/// </returns>
 		public bool HasChanged(object entity)
 		{
 			var shardIds = shardStrategy.ShardSelectionStrategy.ShardIdForExistingObject(entity);
@@ -137,11 +179,21 @@ namespace Raven.Client.Shard
 		private readonly IShardStrategy shardStrategy;
 		private readonly IDocumentSession[] shardSessions;
 
+		/// <summary>
+		/// Gets the database commands.
+		/// </summary>
+		/// <value>The database commands.</value>
 		public IDatabaseCommands DatabaseCommands
 		{
 			get { throw new NotSupportedException("You cannot ask a sharded session for its DatabaseCommands, internal sharded session each have diffeernt DatabaseCommands"); }
 		}
 
+		/// <summary>
+		/// Loads the specified entity with the specified id.
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="id">The id.</param>
+		/// <returns></returns>
 		public T Load<T>(string id)
 		{
 
@@ -172,6 +224,12 @@ namespace Raven.Client.Shard
 				.FirstOrDefault();
 		}
 
+		/// <summary>
+		/// Loads the specified entities with the specified ids.
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="ids">The ids.</param>
+		/// <returns></returns>
 		public T[] Load<T>(params string[] ids)
 		{
 			return shardStrategy.ShardAccessStrategy.Apply(GetAppropriateShardedSessions<T>(null), sessions => sessions.Load<T>(ids)).ToArray();
@@ -187,6 +245,11 @@ namespace Raven.Client.Shard
 			throw new NotSupportedException("Sharded load queries with include aren't supported currently");
 		}
 
+		/// <summary>
+		/// Gets the document URL for the specified entity.
+		/// </summary>
+		/// <param name="entity">The entity.</param>
+		/// <returns></returns>
 		public string GetDocumentUrl(object entity)
 		{
 			if (ReferenceEquals(entity, null))
@@ -197,6 +260,11 @@ namespace Raven.Client.Shard
 			return GetSingleShardSession(shardIds).GetDocumentUrl(entity);
 		}
 
+		/// <summary>
+		/// Marks the specified entity for deletion. The entity will be deleted when <see cref="IDocumentSession.SaveChanges"/> is called.
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="entity">The entity.</param>
 		public void Delete<T>(T entity)
 		{
 			if (ReferenceEquals(entity, null))
@@ -207,16 +275,33 @@ namespace Raven.Client.Shard
 			GetSingleShardSession(shardIds).Delete(entity);
 		}
 
+		/// <summary>
+		/// Queries the specified index using Linq.
+		/// </summary>
+		/// <typeparam name="T">The result of the query</typeparam>
+		/// <param name="indexName">Name of the index.</param>
+		/// <returns></returns>
         public IRavenQueryable<T> Query<T>(string indexName)
 	    {
 	        throw new NotSupportedException("Sharded linq queries aren't supported currently");
 	    }
 
+		/// <summary>
+		/// Queries the index specified by <typeparamref name="TIndexCreator"/> using Linq.
+		/// </summary>
+		/// <typeparam name="T">The result of the query</typeparam>
+		/// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
+		/// <returns></returns>
 		public IRavenQueryable<T> Query<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
 		{
 			throw new NotSupportedException("Sharded linq queries aren't supported currently");
 		}
 
+		/// <summary>
+		/// Refreshes the specified entity from Raven server.
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="entity">The entity.</param>
 		public void Refresh<T>(T entity)
         {
             if (ReferenceEquals(entity, null))
@@ -235,6 +320,10 @@ namespace Raven.Client.Shard
 			return shardSession;
 		}
 
+		/// <summary>
+		/// Stores the specified entity in the session. The entity will be saved when <see cref="IDocumentSession.SaveChanges"/> is called.
+		/// </summary>
+		/// <param name="entity">The entity.</param>
 		public void Store(object entity)
 		{
 			string shardId = shardStrategy.ShardSelectionStrategy.ShardIdForNewObject(entity);
@@ -256,6 +345,12 @@ namespace Raven.Client.Shard
         }
 #endif
 
+		/// <summary>
+		/// Evicts the specified entity from the session.
+		/// Remove the entity from the delete queue and stops tracking changes for this entity.
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="entity">The entity.</param>
 		public void Evict<T>(T entity)
 		{
 			string shardId = shardStrategy.ShardSelectionStrategy.ShardIdForExistingObject(entity);
@@ -276,6 +371,12 @@ namespace Raven.Client.Shard
 			}
 		}
 
+		/// <summary>
+		/// Query the specified index using Lucene syntax
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="indexName">Name of the index.</param>
+		/// <returns></returns>
 		public IDocumentQuery<T> LuceneQuery<T>(string indexName)
 		{
 			return new ShardedDocumentQuery<T>(indexName,
@@ -294,6 +395,12 @@ namespace Raven.Client.Shard
 			return documentSessions;
 		}
 
+		/// <summary>
+		/// Gets the store identifier for this session.
+		/// The store identifier is the identifier for the particular RavenDB instance.
+		/// This is mostly useful when using sharding.
+		/// </summary>
+		/// <value>The store identifier.</value>
 		public string StoreIdentifier
 		{
 			get
@@ -304,6 +411,9 @@ namespace Raven.Client.Shard
 
 		#region IDisposable Members
 
+		/// <summary>
+		/// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+		/// </summary>
 		public void Dispose()
 		{
 			foreach (var shardSession in shardSessions)
@@ -316,11 +426,24 @@ namespace Raven.Client.Shard
 
 		#endregion
 
+		/// <summary>
+		/// Gets the conventions used by this session
+		/// </summary>
+		/// <value>The conventions.</value>
+		/// <remarks>
+		/// This instance is shared among all sessions, changes to the <see cref="DocumentConvention"/> should be done
+		/// via the <see cref="IDocumentStore"/> instance, not on a single session.
+		/// </remarks>
 		public DocumentConvention Conventions
 		{
 			get { throw new NotSupportedException("You cannot ask a sharded session for its conventions, internal sharded session may each have diffeernt conventions"); }
 		}
 
+		/// <summary>
+		/// Gets or sets the max number of requests per session.
+		/// If the <see cref="NumberOfRequests"/> rise above <see cref="MaxNumberOfRequestsPerSession"/>, an exception will be thrown.
+		/// </summary>
+		/// <value>The max number of requests per session.</value>
 		public int MaxNumberOfRequestsPerSession
 	    {
 	        get { return shardSessions.First().MaxNumberOfRequestsPerSession; }

@@ -12,6 +12,7 @@ using Raven.Database.Data;
 #if !NET_3_5
 using System.Dynamic;
 using Microsoft.CSharp.RuntimeBinder;
+using Raven.Database.Exceptions;
 using Raven.Database.Linq;
 
 #endif
@@ -46,13 +47,26 @@ namespace Raven.Client.Document
 		/// Translate between a key and its associated entity
 		/// </summary>
 		protected readonly Dictionary<string, object> entitiesByKey = new Dictionary<string, object>();
+		/// <summary>
+		/// The document store associated with this session
+		/// </summary>
 		protected DocumentStore documentStore;
 
+		/// <summary>
+		/// Gets the number of requests for this session
+		/// </summary>
+		/// <value></value>
 		public int NumberOfRequests { get; private set; }
 
 		private readonly IDocumentDeleteListener[] deleteListeners;
 		private readonly IDocumentStoreListener[] storeListeners;
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="InMemoryDocumentSessionOperations"/> class.
+		/// </summary>
+		/// <param name="documentStore">The document store.</param>
+		/// <param name="storeListeners">The store listeners.</param>
+		/// <param name="deleteListeners">The delete listeners.</param>
 		protected InMemoryDocumentSessionOperations(DocumentStore documentStore, IDocumentStoreListener[] storeListeners, IDocumentDeleteListener[] deleteListeners)
 		{
 			this.documentStore = documentStore;
@@ -64,24 +78,66 @@ namespace Raven.Client.Document
 		    MaxNumberOfRequestsPerSession = documentStore.Conventions.MaxNumberOfRequestsPerSession;
 		}
 
+		/// <summary>
+		/// Gets or sets the timeout to wait for authoritive information if encountered non authoritive document.
+		/// </summary>
+		/// <value></value>
 		public TimeSpan NonAuthoritiveInformationTimeout { get; set; }
 
+		/// <summary>
+		/// Gets the store identifier for this session.
+		/// The store identifier is the identifier for the particular RavenDB instance.
+		/// This is mostly useful when using sharding.
+		/// </summary>
+		/// <value>The store identifier.</value>
 		public string StoreIdentifier
 		{
 			get { return documentStore.Identifier; }
 		}
 
+		/// <summary>
+		/// Gets the conventions used by this session
+		/// </summary>
+		/// <value>The conventions.</value>
+		/// <remarks>
+		/// This instance is shared among all sessions, changes to the <see cref="DocumentConvention"/> should be done
+		/// via the <see cref="IDocumentStore"/> instance, not on a single session.
+		/// </remarks>
 		public DocumentConvention Conventions
 		{
 			get { return documentStore.Conventions; }
 		}
 
+		/// <summary>
+		/// Gets or sets the max number of requests per session.
+		/// If the <see cref="NumberOfRequests"/> rise above <see cref="MaxNumberOfRequestsPerSession"/>, an exception will be thrown.
+		/// </summary>
+		/// <value>The max number of requests per session.</value>
 		public int MaxNumberOfRequestsPerSession { get; set; }
 
+		/// <summary>
+		/// Gets or sets a value indicating whether the session should use optimistic concurrency.
+		/// When set to <c>true</c>, a check is made so that a change made behind the session back would fail
+		/// and raise <see cref="ConcurrencyException"/>.
+		/// </summary>
+		/// <value></value>
 		public bool UseOptimisticConcurrency { get; set; }
+		/// <summary>
+		/// Occurs when an entity is stored in the session
+		/// </summary>
 		public virtual event EntityStored Stored;
+		/// <summary>
+		/// Occurs when an entity is converted to a document and metadata.
+		/// Changes made to the document / metadata instances passed to this event will be persisted.
+		/// </summary>
 		public virtual event EntityToDocument OnEntityConverted;
 
+		/// <summary>
+		/// Gets the metadata for the specified entity.
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="instance">The instance.</param>
+		/// <returns></returns>
 		public JObject GetMetadataFor<T>(T instance)
 		{
 			DocumentSession.DocumentMetadata value;
@@ -90,6 +146,11 @@ namespace Raven.Client.Document
 			return value.Metadata;
 		}
 
+		/// <summary>
+		/// Gets the document id.
+		/// </summary>
+		/// <param name="instance">The instance.</param>
+		/// <returns></returns>
 		public string GetDocumentId(object instance)
 		{
 			DocumentSession.DocumentMetadata value;
@@ -97,6 +158,10 @@ namespace Raven.Client.Document
 				return null;
 			return value.Key;
 		}
+		/// <summary>
+		/// Gets a value indicating whether any of the entities tracked by the session has changes.
+		/// </summary>
+		/// <value></value>
 		public bool HasChanges
 		{
 			get 
@@ -107,6 +172,13 @@ namespace Raven.Client.Document
 		}
 
 
+		/// <summary>
+		/// Determines whether the specified entity has changed.
+		/// </summary>
+		/// <param name="entity">The entity.</param>
+		/// <returns>
+		/// 	<c>true</c> if the specified entity has changed; otherwise, <c>false</c>.
+		/// </returns>
 		public bool HasChanged(object entity)
 		{
 			DocumentSession.DocumentMetadata value;
@@ -130,6 +202,12 @@ more responsive application.
 						MaxNumberOfRequestsPerSession));
 		}
 
+		/// <summary>
+		/// Tracks the entity inside the unit of work
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="documentFound">The document found.</param>
+		/// <returns></returns>
 		protected T TrackEntity<T>(JsonDocument documentFound)
 		{
 			if (documentFound.Metadata.Property("@etag") == null)
@@ -144,6 +222,14 @@ more responsive application.
 			return TrackEntity<T>(documentFound.Key, documentFound.DataAsJson, documentFound.Metadata);
 		}
 
+		/// <summary>
+		/// Tracks the entity.
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="key">The key.</param>
+		/// <param name="document">The document.</param>
+		/// <param name="metadata">The metadata.</param>
+		/// <returns></returns>
 		public T TrackEntity<T>(string key, JObject document, JObject metadata)
 		{
 			object entity;
@@ -177,8 +263,24 @@ more responsive application.
 			return (T) entity;
 		}
 
+		/// <summary>
+		/// Gets or sets a value indicating whether non authoritive information is allowed.
+		/// Non authoritive information is document that has been modified by a transaction that hasn't been committed.
+		/// The server provides the latest committed version, but it is known that attempting to write to a non authoritive document
+		/// will fail, because it is already modified.
+		/// If set to <c>false</c>, the session will wait <see cref="NonAuthoritiveInformationTimeout"/> for the transaction to commit to get an
+		/// authoritive information. If the wait is longer than <see cref="NonAuthoritiveInformationTimeout"/>, <see cref="NonAuthoritiveInformationException"/> is thrown.
+		/// </summary>
+		/// <value>
+		/// 	<c>true</c> if non authoritive information is allowed; otherwise, <c>false</c>.
+		/// </value>
 		public bool AllowNonAuthoritiveInformation { get; set; }
 
+		/// <summary>
+		/// Marks the specified entity for deletion. The entity will be deleted when <see cref="IDocumentSession.SaveChanges"/> is called.
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="entity">The entity.</param>
 		public void Delete<T>(T entity)
 		{
 			if(entitiesAndMetadata.ContainsKey(entity)==false)
@@ -186,6 +288,14 @@ more responsive application.
 			deletedEntities.Add(entity);
 		}
 
+		/// <summary>
+		/// Converts the json document to an entity.
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="id">The id.</param>
+		/// <param name="documentFound">The document found.</param>
+		/// <param name="metadata">The metadata.</param>
+		/// <returns></returns>
 		protected object ConvertToEntity<T>(string id, JObject documentFound, JObject metadata)
 		{
 			var entity = default(T);
@@ -212,6 +322,12 @@ more responsive application.
 			return entity;
 		}
 
+		/// <summary>
+		/// Tries to set the identity property
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="entity">The entity.</param>
+		/// <param name="id">The id.</param>
 		protected void TrySetIdentity<T>(T entity, string id)
 		{
 			var identityProperty = documentStore.Conventions.GetIdentityProperty(entity.GetType());
@@ -235,6 +351,10 @@ more responsive application.
 				);
 		}
 
+		/// <summary>
+		/// Stores the specified entity in the session. The entity will be saved when <see cref="IDocumentSession.SaveChanges"/> is called.
+		/// </summary>
+		/// <param name="entity">The entity.</param>
 		public void Store(object entity)
 		{
 			if (null == entity)
@@ -288,6 +408,12 @@ more responsive application.
 				entitiesByKey[id] = entity;
 		}
 
+		/// <summary>
+		/// Tries to get the identity.
+		/// </summary>
+		/// <param name="entity">The entity.</param>
+		/// <param name="id">The id.</param>
+		/// <returns></returns>
 		protected string TryGetIdentity(object entity, string id)
 		{
 			var identityProperty = GetIdentityProperty(entity.GetType());
@@ -319,6 +445,12 @@ more responsive application.
 		}
 #endif
 
+		/// <summary>
+		/// Creates the put entity command.
+		/// </summary>
+		/// <param name="entity">The entity.</param>
+		/// <param name="documentMetadata">The document metadata.</param>
+		/// <returns></returns>
 		protected ICommandData CreatePutEntityCommand(object entity, DocumentSession.DocumentMetadata documentMetadata)
 		{
 			var json = ConvertEntityToJson(entity, documentMetadata.Metadata);
@@ -339,6 +471,11 @@ more responsive application.
 			return documentStore.Conventions.GetIdentityProperty(entityType);
 		}
 
+		/// <summary>
+		/// Updates the batch results.
+		/// </summary>
+		/// <param name="batchResults">The batch results.</param>
+		/// <param name="entities">The entities.</param>
 		protected void UpdateBatchResults(IList<BatchResult> batchResults, IList<object> entities)
 		{
 			var stored = Stored;
@@ -377,6 +514,10 @@ more responsive application.
             }
 		}
 
+		/// <summary>
+		/// Prepares for save changes.
+		/// </summary>
+		/// <returns></returns>
 		protected DocumentSession.SaveChangesData PrepareForSaveChanges()
 		{
 			var result = new DocumentSession.SaveChangesData
@@ -449,6 +590,12 @@ more responsive application.
 			hasEnlisted = true;
 		}
 
+		/// <summary>
+		/// Determines if the entity have changed.
+		/// </summary>
+		/// <param name="entity">The entity.</param>
+		/// <param name="documentMetadata">The document metadata.</param>
+		/// <returns></returns>
 		protected bool EntityChanged(object entity, DocumentSession.DocumentMetadata documentMetadata)
 		{
 			if (documentMetadata == null)
@@ -486,6 +633,12 @@ more responsive application.
 
 
 
+		/// <summary>
+		/// Evicts the specified entity from the session.
+		/// Remove the entity from the delete queue and stops tracking changes for this entity.
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="entity">The entity.</param>
 		public void Evict<T>(T entity)
 		{
 			DocumentSession.DocumentMetadata value;
@@ -497,6 +650,10 @@ more responsive application.
 			deletedEntities.Remove(entity);
 		}
 
+		/// <summary>
+		/// Clears this instance.
+		/// Remove all entities from the delete queue and stops tracking changes for all entities.
+		/// </summary>
 		public void Clear()
 		{
 			entitiesAndMetadata.Clear();
@@ -504,15 +661,34 @@ more responsive application.
 			entitiesByKey.Clear();
 		}
 
+		/// <summary>
+		/// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+		/// </summary>
 		public virtual void Dispose()
 		{
 			
 		}
 
+		/// <summary>
+		/// Commits the specified tx id.
+		/// </summary>
+		/// <param name="txId">The tx id.</param>
 		public abstract void Commit(Guid txId);
+		/// <summary>
+		/// Rollbacks the specified tx id.
+		/// </summary>
+		/// <param name="txId">The tx id.</param>
 		public abstract void Rollback(Guid txId);
+		/// <summary>
+		/// Promotes the transaction.
+		/// </summary>
+		/// <param name="fromTxId">From tx id.</param>
+		/// <returns></returns>
 		public abstract byte[] PromoteTransaction(Guid fromTxId);
 
+		/// <summary>
+		/// Clears the enlistment.
+		/// </summary>
 		protected void ClearEnlistment()
 		{
 			hasEnlisted = false;

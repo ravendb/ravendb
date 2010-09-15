@@ -40,11 +40,21 @@ namespace Raven.Client.Document.Async
 			get { return null; }
 		}
 
+		/// <summary>
+		/// Gets a user-defined object that qualifies or contains information about an asynchronous operation.
+		/// </summary>
+		/// <value></value>
+		/// <returns>A user-defined object that qualifies or contains information about an asynchronous operation.</returns>
 		public object AsyncState
 		{
 			get { return state; }
 		}
 
+		/// <summary>
+		/// Gets a value that indicates whether the asynchronous operation completed synchronously.
+		/// </summary>
+		/// <value></value>
+		/// <returns>true if the asynchronous operation completed synchronously; otherwise, false.</returns>
 		public bool CompletedSynchronously
 		{
 			get { return true; }

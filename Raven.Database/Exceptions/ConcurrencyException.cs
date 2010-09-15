@@ -46,7 +46,15 @@ namespace Raven.Database.Exceptions
 		{
 		}
 
+		/// <summary>
+		/// Gets or sets the expected E tag.
+		/// </summary>
+		/// <value>The expected E tag.</value>
 		public Guid ExpectedETag { get; set; }
+		/// <summary>
+		/// Gets or sets the actual E tag.
+		/// </summary>
+		/// <value>The actual E tag.</value>
 		public Guid ActualETag { get; set; }
 	}
 }

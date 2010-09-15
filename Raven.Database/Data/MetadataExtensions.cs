@@ -85,6 +85,12 @@ namespace Raven.Database.Data
 			"Warning",
 		};
 
+		/// <summary>
+		/// Filters the headers from unwanted headers
+		/// </summary>
+		/// <param name="self">The self.</param>
+		/// <param name="isServerDocument">if set to <c>true</c> [is server document].</param>
+		/// <returns></returns>
         public static JObject FilterHeaders(this NameValueCollection self, bool isServerDocument)
         {
             var metadata = new JObject();

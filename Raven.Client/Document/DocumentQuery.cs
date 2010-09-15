@@ -41,6 +41,9 @@ namespace Raven.Client.Document
 		protected int pageSize = 128;
 		private QueryResult queryResult;
 		private StringBuilder queryText = new StringBuilder();
+		/// <summary>
+		/// which record to start reading from 
+		/// </summary>
 		protected int start;
 		private TimeSpan timeout;
 		private bool waitForNonStaleResults;
@@ -367,26 +370,49 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		/// <summary>
+		/// Matches fields where the value is greater than the specified value
+		/// </summary>
+		/// <param name="fieldName">Name of the field.</param>
+		/// <param name="value">The value.</param>
 		public IDocumentQuery<T> WhereGreaterThan(string fieldName, object value)
 		{
 			return this.WhereBetween(fieldName, value, null);
 		}
 
+		/// <summary>
+		/// Matches fields where the value is greater than or equal to the specified value
+		/// </summary>
+		/// <param name="fieldName">Name of the field.</param>
+		/// <param name="value">The value.</param>
 		public IDocumentQuery<T> WhereGreaterThanOrEqual(string fieldName, object value)
 		{
 			return this.WhereBetweenOrEqual(fieldName, value, null);
 		}
 
+		/// <summary>
+		/// Matches fields where the value is less than the specified value
+		/// </summary>
+		/// <param name="fieldName">Name of the field.</param>
+		/// <param name="value">The value.</param>
 		public IDocumentQuery<T> WhereLessThan(string fieldName, object value)
 		{
 			return this.WhereBetween(fieldName, null, value);
 		}
 
+		/// <summary>
+		/// Matches fields where the value is less than or equal to the specified value
+		/// </summary>
+		/// <param name="fieldName">Name of the field.</param>
+		/// <param name="value">The value.</param>
 		public IDocumentQuery<T> WhereLessThanOrEqual(string fieldName, object value)
 		{
 			return this.WhereBetweenOrEqual(fieldName, null, value);
 		}
 
+		/// <summary>
+		/// Add an AND to the query
+		/// </summary>
 		public IDocumentQuery<T> AndAlso()
 		{
 			if (this.queryText.Length < 1)
@@ -398,6 +424,9 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		/// <summary>
+		/// Add an OR to the query
+		/// </summary>
 		public IDocumentQuery<T> OrElse()
 		{
 			if (this.queryText.Length < 1)
@@ -507,6 +536,12 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		/// <summary>
+		/// Filter matches to be inside the specified radius
+		/// </summary>
+		/// <param name="radius">The radius.</param>
+		/// <param name="latitude">The latitude.</param>
+		/// <param name="longitude">The longitude.</param>
 		public IDocumentQuery<T> WithinRadiusOf(double radius, double latitude, double longitude)
 		{
 			IDocumentQuery<T> spatialDocumentQuery = new SpatialDocumentQuery<T>(this, radius, latitude, longitude);
@@ -518,12 +553,24 @@ namespace Raven.Client.Document
 			return spatialDocumentQuery.Not;
 		}
 
+		/// <summary>
+		/// Order the results by the specified fields
+		/// </summary>
+		/// <remarks>
+		/// The fields are the names of the fields to sort, defaulting to sorting by ascending.
+		/// You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
+		/// </remarks>
+		/// <param name="fields">The fields.</param>
 		public IDocumentQuery<T> OrderBy(params string[] fields)
 		{
 			orderByFields = orderByFields.Concat(fields).ToArray();
 			return this;
 		}
 
+		/// <summary>
+		/// Instructs the query to wait for non stale results as of now.
+		/// </summary>
+		/// <returns></returns>
 		public IDocumentQuery<T> WaitForNonStaleResultsAsOfNow()
 		{
 			waitForNonStaleResults = true;
@@ -531,6 +578,11 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		/// <summary>
+		/// Instructs the query to wait for non stale results as of now for the specified timeout.
+		/// </summary>
+		/// <param name="waitTimeout">The wait timeout.</param>
+		/// <returns></returns>
 		public IDocumentQuery<T> WaitForNonStaleResultsAsOfNow(TimeSpan waitTimeout)
 		{
 			waitForNonStaleResults = true;
@@ -539,6 +591,11 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		/// <summary>
+		/// Instructs the query to wait for non stale results as of the cutoff date.
+		/// </summary>
+		/// <param name="cutOff">The cut off.</param>
+		/// <returns></returns>
 		public IDocumentQuery<T> WaitForNonStaleResultsAsOf(DateTime cutOff)
 		{
 			waitForNonStaleResults = true;
@@ -546,6 +603,11 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		/// <summary>
+		/// Instructs the query to wait for non stale results as of the cutoff date for the specified timeout
+		/// </summary>
+		/// <param name="cutOff">The cut off.</param>
+		/// <param name="waitTimeout">The wait timeout.</param>
 		public IDocumentQuery<T> WaitForNonStaleResultsAsOf(DateTime cutOff, TimeSpan waitTimeout)
 		{
 			waitForNonStaleResults = true;
@@ -554,6 +616,10 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		/// <summary>
+		/// EXPERT ONLY: Instructs the query to wait for non stale results.
+		/// This shouldn't be used outside of unit tests unless you are well aware of the implications
+		/// </summary>
 		public IDocumentQuery<T> WaitForNonStaleResults()
 		{
 			waitForNonStaleResults = true;
@@ -563,6 +629,10 @@ namespace Raven.Client.Document
 
 		#endregion
 
+		/// <summary>
+		/// Gets the query result.
+		/// </summary>
+		/// <returns></returns>
 		protected QueryResult GetQueryResult()
 		{
 			session.IncrementRequestCount();
@@ -596,6 +666,11 @@ namespace Raven.Client.Document
 			}
 		}
 
+		/// <summary>
+		/// Generates the index query.
+		/// </summary>
+		/// <param name="query">The query.</param>
+		/// <returns></returns>
 		protected virtual IndexQuery GenerateIndexQuery(string query)
 		{
 			return new IndexQuery
@@ -670,6 +745,12 @@ namespace Raven.Client.Document
 			return RavenQuery.Escape(value.ToString(), false);
 		}
 
+		/// <summary>
+		/// Returns a <see cref="System.String"/> that represents this instance.
+		/// </summary>
+		/// <returns>
+		/// A <see cref="System.String"/> that represents this instance.
+		/// </returns>
 		public override string ToString()
 		{
 			return this.queryText.ToString();

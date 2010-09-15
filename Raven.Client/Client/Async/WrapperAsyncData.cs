@@ -46,11 +46,21 @@ namespace Raven.Client.Client.Async
 			}
 		}
 
+		/// <summary>
+		/// Gets a user-defined object that qualifies or contains information about an asynchronous operation.
+		/// </summary>
+		/// <value></value>
+		/// <returns>A user-defined object that qualifies or contains information about an asynchronous operation.</returns>
 		public object AsyncState
 		{
 			get { return inner.AsyncState; }
 		}
 
+		/// <summary>
+		/// Gets a value that indicates whether the asynchronous operation completed synchronously.
+		/// </summary>
+		/// <value></value>
+		/// <returns>true if the asynchronous operation completed synchronously; otherwise, false.</returns>
 		public bool CompletedSynchronously
 		{
 			get { return inner.CompletedSynchronously; }

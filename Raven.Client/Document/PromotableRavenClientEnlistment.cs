@@ -41,18 +41,31 @@ namespace Raven.Client.Document
 		{
 		}
 
+		/// <summary>
+		/// Notifies an enlisted object that the transaction is being committed.
+		/// </summary>
+		/// <param name="singlePhaseEnlistment">A <see cref="T:System.Transactions.SinglePhaseEnlistment"/> interface used to send a response to the transaction manager.</param>
 		public void SinglePhaseCommit(SinglePhaseEnlistment singlePhaseEnlistment)
 		{
 			session.Commit(GetLocalOrDistributedTransactionId(transaction));
 			singlePhaseEnlistment.Committed();
 		}
 
+		/// <summary>
+		/// Notifies an enlisted object that the transaction is being rolled back.
+		/// </summary>
+		/// <param name="singlePhaseEnlistment">A <see cref="T:System.Transactions.SinglePhaseEnlistment"/> object used to send a response to the transaction manager.</param>
 		public void Rollback(SinglePhaseEnlistment singlePhaseEnlistment)
 		{
 			session.Rollback(GetLocalOrDistributedTransactionId(transaction));
 			singlePhaseEnlistment.Aborted();
 		}
 
+		/// <summary>
+		/// Gets the local or distributed transaction id.
+		/// </summary>
+		/// <param name="transactionInformation">The transaction information.</param>
+		/// <returns></returns>
 		public static Guid GetLocalOrDistributedTransactionId(TransactionInformation transactionInformation)
 		{
 			if (transactionInformation.DistributedIdentifier != Guid.Empty)

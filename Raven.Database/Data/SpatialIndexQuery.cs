@@ -51,6 +51,10 @@ namespace Raven.Database.Data
 			SortedFields = query.SortedFields;
 		}
 
+		/// <summary>
+		/// Gets the custom query string variables.
+		/// </summary>
+		/// <returns></returns>
 		protected override string GetCustomQueryStringVariables()
 		{
 			return string.Format("latitude={0}&longitude={1}&radius={2}&sortByDistance={3}",

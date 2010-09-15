@@ -42,7 +42,7 @@ namespace Raven.Client
 		IRavenQueryable<T> Query<T>(string indexName);
 
 		/// <summary>
-		/// Queries the index specified by <see cref="TIndexCreator"/> using Linq.
+		/// Queries the index specified by <typeparamref name="TIndexCreator"/> using Linq.
 		/// </summary>
 		/// <typeparam name="T">The result of the query</typeparam>
 		/// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>

@@ -110,6 +110,10 @@ namespace Raven.Database.Data
 			return Uri.EscapeUriString(path);
 		}
 
+		/// <summary>
+		/// Gets the custom query string variables.
+		/// </summary>
+		/// <returns></returns>
 		protected virtual string GetCustomQueryStringVariables()
 		{
 			return string.Empty;

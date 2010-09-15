@@ -67,7 +67,7 @@ namespace Raven.Client.Indexes
         /// </summary>
         Conditional = 20,            
         /// <summary>
-        /// =  *=  /=  %=  +=  -=  &lt;&lt;=  &gt;&gt;=  &=  ^=  |=
+        /// =  *=  /=  %=  +=  -=  &lt;&lt;=  &gt;&gt;=  &amp;=  ^=  |=
         /// </summary>
         Assignment = 10,
         /// <summary>
@@ -76,8 +76,14 @@ namespace Raven.Client.Indexes
         ParenthesisNotNeeded = 0,
     }
 
-    public static class ExpressionOperatorPrecedenceExtension
+	/// <summary>
+	/// Methods on the enum
+	/// </summary>
+	public static class ExpressionOperatorPrecedenceExtension
     {
+		/// <summary>
+		/// Needs parenthesis for the expression
+		/// </summary>
         public static bool NeedsParenthesisFor(this ExpressionOperatorPrecedence outer, ExpressionOperatorPrecedence inner)
         {
             if (outer == ExpressionOperatorPrecedence.ParenthesisNotNeeded || inner == ExpressionOperatorPrecedence.ParenthesisNotNeeded)

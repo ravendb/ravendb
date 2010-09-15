@@ -81,6 +81,12 @@ namespace Raven.Client.Document
 			return TrackEntity<T>(documentFound);
 		}
 
+		/// <summary>
+		/// Loads the specified entities with the specified ids.
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="ids">The ids.</param>
+		/// <returns></returns>
 		public T[] Load<T>(params string[] ids)
 		{
 			return LoadInternal<T>(ids, null);
@@ -116,17 +122,34 @@ namespace Raven.Client.Document
 				.ToArray();
 		}
 
+		/// <summary>
+		/// Queries the specified index using Linq.
+		/// </summary>
+		/// <typeparam name="T">The result of the query</typeparam>
+		/// <param name="indexName">Name of the index.</param>
+		/// <returns></returns>
 		public IRavenQueryable<T> Query<T>(string indexName)
 	    {
 	        return new RavenQueryable<T>(new RavenQueryProvider<T>(this, indexName));
 	    }
 
+		/// <summary>
+		/// Queries the index specified by <typeparamref name="TIndexCreator"/> using Linq.
+		/// </summary>
+		/// <typeparam name="T">The result of the query</typeparam>
+		/// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
+		/// <returns></returns>
 		public IRavenQueryable<T> Query<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
 		{
 			var indexCreator = new TIndexCreator();
 			return Query<T>(indexCreator.IndexName);
 		}
 
+		/// <summary>
+		/// Refreshes the specified entity from Raven server.
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="entity">The entity.</param>
 		public void Refresh<T>(T entity)
 	    {
 	        DocumentMetadata value;
@@ -147,11 +170,21 @@ namespace Raven.Client.Document
 	        }
 	    }
 
+		/// <summary>
+		/// Begin a load while including the specified path
+		/// </summary>
+		/// <param name="path">The path.</param>
+		/// <returns></returns>
 		public ILoaderWithInclude Include(string path)
 		{
 			return new MultiLoaderWithInclude(this).Include(path);
 		}
 
+		/// <summary>
+		/// Gets the document URL for the specified entity.
+		/// </summary>
+		/// <param name="entity">The entity.</param>
+		/// <returns></returns>
 		public string GetDocumentUrl(object entity)
 		{
 			if (string.IsNullOrEmpty(documentStore.Url))
@@ -167,6 +200,9 @@ namespace Raven.Client.Document
 			return baseUrl + value.Key;
 		}
 
+		/// <summary>
+		/// Saves all the changes to the Raven server.
+		/// </summary>
 		public void SaveChanges()
 		{
 			var data = PrepareForSaveChanges();
@@ -177,11 +213,21 @@ namespace Raven.Client.Document
 			UpdateBatchResults(DatabaseCommands.Batch(data.Commands.ToArray()), data.Entities);
 		}
 
+		/// <summary>
+		/// Query the specified index using Lucene syntax
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="indexName">Name of the index.</param>
+		/// <returns></returns>
 		public IDocumentQuery<T> LuceneQuery<T>(string indexName)
 		{
 			return new DocumentQuery<T>(this, DatabaseCommands, indexName, null);
 		}
 
+		/// <summary>
+		/// Commits the specified tx id.
+		/// </summary>
+		/// <param name="txId">The tx id.</param>
 	    public override void Commit(Guid txId)
 	    {
             IncrementRequestCount();
@@ -189,6 +235,10 @@ namespace Raven.Client.Document
 	        ClearEnlistment();
 	    }
 
+		/// <summary>
+		/// Rollbacks the specified tx id.
+		/// </summary>
+		/// <param name="txId">The tx id.</param>
 		public override void Rollback(Guid txId)
 	    {
             IncrementRequestCount();
@@ -196,61 +246,151 @@ namespace Raven.Client.Document
 			ClearEnlistment();
 	    }
 
+		/// <summary>
+		/// Promotes the transaction.
+		/// </summary>
+		/// <param name="fromTxId">From tx id.</param>
+		/// <returns></returns>
 		public override byte[] PromoteTransaction(Guid fromTxId)
 		{
 			return documentStore.DatabaseCommands.PromoteTransaction(fromTxId);
 		}
 
+		/// <summary>
+		/// Stores the recovery information for the specified transaction
+		/// </summary>
+		/// <param name="txId">The tx id.</param>
+		/// <param name="recoveryInformation">The recovery information.</param>
 		public void StoreRecoveryInformation(Guid txId, byte[] recoveryInformation)
 		{
 			documentStore.DatabaseCommands.StoreRecoveryInformation(txId, recoveryInformation);
 		}
 
+		/// <summary>
+		/// Metadata held about an entity by the session
+		/// </summary>
 		public class DocumentMetadata
         {
+			/// <summary>
+			/// Gets or sets the original value.
+			/// </summary>
+			/// <value>The original value.</value>
 			public JObject OriginalValue { get; set; }
+			/// <summary>
+			/// Gets or sets the metadata.
+			/// </summary>
+			/// <value>The metadata.</value>
             public JObject Metadata { get; set; }
+			/// <summary>
+			/// Gets or sets the ETag.
+			/// </summary>
+			/// <value>The ETag.</value>
             public Guid? ETag { get; set; }
+			/// <summary>
+			/// Gets or sets the key.
+			/// </summary>
+			/// <value>The key.</value>
             public string Key { get; set; }
+			/// <summary>
+			/// Gets or sets the original metadata.
+			/// </summary>
+			/// <value>The original metadata.</value>
 			public JObject OriginalMetadata { get; set; }
         }
 
+		/// <summary>
+		/// Data for a batch command to the server
+		/// </summary>
 		public class SaveChangesData
 		{
+			/// <summary>
+			/// Gets or sets the commands.
+			/// </summary>
+			/// <value>The commands.</value>
 			public IList<ICommandData> Commands { get; set; }
+			/// <summary>
+			/// Gets or sets the entities.
+			/// </summary>
+			/// <value>The entities.</value>
 			public IList<object> Entities { get; set; }
 		}
     }
 
+	/// <summary>
+	/// Fluent interface for specifying include paths
+	/// for loading documents
+	/// </summary>
 	public interface ILoaderWithInclude
 	{
+		/// <summary>
+		/// Includes the specified path.
+		/// </summary>
+		/// <param name="path">The path.</param>
+		/// <returns></returns>
 		MultiLoaderWithInclude Include(string path);
+		/// <summary>
+		/// Loads the specified ids.
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="ids">The ids.</param>
+		/// <returns></returns>
 		T[] Load<T>(params string[] ids);
 
+		/// <summary>
+		/// Loads the specified id.
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="id">The id.</param>
+		/// <returns></returns>
 		T Load<T>(string id);
 	}
 
+	/// <summary>
+	/// Fluent implementation for specifying include paths
+	/// for loading documents
+	/// </summary>
 	public class MultiLoaderWithInclude : ILoaderWithInclude
 	{
 		private readonly DocumentSession session;
 		private readonly List<string> includes = new List<string>();
 
+		/// <summary>
+		/// Includes the specified path.
+		/// </summary>
+		/// <param name="path">The path.</param>
+		/// <returns></returns>
 		public MultiLoaderWithInclude Include(string path)
 		{
 			includes.Add(path);
 			return this;
 		}
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="MultiLoaderWithInclude"/> class.
+		/// </summary>
+		/// <param name="session">The session.</param>
 		public MultiLoaderWithInclude(DocumentSession session)
 		{
 			this.session = session;
 		}
 
+		/// <summary>
+		/// Loads the specified ids.
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="ids">The ids.</param>
+		/// <returns></returns>
 		public T[] Load<T>(params string[] ids)
 		{
 			return session.LoadInternal<T>(ids, includes.ToArray());
 		}
 
+		/// <summary>
+		/// Loads the specified id.
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="id">The id.</param>
+		/// <returns></returns>
 		public T Load<T>(string id)
 		{
 			return Load<T>(new[] {id}).FirstOrDefault();

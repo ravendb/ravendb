@@ -185,6 +185,14 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 				throw new ArgumentException("Key cannot be null or empty", argName);
 		}
 
+		/// <summary>
+		/// Puts the document with the specified key in the database
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <param name="etag">The etag.</param>
+		/// <param name="document">The document.</param>
+		/// <param name="metadata">The metadata.</param>
+		/// <returns></returns>
 		public PutResult Put(string key, Guid? etag, JObject document, JObject metadata)
 		{
 			return ExecuteWithReplication(u => DirectPut(metadata, key, etag, document, u));
@@ -228,6 +236,11 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			metadata["Raven-Transaction-Information"] = new JValue(txInfo);
 		}
 
+		/// <summary>
+		/// Deletes the document with the specified key.
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <param name="etag">The etag.</param>
 		public void Delete(string key, Guid? etag)
 		{
 			EnsureIsNotNullOrEmpty(key, "key");
@@ -238,6 +251,13 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			});
 		}
 
+		/// <summary>
+		/// Puts the attachment with the specified key
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <param name="etag">The etag.</param>
+		/// <param name="data">The data.</param>
+		/// <param name="metadata">The metadata.</param>
 		public void PutAttachment(string key, Guid? etag, byte[] data, JObject metadata)
 		{
 			var webRequest = WebRequest.Create(url + "/static/" + key);
@@ -287,6 +307,11 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			return str;
 		}
 
+		/// <summary>
+		/// Gets the attachment by the specified key
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <returns></returns>
 		public Attachment GetAttachment(string key)
 		{
 			var webRequest = WebRequest.Create(url + "/static/" + key);
@@ -314,6 +339,11 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			}
 		}
 
+		/// <summary>
+		/// Deletes the attachment with the specified key
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <param name="etag">The etag.</param>
 		public void DeleteAttachment(string key, Guid? etag)
 		{
 			var webRequest = WebRequest.Create(url + "/static/" + key);
@@ -329,11 +359,21 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			}
 		}
 
+		/// <summary>
+		/// Gets the index names from the server
+		/// </summary>
+		/// <param name="start">Paging start</param>
+		/// <param name="pageSize">Size of the page.</param>
+		/// <returns></returns>
 		public string[] GetIndexNames(int start, int pageSize)
 		{
 			return ExecuteWithReplication(u => DirectGetIndexNames(start, pageSize, u));
 		}
 
+		/// <summary>
+		/// Resets the specified index
+		/// </summary>
+		/// <param name="name">The name.</param>
 		public void ResetIndex(string name)
 		{
 			ExecuteWithReplication(u => DirectResetIndex(name, u));
@@ -355,6 +395,11 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			return JArray.Parse(responseString).Select(x => x.Value<string>()).ToArray();
 		}
 
+		/// <summary>
+		/// Gets the index definition for the specified name
+		/// </summary>
+		/// <param name="name">The name.</param>
+		/// <returns></returns>
 		public IndexDefinition GetIndex(string name)
 		{
 			EnsureIsNotNullOrEmpty(name, "name");
@@ -426,11 +471,24 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			}
 		}
 
+		/// <summary>
+		/// Puts the index.
+		/// </summary>
+		/// <param name="name">The name.</param>
+		/// <param name="definition">The definition.</param>
+		/// <returns></returns>
 		public string PutIndex(string name, IndexDefinition definition)
 		{
 			return PutIndex(name, definition, false);
 		}
 
+		/// <summary>
+		/// Puts the index.
+		/// </summary>
+		/// <param name="name">The name.</param>
+		/// <param name="definition">The definition.</param>
+		/// <param name="overwrite">if set to <c>true</c> [overwrite].</param>
+		/// <returns></returns>
 		public string PutIndex(string name, IndexDefinition definition, bool overwrite)
 		{
 			EnsureIsNotNullOrEmpty(name, "name");
@@ -471,17 +529,41 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			}
 		}
 
+		/// <summary>
+		/// Puts the index definition for the specified name
+		/// </summary>
+		/// <typeparam name="TDocument">The type of the document.</typeparam>
+		/// <typeparam name="TReduceResult">The type of the reduce result.</typeparam>
+		/// <param name="name">The name.</param>
+		/// <param name="indexDef">The index def.</param>
+		/// <returns></returns>
 		public string PutIndex<TDocument, TReduceResult>(string name, IndexDefinition<TDocument, TReduceResult> indexDef)
 		{
 			return PutIndex(name, indexDef.ToIndexDefinition(convention));
 		}
 
 
+		/// <summary>
+		/// Puts the index for the specified name
+		/// </summary>
+		/// <typeparam name="TDocument">The type of the document.</typeparam>
+		/// <typeparam name="TReduceResult">The type of the reduce result.</typeparam>
+		/// <param name="name">The name.</param>
+		/// <param name="indexDef">The index def.</param>
+		/// <param name="overwrite">if set to <c>true</c> [overwrite].</param>
+		/// <returns></returns>
 		public string PutIndex<TDocument, TReduceResult>(string name, IndexDefinition<TDocument, TReduceResult> indexDef, bool overwrite)
 		{
 			return PutIndex(name, indexDef.ToIndexDefinition(convention), overwrite);
 		}
 
+		/// <summary>
+		/// Queries the specified index.
+		/// </summary>
+		/// <param name="index">The index.</param>
+		/// <param name="query">The query.</param>
+		/// <param name="includes">The includes.</param>
+		/// <returns></returns>
 		public QueryResult Query(string index, IndexQuery query, string[] includes)
 		{
 			EnsureIsNotNullOrEmpty(index, "index");
@@ -521,6 +603,10 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			};
 		}
 
+		/// <summary>
+		/// Deletes the index.
+		/// </summary>
+		/// <param name="name">The name.</param>
 		public void DeleteIndex(string name)
 		{
 			EnsureIsNotNullOrEmpty(name, "name");
@@ -529,11 +615,24 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			request.ReadResponseString();
 		}
 
+		/// <summary>
+		/// Gets the results for the specified ids.
+		/// </summary>
+		/// <param name="ids">The ids.</param>
+		/// <param name="includes">The includes.</param>
+		/// <returns></returns>
 		public MultiLoadResult Get(string[] ids, string[] includes)
 		{
 			return ExecuteWithReplication(u => DirectGet(ids, u, includes));
 		}
 
+		/// <summary>
+		/// Perform a direct get for loading multiple ids in one request
+		/// </summary>
+		/// <param name="ids">The ids.</param>
+		/// <param name="operationUrl">The operation URL.</param>
+		/// <param name="includes">The includes.</param>
+		/// <returns></returns>
 		public MultiLoadResult DirectGet(string[] ids, string operationUrl, string[] includes)
 		{
 			var path = operationUrl + "/queries/";
@@ -554,6 +653,11 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			};
 		}
 
+		/// <summary>
+		/// Executed the specified commands as a single batch
+		/// </summary>
+		/// <param name="commandDatas">The command datas.</param>
+		/// <returns></returns>
 		public BatchResult[] Batch(ICommandData[] commandDatas)
 		{
 			return ExecuteWithReplication(u => DirectBatch(commandDatas, u));
@@ -584,6 +688,10 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			return JsonConvert.DeserializeObject<BatchResult[]>(response);
 		}
 
+		/// <summary>
+		/// Commits the specified tx id.
+		/// </summary>
+		/// <param name="txId">The tx id.</param>
 		public void Commit(Guid txId)
 		{
 			ExecuteWithReplication<object>(u =>
@@ -600,6 +708,10 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			httpJsonRequest.ReadResponseString();
 		}
 
+		/// <summary>
+		/// Rollbacks the specified tx id.
+		/// </summary>
+		/// <param name="txId">The tx id.</param>
 		public void Rollback(Guid txId)
 		{
 			ExecuteWithReplication<object>(u =>
@@ -609,11 +721,21 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			});
 		}
 
+		/// <summary>
+		/// Promotes the transaction.
+		/// </summary>
+		/// <param name="fromTxId">From tx id.</param>
+		/// <returns></returns>
 		public byte[] PromoteTransaction(Guid fromTxId)
 		{
 			return ExecuteWithReplication(u => DirectPromoteTransaction(fromTxId, u));
 		}
 
+		/// <summary>
+		/// Stores the recovery information.
+		/// </summary>
+		/// <param name="txId">The tx id.</param>
+		/// <param name="recoveryInformation">The recovery information.</param>
 		public void StoreRecoveryInformation(Guid txId, byte[] recoveryInformation)
 		{
 			ExecuteWithReplication<object>(u =>
@@ -661,16 +783,31 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			httpJsonRequest.ReadResponseString();
 		}
 
+		/// <summary>
+		/// Returns a new <see cref="IDatabaseCommands "/> using the specified credentials
+		/// </summary>
+		/// <param name="credentialsForSession">The credentials for session.</param>
+		/// <returns></returns>
 		public IDatabaseCommands With(ICredentials credentialsForSession)
 		{
 			return new ServerClient(url, convention, credentialsForSession, replicationInformer);
 		}
 
+		/// <summary>
+		/// Gets a value indicating whether [supports promotable transactions].
+		/// </summary>
+		/// <value>
+		/// 	<c>true</c> if [supports promotable transactions]; otherwise, <c>false</c>.
+		/// </value>
 		public bool SupportsPromotableTransactions
 		{
 			get { return true; }
 		}
 
+		/// <summary>
+		/// Gets the URL.
+		/// </summary>
+		/// <value>The URL.</value>
 		public string Url
 		{
 			get
@@ -679,6 +816,12 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			}
 		}
 
+		/// <summary>
+		/// Perform a set based deletes using the specified index.
+		/// </summary>
+		/// <param name="indexName">Name of the index.</param>
+		/// <param name="queryToDelete">The query to delete.</param>
+		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
 		public void DeleteByIndex(string indexName, IndexQuery queryToDelete, bool allowStale)
 		{
 			ExecuteWithReplication<object>(operationUrl =>
@@ -701,6 +844,13 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			});
 		}
 
+		/// <summary>
+		/// Perform a set based update using the specified index.
+		/// </summary>
+		/// <param name="indexName">Name of the index.</param>
+		/// <param name="queryToUpdate">The query to update.</param>
+		/// <param name="patchRequests">The patch requests.</param>
+		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
 		public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale)
 		{
 

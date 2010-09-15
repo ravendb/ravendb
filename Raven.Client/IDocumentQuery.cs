@@ -19,7 +19,6 @@ namespace Raven.Client
 		/// <summary>
 		/// Negate the next operation
 		/// </summary>
-		/// <value>The not.</value>
 		IDocumentQuery<T> Not { get; }
 
 		/// <summary>
@@ -118,12 +117,10 @@ namespace Raven.Client
 		/// <summary>
 		/// Add an AND to the query
 		/// </summary>
-		/// <returns></returns>
 		IDocumentQuery<T> AndAlso();
 		/// <summary>
 		/// Add an OR to the query
 		/// </summary>
-		/// <returns></returns>
 		IDocumentQuery<T> OrElse();
 
 		/// <summary>
@@ -198,7 +195,6 @@ namespace Raven.Client
 		/// </summary>
 		/// <param name="cutOff">The cut off.</param>
 		/// <param name="waitTimeout">The wait timeout.</param>
-		/// <returns></returns>
         IDocumentQuery<T> WaitForNonStaleResultsAsOf(DateTime cutOff, TimeSpan waitTimeout);
 
 		/// <summary>

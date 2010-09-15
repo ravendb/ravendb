@@ -216,15 +216,16 @@ namespace Raven.Client.Linq
             }
             return date;
 		}
-		
-		/// <summary> Limit a date's resolution. For example, the date <code>2004-09-21 13:50:11</code>
+
+		/// <summary>
+		/// Limit a date's resolution. For example, the date <code>2004-09-21 13:50:11</code>
 		/// will be changed to <code>2004-09-01 00:00:00</code> when using
-		/// <code>Resolution.MONTH</code>. 
-		/// 
+		/// <code>Resolution.MONTH</code>.
 		/// </summary>
-		/// <param name="resolution">The desired resolution of the date to be returned
-		/// </param>
-		/// <returns> the date with all values more precise than <code>resolution</code>
+		/// <param name="date">The date.</param>
+		/// <param name="resolution">The desired resolution of the date to be returned</param>
+		/// <returns>
+		/// the date with all values more precise than <code>resolution</code>
 		/// set to 0 or 1
 		/// </returns>
 		public static System.DateTime Round(System.DateTime date, Resolution resolution)
@@ -301,16 +302,37 @@ namespace Raven.Client.Linq
 		/// <summary>Specifies the time granularity. </summary>
 		public class Resolution
 		{
-			
+
+			/// <summary>
+			/// Resolution by year
+			/// </summary>
 			public static readonly Resolution YEAR = new Resolution("year");
+			/// <summary>
+			/// Resolution by month
+			/// </summary>
 			public static readonly Resolution MONTH = new Resolution("month");
+			/// <summary>
+			/// Resolution by day
+			/// </summary>
 			public static readonly Resolution DAY = new Resolution("day");
+			/// <summary>
+			/// Resolution by hour
+			/// </summary>
 			public static readonly Resolution HOUR = new Resolution("hour");
+			/// <summary>
+			/// Resolution by minute
+			/// </summary>
 			public static readonly Resolution MINUTE = new Resolution("minute");
+			/// <summary>
+			/// Resolution by second
+			/// </summary>
 			public static readonly Resolution SECOND = new Resolution("second");
+			/// <summary>
+			/// Resolution by millisecond
+			/// </summary>
 			public static readonly Resolution MILLISECOND = new Resolution("millisecond");
 			
-			private System.String resolution;
+			private readonly System.String resolution;
 			
 			internal Resolution()
 			{
@@ -320,7 +342,13 @@ namespace Raven.Client.Linq
 			{
 				this.resolution = resolution;
 			}
-			
+
+			/// <summary>
+			/// Returns a <see cref="System.String"/> that represents this instance.
+			/// </summary>
+			/// <returns>
+			/// A <see cref="System.String"/> that represents this instance.
+			/// </returns>
 			public override System.String ToString()
 			{
 				return resolution;

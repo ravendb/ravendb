@@ -12,7 +12,7 @@ namespace Raven.Client.Tests.Bugs
 			{
 				using(var session = store.OpenSession())
 				{
-					var query = session.Query<object>(RavenExtensions.Raven_DocumentByEntityName);
+					var query = session.Query<object>(RavenExtensions.RavenDocumentByEntityName);
 
 					query.Count();
 					query.ToList();

@@ -47,10 +47,17 @@ namespace Raven.Client.Shard
 		private readonly IShardStrategy shardStrategy;
 		private readonly Shards shards;
 
+		/// <summary>
+		/// Gets or sets the identifier for this store.
+		/// </summary>
+		/// <value>The identifier.</value>
         public string Identifier { get; set; }
         
 		#region IDisposable Members
 
+		/// <summary>
+		/// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+		/// </summary>
 		public void Dispose()
 		{
             Stored = null;
@@ -61,6 +68,11 @@ namespace Raven.Client.Shard
 
 		#endregion
 
+		/// <summary>
+		/// Registers the store listener.
+		/// </summary>
+		/// <param name="documentStoreListener">The document store listener.</param>
+		/// <returns></returns>
 		public IDocumentStore RegisterListener(IDocumentStoreListener documentStoreListener)
 		{
 			foreach (var shard in shards)
@@ -70,21 +82,37 @@ namespace Raven.Client.Shard
 			return this;
 		}
 
+		/// <summary>
+		/// Opens the session.
+		/// </summary>
+		/// <returns></returns>
 		public IDocumentSession OpenSession()
         {
             return new ShardedDocumentSession(shardStrategy, shards.Select(x => x.OpenSession()).ToArray());
         }
 
+		/// <summary>
+		/// Gets the database commands.
+		/// </summary>
+		/// <value>The database commands.</value>
 	    public IDatabaseCommands DatabaseCommands
 	    {
 	        get { throw new NotSupportedException("Sharded document store doesn't have a database commands. you need to explicitly use the shard instances to get access to the database commands"); }
 	    }
 
+		/// <summary>
+		/// Gets the conventions.
+		/// </summary>
+		/// <value>The conventions.</value>
 		public DocumentConvention Conventions
 		{
 			get { throw new NotSupportedException("Sharded document store doesn't have a database conventions. you need to explicitly use the shard instances to get access to the database commands"); }
 		}
 
+		/// <summary>
+		/// Initializes this instance.
+		/// </summary>
+		/// <returns></returns>
 		public IDocumentStore Initialize()
 		{
 			try
@@ -112,6 +140,11 @@ namespace Raven.Client.Shard
             return this;
 		}
 
+		/// <summary>
+		/// Registers the delete listener.
+		/// </summary>
+		/// <param name="deleteListener">The delete listener.</param>
+		/// <returns></returns>
 		public IDocumentStore RegisterListener(IDocumentDeleteListener deleteListener)
 		{
 			foreach (var shard in shards)

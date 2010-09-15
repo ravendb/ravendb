@@ -38,6 +38,11 @@ namespace Raven.Client.Document
 			lng = longitude;
 		}
 
+		/// <summary>
+		/// Generates the index query.
+		/// </summary>
+		/// <param name="query">The query.</param>
+		/// <returns></returns>
 		protected override IndexQuery GenerateIndexQuery(string query)
 		{
 			return new SpatialIndexQuery
