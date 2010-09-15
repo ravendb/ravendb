@@ -7,8 +7,14 @@ using Raven.Database.Indexing;
 
 namespace Raven.Database.Data
 {
+	/// <summary>
+	/// All the infomration required to query a Raven index
+	/// </summary>
     public class IndexQuery
     {
+		/// <summary>
+		/// Initializes a new instance of the <see cref="IndexQuery"/> class.
+		/// </summary>
         public IndexQuery()
         {
             TotalSize = new Reference<int>();
@@ -16,22 +22,61 @@ namespace Raven.Database.Data
             PageSize = 128;
         }
 
+		/// <summary>
+		/// Gets or sets the query.
+		/// </summary>
+		/// <value>The query.</value>
         public string Query { get; set; }
 
+		/// <summary>
+		/// Gets or sets the total size.
+		/// </summary>
+		/// <value>The total size.</value>
         public Reference<int> TotalSize { get; private set; }
 
+		/// <summary>
+		/// Gets or sets the start of records to read.
+		/// </summary>
+		/// <value>The start.</value>
         public int Start { get; set; }
 
+		/// <summary>
+		/// Gets or sets the size of the page.
+		/// </summary>
+		/// <value>The size of the page.</value>
         public int PageSize { get; set; }
 
+		/// <summary>
+		/// Gets or sets the fields to fetch.
+		/// </summary>
+		/// <value>The fields to fetch.</value>
         public string[] FieldsToFetch { get; set; }
 
+		/// <summary>
+		/// Gets or sets the fields to sort by
+		/// </summary>
+		/// <value>The sorted fields.</value>
         public SortedField[] SortedFields { get; set; }
 
+		/// <summary>
+		/// Gets or sets the cutoff date
+		/// </summary>
+		/// <value>The cutoff.</value>
         public DateTime? Cutoff { get; set; }
 
+		/// <summary>
+		/// Gets or sets the number of skipped results.
+		/// </summary>
+		/// <value>The skipped results.</value>
         public Reference<int> SkippedResults { get; set; }
 
+		/// <summary>
+		/// Gets the index query URL.
+		/// </summary>
+		/// <param name="operationUrl">The operation URL.</param>
+		/// <param name="index">The index.</param>
+		/// <param name="operationName">Name of the operation.</param>
+		/// <returns></returns>
         public string GetIndexQueryUrl(string operationUrl, string index, string operationName)
         {
             var path = string.Format("{0}/{5}/{1}?query={2}&start={3}&pageSize={4}", operationUrl, index,

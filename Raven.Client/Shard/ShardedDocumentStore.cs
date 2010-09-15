@@ -7,6 +7,11 @@ using Raven.Client.Shard.ShardStrategy;
 
 namespace Raven.Client.Shard
 {
+	/// <summary>
+	/// Implements a shared document store
+	/// Hiding most sharding details behind this and the <see cref="ShardedDocumentSession"/> gives you the ability to use
+	/// sharding without really thinking about this too much
+	/// </summary>
 	public class ShardedDocumentStore : IDocumentStore
 	{
 		public NameValueCollection SharedOperationsHeaders
@@ -14,8 +19,16 @@ namespace Raven.Client.Shard
 			get { throw new NotSupportedException("Sharded document store doesn't have a SharedOperationsHeaders. you need to explicitly use the shard instances to get access to the SharedOperationsHeaders"); }
 		}
 
+		/// <summary>
+		/// Occurs when an entity is stored inside any session opened from this instance
+		/// </summary>
 		public event EventHandler<StoredEntityEventArgs> Stored;
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="ShardedDocumentStore"/> class.
+		/// </summary>
+		/// <param name="shardStrategy">The shard strategy.</param>
+		/// <param name="shards">The shards.</param>
         public ShardedDocumentStore(IShardStrategy shardStrategy, Shards shards)
         {
             if (shards == null || shards.Count == 0) 

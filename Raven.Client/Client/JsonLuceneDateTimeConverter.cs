@@ -6,6 +6,9 @@ using Raven.Client.Linq;
 
 namespace Raven.Database.Json
 {
+	/// <summary>
+	/// Convert a lucene data format to and from json values
+	/// </summary>
 	public class JsonLuceneDateTimeConverter : JsonConverter
 	{
 		// 17 numeric characters on a datetime field == Lucene datetime

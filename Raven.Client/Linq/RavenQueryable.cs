@@ -6,11 +6,18 @@ using System.Linq.Expressions;
 
 namespace Raven.Client.Linq
 {
+	/// <summary>
+	/// Implements <see cref="IRavenQueryable{T}"/>
+	/// </summary>
     public class RavenQueryable<T> : IRavenQueryable<T>
     {
         private readonly Expression expression;
         private readonly IRavenQueryProvider provider;
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="RavenQueryable&lt;T&gt;"/> class.
+		/// </summary>
+		/// <param name="provider">The provider.</param>
         public RavenQueryable(IRavenQueryProvider provider)
         {
             if (provider == null)
@@ -21,6 +28,11 @@ namespace Raven.Client.Linq
             expression = Expression.Constant(this);
         }
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="RavenQueryable&lt;T&gt;"/> class.
+		/// </summary>
+		/// <param name="provider">The provider.</param>
+		/// <param name="expression">The expression.</param>
         public RavenQueryable(IRavenQueryProvider provider, Expression expression)
         {
             if (provider == null)

@@ -7,6 +7,9 @@ using Raven.Database.Linq;
 
 namespace Raven.Database.Json
 {
+	/// <summary>
+	/// Convert a dynamic variable to a json value and vice versa
+	/// </summary>
 	public class JsonDynamicConverter : JsonConverter
 	{
 		public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)

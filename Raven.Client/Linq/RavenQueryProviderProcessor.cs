@@ -7,6 +7,9 @@ using Raven.Client.Document;
 
 namespace Raven.Client.Linq
 {
+	/// <summary>
+	/// Process a Linq expression to a Lucene query
+	/// </summary>
 	public class RavenQueryProviderProcessor<T>
 	{
 		private readonly Action<IDocumentQuery<T>> customizeQuery;
@@ -18,6 +21,12 @@ namespace Raven.Client.Linq
 		private SpecialQueryType queryType = SpecialQueryType.None;
 		private Type newExpressionType;
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="RavenQueryProviderProcessor&lt;T&gt;"/> class.
+		/// </summary>
+		/// <param name="session">The session.</param>
+		/// <param name="customizeQuery">The customize query.</param>
+		/// <param name="indexName">Name of the index.</param>
 		public RavenQueryProviderProcessor(
 			IDocumentSession session,
 			Action<IDocumentQuery<T>> customizeQuery,
@@ -30,11 +39,19 @@ namespace Raven.Client.Linq
 			this.customizeQuery = customizeQuery;
 		}
 
+		/// <summary>
+		/// Gets the lucene query.
+		/// </summary>
+		/// <value>The lucene query.</value>
 		public IDocumentQuery<T> LuceneQuery
 		{
 			get { return luceneQuery; }
 		}
 
+		/// <summary>
+		/// Gets or sets the fields to fetch.
+		/// </summary>
+		/// <value>The fields to fetch.</value>
 		public List<string> FieldsToFetch { get; set; }
 
 		protected void VisitExpression(Expression expression)

@@ -38,11 +38,11 @@
 		public bool Descending { get; set; }
 #if !CLIENT
 		[System.CLSCompliant(false)]
-		public Lucene.Net.Search.SortField ToLuceneSortField(IndexDefinition definition)
+		public Lucene.Net.Search.SortField ToLuceneSortField(Raven.Database.Indexing.IndexDefinition definition)
 		{
 			var sortOptions = definition.GetSortOption(Field);
 			if(sortOptions == null)
-				return new  Lucene.Net.Search.SortField(Field, CultureInfo.InvariantCulture, Descending);
+				return new  Lucene.Net.Search.SortField(Field, System.Globalization.CultureInfo.InvariantCulture, Descending);
 			return new Lucene.Net.Search.SortField(Field, (int)sortOptions.Value, Descending);
 		}
 #endif

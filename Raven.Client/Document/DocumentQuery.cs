@@ -127,7 +127,6 @@ namespace Raven.Client.Document
 		/// </summary>
 		/// <param name="fieldName">Name of the field.</param>
 		/// <param name="descending">if set to <c>true</c> [descending].</param>
-		/// <returns></returns>
 		public IDocumentQuery<T> AddOrder(string fieldName, bool descending)
 		{
 			fieldName = descending ? "-" + fieldName : fieldName;
@@ -138,7 +137,6 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Gets the enumerator.
 		/// </summary>
-		/// <returns></returns>
 		public IEnumerator<T> GetEnumerator()
 		{
 			foreach (var include in QueryResult.Includes)
@@ -214,7 +212,6 @@ namespace Raven.Client.Document
 		/// Filter the results from the index using the specified where clause.
 		/// </summary>
 		/// <param name="whereClause">The where clause.</param>
-		/// <returns></returns>
 		public IDocumentQuery<T> Where(string whereClause)
 		{
 			if (queryText.Length > 0)
@@ -229,9 +226,6 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// 	Matches exact value
 		/// </summary>
-		/// <param name = "fieldName"></param>
-		/// <param name = "value"></param>
-		/// <returns></returns>
 		/// <remarks>
 		/// 	Defaults to NotAnalyzed
 		/// </remarks>
@@ -243,10 +237,6 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// 	Matches exact value
 		/// </summary>
-		/// <param name = "fieldName"></param>
-		/// <param name = "value"></param>
-		/// <param name = "isAnalyzed"></param>
-		/// <returns></returns>
 		/// <remarks>
 		/// 	Defaults to allow wildcards only if analyzed
 		/// </remarks>
@@ -258,7 +248,6 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// 	Matches exact value
 		/// </summary>
-		/// <returns></returns>
 		public IDocumentQuery<T> WhereEquals(string fieldName, object value, bool isAnalyzed, bool allowWildcards)
 		{
 			if (queryText.Length > 0)
@@ -286,9 +275,6 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// 	Matches substrings of the field
 		/// </summary>
-		/// <param name = "fieldName"></param>
-		/// <param name = "value"></param>
-		/// <returns></returns>
 		public IDocumentQuery<T> WhereContains(string fieldName, object value)
 		{
 			return this.WhereEquals(fieldName, value, true, true);

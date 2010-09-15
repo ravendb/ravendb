@@ -5,6 +5,9 @@ using System.Text;
 
 namespace Raven.Client.Indexes
 {
+	/// <summary>
+	/// Precedence values for operations
+	/// </summary>
     public enum ExpressionOperatorPrecedence
     {
         /// <summary>

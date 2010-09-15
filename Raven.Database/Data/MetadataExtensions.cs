@@ -6,6 +6,9 @@ using System;
 
 namespace Raven.Database.Data
 {
+	/// <summary>
+	/// Extensions for handling metadata
+	/// </summary>
     public static class MetadataExtensions
     {
     	private static readonly HashSet<string> HeadersToIgnoreServerDocument =
