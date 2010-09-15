@@ -22,6 +22,10 @@ namespace Raven.Client.Document
             this.session = session;
         }
 
+		/// <summary>
+		/// Notifies an enlisted object that a transaction is being prepared for commitment.
+		/// </summary>
+		/// <param name="preparingEnlistment">A <see cref="T:System.Transactions.PreparingEnlistment"/> object used to send a response to the transaction manager.</param>
         public void Prepare(PreparingEnlistment preparingEnlistment)
         {
         	session.StoreRecoveryInformation(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction), preparingEnlistment.RecoveryInformation());

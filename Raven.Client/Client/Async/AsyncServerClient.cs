@@ -19,12 +19,21 @@ using System.Collections.Generic;
 
 namespace Raven.Client.Client.Async
 {
+	/// <summary>
+	/// Access the database commands in async fashion
+	/// </summary>
 	public class AsyncServerClient : IAsyncDatabaseCommands
 	{
 		private readonly string url;
 		private readonly ICredentials credentials;
 		private readonly DocumentConvention convention;
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="AsyncServerClient"/> class.
+		/// </summary>
+		/// <param name="url">The URL.</param>
+		/// <param name="convention">The convention.</param>
+		/// <param name="credentials">The credentials.</param>
 		public AsyncServerClient(string url, DocumentConvention convention, ICredentials credentials)
 		{
 			this.url = url;

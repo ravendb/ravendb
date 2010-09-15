@@ -18,8 +18,14 @@ using Raven.Database.Linq;
 
 namespace Raven.Client.Document
 {
+	/// <summary>
+	/// Abstract implementation for in memory session operations
+	/// </summary>
 	public abstract class InMemoryDocumentSessionOperations : IInMemoryDocumentSessionOperations
 	{
+		/// <summary>
+		/// The RavenDB resource id for DTC operations
+		/// </summary>
 		public static readonly Guid RavenDbResourceManagerId = new Guid("E749BAA6-6F76-4EEF-A069-40A4378954F8");
 
 		private const string RavenEntityName = "Raven-Entity-Name";

@@ -10,11 +10,29 @@ using Raven.Database.Json;
 
 namespace Raven.Client.Client
 {
+    ///<summary>
+    /// Expose the set of operations by the RavenDB server
+    ///</summary>
     public interface IDatabaseCommands
 	{
+		/// <summary>
+		/// Gets or sets the operations headers.
+		/// </summary>
+		/// <value>The operations headers.</value>
 		NameValueCollection OperationsHeaders { get; set; }
-		
+
+		/// <summary>
+		/// Gets the docuent for the specified key.
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <returns></returns>
 		JsonDocument Get(string key);
+		/// <summary>
+		/// Gets the results for the specified ids.
+		/// </summary>
+		/// <param name="ids">The ids.</param>
+		/// <param name="includes">The includes.</param>
+		/// <returns></returns>
 		MultiLoadResult Get(string[] ids, string[] includes);
 
 		PutResult Put(string key, Guid? etag, JObject document, JObject metadata);

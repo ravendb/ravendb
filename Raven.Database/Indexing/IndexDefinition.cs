@@ -14,12 +14,29 @@ using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Database.Indexing
 {
+	/// <summary>
+	/// A definition of a RavenIndex
+	/// </summary>
 	public class IndexDefinition
 	{
+		/// <summary>
+		/// Gets or sets the map function
+		/// </summary>
+		/// <value>The map.</value>
 		public string Map { get; set; }
-		
+
+		/// <summary>
+		/// Gets or sets the reduce function
+		/// </summary>
+		/// <value>The reduce.</value>
 		public string Reduce { get; set; }
 
+		/// <summary>
+		/// Gets a value indicating whether this instance is map reduce index definition
+		/// </summary>
+		/// <value>
+		/// 	<c>true</c> if this instance is map reduce; otherwise, <c>false</c>.
+		/// </value>
 		public bool IsMapReduce
 		{
 			get { return Reduce != null; }
@@ -27,12 +44,28 @@ namespace Raven.Database.Indexing
 
         internal bool IsCompiled { get; set; }
 
+		/// <summary>
+		/// Gets or sets the stores options
+		/// </summary>
+		/// <value>The stores.</value>
 		public IDictionary<string, FieldStorage> Stores { get; set; }
 
+		/// <summary>
+		/// Gets or sets the indexing options
+		/// </summary>
+		/// <value>The indexes.</value>
 		public IDictionary<string, FieldIndexing> Indexes { get; set; }
 
+		/// <summary>
+		/// Gets or sets the sort options.
+		/// </summary>
+		/// <value>The sort options.</value>
 		public IDictionary<string, SortOptions> SortOptions { get; set; }
 
+		/// <summary>
+		/// Gets or sets the analyzers options
+		/// </summary>
+		/// <value>The analyzers.</value>
 		public IDictionary<string, string> Analyzers { get; set; }
 		
 #if !CLIENT
@@ -118,6 +151,9 @@ namespace Raven.Database.Indexing
 		}
 #endif
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="IndexDefinition"/> class.
+		/// </summary>
 		public IndexDefinition()
 		{
 			Indexes = new Dictionary<string, FieldIndexing>();
@@ -126,6 +162,11 @@ namespace Raven.Database.Indexing
 			SortOptions = new Dictionary<string, SortOptions>();
 		}
 
+		/// <summary>
+		/// Equalses the specified other.
+		/// </summary>
+		/// <param name="other">The other.</param>
+		/// <returns></returns>
 		public bool Equals(IndexDefinition other)
 		{
 			if (ReferenceEquals(null, other)) return false;

@@ -14,11 +14,19 @@ namespace Raven.Client.Linq
         private Action<IDocumentQuery<T>> customizeQuery;
 		private readonly IDocumentSession session;
 
+		/// <summary>
+		/// Gets the session.
+		/// </summary>
+		/// <value>The session.</value>
 		public IDocumentSession Session
         {
             get { return session; }
         }
 
+		/// <summary>
+		/// Gets the name of the index.
+		/// </summary>
+		/// <value>The name of the index.</value>
         public string IndexName
         {
             get { return indexName; }

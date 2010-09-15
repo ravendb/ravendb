@@ -22,6 +22,12 @@ namespace Raven.Client.Document
 			this.session = session;
 		}
 
+		/// <summary>
+		/// Notifies an enlisted object that an escalation of the delegated transaction has been requested.
+		/// </summary>
+		/// <returns>
+		/// A transmitter/receiver propagation token that marshals a distributed transaction. For more information, see <see cref="M:System.Transactions.TransactionInterop.GetTransactionFromTransmitterPropagationToken(System.Byte[])"/>.
+		/// </returns>
 		public byte[] Promote()
 		{
 			return session.PromoteTransaction(GetLocalOrDistributedTransactionId(transaction));

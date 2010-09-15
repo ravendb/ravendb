@@ -8,12 +8,16 @@ using Raven.Client.Shard.ShardStrategy;
 namespace Raven.Client.Shard
 {
 	/// <summary>
-	/// Implements a shared document store
+	/// Implements a sharded document store
 	/// Hiding most sharding details behind this and the <see cref="ShardedDocumentSession"/> gives you the ability to use
 	/// sharding without really thinking about this too much
 	/// </summary>
 	public class ShardedDocumentStore : IDocumentStore
 	{
+		/// <summary>
+		/// Gets the shared operations headers.
+		/// </summary>
+		/// <value>The shared operations headers.</value>
 		public NameValueCollection SharedOperationsHeaders
 		{
 			get { throw new NotSupportedException("Sharded document store doesn't have a SharedOperationsHeaders. you need to explicitly use the shard instances to get access to the SharedOperationsHeaders"); }

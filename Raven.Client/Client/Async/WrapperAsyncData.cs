@@ -23,6 +23,11 @@ namespace Raven.Client.Client.Async
 			this.wrapped = wrapped;
 		}
 
+		/// <summary>
+		/// Gets a value that indicates whether the asynchronous operation has completed.
+		/// </summary>
+		/// <value></value>
+		/// <returns>true if the operation is complete; otherwise, false.</returns>
 		public bool IsCompleted
 		{
 			get { return inner.IsCompleted; }

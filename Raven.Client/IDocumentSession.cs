@@ -55,6 +55,10 @@ namespace Raven.Client
 		/// <param name="indexName">Name of the index.</param>
 		IDocumentQuery<T> LuceneQuery<T>(string indexName);
 
+		/// <summary>
+		/// Begin a load while including the specified path 
+		/// </summary>
+		/// <param name="path">The path.</param>
 		ILoaderWithInclude Include(string path);
 
 		/// <summary>

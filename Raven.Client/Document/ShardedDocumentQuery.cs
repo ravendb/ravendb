@@ -2,18 +2,25 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
 
 namespace Raven.Client.Document
 {
+	/// <summary>
+	/// A query that is executed against sharded instances
+	/// </summary>
 	public class ShardedDocumentQuery<T> : IDocumentQuery<T>
 	{
 		private readonly IList<IDocumentSession> shardSessions;
 		private readonly IDocumentQuery<T>[] queries;
 		private QueryResult queryResult;
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="ShardedDocumentQuery&lt;T&gt;"/> class.
+		/// </summary>
+		/// <param name="indexName">Name of the index.</param>
+		/// <param name="shardSessions">The shard sessions.</param>
 		public ShardedDocumentQuery(string indexName, IList<IDocumentSession> shardSessions)
 		{
 			this.shardSessions = shardSessions;
@@ -24,9 +31,15 @@ namespace Raven.Client.Document
 			}
 		}
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="ShardedDocumentQuery&lt;T&gt;"/> class.
+		/// </summary>
+		/// <param name="queries">The queries.</param>
+		/// <param name="shardSessions">The shard sessions.</param>
 		private ShardedDocumentQuery(IDocumentQuery<T>[] queries, IList<IDocumentSession> shardSessions)
 	    {
 	        this.queries = queries;
+			this.shardSessions = shardSessions;
 	    }
 
 	    protected QueryResult GetQueryResult()
@@ -59,6 +72,10 @@ namespace Raven.Client.Document
 				.GetEnumerator();
 		}
 
+		/// <summary>
+		/// Fors the each query.
+		/// </summary>
+		/// <param name="action">The action.</param>
 		public void ForEachQuery(Action<IDocumentSession,IDocumentQuery<T>> action)
 		{
 			for (int i = 0; i < shardSessions.Count; i++)

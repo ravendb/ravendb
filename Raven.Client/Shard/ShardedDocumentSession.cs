@@ -12,8 +12,15 @@ using System;
 
 namespace Raven.Client.Shard
 {
+	/// <summary>
+	/// Implements Unit of Work for accessing a set of sharded RavenDB servers
+	/// </summary>
 	public class ShardedDocumentSession : IDocumentSession
 	{
+		/// <summary>
+		/// Clears this instance.
+		/// Remove all entities from the delete queue and stops tracking changes for all entities.
+		/// </summary>
 		public void Clear()
 		{
 			foreach (var shardSession in shardSessions)
@@ -66,7 +73,14 @@ namespace Raven.Client.Shard
 			get { return shardSessions.Sum(x => x.NumberOfRequests); }
 		}
 
+		/// <summary>
+		/// Occurs when an entity is stored in the session
+		/// </summary>
 		public event EntityStored Stored;
+		/// <summary>
+		/// Occurs when an entity is converted to a document and metadata.
+		/// Changes made to the document / metadata instances passed to this event will be persisted.
+		/// </summary>
 	    public event EntityToDocument OnEntityConverted;
 
 	    public JObject GetMetadataFor<T>(T instance)
@@ -96,6 +110,11 @@ namespace Raven.Client.Shard
 			return GetSingleShardSession(shardIds).HasChanged(entity);
 		}
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="ShardedDocumentSession"/> class.
+		/// </summary>
+		/// <param name="shardStrategy">The shard strategy.</param>
+		/// <param name="shardSessions">The shard sessions.</param>
 		public ShardedDocumentSession(IShardStrategy shardStrategy, params IDocumentSession[] shardSessions)
 		{
 			this.shardStrategy = shardStrategy;
@@ -151,6 +170,11 @@ namespace Raven.Client.Shard
 			return shardStrategy.ShardAccessStrategy.Apply(GetAppropriateShardedSessions<T>(null), sessions => sessions.Load<T>(ids)).ToArray();
 		}
 
+		/// <summary>
+		/// Begin a load while including the specified path
+		/// </summary>
+		/// <param name="path">The path.</param>
+		/// <returns></returns>
 		public ILoaderWithInclude Include(string path)
 		{
 			throw new NotSupportedException("Sharded load queries with include aren't supported currently");
@@ -214,6 +238,11 @@ namespace Raven.Client.Shard
 		}
 
 #if !NET_3_5
+		/// <summary>
+		/// Stores a dynamic entity
+		/// </summary>
+		/// <param name="entity">The entity.</param>
+		/// <returns></returns>
         public string StoreDynamic(dynamic entity)
         {
             return Store(entity);

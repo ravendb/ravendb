@@ -9,7 +9,7 @@ namespace Raven.Client.Document
 	/// </summary>
 	public class SpatialDocumentQuery<T> : DocumentQuery<T>
 	{
-		protected double lat, lng, radius;
+		private double lat, lng, radius;
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="SpatialDocumentQuery&lt;T&gt;"/> class.

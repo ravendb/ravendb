@@ -21,6 +21,9 @@ using Raven.Database.Json;
 
 namespace Raven.Client.Client
 {
+	/// <summary>
+	/// Access the RavenDB operations using HTTP
+	/// </summary>
 	public class ServerClient : IDatabaseCommands
 	{
 		private int requestCount;

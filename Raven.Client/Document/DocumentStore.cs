@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Configuration;
 using System.Net;
@@ -11,6 +10,9 @@ using System.Linq;
 
 namespace Raven.Client.Document
 {
+	/// <summary>
+	/// Manages access to RavenDB and open sessions to work with RavenDB.
+	/// </summary>
 	public class DocumentStore : IDocumentStore
 	{
 		private static readonly Regex connectionStringRegex = new Regex(@"(\w+) \s* = \s* (.*)", 
@@ -19,6 +21,10 @@ namespace Raven.Client.Document
 			RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
 
 		private Func<IDatabaseCommands> databaseCommandsGenerator;
+		/// <summary>
+		/// Gets the shared operations headers.
+		/// </summary>
+		/// <value>The shared operations headers.</value>
 		public NameValueCollection SharedOperationsHeaders { get; private set; }
 
 		public IDatabaseCommands DatabaseCommands

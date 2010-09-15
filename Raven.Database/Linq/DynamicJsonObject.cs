@@ -8,15 +8,26 @@ using Newtonsoft.Json.Linq;
 
 namespace Raven.Database.Linq
 {
+	/// <summary>
+	/// A dynamic implementation on top of <see cref="JObject"/>
+	/// </summary>
 	public class DynamicJsonObject : DynamicObject
 	{
 		private readonly JObject obj;
 
+		/// <summary>
+		/// Gets the inner json object
+		/// </summary>
+		/// <value>The inner.</value>
 	    public JObject Inner
 	    {
 	        get { return obj; }
 	    }
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="DynamicJsonObject"/> class.
+		/// </summary>
+		/// <param name="obj">The obj.</param>
 	    public DynamicJsonObject(JObject obj)
 		{
 			this.obj = obj;
@@ -65,6 +76,11 @@ namespace Raven.Database.Linq
 			}
 		}
 
+		/// <summary>
+		/// Gets the value for the specified name
+		/// </summary>
+		/// <param name="name">The name.</param>
+		/// <returns></returns>
 		public object GetValue(string name)
 		{
 			if (name == "__document_id")
@@ -79,6 +95,10 @@ namespace Raven.Database.Linq
 			return null;
 		}
 
+		/// <summary>
+		/// Gets the document id.
+		/// </summary>
+		/// <returns></returns>
 	    public string GetDocumentId()
 		{
 			var metadata = obj["@metadata"];
@@ -93,10 +113,17 @@ namespace Raven.Database.Linq
 			return null;
 		}
 
+		/// <summary>
+		/// A list that responds to the dynamic object protocol
+		/// </summary>
 		public class DynamicList : DynamicObject, IEnumerable<object>
 		{
 			private readonly object[] inner;
 
+			/// <summary>
+			/// Initializes a new instance of the <see cref="DynamicList"/> class.
+			/// </summary>
+			/// <param name="inner">The inner.</param>
 			public DynamicList(object[] inner)
 			{
 				this.inner = inner;

@@ -7,11 +7,25 @@ using Newtonsoft.Json.Linq;
 
 namespace Raven.Client.Client
 {
+	/// <summary>
+	/// A representation of an http json request to the RavenDB server
+	/// </summary>
     public class HttpJsonRequest
     {
+		/// <summary>
+		/// Occurs when a json request is created
+		/// </summary>
         public static event EventHandler<WebRequestEventArgs> ConfigureRequest = delegate {  };
 
-    	public byte[] bytesForNextWrite;
+    	private byte[] bytesForNextWrite;
+		/// <summary>
+		/// Creates the HTTP json request.
+		/// </summary>
+		/// <param name="self">The self.</param>
+		/// <param name="url">The URL.</param>
+		/// <param name="method">The method.</param>
+		/// <param name="credentials">The credentials.</param>
+		/// <returns></returns>
         public static HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, ICredentials credentials)
         {
             var request = new HttpJsonRequest(url, method, credentials);
@@ -19,6 +33,15 @@ namespace Raven.Client.Client
             return request;
         }
 
+		/// <summary>
+		/// Creates the HTTP json request.
+		/// </summary>
+		/// <param name="self">The self.</param>
+		/// <param name="url">The URL.</param>
+		/// <param name="method">The method.</param>
+		/// <param name="metadata">The metadata.</param>
+		/// <param name="credentials">The credentials.</param>
+		/// <returns></returns>
         public static HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, JObject metadata, ICredentials credentials)
         {
             var request = new HttpJsonRequest(url, method, metadata, credentials);
@@ -28,6 +51,10 @@ namespace Raven.Client.Client
 
         private readonly WebRequest webRequest;
 
+		/// <summary>
+		/// Gets or sets the response headers.
+		/// </summary>
+		/// <value>The response headers.</value>
         public NameValueCollection ResponseHeaders { get; set; }
 
         private HttpJsonRequest(string url, string method, ICredentials credentials)
@@ -45,16 +72,31 @@ namespace Raven.Client.Client
             webRequest.ContentType = "application/json; charset=utf-8";
         }
 
+		/// <summary>
+		/// Begins tp read response string.
+		/// </summary>
+		/// <param name="callback">The callback.</param>
+		/// <param name="state">The state.</param>
+		/// <returns></returns>
 		public IAsyncResult BeginReadResponseString(AsyncCallback callback, object state)
 		{
 			return webRequest.BeginGetResponse(callback, state);
 		}
 
+		/// <summary>
+		/// Ends the reading of the response string.
+		/// </summary>
+		/// <param name="result">The result.</param>
+		/// <returns></returns>
 		public string EndReadResponseString(IAsyncResult result)
 		{
 			return ReadStringInternal(() => webRequest.EndGetResponse(result));
 		}
 
+		/// <summary>
+		/// Reads the response string.
+		/// </summary>
+		/// <returns></returns>
     	public string ReadResponseString()
     	{
     		return ReadStringInternal(webRequest.GetResponse);
@@ -91,6 +133,10 @@ namespace Raven.Client.Client
     	}
 
 
+		/// <summary>
+		/// Gets or sets the response status code.
+		/// </summary>
+		/// <value>The response status code.</value>
     	public HttpStatusCode ResponseStatusCode { get; set; }
 
     	private void WriteMetadata(JObject metadata)
@@ -128,6 +174,10 @@ namespace Raven.Client.Client
             }
         }
 
+		/// <summary>
+		/// Writes the specified data.
+		/// </summary>
+		/// <param name="data">The data.</param>
         public void Write(string data)
         {
             var byteArray = Encoding.UTF8.GetBytes(data);
@@ -135,6 +185,10 @@ namespace Raven.Client.Client
             Write(byteArray);
         }
 
+		/// <summary>
+		/// Writes the specified byte array.
+		/// </summary>
+		/// <param name="byteArray">The byte array.</param>
         public void Write(byte[] byteArray)
         {
             webRequest.ContentLength = byteArray.Length;
@@ -146,6 +200,13 @@ namespace Raven.Client.Client
             }
         }
 
+		/// <summary>
+		/// Begins the write operation
+		/// </summary>
+		/// <param name="byteArray">The byte array.</param>
+		/// <param name="callback">The callback.</param>
+		/// <param name="state">The state.</param>
+		/// <returns></returns>
 		public IAsyncResult BeginWrite(byte[] byteArray, AsyncCallback callback, object state)
 		{
 			bytesForNextWrite = byteArray;
@@ -153,6 +214,10 @@ namespace Raven.Client.Client
 			return webRequest.BeginGetRequestStream(callback, state);
 		}
 
+		/// <summary>
+		/// Ends the write operation.
+		/// </summary>
+		/// <param name="result">The result.</param>
 		public void EndWrite(IAsyncResult result)
 		{
 			using (var dataStream = webRequest.EndGetRequestStream(result))
@@ -163,6 +228,10 @@ namespace Raven.Client.Client
 			bytesForNextWrite = null;
 		}
 
+		/// <summary>
+		/// Adds the operation headers.
+		/// </summary>
+		/// <param name="operationsHeaders">The operations headers.</param>
     	public void AddOperationHeaders(NameValueCollection operationsHeaders)
     	{
 			foreach (string header in operationsHeaders)

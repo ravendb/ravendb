@@ -14,8 +14,15 @@ using Raven.Database.Data;
 
 namespace Raven.Client.Document
 {
+	/// <summary>
+	/// Implements Unit of Work for accessing the RavenDB server
+	/// </summary>
 	public class DocumentSession : InMemoryDocumentSessionOperations, IDocumentSession, ITransactionalDocumentSession
 	{
+		/// <summary>
+		/// Gets the database commands.
+		/// </summary>
+		/// <value>The database commands.</value>
 		public IDatabaseCommands DatabaseCommands { get; private set; }
 
 		public DocumentSession(DocumentStore documentStore, IDocumentStoreListener[] storeListeners, IDocumentDeleteListener[] deleteListeners)

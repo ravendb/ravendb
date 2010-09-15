@@ -22,6 +22,9 @@ namespace Raven.Client.Document
 		private bool negate;
 		private readonly IDatabaseCommands databaseCommands;
 		private readonly string indexName;
+		/// <summary>
+		/// The list of fields to project directly from the index
+		/// </summary>
 		protected readonly string[] projectionFields;
 		private readonly DocumentSession session;
 		protected DateTime? cutoff;
