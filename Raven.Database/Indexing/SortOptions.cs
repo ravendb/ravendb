@@ -1,5 +1,8 @@
 ﻿namespace Raven.Database.Indexing
 {
+	/// <summary>
+	/// The sort options to use for a particular field
+	/// </summary>
 	public enum SortOptions
 	{
 		/// <summary>Sort using term values as Strings.  Sort values are String and lower
