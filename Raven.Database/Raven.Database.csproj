@@ -147,6 +147,7 @@
     <Compile Include="Plugins\AbstractReadTrigger.cs" />
     <Compile Include="Plugins\Builtins\PendingTransactionRecovery.cs" />
     <Compile Include="Plugins\Builtins\SpatialDynamicCompilationExtension.cs" />
+    <Compile Include="Plugins\AbstractIndexUpdateTriggerBatcher.cs" />
     <Compile Include="Plugins\ReadOperation.cs" />
     <Compile Include="Plugins\ReadVetoResult.cs" />
     <Compile Include="Server\Abstractions\HttpContextAdapter.cs" />

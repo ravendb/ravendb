@@ -29,13 +29,14 @@ namespace Raven.Database.Indexing
 				bool madeChanges = false;
 				PropertyDescriptorCollection properties = null;
 				var processedKeys = new HashSet<string>();
-				var documentsWrapped = documents.Select((dynamic doc) =>
+			    var batchers = context.IndexUpdateTriggers.Select(x=>x.CreateBatcher()).ToArray();
+			    var documentsWrapped = documents.Select((dynamic doc) =>
 				{
 					var documentId = doc.__document_id.ToString();
 					if (processedKeys.Add(documentId) == false)
 						return doc;
 					madeChanges = true;
-					context.IndexUpdateTriggers.Apply(trigger => trigger.OnIndexEntryDeleted(name, documentId));
+                    batchers.Apply(trigger => trigger.OnIndexEntryDeleted(name, documentId));
 					indexWriter.DeleteDocuments(new Term("__document_id", documentId));
 					return doc;
 				});
@@ -57,14 +58,14 @@ namespace Raven.Database.Indexing
 
                     	madeChanges = true;
                         CopyFieldsToDocument(luceneDoc, fields);
-                        context.IndexUpdateTriggers.Apply(trigger => trigger.OnIndexEntryCreated(name, newDocId, luceneDoc));
+                        batchers.Apply(trigger => trigger.OnIndexEntryCreated(name, newDocId, luceneDoc));
                         logIndexing.DebugFormat("Index '{0}' resulted in: {1}", name, luceneDoc);
                         indexWriter.AddDocument(luceneDoc);
                     }
 
 					actions.Indexing.IncrementSuccessIndexing();
 				}
-
+			    batchers.Apply(x => x.Dispose());
 				return madeChanges;
 			});
 			logIndexing.DebugFormat("Indexed {0} documents for {1}", count, name);
@@ -103,8 +104,11 @@ namespace Raven.Database.Indexing
 				{
 					logIndexing.DebugFormat("Deleting ({0}) from {1}", string.Format(", ", keys), name);
 				}
-                keys.Apply(key => context.IndexUpdateTriggers.Apply(trigger => trigger.OnIndexEntryDeleted(name, key)));
+			    var batchers = context.IndexUpdateTriggers.Select(x=>x.CreateBatcher()).ToArray();
+
+			    keys.Apply(key => batchers.Apply(trigger => trigger.OnIndexEntryDeleted(name, key)));
 				writer.DeleteDocuments(keys.Select(k => new Term("__document_id", k)).ToArray());
+                batchers.Apply(batcher => batcher.Dispose());
 				return true;
 			});
 		}

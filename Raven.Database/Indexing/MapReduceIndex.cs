@@ -182,10 +182,11 @@ namespace Raven.Database.Indexing
             var count = 0;
             Write(indexWriter =>
             {
-            	foreach (var reduceKey in reduceKeys)
+                var batchers = context.IndexUpdateTriggers.Select(x=>x.CreateBatcher()).ToArray();
+                foreach (var reduceKey in reduceKeys)
             	{
 					indexWriter.DeleteDocuments(new Term("__reduce_key", reduceKey));
-					context.IndexUpdateTriggers.Apply(trigger => trigger.OnIndexEntryDeleted(name, reduceKey));
+                    batchers.Apply(trigger => trigger.OnIndexEntryDeleted(name, reduceKey));
 				}
                 PropertyDescriptorCollection properties = null;
                 foreach (var doc in RobustEnumeration(mappedResults, viewGenerator.ReduceDefinition, actions, context))
@@ -205,12 +206,12 @@ namespace Raven.Database.Indexing
                     {
                         luceneDoc.Add(field);
                     }
-                    context.IndexUpdateTriggers.Apply(trigger => trigger.OnIndexEntryCreated(name, reduceKeyAsString, luceneDoc));
+                    batchers.Apply(trigger => trigger.OnIndexEntryCreated(name, reduceKeyAsString, luceneDoc));
 					logIndexing.DebugFormat("Reduce key {0} result in index {1} gave document: {2}", reduceKeyAsString, name, luceneDoc);
                     indexWriter.AddDocument(luceneDoc);
                     actions.Indexing.IncrementSuccessIndexing();
                 }
-
+                batchers.Apply(x=>x.Dispose());
                 return true;
             });
 			if (logIndexing.IsDebugEnabled)
