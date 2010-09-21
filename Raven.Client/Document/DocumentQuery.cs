@@ -714,12 +714,10 @@ namespace Raven.Client.Document
 				return DateTools.DateToString((DateTime) value, DateTools.Resolution.MILLISECOND);
 			}
 
-			if (!(value is string))
-			{
-				return Convert.ToString(value, CultureInfo.InvariantCulture);
-			}
-
 			var escaped = RavenQuery.Escape(Convert.ToString(value, CultureInfo.InvariantCulture), allowWildcards && isAnalyzed);
+
+            if (value is string == false)
+                return escaped;
 
 			return isAnalyzed ? escaped : String.Concat("[[", escaped, "]]");
 		}

@@ -100,6 +100,7 @@
     </Compile>
     <Compile Include="Bugs\AsyncCommit.cs" />
     <Compile Include="Bugs\EntityWithoutId.cs" />
+    <Compile Include="Bugs\QueryingByNegative.cs" />
     <Compile Include="Indexes\AnalyzerUtil.cs" />
     <Compile Include="Indexes\UsingCustomLuceneAnalyzer.cs" />
     <Compile Include="LocalClientTest.cs" />
