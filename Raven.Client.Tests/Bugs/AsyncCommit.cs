@@ -1,5 +1,7 @@
 using System.Transactions;
+using Raven.Database.Indexing;
 using Xunit;
+using System.Linq;
 
 namespace Raven.Client.Tests.Bugs
 {
@@ -34,6 +36,46 @@ namespace Raven.Client.Tests.Bugs
 			}
 		}
 
+        [Fact]
+        public void DtcCommitWillGiveOldResultWhenQuerying()
+        {
+            using (var documentStore = NewDocumentStore())
+            {
+                documentStore.DatabaseCommands.PutIndex("test",
+                                                        new IndexDefinition
+                                                        {
+                                                            Map = "from doc in docs select new { doc.Name }"
+                                                        });
+
+                using (var s = documentStore.OpenSession())
+                {
+                    s.Store(new AccurateCount.User { Name = "Ayende" });
+                    s.SaveChanges();
+
+                    s.LuceneQuery<AccurateCount.User>("test")
+                        .WaitForNonStaleResults()
+                        .FirstOrDefault();
+                }
+
+                using (var s = documentStore.OpenSession())
+                using (var scope = new TransactionScope())
+                {
+                    var user = s.Load<AccurateCount.User>("users/1");
+                    user.Name = "Rahien";
+                    s.SaveChanges();
+                    scope.Complete();
+                }
+
+
+                using (var s = documentStore.OpenSession())
+                {
+                    var user = s.LuceneQuery<AccurateCount.User>("test")
+                        .FirstOrDefault();
+                    Assert.Equal("Ayende", user.Name);
+                }
+            }
+        }
+
 		[Fact]
 		public void DtcCommitWillGiveNewResultIfNonAuthoritiveIsSetToFalse()
 		{
@@ -62,5 +104,46 @@ namespace Raven.Client.Tests.Bugs
 				}
 			}
 		}
+
+        [Fact]
+        public void DtcCommitWillGiveNewResultIfNonAuthoritiveIsSetToFalseWhenQuerying()
+        {
+            using (var documentStore = NewDocumentStore())
+            {
+                documentStore.DatabaseCommands.PutIndex("test",
+                                                        new IndexDefinition
+                                                        {
+                                                            Map = "from doc in docs select new { doc.Name }"
+                                                        });
+
+                using (var s = documentStore.OpenSession())
+                {
+                    s.Store(new AccurateCount.User { Name = "Ayende" });
+                    s.SaveChanges();
+
+                    s.LuceneQuery<AccurateCount.User>("test")
+                        .WaitForNonStaleResults()
+                        .FirstOrDefault();
+                }
+
+                using (var s = documentStore.OpenSession())
+                using (var scope = new TransactionScope())
+                {
+                    var user = s.Load<AccurateCount.User>("users/1");
+                    user.Name = "Rahien";
+                    s.SaveChanges();
+                    scope.Complete();
+                }
+
+
+                using (var s = documentStore.OpenSession())
+                {
+                    s.AllowNonAuthoritiveInformation = false;
+                    var user = s.LuceneQuery<AccurateCount.User>("test")
+                        .FirstOrDefault();
+                    Assert.Equal("Rahien", user.Name);
+                }
+            }
+        }
 	}
 }
