@@ -49,13 +49,15 @@ RavenUI.UpdateQuickStats = function (targetSelector) {
 
 //global statistics
 
-RavenUI.GetGlobalStatistics = function (targetSelector) {
-	if (!$(targetSelector).hasTemplate()) {
-		$(targetSelector).setTemplateURL($.ravenDB.getServerUrl() + '/raven/JSONTemplates/globalStats.html');
-	}
+RavenUI.GetGlobalStatistics = function (targetSelector, afterTemplateRendered) {
+    if (!$(targetSelector).hasTemplate()) {
+        $(targetSelector).setTemplateURL($.ravenDB.getServerUrl() + '/raven/JSONTemplates/globalStats.html');
+    }
 
     $.ravenDB.getStatistics(function (stats) {
         $(targetSelector).processTemplate(stats);
+        if (afterTemplateRendered != null)
+            afterTemplateRendered();
     });
 }
 
