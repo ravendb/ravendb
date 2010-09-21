@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Client;
+using Raven.Client.Exceptions;
 using Raven.Client.Linq;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
@@ -154,17 +155,34 @@ namespace Raven.Client.Document
 		/// </summary>
 		public IEnumerator<T> GetEnumerator()
 		{
-			foreach (var include in QueryResult.Includes)
-			{
-				var metadata = include.Value<JObject>("@metadata");
-				
-				session.TrackEntity<object>(metadata.Value<string>("@id"),
-										 include,
-										 metadata);
-			}
-			return QueryResult.Results
-				.Select(Deserialize)
-				.GetEnumerator();
+		    var sp = Stopwatch.StartNew();
+		    do
+		    {
+		        try
+		        {
+		            foreach (var include in QueryResult.Includes)
+		            {
+		                var metadata = include.Value<JObject>("@metadata");
+
+		                session.TrackEntity<object>(metadata.Value<string>("@id"),
+		                                            include,
+		                                            metadata);
+		            }
+		            var list = QueryResult.Results
+		                .Select(Deserialize)
+		                .ToList();
+		            return list.GetEnumerator();
+		        }
+		        catch (NonAuthoritiveInformationException)
+		        {
+                    if (sp.Elapsed > session.NonAuthoritiveInformationTimeout)
+                        throw;
+		            queryResult = null;
+                    // we explicitly do NOT want to consider retries for non authoritive information as 
+                    // additional request counted against the session quota
+                    session.DecrementRequestCount();
+		        }
+		    } while (true);
 		}
 
 
