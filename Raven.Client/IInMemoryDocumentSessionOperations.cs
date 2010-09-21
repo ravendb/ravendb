@@ -93,7 +93,8 @@ namespace Raven.Client
 		int NumberOfRequests { get; }
 
 		/// <summary>
-		/// Occurs when an entity is stored in the session
+		/// Occurs after an entity is stored in RavenDB.
+		/// This event is raised for new and updated entities.
 		/// </summary>
 		event EntityStored Stored;
 
