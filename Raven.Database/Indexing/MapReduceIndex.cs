@@ -182,7 +182,9 @@ namespace Raven.Database.Indexing
             var count = 0;
             Write(indexWriter =>
             {
-                var batchers = context.IndexUpdateTriggers.Select(x=>x.CreateBatcher()).ToArray();
+                var batchers = context.IndexUpdateTriggers.Select(x=>x.CreateBatcher(name))
+                    .Where(x=>x!=null)
+                    .ToList();
                 foreach (var reduceKey in reduceKeys)
             	{
 					indexWriter.DeleteDocuments(new Term("__reduce_key", reduceKey));
