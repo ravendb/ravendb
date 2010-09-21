@@ -23,6 +23,8 @@ namespace Raven.Bundles.Tests.ReplicateToSql
         private readonly string path;
         private readonly RavenDbServer ravenDbServer;
 
+        private readonly ConnectionStringSettings connectionStringSettings = ConfigurationManager.ConnectionStrings[GetAppropriateConnectionStringName()];
+
         public ReplicateToSql()
         {
             path = Path.GetDirectoryName(Assembly.GetAssembly(typeof (Versioning)).CodeBase);
@@ -71,6 +73,38 @@ select new
                             {"DownVotes", FieldStorage.Yes}
                         }
                 });
+
+            CreateRdbmsSchema();
+        }
+
+        private void CreateRdbmsSchema()
+        {
+            var providerFactory = DbProviderFactories.GetFactory(connectionStringSettings.ProviderName);
+            using (var con = providerFactory.CreateConnection())
+            {
+                con.ConnectionString = connectionStringSettings.ConnectionString;
+                con.Open();
+
+                using (var dbCommand = con.CreateCommand())
+                {
+                    dbCommand.CommandText = @"
+IF OBJECT_ID('QuestionSummaries') is not null 
+	DROP TABLE [dbo].[QuestionSummaries]
+";
+                    dbCommand.ExecuteNonQuery();
+
+                    dbCommand.CommandText = @"
+CREATE TABLE [dbo].[QuestionSummaries]
+(
+	[Id] [nvarchar](50) NOT NULL,
+	[UpVotes] [int] NOT NULL,
+	[DownVotes] [int] NOT NULL,
+	[Title] [nvarchar](255) NOT NULL
+)
+";
+                    dbCommand.ExecuteNonQuery();
+                }
+            }
         }
 
         #region IDisposable Members
@@ -99,7 +133,7 @@ select new
                             {"UpVotes", "UpVotes"},
                             {"DownVotes", "DownVotes"},
                         },
-                    ConnectionStringName = "Reports",
+                    ConnectionStringName = GetAppropriateConnectionStringName(),
                     PrimaryKeyColumnName = "Id",
                     TableName = "QuestionSummaries"
                 });
@@ -129,11 +163,10 @@ select new
                     .ToList();
             }
 
-            var connectionString = ConfigurationManager.ConnectionStrings["Reports"];
-            var providerFactory = DbProviderFactories.GetFactory(connectionString.ProviderName);
+            var providerFactory = DbProviderFactories.GetFactory(connectionStringSettings.ProviderName);
             using(var con = providerFactory.CreateConnection())
             {
-                con.ConnectionString = connectionString.ConnectionString;
+                con.ConnectionString = connectionStringSettings.ConnectionString;
                 con.Open();
 
                 using(var dbCommand = con.CreateCommand())
@@ -147,6 +180,133 @@ select new
                         Assert.Equal("How to replicate to SQL Server?", reader["Title"]);
                         Assert.Equal(2, reader["UpVotes"]);
                         Assert.Equal(1, reader["DownVotes"]);
+                    }
+                }
+            }
+        }
+
+        private static string appropriateConnectionStringName;
+        private static string GetAppropriateConnectionStringName()
+        {
+            return appropriateConnectionStringName ??
+                (appropriateConnectionStringName = GetAppropriateConnectionStringNameInternal());
+        }
+
+        private static string GetAppropriateConnectionStringNameInternal()
+        {
+            foreach (ConnectionStringSettings connectionString in new[]
+            {
+                ConfigurationManager.ConnectionStrings["SqlExpress"],
+                ConfigurationManager.ConnectionStrings["LocalHost"],
+            })
+            {
+                var providerFactory = DbProviderFactories.GetFactory(connectionString.ProviderName);
+                try
+                {
+                    using(var connection = providerFactory.CreateConnection())
+                    {
+                        connection.ConnectionString = connectionString.ConnectionString;
+                        connection.Open();
+                    }
+                    return connectionString.Name;
+                }
+// ReSharper disable EmptyGeneralCatchClause
+                catch
+// ReSharper restore EmptyGeneralCatchClause
+                {
+                }
+            }
+            throw new InvalidOperationException("Could not find valid connection string");
+        }
+
+        [Fact]
+        public void Can_replicate_to_sql_when_document_is_updated()
+        {
+            using (var session = documentStore.OpenSession())
+            {
+                session.Store(new ReplicateToSqlDestination
+                {
+                    Id = "Raven/ReplicateToSql/Questions/Votes",
+                    ColumnsMapping =
+                        {
+                            {"Title", "Title"},
+                            {"UpVotes", "UpVotes"},
+                            {"DownVotes", "DownVotes"},
+                        },
+                    ConnectionStringName = GetAppropriateConnectionStringName(),
+                    PrimaryKeyColumnName = "Id",
+                    TableName = "QuestionSummaries"
+                });
+                session.SaveChanges();
+            }
+            using (var session = documentStore.OpenSession())
+            {
+                var q = new Question
+                {
+                    Id = "questions/1",
+                    Title = "How to replicate to SQL Server?",
+                    Votes = new[]
+                    {
+                        new Vote{ Up = true, Comment = "Good!"}, 
+                        new Vote{ Up = false, Comment = "Nah!"}, 
+                        new Vote{ Up = true, Comment = "Nice..."}, 
+                    }
+                };
+                session.Store(q);
+                session.SaveChanges();
+            }
+
+            using (var session = documentStore.OpenSession())
+            {
+                session.LuceneQuery<Question>("Questions/Votes")
+                    .WaitForNonStaleResults()
+                    .SelectFields<QuestionSummary>("__document_id", "Title", "UpVotes", "DownVotes")
+                    .ToList();
+            }
+
+            using (var session = documentStore.OpenSession())
+            {
+                var q = new Question
+                {
+                    Id = "questions/1",
+                    Title = "How to replicate to SQL Server!?",
+                    Votes = new[]
+                    {
+                        new Vote{ Up = true, Comment = "Good!"}, 
+                        new Vote{ Up = false, Comment = "Nah!"}, 
+                        new Vote{ Up = true, Comment = "Nice..."}, 
+                        new Vote{ Up = false, Comment = "No!"}, 
+                      }
+                };
+                session.Store(q);
+                session.SaveChanges();
+            }
+
+            using (var session = documentStore.OpenSession())
+            {
+                session.LuceneQuery<Question>("Questions/Votes")
+                    .WaitForNonStaleResults()
+                    .SelectFields<QuestionSummary>("__document_id", "Title", "UpVotes", "DownVotes")
+                    .ToList();
+            }
+
+            var providerFactory = DbProviderFactories.GetFactory(connectionStringSettings.ProviderName);
+            using (var con = providerFactory.CreateConnection())
+            {
+                con.ConnectionString = connectionStringSettings.ConnectionString;
+                con.Open();
+
+                using (var dbCommand = con.CreateCommand())
+                {
+                    dbCommand.CommandText = "SELECT * FROM QuestionSummaries";
+                    using (var reader = dbCommand.ExecuteReader())
+                    {
+                        Assert.True(reader.Read());
+
+                        Assert.Equal("questions/1", reader["Id"]);
+                        Assert.Equal("How to replicate to SQL Server!?", reader["Title"]);
+                        Assert.Equal(2, reader["UpVotes"]);
+                        Assert.Equal(2, reader["DownVotes"]);
                     }
                 }
             }
