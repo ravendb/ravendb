@@ -36,7 +36,7 @@ namespace Raven.Client.Document
 			get
 			{
 				if (databaseCommandsGenerator == null)
-					return null;
+                    throw new InvalidOperationException("You cannot open a session or access the database commands before initialising the document store. Did you forgot calling Initialise?");
 				var commands = databaseCommandsGenerator();
 				foreach (string key in SharedOperationsHeaders)
 				{
@@ -263,9 +263,7 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public IDocumentSession OpenSession()
         {
-            if(DatabaseCommands == null)
-                throw new InvalidOperationException("You cannot open a session before initialising the document store. Did you forgot calling Initialise?");
-            var session = new DocumentSession(this, storeListeners, deleteListeners);
+             var session = new DocumentSession(this, storeListeners, deleteListeners);
 			session.Stored += OnSessionStored;
             return session;
         }
