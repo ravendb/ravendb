@@ -20,7 +20,7 @@ namespace Raven.Database.Plugins
 		public void Execute(DocumentDatabase database)
 		{
 			Database = database;
-
+		    Initialize();
 			new Thread(BackgroundTask)
 			{
 				Name = "Background task " + GetType().Name,
@@ -28,7 +28,11 @@ namespace Raven.Database.Plugins
 			}.Start();
 		}
 
-		public void BackgroundTask()
+	    protected virtual void Initialize()
+	    {
+	    }
+
+	    public void BackgroundTask()
 		{
 			var context = Database.WorkContext;
 			while (context.DoWork)
