@@ -39,7 +39,7 @@ namespace Raven.Bundles.Expiration
                 queryResult = Database.Query(RavenDocumentsByExpirationDate, new IndexQuery
                 {
                     Cutoff = currentTime,
-                    Query = "Expiry:[" + nowAsStr + " TO NULL]",
+                    Query = "Expiry:[* TO "+nowAsStr+"]",
                     FieldsToFetch = new []{"__document_id"}
                 });
 
@@ -49,7 +49,7 @@ namespace Raven.Bundles.Expiration
                         return false;
                     Thread.Sleep(100);
                 }
-            } while (queryResult.IsStale);
+            } while (queryResult.IsStale );
 
             foreach (var result in queryResult.Results)
             {
@@ -57,7 +57,7 @@ namespace Raven.Bundles.Expiration
                 Database.Delete(docId, null, null);
             }
 
-            return true;
+            return queryResult.Results.Count > 0;
         }
     }
 }

@@ -10,6 +10,7 @@ using Raven.Client.Document;
 using Raven.Database;
 using Raven.Server;
 using Xunit;
+using System.Linq;
 
 namespace Raven.Bundles.Tests.Expiration
 {
@@ -30,7 +31,6 @@ namespace Raven.Bundles.Tests.Expiration
                 {
                     Port = 58080,
                     DataDirectory = path,
-                    RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
                     Catalog =
                         {
                             Catalogs =
@@ -104,19 +104,31 @@ namespace Raven.Bundles.Tests.Expiration
         [Fact]
         public void After_expiry_passed_document_will_be_physically_deleted()
         {
-            var company = new Company { Name = "Company Name" };
+            var company = new Company
+            {
+                Id = "companies/1",
+                Name = "Company Name"
+            };
             var expiry = DateTime.UtcNow.AddMinutes(5);
             using (var session = documentStore.OpenSession())
             {
                 session.Store(company);
                 session.GetMetadataFor(company)["Raven-Expiration-Date"] = new JValue(expiry);
                 session.SaveChanges();
+
+                session.LuceneQuery<Company>("Raven/DocumentsByExpirationDate")
+                    .WaitForNonStaleResults()
+                    .ToList();
             }
             ExpirationReadTrigger.GetCurrentUtcDate = () => DateTime.UtcNow.AddMinutes(10);
 
             using (var session = documentStore.OpenSession())
             {
-                session.Store(new Company { Name = "Company Name" });
+                session.Store(new Company
+                {
+                    Id = "companies/2",
+                    Name = "Company Name"
+                });
                 session.SaveChanges(); // this forces the background task to run
             }
 

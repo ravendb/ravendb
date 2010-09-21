@@ -12,6 +12,8 @@ namespace Raven.Bundles.Expiration
         public override ReadVetoResult AllowRead(string key, JObject document, JObject metadata, ReadOperation operation,
                                                  TransactionInformation transactionInformation)
         {
+            if(metadata == null)
+                return ReadVetoResult.Allowed;
             var property = metadata.Property(RavenExpirationDate);
             if (property == null)
                 return ReadVetoResult.Allowed;
