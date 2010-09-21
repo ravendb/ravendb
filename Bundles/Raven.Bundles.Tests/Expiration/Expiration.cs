@@ -132,12 +132,12 @@ namespace Raven.Bundles.Tests.Expiration
                 session.SaveChanges(); // this forces the background task to run
             }
 
+            database::Raven.Database.JsonDocument documentByKey = null;
             for (int i = 0; i < 15; i++)
             {
-                database::Raven.Database.JsonDocument documentByKey = null;
                 ravenDbServer.Database.TransactionalStorage.Batch(accessor =>
                 {
-                    documentByKey = accessor.Documents.DocumentByKey(company.Id, null);
+                    documentByKey = accessor.Documents.DocumentByKey("companies/1", null);
                 });
                 if (documentByKey == null)
                     return;
