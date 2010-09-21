@@ -9,8 +9,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Bundles.Replication",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Database", "..\Raven.Database\Raven.Database.csproj", "{212823CD-25E1-41AC-92D1-D6DF4D53FC85}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Client.Lightweight", "..\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj", "{4E087ECB-E7CA-4891-AC3C-3C76702715B6}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Server", "..\Raven.Server\Raven.Server.csproj", "{3B90EB20-AEA3-4972-8219-936F1A62768C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Storage.Esent", "..\Raven.Storage.Esent\Raven.Storage.Esent.csproj", "{9DEE8674-D0CD-430D-BD9B-6CD95F3CAB22}"
@@ -20,6 +18,10 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Bundles.Authorization", "Raven.Bundles.Authorization\Raven.Bundles.Authorization.csproj", "{034FFD8F-F917-4A45-B920-9C460CD66BAF}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Client.Authorization", "Raven.Client.Authorization\Raven.Client.Authorization.csproj", "{3A852FD2-E0F9-449C-8F66-0C6A180D030A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Bundles.Expiration", "Raven.Bundles.Expiration\Raven.Bundles.Expiration.csproj", "{5E2C2AAA-31E4-4F2B-A3E3-E1332D2D338A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Client.Lightweight", "..\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj", "{4E087ECB-E7CA-4891-AC3C-3C76702715B6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -43,10 +45,6 @@ Global
 		{212823CD-25E1-41AC-92D1-D6DF4D53FC85}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{212823CD-25E1-41AC-92D1-D6DF4D53FC85}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{212823CD-25E1-41AC-92D1-D6DF4D53FC85}.Release|Any CPU.Build.0 = Release|Any CPU
-		{4E087ECB-E7CA-4891-AC3C-3C76702715B6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{4E087ECB-E7CA-4891-AC3C-3C76702715B6}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{4E087ECB-E7CA-4891-AC3C-3C76702715B6}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{4E087ECB-E7CA-4891-AC3C-3C76702715B6}.Release|Any CPU.Build.0 = Release|Any CPU
 		{3B90EB20-AEA3-4972-8219-936F1A62768C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{3B90EB20-AEA3-4972-8219-936F1A62768C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3B90EB20-AEA3-4972-8219-936F1A62768C}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -63,14 +61,22 @@ Global
 		{3A852FD2-E0F9-449C-8F66-0C6A180D030A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3A852FD2-E0F9-449C-8F66-0C6A180D030A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3A852FD2-E0F9-449C-8F66-0C6A180D030A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5E2C2AAA-31E4-4F2B-A3E3-E1332D2D338A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5E2C2AAA-31E4-4F2B-A3E3-E1332D2D338A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5E2C2AAA-31E4-4F2B-A3E3-E1332D2D338A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5E2C2AAA-31E4-4F2B-A3E3-E1332D2D338A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4E087ECB-E7CA-4891-AC3C-3C76702715B6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4E087ECB-E7CA-4891-AC3C-3C76702715B6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4E087ECB-E7CA-4891-AC3C-3C76702715B6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4E087ECB-E7CA-4891-AC3C-3C76702715B6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{4E087ECB-E7CA-4891-AC3C-3C76702715B6} = {86C266B7-8898-452C-AA95-4CCB81C382B7}
-		{212823CD-25E1-41AC-92D1-D6DF4D53FC85} = {86C266B7-8898-452C-AA95-4CCB81C382B7}
 		{3B90EB20-AEA3-4972-8219-936F1A62768C} = {86C266B7-8898-452C-AA95-4CCB81C382B7}
 		{9DEE8674-D0CD-430D-BD9B-6CD95F3CAB22} = {86C266B7-8898-452C-AA95-4CCB81C382B7}
+		{212823CD-25E1-41AC-92D1-D6DF4D53FC85} = {86C266B7-8898-452C-AA95-4CCB81C382B7}
+		{4E087ECB-E7CA-4891-AC3C-3C76702715B6} = {86C266B7-8898-452C-AA95-4CCB81C382B7}
 	EndGlobalSection
 EndGlobal

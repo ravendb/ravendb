@@ -1,4 +1,6 @@
-﻿using System;
+﻿extern alias database;
+
+using System;
 using System.ComponentModel.Composition.Hosting;
 using System.IO;
 using System.Reflection;
@@ -23,7 +25,7 @@ namespace Raven.Bundles.Tests
             if (Directory.Exists(path))
                 Directory.Delete(path, true);
             ravenDbServer = new RavenDbServer(
-                new RavenConfiguration
+                new database::Raven.Database.RavenConfiguration
                 {
                     Port = 58080,
                     DataDirectory = path,

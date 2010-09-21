@@ -1,4 +1,6 @@
-﻿using System;
+﻿extern alias database;
+
+using System;
 using System.Collections;
 using System.ComponentModel.Composition.Hosting;
 using System.IO;
@@ -31,9 +33,9 @@ namespace Raven.Bundles.Tests.Authorization
 		{
 			if (Directory.Exists("Data"))
 				Directory.Delete("Data", true);
-			server = new RavenDbServer(new RavenConfiguration
+			server = new RavenDbServer(new database::Raven.Database.RavenConfiguration
 			{
-				AnonymousUserAccessMode = AnonymousUserAccessMode.All,
+				AnonymousUserAccessMode = database::Raven.Database.AnonymousUserAccessMode.All,
 				Catalog = { Catalogs = { new AssemblyCatalog(typeof(AuthorizationDecisions).Assembly) } },
 				DataDirectory = "Data",
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
