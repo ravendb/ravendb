@@ -84,6 +84,7 @@ task Compile -depends Init {
     
     exec { & "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Bundles\Raven.Bundles.sln" /p:OutDir="$buildartifacts_dir\" }
     exec { & "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Samples\Raven.Samples.sln" /p:OutDir="$buildartifacts_dir\" }
+    
 }
 
 task Test -depends Compile {
@@ -170,6 +171,7 @@ task CopySmuggler {
 task CopyClient {
 	cp $build_dir\Newtonsoft.Json.dll $build_dir\Output\Client
 	cp $build_dir\Raven.Client.Lightweight.dll $build_dir\Output\Client
+	cp $build_dir\Raven.Client.Lightweight.xml $build_dir\Output\Client
 }
 
 task CopyClient35 {
@@ -216,9 +218,16 @@ task CopyServer {
 	cp $base_dir\DefaultConfigs\RavenDb.exe.config $build_dir\Output\Server\Raven.Server.exe.config
 }
 
-task CopyDocFiles {
+task CreateDocs {
+	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
+    
+    exec { & "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Raven.Docs.shfbproj" /p:OutDir="$buildartifacts_dir\" }
+}
+
+task CopyDocFiles -depends CreateDocs {
 	cp $base_dir\license.txt $build_dir\Output\license.txt
 	cp $base_dir\readme.txt $build_dir\Output\readme.txt
+	cp $base_dir\Help\Documentation.chm $build_dir\Output\Documentation.chm
 	cp $base_dir\acknowledgements.txt $build_dir\Output\acknowledgements.txt
 }
 
