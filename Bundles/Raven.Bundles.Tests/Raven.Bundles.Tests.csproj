@@ -39,6 +39,7 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Web" />
     <Reference Include="System.Xml.Linq" />
@@ -57,6 +58,7 @@
     <Compile Include="Authorization\Reading.cs" />
     <Compile Include="Authorization\Writing.cs" />
     <Compile Include="Expiration\Expiration.cs" />
+    <Compile Include="ReplicateToSql\ReplicateToSql.cs" />
     <Compile Include="Replication\ConflictWhenReplicating.cs" />
     <Compile Include="Replication\FailureHandling.cs" />
     <Compile Include="Replication\ReplicationBase.cs" />
@@ -90,6 +92,10 @@
       <Project>{5E2C2AAA-31E4-4F2B-A3E3-E1332D2D338A}</Project>
       <Name>Raven.Bundles.Expiration</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Raven.Bundles.ReplicateToSql\Raven.Bundles.ReplicateToSql.csproj">
+      <Project>{2728BBA7-5142-445E-BAA5-142A25E0666D}</Project>
+      <Name>Raven.Bundles.ReplicateToSql</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Bundles.Replication\Raven.Bundles.Replication.csproj">
       <Project>{2EA316E8-629A-45C2-80B8-48F9CDB5BF57}</Project>
       <Name>Raven.Bundles.Replication</Name>
@@ -103,6 +109,9 @@
       <Project>{3A852FD2-E0F9-449C-8F66-0C6A180D030A}</Project>
       <Name>Raven.Client.Authorization</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

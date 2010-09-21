@@ -151,18 +151,27 @@ namespace Raven.Database.Linq
 			/// </returns>
 			public override bool TryInvokeMember(InvokeMemberBinder binder, object[] args, out object result)
 			{
-				if(binder.Name == "DefaultIfEmpty")
-				{
-					if (inner.Length > 0)
-						result = this;
-					else
-						result = new object[]{null};
-					return true;
-				}
-				return base.TryInvokeMember(binder, args, out result);
+			    switch (binder.Name)
+			    {
+                    case "Count":
+                        if(args.Length == 0)
+                        {
+                            result = Count;
+                            return true;
+                        }
+			            result = this.Count((Func<dynamic, bool>)args[0]);
+			            return true;
+			        case "DefaultIfEmpty":
+			            if (inner.Length > 0)
+			                result = this;
+			            else
+			                result = new object[]{null};
+			            return true;
+			    }
+			    return base.TryInvokeMember(binder, args, out result);
 			}
 
-			/// <summary>
+		    /// <summary>
 			/// Gets the enumerator.
 			/// </summary>
 			/// <returns></returns>

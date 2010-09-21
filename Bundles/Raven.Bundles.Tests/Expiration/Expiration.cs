@@ -30,6 +30,7 @@ namespace Raven.Bundles.Tests.Expiration
                 new database::Raven.Database.RavenConfiguration
                 {
                     Port = 58080,
+                    RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
                     DataDirectory = path,
                     Catalog =
                         {
