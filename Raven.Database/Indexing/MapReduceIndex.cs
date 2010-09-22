@@ -187,8 +187,11 @@ namespace Raven.Database.Indexing
                     .ToList();
                 foreach (var reduceKey in reduceKeys)
             	{
-					indexWriter.DeleteDocuments(new Term("__reduce_key", reduceKey));
-                    batchers.Apply(trigger => trigger.OnIndexEntryDeleted(name, reduceKey));
+            	    var entryKey = reduceKey;
+            	    indexWriter.DeleteDocuments(new Term("__reduce_key", entryKey));
+                    batchers.ApplyAndIgnoreAllErrors(
+                        exception => logIndexing.WarnFormat(exception, "Error when executed OnIndexEntryDeleted trigger for index '{0}', key: '{1}'", name, entryKey),
+                        trigger => trigger.OnIndexEntryDeleted(name, entryKey));
 				}
                 PropertyDescriptorCollection properties = null;
                 foreach (var doc in RobustEnumeration(mappedResults, viewGenerator.ReduceDefinition, actions, context))
@@ -208,12 +211,16 @@ namespace Raven.Database.Indexing
                     {
                         luceneDoc.Add(field);
                     }
-                    batchers.Apply(trigger => trigger.OnIndexEntryCreated(name, reduceKeyAsString, luceneDoc));
+                    batchers.ApplyAndIgnoreAllErrors(
+                        exception => logIndexing.WarnFormat(exception, "Error when executed OnIndexEntryCreated trigger for index '{0}', key: '{1}'", name, reduceKeyAsString),
+                        trigger => trigger.OnIndexEntryCreated(name, reduceKeyAsString, luceneDoc));
 					logIndexing.DebugFormat("Reduce key {0} result in index {1} gave document: {2}", reduceKeyAsString, name, luceneDoc);
                     indexWriter.AddDocument(luceneDoc);
                     actions.Indexing.IncrementSuccessIndexing();
                 }
-                batchers.Apply(x=>x.Dispose());
+                batchers.ApplyAndIgnoreAllErrors(
+                    e =>logIndexing.Warn("Failed to dispose on index update trigger", e),
+                    x => x.Dispose());
                 return true;
             });
 			if (logIndexing.IsDebugEnabled)
