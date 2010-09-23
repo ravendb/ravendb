@@ -76,7 +76,7 @@ namespace Raven.Tests.Queries
 
             Assert.Equal("Doc 'rahien', Error: Cannot perform runtime binding on a null reference", result.Errors[0]);
             var jObject = result.Results[0];
-            Assert.Equal(@"{""Length"":6,__document_id:""ayende""}", jObject.ToString(Formatting.None));
+            Assert.Equal(@"{""Length"":6,""__document_id"":""ayende""}", jObject.ToString(Formatting.None));
         }
 	}
 }
