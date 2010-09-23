@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Database", "Raven.Database\Raven.Database.g.csproj", "{212823CD-25E1-41AC-92D1-D6DF4D53FC85}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Database.g", "Raven.Database\Raven.Database.g.csproj", "{212823CD-25E1-41AC-92D1-D6DF4D53FC85}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Scenarios", "Raven.Scenarios\Raven.Scenarios.csproj", "{46DB852F-4E76-44BD-B46F-5E7DE7E4B3B7}"
 EndProject
@@ -24,6 +24,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Tryouts", "Raven.Tryouts\Raven.Tryouts.csproj", "{68BC3141-C2EF-487A-B4A6-A0AD7E754FB1}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Smuggler", "Raven.Smuggler\Raven.Smuggler.csproj", "{3E6401AC-3E33-4B61-A460-49953654A207}"
+EndProject
+Project("{F184B08F-C81C-45F6-A57F-5ABD9991F28F}") = "Raven.Client.VisualBasic.Tests", "Raven.Client.VisualBasic.Tests\Raven.Client.VisualBasic.Tests.vbproj", "{F4D4FDE0-BE9B-4139-A76C-7848A641324A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -155,6 +157,16 @@ Global
 		{3E6401AC-3E33-4B61-A460-49953654A207}.Release|Mixed Platforms.Build.0 = Release|x86
 		{3E6401AC-3E33-4B61-A460-49953654A207}.Release|x86.ActiveCfg = Release|x86
 		{3E6401AC-3E33-4B61-A460-49953654A207}.Release|x86.Build.0 = Release|x86
+		{F4D4FDE0-BE9B-4139-A76C-7848A641324A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F4D4FDE0-BE9B-4139-A76C-7848A641324A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F4D4FDE0-BE9B-4139-A76C-7848A641324A}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{F4D4FDE0-BE9B-4139-A76C-7848A641324A}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{F4D4FDE0-BE9B-4139-A76C-7848A641324A}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{F4D4FDE0-BE9B-4139-A76C-7848A641324A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F4D4FDE0-BE9B-4139-A76C-7848A641324A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F4D4FDE0-BE9B-4139-A76C-7848A641324A}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{F4D4FDE0-BE9B-4139-A76C-7848A641324A}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{F4D4FDE0-BE9B-4139-A76C-7848A641324A}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
