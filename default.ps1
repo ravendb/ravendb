@@ -120,7 +120,7 @@ task Release -depends Test,DoRelease {
 }
 
 task CopySamples {
-	$samples = @("MvcMusicStore", "Raven.Sample.ShardClient", "Raven.Sample.Failover", "Raven.Sample.Replication", "Raven.Sample.EventSourcing", "Raven.Bundles.Sample.EventSourcing.ShoppingCartAggregator")
+	$samples = @("MvcMusicStore", "Raven.Sample.ShardClient", "Raven.Sample.Failover", "Raven.Sample.Replication", "Raven.Sample.EventSourcing", "Raven.Bundles.Sample.EventSourcing.ShoppingCartAggregator", "Raven.Samples.IndexReplication")
 	$exclude = @("bin", "obj", "Data", "Plugins")
 	
 	foreach ($sample in $samples) {
