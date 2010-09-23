@@ -3,6 +3,11 @@ using Raven.Database.Storage.StorageActions;
 
 namespace Raven.Database.Storage
 {
+    public interface IRemoteStorage
+    {
+        void Batch(Action<IStorageActionsAccessor> action);
+    }
+
 	public interface ITransactionalStorage : IDisposable
 	{
 		Guid Id { get; }
@@ -11,6 +16,9 @@ namespace Raven.Database.Storage
 		bool Initialize();
 		void StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory);
 		void Restore(string backupLocation, string databaseLocation);
+
+	    Type TypeForRunningQueriesInRemoteAppDomain { get;}
+        object StateForRunningQueriesInRemoteAppDomain { get; }
 	}
 
 	public interface IStorageActionsAccessor
