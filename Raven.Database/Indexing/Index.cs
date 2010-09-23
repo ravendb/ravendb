@@ -309,7 +309,7 @@ namespace Raven.Database.Indexing
                                  e.Message
                     );
                 logIndexing.WarnFormat(e, "Failed to execute indexing function on {0} on {1}", name,
-                               GetDocId(innerEnumerator));
+                               TryGetDocKey(innerEnumerator));
             }
             return null;
         }
@@ -323,16 +323,6 @@ namespace Raven.Database.Indexing
             if (value == null)
                 return null;
             return value.ToString();
-        }
-
-        private static object GetDocId(StatefulEnumerableWrapper<object> currentInnerEnumerator)
-        {
-            var dictionary = currentInnerEnumerator.Current as IDictionary<string, object>;
-            if (dictionary == null)
-                return null;
-            object docId;
-            dictionary.TryGetValue("__document_id", out docId);
-            return docId;
         }
 
         public abstract void Remove(string[] keys, WorkContext context);
