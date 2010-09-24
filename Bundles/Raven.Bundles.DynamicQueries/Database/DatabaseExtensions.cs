@@ -73,7 +73,11 @@ namespace Raven.Bundles.DynamicQueries.Database
         private static string CreateOrGetDynamicIndexName(DocumentDatabase database, DynamicQueryMapping map)
         {
             // This isn't sustainable with long dynamic queries
-            String combinedFields = String.Join("", map.Items.OrderBy(x => x.To).Select(x=>x.To).ToArray());
+            String combinedFields = String.Join("", 
+                map.Items
+                .OrderBy(x => x.To)
+                .Select(x=>x.To)
+                .ToArray());
 
             // Need to use an appropriate index name based on the fields passed in
             var indexName = String.Format("Temp_{0}", combinedFields);

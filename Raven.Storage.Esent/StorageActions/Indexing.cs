@@ -59,18 +59,7 @@ namespace Raven.Storage.Esent.StorageActions
 						Api.RetrieveColumnAsDateTime(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"]).Value,
 				};
 			}
-		}
-        
-        public void AddIndexAsTemporary(string name)
-        {
-            using (var update = new Update(session, IndexesStats, JET_prep.Insert))
-            {
-                Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["key"], name, Encoding.Unicode);
-                Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"], Guid.Empty.TransformToValueForEsentSorting()); // Need Guid Max??
-                Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"], DateTime.MaxValue);
-                update.Save();
-            }
-        }
+		}       
 
 		public void AddIndex(string name)
 		{
