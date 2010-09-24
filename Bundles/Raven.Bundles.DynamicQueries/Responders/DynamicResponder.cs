@@ -29,7 +29,17 @@ namespace Raven.Bundles.DynamicQueries.Responders
             var query = new DynamicQuery
 			{
 				Query = Uri.UnescapeDataString(context.Request.QueryString["query"] ?? ""),
-                FieldMap = Uri.UnescapeDataString(context.Request.QueryString["map"] ?? ""),
+                Mappings = 
+                    Uri.UnescapeDataString(context.Request.QueryString["map"] ?? "")
+                    .Split(',')
+                    .Select(x=>{
+                        String[] split = x.Split(':');
+                        return new DynamicQueryMap(){
+                         From = split[0],
+                         To = split[1]
+                        };         
+                    })
+                    .ToArray(),
                 Start = context.GetStart(),
 				PageSize = context.GetPageSize(Database.Configuration.MaxPageSize),
 				FieldsToFetch = context.Request.QueryString.GetValues("fetch")

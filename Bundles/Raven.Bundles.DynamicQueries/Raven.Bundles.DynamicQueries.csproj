@@ -31,6 +31,10 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Esent.Interop, Version=1.6.0.0, Culture=neutral, PublicKeyToken=8dd49bbdae3f61af, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\SharedLibs\Esent.Interop.dll</HintPath>
+    </Reference>
     <Reference Include="Lucene.Net, Version=2.9.2.1, Culture=neutral, PublicKeyToken=02f879aa45933051, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\SharedLibs\Lucene.Net.dll</HintPath>
@@ -50,6 +54,7 @@
   <ItemGroup>
     <Compile Include="Database\DatabaseExtensions.cs" />
     <Compile Include="Data\DynamicQuery.cs" />
+    <Compile Include="Data\DynamicQueryMap.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Responders\DynamicResponder.cs" />
   </ItemGroup>

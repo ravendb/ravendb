@@ -25,9 +25,9 @@ namespace Raven.Bundles.DynamicQueries.Data
         public string Query { get; set; }
 
         /// <summary>
-        /// Gets or sets the mapping between the original document fields and the names used in the query
+        /// Gets or sets the mappings (This might be temporary, better solutions are incoming)
         /// </summary>
-        public string FieldMap { get; set; }
+        public DynamicQueryMap[] Mappings { get; set; }
 
 		/// <summary>
 		/// Gets or sets the total size.
