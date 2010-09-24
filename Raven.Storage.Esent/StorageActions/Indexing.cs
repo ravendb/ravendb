@@ -60,6 +60,17 @@ namespace Raven.Storage.Esent.StorageActions
 				};
 			}
 		}
+        
+        public void AddIndexAsTemporary(string name)
+        {
+            using (var update = new Update(session, IndexesStats, JET_prep.Insert))
+            {
+                Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["key"], name, Encoding.Unicode);
+                Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"], Guid.Empty.TransformToValueForEsentSorting()); // Need Guid Max??
+                Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"], DateTime.MaxValue);
+                update.Save();
+            }
+        }
 
 		public void AddIndex(string name)
 		{
@@ -112,5 +123,6 @@ namespace Raven.Storage.Esent.StorageActions
 				update.Save();
 			}
 		}
-	}
+
+    }
 }
