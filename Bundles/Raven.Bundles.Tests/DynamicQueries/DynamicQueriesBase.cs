@@ -1,24 +1,26 @@
 ﻿extern alias database;
 
 using System;
-using System.Collections;
-using System.ComponentModel.Composition.Hosting;
-using System.IO;
-using System.Web;
-using Raven.Bundles.Authorization;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using Raven.Client.Document;
-using Raven.Database;
 using Raven.Server;
+using System.IO;
+using System.ComponentModel.Composition.Hosting;
+using Raven.Bundles.Authorization;
+using System.Web;
+using System.Collections;
+using Raven.Bundles.DynamicQueries.Responders;
 
-namespace Raven.Bundles.Tests.Authorization
+namespace Raven.Bundles.Tests.DynamicQueries
 {
-	public abstract class AuthorizationTest : IDisposable
-	{
-		protected const string UserId = "/Raven/Authorization/Users/Ayende";
+    public class DynamicQueriesBase
+    {
 		protected DocumentStore store;
 		protected RavenDbServer server;
 
-		static AuthorizationTest()
+		static DynamicQueriesBase()
 		{
 			try
 			{
@@ -29,14 +31,14 @@ namespace Raven.Bundles.Tests.Authorization
 			}
 		}
 
-		protected AuthorizationTest()
+        protected DynamicQueriesBase()
 		{
 			if (Directory.Exists("Data"))
 				Directory.Delete("Data", true);
 			server = new RavenDbServer(new database::Raven.Database.RavenConfiguration
 			{
 				AnonymousUserAccessMode = database::Raven.Database.AnonymousUserAccessMode.All,
-				Catalog = { Catalogs = { new AssemblyCatalog(typeof(AuthorizationDecisions).Assembly) } },
+				Catalog = { Catalogs = { new AssemblyCatalog(typeof(DynamicResponder).Assembly) } },
 				DataDirectory = "Data",
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 			});
@@ -53,5 +55,5 @@ namespace Raven.Bundles.Tests.Authorization
 			store.Dispose();
 			server.Dispose();
 		}
-	}
+    }
 }
