@@ -25,6 +25,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Client.Lightweight", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Bundles.IndexReplication", "Raven.Bundles.IndexReplication\Raven.Bundles.IndexReplication.csproj", "{2728BBA7-5142-445E-BAA5-142A25E0666D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Bundles.DynamicQueries", "Raven.Bundles.DynamicQueries\Raven.Bundles.DynamicQueries.csproj", "{254488AB-2F45-48D7-898E-41BB8F75C12B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -75,6 +77,10 @@ Global
 		{2728BBA7-5142-445E-BAA5-142A25E0666D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2728BBA7-5142-445E-BAA5-142A25E0666D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2728BBA7-5142-445E-BAA5-142A25E0666D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{254488AB-2F45-48D7-898E-41BB8F75C12B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{254488AB-2F45-48D7-898E-41BB8F75C12B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{254488AB-2F45-48D7-898E-41BB8F75C12B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{254488AB-2F45-48D7-898E-41BB8F75C12B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
