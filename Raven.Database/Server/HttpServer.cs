@@ -260,6 +260,8 @@ namespace Raven.Database.Server
 			if (Configuration.HttpCompression)
 				AddHttpCompressionIfClientCanAcceptIt(ctx);
 
+            AddAccessControlAllowOriginHeader(ctx);
+
 			foreach (var requestResponder in RequestResponders)
 			{
 				if (requestResponder.WillRespond(ctx))
@@ -282,6 +284,14 @@ namespace Raven.Database.Server
 ");
 		    return true;
 		}
+
+         
+        private void AddAccessControlAllowOriginHeader(IHttpContext ctx)
+        {
+            if (string.IsNullOrEmpty(Configuration.AccessControlAllowOrigin))
+                return;
+            ctx.Response.Headers["Access-Control-Allow-Origin"] = Configuration.AccessControlAllowOrigin;
+        }
 
 		private static void AddHttpCompressionIfClientCanAcceptIt(IHttpContext ctx)
 		{

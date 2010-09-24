@@ -44,6 +44,8 @@ namespace Raven.Database
 
 			WebDir = ConfigurationManager.AppSettings["Raven/WebDir"] ?? GetDefaultWebDir();
 
+		    AccessControlAllowOrigin = ConfigurationManager.AppSettings["Raven/AccessControlAllowOrigin"];
+
 			bool httpCompressionTemp;
 			if (bool.TryParse(ConfigurationManager.AppSettings["Raven/HttpCompression"], out httpCompressionTemp) == false)
 				httpCompressionTemp = true;
@@ -147,6 +149,7 @@ namespace Raven.Database
         public string HostName { get; set;  } 
 		public int Port { get; set; }
 		public string WebDir { get; set; }
+        public string AccessControlAllowOrigin { get; set; }
 		public AnonymousUserAccessMode AnonymousUserAccessMode { get; set; }
 
 		public string VirtualDirectory { get; set; }
