@@ -40,23 +40,9 @@ namespace Raven.Bundles.Tests.DynamicQueries
 
             var results = server.Database.ExecuteDynamicQuery(new Bundles.DynamicQueries.Data.DynamicQuery()
             {
-                Mappings = new DynamicQueryMap[]{
-                    new DynamicQueryMap(){
-                         From = "Title",
-                         To = "title"
-                    },
-                    new DynamicQueryMap(){
-                         From = "Category",
-                         To = "category"
-                    },
-                    new DynamicQueryMap(){
-                         From = "Title.Length",
-                         To = "titleLength"
-                    }
-                },
                 PageSize = 128,
                 Start = 0,
-                Query = "titleLength:3 AND category:Rhinos"
+                Query = "Title.Length:3 AND Category:Rhinos"
             });
 
             Assert.Equal(1, results.Results.Length);

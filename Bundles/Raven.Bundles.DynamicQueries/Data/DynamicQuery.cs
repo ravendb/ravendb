@@ -24,11 +24,6 @@ namespace Raven.Bundles.DynamicQueries.Data
 		/// <value>The query.</value>
         public string Query { get; set; }
 
-        /// <summary>
-        /// Gets or sets the mappings (This might be temporary, better solutions are incoming)
-        /// </summary>
-        public DynamicQueryMap[] Mappings { get; set; }
-
 		/// <summary>
 		/// Gets or sets the total size.
 		/// </summary>

@@ -54,7 +54,8 @@
   <ItemGroup>
     <Compile Include="Database\DatabaseExtensions.cs" />
     <Compile Include="Data\DynamicQuery.cs" />
-    <Compile Include="Data\DynamicQueryMap.cs" />
+    <Compile Include="Data\DynamicQueryMapping.cs" />
+    <Compile Include="Data\DynamicQueryMappingItem.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Responders\DynamicResponder.cs" />
   </ItemGroup>

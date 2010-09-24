@@ -63,10 +63,12 @@ namespace Raven.Bundles.DynamicQueries.Database
             var dateStart = DateTime.Now;
 
             var indexName = String.Format("Temp_{0}", Guid.NewGuid().ToString());
-            var mapping = query.Mappings
-                .Select(x=> string.Format("{0} = doc.{1}", x.To, x.From))
-                .ToArray();
+            var map = DynamicQueryMapping.Create(query.Query);
 
+            var mapping = map.Items
+                .Select(x => string.Format("{0} = doc.{1}", x.To, x.From))
+                .ToArray();
+            
             // Create the definition
             var definition = new IndexDefinition(){
                  Map = @"from doc in docs select new 
@@ -95,7 +97,7 @@ namespace Raven.Bundles.DynamicQueries.Database
                     // We get some docs
                     var jsonDocs = actions.Documents.GetDocumentsAfter(currentEtag)
 				    .Where(x => x != null && x.LastModified < dateStart)
-				    .Take(10000)
+				    .Take(1000)
 				    .ToArray();
 
                     // Stop searching once we've reached cut-off
@@ -107,15 +109,23 @@ namespace Raven.Bundles.DynamicQueries.Database
 			        var documentRetriever = new DocumentRetriever(null, database.WorkContext.ReadTriggers);
 			       
                     // Perform the index
-				        database.WorkContext.IndexStorage.Index(indexName, viewGenerator, 
-					        jsonDocs
-					        .Select(doc => documentRetriever.ProcessReadVetoes(doc, null, ReadOperation.Index))
-					        .Where(doc => doc != null)
-					        .Select(x => JsonToExpando.Convert(x.ToJson())), database.WorkContext, actions, dateStart);	    
+				    database.WorkContext.IndexStorage.Index(indexName, viewGenerator, 
+					    jsonDocs
+					    .Select(doc => documentRetriever.ProcessReadVetoes(doc, null, ReadOperation.Index))
+					    .Where(doc => doc != null)
+					    .Select(x => JsonToExpando.Convert(x.ToJson())), database.WorkContext, actions, dateStart);
+                                
 
                     // And update our etag
                     currentEtag = jsonDocs.Last().Etag;
                 });
+            }
+
+            // Re-write the query
+            string realQuery = query.Query;
+            foreach (var mapItem in map.Items)
+            {
+                realQuery = realQuery.Replace(mapItem.From, mapItem.To);
             }
 
             // Query
@@ -124,7 +134,7 @@ namespace Raven.Bundles.DynamicQueries.Database
                    {
                        Cutoff = dateStart,
                        PageSize = query.PageSize,
-                       Query = query.Query,
+                       Query = realQuery,
                        Start = query.Start
                    });
 
