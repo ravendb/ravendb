@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 
-namespace Raven.Bundles.ReplicateToSql.Data
+namespace Raven.Bundles.IndexReplication.Data
 {
-    public class ReplicateToSqlDestination
+    public class IndexReplicationDestination
     {
         public string Id { get; set; }
         public string ConnectionStringName { get; set; }
@@ -10,7 +10,7 @@ namespace Raven.Bundles.ReplicateToSql.Data
         public string PrimaryKeyColumnName { get; set; }
         public IDictionary<string, string> ColumnsMapping { get; set; }
 
-        public ReplicateToSqlDestination()
+        public IndexReplicationDestination()
         {
             ColumnsMapping = new Dictionary<string, string>();
         }

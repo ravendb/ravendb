@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition.Hosting;
 using System.Configuration;
@@ -43,6 +43,8 @@ namespace Raven.Database
 			DataDirectory = ConfigurationManager.AppSettings["Raven/DataDir"] ?? @"~\Data";
 
 			WebDir = ConfigurationManager.AppSettings["Raven/WebDir"] ?? GetDefaultWebDir();
+
+		    AccessControlAllowOrigin = ConfigurationManager.AppSettings["Raven/AccessControlAllowOrigin"];
 
 			bool httpCompressionTemp;
 			if (bool.TryParse(ConfigurationManager.AppSettings["Raven/HttpCompression"], out httpCompressionTemp) == false)
@@ -147,6 +149,7 @@ namespace Raven.Database
         public string HostName { get; set;  } 
 		public int Port { get; set; }
 		public string WebDir { get; set; }
+        public string AccessControlAllowOrigin { get; set; }
 		public AnonymousUserAccessMode AnonymousUserAccessMode { get; set; }
 
 		public string VirtualDirectory { get; set; }

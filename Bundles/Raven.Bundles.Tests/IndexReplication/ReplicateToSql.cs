@@ -1,21 +1,20 @@
-﻿extern alias database;
+﻿﻿extern alias database;
 using System;
 using System.ComponentModel.Composition.Hosting;
 using System.Configuration;
 using System.Data.Common;
 using System.IO;
 using System.Reflection;
-using System.Threading;
 using Raven.Bundles.Expiration;
-using Raven.Bundles.ReplicateToSql;
-using Raven.Bundles.ReplicateToSql.Data;
+using Raven.Bundles.IndexReplication;
+using Raven.Bundles.IndexReplication.Data;
 using Raven.Client.Document;
 using Raven.Database.Indexing;
 using Raven.Server;
 using Xunit;
 using System.Linq;
 
-namespace Raven.Bundles.Tests.ReplicateToSql
+namespace Raven.Bundles.Tests.IndexReplication
 {
     public class ReplicateToSql : IDisposable
     {
@@ -41,7 +40,7 @@ namespace Raven.Bundles.Tests.ReplicateToSql
                         {
                             Catalogs =
                                 {
-                                    new AssemblyCatalog(typeof (ReplicateToSqlIndexUpdateTrigger).Assembly)
+                                    new AssemblyCatalog(typeof (IndexReplicationIndexUpdateTrigger).Assembly)
                                 }
                         },
                 });
@@ -124,9 +123,9 @@ CREATE TABLE [dbo].[QuestionSummaries]
         {
             using (var session = documentStore.OpenSession())
             {
-                session.Store(new ReplicateToSqlDestination
+                session.Store(new IndexReplicationDestination
                 {
-                    Id = "Raven/ReplicateToSql/Questions/Votes",
+                    Id = "Raven/IndexReplication/Questions/Votes",
                     ColumnsMapping =
                         {
                             {"Title", "Title"},
@@ -224,9 +223,9 @@ CREATE TABLE [dbo].[QuestionSummaries]
         {
             using (var session = documentStore.OpenSession())
             {
-                session.Store(new ReplicateToSqlDestination
+                session.Store(new IndexReplicationDestination
                 {
-                    Id = "Raven/ReplicateToSql/Questions/Votes",
+                    Id = "Raven/IndexReplication/Questions/Votes",
                     ColumnsMapping =
                         {
                             {"Title", "Title"},

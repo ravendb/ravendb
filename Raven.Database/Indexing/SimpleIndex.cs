@@ -34,11 +34,22 @@ namespace Raven.Database.Indexing
                     .ToList();
                 var documentsWrapped = documents.Select((dynamic doc) =>
                 {
-                    var documentId = doc.__document_id.ToString();
+                    string documentId = doc.__document_id.ToString();
                     if (processedKeys.Add(documentId) == false)
                         return doc;
                     madeChanges = true;
-                    batchers.Apply(trigger => trigger.OnIndexEntryDeleted(name, documentId));
+                    batchers.ApplyAndIgnoreAllErrors(
+                        exception =>
+                        {
+                            logIndexing.WarnFormat(exception,
+                                                   "Error when executed OnIndexEntryDeleted trigger for index '{0}', key: '{1}'",
+                                                   name, documentId);
+                            context.AddError(name,
+                                             documentId,
+                                             exception.Message
+                                );
+                        },
+                        trigger => trigger.OnIndexEntryDeleted(name, documentId));
                     indexWriter.DeleteDocuments(new Term("__document_id", documentId));
                     return doc;
                 });
@@ -60,14 +71,31 @@ namespace Raven.Database.Indexing
 
                         madeChanges = true;
                         CopyFieldsToDocument(luceneDoc, fields);
-                        batchers.Apply(trigger => trigger.OnIndexEntryCreated(name, newDocId, luceneDoc));
+                        batchers.ApplyAndIgnoreAllErrors(
+                            exception =>
+                            {
+                                logIndexing.WarnFormat(exception,
+                                                       "Error when executed OnIndexEntryCreated trigger for index '{0}', key: '{1}'",
+                                                       name, newDocId);
+                                context.AddError(name,
+                                            newDocId,
+                                            exception.Message
+                               );
+                            },
+                            trigger => trigger.OnIndexEntryCreated(name, newDocId, luceneDoc));
                         logIndexing.DebugFormat("Index '{0}' resulted in: {1}", name, luceneDoc);
                         indexWriter.AddDocument(luceneDoc);
                     }
 
                     actions.Indexing.IncrementSuccessIndexing();
                 }
-                batchers.Apply(x => x.Dispose());
+                batchers.ApplyAndIgnoreAllErrors(
+                    e =>
+                    {
+                        logIndexing.Warn("Failed to dispose on index update trigger", e);
+                        context.AddError(name, null, e.Message);
+                    },
+                    x => x.Dispose());
                 return madeChanges;
             });
             logIndexing.DebugFormat("Indexed {0} documents for {1}", count, name);
@@ -110,9 +138,24 @@ namespace Raven.Database.Indexing
                     .Where(x => x != null)
                     .ToList();
 
-                keys.Apply(key => batchers.Apply(trigger => trigger.OnIndexEntryDeleted(name, key)));
+                keys.Apply(
+                    key => batchers.ApplyAndIgnoreAllErrors(
+                        exception =>
+                        {
+                            logIndexing.WarnFormat(exception,
+                                                   "Error when executed OnIndexEntryDeleted trigger for index '{0}', key: '{1}'",
+                                                   name, key);
+                            context.AddError(name,  key, exception.Message );
+                        },
+                        trigger => trigger.OnIndexEntryDeleted(name, key)));
                 writer.DeleteDocuments(keys.Select(k => new Term("__document_id", k)).ToArray());
-                batchers.Apply(batcher => batcher.Dispose());
+                batchers.ApplyAndIgnoreAllErrors(
+                    e =>
+                    {
+                        logIndexing.Warn("Failed to dispose on index update trigger", e);
+                        context.AddError(name, null, e.Message );
+                    },
+                    batcher => batcher.Dispose());
                 return true;
             });
         }
