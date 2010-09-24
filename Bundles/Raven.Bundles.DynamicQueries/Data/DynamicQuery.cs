@@ -24,6 +24,11 @@ namespace Raven.Bundles.DynamicQueries.Data
 		/// <value>The query.</value>
         public string Query { get; set; }
 
+        /// <summary>
+        /// Gets or sets the cut off time
+        /// </summary>
+        public DateTime CutOff { get; set; }
+
 		/// <summary>
 		/// Gets or sets the total size.
 		/// </summary>

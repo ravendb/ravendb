@@ -49,7 +49,62 @@ namespace Raven.Bundles.Tests.DynamicQueries
             Assert.Equal("two", results.Results[0].Value<string>("Title"));
             Assert.Equal("Rhinos", results.Results[0].Value<string>("Category"));
         }
+
+        [Fact]
+        public void CanPerformMultipleQueriesWithSameParametersAndOnlyCreateASingleIndex()
+        {
+            var blogOne = new Blog
+			{
+				Title = "one",
+                Category = "Ravens"
+			};
+            var blogTwo = new Blog
+			{
+				 Title = "two",
+                 Category = "Rhinos"
+			};
+            var blogThree = new Blog
+			{
+                Title = "three",
+                Category = "Rhinos"
+			};
+
+            using (var s = store.OpenSession())
+            {
+                s.Store(blogOne);
+                s.Store(blogTwo);
+                s.Store(blogThree);
+                s.SaveChanges();
+            }
+
+            int originalIndexCount = server.Database.Statistics.CountOfIndexes;
+
+            server.Database.ExecuteDynamicQuery(new Bundles.DynamicQueries.Data.DynamicQuery()
+            {
+                PageSize = 128,
+                Start = 0,
+                Query = "Title.Length:3 AND Category:Rhinos"
+            });
+            server.Database.ExecuteDynamicQuery(new Bundles.DynamicQueries.Data.DynamicQuery()
+            {
+                PageSize = 128,
+                Start = 0,
+                Query = "Title.Length:3 AND Category:Rhinos"
+            });
+            server.Database.ExecuteDynamicQuery(new Bundles.DynamicQueries.Data.DynamicQuery()
+            {
+                PageSize = 128,
+                Start = 0,
+                Query = "Category:Rhinos AND Title.Length:3"
+            });
+
+            int secondIndexCount = server.Database.Statistics.CountOfIndexes;
+
+            // Should only have created a single index
+            Assert.True(secondIndexCount == originalIndexCount + 1);
+        }
     }
+
 
     public class Blog
     {
