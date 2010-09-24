@@ -5,7 +5,6 @@ using System.Configuration;
 using System.Data.Common;
 using System.IO;
 using System.Reflection;
-using System.Threading;
 using Raven.Bundles.Expiration;
 using Raven.Bundles.IndexReplication;
 using Raven.Bundles.IndexReplication.Data;
@@ -15,7 +14,7 @@ using Raven.Server;
 using Xunit;
 using System.Linq;
 
-namespace Raven.Bundles.Tests.ReplicateToSql
+namespace Raven.Bundles.Tests.IndexReplication
 {
     public class ReplicateToSql : IDisposable
     {
