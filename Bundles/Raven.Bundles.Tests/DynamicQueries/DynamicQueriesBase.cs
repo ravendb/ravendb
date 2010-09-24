@@ -15,7 +15,7 @@ using Raven.Bundles.DynamicQueries.Responders;
 
 namespace Raven.Bundles.Tests.DynamicQueries
 {
-    public class DynamicQueriesBase
+    public class DynamicQueriesBase : IDisposable
     {
 		protected DocumentStore store;
 		protected RavenDbServer server;

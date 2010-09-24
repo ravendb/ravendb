@@ -33,7 +33,7 @@ namespace Raven.Bundles.DynamicQueries.Database
                 realQuery = realQuery.Replace(mapItem.From, mapItem.To);
             }
 
-            // Perform the query until we have some results
+            // Perform the query until we have some results at least
             QueryResult result = null;
             var sp = Stopwatch.StartNew();
             while (true)
@@ -47,7 +47,7 @@ namespace Raven.Bundles.DynamicQueries.Database
                        Start = query.Start
                    });
 
-                if (result.IsStale || result.Results.Count < query.PageSize)
+                if (result.IsStale && result.Results.Count < query.PageSize)
                 {
                     if (sp.Elapsed.TotalMilliseconds > 10000)
                     {
@@ -72,8 +72,11 @@ namespace Raven.Bundles.DynamicQueries.Database
 
         private static string CreateOrGetDynamicIndexName(DocumentDatabase database, DynamicQueryMapping map)
         {
+            // This isn't sustainable with long dynamic queries
+            String combinedFields = String.Join("", map.Items.OrderBy(x => x.To).Select(x=>x.To).ToArray());
+
             // Need to use an appropriate index name based on the fields passed in
-            var indexName = String.Format("Temp_{0}", Guid.NewGuid().ToString());
+            var indexName = String.Format("Temp_{0}", combinedFields);
 
             var mapping = map.Items
               .Select(x => string.Format("{0} = doc.{1}", x.To, x.From))

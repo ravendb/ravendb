@@ -25,7 +25,7 @@ namespace Raven.Bundles.DynamicQueries.Data
         public static DynamicQueryMapping Create(string query)
         {
             var parsedQuery = new QueryParser(Lucene.Net.Util.Version.LUCENE_29, "", new
-StandardAnalyzer()).Parse(query);
+StandardAnalyzer(Lucene.Net.Util.Version.LUCENE_29)).Parse(query);
             var terms = new Hashtable();
             parsedQuery.ExtractTerms(terms);
             var fields = new HashSet<string>();

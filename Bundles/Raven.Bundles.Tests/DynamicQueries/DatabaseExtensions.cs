@@ -42,6 +42,7 @@ namespace Raven.Bundles.Tests.DynamicQueries
             {
                 PageSize = 128,
                 Start = 0,
+                CutOff= DateTime.Now,
                 Query = "Title.Length:3 AND Category:Rhinos"
             });
 
