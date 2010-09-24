@@ -93,6 +93,7 @@ task Test -depends Compile {
   exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\Raven.Tests.dll" } 
   exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\Raven.Scenarios.dll" }
   exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\Raven.Client.Tests.dll" }
+  exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\Raven.Client.VisualBasic.Tests.dll" }
   exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\Raven.Bundles.Tests.dll" }
   cd $old
 }
@@ -220,7 +221,12 @@ task CopyServer {
 
 task CreateDocs {
 	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
-    
+	
+	if($env:buildlabel -eq 13)
+	{
+      return 
+	}
+     
   # we expliclty allows this to fail
   & "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Raven.Docs.shfbproj" /p:OutDir="$buildartifacts_dir\"
 }

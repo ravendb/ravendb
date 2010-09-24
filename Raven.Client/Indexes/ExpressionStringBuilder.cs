@@ -1018,11 +1018,21 @@ namespace Raven.Client.Indexes
             if (expression != null)
             {
                 this.Visit(expression);
-                this.Out(".");
+                if (node.Method.Name != "get_Item") // VB indexer
+                {
+                    this.Out(".");
+                }
             }
-            this.Out(node.Method.Name);
-            this.Out("(");
-            int num2 = num;
+            if(node.Method.Name != "get_Item") // VB indexer
+            {
+                this.Out(node.Method.Name);
+                this.Out("(");
+            }
+            else
+            {
+                this.Out("[");
+            }
+		    int num2 = num;
             int count = node.Arguments.Count;
             while (num2 < count)
             {
@@ -1033,8 +1043,15 @@ namespace Raven.Client.Indexes
                 this.Visit(node.Arguments[num2]);
                 num2++;
             }
-            this.Out(")");
-            return node;
+            if (node.Method.Name != "get_Item")// VB indexer
+            {
+                this.Out(")");
+            }
+            else
+            {
+                this.Out("]");
+            }
+		    return node;
         }
 
 		/// <summary>
@@ -1107,7 +1124,14 @@ namespace Raven.Client.Indexes
                 this.Out("Param_" + this.GetParamId(node));
                 return node;
             }
-            this.Out(node.Name);
+            if(node.Name.StartsWith("$VB$"))
+            {
+                this.Out(node.Name.Substring(4));
+            }
+            else
+            {
+                this.Out(node.Name);
+            }
             return node;
         }
 
@@ -1268,7 +1292,11 @@ namespace Raven.Client.Indexes
             case ExpressionType.OnesComplement:
                 this.Out("~");
                 break;
-
+            case ExpressionType.Convert:
+            case ExpressionType.ConvertChecked:
+                // we don't want to do nothing for those
+                this.Out("(");
+                break;
             default:
                 innerPrecedence = ExpressionOperatorPrecedence.ParenthesisNotNeeded;
                 this.Out(node.NodeType.ToString());
