@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Microsoft.Isam.Esent.Interop;
 
 namespace Raven.Storage.Esent
@@ -24,5 +25,45 @@ namespace Raven.Storage.Esent
 		public IDictionary<string, JET_COLUMNID> DetailsColumns { get; set; }
 
         public IDictionary<string, JET_COLUMNID> QueueColumns { get; set; }
+
+	    public void InitColumDictionaries(JET_INSTANCE instance, string database)
+	    {
+	        using (var session = new Session(instance))
+	        {
+	            var dbid = JET_DBID.Nil;
+	            try
+	            {
+	                Api.JetOpenDatabase(session, database, null, out dbid, OpenDatabaseGrbit.None);
+	                using (var documents = new Table(session, dbid, "documents", OpenTableGrbit.None))
+	                    DocumentsColumns = Api.GetColumnDictionary(session, documents);
+	                using (var tasks = new Table(session, dbid, "tasks", OpenTableGrbit.None))
+	                    TasksColumns = Api.GetColumnDictionary(session, tasks);
+	                using (var files = new Table(session, dbid, "files", OpenTableGrbit.None))
+	                    FilesColumns = Api.GetColumnDictionary(session, files);
+	                using (var indexStats = new Table(session, dbid, "indexes_stats", OpenTableGrbit.None))
+	                    IndexesStatsColumns = Api.GetColumnDictionary(session, indexStats);
+	                using (var mappedResults = new Table(session, dbid, "mapped_results", OpenTableGrbit.None))
+	                    MappedResultsColumns = Api.GetColumnDictionary(session, mappedResults);
+	                using (
+	                    var documentsModifiedByTransactions = new Table(session, dbid, "documents_modified_by_transaction",
+	                                                                    OpenTableGrbit.None))
+	                    DocumentsModifiedByTransactionsColumns = Api.GetColumnDictionary(session,
+	                                                                                                       documentsModifiedByTransactions);
+	                using (var transactions = new Table(session, dbid, "transactions", OpenTableGrbit.None))
+	                    TransactionsColumns = Api.GetColumnDictionary(session, transactions);
+	                using (var identity = new Table(session, dbid, "identity_table", OpenTableGrbit.None))
+	                    IdentityColumns = Api.GetColumnDictionary(session, identity);
+	                using (var details = new Table(session, dbid, "details", OpenTableGrbit.None))
+	                    DetailsColumns = Api.GetColumnDictionary(session, details);
+	                using (var queue = new Table(session, dbid, "queue", OpenTableGrbit.None))
+	                    QueueColumns = Api.GetColumnDictionary(session, queue);
+	            }
+	            finally
+	            {
+	                if (Equals(dbid, JET_DBID.Nil) == false)
+	                    Api.JetCloseDatabase(session, dbid, CloseDatabaseGrbit.None);
+	            }
+	        }
+	    }
 	}
 }

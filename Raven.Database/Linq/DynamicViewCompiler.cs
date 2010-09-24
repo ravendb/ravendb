@@ -30,6 +30,7 @@ namespace Raven.Database.Linq
 			this.indexDefinition = indexDefinition;
 			this.extensions = extensions;
 			this.name = MonoHttpUtility.UrlEncode(name);
+		    RequiresSelectNewAnonymousType = true;
 		}
 
 		public string CompiledQueryText { get; set; }
@@ -99,7 +100,7 @@ namespace Raven.Database.Linq
 				string groupByParamter;
 				if (indexDefinition.Reduce.Trim().StartsWith("from"))
 				{
-					reduceDefiniton = QueryParsingUtils.GetVariableDeclarationForLinqQuery(indexDefinition.Reduce);
+					reduceDefiniton = QueryParsingUtils.GetVariableDeclarationForLinqQuery(indexDefinition.Reduce, RequiresSelectNewAnonymousType);
 					var sourceSelect = (QueryExpression)((QueryExpression)reduceDefiniton.Initializer).FromClause.InExpression;
 					groupBySource = ((QueryExpressionGroupClause)sourceSelect.SelectOrGroupClause).GroupBy;
 					groupByParamter = sourceSelect.FromClause.Identifier;
@@ -160,7 +161,9 @@ namespace Raven.Database.Linq
 			                                              compiledQueryText);
 		}
 
-		private VariableDeclaration TransformMapDefinition(out string entityName)
+	    public bool RequiresSelectNewAnonymousType { get; set; }
+
+	    private VariableDeclaration TransformMapDefinition(out string entityName)
 		{
 			if (indexDefinition.Map.Trim().StartsWith("from"))
 				return TransformMapDefinitionFromLinqQuerySyntax(out entityName);
@@ -242,7 +245,7 @@ namespace Raven.Database.Linq
 		private VariableDeclaration TransformMapDefinitionFromLinqQuerySyntax(out string entityName)
 		{
 			entityName = null;
-			var variableDeclaration = QueryParsingUtils.GetVariableDeclarationForLinqQuery(indexDefinition.Map);
+			var variableDeclaration = QueryParsingUtils.GetVariableDeclarationForLinqQuery(indexDefinition.Map, RequiresSelectNewAnonymousType);
 			var queryExpression = ((QueryExpression) variableDeclaration.Initializer);
 			var expression = queryExpression.FromClause.InExpression;
 			if(expression is MemberReferenceExpression) // collection
@@ -268,6 +271,9 @@ namespace Raven.Database.Linq
 			}
 			var selectOrGroupClause = queryExpression.SelectOrGroupClause;
 			var projection = ((QueryExpressionSelectClause) selectOrGroupClause).Projection;
+            if(projection is ObjectCreateExpression == false)
+                return variableDeclaration;
+
 			var objectInitializer = ((ObjectCreateExpression) projection).ObjectInitializer;
 
 			var identifierExpression = new IdentifierExpression(queryExpression.FromClause.Identifier);

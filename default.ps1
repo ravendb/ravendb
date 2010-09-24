@@ -93,6 +93,7 @@ task Test -depends Compile {
   exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\Raven.Tests.dll" } 
   exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\Raven.Scenarios.dll" }
   exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\Raven.Client.Tests.dll" }
+  exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\Raven.Client.VisualBasic.Tests.dll" }
   exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\Raven.Bundles.Tests.dll" }
   cd $old
 }
@@ -120,7 +121,7 @@ task Release -depends Test,DoRelease {
 }
 
 task CopySamples {
-	$samples = @("MvcMusicStore", "Raven.Sample.ShardClient", "Raven.Sample.Failover", "Raven.Sample.Replication", "Raven.Sample.EventSourcing", "Raven.Bundles.Sample.EventSourcing.ShoppingCartAggregator")
+	$samples = @("MvcMusicStore", "Raven.Sample.ShardClient", "Raven.Sample.Failover", "Raven.Sample.Replication", "Raven.Sample.EventSourcing", "Raven.Bundles.Sample.EventSourcing.ShoppingCartAggregator", "Raven.Samples.IndexReplication")
 	$exclude = @("bin", "obj", "Data", "Plugins")
 	
 	foreach ($sample in $samples) {
@@ -220,14 +221,20 @@ task CopyServer {
 
 task CreateDocs {
 	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
-    
-    exec { & "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Raven.Docs.shfbproj" /p:OutDir="$buildartifacts_dir\" }
+	
+	if($env:buildlabel -eq 13)
+	{
+      return 
+	}
+     
+  # we expliclty allows this to fail
+  & "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Raven.Docs.shfbproj" /p:OutDir="$buildartifacts_dir\"
 }
 
 task CopyDocFiles -depends CreateDocs {
 	cp $base_dir\license.txt $build_dir\Output\license.txt
 	cp $base_dir\readme.txt $build_dir\Output\readme.txt
-	cp $base_dir\Help\Documentation.chm $build_dir\Output\Documentation.chm
+	cp $base_dir\Help\Documentation.chm $build_dir\Output\Documentation.chm  -ErrorAction SilentlyContinue
 	cp $base_dir\acknowledgements.txt $build_dir\Output\acknowledgements.txt
 }
 
