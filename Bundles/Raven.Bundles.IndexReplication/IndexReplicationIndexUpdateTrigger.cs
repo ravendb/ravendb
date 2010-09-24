@@ -5,22 +5,22 @@ using System.Data.Common;
 using System.Data.SqlClient;
 using System.Text;
 using Lucene.Net.Documents;
-using Raven.Bundles.ReplicateToSql.Data;
+using Raven.Bundles.IndexReplication.Data;
 using Raven.Database.Json;
 using Raven.Database.Plugins;
 using Document = Lucene.Net.Documents.Document;
 
-namespace Raven.Bundles.ReplicateToSql
+namespace Raven.Bundles.IndexReplication
 {
-    public class ReplicateToSqlIndexUpdateTrigger : AbstractIndexUpdateTrigger
+    public class IndexReplicationIndexUpdateTrigger : AbstractIndexUpdateTrigger
     {
         public override AbstractIndexUpdateTriggerBatcher CreateBatcher(string indexName)
         {
-            var document = Database.Get("Raven/ReplicateToSql/"+indexName, null);
+            var document = Database.Get("Raven/IndexReplication/" + indexName, null);
             if (document == null)
                 return null; // we don't have any reason to replicate anything 
 
-            var destination = document.DataAsJson.JsonDeserialization<ReplicateToSqlDestination>();
+            var destination = document.DataAsJson.JsonDeserialization<IndexReplicationDestination>();
 
             var connectionString = ConfigurationManager.ConnectionStrings[destination.ConnectionStringName];
             if(connectionString == null)
@@ -40,10 +40,10 @@ namespace Raven.Bundles.ReplicateToSql
         public class ReplicateToSqlIndexUpdateBatcher : AbstractIndexUpdateTriggerBatcher
         {
             private readonly DbConnection connection;
-            private readonly ReplicateToSqlDestination destination;
+            private readonly IndexReplicationDestination destination;
             private DbTransaction tx;
 
-            public ReplicateToSqlIndexUpdateBatcher(DbConnection connection, ReplicateToSqlDestination destination)
+            public ReplicateToSqlIndexUpdateBatcher(DbConnection connection, IndexReplicationDestination destination)
             {
                 this.connection = connection;
                 this.destination = destination;

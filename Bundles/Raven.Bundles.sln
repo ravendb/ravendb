@@ -23,7 +23,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Bundles.Expiration", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Client.Lightweight", "..\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj", "{4E087ECB-E7CA-4891-AC3C-3C76702715B6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Bundles.ReplicateToSql", "Raven.Bundles.ReplicateToSql\Raven.Bundles.ReplicateToSql.csproj", "{2728BBA7-5142-445E-BAA5-142A25E0666D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Bundles.IndexReplication", "Raven.Bundles.IndexReplication\Raven.Bundles.IndexReplication.csproj", "{2728BBA7-5142-445E-BAA5-142A25E0666D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

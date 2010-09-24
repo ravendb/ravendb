@@ -8,8 +8,8 @@
     <ProjectGuid>{2728BBA7-5142-445E-BAA5-142A25E0666D}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Raven.Bundles.ReplicateToSql</RootNamespace>
-    <AssemblyName>Raven.Bundles.ReplicateToSql</AssemblyName>
+    <RootNamespace>Raven.Bundles.IndexReplication</RootNamespace>
+    <AssemblyName>Raven.Bundles.IndexReplication</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -46,9 +46,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Data\ReplicateToSqlDestination.cs" />
+    <Compile Include="Data\IndexReplicationDestination.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ReplicateToSqlIndexUpdateTrigger.cs" />
+    <Compile Include="IndexReplicationIndexUpdateTrigger.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Raven.Database\Raven.Database.csproj">
