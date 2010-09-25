@@ -27,8 +27,7 @@ namespace Raven.Database
 
         [ImportMany]
         public IEnumerable<AbstractDeleteTrigger> DeleteTriggers { get; set; }
-
-
+        
         [ImportMany]
         public IEnumerable<AbstractIndexUpdateTrigger> IndexUpdateTriggers { get; set; }
 
@@ -40,6 +39,7 @@ namespace Raven.Database
 
         private AppDomain queriesAppDomain;
         private readonly WorkContext workContext;
+        private DynamicQueryRunner dynamicQueryRunner;
 
         private Thread[] backgroundWorkers = new Thread[0];
 
@@ -56,6 +56,7 @@ namespace Raven.Database
             	IndexUpdateTriggers = IndexUpdateTriggers,
 				ReadTriggers = ReadTriggers
             };
+            dynamicQueryRunner = new DynamicQueryRunner(this);
 
             TransactionalStorage = configuration.CreateTransactionalStorage(workContext.NotifyAboutWork);
             configuration.Container.SatisfyImportsOnce(TransactionalStorage);
@@ -502,8 +503,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
             stale = isStale;
             return loadedIds;
         }
-
-
+        
         public void DeleteIndex(string name)
         {
             IndexDefinitionStorage.RemoveIndex(name);
@@ -785,6 +785,11 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
             };
 
         }
+        
+        public QueryResult ExecuteDynamicQuery(IndexQuery indexQuery)
+        {
+            return dynamicQueryRunner.ExecuteDynamicQuery(indexQuery);
+        }
 
         private void UnloadQueriesAppDomain()
         {
@@ -799,5 +804,6 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
             queryRunner = (QueryRunner)queriesAppDomain.CreateInstanceAndUnwrap(typeof(QueryRunner).Assembly.FullName, typeof(QueryRunner).FullName);
             queryRunner.Initialize(TransactionalStorage.TypeForRunningQueriesInRemoteAppDomain, TransactionalStorage.StateForRunningQueriesInRemoteAppDomain);
         }
+
     }
 }

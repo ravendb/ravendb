@@ -2,29 +2,34 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Raven.Database;
 using Raven.Database.Data;
-using System.Threading;
 using System.Diagnostics;
-using Microsoft.Isam.Esent.Interop;
-using Raven.Database.Indexing;
-using Raven.Database.Plugins;
-using Raven.Database.Json;
-using Raven.Database.Extensions;
+using System.Threading;
 using System.Security.Cryptography;
+using Raven.Database.Indexing;
 
-
-namespace Raven.Database.Extensions
+namespace Raven.Database
 {
-    public static class DynamicQueryExtensions
+    public class DynamicQueryRunner
     {
-        public static QueryResult ExecuteDynamicQuery(this DocumentDatabase database, IndexQuery query)
+        private DocumentDatabase documentDatabase;
+        private List<TemporaryIndexInfo> temporaryIndexes;
+        private DateTime lastCleanup;
+
+        public DynamicQueryRunner(DocumentDatabase database)
+        {
+            documentDatabase = database;
+            temporaryIndexes = new List<TemporaryIndexInfo>();
+            lastCleanup = DateTime.Now;
+        }
+
+        public QueryResult ExecuteDynamicQuery(IndexQuery query)
         {
             // Create the map
             var map = DynamicQueryMapping.Create(query.Query);
 
             // Get the index name
-            string indexName = CreateOrGetDynamicIndexName(database, map);
+            string indexName = FindDynamicIndexName(map);
 
             // Re-write the query
             string realQuery = query.Query;
@@ -38,7 +43,7 @@ namespace Raven.Database.Extensions
             var sp = Stopwatch.StartNew();
             while (true)
             {
-                result = database.Query(indexName,
+                result = documentDatabase.Query(indexName,
                    new Raven.Database.Data.IndexQuery()
                    {
                        Cutoff = query.Cutoff,
@@ -69,13 +74,13 @@ namespace Raven.Database.Extensions
             return result;
         }
 
-        private static string CreateOrGetDynamicIndexName(DocumentDatabase database, DynamicQueryMapping map)
+        private string FindDynamicIndexName(DynamicQueryMapping map)
         {
             // This isn't sustainable with long dynamic queries
-            String combinedFields = String.Join("", 
+            String combinedFields = String.Join("",
                 map.Items
                 .OrderBy(x => x.To)
-                .Select(x=>x.To)
+                .Select(x => x.To)
                 .ToArray());
 
             // Need to use an appropriate index name based on the fields passed in
@@ -91,15 +96,33 @@ namespace Raven.Database.Extensions
                 }
             }
 
-            // Using a Temp Prefix so we can identify temporary indexes
-            indexName = string.Format("Temp_{0}", indexName);
+            String permanentIndexName = string.Format("Auto_{0}", indexName);
+            String temporaryIndexName = string.Format("Temp_{0}", indexName);
 
+            // If there is a permanent index, use that
+            var permanentIndex = documentDatabase.GetIndexDefinition(permanentIndexName);
+            if (permanentIndex != null) { return permanentIndexName; }
+
+            // If there is a temporary index, fall back to that
+            var temporaryIndex = documentDatabase.GetIndexDefinition(temporaryIndexName);
+            if (temporaryIndex != null) { return temporaryIndexName; }
+
+            // Create the temporary index
+            CreateIndex(map, temporaryIndexName);
+
+            // And return the index name
+            return temporaryIndexName;
+        }
+
+        private void CreateIndex(DynamicQueryMapping map, string indexName)
+        {
+            // Create the index
             var mapping = map.Items
               .Select(x => string.Format("{0} = doc.{1}", x.To, x.From))
               .ToArray();
-            
+
             var indexes = new Dictionary<string, FieldIndexing>();
-            foreach(var mapItem in map.Items)
+            foreach (var mapItem in map.Items)
             {
                 indexes.Add(mapItem.To, FieldIndexing.NotAnalyzed);
             }
@@ -111,14 +134,18 @@ namespace Raven.Database.Extensions
                  { 
                     " + String.Join(",\r\n", mapping) + @"
                  }",
-                Indexes =  indexes
+                Indexes = indexes
             };
 
-            // Store the index - this will check for the present of the index for us
-            database.PutIndex(indexName, definition);
+            documentDatabase.PutIndex(indexName, definition);
+        }
 
-            // And return the index name
-            return indexName;
+        private class TemporaryIndexInfo
+        {
+            public string Name { get; set;}
+            public DateTime LastRun { get; set;}
+            public DateTime Created { get; set;}
+            public DateTime RunCount { get; set;}
         }
     }
 }
