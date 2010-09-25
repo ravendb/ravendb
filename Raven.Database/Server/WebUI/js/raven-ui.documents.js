@@ -5,7 +5,7 @@ var allDocsTotalCount;
 var indexName;
 var indexValues;
 var linqQuery;
-var isInQueryMode = false;
+var queryMode = 'allDocs';
 
 $(document).ready(function () {
     RavenUI.GetDocumentCount(function (count) {
@@ -70,7 +70,7 @@ function getAllDocuments() {
 }
 
 function ExecuteLinqQuery() {
-    isInQueryMode = true;
+    queryMode = 'linearQuery';
 
     $('#docList').show().html('<img src="images/ajax-loader.gif" /> Loading...');
 
@@ -80,14 +80,14 @@ function ExecuteLinqQuery() {
             $('#pager').hide();
         } else {
             //this is only here because there's no way to get the total count on a query currently
-            allDocsTotalCount = data.Results.length;
+            allDocsTotalCount = data.TotalResults;
             processDocumentResults(data.Results, allDocsTotalCount);
         }
     });
 }
 
 function ExecuteQuery() {
-    isInQueryMode = true;
+    queryMode = 'indexQuery';
 
     $('#docList').show().html('<img src="images/ajax-loader.gif" /> Loading...');
 
@@ -189,10 +189,16 @@ function processDocumentResults(results, totalCount) {
 
 function pagerClick(newPageNumber) {
     pageNumber = newPageNumber;
-    if (!isInQueryMode) {
-        getAllDocuments();
-    } else {
-        ExecuteQuery();
+    switch (queryMode) {
+        case 'allDocs':
+            getAllDocuments();
+            break;
+        case 'indexQuery':
+            ExecuteQuery();
+            break;
+        case 'linearQuery':
+            ExecuteLinqQuery();
+            break;
     }
 }
 
