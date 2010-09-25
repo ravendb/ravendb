@@ -11,6 +11,7 @@ using Raven.Database.Indexing;
 using Raven.Database.Plugins;
 using Raven.Database.Json;
 using Raven.Database.Extensions;
+using System.Security.Cryptography;
 
 
 namespace Raven.Database.Extensions
@@ -78,15 +79,25 @@ namespace Raven.Database.Extensions
                 .ToArray());
 
             // Need to use an appropriate index name based on the fields passed in
-            var indexName = String.Format("Temp_{0}", combinedFields);
+            var indexName = combinedFields;
+
+            // Hash the name if it's too long
+            if (indexName.Length > 240)
+            {
+                using (var sha256 = SHA256.Create())
+                {
+                    var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(indexName));
+                    indexName = Encoding.UTF8.GetString(bytes);
+                }
+            }
+
+            // Using a Temp Prefix so we can identify temporary indexes
+            indexName = string.Format("Temp_{0}", indexName);
 
             var mapping = map.Items
               .Select(x => string.Format("{0} = doc.{1}", x.To, x.From))
               .ToArray();
             
-            // We don't analyze all fields by default at the moment
-            // Again, on the backlog is more 'intelligent' index creation (perhaps by analyzing some documents?)
-            // This functionality will work for string matches, but nothing else
             var indexes = new Dictionary<string, FieldIndexing>();
             foreach(var mapItem in map.Items)
             {

@@ -245,9 +245,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
             return new DocumentRetriever(null, ReadTriggers).ExecuteReadTriggers(document, transactionInformation,
                                                                                  ReadOperation.Load);
         }
-
-
-
+        
         public PutResult Put(string key, Guid? etag, JObject document, JObject metadata, TransactionInformation transactionInformation)
         {
             if (string.IsNullOrEmpty(key))

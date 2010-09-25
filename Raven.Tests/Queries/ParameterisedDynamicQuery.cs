@@ -66,6 +66,55 @@ namespace Raven.Tests.Queries
             Assert.Equal("Rhinos", results.Results[0].Value<string>("Category"));
         }
 
+        [Fact]
+        public void SimpleQueriesDoNotGeneratedMultipleIndexes()
+        {
+            var blogOne = new Blog
+            {
+                Title = "one",
+                Category = "Ravens"
+            };
+            var blogTwo = new Blog
+            {
+                Title = "two",
+                Category = "Rhinos"
+            };
+            var blogThree = new Blog
+            {
+                Title = "three",
+                Category = "Rhinos"
+            };
+
+            db.Put("blogOne", null, JObject.FromObject(blogOne), new JObject(), null);
+            db.Put("blogTwo", null, JObject.FromObject(blogTwo), new JObject(), null);
+            db.Put("blogThree", null, JObject.FromObject(blogThree), new JObject(), null);
+
+            int initialIndexCount = db.Statistics.CountOfIndexes;
+            db.ExecuteDynamicQuery(new IndexQuery()
+            {
+                PageSize = 128,
+                Start = 0,
+                Cutoff = DateTime.Now,
+                Query = "Title.Length:3 AND Category:Rhinos"
+            });
+            db.ExecuteDynamicQuery(new IndexQuery()
+            {
+                PageSize = 128,
+                Start = 0,
+                Cutoff = DateTime.Now,
+                Query = "Title.Length:3 AND Category:Rhinos"
+            });
+            db.ExecuteDynamicQuery(new IndexQuery()
+            {
+                PageSize = 128,
+                Start = 0,
+                Cutoff = DateTime.Now,
+                Query = "Category:Rhinos AND Title.Length:3"
+            });
+
+            Assert.True(db.Statistics.CountOfIndexes == initialIndexCount + 1);
+                        
+        }
 
         public class Blog
         {
