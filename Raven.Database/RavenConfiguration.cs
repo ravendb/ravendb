@@ -37,8 +37,12 @@ namespace Raven.Database
 			Port = portStr != null ? int.Parse(portStr) : 8080;
 
             var maxPageSizeStr = ConfigurationManager.AppSettings["Raven/MaxPageSize"];
+            var minimumQueryCount = ConfigurationManager.AppSettings["Raven/TempIndexPromotionMinimumQueryCount"];
+            var queryThreshold = ConfigurationManager.AppSettings["Raven/TempIndexPromotionThreshold"];
 
             MaxPageSize = maxPageSizeStr != null ? int.Parse(maxPageSizeStr) : 1024;
+            TempIndexPromotionMinimumQueryCount = minimumQueryCount != null ? int.Parse(minimumQueryCount) : 100;
+            TempIndexPromotionThreshold = queryThreshold != null ? int.Parse(queryThreshold) : 6000;
 
 			DataDirectory = ConfigurationManager.AppSettings["Raven/DataDir"] ?? @"~\Data";
 
@@ -174,6 +178,10 @@ namespace Raven.Database
 		public bool HttpCompression { get; set; }
 
 	    public int MaxPageSize { get; set; }
+
+
+        public int TempIndexPromotionThreshold { get; set; }
+        public int TempIndexPromotionMinimumQueryCount { get; set; }
 
 	    public void LoadLoggingSettings()
 		{

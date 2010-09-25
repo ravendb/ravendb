@@ -128,13 +128,12 @@ namespace Raven.Database
 
         private bool TemporaryIndexShouldBeMadePermanent(TemporaryIndexInfo indexInfo)
         {
-            // Too small a sample
-            if (indexInfo.RunCount < 100) { return false; }
+            if (indexInfo.RunCount < documentDatabase.Configuration.TempIndexPromotionMinimumQueryCount) { return false; }
 
             var timeSinceCreation = DateTime.Now.Subtract(indexInfo.Created);
             var score = timeSinceCreation.TotalMilliseconds / indexInfo.RunCount;
 
-            if (score < 6000) return true; // 100 times in 60000 milliseconds (10 minutes)
+            if (score < documentDatabase.Configuration.TempIndexPromotionThreshold) return true;
             return false;
         }
 

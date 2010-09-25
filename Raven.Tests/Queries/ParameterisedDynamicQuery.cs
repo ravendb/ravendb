@@ -142,8 +142,11 @@ namespace Raven.Tests.Queries
         public void OftenInvokedQueryShouldCreatePermanentIndex()
         {
             int initialIndexCount = db.Statistics.CountOfIndexes;
-            
-            for (int x = 0; x < 200; x++)
+
+            db.Configuration.TempIndexPromotionMinimumQueryCount = 2;
+            db.Configuration.TempIndexPromotionThreshold = 2000;
+
+            for (int x = 0; x < 3; x++)
             {
                 db.ExecuteDynamicQuery(new IndexQuery()
                 {
@@ -154,6 +157,7 @@ namespace Raven.Tests.Queries
                 });
             }
 
+            
             var autoIndexName = db.IndexDefinitionStorage.IndexNames.Where(x => x.StartsWith("Auto_")).SingleOrDefault();
             var tempIndexName = db.IndexDefinitionStorage.IndexNames.Where(x => x.StartsWith("Temp_")).SingleOrDefault();
 
