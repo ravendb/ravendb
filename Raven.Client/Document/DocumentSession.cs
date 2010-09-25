@@ -267,6 +267,23 @@ namespace Raven.Client.Document
             documentStore.DatabaseCommands.StoreRecoveryInformation(resourceManagerId, txId, recoveryInformation);
 		}
 
+        /// <summary>
+        /// Dynamically queries RavenDB using LINQ
+        /// </summary>
+        /// <typeparam name="T">The result of the query</typeparam>
+        public IRavenQueryable<T> DynamicQuery<T>()
+        {
+            return Query<T>("dynamic");
+        }
+
+        /// <summary>
+        /// Dynamically query RavenDB using Lucene syntax
+        /// </summary>
+        public IDocumentQuery<T> DynamicLuceneQuery<T>()
+        {
+            return LuceneQuery<T>("dynamic");
+        }
+
 		/// <summary>
 		/// Metadata held about an entity by the session
 		/// </summary>
