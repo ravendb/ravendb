@@ -369,7 +369,6 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Commercial\RavenDB.public" />
-    <None Include="ClassDiagram1.cd" />
     <None Include="RavenDB.snk" />
   </ItemGroup>
   <ItemGroup />
