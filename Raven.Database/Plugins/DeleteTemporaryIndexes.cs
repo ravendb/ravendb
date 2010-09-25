@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Raven.Database.Extensions;
 
 namespace Raven.Database.Plugins
 {
@@ -9,14 +10,8 @@ namespace Raven.Database.Plugins
     {
         public void Execute(DocumentDatabase database)
         {
-            // Delete any existing temporary indexes
-            int totalIndexes = database.Statistics.CountOfIndexes;
-            int pageSize = 128;
-            int totalPages = (totalIndexes / pageSize) + 1;
-            for (int currentPage = 0; currentPage < totalPages; currentPage++)
-            {
-                // Etc
-            }
+            database.IndexDefinitionStorage.IndexNames.Where(x => x.StartsWith("Temp_"))
+                .Apply(x => database.DeleteIndex(x));
         }
     }
 }

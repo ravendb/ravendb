@@ -13,13 +13,13 @@ namespace Raven.Database
     public class DynamicQueryRunner
     {
         private DocumentDatabase documentDatabase;
-        private List<TemporaryIndexInfo> temporaryIndexes;
+        private Dictionary<string, TemporaryIndexInfo> temporaryIndexes;
         private DateTime lastCleanup;
 
         public DynamicQueryRunner(DocumentDatabase database)
         {
             documentDatabase = database;
-            temporaryIndexes = new List<TemporaryIndexInfo>();
+            temporaryIndexes = new Dictionary<string, TemporaryIndexInfo>();
             lastCleanup = DateTime.Now;
         }
 
@@ -76,14 +76,11 @@ namespace Raven.Database
 
         private string FindDynamicIndexName(DynamicQueryMapping map)
         {
-            // This isn't sustainable with long dynamic queries
             String combinedFields = String.Join("",
                 map.Items
                 .OrderBy(x => x.To)
                 .Select(x => x.To)
                 .ToArray());
-
-            // Need to use an appropriate index name based on the fields passed in
             var indexName = combinedFields;
 
             // Hash the name if it's too long
@@ -99,19 +96,62 @@ namespace Raven.Database
             String permanentIndexName = string.Format("Auto_{0}", indexName);
             String temporaryIndexName = string.Format("Temp_{0}", indexName);
 
-            // If there is a permanent index, use that
+            // If there is a permanent index, then use that without bothering anything else
             var permanentIndex = documentDatabase.GetIndexDefinition(permanentIndexName);
             if (permanentIndex != null) { return permanentIndexName; }
 
-            // If there is a temporary index, fall back to that
-            var temporaryIndex = documentDatabase.GetIndexDefinition(temporaryIndexName);
-            if (temporaryIndex != null) { return temporaryIndexName; }
+            // Else head down the temporary route
+            return TouchTemporaryIndex(map, temporaryIndexName, permanentIndexName);           
+        }
 
-            // Create the temporary index
-            CreateIndex(map, temporaryIndexName);
+        private string TouchTemporaryIndex(DynamicQueryMapping map, string temporaryIndexName, string permanentIndexName)
+        {
+            var indexInfo = GetOrAddTemporaryIndexInfo(temporaryIndexName);
+            indexInfo.LastRun = DateTime.Now;
+            indexInfo.RunCount++;
+            
+            if (TemporaryIndexShouldBeMadePermanent(indexInfo))
+            {
+                documentDatabase.DeleteIndex(temporaryIndexName);
+                CreateIndex(map, permanentIndexName);
+                temporaryIndexes.Remove(temporaryIndexName);
+                return permanentIndexName;
+            }
+            else
+            {
+                var temporaryIndex = documentDatabase.GetIndexDefinition(temporaryIndexName);
+                if (temporaryIndex != null) { return temporaryIndexName; }
+                CreateIndex(map, temporaryIndexName);
+                return temporaryIndexName;
+            }
+       }
 
-            // And return the index name
-            return temporaryIndexName;
+        private bool TemporaryIndexShouldBeMadePermanent(TemporaryIndexInfo indexInfo)
+        {
+            // Too small a sample
+            if (indexInfo.RunCount < 100) { return false; }
+
+            var timeSinceCreation = DateTime.Now.Subtract(indexInfo.Created);
+            var score = timeSinceCreation.TotalMilliseconds / indexInfo.RunCount;
+
+            if (score < 6000) return true; // 100 times in 60000 milliseconds (10 minutes)
+            return false;
+        }
+
+        private TemporaryIndexInfo GetOrAddTemporaryIndexInfo(string temporaryIndexName)
+        {
+            TemporaryIndexInfo info = null;
+            if (!temporaryIndexes.TryGetValue(temporaryIndexName, out info))
+            {
+                info = new TemporaryIndexInfo()
+                {
+                    Created = DateTime.Now,
+                    RunCount = 0,
+                    Name = temporaryIndexName
+                };
+                temporaryIndexes[temporaryIndexName] = info;
+            }
+            return info;
         }
 
         private void CreateIndex(DynamicQueryMapping map, string indexName)
@@ -145,7 +185,7 @@ namespace Raven.Database
             public string Name { get; set;}
             public DateTime LastRun { get; set;}
             public DateTime Created { get; set;}
-            public DateTime RunCount { get; set;}
+            public int RunCount { get; set;}
         }
     }
 }

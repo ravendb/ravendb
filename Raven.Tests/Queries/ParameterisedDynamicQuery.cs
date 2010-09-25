@@ -116,6 +116,51 @@ namespace Raven.Tests.Queries
                         
         }
 
+        [Fact]
+        public void SingleInvokedQueryShouldCreateOnlyCreatedTempIndex()
+        {
+            int initialIndexCount = db.Statistics.CountOfIndexes;
+
+    
+                db.ExecuteDynamicQuery(new IndexQuery()
+                {
+                    PageSize = 128,
+                    Start = 0,
+                    Cutoff = DateTime.Now,
+                    Query = "Title.Length:3 AND Category:Rhinos"
+                });
+          
+
+            var autoIndexName = db.IndexDefinitionStorage.IndexNames.Where(x => x.StartsWith("Auto_")).SingleOrDefault();
+            var tempIndexName = db.IndexDefinitionStorage.IndexNames.Where(x => x.StartsWith("Temp_")).SingleOrDefault();
+
+            Assert.False(string.IsNullOrEmpty(tempIndexName));
+            Assert.True(string.IsNullOrEmpty(autoIndexName));
+        }
+
+        [Fact]
+        public void OftenInvokedQueryShouldCreatePermanentIndex()
+        {
+            int initialIndexCount = db.Statistics.CountOfIndexes;
+            
+            for (int x = 0; x < 200; x++)
+            {
+                db.ExecuteDynamicQuery(new IndexQuery()
+                {
+                    PageSize = 128,
+                    Start = 0,
+                    Cutoff = DateTime.Now,
+                    Query = "Title.Length:3 AND Category:Rhinos"
+                });
+            }
+
+            var autoIndexName = db.IndexDefinitionStorage.IndexNames.Where(x => x.StartsWith("Auto_")).SingleOrDefault();
+            var tempIndexName = db.IndexDefinitionStorage.IndexNames.Where(x => x.StartsWith("Temp_")).SingleOrDefault();
+
+            Assert.True(string.IsNullOrEmpty(tempIndexName));
+            Assert.False(string.IsNullOrEmpty(autoIndexName));
+        }
+
         public class Blog
         {
             public string Title
