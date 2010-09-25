@@ -778,7 +778,8 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
             }
             return new QueryResults
             {
-                LastResult = result.LastResult,
+                LastScannedResult = result.LastScannedResult,
+                TotalResults = result.TotalResults,
                 Errors = result.Errors,
                 Results = result.Results.Select(JObject.Parse).ToArray()
             };
