@@ -44,9 +44,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Data\VersioningConfiguration.cs" />
     <Compile Include="VersioningContext.cs" />
-    <Compile Include="VersioningDeleteTrigger.cs" />
-    <Compile Include="VersioningPutTrigger.cs" />
+    <Compile Include="Triggers\VersioningDeleteTrigger.cs" />
+    <Compile Include="Triggers\VersioningPutTrigger.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

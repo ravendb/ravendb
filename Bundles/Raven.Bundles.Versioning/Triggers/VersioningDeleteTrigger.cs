@@ -1,8 +1,7 @@
-﻿using System;
-using Raven.Database;
+﻿using Raven.Database;
 using Raven.Database.Plugins;
 
-namespace Raven.Bundles.Versioning
+namespace Raven.Bundles.Versioning.Triggers
 {
     public class VersioningDeleteTrigger : AbstractDeleteTrigger
     {
