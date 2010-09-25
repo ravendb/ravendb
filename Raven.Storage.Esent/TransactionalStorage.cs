@@ -301,7 +301,8 @@ namespace Raven.Storage.Esent
 			}
 		}
 
-		private void ExecuteBatch(Action<IStorageActionsAccessor> action)
+        [DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
+        private void ExecuteBatch(Action<IStorageActionsAccessor> action)
 		{
 			var txMode = configuration.TransactionMode == TransactionMode.Lazy
 				? CommitTransactionGrbit.LazyFlush
