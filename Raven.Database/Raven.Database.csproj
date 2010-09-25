@@ -138,6 +138,7 @@
     <Compile Include="IStartupTask.cs" />
     <Compile Include="Json\DynamicUtil.cs" />
     <Compile Include="Json\JsonDynamicConverter.cs" />
+    <Compile Include="Data\LinearQuery.cs" />
     <Compile Include="PerformanceCounters.cs" />
     <Compile Include="Plugins\AbstractBackgroundTask.cs" />
     <Compile Include="Plugins\AbstractDocumentCodec.cs" />
@@ -150,6 +151,7 @@
     <Compile Include="Plugins\AbstractIndexUpdateTriggerBatcher.cs" />
     <Compile Include="Plugins\ReadOperation.cs" />
     <Compile Include="Plugins\ReadVetoResult.cs" />
+    <Compile Include="Data\QueryResults.cs" />
     <Compile Include="QueryRunner.cs" />
     <Compile Include="Server\Abstractions\HttpContextAdapter.cs" />
     <Compile Include="Server\Abstractions\HttpListenerContextAdpater.cs" />
@@ -229,6 +231,7 @@
     <Compile Include="Server\Responders\HttpExtensions.cs" />
     <Compile Include="Server\Responders\Index.cs" />
     <Compile Include="Server\Responders\Indexes.cs" />
+    <Compile Include="Server\Responders\LinearQueryResponder.cs" />
     <Compile Include="Server\Responders\Queries.cs" />
     <Compile Include="Server\Responders\RavenRoot.cs" />
     <Compile Include="Server\Responders\RavenUI.cs" />
