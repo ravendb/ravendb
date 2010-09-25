@@ -8,6 +8,11 @@ namespace Raven.Client
 	/// </summary>
 	public interface ITransactionalDocumentSession
 	{
+        /// <summary>
+        /// The transaction resource manager identifer
+        /// </summary>
+        Guid ResourceManagerId { get; }
+
 		/// <summary>
 		/// Commits the transaction specified.
 		/// </summary>
@@ -27,11 +32,12 @@ namespace Raven.Client
 		/// <returns>The token representing the distributed transaction</returns>
 		byte[] PromoteTransaction(Guid fromTxId);
 
-		/// <summary>
-		/// Stores the recovery information for the specified transaction
-		/// </summary>
-		/// <param name="txId">The tx id.</param>
-		/// <param name="recoveryInformation">The recovery information.</param>
-		void StoreRecoveryInformation(Guid txId, byte[] recoveryInformation);
+	    /// <summary>
+	    /// Stores the recovery information for the specified transaction
+	    /// </summary>
+	    /// <param name="resourceManagerId">The resource manager Id for this transaction</param>
+	    /// <param name="txId">The tx id.</param>
+	    /// <param name="recoveryInformation">The recovery information.</param>
+	    void StoreRecoveryInformation(Guid resourceManagerId, Guid txId, byte[] recoveryInformation);
 	}
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Transactions;
 using Newtonsoft.Json.Linq;
 
@@ -6,21 +7,37 @@ namespace Raven.Database.Plugins.Builtins
 {
 	public class PendingTransactionRecovery : IStartupTask
 	{
-		public static readonly Guid RavenDbResourceManagerId = Guid.Parse("E749BAA6-6F76-4EEF-A069-40A4378954F8");
-
 		public void Execute(DocumentDatabase database)
 		{
+		    HashSet<Guid> resourceManagersRequiringRecovery =  new HashSet<Guid>();
 			database.TransactionalStorage.Batch(actions =>
 			{
 				foreach (var txId in actions.Transactions.GetTransactionIds())
 				{
 					var attachment = actions.Attachments.GetAttachment("transactions/recoveryInformation/" + txId);
 					if (attachment == null)//Prepare was not called, there is no recovery information
-						actions.Transactions.RollbackTransaction(txId);
+					{
+					    actions.Transactions.RollbackTransaction(txId);
+					}
 					else
-						TransactionManager.Reenlist(RavenDbResourceManagerId, attachment.Data, new InternalEnlistment(database, txId));
+					{
+                        Guid resourceManagerId;
+                        if (Guid.TryParse(attachment.Metadata.Value<string>("Resource-Manager-Id"), out resourceManagerId) == false)
+					    {
+                            actions.Transactions.RollbackTransaction(txId);
+					    }
+					    else
+                        {
+                            resourceManagersRequiringRecovery.Add(resourceManagerId);
+                            TransactionManager.Reenlist(resourceManagerId, attachment.Data, new InternalEnlistment(database, txId));
+					    }
+					}
 				}
 			});
+            foreach (var rm in resourceManagersRequiringRecovery)
+            {
+                TransactionManager.RecoveryComplete(rm);
+            }
 			
 		}
 

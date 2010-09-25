@@ -181,10 +181,10 @@ namespace Raven.Client.Client
 			return database.PromoteTransaction(fromTxId);
 		}
 
-		public void StoreRecoveryInformation(Guid txId, byte[] recoveryInformation)
+		public void StoreRecoveryInformation(Guid resourceManagerId,Guid txId, byte[] recoveryInformation)
 		{
-			CurrentRavenOperation.Headers.Value = OperationsHeaders; 
-			database.PutStatic("transactions/recoveryInformation/" + txId, null, recoveryInformation, new JObject());
+			CurrentRavenOperation.Headers.Value = OperationsHeaders;
+            database.PutStatic("transactions/recoveryInformation/" + txId, null, recoveryInformation, new JObject(new JProperty("Resource-Manager-Id", resourceManagerId.ToString())));
 		}
 
 		public IDatabaseCommands With(ICredentials credentialsForSession)

@@ -256,14 +256,15 @@ namespace Raven.Client.Document
 			return documentStore.DatabaseCommands.PromoteTransaction(fromTxId);
 		}
 
-		/// <summary>
-		/// Stores the recovery information for the specified transaction
-		/// </summary>
-		/// <param name="txId">The tx id.</param>
-		/// <param name="recoveryInformation">The recovery information.</param>
-		public void StoreRecoveryInformation(Guid txId, byte[] recoveryInformation)
+	    /// <summary>
+	    /// Stores the recovery information for the specified transaction
+	    /// </summary>
+	    /// <param name="resourceManagerId"></param>
+	    /// <param name="txId">The tx id.</param>
+	    /// <param name="recoveryInformation">The recovery information.</param>
+	    public void StoreRecoveryInformation(Guid resourceManagerId, Guid txId, byte[] recoveryInformation)
 		{
-			documentStore.DatabaseCommands.StoreRecoveryInformation(txId, recoveryInformation);
+            documentStore.DatabaseCommands.StoreRecoveryInformation(resourceManagerId, txId, recoveryInformation);
 		}
 
 		/// <summary>
