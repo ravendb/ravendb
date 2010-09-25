@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json.Linq;
+using Raven.Database.Data;
 using Raven.Database.Indexing;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
@@ -68,15 +69,19 @@ namespace Raven.Database
                 LastResult = lastResult,
                 Errors = errors.ToArray(),
                 QueryCacheSize = queryCache.Count,
-                Resuslts = results.ToArray()
+                Results = results.ToArray()
             };
         }
 
-        private JObject ToJObject(object result)
+        private static JObject ToJObject(object result)
         {
             var dynamicJsonObject = result as DynamicJsonObject;
             if (dynamicJsonObject != null)
                 return dynamicJsonObject.Inner;
+            if(result is string || result is ValueType)
+            {
+                return new JObject(new JProperty("Value", new JValue(result)));
+            }
             return JObject.FromObject(result);
         }
 
@@ -124,7 +129,7 @@ namespace Raven.Database
     [Serializable]
     public class RemoteQueryResults
     {
-        public string[] Resuslts { get; set; }
+        public string[] Results { get; set; }
         public string[] Errors { get; set; }
         public int QueryCacheSize { get; set; }
 
