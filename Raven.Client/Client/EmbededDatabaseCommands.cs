@@ -10,6 +10,7 @@ using Raven.Database.Data;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Database.Storage;
+using Raven.Database.Extensions;
 
 namespace Raven.Client.Client
 {
@@ -130,8 +131,16 @@ namespace Raven.Client.Client
 
 		public QueryResult Query(string index, IndexQuery query, string[] ignored)
 		{
-			CurrentRavenOperation.Headers.Value = OperationsHeaders; 
-			return database.Query(index, query);
+			CurrentRavenOperation.Headers.Value = OperationsHeaders;
+
+            if (string.Compare(index, "dynamic", true) == 0)
+            {
+                return database.ExecuteDynamicQuery(query);
+            }
+            else
+            {
+                return database.Query(index, query);
+            }
 		}
 
 		public void DeleteIndex(string name)
