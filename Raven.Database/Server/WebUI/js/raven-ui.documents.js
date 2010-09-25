@@ -58,7 +58,8 @@ $(document).ready(function () {
 });
 
 function getAllDocuments() {
-    $('#docList').show().html('<img src="images/ajax-loader.gif" /> Loading...');
+    $('#ajaxError').slideUp();
+     $('#docList').show().html('<img src="images/ajax-loader.gif" /> Loading...');
     RavenUI.GetDocumentPage(pageNumber, pageSize, function (docs) {
         if (docs.length == 0) {
             $('#docList').html('There are no documents in your database.');
@@ -71,7 +72,7 @@ function getAllDocuments() {
 
 function ExecuteLinqQuery() {
     queryMode = 'linearQuery';
-
+    $('#ajaxError').slideUp();
     $('#docList').show().html('<img src="images/ajax-loader.gif" /> Loading...');
 
     RavenUI.QueryLinqIndex(linqQuery, pageNumber, pageSize, function (data) {
@@ -81,13 +82,19 @@ function ExecuteLinqQuery() {
         } else {
             //this is only here because there's no way to get the total count on a query currently
             allDocsTotalCount = data.TotalResults;
+            if (data.Errors.length > 0) {
+                $('#ajaxError').setTemplateURL($.ravenDB.getServerUrl() + '/raven/JSONTemplates/errorsMsgs.html');
+                $('#ajaxError').processTemplate(data);
+                $('#ajaxError').slideDown();
+            }
             processDocumentResults(data.Results, allDocsTotalCount);
         }
     });
 }
 
 function ExecuteQuery() {
-    queryMode = 'indexQuery';
+    $('#ajaxError').slideUp();
+     queryMode = 'indexQuery';
 
     $('#docList').show().html('<img src="images/ajax-loader.gif" /> Loading...');
 

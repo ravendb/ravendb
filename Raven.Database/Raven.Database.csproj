@@ -335,6 +335,7 @@
     <Content Include="Server\WebUI\images\topNavSep.png" />
     <Content Include="Server\WebUI\index.html" />
     <Content Include="Server\WebUI\indexes.html" />
+    <Content Include="Server\WebUI\JSONTemplates\errorsMsgs.html" />
     <Content Include="Server\WebUI\JSONTemplates\warningMsgs.html" />
     <Content Include="Server\WebUI\JSONTemplates\documentation.html" />
     <Content Include="Server\WebUI\JSONTemplates\globalStats.html" />
