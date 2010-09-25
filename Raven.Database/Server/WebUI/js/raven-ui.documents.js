@@ -4,6 +4,7 @@ var pageSize = 25;
 var allDocsTotalCount;
 var indexName;
 var indexValues;
+var linqQuery;
 var isInQueryMode = false;
 
 $(document).ready(function () {
@@ -24,6 +25,13 @@ $(document).ready(function () {
         indexName = $('#txtIndexName').val();
         indexValues = $('#txtIndexValue').val();
         ExecuteQuery();
+    });
+
+    $('#executeLinqQuery').button({
+        icons: { primary: 'ui-icon-circle-triangle-e' }
+    }).click(function () {
+        linqQuery = $('#txtLinqQuery').val();
+        ExecuteLinqQuery();
     });
 
     $('#executeGetByDoumentId').button({
@@ -57,6 +65,23 @@ function getAllDocuments() {
             $('#pager').hide();
         } else {
             processDocumentResults(docs, allDocsTotalCount);
+        }
+    });
+}
+
+function ExecuteLinqQuery() {
+    isInQueryMode = true;
+
+    $('#docList').show().html('<img src="images/ajax-loader.gif" /> Loading...');
+
+    RavenUI.QueryLinqIndex(linqQuery, pageNumber, pageSize, function (data) {
+        if (data.Results.length == 0) {
+            $('#docList').html('No documents matched your query.');
+            $('#pager').hide();
+        } else {
+            //this is only here because there's no way to get the total count on a query currently
+            allDocsTotalCount = data.Results.length;
+            processDocumentResults(data.Results, allDocsTotalCount);
         }
     });
 }

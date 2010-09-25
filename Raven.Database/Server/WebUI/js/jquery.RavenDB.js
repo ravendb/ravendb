@@ -317,6 +317,24 @@
             });
         },
 
+         queryLinqIndex: function (linqQuery, pageNumber, pageSize, successCallback) {
+            var start = (pageNumber - 1) * pageSize;
+            $.ajax({
+                type: 'POST',
+                url: settings.server + 'linearQuery',
+                cache: false,
+                contentType: 'application/json; charset=utf-8',
+                data: JSON.stringify({ 
+                    Query : linqQuery,
+                    Start: start,
+                    PageSize: pageSize
+                }),
+                success: function (data) {
+                    successCallback(data);
+                }
+            });
+        },
+
         searchIndexes: function (name, successCallback) {
             name = name.toLowerCase();
 
