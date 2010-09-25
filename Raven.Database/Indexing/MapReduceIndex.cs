@@ -161,7 +161,7 @@ namespace Raven.Database.Indexing
             	}, DateTime.UtcNow);
 
             });
-            Write(writer =>
+            Write(context, writer =>
             {
 				if (logIndexing.IsDebugEnabled)
                 {
@@ -180,7 +180,7 @@ namespace Raven.Database.Indexing
         {
             actions.Indexing.SetCurrentIndexStatsTo(name);
             var count = 0;
-            Write(indexWriter =>
+            Write(context, indexWriter =>
             {
                 var batchers = context.IndexUpdateTriggers.Select(x=>x.CreateBatcher(name))
                     .Where(x=>x!=null)

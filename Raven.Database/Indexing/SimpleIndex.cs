@@ -24,7 +24,7 @@ namespace Raven.Database.Indexing
         {
             actions.Indexing.SetCurrentIndexStatsTo(name);
             var count = 0;
-            Write(indexWriter =>
+            Write(context, indexWriter =>
             {
                 bool madeChanges = false;
                 PropertyDescriptorCollection properties = null;
@@ -128,7 +128,7 @@ namespace Raven.Database.Indexing
 
         public override void Remove(string[] keys, WorkContext context)
         {
-            Write(writer =>
+            Write(context, writer =>
             {
                 if (logIndexing.IsDebugEnabled)
                 {
