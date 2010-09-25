@@ -120,6 +120,10 @@ RavenUI.QueryIndex = function (name, queryValues, pageNumber, pageSize, successC
     $.ravenDB.queryIndex(name, queryValues, pageNumber, pageSize, successCallback);
 }
 
+RavenUI.QueryLinqIndex = function (linqQuery, pageNumber, pageSize, successCallback) {
+    $.ravenDB.queryLinqIndex(linqQuery, pageNumber, pageSize, successCallback);
+}
+
 // View
 RavenUI.ShowTemplatedDocument = function (docId, operation, elementName) {
     if ($.query.get('docId').length == 0) {

@@ -256,14 +256,15 @@ namespace Raven.Client.Document
 			return documentStore.DatabaseCommands.PromoteTransaction(fromTxId);
 		}
 
-		/// <summary>
-		/// Stores the recovery information for the specified transaction
-		/// </summary>
-		/// <param name="txId">The tx id.</param>
-		/// <param name="recoveryInformation">The recovery information.</param>
-		public void StoreRecoveryInformation(Guid txId, byte[] recoveryInformation)
+	    /// <summary>
+	    /// Stores the recovery information for the specified transaction
+	    /// </summary>
+	    /// <param name="resourceManagerId"></param>
+	    /// <param name="txId">The tx id.</param>
+	    /// <param name="recoveryInformation">The recovery information.</param>
+	    public void StoreRecoveryInformation(Guid resourceManagerId, Guid txId, byte[] recoveryInformation)
 		{
-			documentStore.DatabaseCommands.StoreRecoveryInformation(txId, recoveryInformation);
+            documentStore.DatabaseCommands.StoreRecoveryInformation(resourceManagerId, txId, recoveryInformation);
 		}
 
 		/// <summary>
@@ -314,26 +315,6 @@ namespace Raven.Client.Document
 			/// <value>The entities.</value>
 			public IList<object> Entities { get; set; }
 		}
-
-        /// <summary>
-        /// Executes a dynamic query against the RavenDB store with Linq
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <returns></returns>
-        public IRavenQueryable<T> DynamicQuery<T>()
-        {
-            return this.Query<T>("dynamic");
-        }
-
-        /// <summary>
-        /// Executes a dynamic query against the RavenDB store using Lucene syntax
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <returns></returns>
-        public IDocumentQuery<T> DynamicLuceneQuery<T>()
-        {
-            return this.LuceneQuery<T>("dynamic");
-        }
     }
 
 	/// <summary>

@@ -24,11 +24,6 @@ namespace Raven.Client.Document
 	/// </summary>
 	public abstract class InMemoryDocumentSessionOperations : IInMemoryDocumentSessionOperations
 	{
-		/// <summary>
-		/// The RavenDB resource id for DTC operations
-		/// </summary>
-		public static readonly Guid RavenDbResourceManagerId = new Guid("E749BAA6-6F76-4EEF-A069-40A4378954F8");
-
 		private const string RavenEntityName = "Raven-Entity-Name";
 		/// <summary>
 		/// The entities waiting to be deleted
@@ -72,7 +67,8 @@ namespace Raven.Client.Document
 			this.documentStore = documentStore;
 			this.deleteListeners = deleteListeners;
 			this.storeListeners = storeListeners;
-			UseOptimisticConcurrency = false;
+		    ResourceManagerId = documentStore.ResourceManagerId;
+            UseOptimisticConcurrency = false;
 			AllowNonAuthoritiveInformation = true;
 			NonAuthoritiveInformationTimeout = TimeSpan.FromSeconds(15);
 		    MaxNumberOfRequestsPerSession = documentStore.Conventions.MaxNumberOfRequestsPerSession;
@@ -107,6 +103,12 @@ namespace Raven.Client.Document
 		{
 			get { return documentStore.Conventions; }
 		}
+
+        /// <summary>
+        /// The transaction resource manager identifer
+        /// </summary>
+        public Guid ResourceManagerId { get; private set; }
+
 
 		/// <summary>
 		/// Gets or sets the max number of requests per session.
@@ -588,7 +590,7 @@ more responsive application.
 				Transaction.Current.EnlistPromotableSinglePhase(new PromotableRavenClientEnlistment(transactionalSession)) == false) 
 			{
 				Transaction.Current.EnlistDurable(
-					RavenDbResourceManagerId, 
+					ResourceManagerId, 
 					new RavenClientEnlistment(transactionalSession),
 					EnlistmentOptions.None);
 			}

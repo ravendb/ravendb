@@ -1,10 +1,12 @@
-﻿extern alias database;
+﻿﻿extern alias database;
 
 using System;
 using System.ComponentModel.Composition.Hosting;
 using System.IO;
 using System.Reflection;
 using Raven.Bundles.Versioning;
+using Raven.Bundles.Versioning.Data;
+using Raven.Bundles.Versioning.Triggers;
 using Raven.Client.Document;
 using Raven.Database;
 using Xunit;
@@ -37,17 +39,32 @@ namespace Raven.Bundles.Tests
                         new AssemblyCatalog(typeof (VersioningPutTrigger).Assembly)
                     }
                     },
-                    Settings =
-                    {
-                        {"Raven/Versioning/MaxRevisions", "5"},
-                        {"Raven/Versioning/Exclude", "Users;Comments;"}
-                    }
                 });
             documentStore = new DocumentStore
             {
                 Url = "http://localhost:58080"
             };
             documentStore.Initialize();
+            using(var s = documentStore.OpenSession())
+            {
+                s.Store(new VersioningConfiguration
+                {
+                    Exclude = true,
+                    Id = "Raven/Versioning/Users",
+                });
+                s.Store(new VersioningConfiguration
+                {
+                    Exclude = true,
+                    Id = "Raven/Versioning/Comments",
+                });
+                s.Store(new VersioningConfiguration
+                {
+                    Exclude = false,
+                    Id = "Raven/Versioning/DefaultConfiguration",
+                    MaxRevisions = 5
+                });
+                s.SaveChanges();
+            }
         }
 
         #region IDisposable Members

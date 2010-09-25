@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json.Linq;
+using Raven.Database.Data;
 using Raven.Database.Indexing;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
@@ -15,8 +16,13 @@ namespace Raven.Database
     {
         private IRemoteStorage remoteStorage;
 
-        private ConcurrentDictionary<string, AbstractViewGenerator> queryCache =
+        private readonly ConcurrentDictionary<string, AbstractViewGenerator> queryCache =
             new ConcurrentDictionary<string, AbstractViewGenerator>();
+
+        public override object InitializeLifetimeService()
+        {
+            return null;
+        }
 
         public int QueryCacheSize
         {
@@ -41,9 +47,11 @@ namespace Raven.Database
             var results = new List<string>();
             var errors = new List<string>();
             int lastResult = 0;
+            int finalResult = 0;
             remoteStorage.Batch(actions =>
             {
                 var firstAndLastDocumentIds = actions.Documents.FirstAndLastDocumentIds();
+                finalResult = firstAndLastDocumentIds.Item2;
                 var start = Math.Max(firstAndLastDocumentIds.Item1, query.Start);
                 var matchingDocs = actions.Documents.DocumentsById(start, firstAndLastDocumentIds.Item2);
 
@@ -60,23 +68,32 @@ namespace Raven.Database
                         return new DynamicJsonObject(x.Item1.ToJson());   
                     });
 
-                results.AddRange(RobustEnumeration(docs, viewGenerator.MapDefinition, errors).Select(result => ToJObject(result).ToString()));
+                results.AddRange(
+                    RobustEnumeration(docs, viewGenerator.MapDefinition, errors)
+                    .Take(query.PageSize)
+                    .Select(result => ToJObject(result).ToString())
+                    );
             });
 
             return new RemoteQueryResults
             {
-                LastResult = lastResult,
+                LastScannedResult = lastResult,
+                TotalResults = finalResult,
                 Errors = errors.ToArray(),
                 QueryCacheSize = queryCache.Count,
-                Resuslts = results.ToArray()
+                Results = results.ToArray()
             };
         }
 
-        private JObject ToJObject(object result)
+        private static JObject ToJObject(object result)
         {
             var dynamicJsonObject = result as DynamicJsonObject;
             if (dynamicJsonObject != null)
                 return dynamicJsonObject.Inner;
+            if(result is string || result is ValueType)
+            {
+                return new JObject(new JProperty("Value", new JValue(result)));
+            }
             return JObject.FromObject(result);
         }
 
@@ -124,10 +141,10 @@ namespace Raven.Database
     [Serializable]
     public class RemoteQueryResults
     {
-        public string[] Resuslts { get; set; }
+        public string[] Results { get; set; }
         public string[] Errors { get; set; }
         public int QueryCacheSize { get; set; }
-
-        public int LastResult { get; set; }
+        public int LastScannedResult { get; set; }
+        public int TotalResults { get; set; }
     }
 }

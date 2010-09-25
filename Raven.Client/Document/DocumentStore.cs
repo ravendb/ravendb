@@ -77,6 +77,8 @@ namespace Raven.Client.Document
 		/// </summary>
 		public DocumentStore()
 		{
+            ResourceManagerId = new Guid("E749BAA6-6F76-4EEF-A069-40A4378954F8");
+
 			SharedOperationsHeaders = new NameValueCollection();
 			Conventions = new DocumentConvention();
 		}
@@ -268,8 +270,16 @@ namespace Raven.Client.Document
             return session;
         }
 
+        /// <summary>
+        /// The resource manager id for the document store.
+        /// IMPORTANT: Using Guid.NewGuid() to set this value is almost cetainly a mistake, you should set
+        /// it to a value that remains consistent between restart of the system.
+        /// </summary>
+        public Guid ResourceManagerId { get; set; }
+
 #if !CLIENT
 		public Raven.Database.DocumentDatabase DocumentDatabase { get; set; }
+
 #endif
 
 		/// <summary>

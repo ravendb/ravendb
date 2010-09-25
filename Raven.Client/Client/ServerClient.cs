@@ -731,18 +731,20 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			return ExecuteWithReplication(u => DirectPromoteTransaction(fromTxId, u));
 		}
 
-		/// <summary>
-		/// Stores the recovery information.
-		/// </summary>
-		/// <param name="txId">The tx id.</param>
-		/// <param name="recoveryInformation">The recovery information.</param>
-		public void StoreRecoveryInformation(Guid txId, byte[] recoveryInformation)
+	    /// <summary>
+	    /// Stores the recovery information.
+	    /// </summary>
+        /// <param name="resourceManagerId">The resource manager Id for this transaction</param>
+	    /// <param name="txId">The tx id.</param>
+	    /// <param name="recoveryInformation">The recovery information.</param>
+	    public void StoreRecoveryInformation(Guid resourceManagerId, Guid txId, byte[] recoveryInformation)
 		{
 			ExecuteWithReplication<object>(u =>
 			{
 				var webRequest = (HttpWebRequest)WebRequest.Create(u + "/static/transactions/recoveryInformation/" + txId);
 				AddOperationHeaders(webRequest);
 				webRequest.Method = "PUT";
+			    webRequest.Headers["Resource-Manager-Id"] = resourceManagerId.ToString();
 				webRequest.Credentials = credentials;
 				webRequest.UseDefaultCredentials = true;
 
@@ -876,5 +878,5 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		}
 
 		#endregion
-    }
+	}
 }

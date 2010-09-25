@@ -1,19 +1,18 @@
 ﻿using System;
 using Newtonsoft.Json.Linq;
+using Raven.Bundles.Versioning.Data;
 using Raven.Database;
 using Raven.Database.Plugins;
 using System.Linq;
+using Raven.Database.Json;
 
-namespace Raven.Bundles.Versioning
+namespace Raven.Bundles.Versioning.Triggers
 {
     public class VersioningPutTrigger : AbstractPutTrigger
     {
         public const string RavenDocumentRevision = "Raven-Document-Revision";
 		public const string RavenDocumentParentRevision = "Raven-Document-Parent-Revision"; 
 		public const string RavenDocumentRevisionStatus = "Raven-Document-Revision-Status";
-
-        private int? maxRevisions;
-        private string[] excludeByEntityName = new string[0];
 
         public override VetoResult AllowPut(string key, JObject document, JObject metadata, TransactionInformation transactionInformation)
         {
@@ -32,12 +31,15 @@ namespace Raven.Bundles.Versioning
 			if (key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase))
 				return;
 
-			if (excludeByEntityName.Contains(metadata.Value<string>("Raven-Entity-Name")))
+            if (metadata.Value<string>(RavenDocumentRevisionStatus) == "Historical")
+                return;
+
+            var versioningConfiguration = GetDocumentVersioningConfiguration(metadata);
+
+            if (versioningConfiguration.Exclude)
 				return;
 
-			if (metadata.Value<string>(RavenDocumentRevisionStatus) == "Historical")
-				return;
-
+			
 			using(VersioningContext.Enter())
 			{
 				var copyMetadata = new JObject(metadata);
@@ -54,39 +56,40 @@ namespace Raven.Bundles.Versioning
 											 transactionInformation);
 				int revision = int.Parse(newDoc.Key.Split('/').Last());
 
-				RemoveOldRevisions(key, revision, transactionInformation);
+                RemoveOldRevisions(key, revision, versioningConfiguration, transactionInformation);
 
 				metadata[RavenDocumentRevisionStatus] = JToken.FromObject("Current");
 				metadata[RavenDocumentRevision] = JToken.FromObject(revision);
 			}
         }
 
-        private void RemoveOldRevisions(string key, int revision, TransactionInformation transactionInformation)
+        private VersioningConfiguration GetDocumentVersioningConfiguration(JObject metadata)
         {
-            if (maxRevisions == null)
-                return;
+            var versioningConfiguration = new VersioningConfiguration
+            {
+                MaxRevisions = Int32.MaxValue, 
+                Exclude = false
+            };
+            var entityName = metadata.Value<string>("Raven-Entity-Name");
+            if(entityName != null)
+            {
+                var doc = Database.Get("Raven/Versioning/" + entityName, null) ??
+                          Database.Get("Raven/Versioning/DefaultConfiguration", null);
+                if( doc != null)
+                {
+                    versioningConfiguration = doc.DataAsJson.JsonDeserialization<VersioningConfiguration>();
+                }
+            }
+            return versioningConfiguration;
+        }
 
-            int latestValidRevision = revision - maxRevisions.Value;
+        private void RemoveOldRevisions(string key, int revision, VersioningConfiguration versioningConfiguration, TransactionInformation transactionInformation)
+        {
+            int latestValidRevision = revision - versioningConfiguration.MaxRevisions;
             if (latestValidRevision <= 1)
                 return;
 
         	Database.Delete(key + "/revisions/" + (latestValidRevision - 1), null, transactionInformation);
-        }
-
-        public override void Initialize()
-        {
-            maxRevisions = Database.Configuration.GetConfigurationValue<int>("Raven/Versioning/MaxRevisions");
-
-            string value;
-            if(Database.Configuration.Settings.TryGetValue("Raven/Versioning/Exclude", out value)==false)
-            {
-                excludeByEntityName = new string[0];
-                return;
-            }
-            excludeByEntityName = value
-                .Split(new[] {';'}, StringSplitOptions.RemoveEmptyEntries)
-                .Select(x => x.Trim())
-                .ToArray();
         }
     }
 }

@@ -245,7 +245,9 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
             return new DocumentRetriever(null, ReadTriggers).ExecuteReadTriggers(document, transactionInformation,
                                                                                  ReadOperation.Load);
         }
-        
+
+
+
         public PutResult Put(string key, Guid? etag, JObject document, JObject metadata, TransactionInformation transactionInformation)
         {
             if (string.IsNullOrEmpty(key))
@@ -776,9 +778,10 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
             }
             return new QueryResults
             {
-                LastResult = result.LastResult,
+                LastScannedResult = result.LastScannedResult,
+                TotalResults = result.TotalResults,
                 Errors = result.Errors,
-                Results = result.Resuslts.Select(JObject.Parse).ToArray()
+                Results = result.Results.Select(JObject.Parse).ToArray()
             };
 
         }
@@ -796,25 +799,5 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
             queryRunner = (QueryRunner)queriesAppDomain.CreateInstanceAndUnwrap(typeof(QueryRunner).Assembly.FullName, typeof(QueryRunner).FullName);
             queryRunner.Initialize(TransactionalStorage.TypeForRunningQueriesInRemoteAppDomain, TransactionalStorage.StateForRunningQueriesInRemoteAppDomain);
         }
-    }
-
-    [Serializable]
-    public class LinearQuery
-    {
-        public string Query { get; set; }
-        public int Start { get; set; }
-        public int PageSize { get; set; }
-
-        public LinearQuery()
-        {
-            PageSize = 128;
-        }
-    }
-
-    public class QueryResults
-    {
-        public int LastResult { get; set; }
-        public JObject[] Results { get; set; }
-        public string[] Errors { get; set; }
     }
 }

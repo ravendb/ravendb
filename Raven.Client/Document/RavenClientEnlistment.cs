@@ -27,7 +27,8 @@ namespace Raven.Client.Document
 		/// <param name="preparingEnlistment">A <see cref="T:System.Transactions.PreparingEnlistment"/> object used to send a response to the transaction manager.</param>
         public void Prepare(PreparingEnlistment preparingEnlistment)
         {
-        	session.StoreRecoveryInformation(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction), preparingEnlistment.RecoveryInformation());
+        	session.StoreRecoveryInformation(session.ResourceManagerId, PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction), 
+                preparingEnlistment.RecoveryInformation());
             preparingEnlistment.Prepared();
         }
 
