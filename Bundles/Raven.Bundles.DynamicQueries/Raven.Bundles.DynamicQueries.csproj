@@ -52,12 +52,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Database\DatabaseExtensions.cs" />
-    <Compile Include="Data\DynamicQuery.cs" />
-    <Compile Include="Data\DynamicQueryMapping.cs" />
-    <Compile Include="Data\DynamicQueryMappingItem.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Responders\DynamicResponder.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Raven.Database\Raven.Database.csproj">
@@ -65,7 +60,10 @@
       <Name>Raven.Database</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="Database\" />
+    <Folder Include="Responders\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

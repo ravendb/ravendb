@@ -48,6 +48,17 @@ namespace Raven.Client.Linq
 			get { return luceneQuery; }
 		}
 
+        /// <summary>
+        /// Gets the document session this processor is associated with
+        /// </summary>
+        public IDocumentSession Session
+        {
+            get
+            {
+                return session;
+            }
+        }
+
 		/// <summary>
 		/// Gets or sets the fields to fetch.
 		/// </summary>
@@ -129,7 +140,7 @@ namespace Raven.Client.Linq
 			var memberInfo = GetMember(expression.Left);
 
 			luceneQuery.WhereEquals(
-				memberInfo.Name,
+				memberInfo.Path,
 				GetValueFromExpression(expression.Right, GetMemberType(memberInfo)),
 				GetFieldType(memberInfo) != typeof (string),
 				false);
@@ -140,31 +151,41 @@ namespace Raven.Client.Linq
 			var memberInfo = GetMember(expression.Left);
 
 			luceneQuery.Not.WhereEquals(
-				memberInfo.Name,
+                memberInfo.Path,
 				GetValueFromExpression(expression.Right, GetMemberType(memberInfo)),
 				GetFieldType(memberInfo) != typeof(string),
 				false);
 		}
 
-		private static Type GetMemberType(MemberInfo memberInfo)
+        private static Type GetMemberType(ExpressionMemberInfo memberInfo)
 		{
-			switch (memberInfo.MemberType)
+			switch (memberInfo.InnerMemberInfo.MemberType)
 			{
 				case MemberTypes.Field:
-					return ((FieldInfo) memberInfo).FieldType;
+					return ((FieldInfo) memberInfo.InnerMemberInfo).FieldType;
 				case MemberTypes.Property:
-					return ((PropertyInfo) memberInfo).PropertyType;
+					return ((PropertyInfo) memberInfo.InnerMemberInfo).PropertyType;
 				default:
 					throw new ArgumentOutOfRangeException();
 			}
 		}
 
-		private static MemberInfo GetMember(Expression expression)
+        private static ExpressionMemberInfo GetMember(Expression expression)
 		{
 			var unaryExpression = expression as UnaryExpression;
 			if(unaryExpression != null)
 				expression = unaryExpression.Operand;
-			return ((MemberExpression) expression).Member;
+
+            var memberExpression = (MemberExpression)expression;
+
+            // NOTE: We do this because in the case of dynamic queries, it is perfectly valid
+            // For a query to look like x=> x.SomeProperty.AnotherProperty.Length
+            // This wouldn't be valid if querying an existing index and would not ordinarily occur
+            // So this should be a safe operation
+            String path = memberExpression.ToString();
+            path = path.Substring(path.IndexOf('.') + 1);
+
+            return new ExpressionMemberInfo(path, memberExpression.Member);
 		}
 
 		private void VisitEquals(MethodCallExpression expression)
@@ -172,7 +193,7 @@ namespace Raven.Client.Linq
 			var memberInfo = GetMember(expression.Object);
 
 			luceneQuery.WhereEquals(
-				memberInfo.Name,
+				memberInfo.Path,
 				GetValueFromExpression(expression.Arguments[0], GetMemberType(memberInfo)),
 				GetFieldType(memberInfo) != typeof (string),
 				false);
@@ -183,7 +204,7 @@ namespace Raven.Client.Linq
 			var memberInfo = GetMember(expression.Object);
 
 			luceneQuery.WhereContains(
-				memberInfo.Name,
+				memberInfo.Path,
 				GetValueFromExpression(expression.Arguments[0], GetMemberType(memberInfo)));
 		}
 
@@ -192,7 +213,7 @@ namespace Raven.Client.Linq
 			var memberInfo = GetMember(expression.Object);
 
 			luceneQuery.WhereStartsWith(
-				memberInfo.Name,
+				memberInfo.Path,
 				GetValueFromExpression(expression.Arguments[0], GetMemberType(memberInfo)));
 		}
 
@@ -201,7 +222,7 @@ namespace Raven.Client.Linq
 			var memberInfo = GetMember(expression.Object);
 
 			luceneQuery.WhereEndsWith(
-				memberInfo.Name,
+				memberInfo.Path,
 				GetValueFromExpression(expression.Arguments[0], GetMemberType(memberInfo)));
 		}
 
@@ -517,15 +538,15 @@ namespace Raven.Client.Linq
 			return ((MemberExpression) expression).Member.Name;
 		}
 
-		private Type GetFieldType(MemberInfo member)
+		private Type GetFieldType(ExpressionMemberInfo member)
 		{
-			var property = member as PropertyInfo;
+			var property = member.InnerMemberInfo as PropertyInfo;
 			if (property != null)
 			{
 				return property.PropertyType;
 			}
 
-			var field = member as FieldInfo;
+			var field = member.InnerMemberInfo as FieldInfo;
 			if (field != null)
 			{
 				return field.FieldType;
@@ -639,10 +660,19 @@ namespace Raven.Client.Linq
 			}
 			else
 			{
-				luceneQuery = session.LuceneQuery<T>(indexName);
+                luceneQuery = CreateDocumentQuery();
 			}
 			VisitExpression(expression);
 		}
+
+        /// <summary>
+        /// Creates the underlying document query for be populated by the linq provider
+        /// </summary>
+        /// <returns></returns>
+        protected virtual IDocumentQuery<T> CreateDocumentQuery()
+        {
+            return session.LuceneQuery<T>(indexName);
+        }
 
 
 		/// <summary>

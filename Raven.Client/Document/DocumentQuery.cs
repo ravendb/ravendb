@@ -50,6 +50,38 @@ namespace Raven.Client.Document
 		private bool waitForNonStaleResults;
 		private readonly HashSet<string> includes = new HashSet<string>();
 
+        /// <summary>
+        /// Gets the current includes on this query
+        /// </summary>
+        public IEnumerable<String> Includes
+        {
+            get { return includes; }
+        }
+
+        /// <summary>
+        /// Gets the database commands associated with this document query
+        /// </summary>
+        public IDatabaseCommands Commands
+        {
+            get { return databaseCommands; }
+        }
+
+        /// <summary>
+        /// Gets the session associated with this document query
+        /// </summary>
+        public DocumentSession Session
+        {
+            get { return this.session; }
+        }
+
+        /// <summary>
+        /// Gets the query text built so far
+        /// </summary>
+        protected StringBuilder QueryText
+        {
+            get { return this.queryText; }
+        }
+
 		/// <summary>
 		/// Initializes a new instance of the <see cref="DocumentQuery&lt;T&gt;"/> class.
 		/// </summary>
@@ -651,7 +683,7 @@ namespace Raven.Client.Document
 		/// Gets the query result.
 		/// </summary>
 		/// <returns></returns>
-		protected QueryResult GetQueryResult()
+		protected virtual QueryResult GetQueryResult()
 		{
 			session.IncrementRequestCount();
 			var sp = Stopwatch.StartNew();

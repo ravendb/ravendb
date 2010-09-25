@@ -5,6 +5,7 @@ using Raven.Database.Data;
 using Raven.Database.Indexing;
 using System.Linq;
 using Raven.Database.Server.Abstractions;
+using Raven.Database.Extensions;
 
 namespace Raven.Database.Server.Responders
 {
@@ -101,9 +102,19 @@ namespace Raven.Database.Server.Responders
 		    	context.WriteJson(new {Index = indexDefinition});
 		    }
 		    else
-            {
+            {                
 				var indexQuery = context.GetIndexQueryFromHttpContext(Database.Configuration.MaxPageSize);
-            	var queryResult = Database.Query(index, indexQuery);
+                
+                QueryResult queryResult = null;
+                if (string.Compare(index,"dynamic", true) == 0)
+                {
+                    queryResult = Database.ExecuteDynamicQuery(indexQuery);
+                }
+                else
+                {
+                    queryResult = Database.Query(index, indexQuery); Database.Query(index, indexQuery);
+                }                
+                
             	var includes = context.Request.QueryString.GetValues("include") ?? new string[0];
             	var loadedIds = new HashSet<string>(
             		queryResult.Results

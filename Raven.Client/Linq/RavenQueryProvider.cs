@@ -50,7 +50,7 @@ namespace Raven.Client.Linq
 		/// <returns>
 		/// The value that results from executing the specified query.
 		/// </returns>
-		public object Execute(Expression expression)
+		public virtual object Execute(Expression expression)
 		{
 			return new RavenQueryProviderProcessor<T>(session, customizeQuery, indexName).Execute(expression);
 		}
@@ -103,7 +103,7 @@ namespace Raven.Client.Linq
 		/// Customizes the query using the specified action
 		/// </summary>
 		/// <param name="action">The action.</param>
-        public void Customize(Delegate action)
+        public virtual void Customize(Delegate action)
         {
             customizeQuery = (Action<IDocumentQuery<T>>)action;
         }

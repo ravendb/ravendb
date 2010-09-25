@@ -118,10 +118,13 @@
     <Compile Include="DatabaseBulkOperations.cs" />
     <Compile Include="Data\BackupRequest.cs" />
     <Compile Include="Data\DisposableAction.cs" />
+    <Compile Include="Data\DynamicQueryMapping.cs" />
+    <Compile Include="Data\DynamicQueryMappingItem.cs" />
     <Compile Include="Data\SpatialIndexQuery.cs" />
     <Compile Include="Data\MultiLoadResult.cs" />
     <Compile Include="DocumentRetriever.cs" />
     <Compile Include="Exceptions\IndexDoesNotExists.cs" />
+    <Compile Include="Extensions\DynamicQueryExtensions.cs" />
     <Compile Include="Extensions\ExpressionExtensions.cs" />
     <Compile Include="Extensions\GuidExtensions.cs" />
     <Compile Include="Extensions\MonoHttpEncoder.cs">

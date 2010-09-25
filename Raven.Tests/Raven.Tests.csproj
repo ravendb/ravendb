@@ -109,6 +109,7 @@
     <Compile Include="Indexes\QueryingOnDefaultIndex.cs" />
     <Compile Include="Indexes\QueryingOnStaleIndexes.cs" />
     <Compile Include="Queries\DyanmicQueries.cs" />
+    <Compile Include="Queries\ParameterisedDynamicQuery.cs" />
     <Compile Include="Spatial\SpatialIndex.cs" />
     <Compile Include="Indexes\Statistics.cs" />
     <Compile Include="Indexes\UsingQueryBuilder.cs" />

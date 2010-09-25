@@ -236,5 +236,5 @@ namespace Raven.Client.Client
 			CurrentRavenOperation.Headers.Value = OperationsHeaders; 
 			database.DeleteStatic(name, etag);
 		}
-	}
+    }
 }

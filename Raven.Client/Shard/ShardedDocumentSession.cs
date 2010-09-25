@@ -454,6 +454,27 @@ namespace Raven.Client.Shard
 	                documentSession.MaxNumberOfRequestsPerSession = value;
 	            }
 	        }
-	    }        
+	    }
+
+        /// <summary>
+        /// Executes a dynamic query against the RavenDB store
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public IRavenQueryable<T> DynamicQuery<T>()
+        {
+            throw new NotSupportedException("Sharded linq queries aren't supported currently");
+        }
+
+        /// <summary>
+        /// Executes a dynamic lucene query against the RavendB store
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public IDocumentQuery<T> DynamicLuceneQuery<T>()
+        {
+			return new ShardedDocumentQuery<T>("dynamic",
+											   GetAppropriateShardedSessions<T>(null));		
+        }
     }
 }

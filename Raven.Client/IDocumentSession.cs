@@ -41,6 +41,12 @@ namespace Raven.Client
 		/// <param name="indexName">Name of the index.</param>
 		IRavenQueryable<T> Query<T>(string indexName);
 
+        /// <summary>
+        /// Dynamically queries RavenDB using LINQ
+        /// </summary>
+        /// <typeparam name="T">The result of the query</typeparam>
+        IRavenQueryable<T> DynamicQuery<T>();
+
 		/// <summary>
 		/// Queries the index specified by <typeparamref name="TIndexCreator"/> using Linq.
 		/// </summary>
@@ -54,6 +60,11 @@ namespace Raven.Client
 		/// </summary>
 		/// <param name="indexName">Name of the index.</param>
 		IDocumentQuery<T> LuceneQuery<T>(string indexName);
+
+        /// <summary>
+        /// Dynamically query RavenDB using Lucene syntax
+        /// </summary>
+        IDocumentQuery<T> DynamicLuceneQuery<T>();
 
 		/// <summary>
 		/// Begin a load while including the specified path 

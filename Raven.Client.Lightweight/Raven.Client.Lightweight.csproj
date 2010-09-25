@@ -199,6 +199,9 @@
     <Compile Include="..\Raven.Client\Linq\DateTools.cs">
       <Link>Linq\DateTools.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client\Linq\ExpressionMemberInfo.cs">
+      <Link>Linq\ExpressionMemberInfo.cs</Link>
+    </Compile>
     <Compile Include="..\raven.client\linq\IRavenQueryable.cs">
       <Link>Linq\IRavenQueryable.cs</Link>
     </Compile>

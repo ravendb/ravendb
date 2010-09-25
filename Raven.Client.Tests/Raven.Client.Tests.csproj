@@ -104,6 +104,7 @@
     <Compile Include="Indexes\AnalyzerUtil.cs" />
     <Compile Include="Indexes\UsingCustomLuceneAnalyzer.cs" />
     <Compile Include="LocalClientTest.cs" />
+    <Compile Include="Querying\UsingDynamicQueryWithRemoteServer.cs" />
     <Compile Include="RemoteClientTest.cs" />
     <Compile Include="Bugs\AccurateCount.cs" />
     <Compile Include="Bugs\AnalyzerPerField.cs" />

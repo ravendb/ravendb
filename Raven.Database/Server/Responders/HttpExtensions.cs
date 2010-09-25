@@ -11,6 +11,7 @@ using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
 using Raven.Database.Json;
 using Raven.Database.Server.Abstractions;
+using System.Collections.Generic;
 
 namespace Raven.Database.Server.Responders
 {
