@@ -266,6 +266,11 @@ namespace Raven.Client.Linq
 				value);
 		}
 
+        private void VisitAny(MethodCallExpression expression)
+        {
+            VisitExpression(expression.Arguments[1]);
+        }
+
 		private void VisitMemberAccess(MemberExpression memberExpression, bool boolValue)
 		{
 			if (memberExpression.Type == typeof (bool))
@@ -296,9 +301,31 @@ namespace Raven.Client.Linq
 				return;
 			}
 
+            if (expression.Method.DeclaringType == typeof(Enumerable))
+            {
+                VisitEnumerableMethodCall(expression);
+                return;
+            }
+
 			throw new NotSupportedException("Method not supported: " + expression.Method.DeclaringType.Name + "." +
 				expression.Method.Name);
 		}
+
+        private void VisitEnumerableMethodCall(MethodCallExpression expression)
+        {
+            switch (expression.Method.Name)
+            {
+                case "Any":
+                {
+                    VisitAny(expression);
+                    break;
+                }                   
+                default:
+                {
+                    throw new NotSupportedException("Method not supported: " + expression.Method.Name);
+                }
+            }
+        }
 
 		private void VisitStringMethodCall(MethodCallExpression expression)
 		{
@@ -530,6 +557,7 @@ namespace Raven.Client.Linq
 			luceneQuery.Take(1);
 			queryType = SpecialQueryType.FirstOrDefault;
 		}
+
 
 		private static string GetFieldNameForRangeQuery(Expression expression, object value)
 		{
