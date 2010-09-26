@@ -25,6 +25,8 @@ namespace Raven.Database
 
         public QueryResult ExecuteDynamicQuery(IndexQuery query)
         {
+            CleanupCache();
+
             // Create the map
             var map = DynamicQueryMapping.Create(query.Query);
 
@@ -72,6 +74,28 @@ namespace Raven.Database
             }
 
             return result;
+        }
+
+        public void CleanupCache()
+        {
+            // Downside to doing this, if we do 10000000 completely different dynamic queries on startup and then never do any ever again
+            // after that, then they're going to be there forever
+            // I'm sure this can be put somewhere better
+            if (DateTime.Now.Subtract(lastCleanup).TotalSeconds > documentDatabase.Configuration.TempIndexCleanupPeriod)
+            {
+                lastCleanup = DateTime.Now;
+                
+                foreach (var index in temporaryIndexes)
+                {
+                    var indexInfo = index.Value;
+                    var timeSinceRun = DateTime.Now.Subtract(index.Value.LastRun);
+                    if (timeSinceRun.TotalSeconds > documentDatabase.Configuration.TempIndexCleanupThreshold)
+                    {
+                        documentDatabase.DeleteIndex(indexInfo.Name);
+                        temporaryIndexes.Remove(indexInfo.Name);
+                    }
+                }
+            }
         }
 
         private string FindDynamicIndexName(DynamicQueryMapping map)
