@@ -19,33 +19,39 @@ namespace Raven.Database.Data
             set;
         }
 
-        public DynamicQueryMapping()
-        {
-
-        }
-
         public static DynamicQueryMapping Create(string query)
         {
             var standardAnalyzer = new StandardAnalyzer(Lucene.Net.Util.Version.LUCENE_29);
             var perKeywordAnalyzer = new PerFieldAnalyzerWrapper(standardAnalyzer);
 
-            var parsedQuery = QueryBuilder.BuildQuery(query, perKeywordAnalyzer);
-
-            var terms = new Hashtable();
-            parsedQuery.ExtractTerms(terms);
-            var fields = new HashSet<string>();
-            foreach (Term term in terms.Keys)
+            try
             {
-                fields.Add(term.Field());
+                var parsedQuery = QueryBuilder.BuildQuery(query, perKeywordAnalyzer);
+
+                var terms = new Hashtable();
+                parsedQuery.ExtractTerms(terms);
+                var fields = new HashSet<string>();
+                foreach (Term term in terms.Keys)
+                {
+                    fields.Add(term.Field());
+                }
+
+                return new DynamicQueryMapping()
+                {
+                    Items = fields.Select(x => new DynamicQueryMappingItem()
+                    {
+                        From = x,
+                        To = x.Replace(".", "") // for now
+                    }).ToArray()
+                };
+            }
+            finally
+            {
+                perKeywordAnalyzer.Close();
+                standardAnalyzer.Close();
             }
 
-            return new DynamicQueryMapping()
-            {
-                Items = fields.Select(x=> new DynamicQueryMappingItem(){
-                    From = x,
-                    To = x.Replace(".", "") // for now
-                }).ToArray()
-            };
+          
         }
     }
 }
