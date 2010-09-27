@@ -34,7 +34,7 @@ namespace Raven.Tryouts
 				{
 					var x = new UsingCustomLuceneAnalyzer();
 					{
-						x.find_matching_document_with_lucene_query_and_without_redundant_wait();
+						x.map_reduce_used_for_counting();
 					}
 				}
 				finally
