@@ -200,15 +200,129 @@ namespace Raven.Tests.Queries
             Assert.False(string.IsNullOrEmpty(autoIndexName));
         }
 
+        [Fact]
+        public void NestedCollectionPropertiesCanBeQueried()
+        {
+            var blogOne = new Blog
+            {
+                Title = "one",
+                Category = "Ravens",
+                Tags = new Tag[]{
+                     new Tag(){ Name = "birds" }
+                },
+            };
+            var blogTwo = new Blog
+            {
+                Title = "two",
+                Category = "Rhinos",
+                Tags = new Tag[]{
+                     new Tag(){ Name = "mammals" }
+                },
+            };
+            var blogThree = new Blog
+            {
+                Title = "three",
+                Category = "Rhinos",
+                Tags = new Tag[]{
+                     new Tag(){ Name = "mammals" }
+                },
+            };
+
+            db.Put("blogOne", null, JObject.FromObject(blogOne), new JObject(), null);
+            db.Put("blogTwo", null, JObject.FromObject(blogTwo), new JObject(), null);
+            db.Put("blogThree", null, JObject.FromObject(blogThree), new JObject(), null);
+
+            var results = db.ExecuteDynamicQuery(new IndexQuery()
+            {
+                PageSize = 128,
+                Start = 0,
+                Cutoff = DateTime.Now,
+                Query = "Tags,Name:birds"
+            });
+
+            Assert.Equal(1, results.Results.Count);
+            Assert.Equal("one", results.Results[0].Value<string>("Title"));
+            Assert.Equal("Ravens", results.Results[0].Value<string>("Category"));
+        }
+        
+        [Fact]
+        public void NestedPropertiesCanBeQueried()
+        {
+            var blogOne = new Blog
+            {
+                Title = "one",
+                Category = "Ravens",
+                User = new User(){ Name = "ayende" }
+            };
+            var blogTwo = new Blog
+            {
+                Title = "two",
+                Category = "Rhinos",
+                User = new User() { Name = "ayende" }
+            };
+            var blogThree = new Blog
+            {
+                Title = "three",
+                Category = "Rhinos",
+                User = new User() { Name = "rob" }
+            };
+
+            db.Put("blogOne", null, JObject.FromObject(blogOne), new JObject(), null);
+            db.Put("blogTwo", null, JObject.FromObject(blogTwo), new JObject(), null);
+            db.Put("blogThree", null, JObject.FromObject(blogThree), new JObject(), null);
+
+            var results = db.ExecuteDynamicQuery(new IndexQuery()
+            {
+                PageSize = 128,
+                Start = 0,
+                Cutoff = DateTime.Now,
+                Query = "User.Name:rob"
+            });
+
+            Assert.Equal(1, results.Results.Count);
+            Assert.Equal("three", results.Results[0].Value<string>("Title"));
+            Assert.Equal("Rhinos", results.Results[0].Value<string>("Category"));
+        }
+
         public class Blog
         {
+            public User User
+            {
+                get;
+                set;
+            }
+
             public string Title
             {
                 get;
                 set;
             }
 
+            public Tag[] Tags
+            {
+                get;
+                set;
+            }
+
             public string Category
+            {
+                get;
+                set;
+            }
+        }
+
+        public class Tag
+        {
+            public string Name
+            {
+                get;
+                set;
+            }
+        }
+
+        public class User
+        {
+            public string Name
             {
                 get;
                 set;

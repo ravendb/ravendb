@@ -53,5 +53,57 @@ namespace Raven.Tests.Indexes
             Assert.True(mapping.Items.Any(x => x.From == "Term2"));
             Assert.True(mapping.Items.Any(x => x.From == "Term3"));  
         }
+
+        [Fact]
+        public void CreateDefinitionSupportsSimpleProperties()
+        {
+            Data.DynamicQueryMapping mapping = new Data.DynamicQueryMapping()
+            {
+                 Items = new Data.DynamicQueryMappingItem[]{
+                        new Data.DynamicQueryMappingItem(){
+                             From = "Name",
+                             To = "Name"
+                        }
+                 }
+            };
+
+            var definition = mapping.CreateIndexDefinition();
+            Assert.Equal(@"from doc in docs select new { Name = doc.Name }", definition.Map);
+                
+        }
+
+        [Fact]
+        public void CreateDefinitionSupportsArrayProperties()
+        {
+            Data.DynamicQueryMapping mapping = new Data.DynamicQueryMapping()
+            {
+                Items = new Data.DynamicQueryMappingItem[]{
+                        new Data.DynamicQueryMappingItem(){
+                             From = "Tags,Name",
+                             To = "docTagsName"
+                        }
+                 }
+            };
+
+            var definition = mapping.CreateIndexDefinition();
+            Assert.Equal(@"from doc in docs from docTagsItem in doc.Tags select new { docTagsName = docTagsItem.Name }", definition.Map);
+        }
+
+        [Fact]
+        public void CreateDefinitionSupportsNestedProperties()
+        {
+            Data.DynamicQueryMapping mapping = new Data.DynamicQueryMapping()
+            {
+                Items = new Data.DynamicQueryMappingItem[]{
+                        new Data.DynamicQueryMappingItem(){
+                             From = "User.Name",
+                             To = "UserName"
+                        }
+                 }
+            };
+
+            var definition = mapping.CreateIndexDefinition();
+            Assert.Equal(@"from doc in docs select new { UserName = doc.User.Name }", definition.Map);
+        }
     }
 }
