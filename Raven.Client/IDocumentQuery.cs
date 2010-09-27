@@ -61,6 +61,8 @@ namespace Raven.Client
 
 		IDocumentQuery<T> WithinRadiusOf(double radius, double latitude, double longitude);
 
+		IDocumentQuery<T> SortByDistance();
+
 		IDocumentQuery<T> OrderBy(params string[] fields);
 
         IDocumentQuery<T> WaitForNonStaleResultsAsOfNow();

@@ -425,6 +425,11 @@ namespace Raven.Client.Document
 			return spatialDocumentQuery.Not;
 		}
 
+		public IDocumentQuery<T> SortByDistance()
+		{
+			return new SpatialDocumentQuery<T>(this, true);
+		}
+
 		public IDocumentQuery<T> OrderBy(params string[] fields)
 		{
 			orderByFields = orderByFields.Concat(fields).ToArray();

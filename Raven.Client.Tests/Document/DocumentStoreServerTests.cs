@@ -1028,16 +1028,20 @@ namespace Raven.Client.Tests.Document
 				var events = session.LuceneQuery<Event>("eventsByLatLng")
 					.WhereEquals("Tag", "Event")
 					.WithinRadiusOf(radius, lat, lng)
+					.SortByDistance()
 					.WaitForNonStaleResults()
 					.ToArray();
 
 				Assert.Equal(7, events.Length);
 
+				double previous = 0;
 				foreach (var e in events)
 				{
 					double distance = Raven.Database.Indexing.SpatialIndex.GetDistanceMi(lat, lng, e.Latitude, e.Longitude);
 					Console.WriteLine("Venue: " + e.Venue + ", Distance " + distance);
 					Assert.True(distance < radius);
+					Assert.True(distance >= previous);
+					previous = distance;
 				}
 			}
 		}

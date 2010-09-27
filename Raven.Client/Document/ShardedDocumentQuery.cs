@@ -213,6 +213,12 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		public IDocumentQuery<T> SortByDistance()
+		{
+			ApplyForAll(query => query.SortByDistance());
+			return this;
+		}
+
 		public IDocumentQuery<T> OrderBy(params string[] fields)
 		{
 			ApplyForAll(query => query.OrderBy(fields));

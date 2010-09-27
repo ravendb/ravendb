@@ -75,7 +75,7 @@ namespace Raven.Database.Data
 			return null;
 		}
 
-		internal virtual Lucene.Net.Search.Sort GetSort(IndexDefinition indexDefinition)
+		internal virtual Lucene.Net.Search.Sort GetSort(Lucene.Net.Search.Filter filter, IndexDefinition indexDefinition)
 		{
 			if (SortedFields != null && SortedFields.Length > 0)
 				return new Lucene.Net.Search.Sort(SortedFields.Select(x => x.ToLuceneSortField(indexDefinition)).ToArray());
