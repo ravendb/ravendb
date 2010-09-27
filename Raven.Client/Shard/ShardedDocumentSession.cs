@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Net;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Client;
@@ -239,13 +240,21 @@ namespace Raven.Client.Shard
 		/// Begin a load while including the specified path
 		/// </summary>
 		/// <param name="path">The path.</param>
-		/// <returns></returns>
-		public ILoaderWithInclude Include(string path)
+		public ILoaderWithInclude<object> Include(string path)
 		{
 			throw new NotSupportedException("Sharded load queries with include aren't supported currently");
 		}
 
-		/// <summary>
+        /// <summary>
+        /// Begin a load while including the specified path
+        /// </summary>
+        /// <param name="path">The path.</param>
+	    public ILoaderWithInclude<T> Include<T>(Expression<Func<T, object>> path)
+	    {
+            throw new NotSupportedException("Sharded load queries with include aren't supported currently");
+        }
+
+	    /// <summary>
 		/// Gets the document URL for the specified entity.
 		/// </summary>
 		/// <param name="entity">The entity.</param>

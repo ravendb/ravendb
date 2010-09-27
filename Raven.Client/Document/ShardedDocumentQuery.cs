@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
 
@@ -106,6 +107,16 @@ namespace Raven.Client.Document
 			ApplyForAll(x => x.Include(path));
 			return this;
 		}
+
+        /// <summary>
+        /// Includes the specified path in the query, loading the document specified in that path
+        /// </summary>
+        /// <param name="path">The path.</param>
+        public IDocumentQuery<T> Include(Expression<Func<T, object>> path)
+        {
+            ApplyForAll(x => x.Include(path));
+            return this;
+        }
 
 		/// <summary>
 		/// Negate the next operation

@@ -3,6 +3,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Net;
 using Newtonsoft.Json.Linq;
 using System;
@@ -175,10 +176,20 @@ namespace Raven.Client.Document
 		/// </summary>
 		/// <param name="path">The path.</param>
 		/// <returns></returns>
-		public ILoaderWithInclude Include(string path)
+		public ILoaderWithInclude<object> Include(string path)
 		{
-			return new MultiLoaderWithInclude(this).Include(path);
+            return new MultiLoaderWithInclude<object>(this).Include(path);
 		}
+
+        /// <summary>
+        /// Begin a load while including the specified path
+        /// </summary>
+        /// <param name="path">The path.</param>
+        /// <returns></returns>
+        public ILoaderWithInclude<T> Include<T>(Expression<Func<T, object>> path)
+        {
+            return new MultiLoaderWithInclude<T>(this).Include(path);
+        }
 
 		/// <summary>
 		/// Gets the document URL for the specified entity.
@@ -333,85 +344,4 @@ namespace Raven.Client.Document
 			public IList<object> Entities { get; set; }
 		}
     }
-
-	/// <summary>
-	/// Fluent interface for specifying include paths
-	/// for loading documents
-	/// </summary>
-	public interface ILoaderWithInclude
-	{
-		/// <summary>
-		/// Includes the specified path.
-		/// </summary>
-		/// <param name="path">The path.</param>
-		/// <returns></returns>
-		MultiLoaderWithInclude Include(string path);
-		/// <summary>
-		/// Loads the specified ids.
-		/// </summary>
-		/// <typeparam name="T"></typeparam>
-		/// <param name="ids">The ids.</param>
-		/// <returns></returns>
-		T[] Load<T>(params string[] ids);
-
-		/// <summary>
-		/// Loads the specified id.
-		/// </summary>
-		/// <typeparam name="T"></typeparam>
-		/// <param name="id">The id.</param>
-		/// <returns></returns>
-		T Load<T>(string id);
-	}
-
-	/// <summary>
-	/// Fluent implementation for specifying include paths
-	/// for loading documents
-	/// </summary>
-	public class MultiLoaderWithInclude : ILoaderWithInclude
-	{
-		private readonly DocumentSession session;
-		private readonly List<string> includes = new List<string>();
-
-		/// <summary>
-		/// Includes the specified path.
-		/// </summary>
-		/// <param name="path">The path.</param>
-		/// <returns></returns>
-		public MultiLoaderWithInclude Include(string path)
-		{
-			includes.Add(path);
-			return this;
-		}
-
-		/// <summary>
-		/// Initializes a new instance of the <see cref="MultiLoaderWithInclude"/> class.
-		/// </summary>
-		/// <param name="session">The session.</param>
-		public MultiLoaderWithInclude(DocumentSession session)
-		{
-			this.session = session;
-		}
-
-		/// <summary>
-		/// Loads the specified ids.
-		/// </summary>
-		/// <typeparam name="T"></typeparam>
-		/// <param name="ids">The ids.</param>
-		/// <returns></returns>
-		public T[] Load<T>(params string[] ids)
-		{
-			return session.LoadInternal<T>(ids, includes.ToArray());
-		}
-
-		/// <summary>
-		/// Loads the specified id.
-		/// </summary>
-		/// <typeparam name="T"></typeparam>
-		/// <param name="id">The id.</param>
-		/// <returns></returns>
-		public T Load<T>(string id)
-		{
-			return Load<T>(new[] {id}).FirstOrDefault();
-		}
-	}
 }

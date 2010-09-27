@@ -101,7 +101,6 @@
     <Compile Include="Client\WebRequestEventArgs.cs" />
     <Compile Include="Client\Async\WrapperAsyncData.cs" />
     <Compile Include="Client\WebResponseExtensions.cs" />
-    <Compile Include="DocumentQueryExtensions.cs" />
     <Compile Include="Document\Async\AsyncDocumentSession.cs" />
     <Compile Include="Document\Async\SyncronousLoadResult.cs" />
     <Compile Include="Document\DocumentConvention.cs" />
@@ -112,6 +111,8 @@
     <Compile Include="Client\HttpJsonRequest.cs" />
     <Compile Include="Client\IDatabaseCommands.cs" />
     <Compile Include="Document\HiLoKeyGenerator.cs" />
+    <Compile Include="Document\ILoaderWithInclude.cs" />
+    <Compile Include="Document\MultiLoaderWithInclude.cs" />
     <Compile Include="Document\SpatialDocumentQuery.cs" />
     <Compile Include="Exceptions\ReadVetoException.cs" />
     <Compile Include="Indexes\ExpressionStringBuilder.cs" />

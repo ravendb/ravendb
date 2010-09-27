@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using Raven.Database.Data;
 
 namespace Raven.Client
@@ -15,6 +16,12 @@ namespace Raven.Client
 		/// </summary>
 		/// <param name="path">The path.</param>
 		IDocumentQuery<T> Include(string path);
+
+        /// <summary>
+        /// Includes the specified path in the query, loading the document specified in that path
+        /// </summary>
+        /// <param name="path">The path.</param>
+        IDocumentQuery<T> Include(Expression<Func<T, object>> path);
 
 		/// <summary>
 		/// Negate the next operation

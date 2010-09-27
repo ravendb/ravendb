@@ -1,4 +1,6 @@
-﻿using Raven.Client.Client;
+﻿using System;
+using System.Linq.Expressions;
+using Raven.Client.Client;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
@@ -70,7 +72,13 @@ namespace Raven.Client
 		/// Begin a load while including the specified path 
 		/// </summary>
 		/// <param name="path">The path.</param>
-		ILoaderWithInclude Include(string path);
+		ILoaderWithInclude<object> Include(string path);
+
+        /// <summary>
+        /// Begin a load while including the specified path 
+        /// </summary>
+        /// <param name="path">The path.</param>
+        ILoaderWithInclude<T> Include<T>(Expression<Func<T,object>> path);
 
 		/// <summary>
 		/// Gets the document URL for the specified entity.

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Threading;
 using Newtonsoft.Json.Linq;
@@ -12,6 +13,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Linq;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
+using Raven.Database.Extensions;
 
 namespace Raven.Client.Document
 {
@@ -239,7 +241,16 @@ namespace Raven.Client.Document
 			return this;
 		}
 
-		/// <summary>
+        /// <summary>
+        /// Includes the specified path in the query, loading the document specified in that path
+        /// </summary>
+        /// <param name="path">The path.</param>
+        public IDocumentQuery<T> Include(Expression<Func<T, object>> path)
+	    {
+	        return Include(path.ToPropertyPath());
+	    }
+
+	    /// <summary>
 		/// Negates the next operation
 		/// </summary>
 		public IDocumentQuery<T> Not
