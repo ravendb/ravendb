@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using Raven.Database.Data;
 using System.Diagnostics;
@@ -31,19 +31,15 @@ namespace Raven.Database
             string indexName = FindDynamicIndexName(map);
 
             // Re-write the query
-            string realQuery = query.Query;
-            foreach (var mapItem in map.Items)
-            {
-                realQuery = realQuery.Replace(mapItem.From, mapItem.To);
-            }
+            string realQuery = map.Items.Aggregate(query.Query, (current, mapItem) => current.Replace(mapItem.From, mapItem.To));
 
             // Perform the query until we have some results at least
-            QueryResult result = null;
+            QueryResult result;
             var sp = Stopwatch.StartNew();
             while (true)
             {
                 result = documentDatabase.Query(indexName,
-                   new Raven.Database.Data.IndexQuery()
+                   new IndexQuery
                    {
                        Cutoff = query.Cutoff,
                        PageSize = query.PageSize,
@@ -53,24 +49,15 @@ namespace Raven.Database
                        SortedFields = query.SortedFields,
                    });
 
-                if (result.IsStale && result.Results.Count < query.PageSize)
+                if (!result.IsStale || 
+                    result.Results.Count >= query.PageSize || 
+                    sp.Elapsed.TotalMilliseconds > 10000)
                 {
-                    if (sp.Elapsed.TotalMilliseconds > 10000)
-                    {
-                        sp.Stop();
-                        break;
-                    }
+                    return result;
+                }
 
-                    Thread.Sleep(100);
-                    continue;
-                }
-                else
-                {
-                    break;
-                }
+                Thread.Sleep(100);
             }
-
-            return result;
         }
 
         public void CleanupCache()
@@ -119,7 +106,12 @@ namespace Raven.Database
 
         private string TouchTemporaryIndex(DynamicQueryMapping map, string temporaryIndexName, string permanentIndexName)
         {
-            var indexInfo = GetOrAddTemporaryIndexInfo(temporaryIndexName);
+            var indexInfo = temporaryIndexes.GetOrAdd(temporaryIndexName, s => new TemporaryIndexInfo
+            {
+                Created = DateTime.Now,
+                RunCount = 0,
+                Name = temporaryIndexName
+            });
             indexInfo.LastRun = DateTime.Now;
             indexInfo.RunCount++;
             
@@ -131,54 +123,36 @@ namespace Raven.Database
                 temporaryIndexes.TryRemove(temporaryIndexName, out ignored);
                 return permanentIndexName;
             }
-            else
-            {
-                var temporaryIndex = documentDatabase.GetIndexDefinition(temporaryIndexName);
-                if (temporaryIndex != null) { return temporaryIndexName; }
-                CreateIndex(map, temporaryIndexName);
+            var temporaryIndex = documentDatabase.GetIndexDefinition(temporaryIndexName);
+            if (temporaryIndex != null)
                 return temporaryIndexName;
-            }
-       }
+            CreateIndex(map, temporaryIndexName);
+            return temporaryIndexName;
+        }
 
         private bool TemporaryIndexShouldBeMadePermanent(TemporaryIndexInfo indexInfo)
         {
-            if (indexInfo.RunCount < documentDatabase.Configuration.TempIndexPromotionMinimumQueryCount) { return false; }
+            if (indexInfo.RunCount < documentDatabase.Configuration.TempIndexPromotionMinimumQueryCount)
+                return false;
 
             var timeSinceCreation = DateTime.Now.Subtract(indexInfo.Created);
             var score = timeSinceCreation.TotalMilliseconds / indexInfo.RunCount;
 
-            if (score < documentDatabase.Configuration.TempIndexPromotionThreshold) return true;
-            return false;
+            return score < documentDatabase.Configuration.TempIndexPromotionThreshold;
         }
 
-        private TemporaryIndexInfo GetOrAddTemporaryIndexInfo(string temporaryIndexName)
-        {
-            TemporaryIndexInfo info = null;
-            if (!temporaryIndexes.TryGetValue(temporaryIndexName, out info))
-            {
-                info = new TemporaryIndexInfo()
-                {
-                    Created = DateTime.Now,
-                    RunCount = 0,
-                    Name = temporaryIndexName
-                };
-                temporaryIndexes[temporaryIndexName] = info;
-            }
-            return info;
-        }
-
+        [MethodImpl(MethodImplOptions.Synchronized)]
         private void CreateIndex(DynamicQueryMapping map, string indexName)
         {
+            if (documentDatabase.GetIndexDefinition(indexName) != null) // avoid race condition when creating the index
+                return;
+
             // Create the index
             var mapping = map.Items
               .Select(x => string.Format("{0} = doc.{1}", x.To, x.From))
               .ToArray();
 
-            var indexes = new Dictionary<string, FieldIndexing>();
-            foreach (var mapItem in map.Items)
-            {
-                indexes.Add(mapItem.To, FieldIndexing.NotAnalyzed);
-            }
+            var indexes = map.Items.ToDictionary(mapItem => mapItem.To, mapItem => FieldIndexing.NotAnalyzed);
 
             // Create the definition
             var definition = new IndexDefinition()
