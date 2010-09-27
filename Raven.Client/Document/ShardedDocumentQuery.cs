@@ -368,6 +368,15 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+        /// <summary>
+        /// Sorts the query results by distance.
+        /// </summary>
+		public IDocumentQuery<T> SortByDistance()
+		{
+			ApplyForAll(query => query.SortByDistance());
+			return this;
+		}
+
 		/// <summary>
 		/// Order the results by the specified fields
 		/// </summary>

@@ -614,6 +614,14 @@ namespace Raven.Client.Document
 			return spatialDocumentQuery.Not;
 		}
 
+        /// <summary>
+        /// Sorts the query results by distance.
+        /// </summary>
+		public IDocumentQuery<T> SortByDistance()
+		{
+			return new SpatialDocumentQuery<T>(this, true);
+		}
+
 		/// <summary>
 		/// Order the results by the specified fields
 		/// </summary>

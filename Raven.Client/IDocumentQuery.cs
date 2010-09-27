@@ -169,6 +169,11 @@ namespace Raven.Client
 		/// <param name="longitude">The longitude.</param>
 		IDocumentQuery<T> WithinRadiusOf(double radius, double latitude, double longitude);
 
+        /// <summary>
+        /// Sorts the query results by distance.
+        /// </summary>
+		IDocumentQuery<T> SortByDistance();
+
 		/// <summary>
 		/// Order the results by the specified fields
 		/// </summary>
