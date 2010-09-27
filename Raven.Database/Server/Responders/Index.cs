@@ -112,7 +112,8 @@ namespace Raven.Database.Server.Responders
                 }
                 else
                 {
-                    queryResult = Database.Query(index, indexQuery); Database.Query(index, indexQuery);
+                    queryResult = Database.Query(index, indexQuery);
+                    Database.Query(index, indexQuery);
                 }                
                 
             	var includes = context.Request.QueryString.GetValues("include") ?? new string[0];
