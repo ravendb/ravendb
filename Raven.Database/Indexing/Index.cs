@@ -175,7 +175,7 @@ namespace Raven.Database.Indexing
             };
         }
 
-        private static JObject CreateDocumentFromFields(Document document, string[] fieldsToFetch)
+        private static JObject CreateDocumentFromFields(Document document, IEnumerable<string> fieldsToFetch)
         {
             return new JObject(
                 fieldsToFetch.Concat(new[] { "__document_id" }).Distinct()
@@ -247,9 +247,9 @@ namespace Raven.Database.Indexing
 
         private PerFieldAnalyzerWrapper CreateAnalyzer(ICollection<Action> toDispose)
         {
-            var standardAnalyzer = new StandardAnalyzer(Version.LUCENE_29);
-            toDispose.Add(standardAnalyzer.Close);
-            var perFieldAnalyzerWrapper = new PerFieldAnalyzerWrapper(standardAnalyzer);
+            var defaultAnalyzer = new LowerCaseAnalyzer();
+            toDispose.Add(defaultAnalyzer.Close);
+            var perFieldAnalyzerWrapper = new PerFieldAnalyzerWrapper(defaultAnalyzer);
             foreach (var analyzer in indexDefinition.Analyzers)
             {
                 var analyzerInstance = indexDefinition.CreateAnalyzerInstance(analyzer.Key, analyzer.Value);
@@ -258,19 +258,28 @@ namespace Raven.Database.Indexing
                 toDispose.Add(analyzerInstance.Close);
                 perFieldAnalyzerWrapper.AddAnalyzer(analyzer.Key, analyzerInstance);
             }
+            StandardAnalyzer standardAnalyzer = null;
             KeywordAnalyzer keywordAnalyzer = null;
             foreach (var fieldIndexing in indexDefinition.Indexes)
             {
                 switch (fieldIndexing.Value)
                 {
-                    case FieldIndexing.NotAnalyzedNoNorms:
                     case FieldIndexing.NotAnalyzed:
+                    case FieldIndexing.NotAnalyzedNoNorms:
                         if (keywordAnalyzer == null)
                         {
                             keywordAnalyzer = new KeywordAnalyzer();
                             toDispose.Add(keywordAnalyzer.Close);
                         }
                         perFieldAnalyzerWrapper.AddAnalyzer(fieldIndexing.Key, keywordAnalyzer);
+                        break;
+                    case FieldIndexing.Analyzed:
+                        if (standardAnalyzer == null)
+                        {
+                            standardAnalyzer = new StandardAnalyzer(Version.LUCENE_29);
+                            toDispose.Add(standardAnalyzer.Close);
+                        }
+                        perFieldAnalyzerWrapper.AddAnalyzer(fieldIndexing.Key, standardAnalyzer);
                         break;
                 }
             }
@@ -351,7 +360,7 @@ namespace Raven.Database.Indexing
         {
             private bool shouldDisposeWhenThereAreNoUsages;
             private int useCount;
-            public IndexSearcher Searcher { get; set; }
+            public IndexSearcher Searcher { private get; set; }
 
 
             public IDisposable Use(out IndexSearcher indexSearcher)
