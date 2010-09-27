@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -12,21 +13,19 @@ namespace Raven.Database
 {
     public class DynamicQueryRunner
     {
-        private DocumentDatabase documentDatabase;
-        private Dictionary<string, TemporaryIndexInfo> temporaryIndexes;
+        private readonly DocumentDatabase documentDatabase;
+        private readonly ConcurrentDictionary<string, TemporaryIndexInfo> temporaryIndexes;
         private DateTime lastCleanup;
 
         public DynamicQueryRunner(DocumentDatabase database)
         {
             documentDatabase = database;
-            temporaryIndexes = new Dictionary<string, TemporaryIndexInfo>();
+            temporaryIndexes = new ConcurrentDictionary<string, TemporaryIndexInfo>();
             lastCleanup = DateTime.Now;
         }
 
         public QueryResult ExecuteDynamicQuery(IndexQuery query)
         {
-            CleanupCache();
-
             // Create the map
             var map = DynamicQueryMapping.Create(query.Query);
 
@@ -92,7 +91,8 @@ namespace Raven.Database
                     if (timeSinceRun.TotalSeconds > documentDatabase.Configuration.TempIndexCleanupThreshold)
                     {
                         documentDatabase.DeleteIndex(indexInfo.Name);
-                        temporaryIndexes.Remove(indexInfo.Name);
+                        TemporaryIndexInfo ignored;
+                        temporaryIndexes.TryRemove(indexInfo.Name, out ignored);
                     }
                 }
             }
@@ -138,7 +138,8 @@ namespace Raven.Database
             {
                 documentDatabase.DeleteIndex(temporaryIndexName);
                 CreateIndex(map, permanentIndexName);
-                temporaryIndexes.Remove(temporaryIndexName);
+                TemporaryIndexInfo ignored;
+                temporaryIndexes.TryRemove(temporaryIndexName, out ignored);
                 return permanentIndexName;
             }
             else
