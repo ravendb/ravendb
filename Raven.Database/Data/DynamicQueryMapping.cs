@@ -22,11 +22,6 @@ namespace Raven.Database.Data
             set;
         }
 
-        public string RewriteQuery(string query)
-        {
-            throw new NotImplementedException();
-        }
-
         public IndexDefinition CreateIndexDefinition()
         {
             var fromClauses = new HashSet<string>();
@@ -77,12 +72,20 @@ namespace Raven.Database.Data
                         currentExpression.ToString().Replace("_Range", "")
                         ));
             }
+
+            Dictionary<string, FieldIndexing> indexing = new Dictionary<string, FieldIndexing>();
+            foreach (var mapping in Items)
+            {
+                indexing.Add(mapping.To.Replace("_Range", ""),
+                     FieldIndexing.NotAnalyzed);
+            }
             
             return new IndexDefinition()
             {
                  Map = string.Format("{0} select new {{ {1} }}",
                     string.Join(" ", fromClauses.ToArray()),
-                    string.Join(" ", realMappings.ToArray()))
+                    string.Join(", ", realMappings.ToArray())),
+                 Indexes = indexing
             };
         }
 

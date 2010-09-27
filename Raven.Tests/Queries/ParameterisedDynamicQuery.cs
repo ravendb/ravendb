@@ -237,7 +237,7 @@ namespace Raven.Tests.Queries
                 PageSize = 128,
                 Start = 0,
                 Cutoff = DateTime.Now,
-                Query = "Tags,Name:birds"
+                Query = "Tags,Name:[[birds]]"
             });
 
             Assert.Equal(1, results.Results.Count);
