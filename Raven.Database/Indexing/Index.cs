@@ -112,9 +112,9 @@ namespace Raven.Database.Indexing
 
         private TopDocs ExecuteQuery(IndexSearcher indexSearcher, Query luceneQuery, int start, int pageSize, IndexQuery indexQuery)
         {
-            Filter filter = indexQuery.GetFilter();
-            Sort sort = indexQuery.GetSort(indexDefinition);
-
+			Filter filter = indexQuery.GetFilter();
+			Sort sort = indexQuery.GetSort(filter, indexDefinition);
+			
             if (pageSize == int.MaxValue) // we want all docs
             {
                 var gatherAllCollector = new GatherAllCollector();
