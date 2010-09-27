@@ -1,17 +1,14 @@
 using System;
+using System.Threading;
 
 namespace Raven.Database.Plugins.Builtins
 {
-    public class CleanupOldDynamicIndexes : IStartupTask
+    public class CleanupOldDynamicIndexes : AbstractBackgroundTask
     {
-        public void Execute(DocumentDatabase database)
+        protected override bool HandleWork()
         {
-            while(database.WorkContext.DoWork)
-            {
-                database.DynamicQueryRunner.CleanupCache();
-
-                database.WorkContext.WaitForWork(TimeSpan.FromMinutes(1));
-            }
+            Database.DynamicQueryRunner.CleanupCache();
+            return false;
         }
     }
 }

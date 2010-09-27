@@ -15,13 +15,11 @@ namespace Raven.Database
     {
         private readonly DocumentDatabase documentDatabase;
         private readonly ConcurrentDictionary<string, TemporaryIndexInfo> temporaryIndexes;
-        private DateTime lastCleanup;
 
         public DynamicQueryRunner(DocumentDatabase database)
         {
             documentDatabase = database;
             temporaryIndexes = new ConcurrentDictionary<string, TemporaryIndexInfo>();
-            lastCleanup = DateTime.Now;
         }
 
         public QueryResult ExecuteDynamicQuery(IndexQuery query)
@@ -77,24 +75,15 @@ namespace Raven.Database
 
         public void CleanupCache()
         {
-            // Downside to doing this, if we do 10000000 completely different dynamic queries on startup and then never do any ever again
-            // after that, then they're going to be there forever
-            // I'm sure this can be put somewhere better
-            if (DateTime.Now.Subtract(lastCleanup).TotalSeconds > documentDatabase.Configuration.TempIndexCleanupPeriod)
+            foreach (var indexInfo in from index in temporaryIndexes
+                                      let indexInfo = index.Value
+                                      let timeSinceRun = DateTime.Now.Subtract(indexInfo.LastRun)
+                                      where timeSinceRun.TotalSeconds > documentDatabase.Configuration.TempIndexCleanupThreshold
+                                      select indexInfo)
             {
-                lastCleanup = DateTime.Now;
-                
-                foreach (var index in temporaryIndexes)
-                {
-                    var indexInfo = index.Value;
-                    var timeSinceRun = DateTime.Now.Subtract(index.Value.LastRun);
-                    if (timeSinceRun.TotalSeconds > documentDatabase.Configuration.TempIndexCleanupThreshold)
-                    {
-                        documentDatabase.DeleteIndex(indexInfo.Name);
-                        TemporaryIndexInfo ignored;
-                        temporaryIndexes.TryRemove(indexInfo.Name, out ignored);
-                    }
-                }
+                documentDatabase.DeleteIndex(indexInfo.Name);
+                TemporaryIndexInfo ignored;
+                temporaryIndexes.TryRemove(indexInfo.Name, out ignored);
             }
         }
 
