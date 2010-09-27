@@ -317,6 +317,24 @@
             });
         },
 
+         queryLinqIndex: function (linqQuery, pageNumber, pageSize, successCallback) {
+            var start = (pageNumber - 1) * pageSize;
+            $.ajax({
+                type: 'POST',
+                url: settings.server + 'linearQuery',
+                cache: false,
+                contentType: 'application/json; charset=utf-8',
+                data: JSON.stringify({ 
+                    Query : linqQuery,
+                    Start: start,
+                    PageSize: pageSize
+                }),
+                success: function (data) {
+                    successCallback(data);
+                }
+            });
+        },
+
         searchIndexes: function (name, successCallback) {
             name = name.toLowerCase();
 
@@ -346,4 +364,17 @@
             }
         }
     };
+})(jQuery);
+
+(function(){
+	var IE4 = (navigator.appVersion.indexOf("MSIE 4.")==-1)? false : true;
+	var IE5 = (navigator.appVersion.indexOf("MSIE 5.")==-1) ? false : true;
+	var IE6 = (navigator.appVersion.indexOf("MSIE 6.")==-1) ? false : true;
+	var IE7 = (navigator.appVersion.indexOf("MSIE 7.")==-1) ? false : true;
+
+	if(IE4 || IE5 || IE6 || IE7)
+	{
+		alert("Your browser is unsupported, please use IE 8 or higher, Chrome or FireFox\n" +
+			  "You can still try to use the administrator UI, but things may not work");
+	}
 })(jQuery);

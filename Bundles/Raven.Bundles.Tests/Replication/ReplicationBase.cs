@@ -1,4 +1,5 @@
 ﻿extern alias replication;
+extern alias database;
 
 using System;
 using System.Collections.Generic;
@@ -10,8 +11,6 @@ using log4net.Filter;
 using log4net.Layout;
 using Raven.Client;
 using Raven.Client.Document;
-using Raven.Database;
-using Raven.Database.Server;
 using Raven.Server;
 
 namespace Raven.Bundles.Tests.Replication
@@ -48,10 +47,10 @@ namespace Raven.Bundles.Tests.Replication
         public IDocumentStore CreateStore()
         {
             var port = PortRangeStart + servers.Count;
-            NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
-            var ravenDbServer = new RavenDbServer(new RavenConfiguration
+            database::Raven.Database.Server.NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
+            var ravenDbServer = new RavenDbServer(new database::Raven.Database.RavenConfiguration
             {
-                AnonymousUserAccessMode = AnonymousUserAccessMode.All,
+                AnonymousUserAccessMode = database::Raven.Database.AnonymousUserAccessMode.All,
                 Catalog = {Catalogs = {new AssemblyCatalog(typeof (replication::Raven.Bundles.Replication.Triggers.AncestryPutTrigger).Assembly)}},
                 DataDirectory = "Data #" + servers.Count,
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,

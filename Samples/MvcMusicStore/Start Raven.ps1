@@ -7,16 +7,16 @@ if( (test-path $raven) -eq $false)
   $raven = "..\..\build" #src path
 }
 
-rd Data -force -recurse -erroraction silentlycontinue
+rd .\Server\Data -force -recurse -erroraction silentlycontinue
 
-cp $raven\Raven.Server.exe .\
-cp $raven\log4net.dll .\
-cp $raven\Newtonsoft.Json.dll .\
-cp $raven\Lucene.Net.dll .\
-cp $raven\ICSharpCode.NRefactory.dll .\
-cp $raven\Rhino.Licensing.dll .\
-cp $raven\Esent.Interop.dll .\
-cp $raven\Raven.Database.dll .\
-cp $raven\Raven.Storage.Esent.dll .\
+cp $raven\Raven.Server.exe .\Server
+cp $raven\log4net.dll .\Server
+cp $raven\Newtonsoft.Json.dll .\Server
+cp $raven\Lucene.Net.dll .\Server
+cp $raven\ICSharpCode.NRefactory.dll .\Server
+cp $raven\Rhino.Licensing.dll .\Server
+cp $raven\Esent.Interop.dll .\Server
+cp $raven\Raven.Database.dll .\Server
+cp $raven\Raven.Storage.Esent.dll .\Server
 
-start .\Raven.Server.exe
+start .\Server\Raven.Server.exe

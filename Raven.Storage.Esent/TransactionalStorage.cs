@@ -17,7 +17,7 @@ using Raven.Storage.Esent.StorageActions;
 
 namespace Raven.Storage.Esent
 {
-	public class TransactionalStorage : CriticalFinalizerObject, IDisposable, ITransactionalStorage
+	public class TransactionalStorage : CriticalFinalizerObject, ITransactionalStorage
 	{
 		private readonly ThreadLocal<StorageActionsAccessor> current = new ThreadLocal<StorageActionsAccessor>();
 		private readonly string database;
@@ -98,7 +98,24 @@ namespace Raven.Storage.Esent
 			new RestoreOperation(backupLocation, databaseLocation).Execute();
 		}
 
-		#endregion
+	    public Type TypeForRunningQueriesInRemoteAppDomain
+	    {
+	        get { return typeof(RemoteEsentStorage); }
+	    }
+
+	    public object StateForRunningQueriesInRemoteAppDomain
+	    {
+            get
+            {
+                return new RemoteEsentStorageState
+                {
+                    Database = database,
+                    Instance = instance
+                };
+            }
+	    }
+
+	    #endregion
 
 		public bool Initialize()
 		{
@@ -135,7 +152,7 @@ namespace Raven.Storage.Esent
 
 				SetIdFromDb();
 
-				InitColumDictionaries();
+				tableColumnsCache.InitColumDictionaries(instance, database);
 
 				return newDb;
 			}
@@ -143,43 +160,6 @@ namespace Raven.Storage.Esent
 			{
 				Dispose();
 				throw new InvalidOperationException("Could not open transactional storage: " + database, e);
-			}
-		}
-
-		private void InitColumDictionaries()
-		{
-			using (var session = new Session(instance))
-			{
-				var dbid = JET_DBID.Nil;
-				try
-				{
-					Api.JetOpenDatabase(session, database, null, out dbid, OpenDatabaseGrbit.None);
-					using (var documents = new Table(session, dbid, "documents", OpenTableGrbit.None))
-						tableColumnsCache.DocumentsColumns = Api.GetColumnDictionary(session, documents);
-					using (var tasks = new Table(session, dbid, "tasks", OpenTableGrbit.None))
-						tableColumnsCache.TasksColumns = Api.GetColumnDictionary(session, tasks);
-					using (var files = new Table(session, dbid, "files", OpenTableGrbit.None))
-						tableColumnsCache.FilesColumns = Api.GetColumnDictionary(session, files);
-					using (var indexStats = new Table(session, dbid, "indexes_stats", OpenTableGrbit.None))
-						tableColumnsCache.IndexesStatsColumns = Api.GetColumnDictionary(session, indexStats);
-					using (var mappedResults = new Table(session, dbid, "mapped_results", OpenTableGrbit.None))
-						tableColumnsCache.MappedResultsColumns = Api.GetColumnDictionary(session, mappedResults);
-					using (var documentsModifiedByTransactions = new Table(session, dbid, "documents_modified_by_transaction", OpenTableGrbit.None))
-						tableColumnsCache.DocumentsModifiedByTransactionsColumns = Api.GetColumnDictionary(session, documentsModifiedByTransactions);
-					using (var transactions = new Table(session, dbid, "transactions", OpenTableGrbit.None))
-						tableColumnsCache.TransactionsColumns = Api.GetColumnDictionary(session, transactions);
-					using (var identity = new Table(session, dbid, "identity_table", OpenTableGrbit.None))
-						tableColumnsCache.IdentityColumns = Api.GetColumnDictionary(session, identity);
-					using (var details = new Table(session, dbid, "details", OpenTableGrbit.None))
-						tableColumnsCache.DetailsColumns = Api.GetColumnDictionary(session, details);
-					using (var queue = new Table(session, dbid, "queue", OpenTableGrbit.None))
-						tableColumnsCache.QueueColumns = Api.GetColumnDictionary(session, queue);
-				}
-				finally
-				{
-					if (Equals(dbid, JET_DBID.Nil) == false)
-						Api.JetCloseDatabase(session, dbid, CloseDatabaseGrbit.None);
-				}
 			}
 		}
 
@@ -321,7 +301,8 @@ namespace Raven.Storage.Esent
 			}
 		}
 
-		private void ExecuteBatch(Action<IStorageActionsAccessor> action)
+        [DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
+        private void ExecuteBatch(Action<IStorageActionsAccessor> action)
 		{
 			var txMode = configuration.TransactionMode == TransactionMode.Lazy
 				? CommitTransactionGrbit.LazyFlush

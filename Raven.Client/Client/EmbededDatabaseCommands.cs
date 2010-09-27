@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿﻿using System;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Net;
@@ -10,6 +10,7 @@ using Raven.Database.Data;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Database.Storage;
+using Raven.Database.Extensions;
 
 namespace Raven.Client.Client
 {
@@ -69,6 +70,11 @@ namespace Raven.Client.Client
 
 		public void PutAttachment(string key, Guid? etag, byte[] data, JObject metadata)
 		{
+			// we filter out content length, because getting it wrong will cause errors 
+			// in the server side when serving the wrong value for this header.
+			// worse, if we are using http compression, this value is known to be wrong
+			// instead, we rely on the actual size of the data provided for us
+			metadata.Remove("Content-Length");
 			database.PutStatic(key, etag, data, metadata);
 		}
 
@@ -125,8 +131,16 @@ namespace Raven.Client.Client
 
 		public QueryResult Query(string index, IndexQuery query, string[] ignored)
 		{
-			CurrentRavenOperation.Headers.Value = OperationsHeaders; 
-			return database.Query(index, query);
+			CurrentRavenOperation.Headers.Value = OperationsHeaders;
+
+            if (string.Compare(index, "dynamic", true) == 0)
+            {
+                return database.ExecuteDynamicQuery(query);
+            }
+            else
+            {
+                return database.Query(index, query);
+            }
 		}
 
 		public void DeleteIndex(string name)
@@ -176,10 +190,10 @@ namespace Raven.Client.Client
 			return database.PromoteTransaction(fromTxId);
 		}
 
-		public void StoreRecoveryInformation(Guid txId, byte[] recoveryInformation)
+		public void StoreRecoveryInformation(Guid resourceManagerId,Guid txId, byte[] recoveryInformation)
 		{
-			CurrentRavenOperation.Headers.Value = OperationsHeaders; 
-			database.PutStatic("transactions/recoveryInformation/" + txId, null, recoveryInformation, new JObject());
+			CurrentRavenOperation.Headers.Value = OperationsHeaders;
+            database.PutStatic("transactions/recoveryInformation/" + txId, null, recoveryInformation, new JObject(new JProperty("Resource-Manager-Id", resourceManagerId.ToString())));
 		}
 
 		public IDatabaseCommands With(ICredentials credentialsForSession)

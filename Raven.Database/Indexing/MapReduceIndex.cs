@@ -161,7 +161,7 @@ namespace Raven.Database.Indexing
             	}, DateTime.UtcNow);
 
             });
-            Write(writer =>
+            Write(context, writer =>
             {
 				if (logIndexing.IsDebugEnabled)
                 {
@@ -180,12 +180,27 @@ namespace Raven.Database.Indexing
         {
             actions.Indexing.SetCurrentIndexStatsTo(name);
             var count = 0;
-            Write(indexWriter =>
+            Write(context, indexWriter =>
             {
-            	foreach (var reduceKey in reduceKeys)
+                var batchers = context.IndexUpdateTriggers.Select(x=>x.CreateBatcher(name))
+                    .Where(x=>x!=null)
+                    .ToList();
+                foreach (var reduceKey in reduceKeys)
             	{
-					indexWriter.DeleteDocuments(new Term("__reduce_key", reduceKey));
-					context.IndexUpdateTriggers.Apply(trigger => trigger.OnIndexEntryDeleted(name, reduceKey));
+            	    var entryKey = reduceKey;
+            	    indexWriter.DeleteDocuments(new Term("__reduce_key", entryKey));
+                    batchers.ApplyAndIgnoreAllErrors(
+                        exception =>
+                        {
+                            logIndexing.WarnFormat(exception,
+                                                   "Error when executed OnIndexEntryDeleted trigger for index '{0}', key: '{1}'",
+                                                   name, entryKey);
+                            context.AddError(name,
+                                           entryKey,
+                                           exception.Message
+                              );
+                        },
+                        trigger => trigger.OnIndexEntryDeleted(name, entryKey));
 				}
                 PropertyDescriptorCollection properties = null;
                 foreach (var doc in RobustEnumeration(mappedResults, viewGenerator.ReduceDefinition, actions, context))
@@ -205,12 +220,29 @@ namespace Raven.Database.Indexing
                     {
                         luceneDoc.Add(field);
                     }
-                    context.IndexUpdateTriggers.Apply(trigger => trigger.OnIndexEntryCreated(name, reduceKeyAsString, luceneDoc));
+                    batchers.ApplyAndIgnoreAllErrors(
+                        exception =>
+                        {
+                            logIndexing.WarnFormat(exception,
+                                                   "Error when executed OnIndexEntryCreated trigger for index '{0}', key: '{1}'",
+                                                   name, reduceKeyAsString);
+                            context.AddError(name,
+                                           reduceKeyAsString,
+                                           exception.Message
+                              );
+                        },
+                        trigger => trigger.OnIndexEntryCreated(name, reduceKeyAsString, luceneDoc));
 					logIndexing.DebugFormat("Reduce key {0} result in index {1} gave document: {2}", reduceKeyAsString, name, luceneDoc);
                     indexWriter.AddDocument(luceneDoc);
                     actions.Indexing.IncrementSuccessIndexing();
                 }
-
+                batchers.ApplyAndIgnoreAllErrors(
+                    e =>
+                    {
+                        logIndexing.Warn("Failed to dispose on index update trigger", e);
+                        context.AddError(name, null, e.Message);
+                    },
+                    x => x.Dispose());
                 return true;
             });
 			if (logIndexing.IsDebugEnabled)

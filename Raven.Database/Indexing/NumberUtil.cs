@@ -3,28 +3,46 @@ using System.Globalization;
 
 namespace Raven.Database.Indexing
 {
+	/// <summary>
+	/// Helper function for numeric to indexed string and vice versa
+	/// </summary>
 	public class NumberUtil
 	{
+		/// <summary>
+		/// Translate a number to an indexable string
+		/// </summary>
 		public static string NumberToString(int number)
 		{
 			return string.Format("0x{0:X8}", number);
 		}
 
+		/// <summary>
+		/// Translate a number to an indexable string
+		/// </summary>
 		public static string NumberToString(long number)
 		{
 			return string.Format("0x{0:X16}", number);
 		}
 
+		/// <summary>
+		/// Translate a number to an indexable string
+		/// </summary>
 		public static string NumberToString(float number)
 		{
 			return "Fx" + number.ToString("G", CultureInfo.InvariantCulture);
 		}
 
+		/// <summary>
+		/// Translate a number to an indexable string
+		/// </summary>
 		public static string NumberToString(double number)
 		{
 			return "Dx" + number.ToString("G",CultureInfo.InvariantCulture);
 		}
 
+		/// <summary>
+		/// Translate an indexable string to a number
+		/// </summary>
 		public static object StringToNumber(string number)
 		{
 			if ("NULL".Equals(number, StringComparison.InvariantCultureIgnoreCase) || 

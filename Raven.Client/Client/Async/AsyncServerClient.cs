@@ -19,12 +19,21 @@ using System.Collections.Generic;
 
 namespace Raven.Client.Client.Async
 {
+	/// <summary>
+	/// Access the database commands in async fashion
+	/// </summary>
 	public class AsyncServerClient : IAsyncDatabaseCommands
 	{
 		private readonly string url;
 		private readonly ICredentials credentials;
 		private readonly DocumentConvention convention;
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="AsyncServerClient"/> class.
+		/// </summary>
+		/// <param name="url">The URL.</param>
+		/// <param name="convention">The convention.</param>
+		/// <param name="credentials">The credentials.</param>
 		public AsyncServerClient(string url, DocumentConvention convention, ICredentials credentials)
 		{
 			this.url = url;
@@ -32,10 +41,20 @@ namespace Raven.Client.Client.Async
 			this.credentials = credentials;
 		}
 
+		/// <summary>
+		/// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+		/// </summary>
 		public void Dispose()
 		{
 		}
 
+		/// <summary>
+		/// Begins an async get operation
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <param name="callback">The callback.</param>
+		/// <param name="state">The state.</param>
+		/// <returns></returns>
 		public IAsyncResult BeginGet(string key, AsyncCallback callback, object state)
 		{
 			EnsureIsNotNullOrEmpty(key, "key");
@@ -55,6 +74,11 @@ namespace Raven.Client.Client.Async
 			};
 		}
 
+		/// <summary>
+		/// Ends the async get operation
+		/// </summary>
+		/// <param name="result">The result.</param>
+		/// <returns></returns>
 		public JsonDocument EndGet(IAsyncResult result)
 		{
 			var asyncData = ((UserAsyncData)result);
@@ -94,6 +118,13 @@ namespace Raven.Client.Client.Async
 			}
 		}
 
+		/// <summary>
+		/// Begins an async multi get operation
+		/// </summary>
+		/// <param name="keys">The keys.</param>
+		/// <param name="callback">The callback.</param>
+		/// <param name="state">The state.</param>
+		/// <returns></returns>
 		public IAsyncResult BeginMultiGet(string[] keys, AsyncCallback callback, object state)
 		{
 			var request = HttpJsonRequest.CreateHttpJsonRequest(this, url + "/queries/", "POST", credentials);
@@ -113,6 +144,11 @@ namespace Raven.Client.Client.Async
 	        return multiStepAsyncResult;
 		}
 
+		/// <summary>
+		/// Ends the aync multi get operation
+		/// </summary>
+		/// <param name="result">The result.</param>
+		/// <returns></returns>
 		public JsonDocument[] EndMultiGet(IAsyncResult result)
 		{
 			EnsureNotError(result);
@@ -139,6 +175,14 @@ namespace Raven.Client.Client.Async
 				.ToArray();
 		}
 
+		/// <summary>
+		/// Begins the aysnc query.
+		/// </summary>
+		/// <param name="index">The index.</param>
+		/// <param name="query">The query.</param>
+		/// <param name="callback">The callback.</param>
+		/// <param name="state">The state.</param>
+		/// <returns></returns>
 		public IAsyncResult BeginQuery(string index, IndexQuery query, AsyncCallback callback, object state)
 		{
 			EnsureIsNotNullOrEmpty(index, "index");
@@ -153,6 +197,11 @@ namespace Raven.Client.Client.Async
 			return new UserAsyncData(request, asyncResult);
 		}
 
+		/// <summary>
+		/// Ends the async query.
+		/// </summary>
+		/// <param name="result">The result.</param>
+		/// <returns></returns>
 		public QueryResult EndQuery(IAsyncResult result)
 		{
 			var userAsyncData = ((UserAsyncData)result);
@@ -170,6 +219,13 @@ namespace Raven.Client.Client.Async
 			};
 		}
 
+		/// <summary>
+		/// Begins the async batch operation
+		/// </summary>
+		/// <param name="commandDatas">The command datas.</param>
+		/// <param name="callback">The callback.</param>
+		/// <param name="state">The state.</param>
+		/// <returns></returns>
 		public IAsyncResult BeginBatch(ICommandData[] commandDatas, AsyncCallback callback, object state)
 		{
 			var metadata = new JObject();
@@ -195,6 +251,11 @@ namespace Raven.Client.Client.Async
 			return multiStepAsyncResult;
 		}
 
+		/// <summary>
+		/// Ends the aync batch operation
+		/// </summary>
+		/// <param name="result">The result.</param>
+		/// <returns></returns>
 		public BatchResult[] EndBatch(IAsyncResult result)
 		{
 			EnsureNotError(result);
@@ -342,13 +403,25 @@ namespace Raven.Client.Client.Async
 				throw new ArgumentException("Key cannot be null or empty", argName);
 		}
 
+		/// <summary>
+		/// An async result that contains mulitple steps 
+		/// </summary>
 		public class MultiStepAsyncResult : IAsyncResult
 		{
 			private readonly object state;
 			private readonly HttpJsonRequest req;
 			private readonly ManualResetEvent manualResetEvent;
+			/// <summary>
+			/// Gets or sets the result.
+			/// </summary>
+			/// <value>The result.</value>
 			public IAsyncResult Result { get; set; }
 
+			/// <summary>
+			/// Initializes a new instance of the <see cref="MultiStepAsyncResult"/> class.
+			/// </summary>
+			/// <param name="state">The state.</param>
+			/// <param name="req">The req.</param>
 			public MultiStepAsyncResult(object state, HttpJsonRequest req)
 			{
 				this.state = state;
@@ -356,33 +429,64 @@ namespace Raven.Client.Client.Async
 				manualResetEvent = new ManualResetEvent(false);
 			}
 
+			/// <summary>
+			/// Gets a value that indicates whether the asynchronous operation has completed.
+			/// </summary>
+			/// <value></value>
+			/// <returns>true if the operation is complete; otherwise, false.</returns>
 			public bool IsCompleted
 			{
 				get; set;
 			}
 
+			/// <summary>
+			/// Gets a <see cref="T:System.Threading.WaitHandle"/> that is used to wait for an asynchronous operation to complete.
+			/// </summary>
+			/// <value></value>
+			/// <returns>A <see cref="T:System.Threading.WaitHandle"/> that is used to wait for an asynchronous operation to complete.</returns>
 			public WaitHandle AsyncWaitHandle
 			{
 				get { return manualResetEvent; }
 			}
 
+			/// <summary>
+			/// Gets a user-defined object that qualifies or contains information about an asynchronous operation.
+			/// </summary>
+			/// <value></value>
+			/// <returns>A user-defined object that qualifies or contains information about an asynchronous operation.</returns>
 			public object AsyncState
 			{
 				get { return state; }
 			}
 
+			/// <summary>
+			/// Gets a value that indicates whether the asynchronous operation completed synchronously.
+			/// </summary>
+			/// <value></value>
+			/// <returns>true if the asynchronous operation completed synchronously; otherwise, false.</returns>
 			public bool CompletedSynchronously
 			{
 				get { return false; }
 			}
 
+			/// <summary>
+			/// Gets the request.
+			/// </summary>
+			/// <value>The request.</value>
 			public HttpJsonRequest Request
 			{
 				get { return req; }
 			}
 
+			/// <summary>
+			/// Gets or sets the error.
+			/// </summary>
+			/// <value>The error.</value>
 			public Exception Error { get; set; }
 
+			/// <summary>
+			/// Completes this instance.
+			/// </summary>
 			public void Complete()
 			{
 				manualResetEvent.Set();

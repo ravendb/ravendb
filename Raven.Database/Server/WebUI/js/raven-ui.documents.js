@@ -4,7 +4,8 @@ var pageSize = 25;
 var allDocsTotalCount;
 var indexName;
 var indexValues;
-var isInQueryMode = false;
+var linqQuery;
+var queryMode = 'allDocs';
 
 $(document).ready(function () {
     RavenUI.GetDocumentCount(function (count) {
@@ -24,6 +25,13 @@ $(document).ready(function () {
         indexName = $('#txtIndexName').val();
         indexValues = $('#txtIndexValue').val();
         ExecuteQuery();
+    });
+
+    $('#executeLinqQuery').button({
+        icons: { primary: 'ui-icon-circle-triangle-e' }
+    }).click(function () {
+        linqQuery = $('#txtLinqQuery').val();
+        ExecuteLinqQuery();
     });
 
     $('#executeGetByDoumentId').button({
@@ -50,7 +58,8 @@ $(document).ready(function () {
 });
 
 function getAllDocuments() {
-    $('#docList').show().html('<img src="images/ajax-loader.gif" /> Loading...');
+    $('#ajaxError').slideUp();
+     $('#docList').show().html('<img src="images/ajax-loader.gif" /> Loading...');
     RavenUI.GetDocumentPage(pageNumber, pageSize, function (docs) {
         if (docs.length == 0) {
             $('#docList').html('There are no documents in your database.');
@@ -61,8 +70,31 @@ function getAllDocuments() {
     });
 }
 
+function ExecuteLinqQuery() {
+    queryMode = 'linearQuery';
+    $('#ajaxError').slideUp();
+    $('#docList').show().html('<img src="images/ajax-loader.gif" /> Loading...');
+
+    RavenUI.QueryLinqIndex(linqQuery, pageNumber, pageSize, function (data) {
+        if (data.Results.length == 0) {
+            $('#docList').html('No documents matched your query.');
+            $('#pager').hide();
+        } else {
+            //this is only here because there's no way to get the total count on a query currently
+            allDocsTotalCount = data.TotalResults;
+            if (data.Errors.length > 0) {
+                $('#ajaxError').setTemplateURL($.ravenDB.getServerUrl() + '/raven/JSONTemplates/errorsMsgs.html');
+                $('#ajaxError').processTemplate(data);
+                $('#ajaxError').slideDown();
+            }
+            processDocumentResults(data.Results, allDocsTotalCount);
+        }
+    });
+}
+
 function ExecuteQuery() {
-    isInQueryMode = true;
+    $('#ajaxError').slideUp();
+     queryMode = 'indexQuery';
 
     $('#docList').show().html('<img src="images/ajax-loader.gif" /> Loading...');
 
@@ -164,10 +196,16 @@ function processDocumentResults(results, totalCount) {
 
 function pagerClick(newPageNumber) {
     pageNumber = newPageNumber;
-    if (!isInQueryMode) {
-        getAllDocuments();
-    } else {
-        ExecuteQuery();
+    switch (queryMode) {
+        case 'allDocs':
+            getAllDocuments();
+            break;
+        case 'indexQuery':
+            ExecuteQuery();
+            break;
+        case 'linearQuery':
+            ExecuteLinqQuery();
+            break;
     }
 }
 
@@ -264,17 +302,17 @@ function GetHTMLForDefaultView(jsonObj) {
                 var children = GetHTMLForDefaultView(value);
 
                 if (typeof children == "object") {
-                    $(jsonDiv).append('<span class="arrayNameView">' +escape(key) + '</span>');
+                    $(jsonDiv).append($('<span class="arrayNameView"/>').text(key));
                     $(jsonDiv).append(children);
                 } else {
                     var childDiv = $('<div class="jsonObjectMemberView"></div>');
-                    $(childDiv).append('<span class="memberNameView">' + escape(key) + '</span>');
-                    $(childDiv).append('<span class="memberValueView">' + escape(children) + '</span>');
+                    $(childDiv).append($('<span class="memberNameView"/>').text(key));
+                    $(childDiv).append($('<span class="memberValueView"/>').text(children));
                     $(jsonDiv).append(childDiv);
                 }
             } else {
                 var childDiv = $('<div class="jsonObjectMemberView"></div>');
-                $(childDiv).append('<span class="memberNameView">' + escape(key) + '</span>');
+                $(childDiv).append($('<span class="memberNameView"/>').text(key));
                 $(childDiv).append('<span class="memberValueView"></span>');
                 $(jsonDiv).append(childDiv);
             }

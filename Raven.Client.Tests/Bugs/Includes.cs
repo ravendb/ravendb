@@ -73,6 +73,25 @@ namespace Raven.Client.Tests.Bugs
 			}
 		}
 
+        [Fact]
+        public void CanIncludeWithSingleLoad_UsingExpression()
+        {
+            using (var session = store.OpenSession())
+            {
+                var order = session
+                    .Include<Order>(x => x.Customer.Id)
+                    .Load("orders/1");
+
+                Assert.Equal(1, session.NumberOfRequests);
+
+                var customer = session.Load<Customer>(order.Customer.Id);
+
+                Assert.NotNull(customer);
+
+                Assert.Equal(1, session.NumberOfRequests);
+            }
+        }
+
 		[Fact]
 		public void CanIncludeWithQuery()
 		{

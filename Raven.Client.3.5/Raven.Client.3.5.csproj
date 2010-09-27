@@ -120,8 +120,14 @@
     <Compile Include="..\Raven.Client\Document\HiLoKeyGenerator.cs">
       <Link>Document\HiLoKeyGenerator.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client\Document\ILoaderWithInclude.cs">
+      <Link>Document\ILoaderWithInclude.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client\Document\InMemoryDocumentSessionOperations.cs">
       <Link>Document\InMemoryDocumentSessionOperations.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client\Document\MultiLoaderWithInclude.cs">
+      <Link>Document\MultiLoaderWithInclude.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client\Document\MultiTypeHiLoKeyGenerator.cs">
       <Link>Document\MultiTypeHiLoKeyGenerator.cs</Link>
@@ -185,6 +191,9 @@
     </Compile>
     <Compile Include="..\Raven.Client\Linq\DateTools.cs">
       <Link>Linq\DateTools.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client\Linq\ExpressionMemberInfo.cs">
+      <Link>Linq\ExpressionMemberInfo.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client\Linq\IRavenQueryable.cs">
       <Link>Linq\IRavenQueryable.cs</Link>
@@ -299,6 +308,9 @@
     </Compile>
     <Compile Include="..\Raven.Database\Exceptions\OperationVetoedException.cs">
       <Link>Exceptions\OperationVetoedException.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Database\Extensions\ExpressionExtensions.cs">
+      <Link>Extensions\ExpressionExtensions.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Database\Extensions\Reference.cs">
       <Link>Data\Reference.cs</Link>

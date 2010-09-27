@@ -12,31 +12,34 @@ namespace Raven.Sample.SimpleClient
     {
         static void Main(string[] args)
         {
-			using (var documentStore = new DocumentStore { Url = "http://localhost:8080" })
+            using (var documentStore = new DocumentStore { Url = "http://localhost:8080" })
             {
-				documentStore.Initialize();
-				//documentStore.DatabaseCommands.PutIndex("regionIndex",
-				//                                        new IndexDefinition
-				//                                        {
-				//                                            Map = "from company in docs.Companies select new{company.Region}"
-				//                                        });
-				using (var session = documentStore.OpenSession())
-            {
-				
+                documentStore.Initialize();
+                documentStore.DatabaseCommands.PutIndex("regionIndex",
+                                                        new IndexDefinition
+                                                        {
+                                                            Map =
+                                                            "from company in docs.Companies select new{company.Region}"
+                                                        },
+                                                        overwrite: true);
+                using (var session = documentStore.OpenSession())
+                {
 
-				session.Store(new Company { Name = "Company 1", Region = "Asia" });
-				session.Store(new Company { Name = "Company 2", Region = "Africa" });
-				session.SaveChanges();
 
-                var allCompanies = session
-                    .LuceneQuery<Company>("regionIndex")
-                    .Where("Region:Africa")
-                    .WaitForNonStaleResults()
-                    .ToArray();
+                    session.Store(new Company { Name = "Company 1", Region = "Asia" });
+                    session.Store(new Company { Name = "Company 2", Region = "Africa" });
+                    session.SaveChanges();
 
-                foreach (var company in allCompanies)
-                    Console.WriteLine(company.Name);
-            }}
+                    var allCompanies = session
+                        .LuceneQuery<Company>("regionIndex")
+                        .Where("Region:Africa")
+                        .WaitForNonStaleResults()
+                        .ToArray();
+
+                    foreach (var company in allCompanies)
+                        Console.WriteLine(company.Name);
+                }
+            }
         }
 
     }

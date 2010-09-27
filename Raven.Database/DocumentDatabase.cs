@@ -27,8 +27,7 @@ namespace Raven.Database
 
         [ImportMany]
         public IEnumerable<AbstractDeleteTrigger> DeleteTriggers { get; set; }
-
-
+        
         [ImportMany]
         public IEnumerable<AbstractIndexUpdateTrigger> IndexUpdateTriggers { get; set; }
 
@@ -38,7 +37,14 @@ namespace Raven.Database
         [ImportMany]
         public AbstractDynamicCompilationExtension[] Extensions { get; set; }
 
+        public DynamicQueryRunner DynamicQueryRunner
+        {
+            get { return dynamicQueryRunner; }
+        }
+
+        private AppDomain queriesAppDomain;
         private readonly WorkContext workContext;
+        private readonly DynamicQueryRunner dynamicQueryRunner;
 
         private Thread[] backgroundWorkers = new Thread[0];
 
@@ -55,6 +61,7 @@ namespace Raven.Database
             	IndexUpdateTriggers = IndexUpdateTriggers,
 				ReadTriggers = ReadTriggers
             };
+            dynamicQueryRunner = new DynamicQueryRunner(this);
 
             TransactionalStorage = configuration.CreateTransactionalStorage(workContext.NotifyAboutWork);
             configuration.Container.SatisfyImportsOnce(TransactionalStorage);
@@ -175,6 +182,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
         public void Dispose()
         {
             workContext.StopWork();
+            UnloadQueriesAppDomain();
             TransactionalStorage.Dispose();
             IndexStorage.Dispose();
             foreach (var backgroundWorker in backgroundWorkers)
@@ -216,7 +224,9 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
         }
 
 		private static int sequentialUuidCounter;
-		public static Guid CreateSequentialUuid()
+        private QueryRunner queryRunner;
+
+        public static Guid CreateSequentialUuid()
 		{
 			var ticksAsBytes = BitConverter.GetBytes(DateTime.Now.Ticks);
 			Array.Reverse(ticksAsBytes);
@@ -498,8 +508,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
             stale = isStale;
             return loadedIds;
         }
-
-
+        
         public void DeleteIndex(string name)
         {
             IndexDefinitionStorage.RemoveIndex(name);
@@ -748,5 +757,58 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
         {
             return IndexDefinitionStorage.GetIndexDefinition(index);
         }
+
+        public QueryResults ExecuteQueryUsingLinearSearch(LinearQuery query)
+        {
+            if(queriesAppDomain == null)
+            {
+                lock(this)
+                {
+                    if (queriesAppDomain == null)
+                        InitailizeQueriesAppDomain();
+                }
+            }
+
+            query.PageSize = Math.Min(query.PageSize, Configuration.MaxPageSize);
+            
+            var result = queryRunner.Query(query);
+
+            if(result.QueryCacheSize > 1024)
+            {
+                lock(this)
+                {
+                    if(queryRunner.QueryCacheSize > 1024)
+                        UnloadQueriesAppDomain();
+                }
+            }
+            return new QueryResults
+            {
+                LastScannedResult = result.LastScannedResult,
+                TotalResults = result.TotalResults,
+                Errors = result.Errors,
+                Results = result.Results.Select(JObject.Parse).ToArray()
+            };
+
+        }
+        
+        public QueryResult ExecuteDynamicQuery(IndexQuery indexQuery)
+        {
+            return dynamicQueryRunner.ExecuteDynamicQuery(indexQuery);
+        }
+
+        private void UnloadQueriesAppDomain()
+        {
+            queryRunner = null;
+            if (queriesAppDomain != null)
+                AppDomain.Unload(queriesAppDomain);
+        }
+
+        private void InitailizeQueriesAppDomain()
+        {
+            queriesAppDomain = AppDomain.CreateDomain("Queries", null, AppDomain.CurrentDomain.SetupInformation);
+            queryRunner = (QueryRunner)queriesAppDomain.CreateInstanceAndUnwrap(typeof(QueryRunner).Assembly.FullName, typeof(QueryRunner).FullName);
+            queryRunner.Initialize(TransactionalStorage.TypeForRunningQueriesInRemoteAppDomain, TransactionalStorage.StateForRunningQueriesInRemoteAppDomain);
+        }
+
     }
 }

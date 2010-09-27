@@ -401,6 +401,90 @@ namespace Raven.Tests.Linq
 			}
 		}
 
+        [Fact] // See issue #91 http://github.com/ravendb/ravendb/issues/issue/91 and 
+        //discussion here http://groups.google.com/group/ravendb/browse_thread/thread/3df57d19d41fc21
+        public void Can_do_projection_in_query_result()
+        {
+            using (var store = new DocumentStore() { DataDirectory = directoryName })
+            {
+                store.Initialize();
+
+                store.DatabaseCommands.PutIndex("ByLineCost",
+                        new IndexDefinition
+                        {
+                            Map = @"from order in docs.Orders
+                                    from line in order.Lines
+                                    select new { Cost = line.Cost }",
+
+                            Stores = { { "Cost", FieldStorage.Yes } }
+                        });
+
+                using (var s = store.OpenSession())
+                {
+                    s.Store(new Order
+                    {
+                        Lines = new List<OrderItem>
+                        {
+                            new OrderItem { Cost = 1.59m, Quantity = 5 },
+                            new OrderItem { Cost = 7.59m, Quantity = 3 }
+                        },
+                    });
+                    s.Store(new Order
+                    {
+                        Lines = new List<OrderItem>
+                        {
+                            new OrderItem { Cost = 0.59m, Quantity = 9 },                            
+                        },
+                    });
+
+                    s.SaveChanges();
+                }
+
+                using (var s = store.OpenSession())
+                {
+                    //Just issue a blank query to make sure there are no stale results    
+                    WaitForQueryToComplete(s, "ByLineCost");                   
+
+                    //This is the lucene query we want to mimic
+                    var luceneResult = s.LuceneQuery<OrderItem>("ByLineCost")
+                            .Where("Cost_Range:{Dx1 TO NULL}")
+                            .SelectFields<SomeDataProjection>("Cost")                           
+                            .ToArray();                                                      
+
+                    var projectionResult = s.Query<OrderItem>("ByLineCost")
+                        .Where(x => x.Cost > 1)
+                        .Select(x => new SomeDataProjection { Cost = x.Cost })
+                        .ToArray();
+
+                    Assert.Equal(luceneResult.Count(), projectionResult.Count());
+                    int counter = 0;
+                    foreach (var item in luceneResult)
+                    {
+                        Assert.Equal(item.Cost, projectionResult[counter].Cost);
+                        counter++;
+                    }                    
+                }
+            }
+        }
+
+        public class SomeDataProjection
+        {
+            public decimal Cost { get; set; }
+        }
+
+        private class Order
+        {
+            public string Id { get; set; }
+            //public decimal Test { get; set; }
+            public List<OrderItem> Lines { get; set; }
+        }
+
+        private class OrderItem
+        {
+            public decimal Cost { get; set; }
+            public decimal Quantity { get; set; }
+        }
+
         private class DateTimeInfo
         {
             public string Id { get; set; }

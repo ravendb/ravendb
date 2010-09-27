@@ -137,6 +137,7 @@ namespace Raven.Client.Tests.Document
 						using (var session2 = documentStore.OpenSession())
 						{
 							session2.AllowNonAuthoritiveInformation = false;
+							session2.NonAuthoritiveInformationTimeout = TimeSpan.Zero;
 							Assert.Throws<NonAuthoritiveInformationException>(()=>session2.Load<Company>(company.Id));
 						}
 					}

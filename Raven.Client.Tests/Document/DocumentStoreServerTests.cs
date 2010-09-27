@@ -1229,5 +1229,26 @@ namespace Raven.Client.Tests.Document
 
 			}
 		}
-	}
+
+        [Fact]
+        //Fix for issue at http://groups.google.com/group/ravendb/browse_thread/thread/78f1ca6dbdd07e2b
+        //The issue only shows up in Server/Client mode, not in Embedded mode!!!
+        public void Using_attachments_can_properly_set_WebRequest_Headers()
+        {
+            using (var server = GetNewServer(port, path) )
+            {
+                var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+                documentStore.Initialize();
+
+                var key = string.Format("{0}-{1}", "test", DateTime.Now.ToFileTimeUtc());
+                var metadata = new JObject {
+                                    { "owner", 5 },
+                                    { "Content-Type", "text/plain" },
+                                    { "filename", "test.txt" },
+                                    { "Content-Length", 100 },
+                                };                
+                Assert.DoesNotThrow(() => documentStore.DatabaseCommands.PutAttachment(key, null, new byte[] { 0, 1, 2 }, metadata));
+            }
+        }
+	}    
 }

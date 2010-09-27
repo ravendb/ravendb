@@ -4,8 +4,16 @@ using System.Net;
 
 namespace Raven.Client.Client
 {
+	/// <summary>
+	/// Extensions for web requests
+	/// </summary>
 	public static class WebResponseExtensions
 	{
+		/// <summary>
+		/// Gets the response stream with HTTP decompression.
+		/// </summary>
+		/// <param name="response">The response.</param>
+		/// <returns></returns>
 		public static Stream GetResponseStreamWithHttpDecompression(this WebResponse response)
 		{
 			var stream = response.GetResponseStream();

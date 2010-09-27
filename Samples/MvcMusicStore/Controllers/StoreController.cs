@@ -38,7 +38,7 @@ namespace MvcMusicStore.Controllers
             // Retrieve Genre from database
             var genre = session.Load<Genre>(id);
             var albums = session.LuceneQuery<Album>("AlbumsByGenre")
-                .Where("Genre:" + id)
+                .WhereEquals("Genere",id)
                 .ToArray();
             var viewModel = new StoreBrowseViewModel()
             {

@@ -38,7 +38,7 @@ namespace Raven.Database.Linq.PrivateExtensions
 		}
 
 		public static IEnumerable<dynamic> SelectMany(this object source,
-		                                              Func<object, IEnumerable<dynamic>> selector)
+		                                              Func<dynamic, IEnumerable<dynamic>> selector)
 		{
 			return Select(source).SelectMany<object, object>(selector);
 		}

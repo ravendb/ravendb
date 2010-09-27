@@ -7,6 +7,9 @@ using Raven.Client.Document;
 
 namespace Raven.Client.Linq
 {
+	/// <summary>
+	/// Process a Linq expression to a Lucene query
+	/// </summary>
 	public class RavenQueryProviderProcessor<T>
 	{
 		private readonly Action<IDocumentQuery<T>> customizeQuery;
@@ -18,6 +21,12 @@ namespace Raven.Client.Linq
 		private SpecialQueryType queryType = SpecialQueryType.None;
 		private Type newExpressionType;
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="RavenQueryProviderProcessor&lt;T&gt;"/> class.
+		/// </summary>
+		/// <param name="session">The session.</param>
+		/// <param name="customizeQuery">The customize query.</param>
+		/// <param name="indexName">Name of the index.</param>
 		public RavenQueryProviderProcessor(
 			IDocumentSession session,
 			Action<IDocumentQuery<T>> customizeQuery,
@@ -30,13 +39,36 @@ namespace Raven.Client.Linq
 			this.customizeQuery = customizeQuery;
 		}
 
+		/// <summary>
+		/// Gets the lucene query.
+		/// </summary>
+		/// <value>The lucene query.</value>
 		public IDocumentQuery<T> LuceneQuery
 		{
 			get { return luceneQuery; }
 		}
 
+        /// <summary>
+        /// Gets the document session this processor is associated with
+        /// </summary>
+        public IDocumentSession Session
+        {
+            get
+            {
+                return session;
+            }
+        }
+
+		/// <summary>
+		/// Gets or sets the fields to fetch.
+		/// </summary>
+		/// <value>The fields to fetch.</value>
 		public List<string> FieldsToFetch { get; set; }
 
+		/// <summary>
+		/// Visits the expression and generate the lucene query
+		/// </summary>
+		/// <param name="expression">The expression.</param>
 		protected void VisitExpression(Expression expression)
 		{
 			switch (expression.NodeType)
@@ -108,7 +140,7 @@ namespace Raven.Client.Linq
 			var memberInfo = GetMember(expression.Left);
 
 			luceneQuery.WhereEquals(
-				memberInfo.Name,
+				memberInfo.Path,
 				GetValueFromExpression(expression.Right, GetMemberType(memberInfo)),
 				GetFieldType(memberInfo) != typeof (string),
 				false);
@@ -119,31 +151,41 @@ namespace Raven.Client.Linq
 			var memberInfo = GetMember(expression.Left);
 
 			luceneQuery.Not.WhereEquals(
-				memberInfo.Name,
+                memberInfo.Path,
 				GetValueFromExpression(expression.Right, GetMemberType(memberInfo)),
 				GetFieldType(memberInfo) != typeof(string),
 				false);
 		}
 
-		private static Type GetMemberType(MemberInfo memberInfo)
+        private static Type GetMemberType(ExpressionMemberInfo memberInfo)
 		{
-			switch (memberInfo.MemberType)
+			switch (memberInfo.InnerMemberInfo.MemberType)
 			{
 				case MemberTypes.Field:
-					return ((FieldInfo) memberInfo).FieldType;
+					return ((FieldInfo) memberInfo.InnerMemberInfo).FieldType;
 				case MemberTypes.Property:
-					return ((PropertyInfo) memberInfo).PropertyType;
+					return ((PropertyInfo) memberInfo.InnerMemberInfo).PropertyType;
 				default:
 					throw new ArgumentOutOfRangeException();
 			}
 		}
 
-		private static MemberInfo GetMember(Expression expression)
+        private static ExpressionMemberInfo GetMember(Expression expression)
 		{
 			var unaryExpression = expression as UnaryExpression;
 			if(unaryExpression != null)
 				expression = unaryExpression.Operand;
-			return ((MemberExpression) expression).Member;
+
+            var memberExpression = (MemberExpression)expression;
+
+            // NOTE: We do this because in the case of dynamic queries, it is perfectly valid
+            // For a query to look like x=> x.SomeProperty.AnotherProperty.Length
+            // This wouldn't be valid if querying an existing index and would not ordinarily occur
+            // So this should be a safe operation
+            String path = memberExpression.ToString();
+            path = path.Substring(path.IndexOf('.') + 1);
+
+            return new ExpressionMemberInfo(path, memberExpression.Member);
 		}
 
 		private void VisitEquals(MethodCallExpression expression)
@@ -151,7 +193,7 @@ namespace Raven.Client.Linq
 			var memberInfo = GetMember(expression.Object);
 
 			luceneQuery.WhereEquals(
-				memberInfo.Name,
+				memberInfo.Path,
 				GetValueFromExpression(expression.Arguments[0], GetMemberType(memberInfo)),
 				GetFieldType(memberInfo) != typeof (string),
 				false);
@@ -162,7 +204,7 @@ namespace Raven.Client.Linq
 			var memberInfo = GetMember(expression.Object);
 
 			luceneQuery.WhereContains(
-				memberInfo.Name,
+				memberInfo.Path,
 				GetValueFromExpression(expression.Arguments[0], GetMemberType(memberInfo)));
 		}
 
@@ -171,7 +213,7 @@ namespace Raven.Client.Linq
 			var memberInfo = GetMember(expression.Object);
 
 			luceneQuery.WhereStartsWith(
-				memberInfo.Name,
+				memberInfo.Path,
 				GetValueFromExpression(expression.Arguments[0], GetMemberType(memberInfo)));
 		}
 
@@ -180,7 +222,7 @@ namespace Raven.Client.Linq
 			var memberInfo = GetMember(expression.Object);
 
 			luceneQuery.WhereEndsWith(
-				memberInfo.Name,
+				memberInfo.Path,
 				GetValueFromExpression(expression.Arguments[0], GetMemberType(memberInfo)));
 		}
 
@@ -224,6 +266,11 @@ namespace Raven.Client.Linq
 				value);
 		}
 
+        private void VisitAny(MethodCallExpression expression)
+        {
+            VisitExpression(expression.Arguments[1]);
+        }
+
 		private void VisitMemberAccess(MemberExpression memberExpression, bool boolValue)
 		{
 			if (memberExpression.Type == typeof (bool))
@@ -254,9 +301,31 @@ namespace Raven.Client.Linq
 				return;
 			}
 
+            if (expression.Method.DeclaringType == typeof(Enumerable))
+            {
+                VisitEnumerableMethodCall(expression);
+                return;
+            }
+
 			throw new NotSupportedException("Method not supported: " + expression.Method.DeclaringType.Name + "." +
 				expression.Method.Name);
 		}
+
+        private void VisitEnumerableMethodCall(MethodCallExpression expression)
+        {
+            switch (expression.Method.Name)
+            {
+                case "Any":
+                {
+                    VisitAny(expression);
+                    break;
+                }                   
+                default:
+                {
+                    throw new NotSupportedException("Method not supported: " + expression.Method.Name);
+                }
+            }
+        }
 
 		private void VisitStringMethodCall(MethodCallExpression expression)
 		{
@@ -414,13 +483,22 @@ namespace Raven.Client.Linq
 				case ExpressionType.MemberAccess:
 					FieldsToFetch.Add(((MemberExpression) body).Member.Name);
 					break;
-				case ExpressionType.New:
+                //Anonomyous types come through here .Select(x => new { x.Cost } ) doesn't use a member initializer, even though it looks like it does
+                //See http://blogs.msdn.com/b/sreekarc/archive/2007/04/03/immutable-the-new-anonymous-type.aspx
+				case ExpressionType.New:                
 					var newExpression = ((NewExpression) body);
 					newExpressionType = newExpression.Type;
 					FieldsToFetch.AddRange(newExpression.Arguments.Cast<MemberExpression>().Select(x => x.Member.Name));
 					break;
+                //for example .Select(x => new SomeType { x.Cost } ), it's member init because it's using the object initializer
+                case ExpressionType.MemberInit:
+                    var memberInitExpression = ((MemberInitExpression)body);
+                    newExpressionType = memberInitExpression.NewExpression.Type;
+                    FieldsToFetch.AddRange(memberInitExpression.Bindings.Cast<MemberAssignment>().Select(x => x.Member.Name));
+                    break;
 				case ExpressionType.Parameter: // want the full thing, so just pass it on.
 					break;
+                
 				default:
 					throw new NotSupportedException("Node not supported: " + body.NodeType);
 			}
@@ -480,6 +558,7 @@ namespace Raven.Client.Linq
 			queryType = SpecialQueryType.FirstOrDefault;
 		}
 
+
 		private static string GetFieldNameForRangeQuery(Expression expression, object value)
 		{
 			if (value is int || value is long || value is double || value is float || value is decimal)
@@ -487,15 +566,15 @@ namespace Raven.Client.Linq
 			return ((MemberExpression) expression).Member.Name;
 		}
 
-		private Type GetFieldType(MemberInfo member)
+		private Type GetFieldType(ExpressionMemberInfo member)
 		{
-			var property = member as PropertyInfo;
+			var property = member.InnerMemberInfo as PropertyInfo;
 			if (property != null)
 			{
 				return property.PropertyType;
 			}
 
-			var field = member as FieldInfo;
+			var field = member.InnerMemberInfo as FieldInfo;
 			if (field != null)
 			{
 				return field.FieldType;
@@ -596,6 +675,10 @@ namespace Raven.Client.Linq
 			throw new NotSupportedException("MemberInfo type not supported: " + memberInfo.GetType().FullName);
 		}
 
+		/// <summary>
+		/// Processes the expression.
+		/// </summary>
+		/// <param name="expression">The expression.</param>
 		public void ProcessExpression(Expression expression)
 		{
 			if (session == null)
@@ -605,12 +688,26 @@ namespace Raven.Client.Linq
 			}
 			else
 			{
-				luceneQuery = session.LuceneQuery<T>(indexName);
+                luceneQuery = CreateDocumentQuery();
 			}
 			VisitExpression(expression);
 		}
 
+        /// <summary>
+        /// Creates the underlying document query for be populated by the linq provider
+        /// </summary>
+        /// <returns></returns>
+        protected virtual IDocumentQuery<T> CreateDocumentQuery()
+        {
+            return session.LuceneQuery<T>(indexName);
+        }
 
+
+		/// <summary>
+		/// Executes the specified expression.
+		/// </summary>
+		/// <param name="expression">The expression.</param>
+		/// <returns></returns>
 		public object Execute(Expression expression)
 		{
 			chainedWhere = false;
@@ -671,15 +768,42 @@ namespace Raven.Client.Linq
 
 		#region Nested type: SpecialQueryType
 
+		/// <summary>
+		/// Different query types 
+		/// </summary>
 		protected enum SpecialQueryType
 		{
+			/// <summary>
+			/// 
+			/// </summary>
 			None,
+			/// <summary>
+			/// 
+			/// </summary>
 			All,
+			/// <summary>
+			/// 
+			/// </summary>
 			Any,
+			/// <summary>
+			/// Get count of items for the query
+			/// </summary>
 			Count,
+			/// <summary>
+			/// Get only the first item
+			/// </summary>
 			First,
+			/// <summary>
+			/// Get only the first item (or null)
+			/// </summary>
 			FirstOrDefault,
+			/// <summary>
+			/// Get only the first item (or throw if there are more than one)
+			/// </summary>
 			Single,
+			/// <summary>
+			/// Get only the first item (or throw if there are more than one) or null if empty
+			/// </summary>
 			SingleOrDefault
 		}
 

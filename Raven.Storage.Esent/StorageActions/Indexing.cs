@@ -59,7 +59,7 @@ namespace Raven.Storage.Esent.StorageActions
 						Api.RetrieveColumnAsDateTime(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"]).Value,
 				};
 			}
-		}
+		}       
 
 		public void AddIndex(string name)
 		{
@@ -112,5 +112,6 @@ namespace Raven.Storage.Esent.StorageActions
 				update.Save();
 			}
 		}
-	}
+
+    }
 }

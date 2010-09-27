@@ -5,6 +5,9 @@ using System.Text;
 
 namespace Raven.Client.Indexes
 {
+	/// <summary>
+	/// Precedence values for operations
+	/// </summary>
     public enum ExpressionOperatorPrecedence
     {
         /// <summary>
@@ -24,11 +27,11 @@ namespace Raven.Client.Indexes
         /// </summary>
         Additive = 120,
         /// <summary>
-        /// <<  >>
+        /// &lt;&lt; &gt;&gt;
         /// </summary>
         Shift = 110,    
         /// <summary>
-        /// <  >  <=  >=  is  as
+        /// &lt;  &gt;  &lt;=  &gt;=  is  as
         /// </summary>
         RelationalAndTypeTesting = 100,             
         /// <summary>
@@ -36,7 +39,7 @@ namespace Raven.Client.Indexes
         /// </summary>
         Equality = 90,               
         /// <summary>
-        /// &
+        /// &amp;
         /// </summary>
         LogicalAND = 80,             
         /// <summary>
@@ -48,7 +51,7 @@ namespace Raven.Client.Indexes
         /// </summary>
         LogicalOR = 60,
         /// <summary>
-        /// && (AndAlso in VB)
+		/// &amp;&amp; (AndAlso in VB)
         /// </summary>
         ConditionalAND = 50,
         /// <summary>
@@ -64,18 +67,23 @@ namespace Raven.Client.Indexes
         /// </summary>
         Conditional = 20,            
         /// <summary>
-        /// =  *=  /=  %=  +=  -=  <<=  >>=  &=  ^=  |=
+        /// =  *=  /=  %=  +=  -=  &lt;&lt;=  &gt;&gt;=  &amp;=  ^=  |=
         /// </summary>
         Assignment = 10,
-
         /// <summary>
         /// pseudo operator for comparisons
         /// </summary>
         ParenthesisNotNeeded = 0,
     }
 
-    public static class ExpressionOperatorPrecedenceExtension
+	/// <summary>
+	/// Methods on the enum
+	/// </summary>
+	public static class ExpressionOperatorPrecedenceExtension
     {
+		/// <summary>
+		/// Needs parenthesis for the expression
+		/// </summary>
         public static bool NeedsParenthesisFor(this ExpressionOperatorPrecedence outer, ExpressionOperatorPrecedence inner)
         {
             if (outer == ExpressionOperatorPrecedence.ParenthesisNotNeeded || inner == ExpressionOperatorPrecedence.ParenthesisNotNeeded)

@@ -5,6 +5,9 @@ using System.Linq;
 
 namespace Raven.Database.Extensions
 {
+	/// <summary>
+	/// Extentions for working with streams
+	/// </summary>
 	public static class StreamExtension
 	{
 

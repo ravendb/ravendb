@@ -3,8 +3,16 @@ using System.Text;
 
 namespace Raven.Client.Document
 {
+	/// <summary>
+	/// Helper class for reflection operations
+	/// </summary>
 	public static class ReflectionUtil
 	{
+		/// <summary>
+		/// Gets the full name without version information.
+		/// </summary>
+		/// <param name="entityType">Type of the entity.</param>
+		/// <returns></returns>
 		public static string GetFullNameWithoutVersionInformation(Type entityType)
 		{
 			var asmName = entityType.Assembly.GetName().Name;

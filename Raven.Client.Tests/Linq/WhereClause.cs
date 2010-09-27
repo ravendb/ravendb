@@ -200,12 +200,27 @@ namespace Raven.Client.Tests.Linq
 			Assert.Equal("Age:3 AND Name:[[ayende]]", q.ToString());
 		}
 
+        [Fact]
+        public void CanUnderstandSimpleAny()
+        {
+            var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null, null));
+            var q = indexedUsers
+                .Where(x => x.Properties.Any(y => y.Key == "first"));
+            Assert.Equal("Key:[[first]]", q.ToString());
+        }
+
         public class IndexedUser
         {
 			public int Age { get; set; }
             public DateTime Birthday { get; set; }
             public string Name { get; set; }
             public string Email { get; set; }
+            public UserProperty[] Properties { get; set; }
+        }
+
+        public class UserProperty
+        {
+            public string Key { get; set;}
         }
     }
 }

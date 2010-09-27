@@ -15,13 +15,36 @@ namespace Raven.Client.Indexes
 	/// </summary>
 	public class IndexDefinition<TDocument, TReduceResult> 
 	{
+		/// <summary>
+		/// Gets or sets the map function
+		/// </summary>
+		/// <value>The map.</value>
 		public Expression<Func<IEnumerable<TDocument>, IEnumerable>> Map { get; set; }
+		/// <summary>
+		/// Gets or sets the reduce function
+		/// </summary>
+		/// <value>The reduce.</value>
 		public Expression<Func<IEnumerable<TReduceResult>, IEnumerable>> Reduce { get; set; }
 
+		/// <summary>
+		/// Gets or sets the stores options
+		/// </summary>
+		/// <value>The stores.</value>
 		public IDictionary<Expression<Func<TReduceResult, object>>, FieldStorage> Stores { get; set; }
+		/// <summary>
+		/// Gets or sets the indexing options
+		/// </summary>
+		/// <value>The indexes.</value>
 		public IDictionary<Expression<Func<TReduceResult, object>>, FieldIndexing> Indexes { get; set; }
+		/// <summary>
+		/// Gets or sets the sort options.
+		/// </summary>
+		/// <value>The sort options.</value>
 		public IDictionary<Expression<Func<TReduceResult, object>>, SortOptions> SortOptions { get; set; }
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="IndexDefinition&lt;TDocument, TReduceResult&gt;"/> class.
+		/// </summary>
 		public IndexDefinition()
 		{
 			Stores = new Dictionary<Expression<Func<TReduceResult, object>>, FieldStorage>();
@@ -29,6 +52,11 @@ namespace Raven.Client.Indexes
 			SortOptions = new Dictionary<Expression<Func<TReduceResult, object>>, SortOptions>();
 		}
 
+		/// <summary>
+		/// Toes the index definition.
+		/// </summary>
+		/// <param name="convention">The convention.</param>
+		/// <returns></returns>
 		public IndexDefinition ToIndexDefinition(DocumentConvention convention)
 		{
 			return new IndexDefinition
@@ -136,6 +164,11 @@ namespace Raven.Client.Indexes
 			return linqQuery;
 		}
 	}
-
+	
+	/// <summary>
+	/// This class attempts to provide a strongly typed index defintion on the client.
+	/// It is here solely as a convienance, and it is _expected_ to fail in some scenarios.
+	/// The recommended way is to define indexes outside your code, using the Web UI.
+	/// </summary>
 	public class IndexDefinition<TDocument> : IndexDefinition<TDocument, object> { }
 }

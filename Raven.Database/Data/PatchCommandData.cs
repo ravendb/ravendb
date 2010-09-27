@@ -5,20 +5,39 @@ using System.Linq;
 
 namespace Raven.Database.Data
 {
+	///<summary>
+	/// A single batch operation for a document PATCH
+	///</summary>
 	public class PatchCommandData : ICommandData
 	{
+		/// <summary>
+		/// Gets or sets the patches applied to this document
+		/// </summary>
+		/// <value>The patches.</value>
 		public PatchRequest[] Patches{ get; set;}
 
+		/// <summary>
+		/// Gets the key.
+		/// </summary>
+		/// <value>The key.</value>
 		public string Key
 		{
 			get; set;
 		}
 
+		/// <summary>
+		/// Gets the method.
+		/// </summary>
+		/// <value>The method.</value>
 		public string Method
 		{
 			get { return "PATCH"; }
 		}
 
+		/// <summary>
+		/// Gets the etag.
+		/// </summary>
+		/// <value>The etag.</value>
 		public Guid? Etag
 		{
 			get; set;
@@ -43,6 +62,9 @@ namespace Raven.Database.Data
 				Metadata = doc.Metadata;
 		}
 #endif
+		/// <summary>
+		/// Translate this instance to a Json object.
+		/// </summary>
 		public JObject ToJson()
 		{
 			return new JObject(

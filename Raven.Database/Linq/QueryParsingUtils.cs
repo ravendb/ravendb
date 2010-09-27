@@ -58,7 +58,7 @@ namespace Raven.Database.Linq
 			return output.Text;
 		}
 
-		public static VariableDeclaration GetVariableDeclarationForLinqQuery(string query)
+		public static VariableDeclaration GetVariableDeclarationForLinqQuery(string query, bool requiresSelectNewAnonymousType)
 		{
 			var parser = ParserFactory.CreateParser(SupportedLanguage.CSharp, new StringReader("var q = " + query));
 
@@ -88,14 +88,14 @@ namespace Raven.Database.Linq
 				throw new InvalidOperationException("Variable initializer must be a select query expression");
 
 			var createExpression = selectClause.Projection as ObjectCreateExpression;
-			if (createExpression == null || createExpression.IsAnonymousType == false)
+			if ((createExpression == null || createExpression.IsAnonymousType == false) && requiresSelectNewAnonymousType)
 				throw new InvalidOperationException(
 					"Variable initializer must be a select query expression returning an anonymous object");
 
 			return variable;
 		}
 
-		public static VariableDeclaration GetVariableDeclarationForLinqMethods(string query)
+	    public static VariableDeclaration GetVariableDeclarationForLinqMethods(string query)
 		{
 			var parser = ParserFactory.CreateParser(SupportedLanguage.CSharp, new StringReader("var q = " + query));
 

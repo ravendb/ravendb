@@ -8,16 +8,28 @@ using TransactionInformation = Raven.Database.TransactionInformation;
 
 namespace Raven.Client.Client
 {
+	/// <summary>
+	/// Provide access to the current transaction 
+	/// </summary>
 	public static class RavenTransactionAccessor
 	{
 #if !NET_3_5
 		private static readonly ThreadLocal<Stack<TransactionInformation>> currentRavenTransactions = new ThreadLocal<Stack<TransactionInformation>>(() => new Stack<TransactionInformation>());
 
+		/// <summary>
+		/// Starts a transaction
+		/// </summary>
+		/// <returns></returns>
 		public static IDisposable StartTransaction()
 		{
 			return StartTransaction(TimeSpan.FromMinutes(1));
 		}
 
+		/// <summary>
+		/// Starts a transaction with the specified timeout
+		/// </summary>
+		/// <param name="timeout">The timeout.</param>
+		/// <returns></returns>
 		public static IDisposable StartTransaction(TimeSpan timeout)
 		{
 			currentRavenTransactions.Value.Push(new TransactionInformation
@@ -28,6 +40,10 @@ namespace Raven.Client.Client
 			return new DisposableAction(() => currentRavenTransactions.Value.Pop());
 		}
 #endif
+		/// <summary>
+		/// Gets the transaction information for the current transaction
+		/// </summary>
+		/// <returns></returns>
 		public static TransactionInformation GetTransactionInformation()
 		{
 			#if !NET_3_5

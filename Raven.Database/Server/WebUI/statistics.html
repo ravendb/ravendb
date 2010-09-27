@@ -14,7 +14,15 @@
 
     <script type="text/javascript">
         $(document).ready(function () {
-            RavenUI.GetGlobalStatistics('p#globalStats');
+            RavenUI.GetGlobalStatistics('p#globalStats', function () {
+                var timestamps = $('span.timestamp');
+                timestamps.each(function (i, e) {
+                    var timestamp = $(e);
+                    var val = timestamp.text().replace(/\/Date\((\d+)\)\//, "$1");
+                    var date = new Date(parseInt(val));
+                    timestamp.text(date.toDateString()  + " " + date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds() + "."+date.getMilliseconds());
+                });
+            });
         });
     </script>
 </head>

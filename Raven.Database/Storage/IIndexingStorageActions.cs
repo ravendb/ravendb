@@ -18,6 +18,7 @@ namespace Raven.Database.Storage.StorageActions
 		void AddIndex(string name);
 		void DeleteIndex(string name);
 
+
 		IndexFailureInformation GetFailureRate(string index);
 		void UpdateLastIndexed(string index, Guid etag, DateTime timestamp);
 	}

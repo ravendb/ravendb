@@ -32,4 +32,4 @@ if( (test-path $aggregator_pdb) -eq $true) #release hasn't any debug information
 	cp $aggregator_pdb .\Server\Plugins
 }
 
-start .\Server\RavenDB.exe
+start .\Server\Raven.Server.exe

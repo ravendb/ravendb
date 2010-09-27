@@ -82,7 +82,7 @@ namespace Raven.Database
                 return document;
             foreach (var readTrigger in triggers)
             {
-                var readVetoResult = readTrigger.AllowRead(document.Key, document.DataAsJson, document.Metadata, operation, transactionInformation);
+                var readVetoResult = readTrigger.AllowRead(document.Key, document.DataAsJson ?? document.Projection, document.Metadata, operation, transactionInformation);
                 switch (readVetoResult.Veto)
                 {
                     case ReadVetoResult.ReadAllow.Allow:

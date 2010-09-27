@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition.Hosting;
 using System.Configuration;
@@ -37,12 +37,22 @@ namespace Raven.Database
 			Port = portStr != null ? int.Parse(portStr) : 8080;
 
             var maxPageSizeStr = ConfigurationManager.AppSettings["Raven/MaxPageSize"];
+            var minimumQueryCount = ConfigurationManager.AppSettings["Raven/TempIndexPromotionMinimumQueryCount"];
+            var queryThreshold = ConfigurationManager.AppSettings["Raven/TempIndexPromotionThreshold"];
+            var cleanupPeriod = ConfigurationManager.AppSettings["Raven/TempIndexCleanupPeriod"];
+            var cleanupThreshold = ConfigurationManager.AppSettings["Raven/TempIndexCleanupThreshold"];
 
             MaxPageSize = maxPageSizeStr != null ? int.Parse(maxPageSizeStr) : 1024;
+            TempIndexPromotionMinimumQueryCount = minimumQueryCount != null ? int.Parse(minimumQueryCount) : 100;
+            TempIndexPromotionThreshold = queryThreshold != null ? int.Parse(queryThreshold) : 60000;   // once a minute
+            TempIndexCleanupPeriod = cleanupPeriod != null ? int.Parse(cleanupPeriod) : 300;            // every 5 minutes
+            TempIndexCleanupThreshold = cleanupThreshold != null ? int.Parse(cleanupThreshold) : 600;   // 10 minutes inactivity
 
 			DataDirectory = ConfigurationManager.AppSettings["Raven/DataDir"] ?? @"~\Data";
 
 			WebDir = ConfigurationManager.AppSettings["Raven/WebDir"] ?? GetDefaultWebDir();
+
+		    AccessControlAllowOrigin = ConfigurationManager.AppSettings["Raven/AccessControlAllowOrigin"];
 
 			bool httpCompressionTemp;
 			if (bool.TryParse(ConfigurationManager.AppSettings["Raven/HttpCompression"], out httpCompressionTemp) == false)
@@ -147,6 +157,7 @@ namespace Raven.Database
         public string HostName { get; set;  } 
 		public int Port { get; set; }
 		public string WebDir { get; set; }
+        public string AccessControlAllowOrigin { get; set; }
 		public AnonymousUserAccessMode AnonymousUserAccessMode { get; set; }
 
 		public string VirtualDirectory { get; set; }
@@ -171,6 +182,12 @@ namespace Raven.Database
 		public bool HttpCompression { get; set; }
 
 	    public int MaxPageSize { get; set; }
+
+
+        public int TempIndexPromotionThreshold { get; set; }
+        public int TempIndexPromotionMinimumQueryCount { get; set; }
+        public int TempIndexCleanupPeriod { get; set; }
+        public int TempIndexCleanupThreshold { get; set; }
 
 	    public void LoadLoggingSettings()
 		{

@@ -7,6 +7,9 @@ using Raven.Database.Json;
 
 namespace Raven.Client.Client
 {
+	/// <summary>
+	/// Replication and failover management on the client side
+	/// </summary>
 	public class ReplicationInformer
 	{
 		private const string RavenReplicationDestinations = "Raven/Replication/Destinations";
@@ -14,6 +17,10 @@ namespace Raven.Client.Client
 		private readonly object replicationLock = new object();
 		private List<string> replicationDestinations = new List<string>();
 
+		/// <summary>
+		/// Gets the replication destinations.
+		/// </summary>
+		/// <value>The replication destinations.</value>
 		public List<string> ReplicationDestinations
 		{
 			get { return replicationDestinations; }
@@ -21,6 +28,10 @@ namespace Raven.Client.Client
 
 		private readonly Dictionary<string, IntHolder> failureCounts = new Dictionary<string, IntHolder>();
 
+		/// <summary>
+		/// Updates the replication information if needed.
+		/// </summary>
+		/// <param name="serverClient">The server client.</param>
 		public void UpdateReplicationInformationIfNeeded(ServerClient serverClient)
 		{
 			if (lastReplicationUpdate.AddMinutes(5) > DateTime.UtcNow)
@@ -33,6 +44,12 @@ namespace Raven.Client.Client
 			public int Value;
 		}
 
+		/// <summary>
+		/// Should execute the operation using the specified operation URL
+		/// </summary>
+		/// <param name="operationUrl">The operation URL.</param>
+		/// <param name="currentRequest">The current request.</param>
+		/// <returns></returns>
 		public bool ShouldExecuteUsing(string operationUrl, int currentRequest)
 		{
 			IntHolder value;
@@ -53,6 +70,10 @@ namespace Raven.Client.Client
 			return true;
 		}
 
+		/// <summary>
+		/// Determines whether this is the first failure on the specified operation URL.
+		/// </summary>
+		/// <param name="operationUrl">The operation URL.</param>
 		public bool IsFirstFailure(string operationUrl)
 		{
 			IntHolder value;
@@ -61,6 +82,10 @@ namespace Raven.Client.Client
 			return Thread.VolatileRead(ref value.Value) == 0;
 		}
 
+		/// <summary>
+		/// Increments the failure count for the specified operation URL
+		/// </summary>
+		/// <param name="operationUrl">The operation URL.</param>
 		public void IncrementFailureCount(string operationUrl)
 		{
 			IntHolder value;
@@ -69,6 +94,10 @@ namespace Raven.Client.Client
 			Interlocked.Increment(ref value.Value);
 		}
 
+		/// <summary>
+		/// Refreshes the replication information.
+		/// </summary>
+		/// <param name="commands">The commands.</param>
 		public void RefreshReplicationInformation(ServerClient commands)
 		{
 			lock (replicationLock)
@@ -92,6 +121,10 @@ namespace Raven.Client.Client
 		}
 
 
+		/// <summary>
+		/// Resets the failure count for the specified URL
+		/// </summary>
+		/// <param name="operationUrl">The operation URL.</param>
 		public void ResetFailureCount(string operationUrl)
 		{
 			IntHolder value;

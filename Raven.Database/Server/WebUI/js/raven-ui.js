@@ -49,13 +49,15 @@ RavenUI.UpdateQuickStats = function (targetSelector) {
 
 //global statistics
 
-RavenUI.GetGlobalStatistics = function (targetSelector) {
-	if (!$(targetSelector).hasTemplate()) {
-		$(targetSelector).setTemplateURL($.ravenDB.getServerUrl() + '/raven/JSONTemplates/globalStats.html');
-	}
+RavenUI.GetGlobalStatistics = function (targetSelector, afterTemplateRendered) {
+    if (!$(targetSelector).hasTemplate()) {
+        $(targetSelector).setTemplateURL($.ravenDB.getServerUrl() + '/raven/JSONTemplates/globalStats.html');
+    }
 
     $.ravenDB.getStatistics(function (stats) {
         $(targetSelector).processTemplate(stats);
+        if (afterTemplateRendered != null)
+            afterTemplateRendered();
     });
 }
 
@@ -116,6 +118,10 @@ RavenUI.SearchIndexes = function (name, successCallback) {
 
 RavenUI.QueryIndex = function (name, queryValues, pageNumber, pageSize, successCallback) {
     $.ravenDB.queryIndex(name, queryValues, pageNumber, pageSize, successCallback);
+}
+
+RavenUI.QueryLinqIndex = function (linqQuery, pageNumber, pageSize, successCallback) {
+    $.ravenDB.queryLinqIndex(linqQuery, pageNumber, pageSize, successCallback);
 }
 
 // View

@@ -4,33 +4,93 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Client;
+using Raven.Client.Exceptions;
 using Raven.Client.Linq;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
+using Raven.Database.Extensions;
 
 namespace Raven.Client.Document
 {
+	/// <summary>
+	/// A query against a Raven index
+	/// </summary>
 	public class DocumentQuery<T> : IDocumentQuery<T>
 	{
 		private bool negate;
 		private readonly IDatabaseCommands databaseCommands;
 		private readonly string indexName;
+		/// <summary>
+		/// The list of fields to project directly from the index
+		/// </summary>
 		protected readonly string[] projectionFields;
 		private readonly DocumentSession session;
+		/// <summary>
+		/// The cutoff date to use for detecting staleness in the index
+		/// </summary>
 		protected DateTime? cutoff;
+		/// <summary>
+		/// The fields to order the results by
+		/// </summary>
 		protected string[] orderByFields = new string[0];
+		/// <summary>
+		/// The page size to use when querying the index
+		/// </summary>
 		protected int pageSize = 128;
 		private QueryResult queryResult;
 		private StringBuilder queryText = new StringBuilder();
+		/// <summary>
+		/// which record to start reading from 
+		/// </summary>
 		protected int start;
 		private TimeSpan timeout;
 		private bool waitForNonStaleResults;
 		private readonly HashSet<string> includes = new HashSet<string>();
 
+        /// <summary>
+        /// Gets the current includes on this query
+        /// </summary>
+        public IEnumerable<String> Includes
+        {
+            get { return includes; }
+        }
+
+        /// <summary>
+        /// Gets the database commands associated with this document query
+        /// </summary>
+        public IDatabaseCommands Commands
+        {
+            get { return databaseCommands; }
+        }
+
+        /// <summary>
+        /// Gets the session associated with this document query
+        /// </summary>
+        public DocumentSession Session
+        {
+            get { return this.session; }
+        }
+
+        /// <summary>
+        /// Gets the query text built so far
+        /// </summary>
+        protected StringBuilder QueryText
+        {
+            get { return this.queryText; }
+        }
+
+		/// <summary>
+		/// Initializes a new instance of the <see cref="DocumentQuery&lt;T&gt;"/> class.
+		/// </summary>
+		/// <param name="session">The session.</param>
+		/// <param name="databaseCommands">The database commands.</param>
+		/// <param name="indexName">Name of the index.</param>
+		/// <param name="projectionFields">The projection fields.</param>
 		public DocumentQuery(DocumentSession session, IDatabaseCommands databaseCommands, string indexName,
 		                     string[] projectionFields)
 		{
@@ -40,6 +100,10 @@ namespace Raven.Client.Document
 			this.session = session;
 		}
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="DocumentQuery&lt;T&gt;"/> class.
+		/// </summary>
+		/// <param name="other">The other.</param>
 		protected DocumentQuery(DocumentQuery<T> other)
 		{
 			databaseCommands = other.databaseCommands;
@@ -58,6 +122,11 @@ namespace Raven.Client.Document
 
 		#region IDocumentQuery<T> Members
 
+		/// <summary>
+		/// Selects the specified fields directly from the index
+		/// </summary>
+		/// <typeparam name="TProjection">The type of the projection.</typeparam>
+		/// <param name="fields">The fields.</param>
 		public IDocumentQuery<TProjection> SelectFields<TProjection>(string[] fields)
 		{
 			return new DocumentQuery<TProjection>(session, databaseCommands, indexName, fields)
@@ -72,6 +141,11 @@ namespace Raven.Client.Document
 			};
 		}
 
+		/// <summary>
+		/// Instruct the query to wait for non stale result for the specified wait timeout.
+		/// </summary>
+		/// <param name="waitTimeout">The wait timeout.</param>
+		/// <returns></returns>
 		public IDocumentQuery<T> WaitForNonStaleResults(TimeSpan waitTimeout)
 		{
 			waitForNonStaleResults = true;
@@ -79,16 +153,30 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		/// <summary>
+		/// Gets the query result
+		/// Execute the query the first time that this is called.
+		/// </summary>
+		/// <value>The query result.</value>
 		public QueryResult QueryResult
 		{
 			get { return queryResult ?? (queryResult = GetQueryResult()); }
 		}
 
+		/// <summary>
+		/// Gets the fields for projection 
+		/// </summary>
+		/// <returns></returns>
 		public IEnumerable<string> GetProjectionFields()
 		{
 			return projectionFields ?? Enumerable.Empty<string>();
 		}
 
+		/// <summary>
+		/// Adds an ordering for a specific field to the query
+		/// </summary>
+		/// <param name="fieldName">Name of the field.</param>
+		/// <param name="descending">if set to <c>true</c> [descending].</param>
 		public IDocumentQuery<T> AddOrder(string fieldName, bool descending)
 		{
 			fieldName = descending ? "-" + fieldName : fieldName;
@@ -96,33 +184,75 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		/// <summary>
+		/// Gets the enumerator.
+		/// </summary>
 		public IEnumerator<T> GetEnumerator()
 		{
-			foreach (var include in QueryResult.Includes)
-			{
-				var metadata = include.Value<JObject>("@metadata");
-				
-				session.TrackEntity<object>(metadata.Value<string>("@id"),
-										 include,
-										 metadata);
-			}
-			return QueryResult.Results
-				.Select(Deserialize)
-				.GetEnumerator();
+		    var sp = Stopwatch.StartNew();
+		    do
+		    {
+		        try
+		        {
+		            foreach (var include in QueryResult.Includes)
+		            {
+		                var metadata = include.Value<JObject>("@metadata");
+
+		                session.TrackEntity<object>(metadata.Value<string>("@id"),
+		                                            include,
+		                                            metadata);
+		            }
+		            var list = QueryResult.Results
+		                .Select(Deserialize)
+		                .ToList();
+		            return list.GetEnumerator();
+		        }
+		        catch (NonAuthoritiveInformationException)
+		        {
+                    if (sp.Elapsed > session.NonAuthoritiveInformationTimeout)
+                        throw;
+		            queryResult = null;
+                    // we explicitly do NOT want to consider retries for non authoritive information as 
+                    // additional request counted against the session quota
+                    session.DecrementRequestCount();
+		        }
+		    } while (true);
 		}
 
 
+		/// <summary>
+		/// Returns an enumerator that iterates through a collection.
+		/// </summary>
+		/// <returns>
+		/// An <see cref="T:System.Collections.IEnumerator"/> object that can be used to iterate through the collection.
+		/// </returns>
 		IEnumerator IEnumerable.GetEnumerator()
 		{
 			return GetEnumerator();
 		}
 
+		/// <summary>
+		/// Includes the specified path in the query, loading the document specified in that path
+		/// </summary>
+		/// <param name="path">The path.</param>
 		public IDocumentQuery<T> Include(string path)
 		{
 			includes.Add(path);
 			return this;
 		}
 
+        /// <summary>
+        /// Includes the specified path in the query, loading the document specified in that path
+        /// </summary>
+        /// <param name="path">The path.</param>
+        public IDocumentQuery<T> Include(Expression<Func<T, object>> path)
+	    {
+	        return Include(path.ToPropertyPath());
+	    }
+
+	    /// <summary>
+		/// Negates the next operation
+		/// </summary>
 		public IDocumentQuery<T> Not
 		{
 			get
@@ -132,18 +262,32 @@ namespace Raven.Client.Document
 			}
 		}
 
+		/// <summary>
+		/// Takes the specified count.
+		/// </summary>
+		/// <param name="count">The count.</param>
+		/// <returns></returns>
 		public IDocumentQuery<T> Take(int count)
 		{
 			pageSize = count;
 			return this;
 		}
 
+		/// <summary>
+		/// Skips the specified count.
+		/// </summary>
+		/// <param name="count">The count.</param>
+		/// <returns></returns>
 		public IDocumentQuery<T> Skip(int count)
 		{
 			start = count;
 			return this;
 		}
 
+		/// <summary>
+		/// Filter the results from the index using the specified where clause.
+		/// </summary>
+		/// <param name="whereClause">The where clause.</param>
 		public IDocumentQuery<T> Where(string whereClause)
 		{
 			if (queryText.Length > 0)
@@ -158,9 +302,6 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// 	Matches exact value
 		/// </summary>
-		/// <param name = "fieldName"></param>
-		/// <param name = "value"></param>
-		/// <returns></returns>
 		/// <remarks>
 		/// 	Defaults to NotAnalyzed
 		/// </remarks>
@@ -172,10 +313,6 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// 	Matches exact value
 		/// </summary>
-		/// <param name = "fieldName"></param>
-		/// <param name = "value"></param>
-		/// <param name = "isAnalyzed"></param>
-		/// <returns></returns>
 		/// <remarks>
 		/// 	Defaults to allow wildcards only if analyzed
 		/// </remarks>
@@ -187,7 +324,6 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// 	Matches exact value
 		/// </summary>
-		/// <returns></returns>
 		public IDocumentQuery<T> WhereEquals(string fieldName, object value, bool isAnalyzed, bool allowWildcards)
 		{
 			if (queryText.Length > 0)
@@ -215,20 +351,27 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// 	Matches substrings of the field
 		/// </summary>
-		/// <param name = "fieldName"></param>
-		/// <param name = "value"></param>
-		/// <returns></returns>
 		public IDocumentQuery<T> WhereContains(string fieldName, object value)
 		{
 			return this.WhereEquals(fieldName, value, true, true);
 		}
 
+		/// <summary>
+		/// Matches fields which starts with the specified value.
+		/// </summary>
+		/// <param name="fieldName">Name of the field.</param>
+		/// <param name="value">The value.</param>
 		public IDocumentQuery<T> WhereStartsWith(string fieldName, object value)
 		{
 			// NOTE: doesn't fully match StartsWith semantics
 			return this.WhereEquals(fieldName, String.Concat(value, "*"), true, true);
 		}
 
+		/// <summary>
+		/// Matches fields which ends with the specified value.
+		/// </summary>
+		/// <param name="fieldName">Name of the field.</param>
+		/// <param name="value">The value.</param>
 		public IDocumentQuery<T> WhereEndsWith(string fieldName, object value)
 		{
 			// http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Wildcard%20Searches
@@ -238,6 +381,13 @@ namespace Raven.Client.Document
 			return this.WhereEquals(fieldName, String.Concat("*", value), true, true);
 		}
 
+		/// <summary>
+		/// Matches fields where the value is between the specified start and end, exclusive
+		/// </summary>
+		/// <param name="fieldName">Name of the field.</param>
+		/// <param name="start">The start.</param>
+		/// <param name="end">The end.</param>
+		/// <returns></returns>
 		public IDocumentQuery<T> WhereBetween(string fieldName, object start, object end)
 		{
 			if (queryText.Length > 0)
@@ -256,6 +406,13 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		/// <summary>
+		/// Matches fields where the value is between the specified start and end, inclusive
+		/// </summary>
+		/// <param name="fieldName">Name of the field.</param>
+		/// <param name="start">The start.</param>
+		/// <param name="end">The end.</param>
+		/// <returns></returns>
 		public IDocumentQuery<T> WhereBetweenOrEqual(string fieldName, object start, object end)
 		{
 			if (queryText.Length > 0)
@@ -274,26 +431,49 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		/// <summary>
+		/// Matches fields where the value is greater than the specified value
+		/// </summary>
+		/// <param name="fieldName">Name of the field.</param>
+		/// <param name="value">The value.</param>
 		public IDocumentQuery<T> WhereGreaterThan(string fieldName, object value)
 		{
 			return this.WhereBetween(fieldName, value, null);
 		}
 
+		/// <summary>
+		/// Matches fields where the value is greater than or equal to the specified value
+		/// </summary>
+		/// <param name="fieldName">Name of the field.</param>
+		/// <param name="value">The value.</param>
 		public IDocumentQuery<T> WhereGreaterThanOrEqual(string fieldName, object value)
 		{
 			return this.WhereBetweenOrEqual(fieldName, value, null);
 		}
 
+		/// <summary>
+		/// Matches fields where the value is less than the specified value
+		/// </summary>
+		/// <param name="fieldName">Name of the field.</param>
+		/// <param name="value">The value.</param>
 		public IDocumentQuery<T> WhereLessThan(string fieldName, object value)
 		{
 			return this.WhereBetween(fieldName, null, value);
 		}
 
+		/// <summary>
+		/// Matches fields where the value is less than or equal to the specified value
+		/// </summary>
+		/// <param name="fieldName">Name of the field.</param>
+		/// <param name="value">The value.</param>
 		public IDocumentQuery<T> WhereLessThanOrEqual(string fieldName, object value)
 		{
 			return this.WhereBetweenOrEqual(fieldName, null, value);
 		}
 
+		/// <summary>
+		/// Add an AND to the query
+		/// </summary>
 		public IDocumentQuery<T> AndAlso()
 		{
 			if (this.queryText.Length < 1)
@@ -305,6 +485,9 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		/// <summary>
+		/// Add an OR to the query
+		/// </summary>
 		public IDocumentQuery<T> OrElse()
 		{
 			if (this.queryText.Length < 1)
@@ -414,6 +597,12 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		/// <summary>
+		/// Filter matches to be inside the specified radius
+		/// </summary>
+		/// <param name="radius">The radius.</param>
+		/// <param name="latitude">The latitude.</param>
+		/// <param name="longitude">The longitude.</param>
 		public IDocumentQuery<T> WithinRadiusOf(double radius, double latitude, double longitude)
 		{
 			IDocumentQuery<T> spatialDocumentQuery = new SpatialDocumentQuery<T>(this, radius, latitude, longitude);
@@ -425,12 +614,24 @@ namespace Raven.Client.Document
 			return spatialDocumentQuery.Not;
 		}
 
+		/// <summary>
+		/// Order the results by the specified fields
+		/// </summary>
+		/// <remarks>
+		/// The fields are the names of the fields to sort, defaulting to sorting by ascending.
+		/// You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
+		/// </remarks>
+		/// <param name="fields">The fields.</param>
 		public IDocumentQuery<T> OrderBy(params string[] fields)
 		{
 			orderByFields = orderByFields.Concat(fields).ToArray();
 			return this;
 		}
 
+		/// <summary>
+		/// Instructs the query to wait for non stale results as of now.
+		/// </summary>
+		/// <returns></returns>
 		public IDocumentQuery<T> WaitForNonStaleResultsAsOfNow()
 		{
 			waitForNonStaleResults = true;
@@ -438,6 +639,11 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		/// <summary>
+		/// Instructs the query to wait for non stale results as of now for the specified timeout.
+		/// </summary>
+		/// <param name="waitTimeout">The wait timeout.</param>
+		/// <returns></returns>
 		public IDocumentQuery<T> WaitForNonStaleResultsAsOfNow(TimeSpan waitTimeout)
 		{
 			waitForNonStaleResults = true;
@@ -446,6 +652,11 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		/// <summary>
+		/// Instructs the query to wait for non stale results as of the cutoff date.
+		/// </summary>
+		/// <param name="cutOff">The cut off.</param>
+		/// <returns></returns>
 		public IDocumentQuery<T> WaitForNonStaleResultsAsOf(DateTime cutOff)
 		{
 			waitForNonStaleResults = true;
@@ -453,6 +664,11 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		/// <summary>
+		/// Instructs the query to wait for non stale results as of the cutoff date for the specified timeout
+		/// </summary>
+		/// <param name="cutOff">The cut off.</param>
+		/// <param name="waitTimeout">The wait timeout.</param>
 		public IDocumentQuery<T> WaitForNonStaleResultsAsOf(DateTime cutOff, TimeSpan waitTimeout)
 		{
 			waitForNonStaleResults = true;
@@ -461,6 +677,10 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		/// <summary>
+		/// EXPERT ONLY: Instructs the query to wait for non stale results.
+		/// This shouldn't be used outside of unit tests unless you are well aware of the implications
+		/// </summary>
 		public IDocumentQuery<T> WaitForNonStaleResults()
 		{
 			waitForNonStaleResults = true;
@@ -470,7 +690,11 @@ namespace Raven.Client.Document
 
 		#endregion
 
-		protected QueryResult GetQueryResult()
+		/// <summary>
+		/// Gets the query result.
+		/// </summary>
+		/// <returns></returns>
+		protected virtual QueryResult GetQueryResult()
 		{
 			session.IncrementRequestCount();
 			var sp = Stopwatch.StartNew();
@@ -503,6 +727,11 @@ namespace Raven.Client.Document
 			}
 		}
 
+		/// <summary>
+		/// Generates the index query.
+		/// </summary>
+		/// <param name="query">The query.</param>
+		/// <returns></returns>
 		protected virtual IndexQuery GenerateIndexQuery(string query)
 		{
 			return new IndexQuery
@@ -546,12 +775,10 @@ namespace Raven.Client.Document
 				return DateTools.DateToString((DateTime) value, DateTools.Resolution.MILLISECOND);
 			}
 
-			if (!(value is string))
-			{
-				return Convert.ToString(value, CultureInfo.InvariantCulture);
-			}
-
 			var escaped = RavenQuery.Escape(Convert.ToString(value, CultureInfo.InvariantCulture), allowWildcards && isAnalyzed);
+
+            if (value is string == false)
+                return escaped;
 
 			return isAnalyzed ? escaped : String.Concat("[[", escaped, "]]");
 		}
@@ -577,6 +804,12 @@ namespace Raven.Client.Document
 			return RavenQuery.Escape(value.ToString(), false);
 		}
 
+		/// <summary>
+		/// Returns a <see cref="System.String"/> that represents this instance.
+		/// </summary>
+		/// <returns>
+		/// A <see cref="System.String"/> that represents this instance.
+		/// </returns>
 		public override string ToString()
 		{
 			return this.queryText.ToString();

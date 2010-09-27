@@ -16,19 +16,35 @@ namespace Raven.Tests.Triggers
             DataTable.Columns.Add("Project", typeof(string));
         }
 
-        public override void OnIndexEntryDeleted(string indexName, string entryKey)
+
+        public override AbstractIndexUpdateTriggerBatcher CreateBatcher(string indexName)
         {
-            var dataRows = DataTable.Rows.Cast<DataRow>().Where(x=> (string) x["entry"] == entryKey).ToArray();
-            foreach (var dataRow in dataRows)
-            {
-                DataTable.Rows.Remove(dataRow);
-            }
+            return new DataTableBatcher(this);
         }
 
-		[CLSCompliant(false)]
-        public override void OnIndexEntryCreated(string indexName, string entryKey, Lucene.Net.Documents.Document document)
+        public class DataTableBatcher : AbstractIndexUpdateTriggerBatcher
         {
-            DataTable.Rows.Add(entryKey, document.GetField("Project").StringValue());
+            private readonly IndexToDataTable parent;
+
+            public DataTableBatcher(IndexToDataTable parent)
+            {
+                this.parent = parent;
+            }
+
+            public override void OnIndexEntryDeleted(string indexName, string entryKey)
+            {
+                var dataRows = parent.DataTable.Rows.Cast<DataRow>().Where(x => (string)x["entry"] == entryKey).ToArray();
+                foreach (var dataRow in dataRows)
+                {
+                    parent.DataTable.Rows.Remove(dataRow);
+                }
+            }
+
+            [CLSCompliant(false)]
+            public override void OnIndexEntryCreated(string indexName, string entryKey, Lucene.Net.Documents.Document document)
+            {
+                parent.DataTable.Rows.Add(entryKey, document.GetField("Project").StringValue());
+            }
         }
     }
 }

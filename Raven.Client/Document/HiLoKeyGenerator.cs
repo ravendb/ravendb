@@ -8,6 +8,9 @@ using Raven.Database.Json;
 
 namespace Raven.Client.Document
 {
+	/// <summary>
+	/// Generate hilo numbers against a RavenDB document
+	/// </summary>
     public class HiLoKeyGenerator
     {
         private const string RavenKeyGeneratorsHilo = "Raven/Hilo/";
@@ -18,6 +21,12 @@ namespace Raven.Client.Document
         private long currentHi;
         private long currentLo;
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="HiLoKeyGenerator"/> class.
+		/// </summary>
+		/// <param name="documentStore">The document store.</param>
+		/// <param name="tag">The tag.</param>
+		/// <param name="capacity">The capacity.</param>
         public HiLoKeyGenerator(IDocumentStore documentStore, string tag, long capacity)
         {
             currentHi = 0;
@@ -27,6 +36,12 @@ namespace Raven.Client.Document
             currentLo = capacity + 1;
         }
 
+		/// <summary>
+		/// Generates the document key.
+		/// </summary>
+		/// <param name="convention">The convention.</param>
+		/// <param name="entity">The entity.</param>
+		/// <returns></returns>
         public string GenerateDocumentKey(DocumentConvention convention,object entity)
         {
             return string.Format("{0}{1}{2}",

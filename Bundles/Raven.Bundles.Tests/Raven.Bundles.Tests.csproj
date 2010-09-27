@@ -39,6 +39,7 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Web" />
     <Reference Include="System.Xml.Linq" />
@@ -56,11 +57,13 @@
     <Compile Include="Authorization\Deleting.cs" />
     <Compile Include="Authorization\Reading.cs" />
     <Compile Include="Authorization\Writing.cs" />
+    <Compile Include="Expiration\Expiration.cs" />
+    <Compile Include="IndexReplication\ReplicateToSql.cs" />
     <Compile Include="Replication\ConflictWhenReplicating.cs" />
     <Compile Include="Replication\FailureHandling.cs" />
     <Compile Include="Replication\ReplicationBase.cs" />
     <Compile Include="Replication\SimpleReplication.cs" />
-    <Compile Include="Versioning.cs" />
+    <Compile Include="Versioning\Versioning.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -71,6 +74,7 @@
     <ProjectReference Include="..\..\Raven.Database\Raven.Database.csproj">
       <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
       <Name>Raven.Database</Name>
+      <Aliases>database</Aliases>
     </ProjectReference>
     <ProjectReference Include="..\..\Raven.Server\Raven.Server.csproj">
       <Project>{3B90EB20-AEA3-4972-8219-936F1A62768C}</Project>
@@ -83,6 +87,14 @@
     <ProjectReference Include="..\Raven.Bundles.Authorization\Raven.Bundles.Authorization.csproj">
       <Project>{034FFD8F-F917-4A45-B920-9C460CD66BAF}</Project>
       <Name>Raven.Bundles.Authorization</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Bundles.Expiration\Raven.Bundles.Expiration.csproj">
+      <Project>{5E2C2AAA-31E4-4F2B-A3E3-E1332D2D338A}</Project>
+      <Name>Raven.Bundles.Expiration</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Bundles.IndexReplication\Raven.Bundles.IndexReplication.csproj">
+      <Project>{2728BBA7-5142-445E-BAA5-142A25E0666D}</Project>
+      <Name>Raven.Bundles.IndexReplication</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Bundles.Replication\Raven.Bundles.Replication.csproj">
       <Project>{2EA316E8-629A-45C2-80B8-48F9CDB5BF57}</Project>
@@ -97,6 +109,9 @@
       <Project>{3A852FD2-E0F9-449C-8F66-0C6A180D030A}</Project>
       <Name>Raven.Client.Authorization</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

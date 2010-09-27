@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Configuration;
 using System.Net;
@@ -11,6 +10,9 @@ using System.Linq;
 
 namespace Raven.Client.Document
 {
+	/// <summary>
+	/// Manages access to RavenDB and open sessions to work with RavenDB.
+	/// </summary>
 	public class DocumentStore : IDocumentStore
 	{
 		private static readonly Regex connectionStringRegex = new Regex(@"(\w+) \s* = \s* (.*)", 
@@ -19,14 +21,22 @@ namespace Raven.Client.Document
 			RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
 
 		private Func<IDatabaseCommands> databaseCommandsGenerator;
+		/// <summary>
+		/// Gets the shared operations headers.
+		/// </summary>
+		/// <value>The shared operations headers.</value>
 		public NameValueCollection SharedOperationsHeaders { get; private set; }
 
+		/// <summary>
+		/// Gets the database commands.
+		/// </summary>
+		/// <value>The database commands.</value>
 		public IDatabaseCommands DatabaseCommands
 		{
 			get
 			{
 				if (databaseCommandsGenerator == null)
-					return null;
+                    throw new InvalidOperationException("You cannot open a session or access the database commands before initialising the document store. Did you forgot calling Initialise?");
 				var commands = databaseCommandsGenerator();
 				foreach (string key in SharedOperationsHeaders)
 				{
@@ -43,6 +53,10 @@ namespace Raven.Client.Document
 		}
 
 		private Func<IAsyncDatabaseCommands> asyncDatabaseCommandsGenerator;
+		/// <summary>
+		/// Gets the async database commands.
+		/// </summary>
+		/// <value>The async database commands.</value>
 		public IAsyncDatabaseCommands AsyncDatabaseCommands
 		{
 			get
@@ -53,10 +67,18 @@ namespace Raven.Client.Document
 			}
 		}
 
+		/// <summary>
+		/// Occurs when an entity is stored inside any session opened from this instance
+		/// </summary>
 		public event EventHandler<StoredEntityEventArgs> Stored;
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="DocumentStore"/> class.
+		/// </summary>
 		public DocumentStore()
 		{
+            ResourceManagerId = new Guid("E749BAA6-6F76-4EEF-A069-40A4378954F8");
+
 			SharedOperationsHeaders = new NameValueCollection();
 			Conventions = new DocumentConvention();
 		}
@@ -66,12 +88,20 @@ namespace Raven.Client.Document
 		private IDocumentStoreListener[] storeListeners = new IDocumentStoreListener[0];
 		private ICredentials credentials = CredentialCache.DefaultNetworkCredentials;
 
+		/// <summary>
+		/// Gets or sets the credentials.
+		/// </summary>
+		/// <value>The credentials.</value>
 	    public ICredentials Credentials
 	    {
 	        get { return credentials; }
 	        set { credentials = value; }
 	    }
 
+		/// <summary>
+		/// Gets or sets the identifier for this store.
+		/// </summary>
+		/// <value>The identifier.</value>
 	    public string Identifier
 		{
 			get
@@ -114,6 +144,9 @@ namespace Raven.Client.Document
 #endif
 		private string connectionStringName;
 
+		/// <summary>
+		/// Gets or sets the name of the connection string name.
+		/// </summary>
 		public string ConnectionStringName
 		{
 			get { return connectionStringName; }
@@ -163,12 +196,23 @@ namespace Raven.Client.Document
 			}
 		}
 
+		/// <summary>
+		/// Gets or sets the URL.
+		/// </summary>
+		/// <value>The URL.</value>
 		public string Url { get; set; }
 
+		/// <summary>
+		/// Gets the conventions.
+		/// </summary>
+		/// <value>The conventions.</value>
 		public DocumentConvention Conventions { get; set; }
 
 		#region IDisposable Members
 
+		/// <summary>
+		/// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+		/// </summary>
 		public void Dispose()
 		{
             Stored = null;
@@ -180,6 +224,11 @@ namespace Raven.Client.Document
 
 		#endregion
 
+		/// <summary>
+		/// Opens the session with the specified credentials.
+		/// </summary>
+		/// <param name="credentialsForSession">The credentials for session.</param>
+		/// <returns></returns>
         public IDocumentSession OpenSession(ICredentials credentialsForSession)
         {
             if (DatabaseCommands == null)
@@ -199,25 +248,44 @@ namespace Raven.Client.Document
 				});
 		}
 
+		/// <summary>
+		/// Registers the store listener.
+		/// </summary>
+		/// <param name="documentStoreListener">The document store listener.</param>
+		/// <returns></returns>
 		public IDocumentStore RegisterListener(IDocumentStoreListener documentStoreListener)
 		{
 			storeListeners = storeListeners.Concat(new[] {documentStoreListener}).ToArray();
 			return this;
 		}
 
+		/// <summary>
+		/// Opens the session.
+		/// </summary>
+		/// <returns></returns>
 		public IDocumentSession OpenSession()
         {
-            if(DatabaseCommands == null)
-                throw new InvalidOperationException("You cannot open a session before initialising the document store. Did you forgot calling Initialise?");
-            var session = new DocumentSession(this, storeListeners, deleteListeners);
+             var session = new DocumentSession(this, storeListeners, deleteListeners);
 			session.Stored += OnSessionStored;
             return session;
         }
 
+        /// <summary>
+        /// The resource manager id for the document store.
+        /// IMPORTANT: Using Guid.NewGuid() to set this value is almost cetainly a mistake, you should set
+        /// it to a value that remains consistent between restart of the system.
+        /// </summary>
+        public Guid ResourceManagerId { get; set; }
+
 #if !CLIENT
 		public Raven.Database.DocumentDatabase DocumentDatabase { get; set; }
+
 #endif
 
+		/// <summary>
+		/// Initializes this instance.
+		/// </summary>
+		/// <returns></returns>
 		public IDocumentStore Initialize()
 		{
 			try
@@ -251,6 +319,11 @@ namespace Raven.Client.Document
             return this;
 		}
 
+		/// <summary>
+		/// Registers the delete listener.
+		/// </summary>
+		/// <param name="deleteListener">The delete listener.</param>
+		/// <returns></returns>
 		public IDocumentStore RegisterListener(IDocumentDeleteListener deleteListener)
 		{
 			deleteListeners = deleteListeners.Concat(new[] {deleteListener}).ToArray();
@@ -259,6 +332,10 @@ namespace Raven.Client.Document
 
 #if !NET_3_5
 
+		/// <summary>
+		/// Opens the async session.
+		/// </summary>
+		/// <returns></returns>
 		public IAsyncDocumentSession OpenAsyncSession()
 		{
 			if (DatabaseCommands == null)
