@@ -37,9 +37,14 @@ namespace Raven.Database
         [ImportMany]
         public AbstractDynamicCompilationExtension[] Extensions { get; set; }
 
+        public DynamicQueryRunner DynamicQueryRunner
+        {
+            get { return dynamicQueryRunner; }
+        }
+
         private AppDomain queriesAppDomain;
         private readonly WorkContext workContext;
-        private DynamicQueryRunner dynamicQueryRunner;
+        private readonly DynamicQueryRunner dynamicQueryRunner;
 
         private Thread[] backgroundWorkers = new Thread[0];
 

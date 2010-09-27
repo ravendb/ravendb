@@ -146,13 +146,14 @@
     <Compile Include="Plugins\AbstractBackgroundTask.cs" />
     <Compile Include="Plugins\AbstractDocumentCodec.cs" />
     <Compile Include="Plugins\AbstractDynamicCompilationExtension.cs" />
+    <Compile Include="Plugins\Builtins\CleanupOldDynamicIndexes.cs" />
     <Compile Include="Plugins\Builtins\FilterRavenInternalDocumentsReadTrigger.cs" />
     <Compile Include="Plugins\AbstractIndexUpdateTrigger.cs" />
     <Compile Include="Plugins\AbstractReadTrigger.cs" />
     <Compile Include="Plugins\Builtins\PendingTransactionRecovery.cs" />
     <Compile Include="Plugins\Builtins\SpatialDynamicCompilationExtension.cs" />
     <Compile Include="Plugins\AbstractIndexUpdateTriggerBatcher.cs" />
-    <Compile Include="Plugins\DeleteTemporaryIndexes.cs" />
+    <Compile Include="Plugins\Builtins\DeleteTemporaryIndexes.cs" />
     <Compile Include="Plugins\ReadOperation.cs" />
     <Compile Include="Plugins\ReadVetoResult.cs" />
     <Compile Include="Data\QueryResults.cs" />
