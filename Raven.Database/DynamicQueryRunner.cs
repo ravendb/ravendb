@@ -149,7 +149,9 @@ namespace Raven.Database
 
             // Create the index
             var mapping = map.Items
-              .Select(x => string.Format("{0} = doc.{1}", x.To, x.From))
+              .Select(x => string.Format("{0} = doc.{1}", 
+                  x.To.Replace("_Range", ""), 
+                  x.From.Replace("_Range", "")))
               .ToArray();
 
             var indexes = map.Items.ToDictionary(mapItem => mapItem.To, mapItem => FieldIndexing.NotAnalyzed);

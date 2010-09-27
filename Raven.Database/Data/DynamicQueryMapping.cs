@@ -8,11 +8,14 @@ using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Index;
 using Lucene.Net.Analysis;
 using Raven.Database.Indexing;
+using System.Text.RegularExpressions;
 
 namespace Raven.Database.Data
 {
     public class DynamicQueryMapping
     {
+        static readonly Regex queryTerms = new Regex(@"([^\s\(\+\-][\w._]+)\:", RegexOptions.Compiled);
+
         public DynamicQueryMappingItem[] Items
         {
             get;
@@ -21,37 +24,24 @@ namespace Raven.Database.Data
 
         public static DynamicQueryMapping Create(string query)
         {
-            var standardAnalyzer = new StandardAnalyzer(Lucene.Net.Util.Version.LUCENE_29);
-            var perKeywordAnalyzer = new PerFieldAnalyzerWrapper(standardAnalyzer);
-
-            try
+            var queryTermMatches = queryTerms.Matches(query);
+             var fields = new HashSet<string>();
+            for (int x = 0; x < queryTermMatches.Count; x++)
             {
-                var parsedQuery = QueryBuilder.BuildQuery(query, perKeywordAnalyzer);
-
-                var terms = new Hashtable();
-                parsedQuery.ExtractTerms(terms);
-                var fields = new HashSet<string>();
-                foreach (Term term in terms.Keys)
-                {
-                    fields.Add(term.Field());
-                }
-
-                return new DynamicQueryMapping()
-                {
-                    Items = fields.Select(x => new DynamicQueryMappingItem()
-                    {
-                        From = x,
-                        To = x.Replace(".", "") // for now
-                    }).ToArray()
-                };
+                Match match = queryTermMatches[x];
+                String field = match.Groups[1].Value;
+                fields.Add(field);
             }
-            finally
+            
+            return new DynamicQueryMapping()
             {
-                perKeywordAnalyzer.Close();
-                standardAnalyzer.Close();
-            }
-
-          
+                Items = fields.Select(x => new DynamicQueryMappingItem()
+                {
+                    From = x,
+                    To = x.Replace(".", "") // for now
+                }).ToArray()
+            };
+                      
         }
     }
 }

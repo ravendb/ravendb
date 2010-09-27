@@ -139,6 +139,41 @@ namespace Raven.Tests.Queries
         }
 
         [Fact]
+        public void LengthPropertySupportsRangedQueries()
+        {
+            var blogOne = new Blog
+            {
+                Title = "one",
+                Category = "Ravens"
+            };
+            var blogTwo = new Blog
+            {
+                Title = "two",
+                Category = "Rhinos"
+            };
+            var blogThree = new Blog
+            {
+                Title = "three",
+                Category = "Rhinos"
+            };
+
+            db.Put("blogOne", null, JObject.FromObject(blogOne), new JObject(), null);
+            db.Put("blogTwo", null, JObject.FromObject(blogTwo), new JObject(), null);
+            db.Put("blogThree", null, JObject.FromObject(blogThree), new JObject(), null);
+
+            QueryResult results = null;
+           
+            results = db.ExecuteDynamicQuery(new IndexQuery()
+                {
+                    PageSize = 128,
+                    Start = 0,
+                    Cutoff = DateTime.Now,
+                    Query = "Title.Length_Range:[0x00000004 TO 0x00000009]"
+                });
+
+            Assert.Equal(1, results.TotalResults);
+        }
+        [Fact]
         public void OftenInvokedQueryShouldCreatePermanentIndex()
         {
             int initialIndexCount = db.Statistics.CountOfIndexes;

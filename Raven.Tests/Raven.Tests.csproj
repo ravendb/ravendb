@@ -106,6 +106,7 @@
     <Compile Include="Bugs\ReadDataFromServer.cs" />
     <Compile Include="Indexes\CompiledIndex.cs" />
     <Compile Include="Indexes\ComplexIndexOnNotAnalyzedField.cs" />
+    <Compile Include="Indexes\DynamicQueryMapping.cs" />
     <Compile Include="Indexes\QueryingOnDefaultIndex.cs" />
     <Compile Include="Indexes\QueryingOnStaleIndexes.cs" />
     <Compile Include="Queries\DyanmicQueries.cs" />
