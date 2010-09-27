@@ -42,10 +42,11 @@ namespace Raven.Client.Tests.Bugs
 		{
 			public override IndexDefinition CreateIndexDefinition()
 			{
-				return new IndexDefinition<Movie>
+				return new IndexDefinition<Movie, Movie>
 				{
 					Map = movies => from movie in movies
-					                select new {movie.Name}
+					                select new {movie.Name},
+                    Indexes = {{x=>x.Name, FieldIndexing.Analyzed}}
 				}
 				.ToIndexDefinition(DocumentStore.Conventions);
 			}

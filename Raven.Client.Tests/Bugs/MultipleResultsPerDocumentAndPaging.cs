@@ -17,7 +17,8 @@ namespace Raven.Client.Tests.Bugs
 					Map = @"
 from movie in docs.Movies
 from actor in movie.Actors
-select new { Actor = actor }"
+select new { Actor = actor }",
+                    Indexes = {{"Actor", FieldIndexing.Analyzed}}
 				});
 
 				using(var s1 = store.OpenSession())
