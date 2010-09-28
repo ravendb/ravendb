@@ -615,7 +615,8 @@ namespace Raven.Client.Tests.Document
                                                         new IndexDefinition
                                                         {
                                                             Map = "from doc in docs where doc.Name != null select new { doc.Name, doc.Phone}",
-															Stores = { { "Name", FieldStorage.Yes }, { "Phone", FieldStorage.Yes } }
+															Stores = { { "Name", FieldStorage.Yes }, { "Phone", FieldStorage.Yes } },
+                                                            Indexes = {{"Name", FieldIndexing.NotAnalyzed}}
                                                         });
 
             	var q = session
@@ -1028,16 +1029,20 @@ namespace Raven.Client.Tests.Document
 				var events = session.LuceneQuery<Event>("eventsByLatLng")
 					.WhereEquals("Tag", "Event")
 					.WithinRadiusOf(radius, lat, lng)
+					.SortByDistance()
 					.WaitForNonStaleResults()
 					.ToArray();
 
 				Assert.Equal(7, events.Length);
 
+				double previous = 0;
 				foreach (var e in events)
 				{
 					double distance = Raven.Database.Indexing.SpatialIndex.GetDistanceMi(lat, lng, e.Latitude, e.Longitude);
 					Console.WriteLine("Venue: " + e.Venue + ", Distance " + distance);
 					Assert.True(distance < radius);
+					Assert.True(distance >= previous);
+					previous = distance;
 				}
 			}
 		}
@@ -1091,6 +1096,7 @@ namespace Raven.Client.Tests.Document
 					Reduce = results => from loc in results 
 										group loc by loc.Location into g
 										select new { Location = g.Key, Count =  g.Sum(x=>x.Count)},
+                    Indexes = {{x=>x.Location, FieldIndexing.NotAnalyzed}}
 				});
 
 				using (var session = documentStore.OpenSession())
@@ -1104,7 +1110,7 @@ namespace Raven.Client.Tests.Document
 					session.SaveChanges();
 
                     LinqIndexesFromClient.LocationCount single = session.LuceneQuery<LinqIndexesFromClient.LocationCount>("UsersCountByLocation")
-						.Where("Location:Tel Aviv")
+						.Where("Location:\"Tel Aviv\"")
 						.WaitForNonStaleResults()
 						.Single();
 
@@ -1127,7 +1133,8 @@ namespace Raven.Client.Tests.Document
 								   select new { user.Location, user.Age },
 					Reduce = results => from loc in results
 										group loc by loc.Location into g
-										select new { Location = g.Key, Age = g.Average(x => x.Age) },
+                                        select new { Location = g.Key, Age = g.Average(x => x.Age) },
+                    Indexes = { { x => x.Location, FieldIndexing.NotAnalyzed } }
 				});
 
 				using (var session = documentStore.OpenSession())
@@ -1149,7 +1156,7 @@ namespace Raven.Client.Tests.Document
 					session.SaveChanges();
 
                     LinqIndexesFromClient.LocationAge single = session.LuceneQuery<LinqIndexesFromClient.LocationAge>("AvgAgeByLocation")
-						.Where("Location:Tel Aviv")
+						.Where("Location:\"Tel Aviv\"")
 						.WaitForNonStaleResults()
 						.Single();
 

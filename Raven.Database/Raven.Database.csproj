@@ -134,6 +134,7 @@
     <Compile Include="Extensions\StreamExtension.cs" />
     <Compile Include="Extensions\IOExtensions.cs" />
     <Compile Include="Indexing\GatherAllCollector.cs" />
+    <Compile Include="Indexing\LowerCaseAnalyzer.cs" />
     <Compile Include="Indexing\NumberUtil.cs" />
     <Compile Include="Indexing\RangeQueryParser.cs" />
     <Compile Include="Indexing\SpatialIndex.cs" />

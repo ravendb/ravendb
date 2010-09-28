@@ -45,7 +45,11 @@ namespace Raven.Client.Tests.Bugs
 				{
 					Map = "from company in docs.Companies select new {company.Name, NameForSorting = company.Name}",
 					SortOptions = { { "NameForSorting", SortOptions.String } },
-					Indexes = { { "NameForSorting", FieldIndexing.NotAnalyzed } }
+					Indexes =
+					    {
+					        { "NameForSorting", FieldIndexing.NotAnalyzed },
+                            { "Name", FieldIndexing.Analyzed },
+					    }
 				});
 
 				using (var session = documentStore.OpenSession())

@@ -85,6 +85,7 @@ namespace Raven.Tests.Spatial
 
 			Assert.Equal(7, queryResult.Results.Count);
 
+			double previous = 0;
 			foreach (var r in queryResult.Results)
 			{
 				Event e = r.JsonDeserialization<Event>();
@@ -94,6 +95,8 @@ namespace Raven.Tests.Spatial
 				Console.WriteLine("Venue: " + e.Venue + ", Distance " + distance);
 
 				Assert.True(distance < radius);
+				Assert.True(distance >= previous);
+				previous = distance;
 			}
 		}
 	}

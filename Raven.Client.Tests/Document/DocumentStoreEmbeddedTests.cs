@@ -549,7 +549,8 @@ namespace Raven.Client.Tests.Document
                                                         new IndexDefinition
                                                         {
                                                             Map = "from doc in docs where doc.Name != null select new { doc.Name, doc.Phone}",
-															Stores = {{"Name", FieldStorage.Yes}, {"Phone",FieldStorage.Yes}}
+															Stores = {{"Name", FieldStorage.Yes}, {"Phone",FieldStorage.Yes}},
+                                                            Indexes = { { "Name", FieldIndexing.NotAnalyzed}},
                                                         });
 
             	var q = session

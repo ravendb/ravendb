@@ -246,7 +246,7 @@ namespace Raven.Scenarios
 			var rr = new StringReader(actual.Item1);
 			var actualResponse = JToken.ReadFrom(new JsonTextReader(rr));
 			var remainingText = sr.ReadToEnd();
-			var expectedResponse = JToken.ReadFrom(new JsonTextReader(new StringReader(remainingText)));
+            var expectedResponse = JToken.ReadFrom(new JsonTextReader(new StringReader(remainingText)));
 			if (AreEquals(expectedResponse, actualResponse) == false)
 			{
 				var outputName = Path.GetFileNameWithoutExtension(file) + " request #" + responseNumber + ".txt";
@@ -415,28 +415,31 @@ namespace Raven.Scenarios
 			var chunkSizeBytes = new List<byte>();
 			byte prev = 0;
 			byte cur = 0;
-			do
+			while(true)
 			{
-				var readByte = memoryStream.Read();
-				if (readByte == -1)
-					return null;
-				prev = cur;
-				cur = (byte)readByte;
-				chunkSizeBytes.Add(cur);
-			} while (!(prev == '\r' && cur == '\n')); // (cur != '\n' && chunkSizeBytes.LastOrDefault() != '\r');
+                do
+                {
+                    var readByte = memoryStream.Read();
+                    if (readByte == -1)
+                        return null;
+                    prev = cur;
+                    cur = (byte)readByte;
+                    chunkSizeBytes.Add(cur);
+                } while (!(prev == '\r' && cur == '\n')); // (cur != '\n' && chunkSizeBytes.LastOrDefault() != '\r');
 
-			chunkSizeBytes.RemoveAt(chunkSizeBytes.Count - 1);
-			chunkSizeBytes.RemoveAt(chunkSizeBytes.Count - 1);
+                chunkSizeBytes.RemoveAt(chunkSizeBytes.Count - 1);
+                chunkSizeBytes.RemoveAt(chunkSizeBytes.Count - 1);
 
-			if (chunkSizeBytes.Count == 0)
-				return null;
+			    if (chunkSizeBytes.Count != 0) // has data
+			        break;
+			}
 
 			var size = Convert.ToInt32(Encoding.UTF8.GetString(chunkSizeBytes.ToArray()), 16);
 
 			var buffer = new char[size];
 			memoryStream.Read(buffer, 0, size); //not doing repeated read because it is all in mem
-			memoryStream.Read(); // read next \r
-			memoryStream.Read(); // read next \n
+            if (buffer.Length > 0 && buffer[0] == 65279)
+                buffer = buffer.Skip(1).ToArray();
 			return new string(buffer);
 		}
 	}

@@ -134,8 +134,13 @@ namespace Raven.Database.Indexing
 				return defaultIndex;
 			FieldIndexing value;
 			if (Indexes.TryGetValue(name, out value) == false)
-				return defaultIndex;
-			switch (value)
+			{
+			    string ignored;
+			    if(Analyzers.TryGetValue(name, out ignored))
+                    return Field.Index.ANALYZED;// if there is a custom analyzer, the value should be analyzer
+			    return defaultIndex;
+			}
+		    switch (value)
 			{
 				case FieldIndexing.No:
 					return Field.Index.NO;

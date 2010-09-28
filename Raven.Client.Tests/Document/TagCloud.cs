@@ -57,7 +57,8 @@ select new { Tag, Count = 1 }",
 				                                		@"
 from result in results
 group result by result.Tag into g
-select new { Tag = g.Key, Count = g.Sum(x => (long)x.Count) }"
+select new { Tag = g.Key, Count = g.Sum(x => (long)x.Count) }",
+                                                              Indexes = {{"Tag", FieldIndexing.NotAnalyzed}}
 				                                });
 
 				using(var session = store.OpenSession())
@@ -144,7 +145,8 @@ select new { Tag, Count = 1 }",
 														@"
 from result in results
 group result by result.Tag into g
-select new { Tag = g.Key, Count = g.Sum(x => (long)x.Count) }"
+select new { Tag = g.Key, Count = g.Sum(x => (long)x.Count) }",
+                                                    Indexes = {{"Tag", FieldIndexing.NotAnalyzed}}
 												});
 
 				using (var session = store.OpenSession())
@@ -216,7 +218,12 @@ select new
             Activity = g.Key.Activity,
             Character =  g.Key.Character,
             Amount = g.Sum(x=>(long)x.Amount)
-        }"
+        }",
+                       Indexes =
+                           {
+                               { "Activity", FieldIndexing.NotAnalyzed },
+                               { "Character", FieldIndexing.NotAnalyzed },
+                           }
 				   });
 
 				using (var session = store.OpenSession())

@@ -74,10 +74,23 @@ namespace Raven.Database.Indexing
 				yield break;
 			}
 
-			if (indexDefinition.GetIndex(name, Field.Index.ANALYZED) == Field.Index.NOT_ANALYZED || value is string)
+            if (indexDefinition.GetIndex(name, null) == Field.Index.NOT_ANALYZED)// explicitly not analyzed
+            {
+                yield return new Field(name, value.ToString(), indexDefinition.GetStorage(name, defaultStorage),
+                                 indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
+                yield break;
+			    
+            }
+			if (value is string) 
 			{
-				yield return new Field(name, value.ToString(), indexDefinition.GetStorage(name, defaultStorage),
-								 indexDefinition.GetIndex(name, Field.Index.ANALYZED));
+			    var index = indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED);
+			    var hasDefault = indexDefinition.GetIndex(name, null) != null;
+			    var valueAsString = value.ToString();
+                if (hasDefault == false && index == Field.Index.NOT_ANALYZED)
+                    valueAsString = valueAsString.ToLowerInvariant();
+                
+			    yield return new Field(name, valueAsString, indexDefinition.GetStorage(name, defaultStorage),
+                                 index); 
 				yield break;
 			}
 
@@ -87,24 +100,30 @@ namespace Raven.Database.Indexing
 					indexDefinition.GetStorage(name, defaultStorage),
 					indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
 			}
+            else if(value is bool)
+            {
+                yield return new Field(name, ((bool) value) ? "true" : "false", indexDefinition.GetStorage(name, defaultStorage),
+                              indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
+
+            }
 			else if(value is IConvertible) // we need this to store numbers in invariant format, so JSON could read them
 			{
 				var convert = ((IConvertible) value);
 				yield return new Field(name, convert.ToString(CultureInfo.InvariantCulture), indexDefinition.GetStorage(name, defaultStorage),
-				                       indexDefinition.GetIndex(name, GetDefaultIndexOption(value)));
+				                       indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
 			}
 			else if (value is DynamicJsonObject)
 			{
 				var inner = ((DynamicJsonObject)value).Inner;
 				yield return new Field(name + "_ConvertToJson", "true", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
 				yield return new Field(name, inner.ToString(), indexDefinition.GetStorage(name, defaultStorage),
-									   indexDefinition.GetIndex(name, GetDefaultIndexOption(value)));
+                                       indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
 			}
 			else 
 			{
 				yield return new Field(name + "_ConvertToJson", "true", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
 				yield return new Field(name, JToken.FromObject(value).ToString(), indexDefinition.GetStorage(name, defaultStorage),
-				                       indexDefinition.GetIndex(name, GetDefaultIndexOption(value)));
+                                       indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED));
 			}
 
 
@@ -140,12 +159,5 @@ namespace Raven.Database.Indexing
 					.SetDoubleValue((double)value);
             }
 		}
-
-    	private static Field.Index GetDefaultIndexOption(object value)
-    	{
-			if(value is long || value is int || value is decimal || value is float || value is double)
-				return Field.Index.NOT_ANALYZED;
-    		return Field.Index.ANALYZED;
-    	}
 	}
 }

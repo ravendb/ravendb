@@ -70,7 +70,8 @@ select new
                             {"Title", FieldStorage.Yes},
                             {"UpVotes", FieldStorage.Yes},
                             {"DownVotes", FieldStorage.Yes}
-                        }
+                        },
+                    Indexes = {{"Title", FieldIndexing.NotAnalyzed}}
                 });
 
             CreateRdbmsSchema();

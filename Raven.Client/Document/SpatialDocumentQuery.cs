@@ -9,7 +9,8 @@ namespace Raven.Client.Document
 	/// </summary>
 	public class SpatialDocumentQuery<T> : DocumentQuery<T>
 	{
-		private double lat, lng, radius;
+        private readonly double lat, lng, radius;
+	    private readonly bool sortByDistance;
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="SpatialDocumentQuery&lt;T&gt;"/> class.
@@ -38,6 +39,26 @@ namespace Raven.Client.Document
 			lng = longitude;
 		}
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SpatialDocumentQuery&lt;T&gt;"/> class.
+        /// </summary>
+        /// <param name="documentQuery">The document query.</param>
+        /// <param name="sortByDistance">if set to <c>true</c> the query will be sorted by distance.</param>
+		public SpatialDocumentQuery(DocumentQuery<T> documentQuery, bool sortByDistance)
+			: base(documentQuery)
+		{
+			this.sortByDistance = sortByDistance;
+
+            var other = documentQuery as SpatialDocumentQuery<T>;
+            if (other == null)
+				return;
+
+			radius = other.radius;
+			lat = other.lat;
+			lng = other.lng;				
+		}
+
+
 		/// <summary>
 		/// Generates the index query.
 		/// </summary>
@@ -55,7 +76,8 @@ namespace Raven.Client.Document
 				FieldsToFetch = projectionFields,
 				Latitude = lat,
 				Longitude = lng,
-				Radius = radius
+				Radius = radius,
+				SortByDistance = sortByDistance
 			};
 		}
 	}

@@ -156,6 +156,7 @@ namespace Raven.Tests.Linq
                             {
                                 Map = docs => from doc in docs
                                               select new { doc.Name, doc.Age },
+                                Indexes = {{x=>x.Name, FieldIndexing.Analyzed}}
                             }, true);
 
                     WaitForQueryToComplete(session, indexName);
@@ -198,6 +199,7 @@ namespace Raven.Tests.Linq
                             new IndexDefinition<User, User>() {
                                 Map = docs => from doc in docs
                                               select new { doc.Name, doc.Age, doc.Info, doc.Active },
+                                Indexes = {{x=>x.Name, FieldIndexing.Analyzed}}
                             }, true);
 
                     WaitForQueryToComplete(session, indexName);
