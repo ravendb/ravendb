@@ -335,7 +335,7 @@ namespace Raven.Client.Document
 
 			queryText.Append(fieldName);
 			queryText.Append(":");
-			queryText.Append(TransformToEqualValue(value, isAnalyzed, isAnalyzed));
+			queryText.Append(TransformToEqualValue(value, isAnalyzed, allowWildcards));
 
 			return this;
 		}
