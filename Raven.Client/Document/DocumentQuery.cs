@@ -759,9 +759,16 @@ namespace Raven.Client.Document
 			if (projectionFields != null && projectionFields.Length > 0 // we asked for a projection directly from the index
 				|| metadata == null) // we aren't querying a document, we are probably querying a map reduce index result
 			{
-				return (T) session.Conventions.CreateSerializer().Deserialize(new JTokenReader(result), typeof (T));
+			    var deserializedResult = (T) session.Conventions.CreateSerializer().Deserialize(new JTokenReader(result), typeof (T));
+			    var documentId = result.Value<string>("__document_id");//check if the result contain the reserved name
+                if (string.IsNullOrEmpty(documentId) == false)
+                {
+                    session.TrySetIdentity(deserializedResult, documentId);
+                }
+
+			    return deserializedResult;
 			}
-			return session.TrackEntity<T>(metadata.Value<string>("@id"),
+		    return session.TrackEntity<T>(metadata.Value<string>("@id"),
 			                              result,
 			                              metadata);
 		}

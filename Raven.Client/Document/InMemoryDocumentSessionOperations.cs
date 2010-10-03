@@ -335,7 +335,7 @@ more responsive application.
 		/// <typeparam name="T"></typeparam>
 		/// <param name="entity">The entity.</param>
 		/// <param name="id">The id.</param>
-		protected void TrySetIdentity<T>(T entity, string id)
+		protected internal void TrySetIdentity<T>(T entity, string id)
 		{
 			var identityProperty = documentStore.Conventions.GetIdentityProperty(entity.GetType());
 			if (identityProperty != null && identityProperty.CanWrite)
