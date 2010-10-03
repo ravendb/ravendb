@@ -51,7 +51,7 @@ namespace Raven.Database
 
                 if (!result.IsStale || 
                     result.Results.Count >= query.PageSize || 
-                    sp.Elapsed.TotalMilliseconds > 10000)
+                    sp.Elapsed.TotalSeconds > 15)
                 {
                     return result;
                 }
