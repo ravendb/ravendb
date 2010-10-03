@@ -181,79 +181,80 @@
 
         function EditIndex(name) {
 
-        	RavenUI.GetIndex(name, function (index) {
-        		$('#indexEditorName').val(name);
-        		$('#indexEditorMapDef').val(index.Index.Map);
-        		$('#indexEditorFieldOptions').empty();
-        		if (index.Index.Reduce != undefined) {
-        			$('#indexEditorReduceDef').val(index.Index.Reduce);
-        		}
-        		else {
-        			$('#indexEditorReduceDef').val('');
-        		}
+            RavenUI.GetIndex(name, function (index) {
+                $('#indexEditorName').val(name);
+                $('#indexEditorMapDef').val(index.Index.Map);
+                $('#indexEditorFieldOptions').empty();
+                if (index.Index.Reduce != undefined) {
+                    $('#indexEditorReduceDef').val(index.Index.Reduce);
+                }
+                else {
+                    $('#indexEditorReduceDef').val('');
+                }
 
-        		addFieldsFromIndexDefinition(index.Index);
+                addFieldsFromIndexDefinition(index.Index);
 
-        		$('#actualError', $('#saveError')).remove();
-        		$('#saveError, #ajaxSuccess, #ajaxError').hide();
+                $('#actualError', $('#saveError')).remove();
+                $('#saveError, #ajaxSuccess, #ajaxError').hide();
 
-        		$('#customizeField').unbind().click(function () {
-        			addFieldOptionsToEditDocumentDialog();
-        		});
+                $('#customizeField').unbind().click(function () {
+                    addFieldOptionsToEditDocumentDialog();
+                });
 
-        		$('#deleteIndex').show().click(function () {
-        			var deleteDialog = $('<div title="Delete Confirmation" class="ui-state-error ui-corner-all" style="padding:20px;"></div>');
-        			$(deleteDialog)
+                $('#deleteIndex').show().unbind().click(function () {
+                    var deleteDialog = $('<div title="Delete Confirmation" class="ui-state-error ui-corner-all" style="padding:20px;"></div>');
+                    $(deleteDialog)
                         .html('<p><span style="float: left; margin-right: 0.3em;" class="ui-icon ui-icon-alert"></span>Are you sure you want to delete this index?</p>')
                         .dialog({
-                        	modal: true,
-                        	buttons: {
-                        		'Delete': function () {
-                        			RavenUI.DeleteIndex(name, function (data) {
-                        				$(deleteDialog).dialog('close');
-                        				$('#divEditor').dialog('close');
-                        				$('#ajaxSuccess').html('Your index has been deleted.').fadeIn('slow');
-                        				getIndexPage();
-                        			});
-                        		},
-                        		Cancel: function () {
-                        			$(this).dialog('close');
-                        		}
-                        	},
-                        	width: 'auto'
+                            modal: true,
+                            buttons: {
+                                'Delete': function () {
+                                    var currentDlg = this;
+                                    RavenUI.DeleteIndex(name, function (data) {
+                                        $(currentDlg).dialog('close');
+                                        $('#divEditor').dialog('close');
+                                        $('#ajaxSuccess').html('Your index has been deleted.').fadeIn('slow');
+                                        getIndexPage();
+                                    });
+                                },
+                                Cancel: function () {
+                                    $(this).dialog('close');
+                                }
+                            },
+                            width: 'auto'
                         });
-        		});
-        		$('#divEditor').dialog({
-        			modal: true,
-        			buttons: {
-        				Save: function () {
-        					var newName = $('#indexEditorName').val();
-        					var indexDef = { Map: $('#indexEditorMapDef').val(), Stores: {}, Indexes: {}, Reduce: null };
+                });
+                $('#divEditor').dialog({
+                    modal: true,
+                    buttons: {
+                        Save: function () {
+                            var newName = $('#indexEditorName').val();
+                            var indexDef = { Map: $('#indexEditorMapDef').val(), Stores: {}, Indexes: {}, Reduce: null };
 
-        					var reduce = $('#indexEditorReduceDef').val();
-        					if (reduce.trim() != '') {
-        						indexDef.Reduce = reduce;
-        					}
-        					setFieldsOptionsInIndexDefinition(indexDef);
+                            var reduce = $('#indexEditorReduceDef').val();
+                            if (reduce.trim() != '') {
+                                indexDef.Reduce = reduce;
+                            }
+                            setFieldsOptionsInIndexDefinition(indexDef);
 
-        					RavenUI.SaveIndex(newName, indexDef, function (data) {
-        						$('#divEditor').dialog('close');
-        						$('#ajaxSuccess').html('Your index has been updated. Click <a href="#" onclick="EditIndex(\'' + newName + '\'); return false;">here</a> to see it again.').fadeIn('slow');
-        						getIndexPage();
-        					}, function (result) {
-        						$('#saveError')
+                            RavenUI.SaveIndex(newName, indexDef, function (data) {
+                                $('#divEditor').dialog('close');
+                                $('#ajaxSuccess').html('Your index has been updated. Click <a href="#" onclick="EditIndex(\'' + newName + '\'); return false;">here</a> to see it again.').fadeIn('slow');
+                                getIndexPage();
+                            }, function (result) {
+                                $('#saveError')
 									.append('<span id="actualError"><pre>' + result.Error + '</pre></span>')
 								.fadeIn();
-        					});
-        				},
-        				Cancel: function () {
-        					$(this).dialog('close');
-        				}
-        			},
-        			title: 'Edit Index',
-        			width: 600
-        		});
-        	});
+                            });
+                        },
+                        Cancel: function () {
+                            $(this).dialog('close');
+                        }
+                    },
+                    title: 'Edit Index',
+                    width: 600
+                });
+            });
         }
 
         function CreateIndex() {
