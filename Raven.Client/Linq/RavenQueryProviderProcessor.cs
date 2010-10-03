@@ -142,7 +142,7 @@ namespace Raven.Client.Linq
 			luceneQuery.WhereEquals(
 				memberInfo.Path,
 				GetValueFromExpression(expression.Right, GetMemberType(memberInfo)),
-				GetFieldType(memberInfo) != typeof (string),
+				true,
 				false);
 		}
 
@@ -153,7 +153,7 @@ namespace Raven.Client.Linq
 			luceneQuery.Not.WhereEquals(
                 memberInfo.Path,
 				GetValueFromExpression(expression.Right, GetMemberType(memberInfo)),
-				GetFieldType(memberInfo) != typeof(string),
+				true,
 				false);
 		}
 
