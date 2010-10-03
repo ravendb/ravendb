@@ -86,7 +86,7 @@ namespace Raven.Client.Tests.Document
 					Indexes = { { x => x.Name, FieldIndexing.NotAnalyzed } }
 				});
 				var indexDefinition = documentStore.DatabaseCommands.GetIndex("Companies/Name");
-				Assert.Equal(@"docs.Companies
+                Assert.Equal(@"docs.Companies
 	.Select(c => new {Name = c.Name})", indexDefinition.Map);
 				Assert.Equal(FieldIndexing.NotAnalyzed, indexDefinition.Indexes["Name"]);
 			}
