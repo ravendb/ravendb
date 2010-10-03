@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Database.Exceptions;
@@ -82,7 +83,9 @@ namespace Raven.Tests.Bugs
         {
             if (documentStore != null)
                 documentStore.Dispose();
-            if (Directory.Exists("HiLoData")) Directory.Delete("HiLoData", true);
+            Thread.Sleep(100);
+            if (Directory.Exists("HiLoData")) 
+                Directory.Delete("HiLoData", true);
         }
     }
 }

@@ -14,7 +14,7 @@ namespace Raven.Client.Tests.Linq
             var q = from user in indexedUsers
                     where user.Name == "ayende"
                     select user;
-            Assert.Equal("Name:[[ayende]]", q.ToString());
+            Assert.Equal("Name:ayende", q.ToString());
         }
 
 		[Fact]
@@ -25,7 +25,7 @@ namespace Raven.Client.Tests.Linq
 			var q = from user in indexedUsers
 					where user.Name == ayende
 					select user;
-			Assert.Equal("Name:[[ayende1]]", q.ToString());
+			Assert.Equal("Name:ayende1", q.ToString());
 		}
 
 		[Fact]
@@ -197,7 +197,7 @@ namespace Raven.Client.Tests.Linq
 			var q = indexedUsers
 				.Where(x => x.Age == 3)
 			    .Where(x => x.Name == "ayende");
-			Assert.Equal("Age:3 AND Name:[[ayende]]", q.ToString());
+			Assert.Equal("Age:3 AND Name:ayende", q.ToString());
 		}
 
         [Fact]
@@ -206,7 +206,7 @@ namespace Raven.Client.Tests.Linq
             var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null, null));
             var q = indexedUsers
                 .Where(x => x.Properties.Any(y => y.Key == "first"));
-            Assert.Equal("Key:[[first]]", q.ToString());
+            Assert.Equal("Key:first", q.ToString());
         }
 
         public class IndexedUser
