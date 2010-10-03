@@ -72,20 +72,12 @@ namespace Raven.Database.Data
                         currentExpression.ToString().Replace("_Range", "")
                         ));
             }
-
-            Dictionary<string, FieldIndexing> indexing = new Dictionary<string, FieldIndexing>();
-            foreach (var mapping in Items)
-            {
-                indexing.Add(mapping.To.Replace("_Range", ""),
-                     FieldIndexing.NotAnalyzed);
-            }
             
             return new IndexDefinition()
             {
                  Map = string.Format("{0} select new {{ {1} }}",
                     string.Join(" ", fromClauses.ToArray()),
                     string.Join(", ", realMappings.ToArray())),
-                 Indexes = indexing
             };
         }
 
