@@ -98,9 +98,10 @@ namespace Raven.Database.Data
             }
             if (Cutoff != null)
             {
-                path = path + "&cutOff=" + Uri.EscapeUriString(Uri.EscapeDataString(Cutoff.Value.ToString("o", CultureInfo.InvariantCulture)));
+                var cutOffAsString = Uri.EscapeUriString(Uri.EscapeDataString(Cutoff.Value.ToString("o", CultureInfo.InvariantCulture)));
+                path = path + "&cutOff=" + cutOffAsString;
             }
-			var vars = GetCustomQueryStringVariables();
+		    var vars = GetCustomQueryStringVariables();
 
 			if (!string.IsNullOrEmpty(vars))
 			{

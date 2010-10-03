@@ -275,7 +275,7 @@ namespace Raven.Database.Server.Responders
 		{
 			var query = new IndexQuery
 			{
-				Query = Uri.UnescapeDataString(context.Request.QueryString["query"] ?? ""),
+				Query = context.Request.QueryString["query"] ?? "",
 				Start = context.GetStart(),
 				Cutoff = context.GetCutOff(),
 				PageSize = context.GetPageSize(maxPageSize),
