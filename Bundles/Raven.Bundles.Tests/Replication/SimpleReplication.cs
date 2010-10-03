@@ -24,6 +24,7 @@ namespace Raven.Bundles.Tests.Replication
 
             using(var session = store2.OpenSession())
             {
+                session.MaxNumberOfRequestsPerSession = RetriesCount*2;
                 Company company = null;
                 for (int i = 0; i < RetriesCount; i++)
                 {
