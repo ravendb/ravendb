@@ -98,7 +98,7 @@ namespace Raven.Database.Data
             }
             if (Cutoff != null)
             {
-                path = path + "&cutOff=" + Uri.EscapeDataString(Cutoff.Value.ToString("o", CultureInfo.InvariantCulture));
+                path = path + "&cutOff=" + Uri.EscapeUriString(Uri.EscapeDataString(Cutoff.Value.ToString("o", CultureInfo.InvariantCulture)));
             }
 			var vars = GetCustomQueryStringVariables();
 
@@ -107,7 +107,7 @@ namespace Raven.Database.Data
 				path += vars.StartsWith("&") ? vars : ("&" + vars);
 			}
 		
-			return Uri.EscapeUriString(path);
+			return path;
 		}
 
 		/// <summary>
