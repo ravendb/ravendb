@@ -11,7 +11,58 @@ using System.IO;
 namespace Raven.Client.Tests.Querying
 {
     public class UsingDynamicQueryWithLocalServer : LocalClientTest
-    {   
+    {
+        [Fact]
+        public void CanPerformDynamicQueryUsingClientLinqQueryWithNestedCollection()
+        {
+            var blogOne = new Blog
+            {
+                Title = "one",
+                Category = "Ravens",
+                 Tags = new BlogTag[]{
+                     new BlogTag(){ Name = "Birds" }
+                 }
+            };
+            var blogTwo = new Blog
+            {
+                Title = "two",
+                Category = "Rhinos",
+                Tags = new BlogTag[]{
+                     new BlogTag(){ Name = "Mammals" }
+                 }
+            };
+            var blogThree = new Blog
+            {
+                Title = "three",
+                Category = "Rhinos",
+                Tags = new BlogTag[]{
+                     new BlogTag(){ Name = "Mammals" }
+                 }
+            };
+
+            using(var store = this.NewDocumentStore())
+            {               
+                using (var s = store.OpenSession())
+                {
+                    s.Store(blogOne);
+                    s.Store(blogTwo);
+                    s.Store(blogThree);
+                    s.SaveChanges();
+                }
+
+                using (var s = store.OpenSession())
+                {
+                    var results = s.DynamicQuery<Blog>()
+                        .Customize(x => x.WaitForNonStaleResultsAsOfNow(TimeSpan.FromSeconds(5)))
+                        .Where(x => x.Tags.Any(y=>y.Name == "Birds"))
+                        .ToArray();
+
+                    Assert.Equal(1, results.Length);
+                    Assert.Equal("one", results[0].Title);
+                    Assert.Equal("Ravens", results[0].Category);
+                }
+            }
+        }
 
         [Fact]
         public void CanPerformDynamicQueryUsingClientLinqQuery()
@@ -111,6 +162,17 @@ namespace Raven.Client.Tests.Querying
                 get;
                 set;
             }
+
+            public BlogTag[] Tags
+            {
+                get;
+                set;
+            }
+        }
+
+        public class BlogTag
+        {
+            public string Name { get; set; }
         }
     }
 }

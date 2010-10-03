@@ -190,6 +190,7 @@ namespace Raven.Client.Tests.Linq
             Assert.Equal("Age:3", q.ToString());
         }
 
+
 		[Fact]
 		public void CanChainMultipleWhereClauses()
 		{

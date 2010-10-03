@@ -71,6 +71,10 @@ namespace Raven.Client.Tests.Querying
                         .Where(x => x.Category == "Rhinos" && x.Title.Length == 3)
                         .ToArray();
 
+                    var blogs = s.DynamicLuceneQuery<Blog>()
+                        .Where("Category:Rhinos AND Title.Length:3")
+                        .ToArray();
+
                     Assert.Equal(1, results.Length);
                     Assert.Equal("two", results[0].Title);
                     Assert.Equal("Rhinos", results[0].Category);

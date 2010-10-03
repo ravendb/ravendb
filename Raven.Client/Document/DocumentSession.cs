@@ -284,7 +284,7 @@ namespace Raven.Client.Document
         /// <typeparam name="T">The result of the query</typeparam>
         public IRavenQueryable<T> DynamicQuery<T>()
         {
-            return Query<T>("dynamic");
+            return new RavenQueryable<T>(new DynamicRavenQueryProvider<T>(this));
         }
 
         /// <summary>

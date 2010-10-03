@@ -147,22 +147,7 @@ namespace Raven.Database
             if (documentDatabase.GetIndexDefinition(indexName) != null) // avoid race condition when creating the index
                 return;
 
-            // Create the index
-            var mapping = map.Items
-              .Select(x => string.Format("{0} = doc.{1}", x.To, x.From))
-              .ToArray();
-
-            var indexes = map.Items.ToDictionary(mapItem => mapItem.To, mapItem => FieldIndexing.NotAnalyzed);
-
-            // Create the definition
-            var definition = new IndexDefinition()
-            {
-                Map = @"from doc in docs select new 
-                 { 
-                    " + String.Join(",\r\n", mapping) + @"
-                 }",
-                Indexes = indexes
-            };
+            var definition = map.CreateIndexDefinition();
 
             documentDatabase.PutIndex(indexName, definition);
         }
