@@ -27,7 +27,8 @@ namespace Raven.Client.Tests.Bugs
 				{
 					session.Store(new Registration
 					{
-						RegisteredAt = new DateTime(2010, 1, 1)
+						RegisteredAt = new DateTime(2010, 1, 1),
+                        Name = "ayende"
 					});
 					session.SaveChanges();
 				}
@@ -39,7 +40,8 @@ namespace Raven.Client.Tests.Bugs
 						.WaitForNonStaleResults()
 						.First();
 					Assert.Equal(new DateTime(2010, 1, 1), registration.RegisteredAt);
-					Assert.Null(registration.Id);
+					Assert.NotNull(registration.Id);
+                    Assert.Null(registration.Name);
 				}
 			}
 		}
@@ -48,6 +50,8 @@ namespace Raven.Client.Tests.Bugs
 		{
 			public string Id { get; set; }
 			public DateTime RegisteredAt { get; set; }
+
+		    public string Name { get; set; }
 		}
 	}
 }
