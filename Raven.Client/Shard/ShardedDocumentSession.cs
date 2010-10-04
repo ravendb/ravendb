@@ -392,6 +392,18 @@ namespace Raven.Client.Shard
 											   GetAppropriateShardedSessions<T>(null));
 		}
 
+        /// <summary>
+        /// Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.
+        /// </summary>
+        /// <typeparam name="T">The result of the query</typeparam>
+        /// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
+        /// <returns></returns>
+        public IDocumentQuery<T> LuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
+        {
+            var index = new TIndexCreator();
+            return LuceneQuery<T>(index.IndexName);
+        }
+
 		private IDocumentSession[] GetAppropriateShardedSessions<T>(string key)
 		{
 			var sessionIds =
