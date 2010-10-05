@@ -1,6 +1,8 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using Raven.Client.Tests.Document;
+using Raven.Database.Extensions;
 using Raven.Server;
 using Raven.Database;
 using System.Reflection;
@@ -33,10 +35,10 @@ namespace Raven.Client.Tests
 			{
 			}
 
-			if (Directory.Exists(DbDirectory))
-				Directory.Delete(DbDirectory, true);
-
-			Directory.CreateDirectory(DbDirectory);
+            IOExtensions.DeleteDirectory(DbName);
+            IOExtensions.DeleteDirectory(DbDirectory);
+			
+            Directory.CreateDirectory(DbDirectory);
 		}
 
 		public double Timer(Action action)

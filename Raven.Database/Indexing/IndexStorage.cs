@@ -110,18 +110,7 @@ namespace Raven.Database.Indexing
 			if (!indexes.TryRemove(name, out ignored) || !Directory.Exists(dirOnDisk)) 
 				return;
 
-			for (int i = 0; i < 15; i++)
-			{
-				try
-				{
-					Directory.Delete(dirOnDisk, true);
-					break;
-				}
-				catch (IOException)
-				{
-					Thread.Sleep(100);
-				}
-			}
+			IOExtensions.DeleteDirectory(dirOnDisk);
 		}
 
 		public void CreateIndexImplementation(string name, IndexDefinition indexDefinition)

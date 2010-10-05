@@ -7,6 +7,7 @@ using Raven.Client.Shard.ShardStrategy.ShardAccess;
 using Raven.Client.Shard.ShardStrategy.ShardResolution;
 using Raven.Client.Shard.ShardStrategy.ShardSelection;
 using Raven.Client.Tests.Document;
+using Raven.Database.Extensions;
 using Raven.Database.Server;
 using Raven.Server;
 using Xunit;
@@ -173,7 +174,7 @@ namespace Raven.Client.Tests.Shard
             {
                 try
                 {
-                    Directory.Delete(path, true);
+                    IOExtensions.DeleteDirectory(path);
                 }
                 catch (Exception) { }
             }
