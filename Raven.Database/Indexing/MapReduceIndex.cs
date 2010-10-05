@@ -37,7 +37,7 @@ namespace Raven.Database.Indexing
         	{
 				var count = 0;
 				Func<object, object> documentIdFetcher = null;
-				var reduceKeys = new HashSet<string>();
+				var reduceKeys = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
 				var documentsWrapped = documents.Select(doc =>
 				{
 					var documentId = doc.__document_id;
@@ -167,7 +167,7 @@ namespace Raven.Database.Indexing
                 {
 					logIndexing.DebugFormat("Deleting ({0}) from {1}", string.Format(", ", keys), name);
                 }
-                writer.DeleteDocuments(keys.Select(k => new Term("__document_id", k)).ToArray());
+                writer.DeleteDocuments(keys.Select(k => new Term("__reduce_key", k.ToLowerInvariant())).ToArray());
                 return true;
             });
         }
@@ -188,7 +188,7 @@ namespace Raven.Database.Indexing
                 foreach (var reduceKey in reduceKeys)
             	{
             	    var entryKey = reduceKey;
-            	    indexWriter.DeleteDocuments(new Term("__reduce_key", entryKey));
+            	    indexWriter.DeleteDocuments(new Term("__reduce_key", entryKey.ToLowerInvariant()));
                     batchers.ApplyAndIgnoreAllErrors(
                         exception =>
                         {
@@ -215,7 +215,7 @@ namespace Raven.Database.Indexing
 					string reduceKeyAsString = ReduceKeyToString(reduceKey);
 
                 	var luceneDoc = new Document();
-                    luceneDoc.Add(new Field("__reduce_key", reduceKeyAsString, Field.Store.NO, Field.Index.NOT_ANALYZED));
+                    luceneDoc.Add(new Field("__reduce_key", reduceKeyAsString.ToLowerInvariant(), Field.Store.NO, Field.Index.NOT_ANALYZED));
                     foreach (var field in fields)
                     {
                         luceneDoc.Add(field);
