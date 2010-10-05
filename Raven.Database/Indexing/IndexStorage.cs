@@ -25,7 +25,7 @@ namespace Raven.Database.Indexing
 	{
 		private readonly RavenConfiguration configuration;
 		private readonly string path;
-		private readonly ConcurrentDictionary<string, Index> indexes = new ConcurrentDictionary<string, Index>();
+		private readonly ConcurrentDictionary<string, Index> indexes = new ConcurrentDictionary<string, Index>(StringComparer.InvariantCultureIgnoreCase);
 		private readonly ILog log = LogManager.GetLogger(typeof (IndexStorage));
 
 		public IndexStorage(IndexDefinitionStorage indexDefinitionStorage, RavenConfiguration configuration)

@@ -22,9 +22,9 @@ namespace Raven.Database.Storage
 		private const string IndexDefDir = "IndexDefinitions";
 
 		private readonly ConcurrentDictionary<string, AbstractViewGenerator> indexCache =
-			new ConcurrentDictionary<string, AbstractViewGenerator>();
-        private readonly ConcurrentDictionary<string, IndexDefinition> indexDefinitions = 
-            new ConcurrentDictionary<string, IndexDefinition>();
+			new ConcurrentDictionary<string, AbstractViewGenerator>(StringComparer.InvariantCultureIgnoreCase);
+        private readonly ConcurrentDictionary<string, IndexDefinition> indexDefinitions =
+            new ConcurrentDictionary<string, IndexDefinition>(StringComparer.InvariantCultureIgnoreCase);
 
 		private readonly ILog logger = LogManager.GetLogger(typeof (IndexDefinitionStorage));
 		private readonly string path;
@@ -163,5 +163,10 @@ namespace Raven.Database.Storage
 			}
 			return IndexCreationOptions.Create;
 		}
+
+	    public bool Contains(string indexName)
+	    {
+            return indexDefinitions.ContainsKey(indexName);
+	    }
 	}
 }

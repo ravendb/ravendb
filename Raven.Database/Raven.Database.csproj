@@ -148,6 +148,7 @@
     <Compile Include="Plugins\AbstractDocumentCodec.cs" />
     <Compile Include="Plugins\AbstractDynamicCompilationExtension.cs" />
     <Compile Include="Plugins\Builtins\CleanupOldDynamicIndexes.cs" />
+    <Compile Include="Plugins\Builtins\DeleteRemovedIndexes.cs" />
     <Compile Include="Plugins\Builtins\FilterRavenInternalDocumentsReadTrigger.cs" />
     <Compile Include="Plugins\AbstractIndexUpdateTrigger.cs" />
     <Compile Include="Plugins\AbstractReadTrigger.cs" />
