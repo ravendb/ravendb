@@ -24,8 +24,7 @@ namespace Raven.Bundles.Tests.Replication
         {
             for (int i = 0; i < 15; i++)
             {
-                if(Directory.Exists("Data #" + i))
-                    Directory.Delete("Data #" + i, true);
+                database::Raven.Database.Extensions.IOExtensions.DeleteDirectory("Data #" + i);
             }
 
             var outputDebugStringAppender = new OutputDebugStringAppender

@@ -1,6 +1,7 @@
 using System.Web;
 using Raven.Bundles.Authorization;
 using Raven.Bundles.Authorization.Model;
+using Raven.Bundles.Tests.Versioning;
 using Xunit;
 using Raven.Client.Authorization;
 

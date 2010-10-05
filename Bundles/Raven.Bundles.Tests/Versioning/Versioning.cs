@@ -1,18 +1,15 @@
 ﻿﻿extern alias database;
+﻿using System;
+﻿using System.ComponentModel.Composition.Hosting;
+﻿using System.IO;
+﻿using System.Reflection;
+﻿using Raven.Bundles.Versioning.Data;
+﻿using Raven.Bundles.Versioning.Triggers;
+﻿using Raven.Client.Document;
+﻿using Xunit;
+﻿using Raven.Server;
 
-using System;
-using System.ComponentModel.Composition.Hosting;
-using System.IO;
-using System.Reflection;
-using Raven.Bundles.Versioning;
-using Raven.Bundles.Versioning.Data;
-using Raven.Bundles.Versioning.Triggers;
-using Raven.Client.Document;
-using Raven.Database;
-using Xunit;
-using Raven.Server;
-
-namespace Raven.Bundles.Tests
+namespace Raven.Bundles.Tests.Versioning
 {
     public class Versioning : IDisposable
     {
@@ -24,8 +21,7 @@ namespace Raven.Bundles.Tests
         {
             path = Path.GetDirectoryName(Assembly.GetAssembly(typeof (Versioning)).CodeBase);
             path = Path.Combine(path, "TestDb").Substring(6);
-            if (Directory.Exists(path))
-                Directory.Delete(path, true);
+            database::Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
             ravenDbServer = new RavenDbServer(
                 new database::Raven.Database.RavenConfiguration
                 {
@@ -73,8 +69,7 @@ namespace Raven.Bundles.Tests
         {
             documentStore.Dispose();
             ravenDbServer.Dispose();
-            if (Directory.Exists(path))
-                Directory.Delete(path, true);
+            database::Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
        }
 
         #endregion
