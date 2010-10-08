@@ -25,7 +25,7 @@ namespace Raven.Database.Indexing
 	{
 		private readonly RavenConfiguration configuration;
 		private readonly string path;
-		private readonly ConcurrentDictionary<string, Index> indexes = new ConcurrentDictionary<string, Index>();
+		private readonly ConcurrentDictionary<string, Index> indexes = new ConcurrentDictionary<string, Index>(StringComparer.InvariantCultureIgnoreCase);
 		private readonly ILog log = LogManager.GetLogger(typeof (IndexStorage));
 
 		public IndexStorage(IndexDefinitionStorage indexDefinitionStorage, RavenConfiguration configuration)
@@ -110,18 +110,7 @@ namespace Raven.Database.Indexing
 			if (!indexes.TryRemove(name, out ignored) || !Directory.Exists(dirOnDisk)) 
 				return;
 
-			for (int i = 0; i < 15; i++)
-			{
-				try
-				{
-					Directory.Delete(dirOnDisk, true);
-					break;
-				}
-				catch (IOException)
-				{
-					Thread.Sleep(100);
-				}
-			}
+			IOExtensions.DeleteDirectory(dirOnDisk);
 		}
 
 		public void CreateIndexImplementation(string name, IndexDefinition indexDefinition)

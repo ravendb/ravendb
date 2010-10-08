@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Bundles.Expiration;
+using Raven.Bundles.Tests.Versioning;
 using Raven.Client.Document;
 using Raven.Database;
 using Raven.Server;
@@ -22,10 +23,9 @@ namespace Raven.Bundles.Tests.Expiration
 
         public Expiration()
         {
-            path = Path.GetDirectoryName(Assembly.GetAssembly(typeof (Versioning)).CodeBase);
+            path = Path.GetDirectoryName(Assembly.GetAssembly(typeof (Versioning.Versioning)).CodeBase);
             path = Path.Combine(path, "TestDb").Substring(6);
-            if (Directory.Exists(path))
-                Directory.Delete(path, true);
+            database::Raven.Database.Extensions.IOExtensions.DeleteDirectory("Data");
             ravenDbServer = new RavenDbServer(
                 new database::Raven.Database.RavenConfiguration
                 {
@@ -54,8 +54,7 @@ namespace Raven.Bundles.Tests.Expiration
         {
             documentStore.Dispose();
             ravenDbServer.Dispose();
-            if (Directory.Exists(path))
-                Directory.Delete(path, true);
+            database::Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
         }
 
         #endregion

@@ -5,6 +5,7 @@ using System.Text;
 using System.IO;
 using Raven.Client.Document;
 using System.Reflection;
+using Raven.Database.Extensions;
 using Xunit;
 
 namespace Raven.Client.Tests.Document
@@ -17,7 +18,7 @@ namespace Raven.Client.Tests.Document
 
         public void Dispose()
         {
-            Directory.Delete(path, true);
+            IOExtensions.DeleteDirectory(path);
         }
 
         #endregion

@@ -4,6 +4,7 @@ using System.Reflection;
 using Raven.Client.Document;
 using Raven.Client.Tests.Document;
 using Raven.Database;
+using Raven.Database.Extensions;
 
 namespace Raven.Client.Tests
 {
@@ -16,9 +17,8 @@ namespace Raven.Client.Tests
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
 			path = Path.Combine(path, "TestDb").Substring(6);
 
-            if (Directory.Exists(path))
-                Directory.Delete(path, true);
-            
+            IOExtensions.DeleteDirectory(path);
+
             var documentStore = new DocumentStore
 			{
 				Configuration = new RavenConfiguration

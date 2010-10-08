@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Reflection;
 using System.Transactions;
@@ -41,7 +42,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Translate between a key and its associated entity
 		/// </summary>
-		protected readonly Dictionary<string, object> entitiesByKey = new Dictionary<string, object>();
+        protected readonly Dictionary<string, object> entitiesByKey = new Dictionary<string, object>(StringComparer.InvariantCultureIgnoreCase);
 		/// <summary>
 		/// The document store associated with this session
 		/// </summary>
@@ -335,7 +336,7 @@ more responsive application.
 		/// <typeparam name="T"></typeparam>
 		/// <param name="entity">The entity.</param>
 		/// <param name="id">The id.</param>
-		protected void TrySetIdentity<T>(T entity, string id)
+		protected internal void TrySetIdentity<T>(T entity, string id)
 		{
 			var identityProperty = documentStore.Conventions.GetIdentityProperty(entity.GetType());
 			if (identityProperty != null && identityProperty.CanWrite)

@@ -20,6 +20,12 @@ namespace Raven.Client.Linq
 		private Expression<Func<T, bool>> predicate;
 		private SpecialQueryType queryType = SpecialQueryType.None;
 		private Type newExpressionType;
+        private string currentPath = string.Empty;
+
+        /// <summary>
+        /// Gets the current path in the case of expressions within collections
+        /// </summary>
+        public string CurrentPath { get { return currentPath; } }
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="RavenQueryProviderProcessor&lt;T&gt;"/> class.
@@ -142,7 +148,7 @@ namespace Raven.Client.Linq
 			luceneQuery.WhereEquals(
 				memberInfo.Path,
 				GetValueFromExpression(expression.Right, GetMemberType(memberInfo)),
-				GetFieldType(memberInfo) != typeof (string),
+				true,
 				false);
 		}
 
@@ -153,7 +159,7 @@ namespace Raven.Client.Linq
 			luceneQuery.Not.WhereEquals(
                 memberInfo.Path,
 				GetValueFromExpression(expression.Right, GetMemberType(memberInfo)),
-				GetFieldType(memberInfo) != typeof(string),
+				true,
 				false);
 		}
 
@@ -170,7 +176,12 @@ namespace Raven.Client.Linq
 			}
 		}
 
-        private static ExpressionMemberInfo GetMember(Expression expression)
+        /// <summary>
+        /// Gets member info for the specified expression and the path to that expression
+        /// </summary>
+        /// <param name="expression"></param>
+        /// <returns></returns>
+        protected virtual ExpressionMemberInfo GetMember(Expression expression)
 		{
 			var unaryExpression = expression as UnaryExpression;
 			if(unaryExpression != null)
@@ -268,7 +279,11 @@ namespace Raven.Client.Linq
 
         private void VisitAny(MethodCallExpression expression)
         {
+            var memberInfo = GetMember(expression.Arguments[0]);
+            String oldPath = currentPath;
+            currentPath = memberInfo.Path + ",";
             VisitExpression(expression.Arguments[1]);
+            currentPath = oldPath;
         }
 
 		private void VisitMemberAccess(MemberExpression memberExpression, bool boolValue)
@@ -557,8 +572,7 @@ namespace Raven.Client.Linq
 			luceneQuery.Take(1);
 			queryType = SpecialQueryType.FirstOrDefault;
 		}
-
-
+        
 		private static string GetFieldNameForRangeQuery(Expression expression, object value)
 		{
 			if (value is int || value is long || value is double || value is float || value is decimal)
@@ -701,8 +715,7 @@ namespace Raven.Client.Linq
         {
             return session.LuceneQuery<T>(indexName);
         }
-
-
+        
 		/// <summary>
 		/// Executes the specified expression.
 		/// </summary>

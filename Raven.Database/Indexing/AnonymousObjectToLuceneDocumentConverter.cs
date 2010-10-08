@@ -83,13 +83,8 @@ namespace Raven.Database.Indexing
             }
 			if (value is string) 
 			{
-			    var index = indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED);
-			    var hasDefault = indexDefinition.GetIndex(name, null) != null;
-			    var valueAsString = value.ToString();
-                if (hasDefault == false && index == Field.Index.NOT_ANALYZED)
-                    valueAsString = valueAsString.ToLowerInvariant();
-                
-			    yield return new Field(name, valueAsString, indexDefinition.GetStorage(name, defaultStorage),
+			    var index = indexDefinition.GetIndex(name, Field.Index.ANALYZED);
+			    yield return new Field(name, value.ToString(), indexDefinition.GetStorage(name, defaultStorage),
                                  index); 
 				yield break;
 			}

@@ -56,7 +56,7 @@ namespace Raven.Database.Backup
 
 			try
 			{
-				Directory.Delete(tempPath, true);
+                IOExtensions.DeleteDirectory(tempPath);
 			}
 			catch (Exception e) //cannot delete, probably because there is a file being written there
 			{

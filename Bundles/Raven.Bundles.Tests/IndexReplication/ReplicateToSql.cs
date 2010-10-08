@@ -26,10 +26,9 @@ namespace Raven.Bundles.Tests.IndexReplication
 
         public ReplicateToSql()
         {
-            path = Path.GetDirectoryName(Assembly.GetAssembly(typeof (Versioning)).CodeBase);
+            path = Path.GetDirectoryName(Assembly.GetAssembly(typeof (Versioning.Versioning)).CodeBase);
             path = Path.Combine(path, "TestDb").Substring(6);
-            if (Directory.Exists(path))
-                Directory.Delete(path, true);
+            database::Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
             ravenDbServer = new RavenDbServer(
                 new database::Raven.Database.RavenConfiguration
                 {
@@ -113,8 +112,7 @@ CREATE TABLE [dbo].[QuestionSummaries]
         {
             documentStore.Dispose();
             ravenDbServer.Dispose();
-            if (Directory.Exists(path))
-                Directory.Delete(path, true);
+            database::Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
         }
 
         #endregion

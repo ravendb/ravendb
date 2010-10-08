@@ -138,6 +138,9 @@
     <Compile Include="Indexes\ExpressionOperatorPrecedence.cs" />
     <Compile Include="ITransactionalDocumentSession.cs" />
     <Compile Include="Linq\DateTools.cs" />
+    <Compile Include="Linq\DynamicQueryProviderProcessor.cs" />
+    <Compile Include="Linq\DynamicRavenQueryable.cs" />
+    <Compile Include="Linq\DynamicRavenQueryProvider.cs" />
     <Compile Include="Linq\ExpressionMemberInfo.cs" />
     <Compile Include="Linq\IRavenQueryable.cs" />
     <Compile Include="Linq\IRavenQueryProvider.cs" />

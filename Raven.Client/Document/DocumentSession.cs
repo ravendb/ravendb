@@ -224,6 +224,19 @@ namespace Raven.Client.Document
 			UpdateBatchResults(DatabaseCommands.Batch(data.Commands.ToArray()), data.Entities);
 		}
 
+
+        /// <summary>
+        /// Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.
+        /// </summary>
+        /// <typeparam name="T">The result of the query</typeparam>
+        /// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
+        /// <returns></returns>
+        public IDocumentQuery<T> LuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
+        {
+            var index = new TIndexCreator();
+            return LuceneQuery<T>(index.IndexName);
+        }
+
 		/// <summary>
 		/// Query the specified index using Lucene syntax
 		/// </summary>
@@ -284,7 +297,7 @@ namespace Raven.Client.Document
         /// <typeparam name="T">The result of the query</typeparam>
         public IRavenQueryable<T> DynamicQuery<T>()
         {
-            return Query<T>("dynamic");
+            return new RavenQueryable<T>(new DynamicRavenQueryProvider<T>(this));
         }
 
         /// <summary>

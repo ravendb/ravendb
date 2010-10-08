@@ -488,5 +488,20 @@ namespace Raven.Client.Document
 			ApplyForAll(ts => ts.AddOrder(fieldName, descending));
 			return this;
 		}
+
+        /// <summary>
+        /// This function exists solely to forbid in memory where clause on IDocumentQuery, because
+        /// that is nearly always a mistake.
+        /// </summary>
+        [Obsolete(@"
+You cannot issue an in memory filter - such as Where(x=>x.Name == ""Ayende"") - on IDocumentQuery. 
+This is likely a bug, because this will execute the filter in memory, rather than in RavenDB.
+Consider using session.Query<T>() instead of session.LuceneQuery<T>. The session.Query<T>() method fully supports Linq queries, while session.LuceneQuery<T>() is intended for lower level API access.
+If you really want to do in memory filtering on the data returned from the query, you can use: session.LuceneQuery<T>().ToList().Where(x=>x.Name == ""Ayende"")
+", true)]
+        public IEnumerable<T> Where(Func<T, bool> predicate)
+        {
+            throw new NotSupportedException();
+        }
 	}
 }

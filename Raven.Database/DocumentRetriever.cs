@@ -9,9 +9,9 @@ namespace Raven.Database
 {
     public class DocumentRetriever
     {
-        private readonly IDictionary<string, JsonDocument> cache = new Dictionary<string, JsonDocument>();
-        private readonly HashSet<string> loadedIdsForRetrieval = new HashSet<string>();
-        private readonly HashSet<string> loadedIdsForFilter = new HashSet<string>();
+        private readonly IDictionary<string, JsonDocument> cache = new Dictionary<string, JsonDocument>(StringComparer.InvariantCultureIgnoreCase);
+        private readonly HashSet<string> loadedIdsForRetrieval = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
+        private readonly HashSet<string> loadedIdsForFilter = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
         private readonly IStorageActionsAccessor actions;
         private readonly IEnumerable<AbstractReadTrigger> triggers;
 

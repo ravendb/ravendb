@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Raven.Client.Indexes;
+using Raven.Database.Extensions;
 using Xunit;
 using Raven.Database.Data;
 using Raven.Client;
@@ -37,10 +38,7 @@ namespace Raven.Tests.Linq
             //When running in the XUnit GUI strange things happen is we just create a path relative to 
             //the .exe itself, so make our folder in the System temp folder instead ("<user>\AppData\Local\Temp")
             string directoryName =  Path.Combine(Path.GetTempPath(), "ravendb.RavenWhereTests");
-            if (Directory.Exists(directoryName))
-            {
-                Directory.Delete(directoryName, true);
-            }           
+            IOExtensions.DeleteDirectory(directoryName);
 
             using (var db = new DocumentStore() { DataDirectory = directoryName })
             {

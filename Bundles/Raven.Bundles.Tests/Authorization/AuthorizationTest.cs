@@ -31,8 +31,7 @@ namespace Raven.Bundles.Tests.Authorization
 
 		protected AuthorizationTest()
 		{
-			if (Directory.Exists("Data"))
-				Directory.Delete("Data", true);
+		    database::Raven.Database.Extensions.IOExtensions.DeleteDirectory("Data");
 			server = new RavenDbServer(new database::Raven.Database.RavenConfiguration
 			{
 				AnonymousUserAccessMode = database::Raven.Database.AnonymousUserAccessMode.All,

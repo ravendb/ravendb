@@ -8,50 +8,102 @@ using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Index;
 using Lucene.Net.Analysis;
 using Raven.Database.Indexing;
+using System.Text.RegularExpressions;
 
 namespace Raven.Database.Data
 {
     public class DynamicQueryMapping
     {
+        static readonly Regex queryTerms = new Regex(@"([^\s\(\+\-][\w._,]+)\:", RegexOptions.Compiled);
+
         public DynamicQueryMappingItem[] Items
         {
             get;
             set;
         }
 
-        public static DynamicQueryMapping Create(string query)
+        public IndexDefinition CreateIndexDefinition()
         {
-            var standardAnalyzer = new StandardAnalyzer(Lucene.Net.Util.Version.LUCENE_29);
-            var perKeywordAnalyzer = new PerFieldAnalyzerWrapper(standardAnalyzer);
+            var fromClauses = new HashSet<string>();
+            var realMappings = new List<string>();
 
-            try
+            fromClauses.Add("from doc in docs");
+
+            foreach (var map in this.Items)
             {
-                var parsedQuery = QueryBuilder.BuildQuery(query, perKeywordAnalyzer);
+                String currentDoc = "doc";
+                StringBuilder currentExpression = new StringBuilder();
 
-                var terms = new Hashtable();
-                parsedQuery.ExtractTerms(terms);
-                var fields = new HashSet<string>();
-                foreach (Term term in terms.Keys)
+                int currentIndex = 0;
+                while (currentIndex < map.From.Length)
                 {
-                    fields.Add(term.Field());
+                    char currentChar = map.From[currentIndex++];
+                    switch (currentChar)
+                    {
+                        case ',':                                                       
+
+                            // doc.NewDoc.Items
+                            String newDocumentSource =  string.Format("{0}.{1}", currentDoc, currentExpression.ToString());
+
+                            // docNewDocItemsItem
+                            String newDoc = string.Format("{0}Item", newDocumentSource.Replace(".", ""));
+
+                            // from docNewDocItemsItem in doc.NewDoc.Items
+                            String docInclude = string.Format("from {0} in {1}", newDoc, newDocumentSource);
+                            fromClauses.Add(docInclude);
+
+                            // Start building the property again
+                            currentExpression.Clear();
+
+                            // And from this new doc
+                            currentDoc = newDoc;
+
+                            break;
+                        default:
+                            currentExpression.Append(currentChar);
+                            break;
+                    }
                 }
 
-                return new DynamicQueryMapping()
-                {
-                    Items = fields.Select(x => new DynamicQueryMappingItem()
-                    {
-                        From = x,
-                        To = x.Replace(".", "") // for now
-                    }).ToArray()
-                };
+                // We get rid of any _Range(s) etc
+                realMappings.Add(string.Format("{0} = {1}.{2}",
+                        map.To.Replace("_Range", ""),
+                        currentDoc,
+                        currentExpression.ToString().Replace("_Range", "")
+                        ));
             }
-            finally
+            
+            return new IndexDefinition()
             {
-                perKeywordAnalyzer.Close();
-                standardAnalyzer.Close();
-            }
-
-          
+                 Map = string.Format("{0} select new {{ {1} }}",
+                    string.Join(" ", fromClauses.ToArray()),
+                    string.Join(", ", realMappings.ToArray())),
+            };
         }
+
+        public static DynamicQueryMapping Create(string query)
+        {
+            var queryTermMatches = queryTerms.Matches(query);
+             var fields = new HashSet<string>();
+            for (int x = 0; x < queryTermMatches.Count; x++)
+            {
+                Match match = queryTermMatches[x];
+                String field = match.Groups[1].Value;
+                fields.Add(field);
+            }
+            
+            return new DynamicQueryMapping()
+            {
+                Items = fields.Select(x => new DynamicQueryMappingItem()
+                {
+                    From = x,
+                    To = x.Replace(".", "").Replace(",", "")
+                }).ToArray()
+            };
+                      
+        }
+
+
+        
     }
 }

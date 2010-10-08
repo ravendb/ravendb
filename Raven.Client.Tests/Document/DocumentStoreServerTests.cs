@@ -10,6 +10,7 @@ using Raven.Client.Indexes;
 using Raven.Client.Tests.Indexes;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
+using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Database.Server;
@@ -37,8 +38,7 @@ namespace Raven.Client.Tests.Document
 
 		public void Dispose()
 		{
-			Thread.Sleep(100);
-			Directory.Delete(path, true);
+            IOExtensions.DeleteDirectory(path);
 		}
 
 		#endregion
@@ -86,7 +86,7 @@ namespace Raven.Client.Tests.Document
 					Indexes = { { x => x.Name, FieldIndexing.NotAnalyzed } }
 				});
 				var indexDefinition = documentStore.DatabaseCommands.GetIndex("Companies/Name");
-				Assert.Equal(@"docs.Companies
+                Assert.Equal(@"docs.Companies
 	.Select(c => new {Name = c.Name})", indexDefinition.Map);
 				Assert.Equal(FieldIndexing.NotAnalyzed, indexDefinition.Indexes["Name"]);
 			}

@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Raven.Database.Extensions;
 
 namespace Raven.Tests.Storage
 {
@@ -7,14 +8,12 @@ namespace Raven.Tests.Storage
 	{
 		public AbstractDocumentStorageTest()
 		{
-			if (Directory.Exists("raven.db.test.esent"))
-				Directory.Delete("raven.db.test.esent", true);
+            IOExtensions.DeleteDirectory("raven.db.test.esent");
 		}
 
 		public virtual void Dispose()
 		{
-			//if (Directory.Exists("raven.db.test.esent"))
-			//    Directory.Delete("raven.db.test.esent", true);
+            //IOExtensions.DeleteDirectory("raven.db.test.esent");
 		}
 	}
 }

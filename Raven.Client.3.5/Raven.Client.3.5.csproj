@@ -192,6 +192,15 @@
     <Compile Include="..\Raven.Client\Linq\DateTools.cs">
       <Link>Linq\DateTools.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client\Linq\DynamicQueryProviderProcessor.cs">
+      <Link>Linq\DynamicQueryProviderProcessor.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client\Linq\DynamicRavenQueryable.cs">
+      <Link>Linq\DynamicRavenQueryable.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client\Linq\DynamicRavenQueryProvider.cs">
+      <Link>Linq\DynamicRavenQueryProvider.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client\Linq\ExpressionMemberInfo.cs">
       <Link>Linq\ExpressionMemberInfo.cs</Link>
     </Compile>
