@@ -155,7 +155,7 @@ CREATE TABLE [dbo].[QuestionSummaries]
 
             using (var session = documentStore.OpenSession())
             {
-                session.LuceneQuery<Question>("Questions/Votes")
+                session.Advanced.LuceneQuery<Question>("Questions/Votes")
                     .WaitForNonStaleResults()
                     .SelectFields<QuestionSummary>("__document_id", "Title", "UpVotes", "DownVotes")
                     .ToList();
@@ -256,7 +256,7 @@ CREATE TABLE [dbo].[QuestionSummaries]
 
             using (var session = documentStore.OpenSession())
             {
-                session.LuceneQuery<Question>("Questions/Votes")
+                session.Advanced.LuceneQuery<Question>("Questions/Votes")
                     .WaitForNonStaleResults()
                     .SelectFields<QuestionSummary>("__document_id", "Title", "UpVotes", "DownVotes")
                     .ToList();
@@ -282,7 +282,7 @@ CREATE TABLE [dbo].[QuestionSummaries]
 
             using (var session = documentStore.OpenSession())
             {
-                session.LuceneQuery<Question>("Questions/Votes")
+                session.Advanced.LuceneQuery<Question>("Questions/Votes")
                     .WaitForNonStaleResults()
                     .SelectFields<QuestionSummary>("__document_id", "Title", "UpVotes", "DownVotes")
                     .ToList();

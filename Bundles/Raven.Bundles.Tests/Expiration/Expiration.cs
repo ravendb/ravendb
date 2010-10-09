@@ -67,7 +67,7 @@ namespace Raven.Bundles.Tests.Expiration
             using (var session = documentStore.OpenSession())
             {
                 session.Store(company);
-                session.GetMetadataFor(company)["Raven-Expiration-Date"] = new JValue(expiry);
+                session.Advanced.GetMetadataFor(company)["Raven-Expiration-Date"] = new JValue(expiry);
                 session.SaveChanges();
             }
 
@@ -75,7 +75,7 @@ namespace Raven.Bundles.Tests.Expiration
             {
                 var company2 = session.Load<Company>(company.Id);
                 Assert.NotNull(company2);
-                var metadata = session.GetMetadataFor(company2);
+                var metadata = session.Advanced.GetMetadataFor(company2);
                 var dateAsJsStr = @"\/Date("+(long)( expiry - new DateTime(1970,1,1) ).TotalMilliseconds+@")\/";
                 Assert.Equal(dateAsJsStr, metadata.Value<string>("Raven-Expiration-Date"));
             }
@@ -89,7 +89,7 @@ namespace Raven.Bundles.Tests.Expiration
             using (var session = documentStore.OpenSession())
             {
                 session.Store(company);
-                session.GetMetadataFor(company)["Raven-Expiration-Date"] = new JValue(expiry);
+                session.Advanced.GetMetadataFor(company)["Raven-Expiration-Date"] = new JValue(expiry);
                 session.SaveChanges();
             }
             ExpirationReadTrigger.GetCurrentUtcDate = () => DateTime.UtcNow.AddMinutes(10);
@@ -113,10 +113,10 @@ namespace Raven.Bundles.Tests.Expiration
             using (var session = documentStore.OpenSession())
             {
                 session.Store(company);
-                session.GetMetadataFor(company)["Raven-Expiration-Date"] = new JValue(expiry);
+                session.Advanced.GetMetadataFor(company)["Raven-Expiration-Date"] = new JValue(expiry);
                 session.SaveChanges();
 
-                session.LuceneQuery<Company>("Raven/DocumentsByExpirationDate")
+                session.Advanced.LuceneQuery<Company>("Raven/DocumentsByExpirationDate")
                     .WaitForNonStaleResults()
                     .ToList();
             }

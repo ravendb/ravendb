@@ -25,7 +25,7 @@ namespace Raven.Bundles.Tests.Replication
 
             using(var session = store2.OpenSession())
             {
-                session.MaxNumberOfRequestsPerSession = RetriesCount*2;
+                session.Advanced.MaxNumberOfRequestsPerSession = RetriesCount * 2;
                 Company company = null;
                 for (int i = 0; i < RetriesCount; i++)
                 {
@@ -98,9 +98,9 @@ namespace Raven.Bundles.Tests.Replication
                 session.Store(company);
                 session.SaveChanges();
                 id = company.Id;
-                session.Clear();
+                session.Advanced.Clear();
                 company = session.Load<Company>(id);
-                etag = session.GetMetadataFor(company).Value<string>("@etag");
+                etag = session.Advanced.GetMetadataFor(company).Value<string>("@etag");
             }
 
 
@@ -124,7 +124,7 @@ namespace Raven.Bundles.Tests.Replication
                 using (var session = store1.OpenSession())
                 {
                     Company company = session.Load<Company>(id);
-                    Assert.Equal(etag, session.GetMetadataFor(company).Value<string>("@etag"));
+                    Assert.Equal(etag, session.Advanced.GetMetadataFor(company).Value<string>("@etag"));
                 }
                 Thread.Sleep(100);
             }
