@@ -70,7 +70,7 @@ namespace Raven.Database.Data
             
             return new IndexDefinition()
             {
-                 Map = string.Format("{0} select new {{ {1} }}",
+                 Map = string.Format("{0}\r\nselect new {{ {1} }}",
                     string.Join("\r\n", fromClauses.ToArray()),
                     string.Join(", ", realMappings.ToArray())),
             };
