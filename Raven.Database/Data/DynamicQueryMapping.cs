@@ -69,13 +69,50 @@ namespace Raven.Database.Data
                         currentExpression.ToString().Replace("_Range", "")
                         ));
             }
-            
-            return new IndexDefinition()
+
+            var headers = CurrentRavenOperation.Headers.Value;
+
+            List<DynamicSortInfo> sortInfo = new List<DynamicSortInfo>();
+            String[] sortHintHeaders = headers.AllKeys
+               .Where(key => key.StartsWith("SortHint")).ToArray();
+            foreach (string sortHintHeader in sortHintHeaders)
             {
-                 Map = string.Format("{0}\r\nselect new {{ {1} }}",
-                    string.Join("\r\n", fromClauses.ToArray()),
-                    string.Join(", ", realMappings.ToArray())),
+                String[] split = sortHintHeader.Split('_');
+                String fieldName = split[1];
+                string fieldType = headers[sortHintHeader];
+
+                sortInfo.Add(new DynamicSortInfo()
+                {
+                    Field = fieldName,
+                    FieldType = fieldType
+                });
+
+                realMappings.Add(String.Format("{0} = doc.{0}", fieldName));
+            }
+
+           var index =  new IndexDefinition()
+            {
+                Map = string.Format("{0}\r\nselect new {{ {1} }}",
+                   string.Join("\r\n", fromClauses.ToArray()),
+                   string.Join(", ", realMappings.ToArray()))
             };
+
+           sortInfo.ForEach(x => index.SortOptions.Add(x.Field, FromPrimitiveTypestring(x.FieldType)));           
+
+           return index;
+        }
+
+        private SortOptions FromPrimitiveTypestring(string type)
+        {
+            switch (type)
+            {
+                case "Int16": return SortOptions.Short;
+                case "Int32": return SortOptions.Int;
+                case "Int64": return SortOptions.Long;
+                case "Single": return SortOptions.Float;
+                case "String": return SortOptions.String;
+                default: return SortOptions.String;
+            }
         }
 
         public static DynamicQueryMapping Create(string query, string entityName)
@@ -97,11 +134,13 @@ namespace Raven.Database.Data
                     From = x,
                     To = x.Replace(".", "").Replace(",", "")
                 }).ToArray()
-            };
-                      
+            };                      
         }
 
-
-        
+        private class DynamicSortInfo
+        {
+            public string Field { get; set; }
+            public string FieldType { get; set; }
+        }
     }
 }

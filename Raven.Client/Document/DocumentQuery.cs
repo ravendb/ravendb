@@ -38,6 +38,10 @@ namespace Raven.Client.Document
 		/// The fields to order the results by
 		/// </summary>
 		protected string[] orderByFields = new string[0];
+        /// <summary>
+        /// The types to sort the fields by (NULL if not specified)
+        /// </summary>
+        protected Type[] orderByTypes = new Type[0];
 		/// <summary>
 		/// The page size to use when querying the index
 		/// </summary>
@@ -112,6 +116,7 @@ namespace Raven.Client.Document
 			session = other.session;
 			cutoff = other.cutoff;
 			orderByFields = other.orderByFields;
+            orderByTypes = other.orderByTypes;
 			pageSize = other.pageSize;
 			queryText = other.queryText;
 			start = other.start;
@@ -148,6 +153,7 @@ namespace Raven.Client.Document
 				timeout = timeout,
 				cutoff = cutoff,
 				waitForNonStaleResults = waitForNonStaleResults,
+                orderByTypes = orderByTypes,
 				orderByFields = orderByFields,
 			};
 		}
@@ -200,10 +206,22 @@ namespace Raven.Client.Document
 		/// <param name="descending">if set to <c>true</c> [descending].</param>
 		public IDocumentQuery<T> AddOrder(string fieldName, bool descending)
 		{
-			fieldName = descending ? "-" + fieldName : fieldName;
-			orderByFields = orderByFields.Concat(new[] {fieldName}).ToArray();
-			return this;
+            return this.AddOrder(fieldName, descending, null);
 		}
+
+        /// <summary>
+        /// Adds an ordering for a specific field to the query and specifies the type of field for sorting purposes
+        /// </summary>
+        /// <param name="fieldName">Name of the field.</param>
+        /// <param name="descending">if set to <c>true</c> [descending].</param>
+        /// <param name="fieldType">the type of the field to be sorted.</param>
+        public IDocumentQuery<T> AddOrder(string fieldName, bool descending, Type fieldType)
+        {
+            fieldName = descending ? "-" + fieldName : fieldName;
+            orderByFields = orderByFields.Concat(new[] { fieldName }).ToArray();
+            orderByTypes = orderByTypes.Concat(new[] { fieldType }).ToArray();
+            return this;
+        }
 
 		/// <summary>
 		/// Gets the enumerator.
@@ -669,6 +687,7 @@ If you really want to do in memory filtering on the data returned from the query
 		public IDocumentQuery<T> OrderBy(params string[] fields)
 		{
 			orderByFields = orderByFields.Concat(fields).ToArray();
+            orderByTypes = new Type[orderByFields.Length];
 			return this;
 		}
 
@@ -794,6 +813,17 @@ If you really want to do in memory filtering on the data returned from the query
 
 				IndexQuery indexQuery = GenerateIndexQuery(query);
 
+                for(int x =0 ; x < this.orderByFields.Length; x++)
+                {
+                    String field = this.orderByFields[x];
+                    Type fieldType = this.orderByTypes[x];
+                    if(fieldType == null) { continue;}
+
+                    databaseCommands.OperationsHeaders.Add(
+                        string.Format("SortHint_{0}", field.Trim('-')), fieldType.Name);
+                }     
+               
+
 				var result = databaseCommands.Query(indexName, indexQuery, includes.ToArray());
 				if (waitForNonStaleResults && result.IsStale)
 				{
@@ -908,5 +938,6 @@ If you really want to do in memory filtering on the data returned from the query
 		{
 			return this.queryText.ToString();
 		}
-	}
+
+    }
 }

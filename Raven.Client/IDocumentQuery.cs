@@ -245,12 +245,21 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		/// <value>The query result.</value>
 		QueryResult QueryResult { get; }
+
 		/// <summary>
 		/// Adds an ordering for a specific field to the query
 		/// </summary>
 		/// <param name="fieldName">Name of the field.</param>
 		/// <param name="descending">if set to <c>true</c> [descending].</param>
 		IDocumentQuery<T> AddOrder(string fieldName, bool descending);
+
+        /// <summary>
+        /// Adds an ordering for a specific field to the query and specifies the type of field for sorting purposes
+        /// </summary>
+        /// <param name="fieldName">Name of the field.</param>
+        /// <param name="descending">if set to <c>true</c> [descending].</param>
+        /// <param name="fieldType">the type of the field to be sorted.</param>
+        IDocumentQuery<T> AddOrder(string fieldName, bool descending, Type fieldType);
 	}
 
 
