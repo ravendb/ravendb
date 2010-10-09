@@ -495,7 +495,7 @@ namespace Raven.Client.Shard
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public IRavenQueryable<T> DynamicQuery<T>()
+        public IRavenQueryable<T> Query<T>()
         {
             throw new NotSupportedException("Sharded linq queries aren't supported currently");
         }

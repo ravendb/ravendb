@@ -52,7 +52,7 @@ namespace Raven.Client
         /// Dynamically queries RavenDB using LINQ
         /// </summary>
         /// <typeparam name="T">The result of the query</typeparam>
-        IRavenQueryable<T> DynamicQuery<T>();
+        IRavenQueryable<T> Query<T>();
 
 		/// <summary>
 		/// Queries the index specified by <typeparamref name="TIndexCreator"/> using Linq.

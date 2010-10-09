@@ -42,7 +42,7 @@ namespace Raven.Client.Tests.Bugs
 
                 using (var s = documentStore.OpenSession())
                 {
-                    var result = from user in s.DynamicQuery<User>()
+                    var result = from user in s.Query<User>()
                                  where user.Name == "Ayende"
                                  select new { user.Email };
 

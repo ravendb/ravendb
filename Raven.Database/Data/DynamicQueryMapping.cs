@@ -2,11 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Lucene.Net.QueryParsers;
-using System.Collections;
-using Lucene.Net.Analysis.Standard;
-using Lucene.Net.Index;
-using Lucene.Net.Analysis;
 using Raven.Database.Indexing;
 using System.Text.RegularExpressions;
 
@@ -29,7 +24,7 @@ namespace Raven.Database.Data
 
             fromClauses.Add("from doc in docs");
 
-            foreach (var map in this.Items)
+            foreach (var map in Items)
             {
                 String currentDoc = "doc";
                 StringBuilder currentExpression = new StringBuilder();
@@ -76,7 +71,7 @@ namespace Raven.Database.Data
             return new IndexDefinition()
             {
                  Map = string.Format("{0} select new {{ {1} }}",
-                    string.Join(" ", fromClauses.ToArray()),
+                    string.Join("\r\n", fromClauses.ToArray()),
                     string.Join(", ", realMappings.ToArray())),
             };
         }

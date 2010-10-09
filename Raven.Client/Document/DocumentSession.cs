@@ -307,7 +307,7 @@ namespace Raven.Client.Document
         /// Dynamically queries RavenDB using LINQ
         /// </summary>
         /// <typeparam name="T">The result of the query</typeparam>
-        public IRavenQueryable<T> DynamicQuery<T>()
+        public IRavenQueryable<T> Query<T>()
         {
             return new RavenQueryable<T>(new DynamicRavenQueryProvider<T>(this));
         }

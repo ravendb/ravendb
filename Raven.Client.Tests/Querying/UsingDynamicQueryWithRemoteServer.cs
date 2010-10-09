@@ -66,7 +66,7 @@ namespace Raven.Client.Tests.Querying
 
                 using (var s = store.OpenSession())
                 {
-                    var results = s.DynamicQuery<Blog>()
+                    var results = s.Query<Blog>()
                         .Customize(x => x.WaitForNonStaleResultsAsOfNow())
                         .Where(x => x.Category == "Rhinos" && x.Title.Length == 3)
                         .ToArray();
