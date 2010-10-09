@@ -27,7 +27,7 @@ namespace Raven.Client.Tests.Bugs
                     Assert.NotNull(session.Load<User>("Ayende"));
                     Assert.NotNull(session.Load<User>("AYENDE"));
 
-                    Assert.Equal(1, session.NumberOfRequests);
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
             }
         }
@@ -52,7 +52,7 @@ namespace Raven.Client.Tests.Bugs
 
                 using (var session = s.OpenSession())
                 {
-                    session.LuceneQuery<User>().WaitForNonStaleResults().FirstOrDefault();
+                    session.Advanced.LuceneQuery<User>().WaitForNonStaleResults().FirstOrDefault();
                 }
 
 
@@ -70,7 +70,7 @@ namespace Raven.Client.Tests.Bugs
 
                 using (var session = s.OpenSession())
                 {
-                    var count = session.LuceneQuery<User>().WaitForNonStaleResults().Count();
+                    var count = session.Advanced.LuceneQuery<User>().WaitForNonStaleResults().Count();
                     Assert.Equal(1, count);
                 }
             }

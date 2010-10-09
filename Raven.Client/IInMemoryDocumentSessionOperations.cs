@@ -45,6 +45,9 @@ namespace Raven.Client
 		void AfterStore(string key, object entityInstance, JObject metadata);
 	}
 
+    /// <summary>
+    /// Advanced session operations
+    /// </summary>
     public interface IAdvancedDocumentSessionOperations
     {
         /// <summary>
@@ -160,6 +163,9 @@ namespace Raven.Client
         bool HasChanged(object entity);       
     }
 
+    /// <summary>
+    /// Advanced async session operations
+    /// </summary>
     public interface IAsyncAdvancedSessionOperations : IAdvancedDocumentSessionOperations
     {
         /// <summary>
@@ -169,6 +175,10 @@ namespace Raven.Client
         IAsyncDatabaseCommands AsyncDatabaseCommands { get; }
     }
 
+
+    /// <summary>
+    /// Advanced syncronous session operations
+    /// </summary>
     public interface ISyncAdvancedSessionOperation : IAdvancedDocumentSessionOperations
     {
         /// <summary>

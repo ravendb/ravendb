@@ -38,6 +38,13 @@ namespace Raven.Client.Document
 			DatabaseCommands = documentStore.DatabaseCommands;
 		}
 
+        /// <summary>
+        /// Get the accessor for advanced operations
+        /// </summary>
+        /// <remarks>
+        /// Those operations are rarely needed, and have been moved to a separate 
+        /// property to avoid cluttering the API
+        /// </remarks>
 	    public ISyncAdvancedSessionOperation Advanced
 	    {
             get { return this; }

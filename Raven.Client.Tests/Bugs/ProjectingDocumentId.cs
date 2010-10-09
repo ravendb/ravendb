@@ -31,7 +31,7 @@ namespace Raven.Client.Tests.Bugs
 
                 using(var s = store.OpenSession())
                 {
-                    var nameAndId = s.LuceneQuery<User>("test")
+                    var nameAndId = s.Advanced.LuceneQuery<User>("test")
                         .WaitForNonStaleResults()
                         .SelectFields<NameAndId>("Name", "__document_id")
                         .Single();

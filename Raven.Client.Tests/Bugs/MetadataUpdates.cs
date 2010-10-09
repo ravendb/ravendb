@@ -20,7 +20,7 @@ namespace Raven.Client.Tests.Bugs
 				using (var session = store.OpenSession())
 				{
 					session.Store(foo);
-					session.GetMetadataFor(foo)["bar"] = "baz";
+                    session.Advanced.GetMetadataFor(foo)["bar"] = "baz";
 					session.SaveChanges();
 				}
 
@@ -30,7 +30,7 @@ namespace Raven.Client.Tests.Bugs
 				using (var session = store.OpenSession())
 				{
 					var saved = session.Load<IndexWithTwoProperties.Foo>(foo.Id);
-					var metadata = session.GetMetadataFor(saved);
+                    var metadata = session.Advanced.GetMetadataFor(saved);
 					Assert.Equal("baz", metadata["bar"].Value<string>());
 
 
@@ -53,7 +53,7 @@ namespace Raven.Client.Tests.Bugs
 					var saved = session.Load<IndexWithTwoProperties.Foo>(foo.Id);
 
 
-					var metadata = session.GetMetadataFor(saved);
+                    var metadata = session.Advanced.GetMetadataFor(saved);
 					// FAILS HERE
 					var jToken = metadata["bar"];
 					Assert.Equal("baz", jToken.Value<string>());
@@ -81,7 +81,7 @@ namespace Raven.Client.Tests.Bugs
 				using (var session = store.OpenSession())
 				{
 					var foo = session.Load<IndexWithTwoProperties.Foo>(id);
-					var metadata = session.GetMetadataFor(foo);
+                    var metadata = session.Advanced.GetMetadataFor(foo);
 
 					metadata["foo"] = "bar";
 					session.SaveChanges();
@@ -91,7 +91,7 @@ namespace Raven.Client.Tests.Bugs
 				using (var session = store.OpenSession())
 				{
 					var foo = session.Load<IndexWithTwoProperties.Foo>(id);
-					var metadata = session.GetMetadataFor(foo);
+                    var metadata = session.Advanced.GetMetadataFor(foo);
 
 					Assert.Equal("bar", metadata["foo"].Value<string>());
 				}

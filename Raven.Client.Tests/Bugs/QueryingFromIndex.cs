@@ -34,7 +34,7 @@ namespace Raven.Client.Tests.Bugs
                     session.SaveChanges();
 
                     var company =
-                        session.LuceneQuery<Company>("CompanyByName")
+                        session.Advanced.LuceneQuery<Company>("CompanyByName")
                             .Where("Name:Google")
                             .WaitForNonStaleResults()
                             .FirstOrDefault();

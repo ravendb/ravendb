@@ -60,7 +60,7 @@ namespace Raven.Client.Tests.Bugs
 
                 using (var s = ds.OpenSession())
                 {
-                    var first = s.LuceneQuery<JObject>("Users")
+                    var first = s.Advanced.LuceneQuery<JObject>("Users")
                         .WaitForNonStaleResults()
                         .WhereEquals("Name", "Oren", true)
                         .First();

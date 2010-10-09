@@ -28,7 +28,7 @@ namespace Raven.Client.Tests.Bugs
 
 				using (var s = store.OpenSession())
 				{
-					var movies = s.LuceneQuery<Movie>("Movies/ByActor")
+                    var movies = s.Advanced.LuceneQuery<Movie>("Movies/ByActor")
 						.Where("Name:Dolly")
 						.WaitForNonStaleResults()
 						.ToList();
