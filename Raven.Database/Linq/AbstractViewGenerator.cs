@@ -12,7 +12,7 @@ namespace Raven.Database.Linq
 		
         public IndexingFunc ReduceDefinition { get; set; }
 
-        public TranslatorFunc TranslatorDefinition { get; set; }
+        public TranslatorFunc ResultTransformerDefinition { get; set; }
 		
         public GroupByKeyFunc GroupByExtraction { get; set; }
         

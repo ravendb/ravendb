@@ -93,24 +93,24 @@ namespace Raven.Database.Linq
 			                   		})));
 
 
-            if(indexDefinition.Translator != null)
+            if(indexDefinition.ResultTransformer != null)
             {
                 VariableDeclaration translatorDeclaration;
                 
-                if (indexDefinition.Translator.Trim().StartsWith("from"))
+                if (indexDefinition.ResultTransformer.Trim().StartsWith("from"))
                 {
-                    translatorDeclaration = QueryParsingUtils.GetVariableDeclarationForLinqQuery(indexDefinition.Translator, requiresSelectNewAnonymousType:false);
+                    translatorDeclaration = QueryParsingUtils.GetVariableDeclarationForLinqQuery(indexDefinition.ResultTransformer, requiresSelectNewAnonymousType:false);
                 }
                 else
                 {
-                    translatorDeclaration = QueryParsingUtils.GetVariableDeclarationForLinqMethods(indexDefinition.Translator);
+                    translatorDeclaration = QueryParsingUtils.GetVariableDeclarationForLinqMethods(indexDefinition.ResultTransformer);
                 }
 
 
                 // this.Translator = (Database,results) => from doc in results ...;
                 ctor.Body.AddChild(new ExpressionStatement(
                                     new AssignmentExpression(
-                                        new MemberReferenceExpression(new ThisReferenceExpression(), "TranslatorDefinition"),
+                                        new MemberReferenceExpression(new ThisReferenceExpression(), "ResultTransformerDefinition"),
                                         AssignmentOperatorType.Assign,
                                         new LambdaExpression
                                         {
@@ -186,9 +186,9 @@ namespace Raven.Database.Linq
 				compiledQueryText += Environment.NewLine + indexDefinition.Reduce.Replace("\"", "\"\"");
 			}
 
-            if (indexDefinition.Translator != null)
+            if (indexDefinition.ResultTransformer != null)
             {
-                compiledQueryText += Environment.NewLine + indexDefinition.Translator.Replace("\"", "\"\"");
+                compiledQueryText += Environment.NewLine + indexDefinition.ResultTransformer.Replace("\"", "\"\"");
             }
 
 			compiledQueryText += "\"";

@@ -133,7 +133,7 @@
     <Compile Include="IDocumentStore.cs" />
     <Compile Include="Document\InMemoryDocumentSessionOperations.cs" />
     <Compile Include="IInMemoryDocumentSessionOperations.cs" />
-    <Compile Include="Indexes\AbstractIndexCreation.cs" />
+    <Compile Include="Indexes\AbstractIndexCreationTask.cs" />
     <Compile Include="Indexes\IndexCreation.cs" />
     <Compile Include="Indexes\ExpressionOperatorPrecedence.cs" />
     <Compile Include="ITransactionalDocumentSession.cs" />
