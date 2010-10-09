@@ -31,6 +31,11 @@ namespace Raven.Database.Indexing
 		/// <value>The reduce.</value>
 		public string Reduce { get; set; }
 
+        /// <summary>
+        /// Gets or sets the translator function
+        /// </summary>
+        public string Translator { get; set; }
+
 		/// <summary>
 		/// Gets a value indicating whether this instance is map reduce index definition
 		/// </summary>

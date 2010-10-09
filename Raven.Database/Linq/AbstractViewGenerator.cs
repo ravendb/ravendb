@@ -1,9 +1,7 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using Raven.Database.Indexing;
-using Raven.Database.Linq.PrivateExtensions;
 
 namespace Raven.Database.Linq
 {
@@ -13,6 +11,8 @@ namespace Raven.Database.Linq
 		public IndexingFunc MapDefinition { get; set; }
 		
         public IndexingFunc ReduceDefinition { get; set; }
+
+        public TranslatorFunc TranslatorDefinition { get; set; }
 		
         public GroupByKeyFunc GroupByExtraction { get; set; }
         

@@ -2,12 +2,13 @@
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
+using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
 
 namespace Raven.Database
 {
-    public class DocumentRetriever
+    public class DocumentRetriever : ITranslatorDatabaseAccessor
     {
         private readonly IDictionary<string, JsonDocument> cache = new Dictionary<string, JsonDocument>(StringComparer.InvariantCultureIgnoreCase);
         private readonly HashSet<string> loadedIdsForRetrieval = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
@@ -34,7 +35,7 @@ namespace Raven.Database
                 // duplicate document, filter it out
                 if (loadedIds.Add(queryResult.Key) == false)
                     return null;
-                return GetDocumentWithCaching(queryResult);
+                return GetDocumentWithCaching(queryResult.Key);
             }
 
             if (fieldsToFetch != null)
@@ -44,7 +45,7 @@ namespace Raven.Database
                     if (queryResult.Projection.Property(fieldToFetch) != null)
                         continue;
 
-                    var doc = GetDocumentWithCaching(queryResult);
+                    var doc = GetDocumentWithCaching(queryResult.Key);
                     var token = doc.DataAsJson.SelectToken(fieldToFetch);
                     queryResult.Projection[fieldToFetch] = token;
                 }
@@ -57,13 +58,13 @@ namespace Raven.Database
             };
         }
 
-        private JsonDocument GetDocumentWithCaching(IndexQueryResult queryResult)
+        private JsonDocument GetDocumentWithCaching(string key)
         {
             JsonDocument doc;
-            if (cache.TryGetValue(queryResult.Key, out doc))
+            if (cache.TryGetValue(key, out doc))
                 return doc;
-            doc = actions.Documents.DocumentByKey(queryResult.Key, null);
-            cache[queryResult.Key] = doc;
+            doc = actions.Documents.DocumentByKey(key, null);
+            cache[key] = doc;
             return doc;
         }
 
@@ -123,6 +124,14 @@ namespace Raven.Database
             }
 
             return document;
+        }
+
+        public dynamic Load(string id)
+        {
+            var document = GetDocumentWithCaching(id);
+            if(document == null)
+                return null;
+            return new DynamicJsonObject(document.DataAsJson);
         }
     }
 }

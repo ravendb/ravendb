@@ -93,6 +93,36 @@ namespace Raven.Database.Linq
 			                   		})));
 
 
+            if(indexDefinition.Translator != null)
+            {
+                VariableDeclaration translatorDeclaration;
+                
+                if (indexDefinition.Translator.Trim().StartsWith("from"))
+                {
+                    translatorDeclaration = QueryParsingUtils.GetVariableDeclarationForLinqQuery(indexDefinition.Translator, requiresSelectNewAnonymousType:false);
+                }
+                else
+                {
+                    translatorDeclaration = QueryParsingUtils.GetVariableDeclarationForLinqMethods(indexDefinition.Translator);
+                }
+
+
+                // this.Translator = (Database,results) => from doc in results ...;
+                ctor.Body.AddChild(new ExpressionStatement(
+                                    new AssignmentExpression(
+                                        new MemberReferenceExpression(new ThisReferenceExpression(), "TranslatorDefinition"),
+                                        AssignmentOperatorType.Assign,
+                                        new LambdaExpression
+                                        {
+                                            Parameters =
+			                   				{
+			                   					new ParameterDeclarationExpression(null, "Database"),
+                                                new ParameterDeclarationExpression(null, "results")
+			                   				},
+                                            ExpressionBody = translatorDeclaration.Initializer
+                                        })));
+            }
+
 			if (indexDefinition.IsMapReduce)
 			{
 				VariableDeclaration reduceDefiniton;
@@ -155,6 +185,11 @@ namespace Raven.Database.Linq
 			{
 				compiledQueryText += Environment.NewLine + indexDefinition.Reduce.Replace("\"", "\"\"");
 			}
+
+            if (indexDefinition.Translator != null)
+            {
+                compiledQueryText += Environment.NewLine + indexDefinition.Translator.Replace("\"", "\"\"");
+            }
 
 			compiledQueryText += "\"";
 			CompiledQueryText = CompiledQueryText.Replace("\"" + mapReduceTextToken + "\"",

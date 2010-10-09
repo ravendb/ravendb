@@ -477,8 +477,21 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
                                      select docRetriever.RetrieveDocumentForQuery(queryResult, query.FieldsToFetch)
                                          into doc
                                          where doc != null
-                                         select doc.ToJson();
-                    list.AddRange(collection);
+                                         select doc;
+
+                    IEnumerable<JObject> results;
+                    if (abstractViewGenerator != null && 
+                        abstractViewGenerator.TranslatorDefinition != null)
+                    {
+                        results = abstractViewGenerator.TranslatorDefinition(docRetriever, collection.Select(x => new DynamicJsonObject(x.ToJson())))
+                            .Select<object, JObject>(JsonExtensions.ToJObject);
+                    }
+                    else
+                    {
+                        results = collection.Select(x => x.ToJson());
+                    }
+
+                    list.AddRange(results);
                 });
             return new QueryResult
             {
