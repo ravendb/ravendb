@@ -60,6 +60,8 @@ namespace Raven.Database
 
         private JsonDocument GetDocumentWithCaching(string key)
         {
+            if (key == null)
+                return null;
             JsonDocument doc;
             if (cache.TryGetValue(key, out doc))
                 return doc;
