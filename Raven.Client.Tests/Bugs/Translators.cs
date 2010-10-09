@@ -46,7 +46,8 @@ namespace Raven.Client.Tests.Bugs
 
                 using (var s = ds.OpenSession())
                 {
-                    var first = s.Query<User>("Users").Customize(x => x.WaitForNonStaleResults())
+                    var first = s.Query<User,Users>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(x=>x.Name == "Oren")
                         .As<UserWithPartner>()
                         .First();
