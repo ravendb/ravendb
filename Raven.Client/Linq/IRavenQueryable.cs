@@ -13,6 +13,6 @@ namespace Raven.Client.Linq
 		/// </summary>
 		/// <param name="action">The action.</param>
 		/// <returns></returns>
-        IRavenQueryable<T> Customize(Action<IDocumentQuery<T>> action);
+        IRavenQueryable<T> Customize(Action<IDocumentQueryCustomization> action);
 	}
 }

@@ -87,7 +87,7 @@ namespace Raven.Bundles.Tests.Versioning
             using (var session = documentStore.OpenSession())
             {
                 var company2 = session.Load<Company>(company.Id);
-                var metadata = session.GetMetadataFor(company2);
+                var metadata = session.Advanced.GetMetadataFor(company2);
                 Assert.Equal("Current", metadata.Value<string>("Raven-Document-Revision-Status"));
                 Assert.Equal(1, metadata.Value<int>("Raven-Document-Revision"));
             }
@@ -113,7 +113,7 @@ namespace Raven.Bundles.Tests.Versioning
 
             using (var sesion = documentStore.OpenSession())
             {
-                var metadata = sesion.GetMetadataFor(sesion.Load<User>(user.Id));
+                var metadata = sesion.Advanced.GetMetadataFor(sesion.Load<User>(user.Id));
                 Assert.Null(metadata.Value<string>("Raven-Document-Revision-Status"));
                 Assert.Equal(0, metadata.Value<int>("Raven-Document-Revision"));
             }
@@ -134,7 +134,7 @@ namespace Raven.Bundles.Tests.Versioning
             using (var session = documentStore.OpenSession())
             {
                 var company2 = session.Load<Company>(company.Id);
-                var metadata = session.GetMetadataFor(company2);
+                var metadata = session.Advanced.GetMetadataFor(company2);
                 Assert.Equal("Current", metadata.Value<string>("Raven-Document-Revision-Status"));
                 Assert.Equal(2, metadata.Value<int>("Raven-Document-Revision"));
             }
@@ -153,7 +153,7 @@ namespace Raven.Bundles.Tests.Versioning
             using (var session = documentStore.OpenSession())
             {
                 var company2 = session.Load<Company>(company.Id + "/revisions/1");
-                var metadata = session.GetMetadataFor(company2);
+                var metadata = session.Advanced.GetMetadataFor(company2);
                 Assert.Equal(company.Name, company2.Name);
                 Assert.Equal("Historical", metadata.Value<string>("Raven-Document-Revision-Status"));
             }
@@ -167,25 +167,25 @@ namespace Raven.Bundles.Tests.Versioning
             {
                 session.Store(company);
                 session.SaveChanges();
-				Assert.Equal(1, session.GetMetadataFor(company).Value<int>("Raven-Document-Revision"));
+                Assert.Equal(1, session.Advanced.GetMetadataFor(company).Value<int>("Raven-Document-Revision"));
             }
             using (var session = documentStore.OpenSession())
             {
                 var company3 = session.Load<Company>(company.Id);
                 company3.Name = "Hibernating Rhinos";
                 session.SaveChanges();
-				Assert.Equal(2, session.GetMetadataFor(company3).Value<int>("Raven-Document-Revision"));
+                Assert.Equal(2, session.Advanced.GetMetadataFor(company3).Value<int>("Raven-Document-Revision"));
 			}
             using (var session = documentStore.OpenSession())
             {
                 var company2 = session.Load<Company>(company.Id + "/revisions/1");
-                var metadata = session.GetMetadataFor(company2);
+                var metadata = session.Advanced.GetMetadataFor(company2);
                 Assert.Equal("Company Name", company2.Name);
                 Assert.Equal("Historical", metadata.Value<string>("Raven-Document-Revision-Status"));
                 Assert.Null(metadata.Value<string>("Raven-Document-Parent-Revision"));
 
                 company2 = session.Load<Company>(company.Id + "/revisions/2");
-                metadata = session.GetMetadataFor(company2);
+                metadata = session.Advanced.GetMetadataFor(company2);
                 Assert.Equal("Hibernating Rhinos", company2.Name);
                 Assert.Equal("Historical", metadata.Value<string>("Raven-Document-Revision-Status"));
 				Assert.Equal("companies/1/revisions/1", metadata.Value<string>("Raven-Document-Parent-Revision"));

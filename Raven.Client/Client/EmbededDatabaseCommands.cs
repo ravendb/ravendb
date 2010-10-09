@@ -133,9 +133,12 @@ namespace Raven.Client.Client
 		{
 			CurrentRavenOperation.Headers.Value = OperationsHeaders;
 
-            if (string.Compare(index, "dynamic", true) == 0)
+            if (index.StartsWith("dynamic", StringComparison.InvariantCultureIgnoreCase))
             {
-                return database.ExecuteDynamicQuery(query);
+                string entityName = null;
+                if (index.StartsWith("dynamic/"))
+                    entityName = index.Substring("dynamic/".Length);
+                return database.ExecuteDynamicQuery(entityName, query);
             }
             else
             {

@@ -52,7 +52,7 @@ namespace Raven.Client.Tests.Document
                     Assert.False(String.IsNullOrEmpty(idPerson));
 
                     session.SaveChanges();
-                    session.Clear();
+                    session.Advanced.Clear();
                     //Pull the docs back out of RavenDB and see if the values are the same
                     dynamic employeeLoad = session.Load<dynamic>(idEmployee);
 					Assert.Equal("John Smith", employeeLoad.Name);

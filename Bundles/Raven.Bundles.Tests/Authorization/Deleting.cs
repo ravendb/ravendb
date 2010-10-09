@@ -34,7 +34,7 @@ namespace Raven.Bundles.Tests.Authorization
 			{
 				s.SecureFor(UserId, "/Company/Rename");
 
-				Assert.Throws<InvalidOperationException>(() => s.DatabaseCommands.Delete(company.Id, null));
+                Assert.Throws<InvalidOperationException>(() => s.Advanced.DatabaseCommands.Delete(company.Id, null));
 			}
 		}
 
@@ -77,7 +77,7 @@ namespace Raven.Bundles.Tests.Authorization
 				company.Name = "Stampading Rhinos";
 				s.Store(company);
 
-				Assert.DoesNotThrow(() => s.DatabaseCommands.Delete(company.Id, null));
+                Assert.DoesNotThrow(() => s.Advanced.DatabaseCommands.Delete(company.Id, null));
 			}
 		}
 	}

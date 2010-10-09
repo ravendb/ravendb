@@ -180,8 +180,8 @@
     <Compile Include="..\Raven.Client\IInMemoryDocumentSessionOperations.cs">
       <Link>IInMemoryDocumentSessionOperations.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client\Indexes\AbstractIndexCreation.cs">
-      <Link>Indexes\AbstractIndexCreation.cs</Link>
+    <Compile Include="..\Raven.Client\Indexes\AbstractIndexCreationTask.cs">
+      <Link>Indexes\AbstractIndexCreationTask.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client\Indexes\IndexDefinition.cs">
       <Link>Indexes\IndexDefinition.cs</Link>

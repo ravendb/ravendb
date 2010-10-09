@@ -31,7 +31,7 @@ namespace Raven.Client.Tests.Bugs
 
                 using(var session = store.OpenSession())
                 {
-                    var result = session.LuceneQuery<Record>("Date")
+                    var result = session.Advanced.LuceneQuery<Record>("Date")
                         .Where("Date:" + DateTools.DateToString(new DateTime(2001,1,1), DateTools.Resolution.MILLISECOND))
                         .WaitForNonStaleResults()
                         .ToList();
@@ -65,7 +65,7 @@ namespace Raven.Client.Tests.Bugs
 
                 using (var session = store.OpenSession())
                 {
-                    var result = session.LuceneQuery<Record>("Date")
+                    var result = session.Advanced.LuceneQuery<Record>("Date")
                         .Where("Date:[* TO " + DateTools.DateToString(new DateTime(2001, 1, 2), DateTools.Resolution.MILLISECOND) +"]")
                         .WaitForNonStaleResults()
                         .ToList();
@@ -99,7 +99,7 @@ namespace Raven.Client.Tests.Bugs
 
                 using (var session = store.OpenSession())
                 {
-                    var result = session.LuceneQuery<Record>("Date")
+                    var result = session.Advanced.LuceneQuery<Record>("Date")
                         .Where("Date:[" + DateTools.DateToString(new DateTime(2000, 1, 1), DateTools.Resolution.MILLISECOND) + " TO NULL]")
                         .WaitForNonStaleResults()
                         .ToList();

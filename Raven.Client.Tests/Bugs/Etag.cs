@@ -18,7 +18,7 @@ namespace Raven.Client.Tests.Bugs
 
 					session.SaveChanges();
 
-					var metadata = session.GetMetadataFor(foo);
+                    var metadata = session.Advanced.GetMetadataFor(foo);
 					Assert.NotNull(metadata.Value<string>("@etag"));
 				}
 
@@ -26,7 +26,7 @@ namespace Raven.Client.Tests.Bugs
 				{
 					var loaded = session.Load<IndexWithTwoProperties.Foo>(foo.Id);
 
-					var metadata = session.GetMetadataFor(loaded);
+                    var metadata = session.Advanced.GetMetadataFor(loaded);
 					Assert.NotNull(metadata.Value<string>("@etag"));
 
 				}

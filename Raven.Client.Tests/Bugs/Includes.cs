@@ -63,13 +63,13 @@ namespace Raven.Client.Tests.Bugs
 					.Include("Customer.Id")
 					.Load<Order>("orders/1");
 
-				Assert.Equal(1, session.NumberOfRequests);
+                Assert.Equal(1, session.Advanced.NumberOfRequests);
 
 				var customer = session.Load<Customer>(order.Customer.Id);
 
 				Assert.NotNull(customer);
 
-				Assert.Equal(1, session.NumberOfRequests);
+                Assert.Equal(1, session.Advanced.NumberOfRequests);
 			}
 		}
 
@@ -82,13 +82,13 @@ namespace Raven.Client.Tests.Bugs
                     .Include<Order>(x => x.Customer.Id)
                     .Load("orders/1");
 
-                Assert.Equal(1, session.NumberOfRequests);
+                Assert.Equal(1, session.Advanced.NumberOfRequests);
 
                 var customer = session.Load<Customer>(order.Customer.Id);
 
                 Assert.NotNull(customer);
 
-                Assert.Equal(1, session.NumberOfRequests);
+                Assert.Equal(1, session.Advanced.NumberOfRequests);
             }
         }
 
@@ -98,13 +98,13 @@ namespace Raven.Client.Tests.Bugs
 			using (var session = store.OpenSession())
 			{
 				var orders = session
-					.LuceneQuery<Order>("Orders/ByName")
+                    .Advanced.LuceneQuery<Order>("Orders/ByName")
 					.WaitForNonStaleResults()
 					.Include("Customer.Id")
 					.Take(2)
 					.ToList();
 
-				Assert.Equal(1, session.NumberOfRequests);
+                Assert.Equal(1, session.Advanced.NumberOfRequests);
 
 				var customer1 = session.Load<Customer>(orders[0].Customer.Id);
 				var customer2 = session.Load<Customer>(orders[1].Customer.Id);
@@ -114,21 +114,21 @@ namespace Raven.Client.Tests.Bugs
 
 				Assert.NotSame(customer1, customer2);
 
-				Assert.Equal(1, session.NumberOfRequests);
+                Assert.Equal(1, session.Advanced.NumberOfRequests);
 			}
 		}
 
         [Fact]
         public void CanIncludeExtensionWithQuery() {
             using (var session = store.OpenSession()) {
-                var orders = session
+                var orders = session.Advanced
                     .LuceneQuery<Order>("Orders/ByName")
                     .WaitForNonStaleResults()
                     .Include(o => o.Customer.Id)
                     .Take(2)
                     .ToList();
 
-                Assert.Equal(1, session.NumberOfRequests);
+                Assert.Equal(1, session.Advanced.NumberOfRequests);
 
                 var customer1 = session.Load<Customer>(orders[0].Customer.Id);
                 var customer2 = session.Load<Customer>(orders[1].Customer.Id);
@@ -138,7 +138,7 @@ namespace Raven.Client.Tests.Bugs
 
                 Assert.NotSame(customer1, customer2);
 
-                Assert.Equal(1, session.NumberOfRequests);
+                Assert.Equal(1, session.Advanced.NumberOfRequests);
             }
         }
 
@@ -151,7 +151,7 @@ namespace Raven.Client.Tests.Bugs
 					.Include("Customer.Id")
 					.Load<Order>("orders/1", "orders/2");
 
-				Assert.Equal(1, session.NumberOfRequests);
+                Assert.Equal(1, session.Advanced.NumberOfRequests);
 
 				var customer1 = session.Load<Customer>(orders[0].Customer.Id);
 				var customer2 = session.Load<Customer>(orders[1].Customer.Id);
@@ -161,7 +161,7 @@ namespace Raven.Client.Tests.Bugs
 
 				Assert.NotSame(customer1, customer2);
 
-				Assert.Equal(1, session.NumberOfRequests);
+                Assert.Equal(1, session.Advanced.NumberOfRequests);
 			}
 		}
 

@@ -106,9 +106,12 @@ namespace Raven.Database.Server.Responders
 				var indexQuery = context.GetIndexQueryFromHttpContext(Database.Configuration.MaxPageSize);
                 
                 QueryResult queryResult = null;
-                if (string.Compare(index,"dynamic", true) == 0)
+                if (index.StartsWith("dynamic", StringComparison.InvariantCultureIgnoreCase))
                 {
-                    queryResult = Database.ExecuteDynamicQuery(indexQuery);
+                    string entityName = null;
+                    if (index.StartsWith("dynamic/"))
+                        entityName = index.Substring("dynamic/".Length);
+                    queryResult = Database.ExecuteDynamicQuery(entityName, indexQuery);
                 }
                 else
                 {

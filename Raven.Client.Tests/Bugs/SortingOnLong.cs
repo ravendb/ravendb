@@ -50,7 +50,7 @@ namespace Raven.Client.Tests.Bugs
 		{
 			UsingDatabaseOfFoos(delegate(IDocumentSession session)
 			{
-				var foos1 = session.LuceneQuery<Foo>("long")
+                var foos1 = session.Advanced.LuceneQuery<Foo>("long")
 					.WaitForNonStaleResults()
 					.OrderBy("Value_Range")
 					.ToList();
@@ -86,7 +86,7 @@ namespace Raven.Client.Tests.Bugs
 		{
 			UsingDatabaseOfFoos(delegate(IDocumentSession session)
 			{
-				var foos1 = session.LuceneQuery<Foo>("long")
+                var foos1 = session.Advanced.LuceneQuery<Foo>("long")
 					.WaitForNonStaleResults()
 					.OrderBy("-Value_Range")
 					.ToList();

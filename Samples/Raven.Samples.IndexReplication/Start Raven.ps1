@@ -1,11 +1,11 @@
 # starts the server in debug mode
 
 $raven = "..\..\Server" #release path
-$replication = "..\..\Bundles\Raven.Bundles.ReplicateToSql.dll"
+$replication = "..\..\Bundles\Raven.Bundles.IndexReplication.dll"
 if( (test-path $raven) -eq $false)
 {
   $raven = "..\..\build" #src path
-  $replication = "..\..\build\Raven.Bundles.ReplicateToSql.dll"
+  $replication = "..\..\build\Raven.Bundles.IndexReplication.dll"
 }
 
 rd .\Server\Data -force -recurse -erroraction silentlycontinue

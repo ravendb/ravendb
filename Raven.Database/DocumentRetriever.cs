@@ -2,12 +2,13 @@
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
+using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
 
 namespace Raven.Database
 {
-    public class DocumentRetriever
+    public class DocumentRetriever : ITranslatorDatabaseAccessor
     {
         private readonly IDictionary<string, JsonDocument> cache = new Dictionary<string, JsonDocument>(StringComparer.InvariantCultureIgnoreCase);
         private readonly HashSet<string> loadedIdsForRetrieval = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
@@ -21,25 +22,33 @@ namespace Raven.Database
             this.triggers = triggers;
         }
 
-        public JsonDocument RetrieveDocumentForQuery(IndexQueryResult queryResult)
+        public JsonDocument RetrieveDocumentForQuery(IndexQueryResult queryResult, string[] fieldsToFetch)
         {
-            var doc = RetrieveDocumentInternal(queryResult, loadedIdsForRetrieval);
+            var doc = RetrieveDocumentInternal(queryResult, loadedIdsForRetrieval, fieldsToFetch);
             return ExecuteReadTriggers(doc, null, ReadOperation.Query);
         }
 
-        private JsonDocument RetrieveDocumentInternal(IndexQueryResult queryResult, HashSet<string> loadedIds)
+        private JsonDocument RetrieveDocumentInternal(IndexQueryResult queryResult, HashSet<string> loadedIds, string[] fieldsToFetch)
         {
             if (queryResult.Projection == null)
             {
-                    // duplicate document, filter it out
+                // duplicate document, filter it out
                 if (loadedIds.Add(queryResult.Key) == false)
                     return null;
-                JsonDocument doc;
-                if (cache.TryGetValue(queryResult.Key, out doc))
-                    return doc;
-                doc = actions.Documents.DocumentByKey(queryResult.Key, null);
-                cache[queryResult.Key] = doc;
-                return doc;
+                return GetDocumentWithCaching(queryResult.Key);
+            }
+
+            if (fieldsToFetch != null)
+            {
+                foreach (var fieldToFetch in fieldsToFetch)
+                {
+                    if (queryResult.Projection.Property(fieldToFetch) != null)
+                        continue;
+
+                    var doc = GetDocumentWithCaching(queryResult.Key);
+                    var token = doc.DataAsJson.SelectToken(fieldToFetch);
+                    queryResult.Projection[fieldToFetch] = token;
+                }
             }
 
             return new JsonDocument
@@ -49,9 +58,21 @@ namespace Raven.Database
             };
         }
 
-        public bool ShouldIncludeResultInQuery(IndexQueryResult arg)
+        private JsonDocument GetDocumentWithCaching(string key)
         {
-            var doc = RetrieveDocumentInternal(arg, loadedIdsForFilter);
+            if (key == null)
+                return null;
+            JsonDocument doc;
+            if (cache.TryGetValue(key, out doc))
+                return doc;
+            doc = actions.Documents.DocumentByKey(key, null);
+            cache[key] = doc;
+            return doc;
+        }
+
+        public bool ShouldIncludeResultInQuery(IndexQueryResult arg, string[] fieldsToFetch)
+        {
+            var doc = RetrieveDocumentInternal(arg, loadedIdsForFilter, fieldsToFetch);
             if (doc == null)
                 return false;
             doc = ProcessReadVetoes(doc, null, ReadOperation.Query);
@@ -76,7 +97,7 @@ namespace Raven.Database
             return resultingDocument;
         }
 
-    	public JsonDocument ProcessReadVetoes(JsonDocument document, TransactionInformation transactionInformation, ReadOperation operation)
+        public JsonDocument ProcessReadVetoes(JsonDocument document, TransactionInformation transactionInformation, ReadOperation operation)
         {
             if (document == null)
                 return document;
@@ -105,6 +126,14 @@ namespace Raven.Database
             }
 
             return document;
+        }
+
+        public dynamic Load(string id)
+        {
+            var document = GetDocumentWithCaching(id);
+            if(document == null)
+                return null;
+            return new DynamicJsonObject(document.DataAsJson);
         }
     }
 }

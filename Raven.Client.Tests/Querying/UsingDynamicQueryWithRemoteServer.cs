@@ -66,12 +66,12 @@ namespace Raven.Client.Tests.Querying
 
                 using (var s = store.OpenSession())
                 {
-                    var results = s.DynamicQuery<Blog>()
+                    var results = s.Query<Blog>()
                         .Customize(x => x.WaitForNonStaleResultsAsOfNow())
                         .Where(x => x.Category == "Rhinos" && x.Title.Length == 3)
                         .ToArray();
 
-                    var blogs = s.DynamicLuceneQuery<Blog>()
+                    var blogs = s.Advanced.DynamicLuceneQuery<Blog>()
                         .Where("Category:Rhinos AND Title.Length:3")
                         .ToArray();
 
@@ -116,7 +116,7 @@ namespace Raven.Client.Tests.Querying
 
                 using (var s = store.OpenSession())
                 {
-                    var results = s.DynamicLuceneQuery<Blog>()
+                    var results = s.Advanced.DynamicLuceneQuery<Blog>()
                         .Where("Title.Length:3 AND Category:Rhinos")
                         .WaitForNonStaleResultsAsOfNow().ToArray();
 
@@ -127,15 +127,86 @@ namespace Raven.Client.Tests.Querying
             }
         }
 
+        [Fact]
+        public void CanPerformProjectionUsingClientLinqQuery()
+        {
+            using (var server = GetNewServer(port, path))
+            {
+                var store = new DocumentStore { Url = "http://localhost:" + port };
+                store.Initialize();
+
+                var blogOne = new Blog
+                {
+                    Title = "one",
+                    Category = "Ravens",
+                    Tags = new Tag[] { 
+                         new Tag() { Name = "tagOne"},
+                         new Tag() { Name = "tagTwo"}
+                    }
+                };
+
+                using (var s = store.OpenSession())
+                {
+                    s.Store(blogOne);
+                    s.SaveChanges();
+                }
+
+                using (var s = store.OpenSession())
+                {
+                    var results = s.Query<Blog>()
+                        .Where(x => x.Title == "one" && x.Tags.Any(y => y.Name == "tagTwo"))
+                        .Select(x => new
+                        {
+                            x.Category,
+                            x.Title
+                        })
+                        .Single();
+
+                    Assert.Equal("one", results.Title);
+                    Assert.Equal("Ravens", results.Category);
+                }
+            }
+        }
+
         public class Blog
         {
+            public User User
+            {
+                get;
+                set;
+            }
+
             public string Title
             {
                 get;
                 set;
             }
 
+            public Tag[] Tags
+            {
+                get;
+                set;
+            }
+
             public string Category
+            {
+                get;
+                set;
+            }
+        }
+
+        public class Tag
+        {
+            public string Name
+            {
+                get;
+                set;
+            }
+        }
+
+        public class User
+        {
+            public string Name
             {
                 get;
                 set;

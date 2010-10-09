@@ -52,7 +52,7 @@ namespace Raven.Client.Tests.Bugs
                     s.Store(new AccurateCount.User { Name = "Ayende" });
                     s.SaveChanges();
 
-                    s.LuceneQuery<AccurateCount.User>("test")
+                    s.Advanced.LuceneQuery<AccurateCount.User>("test")
                         .WaitForNonStaleResults()
                         .FirstOrDefault();
                 }
@@ -69,7 +69,7 @@ namespace Raven.Client.Tests.Bugs
 
                 using (var s = documentStore.OpenSession())
                 {
-                    var user = s.LuceneQuery<AccurateCount.User>("test")
+                    var user = s.Advanced.LuceneQuery<AccurateCount.User>("test")
                         .FirstOrDefault();
                     Assert.Equal("Ayende", user.Name);
                 }
@@ -98,7 +98,7 @@ namespace Raven.Client.Tests.Bugs
 
 				using (var s = documentStore.OpenSession())
 				{
-					s.AllowNonAuthoritiveInformation = false;
+                    s.Advanced.AllowNonAuthoritiveInformation = false;
 					var user = s.Load<AccurateCount.User>("users/1");
 					Assert.Equal("Rahien", user.Name);
 				}
@@ -121,7 +121,7 @@ namespace Raven.Client.Tests.Bugs
                     s.Store(new AccurateCount.User { Name = "Ayende" });
                     s.SaveChanges();
 
-                    s.LuceneQuery<AccurateCount.User>("test")
+                    s.Advanced.LuceneQuery<AccurateCount.User>("test")
                         .WaitForNonStaleResults()
                         .FirstOrDefault();
                 }
@@ -138,8 +138,8 @@ namespace Raven.Client.Tests.Bugs
 
                 using (var s = documentStore.OpenSession())
                 {
-                    s.AllowNonAuthoritiveInformation = false;
-                    var user = s.LuceneQuery<AccurateCount.User>("test")
+                    s.Advanced.AllowNonAuthoritiveInformation = false;
+                    var user = s.Advanced.LuceneQuery<AccurateCount.User>("test")
                         .FirstOrDefault();
                     Assert.Equal("Rahien", user.Name);
                 }

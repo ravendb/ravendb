@@ -2,11 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Lucene.Net.QueryParsers;
-using System.Collections;
-using Lucene.Net.Analysis.Standard;
-using Lucene.Net.Index;
-using Lucene.Net.Analysis;
 using Raven.Database.Indexing;
 using System.Text.RegularExpressions;
 
@@ -14,7 +9,9 @@ namespace Raven.Database.Data
 {
     public class DynamicQueryMapping
     {
-        static readonly Regex queryTerms = new Regex(@"([^\s\(\+\-][\w._,]+)\:", RegexOptions.Compiled);
+        static readonly Regex QueryTerms = new Regex(@"([^\s\(\+\-][\w._,]+)\:", RegexOptions.Compiled);
+
+        public string ForEntityName { get; set; }
 
         public DynamicQueryMappingItem[] Items
         {
@@ -29,7 +26,7 @@ namespace Raven.Database.Data
 
             fromClauses.Add("from doc in docs");
 
-            foreach (var map in this.Items)
+            foreach (var map in Items)
             {
                 String currentDoc = "doc";
                 StringBuilder currentExpression = new StringBuilder();
@@ -75,15 +72,15 @@ namespace Raven.Database.Data
             
             return new IndexDefinition()
             {
-                 Map = string.Format("{0} select new {{ {1} }}",
-                    string.Join(" ", fromClauses.ToArray()),
+                 Map = string.Format("{0}\r\nselect new {{ {1} }}",
+                    string.Join("\r\n", fromClauses.ToArray()),
                     string.Join(", ", realMappings.ToArray())),
             };
         }
 
-        public static DynamicQueryMapping Create(string query)
+        public static DynamicQueryMapping Create(string query, string entityName)
         {
-            var queryTermMatches = queryTerms.Matches(query);
+            var queryTermMatches = QueryTerms.Matches(query);
              var fields = new HashSet<string>();
             for (int x = 0; x < queryTermMatches.Count; x++)
             {
@@ -94,6 +91,7 @@ namespace Raven.Database.Data
             
             return new DynamicQueryMapping()
             {
+                ForEntityName = entityName,
                 Items = fields.Select(x => new DynamicQueryMappingItem()
                 {
                     From = x,

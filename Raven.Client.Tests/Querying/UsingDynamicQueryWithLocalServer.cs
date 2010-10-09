@@ -52,7 +52,7 @@ namespace Raven.Client.Tests.Querying
 
                 using (var s = store.OpenSession())
                 {
-                    var results = s.DynamicQuery<Blog>()
+                    var results = s.Query<Blog>()
                         .Customize(x => x.WaitForNonStaleResultsAsOfNow(TimeSpan.FromSeconds(5)))
                         .Where(x => x.Tags.Any(y=>y.Name == "Birds"))
                         .ToArray();
@@ -95,7 +95,7 @@ namespace Raven.Client.Tests.Querying
 
                 using (var s = store.OpenSession())
                 {
-                    var results = s.DynamicQuery<Blog>()
+                    var results = s.Query<Blog>()
                         .Customize(x => x.WaitForNonStaleResultsAsOfNow())
                         .Where(x => x.Category == "Rhinos" && x.Title.Length == 3)
                         .ToArray();
@@ -138,7 +138,7 @@ namespace Raven.Client.Tests.Querying
 
                 using (var s = store.OpenSession())
                 {
-                    var results = s.DynamicLuceneQuery<Blog>()
+                    var results = s.Advanced.DynamicLuceneQuery<Blog>()
                         .Where("Title.Length:3 AND Category:Rhinos")
                         .WaitForNonStaleResultsAsOfNow().ToArray();
 

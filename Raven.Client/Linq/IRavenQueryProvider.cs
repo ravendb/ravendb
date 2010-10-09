@@ -12,7 +12,8 @@ namespace Raven.Client.Linq
 		/// Customizes the query using the specified action
 		/// </summary>
 		/// <param name="action">The action.</param>
-        void Customize(Delegate action);
+        void Customize(Action<IDocumentQueryCustomization> action);
+
 		/// <summary>
 		/// Gets the session.
 		/// </summary>
@@ -23,5 +24,10 @@ namespace Raven.Client.Linq
 		/// </summary>
 		/// <value>The name of the index.</value>
         string IndexName { get; }
+
+        /// <summary>
+        /// Change the result type for the query provider
+        /// </summary>
+	    IRavenQueryProvider For<S>();
     }
 }

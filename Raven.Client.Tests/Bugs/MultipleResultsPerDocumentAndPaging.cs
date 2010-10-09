@@ -40,7 +40,7 @@ select new { Actor = actor }",
 
 				using (var s2 = store.OpenSession())
 				{
-					var movies = s2.LuceneQuery<Movie>("Movies/ByActor")
+                    var movies = s2.Advanced.LuceneQuery<Movie>("Movies/ByActor")
 						.WhereContains("Actor", "Bond")
 						.Take(2)
 						.WaitForNonStaleResults()

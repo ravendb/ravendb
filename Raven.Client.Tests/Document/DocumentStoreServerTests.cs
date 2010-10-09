@@ -106,7 +106,7 @@ namespace Raven.Client.Tests.Document
 					session.Store(entity);
 					session.SaveChanges();
 
-					session.LuceneQuery<Company>().WaitForNonStaleResults().ToArray();// wait for the index to settle down
+                    session.Advanced.LuceneQuery<Company>().WaitForNonStaleResults().ToArray();// wait for the index to settle down
 				}
 
 				documentStore.DatabaseCommands.DeleteByIndex("Raven/DocumentsByEntityName", new IndexQuery
@@ -116,7 +116,7 @@ namespace Raven.Client.Tests.Document
 
 				using (var session = documentStore.OpenSession())
 				{
-					Assert.Empty(session.LuceneQuery<Company>().WaitForNonStaleResults().ToArray());
+                    Assert.Empty(session.Advanced.LuceneQuery<Company>().WaitForNonStaleResults().ToArray());
 				}
 			}
 		}
@@ -142,7 +142,7 @@ namespace Raven.Client.Tests.Document
 					session.Store(new Company { Name = "B", Phone = 4 });
 					session.SaveChanges();
 
-					session.LuceneQuery<Company>("CompaniesByName").WaitForNonStaleResults().ToArray();// wait for the index to settle down
+                    session.Advanced.LuceneQuery<Company>("CompaniesByName").WaitForNonStaleResults().ToArray();// wait for the index to settle down
 				}
 
 				using (var session = documentStore.OpenSession())
@@ -289,7 +289,7 @@ namespace Raven.Client.Tests.Document
 					session.Store(entity);
 					session.SaveChanges();
 
-					session.LuceneQuery<Company>().WaitForNonStaleResults().ToArray();// wait for the index to settle down
+                    session.Advanced.LuceneQuery<Company>().WaitForNonStaleResults().ToArray();// wait for the index to settle down
 				}
 
 				documentStore.DatabaseCommands.UpdateByIndex("Raven/DocumentsByEntityName", new IndexQuery
@@ -356,7 +356,7 @@ namespace Raven.Client.Tests.Document
 
 				using (var s = documentStore.OpenSession())
 				{
-					var query = s.LuceneQuery<object>("my_index")
+                    var query = s.Advanced.LuceneQuery<object>("my_index")
 						.SelectFields<DateHolder>("Date")
 						.WaitForNonStaleResults();
 					var dateHolder = query.ToArray().First();
@@ -399,7 +399,7 @@ namespace Raven.Client.Tests.Document
 
 				using (var s = documentStore.OpenSession())
 				{
-					var query = s.LuceneQuery<object>("my_index")
+                    var query = s.Advanced.LuceneQuery<object>("my_index")
 						.Where("Type:Feats AND Language:Français")
 						.WaitForNonStaleResults();
 					query.ToArray();
@@ -437,7 +437,7 @@ namespace Raven.Client.Tests.Document
 
 				using (var s = documentStore.OpenSession())
 				{
-					var query = s.LuceneQuery<object>("my_index")
+                    var query = s.Advanced.LuceneQuery<object>("my_index")
 						.Where("Type:Feats AND Language:Français")
 						.SelectFields<object>("Value")
 						.WaitForNonStaleResults();
@@ -495,7 +495,7 @@ namespace Raven.Client.Tests.Document
                 documentStore.Initialize();
 
                 var session = documentStore.OpenSession();
-                session.OnEntityConverted += (entity, document, metadata) =>
+                session.Advanced.OnEntityConverted += (entity, document, metadata) =>
                 {
 					metadata["Raven-Allowed-Users"] = new JArray("ayende", "oren", "rob");
                 };
@@ -504,7 +504,7 @@ namespace Raven.Client.Tests.Document
                 session.Store(company);
                 session.SaveChanges();
 
-                var metadataFromServer = session.GetMetadataFor(session.Load<Company>(company.Id));
+                var metadataFromServer = session.Advanced.GetMetadataFor(session.Load<Company>(company.Id));
 				var users = metadataFromServer["Raven-Allowed-Users"].OfType<JValue>().Select(x => (string)x.Value).ToArray();
                 Assert.Equal(new[]{"ayende","oren","rob"}, users);
             }
@@ -620,7 +620,7 @@ namespace Raven.Client.Tests.Document
                                                         });
 
             	var q = session
-                    .LuceneQuery<Company>("company_by_name")
+                    .Advanced.LuceneQuery<Company>("company_by_name")
 					.SelectFields<Company>("Name","Phone")
             		.WaitForNonStaleResults();
                 var single = q.Single();
@@ -779,7 +779,7 @@ namespace Raven.Client.Tests.Document
 				documentStore.Initialize();
 
                 var session = documentStore.OpenSession();
-                session.UseOptimisticConcurrency = true;
+                session.Advanced.UseOptimisticConcurrency = true;
                 var company = new Company { Name = "Company 1" };
                 session.Store(company);
                 session.SaveChanges();
@@ -914,7 +914,7 @@ namespace Raven.Client.Tests.Document
 				session1.SaveChanges();
 
 				var session2 = documentStore.OpenSession();
-				var companyFound = session2.LuceneQuery<Company>()
+                var companyFound = session2.Advanced.LuceneQuery<Company>()
 					.WaitForNonStaleResults()
 					.ToArray();
 
@@ -937,7 +937,7 @@ namespace Raven.Client.Tests.Document
 				session1.SaveChanges();
 
 				var session2 = documentStore.OpenSession();
-				var companyFound = session2.LuceneQuery<Company>()
+                var companyFound = session2.Advanced.LuceneQuery<Company>()
 					.WaitForNonStaleResults()
 					.ToArray();
 
@@ -977,11 +977,11 @@ namespace Raven.Client.Tests.Document
 														});
 
 				// Wait until the index is built
-                session.LuceneQuery<Company>("company_by_name")
+                session.Advanced.LuceneQuery<Company>("company_by_name")
 					.WaitForNonStaleResults()
 					.ToArray();
 
-                var companies = session.LuceneQuery<Company>("company_by_name")
+                var companies = session.Advanced.LuceneQuery<Company>("company_by_name")
 					.OrderBy("Phone")
 					.WaitForNonStaleResults()
 					.ToArray();
@@ -1019,14 +1019,14 @@ namespace Raven.Client.Tests.Document
 				documentStore.DatabaseCommands.PutIndex("eventsByLatLng", indexDefinition);
 
 				// Wait until the index is built
-				session.LuceneQuery<Event>("eventsByLatLng")
+                session.Advanced.LuceneQuery<Event>("eventsByLatLng")
 					.WaitForNonStaleResults()
 					.ToArray();
 
 				const double lat = 38.96939, lng = -77.386398;
 				const double radius = 6.0;
 
-				var events = session.LuceneQuery<Event>("eventsByLatLng")
+                var events = session.Advanced.LuceneQuery<Event>("eventsByLatLng")
 					.WhereEquals("Tag", "Event")
 					.WithinRadiusOf(radius, lat, lng)
 					.SortByDistance()
@@ -1071,7 +1071,7 @@ namespace Raven.Client.Tests.Document
 
 					session.SaveChanges();
 
-                    LinqIndexesFromClient.User single = session.LuceneQuery<LinqIndexesFromClient.User>("UsersByLocation")
+                    LinqIndexesFromClient.User single = session.Advanced.LuceneQuery<LinqIndexesFromClient.User>("UsersByLocation")
 						.Where("Name:Yael")
 						.WaitForNonStaleResults()
 						.Single();
@@ -1109,7 +1109,7 @@ namespace Raven.Client.Tests.Document
 
 					session.SaveChanges();
 
-                    LinqIndexesFromClient.LocationCount single = session.LuceneQuery<LinqIndexesFromClient.LocationCount>("UsersCountByLocation")
+                    LinqIndexesFromClient.LocationCount single = session.Advanced.LuceneQuery<LinqIndexesFromClient.LocationCount>("UsersCountByLocation")
 						.Where("Location:\"Tel Aviv\"")
 						.WaitForNonStaleResults()
 						.Single();
@@ -1155,7 +1155,7 @@ namespace Raven.Client.Tests.Document
 
 					session.SaveChanges();
 
-                    LinqIndexesFromClient.LocationAge single = session.LuceneQuery<LinqIndexesFromClient.LocationAge>("AvgAgeByLocation")
+                    LinqIndexesFromClient.LocationAge single = session.Advanced.LuceneQuery<LinqIndexesFromClient.LocationAge>("AvgAgeByLocation")
 						.Where("Location:\"Tel Aviv\"")
 						.WaitForNonStaleResults()
 						.Single();
@@ -1199,7 +1199,7 @@ namespace Raven.Client.Tests.Document
 
                     session.SaveChanges();
 
-					var user = session.LuceneQuery<LinqIndexesFromClient.User>("MaxAge")
+                    var user = session.Advanced.LuceneQuery<LinqIndexesFromClient.User>("MaxAge")
 						.OrderBy("-Age")
 						.Take(1)
                         .WaitForNonStaleResults()

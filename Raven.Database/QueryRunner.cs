@@ -6,6 +6,7 @@ using System.Linq;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
+using Raven.Database.Json;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
@@ -71,7 +72,7 @@ namespace Raven.Database
                 results.AddRange(
                     RobustEnumeration(docs, viewGenerator.MapDefinition, errors)
                     .Take(query.PageSize)
-                    .Select(result => ToJObject(result).ToString())
+                    .Select(result => JsonExtensions.ToJObject(result).ToString())
                     );
             });
 
@@ -84,19 +85,7 @@ namespace Raven.Database
                 Results = results.ToArray()
             };
         }
-
-        private static JObject ToJObject(object result)
-        {
-            var dynamicJsonObject = result as DynamicJsonObject;
-            if (dynamicJsonObject != null)
-                return dynamicJsonObject.Inner;
-            if(result is string || result is ValueType)
-            {
-                return new JObject(new JProperty("Value", new JValue(result)));
-            }
-            return JObject.FromObject(result);
-        }
-
+      
         protected IEnumerable<object> RobustEnumeration(IEnumerable<object> input, IndexingFunc func, ICollection<string> errors)
         {
             var wrapped = new StatefulEnumerableWrapper<dynamic>(input.GetEnumerator());

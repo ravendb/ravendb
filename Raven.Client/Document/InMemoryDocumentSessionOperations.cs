@@ -23,7 +23,7 @@ namespace Raven.Client.Document
 	/// <summary>
 	/// Abstract implementation for in memory session operations
 	/// </summary>
-	public abstract class InMemoryDocumentSessionOperations : IInMemoryDocumentSessionOperations
+	public abstract class InMemoryDocumentSessionOperations : IDisposable
 	{
 		private const string RavenEntityName = "Raven-Entity-Name";
 		/// <summary>

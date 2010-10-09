@@ -17,9 +17,9 @@ namespace Raven.Client.Tests.Bugs
 					{
 						RegisteredAt = new DateTime(2010, 1, 1)
 					});
-					Assert.True(session.HasChanges);
+                    Assert.True(session.Advanced.HasChanges);
 					session.SaveChanges();
-					Assert.False(session.HasChanges);
+                    Assert.False(session.Advanced.HasChanges);
 				}
 			}
 		}
@@ -41,14 +41,14 @@ namespace Raven.Client.Tests.Bugs
 				using (var session = store.OpenSession())
 				{
 					var registration = session.Load<ProjectingDates.Registration>("registrations/1");
-					Assert.False(session.HasChanges);
-					Assert.False(session.HasChanged(registration));
+                    Assert.False(session.Advanced.HasChanges);
+                    Assert.False(session.Advanced.HasChanged(registration));
 					registration.RegisteredAt = new DateTime(2010, 2, 1);
-					Assert.True(session.HasChanges);
-					Assert.True(session.HasChanged(registration));
+                    Assert.True(session.Advanced.HasChanges);
+                    Assert.True(session.Advanced.HasChanged(registration));
 					session.SaveChanges();
-					Assert.False(session.HasChanges);
-					Assert.False(session.HasChanged(registration));
+                    Assert.False(session.Advanced.HasChanges);
+                    Assert.False(session.Advanced.HasChanged(registration));
 				}
 			}
 		}
@@ -69,17 +69,17 @@ namespace Raven.Client.Tests.Bugs
 
 				using (var session = store.OpenSession())
 				{
-					var registration = session.LuceneQuery<ProjectingDates.Registration>()
+                    var registration = session.Advanced.LuceneQuery<ProjectingDates.Registration>()
 						.WaitForNonStaleResults()
 						.Single();
-					Assert.False(session.HasChanges);
-					Assert.False(session.HasChanged(registration));
+                    Assert.False(session.Advanced.HasChanges);
+                    Assert.False(session.Advanced.HasChanged(registration));
 					registration.RegisteredAt = new DateTime(2010, 2, 1);
-					Assert.True(session.HasChanges);
-					Assert.True(session.HasChanged(registration));
+                    Assert.True(session.Advanced.HasChanges);
+                    Assert.True(session.Advanced.HasChanged(registration));
 					session.SaveChanges();
-					Assert.False(session.HasChanges);
-					Assert.False(session.HasChanged(registration));
+                    Assert.False(session.Advanced.HasChanges);
+                    Assert.False(session.Advanced.HasChanged(registration));
 				}
 			}
 		}
@@ -106,7 +106,7 @@ namespace Raven.Client.Tests.Bugs
 				{
 					for (int i = 0; i < 15; i++)
 					{
-						session.LuceneQuery<ProjectingDates.Registration>().WaitForNonStaleResults().ToArray();
+                        session.Advanced.LuceneQuery<ProjectingDates.Registration>().WaitForNonStaleResults().ToArray();
 
 						session.SaveChanges();
 					}
@@ -114,7 +114,7 @@ namespace Raven.Client.Tests.Bugs
 
 				using (var session = store.OpenSession())
 				{
-					Assert.Equal(2, session.LuceneQuery<ProjectingDates.Registration>().WaitForNonStaleResults().Count());
+                    Assert.Equal(2, session.Advanced.LuceneQuery<ProjectingDates.Registration>().WaitForNonStaleResults().Count());
 				}
 			}
 		}

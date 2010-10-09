@@ -143,6 +143,7 @@
     <Compile Include="Json\DynamicUtil.cs" />
     <Compile Include="Json\JsonDynamicConverter.cs" />
     <Compile Include="Data\LinearQuery.cs" />
+    <Compile Include="Linq\ITranslatorDatabaseAccessor.cs" />
     <Compile Include="PerformanceCounters.cs" />
     <Compile Include="Plugins\AbstractBackgroundTask.cs" />
     <Compile Include="Plugins\AbstractDocumentCodec.cs" />

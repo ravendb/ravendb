@@ -240,7 +240,7 @@ namespace Raven.Client.Tests.Document
 					documentSession.SaveChanges();
 
 					var darykalSumResults =
-                        documentSession.LuceneQuery<GameEvent>("GameEventCountZoneBySpecificCharacter")
+                        documentSession.Advanced.LuceneQuery<GameEvent>("GameEventCountZoneBySpecificCharacter")
 							.Where("CharacterName:Darykal AND RealmName:Moonglade AND Region:SingleRegion AND DataUploadId:10 ")
 							.SelectFields<ZoneCountResult>("Zone", "Count")
 							.WaitForNonStaleResults(TimeSpan.FromDays(1))
@@ -447,7 +447,7 @@ namespace Raven.Client.Tests.Document
 					documentSession.SaveChanges();
 
 					var darykalSumResults =
-                        documentSession.LuceneQuery<GameEvent>("GameEventCountZoneBySpecificCharacter")
+                        documentSession.Advanced.LuceneQuery<GameEvent>("GameEventCountZoneBySpecificCharacter")
 							.Where("CharacterName:Darykal AND RealmName:Moonglade AND Region:SingleRegion AND DataUploadId:10 ")
 							.SelectFields<ZoneCountResult>("Zone", "Count")
 							.WaitForNonStaleResults(TimeSpan.FromDays(1))

@@ -5,6 +5,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Merger", "Raven.Merge
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.ProjectRewriter", "Raven.ProjectRewriter\Raven.ProjectRewriter.csproj", "{CE9E7035-2502-4875-9B8A-CB7C198D04A2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Samples.PrepareForRelease", "Raven.Samples.PrepareForRelease\Raven.Samples.PrepareForRelease.csproj", "{06E7534B-7935-4DA5-A50D-FEC0A0EBC3FF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x86 = Debug|x86
@@ -19,6 +21,10 @@ Global
 		{CE9E7035-2502-4875-9B8A-CB7C198D04A2}.Debug|x86.Build.0 = Debug|x86
 		{CE9E7035-2502-4875-9B8A-CB7C198D04A2}.Release|x86.ActiveCfg = Release|x86
 		{CE9E7035-2502-4875-9B8A-CB7C198D04A2}.Release|x86.Build.0 = Release|x86
+		{06E7534B-7935-4DA5-A50D-FEC0A0EBC3FF}.Debug|x86.ActiveCfg = Debug|x86
+		{06E7534B-7935-4DA5-A50D-FEC0A0EBC3FF}.Debug|x86.Build.0 = Debug|x86
+		{06E7534B-7935-4DA5-A50D-FEC0A0EBC3FF}.Release|x86.ActiveCfg = Release|x86
+		{06E7534B-7935-4DA5-A50D-FEC0A0EBC3FF}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

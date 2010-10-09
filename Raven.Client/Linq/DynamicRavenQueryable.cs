@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Linq.Expressions;
 
 namespace Raven.Client.Linq
 {
@@ -20,6 +21,18 @@ namespace Raven.Client.Linq
         {
 
         }
+
+        /// <summary>
+        /// Creates a dynamic raven queryable around the provided query provider + expression
+        /// </summary>
+        /// <param name="queryProvider"></param>
+        /// <param name="expression"></param>
+        public DynamicRavenQueryable(IRavenQueryProvider queryProvider, Expression expression)
+            : base(queryProvider, expression)
+        {
+
+        }
+
 
     }
 }

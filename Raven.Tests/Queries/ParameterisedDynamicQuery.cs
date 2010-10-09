@@ -54,7 +54,7 @@ namespace Raven.Tests.Queries
             db.Put("blogTwo", null, JObject.FromObject(blogTwo), new JObject(), null);
             db.Put("blogThree", null, JObject.FromObject(blogThree), new JObject(), null);
 
-            var results = db.ExecuteDynamicQuery(new IndexQuery()
+            var results = db.ExecuteDynamicQuery(null,new IndexQuery()
            {
                PageSize = 128,
                Start = 0,
@@ -91,21 +91,21 @@ namespace Raven.Tests.Queries
             db.Put("blogThree", null, JObject.FromObject(blogThree), new JObject(), null);
 
             int initialIndexCount = db.Statistics.CountOfIndexes;
-            db.ExecuteDynamicQuery(new IndexQuery()
+            db.ExecuteDynamicQuery(null,new IndexQuery()
             {
                 PageSize = 128,
                 Start = 0,
                 Cutoff = DateTime.Now,
                 Query = "Title.Length:3 AND Category:Rhinos"
             });
-            db.ExecuteDynamicQuery(new IndexQuery()
+            db.ExecuteDynamicQuery(null, new IndexQuery()
             {
                 PageSize = 128,
                 Start = 0,
                 Cutoff = DateTime.Now,
                 Query = "Title.Length:3 AND Category:Rhinos"
             });
-            db.ExecuteDynamicQuery(new IndexQuery()
+            db.ExecuteDynamicQuery(null, new IndexQuery()
             {
                 PageSize = 128,
                 Start = 0,
@@ -122,8 +122,8 @@ namespace Raven.Tests.Queries
         {
             int initialIndexCount = db.Statistics.CountOfIndexes;
 
-    
-                db.ExecuteDynamicQuery(new IndexQuery()
+
+            db.ExecuteDynamicQuery(null, new IndexQuery()
                 {
                     PageSize = 128,
                     Start = 0,
@@ -132,8 +132,8 @@ namespace Raven.Tests.Queries
                 });
           
 
-            var autoIndexName = db.IndexDefinitionStorage.IndexNames.Where(x => x.StartsWith("Auto_")).SingleOrDefault();
-            var tempIndexName = db.IndexDefinitionStorage.IndexNames.Where(x => x.StartsWith("Temp_")).SingleOrDefault();
+            var autoIndexName = db.IndexDefinitionStorage.IndexNames.Where(x => x.StartsWith("Auto")).SingleOrDefault();
+            var tempIndexName = db.IndexDefinitionStorage.IndexNames.Where(x => x.StartsWith("Temp")).SingleOrDefault();
 
             Assert.False(string.IsNullOrEmpty(tempIndexName));
             Assert.True(string.IsNullOrEmpty(autoIndexName));
@@ -163,8 +163,8 @@ namespace Raven.Tests.Queries
             db.Put("blogThree", null, JObject.FromObject(blogThree), new JObject(), null);
 
             QueryResult results = null;
-           
-            results = db.ExecuteDynamicQuery(new IndexQuery()
+
+            results = db.ExecuteDynamicQuery(null, new IndexQuery()
                 {
                     PageSize = 128,
                     Start = 0,
@@ -184,7 +184,7 @@ namespace Raven.Tests.Queries
 
             for (int x = 0; x < 3; x++)
             {
-                db.ExecuteDynamicQuery(new IndexQuery()
+                db.ExecuteDynamicQuery(null, new IndexQuery()
                 {
                     PageSize = 128,
                     Start = 0,
@@ -194,8 +194,8 @@ namespace Raven.Tests.Queries
             }
 
             
-            var autoIndexName = db.IndexDefinitionStorage.IndexNames.Where(x => x.StartsWith("Auto_")).SingleOrDefault();
-            var tempIndexName = db.IndexDefinitionStorage.IndexNames.Where(x => x.StartsWith("Temp_")).SingleOrDefault();
+            var autoIndexName = db.IndexDefinitionStorage.IndexNames.Where(x => x.StartsWith("Auto")).SingleOrDefault();
+            var tempIndexName = db.IndexDefinitionStorage.IndexNames.Where(x => x.StartsWith("Temp")).SingleOrDefault();
 
             Assert.True(string.IsNullOrEmpty(tempIndexName));
             Assert.False(string.IsNullOrEmpty(autoIndexName));
@@ -233,7 +233,7 @@ namespace Raven.Tests.Queries
             db.Put("blogTwo", null, JObject.FromObject(blogTwo), new JObject(), null);
             db.Put("blogThree", null, JObject.FromObject(blogThree), new JObject(), null);
 
-            var results = db.ExecuteDynamicQuery(new IndexQuery()
+            var results = db.ExecuteDynamicQuery(null, new IndexQuery()
             {
                 PageSize = 128,
                 Start = 0,
@@ -272,7 +272,7 @@ namespace Raven.Tests.Queries
             db.Put("blogTwo", null, JObject.FromObject(blogTwo), new JObject(), null);
             db.Put("blogThree", null, JObject.FromObject(blogThree), new JObject(), null);
 
-            var results = db.ExecuteDynamicQuery(new IndexQuery()
+            var results = db.ExecuteDynamicQuery(null, new IndexQuery()
             {
                 PageSize = 128,
                 Start = 0,
@@ -283,6 +283,34 @@ namespace Raven.Tests.Queries
             Assert.Equal(1, results.Results.Count);
             Assert.Equal("three", results.Results[0].Value<string>("Title"));
             Assert.Equal("Rhinos", results.Results[0].Value<string>("Category"));
+        }
+
+        [Fact]
+        public void NestedCollectionPropertiesCanBeQueriedWithProjection()
+        {
+            var blogOne = new Blog
+            {
+                Title = "one",
+                Category = "Ravens",
+                Tags = new Tag[]{
+                     new Tag(){ Name = "birds" }
+                },
+            };
+
+            db.Put("blogOne", null, JObject.FromObject(blogOne), new JObject(), null);
+
+            var results = db.ExecuteDynamicQuery(null, new IndexQuery()
+            {
+                PageSize = 128,
+                Start = 0,
+                Cutoff = DateTime.Now,
+                Query = "Tags,Name:[[birds]]",
+                FieldsToFetch = new string[] { "Title", "Category" }
+            });
+
+            Assert.Equal(1, results.Results.Count);
+            Assert.Equal("one", results.Results[0].Value<string>("Title"));
+            Assert.Equal("Ravens", results.Results[0].Value<string>("Category"));
         }
 
         public class Blog

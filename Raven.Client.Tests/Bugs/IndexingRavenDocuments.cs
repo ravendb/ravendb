@@ -26,7 +26,7 @@ namespace Raven.Client.Tests.Bugs
 
 				using (var s = store.OpenSession())
 				{
-					var waitForNonStaleResults = s.LuceneQuery<User>("Users")
+                    var waitForNonStaleResults = s.Advanced.LuceneQuery<User>("Users")
 						.WaitForNonStaleResults();
 					Assert.Equal(1, waitForNonStaleResults.QueryResult.TotalResults);
 				}

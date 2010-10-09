@@ -10,7 +10,7 @@ namespace Raven.Client.Document.Async
 	/// <summary>
 	/// Implementation for async document session 
 	/// </summary>
-	public class AsyncDocumentSession : InMemoryDocumentSessionOperations, IAsyncDocumentSession
+	public class AsyncDocumentSession : InMemoryDocumentSessionOperations, IAsyncDocumentSession, IAsyncAdvancedSessionOperations
 	{
 		/// <summary>
 		/// Initializes a new instance of the <see cref="AsyncDocumentSession"/> class.
@@ -30,7 +30,19 @@ namespace Raven.Client.Document.Async
 		/// <value>The async database commands.</value>
 		public IAsyncDatabaseCommands AsyncDatabaseCommands { get; private set; }
 
-		/// <summary>
+        /// <summary>
+        /// Get the accessor for advanced operations
+        /// </summary>
+        /// <remarks>
+        /// Those operations are rarely needed, and have been moved to a separate 
+        /// property to avoid cluttering the API
+        /// </remarks>
+	    public IAsyncAdvancedSessionOperations Advanced
+	    {
+            get { return this; }
+	    }
+
+	    /// <summary>
 		/// Begins the aysnc load operation
 		/// </summary>
 		/// <param name="id">The id.</param>

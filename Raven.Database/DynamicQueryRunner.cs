@@ -22,10 +22,10 @@ namespace Raven.Database
             temporaryIndexes = new ConcurrentDictionary<string, TemporaryIndexInfo>();
         }
 
-        public QueryResult ExecuteDynamicQuery(IndexQuery query)
+        public QueryResult ExecuteDynamicQuery(string entityName, IndexQuery query)
         {
             // Create the map
-            var map = DynamicQueryMapping.Create(query.Query);
+            var map = DynamicQueryMapping.Create(query.Query, entityName);
 
             // Get the index name
             string indexName = FindDynamicIndexName(map);
@@ -76,7 +76,9 @@ namespace Raven.Database
 
         private string FindDynamicIndexName(DynamicQueryMapping map)
         {
-            String combinedFields = String.Join("",
+            var targetName = map.ForEntityName ?? "AllDocs";
+
+            var combinedFields = String.Join("And",
                 map.Items
                 .OrderBy(x => x.To)
                 .Select(x => x.To)
@@ -84,7 +86,7 @@ namespace Raven.Database
             var indexName = combinedFields;
 
             // Hash the name if it's too long
-            if (indexName.Length > 240)
+            if (indexName.Length > 230)
             {
                 using (var sha256 = SHA256.Create())
                 {
@@ -93,8 +95,8 @@ namespace Raven.Database
                 }
             }
 
-            String permanentIndexName = string.Format("Auto_{0}", indexName);
-            String temporaryIndexName = string.Format("Temp_{0}", indexName);
+            var permanentIndexName = string.Format("Auto/{0}/By{1}", targetName, indexName);
+            var temporaryIndexName = string.Format("Temp/{0}/By{1}", targetName, indexName);
 
             // If there is a permanent index, then use that without bothering anything else
             var permanentIndex = documentDatabase.GetIndexDefinition(permanentIndexName);

@@ -11,13 +11,13 @@ namespace Raven.Client.Linq
 	public class RavenQueryProvider<T> :  IRavenQueryProvider
     {
         private readonly string indexName;
-        private Action<IDocumentQuery<T>> customizeQuery;
+        private Action<IDocumentQueryCustomization> customizeQuery;
 		private readonly IDocumentSession session;
 
         /// <summary>
         /// Gets the actions for customising the generated lucene query
         /// </summary>
-        public Action<IDocumentQuery<T>> CustomizedQuery
+        public Action<IDocumentQueryCustomization> CustomizedQuery
         {
             get { return customizeQuery; }
         }
@@ -40,7 +40,20 @@ namespace Raven.Client.Linq
             get { return indexName; }
         }
 
-		/// <summary>
+	    /// <summary>
+	    /// Change the result type for the query provider
+	    /// </summary>
+	    public IRavenQueryProvider For<S>()
+	    {
+            if (typeof(T) == typeof(S))
+                return this;
+
+	        var ravenQueryProvider = new RavenQueryProvider<S>(session, indexName);
+	        ravenQueryProvider.Customize(customizeQuery);
+	        return ravenQueryProvider;
+	    }
+
+	    /// <summary>
 		/// Initializes a new instance of the <see cref="RavenQueryProvider&lt;T&gt;"/> class.
 		/// </summary>
 		/// <param name="session">The session.</param>
@@ -111,9 +124,11 @@ namespace Raven.Client.Linq
 		/// Customizes the query using the specified action
 		/// </summary>
 		/// <param name="action">The action.</param>
-        public virtual void Customize(Delegate action)
+        public virtual void Customize(Action<IDocumentQueryCustomization> action)
         {
-            customizeQuery = (Action<IDocumentQuery<T>>)action;
+            if (action == null)
+                return;
+            customizeQuery += action;
         }
 	}
 }

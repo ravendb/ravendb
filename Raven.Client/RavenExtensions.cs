@@ -19,21 +19,21 @@ namespace Raven.Client
 		/// <typeparam name="T"></typeparam>
 		/// <param name="session">The session.</param>
 		/// <returns></returns>
-		public static IDocumentQuery<T> LuceneQuery<T>(this IDocumentSession session)
+		public static IDocumentQuery<T> LuceneQuery<T>(this ISyncAdvancedSessionOperation session)
 		{
 			var shardedDocumentSession = session as ShardedDocumentSession;
 			if(shardedDocumentSession != null)
 			{
 				var documentQuery = (ShardedDocumentQuery<T>)shardedDocumentSession.LuceneQuery<T>(RavenDocumentByEntityName);
-				documentQuery.ForEachQuery((documentSession, query) => query.Where(GenerateQuery<T>(documentSession)));
+				documentQuery.ForEachQuery((documentSession, query) => query.Where(GenerateQuery<T>(documentSession.Advanced)));
 				return documentQuery;
 			}
 
-			return session.LuceneQuery<T>(RavenDocumentByEntityName)
+            return session.LuceneQuery<T>(RavenDocumentByEntityName)
 				.Where(GenerateQuery<T>(session));
 		}
 
-		private static string GenerateQuery<T>(IDocumentSession session)
+		private static string GenerateQuery<T>(ISyncAdvancedSessionOperation session)
 		{
 			return "Tag:[[" + session.Conventions.GetTypeTagName(typeof(T)) +"]]";
 		}

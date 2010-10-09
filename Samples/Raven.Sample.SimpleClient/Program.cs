@@ -31,7 +31,7 @@ namespace Raven.Sample.SimpleClient
                     session.SaveChanges();
 
                     var allCompanies = session
-                        .LuceneQuery<Company>("regionIndex")
+                        .Advanced.LuceneQuery<Company>("regionIndex")
                         .Where("Region:Africa")
                         .WaitForNonStaleResults()
                         .ToArray();

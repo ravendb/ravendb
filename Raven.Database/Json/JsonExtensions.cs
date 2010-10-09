@@ -11,6 +11,20 @@ namespace Raven.Database.Json
 	/// </summary>
 	public static class JsonExtensions
 	{
+#if !CLIENT
+	    public static JObject ToJObject(object result)
+        {
+            var dynamicJsonObject = result as Raven.Database.Linq.DynamicJsonObject;
+            if (dynamicJsonObject != null)
+                return dynamicJsonObject.Inner;
+            if (result is string || result is ValueType)
+            {
+                return new JObject(new JProperty("Value", new JValue(result)));
+            }
+            return JObject.FromObject(result);
+        }
+#endif
+
 		/// <summary>
 		/// Convert a byte array to a JObject
 		/// </summary>

@@ -104,9 +104,11 @@
     <Compile Include="Bugs\OverwriteIndex.cs" />
     <Compile Include="Bugs\ProjectingDocumentId.cs" />
     <Compile Include="Bugs\ProjectingFromIndexes.cs" />
+    <Compile Include="Bugs\ProjectionFromDynamicQuery.cs" />
     <Compile Include="Bugs\QueryingByNegative.cs" />
     <Compile Include="Bugs\QueryingFromIndex.cs" />
     <Compile Include="Bugs\QueryWithPercentageSign.cs" />
+    <Compile Include="Bugs\Translators.cs" />
     <Compile Include="Indexes\AnalyzerUtil.cs" />
     <Compile Include="Indexes\UsingCustomLuceneAnalyzer.cs" />
     <Compile Include="LocalClientTest.cs" />

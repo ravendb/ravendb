@@ -6,13 +6,29 @@ namespace Raven.Client
 	/// <summary>
 	/// Interface for document session using async approaches
 	/// </summary>
-	public interface IAsyncDocumentSession : IInMemoryDocumentSessionOperations
+	public interface IAsyncDocumentSession : IDisposable
 	{
-		/// <summary>
-		/// Gets the async database commands.
-		/// </summary>
-		/// <value>The async database commands.</value>
-		IAsyncDatabaseCommands AsyncDatabaseCommands { get; }
+        /// <summary>
+        /// Get the accessor for advanced operations
+        /// </summary>
+        /// <remarks>
+        /// Those operations are rarely needed, and have been moved to a separate 
+        /// property to avoid cluttering the API
+        /// </remarks>
+        IAsyncAdvancedSessionOperations Advanced { get; }
+
+        /// <summary>
+        /// Stores the specified entity in the session. The entity will be saved when <see cref="IDocumentSession.SaveChanges"/> is called.
+        /// </summary>
+        /// <param name="entity">The entity.</param>
+        void Store(object entity);
+
+        /// <summary>
+        /// Marks the specified entity for deletion. The entity will be deleted when <see cref="IDocumentSession.SaveChanges"/> is called.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="entity">The entity.</param>
+        void Delete<T>(T entity);
 
 		/// <summary>
 		/// Begins the aysnc load operation

@@ -17,7 +17,7 @@ namespace Raven.Client.Linq
         /// <param name="session"></param>
         /// <param name="customizeQuery"></param>
         public DynamicQueryProviderProcessor(IDocumentSession session,
-            Action<IDocumentQuery<T>> customizeQuery) 
+            Action<IDocumentQueryCustomization> customizeQuery) 
             : base(session, customizeQuery, "dynamic")
         {
 

@@ -93,6 +93,36 @@ namespace Raven.Database.Linq
 			                   		})));
 
 
+            if(indexDefinition.ResultTransformer != null)
+            {
+                VariableDeclaration translatorDeclaration;
+                
+                if (indexDefinition.ResultTransformer.Trim().StartsWith("from"))
+                {
+                    translatorDeclaration = QueryParsingUtils.GetVariableDeclarationForLinqQuery(indexDefinition.ResultTransformer, requiresSelectNewAnonymousType:false);
+                }
+                else
+                {
+                    translatorDeclaration = QueryParsingUtils.GetVariableDeclarationForLinqMethods(indexDefinition.ResultTransformer);
+                }
+
+
+                // this.Translator = (Database,results) => from doc in results ...;
+                ctor.Body.AddChild(new ExpressionStatement(
+                                    new AssignmentExpression(
+                                        new MemberReferenceExpression(new ThisReferenceExpression(), "ResultTransformerDefinition"),
+                                        AssignmentOperatorType.Assign,
+                                        new LambdaExpression
+                                        {
+                                            Parameters =
+			                   				{
+			                   					new ParameterDeclarationExpression(null, "Database"),
+                                                new ParameterDeclarationExpression(null, "results")
+			                   				},
+                                            ExpressionBody = translatorDeclaration.Initializer
+                                        })));
+            }
+
 			if (indexDefinition.IsMapReduce)
 			{
 				VariableDeclaration reduceDefiniton;
@@ -155,6 +185,11 @@ namespace Raven.Database.Linq
 			{
 				compiledQueryText += Environment.NewLine + indexDefinition.Reduce.Replace("\"", "\"\"");
 			}
+
+            if (indexDefinition.ResultTransformer != null)
+            {
+                compiledQueryText += Environment.NewLine + indexDefinition.ResultTransformer.Replace("\"", "\"\"");
+            }
 
 			compiledQueryText += "\"";
 			CompiledQueryText = CompiledQueryText.Replace("\"" + mapReduceTextToken + "\"",
