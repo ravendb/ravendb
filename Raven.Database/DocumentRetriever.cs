@@ -21,25 +21,33 @@ namespace Raven.Database
             this.triggers = triggers;
         }
 
-        public JsonDocument RetrieveDocumentForQuery(IndexQueryResult queryResult)
+        public JsonDocument RetrieveDocumentForQuery(IndexQueryResult queryResult, string[] fieldsToFetch)
         {
-            var doc = RetrieveDocumentInternal(queryResult, loadedIdsForRetrieval);
+            var doc = RetrieveDocumentInternal(queryResult, loadedIdsForRetrieval, fieldsToFetch);
             return ExecuteReadTriggers(doc, null, ReadOperation.Query);
         }
 
-        private JsonDocument RetrieveDocumentInternal(IndexQueryResult queryResult, HashSet<string> loadedIds)
+        private JsonDocument RetrieveDocumentInternal(IndexQueryResult queryResult, HashSet<string> loadedIds, string[] fieldsToFetch)
         {
             if (queryResult.Projection == null)
             {
-                    // duplicate document, filter it out
+                // duplicate document, filter it out
                 if (loadedIds.Add(queryResult.Key) == false)
                     return null;
-                JsonDocument doc;
-                if (cache.TryGetValue(queryResult.Key, out doc))
-                    return doc;
-                doc = actions.Documents.DocumentByKey(queryResult.Key, null);
-                cache[queryResult.Key] = doc;
-                return doc;
+                return GetDocumentWithCaching(queryResult);
+            }
+
+            if (fieldsToFetch != null)
+            {
+                foreach (var fieldToFetch in fieldsToFetch)
+                {
+                    if (queryResult.Projection.Property(fieldToFetch) != null)
+                        continue;
+
+                    var doc = GetDocumentWithCaching(queryResult);
+                    var token = doc.DataAsJson.SelectToken(fieldToFetch);
+                    queryResult.Projection[fieldToFetch] = token;
+                }
             }
 
             return new JsonDocument
@@ -49,9 +57,19 @@ namespace Raven.Database
             };
         }
 
-        public bool ShouldIncludeResultInQuery(IndexQueryResult arg)
+        private JsonDocument GetDocumentWithCaching(IndexQueryResult queryResult)
         {
-            var doc = RetrieveDocumentInternal(arg, loadedIdsForFilter);
+            JsonDocument doc;
+            if (cache.TryGetValue(queryResult.Key, out doc))
+                return doc;
+            doc = actions.Documents.DocumentByKey(queryResult.Key, null);
+            cache[queryResult.Key] = doc;
+            return doc;
+        }
+
+        public bool ShouldIncludeResultInQuery(IndexQueryResult arg, string[] fieldsToFetch)
+        {
+            var doc = RetrieveDocumentInternal(arg, loadedIdsForFilter, fieldsToFetch);
             if (doc == null)
                 return false;
             doc = ProcessReadVetoes(doc, null, ReadOperation.Query);
@@ -76,7 +94,7 @@ namespace Raven.Database
             return resultingDocument;
         }
 
-    	public JsonDocument ProcessReadVetoes(JsonDocument document, TransactionInformation transactionInformation, ReadOperation operation)
+        public JsonDocument ProcessReadVetoes(JsonDocument document, TransactionInformation transactionInformation, ReadOperation operation)
         {
             if (document == null)
                 return document;

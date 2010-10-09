@@ -473,8 +473,8 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
                         throw new IndexDisabledException(indexFailureInformation);
                     }
                     var docRetriever = new DocumentRetriever(actions, ReadTriggers);
-                    var collection = from queryResult in IndexStorage.Query(index, query, docRetriever.ShouldIncludeResultInQuery)
-                                     select docRetriever.RetrieveDocumentForQuery(queryResult)
+                    var collection = from queryResult in IndexStorage.Query(index, query, result => docRetriever.ShouldIncludeResultInQuery(result, query.FieldsToFetch))
+                                     select docRetriever.RetrieveDocumentForQuery(queryResult, query.FieldsToFetch)
                                          into doc
                                          where doc != null
                                          select doc.ToJson();
