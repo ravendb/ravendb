@@ -212,7 +212,7 @@ namespace Raven.Scenarios
 
 		private static bool IsStaleResponse(string response)
 		{
-			return response.Contains("\"IsStale\":true");
+			return response.Contains("\"IsStale\":true") || response.Contains("\"Non-Authoritive-Information\":false");
 		}
 
 		private void CompareResponses(byte[] response, Tuple<string, NameValueCollection, string> actual, string request)
