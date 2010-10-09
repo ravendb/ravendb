@@ -9,7 +9,9 @@ namespace Raven.Database.Data
 {
     public class DynamicQueryMapping
     {
-        static readonly Regex queryTerms = new Regex(@"([^\s\(\+\-][\w._,]+)\:", RegexOptions.Compiled);
+        static readonly Regex QueryTerms = new Regex(@"([^\s\(\+\-][\w._,]+)\:", RegexOptions.Compiled);
+
+        public string ForEntityName { get; set; }
 
         public DynamicQueryMappingItem[] Items
         {
@@ -78,7 +80,7 @@ namespace Raven.Database.Data
 
         public static DynamicQueryMapping Create(string query)
         {
-            var queryTermMatches = queryTerms.Matches(query);
+            var queryTermMatches = QueryTerms.Matches(query);
              var fields = new HashSet<string>();
             for (int x = 0; x < queryTermMatches.Count; x++)
             {
