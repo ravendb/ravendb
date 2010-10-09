@@ -100,6 +100,7 @@
     </Compile>
     <Compile Include="Bugs\AsyncCommit.cs" />
     <Compile Include="Bugs\EntityWithoutId.cs" />
+    <Compile Include="Bugs\IndexNestedFields.cs" />
     <Compile Include="Bugs\KeysAreCaseInsensitive.cs" />
     <Compile Include="Bugs\OverwriteIndex.cs" />
     <Compile Include="Bugs\ProjectingDocumentId.cs" />

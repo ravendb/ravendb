@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Reflection;
+using System.Threading;
 using Raven.Client.Document;
 using Raven.Client.Tests.Document;
 using Raven.Database;
@@ -31,5 +32,13 @@ namespace Raven.Client.Tests
 			documentStore.Initialize();
 			return documentStore;
 		}
+
+        public void WaitForIndexing(DocumentStore store)
+        {
+            while (store.DocumentDatabase.Statistics.StaleIndexes.Length > 0)
+            {
+                Thread.Sleep(100);
+            }
+        }
 	}
 }
