@@ -713,7 +713,7 @@ namespace Raven.Client.Linq
         /// <returns></returns>
         protected virtual IDocumentQuery<T> CreateDocumentQuery()
         {
-            return session.LuceneQuery<T>(indexName);
+            return session.Advanced.LuceneQuery<T>(indexName);
         }
         
 		/// <summary>

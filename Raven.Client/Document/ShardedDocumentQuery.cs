@@ -28,7 +28,7 @@ namespace Raven.Client.Document
 			queries = new IDocumentQuery<T>[shardSessions.Count];
 			for (int i = 0; i < shardSessions.Count; i++)
 			{
-				queries[i] = shardSessions[i].LuceneQuery<T>(indexName);
+                queries[i] = shardSessions[i].Advanced.LuceneQuery<T>(indexName);
 			}
 		}
 
@@ -75,7 +75,7 @@ namespace Raven.Client.Document
 		{
 			var jsonSerializer =
                 // we assume the same json contract resolver across the entire shared sessions set
-				shardSessions.First().Conventions.CreateSerializer();
+                shardSessions.First().Advanced.Conventions.CreateSerializer();
 			return QueryResult.Results
 				.Select(j => (T)jsonSerializer.Deserialize(new JTokenReader(j), typeof(T)))
 				.GetEnumerator();

@@ -18,7 +18,7 @@ namespace Raven.Client.Shard
 	/// <summary>
 	/// Implements Unit of Work for accessing a set of sharded RavenDB servers
 	/// </summary>
-	public class ShardedDocumentSession : IDocumentSession
+    public class ShardedDocumentSession : IDocumentSession, ISyncAdvancedSessionOperation
 	{
 		/// <summary>
 		/// Clears this instance.
@@ -28,7 +28,7 @@ namespace Raven.Client.Shard
 		{
 			foreach (var shardSession in shardSessions)
 			{
-				shardSession.Clear();
+                shardSession.Advanced.Clear();
 			}
 		}
 
@@ -42,13 +42,13 @@ namespace Raven.Client.Shard
 		{
 			get
 			{
-				return shardSessions.All(x => x.UseOptimisticConcurrency);
+                return shardSessions.All(x => x.Advanced.UseOptimisticConcurrency);
 			}
 			set
 			{
 				foreach (var shardSession in shardSessions)
 				{
-					shardSession.UseOptimisticConcurrency = value;
+					shardSession.Advanced.UseOptimisticConcurrency = value;
 				}
 			}
 		}
@@ -66,12 +66,12 @@ namespace Raven.Client.Shard
 		/// </value>
 		public bool AllowNonAuthoritiveInformation
 		{
-			get { return shardSessions.First().AllowNonAuthoritiveInformation; }
+            get { return shardSessions.First().Advanced.AllowNonAuthoritiveInformation; }
 			set
 			{
 				foreach (var documentSession in shardSessions)
 				{
-					documentSession.AllowNonAuthoritiveInformation = value;
+                    documentSession.Advanced.AllowNonAuthoritiveInformation = value;
 				}
 			}
 		}
@@ -82,12 +82,12 @@ namespace Raven.Client.Shard
 		/// <value></value>
 		public TimeSpan NonAuthoritiveInformationTimeout
 		{
-			get { return shardSessions.First().NonAuthoritiveInformationTimeout; }
+            get { return shardSessions.First().Advanced.NonAuthoritiveInformationTimeout; }
 			set
 			{
 				foreach (var documentSession in shardSessions)
 				{
-					documentSession.NonAuthoritiveInformationTimeout = value;
+                    documentSession.Advanced.NonAuthoritiveInformationTimeout = value;
 				}
 			}
 		}
@@ -98,7 +98,7 @@ namespace Raven.Client.Shard
 		/// <value></value>
 		public int NumberOfRequests
 		{
-			get { return shardSessions.Sum(x => x.NumberOfRequests); }
+            get { return shardSessions.Sum(x => x.Advanced.NumberOfRequests); }
 		}
 
 		/// <summary>
@@ -120,7 +120,7 @@ namespace Raven.Client.Shard
 	    public JObject GetMetadataFor<T>(T instance)
 	    {
 	        var shardIds = shardStrategy.ShardSelectionStrategy.ShardIdForExistingObject(instance);
-	        return GetSingleShardSession(shardIds).GetMetadataFor(instance);
+            return GetSingleShardSession(shardIds).Advanced.GetMetadataFor(instance);
 	    }
 
 		/// <summary>
@@ -131,7 +131,7 @@ namespace Raven.Client.Shard
 		public string GetDocumentId(object instance)
 		{
 			var shardIds = shardStrategy.ShardSelectionStrategy.ShardIdForExistingObject(instance);
-			return GetSingleShardSession(shardIds).GetDocumentId(instance);
+            return GetSingleShardSession(shardIds).Advanced.GetDocumentId(instance);
 		}
 
 		/// <summary>
@@ -142,7 +142,7 @@ namespace Raven.Client.Shard
 		{
 			get
 			{
-				return shardSessions.Any(x => x.HasChanges);
+                return shardSessions.Any(x => x.Advanced.HasChanges);
 			}
 		}
 
@@ -157,7 +157,7 @@ namespace Raven.Client.Shard
 		{
 			var shardIds = shardStrategy.ShardSelectionStrategy.ShardIdForExistingObject(entity);
 
-			return GetSingleShardSession(shardIds).HasChanged(entity);
+            return GetSingleShardSession(shardIds).Advanced.HasChanged(entity);
 		}
 
 		/// <summary>
@@ -172,8 +172,8 @@ namespace Raven.Client.Shard
 
 			foreach (var shardSession in shardSessions)
 			{
-				shardSession.Stored += Stored;
-			    shardSession.OnEntityConverted += OnEntityConverted;
+                shardSession.Advanced.Stored += Stored;
+                shardSession.Advanced.OnEntityConverted += OnEntityConverted;
 			}
 		}
 
@@ -266,10 +266,15 @@ namespace Raven.Client.Shard
 
 			var shardIds = shardStrategy.ShardSelectionStrategy.ShardIdForExistingObject(entity);
 
-			return GetSingleShardSession(shardIds).GetDocumentUrl(entity);
+            return GetSingleShardSession(shardIds).Advanced.GetDocumentUrl(entity);
 		}
 
-		/// <summary>
+	    public ISyncAdvancedSessionOperation Advanced
+	    {
+            get { return this; }
+	    }
+
+	    /// <summary>
 		/// Marks the specified entity for deletion. The entity will be deleted when <see cref="IDocumentSession.SaveChanges"/> is called.
 		/// </summary>
 		/// <typeparam name="T"></typeparam>
@@ -318,12 +323,12 @@ namespace Raven.Client.Shard
 
             var shardIds = shardStrategy.ShardSelectionStrategy.ShardIdForExistingObject(entity);
 
-            GetSingleShardSession(shardIds).Refresh(entity);
+            GetSingleShardSession(shardIds).Advanced.Refresh(entity);
         }
 
 		private IDocumentSession GetSingleShardSession(string shardId)
 		{
-			var shardSession = shardSessions.FirstOrDefault(x => x.StoreIdentifier == shardId);
+            var shardSession = shardSessions.FirstOrDefault(x => x.Advanced.StoreIdentifier == shardId);
 			if (shardSession == null)
 				throw new ApplicationException("Can't find a shard with identifier: " + shardId);
 			return shardSession;
@@ -366,7 +371,7 @@ namespace Raven.Client.Shard
 			if (String.IsNullOrEmpty(shardId))
 				throw new ApplicationException("Can't find a shard to use for entity: " + entity);
 
-			GetSingleShardSession(shardId).Evict(entity);
+            GetSingleShardSession(shardId).Advanced.Evict(entity);
 		}
 
 		/// <summary>
@@ -410,7 +415,7 @@ namespace Raven.Client.Shard
 				shardStrategy.ShardResolutionStrategy.SelectShardIds(ShardResolutionStrategyData.BuildFrom(typeof(T), key));
 			IDocumentSession[] documentSessions;
 			if (sessionIds != null)
-				documentSessions = shardSessions.Where(session => sessionIds.Contains(session.StoreIdentifier)).ToArray();
+                documentSessions = shardSessions.Where(session => sessionIds.Contains(session.Advanced.StoreIdentifier)).ToArray();
 			else
 				documentSessions = shardSessions;
 			return documentSessions;
@@ -467,12 +472,12 @@ namespace Raven.Client.Shard
 		/// <value>The max number of requests per session.</value>
 		public int MaxNumberOfRequestsPerSession
 	    {
-	        get { return shardSessions.First().MaxNumberOfRequestsPerSession; }
+            get { return shardSessions.First().Advanced.MaxNumberOfRequestsPerSession; }
 	        set
 	        {
 	            foreach (var documentSession in shardSessions)
 	            {
-	                documentSession.MaxNumberOfRequestsPerSession = value;
+                    documentSession.Advanced.MaxNumberOfRequestsPerSession = value;
 	            }
 	        }
 	    }

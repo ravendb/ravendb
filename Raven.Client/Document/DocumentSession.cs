@@ -18,7 +18,7 @@ namespace Raven.Client.Document
 	/// <summary>
 	/// Implements Unit of Work for accessing the RavenDB server
 	/// </summary>
-	public class DocumentSession : InMemoryDocumentSessionOperations, IDocumentSession, ITransactionalDocumentSession
+    public class DocumentSession : InMemoryDocumentSessionOperations, IDocumentSession, ITransactionalDocumentSession, ISyncAdvancedSessionOperation
 	{
 		/// <summary>
 		/// Gets the database commands.
@@ -38,7 +38,12 @@ namespace Raven.Client.Document
 			DatabaseCommands = documentStore.DatabaseCommands;
 		}
 
-		/// <summary>
+	    public ISyncAdvancedSessionOperation Advanced
+	    {
+            get { return this; }
+	    }
+
+	    /// <summary>
 		/// Loads the specified entity with the specified id.
 		/// </summary>
 		/// <typeparam name="T"></typeparam>
