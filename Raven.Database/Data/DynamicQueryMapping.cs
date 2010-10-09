@@ -13,6 +13,12 @@ namespace Raven.Database.Data
 
         public string ForEntityName { get; set; }
 
+        public DynamicSortInfo[] SortDescriptors
+        {
+            get;
+            set;
+        }
+
         public DynamicQueryMappingItem[] Items
         {
             get;
@@ -70,6 +76,31 @@ namespace Raven.Database.Data
                         ));
             }
 
+           var index =  new IndexDefinition()
+            {
+                Map = string.Format("{0}\r\nselect new {{ {1} }}",
+                   string.Join("\r\n", fromClauses.ToArray()),
+                   string.Join(", ", realMappings.ToArray()))
+            };
+
+           foreach (var descriptor in this.SortDescriptors)
+           {
+               index.SortOptions.Add(descriptor.Field, (SortOptions)Enum.Parse(typeof(SortOptions), descriptor.FieldType)); 
+           }      
+           return index;
+        }
+
+        public static DynamicQueryMapping Create(string query, string entityName)
+        {
+            var queryTermMatches = QueryTerms.Matches(query);
+             var fields = new HashSet<string>();
+            for (int x = 0; x < queryTermMatches.Count; x++)
+            {
+                Match match = queryTermMatches[x];
+                String field = match.Groups[1].Value;
+                fields.Add(field);
+            }
+
             var headers = CurrentRavenOperation.Headers.Value;
 
             List<DynamicSortInfo> sortInfo = new List<DynamicSortInfo>();
@@ -87,48 +118,13 @@ namespace Raven.Database.Data
                     FieldType = fieldType
                 });
 
-                realMappings.Add(String.Format("{0} = doc.{0}", fieldName));
-            }
-
-           var index =  new IndexDefinition()
-            {
-                Map = string.Format("{0}\r\nselect new {{ {1} }}",
-                   string.Join("\r\n", fromClauses.ToArray()),
-                   string.Join(", ", realMappings.ToArray()))
-            };
-
-           sortInfo.ForEach(x => index.SortOptions.Add(x.Field, FromPrimitiveTypestring(x.FieldType)));           
-
-           return index;
-        }
-
-        private SortOptions FromPrimitiveTypestring(string type)
-        {
-            switch (type)
-            {
-                case "Int16": return SortOptions.Short;
-                case "Int32": return SortOptions.Int;
-                case "Int64": return SortOptions.Long;
-                case "Single": return SortOptions.Float;
-                case "String": return SortOptions.String;
-                default: return SortOptions.String;
-            }
-        }
-
-        public static DynamicQueryMapping Create(string query, string entityName)
-        {
-            var queryTermMatches = QueryTerms.Matches(query);
-             var fields = new HashSet<string>();
-            for (int x = 0; x < queryTermMatches.Count; x++)
-            {
-                Match match = queryTermMatches[x];
-                String field = match.Groups[1].Value;
-                fields.Add(field);
+                fields.Add(fieldName);
             }
             
             return new DynamicQueryMapping()
             {
                 ForEntityName = entityName,
+                SortDescriptors = sortInfo.ToArray(),
                 Items = fields.Select(x => new DynamicQueryMappingItem()
                 {
                     From = x,
@@ -137,7 +133,7 @@ namespace Raven.Database.Data
             };                      
         }
 
-        private class DynamicSortInfo
+        public class DynamicSortInfo
         {
             public string Field { get; set; }
             public string FieldType { get; set; }

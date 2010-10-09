@@ -820,7 +820,7 @@ If you really want to do in memory filtering on the data returned from the query
                     if(fieldType == null) { continue;}
 
                     databaseCommands.OperationsHeaders.Add(
-                        string.Format("SortHint_{0}", field.Trim('-')), fieldType.Name);
+                        string.Format("SortHint_{0}", field.Trim('-')), FromPrimitiveTypestring(fieldType.Name).ToString());
                 }     
                
 
@@ -843,6 +843,20 @@ If you really want to do in memory filtering on the data returned from the query
 				return result;
 			}
 		}
+
+        private SortOptions FromPrimitiveTypestring(string type)
+        {
+            switch (type)
+            {
+                case "Int16": return SortOptions.Short;
+                case "Int32": return SortOptions.Int;
+                case "Int64": return SortOptions.Long;
+                case "Single": return SortOptions.Float;
+                case "String": return SortOptions.String;
+                default: return SortOptions.String;
+            }
+        }
+
 
 		/// <summary>
 		/// Generates the index query.
