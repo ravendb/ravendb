@@ -83,7 +83,15 @@ namespace Raven.Database
                 .OrderBy(x => x.To)
                 .Select(x => x.To)
                 .ToArray());
-            var indexName = combinedFields;
+            var indexName = combinedFields;                     
+            
+            indexName = string.Format("{0}SortBy{1}", indexName ,  
+                    String.Join("", 
+                    map.SortDescriptors
+                    .Select(x=>x.Field)
+                    .OrderBy(x=>x)
+                    .ToArray()));
+
 
             // Hash the name if it's too long
             if (indexName.Length > 230)
