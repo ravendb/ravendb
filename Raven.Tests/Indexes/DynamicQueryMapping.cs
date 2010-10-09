@@ -68,7 +68,7 @@ namespace Raven.Tests.Indexes
             };
 
             var definition = mapping.CreateIndexDefinition();
-            Assert.Equal(@"from doc in docs select new { Name = doc.Name }", definition.Map);
+            Assert.Equal("from doc in docs\r\nselect new { Name = doc.Name }", definition.Map);
                 
         }
 
@@ -86,7 +86,7 @@ namespace Raven.Tests.Indexes
             };
 
             var definition = mapping.CreateIndexDefinition();
-            Assert.Equal(@"from doc in docs from docTagsItem in doc.Tags select new { docTagsName = docTagsItem.Name }", definition.Map);
+            Assert.Equal("from doc in docs\r\nfrom docTagsItem in doc.Tags\r\nselect new { docTagsName = docTagsItem.Name }", definition.Map);
         }
 
         [Fact]
@@ -103,7 +103,7 @@ namespace Raven.Tests.Indexes
             };
 
             var definition = mapping.CreateIndexDefinition();
-            Assert.Equal(@"from doc in docs select new { UserName = doc.User.Name }", definition.Map);
+            Assert.Equal("from doc in docs\r\nselect new { UserName = doc.User.Name }", definition.Map);
         }
     }
 }

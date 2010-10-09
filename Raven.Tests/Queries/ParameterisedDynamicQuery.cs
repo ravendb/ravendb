@@ -132,8 +132,8 @@ namespace Raven.Tests.Queries
                 });
           
 
-            var autoIndexName = db.IndexDefinitionStorage.IndexNames.Where(x => x.StartsWith("Auto_")).SingleOrDefault();
-            var tempIndexName = db.IndexDefinitionStorage.IndexNames.Where(x => x.StartsWith("Temp_")).SingleOrDefault();
+            var autoIndexName = db.IndexDefinitionStorage.IndexNames.Where(x => x.StartsWith("Auto")).SingleOrDefault();
+            var tempIndexName = db.IndexDefinitionStorage.IndexNames.Where(x => x.StartsWith("Temp")).SingleOrDefault();
 
             Assert.False(string.IsNullOrEmpty(tempIndexName));
             Assert.True(string.IsNullOrEmpty(autoIndexName));
@@ -194,8 +194,8 @@ namespace Raven.Tests.Queries
             }
 
             
-            var autoIndexName = db.IndexDefinitionStorage.IndexNames.Where(x => x.StartsWith("Auto_")).SingleOrDefault();
-            var tempIndexName = db.IndexDefinitionStorage.IndexNames.Where(x => x.StartsWith("Temp_")).SingleOrDefault();
+            var autoIndexName = db.IndexDefinitionStorage.IndexNames.Where(x => x.StartsWith("Auto")).SingleOrDefault();
+            var tempIndexName = db.IndexDefinitionStorage.IndexNames.Where(x => x.StartsWith("Temp")).SingleOrDefault();
 
             Assert.True(string.IsNullOrEmpty(tempIndexName));
             Assert.False(string.IsNullOrEmpty(autoIndexName));
