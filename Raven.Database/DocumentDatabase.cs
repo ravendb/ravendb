@@ -805,9 +805,9 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 
         }
         
-        public QueryResult ExecuteDynamicQuery(IndexQuery indexQuery)
+        public QueryResult ExecuteDynamicQuery(string entityName, IndexQuery indexQuery)
         {
-            return dynamicQueryRunner.ExecuteDynamicQuery(indexQuery);
+            return dynamicQueryRunner.ExecuteDynamicQuery(entityName, indexQuery);
         }
 
         private void UnloadQueriesAppDomain()

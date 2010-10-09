@@ -22,10 +22,10 @@ namespace Raven.Database
             temporaryIndexes = new ConcurrentDictionary<string, TemporaryIndexInfo>();
         }
 
-        public QueryResult ExecuteDynamicQuery(IndexQuery query)
+        public QueryResult ExecuteDynamicQuery(string entityName, IndexQuery query)
         {
             // Create the map
-            var map = DynamicQueryMapping.Create(query.Query);
+            var map = DynamicQueryMapping.Create(query.Query, entityName);
 
             // Get the index name
             string indexName = FindDynamicIndexName(map);
@@ -78,7 +78,7 @@ namespace Raven.Database
         {
             var targetName = map.ForEntityName ?? "AllDocs";
 
-            String combinedFields = String.Join("And",
+            var combinedFields = String.Join("And",
                 map.Items
                 .OrderBy(x => x.To)
                 .Select(x => x.To)

@@ -78,7 +78,7 @@ namespace Raven.Database.Data
             };
         }
 
-        public static DynamicQueryMapping Create(string query)
+        public static DynamicQueryMapping Create(string query, string entityName)
         {
             var queryTermMatches = QueryTerms.Matches(query);
              var fields = new HashSet<string>();
@@ -91,6 +91,7 @@ namespace Raven.Database.Data
             
             return new DynamicQueryMapping()
             {
+                ForEntityName = entityName,
                 Items = fields.Select(x => new DynamicQueryMappingItem()
                 {
                     From = x,
