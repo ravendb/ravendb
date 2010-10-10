@@ -77,9 +77,10 @@ namespace Raven.Tests.Indexes
 					Thread.Sleep(100);
 			} while (docs.IsStale);
 
-			Assert.Equal("pagesByTitle2", db.Statistics.Indexes[0].Name);
-			Assert.Equal(1, db.Statistics.Indexes[0].IndexingAttempts);
-			Assert.Equal(1, db.Statistics.Indexes[0].IndexingSuccesses);
+		    var indexStats = db.Statistics.Indexes.First(x=>x.Name == "pagesByTitle2");
+		    Assert.Equal("pagesByTitle2", indexStats.Name);
+			Assert.Equal(1, indexStats.IndexingAttempts);
+			Assert.Equal(1, indexStats.IndexingSuccesses);
 		}
 
 		[Fact]
@@ -123,10 +124,11 @@ namespace Raven.Tests.Indexes
 					Thread.Sleep(100);
 			} while (docs.IsStale);
 
-			Assert.Equal("pagesByTitle2", db.Statistics.Indexes[0].Name);
-			Assert.Equal(2, db.Statistics.Indexes[0].IndexingAttempts);
-			Assert.Equal(1, db.Statistics.Indexes[0].IndexingErrors);
-			Assert.Equal(1, db.Statistics.Indexes[0].IndexingSuccesses);
+		    var indexStats = db.Statistics.Indexes.First(x=>x.Name == "pagesByTitle2");
+		    Assert.Equal("pagesByTitle2", indexStats.Name);
+			Assert.Equal(2, indexStats.IndexingAttempts);
+			Assert.Equal(1, indexStats.IndexingErrors);
+			Assert.Equal(1, indexStats.IndexingSuccesses);
 		}
 
 		[Fact]
