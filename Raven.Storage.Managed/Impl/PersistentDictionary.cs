@@ -458,17 +458,22 @@ namespace Raven.Storage.Managed.Impl
 
         public IEnumerable<JToken> SkipAfter(JToken key)
         {
-            lock(index)
+            return Skip(key, i => i <= 0);
+        }
+
+        private IEnumerable<JToken> Skip(JToken key, Func<int,bool> shouldMoveToNext)
+        {
+            lock (index)
             {
                 var recordingComparer = new RecordingComparer();
                 Array.BinarySearch(index.Keys.ToArray(), key, recordingComparer);
 
-                if(recordingComparer.LastComparedTo == null)
+                if (recordingComparer.LastComparedTo == null)
                     yield break;
 
                 var indexOf = index.IndexOfKey(recordingComparer.LastComparedTo);
 
-                if (comparer.Compare(recordingComparer.LastComparedTo, key) <= 0)
+                if (shouldMoveToNext(comparer.Compare(recordingComparer.LastComparedTo, key)))
                     indexOf += 1; // skip to the next higher value
 
                 for (int i = indexOf; i < index.Count; i++)
@@ -481,6 +486,10 @@ namespace Raven.Storage.Managed.Impl
             }
         }
 
+        public IEnumerable<JToken> SkipTo(JToken key)
+        {
+            return Skip(key, i => i < 0);
+        }
 
         public JToken LastOrDefault()
         {
