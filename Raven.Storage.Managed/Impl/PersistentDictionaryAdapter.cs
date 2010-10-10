@@ -38,9 +38,9 @@ namespace Raven.Storage.Managed.Impl
             return persistentDictionary.Remove(key, txId.Value);
         }
 
-        public void Add(string name, SecondaryIndex index)
+        public void Add(string name, Func<JToken, JToken> func)
         {
-            secondaryIndices[name] = index; 
+            secondaryIndices[name] = persistentDictionary.AddSecondaryIndex(func); 
         }
 
         public IEnumerator<SecondaryIndex> GetEnumerator()

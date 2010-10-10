@@ -24,64 +24,51 @@ namespace Raven.Storage.Managed.Impl
             Identity = new PersistentDictionaryAdapter(txId,
                                                        Add(new PersistentDictionary(persistentSource, new ModifiedJTokenComparer(x=>x.Value<string>("name")))));
 
-            PersistentDictionary attachmentPersistentDictionary =
-                Add(new PersistentDictionary(persistentSource, new ModifiedJTokenComparer(x => x.Value<string>("key"))));
-            Attachments = new PersistentDictionaryAdapter(txId, attachmentPersistentDictionary)
+            Attachments = new PersistentDictionaryAdapter(txId, Add(new PersistentDictionary(persistentSource, new ModifiedJTokenComparer(x => x.Value<string>("key")))))
             {
-                {"ByEtag", attachmentPersistentDictionary.AddSecondaryIndex(x => x.Value<byte[]>("etag"))}
+                {"ByEtag", x => x.Value<byte[]>("etag")}
             };
 
-            PersistentDictionary documentsPersistentDictionary =
-                Add(new PersistentDictionary(persistentSource, new ModifiedJTokenComparer(x => x.Value<string>("key"))));
-            Documents = new PersistentDictionaryAdapter(txId, documentsPersistentDictionary)
+            Documents = new PersistentDictionaryAdapter(txId, Add(new PersistentDictionary(persistentSource, new ModifiedJTokenComparer(x => x.Value<string>("key")))))
             {
-                {"ByKey", documentsPersistentDictionary.AddSecondaryIndex(x => x.Value<string>("key"))},
-                {"ById", documentsPersistentDictionary.AddSecondaryIndex(x => x.Value<string>("id"))},
-                {"ByEtag", documentsPersistentDictionary.AddSecondaryIndex(x => x.Value<byte[]>("etag"))}
+                {"ByKey", x => x.Value<string>("key")},
+                {"ById", x => x.Value<string>("id")},
+                {"ByEtag", x => x.Value<byte[]>("etag")}
             };
 
-            PersistentDictionary documentsInTransactionPersistentdictionary =
-                Add(new PersistentDictionary(persistentSource, new ModifiedJTokenComparer(x => x.Value<string>("key"))));
-            DocumentsModifiedByTransactions = new PersistentDictionaryAdapter(txId,
-                                                                              documentsInTransactionPersistentdictionary)
+            DocumentsModifiedByTransactions = new PersistentDictionaryAdapter(txId, 
+                Add(new PersistentDictionary(persistentSource, new ModifiedJTokenComparer(x => x.Value<string>("key")))))
             {
-                {"ByTxId", documentsInTransactionPersistentdictionary.AddSecondaryIndex(x => x.Value<byte[]>("txId"))}
+                {"ByTxId", x => x.Value<byte[]>("txId")}
             };
             Transactions = new PersistentDictionaryAdapter(txId,
-                                                           Add(new PersistentDictionary(persistentSource,
-                                                                                        new ModifiedJTokenComparer(
-                                                                                            x => x.Value<byte[]>("txId")))));
+                Add(new PersistentDictionary(persistentSource,new ModifiedJTokenComparer(x => x.Value<byte[]>("txId")))));
 
             IndexingStats = new PersistentDictionaryAdapter(txId,
-                                                            Add(new PersistentDictionary(persistentSource,
-                                                                                         new ModifiedJTokenComparer(
-                                                                                             x =>
-                                                                                             x.Value<string>("index")))));
+                Add(new PersistentDictionary(persistentSource,new ModifiedJTokenComparer(x =>x.Value<string>("index")))));
 
-            PersistentDictionary mappedResultsPersistentDictioanry = Add(new PersistentDictionary(persistentSource, JTokenComparer.Instance));
-            MappedResults = new PersistentDictionaryAdapter(txId, mappedResultsPersistentDictioanry)
+            MappedResults = new PersistentDictionaryAdapter(txId, Add(new PersistentDictionary(persistentSource, JTokenComparer.Instance)))
             {
-                {"ByViewAndReduceKey", mappedResultsPersistentDictioanry.AddSecondaryIndex(x => new JObject
+                {"ByViewAndReduceKey", x => new JObject
                     {
                         {"view", x.Value<string>("view")},
                         {"reduceKey", x.Value<string>("reduceKey")}
-                    })},
-               {"ByViewAndDocumentId", mappedResultsPersistentDictioanry.AddSecondaryIndex(x => new JObject
+                    }},
+               {"ByViewAndDocumentId", x => new JObject
                     {
                         {"view", x.Value<string>("view")},
                         {"docId", x.Value<string>("docId")}
-                    })}
+                    }}
             };
 
-            var queuesPersistentDictioanry = Add(new PersistentDictionary(persistentSource, 
-                                                                    new ModifiedJTokenComparer(x=> new JObject
-                                                                    {
-                                                                        {"name", x.Value<string>("name")},
-                                                                        {"id", x.Value<byte[]>("id")},
-                                                                    })));
-            Queues = new PersistentDictionaryAdapter(txId, queuesPersistentDictioanry)
+            Queues = new PersistentDictionaryAdapter(txId, Add(new PersistentDictionary(persistentSource, 
+                                                                                        new ModifiedJTokenComparer(x=> new JObject
+                                                                                        {
+                                                                                            {"name", x.Value<string>("name")},
+                                                                                            {"id", x.Value<byte[]>("id")},
+                                                                                        }))))
             {
-                {"ByName", queuesPersistentDictioanry.AddSecondaryIndex(x=>x.Value<string>("name"))}
+                {"ByName", x=>x.Value<string>("name")}
             };
         }
 
