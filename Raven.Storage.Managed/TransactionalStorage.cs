@@ -44,9 +44,10 @@ namespace Raven.Storage.Managed
 
         public Guid Id
         {
-            get { return new Guid(tableStroage.Details.Read("id").Data()); }
+            get { throw new NotImplementedException(); }
         }
 
+        [DebuggerNonUserCode]
         public void Batch(Action<IStorageActionsAccessor> action)
         {
             if (disposed)
@@ -64,9 +65,11 @@ namespace Raven.Storage.Managed
             {
                 using (tableStroage.BeginTransaction())
                 {
-                    current.Value = new StorageActionsAccessor(tableStroage);
+                    var storageActionsAccessor = new StorageActionsAccessor(tableStroage);
+                    current.Value = storageActionsAccessor;
                     action(current.Value);
                     tableStroage.Commit();
+                    storageActionsAccessor.InvokeOnCommit();
                     onCommit();
                 }
             }
@@ -95,17 +98,11 @@ namespace Raven.Storage.Managed
 
             persistenceSource = configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction
                           ? (IPersistentSource)new MemoryPersistentSource()
-                          : new FileBasedPersistentSource(configuration.DataDirectory, "Raven");
+                          : new FileBasedPersistentSource(configuration.DataDirectory, "Raven", configuration.TransactionMode);
 
             tableStroage = new TableStorage(persistenceSource);
 
             tableStroage.Initialze();
-
-            using(tableStroage.BeginTransaction())
-            {
-                if (tableStroage.Details.Read(JToken.FromObject("id")) == null)
-                    tableStroage.Details.Put(JToken.FromObject("id"), Guid.NewGuid().ToByteArray());
-            }
 
             return persistenceSource.CreatedNew;
         }

@@ -18,6 +18,13 @@ namespace Raven.Storage.Managed.Impl
             public JToken Key { get; set; }
         }
 
+        public string Name { get; set; }
+
+        public override string ToString()
+        {
+            return Name + " (" + ItemCount + ")";
+        }
+
         public IEnumerable<JToken> Keys { get { return keyToFilePos.Keys; } }
 
         private readonly ConcurrentDictionary<JToken, PositionInFile> keyToFilePos;
@@ -288,6 +295,10 @@ namespace Raven.Storage.Managed.Impl
             keyToFilePos.AddOrUpdate(key, position, (token, oldPos) =>
             {
                 WasteCount += 1;
+                foreach (var index in secondaryIndices)
+                {
+                    index.Add(oldPos.Key);
+                }
                 return position;
             });
             foreach (var index in secondaryIndices)
@@ -298,12 +309,13 @@ namespace Raven.Storage.Managed.Impl
 
         private void RemoveInternal(JToken key)
         {
-            PositionInFile _;
-            keyToFilePos.TryRemove(key, out _);
+            PositionInFile removedValue;
+            if (keyToFilePos.TryRemove(key, out removedValue) == false)
+                return;
             WasteCount += 1;
             foreach (var index in secondaryIndices)
             {
-                index.Remove(key);
+                index.Remove(removedValue.Key);
             }
         }
 

@@ -14,7 +14,7 @@ namespace Raven.Storage.Managed.Impl
 
         public override string ToString()
         {
-            return Count.ToString();
+            return persistentDictionary.Name + " (" + Count +")";
         }
 
         public PersistentDictionaryAdapter(ThreadLocal<Guid> txId, PersistentDictionary persistentDictionary)

@@ -19,18 +19,24 @@ namespace Raven.Storage.Managed.Impl
         public TableStorage(IPersistentSource persistentSource)
             : base(persistentSource)
         {
-            Details = new PersistentDictionaryAdapter(txId,
-                                                      Add(new PersistentDictionary(persistentSource,
-                                                                                   JTokenComparer.Instance)));
             Identity = new PersistentDictionaryAdapter(txId,
-                                                       Add(new PersistentDictionary(persistentSource, new ModifiedJTokenComparer(x=>x.Value<string>("name")))));
+                                                       Add(new PersistentDictionary(persistentSource, new ModifiedJTokenComparer(x=>x.Value<string>("name")))
+                                                       {
+                                                           Name = "Identity"
+                                                       }));
 
-            Attachments = new PersistentDictionaryAdapter(txId, Add(new PersistentDictionary(persistentSource, new ModifiedJTokenComparer(x => x.Value<string>("key")))))
+            Attachments = new PersistentDictionaryAdapter(txId, Add(new PersistentDictionary(persistentSource, new ModifiedJTokenComparer(x => x.Value<string>("key")))
+            {
+                Name = "Attachments"
+            }))
             {
                 {"ByEtag", x => x.Value<byte[]>("etag")}
             };
 
-            Documents = new PersistentDictionaryAdapter(txId, Add(new PersistentDictionary(persistentSource, new ModifiedJTokenComparer(x => x.Value<string>("key")))))
+            Documents = new PersistentDictionaryAdapter(txId, Add(new PersistentDictionary(persistentSource, new ModifiedJTokenComparer(x => x.Value<string>("key")))
+            {
+                Name = "Documents"
+            }))
             {
                 {"ByKey", x => x.Value<string>("key")},
                 {"ById", x => x.Value<string>("id")},
@@ -41,17 +47,29 @@ namespace Raven.Storage.Managed.Impl
                 Add(new PersistentDictionary(persistentSource, new ModifiedJTokenComparer(x => new JObject
                 {
                     {"key", x.Value<string>("key")},
-                }))))
+                }))
+                {
+                    Name = "DocumentsModifiedByTransactions"
+                }))
             {
                 {"ByTxId", x => x.Value<byte[]>("txId")}
             };
             Transactions = new PersistentDictionaryAdapter(txId,
-                Add(new PersistentDictionary(persistentSource,new ModifiedJTokenComparer(x => x.Value<byte[]>("txId")))));
+                Add(new PersistentDictionary(persistentSource,new ModifiedJTokenComparer(x => x.Value<byte[]>("txId")))
+                {
+                    Name = "Transactions"
+                }));
 
             IndexingStats = new PersistentDictionaryAdapter(txId,
-                Add(new PersistentDictionary(persistentSource,new ModifiedJTokenComparer(x =>x.Value<string>("index")))));
+                Add(new PersistentDictionary(persistentSource,new ModifiedJTokenComparer(x =>x.Value<string>("index")))
+                {
+                    Name = "IndexingStats"
+                }));
 
-            MappedResults = new PersistentDictionaryAdapter(txId, Add(new PersistentDictionary(persistentSource, JTokenComparer.Instance)))
+            MappedResults = new PersistentDictionaryAdapter(txId, Add(new PersistentDictionary(persistentSource, JTokenComparer.Instance)
+            {
+                Name = "MappedResults"
+            }))
             {
                 {"ByViewAndReduceKey", x => new JObject
                     {
@@ -70,7 +88,10 @@ namespace Raven.Storage.Managed.Impl
                                                                                         {
                                                                                             {"name", x.Value<string>("name")},
                                                                                             {"id", x.Value<byte[]>("id")},
-                                                                                        }))))
+                                                                                        }))
+            {
+                Name = "Queues"
+            }))
             {
                 {"ByName", x=>x.Value<string>("name")}
             };
@@ -80,7 +101,10 @@ namespace Raven.Storage.Managed.Impl
                                                                                         {
                                                                                             {"index", x.Value<string>("index")},
                                                                                             {"id", x.Value<byte[]>("id")},
-                                                                                        }))))
+                                                                                        }))
+            {
+                Name = "Tasks"
+            }))
             {
                 {"ByIndexAndTime", x=>new JObject
                 {
@@ -112,8 +136,6 @@ namespace Raven.Storage.Managed.Impl
         public PersistentDictionaryAdapter Attachments { get; private set; }
 
         public PersistentDictionaryAdapter Identity { get; private set; }
-
-        public PersistentDictionaryAdapter Details { get; private set; }
 
         public IDisposable BeginTransaction()
         {
