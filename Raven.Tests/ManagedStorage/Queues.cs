@@ -27,7 +27,7 @@ namespace Raven.Storage.Tests
 
 				tx.Batch(mutator =>
 				{
-					for (int i = 0; i < 5; i++)
+					for (int i = 0; i < 6; i++)
 					{
 						mutator.Queue.PeekFromQueue("ayende").First();
 					}

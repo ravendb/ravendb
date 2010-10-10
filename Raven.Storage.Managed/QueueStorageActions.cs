@@ -38,14 +38,13 @@ namespace Raven.Storage.Managed
                 if(readResult == null)
                     yield break;
 
-                readResult.Key["reads"] = readResult.Key.Value<int>("reads") + 1;
-
                 if (readResult.Key.Value<int>("reads") > 5) //      // read too much, probably poison message, remove it
                 {
                     storage.Queues.Remove(readResult.Key);
                     continue;
                 }
 
+                readResult.Key["reads"] = readResult.Key.Value<int>("reads") + 1;
                 storage.Queues.UpdateKey(readResult.Key);
 
                 yield return new Tuple<byte[], object>(
