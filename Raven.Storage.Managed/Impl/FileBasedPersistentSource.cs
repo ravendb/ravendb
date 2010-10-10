@@ -1,10 +1,12 @@
 ﻿using System.IO;
+using Raven.Database;
 
 namespace Raven.Storage.Managed.Impl
 {
     public class FileBasedPersistentSource : IPersistentSource
     {
         private readonly string basePath;
+        private readonly TransactionMode transactionMode;
         private readonly string dataPath;
         private readonly string logPath;
 
@@ -13,10 +15,11 @@ namespace Raven.Storage.Managed.Impl
 
         public bool CreatedNew { get; set; }
 
-        public FileBasedPersistentSource(string basePath, string prefix)
+        public FileBasedPersistentSource(string basePath, string prefix, TransactionMode transactionMode)
         {
             SyncLock = new object();
             this.basePath = basePath;
+            this.transactionMode = transactionMode;
             dataPath = Path.Combine(basePath, prefix + ".data");
             logPath = Path.Combine(basePath, prefix + ".log");
 
@@ -24,10 +27,19 @@ namespace Raven.Storage.Managed.Impl
             RecoverFromFailedRename(dataPath);
             RecoverFromFailedRename(logPath);
 
-            CreatedNew = File.Exists(logPath);
+            CreatedNew = File.Exists(logPath) == false;
 
-            log = File.Open(logPath, FileMode.OpenOrCreate, FileAccess.ReadWrite);
-            data = File.Open(dataPath, FileMode.OpenOrCreate, FileAccess.ReadWrite);
+            OpenFiles();
+        }
+
+        private void OpenFiles()
+        {
+            log = new FileStream(logPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read, 4096,
+                                 transactionMode == TransactionMode.Lazy ? FileOptions.SequentialScan : FileOptions.WriteThrough| FileOptions.SequentialScan
+                );
+            data = new FileStream(dataPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read, 4096,
+                                  transactionMode == TransactionMode.Lazy ? FileOptions.RandomAccess : FileOptions.WriteThrough | FileOptions.RandomAccess
+                );
         }
 
         #region IPersistentSource Members
@@ -79,8 +91,7 @@ namespace Raven.Storage.Managed.Impl
             File.Delete(renamedDataFile);
             File.Delete(renamedLogFile);
 
-            this.data = File.Open(dataPath, FileMode.OpenOrCreate, FileAccess.ReadWrite);
-            this.log = File.Open(logPath, FileMode.OpenOrCreate, FileAccess.ReadWrite);
+            OpenFiles();
         }
 
         public Stream CreateTemporaryStream()

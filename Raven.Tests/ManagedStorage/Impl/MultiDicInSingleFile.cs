@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Raven.Database;
 using Raven.Storage.Managed.Impl;
 
 namespace Raven.Tests.ManagedStorage.Impl
@@ -39,7 +40,7 @@ namespace Raven.Tests.ManagedStorage.Impl
 
         protected void OpenDictionary()
         {
-            persistentSource = new FileBasedPersistentSource(Path.GetTempPath(), "test_");
+            persistentSource = new FileBasedPersistentSource(Path.GetTempPath(), "test_", TransactionMode.Lazy);
             aggregateDictionary = new AggregateDictionary(persistentSource);
 
             persistentDictionaryOne = aggregateDictionary.Add(new PersistentDictionary(persistentSource, JTokenComparer.Instance));
