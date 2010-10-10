@@ -134,6 +134,7 @@
     <Compile Include="ManagedStorage\Impl\SimpleFileTest.cs" />
     <Compile Include="ManagedStorage\Indexes.cs" />
     <Compile Include="ManagedStorage\MappedResults.cs" />
+    <Compile Include="ManagedStorage\Queues.cs" />
     <Compile Include="ManagedStorage\Storage.cs" />
     <Compile Include="ManagedStorage\Transactions.cs">
       <SubType>Code</SubType>

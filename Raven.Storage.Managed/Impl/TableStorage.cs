@@ -72,7 +72,20 @@ namespace Raven.Storage.Managed.Impl
                         {"docId", x.Value<string>("docId")}
                     })}
             };
+
+            var queuesPersistentDictioanry = Add(new PersistentDictionary(persistentSource, 
+                                                                    new ModifiedJTokenComparer(x=> new JObject
+                                                                    {
+                                                                        {"name", x.Value<string>("name")},
+                                                                        {"id", x.Value<byte[]>("id")},
+                                                                    })));
+            Queues = new PersistentDictionaryAdapter(txId, queuesPersistentDictioanry)
+            {
+                {"ByName", queuesPersistentDictioanry.AddSecondaryIndex(x=>x.Value<string>("name"))}
+            };
         }
+
+        public PersistentDictionaryAdapter  Queues { get; private set; }
 
         public PersistentDictionaryAdapter MappedResults { get; private set; }
 

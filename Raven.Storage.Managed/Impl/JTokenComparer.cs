@@ -67,7 +67,7 @@ namespace Raven.Storage.Managed.Impl
                 case JTokenType.Float:
                     return (x.Value<double>()).CompareTo(y.Value<double>());
                 case JTokenType.String:
-                    return StringComparer.InvariantCultureIgnoreCase.Compare(x.Value<string>(),y.Value<string>());
+                    return StringComparer.InvariantCultureIgnoreCase.Compare(x.Value<string>(), y.Value<string>());
                 case JTokenType.Boolean:
                     return x.Value<bool>().CompareTo(y.Value<bool>());
                 case JTokenType.Date:
@@ -133,24 +133,21 @@ namespace Raven.Storage.Managed.Impl
 
         public ModifiedJTokenComparer(Func<JToken, JToken> modifier)
         {
-            this.modifier = modifier;
+            this.modifier = token =>
+            {
+                return token.Type != JTokenType.Object ? token : modifier(token);
+            };
         }
 
         public override int Compare(JToken x, JToken y)
         {
-            if (x.Type == JTokenType.Object)
-                x = modifier(x);
-            if (y.Type == JTokenType.Object)
-                y = modifier(y);
-            return base.Compare(x, y);
+            return base.Compare(modifier(x), modifier(y));
         }
 
         public override int GetHashCode(JToken obj)
         {
-            if (obj.Type == JTokenType.Object)
-                obj = modifier(obj);
-            return base.GetHashCode(obj);
-        } 
+            return base.GetHashCode(modifier(obj));
+        }
     }
 
     public class RecordingComparer : IComparer<JToken>

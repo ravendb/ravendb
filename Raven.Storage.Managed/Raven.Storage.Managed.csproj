@@ -69,6 +69,7 @@
     <Compile Include="IndexingStorageActions.cs" />
     <Compile Include="MappedResultsStorageAction.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="QueueStorageActions.cs" />
     <Compile Include="StorageActionsAccessor.cs" />
     <Compile Include="TransactionalStorage.cs" />
     <Compile Include="TransactionStorageActions.cs" />

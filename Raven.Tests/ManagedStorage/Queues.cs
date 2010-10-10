@@ -9,11 +9,11 @@ namespace Raven.Storage.Tests
 		[Fact]
 		public void CanEnqueueAndPeek()
 		{
-			using (var tx = new TransactionalStorage("test"))
+			using (var tx = NewTransactionalStorage())
 			{
-				tx.Write(mutator => mutator.Queue.EnqueueToQueue("ayende", new byte[] {1, 2}));
+				tx.Batch(mutator => mutator.Queue.EnqueueToQueue("ayende", new byte[] {1, 2}));
 
-				tx.Write(
+				tx.Batch(
 					mutator => Assert.Equal(new byte[] {1, 2}, mutator.Queue.PeekFromQueue("ayende").First().Item1));
 			}
 		}
@@ -21,11 +21,11 @@ namespace Raven.Storage.Tests
 		[Fact]
 		public void PoisonMessagesWillBeDeleted()
 		{
-			using (var tx = new TransactionalStorage("test"))
+			using (var tx = NewTransactionalStorage())
 			{
-				tx.Write(mutator => mutator.Queue.EnqueueToQueue("ayende", new byte[] {1, 2}));
+				tx.Batch(mutator => mutator.Queue.EnqueueToQueue("ayende", new byte[] {1, 2}));
 
-				tx.Write(mutator =>
+				tx.Batch(mutator =>
 				{
 					for (int i = 0; i < 5; i++)
 					{
@@ -39,11 +39,11 @@ namespace Raven.Storage.Tests
 		[Fact]
 		public void CanDeleteQueuedData()
 		{
-			using (var tx = new TransactionalStorage("test"))
+			using (var tx = NewTransactionalStorage())
 			{
-				tx.Write(mutator => mutator.Queue.EnqueueToQueue("ayende", new byte[] { 1, 2 }));
+				tx.Batch(mutator => mutator.Queue.EnqueueToQueue("ayende", new byte[] { 1, 2 }));
 
-				tx.Write(mutator => 
+				tx.Batch(mutator => 
 				{
 					mutator.Queue.DeleteFromQueue("ayende", mutator.Queue.PeekFromQueue("ayende").First().Item2);
 					Assert.Equal(null, mutator.Queue.PeekFromQueue("ayende").FirstOrDefault());
