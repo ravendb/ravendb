@@ -34,7 +34,8 @@ namespace Raven.Storage.Managed
             {
                 if (disposed)
                     return;
-                persistenceSource.Dispose();
+                if (persistenceSource != null)
+                    persistenceSource.Dispose();
             }
             finally
             {
@@ -121,7 +122,7 @@ namespace Raven.Storage.Managed
 
         public void StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory)
         {
-            var backupOperation = new BackupOperation(database, database.Configuration.DataDirectory, backupDestinationDirectory);
+            var backupOperation = new BackupOperation(database, persistenceSource, database.Configuration.DataDirectory, backupDestinationDirectory);
             ThreadPool.QueueUserWorkItem(backupOperation.Execute);
 		
         }
