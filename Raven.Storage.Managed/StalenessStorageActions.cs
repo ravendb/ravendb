@@ -58,6 +58,7 @@ namespace Raven.Storage.Managed
                 if(entityName != null && 
                    StringComparer.InvariantCultureIgnoreCase.Equals(entityName, doc.Value<string>("entityName")) == false)
                     continue;
+                return true;
             }
             return false;
         }
