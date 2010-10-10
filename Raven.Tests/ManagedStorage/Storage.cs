@@ -10,7 +10,7 @@ namespace Raven.Storage.Tests
 		[Fact]
 		public void CanCreateNewFile()
 		{
-			using (new TransactionalStorage("test"))
+			using (NewTransactionalStorage())
 			{
 
 			}
@@ -19,12 +19,12 @@ namespace Raven.Storage.Tests
 		[Fact]
 		public void CanCreateNewFileAndThenOpenIt()
 		{
-			using (new TransactionalStorage("test"))
+			using (NewTransactionalStorage())
 			{
 
 			}
 
-			using (new TransactionalStorage("test"))
+			using (NewTransactionalStorage())
 			{
 			}
 		}
@@ -32,15 +32,15 @@ namespace Raven.Storage.Tests
 		[Fact]
 		public void CanHandleTruncatedFile()
 		{
-			var fileName = Path.Combine("test", "storage.raven");
+			var fileName = Path.Combine("test", "raven.log");
 			long lengthAfterFirstTransaction;
-			using (var tx = new TransactionalStorage("test"))
+			using (var tx = NewTransactionalStorage())
 			{
-				tx.Write(mutator => mutator.Documents.AddDocument("Ayende", null, JObject.FromObject(new { Name = "Rahien" }), new JObject()));
+				tx.Batch(mutator => mutator.Documents.AddDocument("Ayende", null, JObject.FromObject(new { Name = "Rahien" }), new JObject()));
 
 				lengthAfterFirstTransaction = new FileInfo(fileName).Length;
 
-				tx.Write(mutator => mutator.Documents.AddDocument("Oren", null, JObject.FromObject(new { Name = "Eini" }), new JObject()));
+                tx.Batch(mutator => mutator.Documents.AddDocument("Oren", null, JObject.FromObject(new { Name = "Eini" }), new JObject()));
 
 			}
 
@@ -49,10 +49,10 @@ namespace Raven.Storage.Tests
 				fileStream.SetLength(lengthAfterFirstTransaction + (fileStream.Length - lengthAfterFirstTransaction) / 2);
 			}
 
-			using (var tx = new TransactionalStorage("test"))
+			using (var tx = NewTransactionalStorage())
 			{
-				tx.Read(viewer => Assert.NotNull(viewer.Documents.DocumentByKey("Ayende", null)));
-				tx.Read(viewer => Assert.Null(viewer.Documents.DocumentByKey("Oren", null)));
+                tx.Batch(viewer => Assert.NotNull(viewer.Documents.DocumentByKey("Ayende", null)));
+                tx.Batch(viewer => Assert.Null(viewer.Documents.DocumentByKey("Oren", null)));
 			}
 		}
 
