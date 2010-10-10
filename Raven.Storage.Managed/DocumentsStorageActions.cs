@@ -38,7 +38,7 @@ namespace Raven.Storage.Managed
 
         public IEnumerable<Tuple<JsonDocument, int>> DocumentsById(int startId, int endId)
         {
-            var results = storage.Documents["ById"].SkipAfter(new JObject{{"id", startId}})
+            var results = storage.Documents["ById"].SkipTo(new JObject{{"id", startId}})
                 .TakeWhile(x=>x.Value<int>("id") <= endId);
 
             foreach (var result in results)

@@ -41,7 +41,7 @@ namespace Raven.Storage.Managed
             {
                 {"index", name},
             };
-            var tasksAfterCutoffPoint = storage.Tasks["ByIndexAndTime"].SkipAfter(keyToSearch);
+            var tasksAfterCutoffPoint = storage.Tasks["ByIndexAndTime"].SkipTo(keyToSearch);
             if (cutOff != null)
                 tasksAfterCutoffPoint = tasksAfterCutoffPoint
                     .Where(x => x.Value<DateTime>("time") < cutOff.Value);

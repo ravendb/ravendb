@@ -157,7 +157,7 @@ namespace Raven.Storage.Managed
             storage.Transactions.Remove(new JObject { { "txId", txId.ToByteArray() } });
 
             var documentsInTx = storage.DocumentsModifiedByTransactions["ByTxId"]
-                .SkipAfter(new JObject { { "txId", txId.ToByteArray() } })
+                .SkipTo(new JObject { { "txId", txId.ToByteArray() } })
                 .TakeWhile(x => new Guid(x.Value<byte[]>("txId")) == txId);
 
             foreach (var docInTx in documentsInTx)

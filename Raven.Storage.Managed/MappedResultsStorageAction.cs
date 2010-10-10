@@ -34,7 +34,7 @@ namespace Raven.Storage.Managed
 
         public IEnumerable<JObject> GetMappedResults(string view, string reduceKey, byte[] viewAndReduceKeyHashed)
         {
-            return storage.MappedResults["ByViewAndReduceKey"].SkipAfter(new JObject
+            return storage.MappedResults["ByViewAndReduceKey"].SkipTo(new JObject
             {
                 {"view", view},
                 {"reduceKey", reduceKey}
@@ -52,7 +52,7 @@ namespace Raven.Storage.Managed
 
         public IEnumerable<string> DeleteMappedResultsForDocumentId(string documentId, string view)
         {
-            foreach (var key in storage.MappedResults["ByViewAndDocumentId"].SkipAfter(new JObject
+            foreach (var key in storage.MappedResults["ByViewAndDocumentId"].SkipTo(new JObject
             {
                 {"view", view},
                 {"docId", documentId},
@@ -66,7 +66,7 @@ namespace Raven.Storage.Managed
 
         public void DeleteMappedResultsForView(string view)
         {
-            foreach (var key in storage.MappedResults["ByViewAndReduceKey"].SkipAfter(new JObject
+            foreach (var key in storage.MappedResults["ByViewAndReduceKey"].SkipTo(new JObject
             {
                 {"view", view},
             }).TakeWhile(x => StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("view"), view)))

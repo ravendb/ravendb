@@ -72,7 +72,7 @@ namespace Raven.Storage.Managed
             if (task.SupportsMerging == false)
                 return;
 
-            var keyForTaskToTryMergings = storage.Tasks["ByIndexAndType"].SkipAfter(new JObject
+            var keyForTaskToTryMergings = storage.Tasks["ByIndexAndType"].SkipTo(new JObject
             {
                 {"index", task.Index},
                 {"type", task.Type},

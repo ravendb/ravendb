@@ -29,7 +29,7 @@ namespace Raven.Storage.Managed
 
         public IEnumerable<Tuple<byte[], object>> PeekFromQueue(string name)
         {
-            foreach (var queuedMsgKey in storage.Queues["ByName"].SkipAfter(new JObject
+            foreach (var queuedMsgKey in storage.Queues["ByName"].SkipTo(new JObject
             {
                 {"name", name}
             }).TakeWhile(x=> StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("name"), name)))
