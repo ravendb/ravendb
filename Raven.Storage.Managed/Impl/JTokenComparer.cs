@@ -116,7 +116,10 @@ namespace Raven.Storage.Managed.Impl
                 case JTokenType.String:
                 case JTokenType.Boolean:
                 case JTokenType.Date:
-                    return ((JValue)obj).Value.GetHashCode();
+                    var value = ((JValue)obj).Value;
+                    if (value == null)// string can be null here
+                        return 0;
+                    return value.GetHashCode();
                 case JTokenType.Raw:
                 case JTokenType.Comment:
                 case JTokenType.Constructor:
