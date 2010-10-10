@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -8,7 +9,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Raven.Storage.Managed.Impl
 {
-    public class PersistentDictionary
+    public class PersistentDictionary : IEnumerable<PersistentDictionary.ReadResult>
     {
         private class PositionInFile
         {
@@ -361,6 +362,28 @@ namespace Raven.Storage.Managed.Impl
             public long Position { get; set; }
             public JToken Key { get; set; }
             public Func<byte[]> Data { get; set; }
+        }
+
+        public IEnumerator<ReadResult> GetEnumerator()
+        {
+            foreach (var positionInFile in keyToFilePos.Values)
+            {
+                byte[] readData = null;
+                var pos = positionInFile;
+                yield return new ReadResult
+                {
+                    Key = positionInFile.Key,
+                    Position = positionInFile.Position,
+                    Size = positionInFile.Size,
+                    Data = () => readData ?? (readData = ReadData(pos.Position, pos.Size)),
+               
+                };
+            }
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
         }
     }
 

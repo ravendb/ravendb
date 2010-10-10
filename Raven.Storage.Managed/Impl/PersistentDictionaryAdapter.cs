@@ -6,7 +6,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Raven.Storage.Managed.Impl
 {
-    public class PersistentDictionaryAdapter : IEnumerable<SecondaryIndex>
+    public class PersistentDictionaryAdapter : IEnumerable<PersistentDictionary.ReadResult>
     {
         private readonly ThreadLocal<Guid> txId;
         private readonly PersistentDictionary persistentDictionary;
@@ -16,6 +16,11 @@ namespace Raven.Storage.Managed.Impl
         {
             this.txId = txId;
             this.persistentDictionary = persistentDictionary;
+        }
+
+        public int Count
+        {
+            get { return persistentDictionary.ItemCount; }
         }
 
         public IEnumerable<JToken> Keys
@@ -43,9 +48,9 @@ namespace Raven.Storage.Managed.Impl
             secondaryIndices[name] = persistentDictionary.AddSecondaryIndex(func); 
         }
 
-        public IEnumerator<SecondaryIndex> GetEnumerator()
+        public IEnumerator<PersistentDictionary.ReadResult> GetEnumerator()
         {
-            return secondaryIndices.Values.GetEnumerator();
+            return persistentDictionary.GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()
