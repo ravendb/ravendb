@@ -5,6 +5,7 @@ using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Storage;
+using Raven.Storage.Managed.Backup;
 using Raven.Storage.Managed.Impl;
 
 namespace Raven.Storage.Managed
@@ -44,7 +45,7 @@ namespace Raven.Storage.Managed
 
         public Guid Id
         {
-            get { throw new NotImplementedException(); }
+            get; private set;
         }
 
         [DebuggerNonUserCode]
@@ -104,17 +105,30 @@ namespace Raven.Storage.Managed
 
             tableStroage.Initialze();
 
+            if(persistenceSource.CreatedNew)
+            {
+                Id = Guid.NewGuid();
+                Batch(accessor => tableStroage.Details.Put("id", Id.ToByteArray()));
+            }
+            else
+            {
+                var readResult = tableStroage.Details.Read("id");
+                Id = new Guid(readResult.Data());
+            }
+
             return persistenceSource.CreatedNew;
         }
 
         public void StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory)
         {
-            throw new NotImplementedException();
+            var backupOperation = new BackupOperation(database, database.Configuration.DataDirectory, backupDestinationDirectory);
+            ThreadPool.QueueUserWorkItem(backupOperation.Execute);
+		
         }
 
         public void Restore(string backupLocation, string databaseLocation)
         {
-            throw new NotImplementedException();
+            new RestoreOperation(backupLocation, databaseLocation).Execute();
         }
 
         public Type TypeForRunningQueriesInRemoteAppDomain

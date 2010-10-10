@@ -36,6 +36,22 @@ namespace Raven.Storage.Tests
 		}
 
         [Fact]
+        public void TransactionStorageIdRemainsConstantAcrossRestarts()
+        {
+            Guid id;
+            using (var tx = NewTransactionalStorage())
+            {
+                Assert.Equal(tx.Id, tx.Id);
+                id = tx.Id;
+            }
+
+            using (var tx = NewTransactionalStorage())
+            {
+                Assert.Equal(id, tx.Id);
+            }
+        }
+
+        [Fact]
         public void CanGetNewIdentityValueAfterRestart()
         {
             using (var tx = NewTransactionalStorage())

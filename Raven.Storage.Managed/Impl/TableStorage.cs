@@ -19,6 +19,12 @@ namespace Raven.Storage.Managed.Impl
         public TableStorage(IPersistentSource persistentSource)
             : base(persistentSource)
         {
+            Details = new PersistentDictionaryAdapter(txId,
+                                                     Add(new PersistentDictionary(persistentSource, JTokenComparer.Instance)
+                                                     {
+                                                         Name = "Details"
+                                                     }));
+
             Identity = new PersistentDictionaryAdapter(txId,
                                                        Add(new PersistentDictionary(persistentSource, new ModifiedJTokenComparer(x=>x.Value<string>("name")))
                                                        {
@@ -118,6 +124,8 @@ namespace Raven.Storage.Managed.Impl
                 }}
             };
         }
+
+        public PersistentDictionaryAdapter Details { get; private set; }
 
         public PersistentDictionaryAdapter Tasks { get; private set; }
 

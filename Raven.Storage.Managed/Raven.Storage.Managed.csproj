@@ -54,6 +54,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AttachmentsStorageActions.cs" />
+    <Compile Include="Backup\BackupOperation.cs" />
+    <Compile Include="Backup\RestoreOperation.cs" />
     <Compile Include="DocumentsStorageActions.cs" />
     <Compile Include="GeneralStorageActions.cs" />
     <Compile Include="Impl\AggregateDictionary.cs" />

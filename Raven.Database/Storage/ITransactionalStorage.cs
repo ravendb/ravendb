@@ -10,6 +10,9 @@ namespace Raven.Database.Storage
 
 	public interface ITransactionalStorage : IDisposable
 	{
+        /// <summary>
+        /// This is used mostly for replication
+        /// </summary>
 		Guid Id { get; }
 		void Batch(Action<IStorageActionsAccessor> action);
 		void ExecuteImmediatelyOrRegisterForSyncronization(Action action);
