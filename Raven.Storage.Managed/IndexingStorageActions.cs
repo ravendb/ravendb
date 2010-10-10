@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
+using Raven.Database.Exceptions;
 using Raven.Database.Storage.StorageActions;
 using Raven.Storage.Managed.Impl;
 
@@ -106,7 +107,7 @@ namespace Raven.Storage.Managed
         {
             var readResult = storage.IndexingStats.Read(index);
             if (readResult == null)
-                return null;
+                throw new IndexDoesNotExistsException("There is no index named: " + index);
 
             var indexFailureInformation = new IndexFailureInformation
             {
