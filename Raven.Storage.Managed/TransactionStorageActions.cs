@@ -63,8 +63,10 @@ namespace Raven.Storage.Managed
             return newEtag;
         }
 
-        private void AssertValidEtag(string key, PersistentDictionary.ReadResult readResult, Guid? etag)
+        private static void AssertValidEtag(string key, PersistentDictionary.ReadResult readResult, Guid? etag)
         {
+            if (readResult == null)
+                return;
             var existingEtag = new Guid(readResult.Key.Value<byte[]>("etag"));
             if (etag != null && etag.Value != existingEtag)
             {
@@ -88,10 +90,13 @@ namespace Raven.Storage.Managed
             StorageHelper.AssertNotModifiedByAnotherTransaction(storage, this, key, readResult, transactionInformation);
             AssertValidEtag(key, readResult, etag);
 
-            readResult.Key["txId"] = transactionInformation.Id.ToByteArray();
-            if (storage.Documents.UpdateKey(readResult.Key) == false)
-                throw new ConcurrencyException("DELETE attempted on document '" + key +
-                                               "' that is currently being modified by another transaction");
+            if (readResult != null)
+            {
+                readResult.Key["txId"] = transactionInformation.Id.ToByteArray();
+                if (storage.Documents.UpdateKey(readResult.Key) == false)
+                    throw new ConcurrencyException("DELETE attempted on document '" + key +
+                                                   "' that is currently being modified by another transaction");
+            }
 
             storage.Transactions.Put(new JObject
             {
@@ -100,12 +105,12 @@ namespace Raven.Storage.Managed
             }, null);
 
             var newEtag = DocumentDatabase.CreateSequentialUuid();
-            storage.Documents.Put(new JObject
+            storage.DocumentsModifiedByTransactions.Put(new JObject
             {
                 {"key", key},
                 {"etag", newEtag.ToByteArray()},
                 {"modified", DateTime.UtcNow},
-                {"delete", true},
+                {"deleted", true},
                 {"txId", transactionInformation.Id.ToByteArray()}
             }, null);
         }
@@ -169,11 +174,6 @@ namespace Raven.Storage.Managed
                     Data = (JObject)JToken.ReadFrom(new BsonReader(ms)),
                 });
             }
-
-            foreach (var docInTx in documentsInTx)
-            {
-                storage.DocumentsModifiedByTransactions.Remove(docInTx);
-            }
         }
 
         public IEnumerable<Guid> GetTransactionIds()
@@ -188,7 +188,11 @@ namespace Raven.Storage.Managed
         {
             if (readResult == null)
                 return;
-            var txId = new Guid(readResult.Key.Value<byte[]>("txId"));
+            var txIdAsBytes = readResult.Key.Value<byte[]>("txId");
+            if (txIdAsBytes == null)
+                return;
+
+            var txId = new Guid(txIdAsBytes);
             if (transactionInformation != null && transactionInformation.Id == txId)
             {
                 return;

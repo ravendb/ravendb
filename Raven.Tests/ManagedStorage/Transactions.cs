@@ -150,7 +150,11 @@ namespace Raven.Storage.Tests
 									mutator.Transactions.AddDocumentInTransaction("Ayende", Guid.NewGuid(),
 				         			                                           JObject.FromObject(new {Name = "Rahien"}),
 				         			                                           new JObject(),
-				         			                                           transactionInformation)));
+				         			                                           new TransactionInformation
+				         			                                           {
+				         			                                               Id = Guid.NewGuid(),
+                                                                                   Timeout = TimeSpan.FromMinutes(1)
+				         			                                           })));
 			}
 		}
 

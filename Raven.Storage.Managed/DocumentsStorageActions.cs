@@ -77,13 +77,22 @@ namespace Raven.Storage.Managed
                     if (resultInTx.Key.Value<bool>("deleted"))
                         return null;
 
-                    var memoryStreamFromTx = new MemoryStream(resultInTx.Data());
+                    JObject metadata = null;
+                    JObject dataAsJson = null;
+                    if (resultInTx.Position != -1)
+                    {
+                        using (var memoryStreamFromTx = new MemoryStream(resultInTx.Data()))
+                        {
+                            metadata = (JObject) JToken.ReadFrom(new BsonReader(memoryStreamFromTx));
+                            dataAsJson = (JObject) JToken.ReadFrom(new BsonReader(memoryStreamFromTx));
+                        }
+                    }
                     return new JsonDocument
                     {
                         Key = resultInTx.Key.Value<string>("key"),
                         Etag = new Guid(resultInTx.Key.Value<byte[]>("etag")),
-                        Metadata = (JObject)JToken.ReadFrom(new BsonReader(memoryStreamFromTx)),
-                        DataAsJson = (JObject)JToken.ReadFrom(new BsonReader(memoryStreamFromTx)),
+                        Metadata = metadata,
+                        DataAsJson = dataAsJson,
                         LastModified = resultInTx.Key.Value<DateTime>("modified"),
                     };
                 }

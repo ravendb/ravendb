@@ -85,7 +85,7 @@ namespace Raven.Storage.Managed.Impl
             if (keysModifiedInTx.TryGetValue(key, out existing) && existing != txId)
                 return false;
 
-            long position = -1;
+            long position;
             if(value != null)
             {
                 lock (persistentSource.SyncLock)
@@ -95,6 +95,11 @@ namespace Raven.Storage.Managed.Impl
                     persistentSource.Data.Write(value, 0, value.Length);
                 }
                 cache[position.ToString()] = value;
+            }
+            else
+            {
+                position = -1;
+                
             }
             operationsInTransactions.GetOrAdd(txId, new List<Command>())
                 .Add(new Command
