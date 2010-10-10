@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Runtime.Caching;
 using Newtonsoft.Json.Linq;
-using Raven.Database.Data;
 
 namespace Raven.Storage.Managed.Impl
 {
@@ -17,6 +16,8 @@ namespace Raven.Storage.Managed.Impl
             public int Size { get; set; }
             public JToken Key { get; set; }
         }
+
+        public IEnumerable<JToken> Keys { get { return keyToFilePos.Keys; } }
 
         private readonly ConcurrentDictionary<JToken, PositionInFile> keyToFilePos;
 
@@ -84,20 +85,47 @@ namespace Raven.Storage.Managed.Impl
             if (keysModifiedInTx.TryGetValue(key, out existing) && existing != txId)
                 return false;
 
-            long position;
-            lock (persistentSource.SyncLock)
+            long position = -1;
+            if(value != null)
             {
-                // we *always* write to the end
-                position = persistentSource.Data.Position = persistentSource.Data.Length;
-                persistentSource.Data.Write(value, 0, value.Length);
+                lock (persistentSource.SyncLock)
+                {
+                    // we *always* write to the end
+                    position = persistentSource.Data.Position = persistentSource.Data.Length;
+                    persistentSource.Data.Write(value, 0, value.Length);
+                }
+                cache[position.ToString()] = value;
             }
-            cache[position.ToString()] = value;
             operationsInTransactions.GetOrAdd(txId, new List<Command>())
                 .Add(new Command
                 {
                     Key = key,
                     Position = position,
-                    Size = value.Length,
+                    Size = (value == null ? 0 : value.Length),
+                    DictionaryId = DictionaryId,
+                    Type = CommandType.Put
+                });
+
+            if (existing != txId) // otherwise we are already there
+                keysModifiedInTx.TryAdd(key, txId);
+
+            return true;
+        }
+
+        public bool UpdateKey(JToken key, Guid txId)
+        {
+            Guid existing;
+            if (keysModifiedInTx.TryGetValue(key, out existing) && existing != txId)
+                return false;
+
+            var readResult = Read(key, txId);
+
+            operationsInTransactions.GetOrAdd(txId, new List<Command>())
+                .Add(new Command
+                {
+                    Key = key,
+                    Position = readResult.Position,
+                    Size = readResult.Size,
                     DictionaryId = DictionaryId,
                     Type = CommandType.Put
                 });
@@ -110,6 +138,8 @@ namespace Raven.Storage.Managed.Impl
 
         public ReadResult Read(JToken key, Guid txId)
         {
+            byte[] readData = null;
+
             Guid mofiedByTx;
             if (keysModifiedInTx.TryGetValue(key, out mofiedByTx) && mofiedByTx == txId)
             {
@@ -123,7 +153,9 @@ namespace Raven.Storage.Managed.Impl
                         case CommandType.Put:
                             return new ReadResult
                             {
-                                Data = ReadData(command.Position, command.Size),
+                                Position = command.Position,
+                                Size = command.Size,
+                                Data = () => readData ?? (readData = ReadData(command.Position, command.Size)),
                                 Key = command.Key
                             };
                         case CommandType.Delete:
@@ -140,7 +172,9 @@ namespace Raven.Storage.Managed.Impl
 
             return new ReadResult
             {
-                Data = ReadData(pos.Position, pos.Size),
+                Position = pos.Position,
+                Size = pos.Size,
+                Data = () => readData ?? (readData = ReadData(pos.Position, pos.Size)),
                 Key = pos.Key
             };
         }
@@ -318,8 +352,10 @@ namespace Raven.Storage.Managed.Impl
 
         public class ReadResult
         {
+            public int Size { get; set; }
+            public long Position { get; set; }
             public JToken Key { get; set; }
-            public byte[] Data { get; set; }
+            public Func<byte[]> Data { get; set; }
         }
     }
 
@@ -330,6 +366,15 @@ namespace Raven.Storage.Managed.Impl
         public SecondaryIndex(IComparer<JToken> comparer)
         {
             this.index = new SortedList<JToken, object>(comparer);
+        }
+
+        public long Count
+        {
+            get
+            {
+                lock (index)
+                    return index.Count;
+            }
         }
 
         public void Add(JToken key)
@@ -375,7 +420,26 @@ namespace Raven.Storage.Managed.Impl
             }
         }
 
-        
+
+        public JToken LastOrDefault()
+        {
+            lock (index)
+            {
+                if (index.Count == 0)
+                    return null;
+                return index.Keys[index.Count-1];
+            }
+        }
+
+        public JToken FirstOrDefault()
+        {
+            lock (index)
+            {
+                if (index.Count == 0)
+                    return null;
+                return index.Keys[0];
+            }
+        }
     }
 
 }

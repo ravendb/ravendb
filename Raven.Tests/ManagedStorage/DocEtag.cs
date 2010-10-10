@@ -12,18 +12,18 @@ namespace Raven.Storage.Tests
 		[Fact]
 		public void EtagsAreAlwaysIncreasing()
 		{
-			using (var tx = new TransactionalStorage("test"))
+			using (var tx = NewTransactionalStorage())
 			{
-				tx.Write(mutator =>
+				tx.Batch(mutator =>
 				{
 					mutator.Documents.AddDocument("Ayende", null, JObject.FromObject(new { Name = "Rahien" }), new JObject());
 					mutator.Documents.AddDocument("Oren", null, JObject.FromObject(new { Name = "Eini" }), new JObject());
 				});
 			}
 
-			using (var tx = new TransactionalStorage("test"))
+			using (var tx = NewTransactionalStorage())
 			{
-				tx.Read(viewer =>
+                tx.Batch(viewer =>
 				{
 					var doc1 = viewer.Documents.DocumentByKey("Ayende", null);
 					var doc2 = viewer.Documents.DocumentByKey("Oren", null);
@@ -38,22 +38,24 @@ namespace Raven.Storage.Tests
 		public void CanGetDocumentByEtag()
 		{
 
-			using (var tx = new TransactionalStorage("test"))
+			using (var tx = NewTransactionalStorage())
 			{
-				tx.Write(mutator =>
+                tx.Batch(mutator =>
 				{
 					mutator.Documents.AddDocument("Ayende", null, JObject.FromObject(new { Name = "Rahien" }), new JObject());
 					mutator.Documents.AddDocument("Oren", null, JObject.FromObject(new { Name = "Eini" }), new JObject());
 				});
 			}
 
-			using (var tx = new TransactionalStorage("test"))
+			using (var tx = NewTransactionalStorage())
 			{
-				tx.Read(viewer =>
+                tx.Batch(viewer =>
 				{
 					Assert.Equal(2, viewer.Documents.GetDocumentsAfter(Guid.Empty).Count());
 					var doc1 = viewer.Documents.DocumentByKey("Ayende", null);
-					Assert.Equal(1, viewer.Documents.GetDocumentsAfter(doc1.Etag).Count());
+					Assert.Equal(2, viewer.Documents.GetDocumentsAfter(doc1.Etag).Count());
+                    var doc2 = viewer.Documents.DocumentByKey("Oren", null);
+                    Assert.Equal(1, viewer.Documents.GetDocumentsAfter(doc2.Etag).Count());
 				});
 			}
 		}
@@ -62,18 +64,18 @@ namespace Raven.Storage.Tests
 		public void CanGetDocumentByUpdateOrder()
 		{
 
-			using (var tx = new TransactionalStorage("test"))
+			using (var tx = NewTransactionalStorage())
 			{
-				tx.Write(mutator =>
+                tx.Batch(mutator =>
 				{
 					mutator.Documents.AddDocument("Ayende", null, JObject.FromObject(new { Name = "Rahien" }), new JObject());
 					mutator.Documents.AddDocument("Oren", null, JObject.FromObject(new { Name = "Eini" }), new JObject());
 				});
 			}
 
-			using (var tx = new TransactionalStorage("test"))
+			using (var tx = NewTransactionalStorage())
 			{
-				tx.Read(viewer =>
+                tx.Batch(viewer =>
 				{
 					Assert.Equal(2, viewer.Documents.GetDocumentsByReverseUpdateOrder(0).Count());
 					var tuples = viewer.Documents.GetDocumentsByReverseUpdateOrder(0).ToArray();

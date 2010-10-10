@@ -44,7 +44,7 @@ namespace Raven.Storage.Managed
 
         public Guid Id
         {
-            get { return new Guid(tableStroage.Details.Read("id").Data); }
+            get { return new Guid(tableStroage.Details.Read("id").Data()); }
         }
 
         public void Batch(Action<IStorageActionsAccessor> action)

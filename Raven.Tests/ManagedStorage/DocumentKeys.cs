@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using Newtonsoft.Json.Linq;
 using Raven.Storage.Managed;
 using Xunit;
@@ -12,14 +13,14 @@ namespace Raven.Storage.Tests
 		[Fact]
 		public void CanGetDocumentKeys()
 		{
-			using (var tx = new TransactionalStorage("test"))
+			using (var tx = NewTransactionalStorage())
 			{
-				tx.Write(mutator => mutator.Documents.AddDocument("Ayende", null, JObject.FromObject(new { Name = "Rahien" }), new JObject()));
+                tx.Batch(mutator => mutator.Documents.AddDocument("Ayende", null, JObject.FromObject(new { Name = "Rahien" }), new JObject()));
 			}
 
-			using (var tx = new TransactionalStorage("test"))
+			using (var tx = NewTransactionalStorage())
 			{
-				tx.Read(viewer => Assert.Equal(new[] { "Ayende" }, viewer.Documents.DocumentKeys.ToArray()));
+                tx.Batch(viewer => Assert.Equal(new[] { "Ayende" }, viewer.Documents.GetDocumentsAfter(Guid.Empty).Select(x=>x.Key).ToArray()));
 			}
 		}
 	}

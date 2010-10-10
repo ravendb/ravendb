@@ -38,8 +38,8 @@ namespace Raven.Tests.ManagedStorage.Impl
 
             Reopen();
 
-            Assert.Equal(new byte[] { 1, 2, 4, 5 }, persistentDictionary.Read(JToken.FromObject("123"), Guid.NewGuid()).Data);
-            Assert.Equal(new byte[] { 1, 3, 4, 5 }, persistentDictionary.Read(JToken.FromObject("431"), Guid.NewGuid()).Data);
+            Assert.Equal(new byte[] { 1, 2, 4, 5 }, persistentDictionary.Read(JToken.FromObject("123"), Guid.NewGuid()).Data());
+            Assert.Equal(new byte[] { 1, 3, 4, 5 }, persistentDictionary.Read(JToken.FromObject("431"), Guid.NewGuid()).Data());
         }
     }
 }

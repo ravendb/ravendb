@@ -18,6 +18,11 @@ namespace Raven.Storage.Managed.Impl
             this.persistentDictionary = persistentDictionary;
         }
 
+        public IEnumerable<JToken> Keys
+        {
+            get { return persistentDictionary.Keys; }
+        }
+
         public bool Put(JToken key, byte[] value)
         {
             return persistentDictionary.Put(key, value, txId.Value);
@@ -51,6 +56,11 @@ namespace Raven.Storage.Managed.Impl
         public SecondaryIndex this[string indexName]
         {
             get { return secondaryIndices[indexName]; }
+        }
+
+        public bool UpdateKey(JToken key)
+        {
+            return persistentDictionary.UpdateKey(key, txId.Value);
         }
     }
 }

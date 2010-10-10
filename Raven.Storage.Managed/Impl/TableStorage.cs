@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
 
 namespace Raven.Storage.Managed.Impl
@@ -24,9 +25,30 @@ namespace Raven.Storage.Managed.Impl
             {
                 {"ByEtag", attachmentPersistentDictionary.AddSecondaryIndex(x => x.Value<byte[]>("etag"))}
             };
+
+            var documentsPersistentDictionary = Add(new PersistentDictionary(persistentSource, new ModifiedJTokenComparer(x=>x.Value<string>("key"))));
+            Documents = new PersistentDictionaryAdapter(txId, documentsPersistentDictionary)
+            {
+                {"ByKey", documentsPersistentDictionary.AddSecondaryIndex(x=>x.Value<string>("key"))},
+                {"ById", documentsPersistentDictionary.AddSecondaryIndex(x=>x.Value<string>("id"))},
+                {"ByEtag", documentsPersistentDictionary.AddSecondaryIndex(x=>x.Value<byte[]>("etag"))}
+            };
+
+            var documentsInTransactionPersistentdictionary = Add(new PersistentDictionary(persistentSource, new ModifiedJTokenComparer(x=>x.Value<string>("key"))));
+            DocumentsModifiedByTransactions = new PersistentDictionaryAdapter(txId, documentsInTransactionPersistentdictionary)
+            {
+                {"ByTxId", documentsInTransactionPersistentdictionary.AddSecondaryIndex(x=>x.Value<byte[]>("txId"))}
+            };
+            Transactions = new PersistentDictionaryAdapter(txId, Add(new PersistentDictionary(persistentSource, new ModifiedJTokenComparer(x=>x.Value<byte[]>("txId")))));
         }
 
-        public PersistentDictionaryAdapter Attachments { get; set; }
+        public PersistentDictionaryAdapter Transactions { get; private set; }
+
+        public PersistentDictionaryAdapter DocumentsModifiedByTransactions { get; private set; }
+
+        public PersistentDictionaryAdapter Documents { get; private set; }
+
+        public PersistentDictionaryAdapter Attachments { get; private set; }
 
         public PersistentDictionaryAdapter Identity { get; private set; }
 

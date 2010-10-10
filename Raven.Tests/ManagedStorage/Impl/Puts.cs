@@ -21,7 +21,7 @@ namespace Raven.Tests.ManagedStorage.Impl
 
             var data = persistentDictionary.Read(JToken.FromObject("123"), txId);
 
-            Assert.Equal(new byte[] { 1, 2, 4, 5 }, data.Data);
+            Assert.Equal(new byte[] { 1, 2, 4, 5 }, data.Data());
         }
 
         [Fact]
@@ -46,7 +46,7 @@ namespace Raven.Tests.ManagedStorage.Impl
 
             var data = persistentDictionary.Read(JToken.FromObject("123"), Guid.NewGuid());
 
-            Assert.Equal(new byte[] { 1, 2, 4, 5 }, data.Data);
+            Assert.Equal(new byte[] { 1, 2, 4, 5 }, data.Data());
         }
 
 
@@ -72,11 +72,11 @@ namespace Raven.Tests.ManagedStorage.Impl
 
             Assert.True(persistentDictionary.Put(JToken.FromObject("789"), new byte[] { 3, 1, 4, 5 }, txId));
 
-            Assert.Equal(new byte[] { 1, 2, 4, 5 }, persistentDictionary.Read(JToken.FromObject("123"), txId).Data);
+            Assert.Equal(new byte[] { 1, 2, 4, 5 }, persistentDictionary.Read(JToken.FromObject("123"), txId).Data());
 
             Assert.True(persistentDictionary.Put(JToken.FromObject("456"), new byte[] { 4, 5 }, txId));
 
-            Assert.Equal(new byte[] { 3, 1, 4, 5 }, persistentDictionary.Read(JToken.FromObject("789"), txId).Data);
+            Assert.Equal(new byte[] { 3, 1, 4, 5 }, persistentDictionary.Read(JToken.FromObject("789"), txId).Data());
         }
     }
 }

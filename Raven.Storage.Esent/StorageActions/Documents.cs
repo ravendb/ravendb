@@ -21,21 +21,6 @@ namespace Raven.Storage.Esent.StorageActions
 			return 0;
 		}
 
-		public IEnumerable<string> DocumentKeys
-		{
-			get
-			{
-				Api.MoveBeforeFirst(session, Documents);
-				while (Api.TryMoveNext(session, Documents))
-				{
-					yield return
-						Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode);
-				}
-			}
-		}
-
-
-
 		public JsonDocument DocumentByKey(string key, TransactionInformation transactionInformation)
 		{
 			byte[] data;

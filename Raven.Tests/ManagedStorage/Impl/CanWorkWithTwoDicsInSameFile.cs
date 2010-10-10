@@ -14,8 +14,8 @@ namespace Raven.Tests.ManagedStorage.Impl
             persistentDictionaryOne.Put(JToken.FromObject(1), new byte[] { 1, 2 }, txId);
             persistentDictionaryTwo.Put(JToken.FromObject(1), new byte[] { 2, 3 }, txId);
 
-            Assert.Equal(new byte[] { 1, 2, }, persistentDictionaryOne.Read(JToken.FromObject(1), txId).Data);
-            Assert.Equal(new byte[] { 2, 3 }, persistentDictionaryTwo.Read(JToken.FromObject(1), txId).Data);
+            Assert.Equal(new byte[] { 1, 2, }, persistentDictionaryOne.Read(JToken.FromObject(1), txId).Data());
+            Assert.Equal(new byte[] { 2, 3 }, persistentDictionaryTwo.Read(JToken.FromObject(1), txId).Data());
         }
 
         [Fact]
@@ -29,8 +29,8 @@ namespace Raven.Tests.ManagedStorage.Impl
             Commit(txId);
             Commit(txId);
 
-            Assert.Equal(new byte[] { 1, 2, }, persistentDictionaryOne.Read(JToken.FromObject(1), txId).Data);
-            Assert.Equal(new byte[] { 2, 3 }, persistentDictionaryTwo.Read(JToken.FromObject(1), txId).Data);
+            Assert.Equal(new byte[] { 1, 2, }, persistentDictionaryOne.Read(JToken.FromObject(1), txId).Data());
+            Assert.Equal(new byte[] { 2, 3 }, persistentDictionaryTwo.Read(JToken.FromObject(1), txId).Data());
         }
 
         [Fact]
@@ -45,8 +45,8 @@ namespace Raven.Tests.ManagedStorage.Impl
 
             Reopen();
 
-            Assert.Equal(new byte[] { 1, 2, }, persistentDictionaryOne.Read(JToken.FromObject(1), txId).Data);
-            Assert.Equal(new byte[] { 2, 3 }, persistentDictionaryTwo.Read(JToken.FromObject(1), txId).Data);
+            Assert.Equal(new byte[] { 1, 2, }, persistentDictionaryOne.Read(JToken.FromObject(1), txId).Data());
+            Assert.Equal(new byte[] { 2, 3 }, persistentDictionaryTwo.Read(JToken.FromObject(1), txId).Data());
         }
     }
 }

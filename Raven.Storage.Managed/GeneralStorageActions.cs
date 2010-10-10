@@ -23,7 +23,7 @@ namespace Raven.Storage.Managed
             }
             else
             {
-                var val = BitConverter.ToInt32(result.Data, 0) + 1;
+                var val = BitConverter.ToInt32(result.Data(), 0) + 1;
                 storage.Identity.Put(name, BitConverter.GetBytes(val));
                 return val;
             }

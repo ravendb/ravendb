@@ -78,10 +78,11 @@ namespace Raven.Storage.Managed
             var readResult = storage.Attachments.Read(new JObject { { "key", key } });
             if (readResult == null)
                 return null;
-            var memoryStream = new MemoryStream(readResult.Data);
+            var attachmentDAta = readResult.Data();
+            var memoryStream = new MemoryStream(attachmentDAta);
             var metadata = (JObject)JToken.ReadFrom(new BsonReader(memoryStream));
-            var data = new byte[readResult.Data.Length - memoryStream.Position];
-            Buffer.BlockCopy(readResult.Data,(int)memoryStream.Position, data, 0, data.Length);
+            var data = new byte[readResult.Size - memoryStream.Position];
+            Buffer.BlockCopy(attachmentDAta,(int)memoryStream.Position, data, 0, data.Length);
             return new Attachment
             {
                 Etag = new Guid(readResult.Key.Value<byte[]>("etag")),

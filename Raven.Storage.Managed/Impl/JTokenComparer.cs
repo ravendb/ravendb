@@ -138,12 +138,18 @@ namespace Raven.Storage.Managed.Impl
 
         public override int Compare(JToken x, JToken y)
         {
-            return base.Compare(modifier(x), modifier(y));
+            if (x.Type == JTokenType.Object)
+                x = modifier(x);
+            if (y.Type == JTokenType.Object)
+                y = modifier(y);
+            return base.Compare(x, y);
         }
 
         public override int GetHashCode(JToken obj)
         {
-            return base.GetHashCode(modifier(obj));
+            if (obj.Type == JTokenType.Object)
+                obj = modifier(obj);
+            return base.GetHashCode(obj);
         } 
     }
 

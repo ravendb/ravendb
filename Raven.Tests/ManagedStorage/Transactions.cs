@@ -19,12 +19,12 @@ namespace Raven.Storage.Tests
 				Timeout = TimeSpan.FromDays(7)
 			};
 
-			using (var tx = new TransactionalStorage("test"))
+			using (var tx = NewTransactionalStorage())
 			{
-				tx.Write(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, JObject.FromObject(new { Name = "Rahien" }), new JObject(),
+				tx.Batch(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, JObject.FromObject(new { Name = "Rahien" }), new JObject(),
 					transactionInformation));
 
-				tx.Read(viewer => 
+                tx.Batch(viewer => 
 					Assert.Null(viewer.Documents.DocumentByKey("Ayende", null)));
 			}
 		}
@@ -38,9 +38,9 @@ namespace Raven.Storage.Tests
 				Timeout = TimeSpan.FromDays(7)
 			};
 
-			using (var tx = new TransactionalStorage("test"))
+			using (var tx = NewTransactionalStorage())
 			{
-				tx.Write(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, JObject.FromObject(new { Name = "Rahien" }), new JObject(),
+                tx.Batch(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, JObject.FromObject(new { Name = "Rahien" }), new JObject(),
 					transactionInformation));
 
 				var txInfo2 = new TransactionInformation
@@ -49,10 +49,10 @@ namespace Raven.Storage.Tests
 					Timeout = TimeSpan.FromDays(1)
 				};
 
-				tx.Write(mutator => mutator.Transactions.ModifyTransactionId(transactionInformation.Id, txInfo2.Id, txInfo2.Timeout));
+                tx.Batch(mutator => mutator.Transactions.ModifyTransactionId(transactionInformation.Id, txInfo2.Id, txInfo2.Timeout));
 
 
-				tx.Read(viewer =>
+                tx.Batch(viewer =>
 					Assert.NotNull(viewer.Documents.DocumentByKey("Ayende", txInfo2)));
 			}
 		}
@@ -66,12 +66,12 @@ namespace Raven.Storage.Tests
 				Timeout = TimeSpan.FromDays(7)
 			};
 
-			using (var tx = new TransactionalStorage("test"))
+			using (var tx = NewTransactionalStorage())
 			{
-				tx.Write(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, JObject.FromObject(new { Name = "Rahien" }), new JObject(),
+                tx.Batch(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, JObject.FromObject(new { Name = "Rahien" }), new JObject(),
 					transactionInformation));
 
-				tx.Write(mutator => mutator.Transactions.CompleteTransaction(transactionInformation.Id, data =>
+                tx.Batch(mutator => mutator.Transactions.CompleteTransaction(transactionInformation.Id, data =>
 				{
 					if (data.Delete)
 					{
@@ -81,7 +81,7 @@ namespace Raven.Storage.Tests
 					else
 						mutator.Documents.AddDocument(data.Key, null, data.Data, data.Metadata);
 				}));
-				tx.Read(viewer =>
+                tx.Batch(viewer =>
 					Assert.NotNull(viewer.Documents.DocumentByKey("Ayende", null)));
 			}
 		}
@@ -95,17 +95,17 @@ namespace Raven.Storage.Tests
 				Timeout = TimeSpan.FromDays(7)
 			};
 
-			using (var tx = new TransactionalStorage("test"))
+			using (var tx = NewTransactionalStorage())
 			{
-				tx.Write(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, JObject.FromObject(new { Name = "Rahien" }), new JObject(),
+                tx.Batch(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, JObject.FromObject(new { Name = "Rahien" }), new JObject(),
 					transactionInformation));
 
-				tx.Read(viewer =>
+                tx.Batch(viewer =>
 					Assert.NotNull(viewer.Documents.DocumentByKey("Ayende", transactionInformation)));
-			
-				tx.Write(mutator => mutator.Transactions.RollbackTransaction(transactionInformation.Id));
 
-				tx.Read(viewer =>
+                tx.Batch(mutator => mutator.Transactions.RollbackTransaction(transactionInformation.Id));
+
+                tx.Batch(viewer =>
 					Assert.Null(viewer.Documents.DocumentByKey("Ayende", transactionInformation)));
 			
 			}
@@ -121,12 +121,12 @@ namespace Raven.Storage.Tests
 				Timeout = TimeSpan.FromDays(7)
 			};
 
-			using (var tx = new TransactionalStorage("test"))
+			using (var tx = NewTransactionalStorage())
 			{
-				tx.Write(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, JObject.FromObject(new { Name = "Rahien" }), new JObject(),
+				tx.Batch(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, JObject.FromObject(new { Name = "Rahien" }), new JObject(),
 					transactionInformation));
 
-				tx.Read(viewer =>
+				tx.Batch(viewer =>
 					Assert.NotNull(viewer.Documents.DocumentByKey("Ayende", transactionInformation)));
 			}
 		}
@@ -140,11 +140,11 @@ namespace Raven.Storage.Tests
 				Timeout = TimeSpan.FromDays(7)
 			};
 
-			using (var tx = new TransactionalStorage("test"))
+			using (var tx = NewTransactionalStorage())
 			{
-				tx.Write(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, JObject.FromObject(new { Name = "Rahien" }), new JObject(),
+				tx.Batch(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, JObject.FromObject(new { Name = "Rahien" }), new JObject(),
 				                                                               transactionInformation));
-				tx.Write(mutator =>
+				tx.Batch(mutator =>
 				         	Assert.Throws<ConcurrencyException>(
 				         		() =>
 									mutator.Transactions.AddDocumentInTransaction("Ayende", Guid.NewGuid(),
@@ -163,14 +163,14 @@ namespace Raven.Storage.Tests
 				Timeout = TimeSpan.FromDays(7)
 			};
 
-			using (var tx = new TransactionalStorage("test"))
+			using (var tx = NewTransactionalStorage())
 			{
-				tx.Write(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, JObject.FromObject(new { Name = "Rahien" }), new JObject(),
+				tx.Batch(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, JObject.FromObject(new { Name = "Rahien" }), new JObject(),
 					transactionInformation));
 
 				Assert.Throws<ConcurrencyException>(
 					() =>
-						tx.Write(
+						tx.Batch(
 							mutator =>
 								mutator.Transactions.AddDocumentInTransaction("Ayende", null, JObject.FromObject(new { Name = "Rahien" }),
 								                                           new JObject(),
@@ -191,15 +191,15 @@ namespace Raven.Storage.Tests
 				Timeout = TimeSpan.FromDays(7)
 			};
 
-			using (var tx = new TransactionalStorage("test"))
+			using (var tx = NewTransactionalStorage())
 			{
 
-				tx.Write(mutator => mutator.Documents.AddDocument("Ayende", null, JObject.FromObject(new { Name = "Rahien" }), new JObject()));
+				tx.Batch(mutator => mutator.Documents.AddDocument("Ayende", null, JObject.FromObject(new { Name = "Rahien" }), new JObject()));
 
-				tx.Write(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, JObject.FromObject(new { Name = "Rahien2" }), new JObject(),
+				tx.Batch(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, JObject.FromObject(new { Name = "Rahien2" }), new JObject(),
 					transactionInformation));
 
-				tx.Read(viewer =>
+				tx.Batch(viewer =>
 				{
 					var doc = viewer.Documents.DocumentByKey("Ayende", null);
 					Assert.Equal("Rahien", doc.DataAsJson.Value<string>("Name"));
@@ -216,11 +216,11 @@ namespace Raven.Storage.Tests
 				Timeout = TimeSpan.FromDays(7)
 			};
 
-			using (var tx = new TransactionalStorage("test"))
+			using (var tx = NewTransactionalStorage())
 			{
-				tx.Write(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, JObject.FromObject(new { Name = "Rahien" }), new JObject(),
+				tx.Batch(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, JObject.FromObject(new { Name = "Rahien" }), new JObject(),
 																			   transactionInformation));
-				tx.Write(mutator =>
+				tx.Batch(mutator =>
 							Assert.Throws<ConcurrencyException>(
 								() =>
 									mutator.Documents.AddDocument("Ayende", Guid.NewGuid(),
@@ -238,11 +238,11 @@ namespace Raven.Storage.Tests
 				Timeout = TimeSpan.FromDays(7)
 			};
 
-			using (var tx = new TransactionalStorage("test"))
+			using (var tx = NewTransactionalStorage())
 			{
-				tx.Write(mutator => mutator.Documents.AddDocument("Ayende", null, JObject.FromObject(new { Name = "Rahien" }), new JObject()));
-				tx.Write(mutator => mutator.Transactions.DeleteDocumentInTransaction(transactionInformation, "Ayende", null));
-				tx.Read(viewer =>
+				tx.Batch(mutator => mutator.Documents.AddDocument("Ayende", null, JObject.FromObject(new { Name = "Rahien" }), new JObject()));
+				tx.Batch(mutator => mutator.Transactions.DeleteDocumentInTransaction(transactionInformation, "Ayende", null));
+				tx.Batch(viewer =>
 				{
 					Assert.NotNull(viewer.Documents.DocumentByKey("Ayende", null));
 					Assert.Null(viewer.Documents.DocumentByKey("Ayende", transactionInformation));
@@ -260,15 +260,15 @@ namespace Raven.Storage.Tests
 				Timeout = TimeSpan.FromDays(-7)
 			};
 
-			using (var tx = new TransactionalStorage("test"))
+			using (var tx = NewTransactionalStorage())
 			{
-				tx.Write(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, JObject.FromObject(new { Name = "Rahien1" }), new JObject(),
+				tx.Batch(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, JObject.FromObject(new { Name = "Rahien1" }), new JObject(),
 																			   transactionInformation));
-				tx.Write(mutator => mutator.Documents.AddDocument("Ayende", Guid.NewGuid(),
+				tx.Batch(mutator => mutator.Documents.AddDocument("Ayende", Guid.NewGuid(),
 																			   JObject.FromObject(new { Name = "Rahien2" }),
 																			   new JObject()));
 
-				tx.Read(viewer =>
+				tx.Batch(viewer =>
 				{
 					var doc  = viewer.Documents.DocumentByKey("Ayende", transactionInformation);
 					Assert.Equal("Rahien2", doc.DataAsJson.Value<string>("Name"));
@@ -281,17 +281,17 @@ namespace Raven.Storage.Tests
 		[Fact]
 		public void CanGetTxIdValues()
 		{
-			using (var tx = new TransactionalStorage("test"))
+			using (var tx = NewTransactionalStorage())
 			{
 				var txId = Guid.NewGuid();
-				tx.Write(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, new JObject(), new JObject(), new TransactionInformation
+				tx.Batch(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, new JObject(), new JObject(), new TransactionInformation
 				{
 					Id = txId,
 					Timeout = TimeSpan.FromDays(7)
 				}));
 
 
-				tx.Read(viewer =>
+				tx.Batch(viewer =>
 					Assert.Equal(new[] { txId }, viewer.Transactions.GetTransactionIds().ToArray()));
 			}
 		}

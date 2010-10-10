@@ -11,7 +11,6 @@ namespace Raven.Database.Storage.StorageActions
 		IEnumerable<JsonDocument> GetDocumentsByReverseUpdateOrder(int start);
 		IEnumerable<JsonDocument> GetDocumentsAfter(Guid etag);
 
-		IEnumerable<string> DocumentKeys { get; }
 		long GetDocumentsCount();
 		JsonDocument DocumentByKey(string key, TransactionInformation transactionInformation);
 		bool DeleteDocument(string key, Guid? etag, out JObject metadata);

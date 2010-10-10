@@ -112,6 +112,15 @@
     <Compile Include="ManagedStorage\Attachments.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="ManagedStorage\DocEtag.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ManagedStorage\DocumentKeys.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ManagedStorage\Documents.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="ManagedStorage\General.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -123,6 +132,9 @@
     <Compile Include="ManagedStorage\Impl\PutsAfterRestart.cs" />
     <Compile Include="ManagedStorage\Impl\Removes.cs" />
     <Compile Include="ManagedStorage\Impl\SimpleFileTest.cs" />
+    <Compile Include="ManagedStorage\Transactions.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="ManagedStorage\TxStorageTest.cs">
       <SubType>Code</SubType>
     </Compile>

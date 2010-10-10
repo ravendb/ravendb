@@ -39,7 +39,7 @@ namespace Raven.Tests.ManagedStorage.Impl
 
             var data = persistentDictionary.Read(JToken.FromObject("123"), txId);
 
-            Assert.Equal(new byte[] { 1, 2, 4, 5 }, data.Data);
+            Assert.Equal(new byte[] { 1, 2, 4, 5 }, data.Data());
         }
 
         [Fact]

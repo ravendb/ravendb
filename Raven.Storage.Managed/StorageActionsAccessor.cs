@@ -14,16 +14,18 @@ namespace Raven.Storage.Managed
             this.storage = storage;
             General = new GeneralStorageActions(storage);
             Attachments = new AttachmentsStorageActions(storage);
+            Transactions = new TransactionStorageActions(storage);
+            Documents = new DocumentsStorageActions(storage, Transactions);
         }
 
         public ITransactionStorageActions Transactions
         {
-            get { throw new NotImplementedException(); }
+            get; private set;
         }
 
         public IDocumentStorageActions Documents
         {
-            get { throw new NotImplementedException(); }
+            get; private set;
         }
 
         public IQueueStorageActions Queue

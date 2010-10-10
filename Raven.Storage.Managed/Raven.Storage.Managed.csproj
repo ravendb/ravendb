@@ -54,6 +54,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AttachmentsStorageActions.cs" />
+    <Compile Include="DocumentsStorageActions.cs" />
     <Compile Include="GeneralStorageActions.cs" />
     <Compile Include="Impl\AggregateDictionary.cs" />
     <Compile Include="Impl\Command.cs" />
@@ -68,6 +69,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="StorageActionsAccessor.cs" />
     <Compile Include="TransactionalStorage.cs" />
+    <Compile Include="TransactionStorageActions.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Raven.Database\Raven.Database.csproj">
