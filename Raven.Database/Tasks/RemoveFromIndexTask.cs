@@ -22,13 +22,10 @@ namespace Raven.Database.Tasks
 
 		public override void Execute(WorkContext context)
 		{
-			foreach (var indexName in context.IndexDefinitionStorage.IndexNames)
-			{
-				context.IndexStorage.RemoveFromIndex(indexName, Keys, context);
-			}
+		    context.IndexStorage.RemoveFromIndex(Index, Keys, context);
 		}
 
-		public override Task Clone()
+	    public override Task Clone()
 		{
 			return new RemoveFromIndexTask
 			{
