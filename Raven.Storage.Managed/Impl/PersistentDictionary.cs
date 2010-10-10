@@ -134,12 +134,15 @@ namespace Raven.Storage.Managed.Impl
 
             var readResult = Read(key, txId);
 
+            if (readResult != null && JTokenComparer.Instance.Equals(readResult.Key, key))
+                return true; // no need to do anything, user wrote the same data as is already in, hence, no op
+
             operationsInTransactions.GetOrAdd(txId, new List<Command>())
                 .Add(new Command
                 {
                     Key = key,
-                    Position = readResult.Position,
-                    Size = readResult.Size,
+                    Position = readResult == null ? -1 : readResult.Position,
+                    Size = readResult == null ? -1 : readResult.Size,
                     DictionaryId = DictionaryId,
                     Type = CommandType.Put
                 });
