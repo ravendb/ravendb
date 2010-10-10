@@ -16,6 +16,7 @@ namespace Raven.Storage.Managed
             Indexing = new IndexingStorageActions(storage);
             MappedResults = new MappedResultsStorageAction(storage);
             Queue = new QueueStorageActions(storage);
+            Tasks = new TasksStorageActions(storage);
         }
 
         public ITransactionStorageActions Transactions
@@ -35,7 +36,7 @@ namespace Raven.Storage.Managed
 
         public ITasksStorageActions Tasks
         {
-            get { throw new NotImplementedException(); }
+            get; private set;
         }
 
         public IAttachmentsStorageActions Attachments

@@ -70,7 +70,24 @@ namespace Raven.Storage.Managed.Impl
             {
                 {"ByName", x=>x.Value<string>("name")}
             };
+
+            Tasks = new PersistentDictionaryAdapter(txId, Add(new PersistentDictionary(persistentSource,
+                                                                                       new ModifiedJTokenComparer(x => new JObject
+                                                                                        {
+                                                                                            {"index", x.Value<string>("index")},
+                                                                                            {"id", x.Value<byte[]>("id")},
+                                                                                        }))))
+            {
+                {"ByIndex", x=>x.Value<string>("index")},
+                {"ByIndexAndType", x=>new JObject
+                {
+                    {"index", x.Value<string>("index")},
+                    {"type", x.Value<string>("type")},
+                }}
+            };
         }
+
+        public PersistentDictionaryAdapter Tasks { get; private set; }
 
         public PersistentDictionaryAdapter  Queues { get; private set; }
 

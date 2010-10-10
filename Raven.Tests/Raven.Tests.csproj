@@ -136,6 +136,7 @@
     <Compile Include="ManagedStorage\MappedResults.cs" />
     <Compile Include="ManagedStorage\Queues.cs" />
     <Compile Include="ManagedStorage\Storage.cs" />
+    <Compile Include="ManagedStorage\Tasks.cs" />
     <Compile Include="ManagedStorage\Transactions.cs">
       <SubType>Code</SubType>
     </Compile>
