@@ -8,21 +8,24 @@ using Raven.Database;
 using Raven.Database.Backup;
 using Raven.Database.Json;
 using Raven.Database.Extensions;
+using Raven.Storage.Managed.Impl;
 
 namespace Raven.Storage.Managed.Backup
 {
 	public class BackupOperation
 	{
 		private readonly DocumentDatabase database;
-		private readonly string to;
+	    private readonly IPersistentSource persistentSource;
+	    private readonly string to;
 		private readonly string src;
 
 		private readonly ILog log = LogManager.GetLogger(typeof (BackupOperation));
 
-		public BackupOperation(DocumentDatabase database, string src, string to)
+		public BackupOperation(DocumentDatabase database, IPersistentSource persistentSource, string src, string to)
 		{
 			this.database = database;
-            this.to = to.ToFullPath();
+		    this.persistentSource = persistentSource;
+		    this.to = to.ToFullPath();
             this.src = src.ToFullPath();
 		}
 
@@ -43,16 +46,23 @@ namespace Raven.Storage.Managed.Backup
 										  let tempIndex = Path.Combine(src, Path.Combine("BackupTempDirectories",Guid.NewGuid().ToString("N")))
 				                          select new DirectoryBackup(fromIndex, toIndex, tempIndex));
 
-				foreach (var directoryBackup in directoryBackups)
-				{
-					directoryBackup.Notify += UpdateBackupStatus;
-					directoryBackup.Prepare();
-				}
 
-				foreach (var directoryBackup in directoryBackups)
-				{
-					directoryBackup.Execute();
-				}
+                lock (persistentSource.SyncLock)
+                {
+                    persistentSource.FlushData();
+                    persistentSource.FlushLog();
+
+                    foreach (var directoryBackup in directoryBackups)
+                    {
+                        directoryBackup.Notify += UpdateBackupStatus;
+                        directoryBackup.Prepare();
+                    }
+
+                    foreach (var directoryBackup in directoryBackups)
+                    {
+                        directoryBackup.Execute();
+                    }
+                }
 			}
 			catch (Exception e)
 			{
