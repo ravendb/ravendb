@@ -87,7 +87,7 @@ namespace Raven.Storage.Managed
             if(readResult != null)
                 throw new ArgumentException("There is already an index with the name: " + name);
 
-            storage.IndexingStats.Put(new JObject
+            storage.IndexingStats.UpdateKey(new JObject
             {
                 {"index", name},
                 {"attempts", 0},
@@ -95,7 +95,7 @@ namespace Raven.Storage.Managed
                 {"failures", 0},
                 {"lastEtag", Guid.Empty.ToByteArray()},
                 {"lastTimestamp", DateTime.MinValue}
-            }, null);
+            });
         }
 
         public void DeleteIndex(string name)
@@ -128,7 +128,7 @@ namespace Raven.Storage.Managed
             readResult.Key["lastEtag"] = etag.ToByteArray();
             readResult.Key["lastTimestamp"] = timestamp;
 
-            storage.IndexingStats.Put(readResult.Key, null);
+            storage.IndexingStats.UpdateKey(readResult.Key);
         }
     }
 }

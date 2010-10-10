@@ -40,11 +40,11 @@ namespace Raven.Storage.Managed
                 StorageHelper.AssertNotModifiedByAnotherTransaction(storage, this, key, readResult, transactionInformation);
             }
 
-            storage.Transactions.Put(new JObject
+            storage.Transactions.UpdateKey(new JObject
             {
                 {"txId", transactionInformation.Id.ToByteArray()},
                 {"timeout", DateTime.UtcNow.Add(transactionInformation.Timeout)}
-            }, null);
+            });
 
             var ms = new MemoryStream();
 
@@ -103,21 +103,21 @@ namespace Raven.Storage.Managed
                                                    "' that is currently being modified by another transaction");
             }
 
-            storage.Transactions.Put(new JObject
+            storage.Transactions.UpdateKey(new JObject
             {
                 {"txId", transactionInformation.Id.ToByteArray()},
                 {"timeout", DateTime.UtcNow.Add(transactionInformation.Timeout)}
-            }, null);
+            });
 
             var newEtag = DocumentDatabase.CreateSequentialUuid();
-            storage.DocumentsModifiedByTransactions.Put(new JObject
+            storage.DocumentsModifiedByTransactions.UpdateKey(new JObject
             {
                 {"key", key},
                 {"etag", newEtag.ToByteArray()},
                 {"modified", DateTime.UtcNow},
                 {"deleted", true},
                 {"txId", transactionInformation.Id.ToByteArray()}
-            }, null);
+            });
         }
 
         public void RollbackTransaction(Guid txId)
@@ -134,11 +134,11 @@ namespace Raven.Storage.Managed
 
         public void ModifyTransactionId(Guid fromTxId, Guid toTxId, TimeSpan timeout)
         {
-            storage.Transactions.Put(new JObject
+            storage.Transactions.UpdateKey(new JObject
             {
                 {"txId", toTxId.ToByteArray()},
                 {"timeout", DateTime.UtcNow.Add(timeout)}
-            }, null);
+            });
 
             var transactionInformation = new TransactionInformation { Id = toTxId, Timeout = timeout };
             CompleteTransaction(fromTxId, data =>

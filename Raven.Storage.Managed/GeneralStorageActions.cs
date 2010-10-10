@@ -19,11 +19,11 @@ namespace Raven.Storage.Managed
             var result = storage.Identity.Read(new JObject{{"name", name}});
             if(result == null)
             {
-                storage.Identity.Put(new JObject
+                storage.Identity.UpdateKey(new JObject
                 {
                     {"name",name},
                     {"id", 1}
-                },null);
+                });
                 return 1;
             }
             else
