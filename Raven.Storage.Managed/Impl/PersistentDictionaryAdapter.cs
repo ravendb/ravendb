@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using System.Threading;
 using Newtonsoft.Json.Linq;
 
@@ -48,7 +49,7 @@ namespace Raven.Storage.Managed.Impl
             return persistentDictionary.Remove(key, txId.Value);
         }
 
-        public void Add(string name, Func<JToken, JToken> func)
+        public void Add(string name, Expression<Func<JToken, JToken>> func)
         {
             secondaryIndices[name] = persistentDictionary.AddSecondaryIndex(func); 
         }

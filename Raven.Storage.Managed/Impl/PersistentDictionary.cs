@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Runtime.Caching;
 using Newtonsoft.Json.Linq;
 
@@ -56,9 +57,9 @@ namespace Raven.Storage.Managed.Impl
             get { return keyToFilePos.Count; }
         }
 
-        public SecondaryIndex AddSecondaryIndex(Func<JToken, JToken> func)
+        public SecondaryIndex AddSecondaryIndex(Expression<Func<JToken, JToken>> func)
         {
-            var secondaryIndex = new SecondaryIndex(new ModifiedJTokenComparer(func));
+            var secondaryIndex = new SecondaryIndex(new ModifiedJTokenComparer(func.Compile()), func.ToString());
             secondaryIndices.Add(secondaryIndex);
             return secondaryIndex;
         }
@@ -297,7 +298,7 @@ namespace Raven.Storage.Managed.Impl
                 WasteCount += 1;
                 foreach (var index in secondaryIndices)
                 {
-                    index.Add(oldPos.Key);
+                    index.Remove(oldPos.Key);
                 }
                 return position;
             });
@@ -402,12 +403,19 @@ namespace Raven.Storage.Managed.Impl
     public class SecondaryIndex
     {
         private readonly IComparer<JToken> comparer;
+        private readonly string indexDef;
         private readonly SortedList<JToken, SortedSet<JToken>> index;
 
-        public SecondaryIndex(IComparer<JToken> comparer)
+        public SecondaryIndex(IComparer<JToken> comparer, string indexDef)
         {
             this.comparer = comparer;
+            this.indexDef = indexDef;
             this.index = new SortedList<JToken, SortedSet<JToken>>(comparer);
+        }
+
+        public override string ToString()
+        {
+            return indexDef + " ("+index.Count+")";
         }
 
         public long Count
