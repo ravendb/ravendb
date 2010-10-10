@@ -67,7 +67,7 @@ namespace Raven.Storage.Managed.Impl
                 case JTokenType.Float:
                     return (x.Value<double>()).CompareTo(y.Value<double>());
                 case JTokenType.String:
-                    return x.Value<string>().CompareTo(y.Value<string>());
+                    return StringComparer.InvariantCultureIgnoreCase.Compare(x.Value<string>(),y.Value<string>());
                 case JTokenType.Boolean:
                     return x.Value<bool>().CompareTo(y.Value<bool>());
                 case JTokenType.Date:
