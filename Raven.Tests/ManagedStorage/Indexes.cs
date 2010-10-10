@@ -9,10 +9,10 @@ namespace Raven.Storage.Tests
 		[Fact]
 		public void CanAddAndReadIndex()
 		{
-			using (var tx = new TransactionalStorage("test"))
+			using (var tx = NewTransactionalStorage())
 			{
-				tx.Write(mutator => mutator.Indexing.AddIndex("def"));
-				tx.Read(viewer =>
+				tx.Batch(mutator => mutator.Indexing.AddIndex("def"));
+				tx.Batch( viewer =>
 					Assert.True(viewer.Indexing.GetIndexesStats().Any(x => x.Name == "def")));
 			}
 		}
@@ -20,14 +20,14 @@ namespace Raven.Storage.Tests
 		[Fact]
 		public void CanDeleteIndex()
 		{
-			using (var tx = new TransactionalStorage("test"))
+			using (var tx = NewTransactionalStorage())
 			{
-				tx.Write(mutator => mutator.Indexing.AddIndex("def"));
-				tx.Read(viewer =>
+				tx.Batch(mutator => mutator.Indexing.AddIndex("def"));
+                tx.Batch(viewer =>
 					Assert.True(viewer.Indexing.GetIndexesStats().Any(x => x.Name == "def")));
 
-				tx.Write(mutator => mutator.Indexing.DeleteIndex("def"));
-				tx.Read(viewer =>
+                tx.Batch(mutator => mutator.Indexing.DeleteIndex("def"));
+                tx.Batch(viewer =>
 					Assert.False(viewer.Indexing.GetIndexesStats().Any(x => x.Name == "def")));
 			}
 		}
@@ -36,10 +36,10 @@ namespace Raven.Storage.Tests
 		[Fact]
 		public void CanAddAndReadIndexFailureRate()
 		{
-			using (var tx = new TransactionalStorage("test"))
+			using (var tx = NewTransactionalStorage())
 			{
-				tx.Write(mutator => mutator.Indexing.AddIndex("def"));
-				tx.Read(viewer =>
+				tx.Batch(mutator => mutator.Indexing.AddIndex("def"));
+				tx.Batch(viewer =>
 					Assert.Equal("def", viewer.Indexing.GetFailureRate("def").Name));
 			}
 		}
@@ -47,18 +47,17 @@ namespace Raven.Storage.Tests
 		[Fact]
 		public void CanRecordAttempts()
 		{
-			using (var tx = new TransactionalStorage("test"))
+			using (var tx = NewTransactionalStorage())
 			{
-				tx.Write(mutator => mutator.Indexing.AddIndex("def"));
-				tx.Write(mutator=>
+				tx.Batch(mutator => mutator.Indexing.AddIndex("def"));
+				tx.Batch(mutator=>
 				{
 					mutator.Indexing.SetCurrentIndexStatsTo("def");
 
 					mutator.Indexing.IncrementIndexingAttempt();
 
-					mutator.Indexing.FlushIndexStats();
 				});
-				tx.Read(viewer =>
+				tx.Batch(viewer =>
 					Assert.Equal(1, viewer.Indexing.GetFailureRate("def").Attempts));
 			}
 		}
@@ -66,29 +65,27 @@ namespace Raven.Storage.Tests
 		[Fact]
 		public void CanRecordAttemptsDecrements()
 		{
-			using (var tx = new TransactionalStorage("test"))
+			using (var tx = NewTransactionalStorage())
 			{
-				tx.Write(mutator => mutator.Indexing.AddIndex("def"));
-				tx.Write(mutator =>
+				tx.Batch(mutator => mutator.Indexing.AddIndex("def"));
+				tx.Batch(mutator =>
 				{
 					mutator.Indexing.SetCurrentIndexStatsTo("def");
 
 					mutator.Indexing.IncrementIndexingAttempt();
 
-					mutator.Indexing.FlushIndexStats();
 				});
-				tx.Read(viewer =>
+				tx.Batch(viewer =>
 					Assert.Equal(1, viewer.Indexing.GetFailureRate("def").Attempts));
 
-				tx.Write(mutator =>
+				tx.Batch(mutator =>
 				{
 					mutator.Indexing.SetCurrentIndexStatsTo("def");
 
 					mutator.Indexing.DecrementIndexingAttempt();
 
-					mutator.Indexing.FlushIndexStats();
 				});
-				tx.Read(viewer =>
+				tx.Batch(viewer =>
 					Assert.Equal(0, viewer.Indexing.GetFailureRate("def").Attempts));
 			}
 		}
@@ -97,18 +94,17 @@ namespace Raven.Storage.Tests
 		[Fact]
 		public void CanRecordErrors()
 		{
-			using (var tx = new TransactionalStorage("test"))
+			using (var tx = NewTransactionalStorage())
 			{
-				tx.Write(mutator => mutator.Indexing.AddIndex("def"));
-				tx.Write(mutator =>
+				tx.Batch(mutator => mutator.Indexing.AddIndex("def"));
+				tx.Batch(mutator =>
 				{
 					mutator.Indexing.SetCurrentIndexStatsTo("def");
 
 					mutator.Indexing.IncrementIndexingFailure();
 
-					mutator.Indexing.FlushIndexStats();
 				});
-				tx.Read(viewer =>
+				tx.Batch(viewer =>
 					Assert.Equal(1, viewer.Indexing.GetFailureRate("def").Errors));
 			}
 		}
@@ -116,18 +112,16 @@ namespace Raven.Storage.Tests
 		[Fact]
 		public void CanRecordSuccesses()
 		{
-			using (var tx = new TransactionalStorage("test"))
+			using (var tx = NewTransactionalStorage())
 			{
-				tx.Write(mutator => mutator.Indexing.AddIndex("def"));
-				tx.Write(mutator =>
+				tx.Batch(mutator => mutator.Indexing.AddIndex("def"));
+				tx.Batch(mutator =>
 				{
 					mutator.Indexing.SetCurrentIndexStatsTo("def");
 
 					mutator.Indexing.IncrementSuccessIndexing();
-
-					mutator.Indexing.FlushIndexStats();
 				});
-				tx.Read(viewer =>
+				tx.Batch(viewer =>
 					Assert.Equal(1, viewer.Indexing.GetFailureRate("def").Successes));
 			}
 		}

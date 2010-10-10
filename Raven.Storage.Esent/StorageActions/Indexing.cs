@@ -19,11 +19,6 @@ namespace Raven.Storage.Esent.StorageActions
 				throw new IndexDoesNotExistsException("There is no index named: " + index);
 		}
 
-		public void FlushIndexStats()
-		{
-			// nothing to do here, data will be flushed on commit
-		}
-
 		public void IncrementIndexingAttempt()
 		{
 			Api.EscrowUpdate(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["attempts"], 1);

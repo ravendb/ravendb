@@ -40,7 +40,11 @@ namespace Raven.Storage.Managed.Impl
                 {"ByTxId", documentsInTransactionPersistentdictionary.AddSecondaryIndex(x=>x.Value<byte[]>("txId"))}
             };
             Transactions = new PersistentDictionaryAdapter(txId, Add(new PersistentDictionary(persistentSource, new ModifiedJTokenComparer(x=>x.Value<byte[]>("txId")))));
+
+            IndexingStats = new PersistentDictionaryAdapter(txId, Add(new PersistentDictionary(persistentSource, new ModifiedJTokenComparer(x => x.Value<string>("index")))));
         }
+
+        public PersistentDictionaryAdapter IndexingStats { get; private set; }
 
         public PersistentDictionaryAdapter Transactions { get; private set; }
 

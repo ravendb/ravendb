@@ -16,6 +16,7 @@ namespace Raven.Storage.Managed
             Attachments = new AttachmentsStorageActions(storage);
             Transactions = new TransactionStorageActions(storage);
             Documents = new DocumentsStorageActions(storage, Transactions);
+            Indexing = new IndexingStorageActions(storage);
         }
 
         public ITransactionStorageActions Transactions
@@ -45,7 +46,8 @@ namespace Raven.Storage.Managed
 
         public IIndexingStorageActions Indexing
         {
-            get { throw new NotImplementedException(); }
+            get;
+            private set;
         }
 
         public IGeneralStorageActions General

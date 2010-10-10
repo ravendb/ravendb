@@ -66,6 +66,7 @@
     <Compile Include="Impl\PersistentDictionary.cs" />
     <Compile Include="Impl\PersistentDictionaryAdapter.cs" />
     <Compile Include="Impl\TableStorage.cs" />
+    <Compile Include="IndexingStorageActions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="StorageActionsAccessor.cs" />
     <Compile Include="TransactionalStorage.cs" />

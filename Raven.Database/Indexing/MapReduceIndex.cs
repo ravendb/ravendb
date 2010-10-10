@@ -33,64 +33,57 @@ namespace Raven.Database.Indexing
 			DateTime minimumTimestamp)
         {
             actions.Indexing.SetCurrentIndexStatsTo(name);
-        	try
-        	{
-				var count = 0;
-				Func<object, object> documentIdFetcher = null;
-				var reduceKeys = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
-				var documentsWrapped = documents.Select(doc =>
-				{
-					var documentId = doc.__document_id;
-					foreach (var reduceKey in actions.MappedResults.DeleteMappedResultsForDocumentId((string)documentId, name))
-					{
-						reduceKeys.Add(reduceKey);
-					}
-					return doc;
-				});
-				foreach (var doc in RobustEnumeration(documentsWrapped, viewGenerator.MapDefinition, actions, context))
-				{
-					count++;
+            var count = 0;
+            Func<object, object> documentIdFetcher = null;
+            var reduceKeys = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
+            var documentsWrapped = documents.Select(doc =>
+            {
+                var documentId = doc.__document_id;
+                foreach (var reduceKey in actions.MappedResults.DeleteMappedResultsForDocumentId((string)documentId, name))
+                {
+                    reduceKeys.Add(reduceKey);
+                }
+                return doc;
+            });
+            foreach (var doc in RobustEnumeration(documentsWrapped, viewGenerator.MapDefinition, actions, context))
+            {
+                count++;
 
-					documentIdFetcher = CreateDocumentIdFetcherIfNeeded(documentIdFetcher, doc);
+                documentIdFetcher = CreateDocumentIdFetcherIfNeeded(documentIdFetcher, doc);
 
-					var docIdValue = documentIdFetcher(doc);
-					if (docIdValue == null)
-						throw new InvalidOperationException("Could not find document id for this document");
+                var docIdValue = documentIdFetcher(doc);
+                if (docIdValue == null)
+                    throw new InvalidOperationException("Could not find document id for this document");
 
-					var reduceValue = viewGenerator.GroupByExtraction(doc);
-					if (reduceValue == null)
-					{
-						logIndexing.DebugFormat("Field {0} is used as the reduce key and cannot be null, skipping document {1}", viewGenerator.GroupByExtraction, docIdValue);
-						continue;
-					}
-					var reduceKey = ReduceKeyToString(reduceValue);
-					var docId = docIdValue.ToString();
+                var reduceValue = viewGenerator.GroupByExtraction(doc);
+                if (reduceValue == null)
+                {
+                    logIndexing.DebugFormat("Field {0} is used as the reduce key and cannot be null, skipping document {1}", viewGenerator.GroupByExtraction, docIdValue);
+                    continue;
+                }
+                var reduceKey = ReduceKeyToString(reduceValue);
+                var docId = docIdValue.ToString();
 
-					reduceKeys.Add(reduceKey);
+                reduceKeys.Add(reduceKey);
 
-					var data = GetMapedData(doc);
+                var data = GetMapedData(doc);
 
-					logIndexing.DebugFormat("Mapped result for '{0}': '{1}'", name, data);
+                logIndexing.DebugFormat("Mapped result for '{0}': '{1}'", name, data);
 
-					var hash = ComputeHash(name, reduceKey);
+                var hash = ComputeHash(name, reduceKey);
 
-					actions.MappedResults.PutMappedResult(name, docId, reduceKey, data, hash);
+                actions.MappedResults.PutMappedResult(name, docId, reduceKey, data, hash);
 
-					actions.Indexing.IncrementSuccessIndexing();
-				}
+                actions.Indexing.IncrementSuccessIndexing();
+            }
 
-				actions.Tasks.AddTask(new ReduceTask
-				{
-					Index = name,
-					ReduceKeys = reduceKeys.ToArray()
-				}, minimumTimestamp);
+            actions.Tasks.AddTask(new ReduceTask
+            {
+                Index = name,
+                ReduceKeys = reduceKeys.ToArray()
+            }, minimumTimestamp);
 
-				logIndexing.DebugFormat("Mapped {0} documents for {1}", count, name);
-        	}
-        	finally
-        	{
-        		actions.Indexing.FlushIndexStats();
-        	}
+            logIndexing.DebugFormat("Mapped {0} documents for {1}", count, name);
         }
 
         private static JObject GetMapedData(object doc)
