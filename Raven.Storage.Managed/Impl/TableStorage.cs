@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
@@ -128,6 +129,7 @@ namespace Raven.Storage.Managed.Impl
             });
         }
 
+        [DebuggerNonUserCode]
         public void Commit()
         {
             if (txId.Value == Guid.Empty)

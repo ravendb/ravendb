@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Newtonsoft.Json.Bson;
@@ -65,6 +66,7 @@ namespace Raven.Storage.Managed.Impl
             get { return dictionaries[i]; }
         }
 
+        [DebuggerNonUserCode]
         public void Commit(Guid txId)
         {
             lock (persistentSource.SyncLock)

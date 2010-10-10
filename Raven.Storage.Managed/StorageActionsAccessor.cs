@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using Raven.Database.Storage;
 using Raven.Database.Storage.StorageActions;
 using Raven.Storage.Managed.Impl;
@@ -63,9 +64,18 @@ namespace Raven.Storage.Managed
         }
 
         public IMappedResultsStorageAction MappedResults
-        { get; private set;
+        { 
+            get; private set;
         }
 
         public event Action OnCommit;
+
+        [DebuggerNonUserCode]
+        public void InvokeOnCommit()
+        {
+            var handler = OnCommit;
+            if (handler != null) 
+                handler();
+        }
     }
 }
