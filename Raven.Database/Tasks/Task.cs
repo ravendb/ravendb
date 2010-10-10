@@ -43,7 +43,7 @@ namespace Raven.Database.Tasks
 
 		public static Task ToTask(string taskType, byte[] task)
 		{
-			var type = typeof(Task).Assembly.GetType(taskType);
+			var type = typeof(Task).Assembly.GetType(taskType) ?? System.Type.GetType(taskType);
 			return (Task) new JsonSerializer().Deserialize(new BsonReader(new MemoryStream(task)), type);
 		}
 
