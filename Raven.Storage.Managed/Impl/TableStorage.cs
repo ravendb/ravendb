@@ -37,7 +37,10 @@ namespace Raven.Storage.Managed.Impl
             };
 
             DocumentsModifiedByTransactions = new PersistentDictionaryAdapter(txId, 
-                Add(new PersistentDictionary(persistentSource, new ModifiedJTokenComparer(x => x.Value<string>("key")))))
+                Add(new PersistentDictionary(persistentSource, new ModifiedJTokenComparer(x => new JObject
+                {
+                    {"key", x.Value<string>("key")},
+                }))))
             {
                 {"ByTxId", x => x.Value<byte[]>("txId")}
             };

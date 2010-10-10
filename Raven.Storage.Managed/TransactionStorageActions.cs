@@ -163,6 +163,7 @@ namespace Raven.Storage.Managed
             foreach (var docInTx in documentsInTx)
             {
                 var readResult = storage.DocumentsModifiedByTransactions.Read(docInTx);
+                storage.DocumentsModifiedByTransactions.Remove(docInTx);
 
                 var ms = new MemoryStream(readResult.Data());
                 perDocumentModified(new DocumentInTransactionData
@@ -174,7 +175,6 @@ namespace Raven.Storage.Managed
                     Data = (JObject)JToken.ReadFrom(new BsonReader(ms)),
                 });
 
-                storage.DocumentsModifiedByTransactions.Remove(docInTx);
             }
         }
 
