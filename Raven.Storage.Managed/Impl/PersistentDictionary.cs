@@ -468,7 +468,7 @@ namespace Raven.Storage.Managed.Impl
 
                 var indexOf = index.IndexOfKey(recordingComparer.LastComparedTo);
 
-                if (comparer.Compare(recordingComparer.LastComparedTo, key) < 0)
+                if (comparer.Compare(recordingComparer.LastComparedTo, key) <= 0)
                     indexOf += 1; // skip to the next higher value
 
                 for (int i = indexOf; i < index.Count; i++)
