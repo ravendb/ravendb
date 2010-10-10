@@ -92,7 +92,7 @@ namespace Raven.Storage.Managed
 
         public IEnumerable<AttachmentInformation> GetAttachmentsByReverseUpdateOrder(int start)
         {
-            return from key in storage.Attachments["ByEtag"].Skip(start)
+            return from key in storage.Attachments["ByEtag"].SkipFromEnd(start)
                    let attachment = GetAttachment(key.Value<string>("key"))
                    select new AttachmentInformation
                    {
@@ -105,7 +105,7 @@ namespace Raven.Storage.Managed
 
         public IEnumerable<AttachmentInformation> GetAttachmentsAfter(Guid value)
         {
-            return from key in storage.Attachments["ByEtag"].GreaterThanOrEqual(value.ToByteArray())
+            return from key in storage.Attachments["ByEtag"].SkipAfter(new JObject { { "etag", value.ToByteArray() } })
                    let attachment = GetAttachment(key.Value<string>("key"))
                    select new AttachmentInformation
                    {

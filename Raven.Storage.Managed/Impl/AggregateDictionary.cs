@@ -78,8 +78,6 @@ namespace Raven.Storage.Managed.Impl
                     cmds.AddRange(commandsToCommit);
                 }
 
-                WriteCommands(cmds, persistentSource.Log);
-
                 persistentSource.FlushData(); // sync the data to disk before doing anything else
                 WriteCommands(cmds, persistentSource.Log);
                 persistentSource.FlushLog(); // flush all the index changes to disk

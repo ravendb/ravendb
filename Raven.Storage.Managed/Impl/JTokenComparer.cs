@@ -38,12 +38,10 @@ namespace Raven.Storage.Managed.Impl
                         JToken value;
                         if (xObj.TryGetValue(prop.Key, out value) == false)
                             continue;
-                        var compare = Compare(prop.Value, value);
+                        var compare = Compare(value, prop.Value);
                         if (compare != 0)
                             return compare;
                     }
-                    if (xObj.Count > yObj.Count)// yObj has missing properties
-                        return -1;
                     return 0;
                 case JTokenType.Array:
                     var xArray = (JArray)x;
@@ -77,10 +75,6 @@ namespace Raven.Storage.Managed.Impl
                 case JTokenType.Bytes:
                     var xBytes = x.Value<byte[]>();
                     var yBytes = y.Value<byte[]>();
-                    if (xBytes.Length == 16 && yBytes.Length == 16)
-                    {
-                        return new Guid(xBytes).CompareTo(new Guid(yBytes));
-                    }
                     for (int i = 0; i < xBytes.Length && i < yBytes.Length; i++)
                     {
                         if (xBytes[i] != yBytes[i])
@@ -151,5 +145,16 @@ namespace Raven.Storage.Managed.Impl
         {
             return base.GetHashCode(modifier(obj));
         } 
+    }
+
+    public class RecordingComparer : IComparer<JToken>
+    {
+        public JToken LastComparedTo { get; set; }
+
+        public int Compare(JToken x, JToken y)
+        {
+            LastComparedTo = x;
+            return JTokenComparer.Instance.Compare(x, y);
+        }
     }
 }

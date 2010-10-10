@@ -49,7 +49,7 @@ namespace Raven.Storage.Managed.Impl
 
         public SecondaryIndex AddSecondaryIndex(Func<JToken, JToken> func)
         {
-            var secondaryIndex = new SecondaryIndex(new SortedSet<JToken>(new ModifiedJTokenComparer(func)));
+            var secondaryIndex = new SecondaryIndex(new ModifiedJTokenComparer(func));
             secondaryIndices.Add(secondaryIndex);
             return secondaryIndex;
         }
@@ -150,7 +150,7 @@ namespace Raven.Storage.Managed.Impl
             var cacheKey = pos.ToString();
             var cached = cache.Get(cacheKey);
             if (cached != null)
-                return (byte[]) cached;
+                return (byte[])cached;
 
             byte[] buf;
 
@@ -311,7 +311,7 @@ namespace Raven.Storage.Managed.Impl
 
         public void ClearCache()
         {
-            cache.Trim(percent:100);
+            cache.Trim(percent: 100);
         }
 
 
@@ -325,17 +325,17 @@ namespace Raven.Storage.Managed.Impl
 
     public class SecondaryIndex
     {
-        private readonly SortedSet<JToken> index;
+        private readonly SortedList<JToken, object> index;
 
-        public SecondaryIndex(SortedSet<JToken> index)
+        public SecondaryIndex(IComparer<JToken> comparer)
         {
-            this.index = index;
+            this.index = new SortedList<JToken, object>(comparer);
         }
 
         public void Add(JToken key)
         {
             lock (index)
-                index.Add(key);
+                index[key] = null;
         }
 
         public void Remove(JToken key)
@@ -344,45 +344,38 @@ namespace Raven.Storage.Managed.Impl
                 index.Remove(key);
         }
 
-        public JToken First
-        {
-            get
-            {
-                lock (index)
-                    return index.Min;
-            }
-        }
 
-        public JToken Last
-        {
-            get
-            {
-                lock (index)
-                    return index.Max;
-            }
-        }
-
-        public IEnumerable<JToken> GreaterThanOrEqual(JToken key)
+        public IEnumerable<JToken> SkipFromEnd(int start)
         {
             lock (index)
             {
-                foreach (var item in index.GetViewBetween(key, index.Max))
+                for (int i = (index.Count - 1) - start; i >= 0; i--)
                 {
-                    yield return item;
+                    yield return index.Keys[i];
                 }
             }
         }
 
-        public IEnumerable<JToken> Skip(int start)
+        public IEnumerable<JToken> SkipAfter(JToken key)
         {
             lock(index)
             {
-                foreach (var item in index.Skip(start))
+                var recordingComparer = new RecordingComparer();
+                Array.BinarySearch(index.Keys.ToArray(), key, recordingComparer);
+
+                if(recordingComparer.LastComparedTo == null)
+                    yield break;
+
+                var indexOf = index.IndexOfKey(recordingComparer.LastComparedTo);
+
+                for (int i = indexOf; i < index.Count; i++)
                 {
-                    yield return item;
+                    yield return index.Keys[i];
                 }
             }
         }
+
+        
     }
 
 }
