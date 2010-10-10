@@ -158,7 +158,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
                             if (abstractViewGenerator != null)
                                 entityName = abstractViewGenerator.ForEntityName;
 
-                            return actions.Tasks.IsIndexStale(s, null, entityName);
+                            return actions.Staleness.IsIndexStale(s, null, entityName);
                         }).ToArray();
                     result.Indexes = actions.Indexing.GetIndexesStats().ToArray();
                 });
@@ -466,7 +466,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
                     if (abstractViewGenerator != null)
                         entityName = abstractViewGenerator.ForEntityName;
 
-                    stale = actions.Tasks.IsIndexStale(index, query.Cutoff, entityName);
+                    stale = actions.Staleness.IsIndexStale(index, query.Cutoff, entityName);
                     var indexFailureInformation = actions.Indexing.GetFailureRate(index);
                     if (indexFailureInformation.IsInvalidIndex)
                     {
@@ -509,7 +509,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
             TransactionalStorage.Batch(
                 actions =>
                 {
-                    isStale = actions.Tasks.IsIndexStale(index, query.Cutoff, null);
+                    isStale = actions.Staleness.IsIndexStale(index, query.Cutoff, null);
                     var indexFailureInformation = actions.Indexing.GetFailureRate(index)
 ;
                     if (indexFailureInformation.IsInvalidIndex)
