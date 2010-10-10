@@ -119,7 +119,8 @@ namespace Raven.Storage.Managed.Impl
 
                 array.Add(cmd);
             }
-
+            if (array.Count == 0)
+                return;
             array.WriteTo(new BsonWriter(log));
         }
 
