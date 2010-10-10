@@ -171,14 +171,21 @@ namespace Raven.Storage.Managed
 
                 storage.DocumentsModifiedByTransactions.Remove(docInTx);
 
-                var ms = new MemoryStream(readResult.Data());
+                JObject metadata = null;
+                JObject data = null;
+                if (readResult.Position >= 0)
+                {
+                    var ms = new MemoryStream(readResult.Data());
+                    metadata = (JObject) JToken.ReadFrom(new BsonReader(ms));
+                    data = (JObject) JToken.ReadFrom(new BsonReader(ms));
+                }
                 perDocumentModified(new DocumentInTransactionData
                 {
                     Key = readResult.Key.Value<string>("key"),
                     Etag = new Guid(readResult.Key.Value<byte[]>("etag")),
                     Delete = readResult.Key.Value<bool>("deleted"),
-                    Metadata = (JObject)JToken.ReadFrom(new BsonReader(ms)),
-                    Data = (JObject)JToken.ReadFrom(new BsonReader(ms)),
+                    Metadata = metadata,
+                    Data = data,
                 });
 
             }
