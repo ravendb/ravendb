@@ -38,7 +38,8 @@ namespace Raven.Storage.Managed
             {
                 {"view", view},
                 {"reduceKey", reduceKey}
-            }).TakeWhile(x => x.Value<string>("view") == view && x.Value<string>("reduceKey") == reduceKey)
+            }).TakeWhile(x => StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("view"), view) &&
+                              StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("reduceKey"), reduceKey))
                 .Select(x =>
                 {
                     var readResult = storage.MappedResults.Read(x);
@@ -55,7 +56,8 @@ namespace Raven.Storage.Managed
             {
                 {"view", view},
                 {"docId", documentId},
-            }).TakeWhile(x => x.Value<string>("view") == view && x.Value<string>("docId") == documentId))
+            }).TakeWhile(x => StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("view"), view) &&
+                              StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("docId"), documentId)))
             {
                 storage.MappedResults.Remove(key);
                 yield return key.Value<string>("reduceKey");
@@ -67,7 +69,7 @@ namespace Raven.Storage.Managed
             foreach (var key in storage.MappedResults["ByViewAndReduceKey"].SkipAfter(new JObject
             {
                 {"view", view},
-            }).TakeWhile(x => x.Value<string>("view") == view))
+            }).TakeWhile(x => StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("view"), view)))
             {
                 storage.MappedResults.Remove(key);
             }

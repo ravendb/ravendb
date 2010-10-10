@@ -4,6 +4,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Storage.StorageActions;
 using Raven.Storage.Managed.Impl;
+using System.Linq;
 
 namespace Raven.Storage.Managed
 {
@@ -31,7 +32,7 @@ namespace Raven.Storage.Managed
             foreach (var queuedMsgKey in storage.Queues["ByName"].SkipAfter(new JObject
             {
                 {"name", name}
-            }))
+            }).TakeWhile(x=> StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("name"), name)))
             {
                 var readResult = storage.Queues.Read(queuedMsgKey);
                 if(readResult == null)
