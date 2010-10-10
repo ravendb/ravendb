@@ -13,36 +13,69 @@ namespace Raven.Storage.Managed.Impl
     /// </summary>
     public class TableStorage : AggregateDictionary
     {
-        readonly ThreadLocal<Guid> txId = new ThreadLocal<Guid>(() => Guid.Empty);
+        private readonly ThreadLocal<Guid> txId = new ThreadLocal<Guid>(() => Guid.Empty);
 
-        public TableStorage(IPersistentSource persistentSource) : base(persistentSource)
+        public TableStorage(IPersistentSource persistentSource)
+            : base(persistentSource)
         {
-            Details = new PersistentDictionaryAdapter(txId, Add(new PersistentDictionary(persistentSource, JTokenComparer.Instance)));
-            Identity = new PersistentDictionaryAdapter(txId, Add(new PersistentDictionary(persistentSource, JTokenComparer.Instance)));
+            Details = new PersistentDictionaryAdapter(txId,
+                                                      Add(new PersistentDictionary(persistentSource,
+                                                                                   JTokenComparer.Instance)));
+            Identity = new PersistentDictionaryAdapter(txId,
+                                                       Add(new PersistentDictionary(persistentSource,
+                                                                                    JTokenComparer.Instance)));
 
-            var attachmentPersistentDictionary = Add(new PersistentDictionary(persistentSource, new ModifiedJTokenComparer(x=>x.Value<string>("key"))));
+            PersistentDictionary attachmentPersistentDictionary =
+                Add(new PersistentDictionary(persistentSource, new ModifiedJTokenComparer(x => x.Value<string>("key"))));
             Attachments = new PersistentDictionaryAdapter(txId, attachmentPersistentDictionary)
             {
                 {"ByEtag", attachmentPersistentDictionary.AddSecondaryIndex(x => x.Value<byte[]>("etag"))}
             };
 
-            var documentsPersistentDictionary = Add(new PersistentDictionary(persistentSource, new ModifiedJTokenComparer(x=>x.Value<string>("key"))));
+            PersistentDictionary documentsPersistentDictionary =
+                Add(new PersistentDictionary(persistentSource, new ModifiedJTokenComparer(x => x.Value<string>("key"))));
             Documents = new PersistentDictionaryAdapter(txId, documentsPersistentDictionary)
             {
-                {"ByKey", documentsPersistentDictionary.AddSecondaryIndex(x=>x.Value<string>("key"))},
-                {"ById", documentsPersistentDictionary.AddSecondaryIndex(x=>x.Value<string>("id"))},
-                {"ByEtag", documentsPersistentDictionary.AddSecondaryIndex(x=>x.Value<byte[]>("etag"))}
+                {"ByKey", documentsPersistentDictionary.AddSecondaryIndex(x => x.Value<string>("key"))},
+                {"ById", documentsPersistentDictionary.AddSecondaryIndex(x => x.Value<string>("id"))},
+                {"ByEtag", documentsPersistentDictionary.AddSecondaryIndex(x => x.Value<byte[]>("etag"))}
             };
 
-            var documentsInTransactionPersistentdictionary = Add(new PersistentDictionary(persistentSource, new ModifiedJTokenComparer(x=>x.Value<string>("key"))));
-            DocumentsModifiedByTransactions = new PersistentDictionaryAdapter(txId, documentsInTransactionPersistentdictionary)
+            PersistentDictionary documentsInTransactionPersistentdictionary =
+                Add(new PersistentDictionary(persistentSource, new ModifiedJTokenComparer(x => x.Value<string>("key"))));
+            DocumentsModifiedByTransactions = new PersistentDictionaryAdapter(txId,
+                                                                              documentsInTransactionPersistentdictionary)
             {
-                {"ByTxId", documentsInTransactionPersistentdictionary.AddSecondaryIndex(x=>x.Value<byte[]>("txId"))}
+                {"ByTxId", documentsInTransactionPersistentdictionary.AddSecondaryIndex(x => x.Value<byte[]>("txId"))}
             };
-            Transactions = new PersistentDictionaryAdapter(txId, Add(new PersistentDictionary(persistentSource, new ModifiedJTokenComparer(x=>x.Value<byte[]>("txId")))));
+            Transactions = new PersistentDictionaryAdapter(txId,
+                                                           Add(new PersistentDictionary(persistentSource,
+                                                                                        new ModifiedJTokenComparer(
+                                                                                            x => x.Value<byte[]>("txId")))));
 
-            IndexingStats = new PersistentDictionaryAdapter(txId, Add(new PersistentDictionary(persistentSource, new ModifiedJTokenComparer(x => x.Value<string>("index")))));
+            IndexingStats = new PersistentDictionaryAdapter(txId,
+                                                            Add(new PersistentDictionary(persistentSource,
+                                                                                         new ModifiedJTokenComparer(
+                                                                                             x =>
+                                                                                             x.Value<string>("index")))));
+
+            PersistentDictionary mappedResultsPersistentDictioanry = Add(new PersistentDictionary(persistentSource, JTokenComparer.Instance));
+            MappedResults = new PersistentDictionaryAdapter(txId, mappedResultsPersistentDictioanry)
+            {
+                {"ByViewAndReduceKey", mappedResultsPersistentDictioanry.AddSecondaryIndex(x => new JObject
+                    {
+                        {"view", x.Value<string>("view")},
+                        {"reduceKey", x.Value<string>("reduceKey")}
+                    })},
+               {"ByViewAndDocumentId", mappedResultsPersistentDictioanry.AddSecondaryIndex(x => new JObject
+                    {
+                        {"view", x.Value<string>("view")},
+                        {"docId", x.Value<string>("docId")}
+                    })}
+            };
         }
+
+        public PersistentDictionaryAdapter MappedResults { get; private set; }
 
         public PersistentDictionaryAdapter IndexingStats { get; private set; }
 
@@ -61,13 +94,13 @@ namespace Raven.Storage.Managed.Impl
         public IDisposable BeginTransaction()
         {
             if (txId.Value != Guid.Empty)
-                return new DisposableAction(() => { });// no op, already in tx
+                return new DisposableAction(() => { }); // no op, already in tx
 
             txId.Value = Guid.NewGuid();
 
             return new DisposableAction(() =>
             {
-                if (txId.Value != Guid.Empty)// tx not committed
+                if (txId.Value != Guid.Empty) // tx not committed
                     Rollback();
             });
         }
@@ -83,7 +116,7 @@ namespace Raven.Storage.Managed.Impl
         public void Rollback()
         {
             Rollback(txId.Value);
-            
+
             txId.Value = Guid.Empty;
         }
     }

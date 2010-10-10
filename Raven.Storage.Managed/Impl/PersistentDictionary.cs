@@ -366,11 +366,11 @@ namespace Raven.Storage.Managed.Impl
 
     public class SecondaryIndex
     {
-        private readonly SortedList<JToken, object> index;
+        private readonly SortedList<JToken, SortedSet<JToken>> index;
 
         public SecondaryIndex(IComparer<JToken> comparer)
         {
-            this.index = new SortedList<JToken, object>(comparer);
+            this.index = new SortedList<JToken, SortedSet<JToken>>(comparer);
         }
 
         public long Count
@@ -385,13 +385,35 @@ namespace Raven.Storage.Managed.Impl
         public void Add(JToken key)
         {
             lock (index)
-                index[key] = null;
+            {
+                var indexOfKey = index.IndexOfKey(key);
+                if (indexOfKey < 0)
+                {
+                    index[key] = new SortedSet<JToken>(JTokenComparer.Instance)
+                    {
+                        key
+                    };
+                }
+                else
+                {
+                    index.Values[indexOfKey].Add(key);
+                }
+            }
         }
 
         public void Remove(JToken key)
         {
             lock (index)
-                index.Remove(key);
+            {
+                var indexOfKey = index.IndexOfKey(key);
+                if(indexOfKey < 0)
+                {
+                    return;
+                }
+                index.Values[indexOfKey].Remove(key);
+                if (index.Values[indexOfKey].Count == 0)
+                    index.Remove(key);
+            }
         }
 
 
@@ -401,7 +423,10 @@ namespace Raven.Storage.Managed.Impl
             {
                 for (int i = (index.Count - 1) - start; i >= 0; i--)
                 {
-                    yield return index.Keys[i];
+                    foreach (var item in index.Values[i])
+                    {
+                        yield return item;
+                    }
                 }
             }
         }
@@ -420,7 +445,10 @@ namespace Raven.Storage.Managed.Impl
 
                 for (int i = indexOf; i < index.Count; i++)
                 {
-                    yield return index.Keys[i];
+                    foreach (var item in index.Values[i])
+                    {
+                        yield return item;
+                    }
                 }
             }
         }

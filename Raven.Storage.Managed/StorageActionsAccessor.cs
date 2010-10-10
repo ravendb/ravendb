@@ -17,6 +17,7 @@ namespace Raven.Storage.Managed
             Transactions = new TransactionStorageActions(storage);
             Documents = new DocumentsStorageActions(storage, Transactions);
             Indexing = new IndexingStorageActions(storage);
+            MappedResults = new MappedResultsStorageAction(storage);
         }
 
         public ITransactionStorageActions Transactions
@@ -56,8 +57,7 @@ namespace Raven.Storage.Managed
         }
 
         public IMappedResultsStorageAction MappedResults
-        {
-            get { throw new NotImplementedException(); }
+        { get; private set;
         }
 
         public event Action OnCommit;
