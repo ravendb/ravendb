@@ -7,11 +7,8 @@ namespace Raven.Storage.Managed
 {
     public class StorageActionsAccessor : IStorageActionsAccessor
     {
-        private readonly TableStorage storage;
-
         public StorageActionsAccessor(TableStorage storage)
         {
-            this.storage = storage;
             General = new GeneralStorageActions(storage);
             Attachments = new AttachmentsStorageActions(storage);
             Transactions = new TransactionStorageActions(storage);

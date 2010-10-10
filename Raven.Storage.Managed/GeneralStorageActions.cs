@@ -1,4 +1,5 @@
 ﻿using System;
+using Newtonsoft.Json.Linq;
 using Raven.Database.Storage.StorageActions;
 using Raven.Storage.Managed.Impl;
 
@@ -15,16 +16,21 @@ namespace Raven.Storage.Managed
 
         public long GetNextIdentityValue(string name)
         {
-            var result = storage.Identity.Read(name);
+            var result = storage.Identity.Read(new JObject{{"name", name}});
             if(result == null)
             {
-                storage.Identity.Put(name, BitConverter.GetBytes(1));
+                storage.Identity.Put(new JObject
+                {
+                    {"name",name},
+                    {"id", 1}
+                },null);
                 return 1;
             }
             else
             {
-                var val = BitConverter.ToInt32(result.Data(), 0) + 1;
-                storage.Identity.Put(name, BitConverter.GetBytes(val));
+                var val = result.Key.Value<int>("id") + 1;
+                result.Key["id"] = val;
+                storage.Identity.UpdateKey(result.Key);
                 return val;
             }
         }

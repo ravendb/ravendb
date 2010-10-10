@@ -22,8 +22,7 @@ namespace Raven.Storage.Managed.Impl
                                                       Add(new PersistentDictionary(persistentSource,
                                                                                    JTokenComparer.Instance)));
             Identity = new PersistentDictionaryAdapter(txId,
-                                                       Add(new PersistentDictionary(persistentSource,
-                                                                                    JTokenComparer.Instance)));
+                                                       Add(new PersistentDictionary(persistentSource, new ModifiedJTokenComparer(x=>x.Value<string>("name")))));
 
             PersistentDictionary attachmentPersistentDictionary =
                 Add(new PersistentDictionary(persistentSource, new ModifiedJTokenComparer(x => x.Value<string>("key"))));
