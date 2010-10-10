@@ -17,7 +17,9 @@ namespace Raven.Storage.Managed
             MappedResults = new MappedResultsStorageAction(storage);
             Queue = new QueueStorageActions(storage);
             Tasks = new TasksStorageActions(storage);
+            Staleness = new StalenessStorageActions(storage);
         }
+
 
         public ITransactionStorageActions Transactions
         {
@@ -35,6 +37,11 @@ namespace Raven.Storage.Managed
         }
 
         public ITasksStorageActions Tasks
+        {
+            get; private set;
+        }
+
+        public IStalenessStorageActions Staleness
         {
             get; private set;
         }

@@ -153,7 +153,8 @@ namespace Raven.Storage.Managed
                 {"key", key},
                 {"etag", newEtag.ToByteArray()},
                 {"modified", DateTime.UtcNow},
-                {"id", id}
+                {"id", id},
+                {"entityName", metadata.Value<string>("Raven-Entity-Name")}
             },ms.ToArray());
 
             return newEtag;

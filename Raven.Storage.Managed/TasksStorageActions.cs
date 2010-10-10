@@ -22,11 +22,6 @@ namespace Raven.Storage.Managed
             this.storage = storage;
         }
 
-        public bool IsIndexStale(string name, DateTime? cutOff, string entityName)
-        {
-            throw new NotImplementedException();
-        }
-
         public void AddTask(Task task, DateTime addedAt)
         {
             storage.Tasks.Put(new JObject

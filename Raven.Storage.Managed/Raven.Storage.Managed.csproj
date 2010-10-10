@@ -70,6 +70,7 @@
     <Compile Include="MappedResultsStorageAction.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="QueueStorageActions.cs" />
+    <Compile Include="StalenessStorageActions.cs" />
     <Compile Include="StorageActionsAccessor.cs" />
     <Compile Include="TasksStorageActions.cs" />
     <Compile Include="TransactionalStorage.cs" />

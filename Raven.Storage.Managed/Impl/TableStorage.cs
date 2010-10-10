@@ -78,7 +78,11 @@ namespace Raven.Storage.Managed.Impl
                                                                                             {"id", x.Value<byte[]>("id")},
                                                                                         }))))
             {
-                {"ByIndex", x=>x.Value<string>("index")},
+                {"ByIndexAndTime", x=>new JObject
+                {
+                    {"index", x.Value<string>("index")},
+                    {"time", x.Value<DateTime>("time")}
+                }},
                 {"ByIndexAndType", x=>new JObject
                 {
                     {"index", x.Value<string>("index")},

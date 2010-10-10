@@ -59,7 +59,7 @@ namespace Raven.Database.Indexing
 						               failureRate.FailureRate);
 						continue;
 					}
-					if (!actions.Tasks.IsIndexStale(indexesStat.Name, null, null)) 
+					if (!actions.Staleness.IsIndexStale(indexesStat.Name, null, null)) 
 						continue;
 					indexesToWorkOn.Add(new IndexToWorkOn
 					{

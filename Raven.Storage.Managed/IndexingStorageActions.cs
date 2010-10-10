@@ -75,7 +75,7 @@ namespace Raven.Storage.Managed
                     IndexingSuccesses = readResult.Key.Value<int>("successes"),
                     Name = readResult.Key.Value<string>("index"),
                     LastIndexedEtag = new Guid(readResult.Key.Value<byte[]>("lastEtag")),
-                    LastIndexedTimestamp = readResult.Key.Value<DateTime>("lastTimeStamp")
+                    LastIndexedTimestamp = readResult.Key.Value<DateTime>("lastTimestamp")
                 };
             }
         }
@@ -93,7 +93,7 @@ namespace Raven.Storage.Managed
                 {"sucesses", 0},
                 {"failures", 0},
                 {"lastEtag", Guid.Empty.ToByteArray()},
-                {"lastTimeStamp", DateTime.MinValue}
+                {"lastTimestamp", DateTime.MinValue}
             }, null);
         }
 

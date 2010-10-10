@@ -13,9 +13,10 @@ namespace Raven.Storage.Tests
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.Batch(viewer => Assert.False(viewer.Tasks.IsIndexStale("test", null, null))); 
+                tx.Batch(accessor => accessor.Indexing.AddIndex("test"));
+                tx.Batch(viewer => Assert.False(viewer.Staleness.IsIndexStale("test", null, null))); 
 				tx.Batch(mutator => mutator.Tasks.AddTask(new MyTask { Index = "test" }, DateTime.Now));
-				tx.Batch(viewer => Assert.True(viewer.Tasks.IsIndexStale("test", null, null)));
+                tx.Batch(viewer => Assert.True(viewer.Staleness.IsIndexStale("test", null, null)));
 			}
 		}
 
@@ -24,14 +25,15 @@ namespace Raven.Storage.Tests
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.Batch(viewer => Assert.False(viewer.Tasks.IsIndexStale("test", null, null)));
+                tx.Batch(accessor => accessor.Indexing.AddIndex("test"));
+                tx.Batch(viewer => Assert.False(viewer.Staleness.IsIndexStale("test", null, null)));
 				tx.Batch(mutator => mutator.Tasks.AddTask(new MyTask { Index = "test" }, DateTime.Now));
-				tx.Batch(viewer => Assert.True(viewer.Tasks.IsIndexStale("test", null, null))); 
+                tx.Batch(viewer => Assert.True(viewer.Staleness.IsIndexStale("test", null, null))); 
 				
 				int tasks = 0;
 				tx.Batch(mutator => mutator.Tasks.GetMergedTask(out tasks));
 				Assert.Equal(1, tasks);
-                tx.Batch(viewer => Assert.False(viewer.Tasks.IsIndexStale("test", null, null)));
+                tx.Batch(viewer => Assert.False(viewer.Staleness.IsIndexStale("test", null, null)));
 			}
 		}
 
@@ -42,10 +44,15 @@ namespace Raven.Storage.Tests
 			using (var tx = NewTransactionalStorage())
 			{
 				var cutoff = DateTime.UtcNow;
-				tx.Batch(mutator => mutator.Tasks.AddTask(new MyTask { Index = "test" }, DateTime.Now));
-                tx.Batch(viewer => Assert.True(viewer.Tasks.IsIndexStale("test", null, null)));
-                tx.Batch(viewer => Assert.True(viewer.Tasks.IsIndexStale("test", cutoff.AddMinutes(1), null)));
-                tx.Batch(viewer => Assert.False(viewer.Tasks.IsIndexStale("test", cutoff.AddMinutes(-1), null)));
+                tx.Batch(mutator =>
+                {
+                    mutator.Indexing.AddIndex("test");
+                    mutator.Indexing.UpdateLastIndexed("test", Guid.NewGuid(), cutoff);
+                });
+				tx.Batch(mutator => mutator.Tasks.AddTask(new MyTask { Index = "test" }, DateTime.UtcNow));
+                tx.Batch(viewer => Assert.True(viewer.Staleness.IsIndexStale("test", null, null)));
+                tx.Batch(viewer => Assert.True(viewer.Staleness.IsIndexStale("test", cutoff.AddMinutes(1), null)));
+                tx.Batch(viewer => Assert.False(viewer.Staleness.IsIndexStale("test", cutoff.AddMinutes(-1), null)));
 			}
 		}
 

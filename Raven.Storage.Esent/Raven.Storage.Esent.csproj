@@ -81,6 +81,7 @@
     <Compile Include="StorageActions\Indexing.cs" />
     <Compile Include="StorageActions\MappedResults.cs" />
     <Compile Include="StorageActions\Queue.cs" />
+    <Compile Include="StorageActions\Staleness.cs" />
     <Compile Include="StorageActions\TableProperties.cs" />
     <Compile Include="StorageActions\Tasks.cs" />
     <Compile Include="StorageActions\Util.cs" />

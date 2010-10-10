@@ -389,10 +389,12 @@ namespace Raven.Storage.Managed.Impl
 
     public class SecondaryIndex
     {
+        private readonly IComparer<JToken> comparer;
         private readonly SortedList<JToken, SortedSet<JToken>> index;
 
         public SecondaryIndex(IComparer<JToken> comparer)
         {
+            this.comparer = comparer;
             this.index = new SortedList<JToken, SortedSet<JToken>>(comparer);
         }
 
@@ -465,6 +467,9 @@ namespace Raven.Storage.Managed.Impl
                     yield break;
 
                 var indexOf = index.IndexOfKey(recordingComparer.LastComparedTo);
+
+                if (comparer.Compare(recordingComparer.LastComparedTo, key) < 0)
+                    indexOf += 1; // skip to the next higher value
 
                 for (int i = indexOf; i < index.Count; i++)
                 {
