@@ -8,8 +8,6 @@ namespace Raven.Database.Tasks
 {
 	public abstract class Task
 	{
-		public long Id { get; set; }
-
 		public string Index { get; set; }
 
 		public string Type
