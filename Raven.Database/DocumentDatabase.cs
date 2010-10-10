@@ -91,9 +91,16 @@ namespace Raven.Database
             workContext.IndexDefinitionStorage = IndexDefinitionStorage;
 
 
-            InitializeTriggers();
-            ExecuteStartupTasks();
-
+            try
+            {
+                InitializeTriggers();
+                ExecuteStartupTasks();
+            }
+            catch (Exception)
+            {
+                Dispose();
+                throw;
+            }
             if (!newDb)
                 return;
 
