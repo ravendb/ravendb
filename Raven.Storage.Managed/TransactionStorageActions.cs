@@ -173,6 +173,8 @@ namespace Raven.Storage.Managed
                     Metadata = (JObject)JToken.ReadFrom(new BsonReader(ms)),
                     Data = (JObject)JToken.ReadFrom(new BsonReader(ms)),
                 });
+
+                storage.DocumentsModifiedByTransactions.Remove(docInTx);
             }
         }
 
