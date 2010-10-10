@@ -27,7 +27,7 @@ namespace Raven.Storage.Managed
             if (readResult != null) // update
             {
                 StorageHelper.AssertNotModifiedByAnotherTransaction(storage, this, key, readResult, transactionInformation);
-                AssertValidEtag(key, readResult, etag);
+                AssertValidEtag(key, readResult, storage.DocumentsModifiedByTransactions.Read(new JObject{{"key", key}}), etag);
 
                 readResult.Key["txId"] = transactionInformation.Id.ToByteArray();
                 if (storage.Documents.UpdateKey(readResult.Key) == false)
@@ -63,11 +63,16 @@ namespace Raven.Storage.Managed
             return newEtag;
         }
 
-        private static void AssertValidEtag(string key, PersistentDictionary.ReadResult readResult, Guid? etag)
+        private static void AssertValidEtag(string key, PersistentDictionary.ReadResult doc, PersistentDictionary.ReadResult docInTx, Guid? etag)
         {
-            if (readResult == null)
+            if (doc == null)
                 return;
-            var existingEtag = new Guid(readResult.Key.Value<byte[]>("etag"));
+            var existingEtag =
+                docInTx != null
+                    ? new Guid(docInTx.Key.Value<byte[]>("etag"))
+                    : new Guid(doc.Key.Value<byte[]>("etag"));
+
+
             if (etag != null && etag.Value != existingEtag)
             {
                 throw new ConcurrencyException("PUT attempted on document '" + key +
@@ -88,7 +93,7 @@ namespace Raven.Storage.Managed
             }
             readResult = storage.DocumentsModifiedByTransactions.Read(new JObject { { "key", key } });
             StorageHelper.AssertNotModifiedByAnotherTransaction(storage, this, key, readResult, transactionInformation);
-            AssertValidEtag(key, readResult, etag);
+            AssertValidEtag(key, readResult, storage.DocumentsModifiedByTransactions.Read(new JObject{{"key", key}}), etag);
 
             if (readResult != null)
             {
