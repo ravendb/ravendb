@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Raven.Storage.Managed.Impl
 {
@@ -9,5 +10,10 @@ namespace Raven.Storage.Managed.Impl
         public CommandType Type { get; set; }
         public long Position { get; set; }
         public int DictionaryId { get; set; }
+
+        public override string ToString()
+        {
+            return Type + " " + Key.ToString(Formatting.None);
+        }
     }
 }

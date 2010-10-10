@@ -12,6 +12,11 @@ namespace Raven.Storage.Managed.Impl
         private readonly PersistentDictionary persistentDictionary;
         private readonly Dictionary<string, SecondaryIndex> secondaryIndices = new Dictionary<string, SecondaryIndex>();
 
+        public override string ToString()
+        {
+            return Count.ToString();
+        }
+
         public PersistentDictionaryAdapter(ThreadLocal<Guid> txId, PersistentDictionary persistentDictionary)
         {
             this.txId = txId;
