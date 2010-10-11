@@ -77,68 +77,93 @@ namespace Raven.Client.Linq
 		/// <param name="expression">The expression.</param>
 		protected void VisitExpression(Expression expression)
 		{
-			switch (expression.NodeType)
-			{
-				case ExpressionType.OrElse:
-					VisitOrElse((BinaryExpression) expression);
-					break;
-				case ExpressionType.AndAlso:
-					VisitAndAlso((BinaryExpression) expression);
-					break;
-				case ExpressionType.NotEqual:
-					VisitNotEquals((BinaryExpression) expression);
-					break;
-				case ExpressionType.Equal:
-					VisitEquals((BinaryExpression) expression);
-					break;
-				case ExpressionType.GreaterThan:
-					VisitGreaterThan((BinaryExpression) expression);
-					break;
-				case ExpressionType.GreaterThanOrEqual:
-					VisitGreaterThanOrEqual((BinaryExpression) expression);
-					break;
-				case ExpressionType.LessThan:
-					VisitLessThan((BinaryExpression) expression);
-					break;
-				case ExpressionType.LessThanOrEqual:
-					VisitLessThanOrEqual((BinaryExpression) expression);
-					break;
-				case ExpressionType.MemberAccess:
-					VisitMemberAccess((MemberExpression) expression, true);
-					break;
-				case ExpressionType.Not:
-					var unaryExpressionOp = ((UnaryExpression) expression).Operand;
-					VisitMemberAccess((MemberExpression) unaryExpressionOp, false);
-					break;
-				default:
-					if (expression is MethodCallExpression)
-					{
-						VisitMethodCall((MethodCallExpression) expression);
-					}
-					else if (expression is LambdaExpression)
-					{
-						VisitExpression(((LambdaExpression) expression).Body);
-					}
-					break;
-			}
+            if (expression is BinaryExpression)
+            {
+                VisitBinaryExpression((BinaryExpression)expression);
+            }
+            else
+            {
+                switch (expression.NodeType)
+                {
+                    case ExpressionType.MemberAccess:
+                        VisitMemberAccess((MemberExpression)expression, true);
+                        break;
+                    case ExpressionType.Not:
+                        var unaryExpressionOp = ((UnaryExpression)expression).Operand;
+                        VisitMemberAccess((MemberExpression)unaryExpressionOp, false);
+                        break;
+                    default:
+                        if (expression is MethodCallExpression)
+                        {
+                            VisitMethodCall((MethodCallExpression)expression);
+                        }
+                        else if (expression is LambdaExpression)
+                        {
+                            VisitExpression(((LambdaExpression)expression).Body);
+                        }
+                        break;
+                }
+            }
+       
 		}
+
+        int nestedCount = 0;
+        private void VisitBinaryExpression(BinaryExpression expression)
+        {        
+            switch (expression.NodeType)
+            {
+                case ExpressionType.OrElse:
+                    VisitOrElse(expression);
+                    break;
+                case ExpressionType.AndAlso:
+                    VisitAndAlso(expression);
+                    break;
+                case ExpressionType.NotEqual:
+                    VisitNotEquals(expression);
+                    break;
+                case ExpressionType.Equal:
+                    VisitEquals(expression);
+                    break;
+                case ExpressionType.GreaterThan:
+                    VisitGreaterThan(expression);
+                    break;
+                case ExpressionType.GreaterThanOrEqual:
+                    VisitGreaterThanOrEqual(expression);
+                    break;
+                case ExpressionType.LessThan:
+                    VisitLessThan(expression);
+                    break;
+                case ExpressionType.LessThanOrEqual:
+                    VisitLessThanOrEqual(expression);
+                    break;
+            }
+    
+        }
 
 		private void VisitAndAlso(BinaryExpression andAlso)
 		{
+            if (nestedCount > 0) luceneQuery.OpenSubclause();
+            nestedCount++;
+
 			VisitExpression(andAlso.Left);
-
 			luceneQuery.AndAlso();
+            VisitExpression(andAlso.Right);
 
-			VisitExpression(andAlso.Right);
+            nestedCount--;
+            if (nestedCount > 0) luceneQuery.CloseSubclause();
 		}
 
 		private void VisitOrElse(BinaryExpression orElse)
 		{
+            if (nestedCount > 0) luceneQuery.OpenSubclause();
+            nestedCount++;
+
 			VisitExpression(orElse.Left);
+			luceneQuery.OrElse();              
+            VisitExpression(orElse.Right);
 
-			luceneQuery.OrElse();
-
-			VisitExpression(orElse.Right);
+            nestedCount--;
+            if (nestedCount > 0) luceneQuery.CloseSubclause();
 		}
 
 		private void VisitEquals(BinaryExpression expression)

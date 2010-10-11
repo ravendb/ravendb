@@ -79,6 +79,28 @@ namespace Raven.Client.Tests.Linq
         }
 
         [Fact]
+        public void WithNoBracesOperatorPrecedenceIsHonoured()
+        {
+            var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null, null));
+            var q = from user in indexedUsers
+                    where user.Name == "ayende" && user.Name == "rob" || user.Name == "dave"
+                    select user;
+
+            Assert.Equal("(Name:ayende AND Name:rob) OR Name:dave", q.ToString());
+        }
+
+        [Fact]
+        public void BracesOverrideOperatorPrecedence()
+        {
+            var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null, null));
+            var q = from user in indexedUsers
+                    where user.Name == "ayende" && (user.Name == "rob" || user.Name == "dave")
+                    select user;
+
+            Assert.Equal("Name:ayende AND (Name:rob OR Name:dave)", q.ToString());
+        }
+
+        [Fact]
         public void CanUnderstandLessThan()
         {
             var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null,null));
