@@ -15,7 +15,7 @@ namespace Raven.Storage.Managed.Impl
     {
         private readonly IPersistentSource persistentSource;
         private readonly List<PersistentDictionary> dictionaries = new List<PersistentDictionary>();
-        private ReaderWriterLockSlim readerWriterLockSlim;
+        private ReaderWriterLockSlim currentlyCommittingLock;
 
         public AggregateDictionary(IPersistentSource persistentSource)
         {
@@ -25,7 +25,7 @@ namespace Raven.Storage.Managed.Impl
 
         public void Initialze()
         {
-            readerWriterLockSlim.EnterWriteLock();
+            currentlyCommittingLock.EnterWriteLock();
             try
             {
                 while (true)
@@ -47,7 +47,7 @@ namespace Raven.Storage.Managed.Impl
             }
             finally
             {
-                readerWriterLockSlim.ExitWriteLock();
+                currentlyCommittingLock.ExitWriteLock();
             }
         }
 
@@ -82,7 +82,7 @@ namespace Raven.Storage.Managed.Impl
         {
             lock (persistentSource.SyncLock)
             {
-                readerWriterLockSlim.EnterWriteLock();
+                currentlyCommittingLock.EnterWriteLock();
                 try
                 {
                     var cmds = new List<Command>();
@@ -106,7 +106,7 @@ namespace Raven.Storage.Managed.Impl
                 }
                 finally
                 {
-                    readerWriterLockSlim.ExitWriteLock();
+                    currentlyCommittingLock.ExitWriteLock();
                 }
             }
         }
@@ -149,7 +149,7 @@ namespace Raven.Storage.Managed.Impl
         {
             lock (persistentSource.SyncLock)
             {
-                readerWriterLockSlim.EnterWriteLock();
+                currentlyCommittingLock.EnterWriteLock();
                 try
                 {
                     Stream tempLog = persistentSource.CreateTemporaryStream();
@@ -169,7 +169,7 @@ namespace Raven.Storage.Managed.Impl
                 }
                 finally
                 {
-                    readerWriterLockSlim.ExitWriteLock();
+                    currentlyCommittingLock.ExitWriteLock();
                 }
             }
         }
@@ -202,8 +202,8 @@ namespace Raven.Storage.Managed.Impl
 
         public PersistentDictionary Add(PersistentDictionary dictionary)
         {
-            readerWriterLockSlim = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
-            dictionary.JoinToAggregate(readerWriterLockSlim);
+            currentlyCommittingLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
+            dictionary.JoinToAggregate(currentlyCommittingLock);
             dictionaries.Add(dictionary);
             dictionary.DictionaryId = dictionaries.Count - 1;
             return dictionary;

@@ -32,14 +32,14 @@ namespace Raven.Storage.Managed.Impl
         {
             get
             {
-                readerWriterLockSlim.EnterReadLock();
+                currentlyCommittingLock.EnterReadLock();
                 try
                 {
                     return keyToFilePos.Keys.ToArray();
                 }
                 finally
                 {
-                    readerWriterLockSlim.ExitReadLock();
+                    currentlyCommittingLock.ExitReadLock();
                 }
             }
         }
@@ -50,7 +50,7 @@ namespace Raven.Storage.Managed.Impl
         /// We have to support recursion here, because we want to be able to scan a secondary index and pull records from the main one
         /// at the same time.
         /// </summary>
-        private ReaderWriterLockSlim readerWriterLockSlim = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
+        private ReaderWriterLockSlim currentlyCommittingLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
 
         private readonly List<SecondaryIndex> secondaryIndices = new List<SecondaryIndex>();
 
@@ -64,9 +64,9 @@ namespace Raven.Storage.Managed.Impl
         private readonly MemoryCache cache = new MemoryCache(Guid.NewGuid().ToString());
         public int DictionaryId { get; set; }
 
-        public void JoinToAggregate(ReaderWriterLockSlim writerLockSlim)
+        public void JoinToAggregate(ReaderWriterLockSlim theCurrentlyCommittingLock)
         {
-            readerWriterLockSlim = writerLockSlim;
+            this.currentlyCommittingLock = theCurrentlyCommittingLock;
         }
 
         public PersistentDictionary(IPersistentSource persistentSource, IEqualityComparer<JToken> comparer)
@@ -86,7 +86,7 @@ namespace Raven.Storage.Managed.Impl
 
         public SecondaryIndex AddSecondaryIndex(Expression<Func<JToken, JToken>> func)
         {
-            var secondaryIndex = new SecondaryIndex(new ModifiedJTokenComparer(func.Compile()), func.ToString(),readerWriterLockSlim);
+            var secondaryIndex = new SecondaryIndex(new ModifiedJTokenComparer(func.Compile()), func.ToString(),currentlyCommittingLock);
             secondaryIndices.Add(secondaryIndex);
             return secondaryIndex;
         }
@@ -212,7 +212,7 @@ namespace Raven.Storage.Managed.Impl
                 }
             }
 
-            readerWriterLockSlim.EnterReadLock();
+            currentlyCommittingLock.EnterReadLock();
             try
             {
                 PositionInFile pos;
@@ -229,7 +229,7 @@ namespace Raven.Storage.Managed.Impl
             }
             finally
             {
-                readerWriterLockSlim.ExitReadLock();
+                currentlyCommittingLock.ExitReadLock();
             }
         }
 
@@ -357,7 +357,7 @@ namespace Raven.Storage.Managed.Impl
 
         internal void CopyCommittedData(Stream tempData, List<Command> cmds)
         {
-            readerWriterLockSlim.EnterReadLock();
+            currentlyCommittingLock.EnterReadLock();
             try
             {
                 foreach (var kvp in keyToFilePos) // copy committed data
@@ -383,7 +383,7 @@ namespace Raven.Storage.Managed.Impl
             }
             finally
             {
-                readerWriterLockSlim.ExitReadLock();
+                currentlyCommittingLock.ExitReadLock();
             }
         }
 
