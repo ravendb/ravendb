@@ -107,8 +107,14 @@
     <Compile Include="Indexes\CompiledIndex.cs" />
     <Compile Include="Indexes\ComplexIndexOnNotAnalyzedField.cs" />
     <Compile Include="Indexes\DynamicQueryMapping.cs" />
+    <Compile Include="Indexes\MapOnlyView.cs" />
     <Compile Include="Indexes\QueryingOnDefaultIndex.cs" />
     <Compile Include="Indexes\QueryingOnStaleIndexes.cs" />
+    <Compile Include="Indexes\ShoppingCartEventsToShopingCart.cs" />
+    <Compile Include="Linq\CommitInfo.cs" />
+    <Compile Include="Linq\SampleDynamicCompilationExtension.cs" />
+    <Compile Include="Linq\SampleGeoLocation.cs" />
+    <Compile Include="Linq\User.cs" />
     <Compile Include="ManagedStorage\Attachments.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -134,6 +140,7 @@
     <Compile Include="ManagedStorage\Impl\SimpleFileTest.cs" />
     <Compile Include="ManagedStorage\Indexes.cs" />
     <Compile Include="ManagedStorage\MappedResults.cs" />
+    <Compile Include="ManagedStorage\MyTask.cs" />
     <Compile Include="ManagedStorage\Queues.cs" />
     <Compile Include="ManagedStorage\Storage.cs" />
     <Compile Include="ManagedStorage\Tasks.cs" />
@@ -187,7 +194,7 @@
     <Compile Include="Triggers\PutTriggers.cs" />
     <Compile Include="Triggers\ReadTriggers.cs" />
     <Compile Include="Triggers\VetoCapitalNamesPutTrigger.cs" />
-    <Compile Include="Util\ReflectionUtil.cs" />
+    <Compile Include="Util\ReflectionUtilTest.cs" />
     <Compile Include="Views\MapReduce.cs" />
     <Compile Include="Views\ViewCompilation.cs" />
     <Compile Include="Views\ViewStorage.cs" />

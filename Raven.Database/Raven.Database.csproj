@@ -116,6 +116,7 @@
     <Compile Include="Commercial\WarningMessagesHolder.cs" />
     <Compile Include="CurrentRavenOperation.cs" />
     <Compile Include="DatabaseBulkOperations.cs" />
+    <Compile Include="Data\AttachmentInformation.cs" />
     <Compile Include="Data\BackupRequest.cs" />
     <Compile Include="Data\DisposableAction.cs" />
     <Compile Include="Data\DynamicQueryMapping.cs" />
@@ -124,7 +125,7 @@
     <Compile Include="Data\MultiLoadResult.cs" />
     <Compile Include="DocumentRetriever.cs" />
     <Compile Include="DynamicQueryRunner.cs" />
-    <Compile Include="Exceptions\IndexDoesNotExists.cs" />
+    <Compile Include="Exceptions\IndexDoesNotExistsException.cs" />
     <Compile Include="Extensions\ExpressionExtensions.cs" />
     <Compile Include="Extensions\GuidExtensions.cs" />
     <Compile Include="Extensions\MonoHttpEncoder.cs">
@@ -143,9 +144,12 @@
     <Compile Include="Json\DynamicUtil.cs" />
     <Compile Include="Json\JsonDynamicConverter.cs" />
     <Compile Include="Data\LinearQuery.cs" />
+    <Compile Include="Json\PatchCommandType.cs" />
     <Compile Include="LinearQueries\IRemoteSingleQueryRunner.cs" />
     <Compile Include="LinearQueries\SingleQueryRunner.cs" />
+    <Compile Include="Linq\GroupByKeyFunc.cs" />
     <Compile Include="Linq\ITranslatorDatabaseAccessor.cs" />
+    <Compile Include="Linq\TranslatorFunc.cs" />
     <Compile Include="PerformanceCounters.cs" />
     <Compile Include="Plugins\AbstractBackgroundTask.cs" />
     <Compile Include="Plugins\AbstractDocumentCodec.cs" />
@@ -231,6 +235,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="PutResult.cs" />
     <Compile Include="RavenConfiguration.cs" />
+    <Compile Include="Server\Abstractions\UrlExtension.cs" />
     <Compile Include="Server\HttpServer.cs" />
     <Compile Include="Server\NonAdminHttp.cs" />
     <Compile Include="Server\Responders\AddIncludesCommand.cs" />
@@ -264,9 +269,12 @@
     <Compile Include="Storage\IndexCreationOptions.cs" />
     <Compile Include="Storage\IndexDefinitionStorage.cs" />
     <Compile Include="Storage\IQueueStorageActions.cs" />
+    <Compile Include="Storage\IRemoteStorage.cs" />
     <Compile Include="Storage\IStalenessStorageActions.cs" />
+    <Compile Include="Storage\IStorageActionsAccessor.cs" />
     <Compile Include="Storage\ITasksStorageActions.cs" />
     <Compile Include="Storage\ITransactionalStorage.cs" />
+    <Compile Include="Storage\ITransactionStorageActions.cs" />
     <Compile Include="Tasks\ReduceTask.cs" />
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
     <Compile Include="Tasks\Task.cs" />
