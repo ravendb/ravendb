@@ -105,6 +105,9 @@
     <Compile Include="..\Raven.Client\Document\Async\SyncronousLoadResult.cs">
       <Link>Document\Async\SyncronousLoadResult.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client\Document\DefaultRavenContractResolver.cs">
+      <Link>Document\DefaultRavenContractResolver.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client\Document\DocumentConvention.cs">
       <Link>Document\DocumentConvention.cs</Link>
     </Compile>
@@ -165,11 +168,23 @@
     <Compile Include="..\Raven.Client\Exceptions\ReadVetoException.cs">
       <Link>Exceptions\ReadVetoException.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client\IAdvancedDocumentSessionOperations.cs">
+      <Link>IAdvancedDocumentSessionOperations.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client\IAsyncAdvancedSessionOperations.cs">
+      <Link>IAsyncAdvancedSessionOperations.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client\IAsyncDocumentSession.cs">
       <Link>IAsyncDocumentSession.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client\IDocumentDeleteListener.cs">
+      <Link>IDocumentDeleteListener.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client\IDocumentQuery.cs">
       <Link>IDocumentQuery.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client\IDocumentQueryCustomization.cs">
+      <Link>IDocumentQueryCustomization.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client\IDocumentSession.cs">
       <Link>IDocumentSession.cs</Link>
@@ -177,14 +192,26 @@
     <Compile Include="..\Raven.Client\IDocumentStore.cs">
       <Link>IDocumentStore.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client\IInMemoryDocumentSessionOperations.cs">
-      <Link>IInMemoryDocumentSessionOperations.cs</Link>
+    <Compile Include="..\Raven.Client\IDocumentStoreListener.cs">
+      <Link>IDocumentStoreListener.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client\Indexes\AbstractIndexCreationTask.cs">
       <Link>Indexes\AbstractIndexCreationTask.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client\Indexes\ExpressionOperatorPrecedence.cs">
+      <Link>Indexes\ExpressionOperatorPrecedence.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client\Indexes\ExpressionOperatorPrecedenceExtension.cs">
+      <Link>Indexes\ExpressionOperatorPrecedenceExtension.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client\Indexes\IClientSideDatabase.cs">
+      <Link>Indexes\IClientSideDatabase.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client\Indexes\IndexDefinition.cs">
       <Link>Indexes\IndexDefinition.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client\ISyncAdvancedSessionOperation.cs">
+      <Link>ISyncAdvancedSessionOperation.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client\ITransactionalDocumentSession.cs">
       <Link>ITransactionalDocumentSession.cs</Link>
@@ -257,6 +284,9 @@
     </Compile>
     <Compile Include="..\Raven.Client\Shard\ShardStrategy\ShardStrategy.cs">
       <Link>Shard\ShardStrategy\ShardStrategy.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client\StoredEntityEventArgs.cs">
+      <Link>StoredEntityEventArgs.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client\Util\Inflector.cs">
       <Link>Util\Inflector.cs</Link>
