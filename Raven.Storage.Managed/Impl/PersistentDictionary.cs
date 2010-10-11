@@ -286,7 +286,7 @@ namespace Raven.Storage.Managed.Impl
         internal void CompleteCommit(Guid txId)
         {
             List<Command> cmds;
-            if (operationsInTransactions.TryGetValue(txId, out cmds) == false)
+            if (operationsInTransactions.TryRemove(txId, out cmds) == false)
                 return;
 
              ApplyCommands(cmds);
