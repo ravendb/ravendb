@@ -67,7 +67,6 @@ namespace Raven.Tests.Spatial
 
 			const double lat = 38.96939, lng = -77.386398;
 			const double radius = 6.0;
-
 			QueryResult queryResult;
 			do
 			{

@@ -113,13 +113,14 @@ namespace Raven.Storage.Managed.Impl
                     return (prop.Name.GetHashCode() * 397) ^ GetHashCode(prop.Value);
                 case JTokenType.Integer:
                 case JTokenType.Float:
-                case JTokenType.String:
                 case JTokenType.Boolean:
                 case JTokenType.Date:
-                    var value = ((JValue)obj).Value;
-                    if (value == null)// string can be null here
+                    return ((JValue)obj).Value.GetHashCode();
+                case JTokenType.String:
+                    var jStr = ((JValue)obj);
+                    if (jStr.Value == null)
                         return 0;
-                    return value.GetHashCode();
+                    return StringComparer.InvariantCultureIgnoreCase.GetHashCode(jStr.Value<string>());
                 case JTokenType.Raw:
                 case JTokenType.Comment:
                 case JTokenType.Constructor:
