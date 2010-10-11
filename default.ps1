@@ -8,7 +8,6 @@ properties {
   $tools_dir = "$base_dir\Tools"
   $release_dir = "$base_dir\Release"
   $uploader = "..\Uploader\S3Uploader.exe"
-  $gemPusher = "..\Uploader\push_gem.ps1"
 }
 
 include .\psake_ext.ps1
@@ -205,10 +204,6 @@ task CopyBundles {
 	del $build_dir\Output\Bundles\Raven.Bundles.Tests.dll
 }
 
-task CopyGems -depends CreateOutpuDirectories {
-	cp $build_dir\Raven.Client.Lightweight.dll $build_dir\Output\lib
-}
-
 task CopyServer {
 	cp $build_dir\Raven.Server.exe $build_dir\Output\Server
 	cp $build_dir\log4net.dll $build_dir\Output\Server
@@ -240,19 +235,6 @@ task CopyDocFiles -depends CreateDocs {
 	cp $base_dir\readme.txt $build_dir\Output\readme.txt
 	cp $base_dir\Help\Documentation.chm $build_dir\Output\Documentation.chm  -ErrorAction SilentlyContinue
 	cp $base_dir\acknowledgements.txt $build_dir\Output\acknowledgements.txt
-}
-
-task CreateGem -depends CopyGems {
-	exec { 		
-		$currentDate = [System.DateTime]::Today.ToString("yyyyMMdd")
-		[System.IO.File]::WriteAllText( "$build_dir\Output\VERSION", "$version.$env:buildlabel.$currentDate", [System.Text.Encoding]::ASCII)
-		$global:gem_result = "ravendb-$version.$env:buildlabel.$currentDate.gem"
-		$old = pwd
-		cd $build_dir\Output
-		del $build_dir\Output\*.gem
-		exec { & "$tools_dir\IronRuby\bin\igem.bat" build "$base_dir\ravendb.gemspec" }
-		cd $old
-	}
 }
 
 task DoRelease -depends Compile, `
@@ -297,10 +279,6 @@ task DoRelease -depends Compile, `
 
 task ResetBuildArtifcats {
     git checkout "Raven.Database\RavenDB.snk"
-}
-
-task PushGem -depends CreateGem {
-	exec { & "$tools_dir\IronRuby\bin\igem.bat" push "$global:gem_result" }
 }
 
 task Upload -depends DoRelease {
