@@ -82,6 +82,7 @@ namespace Raven.Database
             }
 
             IndexDefinitionStorage = new IndexDefinitionStorage(
+                configuration,
                 TransactionalStorage,
                 configuration.DataDirectory,
                 configuration.Container.GetExportedValues<AbstractViewGenerator>(),

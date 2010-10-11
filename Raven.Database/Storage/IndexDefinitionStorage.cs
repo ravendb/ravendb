@@ -28,69 +28,84 @@ namespace Raven.Database.Storage
 
 		private readonly ILog logger = LogManager.GetLogger(typeof (IndexDefinitionStorage));
 		private readonly string path;
-		private readonly AbstractDynamicCompilationExtension[] extensions;
+	    private readonly RavenConfiguration configuration;
+	    private readonly AbstractDynamicCompilationExtension[] extensions;
 
 		public IndexDefinitionStorage(
+            RavenConfiguration configuration,
 			ITransactionalStorage  transactionalStorage,
 			string path, 
 			IEnumerable<AbstractViewGenerator> compiledGenerators, 
 			AbstractDynamicCompilationExtension[] extensions)
 		{
-			this.extensions = extensions;// this is used later in the ctor, so it must appears first
+		    this.configuration = configuration;
+		    this.extensions = extensions;// this is used later in the ctor, so it must appears first
 			this.path = Path.Combine(path, IndexDefDir);
 
-			if (Directory.Exists(this.path) == false)
+			if (Directory.Exists(this.path) == false && configuration.RunInMemory == false)
 				Directory.CreateDirectory(this.path);
 
             this.extensions = extensions;
-            foreach (var index in Directory.GetFiles(this.path, "*.index"))
-			{
-				try
-				{
-					AddAndCompileIndex(
-						MonoHttpUtility.UrlDecode(Path.GetFileNameWithoutExtension(index)),
-						JsonConvert.DeserializeObject<IndexDefinition>(File.ReadAllText(index), new JsonEnumConverter())
-						);
-				}
-				catch (Exception e)
-				{
-					logger.Warn("Could not compile index " + index + ", skipping bad index", e);
-				}
-			}
+
+            if (configuration.RunInMemory == false)
+                ReadIndexesFromDisk();
 
             //compiled view generators always overwrite dynamic views
-		    foreach (var generator in compiledGenerators)
-		    {
-		        var copy = generator;
-		        var displayNameAtt = TypeDescriptor.GetAttributes(copy)
-		            .OfType<DisplayNameAttribute>()
-		            .FirstOrDefault();
-
-		        var name = displayNameAtt != null ? displayNameAtt.DisplayName : copy.GetType().Name;
-
-                transactionalStorage.Batch(actions =>
-                {
-                    if (actions.Indexing.GetIndexesStats().Any(x => x.Name == name))
-                        return;
-
-                    actions.Indexing.AddIndex(name);
-                });
-
-		        var indexDefinition = new IndexDefinition
-		        {
-                    Map = "Compiled map function: " + generator.GetType().AssemblyQualifiedName,
-                    // need to supply this so the index storage will create map/reduce index
-                    Reduce = generator.ReduceDefinition == null ? null : "Compiled reduce function: " + generator.GetType().AssemblyQualifiedName,
-		            Indexes = generator.Indexes,
-		            Stores = generator.Stores,
-                    IsCompiled = true
-		        };
-		        indexCache.AddOrUpdate(name, copy, (s, viewGenerator) => copy);
-		        indexDefinitions.AddOrUpdate(name, indexDefinition, (s1, definition) => indexDefinition);
-		    }
+		    ReadIndexesFromCatalog(compiledGenerators, transactionalStorage);
 		}
 
-		public string[] IndexNames
+	    private void ReadIndexesFromCatalog(IEnumerable<AbstractViewGenerator> compiledGenerators, ITransactionalStorage transactionalStorage)
+	    {
+	        foreach (var generator in compiledGenerators)
+	        {
+	            var copy = generator;
+	            var displayNameAtt = TypeDescriptor.GetAttributes(copy)
+	                .OfType<DisplayNameAttribute>()
+	                .FirstOrDefault();
+
+	            var name = displayNameAtt != null ? displayNameAtt.DisplayName : copy.GetType().Name;
+
+	            transactionalStorage.Batch(actions =>
+	            {
+	                if (actions.Indexing.GetIndexesStats().Any(x => x.Name == name))
+	                    return;
+
+	                actions.Indexing.AddIndex(name);
+	            });
+
+	            var indexDefinition = new IndexDefinition
+	            {
+	                Map = "Compiled map function: " + generator.GetType().AssemblyQualifiedName,
+	                // need to supply this so the index storage will create map/reduce index
+	                Reduce = generator.ReduceDefinition == null ? null : "Compiled reduce function: " + generator.GetType().AssemblyQualifiedName,
+	                Indexes = generator.Indexes,
+	                Stores = generator.Stores,
+	                IsCompiled = true
+	            };
+	            indexCache.AddOrUpdate(name, copy, (s, viewGenerator) => copy);
+	            indexDefinitions.AddOrUpdate(name, indexDefinition, (s1, definition) => indexDefinition);
+	        }
+	    }
+
+	    private void ReadIndexesFromDisk()
+	    {
+	        foreach (var index in Directory.GetFiles(this.path, "*.index"))
+	        {
+	            try
+	            {
+	                AddAndCompileIndex(
+	                    MonoHttpUtility.UrlDecode(Path.GetFileNameWithoutExtension(index)),
+	                    JsonConvert.DeserializeObject<IndexDefinition>(File.ReadAllText(index), new JsonEnumConverter())
+	                    );
+	            }
+	            catch (Exception e)
+	            {
+	                logger.Warn("Could not compile index " + index + ", skipping bad index", e);
+	            }
+	        }
+	    }
+
+	    public string[] IndexNames
 		{
 			get { return indexCache.Keys.ToArray(); }
 		}
@@ -98,7 +113,8 @@ namespace Raven.Database.Storage
 		public string AddIndex(string name, IndexDefinition indexDefinition)
 		{
 			DynamicViewCompiler transformer = AddAndCompileIndex(name, indexDefinition);
-			File.WriteAllText(Path.Combine(path, transformer.Name + ".index"), JsonConvert.SerializeObject(indexDefinition, Formatting.Indented, new JsonEnumConverter()));
+            if(configuration.RunInMemory == false)
+			    File.WriteAllText(Path.Combine(path, transformer.Name + ".index"), JsonConvert.SerializeObject(indexDefinition, Formatting.Indented, new JsonEnumConverter()));
 			return transformer.Name;
 		}
 
@@ -124,6 +140,8 @@ namespace Raven.Database.Storage
 			indexCache.TryRemove(name, out ignoredViewGenerator);
 			IndexDefinition ignoredIndexDefinition;
 			indexDefinitions.TryRemove(name, out ignoredIndexDefinition);
+            if (configuration.RunInMemory)
+                return;
 			File.Delete(GetIndexPath(name));
 			File.Delete(GetIndexSourcePath(name));
 		}

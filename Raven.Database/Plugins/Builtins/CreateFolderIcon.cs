@@ -8,6 +8,9 @@ namespace Raven.Database.Plugins.Builtins
     {
         public void Execute(DocumentDatabase database)
         {
+            if (database.Configuration.RunInMemory)
+                return;
+
             var dataDirectory = Path.GetFullPath(database.Configuration.DataDirectory);
             
             var desktopIni = Path.Combine(dataDirectory, "desktop.ini");
