@@ -342,8 +342,8 @@
     <Compile Include="..\Raven.Database\Exceptions\IndexDisabledException.cs">
       <Link>Exceptions\IndexDisabledException.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Database\Exceptions\IndexDoesNotExists.cs">
-      <Link>Exceptions\IndexDoesNotExists.cs</Link>
+    <Compile Include="..\Raven.Database\Exceptions\IndexDoesNotExistsException.cs">
+      <Link>Exceptions\IndexDoesNotExistsException.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Database\Exceptions\OperationVetoedException.cs">
       <Link>Exceptions\OperationVetoedException.cs</Link>
@@ -380,6 +380,9 @@
     </Compile>
     <Compile Include="..\Raven.Database\Json\JsonExtensions.cs">
       <Link>Extensions\JsonExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Database\Json\PatchCommandType.cs">
+      <Link>Json\PatchCommandType.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Database\Json\PatchRequest.cs">
       <Link>Data\PatchRequest.cs</Link>
