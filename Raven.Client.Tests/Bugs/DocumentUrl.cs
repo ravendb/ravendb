@@ -26,7 +26,7 @@ namespace Raven.Client.Tests.Bugs
 				session.Store(entity);
 
 				Assert.Equal("http://localhost:8080/docs/users/1",
-					session.GetDocumentUrl(entity));
+                    session.Advanced.GetDocumentUrl(entity));
 
 			}
 		}
@@ -49,7 +49,7 @@ namespace Raven.Client.Tests.Bugs
 				session.Store(entity);
 
 				Assert.Equal("http://localhost:8080/docs/users/1",
-					session.GetDocumentUrl(entity));
+                    session.Advanced.GetDocumentUrl(entity));
 
 			}
 		}

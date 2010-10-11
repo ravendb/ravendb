@@ -1017,7 +1017,14 @@ namespace Raven.Client.Indexes
             }
             if (expression != null)
             {
-                this.Visit(expression);
+                if (expression.Type == typeof(IClientSideDatabase))
+                {
+                    this.Out("Database");
+                }
+                else
+                {
+                    this.Visit(expression);
+                }
                 if (node.Method.Name != "get_Item") // VB indexer
                 {
                     this.Out(".");

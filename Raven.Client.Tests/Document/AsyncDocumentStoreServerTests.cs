@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Threading;
 using Raven.Client.Document;
+using Raven.Database.Extensions;
 using Raven.Database.Server;
 using Raven.Server;
 using Xunit;
@@ -24,8 +25,7 @@ namespace Raven.Client.Tests.Document
 
 		public void Dispose()
 		{
-			Thread.Sleep(100);
-			Directory.Delete(path, true);
+            IOExtensions.DeleteDirectory(path);
 		}
 
 		#endregion

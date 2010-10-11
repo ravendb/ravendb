@@ -5,6 +5,7 @@ using System.Threading;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Database;
+using Raven.Database.Extensions;
 using Raven.Server;
 using Xunit;
 
@@ -24,7 +25,7 @@ namespace Raven.Tests.Bugs
 
         private void CreateServer(bool initDocStore = false)
         {
-            if (Directory.Exists("HiLoData")) Directory.Delete("HiLoData", true);
+            IOExtensions.DeleteDirectory("HiLoData");
             server = new RavenDbServer(new RavenConfiguration { Port = 8080, DataDirectory = "HiLoData", RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true });
 
             if (initDocStore) {
@@ -83,7 +84,7 @@ namespace Raven.Tests.Bugs
         {
             documentStore.Dispose();
             server.Dispose();
-            if (Directory.Exists("HiLoData")) Directory.Delete("HiLoData", true);
+            IOExtensions.DeleteDirectory("HiLoData");
         }
 
     }

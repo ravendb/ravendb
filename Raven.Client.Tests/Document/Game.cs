@@ -7,6 +7,7 @@ using log4net.Config;
 using log4net.Layout;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
+using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Xunit;
 
@@ -20,7 +21,7 @@ namespace Raven.Client.Tests.Document
 
 		public void Dispose()
 		{
-			//Directory.Delete(path, true);
+            IOExtensions.DeleteDirectory(path);
 		}
 
 		#endregion
@@ -239,7 +240,7 @@ namespace Raven.Client.Tests.Document
 					documentSession.SaveChanges();
 
 					var darykalSumResults =
-                        documentSession.LuceneQuery<GameEvent>("GameEventCountZoneBySpecificCharacter")
+                        documentSession.Advanced.LuceneQuery<GameEvent>("GameEventCountZoneBySpecificCharacter")
 							.Where("CharacterName:Darykal AND RealmName:Moonglade AND Region:SingleRegion AND DataUploadId:10 ")
 							.SelectFields<ZoneCountResult>("Zone", "Count")
 							.WaitForNonStaleResults(TimeSpan.FromDays(1))
@@ -446,7 +447,7 @@ namespace Raven.Client.Tests.Document
 					documentSession.SaveChanges();
 
 					var darykalSumResults =
-                        documentSession.LuceneQuery<GameEvent>("GameEventCountZoneBySpecificCharacter")
+                        documentSession.Advanced.LuceneQuery<GameEvent>("GameEventCountZoneBySpecificCharacter")
 							.Where("CharacterName:Darykal AND RealmName:Moonglade AND Region:SingleRegion AND DataUploadId:10 ")
 							.SelectFields<ZoneCountResult>("Zone", "Count")
 							.WaitForNonStaleResults(TimeSpan.FromDays(1))

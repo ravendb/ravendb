@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using Raven.Client.Document;
+using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Xunit;
 using System.Linq;
@@ -17,7 +18,7 @@ namespace Raven.Client.Tests.Document
 
 		public void Dispose()
 		{
-			Directory.Delete(path, true);
+            IOExtensions.DeleteDirectory(path);
 		}
 
 		#endregion
@@ -75,7 +76,7 @@ select new { Tag = g.Key, Count = g.Sum(x => (long)x.Count) }",
 					});
 					session.SaveChanges();
 
-                    var tagAndCounts = session.LuceneQuery<TagAndCount>("TagCloud").WaitForNonStaleResults()
+                    var tagAndCounts = session.Advanced.LuceneQuery<TagAndCount>("TagCloud").WaitForNonStaleResults()
 						.ToArray();
 
 					Assert.Equal(1, tagAndCounts.First(x=>x.Tag == "C#").Count);
@@ -163,7 +164,7 @@ select new { Tag = g.Key, Count = g.Sum(x => (long)x.Count) }",
 					});
 					session.SaveChanges();
 
-                    var tagAndCounts = session.LuceneQuery<TagAndCount>("TagCloud").WaitForNonStaleResults()
+                    var tagAndCounts = session.Advanced.LuceneQuery<TagAndCount>("TagCloud").WaitForNonStaleResults()
 					.ToArray();
 
 					Assert.Equal(1, tagAndCounts.Single(x => x.Tag == "C#").Count);
@@ -183,7 +184,7 @@ select new { Tag = g.Key, Count = g.Sum(x => (long)x.Count) }",
 					});
 					session.SaveChanges();
 
-                    tagAndCounts = session.LuceneQuery<TagAndCount>("TagCloud").WaitForNonStaleResults()
+                    tagAndCounts = session.Advanced.LuceneQuery<TagAndCount>("TagCloud").WaitForNonStaleResults()
 						.ToArray();
 
 					Assert.Equal(2, tagAndCounts.Single(x => x.Tag == "C#").Count);
@@ -248,7 +249,7 @@ select new
 					});
 					session.SaveChanges();
 
-                    var tagAndCounts = session.LuceneQuery<ActivityAndCharacterCountAmount>("EventsByActivityAndCharacterCountAmount")
+                    var tagAndCounts = session.Advanced.LuceneQuery<ActivityAndCharacterCountAmount>("EventsByActivityAndCharacterCountAmount")
 						.WaitForNonStaleResults(TimeSpan.FromHours(1))
 						.ToArray();
 

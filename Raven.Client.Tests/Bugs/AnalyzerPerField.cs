@@ -35,14 +35,14 @@ namespace Raven.Client.Tests.Bugs
 
 				using (var s = store.OpenSession())
 				{
-					var movies = s.LuceneQuery<Movie>("Movies")
+                    var movies = s.Advanced.LuceneQuery<Movie>("Movies")
 						.Where("Name:DOLLY")
 						.WaitForNonStaleResults()
 						.ToList();
 
 					Assert.Equal(1, movies.Count);
 
-					movies = s.LuceneQuery<Movie>("Movies")
+                    movies = s.Advanced.LuceneQuery<Movie>("Movies")
 						.Where("Tagline:she's")
 						.WaitForNonStaleResults()
 						.ToList();

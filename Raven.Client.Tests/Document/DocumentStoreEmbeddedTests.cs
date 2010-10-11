@@ -10,6 +10,7 @@ using Raven.Client.Indexes;
 using Raven.Client.Tests.Indexes;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
+using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Xunit;
@@ -25,7 +26,7 @@ namespace Raven.Client.Tests.Document
 
 		public void Dispose()
 		{
-			Directory.Delete(path, true);
+            IOExtensions.DeleteDirectory(path);
 		}
 
 		#endregion
@@ -136,8 +137,8 @@ namespace Raven.Client.Tests.Document
 					{
 						using (var session2 = documentStore.OpenSession())
 						{
-							session2.AllowNonAuthoritiveInformation = false;
-							session2.NonAuthoritiveInformationTimeout = TimeSpan.Zero;
+                            session2.Advanced.AllowNonAuthoritiveInformation = false;
+                            session2.Advanced.NonAuthoritiveInformationTimeout = TimeSpan.Zero;
 							Assert.Throws<NonAuthoritiveInformationException>(()=>session2.Load<Company>(company.Id));
 						}
 					}
@@ -189,7 +190,7 @@ namespace Raven.Client.Tests.Document
                 session2.Store(company2);
                 session2.SaveChanges();
 
-                session.Refresh(company);
+                session.Advanced.Refresh(company);
 
                 Assert.Equal(company2.Name, company.Name);
               
@@ -210,7 +211,7 @@ namespace Raven.Client.Tests.Document
 
 				using(var session2 = documentStore.OpenSession())
 				{
-					var companyFromRaven = session2.LuceneQuery<Company>()
+                    var companyFromRaven = session2.Advanced.LuceneQuery<Company>()
 						.WaitForNonStaleResults()
 						.First();
 					Assert.Equal(companyFromRaven.Id, company.Id);
@@ -281,7 +282,7 @@ namespace Raven.Client.Tests.Document
 
 				using (var session2 = documentStore.OpenSession())
 				{
-					var companyFromRaven = session2.LuceneQuery<Company>()
+                    var companyFromRaven = session2.Advanced.LuceneQuery<Company>()
 						.WaitForNonStaleResults()
 						.First();
 
@@ -428,7 +429,7 @@ namespace Raven.Client.Tests.Document
 			{
 				var company = new Company { Name = "Company Name" };
 				var session = documentStore.OpenSession();
-				session.Stored += o => stored++;
+                session.Advanced.Stored += o => stored++;
 				session.Store(company);
 				Assert.Equal(0, stored);
 				session.SaveChanges();
@@ -451,7 +452,7 @@ namespace Raven.Client.Tests.Document
 				session.SaveChanges();
 
 				var sessions2 = documentStore.OpenSession();
-				sessions2.Stored += o => stored++;
+                sessions2.Advanced.Stored += o => stored++;
 				var c2 = sessions2.Load<Company>(company.Id);
 				sessions2.SaveChanges();
 				Assert.Equal(0, stored);
@@ -554,7 +555,7 @@ namespace Raven.Client.Tests.Document
                                                         });
 
             	var q = session
-                    .LuceneQuery<Company>("company_by_name")
+                   .Advanced.LuceneQuery<Company>("company_by_name")
             		.SelectFields<Company>("Name", "Phone")
             		.WaitForNonStaleResults();
                 var single = q.Single();
@@ -581,11 +582,11 @@ namespace Raven.Client.Tests.Document
             	                                        });
 
 				// Wait until the index is built
-                session.LuceneQuery<Company>("company_by_name")
+                session.Advanced.LuceneQuery<Company>("company_by_name")
 					.WaitForNonStaleResults()
 					.ToArray();
 
-                var companies = session.LuceneQuery<Company>("company_by_name")
+                var companies = session.Advanced.LuceneQuery<Company>("company_by_name")
                     .OrderBy("Phone")
                     .WaitForNonStaleResults()
                     .ToArray();
@@ -601,7 +602,7 @@ namespace Raven.Client.Tests.Document
             using (var documentStore = NewDocumentStore())
             {
                 var session = documentStore.OpenSession();
-                session.UseOptimisticConcurrency = true;
+                session.Advanced.UseOptimisticConcurrency = true;
                 var company = new Company { Name = "Company 1" };
                 session.Store(company);
                 session.SaveChanges();
@@ -668,7 +669,7 @@ namespace Raven.Client.Tests.Document
 			
 				session1.SaveChanges();
 				var session2 = documentStore.OpenSession();
-				var companyFound = session2.LuceneQuery<Company>()
+                var companyFound = session2.Advanced.LuceneQuery<Company>()
 					.WaitForNonStaleResults()
 					.ToArray();
 
@@ -698,7 +699,7 @@ namespace Raven.Client.Tests.Document
 
 				session1.SaveChanges();
 				var session2 = documentStore.OpenSession();
-				var companyFound = session2.LuceneQuery<Company>()
+                var companyFound = session2.Advanced.LuceneQuery<Company>()
 					.WaitForNonStaleResults()
 					.ToArray();
 
@@ -728,7 +729,7 @@ namespace Raven.Client.Tests.Document
 
 					session.SaveChanges();
 
-                    LinqIndexesFromClient.User single = session.LuceneQuery<LinqIndexesFromClient.User>("UsersByLocation")
+                    LinqIndexesFromClient.User single = session.Advanced.LuceneQuery<LinqIndexesFromClient.User>("UsersByLocation")
 						.Where("Name:Yael")
 						.WaitForNonStaleResults()
 						.Single();
@@ -749,7 +750,7 @@ namespace Raven.Client.Tests.Document
 					session.Store(entity);
 					session.SaveChanges();
 
-					session.LuceneQuery<Company>().WaitForNonStaleResults().ToArray();// wait for the index to settle down
+                    session.Advanced.LuceneQuery<Company>().WaitForNonStaleResults().ToArray();// wait for the index to settle down
 				}
 
 				store.DatabaseCommands.DeleteByIndex("Raven/DocumentsByEntityName", new IndexQuery
@@ -759,7 +760,7 @@ namespace Raven.Client.Tests.Document
 
 				using (var session = store.OpenSession())
 				{
-					Assert.Empty(session.LuceneQuery<Company>().WaitForNonStaleResults().ToArray());
+                    Assert.Empty(session.Advanced.LuceneQuery<Company>().WaitForNonStaleResults().ToArray());
 				}
 			}
 		}
@@ -775,7 +776,7 @@ namespace Raven.Client.Tests.Document
 					session.Store(entity);
 					session.SaveChanges();
 
-					session.LuceneQuery<Company>().WaitForNonStaleResults().ToArray();// wait for the index to settle down
+                    session.Advanced.LuceneQuery<Company>().WaitForNonStaleResults().ToArray();// wait for the index to settle down
 				}
 
 				store.DatabaseCommands.UpdateByIndex("Raven/DocumentsByEntityName", new IndexQuery

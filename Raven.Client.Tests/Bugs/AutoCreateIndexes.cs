@@ -28,7 +28,7 @@ namespace Raven.Client.Tests.Bugs
 
 				using (var s = store.OpenSession())
 				{
-					var movies = s.LuceneQuery<Movie>("Movies/ByActor")
+                    var movies = s.Advanced.LuceneQuery<Movie>("Movies/ByActor")
 						.Where("Name:Dolly")
 						.WaitForNonStaleResults()
 						.ToList();
@@ -38,18 +38,14 @@ namespace Raven.Client.Tests.Bugs
 			}
 		}
 
-		public class Movies_ByActor : AbstractIndexCreationTask
+		public class Movies_ByActor : AbstractIndexCreationTask<Movie>
 		{
-			public override IndexDefinition CreateIndexDefinition()
-			{
-				return new IndexDefinition<Movie, Movie>
-				{
-					Map = movies => from movie in movies
-					                select new {movie.Name},
-                    Indexes = {{x=>x.Name, FieldIndexing.Analyzed}}
-				}
-				.ToIndexDefinition(DocumentStore.Conventions);
-			}
+		    public Movies_ByActor()
+		    {
+		        Map = movies => from movie in movies
+		                        select new {movie.Name};
+                Index(x=>x.Name, FieldIndexing.Analyzed);
+		    }
 		}
 
 		public class Movie

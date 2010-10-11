@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Raven.Client.Indexes;
+using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Xunit;
 using Raven.Database.Data;
@@ -41,9 +42,7 @@ namespace Raven.Tests.Linq
             //When running in the XUnit GUI strange things happen is we just create a path relative to 
             //the .exe itself, so make our folder in the System temp folder instead ("<user>\AppData\Local\Temp")
             directoryName = Path.Combine(Path.GetTempPath(), "ravendb.RavenQueryProvider");
-            if (Directory.Exists(directoryName)) {
-                Directory.Delete(directoryName, true);
-            }
+            IOExtensions.DeleteDirectory(directoryName);
         }
 
         [Fact]
@@ -448,7 +447,7 @@ namespace Raven.Tests.Linq
                     WaitForQueryToComplete(s, "ByLineCost");                   
 
                     //This is the lucene query we want to mimic
-                    var luceneResult = s.LuceneQuery<OrderItem>("ByLineCost")
+                    var luceneResult = s.Advanced.LuceneQuery<OrderItem>("ByLineCost")
                             .Where("Cost_Range:{Dx1 TO NULL}")
                             .SelectFields<SomeDataProjection>("Cost")                           
                             .ToArray();                                                      
@@ -499,7 +498,7 @@ namespace Raven.Tests.Linq
             do
             {
                 //doesn't matter what the query is here, just want to see if it's stale or not
-                results = session.LuceneQuery<User>(indexName)                              
+                results = session.Advanced.LuceneQuery<User>(indexName)                              
                               .Where("") 
                               .QueryResult;   
 

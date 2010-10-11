@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Raven.Database.Extensions;
 using Xunit;
 using System.Dynamic;
 using System.Runtime.CompilerServices;
@@ -20,11 +21,7 @@ namespace Raven.Client.Tests.Document
             //When running in the XUnit GUI strange things happen is we just create a path relative to 
             //the .exe itself, so make our folder in the System temp folder instead ("<user>\AppData\Local\Temp")
             string directoryName =  Path.Combine(Path.GetTempPath(), "ravendb.RavenDynamicDocs");
-            if (Directory.Exists(directoryName))
-            {
-                Directory.Delete(directoryName, true);
-            }
-
+            IOExtensions.DeleteDirectory(directoryName);
             dynamic person = new CustomDynamicClass();
             person.FirstName = "Ellen";
             person.LastName = "Adams";
@@ -55,7 +52,7 @@ namespace Raven.Client.Tests.Document
                     Assert.False(String.IsNullOrEmpty(idPerson));
 
                     session.SaveChanges();
-                    session.Clear();
+                    session.Advanced.Clear();
                     //Pull the docs back out of RavenDB and see if the values are the same
                     dynamic employeeLoad = session.Load<dynamic>(idEmployee);
 					Assert.Equal("John Smith", employeeLoad.Name);

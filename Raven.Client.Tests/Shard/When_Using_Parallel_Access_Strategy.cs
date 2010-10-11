@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading;
 using Raven.Client.Document;
 using Raven.Client.Tests.Document;
+using Raven.Database.Extensions;
 using Raven.Database.Server;
 using Raven.Server;
 using Xunit;
@@ -28,7 +29,7 @@ namespace Raven.Client.Tests.Shard
 
 		public void Dispose()
 		{
-			Directory.Delete(path, true);
+            IOExtensions.DeleteDirectory(path);
 		}
 
 		#endregion

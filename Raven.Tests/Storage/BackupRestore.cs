@@ -5,6 +5,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Backup;
 using Raven.Database.Data;
+using Raven.Database.Extensions;
 using Raven.Database.Json;
 using Xunit;
 using System.Linq;
@@ -39,8 +40,7 @@ namespace Raven.Tests.Storage
             else
                 directoryFullName = DirectoryName;
 
-            if (Directory.Exists(directoryFullName))
-                Directory.Delete(directoryFullName, true);
+            IOExtensions.DeleteDirectory(directoryFullName);
         }
 		
 		[Fact]

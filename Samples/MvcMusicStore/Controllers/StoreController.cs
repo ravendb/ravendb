@@ -16,7 +16,7 @@ namespace MvcMusicStore.Controllers
         public ActionResult Index()
         {
             // Retrieve list of Genres from database
-            var genres = session.LuceneQuery<Genre>()
+            var genres = session.Advanced.LuceneQuery<Genre>()
                 .ToArray();
 
             // Set up our ViewModel
@@ -37,7 +37,7 @@ namespace MvcMusicStore.Controllers
         {
             // Retrieve Genre from database
             var genre = session.Load<Genre>(id);
-            var albums = session.LuceneQuery<Album>("AlbumsByGenre")
+            var albums = session.Advanced.LuceneQuery<Album>("AlbumsByGenre")
                 .WhereEquals("Genere",id)
                 .ToArray();
             var viewModel = new StoreBrowseViewModel()
@@ -63,7 +63,7 @@ namespace MvcMusicStore.Controllers
         [ChildActionOnly]
         public ActionResult GenreMenu()
         {
-            return View(session.LuceneQuery<Genre>().ToArray());
+            return View(session.Advanced.LuceneQuery<Genre>().ToArray());
         }
     }
 }

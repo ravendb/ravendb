@@ -143,11 +143,14 @@
     <Compile Include="Json\DynamicUtil.cs" />
     <Compile Include="Json\JsonDynamicConverter.cs" />
     <Compile Include="Data\LinearQuery.cs" />
+    <Compile Include="Linq\ITranslatorDatabaseAccessor.cs" />
     <Compile Include="PerformanceCounters.cs" />
     <Compile Include="Plugins\AbstractBackgroundTask.cs" />
     <Compile Include="Plugins\AbstractDocumentCodec.cs" />
     <Compile Include="Plugins\AbstractDynamicCompilationExtension.cs" />
     <Compile Include="Plugins\Builtins\CleanupOldDynamicIndexes.cs" />
+    <Compile Include="Plugins\Builtins\CreateFolderIcon.cs" />
+    <Compile Include="Plugins\Builtins\DeleteRemovedIndexes.cs" />
     <Compile Include="Plugins\Builtins\FilterRavenInternalDocumentsReadTrigger.cs" />
     <Compile Include="Plugins\AbstractIndexUpdateTrigger.cs" />
     <Compile Include="Plugins\AbstractReadTrigger.cs" />
@@ -285,6 +288,7 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Server\WebUI\raven-data.ico" />
     <Content Include="Server\WebUI\css\Pager.css" />
     <Content Include="Server\WebUI\css\rdb.css" />
     <Content Include="Server\WebUI\css\rdb.jsonEditor.css" />

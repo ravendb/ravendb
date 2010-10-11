@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Reflection;
 using Raven.Client.Document;
+using Raven.Database.Extensions;
 using Xunit;
 using System.Linq;
 
@@ -15,7 +16,7 @@ namespace Raven.Client.Tests.Document
 
 		public void Dispose()
 		{
-			Directory.Delete(path, true);
+            IOExtensions.DeleteDirectory(path); 
 		}
 
 		#endregion
@@ -58,7 +59,7 @@ namespace Raven.Client.Tests.Document
 					});
 					session.SaveChanges();
 
-					IServer[] servers = session.LuceneQuery<IServer>()
+                    IServer[] servers = session.Advanced.LuceneQuery<IServer>()
 						.WaitForNonStaleResults()
 						.ToArray();
 					Assert.Equal(2, servers.Length);

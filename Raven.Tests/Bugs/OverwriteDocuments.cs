@@ -5,6 +5,7 @@ using System.Threading;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Database.Exceptions;
+using Raven.Database.Extensions;
 using Xunit;
 
 namespace Raven.Tests.Bugs
@@ -17,7 +18,7 @@ namespace Raven.Tests.Bugs
             if (documentStore != null)
                 documentStore.Dispose();
 
-            if (Directory.Exists("HiLoData")) Directory.Delete("HiLoData", true);
+            IOExtensions.DeleteDirectory("HiLoData");
             documentStore = new DocumentStore
             {
             	Configuration =
@@ -45,7 +46,7 @@ namespace Raven.Tests.Bugs
 
             using (var session = documentStore.OpenSession())
             {
-            	session.UseOptimisticConcurrency = true;
+            	session.Advanced.UseOptimisticConcurrency = true;
 				var foo = new Foo() { Id = "foos/1", Something = "something1" };
                 session.Store(foo);
             	Assert.Throws<ConcurrencyException>(() => session.SaveChanges());
@@ -84,8 +85,7 @@ namespace Raven.Tests.Bugs
             if (documentStore != null)
                 documentStore.Dispose();
             Thread.Sleep(100);
-            if (Directory.Exists("HiLoData")) 
-                Directory.Delete("HiLoData", true);
+            IOExtensions.DeleteDirectory("HiLoData");
         }
     }
 }

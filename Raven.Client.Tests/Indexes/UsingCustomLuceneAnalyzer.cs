@@ -96,7 +96,7 @@ namespace Raven.Client.Tests.Indexes
         {
             with_index_and_some_entities(delegate(IDocumentSession session)
             {
-                var result = session.LuceneQuery<EntityCount>("someIndex").WaitForNonStaleResults()
+                var result = session.Advanced.LuceneQuery<EntityCount>("someIndex").WaitForNonStaleResults()
                     .WhereEquals("NormalizedName", searchString, true, false)
                     .ToArray();
 
@@ -110,7 +110,7 @@ namespace Raven.Client.Tests.Indexes
         {
             with_index_and_some_entities(delegate(IDocumentSession session)
             {
-                var result = session.LuceneQuery<EntityCount>("someIndex")
+                var result = session.Advanced.LuceneQuery<EntityCount>("someIndex")
                     .WhereEquals("NormalizedName", searchString, true, false)
                     .ToArray();
 
@@ -124,7 +124,7 @@ namespace Raven.Client.Tests.Indexes
             using (var session = store.OpenSession())
             {
                 //doesn't matter what the query is here, just want to see if it's stale or not
-				session.LuceneQuery<object>(indexName)
+                session.Advanced.LuceneQuery<object>(indexName)
             		.Where("")
             		.WaitForNonStaleResultsAsOfNow(TimeSpan.FromSeconds(5))
             		.ToArray();

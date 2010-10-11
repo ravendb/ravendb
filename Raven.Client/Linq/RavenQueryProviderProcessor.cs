@@ -12,7 +12,7 @@ namespace Raven.Client.Linq
 	/// </summary>
 	public class RavenQueryProviderProcessor<T>
 	{
-		private readonly Action<IDocumentQuery<T>> customizeQuery;
+        private readonly Action<IDocumentQueryCustomization> customizeQuery;
 		private readonly string indexName;
 		private readonly IDocumentSession session;
 		private bool chainedWhere;
@@ -35,7 +35,7 @@ namespace Raven.Client.Linq
 		/// <param name="indexName">Name of the index.</param>
 		public RavenQueryProviderProcessor(
 			IDocumentSession session,
-			Action<IDocumentQuery<T>> customizeQuery,
+            Action<IDocumentQueryCustomization> customizeQuery,
 			string indexName)
 		{
 			FieldsToFetch = new List<string>();
@@ -713,7 +713,7 @@ namespace Raven.Client.Linq
         /// <returns></returns>
         protected virtual IDocumentQuery<T> CreateDocumentQuery()
         {
-            return session.LuceneQuery<T>(indexName);
+            return session.Advanced.LuceneQuery<T>(indexName);
         }
         
 		/// <summary>
@@ -727,12 +727,12 @@ namespace Raven.Client.Linq
 			ProcessExpression(expression);
 
 			if (customizeQuery != null)
-				customizeQuery(luceneQuery);
+				customizeQuery((IDocumentQueryCustomization)luceneQuery);
 
 			if(newExpressionType == typeof(T))
 				return ExecuteQuery<T>();
 
-			var genericExecuteQuery = GetType().GetMethod("ExecuteQuery", BindingFlags.Instance|BindingFlags.NonPublic);
+			var genericExecuteQuery = typeof(RavenQueryProviderProcessor<T>).GetMethod("ExecuteQuery", BindingFlags.Instance|BindingFlags.NonPublic);
 			var executeQueryWithProjectionType = genericExecuteQuery.MakeGenericMethod(newExpressionType);
 			return executeQueryWithProjectionType.Invoke(this, new object[0]);
 		}

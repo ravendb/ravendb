@@ -7,6 +7,7 @@ using Raven.Client.Shard.ShardStrategy.ShardAccess;
 using Raven.Client.Shard.ShardStrategy.ShardResolution;
 using Raven.Client.Shard.ShardStrategy.ShardSelection;
 using Raven.Client.Tests.Document;
+using Raven.Database.Extensions;
 using Raven.Database.Server;
 using Raven.Server;
 using Xunit;
@@ -149,7 +150,7 @@ namespace Raven.Client.Tests.Shard
 
              
                 //get all, should automagically retrieve from each shard
-                var allCompanies = session.LuceneQuery<Company>()
+                var allCompanies = session.Advanced.LuceneQuery<Company>()
 					.WaitForNonStaleResults()
 					.ToArray();
 
@@ -173,7 +174,7 @@ namespace Raven.Client.Tests.Shard
             {
                 try
                 {
-                    Directory.Delete(path, true);
+                    IOExtensions.DeleteDirectory(path);
                 }
                 catch (Exception) { }
             }

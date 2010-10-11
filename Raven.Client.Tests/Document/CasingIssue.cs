@@ -3,6 +3,7 @@ using System.IO;
 using System.Reflection;
 using Raven.Client.Document;
 using Raven.Database;
+using Raven.Database.Extensions;
 using Xunit;
 using System.Linq;
 
@@ -16,7 +17,7 @@ namespace Raven.Client.Tests.Document
 
 		public void Dispose()
 		{
-			Directory.Delete(path, true);
+            IOExtensions.DeleteDirectory(path);
 		}
 
 		#endregion
@@ -48,7 +49,7 @@ namespace Raven.Client.Tests.Document
 				session.Store(new Post{Title = "test", Body = "casing"});
 				session.SaveChanges();
 
-				var single = session.LuceneQuery<Post>()
+                var single = session.Advanced.LuceneQuery<Post>()
 					.WaitForNonStaleResults()
 					.Single();
 
@@ -66,7 +67,7 @@ namespace Raven.Client.Tests.Document
 				session.Store(entity);
 				session.SaveChanges();
 
-				var single = session.LuceneQuery<Post>()
+                var single = session.Advanced.LuceneQuery<Post>()
 					.WaitForNonStaleResults()
 					.Single();
 

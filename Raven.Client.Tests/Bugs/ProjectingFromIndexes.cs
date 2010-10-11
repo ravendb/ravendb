@@ -76,7 +76,7 @@ namespace Raven.Client.Tests.Bugs
 
                 using (var s = documentStore.OpenSession())
                 {
-                    var imageByTagSearchModels = s.LuceneQuery<ImageByTagSearchModel>("ImagesByTag")
+                    var imageByTagSearchModels = s.Advanced.LuceneQuery<ImageByTagSearchModel>("ImagesByTag")
                         .OrderBy("TagName")
                         .WaitForNonStaleResults()
                         .ToList();

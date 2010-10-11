@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using Lucene.Net.Store;
 using Raven.Client.Document;
+using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Database.Server;
 using Xunit;
@@ -25,7 +26,7 @@ namespace Raven.Client.Tests.Bugs
 
         public void Dispose()
         {
-            Directory.Delete(path, true);
+            IOExtensions.DeleteDirectory(path);
         }
 
         #endregion

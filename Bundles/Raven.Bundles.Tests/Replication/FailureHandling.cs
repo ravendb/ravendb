@@ -1,5 +1,6 @@
 using System.Net;
 using System.Threading;
+using Raven.Bundles.Tests.Versioning;
 using Raven.Client.Exceptions;
 using Xunit;
 

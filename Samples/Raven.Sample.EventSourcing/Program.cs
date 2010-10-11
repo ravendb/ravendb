@@ -76,7 +76,7 @@ namespace Raven.Sample.EventSourcing
 
             using(var session = documentStore1.OpenSession())
             {
-                var aggregate = session.LuceneQuery<AggregateHolder>("Aggregates/ShoppingCart")
+                var aggregate = session.Advanced.LuceneQuery<AggregateHolder>("Aggregates/ShoppingCart")
                     .Where("Id:shoppingcarts/12")
                     .Single();
 

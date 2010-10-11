@@ -11,6 +11,7 @@ using log4net.Config;
 using log4net.Filter;
 using log4net.Layout;
 using Raven.Database;
+using Raven.Database.Extensions;
 using Raven.Database.Server;
 
 namespace Raven.Server
@@ -81,8 +82,7 @@ namespace Raven.Server
 #if DEBUG
                 case "test":
                     var dataDirectory = new RavenConfiguration().DataDirectory;
-                    if (Directory.Exists(dataDirectory))
-                        Directory.Delete(dataDirectory, true);
+                    IOExtensions.DeleteDirectory(dataDirectory);
 
                     RunInDebugMode(anonymousUserAccessMode: AnonymousUserAccessMode.All);
                     break;

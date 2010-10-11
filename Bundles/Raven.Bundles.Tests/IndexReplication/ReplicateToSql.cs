@@ -26,10 +26,9 @@ namespace Raven.Bundles.Tests.IndexReplication
 
         public ReplicateToSql()
         {
-            path = Path.GetDirectoryName(Assembly.GetAssembly(typeof (Versioning)).CodeBase);
+            path = Path.GetDirectoryName(Assembly.GetAssembly(typeof (Versioning.Versioning)).CodeBase);
             path = Path.Combine(path, "TestDb").Substring(6);
-            if (Directory.Exists(path))
-                Directory.Delete(path, true);
+            database::Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
             ravenDbServer = new RavenDbServer(
                 new database::Raven.Database.RavenConfiguration
                 {
@@ -113,8 +112,7 @@ CREATE TABLE [dbo].[QuestionSummaries]
         {
             documentStore.Dispose();
             ravenDbServer.Dispose();
-            if (Directory.Exists(path))
-                Directory.Delete(path, true);
+            database::Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
         }
 
         #endregion
@@ -157,7 +155,7 @@ CREATE TABLE [dbo].[QuestionSummaries]
 
             using (var session = documentStore.OpenSession())
             {
-                session.LuceneQuery<Question>("Questions/Votes")
+                session.Advanced.LuceneQuery<Question>("Questions/Votes")
                     .WaitForNonStaleResults()
                     .SelectFields<QuestionSummary>("__document_id", "Title", "UpVotes", "DownVotes")
                     .ToList();
@@ -258,7 +256,7 @@ CREATE TABLE [dbo].[QuestionSummaries]
 
             using (var session = documentStore.OpenSession())
             {
-                session.LuceneQuery<Question>("Questions/Votes")
+                session.Advanced.LuceneQuery<Question>("Questions/Votes")
                     .WaitForNonStaleResults()
                     .SelectFields<QuestionSummary>("__document_id", "Title", "UpVotes", "DownVotes")
                     .ToList();
@@ -284,7 +282,7 @@ CREATE TABLE [dbo].[QuestionSummaries]
 
             using (var session = documentStore.OpenSession())
             {
-                session.LuceneQuery<Question>("Questions/Votes")
+                session.Advanced.LuceneQuery<Question>("Questions/Votes")
                     .WaitForNonStaleResults()
                     .SelectFields<QuestionSummary>("__document_id", "Title", "UpVotes", "DownVotes")
                     .ToList();

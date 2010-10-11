@@ -1,5 +1,6 @@
 using System.Linq;
 using Raven.Bundles.Authorization.Model;
+using Raven.Bundles.Tests.Versioning;
 using Raven.Client.Authorization;
 using Raven.Client.Exceptions;
 using Xunit;
@@ -142,7 +143,7 @@ Veto reason: Could not find any permissions for operation: /Company/Bid on compa
 			{
 				s.SecureFor(UserId, "/Company/Bid");
 
-				Assert.Equal(0, s.LuceneQuery<Company>()
+                Assert.Equal(0, s.Advanced.LuceneQuery<Company>()
 									.WaitForNonStaleResults()
 				                	.ToList().Count);
 			}

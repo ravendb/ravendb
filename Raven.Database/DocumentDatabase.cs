@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Transactions;
@@ -472,12 +473,25 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
                         throw new IndexDisabledException(indexFailureInformation);
                     }
                     var docRetriever = new DocumentRetriever(actions, ReadTriggers);
-                    var collection = from queryResult in IndexStorage.Query(index, query, docRetriever.ShouldIncludeResultInQuery)
-                                     select docRetriever.RetrieveDocumentForQuery(queryResult)
+                    var collection = from queryResult in IndexStorage.Query(index, query, result => docRetriever.ShouldIncludeResultInQuery(result, query.FieldsToFetch))
+                                     select docRetriever.RetrieveDocumentForQuery(queryResult, query.FieldsToFetch)
                                          into doc
                                          where doc != null
-                                         select doc.ToJson();
-                    list.AddRange(collection);
+                                         select doc;
+
+                    IEnumerable<JObject> results;
+                    if (abstractViewGenerator != null && 
+                        abstractViewGenerator.ResultTransformerDefinition != null)
+                    {
+                        results = abstractViewGenerator.ResultTransformerDefinition(docRetriever, collection.Select(x => new DynamicJsonObject(x.ToJson())))
+                            .Select<object, JObject>(JsonExtensions.ToJObject);
+                    }
+                    else
+                    {
+                        results = collection.Select(x => x.ToJson());
+                    }
+
+                    list.AddRange(results);
                 });
             return new QueryResult
             {
@@ -791,9 +805,9 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 
         }
         
-        public QueryResult ExecuteDynamicQuery(IndexQuery indexQuery)
+        public QueryResult ExecuteDynamicQuery(string entityName, IndexQuery indexQuery)
         {
-            return dynamicQueryRunner.ExecuteDynamicQuery(indexQuery);
+            return dynamicQueryRunner.ExecuteDynamicQuery(entityName, indexQuery);
         }
 
         private void UnloadQueriesAppDomain()

@@ -43,11 +43,7 @@ namespace Raven.Client.Linq
             {
                 throw new ArgumentNullException("expression");
             }
-            if (!typeof(IQueryable<T>).IsAssignableFrom(expression.Type))
-            {
-                throw new ArgumentOutOfRangeException("expression");
-            }
-            this.provider = provider;
+		    this.provider = provider.For<T>();
             this.expression = expression;
         }
 
@@ -89,7 +85,7 @@ namespace Raven.Client.Linq
 		/// </summary>
 		/// <param name="action">The action.</param>
 		/// <returns></returns>
-        public IRavenQueryable<T> Customize(Action<IDocumentQuery<T>> action)
+        public IRavenQueryable<T> Customize(Action<IDocumentQueryCustomization> action)
         {
             provider.Customize(action);
             return this;

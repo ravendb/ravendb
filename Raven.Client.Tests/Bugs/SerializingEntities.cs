@@ -5,6 +5,7 @@ using System.IO;
 using Newtonsoft.Json;
 using Raven.Client.Document;
 using Raven.Database;
+using Raven.Database.Extensions;
 using Raven.Server;
 using Xunit;
 
@@ -66,8 +67,7 @@ namespace Raven.Client.Tests.Bugs
 		[Fact]
 		public void Daniil_CanSaveProperly()
 		{
-			if (Directory.Exists("Data"))
-				Directory.Delete("Data", true);
+            IOExtensions.DeleteDirectory("Data");
 			try
 			{
 				using(new RavenDbServer(new RavenConfiguration
@@ -108,17 +108,15 @@ namespace Raven.Client.Tests.Bugs
 			}
 			finally
 			{
-				if (Directory.Exists("Data"))
-					Directory.Delete("Data", true);
+                IOExtensions.DeleteDirectory("Data");
 			}
 		}
 
 		[Fact]
 		public void WillNotSerializeEvents()
 		{
-			if (Directory.Exists("Data"))
-				Directory.Delete("Data", true);
-			try
+            IOExtensions.DeleteDirectory("Data");
+            try
 			{
 				using (var documentStore = new DocumentStore())
 				{
@@ -139,8 +137,7 @@ namespace Raven.Client.Tests.Bugs
 			}
 			finally
 			{
-				if (Directory.Exists("Data"))
-					Directory.Delete("Data", true);
+                IOExtensions.DeleteDirectory("Data");
 			}
 		}
 	}

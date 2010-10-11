@@ -12,21 +12,21 @@ namespace Raven.Tests.Indexes
         [Fact]
         public void CanExtractTermsFromRangedQuery()
         {
-            var mapping = Data.DynamicQueryMapping.Create("Term:[0 TO 10]");
+            var mapping = Data.DynamicQueryMapping.Create("Term:[0 TO 10]",null);
             Assert.Equal("Term", mapping.Items[0].From);
         }
 
         [Fact]
         public void CanExtractTermsFromEqualityQuery()
         {
-            var mapping = Data.DynamicQueryMapping.Create("Term:Whatever");
+            var mapping = Data.DynamicQueryMapping.Create("Term:Whatever", null);
             Assert.Equal("Term", mapping.Items[0].From);
         }
 
         [Fact]
         public void CanExtractMultipleTermsQuery()
         {
-            var mapping = Data.DynamicQueryMapping.Create("Term:Whatever OR Term2:[0 TO 10]");
+            var mapping = Data.DynamicQueryMapping.Create("Term:Whatever OR Term2:[0 TO 10]", null);
 
             Assert.Equal(2, mapping.Items.Length);
             Assert.True(mapping.Items.Any(x => x.From == "Term"));
@@ -36,7 +36,7 @@ namespace Raven.Tests.Indexes
         [Fact]
         public void CanExtractTermsFromComplexQuery()
         {
-            var mapping = Data.DynamicQueryMapping.Create("+(Term:bar Term2:baz) +Term3:foo -Term4:rob");
+            var mapping = Data.DynamicQueryMapping.Create("+(Term:bar Term2:baz) +Term3:foo -Term4:rob", null);
             Assert.Equal(4, mapping.Items.Length);
             Assert.True(mapping.Items.Any(x => x.From == "Term"));
             Assert.True(mapping.Items.Any(x => x.From == "Term2"));
@@ -47,7 +47,7 @@ namespace Raven.Tests.Indexes
         [Fact]
         public void CanExtractMultipleNestedTermsQuery()
         {
-            var mapping = Data.DynamicQueryMapping.Create("Term:Whatever OR (Term2:Whatever AND Term3:Whatever)");
+            var mapping = Data.DynamicQueryMapping.Create("Term:Whatever OR (Term2:Whatever AND Term3:Whatever)", null);
             Assert.Equal(3, mapping.Items.Length);
             Assert.True(mapping.Items.Any(x => x.From == "Term"));
             Assert.True(mapping.Items.Any(x => x.From == "Term2"));
@@ -68,7 +68,7 @@ namespace Raven.Tests.Indexes
             };
 
             var definition = mapping.CreateIndexDefinition();
-            Assert.Equal(@"from doc in docs select new { Name = doc.Name }", definition.Map);
+            Assert.Equal("from doc in docs\r\nselect new { Name = doc.Name }", definition.Map);
                 
         }
 
@@ -86,7 +86,7 @@ namespace Raven.Tests.Indexes
             };
 
             var definition = mapping.CreateIndexDefinition();
-            Assert.Equal(@"from doc in docs from docTagsItem in doc.Tags select new { docTagsName = docTagsItem.Name }", definition.Map);
+            Assert.Equal("from doc in docs\r\nfrom docTagsItem in doc.Tags\r\nselect new { docTagsName = docTagsItem.Name }", definition.Map);
         }
 
         [Fact]
@@ -103,7 +103,7 @@ namespace Raven.Tests.Indexes
             };
 
             var definition = mapping.CreateIndexDefinition();
-            Assert.Equal(@"from doc in docs select new { UserName = doc.User.Name }", definition.Map);
+            Assert.Equal("from doc in docs\r\nselect new { UserName = doc.User.Name }", definition.Map);
         }
     }
 }

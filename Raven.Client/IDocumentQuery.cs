@@ -18,6 +18,18 @@ namespace Raven.Client
 		IDocumentQuery<T> Include(string path);
 
         /// <summary>
+        /// This function exists solely to forbid in memory where clause on IDocumentQuery, because
+        /// that is nearly always a mistake.
+        /// </summary>
+        [Obsolete(@"
+You cannot issue an in memory filter - such as Where(x=>x.Name == ""Ayende"") - on IDocumentQuery. 
+This is likely a bug, because this will execute the filter in memory, rather than in RavenDB.
+Consider using session.Query<T>() instead of session.LuceneQuery<T>. The session.Query<T>() method fully supports Linq queries, while session.LuceneQuery<T>() is intended for lower level API access.
+If you really want to do in memory filtering on the data returned from the query, you can use: session.LuceneQuery<T>().ToList().Where(x=>x.Name == ""Ayende"")
+", true)]
+	    IEnumerable<T> Where(Func<T, bool> predicate);
+
+        /// <summary>
         /// Includes the specified path in the query, loading the document specified in that path
         /// </summary>
         /// <param name="path">The path.</param>
@@ -240,4 +252,54 @@ namespace Raven.Client
 		/// <param name="descending">if set to <c>true</c> [descending].</param>
 		IDocumentQuery<T> AddOrder(string fieldName, bool descending);
 	}
+
+
+    /// <summary>
+    /// Customize the document query
+    /// </summary>
+    public interface IDocumentQueryCustomization
+    {
+        /// <summary>
+        /// Instructs the query to wait for non stale results as of now.
+        /// </summary>
+        /// <returns></returns>
+        IDocumentQueryCustomization WaitForNonStaleResultsAsOfNow();
+        /// <summary>
+        /// Instructs the query to wait for non stale results as of now for the specified timeout.
+        /// </summary>
+        /// <param name="waitTimeout">The wait timeout.</param>
+        /// <returns></returns>
+        IDocumentQueryCustomization WaitForNonStaleResultsAsOfNow(TimeSpan waitTimeout);
+
+        /// <summary>
+        /// Instructs the query to wait for non stale results as of the cutoff date.
+        /// </summary>
+        /// <param name="cutOff">The cut off.</param>
+        /// <returns></returns>
+        IDocumentQueryCustomization WaitForNonStaleResultsAsOf(DateTime cutOff);
+        /// <summary>
+        /// Instructs the query to wait for non stale results as of the cutoff date for the specified timeout
+        /// </summary>
+        /// <param name="cutOff">The cut off.</param>
+        /// <param name="waitTimeout">The wait timeout.</param>
+        IDocumentQueryCustomization WaitForNonStaleResultsAsOf(DateTime cutOff, TimeSpan waitTimeout);
+
+        /// <summary>
+        /// EXPERT ONLY: Instructs the query to wait for non stale results.
+        /// This shouldn't be used outside of unit tests unless you are well aware of the implications
+        /// </summary>
+        IDocumentQueryCustomization WaitForNonStaleResults();
+        /// <summary>
+        /// EXPERT ONLY: Instructs the query to wait for non stale results for the specified wait timeout.
+        /// This shouldn't be used outside of unit tests unless you are well aware of the implications
+        /// </summary>
+        /// <param name="waitTimeout">The wait timeout.</param>
+        IDocumentQueryCustomization WaitForNonStaleResults(TimeSpan waitTimeout);
+        /// <summary>
+        /// Selects the specified fields directly from the index
+        /// </summary>
+        /// <typeparam name="TProjection">The type of the projection.</typeparam>
+        /// <param name="fields">The fields.</param>
+        IDocumentQuery<TProjection> SelectFields<TProjection>(params string[] fields);
+    }
 }

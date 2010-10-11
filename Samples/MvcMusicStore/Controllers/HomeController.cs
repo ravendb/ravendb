@@ -25,7 +25,7 @@ namespace MvcMusicStore.Controllers
         {
            var session = MvcApplication.CurrentSession;
 
-           return session.LuceneQuery<Album>("AlbumsByCountSold")
+           return session.Advanced.LuceneQuery<Album>("AlbumsByCountSold")
                 .Take(count)
                 .OrderBy("-Quantity")
                 .ToArray();
@@ -36,7 +36,7 @@ namespace MvcMusicStore.Controllers
             var session = MvcApplication.CurrentSession;
 
             // Get count most sold albums ids
-            var topSoldAlbumIds = session.LuceneQuery<SoldAlbum>("SoldAlbums")
+            var topSoldAlbumIds = session.Advanced.LuceneQuery<SoldAlbum>("SoldAlbums")
                 .OrderBy("-Quantity")
                 .Take(count)
                 .Select(x=>x.Album)
@@ -48,7 +48,7 @@ namespace MvcMusicStore.Controllers
             if(topSoldAlbums.Length < count)
             {
                 // top it off from the unsold albums
-                var justRegularAlbums = session.LuceneQuery<Album>()
+                var justRegularAlbums = session.Advanced.LuceneQuery<Album>()
                     .Take(count);
                 topSoldAlbums = topSoldAlbums.Concat(justRegularAlbums)
                     .Distinct()
@@ -68,7 +68,7 @@ namespace MvcMusicStore.Controllers
                     int count = 0;
                     do
                     {
-                        var albums = session.LuceneQuery<Album>()
+                        var albums = session.Advanced.LuceneQuery<Album>()
                             .Skip(count)
                             .Take(128)
                             .ToArray();
@@ -77,7 +77,7 @@ namespace MvcMusicStore.Controllers
 
                         foreach (var album in albums)
                         {
-                            var result = session.LuceneQuery<SoldAlbum>("SoldAlbums")
+                            var result = session.Advanced.LuceneQuery<SoldAlbum>("SoldAlbums")
                                 .Where("Album:" + album.Id)
                                 .SingleOrDefault();
 
@@ -87,7 +87,7 @@ namespace MvcMusicStore.Controllers
                         count += albums.Length;
 
                         session.SaveChanges();
-                        session.Clear();
+                        session.Advanced.Clear();
                     } while (true); 
                 }
             }

@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading;
 using Raven.Client.Document;
 using Raven.Client.Tests.Document;
+using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Database.Server;
 using Xunit;
@@ -24,8 +25,7 @@ namespace Raven.Client.Tests.Bugs
 
 		public void Dispose()
 		{
-			Thread.Sleep(100);
-			Directory.Delete(path, true);
+            IOExtensions.DeleteDirectory(path);
 		}
 
 		[Fact]
@@ -61,14 +61,14 @@ namespace Raven.Client.Tests.Bugs
 					session.Store(new Company {Name = "Nunc volutpat malesuada"});
 					session.SaveChanges();
 
-					session.LuceneQuery<Company>("CompaniesByName").WaitForNonStaleResults().ToArray();
+                    session.Advanced.LuceneQuery<Company>("CompaniesByName").WaitForNonStaleResults().ToArray();
 						// wait for the index to settle down
 				}
 
 				using (var session = documentStore.OpenSession())
 				{
 					var q = session
-						.LuceneQuery<Company>("CompaniesByName")
+                        .Advanced.LuceneQuery<Company>("CompaniesByName")
 						.OrderBy("NameForSorting")
 						.ToArray();
 
@@ -79,7 +79,7 @@ namespace Raven.Client.Tests.Bugs
 					Assert.Equal("Quisque vulputate eros", q[4].Name);
 
 					q = session
-						.LuceneQuery<Company>("CompaniesByName")
+                        .Advanced.LuceneQuery<Company>("CompaniesByName")
 						.Where("Name:vul*")
 						.OrderBy("NameForSorting")
 						.Take(3)

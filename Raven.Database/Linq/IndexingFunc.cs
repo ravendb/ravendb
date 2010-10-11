@@ -12,4 +12,10 @@ namespace Raven.Database.Linq
 	/// Get the group by value from the document
 	/// </summary>
 	public delegate dynamic GroupByKeyFunc(dynamic source);
+
+    /// <summary>
+    /// 	Defining the translator function for a set of results
+    ///     about to sent to the user and apply final processing
+    /// </summary>
+    public delegate IEnumerable<dynamic> TranslatorFunc(ITranslatorDatabaseAccessor database, IEnumerable<dynamic> source);
 }

@@ -121,7 +121,7 @@ task Release -depends Test,DoRelease {
 }
 
 task CopySamples {
-	$samples = @("MvcMusicStore", "Raven.Sample.ShardClient", "Raven.Sample.Failover", "Raven.Sample.Replication", "Raven.Sample.EventSourcing", "Raven.Bundles.Sample.EventSourcing.ShoppingCartAggregator", "Raven.Samples.IndexReplication")
+	$samples = @("MvcMusicStore", "Raven.Sample.ShardClient", "Raven.Sample.Failover", "Raven.Sample.Replication", "Raven.Sample.EventSourcing", "Raven.Bundles.Sample.EventSourcing.ShoppingCartAggregator", "Raven.Samples.IndexReplication", "Raven.Samples.Includes", "Raven.Sample.SimpleClient", "Raven.Sample.ComplexSharding")
 	$exclude = @("bin", "obj", "Data", "Plugins")
 	
 	foreach ($sample in $samples) {
@@ -133,6 +133,10 @@ task CopySamples {
       
       Delete-Sample-Data-For-Release "$build_dir\Output\Samples\$sample" 
 	}
+	
+	cp "$base_dir\Samples\Raven.Samples.sln" "$build_dir\Output\Samples" -force
+      
+	exec { .\Utilities\Binaries\Raven.Samples.PrepareForRelease.exe "$build_dir\Output\Samples\Raven.Samples.sln" "$build_dir\Output" }
 }
 
 task CreateOutpuDirectories -depends CleanOutputDirectory {

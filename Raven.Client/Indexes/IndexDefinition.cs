@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using System.Text.RegularExpressions;
 using Raven.Client.Document;
 using Raven.Database.Indexing;
+using System.Linq;
 
 namespace Raven.Client.Indexes
 {
@@ -26,7 +27,13 @@ namespace Raven.Client.Indexes
 		/// <value>The reduce.</value>
 		public Expression<Func<IEnumerable<TReduceResult>, IEnumerable>> Reduce { get; set; }
 
-		/// <summary>
+        /// <summary>
+        /// Gets or sets the reduce function
+        /// </summary>
+        /// <value>The reduce.</value>
+        public Expression<Func<IClientSideDatabase,IEnumerable<TReduceResult>, IEnumerable>> ResultTransformer { get; set; }
+
+	    /// <summary>
 		/// Gets or sets the stores options
 		/// </summary>
 		/// <value>The stores.</value>
@@ -63,6 +70,7 @@ namespace Raven.Client.Indexes
 			{
 				Map = PruneToFailureLinqQueryAsStringToWorkableCode(Map, convention, "docs." + convention.GetTypeTagName(typeof(TDocument))),
 				Reduce = PruneToFailureLinqQueryAsStringToWorkableCode(Reduce, convention, "results"),
+                ResultTransformer = PruneToFailureLinqQueryAsStringToWorkableCode(ResultTransformer, convention, "results"),
 				Indexes = ConvertToStringDictionary(Indexes),
 				Stores = ConvertToStringDictionary(Stores),
 				SortOptions = ConvertToStringDictionary(SortOptions)
@@ -87,8 +95,8 @@ namespace Raven.Client.Indexes
 		}
 
 
-		private static string PruneToFailureLinqQueryAsStringToWorkableCode<T>(
-			Expression<Func<IEnumerable<T>, IEnumerable>> expr, 
+		private static string PruneToFailureLinqQueryAsStringToWorkableCode(
+			LambdaExpression expr, 
 			DocumentConvention convention,
 			string querySource)
 		{
@@ -110,7 +118,7 @@ namespace Raven.Client.Indexes
             var linqQuery =expression.ToString();
 #endif
 
-			linqQuery = querySource + linqQuery.Substring(expr.Parameters[0].Name.Length);
+			linqQuery = querySource + linqQuery.Substring(expr.Parameters.First(x=>x.Type!=typeof(IClientSideDatabase)).Name.Length);
 
 			linqQuery = ReplaceAnonymousTypeBraces(linqQuery);
 			linqQuery = Regex.Replace(linqQuery, @"new ((VB\$)|(<>))[\w_]+`\d+", "new ");// remove anonymous types
@@ -164,8 +172,19 @@ namespace Raven.Client.Indexes
 			return linqQuery;
 		}
 	}
-	
-	/// <summary>
+
+    /// <summary>
+    /// DatabaseAccessor for loading documents in the translator
+    /// </summary>
+    public interface IClientSideDatabase
+    {
+        /// <summary>
+        /// Loading a document during result transformers
+        /// </summary>
+        T Load<T>(string docId);
+    }
+
+    /// <summary>
 	/// This class attempts to provide a strongly typed index defintion on the client.
 	/// It is here solely as a convienance, and it is _expected_ to fail in some scenarios.
 	/// The recommended way is to define indexes outside your code, using the Web UI.

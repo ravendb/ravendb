@@ -1,5 +1,6 @@
 using System;
 using Raven.Bundles.Authorization.Model;
+using Raven.Bundles.Tests.Versioning;
 using Raven.Client.Authorization;
 using Xunit;
 

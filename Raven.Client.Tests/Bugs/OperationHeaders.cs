@@ -5,6 +5,7 @@ using System.Reflection;
 using Raven.Client.Document;
 using Raven.Client.Tests.Document;
 using Raven.Database;
+using Raven.Database.Extensions;
 using Raven.Database.Plugins;
 using Raven.Server;
 using Xunit;
@@ -23,7 +24,7 @@ namespace Raven.Client.Tests.Bugs
 
 		public void Dispose()
 		{
-			Directory.Delete(path, true);
+            IOExtensions.DeleteDirectory(path);
 		}
 
 		[Fact]
@@ -46,7 +47,7 @@ namespace Raven.Client.Tests.Bugs
 				RecordOperationHeaders.Hello = null;
 				using(var session = documentStore.OpenSession())
 				{
-					session.DatabaseCommands.OperationsHeaders["Hello"] = "World";
+                    session.Advanced.DatabaseCommands.OperationsHeaders["Hello"] = "World";
 					session.Store(new { Bar = "foo"});
 					session.SaveChanges();
 
@@ -76,7 +77,7 @@ namespace Raven.Client.Tests.Bugs
 				RecordOperationHeaders.Hello = null;
 				using (var session = documentStore.OpenSession())
 				{
-					session.DatabaseCommands.OperationsHeaders["Hello"] = "World";
+                    session.Advanced.DatabaseCommands.OperationsHeaders["Hello"] = "World";
 					session.Store(new { Bar = "foo" });
 					session.SaveChanges();
 

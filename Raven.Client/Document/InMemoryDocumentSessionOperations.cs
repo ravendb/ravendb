@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Reflection;
 using System.Transactions;
@@ -22,7 +23,7 @@ namespace Raven.Client.Document
 	/// <summary>
 	/// Abstract implementation for in memory session operations
 	/// </summary>
-	public abstract class InMemoryDocumentSessionOperations : IInMemoryDocumentSessionOperations
+	public abstract class InMemoryDocumentSessionOperations : IDisposable
 	{
 		private const string RavenEntityName = "Raven-Entity-Name";
 		/// <summary>
@@ -41,7 +42,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Translate between a key and its associated entity
 		/// </summary>
-		protected readonly Dictionary<string, object> entitiesByKey = new Dictionary<string, object>();
+        protected readonly Dictionary<string, object> entitiesByKey = new Dictionary<string, object>(StringComparer.InvariantCultureIgnoreCase);
 		/// <summary>
 		/// The document store associated with this session
 		/// </summary>
