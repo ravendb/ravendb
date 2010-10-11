@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -25,6 +25,7 @@ namespace Raven.Client.Document
 		private bool negate;
 		private readonly IDatabaseCommands databaseCommands;
 		private readonly string indexName;
+        private int currentClauseDepth = 0;
 		/// <summary>
 		/// The list of fields to project directly from the index
 		/// </summary>
@@ -375,12 +376,39 @@ If you really want to do in memory filtering on the data returned from the query
 			return this.WhereEquals(fieldName, value, isAnalyzed, isAnalyzed);
 		}
 
+
+        /// <summary>
+        /// Simplified method for opening a new clause within the query
+        /// </summary>
+        /// <returns></returns>
+        public IDocumentQuery<T> OpenSubclause()
+        {
+            currentClauseDepth++;
+            if (queryText.Length > 0 && queryText[queryText.Length - 1] != '(')
+            {
+                queryText.Append(" ");
+            }
+            this.queryText.Append("(");
+            return this;
+        }
+
+        /// <summary>
+        /// Simplified method for closing a clause within the query
+        /// </summary>
+        /// <returns></returns>
+        public IDocumentQuery<T> CloseSubclause()
+        {
+            currentClauseDepth--;
+            this.queryText.Append(")");
+            return this;
+        }
+
 		/// <summary>
 		/// 	Matches exact value
 		/// </summary>
 		public IDocumentQuery<T> WhereEquals(string fieldName, object value, bool isAnalyzed, bool allowWildcards)
 		{
-			if (queryText.Length > 0)
+			if (queryText.Length > 0 && queryText[queryText.Length-1] != '(')
 			{
 				queryText.Append(" ");
 			}
@@ -950,6 +978,10 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </returns>
 		public override string ToString()
 		{
+            if (currentClauseDepth != 0)
+            {
+                throw new InvalidOperationException(string.Format("A clause was not closed correctly within this query, current clause depth = {0}", currentClauseDepth));
+            }
 			return this.queryText.ToString();
 		}
 

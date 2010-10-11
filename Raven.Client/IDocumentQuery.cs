@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using Raven.Database.Data;
@@ -260,5 +260,17 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name="descending">if set to <c>true</c> [descending].</param>
         /// <param name="fieldType">the type of the field to be sorted.</param>
         IDocumentQuery<T> AddOrder(string fieldName, bool descending, Type fieldType);
+
+        /// <summary>
+        /// Simplified method for opening a new clause within the query
+        /// </summary>
+        /// <returns></returns>
+        IDocumentQuery<T> OpenSubclause();
+
+        /// <summary>
+        /// Simplified method for closing a clause within the query
+        /// </summary>
+        /// <returns></returns>
+        IDocumentQuery<T> CloseSubclause();
 	}
 }

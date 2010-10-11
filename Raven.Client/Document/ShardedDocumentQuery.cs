@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -517,6 +517,25 @@ If you really want to do in memory filtering on the data returned from the query
         }
 
 
+        /// <summary>
+        /// Simplified method for opening a new clause within the query
+        /// </summary>
+        /// <returns></returns>
+        public IDocumentQuery<T> OpenSubclause()
+        {
+            ApplyForAll(x => x.OpenSubclause());
+            return this;
+        }
 
+
+        /// <summary>
+        /// Simplified method for closing a clause within the query
+        /// </summary>
+        /// <returns></returns>
+        public IDocumentQuery<T> CloseSubclause()
+        {
+            ApplyForAll(x => x.CloseSubclause());
+            return this;
+        }
     }
 }
