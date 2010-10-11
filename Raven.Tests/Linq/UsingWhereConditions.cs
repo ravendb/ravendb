@@ -18,18 +18,7 @@ using System.Diagnostics;
  */
 namespace Raven.Tests.Linq
 {
-    public class CommitInfo
-    {
-        public string Id { get; set; }
-        public string Author { get; set; }
-		public string PathInRepo { get; set; }
-		public string Repository { get; set; }
-        public int Revision { get; set; }
-		public DateTime Date { get; set; }
-		public string CommitMessage { get; set; }
-    }
-
-	public class UsingWhereConditions
+    public class UsingWhereConditions
     {
         [Fact]
         public void Can_Use_Where()

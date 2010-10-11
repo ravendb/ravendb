@@ -1,6 +1,4 @@
 using System;
-using Raven.Database.Indexing;
-using Raven.Database.Tasks;
 using Raven.Storage.Managed;
 using Xunit;
 
@@ -90,27 +88,6 @@ namespace Raven.Storage.Tests
 				tx.Batch(mutator => Assert.NotNull(mutator.Tasks.GetMergedTask(out tasks)));
 				Assert.Equal(2, tasks);
 			}
-		}
-	}
-
-	public class MyTask : Task
-	{
-		public override bool TryMerge(Task task)
-		{
-			return true;
-		}
-
-		public override void Execute(WorkContext context)
-		{
-			
-		}
-
-		public override Task Clone()
-		{
-			return new MyTask
-			{
-				Index = Index,
-			};
 		}
 	}
 }
