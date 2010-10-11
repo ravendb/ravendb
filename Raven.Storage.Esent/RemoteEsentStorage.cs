@@ -10,7 +10,7 @@ namespace Raven.Storage.Esent
     {
         private readonly JET_INSTANCE instance;
         private readonly TableColumnsCache tableColumnsCache;
-        private string database;
+        private readonly string database;
 
         public RemoteEsentStorage(RemoteEsentStorageState state)
         {

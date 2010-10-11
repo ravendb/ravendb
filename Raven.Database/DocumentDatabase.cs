@@ -14,6 +14,7 @@ using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
+using Raven.Database.LinearQueries;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
@@ -232,7 +233,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
         }
 
 		private static int sequentialUuidCounter;
-        private QueryRunner queryRunner;
+        private QueryRunnerManager queryRunnerManager;
 
         public static Guid CreateSequentialUuid()
 		{
@@ -791,14 +792,16 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
             }
 
             query.PageSize = Math.Min(query.PageSize, Configuration.MaxPageSize);
-            
-            var result = queryRunner.Query(query);
+
+            var remoteSingleQueryRunner = queryRunnerManager.CreateSingleQueryRunner(TransactionalStorage.TypeForRunningQueriesInRemoteAppDomain, TransactionalStorage.StateForRunningQueriesInRemoteAppDomain);
+
+            var result = remoteSingleQueryRunner.Query(query);
 
             if(result.QueryCacheSize > 1024)
             {
                 lock(this)
                 {
-                    if(queryRunner.QueryCacheSize > 1024)
+                    if(queryRunnerManager.QueryCacheSize > 1024)
                         UnloadQueriesAppDomain();
                 }
             }
@@ -819,7 +822,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 
         private void UnloadQueriesAppDomain()
         {
-            queryRunner = null;
+            queryRunnerManager = null;
             if (queriesAppDomain != null)
                 AppDomain.Unload(queriesAppDomain);
         }
@@ -827,8 +830,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
         private void InitailizeQueriesAppDomain()
         {
             queriesAppDomain = AppDomain.CreateDomain("Queries", null, AppDomain.CurrentDomain.SetupInformation);
-            queryRunner = (QueryRunner)queriesAppDomain.CreateInstanceAndUnwrap(typeof(QueryRunner).Assembly.FullName, typeof(QueryRunner).FullName);
-            queryRunner.Initialize(TransactionalStorage.TypeForRunningQueriesInRemoteAppDomain, TransactionalStorage.StateForRunningQueriesInRemoteAppDomain);
+            queryRunnerManager = (QueryRunnerManager)queriesAppDomain.CreateInstanceAndUnwrap(typeof(QueryRunnerManager).Assembly.FullName, typeof(QueryRunnerManager).FullName);
         }
 
     }
