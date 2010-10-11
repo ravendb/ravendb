@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Newtonsoft.Json.Linq;
 
 namespace Raven.Storage.Managed.Impl
@@ -9,18 +10,20 @@ namespace Raven.Storage.Managed.Impl
     {
         private readonly IComparer<JToken> comparer;
         private readonly string indexDef;
+        private readonly ReaderWriterLockSlim readerWriterLockSlim;
         private readonly SortedList<JToken, SortedSet<JToken>> index;
 
-        public SecondaryIndex(IComparer<JToken> comparer, string indexDef)
+        public SecondaryIndex(IComparer<JToken> comparer, string indexDef, ReaderWriterLockSlim readerWriterLockSlim)
         {
             this.comparer = comparer;
             this.indexDef = indexDef;
+            this.readerWriterLockSlim = readerWriterLockSlim;
             this.index = new SortedList<JToken, SortedSet<JToken>>(comparer);
         }
 
         public override string ToString()
         {
-            return indexDef + " ("+index.Count+")";
+            return indexDef + " (" + index.Count + ")";
         }
 
         public long Count
@@ -34,42 +37,37 @@ namespace Raven.Storage.Managed.Impl
 
         public void Add(JToken key)
         {
-            lock (index)
+            var indexOfKey = index.IndexOfKey(key);
+            if (indexOfKey < 0)
             {
-                var indexOfKey = index.IndexOfKey(key);
-                if (indexOfKey < 0)
+                index[key] = new SortedSet<JToken>(JTokenComparer.Instance)
                 {
-                    index[key] = new SortedSet<JToken>(JTokenComparer.Instance)
-                    {
-                        key
-                    };
-                }
-                else
-                {
-                    index.Values[indexOfKey].Add(key);
-                }
+                    key
+                };
+            }
+            else
+            {
+                index.Values[indexOfKey].Add(key);
             }
         }
 
         public void Remove(JToken key)
         {
-            lock (index)
+            var indexOfKey = index.IndexOfKey(key);
+            if (indexOfKey < 0)
             {
-                var indexOfKey = index.IndexOfKey(key);
-                if(indexOfKey < 0)
-                {
-                    return;
-                }
-                index.Values[indexOfKey].Remove(key);
-                if (index.Values[indexOfKey].Count == 0)
-                    index.Remove(key);
+                return;
             }
+            index.Values[indexOfKey].Remove(key);
+            if (index.Values[indexOfKey].Count == 0)
+                index.Remove(key);
         }
 
 
         public IEnumerable<JToken> SkipFromEnd(int start)
         {
-            lock (index)
+            readerWriterLockSlim.EnterReadLock();
+            try
             {
                 for (int i = (index.Count - 1) - start; i >= 0; i--)
                 {
@@ -79,6 +77,10 @@ namespace Raven.Storage.Managed.Impl
                     }
                 }
             }
+            finally
+            {
+                readerWriterLockSlim.ExitReadLock();
+            }
         }
 
         public IEnumerable<JToken> SkipAfter(JToken key)
@@ -86,9 +88,10 @@ namespace Raven.Storage.Managed.Impl
             return Skip(key, i => i <= 0);
         }
 
-        private IEnumerable<JToken> Skip(JToken key, Func<int,bool> shouldMoveToNext)
+        private IEnumerable<JToken> Skip(JToken key, Func<int, bool> shouldMoveToNext)
         {
-            lock (index)
+            readerWriterLockSlim.EnterReadLock();
+            try
             {
                 var recordingComparer = new RecordingComparer();
                 Array.BinarySearch(index.Keys.ToArray(), key, recordingComparer);
@@ -109,6 +112,10 @@ namespace Raven.Storage.Managed.Impl
                     }
                 }
             }
+            finally
+            {
+                readerWriterLockSlim.ExitReadLock();
+            }
         }
 
         public IEnumerable<JToken> SkipTo(JToken key)
@@ -122,17 +129,22 @@ namespace Raven.Storage.Managed.Impl
             {
                 if (index.Count == 0)
                     return null;
-                return index.Keys[index.Count-1];
+                return index.Keys[index.Count - 1];
             }
         }
 
         public JToken FirstOrDefault()
         {
-            lock (index)
+            readerWriterLockSlim.EnterReadLock();
+            try
             {
                 if (index.Count == 0)
                     return null;
                 return index.Keys[0];
+            }
+            finally
+            {
+                readerWriterLockSlim.ExitReadLock();
             }
         }
     }

@@ -2,10 +2,12 @@
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Runtime.Caching;
+using System.Threading;
 using Newtonsoft.Json.Linq;
 
 namespace Raven.Storage.Managed.Impl
@@ -26,9 +28,29 @@ namespace Raven.Storage.Managed.Impl
             return Name + " (" + ItemCount + ")";
         }
 
-        public IEnumerable<JToken> Keys { get { return keyToFilePos.Keys; } }
+        public IEnumerable<JToken> Keys
+        {
+            get
+            {
+                readerWriterLockSlim.EnterReadLock();
+                try
+                {
+                    return keyToFilePos.Keys.ToArray();
+                }
+                finally
+                {
+                    readerWriterLockSlim.ExitReadLock();
+                }
+            }
+        }
 
         private readonly ConcurrentDictionary<JToken, PositionInFile> keyToFilePos;
+
+        /// <summary>
+        /// We have to support recursion here, because we want to be able to scan a secondary index and pull records from the main one
+        /// at the same time.
+        /// </summary>
+        private readonly ReaderWriterLockSlim readerWriterLockSlim = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
 
         private readonly List<SecondaryIndex> secondaryIndices = new List<SecondaryIndex>();
 
@@ -59,31 +81,41 @@ namespace Raven.Storage.Managed.Impl
 
         public SecondaryIndex AddSecondaryIndex(Expression<Func<JToken, JToken>> func)
         {
-            var secondaryIndex = new SecondaryIndex(new ModifiedJTokenComparer(func.Compile()), func.ToString());
+            var secondaryIndex = new SecondaryIndex(new ModifiedJTokenComparer(func.Compile()), func.ToString(),readerWriterLockSlim);
             secondaryIndices.Add(secondaryIndex);
             return secondaryIndex;
         }
 
         internal void ApplyCommands(IEnumerable<Command> cmds)
         {
-            foreach (Command command in cmds)
+            readerWriterLockSlim.EnterWriteLock();
+            try
             {
-                switch (command.Type)
+                foreach (Command command in cmds)
                 {
-                    case CommandType.Put:
-                        AddInteral(command.Key, new PositionInFile
-                        {
-                            Position = command.Position,
-                            Size = command.Size,
-                            Key = command.Key
-                        });
-                        break;
-                    case CommandType.Delete:
-                        RemoveInternal(command.Key);
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException();
+                    switch (command.Type)
+                    {
+                        case CommandType.Put:
+                            AddInteral(command.Key, new PositionInFile
+                            {
+                                Position = command.Position,
+                                Size = command.Size,
+                                Key = command.Key
+                            });
+                            break;
+                        case CommandType.Delete:
+                            RemoveInternal(command.Key);
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+                    Guid _;
+                    keysModifiedInTx.TryRemove(command.Key, out _);
                 }
+            }
+            finally
+            {
+                readerWriterLockSlim.ExitWriteLock();
             }
         }
 
@@ -183,17 +215,25 @@ namespace Raven.Storage.Managed.Impl
                 }
             }
 
-            PositionInFile pos;
-            if (keyToFilePos.TryGetValue(key, out pos) == false)
-                return null;
-
-            return new ReadResult
+            readerWriterLockSlim.EnterReadLock();
+            try
             {
-                Position = pos.Position,
-                Size = pos.Size,
-                Data = () => readData ?? (readData = ReadData(pos.Position, pos.Size)),
-                Key = pos.Key
-            };
+                PositionInFile pos;
+                if (keyToFilePos.TryGetValue(key, out pos) == false)
+                    return null;
+
+                return new ReadResult
+                {
+                    Position = pos.Position,
+                    Size = pos.Size,
+                    Data = () => readData ?? (readData = ReadData(pos.Position, pos.Size)),
+                    Key = pos.Key
+                };
+            }
+            finally
+            {
+                readerWriterLockSlim.ExitReadLock();
+            }
         }
 
         private byte[] ReadData(long pos, int size)
@@ -252,16 +292,10 @@ namespace Raven.Storage.Managed.Impl
             if (operationsInTransactions.TryGetValue(txId, out cmds) == false)
                 return;
 
-            ApplyCommands(cmds);
-            ClearTransactionInMemoryData(txId);
+             ApplyCommands(cmds);
         }
 
         public void Rollback(Guid txId)
-        {
-            ClearTransactionInMemoryData(txId);
-        }
-
-        private void ClearTransactionInMemoryData(Guid txId)
         {
             List<Command> commands;
             if (operationsInTransactions.TryRemove(txId, out commands) == false)
@@ -316,6 +350,7 @@ namespace Raven.Storage.Managed.Impl
             PositionInFile removedValue;
             if (keyToFilePos.TryRemove(key, out removedValue) == false)
                 return;
+            cache.Remove(removedValue.Position.ToString());
             WasteCount += 1;
             foreach (var index in secondaryIndices)
             {
@@ -325,25 +360,33 @@ namespace Raven.Storage.Managed.Impl
 
         internal void CopyCommittedData(Stream tempData, List<Command> cmds)
         {
-            foreach (var kvp in keyToFilePos) // copy committed data
+            readerWriterLockSlim.EnterReadLock();
+            try
             {
-                long pos = tempData.Position;
-                byte[] data = ReadData(kvp.Value.Position, kvp.Value.Size);
-
-                byte[] lenInBytes = BitConverter.GetBytes(data.Length);
-                tempData.Write(lenInBytes, 0, lenInBytes.Length);
-                tempData.Write(data, 0, data.Length);
-
-                cmds.Add(new Command
+                foreach (var kvp in keyToFilePos) // copy committed data
                 {
-                    Key = kvp.Key,
-                    Position = pos,
-                    DictionaryId = DictionaryId,
-                    Size = kvp.Value.Size,
-                    Type = CommandType.Put
-                });
+                    long pos = tempData.Position;
+                    byte[] data = ReadData(kvp.Value.Position, kvp.Value.Size);
 
-                kvp.Value.Position = pos;
+                    byte[] lenInBytes = BitConverter.GetBytes(data.Length);
+                    tempData.Write(lenInBytes, 0, lenInBytes.Length);
+                    tempData.Write(data, 0, data.Length);
+
+                    cmds.Add(new Command
+                    {
+                        Key = kvp.Key,
+                        Position = pos,
+                        DictionaryId = DictionaryId,
+                        Size = kvp.Value.Size,
+                        Type = CommandType.Put
+                    });
+
+                    kvp.Value.Position = pos;
+                }
+            }
+            finally
+            {
+                readerWriterLockSlim.ExitReadLock();
             }
         }
 
@@ -382,7 +425,7 @@ namespace Raven.Storage.Managed.Impl
 
         public IEnumerator<ReadResult> GetEnumerator()
         {
-            foreach (var positionInFile in keyToFilePos.Values)
+            foreach (var positionInFile in keyToFilePos.Values.ToArray())
             {
                 byte[] readData = null;
                 var pos = positionInFile;
