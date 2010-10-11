@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using System.Linq;
 using Raven.Database.Linq;
 
 namespace Raven.Tests.Indexes

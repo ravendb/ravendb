@@ -12,7 +12,7 @@ namespace Raven.Tests.Indexes
     {
         public ShoppingCartEventsToShopingCart()
         {
-            MapDefinition = docs => docs.Where<object>(document => document.For == "ShoppingCart");
+            MapDefinition = docs => docs.Where(document => document.For == "ShoppingCart");
             GroupByExtraction = source => source.ShoppingCartId;
             ReduceDefinition = Reduce;
 
@@ -20,13 +20,13 @@ namespace Raven.Tests.Indexes
             Indexes.Add("Aggregate", FieldIndexing.No);
         }
 
-        private static IEnumerable<object> Reduce(IEnumerable<object> source)
+        private static IEnumerable<object> Reduce(IEnumerable<dynamic> source)
         {
             foreach (var events in source
-                .GroupBy<object, object>(@event => @event.ShoppingCartId))
+                .GroupBy(@event => @event.ShoppingCartId))
             {
                 var cart = new ShoppingCart { Id = events.Key };
-                foreach (var @event in events.OrderBy<object, object>(x => x.Timestamp))
+                foreach (var @event in events.OrderBy(x => x.Timestamp))
                 {
                     switch ((string)@event.Type)
                     {
