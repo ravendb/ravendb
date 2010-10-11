@@ -7,7 +7,7 @@ namespace Raven.Client.Tests.Bugs
     public class UsingStartsWith : LocalClientTest
     {
         [Fact]
-        public void DefaultIndexingBehaviourDoesNotAllowStartsWith()
+        public void DefaultIndexingBehaviourAllowStartsWith()
         {
             using (var store = this.NewDocumentStore())
             {
@@ -48,7 +48,7 @@ namespace Raven.Client.Tests.Bugs
                         .Where(x => x.Name.StartsWith("Su"))
                         .FirstOrDefault();
 
-                    Assert.Null(result);
+                    Assert.NotNull(result);
                 }
             }
         }
