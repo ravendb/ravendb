@@ -100,19 +100,29 @@
     </Compile>
     <Compile Include="Bugs\AsyncCommit.cs" />
     <Compile Include="Bugs\EntityWithoutId.cs" />
+    <Compile Include="Bugs\FailDelete.cs" />
+    <Compile Include="Bugs\FailStore.cs" />
+    <Compile Include="Bugs\Image.cs" />
+    <Compile Include="Bugs\ImageByTagSearchModel.cs" />
     <Compile Include="Bugs\KeysAreCaseInsensitive.cs" />
-    <Compile Include="Bugs\OverwriteIndex.cs" />
+    <Compile Include="Bugs\NameAndId.cs" />
+    <Compile Include="Bugs\OverwriteIndexLocally.cs" />
+    <Compile Include="Bugs\OverwriteIndexRemotely.cs" />
     <Compile Include="Bugs\ProjectingDocumentId.cs" />
     <Compile Include="Bugs\ProjectingFromIndexes.cs" />
     <Compile Include="Bugs\ProjectionFromDynamicQuery.cs" />
     <Compile Include="Bugs\QueryingByNegative.cs" />
     <Compile Include="Bugs\QueryingFromIndex.cs" />
-    <Compile Include="Bugs\QueryWithPercentageSign.cs" />
+    <Compile Include="Bugs\QueryWithPercentageSignp.cs" />
+    <Compile Include="Bugs\User.cs" />
     <Compile Include="Bugs\UsingStartsWith.cs" />
     <Compile Include="Bugs\Translators.cs" />
-    <Compile Include="Indexes\AnalyzerUtil.cs" />
+    <Compile Include="Document\ZoneCountResult.cs" />
+    <Compile Include="Indexes\LuceneAnalyzerUtils.cs" />
+    <Compile Include="Indexes\CustomAnalyzer.cs" />
     <Compile Include="Indexes\UsingCustomLuceneAnalyzer.cs" />
     <Compile Include="LocalClientTest.cs" />
+    <Compile Include="Querying\IndexedUser.cs" />
     <Compile Include="Querying\UsingDynamicQueryWithLocalServer.cs" />
     <Compile Include="Querying\UsingDynamicQueryWithRemoteServer.cs" />
     <Compile Include="RemoteClientTest.cs" />
@@ -133,9 +143,9 @@
     <Compile Include="Bugs\Includes.cs" />
     <Compile Include="Bugs\IndexingRavenDocuments.cs" />
     <Compile Include="Bugs\IndexWithTwoProperties.cs" />
-    <Compile Include="Bugs\JsonSerializationBothWays.cs" />
+    <Compile Include="Bugs\DocumentToJsonAndBackTest.cs" />
     <Compile Include="Bugs\KeyGeneration.cs" />
-    <Compile Include="Bugs\Linq_GH147.cs" />
+    <Compile Include="Bugs\LinqGitHub147.cs" />
     <Compile Include="Bugs\MetadataUpdates.cs" />
     <Compile Include="Bugs\MultipleResultsPerDocumentAndPaging.cs" />
     <Compile Include="Bugs\OperationHeaders.cs" />
@@ -177,6 +187,7 @@
     <Compile Include="Document\DocumentStoreServerTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Some.cs" />
+    <Compile Include="Spatial\Event.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Raven.Client\Raven.Client.csproj">

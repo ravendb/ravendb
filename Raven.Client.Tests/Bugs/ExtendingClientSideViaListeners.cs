@@ -1,5 +1,4 @@
 using System;
-using Newtonsoft.Json.Linq;
 using Xunit;
 
 namespace Raven.Client.Tests.Bugs
@@ -43,27 +42,6 @@ namespace Raven.Client.Tests.Bugs
 		public class Email
 		{
 			public string Id { get; set; }
-		}
-	}
-
-	public class FailDelete : IDocumentDeleteListener
-	{
-		public void BeforeDelete(string key, object entityInstance, JObject metadata)
-		{
-			throw new NotImplementedException();
-		}
-	}
-
-	public class FailStore : IDocumentStoreListener
-	{
-		public void BeforeStore(string key, object entityInstance, JObject metadata)
-		{
-			throw new NotImplementedException();
-		}
-
-		public void AfterStore(string key, object entityInstance, JObject metadata)
-		{
-			throw new NotImplementedException();
 		}
 	}
 }

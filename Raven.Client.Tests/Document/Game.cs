@@ -564,10 +564,4 @@ namespace Raven.Client.Tests.Document
 			public int Count { get; set; }
 		}
 	}
-
-	public class ZoneCountResult
-	{
-		public string Zone { get; set; }
-		public int Count { get; set; }
-	}
 }

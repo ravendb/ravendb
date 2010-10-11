@@ -93,16 +93,4 @@ namespace Raven.Client.Tests.Bugs
             }
         }
     }
-
-    public class ImageByTagSearchModel
-    {
-        public string TagName { get; set; }
-        public string[] Images { get; set; }
-    }
-
-    public class Image
-    {
-        public string Id { get; set; }
-        public string[] Tags { get; set; }
-    }
 }
