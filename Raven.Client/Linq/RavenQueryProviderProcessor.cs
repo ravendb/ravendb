@@ -21,6 +21,7 @@ namespace Raven.Client.Linq
 		private SpecialQueryType queryType = SpecialQueryType.None;
 		private Type newExpressionType;
         private string currentPath = string.Empty;
+        private int subClauseDepth = 0;
 
         /// <summary>
         /// Gets the current path in the case of expressions within collections
@@ -107,7 +108,6 @@ namespace Raven.Client.Linq
        
 		}
 
-        int nestedCount = 0;
         private void VisitBinaryExpression(BinaryExpression expression)
         {        
             switch (expression.NodeType)
@@ -142,28 +142,28 @@ namespace Raven.Client.Linq
 
 		private void VisitAndAlso(BinaryExpression andAlso)
 		{
-            if (nestedCount > 0) luceneQuery.OpenSubclause();
-            nestedCount++;
+            if (subClauseDepth > 0) luceneQuery.OpenSubclause();
+            subClauseDepth++;
 
 			VisitExpression(andAlso.Left);
 			luceneQuery.AndAlso();
             VisitExpression(andAlso.Right);
 
-            nestedCount--;
-            if (nestedCount > 0) luceneQuery.CloseSubclause();
+            subClauseDepth--;
+            if (subClauseDepth > 0) luceneQuery.CloseSubclause();
 		}
 
 		private void VisitOrElse(BinaryExpression orElse)
 		{
-            if (nestedCount > 0) luceneQuery.OpenSubclause();
-            nestedCount++;
+            if (subClauseDepth > 0) luceneQuery.OpenSubclause();
+            subClauseDepth++;
 
 			VisitExpression(orElse.Left);
 			luceneQuery.OrElse();              
             VisitExpression(orElse.Right);
 
-            nestedCount--;
-            if (nestedCount > 0) luceneQuery.CloseSubclause();
+            subClauseDepth--;
+            if (subClauseDepth > 0) luceneQuery.CloseSubclause();
 		}
 
 		private void VisitEquals(BinaryExpression expression)
