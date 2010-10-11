@@ -4,6 +4,7 @@ using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Transactions;
 using log4net;
 using Microsoft.Isam.Esent.Interop;
@@ -19,6 +20,7 @@ using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
+using Task = Raven.Database.Tasks.Task;
 
 namespace Raven.Database
 {
@@ -48,7 +50,7 @@ namespace Raven.Database
         private readonly WorkContext workContext;
         private readonly DynamicQueryRunner dynamicQueryRunner;
 
-        private Thread[] backgroundWorkers = new Thread[0];
+        private System.Threading.Tasks.Task backgroundWorkerTask = null;
 
         private readonly ILog log = LogManager.GetLogger(typeof(DocumentDatabase));
 
@@ -194,19 +196,14 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
             UnloadQueriesAppDomain();
             TransactionalStorage.Dispose();
             IndexStorage.Dispose();
-            foreach (var backgroundWorker in backgroundWorkers)
-            {
-                backgroundWorker.Join();
-            }
+            if (backgroundWorkerTask != null)
+                backgroundWorkerTask.Wait();
         }
 
         public void StopBackgroundWokers()
         {
             workContext.StopWork();
-            foreach (var backgroundWorker in backgroundWorkers)
-            {
-                backgroundWorker.Join();
-            }
+            backgroundWorkerTask.Wait();
         }
 
         public WorkContext WorkContext
@@ -219,17 +216,10 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
         public void SpinBackgroundWorkers()
         {
             workContext.StartWork();
-            const int threadCount = 1; // Environment.ProcessorCount;
-            backgroundWorkers = new Thread[threadCount];
-            for (var i = 0; i < threadCount; i++)
-            {
-                backgroundWorkers[i] = new Thread(new TaskExecuter(TransactionalStorage, workContext).Execute)
-                {
-                    IsBackground = true,
-                    Name = "RavenDB Background Worker #" + i,
-                };
-                backgroundWorkers[i].Start();
-            }
+            backgroundWorkerTask = new System.Threading.Tasks.Task(
+                new TaskExecuter(TransactionalStorage, workContext).Execute,
+                TaskCreationOptions.LongRunning);
+            backgroundWorkerTask.Start();
         }
 
 		private static int sequentialUuidCounter;

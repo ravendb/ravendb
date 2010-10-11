@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel.Composition;
 using System.Threading;
+using System.Threading.Tasks;
 using log4net;
 
 namespace Raven.Database.Plugins
@@ -21,11 +22,7 @@ namespace Raven.Database.Plugins
 		{
 			Database = database;
 		    Initialize();
-			new Thread(BackgroundTask)
-			{
-				Name = "Background task " + GetType().Name,
-				IsBackground = true
-			}.Start();
+		    Task.Factory.StartNew(BackgroundTask,TaskCreationOptions.LongRunning);
 		}
 
 	    protected virtual void Initialize()
