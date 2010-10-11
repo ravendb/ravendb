@@ -197,35 +197,4 @@ namespace Raven.Storage.Managed
             return storage.Transactions.Keys.Select(x => new Guid(x.Value<byte[]>("txId")));
         }
     }
-
-    public static class StorageHelper
-    {
-        public static void AssertNotModifiedByAnotherTransaction(TableStorage storage, ITransactionStorageActions transactionStorageActions, string key, PersistentDictionary.ReadResult readResult, TransactionInformation transactionInformation)
-        {
-            if (readResult == null)
-                return;
-            var txIdAsBytes = readResult.Key.Value<byte[]>("txId");
-            if (txIdAsBytes == null)
-                return;
-
-            var txId = new Guid(txIdAsBytes);
-            if (transactionInformation != null && transactionInformation.Id == txId)
-            {
-                return;
-            }
-
-            var existingTx = storage.Transactions.Read(new JObject { { "txId", txId.ToByteArray() } });
-            if (existingTx == null)//probably a bug, ignoring this as not a real tx
-                return;
-
-            var timeout = existingTx.Key.Value<DateTime>("timeout");
-            if (DateTime.UtcNow > timeout)
-            {
-                transactionStorageActions.RollbackTransaction(txId);
-                return;
-            }
-
-            throw new ConcurrencyException("Document '" + key + "' is locked by transacton: " + txId);
-        }
-    }
 }

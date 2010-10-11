@@ -65,9 +65,12 @@
     <Compile Include="Impl\IPersistentSource.cs" />
     <Compile Include="Impl\JTokenComparer.cs" />
     <Compile Include="Impl\MemoryPersistentSource.cs" />
+    <Compile Include="Impl\ModifiedJTokenComparer.cs" />
     <Compile Include="Impl\PersistentDictionary.cs" />
     <Compile Include="Impl\PersistentDictionaryAdapter.cs" />
     <Compile Include="Impl\ReadOnlyFileBasedPersistentSource.cs" />
+    <Compile Include="Impl\RecordingComparer.cs" />
+    <Compile Include="Impl\SecondaryIndex.cs" />
     <Compile Include="Impl\TableStorage.cs" />
     <Compile Include="IndexingStorageActions.cs" />
     <Compile Include="MappedResultsStorageAction.cs" />
@@ -77,6 +80,7 @@
     <Compile Include="RemoteManagedStorageState.cs" />
     <Compile Include="StalenessStorageActions.cs" />
     <Compile Include="StorageActionsAccessor.cs" />
+    <Compile Include="StorageHelper.cs" />
     <Compile Include="TasksStorageActions.cs" />
     <Compile Include="TransactionalStorage.cs" />
     <Compile Include="TransactionStorageActions.cs" />
