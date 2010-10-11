@@ -149,20 +149,28 @@ namespace Raven.Storage.Managed.Impl
         {
             lock (persistentSource.SyncLock)
             {
-                Stream tempLog = persistentSource.CreateTemporaryStream();
-                Stream tempData = persistentSource.CreateTemporaryStream();
-
-                var cmds = new List<Command>();
-                foreach (var persistentDictionary in dictionaries)
+                readerWriterLockSlim.EnterWriteLock();
+                try
                 {
-                    persistentDictionary.CopyCommittedData(tempData, cmds);
-                    persistentDictionary.CopyUncommitedData(tempData);
-                    persistentDictionary.ClearCache();
+                    Stream tempLog = persistentSource.CreateTemporaryStream();
+                    Stream tempData = persistentSource.CreateTemporaryStream();
+
+                    var cmds = new List<Command>();
+                    foreach (var persistentDictionary in dictionaries)
+                    {
+                        persistentDictionary.CopyCommittedData(tempData, cmds);
+                        persistentDictionary.CopyUncommitedData(tempData);
+                        persistentDictionary.ClearCache();
+                    }
+
+                    WriteCommands(cmds, tempLog);
+
+                    persistentSource.ReplaceAtomically(tempData, tempLog);
                 }
-
-                WriteCommands(cmds, tempLog);
-
-                persistentSource.ReplaceAtomically(tempData, tempLog);
+                finally
+                {
+                    readerWriterLockSlim.ExitWriteLock();
+                }
             }
         }
 
