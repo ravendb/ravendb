@@ -5,6 +5,7 @@ using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Exceptions;
+using Raven.Database.Json;
 using Raven.Database.Storage.StorageActions;
 using Raven.Storage.Managed.Impl;
 using System.Linq;
@@ -83,8 +84,8 @@ namespace Raven.Storage.Managed
                     {
                         using (var memoryStreamFromTx = new MemoryStream(resultInTx.Data()))
                         {
-                            metadata = (JObject) JToken.ReadFrom(new BsonReader(memoryStreamFromTx));
-                            dataAsJson = (JObject) JToken.ReadFrom(new BsonReader(memoryStreamFromTx));
+                            metadata = memoryStreamFromTx.ToJObject();
+                            dataAsJson = memoryStreamFromTx.ToJObject();
                         }
                     }
                     return new JsonDocument
@@ -107,8 +108,8 @@ namespace Raven.Storage.Managed
             {
                 Key = readResult.Key.Value<string>("key"),
                 Etag = new Guid(readResult.Key.Value<byte[]>("etag")),
-                Metadata = (JObject)JToken.ReadFrom(new BsonReader(memoryStream)),
-                DataAsJson = (JObject)JToken.ReadFrom(new BsonReader(memoryStream)),
+                Metadata = memoryStream.ToJObject(),
+                DataAsJson = memoryStream.ToJObject(),
                 LastModified = readResult.Key.Value<DateTime>("modified"),
                 NonAuthoritiveInformation = resultInTx != null
             };
@@ -123,7 +124,7 @@ namespace Raven.Storage.Managed
             if (readResult == null)
                 return false;
 
-            metadata = (JObject)JToken.ReadFrom(new BsonReader(new MemoryStream(readResult.Data())));
+            metadata = readResult.Data().ToJObject();
 
             storage.Documents.Remove(new JObject
             {
@@ -139,8 +140,8 @@ namespace Raven.Storage.Managed
 
             var ms = new MemoryStream();
 
-            metadata.WriteTo(new BsonWriter(ms));
-            data.WriteTo(new BsonWriter(ms));
+            metadata.WriteTo(ms);
+            data.WriteTo(ms);
 
             var lastOrefaultKeyById = storage.Documents["ById"].LastOrDefault();
             int id = 0;

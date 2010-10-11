@@ -8,6 +8,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
+using Raven.Database.Json;
 using Raven.Database.Storage.StorageActions;
 using Raven.Storage.Managed.Impl;
 
@@ -28,7 +29,7 @@ namespace Raven.Storage.Managed
             AssertValidEtag(key, etag, "PUT");
 
             var ms = new MemoryStream();
-            headers.WriteTo(new BsonWriter(ms));
+            headers.WriteTo(ms);
             ms.Write(data,0,data.Length);
             var newEtag = DocumentDatabase.CreateSequentialUuid();
            var result = storage.Attachments.Put(new JObject
@@ -80,7 +81,7 @@ namespace Raven.Storage.Managed
                 return null;
             var attachmentDAta = readResult.Data();
             var memoryStream = new MemoryStream(attachmentDAta);
-            var metadata = (JObject)JToken.ReadFrom(new BsonReader(memoryStream));
+            var metadata = memoryStream.ToJObject();
             var data = new byte[readResult.Size - memoryStream.Position];
             Buffer.BlockCopy(attachmentDAta,(int)memoryStream.Position, data, 0, data.Length);
             return new Attachment

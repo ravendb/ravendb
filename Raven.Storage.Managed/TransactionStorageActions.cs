@@ -9,6 +9,7 @@ using Raven.Database.Storage;
 using Raven.Database.Storage.StorageActions;
 using Raven.Storage.Managed.Impl;
 using System.Linq;
+using Raven.Database.Json;
 
 namespace Raven.Storage.Managed
 {
@@ -48,8 +49,8 @@ namespace Raven.Storage.Managed
 
             var ms = new MemoryStream();
 
-            metadata.WriteTo(new BsonWriter(ms));
-            data.WriteTo(new BsonWriter(ms));
+            metadata.WriteTo(ms);
+            data.WriteTo(ms);
 
             var newEtag = DocumentDatabase.CreateSequentialUuid();
             storage.DocumentsModifiedByTransactions.Put(new JObject
@@ -176,8 +177,8 @@ namespace Raven.Storage.Managed
                 if (readResult.Position >= 0)
                 {
                     var ms = new MemoryStream(readResult.Data());
-                    metadata = (JObject) JToken.ReadFrom(new BsonReader(ms));
-                    data = (JObject) JToken.ReadFrom(new BsonReader(ms));
+                    metadata = ms.ToJObject();
+                    data = ms.ToJObject();
                 }
                 perDocumentModified(new DocumentInTransactionData
                 {

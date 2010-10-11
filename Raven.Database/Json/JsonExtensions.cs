@@ -36,6 +36,17 @@ namespace Raven.Database.Json
 			});
 		}
 
+        /// <summary>
+        /// Convert a byte array to a JObject
+        /// </summary>
+        public static JObject ToJObject(this Stream self)
+        {
+            return JObject.Load(new BsonReader(self)
+            {
+                DateTimeKindHandling = DateTimeKind.Utc,
+            });
+        }
+
 		/// <summary>
 		/// Convert a JToken to a byte array
 		/// </summary>
@@ -51,8 +62,19 @@ namespace Raven.Database.Json
 			}
 		}
 
+        /// <summary>
+        /// Convert a JToken to a byte array
+        /// </summary>
+        public static void WriteTo(this JToken self, Stream stream)
+        {
+            self.WriteTo(new BsonWriter(stream)
+            {
+                DateTimeKindHandling = DateTimeKind.Unspecified
+            });
+        }
 
-		/// <summary>
+
+	    /// <summary>
 		/// Deserialize a <param name="self"/> to an instance of <typeparam name="T"/>
 		/// </summary>
 		public static T JsonDeserialization<T>(this byte [] self)

@@ -230,9 +230,9 @@ namespace Raven.Tests.Linq
 
                 string indexName = "UserIndex";
                 using (var session = db.OpenSession()) {
-                    session.Store(new User() { Name = "First", Created = firstTime });
-                    session.Store(new User() { Name = "Second", Created = secondTime});
-                    session.Store(new User() { Name = "Third", Created = thirdTime});
+                    session.Store(new User { Name = "First", Created = firstTime });
+                    session.Store(new User { Name = "Second", Created = secondTime});
+                    session.Store(new User { Name = "Third", Created = thirdTime});
                     session.SaveChanges();
 
                     db.DatabaseCommands.DeleteIndex(indexName);

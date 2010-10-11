@@ -7,6 +7,7 @@ using Raven.Database;
 using Raven.Database.Storage.StorageActions;
 using Raven.Storage.Managed.Impl;
 using System.Linq;
+using Raven.Database.Json;
 
 namespace Raven.Storage.Managed
 {
@@ -22,7 +23,7 @@ namespace Raven.Storage.Managed
         public void PutMappedResult(string view, string docId, string reduceKey, JObject data, byte[] viewAndReduceKeyHashed)
         {
             var ms = new MemoryStream();
-            data.WriteTo(new BsonWriter(ms));
+            data.WriteTo(ms);
             storage.MappedResults.Put(new JObject
             {
                 {"view", view},
@@ -45,7 +46,7 @@ namespace Raven.Storage.Managed
                     var readResult = storage.MappedResults.Read(x);
                     if (readResult == null)
                         return null;
-                    return (JObject) JToken.ReadFrom(new BsonReader(new MemoryStream(readResult.Data())));
+                    return readResult.Data().ToJObject();
                 }).Where(x => x != null);
 
         }

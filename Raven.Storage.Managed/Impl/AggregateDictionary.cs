@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
+using Raven.Database.Json;
 
 namespace Raven.Storage.Managed.Impl
 {
@@ -44,7 +45,7 @@ namespace Raven.Storage.Managed.Impl
         {
             try
             {
-                var cmds = JToken.ReadFrom(new BsonReader(persistentSource.Log));
+                var cmds = persistentSource.Log.ToJObject();
                 return cmds.Values().Select(cmd => new Command
                 {
                     Key = cmd.Value<JToken>("key"),
@@ -121,7 +122,7 @@ namespace Raven.Storage.Managed.Impl
             }
             if (array.Count == 0)
                 return;
-            array.WriteTo(new BsonWriter(log));
+            array.WriteTo(log);
         }
 
 

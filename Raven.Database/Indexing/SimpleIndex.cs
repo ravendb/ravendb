@@ -115,7 +115,7 @@ namespace Raven.Database.Indexing
                 properties = TypeDescriptor.GetProperties(doc);
             }
             newDocId = properties.Find("__document_id", false).GetValue(doc) as string;
-            return AnonymousObjectToLuceneDocumentConverter.Index(doc, properties, indexDefinition, Field.Store.NO);
+            return AnonymousObjectToLuceneDocumentConverter.Index(doc, properties, indexDefinition, Field.Store.YES);
         }
 
         private static void CopyFieldsToDocument(Document luceneDoc, IEnumerable<AbstractField> fields)
