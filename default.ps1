@@ -246,11 +246,9 @@ task DoRelease -depends Compile, `
 	CopyClient35, `
 	CopyWeb, `
 	CopyBundles, `
-	CopyGems, `
 	CopyServer, `
 	CopyDocFiles, `
-	CopySamples, `
-	CreateGem {
+	CopySamples {
 	
 	$old = pwd
 	
