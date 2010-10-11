@@ -20,7 +20,13 @@ namespace Raven.Database.Extensions
                     if (Directory.Exists(directory) == false)
                         return;
 
-                    File.SetAttributes(directory, FileAttributes.Normal);
+                    try
+                    {
+                        File.SetAttributes(directory, FileAttributes.Normal);
+                    }
+                    catch (IOException)
+                    {
+                    }
                     Directory.Delete(directory, true);
                     return;
                 }
@@ -28,7 +34,13 @@ namespace Raven.Database.Extensions
                 {
                     foreach (var childDir in Directory.GetDirectories(directory))
                     {
-                        File.SetAttributes(childDir, FileAttributes.Normal);
+                        try
+                        {
+                            File.SetAttributes(childDir, FileAttributes.Normal);
+                        }
+                        catch (IOException)
+                        {
+                        }
                     }
                     if (i == retries-1)// last try also failed
                         throw;
