@@ -13,6 +13,12 @@ namespace Raven.Database.Data
 
         public string ForEntityName { get; set; }
 
+        public DynamicQueryMapping()
+        {
+            Items = new DynamicQueryMappingItem[0];
+            SortDescriptors = new DynamicSortInfo[0];
+        }
+
         public DynamicSortInfo[] SortDescriptors
         {
             get;
