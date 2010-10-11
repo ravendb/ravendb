@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using System.Globalization;

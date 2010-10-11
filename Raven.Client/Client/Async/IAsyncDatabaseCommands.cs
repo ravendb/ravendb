@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Raven.Database;
 using Raven.Database.Data;
 

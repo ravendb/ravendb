@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 #if !SILVERLIGHT && !PocketPC && !NET20
 using System.Data.Linq;

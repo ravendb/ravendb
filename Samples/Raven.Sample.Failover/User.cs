@@ -1,4 +1,4 @@
-﻿namespace Raven.Sample.Failover
+namespace Raven.Sample.Failover
 {
     public class User
     {

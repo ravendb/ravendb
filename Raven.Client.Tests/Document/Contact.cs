@@ -1,4 +1,4 @@
-﻿namespace Raven.Client.Tests.Document
+namespace Raven.Client.Tests.Document
 {
 	public class Contact
 	{

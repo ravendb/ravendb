@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using Microsoft.Isam.Esent.Interop;
 
 namespace Raven.Storage.Esent.SchemaUpdates

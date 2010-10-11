@@ -1,4 +1,4 @@
-ï»¿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -26,7 +26,7 @@ namespace Newtonsoft.Json.Tests.Converters
       ObjectIdTestClass c = new ObjectIdTestClass
                               {
                                 Id = new BsonObjectId(MiscellaneousUtils.HexToBytes("4ABBED9D1D8B0F0218000001")),
-                                Test = "1234Â£56"
+                                Test = "1234£56"
                               };
 
       MemoryStream ms = new MemoryStream();
@@ -52,7 +52,7 @@ namespace Newtonsoft.Json.Tests.Converters
       ObjectIdTestClass c = serializer.Deserialize<ObjectIdTestClass>(reader);
 
       Assert.AreEqual(c.Id.Value, MiscellaneousUtils.HexToBytes("4ABBED9D1D8B0F0218000001"));
-      Assert.AreEqual(c.Test, "1234Â£56");
+      Assert.AreEqual(c.Test, "1234£56");
     }
   }
 }

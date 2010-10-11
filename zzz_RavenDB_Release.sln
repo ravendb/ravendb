@@ -1,4 +1,4 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Database.g", "Raven.Database\Raven.Database.g.csproj", "{212823CD-25E1-41AC-92D1-D6DF4D53FC85}"

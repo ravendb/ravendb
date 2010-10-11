@@ -1,4 +1,4 @@
-﻿namespace Raven.Bundles.Authorization.Model
+namespace Raven.Bundles.Authorization.Model
 {
 	public interface IPermission
 	{

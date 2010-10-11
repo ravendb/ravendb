@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.Isam.Esent.Interop;
 
 namespace Raven.Storage.Esent

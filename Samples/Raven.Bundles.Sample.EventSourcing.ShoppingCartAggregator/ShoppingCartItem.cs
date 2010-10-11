@@ -1,4 +1,4 @@
-﻿namespace Raven.Sample.EventSourcing
+namespace Raven.Sample.EventSourcing
 {
     public class ShoppingCartItem
     {

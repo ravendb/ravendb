@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Management.Automation;
 
 namespace Raven.PowerShellIntegration

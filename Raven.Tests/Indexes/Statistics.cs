@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Database;

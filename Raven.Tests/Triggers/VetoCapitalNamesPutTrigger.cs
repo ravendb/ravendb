@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Plugins;
 using System.Linq;

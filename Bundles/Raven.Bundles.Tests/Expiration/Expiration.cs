@@ -1,4 +1,4 @@
-﻿extern alias database;
+extern alias database;
 using System;
 using System.ComponentModel.Composition.Hosting;
 using System.IO;

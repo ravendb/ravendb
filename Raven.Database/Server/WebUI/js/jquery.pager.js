@@ -1,4 +1,4 @@
-﻿/*
+/*
 * jQuery pager plugin
 * Version 1.0 (12/22/2008)
 * @requires jQuery v1.2.6 or later

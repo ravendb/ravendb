@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using Raven.StackOverflow.Etl.Generic;
 using Rhino.Etl.Core;

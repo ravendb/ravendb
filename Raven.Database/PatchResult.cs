@@ -1,4 +1,4 @@
-﻿namespace Raven.Database
+namespace Raven.Database
 {
 	/// <summary>
 	/// The result of a patch operation

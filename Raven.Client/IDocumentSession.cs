@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq.Expressions;
 using Raven.Client.Client;
 using Raven.Client.Document;

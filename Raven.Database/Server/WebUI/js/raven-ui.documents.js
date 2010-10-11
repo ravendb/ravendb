@@ -1,4 +1,4 @@
-﻿var numPages;
+var numPages;
 var pageNumber = 1;
 var pageSize = 25;
 var allDocsTotalCount;

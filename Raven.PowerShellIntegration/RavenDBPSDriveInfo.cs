@@ -1,4 +1,4 @@
-﻿using System.Management.Automation;
+using System.Management.Automation;
 using Raven.Database;
 
 namespace Raven.PowerShellIntegration

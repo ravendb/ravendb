@@ -149,7 +149,8 @@ lab0_brk: ;
 				return false;
 			}
 			cursor--;
-			// or, line 36
+			// or, line 36
+
 lab2: 
 			do 
 			{
@@ -473,7 +474,8 @@ lab0_brk: ;
 				
 				case 4: 
 					// (, line 55
-					// or, line 55					do 
+					// or, line 55
+					do 
 					{
 						v_2 = limit - cursor;
 						do 
@@ -577,7 +579,8 @@ lab1_brk: ;
 				
 				case 6: 
 					// (, line 60
-					// or, line 60					do 
+					// or, line 60
+					do 
 					{
 						v_3 = limit - cursor;
 						do 
@@ -753,7 +756,8 @@ lab4_brk: ;
 				
 				case 1: 
 					// (, line 72
-					// or, line 72					do 
+					// or, line 72
+					do 
 					{
 						v_1 = limit - cursor;
 						do 
@@ -1251,7 +1255,8 @@ lab0_brk: ;
 			int among_var;
 			int v_1;
 			// (, line 114
-			// or, line 134
+			// or, line 134
+
 lab11: 
 			do 
 			{
@@ -1971,7 +1976,8 @@ golab4_brk: ;
 			int v_10;
 			// (, line 202
 			// do, line 203
-			v_1 = cursor;			do 
+			v_1 = cursor;
+			do 
 			{
 				// (, line 203
 				// tolimit, line 204
@@ -2019,7 +2025,8 @@ replab2_brk: ;
 					// atleast, line 209
 					while (true)
 					{
-						v_5 = cursor;						do 
+						v_5 = cursor;
+						do 
 						{
 							// (, line 209
 							// or, line 209
@@ -2220,7 +2227,8 @@ lab0_brk: ;
 			
 			cursor = v_1;
 			// do, line 219
-			v_2 = cursor;			do 
+			v_2 = cursor;
+			do 
 			{
 				// repeat, line 219
 				while (true)

@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Configuration.Install;
 using System.Diagnostics;
 using System.ServiceProcess;

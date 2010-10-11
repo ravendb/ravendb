@@ -1,4 +1,4 @@
-﻿namespace MvcMusicStore.Models
+namespace MvcMusicStore.Models
 {
     public partial class Album
     {

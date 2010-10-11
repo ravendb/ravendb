@@ -1,4 +1,4 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 10.00
 # Visual Studio 2008
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Newtonsoft.Json.Compact", "Newtonsoft.Json\Newtonsoft.Json.Compact.csproj", "{256AA604-F61B-4B6D-8D51-C8E6AB11E435}"

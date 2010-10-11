@@ -1,4 +1,4 @@
-﻿//a useful extension to string
+//a useful extension to string
 String.prototype.trim = function () {
     return this.replace(/^\s+|\s+$/g, "");
 }

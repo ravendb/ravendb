@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Raven.Client.Document;
 
 namespace Raven.Sample.Failover

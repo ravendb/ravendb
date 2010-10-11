@@ -1,4 +1,4 @@
-﻿namespace TutorialSamples
+namespace TutorialSamples
 {
     using System;
     /// <summary>

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Raven.Database.Storage;
 using Raven.Database.Storage.StorageActions;
 using Raven.Storage.Esent.StorageActions;

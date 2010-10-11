@@ -1,4 +1,4 @@
-﻿namespace Raven.Database.Plugins
+namespace Raven.Database.Plugins
 {
 	public class VetoResult
 	{

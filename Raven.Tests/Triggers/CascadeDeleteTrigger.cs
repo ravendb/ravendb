@@ -1,4 +1,4 @@
-﻿using Raven.Database;
+using Raven.Database;
 using Raven.Database.Plugins;
 
 namespace Raven.Tests.Triggers

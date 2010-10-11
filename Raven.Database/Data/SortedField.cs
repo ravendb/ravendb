@@ -1,4 +1,4 @@
-﻿namespace Raven.Database.Data
+namespace Raven.Database.Data
 {
 	/// <summary>
 	/// Represent a field sort options

@@ -214,7 +214,8 @@ lab0_brk: ;
 				
 				case 1: 
 					// (, line 115
-					// or, line 115
+					// or, line 115
+
 lab1: 
 					do 
 					{
@@ -417,7 +418,8 @@ lab0_brk: ;
 				
 				case 1: 
 					// (, line 182
-					// or, line 182
+					// or, line 182
+
 lab3: 
 					do 
 					{
@@ -624,7 +626,8 @@ lab0_brk: ;
 			cursor = limit - v_2;
 			// (, line 241
 			// do, line 242
-			v_4 = limit - cursor;			do 
+			v_4 = limit - cursor;
+			do 
 			{
 				// (, line 242
 				// or, line 243

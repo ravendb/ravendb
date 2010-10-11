@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Lucene.Net.Documents;
 
 namespace Raven.Database.Plugins

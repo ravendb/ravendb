@@ -1,4 +1,4 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Storage.Esent.Dumper", "Raven.Storage.Esent.Dumper\Raven.Storage.Esent.Dumper.csproj", "{E3C91794-0A25-48D6-9585-0698FD4876F1}"

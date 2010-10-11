@@ -108,7 +108,8 @@ lab0_brk: ;
 			
 			cursor = v_1;
 			// do, line 26
-			v_2 = cursor;
+			v_2 = cursor;
+
 			do 
 			{
 				// repeat, line 26
@@ -331,7 +332,8 @@ lab0_brk: ;
 		{
 			int v_1;
 			// (, line 44
-			// or, line 46
+			// or, line 46
+
 			do 
 			{
 				v_1 = limit - cursor;
@@ -426,7 +428,8 @@ lab0_brk: ;
 				
 				case 2: 
 					// (, line 57
-					// or, line 57
+					// or, line 57
+
 					do 
 					{
 						v_1 = limit - cursor;
@@ -642,7 +645,8 @@ golab0_brk: ;
 			// (, line 82
 			// [, line 83
 			ket = cursor;
-			// or, line 83
+			// or, line 83
+
 			do 
 			{
 				v_1 = limit - cursor;
@@ -935,7 +939,8 @@ lab2_brk: ;
 				
 				case 2: 
 					// (, line 134
-					// or, line 134
+					// or, line 134
+
 					do 
 					{
 						v_1 = limit - cursor;
@@ -994,7 +999,8 @@ lab0_brk: ;
 				
 				case 1: 
 					// (, line 140
-					// or, line 140
+					// or, line 140
+
 					do 
 					{
 						v_1 = limit - cursor;
@@ -1260,7 +1266,8 @@ replab0_brk: ;
 			int v_12;
 			int v_13;
 			// (, line 194
-			// or, line 196
+			// or, line 196
+
 			do 
 			{
 				v_1 = cursor;
@@ -1339,7 +1346,8 @@ lab3_brk: ;
 lab4_brk: ;
 
 				cursor = limit - v_5;
-				// or, line 205
+				// or, line 205
+
 				do 
 				{
 					v_6 = limit - cursor;

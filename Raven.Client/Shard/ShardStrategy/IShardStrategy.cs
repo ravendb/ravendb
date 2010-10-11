@@ -1,4 +1,4 @@
-﻿using Raven.Client.Shard.ShardStrategy.ShardAccess;
+using Raven.Client.Shard.ShardStrategy.ShardAccess;
 using Raven.Client.Shard.ShardStrategy.ShardResolution;
 using Raven.Client.Shard.ShardStrategy.ShardSelection;
 

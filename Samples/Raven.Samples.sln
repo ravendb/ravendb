@@ -1,4 +1,4 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Sample.ComplexSharding", "Raven.Sample.ComplexSharding\Raven.Sample.ComplexSharding.csproj", "{C7F492BF-8C5C-4080-85A0-A0C4A63D68F2}"

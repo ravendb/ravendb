@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Specialized;
 using Raven.Client.Client;
 using Raven.Client.Document;

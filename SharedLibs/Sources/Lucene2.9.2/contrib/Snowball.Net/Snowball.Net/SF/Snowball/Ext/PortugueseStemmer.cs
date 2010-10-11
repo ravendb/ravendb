@@ -149,7 +149,8 @@ replab0_brk: ;
 			do 
 			{
 				// (, line 50
-				// or, line 52
+				// or, line 52
+
 lab2: 
 				do 
 				{
@@ -934,7 +935,8 @@ lab3_brk: ;
 					slice_del();
 					// [, line 192
 					ket = cursor;
-					// or, line 192
+					// or, line 192
+
 lab5: 
 					do 
 					{
@@ -1047,7 +1049,8 @@ lab1_brk: ;
 			limit_backward = cursor; cursor = limit;
 			// (, line 202
 			// do, line 203
-			v_3 = limit - cursor;			do 
+			v_3 = limit - cursor;
+			do 
 			{
 				// (, line 203
 				// or, line 207

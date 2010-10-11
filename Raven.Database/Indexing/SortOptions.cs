@@ -1,4 +1,4 @@
-﻿namespace Raven.Database.Indexing
+namespace Raven.Database.Indexing
 {
 	/// <summary>
 	/// The sort options to use for a particular field

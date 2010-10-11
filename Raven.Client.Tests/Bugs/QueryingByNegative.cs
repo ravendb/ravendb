@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using Raven.Database.Indexing;
 using Xunit;
 

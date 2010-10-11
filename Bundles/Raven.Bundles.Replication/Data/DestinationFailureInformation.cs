@@ -1,4 +1,4 @@
-﻿namespace Raven.Bundles.Replication.Data
+namespace Raven.Bundles.Replication.Data
 {
     public class DestinationFailureInformation
     {

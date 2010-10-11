@@ -1,4 +1,4 @@
-﻿namespace Raven.Server
+namespace Raven.Server
 {
     partial class RavenService
     {

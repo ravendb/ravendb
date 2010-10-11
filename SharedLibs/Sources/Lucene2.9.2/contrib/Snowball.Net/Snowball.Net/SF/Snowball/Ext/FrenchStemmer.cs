@@ -262,7 +262,8 @@ replab0_brk: ;
 			do 
 			{
 				// (, line 56
-				// or, line 57
+				// or, line 57
+
 				do 
 				{
 					v_2 = cursor;
@@ -612,7 +613,8 @@ replab1_brk: ;
 						}
 						// ], line 91
 						bra = cursor;
-						// or, line 91						do 
+						// or, line 91
+						do 
 						{
 							v_2 = limit - cursor;
 							do 
@@ -844,7 +846,8 @@ lab3_brk: ;
 							
 							case 1: 
 								// (, line 123
-								// or, line 123
+								// or, line 123
+
 								do 
 								{
 									v_6 = limit - cursor;
@@ -875,7 +878,8 @@ lab7_brk: ;
 							
 							case 2: 
 								// (, line 124
-								// or, line 124								do 
+								// or, line 124
+								do 
 								{
 									v_7 = limit - cursor;
 									do 
@@ -1333,7 +1337,8 @@ lab0_brk: ;
 						limit_backward = v_4;
 						return false;
 					}
-					// or, line 193					do 
+					// or, line 193
+					do 
 					{
 						v_5 = limit - cursor;
 						do 
@@ -1457,7 +1462,8 @@ replab1_brk: ;
 			}
 			// [, line 208
 			ket = cursor;
-			// or, line 208
+			// or, line 208
+
 lab16: 
 			do 
 			{
@@ -1538,7 +1544,8 @@ lab1_brk: ;
 			limit_backward = cursor; cursor = limit;
 			// (, line 216
 			// do, line 218
-			v_3 = limit - cursor;
+			v_3 = limit - cursor;
+
 			do 
 			{
 				// (, line 218
@@ -1596,7 +1603,8 @@ lab5_brk: ;
 						
 						cursor = limit - v_5;
 						// try, line 225
-						v_7 = limit - cursor;						do 
+						v_7 = limit - cursor;
+						do 
 						{
 							// (, line 225
 							// [, line 225

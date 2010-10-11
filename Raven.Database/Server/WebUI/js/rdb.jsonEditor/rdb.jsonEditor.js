@@ -1,4 +1,4 @@
-﻿/*
+/*
 requires the following includes to be on page
 <link href="css/rdb.jsonEditor.css" rel="Stylesheet" type="text/css" />
 <link href="css/smoothness/jquery-ui-1.8rc2.custom.css" rel="Stylesheet" type="text/css" />

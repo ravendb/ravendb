@@ -1,4 +1,4 @@
-﻿namespace Raven.Database.Linq
+namespace Raven.Database.Linq
 {
     /// <summary>
     /// This is used to provide a way for a translator function 

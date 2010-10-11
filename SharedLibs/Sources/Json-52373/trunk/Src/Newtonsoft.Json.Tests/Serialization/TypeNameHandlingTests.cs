@@ -1,4 +1,4 @@
-﻿#region License
+#region License
 // Copyright (c) 2007 James Newton-King
 //
 // Permission is hereby granted, free of charge, to any person
@@ -292,7 +292,7 @@ namespace Newtonsoft.Json.Tests.Serialization
 ""$type"": """ + typeName + @""",
 ""RequestData"": {
 ""$type"": ""System.Collections.Generic.Dictionary`2[[System.String, mscorlib,Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089],[System.String, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]], mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"",
-""Id"": ""siedemnaście"",
+""Id"": ""siedemnascie"",
 ""X"": ""323""
 },
 ""Method"": ""GET"",
@@ -312,7 +312,7 @@ namespace Newtonsoft.Json.Tests.Serialization
       SendHttpRequest request = (SendHttpRequest)message;
       Assert.AreEqual("xyz", request.CorrelationId);
       Assert.AreEqual(2, request.RequestData.Count);
-      Assert.AreEqual("siedemnaście", request.RequestData["Id"]);
+      Assert.AreEqual("siedemnascie", request.RequestData["Id"]);
     }
 
     [Test]

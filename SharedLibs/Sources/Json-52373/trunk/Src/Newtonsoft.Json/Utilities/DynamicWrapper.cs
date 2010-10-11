@@ -1,4 +1,4 @@
-﻿#if !SILVERLIGHT && !PocketPC
+#if !SILVERLIGHT && !PocketPC
 using System;
 using System.Collections.Generic;
 using System.IO;

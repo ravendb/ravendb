@@ -1,4 +1,4 @@
-﻿namespace Raven.Bundles.Replication
+namespace Raven.Bundles.Replication
 {
     public class ReplicationConstants
     {

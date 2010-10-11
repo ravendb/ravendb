@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Raven.Database.Tasks;
 
 namespace Raven.Database.Storage.StorageActions

@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.Composition.Hosting;
+using System.ComponentModel.Composition.Hosting;
 using System.Reflection;
 
 namespace Raven.Client.Indexes

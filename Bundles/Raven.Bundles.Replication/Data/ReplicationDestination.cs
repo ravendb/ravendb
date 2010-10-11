@@ -1,4 +1,4 @@
-﻿namespace Raven.Bundles.Replication.Data
+namespace Raven.Bundles.Replication.Data
 {
 	/// <summary>
 	/// Data class for replication destination documents

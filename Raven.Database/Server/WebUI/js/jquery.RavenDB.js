@@ -1,4 +1,4 @@
-﻿var indexSearchCache = null;
+var indexSearchCache = null;
 
 (function ($) {
     $.ravenDB = {

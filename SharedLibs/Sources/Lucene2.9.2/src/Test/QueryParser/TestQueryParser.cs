@@ -1,4 +1,4 @@
-﻿/* 
+/* 
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
@@ -298,12 +298,12 @@ namespace Lucene.Net.QueryParsers
         public virtual void TestCJK()
         {
             // Test Ideographic Space - As wide as a CJK character cell (fullwidth)
-            // used google to translate the word "term" to japanese -> ç”¨èªž
+            // used google to translate the word "term" to japanese -> 用語
             //
             // NOTE: What is printed above is not the translation of "term" into
             // Japanese.  Google translate currently gives:
             //
-            // 期間
+            // ??
             //
             // Which translates to unicode characters 26399 and 38291, or
             // the literals '\u671f' and '\u9593'.
@@ -323,8 +323,8 @@ namespace Lucene.Net.QueryParsers
 		public virtual void  TestSimple()
 		{
 			AssertQueryEquals("term term term", null, "term term term");
-			AssertQueryEquals("tÃ¼rm term term", new WhitespaceAnalyzer(), "tÃ¼rm term term");
-			AssertQueryEquals("Ã¼mlaut", new WhitespaceAnalyzer(), "Ã¼mlaut");
+			AssertQueryEquals("türm term term", new WhitespaceAnalyzer(), "türm term term");
+			AssertQueryEquals("ümlaut", new WhitespaceAnalyzer(), "ümlaut");
 			
 			AssertQueryEquals("\"\"", new KeywordAnalyzer(), "");
 			AssertQueryEquals("foo:\"\"", new KeywordAnalyzer(), "foo:");

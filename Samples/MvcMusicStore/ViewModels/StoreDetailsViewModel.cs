@@ -1,4 +1,4 @@
-﻿using MvcMusicStore.Models;
+using MvcMusicStore.Models;
 
 namespace MvcMusicStore.ViewModels
 {

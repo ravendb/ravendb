@@ -1,4 +1,4 @@
-﻿extern alias replication;
+extern alias replication;
 extern alias database;
 
 using System;

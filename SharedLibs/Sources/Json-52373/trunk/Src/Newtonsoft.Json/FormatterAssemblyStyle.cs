@@ -1,4 +1,4 @@
-﻿#if SILVERLIGHT || PocketPC
+#if SILVERLIGHT || PocketPC
 namespace System.Runtime.Serialization.Formatters
 {
   /// <summary>

@@ -1,4 +1,4 @@
-﻿namespace Raven.Database.Indexing
+namespace Raven.Database.Indexing
 {
 	/// <summary>
 	/// Specifies whether and how a field should be stored.

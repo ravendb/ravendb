@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using Raven.Client.Client;
 using Raven.Database.Data;
 

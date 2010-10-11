@@ -1,4 +1,4 @@
-ï»¿#region License
+#region License
 // Copyright (c) 2007 James Newton-King
 //
 // Permission is hereby granted, free of charge, to any person
@@ -308,7 +308,7 @@ namespace Newtonsoft.Json.Tests.Bson
 
       Assert.IsTrue(reader.Read());
       Assert.AreEqual(JsonToken.String, reader.TokenType);
-      Assert.AreEqual("1234Â£56", reader.Value);
+      Assert.AreEqual("1234£56", reader.Value);
       Assert.AreEqual(typeof(string), reader.ValueType);
 
       Assert.IsTrue(reader.Read());
@@ -1019,7 +1019,7 @@ namespace Newtonsoft.Json.Tests.Bson
     {
       var doc =
           @"{
-""AboutMe"": ""<p>I'm the Director for Research and Development for <a href=\""http://www.prophoenix.com\"" rel=\""nofollow\"">ProPhoenix</a>, a public safety software company.  This position allows me to investigate new and existing technologies and incorporate them into our product line, with the end goal being to help public safety agencies to do their jobs more effeciently and safely.</p>\r\n\r\n<p>I'm an advocate for PowerShell, as I believe it encourages administrative best practices and allows developers to provide additional access to their applications, without needing to explicity write code for each administrative feature.  Part of my advocacy for PowerShell includes <a href=\""http://blog.usepowershell.com\"" rel=\""nofollow\"">my blog</a>, appearances on various podcasts, and acting as a Community Director for <a href=\""http://powershellcommunity.org\"" rel=\""nofollow\"">PowerShellCommunity.Org</a></p>\r\n\r\n<p>Iâ€™m also a co-host of Mind of Root (a weekly audio podcast about systems administration, tech news, and topics).</p>\r\n"",
+""AboutMe"": ""<p>I'm the Director for Research and Development for <a href=\""http://www.prophoenix.com\"" rel=\""nofollow\"">ProPhoenix</a>, a public safety software company.  This position allows me to investigate new and existing technologies and incorporate them into our product line, with the end goal being to help public safety agencies to do their jobs more effeciently and safely.</p>\r\n\r\n<p>I'm an advocate for PowerShell, as I believe it encourages administrative best practices and allows developers to provide additional access to their applications, without needing to explicity write code for each administrative feature.  Part of my advocacy for PowerShell includes <a href=\""http://blog.usepowershell.com\"" rel=\""nofollow\"">my blog</a>, appearances on various podcasts, and acting as a Community Director for <a href=\""http://powershellcommunity.org\"" rel=\""nofollow\"">PowerShellCommunity.Org</a></p>\r\n\r\n<p>I’m also a co-host of Mind of Root (a weekly audio podcast about systems administration, tech news, and topics).</p>\r\n"",
 ""WebsiteUrl"": ""http://blog.usepowershell.com""
 }";
       JObject parsed = JObject.Parse(doc);
@@ -1045,7 +1045,7 @@ namespace Newtonsoft.Json.Tests.Bson
 
 <p>I'm an advocate for PowerShell, as I believe it encourages administrative best practices and allows developers to provide additional access to their applications, without needing to explicity write code for each administrative feature.  Part of my advocacy for PowerShell includes <a href=""http://blog.usepowershell.com"" rel=""nofollow"">my blog</a>, appearances on various podcasts, and acting as a Community Director for <a href=""http://powershellcommunity.org"" rel=""nofollow"">PowerShellCommunity.Org</a></p>
 
-<p>Iâ€™m also a co-host of Mind of Root (a weekly audio podcast about systems administration, tech news, and topics).</p>
+<p>I’m also a co-host of Mind of Root (a weekly audio podcast about systems administration, tech news, and topics).</p>
 ", reader.Value);
       Assert.AreEqual(typeof(string), reader.ValueType);
 

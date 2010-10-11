@@ -1,4 +1,4 @@
-﻿namespace Raven.Database
+namespace Raven.Database
 {
 	public enum AnonymousUserAccessMode
 	{

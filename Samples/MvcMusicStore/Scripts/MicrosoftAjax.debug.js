@@ -1,4 +1,4 @@
-﻿// Name:        MicrosoftAjax.debug.js
+// Name:        MicrosoftAjax.debug.js
 // Assembly:    System.Web.Extensions
 // Version:     4.0.0.0
 // FileVersion: 4.0.20526.0

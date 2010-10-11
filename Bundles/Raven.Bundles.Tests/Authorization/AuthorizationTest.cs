@@ -1,4 +1,4 @@
-﻿extern alias database;
+extern alias database;
 
 using System;
 using System.Collections;
