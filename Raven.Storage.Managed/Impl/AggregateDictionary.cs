@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Json;
@@ -14,6 +15,7 @@ namespace Raven.Storage.Managed.Impl
     {
         private readonly IPersistentSource persistentSource;
         private readonly List<PersistentDictionary> dictionaries = new List<PersistentDictionary>();
+        private ReaderWriterLockSlim readerWriterLockSlim;
 
         public AggregateDictionary(IPersistentSource persistentSource)
         {
@@ -23,21 +25,29 @@ namespace Raven.Storage.Managed.Impl
 
         public void Initialze()
         {
-            while (true)
+            readerWriterLockSlim.EnterWriteLock();
+            try
             {
-                long lastGoodPosition = persistentSource.Log.Position;
-
-                if (persistentSource.Log.Position == persistentSource.Log.Length)
-                    break;// EOF
-
-                var cmds = ReadCommands(lastGoodPosition);
-                if (cmds == null)
-                    break;
-
-                foreach (var commandForDictionary in cmds.GroupBy(x => x.DictionaryId))
+                while (true)
                 {
-                    dictionaries[commandForDictionary.Key].ApplyCommands(commandForDictionary);
+                    long lastGoodPosition = persistentSource.Log.Position;
+
+                    if (persistentSource.Log.Position == persistentSource.Log.Length)
+                        break;// EOF
+
+                    var cmds = ReadCommands(lastGoodPosition);
+                    if (cmds == null)
+                        break;
+
+                    foreach (var commandForDictionary in cmds.GroupBy(x => x.DictionaryId))
+                    {
+                        dictionaries[commandForDictionary.Key].ApplyCommands(commandForDictionary);
+                    }
                 }
+            }
+            finally
+            {
+                readerWriterLockSlim.ExitWriteLock();
             }
         }
 
@@ -72,22 +82,31 @@ namespace Raven.Storage.Managed.Impl
         {
             lock (persistentSource.SyncLock)
             {
-                var cmds = new List<Command>();
-                foreach (var persistentDictionary in dictionaries)
+                readerWriterLockSlim.EnterWriteLock();
+                try
                 {
-                    var commandsToCommit = persistentDictionary.GetCommandsToCommit(txId);
-                    if(commandsToCommit == null)
-                        continue;
-                    cmds.AddRange(commandsToCommit);
+                    var cmds = new List<Command>();
+                    foreach (var persistentDictionary in dictionaries)
+                    {
+                        var commandsToCommit = persistentDictionary.GetCommandsToCommit(txId);
+                        if (commandsToCommit == null)
+                            continue;
+                        cmds.AddRange(commandsToCommit);
+                    }
+
+                    persistentSource.FlushData(); // sync the data to disk before doing anything else
+                    WriteCommands(cmds, persistentSource.Log);
+                    persistentSource.FlushLog(); // flush all the index changes to disk
+
+
+                    foreach (var persistentDictionary in dictionaries)
+                    {
+                        persistentDictionary.CompleteCommit(txId);
+                    }
                 }
-
-                persistentSource.FlushData(); // sync the data to disk before doing anything else
-                WriteCommands(cmds, persistentSource.Log);
-                persistentSource.FlushLog(); // flush all the index changes to disk
-
-                foreach (var persistentDictionary in dictionaries)
+                finally
                 {
-                    persistentDictionary.CompleteCommit(txId);
+                    readerWriterLockSlim.ExitWriteLock();
                 }
             }
         }
@@ -154,7 +173,7 @@ namespace Raven.Storage.Managed.Impl
         /// </summary>
         public void PerformIdleTasks()
         {
-            if (CompactionRequired() == false) 
+            if (CompactionRequired() == false)
                 return;
 
             Compact();
@@ -175,6 +194,8 @@ namespace Raven.Storage.Managed.Impl
 
         public PersistentDictionary Add(PersistentDictionary dictionary)
         {
+            readerWriterLockSlim = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
+            dictionary.JoinToAggregate(readerWriterLockSlim);
             dictionaries.Add(dictionary);
             dictionary.DictionaryId = dictionaries.Count - 1;
             return dictionary;

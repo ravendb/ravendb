@@ -4,6 +4,7 @@ using log4net;
 using log4net.Appender;
 using log4net.Config;
 using log4net.Layout;
+using Raven.Client.Tests.Document;
 using Raven.Client.Tests.Indexes;
 using Raven.Tests.Indexes;
 using Raven.Tests.Triggers;
@@ -14,34 +15,14 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-			foreach (var file in Directory.GetFiles(".", "*.log"))
-			{
-				File.Delete(file);
-			}
-
-			for (var i = 0; i < 100; i++)
-			{
-				var file = i + ".log";
-				Console.WriteLine(file);
-				var fileAppender = new FileAppender
-				{
-					Layout = new PatternLayout(PatternLayout.DetailConversionPattern),
-					File = file,
-				};
-				fileAppender.ActivateOptions();
-				BasicConfigurator.Configure(fileAppender);
-				try
-				{
-					var x = new UsingCustomLuceneAnalyzer();
-					{
-						x.find_matching_document_with_lucene_query_and_without_redundant_wait();
-					}
-				}
-				finally
-				{
-					LogManager.Shutdown();
-				}
-			}
+		    for (int i = 0; i < 1500; i++)
+		    {
+		        Console.Write(i+"\r");
+                using (var t = new Game())
+                {
+                    t.WillNotGetDuplicatedResults();
+                }
+		    }
 		}
 	}
 }

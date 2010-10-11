@@ -50,7 +50,7 @@ namespace Raven.Storage.Managed.Impl
         /// We have to support recursion here, because we want to be able to scan a secondary index and pull records from the main one
         /// at the same time.
         /// </summary>
-        private readonly ReaderWriterLockSlim readerWriterLockSlim = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
+        private ReaderWriterLockSlim readerWriterLockSlim = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
 
         private readonly List<SecondaryIndex> secondaryIndices = new List<SecondaryIndex>();
 
@@ -63,6 +63,11 @@ namespace Raven.Storage.Managed.Impl
 
         private readonly MemoryCache cache = new MemoryCache(Guid.NewGuid().ToString());
         public int DictionaryId { get; set; }
+
+        public void JoinToAggregate(ReaderWriterLockSlim writerLockSlim)
+        {
+            readerWriterLockSlim = writerLockSlim;
+        }
 
         public PersistentDictionary(IPersistentSource persistentSource, IEqualityComparer<JToken> comparer)
         {
@@ -88,34 +93,26 @@ namespace Raven.Storage.Managed.Impl
 
         internal void ApplyCommands(IEnumerable<Command> cmds)
         {
-            readerWriterLockSlim.EnterWriteLock();
-            try
+            foreach (Command command in cmds)
             {
-                foreach (Command command in cmds)
+                switch (command.Type)
                 {
-                    switch (command.Type)
-                    {
-                        case CommandType.Put:
-                            AddInteral(command.Key, new PositionInFile
-                            {
-                                Position = command.Position,
-                                Size = command.Size,
-                                Key = command.Key
-                            });
-                            break;
-                        case CommandType.Delete:
-                            RemoveInternal(command.Key);
-                            break;
-                        default:
-                            throw new ArgumentOutOfRangeException();
-                    }
-                    Guid _;
-                    keysModifiedInTx.TryRemove(command.Key, out _);
+                    case CommandType.Put:
+                        AddInteral(command.Key, new PositionInFile
+                        {
+                            Position = command.Position,
+                            Size = command.Size,
+                            Key = command.Key
+                        });
+                        break;
+                    case CommandType.Delete:
+                        RemoveInternal(command.Key);
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
                 }
-            }
-            finally
-            {
-                readerWriterLockSlim.ExitWriteLock();
+                Guid _;
+                keysModifiedInTx.TryRemove(command.Key, out _);
             }
         }
 
