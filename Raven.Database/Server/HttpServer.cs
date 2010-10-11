@@ -311,8 +311,7 @@ namespace Raven.Database.Server
 			{
 				ctx.SetResponseFilter(s => new DeflateStream(s, CompressionMode.Compress, true));
 				ctx.Response.Headers["Content-Encoding"] = "deflate";
-			}
-			 
+			}		 
 
 		}
 

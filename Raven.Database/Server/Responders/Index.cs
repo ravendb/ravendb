@@ -110,7 +110,8 @@ namespace Raven.Database.Server.Responders
                 {
                     string entityName = null;
                     if (index.StartsWith("dynamic/"))
-                        entityName = index.Substring("dynamic/".Length);
+                        entityName = index.Substring("dynamic/".Length);           
+
                     queryResult = Database.ExecuteDynamicQuery(entityName, indexQuery);
                 }
                 else

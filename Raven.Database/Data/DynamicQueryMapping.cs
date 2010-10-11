@@ -13,6 +13,12 @@ namespace Raven.Database.Data
 
         public string ForEntityName { get; set; }
 
+        public DynamicSortInfo[] SortDescriptors
+        {
+            get;
+            set;
+        }
+
         public DynamicQueryMappingItem[] Items
         {
             get;
@@ -69,13 +75,19 @@ namespace Raven.Database.Data
                         currentExpression.ToString().Replace("_Range", "")
                         ));
             }
-            
-            return new IndexDefinition()
+
+           var index =  new IndexDefinition()
             {
-                 Map = string.Format("{0}\r\nselect new {{ {1} }}",
-                    string.Join("\r\n", fromClauses.ToArray()),
-                    string.Join(", ", realMappings.ToArray())),
+                Map = string.Format("{0}\r\nselect new {{ {1} }}",
+                   string.Join("\r\n", fromClauses.ToArray()),
+                   string.Join(", ", realMappings.ToArray()))
             };
+
+           foreach (var descriptor in this.SortDescriptors)
+           {
+               index.SortOptions.Add(descriptor.Field, (SortOptions)Enum.Parse(typeof(SortOptions), descriptor.FieldType)); 
+           }      
+           return index;
         }
 
         public static DynamicQueryMapping Create(string query, string entityName)
@@ -88,20 +100,43 @@ namespace Raven.Database.Data
                 String field = match.Groups[1].Value;
                 fields.Add(field);
             }
+
+            var headers = CurrentRavenOperation.Headers.Value;
+
+            List<DynamicSortInfo> sortInfo = new List<DynamicSortInfo>();
+            String[] sortHintHeaders = headers.AllKeys
+               .Where(key => key.StartsWith("SortHint")).ToArray();
+            foreach (string sortHintHeader in sortHintHeaders)
+            {
+                String[] split = sortHintHeader.Split('_');
+                String fieldName = split[1];
+                string fieldType = headers[sortHintHeader];
+
+                sortInfo.Add(new DynamicSortInfo()
+                {
+                    Field = fieldName,
+                    FieldType = fieldType
+                });
+
+                fields.Add(fieldName);
+            }
             
             return new DynamicQueryMapping()
             {
                 ForEntityName = entityName,
+                SortDescriptors = sortInfo.ToArray(),
                 Items = fields.Select(x => new DynamicQueryMappingItem()
                 {
                     From = x,
                     To = x.Replace(".", "").Replace(",", "")
                 }).ToArray()
-            };
-                      
+            };                      
         }
 
-
-        
+        public class DynamicSortInfo
+        {
+            public string Field { get; set; }
+            public string FieldType { get; set; }
+        }
     }
 }

@@ -490,6 +490,18 @@ namespace Raven.Client.Document
 		}
 
         /// <summary>
+        /// Adds an ordering for a specific field to the query and specifies the type of field for sorting purposes
+        /// </summary>
+        /// <param name="fieldName">Name of the field.</param>
+        /// <param name="descending">if set to <c>true</c> [descending].</param>
+        /// <param name="fieldType">the type of the field to be sorted.</param>
+        public IDocumentQuery<T> AddOrder(string fieldName, bool descending, Type fieldType)
+        {
+            ApplyForAll(x => x.AddOrder(fieldName, descending, fieldType));
+            return this;
+        }
+
+        /// <summary>
         /// This function exists solely to forbid in memory where clause on IDocumentQuery, because
         /// that is nearly always a mistake.
         /// </summary>
@@ -503,5 +515,8 @@ If you really want to do in memory filtering on the data returned from the query
         {
             throw new NotSupportedException();
         }
-	}
+
+
+
+    }
 }

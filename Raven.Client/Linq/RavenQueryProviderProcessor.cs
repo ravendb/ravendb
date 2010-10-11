@@ -486,8 +486,12 @@ namespace Raven.Client.Linq
 
 		private void VisitOrderBy(LambdaExpression expression, bool descending)
 		{
-			var name = ((MemberExpression) expression.Body).Member.Name;
-			luceneQuery.AddOrder(name, descending);
+            var member = ((MemberExpression) expression.Body).Member;
+            var propertyInfo = ((MemberExpression)expression.Body).Member as PropertyInfo;
+            var fieldInfo = ((MemberExpression)expression.Body).Member as FieldInfo;
+            var name = member.Name;
+            var type = propertyInfo != null ? propertyInfo.PropertyType : fieldInfo.FieldType;
+            luceneQuery.AddOrder(name, descending, type);
 		}
 
 		private void VisitSelect(Expression operand)

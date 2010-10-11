@@ -285,6 +285,34 @@ namespace Raven.Tests.Queries
             Assert.Equal("Rhinos", results.Results[0].Value<string>("Category"));
         }
 
+        [Fact]
+        public void NestedCollectionPropertiesCanBeQueriedWithProjection()
+        {
+            var blogOne = new Blog
+            {
+                Title = "one",
+                Category = "Ravens",
+                Tags = new Tag[]{
+                     new Tag(){ Name = "birds" }
+                },
+            };
+
+            db.Put("blogOne", null, JObject.FromObject(blogOne), new JObject(), null);
+
+            var results = db.ExecuteDynamicQuery(null, new IndexQuery()
+            {
+                PageSize = 128,
+                Start = 0,
+                Cutoff = DateTime.Now,
+                Query = "Tags,Name:[[birds]]",
+                FieldsToFetch = new string[] { "Title", "Category" }
+            });
+
+            Assert.Equal(1, results.Results.Count);
+            Assert.Equal("one", results.Results[0].Value<string>("Title"));
+            Assert.Equal("Ravens", results.Results[0].Value<string>("Category"));
+        }
+
         public class Blog
         {
             public User User
