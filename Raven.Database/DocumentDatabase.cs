@@ -264,6 +264,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
             }
             RemoveReservedProperties(document);
             RemoveReservedProperties(metadata);
+            Guid newEtag = Guid.Empty;
             TransactionalStorage.Batch(actions =>
             {
                 if (key.EndsWith("/"))
@@ -276,26 +277,26 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
                     AssertPutOperationNotVetoed(key, metadata, document, transactionInformation);
                     PutTriggers.Apply(trigger => trigger.OnPut(key, document, metadata, transactionInformation));
 
-                    etag = actions.Documents.AddDocument(key, etag, document, metadata);
+                    newEtag = actions.Documents.AddDocument(key, etag, document, metadata);
                     // We detect this by using the etags
                     // AddIndexingTask(actions, metadata, () => new IndexDocumentsTask { Keys = new[] { key } });
-                    PutTriggers.Apply(trigger => trigger.AfterPut(key, document, metadata, etag.Value, transactionInformation));
+                    PutTriggers.Apply(trigger => trigger.AfterPut(key, document, metadata, newEtag, transactionInformation));
                 }
                 else
                 {
-                    etag = actions.Transactions.AddDocumentInTransaction(key, etag,
+                    newEtag = actions.Transactions.AddDocumentInTransaction(key, etag,
                                                      document, metadata, transactionInformation);
                 }
                 workContext.ShouldNotifyAboutWork();
             });
 
             TransactionalStorage
-                .ExecuteImmediatelyOrRegisterForSyncronization(() => PutTriggers.Apply(trigger => trigger.AfterCommit(key, document, metadata, etag.Value)));
+                .ExecuteImmediatelyOrRegisterForSyncronization(() => PutTriggers.Apply(trigger => trigger.AfterCommit(key, document, metadata, newEtag)));
 
             return new PutResult
             {
                 Key = key,
-                ETag = etag.Value
+                ETag = newEtag
             };
         }
 
