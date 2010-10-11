@@ -32,7 +32,8 @@ namespace Raven.Database.Indexing
 		{
 		    this.configuration = configuration;
 		    path = Path.Combine(configuration.DataDirectory, "Indexes");
-		    if (Directory.Exists(path) == false)
+
+            if (Directory.Exists(path) == false && configuration.RunInMemory == false)
 		        Directory.CreateDirectory(path);
 
 		    foreach (var indexDirectory in indexDefinitionStorage.IndexNames)
@@ -52,7 +53,7 @@ namespace Raven.Database.Indexing
 		protected Lucene.Net.Store.Directory OpenOrCreateLuceneDirectory(string indexDirectory)
 		{
 			Lucene.Net.Store.Directory directory;
-			if (configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction)
+			if (configuration.RunInMemory)
 				directory = new RAMDirectory();
 			else
 				directory = FSDirectory.Open(new DirectoryInfo(Path.Combine(path, MonoHttpUtility.UrlEncode(indexDirectory))));

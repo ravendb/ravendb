@@ -177,7 +177,18 @@ namespace Raven.Database
 
 		public AggregateCatalog Catalog { get; set; }
 
-		public bool RunInUnreliableYetFastModeThatIsNotSuitableForProduction { get; set; }
+	    private bool runInUnreliableYetFastModeThatIsNotSuitableForProduction;
+	    public bool RunInUnreliableYetFastModeThatIsNotSuitableForProduction
+	    {
+	        get { return runInUnreliableYetFastModeThatIsNotSuitableForProduction; }
+	        set
+	        {
+	            RunInMemory = value;
+	            runInUnreliableYetFastModeThatIsNotSuitableForProduction = value;
+	        }
+	    }
+
+	    public bool RunInMemory { get; set; }
 
 		public bool HttpCompression { get; set; }
 

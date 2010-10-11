@@ -94,11 +94,10 @@ namespace Raven.Storage.Managed
 
         public bool Initialize()
         {
-            if (configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction == false &&
-                Directory.Exists(configuration.DataDirectory) == false)
+            if (configuration.RunInMemory  == false && Directory.Exists(configuration.DataDirectory) == false)
                 Directory.CreateDirectory(configuration.DataDirectory);
 
-            persistenceSource = configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction
+            persistenceSource = configuration.RunInMemory
                           ? (IPersistentSource)new MemoryPersistentSource()
                           : new FileBasedPersistentSource(configuration.DataDirectory, "Raven", configuration.TransactionMode);
 
