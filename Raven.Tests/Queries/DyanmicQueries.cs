@@ -1,16 +1,9 @@
-using System;
-using System.Collections.Generic;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Data;
-using Raven.Database.Indexing;
-using Raven.Database.Linq;
-using Raven.Database.Plugins;
-using Raven.Database.Storage;
 using Raven.Tests.Storage;
 using Xunit;
-using System.Linq;
 
 namespace Raven.Tests.Queries
 {

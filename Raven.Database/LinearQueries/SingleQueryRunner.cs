@@ -115,5 +115,10 @@ namespace Raven.Database.LinearQueries
                 return null;
             return value.ToString();
         }
+
+        public void Dispose()
+        {
+            remoteStorage.Dispose();
+        }
     }
 }

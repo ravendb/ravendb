@@ -134,12 +134,12 @@ namespace Raven.Storage.Managed
 
         public Type TypeForRunningQueriesInRemoteAppDomain
         {
-            get { throw new NotImplementedException(); }
+            get { return typeof(RemoteManagedStorage); }
         }
 
         public object StateForRunningQueriesInRemoteAppDomain
         {
-            get { throw new NotImplementedException(); }
+            get { return persistenceSource.CreateRemoteAppDomainState(); }
         }
     }
 }

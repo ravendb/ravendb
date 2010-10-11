@@ -27,5 +27,10 @@ namespace Raven.Storage.Esent
                 action(new StorageActionsAccessor(pht));
             }
         }
+
+        public void Dispose()
+        {
+            
+        }
     }
 }

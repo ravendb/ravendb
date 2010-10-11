@@ -16,5 +16,6 @@ namespace Raven.Storage.Managed.Impl
 
         void FlushData();
         void FlushLog();
+        RemoteManagedStorageState CreateRemoteAppDomainState();
     }
 }

@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using Raven.Database;
 
 namespace Raven.Storage.Managed.Impl
@@ -6,6 +7,7 @@ namespace Raven.Storage.Managed.Impl
     public class FileBasedPersistentSource : IPersistentSource
     {
         private readonly string basePath;
+        private readonly string prefix;
         private readonly TransactionMode transactionMode;
         private readonly string dataPath;
         private readonly string logPath;
@@ -19,6 +21,7 @@ namespace Raven.Storage.Managed.Impl
         {
             SyncLock = new object();
             this.basePath = basePath;
+            this.prefix = prefix;
             this.transactionMode = transactionMode;
             dataPath = Path.Combine(basePath, prefix + ".data");
             logPath = Path.Combine(basePath, prefix + ".log");
@@ -108,6 +111,15 @@ namespace Raven.Storage.Managed.Impl
         public void FlushLog()
         {
             log.Flush(true);
+        }
+
+        public RemoteManagedStorageState CreateRemoteAppDomainState()
+        {
+            return new RemoteManagedStorageState
+            {
+                Path = basePath,
+                Prefix = prefix
+            };
         }
 
         #endregion

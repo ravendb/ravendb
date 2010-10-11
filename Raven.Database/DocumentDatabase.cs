@@ -793,9 +793,14 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 
             query.PageSize = Math.Min(query.PageSize, Configuration.MaxPageSize);
 
-            var remoteSingleQueryRunner = queryRunnerManager.CreateSingleQueryRunner(TransactionalStorage.TypeForRunningQueriesInRemoteAppDomain, TransactionalStorage.StateForRunningQueriesInRemoteAppDomain);
+            RemoteQueryResults result;
+            using (var remoteSingleQueryRunner = queryRunnerManager.CreateSingleQueryRunner(
+                TransactionalStorage.TypeForRunningQueriesInRemoteAppDomain, 
+                TransactionalStorage.StateForRunningQueriesInRemoteAppDomain))
+            {
+                result = remoteSingleQueryRunner.Query(query);
+            }
 
-            var result = remoteSingleQueryRunner.Query(query);
 
             if(result.QueryCacheSize > 1024)
             {
