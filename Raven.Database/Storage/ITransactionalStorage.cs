@@ -3,13 +3,16 @@ using Raven.Database.Storage.StorageActions;
 
 namespace Raven.Database.Storage
 {
-    public interface IRemoteStorage
+    public interface IRemoteStorage : IDisposable
     {
         void Batch(Action<IStorageActionsAccessor> action);
     }
 
 	public interface ITransactionalStorage : IDisposable
 	{
+        /// <summary>
+        /// This is used mostly for replication
+        /// </summary>
 		Guid Id { get; }
 		void Batch(Action<IStorageActionsAccessor> action);
 		void ExecuteImmediatelyOrRegisterForSyncronization(Action action);
@@ -27,6 +30,7 @@ namespace Raven.Database.Storage
 		IDocumentStorageActions Documents { get; }
 		IQueueStorageActions Queue { get; }
 		ITasksStorageActions Tasks { get; }
+        IStalenessStorageActions Staleness{ get; }
 		IAttachmentsStorageActions Attachments { get; }
 		IIndexingStorageActions Indexing { get; }
 		IGeneralStorageActions General { get; }

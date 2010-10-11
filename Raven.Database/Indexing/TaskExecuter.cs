@@ -59,7 +59,7 @@ namespace Raven.Database.Indexing
 						               failureRate.FailureRate);
 						continue;
 					}
-					if (!actions.Tasks.IsIndexStale(indexesStat.Name, null, null)) 
+					if (!actions.Staleness.IsIndexStale(indexesStat.Name, null, null)) 
 						continue;
 					indexesToWorkOn.Add(new IndexToWorkOn
 					{
@@ -133,6 +133,11 @@ namespace Raven.Database.Indexing
 		{
 			public string IndexName { get; set; }
 			public Guid LastIndexedEtag { get; set; }
+
+		    public override string ToString()
+		    {
+		        return string.Format("IndexName: {0}, LastIndexedEtag: {1}", IndexName, LastIndexedEtag);
+		    }
 		}
 
 		public bool IndexDocuments(IStorageActionsAccessor actions, string index, Guid etagToIndexFrom)

@@ -78,7 +78,9 @@ namespace Raven.Database.Linq
 					return new DynamicJsonObject(jObject);
 				case JTokenType.Array:
 					return new DynamicList(jToken.Select(TransformToValue).ToArray());
-				default:
+				case JTokenType.Date:
+			        return jToken.Value<DateTime>();
+                default:
 					var value = jToken.Value<object>();
 					if(value is long)
 					{

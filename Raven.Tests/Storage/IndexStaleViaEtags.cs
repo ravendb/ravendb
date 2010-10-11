@@ -25,32 +25,32 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void CanTellThatIndexIsStale()
 		{
-			db.TransactionalStorage.Batch(accessor => Assert.False(accessor.Tasks.IsIndexStale("Raven/DocumentsByEntityName",null, null)));
+            db.TransactionalStorage.Batch(accessor => Assert.False(accessor.Staleness.IsIndexStale("Raven/DocumentsByEntityName", null, null)));
 
 			db.Put("ayende", null, new JObject(), new JObject(), null);
 
-			db.TransactionalStorage.Batch(accessor => Assert.True(accessor.Tasks.IsIndexStale("Raven/DocumentsByEntityName", null, null)));
+            db.TransactionalStorage.Batch(accessor => Assert.True(accessor.Staleness.IsIndexStale("Raven/DocumentsByEntityName", null, null)));
 		}
 
 		[Fact]
 		public void CanIndexDocuments()
 		{
 			db.SpinBackgroundWorkers();
-			
-			db.TransactionalStorage.Batch(accessor => Assert.False(accessor.Tasks.IsIndexStale("Raven/DocumentsByEntityName", null, null)));
+
+            db.TransactionalStorage.Batch(accessor => Assert.False(accessor.Staleness.IsIndexStale("Raven/DocumentsByEntityName", null, null)));
 
 			db.Put("ayende", null, new JObject(), new JObject(), null);
 
 			for (int i = 0; i < 50; i++)
 			{
 				bool indexed = false;
-				db.TransactionalStorage.Batch(accessor => indexed = (accessor.Tasks.IsIndexStale("Raven/DocumentsByEntityName", null, null)));
+                db.TransactionalStorage.Batch(accessor => indexed = (accessor.Staleness.IsIndexStale("Raven/DocumentsByEntityName", null, null)));
 				if (indexed == false)
 					break;
 				Thread.Sleep(50);
 			}
 
-			db.TransactionalStorage.Batch(accessor => Assert.False(accessor.Tasks.IsIndexStale("Raven/DocumentsByEntityName", null, null)));
+            db.TransactionalStorage.Batch(accessor => Assert.False(accessor.Staleness.IsIndexStale("Raven/DocumentsByEntityName", null, null)));
 		}
 	}
 }

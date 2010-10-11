@@ -14,6 +14,7 @@ using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
+using Raven.Database.LinearQueries;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
@@ -91,9 +92,16 @@ namespace Raven.Database
             workContext.IndexDefinitionStorage = IndexDefinitionStorage;
 
 
-            InitializeTriggers();
-            ExecuteStartupTasks();
-
+            try
+            {
+                InitializeTriggers();
+                ExecuteStartupTasks();
+            }
+            catch (Exception)
+            {
+                Dispose();
+                throw;
+            }
             if (!newDb)
                 return;
 
@@ -158,7 +166,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
                             if (abstractViewGenerator != null)
                                 entityName = abstractViewGenerator.ForEntityName;
 
-                            return actions.Tasks.IsIndexStale(s, null, entityName);
+                            return actions.Staleness.IsIndexStale(s, null, entityName);
                         }).ToArray();
                     result.Indexes = actions.Indexing.GetIndexesStats().ToArray();
                 });
@@ -225,7 +233,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
         }
 
 		private static int sequentialUuidCounter;
-        private QueryRunner queryRunner;
+        private QueryRunnerManager queryRunnerManager;
 
         public static Guid CreateSequentialUuid()
 		{
@@ -466,7 +474,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
                     if (abstractViewGenerator != null)
                         entityName = abstractViewGenerator.ForEntityName;
 
-                    stale = actions.Tasks.IsIndexStale(index, query.Cutoff, entityName);
+                    stale = actions.Staleness.IsIndexStale(index, query.Cutoff, entityName);
                     var indexFailureInformation = actions.Indexing.GetFailureRate(index);
                     if (indexFailureInformation.IsInvalidIndex)
                     {
@@ -509,7 +517,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
             TransactionalStorage.Batch(
                 actions =>
                 {
-                    isStale = actions.Tasks.IsIndexStale(index, query.Cutoff, null);
+                    isStale = actions.Staleness.IsIndexStale(index, query.Cutoff, null);
                     var indexFailureInformation = actions.Indexing.GetFailureRate(index)
 ;
                     if (indexFailureInformation.IsInvalidIndex)
@@ -784,14 +792,21 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
             }
 
             query.PageSize = Math.Min(query.PageSize, Configuration.MaxPageSize);
-            
-            var result = queryRunner.Query(query);
+
+            RemoteQueryResults result;
+            using (var remoteSingleQueryRunner = queryRunnerManager.CreateSingleQueryRunner(
+                TransactionalStorage.TypeForRunningQueriesInRemoteAppDomain, 
+                TransactionalStorage.StateForRunningQueriesInRemoteAppDomain))
+            {
+                result = remoteSingleQueryRunner.Query(query);
+            }
+
 
             if(result.QueryCacheSize > 1024)
             {
                 lock(this)
                 {
-                    if(queryRunner.QueryCacheSize > 1024)
+                    if(queryRunnerManager.QueryCacheSize > 1024)
                         UnloadQueriesAppDomain();
                 }
             }
@@ -812,7 +827,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 
         private void UnloadQueriesAppDomain()
         {
-            queryRunner = null;
+            queryRunnerManager = null;
             if (queriesAppDomain != null)
                 AppDomain.Unload(queriesAppDomain);
         }
@@ -820,8 +835,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
         private void InitailizeQueriesAppDomain()
         {
             queriesAppDomain = AppDomain.CreateDomain("Queries", null, AppDomain.CurrentDomain.SetupInformation);
-            queryRunner = (QueryRunner)queriesAppDomain.CreateInstanceAndUnwrap(typeof(QueryRunner).Assembly.FullName, typeof(QueryRunner).FullName);
-            queryRunner.Initialize(TransactionalStorage.TypeForRunningQueriesInRemoteAppDomain, TransactionalStorage.StateForRunningQueriesInRemoteAppDomain);
+            queryRunnerManager = (QueryRunnerManager)queriesAppDomain.CreateInstanceAndUnwrap(typeof(QueryRunnerManager).Assembly.FullName, typeof(QueryRunnerManager).FullName);
         }
 
     }

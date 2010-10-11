@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition.Hosting;
 using System.Configuration;
@@ -78,11 +78,11 @@ namespace Raven.Database
 
 			AnonymousUserAccessMode = GetAnonymousUserAccessMode();
 
-			StorageTypeName = ConfigurationManager.AppSettings["Raven/StorageTypeName"] ??
-				"Raven.Storage.Esent.TransactionalStorage, Raven.Storage.Esent";
+            //StorageTypeName = ConfigurationManager.AppSettings["Raven/StorageTypeName"] ??
+            //    "Raven.Storage.Esent.TransactionalStorage, Raven.Storage.Esent";
 
-			//StorageTypeName = ConfigurationManager.AppSettings["Raven/StorageTypeName"] ??
-			//    "Raven.Storage.Managed.TransactionalStorage, Raven.Storage.Managed";
+            StorageTypeName = ConfigurationManager.AppSettings["Raven/StorageTypeName"] ??
+                "Raven.Storage.Managed.TransactionalStorage, Raven.Storage.Managed";
 		}
 
 		public string StorageTypeName { get; set; }

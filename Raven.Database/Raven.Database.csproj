@@ -143,6 +143,8 @@
     <Compile Include="Json\DynamicUtil.cs" />
     <Compile Include="Json\JsonDynamicConverter.cs" />
     <Compile Include="Data\LinearQuery.cs" />
+    <Compile Include="LinearQueries\IRemoteSingleQueryRunner.cs" />
+    <Compile Include="LinearQueries\SingleQueryRunner.cs" />
     <Compile Include="Linq\ITranslatorDatabaseAccessor.cs" />
     <Compile Include="PerformanceCounters.cs" />
     <Compile Include="Plugins\AbstractBackgroundTask.cs" />
@@ -161,7 +163,8 @@
     <Compile Include="Plugins\ReadOperation.cs" />
     <Compile Include="Plugins\ReadVetoResult.cs" />
     <Compile Include="Data\QueryResults.cs" />
-    <Compile Include="QueryRunner.cs" />
+    <Compile Include="LinearQueries\QueryRunnerManager.cs" />
+    <Compile Include="LinearQueries\RemoteQueryResults.cs" />
     <Compile Include="Server\Abstractions\HttpContextAdapter.cs" />
     <Compile Include="Server\Abstractions\HttpListenerContextAdpater.cs" />
     <Compile Include="Server\Abstractions\HttpListenerRequestAdapter.cs" />
@@ -261,6 +264,7 @@
     <Compile Include="Storage\IndexCreationOptions.cs" />
     <Compile Include="Storage\IndexDefinitionStorage.cs" />
     <Compile Include="Storage\IQueueStorageActions.cs" />
+    <Compile Include="Storage\IStalenessStorageActions.cs" />
     <Compile Include="Storage\ITasksStorageActions.cs" />
     <Compile Include="Storage\ITransactionalStorage.cs" />
     <Compile Include="Tasks\ReduceTask.cs" />

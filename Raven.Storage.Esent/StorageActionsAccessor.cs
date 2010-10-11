@@ -36,6 +36,11 @@ namespace Raven.Storage.Esent
 			get { return inner; }
 		}
 
+        public IStalenessStorageActions Staleness
+        {
+            get { return inner; }
+        }
+
 		public IAttachmentsStorageActions Attachments
 		{
 			get { return inner; }

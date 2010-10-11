@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Raven.Database.Data;
 
@@ -7,7 +7,6 @@ namespace Raven.Database.Storage.StorageActions
 	public interface IIndexingStorageActions
 	{
 		void SetCurrentIndexStatsTo(string index);
-		void FlushIndexStats();
 
 		void IncrementIndexingAttempt();
 		void IncrementSuccessIndexing();
