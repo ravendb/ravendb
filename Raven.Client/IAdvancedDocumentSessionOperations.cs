@@ -1,50 +1,11 @@
-using System;
+﻿using System;
 using Newtonsoft.Json.Linq;
-using Raven.Client.Client;
-using Raven.Client.Client.Async;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
-using Raven.Client.Indexes;
 using Raven.Database.Exceptions;
 
 namespace Raven.Client
 {
-    /// <summary>
-	/// Hook for users to provide additioanl logic on delete operations
-	/// </summary>
-	public interface IDocumentDeleteListener
-	{
-		/// <summary>
-		/// Invoked before the delete request is sent to the server.
-		/// </summary>
-		/// <param name="key">The key.</param>
-		/// <param name="entityInstance">The entity instance.</param>
-		/// <param name="metadata">The metadata.</param>
-		void BeforeDelete(string key, object entityInstance, JObject metadata);
-	}
-
-	/// <summary>
-	/// Hook for users to provide additioanl logic on store operations
-	/// </summary>
-	public interface IDocumentStoreListener
-	{
-		/// <summary>
-		/// Invoked before the store request is sent to the server.
-		/// </summary>
-		/// <param name="key">The key.</param>
-		/// <param name="entityInstance">The entity instance.</param>
-		/// <param name="metadata">The metadata.</param>
-		void BeforeStore(string key, object entityInstance, JObject metadata);
-
-		/// <summary>
-		/// Invoked after the store request is sent to the server.
-		/// </summary>
-		/// <param name="key">The key.</param>
-		/// <param name="entityInstance">The entity instance.</param>
-		/// <param name="metadata">The metadata.</param>
-		void AfterStore(string key, object entityInstance, JObject metadata);
-	}
-
     /// <summary>
     /// Advanced session operations
     /// </summary>
@@ -161,62 +122,5 @@ namespace Raven.Client
         /// 	<c>true</c> if the specified entity has changed; otherwise, <c>false</c>.
         /// </returns>
         bool HasChanged(object entity);       
-    }
-
-    /// <summary>
-    /// Advanced async session operations
-    /// </summary>
-    public interface IAsyncAdvancedSessionOperations : IAdvancedDocumentSessionOperations
-    {
-        /// <summary>
-        /// Gets the async database commands.
-        /// </summary>
-        /// <value>The async database commands.</value>
-        IAsyncDatabaseCommands AsyncDatabaseCommands { get; }
-    }
-
-
-    /// <summary>
-    /// Advanced syncronous session operations
-    /// </summary>
-    public interface ISyncAdvancedSessionOperation : IAdvancedDocumentSessionOperations
-    {
-        /// <summary>
-        /// Refreshes the specified entity from Raven server.
-        /// </summary>
-        /// <param name="entity">The entity.</param>
-        void Refresh<T>(T entity);
-
-        /// <summary>
-        /// Gets the database commands.
-        /// </summary>
-        /// <value>The database commands.</value>
-        IDatabaseCommands DatabaseCommands { get; }
-
-        /// <summary>
-        /// Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.
-        /// </summary>
-        /// <typeparam name="T">The result of the query</typeparam>
-        /// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
-        /// <returns></returns>
-        IDocumentQuery<T> LuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new();
-
-        /// <summary>
-        /// Query the specified index using Lucene syntax
-        /// </summary>
-        /// <param name="indexName">Name of the index.</param>
-        IDocumentQuery<T> LuceneQuery<T>(string indexName);
-
-        /// <summary>
-        /// Dynamically query RavenDB using Lucene syntax
-        /// </summary>
-        IDocumentQuery<T> DynamicLuceneQuery<T>();
-
-        /// <summary>
-        /// Gets the document URL for the specified entity.
-        /// </summary>
-        /// <param name="entity">The entity.</param>
-        /// <returns></returns>
-        string GetDocumentUrl(object entity);
     }
 }

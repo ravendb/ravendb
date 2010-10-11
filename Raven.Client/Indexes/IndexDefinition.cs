@@ -174,17 +174,6 @@ namespace Raven.Client.Indexes
 	}
 
     /// <summary>
-    /// DatabaseAccessor for loading documents in the translator
-    /// </summary>
-    public interface IClientSideDatabase
-    {
-        /// <summary>
-        /// Loading a document during result transformers
-        /// </summary>
-        T Load<T>(string docId);
-    }
-
-    /// <summary>
 	/// This class attempts to provide a strongly typed index defintion on the client.
 	/// It is here solely as a convienance, and it is _expected_ to fail in some scenarios.
 	/// The recommended way is to define indexes outside your code, using the Web UI.

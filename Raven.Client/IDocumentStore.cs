@@ -65,21 +65,4 @@ namespace Raven.Client
 		/// <value>The conventions.</value>
     	DocumentConvention Conventions { get; }
     }
-
-	/// <summary>
-	/// The event args raised when an entity is stored
-	/// </summary>
-	public class StoredEntityEventArgs : EventArgs
-	{
-		/// <summary>
-		/// Gets or sets the session identifier.
-		/// </summary>
-		/// <value>The session identifier.</value>
-		public string SessionIdentifier { get; set; }
-		/// <summary>
-		/// Gets or sets the entity instance.
-		/// </summary>
-		/// <value>The entity instance.</value>
-		public object EntityInstance { get; set; }
-	}
 }

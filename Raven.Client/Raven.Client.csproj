@@ -103,6 +103,7 @@
     <Compile Include="Client\WebResponseExtensions.cs" />
     <Compile Include="Document\Async\AsyncDocumentSession.cs" />
     <Compile Include="Document\Async\SyncronousLoadResult.cs" />
+    <Compile Include="Document\DefaultRavenContractResolver.cs" />
     <Compile Include="Document\DocumentConvention.cs" />
     <Compile Include="Document\DocumentQuery.cs" />
     <Compile Include="Document\DocumentSession.cs" />
@@ -115,7 +116,13 @@
     <Compile Include="Document\MultiLoaderWithInclude.cs" />
     <Compile Include="Document\SpatialDocumentQuery.cs" />
     <Compile Include="Exceptions\ReadVetoException.cs" />
+    <Compile Include="IAdvancedDocumentSessionOperations.cs" />
+    <Compile Include="IAsyncAdvancedSessionOperations.cs" />
+    <Compile Include="IDocumentQueryCustomization.cs" />
+    <Compile Include="IDocumentStoreListener.cs" />
+    <Compile Include="Indexes\ExpressionOperatorPrecedenceExtension.cs" />
     <Compile Include="Indexes\ExpressionStringBuilder.cs" />
+    <Compile Include="Indexes\IClientSideDatabase.cs" />
     <Compile Include="Indexes\IndexDefinition.cs" />
     <Compile Include="Document\MultiTypeHiLoKeyGenerator.cs" />
     <Compile Include="Document\PromotableRavenClientEnlistment.cs" />
@@ -132,10 +139,11 @@
     <Compile Include="IDocumentSession.cs" />
     <Compile Include="IDocumentStore.cs" />
     <Compile Include="Document\InMemoryDocumentSessionOperations.cs" />
-    <Compile Include="IInMemoryDocumentSessionOperations.cs" />
+    <Compile Include="IDocumentDeleteListener.cs" />
     <Compile Include="Indexes\AbstractIndexCreationTask.cs" />
     <Compile Include="Indexes\IndexCreation.cs" />
     <Compile Include="Indexes\ExpressionOperatorPrecedence.cs" />
+    <Compile Include="ISyncAdvancedSessionOperation.cs" />
     <Compile Include="ITransactionalDocumentSession.cs" />
     <Compile Include="Linq\DateTools.cs" />
     <Compile Include="Linq\DynamicQueryProviderProcessor.cs" />
@@ -165,6 +173,7 @@
     <Compile Include="Shard\ShardStrategy\ShardResolution\ShardResolutionStrategyData.cs" />
     <Compile Include="Shard\Shards.cs" />
     <Compile Include="Shard\ShardStrategy\ShardStrategy.cs" />
+    <Compile Include="StoredEntityEventArgs.cs" />
     <Compile Include="Util\Inflector.cs" />
   </ItemGroup>
   <ItemGroup>
