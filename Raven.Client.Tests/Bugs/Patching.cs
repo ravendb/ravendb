@@ -18,6 +18,72 @@ namespace Raven.Client.Tests.Bugs
 			public string AuthorId { get; set; }
 		}
 
+        [Fact]
+        public void CanConvertToAndFromJsonWithNestedPatchRequests()
+        {
+            var patch = new PatchRequest
+                            {
+                                Name = "Comments",
+                                Type = PatchCommandType.Modify,
+                                Position = 0,
+                                Nested = new[]
+                                             {
+                                                 new PatchRequest
+                                                     {
+                                                         Name = "AuthorId",
+                                                         Type = PatchCommandType.Set,
+                                                         Value = "authors/456"
+                                                     },
+                                                    new PatchRequest
+                                                     {
+                                                         Name = "AuthorName",
+                                                         Type = PatchCommandType.Set,
+                                                         Value = "Tolkien"
+                                                     },
+                                             }
+                            };
+
+            var jsonPatch = patch.ToJson();
+            var backToPatch = PatchRequest.FromJson(jsonPatch);
+            Assert.Equal(patch.Name, backToPatch.Name);
+            Assert.Equal(patch.Nested.Length, backToPatch.Nested.Length);
+
+        }
+        
+        
+        [Fact]
+        public void CanConvertToAndFromJsonWithoutNestedPatchRequests()
+        {
+            var patch = new PatchRequest
+                            {
+                                Name = "Comments",
+                                Type = PatchCommandType.Modify,
+                                Position = 0,
+                                Nested = null
+                            };
+
+            var jsonPatch = patch.ToJson();
+            var backToPatch = PatchRequest.FromJson(jsonPatch);
+            Assert.Equal(patch.Name, backToPatch.Name);
+            Assert.Equal(patch.Nested, backToPatch.Nested);
+        }
+        
+        [Fact]
+        public void CanConvertToAndFromJsonWithEmptyNestedPatchRequests()
+        {
+            var patch = new PatchRequest
+                            {
+                                Name = "Comments",
+                                Type = PatchCommandType.Modify,
+                                Position = 0,
+                                Nested = new PatchRequest[] { }
+                            };
+
+            var jsonPatch = patch.ToJson();
+            var backToPatch = PatchRequest.FromJson(jsonPatch);
+            Assert.Equal(patch.Name, backToPatch.Name);
+            Assert.Equal(patch.Nested.Length, backToPatch.Nested.Length);
+        }
 		[Fact]
 		public void CanModifyValue()
 		{

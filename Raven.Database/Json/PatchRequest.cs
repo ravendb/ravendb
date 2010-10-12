@@ -109,16 +109,16 @@ namespace Raven.Database.Json
 		public static PatchRequest FromJson(JObject patchRequestJson)
 		{
 			PatchRequest[] nested = null;
-			var nestedJson = patchRequestJson.Value<JValue>("Nested");
-			if (nestedJson != null && nestedJson.Value != null)
-				nested = nestedJson.Value<JArray>().Cast<JObject>().Select(FromJson).ToArray();
+			var nestedJson = patchRequestJson.Value<JToken>("Nested");
+            if (nestedJson != null && nestedJson.Type != JTokenType.Null)
+                nested = patchRequestJson.Value<JArray>("Nested").Cast<JObject>().Select(FromJson).ToArray();
 
 			return new PatchRequest
 			{
 				Type = (PatchCommandType)Enum.Parse(typeof(PatchCommandType), patchRequestJson.Value<string>("Type"), true),
 				Name = patchRequestJson.Value<string>("Name"),
 				Nested = nested,
-				Position = (int?)patchRequestJson.Value<object>("Position"),
+				Position = patchRequestJson.Value<int?>("Position"),
 				PrevVal = patchRequestJson.Property("PrevVal") == null ? null : patchRequestJson.Property("PrevVal").Value,
 				Value = patchRequestJson.Property("Value") == null ? null : patchRequestJson.Property("Value").Value,
 			};
