@@ -140,7 +140,15 @@ namespace Raven.Client.Document.Async
 			UpdateBatchResults(batchResults, wrapperAsyncData.Wrapped.Entities);
 		}
 
-		/// <summary>
+        /// <summary>
+        /// Get the json document by key from the store
+        /// </summary>
+	    protected override JsonDocument GetJsonDocument(string documentKey)
+	    {
+	        throw new NotSupportedException("Cannot get a document in a syncronous manner using async document session");
+	    }
+
+	    /// <summary>
 		/// Commits the specified tx id.
 		/// </summary>
 		/// <param name="txId">The tx id.</param>

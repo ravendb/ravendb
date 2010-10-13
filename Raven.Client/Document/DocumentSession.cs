@@ -184,6 +184,17 @@ namespace Raven.Client.Document
         }
 
         /// <summary>
+        /// Get the json document by key from the store
+        /// </summary>
+        protected override JsonDocument GetJsonDocument(string documentKey)
+        {
+             var jsonDocument = documentStore.DatabaseCommands.Get(documentKey);
+            if (jsonDocument == null)
+                throw new InvalidOperationException("Document '" + documentKey + "' no longer exists and was probably deleted");
+            return jsonDocument;
+        }
+
+        /// <summary>
         /// Begin a load while including the specified path
         /// </summary>
         /// <param name="path">The path.</param>
@@ -217,7 +228,7 @@ namespace Raven.Client.Document
             string baseUrl = documentStore.Url.EndsWith("/") ? documentStore.Url + "docs/" : documentStore.Url + "/docs/";
             if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
             {
-                return baseUrl + TryGetIdentity(entity, null);
+                return baseUrl + GetOrGenerateDocumentKey(entity);
             }
 
             return baseUrl + value.Key;

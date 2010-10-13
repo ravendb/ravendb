@@ -145,9 +145,38 @@ namespace Raven.Client.Document
 		{
 			DocumentSession.DocumentMetadata value;
 			if (entitiesAndMetadata.TryGetValue(instance, out value) == false)
-				return null;
+			{
+			    string id;
+			    if(TryGetIdFromInstance(instance, out id)
+#if !NET_3_5
+                    || (instance is IDynamicMetaObjectProvider && 
+                    TryGetIdFromDynamic(instance, out id) )
+#endif 
+                    )
+			    {
+			        var jsonDocument = GetJsonDocument(id);
+			        entitiesByKey[id] = instance;
+                    entitiesAndMetadata[instance] = value = new DocumentSession.DocumentMetadata
+                    {
+                        ETag = UseOptimisticConcurrency ? (Guid?)Guid.Empty : null,
+                        Key = id,
+                        OriginalMetadata = jsonDocument.Metadata,
+                        Metadata = new JObject(jsonDocument.Metadata),
+                        OriginalValue = new JObject()
+                    };
+			    }
+                else
+			    {
+			        throw new InvalidOperationException("Could not find the document key for " + instance);
+			    }
+			}
 			return value.Metadata;
 		}
+
+        /// <summary>
+        /// Get the json document by key from the store
+        /// </summary>
+	    protected abstract JsonDocument GetJsonDocument(string documentKey);
 
 		/// <summary>
 		/// Gets the document id.
@@ -372,7 +401,7 @@ more responsive application.
 #if !NET_3_5
             if (entity is IDynamicMetaObjectProvider)
             {
-            	if(TryGetId(entity,out id) == false)
+            	if(TryGetIdFromDynamic(entity,out id) == false)
 				{
 					id = Conventions.DocumentKeyGenerator(entity);
 
@@ -386,7 +415,7 @@ more responsive application.
             else
 #endif
 			{
-				id = TryGetIdentity(entity, id);
+				id = GetOrGenerateDocumentKey(entity);
 
 				TrySetIdentity(entity, id);
 			}
@@ -420,13 +449,11 @@ more responsive application.
 		/// Tries to get the identity.
 		/// </summary>
 		/// <param name="entity">The entity.</param>
-		/// <param name="id">The id.</param>
 		/// <returns></returns>
-		protected string TryGetIdentity(object entity, string id)
+		protected string GetOrGenerateDocumentKey(object entity)
 		{
-			var identityProperty = GetIdentityProperty(entity.GetType());
-			if (identityProperty != null)
-				id = identityProperty.GetValue(entity, null) as string;
+		    string id;
+		    TryGetIdFromInstance(entity, out id);
 
 			if (id == null)
 			{
@@ -437,8 +464,20 @@ more responsive application.
 			return id;
 		}
 
+	    private bool TryGetIdFromInstance(object entity, out string id)
+        {
+            var identityProperty = GetIdentityProperty(entity.GetType());
+			if (identityProperty != null)
+			{
+			    id = identityProperty.GetValue(entity, null) as string;
+			    return true;
+			}
+            id = null;
+            return false;
+        }
+
 #if !NET_3_5
-		private static bool TryGetId(dynamic entity, out string id)
+		private static bool TryGetIdFromDynamic(dynamic entity, out string id)
 		{
 			try
 			{

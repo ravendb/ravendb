@@ -99,6 +99,7 @@
       <Link>Spatial\SpatialIndexTestHelper.cs</Link>
     </Compile>
     <Compile Include="Bugs\AsyncCommit.cs" />
+    <Compile Include="Bugs\CanGetMetadataForTransient.cs" />
     <Compile Include="Bugs\EntityWithoutId.cs" />
     <Compile Include="Bugs\FailDelete.cs" />
     <Compile Include="Bugs\FailStore.cs" />
