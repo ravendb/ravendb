@@ -4,6 +4,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using Raven.Client.Document;
+using Raven.Database.Data;
 
 namespace Raven.Client.Linq
 {
@@ -13,6 +14,7 @@ namespace Raven.Client.Linq
 	public class RavenQueryProviderProcessor<T>
 	{
         private readonly Action<IDocumentQueryCustomization> customizeQuery;
+        private readonly Action<QueryResult> afterQueryExecuted;
 		private readonly string indexName;
 		private readonly IDocumentSession session;
 		private bool chainedWhere;
@@ -28,21 +30,24 @@ namespace Raven.Client.Linq
         /// </summary>
         public string CurrentPath { get { return currentPath; } }
 
-		/// <summary>
-		/// Initializes a new instance of the <see cref="RavenQueryProviderProcessor&lt;T&gt;"/> class.
-		/// </summary>
-		/// <param name="session">The session.</param>
-		/// <param name="customizeQuery">The customize query.</param>
-		/// <param name="indexName">Name of the index.</param>
-		public RavenQueryProviderProcessor(
+	    /// <summary>
+	    /// Initializes a new instance of the <see cref="RavenQueryProviderProcessor&lt;T&gt;"/> class.
+	    /// </summary>
+	    /// <param name="session">The session.</param>
+	    /// <param name="customizeQuery">The customize query.</param>
+	    /// <param name="afterQueryExecuted">Executed after the query run, allow access to the query results</param>
+	    /// <param name="indexName">Name of the index.</param>
+	    public RavenQueryProviderProcessor(
 			IDocumentSession session,
             Action<IDocumentQueryCustomization> customizeQuery,
+            Action<QueryResult> afterQueryExecuted,
 			string indexName)
 		{
 			FieldsToFetch = new List<string>();
 			newExpressionType = typeof (T);
 			this.session = session;
-			this.indexName = indexName;
+		    this.afterQueryExecuted = afterQueryExecuted;
+		    this.indexName = indexName;
 			this.customizeQuery = customizeQuery;
 		}
 
@@ -768,7 +773,10 @@ namespace Raven.Client.Linq
 
 			var genericExecuteQuery = typeof(RavenQueryProviderProcessor<T>).GetMethod("ExecuteQuery", BindingFlags.Instance|BindingFlags.NonPublic);
 			var executeQueryWithProjectionType = genericExecuteQuery.MakeGenericMethod(newExpressionType);
-			return executeQueryWithProjectionType.Invoke(this, new object[0]);
+            var results = executeQueryWithProjectionType.Invoke(this, new object[0]);
+            if (afterQueryExecuted != null)
+                afterQueryExecuted(luceneQuery.QueryResult);
+		    return results;
 		}
 
 		private object ExecuteQuery<TProjection>()

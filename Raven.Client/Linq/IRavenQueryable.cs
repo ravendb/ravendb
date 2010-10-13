@@ -7,7 +7,12 @@ namespace Raven.Client.Linq
 	/// An implementation of <see cref="IOrderedQueryable{T}"/> with Raven specific operation
 	/// </summary>
     public interface IRavenQueryable<T> : IOrderedQueryable<T>
-    {
+	{
+        /// <summary>
+        /// Provide statistics about the query, such as total count of matching records
+        /// </summary>
+	    IRavenQueryable<T> Statistics(out RavenQueryStatistics stats);
+
 		/// <summary>
 		/// Customizes the query using the specified action
 		/// </summary>

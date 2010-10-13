@@ -116,6 +116,7 @@
     <Compile Include="Bugs\QueryingByNegative.cs" />
     <Compile Include="Bugs\QueryingFromIndex.cs" />
     <Compile Include="Bugs\QueryWithPercentageSignp.cs" />
+    <Compile Include="Bugs\ReportQueryCount.cs" />
     <Compile Include="Bugs\User.cs" />
     <Compile Include="Bugs\UsingStartsWith.cs" />
     <Compile Include="Bugs\Translators.cs" />

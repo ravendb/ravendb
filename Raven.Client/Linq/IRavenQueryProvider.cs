@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using Raven.Database.Data;
 
 namespace Raven.Client.Linq
 {
@@ -7,11 +8,15 @@ namespace Raven.Client.Linq
 	/// Extension for the builtin <see cref="IQueryProvider"/> allowing for Raven specific operations
 	/// </summary>
     public interface IRavenQueryProvider : IQueryProvider
-    {
+	{
+        /// <summary>
+        /// Callback to get the results of the query
+        /// </summary>
+	    void AfterQueryExecuted(Action<QueryResult> afterQueryExecuted);
+
 		/// <summary>
 		/// Customizes the query using the specified action
 		/// </summary>
-		/// <param name="action">The action.</param>
         void Customize(Action<IDocumentQueryCustomization> action);
 
 		/// <summary>

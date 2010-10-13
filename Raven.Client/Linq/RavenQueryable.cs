@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using Raven.Database.Data;
 
 namespace Raven.Client.Linq
 {
@@ -13,8 +14,9 @@ namespace Raven.Client.Linq
     {
         private readonly Expression expression;
         private readonly IRavenQueryProvider provider;
+	    private readonly RavenQueryStatistics queryStats = new RavenQueryStatistics();
 
-		/// <summary>
+	    /// <summary>
 		/// Initializes a new instance of the <see cref="RavenQueryable&lt;T&gt;"/> class.
 		/// </summary>
 		/// <param name="provider">The provider.</param>
@@ -25,10 +27,11 @@ namespace Raven.Client.Linq
                 throw new ArgumentNullException("provider");
             }
             this.provider = provider;
+            this.provider.AfterQueryExecuted(UpdateQueryStats);
             expression = Expression.Constant(this);
         }
 
-		/// <summary>
+	    /// <summary>
 		/// Initializes a new instance of the <see cref="RavenQueryable&lt;T&gt;"/> class.
 		/// </summary>
 		/// <param name="provider">The provider.</param>
@@ -44,7 +47,15 @@ namespace Raven.Client.Linq
                 throw new ArgumentNullException("expression");
             }
 		    this.provider = provider.For<T>();
+            this.provider.AfterQueryExecuted(UpdateQueryStats);
             this.expression = expression;
+        }
+
+        private void UpdateQueryStats(QueryResult obj)
+        {
+            queryStats.IsStale = obj.IsStale;
+            queryStats.TotalResults = obj.TotalResults;
+            queryStats.SkippedResults = obj.SkippedResults;
         }
 
         #region IOrderedQueryable<T> Members
@@ -75,12 +86,21 @@ namespace Raven.Client.Linq
 
         IEnumerator IEnumerable.GetEnumerator()
         {
-            return ((IEnumerable)provider.Execute(expression)).GetEnumerator();
+            return GetEnumerator();
         }
 
         #endregion
 
-		/// <summary>
+        /// <summary>
+        /// Provide statistics about the query, such as total count of matching records
+        /// </summary>
+	    public IRavenQueryable<T> Statistics(out RavenQueryStatistics stats)
+	    {
+	        stats = queryStats;
+	        return this;
+	    }
+
+	    /// <summary>
 		/// Customizes the query using the specified action
 		/// </summary>
 		/// <param name="action">The action.</param>
@@ -99,7 +119,7 @@ namespace Raven.Client.Linq
 		/// </returns>
     	public override string ToString()
         {
-            var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.Session, null, provider.IndexName);
+            var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.Session, null, null, provider.IndexName);
             ravenQueryProvider.ProcessExpression(expression);
             string fields = "";
             if (ravenQueryProvider.FieldsToFetch.Count > 0)

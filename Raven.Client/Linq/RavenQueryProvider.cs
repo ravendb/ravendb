@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using Raven.Database.Data;
 
 namespace Raven.Client.Linq
 {
@@ -12,6 +13,7 @@ namespace Raven.Client.Linq
     {
         private readonly string indexName;
         private Action<IDocumentQueryCustomization> customizeQuery;
+	    private Action<QueryResult> afterQueryExecuted;
 		private readonly IDocumentSession session;
 
         /// <summary>
@@ -73,7 +75,7 @@ namespace Raven.Client.Linq
 		/// </returns>
 		public virtual object Execute(Expression expression)
 		{
-			return new RavenQueryProviderProcessor<T>(session, customizeQuery, indexName).Execute(expression);
+			return new RavenQueryProviderProcessor<T>(session, customizeQuery, afterQueryExecuted, indexName).Execute(expression);
 		}
 
 		IQueryable<S> IQueryProvider.CreateQuery<S>(Expression expression)
@@ -120,7 +122,15 @@ namespace Raven.Client.Linq
             return Execute(expression);
         }
 
-		/// <summary>
+        /// <summary>
+        /// Callback to get the results of the query
+        /// </summary>
+	    public void AfterQueryExecuted(Action<QueryResult> afterQueryExecutedCallback)
+	    {
+	        this.afterQueryExecuted=afterQueryExecutedCallback;
+	    }
+
+	    /// <summary>
 		/// Customizes the query using the specified action
 		/// </summary>
 		/// <param name="action">The action.</param>
@@ -130,5 +140,7 @@ namespace Raven.Client.Linq
                 return;
             customizeQuery += action;
         }
+
+
 	}
 }

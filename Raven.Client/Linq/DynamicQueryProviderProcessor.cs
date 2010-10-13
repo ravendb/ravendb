@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Raven.Database.Data;
 
 namespace Raven.Client.Linq
 {
@@ -14,11 +15,9 @@ namespace Raven.Client.Linq
         /// <summary>
         /// Creates a dynamic query proivder around the provided session
         /// </summary>
-        /// <param name="session"></param>
-        /// <param name="customizeQuery"></param>
-        public DynamicQueryProviderProcessor(IDocumentSession session,
-            Action<IDocumentQueryCustomization> customizeQuery) 
-            : base(session, customizeQuery, "dynamic")
+       public DynamicQueryProviderProcessor(IDocumentSession session,
+            Action<IDocumentQueryCustomization> customizeQuery, Action<QueryResult> afterQueryExecuted) 
+            : base(session, customizeQuery, afterQueryExecuted, "dynamic")
         {
 
         }

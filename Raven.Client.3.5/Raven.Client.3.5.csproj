@@ -246,6 +246,9 @@
     <Compile Include="..\Raven.Client\Linq\RavenQueryProviderProcessor.cs">
       <Link>Linq\RavenQueryProviderProcessor.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client\Linq\RavenQueryStatistics.cs">
+      <Link>Linq\RavenQueryStatistics.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client\Linq\TypeSystem.cs">
       <Link>Linq\TypeSystem.cs</Link>
     </Compile>
