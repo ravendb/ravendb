@@ -129,8 +129,6 @@ namespace Raven.Client.Document
 		}
 
 
-	    private bool runInMemory;
-
 	    /// <summary>
         /// Run RavenDB in an embedded mode, using in memory only storage.
         /// This is useful for unit tests, since it is very fast.
