@@ -1,3 +1,4 @@
+using System;
 using System.ComponentModel.Composition.Hosting;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -11,7 +12,6 @@ namespace Raven.Client.Tests.Bugs
 {
     public class Translators : LocalClientTest
     {
-
         public class Users : AbstractIndexCreationTask<User>
         {
             public Users()
@@ -54,6 +54,37 @@ namespace Raven.Client.Tests.Bugs
 
                     Assert.Equal("Oren", first.User);
                     Assert.Equal("Ayende", first.Partner);
+                }
+            }
+        }
+
+        [Fact]
+        public void WhenTransformResultsHasAnError()
+        {
+            using (var ds = NewDocumentStore())
+            {
+                using (var s = ds.OpenSession())
+                {
+                    var entity = new User { Name = "Ayende" };
+                    s.Store(entity);
+                    s.Store(new User { Name = "Oren", PartnerId = entity.Id });
+                    s.SaveChanges();
+                }
+
+                IndexCreation.CreateIndexes(
+                    new CompositionContainer(new TypeCatalog(typeof(Users))),
+                    ds);
+
+                using (var s = ds.OpenSession())
+                {
+                    var exception = Assert.Throws<InvalidOperationException>(() => s.Query<User, Users>()
+                                                                                                 .Customize(x => x.WaitForNonStaleResults())
+                                                                                                 .Where(x => x.Name == "Ayende")
+                                                                                                 .As<UserWithPartner>()
+                                                                                                 .First());
+
+                    Assert.Equal(@"The transform results function failed.
+Doc 'users/1', Error: Cannot perform runtime binding on a null reference", exception.Message);
                 }
             }
         }

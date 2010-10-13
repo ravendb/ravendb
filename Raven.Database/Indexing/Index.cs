@@ -286,49 +286,26 @@ namespace Raven.Database.Indexing
             return perFieldAnalyzerWrapper;
         }
 
-
-        protected IEnumerable<object> RobustEnumeration(IEnumerable<object> input, IndexingFunc func,
-                                                        IStorageActionsAccessor actions, WorkContext context)
+        protected IEnumerable<object> RobustEnumeration(IEnumerable<object> input, IndexingFunc func, IStorageActionsAccessor actions, WorkContext context)
         {
-            var wrapped = new StatefulEnumerableWrapper<dynamic>(input.GetEnumerator());
-            IEnumerator<object> en = func(wrapped).GetEnumerator();
-            do
+            return new RobustEnumerator
             {
-                var moveSuccessful = MoveNext(en, wrapped, context, actions);
-                if (moveSuccessful == false)
-                    yield break;
-                if (moveSuccessful == true)
-                    yield return en.Current;
-                else
-                    en = func(wrapped).GetEnumerator();
-            } while (true);
+                BeforeMoveNext = actions.Indexing.IncrementIndexingAttempt,
+                CancelMoveNext = actions.Indexing.DecrementIndexingAttempt,
+                OnError = (exception, o) =>
+                {
+                    actions.Indexing.IncrementIndexingFailure();
+                    context.AddError(name,
+                                     TryGetDocKey(o),
+                                     exception.Message
+                        );
+                    logIndexing.WarnFormat(exception, "Failed to execute indexing function on {0} on {1}", name,
+                                           TryGetDocKey(o));
+                }
+            }.RobustEnumeration(input, func);
         }
 
-        private bool? MoveNext(IEnumerator en, StatefulEnumerableWrapper<object> innerEnumerator, WorkContext context,
-                               IStorageActionsAccessor actions)
-        {
-            try
-            {
-                actions.Indexing.IncrementIndexingAttempt();
-                var moveNext = en.MoveNext();
-                if (moveNext == false)
-                    actions.Indexing.DecrementIndexingAttempt();
-                return moveNext;
-            }
-            catch (Exception e)
-            {
-                actions.Indexing.IncrementIndexingFailure();
-                context.AddError(name,
-                                 TryGetDocKey(innerEnumerator.Current),
-                                 e.Message
-                    );
-                logIndexing.WarnFormat(e, "Failed to execute indexing function on {0} on {1}", name,
-                               TryGetDocKey(innerEnumerator));
-            }
-            return null;
-        }
-
-        private static string TryGetDocKey(object current)
+        public static string TryGetDocKey(object current)
         {
             var dic = current as DynamicJsonObject;
             if (dic == null)

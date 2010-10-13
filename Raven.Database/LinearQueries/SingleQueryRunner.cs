@@ -59,8 +59,15 @@ namespace Raven.Database.LinearQueries
                         return new DynamicJsonObject(x.Item1.ToJson());
                     });
 
+                var robustEnumerator = new RobustEnumerator
+                {
+                    OnError =
+                        (exception, o) =>
+                        errors.Add(String.Format("Doc '{0}', Error: {1}", Index.TryGetDocKey(o),
+                                                 exception.Message))
+                };
                 results.AddRange(
-                    RobustEnumeration(docs, viewGenerator.MapDefinition, errors)
+                    robustEnumerator.RobustEnumeration(docs, viewGenerator.MapDefinition)
                         .Take(query.PageSize)
                         .Select(result => JsonExtensions.ToJObject(result).ToString())
                     );
@@ -76,45 +83,6 @@ namespace Raven.Database.LinearQueries
             };
         }
 
-        protected IEnumerable<object> RobustEnumeration(IEnumerable<object> input, IndexingFunc func, ICollection<string> errors)
-        {
-            var wrapped = new StatefulEnumerableWrapper<object>(input.GetEnumerator());
-            IEnumerator<object> en = func(wrapped).GetEnumerator();
-            do
-            {
-                var moveSuccessful = MoveNext(en, wrapped, errors);
-                if (moveSuccessful == false)
-                    yield break;
-                if (moveSuccessful == true)
-                    yield return en.Current;
-                else
-                    en = func(wrapped).GetEnumerator();
-            } while (true);
-        }
-
-        private static bool? MoveNext(IEnumerator en, StatefulEnumerableWrapper<object> innerEnumerator, ICollection<string> errors)
-        {
-            try
-            {
-                return en.MoveNext();
-            }
-            catch (Exception e)
-            {
-                errors.Add(String.Format("Doc '{0}', Error: {1}", TryGetDocKey(innerEnumerator.Current), e.Message));
-            }
-            return null;
-        }
-
-        private static string TryGetDocKey(object current)
-        {
-            var dic = current as DynamicJsonObject;
-            if (dic == null)
-                return null;
-            var value = dic.GetValue("__document_id");
-            if (value == null)
-                return null;
-            return value.ToString();
-        }
 
         public void Dispose()
         {

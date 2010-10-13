@@ -138,6 +138,7 @@
     <Compile Include="Indexing\LowerCaseAnalyzer.cs" />
     <Compile Include="Indexing\NumberUtil.cs" />
     <Compile Include="Indexing\RangeQueryParser.cs" />
+    <Compile Include="Indexing\RobustEnumerator.cs" />
     <Compile Include="Indexing\SpatialIndex.cs" />
     <Compile Include="Indexing\SortOptions.cs" />
     <Compile Include="IStartupTask.cs" />

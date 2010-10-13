@@ -479,12 +479,23 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
                                          where doc != null
                                          select doc;
 
+                    var transformerErrors = new List<string>();
                     IEnumerable<JObject> results;
                     if (abstractViewGenerator != null && 
                         abstractViewGenerator.TransformResultsDefinition != null)
                     {
-                        results = abstractViewGenerator.TransformResultsDefinition(docRetriever, collection.Select(x => new DynamicJsonObject(x.ToJson())))
-                            .Select<object, JObject>(JsonExtensions.ToJObject);
+                        var robustEnumerator = new RobustEnumerator
+                        {
+                            OnError =
+                                (exception, o) =>
+                                transformerErrors.Add(string.Format("Doc '{0}', Error: {1}", Index.TryGetDocKey(o),
+                                                         exception.Message))
+                        };
+                        results =
+                            robustEnumerator.RobustEnumeration(
+                                collection.Select(x => new DynamicJsonObject(x.ToJson())),
+                                source => abstractViewGenerator.TransformResultsDefinition(docRetriever, source))
+                                .Select(JsonExtensions.ToJObject);
                     }
                     else
                     {
@@ -492,6 +503,12 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
                     }
 
                     list.AddRange(results);
+
+                    if(transformerErrors.Count>0)
+                    {
+                        throw new InvalidOperationException("The transform results function failed.\r\n" + string.Join("\r\n", transformerErrors));
+                    }
+
                 });
             return new QueryResult
             {
