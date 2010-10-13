@@ -6,15 +6,11 @@ using Raven.Database.Data;
 
 namespace Raven.Storage.Managed.Impl
 {
-    /// <summary>
-    /// Give us nice names for the persistent dictionaries
-    /// 0 - Details
-    /// 1 - Identity
-    /// 2 - Attachments
-    /// </summary>
     public class TableStorage : AggregateDictionary
     {
         private readonly ThreadLocal<Guid> txId = new ThreadLocal<Guid>(() => Guid.Empty);
+
+
 
         public TableStorage(IPersistentSource persistentSource)
             : base(persistentSource)

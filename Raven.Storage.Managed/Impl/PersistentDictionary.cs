@@ -283,13 +283,15 @@ namespace Raven.Storage.Managed.Impl
             return cmds;
         }
 
-        internal void CompleteCommit(Guid txId)
+        internal bool CompleteCommit(Guid txId)
         {
             List<Command> cmds;
-            if (operationsInTransactions.TryRemove(txId, out cmds) == false)
-                return;
+            if (operationsInTransactions.TryRemove(txId, out cmds) == false || 
+                cmds.Count == 0)
+                return false;
 
-             ApplyCommands(cmds);
+            ApplyCommands(cmds);
+            return true;
         }
 
         public void Rollback(Guid txId)

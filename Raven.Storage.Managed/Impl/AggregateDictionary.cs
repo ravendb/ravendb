@@ -78,7 +78,7 @@ namespace Raven.Storage.Managed.Impl
         }
 
         [DebuggerNonUserCode]
-        public void Commit(Guid txId)
+        public bool Commit(Guid txId)
         {
             lock (persistentSource.SyncLock)
             {
@@ -98,11 +98,9 @@ namespace Raven.Storage.Managed.Impl
                     WriteCommands(cmds, persistentSource.Log);
                     persistentSource.FlushLog(); // flush all the index changes to disk
 
+                    return dictionaries.Aggregate(false, (changed, persistentDictionary) => changed | persistentDictionary.CompleteCommit(txId));
 
-                    foreach (var persistentDictionary in dictionaries)
-                    {
-                        persistentDictionary.CompleteCommit(txId);
-                    }
+
                 }
                 finally
                 {
