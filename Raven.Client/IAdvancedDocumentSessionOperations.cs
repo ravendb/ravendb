@@ -93,6 +93,8 @@ namespace Raven.Client
 
         /// <summary>
         /// Gets the metadata for the specified entity.
+        /// If the entity is transient, it will load the metadata from the store
+        /// and associate the current state of the entity with the metadata from the server.
         /// </summary>
         /// <param name="instance">The instance.</param>
         /// <returns></returns>

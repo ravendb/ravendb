@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -81,7 +81,7 @@ namespace Raven.Client.Tests.Indexes
         }
 
         [Fact]
-        public void find_matching_document_with_lucene_query_and_redundant_wait()
+        public void find_matching_document_with_lucene_query()
         {
             with_index_and_some_entities(delegate(IDocumentSession session)
             {
@@ -90,20 +90,20 @@ namespace Raven.Client.Tests.Indexes
                     .ToArray();
 
                 Assert.Equal(1, result.Length);
-                Assert.Equal(4, result.First().Count);
+                Assert.Equal(entityName, result.First().Name);
             });
         }
 
         [Fact]
-        public void find_matching_document_with_lucene_query_and_without_redundant_wait()
+        public void map_reduce_used_for_counting()
         {
             with_index_and_some_entities(delegate(IDocumentSession session)
             {
                 var result = session.Advanced.LuceneQuery<EntityCount>("someIndex")
+                var result = session.LuceneQuery<EntityCount>("someIndex").WaitForNonStaleResults()
                     .WhereEquals("NormalizedName", searchString, true, false)
                     .ToArray();
 
-                Assert.Equal(1, result.Length);
                 Assert.Equal(4, result.First().Count);
             });
         }
@@ -112,12 +112,10 @@ namespace Raven.Client.Tests.Indexes
         {
             using (var session = store.OpenSession())
             {
-                //doesn't matter what the query is here, just want to see if it's stale or not
                 session.Advanced.LuceneQuery<object>(indexName)
-            		.Where("")
+            		.Where("NOT \"*\"")
             		.WaitForNonStaleResultsAsOfNow(TimeSpan.FromSeconds(5))
             		.ToArray();
-
             }
         }
     }

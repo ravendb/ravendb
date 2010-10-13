@@ -105,6 +105,7 @@
     <Compile Include="Bugs\FailStore.cs" />
     <Compile Include="Bugs\Image.cs" />
     <Compile Include="Bugs\ImageByTagSearchModel.cs" />
+    <Compile Include="Bugs\IndexNestedFields.cs" />
     <Compile Include="Bugs\KeysAreCaseInsensitive.cs" />
     <Compile Include="Bugs\NameAndId.cs" />
     <Compile Include="Bugs\OverwriteIndexLocally.cs" />
