@@ -93,17 +93,17 @@ namespace Raven.Database.Linq
 			                   		})));
 
 
-            if(indexDefinition.ResultTransformer != null)
+            if(indexDefinition.TransformResults != null)
             {
                 VariableDeclaration translatorDeclaration;
                 
-                if (indexDefinition.ResultTransformer.Trim().StartsWith("from"))
+                if (indexDefinition.TransformResults.Trim().StartsWith("from"))
                 {
-                    translatorDeclaration = QueryParsingUtils.GetVariableDeclarationForLinqQuery(indexDefinition.ResultTransformer, requiresSelectNewAnonymousType:false);
+                    translatorDeclaration = QueryParsingUtils.GetVariableDeclarationForLinqQuery(indexDefinition.TransformResults, requiresSelectNewAnonymousType:false);
                 }
                 else
                 {
-                    translatorDeclaration = QueryParsingUtils.GetVariableDeclarationForLinqMethods(indexDefinition.ResultTransformer);
+                    translatorDeclaration = QueryParsingUtils.GetVariableDeclarationForLinqMethods(indexDefinition.TransformResults);
                 }
 
 
@@ -186,9 +186,9 @@ namespace Raven.Database.Linq
 				compiledQueryText += Environment.NewLine + indexDefinition.Reduce.Replace("\"", "\"\"");
 			}
 
-            if (indexDefinition.ResultTransformer != null)
+            if (indexDefinition.TransformResults != null)
             {
-                compiledQueryText += Environment.NewLine + indexDefinition.ResultTransformer.Replace("\"", "\"\"");
+                compiledQueryText += Environment.NewLine + indexDefinition.TransformResults.Replace("\"", "\"\"");
             }
 
 			compiledQueryText += "\"";

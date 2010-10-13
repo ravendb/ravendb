@@ -481,9 +481,9 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 
                     IEnumerable<JObject> results;
                     if (abstractViewGenerator != null && 
-                        abstractViewGenerator.ResultTransformerDefinition != null)
+                        abstractViewGenerator.TransformResultsDefinition != null)
                     {
-                        results = abstractViewGenerator.ResultTransformerDefinition(docRetriever, collection.Select(x => new DynamicJsonObject(x.ToJson())))
+                        results = abstractViewGenerator.TransformResultsDefinition(docRetriever, collection.Select(x => new DynamicJsonObject(x.ToJson())))
                             .Select<object, JObject>(JsonExtensions.ToJObject);
                     }
                     else

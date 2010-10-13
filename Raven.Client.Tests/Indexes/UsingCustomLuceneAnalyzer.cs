@@ -100,7 +100,7 @@ namespace Raven.Client.Tests.Indexes
             with_index_and_some_entities(delegate(IDocumentSession session)
             {
                 var result = session.Advanced.LuceneQuery<EntityCount>("someIndex")
-                var result = session.LuceneQuery<EntityCount>("someIndex").WaitForNonStaleResults()
+                    .WaitForNonStaleResults()
                     .WhereEquals("NormalizedName", searchString, true, false)
                     .ToArray();
 

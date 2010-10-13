@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Raven.Client.Indexes;
 using Raven.Database.Indexing;
 using Xunit;
@@ -32,7 +30,7 @@ namespace Raven.Client.Tests.Bugs
         {
             UsingPrepoulatedDatabase(delegate(IDocumentSession session3)
             {
-                var results1 = session3.LuceneQuery<Outer>("matryoshka").Where("ID:" + ExpectedId).ToArray();
+                var results1 = session3.Advanced.LuceneQuery<Outer>("matryoshka").Where("ID:" + ExpectedId).ToArray();
 
                 Assert.Equal(ExpectedId, results1.Single().middle.inner.ID);
             });

@@ -86,7 +86,7 @@ namespace Raven.Client.Indexes
                 SortOptions = SortOptions,
                 Map = Map,
                 Reduce = Reduce,
-                ResultTransformer = ResultTransformer,
+                TransformResults = ResultTransformer,
                 Stores = Stores
             }.ToIndexDefinition(DocumentStore.Conventions);
         }

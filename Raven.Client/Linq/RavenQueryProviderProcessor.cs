@@ -219,7 +219,7 @@ namespace Raven.Client.Linq
             // This wouldn't be valid if querying an existing index and would not ordinarily occur
             // So this should be a safe operation
             String path = memberExpression.ToString();
-            path = path.Substring(path.IndexOf('.') + 1);
+            path = path.Substring(path.LastIndexOf('.') + 1);
 
             return new ExpressionMemberInfo(path, memberExpression.Member);
 		}

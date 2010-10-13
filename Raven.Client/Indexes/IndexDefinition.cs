@@ -31,7 +31,7 @@ namespace Raven.Client.Indexes
         /// Gets or sets the reduce function
         /// </summary>
         /// <value>The reduce.</value>
-        public Expression<Func<IClientSideDatabase,IEnumerable<TReduceResult>, IEnumerable>> ResultTransformer { get; set; }
+        public Expression<Func<IClientSideDatabase,IEnumerable<TReduceResult>, IEnumerable>> TransformResults { get; set; }
 
 	    /// <summary>
 		/// Gets or sets the stores options
@@ -70,7 +70,7 @@ namespace Raven.Client.Indexes
 			{
 				Map = PruneToFailureLinqQueryAsStringToWorkableCode(Map, convention, "docs." + convention.GetTypeTagName(typeof(TDocument))),
 				Reduce = PruneToFailureLinqQueryAsStringToWorkableCode(Reduce, convention, "results"),
-                ResultTransformer = PruneToFailureLinqQueryAsStringToWorkableCode(ResultTransformer, convention, "results"),
+                TransformResults = PruneToFailureLinqQueryAsStringToWorkableCode(TransformResults, convention, "results"),
 				Indexes = ConvertToStringDictionary(Indexes),
 				Stores = ConvertToStringDictionary(Stores),
 				SortOptions = ConvertToStringDictionary(SortOptions)

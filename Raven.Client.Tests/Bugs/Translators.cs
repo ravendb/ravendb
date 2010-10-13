@@ -79,7 +79,7 @@ namespace Raven.Client.Tests.Bugs
                                              new IndexDefinition
                                              {
                                                  Map = "from u in docs.Users select new { u.Name }",
-                                                 ResultTransformer = "from user in results select new { Name = user.Name.ToUpper() }"
+                                                 TransformResults = "from user in results select new { Name = user.Name.ToUpper() }"
                                              });
 
 
@@ -110,7 +110,7 @@ namespace Raven.Client.Tests.Bugs
                                              new IndexDefinition
                                              {
                                                  Map = "from u in docs.Users select new { u.Name }",
-                                                 ResultTransformer =
+                                                 TransformResults =
                                                  @"
 from user in results 
 let partner = Database.Load(user.PartnerId)
