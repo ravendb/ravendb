@@ -28,6 +28,7 @@ namespace Raven.Bundles.Replication.Tasks
         private ConcurrentDictionary<string, IntHolder> activeReplicationTasks = new ConcurrentDictionary<string, IntHolder>();
 
         private int replicationAttempts;
+        private int workCounter;
 
         public void Execute(DocumentDatabase database)
         {
@@ -80,7 +81,7 @@ namespace Raven.Bundles.Replication.Tasks
                     log.Error("Failed to perform replication", e);
                 }
 
-                context.WaitForWork(TimeSpan.FromMinutes(1));
+                context.WaitForWork(TimeSpan.FromMinutes(1), ref workCounter);
             }
         }
 

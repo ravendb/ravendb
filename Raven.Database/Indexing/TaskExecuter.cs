@@ -23,9 +23,11 @@ namespace Raven.Database.Indexing
 			this.context = context;
 		}
 
-		public void Execute()
+        int workCounter;
+        
+        public void Execute()
 		{
-			while (context.DoWork)
+		    while (context.DoWork)
 			{
 				var foundWork = false;
 				try
@@ -39,7 +41,9 @@ namespace Raven.Database.Indexing
 					log.Error("Failed to execute indexing", e);
 				}
 				if (foundWork == false)
-					context.WaitForWork(TimeSpan.FromHours(1));
+				{
+				    context.WaitForWork(TimeSpan.FromHours(1), ref workCounter);
+				}
 			}
 		}
 

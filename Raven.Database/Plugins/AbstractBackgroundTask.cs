@@ -29,7 +29,8 @@ namespace Raven.Database.Plugins
 	    {
 	    }
 
-	    public void BackgroundTask()
+        int workCounter;
+        public void BackgroundTask()
 		{
 			var context = Database.WorkContext;
 			while (context.DoWork)
@@ -44,7 +45,9 @@ namespace Raven.Database.Plugins
 					log.Error("Failed to execute background task", e);
 				}
 				if (foundWork == false)
-					context.WaitForWork(TimeSpan.FromHours(1));
+				{
+				    context.WaitForWork(TimeSpan.FromHours(1), ref workCounter);
+				}
 			}
 		}
 

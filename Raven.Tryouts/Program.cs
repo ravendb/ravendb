@@ -4,6 +4,7 @@ using log4net;
 using log4net.Appender;
 using log4net.Config;
 using log4net.Layout;
+using Raven.Client.Tests.Bugs;
 using Raven.Client.Tests.Document;
 using Raven.Client.Tests.Indexes;
 using Raven.Tests.Indexes;
@@ -18,9 +19,9 @@ namespace Raven.Tryouts
 		    for (int i = 0; i < 1500; i++)
 		    {
 		        Console.Write(i+"\r");
-                using (var t = new Game())
+		        var t = new LinqGitHub147();
                 {
-                    t.WillNotGetDuplicatedResults();
+                    t.CanSelectStringProperty();
                 }
 		    }
 		}
