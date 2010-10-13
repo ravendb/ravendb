@@ -30,7 +30,15 @@ namespace Raven.Client.Linq
         /// <returns></returns>
         protected override ExpressionMemberInfo GetMember(System.Linq.Expressions.Expression expression)
         {
-            var info = base.GetMember(expression);
+            var memberExpression = base.GetMemberExpression(expression);
+
+            //for stnadard queries, we take just the last part. Bu for dynamic queries, we take the whole part
+            var path = memberExpression.ToString();
+            path = path.Substring(path.IndexOf('.') + 1);
+
+
+            var info = new ExpressionMemberInfo(path, memberExpression.Member);
+
             return new ExpressionMemberInfo(
                 this.CurrentPath + info.Path,
                 info.InnerMemberInfo);

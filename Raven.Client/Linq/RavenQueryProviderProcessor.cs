@@ -208,23 +208,28 @@ namespace Raven.Client.Linq
         /// <returns></returns>
         protected virtual ExpressionMemberInfo GetMember(Expression expression)
 		{
-			var unaryExpression = expression as UnaryExpression;
-			if(unaryExpression != null)
-				expression = unaryExpression.Operand;
+			MemberExpression memberExpression = GetMemberExpression(expression);
 
-            var memberExpression = (MemberExpression)expression;
-
-            // NOTE: We do this because in the case of dynamic queries, it is perfectly valid
-            // For a query to look like x=> x.SomeProperty.AnotherProperty.Length
-            // This wouldn't be valid if querying an existing index and would not ordinarily occur
-            // So this should be a safe operation
-            String path = memberExpression.ToString();
+            //for stnadard queries, we take just the last part. Bu for dynamic queries, we take the whole part
+            var path = memberExpression.ToString();
             path = path.Substring(path.LastIndexOf('.') + 1);
 
             return new ExpressionMemberInfo(path, memberExpression.Member);
 		}
 
-		private void VisitEquals(MethodCallExpression expression)
+        /// <summary>
+        /// Get the member expression from the expression
+        /// </summary>
+	    protected MemberExpression GetMemberExpression(Expression expression)
+	    {
+	        var unaryExpression = expression as UnaryExpression;
+	        if(unaryExpression != null)
+	            expression = unaryExpression.Operand;
+
+	        return (MemberExpression)expression;
+	    }
+
+	    private void VisitEquals(MethodCallExpression expression)
 		{
 			var memberInfo = GetMember(expression.Object);
 
