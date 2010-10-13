@@ -44,7 +44,7 @@ namespace Raven.Database.Plugins
 					log.Error("Failed to execute background task", e);
 				}
 				if (foundWork == false)
-					context.WaitForWork(TimeSpan.FromMinutes(1));
+					context.WaitForWork(TimeSpan.FromHours(1));
 			}
 		}
 

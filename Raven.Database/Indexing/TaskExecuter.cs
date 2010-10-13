@@ -39,7 +39,7 @@ namespace Raven.Database.Indexing
 					log.Error("Failed to execute indexing", e);
 				}
 				if (foundWork == false)
-					context.WaitForWork(TimeSpan.FromSeconds(1));
+					context.WaitForWork(TimeSpan.FromHours(1));
 			}
 		}
 
