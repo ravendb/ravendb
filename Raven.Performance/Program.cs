@@ -500,9 +500,9 @@ namespace Raven.Performance
 			{
 				using (IDocumentSession session = store.OpenSession())
 				{
-					session.LuceneQuery<User>("Users/ByName").Where("Name:WILLY").ToList();
-					session.LuceneQuery<User>("Users/ByName").Where("Name:FAUSTINO").ToList();
-					session.LuceneQuery<User>("Users/ByName").Where("Name:BART").ToList();
+					session.Advanced.LuceneQuery<User>("Users/ByName").Where("Name:WILLY").ToList();
+                    session.Advanced.LuceneQuery<User>("Users/ByName").Where("Name:FAUSTINO").ToList();
+                    session.Advanced.LuceneQuery<User>("Users/ByName").Where("Name:BART").ToList();
 				}
 			}
 
@@ -517,9 +517,9 @@ namespace Raven.Performance
 			{
 				using (IDocumentSession session = store.OpenSession())
 				{
-					session.LuceneQuery<User>("Users/ByName").Where("Name:WIL*").ToList();
-					session.LuceneQuery<User>("Users/ByName").Where("Name:FAUS*").ToList();
-					session.LuceneQuery<User>("Users/ByName").Where("Name:BA*").ToList();
+                    session.Advanced.LuceneQuery<User>("Users/ByName").Where("Name:WIL*").ToList();
+                    session.Advanced.LuceneQuery<User>("Users/ByName").Where("Name:FAUS*").ToList();
+                    session.Advanced.LuceneQuery<User>("Users/ByName").Where("Name:BA*").ToList();
 				}
 			}
 
