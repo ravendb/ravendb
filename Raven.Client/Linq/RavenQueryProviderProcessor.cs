@@ -783,7 +783,7 @@ namespace Raven.Client.Linq
 		    var executeQuery = GetQueryResult(finalQuery);
           
             if (afterQueryExecuted != null)
-                afterQueryExecuted(luceneQuery.QueryResult);
+                afterQueryExecuted(finalQuery.QueryResult);
 		  
 		    return executeQuery;
 		}
