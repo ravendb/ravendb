@@ -110,7 +110,7 @@ namespace Raven.Database.Linq
                 // this.Translator = (Database,results) => from doc in results ...;
                 ctor.Body.AddChild(new ExpressionStatement(
                                     new AssignmentExpression(
-                                        new MemberReferenceExpression(new ThisReferenceExpression(), "ResultTransformerDefinition"),
+                                        new MemberReferenceExpression(new ThisReferenceExpression(), "TransformResultsDefinition"),
                                         AssignmentOperatorType.Assign,
                                         new LambdaExpression
                                         {

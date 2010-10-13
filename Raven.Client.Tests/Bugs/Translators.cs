@@ -20,7 +20,7 @@ namespace Raven.Client.Tests.Bugs
                     users => from user in users
                              select new {user.Name};
 
-                ResultTransformer =
+                TransformResults =
                     (database, users) => from user in users
                                          let partner = database.Load<User>(user.PartnerId)
                                          select new {User = user.Name, Partner = partner.Name};

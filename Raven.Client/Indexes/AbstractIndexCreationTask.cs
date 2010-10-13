@@ -86,7 +86,7 @@ namespace Raven.Client.Indexes
                 SortOptions = SortOptions,
                 Map = Map,
                 Reduce = Reduce,
-                TransformResults = ResultTransformer,
+                TransformResults = TransformResults,
                 Stores = Stores
             }.ToIndexDefinition(DocumentStore.Conventions);
         }
@@ -94,7 +94,7 @@ namespace Raven.Client.Indexes
         /// <summary>
         /// The result translator definition
         /// </summary>
-        protected Expression<Func<IClientSideDatabase, IEnumerable<TReduceResult>, IEnumerable>> ResultTransformer { get; set; }
+        protected Expression<Func<IClientSideDatabase, IEnumerable<TReduceResult>, IEnumerable>> TransformResults { get; set; }
 
         /// <summary>
         /// The reduce defintion
