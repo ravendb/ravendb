@@ -106,9 +106,9 @@ namespace Raven.Client.Document
 		{
 			get
 			{
-				return identifier ?? Url 
+			    return identifier ?? Url
 #if !CLIENT
-					?? DataDirectory
+			        ?? ( RunInMemory ? "memory" :  DataDirectory);
 #endif
 ;
 			}
@@ -128,16 +128,35 @@ namespace Raven.Client.Document
 			set { configuration = value; }
 		}
 
+
+	    private bool runInMemory;
+
+	    /// <summary>
+        /// Run RavenDB in an embedded mode, using in memory only storage.
+        /// This is useful for unit tests, since it is very fast.
+        /// </summary>
+        public bool RunInMemory
+	    {
+            get { return Configuration.RunInMemory; }
+	        set
+	        {
+	            Configuration.RunInMemory = true;
+                Configuration.StorageTypeName = "Raven.Storage.Managed.TransactionalStorage, Raven.Storage.Managed";
+	        }
+	    }
+
+	    /// <summary>
+        /// Run RavenDB in embedded mode, using the specified directory for data storage
+        /// </summary>
+        /// <value>The data directory.</value>
 		public string DataDirectory
 		{
 			get
 			{
-				return Configuration == null ? null : Configuration.DataDirectory;
+				return Configuration.DataDirectory;
 			}
 			set
 			{
-				if (Configuration == null)
-                    Configuration = new Raven.Database.RavenConfiguration();
 				Configuration.DataDirectory = value;
 			}
 		}
@@ -167,6 +186,13 @@ namespace Raven.Client.Document
 					switch (match.Groups[1].Value.ToLower())
 					{
 #if !CLIENT
+                        case "memory":
+					        bool result;
+                            if (bool.TryParse(match.Groups[2].Value, out result) == false)
+                                throw new ConfigurationErrorsException("Could not understand memory setting: " +
+                                    match.Groups[2].Value);
+					        RunInMemory = result;
+					        break;
 						case "datadir":
 							DataDirectory = match.Groups[2].Value.Trim();
 							break;
@@ -195,6 +221,7 @@ namespace Raven.Client.Document
 				Credentials = new NetworkCredential(user, pass);
 			}
 		}
+
 
 		/// <summary>
 		/// Gets or sets the URL.
