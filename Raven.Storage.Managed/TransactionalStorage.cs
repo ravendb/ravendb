@@ -20,6 +20,8 @@ namespace Raven.Storage.Managed
         private IPersistentSource persistenceSource;
         private bool disposed;
         private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
+        private Timer idleTimer;
+        private long lastUsageTime;
 
         public TransactionalStorage(RavenConfiguration configuration, Action onCommit)
         {
@@ -34,6 +36,8 @@ namespace Raven.Storage.Managed
             {
                 if (disposed)
                     return;
+                if (idleTimer != null)
+                    idleTimer.Dispose();
                 if (persistenceSource != null)
                     persistenceSource.Dispose();
             }
@@ -65,6 +69,7 @@ namespace Raven.Storage.Managed
             disposerLock.EnterReadLock();
             try
             {
+                Interlocked.Exchange(ref lastUsageTime, DateTime.Now.ToBinary());
                 using (tableStroage.BeginTransaction())
                 {
                     var storageActionsAccessor = new StorageActionsAccessor(tableStroage);
@@ -103,6 +108,8 @@ namespace Raven.Storage.Managed
 
             tableStroage = new TableStorage(persistenceSource);
 
+            idleTimer = new Timer(MaybeOnIdle, null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+
             tableStroage.Initialze();
 
             if(persistenceSource.CreatedNew)
@@ -140,5 +147,16 @@ namespace Raven.Storage.Managed
         {
             get { return persistenceSource.CreateRemoteAppDomainState(); }
         }
+
+        private void MaybeOnIdle(object _)
+        {
+            var ticks = Interlocked.Read(ref lastUsageTime);
+            var lastUsage = DateTime.FromBinary(ticks);
+            if ((DateTime.Now - lastUsage).TotalSeconds < 30)
+                return;
+
+            tableStroage.PerformIdleTasks();
+        }
+
     }
 }
