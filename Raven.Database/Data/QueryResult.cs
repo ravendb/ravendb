@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 
@@ -23,6 +24,13 @@ namespace Raven.Database.Data
 		/// </summary>
 		/// <value><c>true</c> if the index is stale; otherwise, <c>false</c>.</value>
 		public bool IsStale { get; set; }
+
+        /// <summary>
+        /// The last time the index was updated.
+        /// This can be used to determaine the freshness of the data.
+        /// </summary>
+        public DateTime IndexTimestamp { get; set; }
+
 		/// <summary>
 		/// Gets or sets the total results for this query
 		/// </summary>

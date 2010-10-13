@@ -143,7 +143,8 @@ namespace Raven.Client.Document
         /// <returns></returns>
         public IRavenQueryable<T> Query<T>(string indexName)
         {
-            return new RavenQueryable<T>(new RavenQueryProvider<T>(this, indexName));
+            var ravenQueryStatistics = new RavenQueryStatistics();
+            return new RavenQueryable<T>(new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics),ravenQueryStatistics);
         }
 
         /// <summary>
@@ -320,7 +321,8 @@ namespace Raven.Client.Document
         /// <typeparam name="T">The result of the query</typeparam>
         public IRavenQueryable<T> Query<T>()
         {
-            return new RavenQueryable<T>(new DynamicRavenQueryProvider<T>(this));
+            var ravenQueryStatistics = new RavenQueryStatistics();
+            return new RavenQueryable<T>(new DynamicRavenQueryProvider<T>(this, ravenQueryStatistics), ravenQueryStatistics);
         }
 
         /// <summary>

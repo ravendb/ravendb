@@ -17,7 +17,8 @@ namespace Raven.Client.Linq
         private Action<IDocumentQueryCustomization> customizeQuery;
         private Action<QueryResult> afterQueryExecuted;
 		private readonly IDocumentSession session;
-        
+        private readonly RavenQueryStatistics ravenQueryStatistics;
+
         /// <summary>
         /// Gets the IndexName for this dynamic query provider (always "dynamic" in this case)
         /// </summary>
@@ -30,9 +31,11 @@ namespace Raven.Client.Linq
         /// Creates a dynamic query provider around the provided document session
         /// </summary>
         /// <param name="session"></param>
-        public DynamicRavenQueryProvider(IDocumentSession session)  
+        /// <param name="ravenQueryStatistics"></param>
+        public DynamicRavenQueryProvider(IDocumentSession session, RavenQueryStatistics ravenQueryStatistics)
         {
             this.session = session;
+            this.ravenQueryStatistics = ravenQueryStatistics;
         }
 
         /// <summary>
@@ -60,7 +63,7 @@ namespace Raven.Client.Linq
             if (typeof(T) == typeof(S))
                 return this;
 
-	        var ravenQueryProvider = new DynamicRavenQueryProvider<S>(session);
+	        var ravenQueryProvider = new DynamicRavenQueryProvider<S>(session, ravenQueryStatistics);
 	        ravenQueryProvider.Customize(customizeQuery);
 	        return ravenQueryProvider;
 	    }
@@ -79,7 +82,7 @@ namespace Raven.Client.Linq
 
 		IQueryable<S> IQueryProvider.CreateQuery<S>(Expression expression)
         {
-            return new DynamicRavenQueryable<S>(this, expression);
+            return new DynamicRavenQueryable<S>(this, expression, ravenQueryStatistics);
         }
 
         IQueryable IQueryProvider.CreateQuery(Expression expression)

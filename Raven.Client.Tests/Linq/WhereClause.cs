@@ -7,10 +7,12 @@ namespace Raven.Client.Tests.Linq
 {
     public class WhereClause
     {
+        private readonly RavenQueryStatistics ravenQueryStatistics = new RavenQueryStatistics();
+
         [Fact]
         public void CanUnderstandSimpleEquality()
         {
-            var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null, null));
+            var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null, null, ravenQueryStatistics),  ravenQueryStatistics);
             var q = from user in indexedUsers
                     where user.Name == "ayende"
                     select user;
@@ -20,7 +22,7 @@ namespace Raven.Client.Tests.Linq
 		[Fact]
 		public void CanUnderstandSimpleEqualityWithVariable()
 		{
-			var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null, null));
+			var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null, null, ravenQueryStatistics),  ravenQueryStatistics);
 			var ayende = "ayende" + 1;
 			var q = from user in indexedUsers
 					where user.Name == ayende
@@ -31,7 +33,7 @@ namespace Raven.Client.Tests.Linq
 		[Fact]
 		public void CanUnderstandSimpleContains()
 		{
-			var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null, null));
+			var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null, null, ravenQueryStatistics),  ravenQueryStatistics);
 			var q = from user in indexedUsers
 					where user.Name.Contains("ayende")
 					select user;
@@ -41,7 +43,7 @@ namespace Raven.Client.Tests.Linq
 		[Fact]
 		public void CanUnderstandSimpleContainsWithVariable()
 		{
-			var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null, null));
+			var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null, null, ravenQueryStatistics),  ravenQueryStatistics);
 			var ayende = "ayende" + 1;
 			var q = from user in indexedUsers
 					where user.Name.Contains(ayende)
@@ -52,7 +54,7 @@ namespace Raven.Client.Tests.Linq
 		[Fact]
 		public void NoOpShouldProduceEmptyString()
 		{
-			var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null, null));
+			var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null, null, ravenQueryStatistics),  ravenQueryStatistics);
 			var q = from user in indexedUsers
 					select user;
 			Assert.Equal("", q.ToString());
@@ -61,7 +63,7 @@ namespace Raven.Client.Tests.Linq
         [Fact]
         public void CanUnderstandAnd()
         {
-            var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null,null));
+            var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null,null, ravenQueryStatistics),  ravenQueryStatistics);
             var q = from user in indexedUsers
                     where user.Name.Contains("ayende") && user.Email.Contains("ayende@ayende.com")
                     select user;
@@ -71,7 +73,7 @@ namespace Raven.Client.Tests.Linq
         [Fact]
         public void CanUnderstandOr()
         {
-            var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null,null));
+            var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null,null, ravenQueryStatistics),  ravenQueryStatistics);
             var q = from user in indexedUsers
                     where user.Name.Contains("ayende") || user.Email.Contains("ayende@ayende.com")
                     select user;
@@ -81,7 +83,7 @@ namespace Raven.Client.Tests.Linq
         [Fact]
         public void WithNoBracesOperatorPrecedenceIsHonoured()
         {
-            var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null, null));
+            var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null, null, ravenQueryStatistics),  ravenQueryStatistics);
             var q = from user in indexedUsers
                     where user.Name == "ayende" && user.Name == "rob" || user.Name == "dave"
                     select user;
@@ -92,7 +94,7 @@ namespace Raven.Client.Tests.Linq
         [Fact]
         public void BracesOverrideOperatorPrecedence()
         {
-            var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null, null));
+            var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null, null, ravenQueryStatistics),  ravenQueryStatistics);
             var q = from user in indexedUsers
                     where user.Name == "ayende" && (user.Name == "rob" || user.Name == "dave")
                     select user;
@@ -103,7 +105,7 @@ namespace Raven.Client.Tests.Linq
         [Fact]
         public void CanUnderstandLessThan()
         {
-            var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null,null));
+            var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null,null, ravenQueryStatistics),  ravenQueryStatistics);
             var q = from user in indexedUsers
 					where user.Birthday < new DateTime(2010,05,15)
                     select user;
@@ -113,7 +115,7 @@ namespace Raven.Client.Tests.Linq
 		[Fact]
 		public void CanUnderstandEqualOnDate()
 		{
-			var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null, null));
+			var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null, null, ravenQueryStatistics),  ravenQueryStatistics);
 			var q = from user in indexedUsers
 					where user.Birthday == new DateTime(2010, 05, 15)
 					select user;
@@ -123,7 +125,7 @@ namespace Raven.Client.Tests.Linq
         [Fact]
         public void CanUnderstandLessThanOrEqualsTo()
         {
-            var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null,null));
+            var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null,null, ravenQueryStatistics),  ravenQueryStatistics);
             var q = from user in indexedUsers
 					where user.Birthday <= new DateTime(2010, 05, 15)
 					select user;
@@ -133,7 +135,7 @@ namespace Raven.Client.Tests.Linq
         [Fact]
         public void CanUnderstandGreaterThan()
         {
-            var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null,null));
+            var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null,null, ravenQueryStatistics),  ravenQueryStatistics);
             var q = from user in indexedUsers
 					where user.Birthday > new DateTime(2010, 05, 15)
 					select user;
@@ -143,7 +145,7 @@ namespace Raven.Client.Tests.Linq
         [Fact]
         public void CanUnderstandGreaterThanOrEqualsTo()
         {
-            var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null,null));
+            var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null,null, ravenQueryStatistics),  ravenQueryStatistics);
             var q = from user in indexedUsers
 					where user.Birthday >= new DateTime(2010, 05, 15)
 					select user;
@@ -153,7 +155,7 @@ namespace Raven.Client.Tests.Linq
         [Fact]
         public void CanUnderstandProjectionOfOneField()
         {
-            var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null,null));
+            var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null,null, ravenQueryStatistics),  ravenQueryStatistics);
             var q = from user in indexedUsers
 					where user.Birthday >= new DateTime(2010, 05, 15)
 					select user.Name;
@@ -163,7 +165,7 @@ namespace Raven.Client.Tests.Linq
         [Fact]
         public void CanUnderstandProjectionOfMultipleFields()
         {
-            var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null,null));
+            var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null,null, ravenQueryStatistics),  ravenQueryStatistics);
         	var dateTime = new DateTime(2010, 05, 15);
         	var q = from user in indexedUsers
 					where user.Birthday >= dateTime
@@ -174,7 +176,7 @@ namespace Raven.Client.Tests.Linq
 		[Fact]
 		public void CanUnderstandSimpleEqualityOnInt()
 		{
-			var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null, null));
+			var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null, null, ravenQueryStatistics),  ravenQueryStatistics);
 			var q = from user in indexedUsers
 					where user.Age == 3
 					select user;
@@ -185,7 +187,7 @@ namespace Raven.Client.Tests.Linq
 		[Fact]
 		public void CanUnderstandGreaterThanOnInt()
 		{
-			var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null, null));
+			var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null, null, ravenQueryStatistics),  ravenQueryStatistics);
 			var q = from user in indexedUsers
 					where user.Age > 3
 					select user;
@@ -195,7 +197,7 @@ namespace Raven.Client.Tests.Linq
         [Fact]
         public void CanUnderstandMethodCalls()
         {
-            var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null, null));
+            var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null, null, ravenQueryStatistics),  ravenQueryStatistics);
             var q = from user in indexedUsers
                     where user.Birthday >= DateTime.Parse("2010-05-15")
                     select new { user.Name, user.Age };
@@ -205,7 +207,7 @@ namespace Raven.Client.Tests.Linq
         [Fact]
         public void CanUnderstandConvertExpressions()
         {
-            var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null, null));
+            var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null, null, ravenQueryStatistics),  ravenQueryStatistics);
             var q = from user in indexedUsers
                     where user.Age == Convert.ToInt16("3")
                     select user;
@@ -216,7 +218,7 @@ namespace Raven.Client.Tests.Linq
 		[Fact]
 		public void CanChainMultipleWhereClauses()
 		{
-			var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null, null));
+			var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null, null, ravenQueryStatistics),  ravenQueryStatistics);
 			var q = indexedUsers
 				.Where(x => x.Age == 3)
 			    .Where(x => x.Name == "ayende");
@@ -226,7 +228,7 @@ namespace Raven.Client.Tests.Linq
         [Fact]
         public void CanUnderstandSimpleAny()
         {
-            var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null, null));
+            var indexedUsers = new RavenQueryable<IndexedUser>(new RavenQueryProvider<IndexedUser>(null, null, ravenQueryStatistics),  ravenQueryStatistics);
             var q = indexedUsers
                 .Where(x => x.Properties.Any(y => y.Key == "first"));
             Assert.Equal("Key:first", q.ToString());

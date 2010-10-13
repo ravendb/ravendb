@@ -1,7 +1,9 @@
 using System;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
+using Raven.Database.Exceptions;
 using Raven.Database.Json;
+using Raven.Database.Storage;
 using Raven.Database.Storage.StorageActions;
 
 namespace Raven.Storage.Esent.StorageActions
@@ -44,6 +46,19 @@ namespace Raven.Storage.Esent.StorageActions
             // we are at the first row for this index
             var addedAt = Api.RetrieveColumnAsDateTime(session, Tasks, tableColumnsCache.TasksColumns["added_at"]).Value;
             return cutOff.Value >= addedAt;
+        }
+
+        public DateTime IndexLastUpdatedAt(string name)
+        {
+            Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
+            Api.MakeKey(session, IndexesStats, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
+            {
+                throw new IndexDoesNotExistsException("Could not find index named: " + name);
+            }
+            return Api.RetrieveColumnAsDateTime(session, IndexesStats,
+                                                tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"])
+                .Value;
         }
 
         private bool IsStaleByEtag(string entityName)

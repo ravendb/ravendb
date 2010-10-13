@@ -213,6 +213,7 @@ namespace Raven.Client.Client.Async
 			return new QueryResult
 			{
 				IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
+                IndexTimestamp = json.Value<DateTime>("IndexTimestamp"),
 				Results = json["Results"].Children().Cast<JObject>().ToList(),
 				TotalResults = Convert.ToInt32(json["TotalResults"].ToString()),
                 SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString())

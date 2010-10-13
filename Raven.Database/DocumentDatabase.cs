@@ -457,6 +457,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
         {
             var list = new List<JObject>();
             var stale = false;
+            DateTime indexTimestamp = DateTime.MinValue;
             TransactionalStorage.Batch(
                 actions =>
                 {
@@ -467,6 +468,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
                         entityName = abstractViewGenerator.ForEntityName;
 
                     stale = actions.Staleness.IsIndexStale(index, query.Cutoff, entityName);
+                    indexTimestamp = actions.Staleness.IndexLastUpdatedAt(index);
                     var indexFailureInformation = actions.Indexing.GetFailureRate(index);
                     if (indexFailureInformation.IsInvalidIndex)
                     {
@@ -515,7 +517,8 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
                 Results = list,
                 IsStale = stale,
                 SkippedResults = query.SkippedResults.Value,
-                TotalResults = query.TotalSize.Value
+                TotalResults = query.TotalSize.Value,
+                IndexTimestamp = indexTimestamp
             };
         }
 

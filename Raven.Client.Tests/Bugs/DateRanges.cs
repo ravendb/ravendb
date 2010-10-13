@@ -15,6 +15,7 @@ namespace Raven.Client.Tests.Bugs
             {
                 using(var session = store.OpenSession())
                 {
+
                     session.Store(new Record
                     {
                         Date = new DateTime(2001,1,1)

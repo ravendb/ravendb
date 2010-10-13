@@ -22,5 +22,10 @@ namespace Raven.Client.Linq
         /// Gets or sets the skipped results (duplicate documents);
         /// </summary>
         public int SkippedResults { get; set; }
+
+        /// <summary>
+        /// The time when the query results were unstale.
+        /// </summary>
+        public DateTime Timestamp { get; set; }
     }
 }

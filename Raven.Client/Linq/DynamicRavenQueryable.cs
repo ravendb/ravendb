@@ -15,9 +15,8 @@ namespace Raven.Client.Linq
         /// <summary>
         /// Creates a dynamic raven queryable around the provided query provider
         /// </summary>
-        /// <param name="queryProvider"></param>
-        public DynamicRavenQueryable(IRavenQueryProvider queryProvider) 
-            : base(queryProvider)
+        public DynamicRavenQueryable(IRavenQueryProvider queryProvider, RavenQueryStatistics queryStatistics)
+            : base(queryProvider, queryStatistics)
         {
 
         }
@@ -25,10 +24,8 @@ namespace Raven.Client.Linq
         /// <summary>
         /// Creates a dynamic raven queryable around the provided query provider + expression
         /// </summary>
-        /// <param name="queryProvider"></param>
-        /// <param name="expression"></param>
-        public DynamicRavenQueryable(IRavenQueryProvider queryProvider, Expression expression)
-            : base(queryProvider, expression)
+        public DynamicRavenQueryable(IRavenQueryProvider queryProvider, Expression expression, RavenQueryStatistics queryStatistics)
+            : base(queryProvider, expression, queryStatistics)  
         {
 
         }

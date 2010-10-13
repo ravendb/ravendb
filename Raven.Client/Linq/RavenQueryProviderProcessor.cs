@@ -773,55 +773,62 @@ namespace Raven.Client.Linq
 
 			var genericExecuteQuery = typeof(RavenQueryProviderProcessor<T>).GetMethod("ExecuteQuery", BindingFlags.Instance|BindingFlags.NonPublic);
 			var executeQueryWithProjectionType = genericExecuteQuery.MakeGenericMethod(newExpressionType);
-            var results = executeQueryWithProjectionType.Invoke(this, new object[0]);
-            if (afterQueryExecuted != null)
-                afterQueryExecuted(luceneQuery.QueryResult);
-		    return results;
+		    return executeQueryWithProjectionType.Invoke(this, new object[0]);
 		}
 
 		private object ExecuteQuery<TProjection>()
 		{
-			var finalQuery = luceneQuery.SelectFields<TProjection>(FieldsToFetch.ToArray());
+		    var finalQuery = luceneQuery.SelectFields<TProjection>(FieldsToFetch.ToArray());
 
-			switch (queryType)
-			{
-				case SpecialQueryType.First:
-				{
-					return finalQuery.First();
-				}
-				case SpecialQueryType.FirstOrDefault:
-				{
-					return finalQuery.FirstOrDefault();
-				}
-				case SpecialQueryType.Single:
-				{
-					return finalQuery.Single();
-				}
-				case SpecialQueryType.SingleOrDefault:
-				{
-					return finalQuery.SingleOrDefault();
-				}
-				case SpecialQueryType.All:
-				{
-					var pred = predicate.Compile();
-					return finalQuery.AsQueryable().All(projection => pred((T)(object)projection));
-				}
-				case SpecialQueryType.Any:
-				{
-					return finalQuery.Any();
-				}
-				case SpecialQueryType.Count:
-				{
-					return finalQuery.QueryResult.TotalResults;
-				}
-				default:
-				{
-					return finalQuery;
-				}
-			}
+		    var executeQuery = GetQueryResult(finalQuery);
+          
+            if (afterQueryExecuted != null)
+                afterQueryExecuted(luceneQuery.QueryResult);
+		  
+		    return executeQuery;
 		}
 
-		#region Nested type: SpecialQueryType
+	    private object GetQueryResult<TProjection>(IDocumentQuery<TProjection> finalQuery)
+	    {
+	        switch (queryType)
+	        {
+	            case SpecialQueryType.First:
+	            {
+	                return finalQuery.First();
+	            }
+	            case SpecialQueryType.FirstOrDefault:
+	            {
+	                return finalQuery.FirstOrDefault();
+	            }
+	            case SpecialQueryType.Single:
+	            {
+	                return finalQuery.Single();
+	            }
+	            case SpecialQueryType.SingleOrDefault:
+	            {
+	                return finalQuery.SingleOrDefault();
+	            }
+	            case SpecialQueryType.All:
+	            {
+	                var pred = predicate.Compile();
+	                return finalQuery.AsQueryable().All(projection => pred((T)(object)projection));
+	            }
+	            case SpecialQueryType.Any:
+	            {
+	                return finalQuery.Any();
+	            }
+	            case SpecialQueryType.Count:
+	            {
+	                return finalQuery.QueryResult.TotalResults;
+	            }
+	            default:
+	            {
+	                return finalQuery;
+	            }
+	        }
+	    }
+
+	    #region Nested type: SpecialQueryType
 
 		/// <summary>
 		/// Different query types 

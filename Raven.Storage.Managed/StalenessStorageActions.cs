@@ -2,6 +2,8 @@
 using System.ComponentModel;
 using System.Linq;
 using Newtonsoft.Json.Linq;
+using Raven.Database.Exceptions;
+using Raven.Database.Storage;
 using Raven.Database.Storage.StorageActions;
 using Raven.Storage.Managed.Impl;
 
@@ -46,6 +48,19 @@ namespace Raven.Storage.Managed
                 tasksAfterCutoffPoint = tasksAfterCutoffPoint
                     .Where(x => x.Value<DateTime>("time") < cutOff.Value);
             return tasksAfterCutoffPoint.Any();
+        }
+
+        public DateTime IndexLastUpdatedAt(string name)
+        {
+            var readResult = storage.IndexingStats.Read(new JObject
+            {
+                {"index", name}
+            });
+
+            if (readResult == null)
+                throw new IndexDoesNotExistsException("Could not find index named: " + name);
+            
+            return readResult.Key.Value<DateTime>("lastTimestamp");
         }
 
         private bool IsStaleByEtag(string entityName, byte [] lastIndexedEtag)

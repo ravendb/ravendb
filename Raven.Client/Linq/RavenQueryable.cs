@@ -14,20 +14,22 @@ namespace Raven.Client.Linq
     {
         private readonly Expression expression;
         private readonly IRavenQueryProvider provider;
-	    private readonly RavenQueryStatistics queryStats = new RavenQueryStatistics();
+	    private readonly RavenQueryStatistics queryStats;
 
 	    /// <summary>
-		/// Initializes a new instance of the <see cref="RavenQueryable&lt;T&gt;"/> class.
-		/// </summary>
-		/// <param name="provider">The provider.</param>
-        public RavenQueryable(IRavenQueryProvider provider)
+	    /// Initializes a new instance of the <see cref="RavenQueryable&lt;T&gt;"/> class.
+	    /// </summary>
+	    /// <param name="provider">The provider.</param>
+	    /// <param name="queryStats">The query stats to fill</param>
+	    public RavenQueryable(IRavenQueryProvider provider, RavenQueryStatistics queryStats)
         {
             if (provider == null)
             {
                 throw new ArgumentNullException("provider");
             }
             this.provider = provider;
-            this.provider.AfterQueryExecuted(UpdateQueryStats);
+	        this.queryStats = queryStats;
+	        this.provider.AfterQueryExecuted(UpdateQueryStats);
             expression = Expression.Constant(this);
         }
 
@@ -36,7 +38,8 @@ namespace Raven.Client.Linq
 		/// </summary>
 		/// <param name="provider">The provider.</param>
 		/// <param name="expression">The expression.</param>
-        public RavenQueryable(IRavenQueryProvider provider, Expression expression)
+        /// <param name="queryStats">The query stats to fill</param>
+        public RavenQueryable(IRavenQueryProvider provider, Expression expression, RavenQueryStatistics queryStats)
         {
             if (provider == null)
             {
@@ -49,6 +52,7 @@ namespace Raven.Client.Linq
 		    this.provider = provider.For<T>();
             this.provider.AfterQueryExecuted(UpdateQueryStats);
             this.expression = expression;
+	        this.queryStats = queryStats;
         }
 
         private void UpdateQueryStats(QueryResult obj)
@@ -56,6 +60,7 @@ namespace Raven.Client.Linq
             queryStats.IsStale = obj.IsStale;
             queryStats.TotalResults = obj.TotalResults;
             queryStats.SkippedResults = obj.SkippedResults;
+            queryStats.Timestamp = obj.IndexTimestamp;
         }
 
         #region IOrderedQueryable<T> Members

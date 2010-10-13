@@ -12,7 +12,8 @@ namespace Raven.Client.Linq
 	public class RavenQueryProvider<T> :  IRavenQueryProvider
     {
         private readonly string indexName;
-        private Action<IDocumentQueryCustomization> customizeQuery;
+	    private readonly RavenQueryStatistics ravenQueryStatistics;
+	    private Action<IDocumentQueryCustomization> customizeQuery;
 	    private Action<QueryResult> afterQueryExecuted;
 		private readonly IDocumentSession session;
 
@@ -50,20 +51,22 @@ namespace Raven.Client.Linq
             if (typeof(T) == typeof(S))
                 return this;
 
-	        var ravenQueryProvider = new RavenQueryProvider<S>(session, indexName);
+	        var ravenQueryProvider = new RavenQueryProvider<S>(session, indexName, ravenQueryStatistics);
 	        ravenQueryProvider.Customize(customizeQuery);
 	        return ravenQueryProvider;
 	    }
 
 	    /// <summary>
-		/// Initializes a new instance of the <see cref="RavenQueryProvider&lt;T&gt;"/> class.
-		/// </summary>
-		/// <param name="session">The session.</param>
-		/// <param name="indexName">Name of the index.</param>
-    	public RavenQueryProvider(IDocumentSession session, string indexName)
+	    /// Initializes a new instance of the <see cref="RavenQueryProvider&lt;T&gt;"/> class.
+	    /// </summary>
+	    /// <param name="session">The session.</param>
+	    /// <param name="indexName">Name of the index.</param>
+	    /// <param name="ravenQueryStatistics"></param>
+	    public RavenQueryProvider(IDocumentSession session, string indexName, RavenQueryStatistics ravenQueryStatistics)
         {
             this.session = session;
             this.indexName = indexName;
+	        this.ravenQueryStatistics = ravenQueryStatistics;
         }
 
 		/// <summary>
@@ -80,7 +83,7 @@ namespace Raven.Client.Linq
 
 		IQueryable<S> IQueryProvider.CreateQuery<S>(Expression expression)
         {
-            return new RavenQueryable<S>(this, expression);
+            return new RavenQueryable<S>(this, expression, ravenQueryStatistics);
         }
 
         IQueryable IQueryProvider.CreateQuery(Expression expression)
