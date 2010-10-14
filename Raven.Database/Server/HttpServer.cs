@@ -26,7 +26,7 @@ namespace Raven.Database.Server
         private readonly ThreadLocal<DocumentDatabase> currentDatabase = new ThreadLocal<DocumentDatabase>();
         private readonly ThreadLocal<InMemroyRavenConfiguration> currentConfiguration = new ThreadLocal<InMemroyRavenConfiguration>();
 
-        private readonly ConcurrentDictionary<string, DocumentDatabase> tenantsDatabaseCache =
+        private readonly ConcurrentDictionary<string, DocumentDatabase> databaseCache =
             new ConcurrentDictionary<string, DocumentDatabase>();
 
         private static readonly Regex databaseQuery = new Regex("^/databases/([^/]+)(?=/?)");
@@ -330,7 +330,7 @@ namespace Raven.Database.Server
                 currentDatabase.Value = defaultDatabase;
                 currentConfiguration.Value = defaultConfiguration;
             } 
-            else if(TryGetOrCreateTenantDatabase(match.Groups[1].Value, out database))
+            else if(TryGetOrCreateDatabase(match.Groups[1].Value, out database))
             {
                 ctx.AdjustUrl(match.Value);
                 currentDatabase.Value = database;
@@ -342,9 +342,9 @@ namespace Raven.Database.Server
             }
         }
 
-        private bool TryGetOrCreateTenantDatabase(string tenantId, out DocumentDatabase database)
+        private bool TryGetOrCreateDatabase(string tenantId, out DocumentDatabase database)
         {
-            if (tenantsDatabaseCache.TryGetValue(tenantId, out database))
+            if (databaseCache.TryGetValue(tenantId, out database))
                 return true;
 
             var jsonDocument = defaultDatabase.Get("Raven/Databases/" + tenantId, null);
@@ -354,7 +354,7 @@ namespace Raven.Database.Server
 
             var document = jsonDocument.DataAsJson.JsonDeserialization<DatabaseDocument>();
 
-            database = tenantsDatabaseCache.GetOrAdd(tenantId, s =>
+            database = databaseCache.GetOrAdd(tenantId, s =>
             {
                 var config = new InMemroyRavenConfiguration
                 {
