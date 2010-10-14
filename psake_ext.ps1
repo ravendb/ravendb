@@ -5,7 +5,6 @@ function Get-File-Exists-On-Path
 	)
 	$results = ($Env:Path).Split(";") | Get-ChildItem -filter $file -erroraction silentlycontinue
 	$found = ($results -ne $null)
-	write-host $found
 	return $found
 }
 

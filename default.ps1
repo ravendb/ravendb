@@ -31,18 +31,18 @@ task Init -depends Verify40, Clean {
 		$env:buildlabel = "13"
 	}
 	
-	$asmInfos = ls -path $base_dir -include AssemblyInfo.cs -recurse | 
+	$propertiesDirs = ls -path $base_dir -include Properties -recurse | 
 					Where { $_ -notmatch [regex]::Escape($lib_dir) } | 
 					Where { $_ -notmatch [regex]::Escape($tools_dir) }
 	
-	foreach($asmInfo in $asmInfos) {
+	foreach($propertiesDir in $propertiesDirs) {
 		
-		$propertiesDir = [System.IO.Path]::GetDirectoryName($asmInfo.FullName)
 		$projectDir = [System.IO.Path]::GetDirectoryName($propertiesDir)
 		$projectName = [System.IO.Path]::GetFileName($projectDir)
+		$asmInfo = [System.IO.Path]::Combine($propertiesDir, "AssemblyInfo.cs")
 		
 		Generate-Assembly-Info `
-			-file $asmInfo.FullName `
+			-file $asmInfo `
 			-title "$projectName $version" `
 			-description "A linq enabled document database for .NET" `
 			-company "Hibernating Rhinos" `
