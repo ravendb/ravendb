@@ -14,7 +14,6 @@ include .\psake_ext.ps1
 
 task default -depends OpenSource,Release
 
-
 task Verify40 {
 	if( (ls "$env:windir\Microsoft.NET\Framework\v4.0*") -eq $null ) {
 		throw "Building Raven requires .NET 4.0, which doesn't appear to be installed on this machine"
@@ -49,6 +48,7 @@ task Init -depends Verify40, Clean {
 			-company "Hibernating Rhinos" `
 			-product "RavenDB $version" `
 			-version $version `
+			-fileversion "1.0.0.$env:buildlabel" `
 			-copyright "Copyright © Hibernating Rhinos and Ayende Rahien 2004 - 2010" `
 			-clsCompliant "true"
 	}
