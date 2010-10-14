@@ -9,7 +9,7 @@ namespace Raven.Database.Server.Responders
 	{
 		public override string UrlPattern
 		{
-			get { return "/queries/?$"; }
+			get { return "^/queries/?$"; }
 		}
 
 		public override string[] SupportedVerbs

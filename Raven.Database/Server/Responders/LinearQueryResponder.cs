@@ -8,7 +8,7 @@ namespace Raven.Database.Server.Responders
     {
         public override string UrlPattern
         {
-            get { return "/linearQuery$"; }
+            get { return "^/linearQuery$"; }
         }
 
         public override string[] SupportedVerbs

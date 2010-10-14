@@ -11,7 +11,7 @@ namespace Raven.Database.Server.Responders
 	{
 		public override string UrlPattern
 		{
-			get { return @"/docs/(.+)"; }
+			get { return @"^/docs/(.+)"; }
 		}
 
 		public override string[] SupportedVerbs

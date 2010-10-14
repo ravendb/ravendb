@@ -6,7 +6,7 @@ namespace Raven.Database.Server.Responders
 	{
 		public override string UrlPattern
 		{
-			get { return "/stats"; }
+			get { return "^/stats$"; }
 		}
 
 		public override string[] SupportedVerbs

@@ -13,7 +13,7 @@ namespace Raven.Database.Server.Responders
 	{
 		public override string UrlPattern
 		{
-			get { return @"/indexes/(.+)"; }
+			get { return @"^/indexes/(.+)"; }
 		}
 
 		public override string[] SupportedVerbs

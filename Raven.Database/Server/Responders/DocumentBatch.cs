@@ -13,7 +13,7 @@ namespace Raven.Database.Server.Responders
     {
         public override string UrlPattern
         {
-            get { return @"/bulk_docs(/(.+))?"; }
+            get { return @"^/bulk_docs(/(.+))?"; }
         }
 
         public override string[] SupportedVerbs

@@ -7,7 +7,7 @@ namespace Raven.Database.Server.Responders
     {
         public override string UrlPattern
         {
-            get { return "/transaction/commit"; }
+            get { return "^/transaction/commit$"; }
         }
 
         public override string[] SupportedVerbs
