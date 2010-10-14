@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Specialized;
 using System.IO;
 using System.Web;
@@ -13,7 +14,9 @@ namespace Raven.Database.Server.Abstractions
 			this.response = response;
 		}
 
-		public NameValueCollection Headers
+        public string RedirectionPrefix { get; set; }
+
+	    public NameValueCollection Headers
 		{
 			get { return response.Headers; }
 		}
@@ -43,7 +46,7 @@ namespace Raven.Database.Server.Abstractions
 
 		public void Redirect(string url)
 		{
-			response.Redirect(url, false);
+			response.Redirect(RedirectionPrefix + url, false);
 		}
 
 		public void Close()

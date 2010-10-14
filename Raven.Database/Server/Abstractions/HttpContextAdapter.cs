@@ -10,9 +10,9 @@ namespace Raven.Database.Server.Abstractions
 		private readonly HttpContext context;
 		private readonly HttpRequestAdapter request;
 		private readonly HttpResponseAdapter response;
-		private readonly RavenConfiguration configuration;
+        private readonly InMemroyRavenConfiguration configuration;
 
-		public HttpContextAdapter(HttpContext context, RavenConfiguration configuration)
+		public HttpContextAdapter(HttpContext context, InMemroyRavenConfiguration configuration)
 		{
 			this.context = context;
 			this.configuration = configuration;
@@ -20,7 +20,7 @@ namespace Raven.Database.Server.Abstractions
 			response = new HttpResponseAdapter(context.Response);
 		}
 
-		public RavenConfiguration Configuration
+        public InMemroyRavenConfiguration Configuration
 		{
 			get { return configuration; }
 		}

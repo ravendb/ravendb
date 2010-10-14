@@ -9,12 +9,14 @@ namespace Raven.Database.Server.Abstractions
 	{
 		private readonly HttpRequest request;
 
-		public HttpRequestAdapter(HttpRequest request)
+	    public HttpRequestAdapter(HttpRequest request)
 		{
-			this.request = request;
+		    this.request = request;
+		    Url = this.request.Url;
+	        RawUrl = this.request.RawUrl;
 		}
 
-		public NameValueCollection Headers
+	    public NameValueCollection Headers
 		{
 			get { return request.Headers; }
 		}
@@ -29,19 +31,13 @@ namespace Raven.Database.Server.Abstractions
 			get { return request.QueryString; }
 		}
 
-		public Uri Url
-		{
-			get { return request.Url; }
-		}
+	    public Uri Url { get;  set; }
 
-		public string HttpMethod
+	    public string HttpMethod
 		{
 			get { return request.HttpMethod; }
 		}
 
-		public string RawUrl
-		{
-			get { return request.RawUrl; }
-		}
+	    public string RawUrl { get;  set; }
 	}
 }

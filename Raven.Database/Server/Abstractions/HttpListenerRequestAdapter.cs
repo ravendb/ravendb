@@ -15,9 +15,11 @@ namespace Raven.Database.Server.Abstractions
 		{
 			this.request = request;
 		    this.queryString = System.Web.HttpUtility.ParseQueryString(Uri.UnescapeDataString(request.Url.Query));
+	        Url = this.request.Url;
+	        RawUrl = this.request.RawUrl;
 		}
 
-		public NameValueCollection Headers
+	    public NameValueCollection Headers
 		{
 			get { return request.Headers; }
 		}
@@ -32,19 +34,13 @@ namespace Raven.Database.Server.Abstractions
 			get { return queryString; }
 		}
 
-		public Uri Url
-		{
-			get { return request.Url; }
-		}
+	    public Uri Url { get;  set; }
 
-		public string HttpMethod
+	    public string HttpMethod
 		{
 			get { return request.HttpMethod; }
 		}
 
-		public string RawUrl
-		{
-			get { return request.RawUrl; }
-		}
+	    public string RawUrl { get;  set; }
 	}
 }

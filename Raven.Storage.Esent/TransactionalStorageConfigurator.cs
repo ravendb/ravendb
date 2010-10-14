@@ -8,9 +8,9 @@ namespace Raven.Storage.Esent
 	{
 		public const int MaxSessions = 256;
 
-		private readonly RavenConfiguration configuration;
+        private readonly InMemroyRavenConfiguration configuration;
 
-		public TransactionalStorageConfigurator(RavenConfiguration configuration)
+        public TransactionalStorageConfigurator(InMemroyRavenConfiguration configuration)
 		{
 			this.configuration = configuration;
 		}

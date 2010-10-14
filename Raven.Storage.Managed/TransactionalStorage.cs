@@ -13,8 +13,8 @@ namespace Raven.Storage.Managed
     public class TransactionalStorage : ITransactionalStorage
     {
         private readonly ThreadLocal<IStorageActionsAccessor> current = new ThreadLocal<IStorageActionsAccessor>();
-        
-        private readonly RavenConfiguration configuration;
+
+        private readonly InMemroyRavenConfiguration configuration;
         private readonly Action onCommit;
         private TableStorage tableStroage;
         private IPersistentSource persistenceSource;
@@ -23,7 +23,7 @@ namespace Raven.Storage.Managed
         private Timer idleTimer;
         private long lastUsageTime;
 
-        public TransactionalStorage(RavenConfiguration configuration, Action onCommit)
+        public TransactionalStorage(InMemroyRavenConfiguration configuration, Action onCommit)
         {
             this.configuration = configuration;
             this.onCommit = onCommit;

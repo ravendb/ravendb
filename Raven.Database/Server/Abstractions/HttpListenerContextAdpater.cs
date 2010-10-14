@@ -8,9 +8,9 @@ namespace Raven.Database.Server.Abstractions
 	public class HttpListenerContextAdpater : IHttpContext
 	{
 		private readonly HttpListenerContext ctx;
-		private readonly RavenConfiguration configuration;
+        private readonly InMemroyRavenConfiguration configuration;
 
-		public HttpListenerContextAdpater(HttpListenerContext ctx, RavenConfiguration configuration)
+        public HttpListenerContextAdpater(HttpListenerContext ctx, InMemroyRavenConfiguration configuration)
 		{
 			this.ctx = ctx;
 			this.configuration = configuration;
@@ -18,7 +18,7 @@ namespace Raven.Database.Server.Abstractions
 			ResponseInternal = new HttpListenerResponseAdapter(ctx.Response);
 		}
 
-		public RavenConfiguration Configuration
+        public InMemroyRavenConfiguration Configuration
 		{
 			get { return configuration; }
 		}

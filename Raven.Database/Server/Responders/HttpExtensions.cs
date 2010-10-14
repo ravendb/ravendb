@@ -203,6 +203,28 @@ namespace Raven.Database.Server.Responders
 			return stale;
 		}
 
+        public static void AdjustUrl(this IHttpContext self, string token)
+        {
+            self.Request.RemoveFromRequestUrl(token);
+            self.Response.RedirectionPrefix = token;
+            
+        }
+
+	    public static void RemoveFromRequestUrl(this IHttpRequest self, string token)
+        {
+            if (self.Url.LocalPath.StartsWith(token))
+            {
+                self.Url = new UriBuilder(self.Url)
+                {
+                    Path = self.Url.LocalPath.Substring(token.Length)
+                }.Uri;
+            }
+            if (self.RawUrl.StartsWith(token))
+            {
+                self.RawUrl = self.RawUrl.Substring(token.Length);
+            }
+        }
+
 		public static int GetPageSize(this IHttpContext context, int maxPageSize)
 		{
 			int pageSize;

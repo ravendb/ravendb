@@ -5,6 +5,7 @@ namespace Raven.Database.Server.Abstractions
 {
 	public interface IHttpResponse
 	{
+        string RedirectionPrefix { get; set; }
 		NameValueCollection Headers { get; }
 		Stream OutputStream { get; }
 		long ContentLength64 { get; set; }

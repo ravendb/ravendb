@@ -5,56 +5,62 @@ using System.Net;
 
 namespace Raven.Database.Server.Abstractions
 {
-	public class HttpListenerResponseAdapter : IHttpResponse
-	{
-		private readonly HttpListenerResponse response;
+    public class HttpListenerResponseAdapter : IHttpResponse
+    {
+        private readonly HttpListenerResponse response;
 
-		public HttpListenerResponseAdapter(HttpListenerResponse response)
-		{
-			this.response = response;
-			OutputStream = response.OutputStream;
-		}
+        public HttpListenerResponseAdapter(HttpListenerResponse response)
+        {
+            this.response = response;
+            OutputStream = response.OutputStream;
+        }
 
-		public NameValueCollection Headers
-		{
-			get { return response.Headers; }
-		}
+        public string RedirectionPrefix
+        {
+            get;
+            set;
+        }
 
-		public Stream OutputStream { get; set; }
+        public NameValueCollection Headers
+        {
+            get { return response.Headers; }
+        }
 
-		public long ContentLength64
-		{
-			get { return response.ContentLength64; }
-			set { response.ContentLength64 = value; }
-		}
+        public Stream OutputStream { get; set; }
 
-		public int StatusCode
-		{
-			get { return response.StatusCode; }
-			set { response.StatusCode = value; }
-		}
+        public long ContentLength64
+        {
+            get { return response.ContentLength64; }
+            set { response.ContentLength64 = value; }
+        }
 
-		public string StatusDescription
-		{
-			get { return response.StatusDescription; }
-			set { response.StatusDescription = value; }
-		}
+        public int StatusCode
+        {
+            get { return response.StatusCode; }
+            set { response.StatusCode = value; }
+        }
 
-		public string ContentType
-		{
-			get { return response.ContentType; }
-			set { response.ContentType = value; }
-		}
+        public string StatusDescription
+        {
+            get { return response.StatusDescription; }
+            set { response.StatusDescription = value; }
+        }
 
-		public void Redirect(string url)
-		{
-			response.Redirect(url);
-		}
+        public string ContentType
+        {
+            get { return response.ContentType; }
+            set { response.ContentType = value; }
+        }
 
-		public void Close()
-		{
-			OutputStream.Dispose();
-			response.Close();
-		}
-	}
+        public void Redirect(string url)
+        {
+            response.Redirect(RedirectionPrefix + url);
+        }
+
+        public void Close()
+        {
+            OutputStream.Dispose();
+            response.Close();
+        }
+    }
 }
