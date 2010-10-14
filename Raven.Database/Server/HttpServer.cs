@@ -15,6 +15,7 @@ using Raven.Database.Exceptions;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Responders;
 using Raven.Database.Json;
+using System.Linq;
 
 namespace Raven.Database.Server
 {
@@ -28,6 +29,8 @@ namespace Raven.Database.Server
 
         private readonly ConcurrentDictionary<string, DocumentDatabase> databaseCache =
             new ConcurrentDictionary<string, DocumentDatabase>();
+
+        private readonly ConcurrentDictionary<string, DateTime> databaseLastRecentlyUsed = new ConcurrentDictionary<string, DateTime>();
 
         private static readonly Regex databaseQuery = new Regex("^/databases/([^/]+)(?=/?)");
 
@@ -52,6 +55,7 @@ namespace Raven.Database.Server
         // concurrent requests
         // we set 1/4 aside for handling background tasks
         private readonly SemaphoreSlim concurretRequestSemaphore = new SemaphoreSlim(192);
+        private Timer databasesCleanupTimer;
 
         public HttpServer(RavenConfiguration configuration, DocumentDatabase database)
         {
@@ -70,6 +74,7 @@ namespace Raven.Database.Server
 
         public void Dispose()
         {
+            databasesCleanupTimer.Dispose();
             if (listener != null)
                 listener.Stop();
             foreach (var documentDatabase in databaseCache)
@@ -107,9 +112,27 @@ namespace Raven.Database.Server
                 default:
                     throw new ArgumentException("Cannot understand access mode: " + defaultConfiguration.AnonymousUserAccessMode);
             }
-
+            databasesCleanupTimer = new Timer(CleanupDatabases, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
             listener.Start();
             listener.BeginGetContext(GetContext, null);
+        }
+
+        private void CleanupDatabases(object state)
+        {
+            var databasesToCleanup = databaseLastRecentlyUsed
+                .Where(x=>(DateTime.Now - x.Value).TotalMinutes > 10)
+                .Select(x=>x.Key)
+                .ToArray();
+
+            foreach (var db in databasesToCleanup)
+            {
+                DateTime _;
+                databaseLastRecentlyUsed.TryRemove(db, out _);
+
+                DocumentDatabase database;
+                if(databaseCache.TryRemove(db, out database))
+                    database.Dispose();
+            }
         }
 
         private void GetContext(IAsyncResult ar)
@@ -336,6 +359,7 @@ namespace Raven.Database.Server
             } 
             else if(TryGetOrCreateDatabase(match.Groups[1].Value, out database))
             {
+                databaseLastRecentlyUsed.AddOrUpdate(match.Groups[1].Value, DateTime.Now, (s, time) => DateTime.Now);
                 ctx.AdjustUrl(match.Value);
                 currentDatabase.Value = database;
                 currentConfiguration.Value = database.Configuration;
