@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -27,9 +26,13 @@ namespace Raven.Client.Client
 			get { return replicationDestinations; }
 		}
 
-        private readonly ConcurrentDictionary<string, IntHolder> failureCounts = new ConcurrentDictionary<string, IntHolder>();
+#if !NET_3_5
+        private readonly System.Collections.Concurrent.ConcurrentDictionary<string, IntHolder> failureCounts = new System.Collections.Concurrent.ConcurrentDictionary<string, IntHolder>();
+#else
+        private readonly Dictionary<string, IntHolder> failureCounts = new Dictionary<string, IntHolder>();
+#endif
 
-		/// <summary>
+        /// <summary>
 		/// Updates the replication information if needed.
 		/// </summary>
 		/// <param name="serverClient">The server client.</param>
@@ -53,8 +56,25 @@ namespace Raven.Client.Client
 		/// <returns></returns>
 		public bool ShouldExecuteUsing(string operationUrl, int currentRequest)
 		{
+#if !NET_3_5
 		    var value = failureCounts.GetOrAdd(operationUrl, new IntHolder());
-			if (value.Value > 1000)
+#else
+            // need to compensate for 3.5 not having concnurrent dic.
+
+            IntHolder value;
+            if(failureCounts.TryGetValue(operationUrl, out value) == false)
+            {
+                lock(replicationLock)
+                {
+                    if(failureCounts.TryGetValue(operationUrl, out value) == false)
+                    {
+                        failureCounts[operationUrl] = value = new IntHolder();
+                    }
+                }
+            }
+
+#endif
+            if (value.Value > 1000)
 			{
 				return currentRequest % 1000 == 0;
 			}
