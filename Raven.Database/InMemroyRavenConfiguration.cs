@@ -219,8 +219,8 @@ namespace Raven.Database
         public T? GetConfigurationValue<T>(string configName) where T : struct
         {
             // explicitly fail if we can convert it
-            if (string.IsNullOrEmpty(Settings["Raven/AnonymousAccess"]) == false)
-                return (T)Convert.ChangeType(Settings["Raven/AnonymousAccess"], typeof(T));
+            if (string.IsNullOrEmpty(Settings[configName]) == false)
+                return (T)Convert.ChangeType(Settings[configName], typeof(T));
             return null;
         }
 
