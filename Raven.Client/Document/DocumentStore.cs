@@ -195,6 +195,9 @@ namespace Raven.Client.Document
 							DataDirectory = match.Groups[2].Value.Trim();
 							break;
 #endif
+                        case "resourcemanagerid":
+                            ResourceManagerId = new Guid(match.Groups[2].Value.Trim());
+					        break;
 						case "url":
 							Url = match.Groups[2].Value.Trim();
 							break;
