@@ -72,6 +72,10 @@ namespace Raven.Database.Server
         {
             if (listener != null)
                 listener.Stop();
+            foreach (var documentDatabase in databaseCache)
+            {
+                documentDatabase.Value.Dispose();
+            }
         }
 
         #endregion
@@ -388,7 +392,7 @@ namespace Raven.Database.Server
             if (string.IsNullOrEmpty(acceptEncoding))
                 return;
 
-            // gzip must be first, because chrome has a bug accepting deflate data
+            // gzip must be first, because chrome has an issue accepting deflate data
             // when sending it json text
             if ((acceptEncoding.IndexOf("gzip", StringComparison.InvariantCultureIgnoreCase) != -1))
             {
