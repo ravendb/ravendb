@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Specialized;
 using System.Linq;
+using System.Net;
 using Raven.Client.Client;
 using Raven.Client.Document;
 using Raven.Client.Shard.ShardStrategy;
@@ -91,7 +92,32 @@ namespace Raven.Client.Shard
             return new ShardedDocumentSession(shardStrategy, shards.Select(x => x.OpenSession()).ToArray());
         }
 
-		/// <summary>
+        /// <summary>
+        /// Opens the session for a particular database
+        /// </summary>
+	    public IDocumentSession OpenSession(string database)
+	    {
+	        return new ShardedDocumentSession(shardStrategy, shards.Select(x => x.OpenSession(database)).ToArray());
+	    }
+
+        /// <summary>
+        /// Opens the session for a particular database with the specified credentials
+        /// </summary>
+	    public IDocumentSession OpenSession(string database, ICredentials credentialsForSession)
+	    {
+            return new ShardedDocumentSession(shardStrategy, shards.Select(x => x.OpenSession(database, credentialsForSession)).ToArray());
+	    }
+
+        /// <summary>
+        /// Opens the session with the specified credentials.
+        /// </summary>
+        /// <param name="credentialsForSession">The credentials for session.</param>
+	    public IDocumentSession OpenSession(ICredentials credentialsForSession)
+	    {
+            return new ShardedDocumentSession(shardStrategy, shards.Select(x => x.OpenSession(credentialsForSession)).ToArray());
+	    }
+
+	    /// <summary>
 		/// Gets the database commands.
 		/// </summary>
 		/// <value>The database commands.</value>

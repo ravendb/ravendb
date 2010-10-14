@@ -6,7 +6,7 @@ namespace Raven.Client.Shard
 	/// <summary>
 	/// Referest a list of shards
 	/// </summary>
-    public class Shards : List<DocumentStore>
+    public class Shards : List<IDocumentStore>
     {
 		/// <summary>
 		/// Initializes a new instance of the <see cref="Shards"/> class.
@@ -20,7 +20,7 @@ namespace Raven.Client.Shard
 		/// Initializes a new instance of the <see cref="Shards"/> class.
 		/// </summary>
 		/// <param name="shards">The shards.</param>
-        public Shards(IEnumerable<DocumentStore> shards) : base(shards)
+        public Shards(IEnumerable<IDocumentStore> shards) : base(shards)
         {
 
         }

@@ -796,7 +796,20 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			return new ServerClient(url, convention, credentialsForSession, replicationInformer);
 		}
 
-		/// <summary>
+        /// <summary>
+        /// Create a new instance of <see cref="IDatabaseCommands"/> that will interacts
+        /// with the specified database
+        /// </summary>
+	    public IDatabaseCommands ForDatabase(string database)
+	    {
+	        var databaseUrl = url;
+            if (databaseUrl.EndsWith("/") == false)
+                databaseUrl += "/";
+	        databaseUrl = databaseUrl + "databases/" + database + "/";
+            return new ServerClient(databaseUrl, convention, credentials, replicationInformer);
+        }
+
+	    /// <summary>
 		/// Gets a value indicating whether [supports promotable transactions].
 		/// </summary>
 		/// <value>

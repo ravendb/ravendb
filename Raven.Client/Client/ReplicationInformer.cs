@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -26,7 +27,7 @@ namespace Raven.Client.Client
 			get { return replicationDestinations; }
 		}
 
-		private readonly Dictionary<string, IntHolder> failureCounts = new Dictionary<string, IntHolder>();
+        private readonly ConcurrentDictionary<string, IntHolder> failureCounts = new ConcurrentDictionary<string, IntHolder>();
 
 		/// <summary>
 		/// Updates the replication information if needed.
@@ -52,9 +53,7 @@ namespace Raven.Client.Client
 		/// <returns></returns>
 		public bool ShouldExecuteUsing(string operationUrl, int currentRequest)
 		{
-			IntHolder value;
-			if (failureCounts.TryGetValue(operationUrl, out value) == false)
-				throw new KeyNotFoundException("BUG: Could not find failure count for " + operationUrl);
+		    var value = failureCounts.GetOrAdd(operationUrl, new IntHolder());
 			if (value.Value > 1000)
 			{
 				return currentRequest % 1000 == 0;

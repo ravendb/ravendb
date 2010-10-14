@@ -195,5 +195,11 @@ namespace Raven.Client.Client
 		/// <param name="patchRequests">The patch requests.</param>
 		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
 		void UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale);
+
+        /// <summary>
+        /// Create a new instance of <see cref="IDatabaseCommands"/> that will interacts
+        /// with the specified database
+        /// </summary>
+        IDatabaseCommands ForDatabase(string database);
 	}
 }

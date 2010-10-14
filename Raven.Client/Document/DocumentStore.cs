@@ -253,12 +253,9 @@ namespace Raven.Client.Document
 		/// Opens the session with the specified credentials.
 		/// </summary>
 		/// <param name="credentialsForSession">The credentials for session.</param>
-		/// <returns></returns>
         public IDocumentSession OpenSession(ICredentials credentialsForSession)
         {
-            if (DatabaseCommands == null)
-                throw new InvalidOperationException("You cannot open a session before initialising the document store. Did you forgot calling Initialise?");
-            var session = new DocumentSession(this, storeListeners, deleteListeners);
+            var session = new DocumentSession(this, storeListeners, deleteListeners, DatabaseCommands.With(credentialsForSession));
 			session.Stored += OnSessionStored;
             return session;
         }
@@ -290,12 +287,34 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public IDocumentSession OpenSession()
         {
-             var session = new DocumentSession(this, storeListeners, deleteListeners);
+             var session = new DocumentSession(this, storeListeners, deleteListeners, DatabaseCommands);
 			session.Stored += OnSessionStored;
             return session;
         }
 
         /// <summary>
+        /// Opens the session for a particular database
+        /// </summary>
+	    public IDocumentSession OpenSession(string database)
+	    {
+            var session = new DocumentSession(this, storeListeners, deleteListeners, DatabaseCommands.ForDatabase(database));
+            session.Stored += OnSessionStored;
+            return session;
+	    }
+
+        /// <summary>
+        /// Opens the session for a particular database with the specified credentials
+        /// </summary>
+	    public IDocumentSession OpenSession(string database, ICredentials credentialsForSession)
+	    {
+            var session = new DocumentSession(this, storeListeners, deleteListeners, DatabaseCommands
+                .ForDatabase(database)
+                .With(credentialsForSession));
+            session.Stored += OnSessionStored;
+            return session;
+	    }
+
+	    /// <summary>
         /// The resource manager id for the document store.
         /// IMPORTANT: Using Guid.NewGuid() to set this value is almost cetainly a mistake, you should set
         /// it to a value that remains consistent between restart of the system.

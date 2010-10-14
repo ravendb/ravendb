@@ -32,10 +32,11 @@ namespace Raven.Client.Document
         /// <param name="documentStore">The document store.</param>
         /// <param name="storeListeners">The store listeners.</param>
         /// <param name="deleteListeners">The delete listeners.</param>
-        public DocumentSession(DocumentStore documentStore, IDocumentStoreListener[] storeListeners, IDocumentDeleteListener[] deleteListeners)
+        /// <param name="databaseCommands"></param>
+        public DocumentSession(DocumentStore documentStore, IDocumentStoreListener[] storeListeners, IDocumentDeleteListener[] deleteListeners, IDatabaseCommands databaseCommands)
             : base(documentStore, storeListeners, deleteListeners)
         {
-            DatabaseCommands = documentStore.DatabaseCommands;
+            DatabaseCommands = databaseCommands;
         }
 
         /// <summary>

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Specialized;
+using System.Net;
 using Raven.Client.Client;
 using Raven.Client.Document;
 
@@ -52,6 +53,22 @@ namespace Raven.Client
 		/// </summary>
 		/// <returns></returns>
         IDocumentSession OpenSession();
+
+        /// <summary>
+        /// Opens the session for a particular database
+        /// </summary>
+        IDocumentSession OpenSession(string database);
+
+        /// <summary>
+        /// Opens the session for a particular database with the specified credentials
+        /// </summary>
+        IDocumentSession OpenSession(string database, ICredentials credentialsForSession);
+
+        /// <summary>
+        /// Opens the session with the specified credentials.
+        /// </summary>
+        /// <param name="credentialsForSession">The credentials for session.</param>
+        IDocumentSession OpenSession(ICredentials credentialsForSession);
 
 		/// <summary>
 		/// Gets the database commands.

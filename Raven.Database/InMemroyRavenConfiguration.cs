@@ -48,8 +48,9 @@ namespace Raven.Database
             TempIndexPromotionMinimumQueryCount = minimumQueryCount != null ? int.Parse(minimumQueryCount) : 100;
             TempIndexPromotionThreshold = queryThreshold != null ? int.Parse(queryThreshold) : 60000; // once a minute
             TempIndexCleanupPeriod = cleanupPeriod != null ? int.Parse(cleanupPeriod) : 300; // every 5 minutes
-            TempIndexCleanupThreshold = cleanupThreshold != null ? int.Parse(cleanupThreshold) : 600;
-            // 10 minutes inactivity
+            TempIndexCleanupThreshold = cleanupThreshold != null ? int.Parse(cleanupThreshold) : 600; // 10 minutes inactivity
+
+            RunInMemory = GetConfigurationValue<bool>("Raven/RunInMemory") ?? false;
 
             DataDirectory = Settings["Raven/DataDir"] ?? @"~\Data";
 

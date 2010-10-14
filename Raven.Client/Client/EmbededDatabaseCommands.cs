@@ -224,7 +224,17 @@ namespace Raven.Client.Client
 			databaseBulkOperations.UpdateByIndex(indexName, queryToUpdate, patchRequests, allowStale);
 		}
 
-		#endregion
+
+        /// <summary>
+        /// Create a new instance of <see cref="IDatabaseCommands"/> that will interacts
+        /// with the specified database
+        /// </summary>
+        public IDatabaseCommands ForDatabase(string database)
+	    {
+	        throw new NotSupportedException("Multiple databases are not supported in the embedded API currently");
+	    }
+
+	    #endregion
 
 		public void SpinBackgroundWorkers()
 		{
