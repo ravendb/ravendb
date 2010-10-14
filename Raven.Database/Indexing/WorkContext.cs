@@ -40,7 +40,6 @@ namespace Raven.Database.Indexing
 
         public void WaitForWork(TimeSpan timeout, ref int workerWorkCounter)
         {
-            workerWorkCounter = -1;
             if (!doWork)
                 return;
             var currentWorkCounter = Thread.VolatileRead(ref workCounter);
