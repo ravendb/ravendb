@@ -12,8 +12,10 @@ namespace Raven.Database.Server.Responders
 	{
 		private readonly string[] supportedVerbsCached;
 		protected readonly Regex urlMatcher;
+        private Func<InMemroyRavenConfiguration> settings;
+	    private Func<DocumentDatabase> database;
 
-		protected RequestResponder()
+	    protected RequestResponder()
 		{
 			urlMatcher = new Regex(UrlPattern);
 			supportedVerbsCached = SupportedVerbs;
@@ -22,8 +24,14 @@ namespace Raven.Database.Server.Responders
 		public abstract string UrlPattern { get; }
 		public abstract string[] SupportedVerbs { get; }
 
-		public DocumentDatabase Database { get; set; }
-		public RavenConfiguration Settings { get; set; }
+        public DocumentDatabase Database { get { return database(); } }
+        public InMemroyRavenConfiguration Settings { get { return settings(); } }
+
+        public void Initialize(Func<DocumentDatabase> databaseGetter, Func<InMemroyRavenConfiguration> settingsGetter)
+        {
+            this.database = databaseGetter;
+            this.settings = settingsGetter;
+        }
 
 		public bool WillRespond(IHttpContext context)
 		{

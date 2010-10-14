@@ -54,7 +54,7 @@ namespace Raven.Database
 
         private readonly ILog log = LogManager.GetLogger(typeof(DocumentDatabase));
 
-        public DocumentDatabase(RavenConfiguration configuration)
+        public DocumentDatabase(InMemroyRavenConfiguration configuration)
         {
             Configuration = configuration;
 
@@ -177,7 +177,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
             }
         }
 
-        public RavenConfiguration Configuration
+        public InMemroyRavenConfiguration Configuration
         {
             get;
             private set;

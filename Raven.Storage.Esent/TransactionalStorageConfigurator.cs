@@ -56,10 +56,9 @@ namespace Raven.Storage.Esent
 
 		private int GetValueFromConfiguration(string name, int defaultValue)
 		{
-			string valueAsStr;
 			int value;
-			if (configuration.Settings.TryGetValue(name, out valueAsStr) &&
-				int.TryParse(valueAsStr, out value))
+			if (string.IsNullOrEmpty(configuration.Settings[name]) == false &&
+                int.TryParse(configuration.Settings[name], out value))
 			{
 				return value;
 			}

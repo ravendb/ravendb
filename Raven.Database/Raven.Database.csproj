@@ -118,6 +118,7 @@
     <Compile Include="DatabaseBulkOperations.cs" />
     <Compile Include="Data\AttachmentInformation.cs" />
     <Compile Include="Data\BackupRequest.cs" />
+    <Compile Include="Data\DatabaseDocument.cs" />
     <Compile Include="Data\DisposableAction.cs" />
     <Compile Include="Data\DynamicQueryMapping.cs" />
     <Compile Include="Data\DynamicQueryMappingItem.cs" />
@@ -141,6 +142,7 @@
     <Compile Include="Indexing\RobustEnumerator.cs" />
     <Compile Include="Indexing\SpatialIndex.cs" />
     <Compile Include="Indexing\SortOptions.cs" />
+    <Compile Include="InMemroyRavenConfiguration.cs" />
     <Compile Include="IStartupTask.cs" />
     <Compile Include="Json\DynamicUtil.cs" />
     <Compile Include="Json\JsonDynamicConverter.cs" />
