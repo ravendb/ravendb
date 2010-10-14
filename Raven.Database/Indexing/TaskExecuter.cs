@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using log4net;
 using Raven.Database.Extensions;
 using Raven.Database.Json;
@@ -76,35 +77,16 @@ namespace Raven.Database.Indexing
 			if (indexesToWorkOn.Count == 0)
 				return false;
 			
-			//ExecuteIndexingWorkOnMultipleThreads(indexesToWorkOn);
-
-			ExecuteIndexingWorkOnSingleThread(indexesToWorkOn);
+			ExecuteIndexingWorkOnMultipleThreads(indexesToWorkOn);
 
 			return true;
 		}
 
-		private void ExecuteIndexingWorkOnMultipleThreads(List<IndexToWorkOn> indexesToWorkOn)
+		private void ExecuteIndexingWorkOnMultipleThreads(IEnumerable<IndexToWorkOn> indexesToWorkOn)
 		{
-			var threadingTasks = new ThreadingTask[indexesToWorkOn.Count];
-			for (int i = 0; i < indexesToWorkOn.Count; i++)
-			{
-				var indexToWorkOn = indexesToWorkOn[i];
-				threadingTasks[i] = new ThreadingTask(() =>
-					transactionalStorage.Batch(actions =>
-						IndexDocuments(actions, indexToWorkOn.IndexName, indexToWorkOn.LastIndexedEtag)));
-
-				threadingTasks[i].Start();
-			}
-			ThreadingTask.WaitAll(threadingTasks);
-		}
-
-		private void ExecuteIndexingWorkOnSingleThread(List<IndexToWorkOn> indexesToWorkOn)
-		{
-			foreach (var indexToWorkOn in indexesToWorkOn)
-			{
-				transactionalStorage.Batch(actions => 
-					IndexDocuments(actions, indexToWorkOn.IndexName, indexToWorkOn.LastIndexedEtag));
-			}
+            Parallel.ForEach(indexesToWorkOn, indexToWorkOn => 
+                transactionalStorage.Batch(actions => 
+                    IndexDocuments(actions, indexToWorkOn.IndexName, indexToWorkOn.LastIndexedEtag)));
 		}
 
 		private bool ExecuteTasks()
@@ -161,7 +143,7 @@ namespace Raven.Database.Indexing
 
 			var dateTime = jsonDocs.Select(x=>x.LastModified).Min();
 
-			var documentRetriever = new DocumentRetriever(null, this.context.ReadTriggers);
+			var documentRetriever = new DocumentRetriever(null, context.ReadTriggers);
 			try
 			{
 				log.DebugFormat("Indexing {0} documents for index: {1}", jsonDocs.Length, index);
