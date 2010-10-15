@@ -35,8 +35,15 @@ namespace Raven.Database.Data
         {
             var fromClauses = new HashSet<string>();
             var realMappings = new List<string>();
-
-            fromClauses.Add("from doc in docs");
+            
+            if (!string.IsNullOrEmpty(this.ForEntityName))
+            {
+                fromClauses.Add("from doc in docs." + this.ForEntityName);
+            }
+            else
+            {
+                fromClauses.Add("from doc in docs");
+            }
 
             foreach (var map in Items)
             {

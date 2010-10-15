@@ -168,6 +168,29 @@ namespace Raven.Client.Tests.Querying
             }
         }
 
+        [Fact]
+        public void QueryForASpecificTypeDoesNotBringBackOtherTypes()
+        {
+            using (var server = GetNewServer(port, path))
+            {
+                var store = new DocumentStore { Url = "http://localhost:" + port };
+                store.Initialize();
+
+                using (var s = store.OpenSession())
+                {
+                    s.Store(new Tag());
+                    s.SaveChanges();
+                }
+
+                using (var s = store.OpenSession())
+                {
+                    var results = s.Query<Blog>()
+                        .Select(b => new { b.Category })
+                        .ToArray();
+                    Assert.Equal(0, results.Length);
+                }
+            }
+        }
 
         [Fact]
         public void CanPerformLinqOrderByOnNumericField()

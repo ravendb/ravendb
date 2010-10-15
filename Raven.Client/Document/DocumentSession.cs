@@ -322,8 +322,13 @@ namespace Raven.Client.Document
         /// <typeparam name="T">The result of the query</typeparam>
         public IRavenQueryable<T> Query<T>()
         {
+            string indexName = "dynamic";
+            if (typeof(T) != typeof(object))
+            {
+                indexName += "/" + Conventions.GetTypeTagName(typeof(T));
+            }
             var ravenQueryStatistics = new RavenQueryStatistics();
-            return new RavenQueryable<T>(new DynamicRavenQueryProvider<T>(this, ravenQueryStatistics), ravenQueryStatistics);
+            return new RavenQueryable<T>(new DynamicRavenQueryProvider<T>(this, indexName, ravenQueryStatistics), ravenQueryStatistics);
         }
 
         /// <summary>
