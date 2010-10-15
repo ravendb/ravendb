@@ -4,7 +4,7 @@ properties {
   $build_dir = "$base_dir\build"
   $buildartifacts_dir = "$build_dir\"
   $sln_file = "$base_dir\zzz_RavenDB_Release.sln"
-  $version = "1.0.0.0"
+  $version = "1.0.0"
   $tools_dir = "$base_dir\Tools"
   $release_dir = "$base_dir\Release"
   $uploader = "..\Uploader\S3Uploader.exe"
@@ -43,11 +43,11 @@ task Init -depends Verify40, Clean {
 		
 		Generate-Assembly-Info `
 			-file $asmInfo `
-			-title "$projectName $version" `
+			-title "$projectName $version.0" `
 			-description "A linq enabled document database for .NET" `
 			-company "Hibernating Rhinos" `
-			-product "RavenDB $version" `
-			-version $version `
+			-product "RavenDB $version.0" `
+			-version "$version.0" `
 			-fileversion "1.0.0.$env:buildlabel" `
 			-copyright "Copyright © Hibernating Rhinos and Ayende Rahien 2004 - 2010" `
 			-clsCompliant "true"
@@ -222,6 +222,54 @@ task CopyServer {
 	cp $base_dir\DefaultConfigs\RavenDb.exe.config $build_dir\Output\Server\Raven.Server.exe.config
 }
 
+task CreateNupack {
+	del $base_dir\*.nupkg
+	remove-item $build_dir\NuPack -force -recurse -erroraction silentlycontinue
+	mkdir $build_dir\NuPack
+	mkdir $build_dir\NuPack\Lib
+	mkdir $build_dir\NuPack\Lib\3.5
+	mkdir $build_dir\NuPack\Lib\4.0
+	mkdir $build_dir\NuPack\Tools
+	
+	$nupack = [xml](get-content $base_dir\RavenDB.nuspec)
+	
+	$nupack.package.metadata.version = "$version.$env:buildlabel"
+
+	$writerSettings = new-object System.Xml.XmlWriterSettings
+	$writerSettings.OmitXmlDeclaration = $true
+	$writerSettings.NewLineOnAttributes = $true
+	$writerSettings.Indent = $true
+	
+	$writer = [System.Xml.XmlWriter]::Create("$build_dir\Nupack\RavenDB.nuspec", $writerSettings)
+	
+	$nupack.WriteTo($writer)
+	$writer.Flush()
+	$writer.Close()
+	
+	cp $build_dir\Newtonsoft.Json.dll $build_dir\NuPack\Lib\3.5
+	cp $build_dir\Raven.Client-3.5.dll $build_dir\NuPack\Lib\3.5
+	
+	cp $build_dir\Newtonsoft.Json.dll $build_dir\NuPack\Lib\4.0
+	cp $build_dir\Raven.Client.Lightweight.dll $build_dir\NuPack\Lib\4.0
+	cp $build_dir\Raven.Client.Lightweight.xml $build_dir\NuPack\Lib\4.0
+	
+	
+	cp $build_dir\Raven.Server.exe $build_dir\NuPack\Tools
+	cp $build_dir\log4net.dll $build_dir\NuPack\Tools
+	cp $build_dir\Newtonsoft.Json.dll $build_dir\NuPack\Tools
+	cp $build_dir\Lucene.Net.dll $build_dir\NuPack\Tools
+	cp $build_dir\Spatial.Net.dll $build_dir\NuPack\Tools
+	cp $build_dir\ICSharpCode.NRefactory.dll $build_dir\NuPack\Tools
+	cp $build_dir\Rhino.Licensing.dll $build_dir\NuPack\Toolsr
+	cp $build_dir\Esent.Interop.dll $build_dir\NuPack\Tools
+	cp $build_dir\Raven.Database.dll $build_dir\NuPack\Tools
+	cp $build_dir\Raven.Storage.Esent.dll $build_dir\NuPack\Tools
+	cp $build_dir\Raven.Storage.Managed.dll $build_dir\NuPack\Tools
+	cp $base_dir\DefaultConfigs\RavenDb.exe.config $build_dir\NuPack\Tools\Raven.Server.exe.config
+	
+	& $tools_dir\NuPack.exe $build_dir\NuPack\RavenDB.nuspec
+}
+
 task CreateDocs {
 	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
 	
@@ -252,7 +300,8 @@ task DoRelease -depends Compile, `
 	CopyBundles, `
 	CopyServer, `
 	CopyDocFiles, `
-	CopySamples {
+	CopySamples, `
+	CreateNupack {
 	
 	$old = pwd
 	

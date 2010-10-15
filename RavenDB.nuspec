@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package>
+ <metadata>
+   <id>RavenDB</id>
+   <version>1.0</version>
+   <authors>
+     <author>Hibernating Rhinos (http://hiberantingrhinos.com)</author>
+   </authors>
+   <description>Raven is a document database for the .NET/Windows platform, offering a flexible data model design to fit the needs of real world systems.</description>
+   <language>en-US</language>
+   <licenseUrl>http://www.ravendb.net/licensing</licenseUrl>
+ </metadata>
+</package>
