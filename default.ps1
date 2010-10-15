@@ -31,15 +31,15 @@ task Init -depends Verify40, Clean {
 		$env:buildlabel = "13"
 	}
 	
-	$propertiesDirs = ls -path $base_dir -include Properties -recurse | 
+	$projectFiles = ls -path $base_dir -include *.csproj -recurse | 
 					Where { $_ -notmatch [regex]::Escape($lib_dir) } | 
 					Where { $_ -notmatch [regex]::Escape($tools_dir) }
 	
-	foreach($propertiesDir in $propertiesDirs) {
+	foreach($projectFile in $projectFiles) {
 		
-		$projectDir = [System.IO.Path]::GetDirectoryName($propertiesDir)
+		$projectDir = [System.IO.Path]::GetDirectoryName($projectFile)
 		$projectName = [System.IO.Path]::GetFileName($projectDir)
-		$asmInfo = [System.IO.Path]::Combine($propertiesDir, "AssemblyInfo.cs")
+		$asmInfo = [System.IO.Path]::Combine($projectDir, [System.IO.Path]::Combine("Properties", "AssemblyInfo.cs"))
 		
 		Generate-Assembly-Info `
 			-file $asmInfo `
