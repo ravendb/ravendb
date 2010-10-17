@@ -257,7 +257,7 @@ namespace Raven.Storage.Managed.Impl
                 int dataRead = persistentSource.Log.Read(buf, read, buf.Length - read);
                 if (dataRead == 0) // nothing read, EOF, probably truncated write, 
                 {
-                    throw new InvalidDataException("Could not read complete data, the data file is corrupt");
+                    throw new InvalidDataException("Could not read complete data, the file is probably corrupt");
                 }
                 read += dataRead;
             } while (read < buf.Length);
