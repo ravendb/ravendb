@@ -6,15 +6,13 @@ namespace Raven.Storage.Managed.Impl
     public interface IPersistentSource : IDisposable
     {
         object SyncLock { get; }
-        Stream Data { get; }
         Stream Log { get; }
         bool CreatedNew { get; }
 
-        void ReplaceAtomically(Stream data, Stream log);
+        void ReplaceAtomically(Stream log);
 
         Stream CreateTemporaryStream();
 
-        void FlushData();
         void FlushLog();
         RemoteManagedStorageState CreateRemoteAppDomainState();
     }

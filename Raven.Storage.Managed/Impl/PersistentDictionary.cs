@@ -118,33 +118,15 @@ namespace Raven.Storage.Managed.Impl
 
         public bool Put(JToken key, byte[] value, Guid txId)
         {
-
             Guid existing;
             if (keysModifiedInTx.TryGetValue(key, out existing) && existing != txId)
                 return false;
 
-            long position;
-            if(value != null)
-            {
-                lock (persistentSource.SyncLock)
-                {
-                    // we *always* write to the end
-                    position = persistentSource.Data.Position = persistentSource.Data.Length;
-                    persistentSource.Data.Write(value, 0, value.Length);
-                }
-                cache[position.ToString()] = value;
-            }
-            else
-            {
-                position = -1;
-                
-            }
             operationsInTransactions.GetOrAdd(txId, new List<Command>())
                 .Add(new Command
                 {
                     Key = key,
-                    Position = position,
-                    Size = (value == null ? 0 : value.Length),
+                    Payload = value,
                     DictionaryId = DictionaryId,
                     Type = CommandType.Put
                 });
@@ -201,7 +183,7 @@ namespace Raven.Storage.Managed.Impl
                             {
                                 Position = command.Position,
                                 Size = command.Size,
-                                Data = () => readData ?? (readData = ReadData(command.Position, command.Size)),
+                                Data = () => readData ?? (readData = ReadData(command)),
                                 Key = command.Key
                             };
                         case CommandType.Delete:
@@ -233,6 +215,14 @@ namespace Raven.Storage.Managed.Impl
             }
         }
 
+        private byte[] ReadData(Command command)
+        {
+            if (command.Payload != null)
+                return command.Payload;
+
+            return ReadData(command.Position, command.Size);
+        }
+
         private byte[] ReadData(long pos, int size)
         {
             var cacheKey = pos.ToString();
@@ -258,13 +248,13 @@ namespace Raven.Storage.Managed.Impl
 
         private byte[] ReadDataNoCaching(long pos, int size)
         {
-            persistentSource.Data.Position = pos;
+            persistentSource.Log.Position = pos;
 
             var read = 0;
             var buf = new byte[size];
             do
             {
-                int dataRead = persistentSource.Data.Read(buf, read, buf.Length - read);
+                int dataRead = persistentSource.Log.Read(buf, read, buf.Length - read);
                 if (dataRead == 0) // nothing read, EOF, probably truncated write, 
                 {
                     throw new InvalidDataException("Could not read complete data, the data file is corrupt");
@@ -357,54 +347,17 @@ namespace Raven.Storage.Managed.Impl
             }
         }
 
-        internal void CopyCommittedData(Stream tempData, List<Command> cmds)
+        internal IEnumerable<Command> CopyCommittedData(Stream tempData)
         {
-            currentlyCommittingLock.EnterReadLock();
-            try
-            {
-                foreach (var kvp in keyToFilePos) // copy committed data
-                {
-                    long pos = tempData.Position;
-                    byte[] data = ReadData(kvp.Value.Position, kvp.Value.Size);
-
-                    byte[] lenInBytes = BitConverter.GetBytes(data.Length);
-                    tempData.Write(lenInBytes, 0, lenInBytes.Length);
-                    tempData.Write(data, 0, data.Length);
-
-                    cmds.Add(new Command
-                    {
-                        Key = kvp.Key,
-                        Position = pos,
-                        DictionaryId = DictionaryId,
-                        Size = kvp.Value.Size,
-                        Type = CommandType.Put
-                    });
-
-                    kvp.Value.Position = pos;
-                }
-            }
-            finally
-            {
-                currentlyCommittingLock.ExitReadLock();
-            }
-        }
-
-        public void CopyUncommitedData(Stream tempData)
-        {
-            // copy uncommitted data
-            foreach (Command uncommitted in operationsInTransactions
-                .SelectMany(x => x.Value)
-                .Where(x => x.Type == CommandType.Put))
-            {
-                long pos = tempData.Position;
-                byte[] data = ReadData(uncommitted.Position, uncommitted.Size);
-
-                byte[] lenInBytes = BitConverter.GetBytes(data.Length);
-                tempData.Write(lenInBytes, 0, lenInBytes.Length);
-                tempData.Write(data, 0, data.Length);
-
-                uncommitted.Position = pos;
-            }
+            return from kvp in keyToFilePos
+                   select new Command
+                   {
+                       Key = kvp.Key,
+                       Payload = ReadData(kvp.Value.Position, kvp.Value.Size),
+                       DictionaryId = DictionaryId,
+                       Size = kvp.Value.Size,
+                       Type = CommandType.Put
+                   };
         }
 
         public void ClearCache()

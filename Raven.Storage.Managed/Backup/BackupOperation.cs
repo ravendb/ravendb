@@ -49,7 +49,6 @@ namespace Raven.Storage.Managed.Backup
 
                 lock (persistentSource.SyncLock)
                 {
-                    persistentSource.FlushData();
                     persistentSource.FlushLog();
 
                     foreach (var directoryBackup in directoryBackups)

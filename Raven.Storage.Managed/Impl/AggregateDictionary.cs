@@ -39,6 +39,12 @@ namespace Raven.Storage.Managed.Impl
                     if (cmds == null)
                         break;
 
+                    if(cmds.Length == 1 && cmds[0].Type==CommandType.Skip)
+                    {
+                        persistentSource.Log.Position += cmds[0].Size;
+                        continue;
+                    }
+
                     foreach (var commandForDictionary in cmds.GroupBy(x => x.DictionaryId))
                     {
                         dictionaries[commandForDictionary.Key].ApplyCommands(commandForDictionary);
@@ -51,7 +57,7 @@ namespace Raven.Storage.Managed.Impl
             }
         }
 
-        private IEnumerable<Command> ReadCommands(long lastGoodPosition)
+        private Command[] ReadCommands(long lastGoodPosition)
         {
             try
             {
@@ -85,6 +91,7 @@ namespace Raven.Storage.Managed.Impl
                 currentlyCommittingLock.EnterWriteLock();
                 try
                 {
+                    persistentSource.Log.Position = persistentSource.Log.Length; // always write at the end of the file
                     var cmds = new List<Command>();
                     foreach (var persistentDictionary in dictionaries)
                     {
@@ -94,7 +101,6 @@ namespace Raven.Storage.Managed.Impl
                         cmds.AddRange(commandsToCommit);
                     }
 
-                    persistentSource.FlushData(); // sync the data to disk before doing anything else
                     WriteCommands(cmds, persistentSource.Log);
                     persistentSource.FlushLog(); // flush all the index changes to disk
 
@@ -117,8 +123,24 @@ namespace Raven.Storage.Managed.Impl
             }
         }
 
-        private static void WriteCommands(IEnumerable<Command> cmds, Stream log)
+        private static void WriteCommands(IList<Command> cmds, Stream log)
         {
+            if(cmds.Count ==0)
+                return;
+
+            var dataSizeInBytes = cmds
+                .Where(x => x.Type == CommandType.Put && x.Payload != null)
+                .Sum(x => x.Payload.Length);
+
+            if(dataSizeInBytes > 0)
+            {
+                new JArray(new JObject
+                {
+                    {"type", (byte) CommandType.Skip},
+                    {"size", dataSizeInBytes}
+                }).WriteTo(log);
+            }
+
             var array = new JArray();
             foreach (var command in cmds)
             {
@@ -131,14 +153,24 @@ namespace Raven.Storage.Managed.Impl
 
                 if (command.Type == CommandType.Put)
                 {
+                    if(command.Payload != null)
+                    {
+                        command.Position = log.Position;
+                        command.Size = command.Payload.Length;
+                        log.Write(command.Payload, 0, command.Payload.Length);
+                    }
+                    else
+                    {
+                        command.Position = 0;
+                        command.Size = 0;
+                    }
+
                     cmd.Add("position", command.Position);
                     cmd.Add("size", command.Size);
                 }
 
                 array.Add(cmd);
             }
-            if (array.Count == 0)
-                return;
             array.WriteTo(log);
         }
 
@@ -151,19 +183,17 @@ namespace Raven.Storage.Managed.Impl
                 try
                 {
                     Stream tempLog = persistentSource.CreateTemporaryStream();
-                    Stream tempData = persistentSource.CreateTemporaryStream();
 
                     var cmds = new List<Command>();
                     foreach (var persistentDictionary in dictionaries)
                     {
-                        persistentDictionary.CopyCommittedData(tempData, cmds);
-                        persistentDictionary.CopyUncommitedData(tempData);
+                        cmds.AddRange(persistentDictionary.CopyCommittedData(tempLog));
                         persistentDictionary.ClearCache();
                     }
 
                     WriteCommands(cmds, tempLog);
 
-                    persistentSource.ReplaceAtomically(tempData, tempLog);
+                    persistentSource.ReplaceAtomically(tempLog);
                 }
                 finally
                 {

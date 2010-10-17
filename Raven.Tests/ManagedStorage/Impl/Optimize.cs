@@ -20,13 +20,13 @@ namespace Raven.Tests.ManagedStorage.Impl
                 persistentDictionary.Remove(JToken.FromObject(i), txId);
             }
 
-            var oldSize = persistentSource.Data.Length;
 
             Commit(txId);
 
+            var oldSize = persistentSource.Log.Length;
             PerformIdleTasks();
 
-            Assert.True( oldSize > persistentSource.Data.Length);
+            Assert.True(oldSize > persistentSource.Log.Length);
         }
 
         [Fact]
@@ -44,13 +44,13 @@ namespace Raven.Tests.ManagedStorage.Impl
             }
 
             persistentDictionary.Put(JToken.FromObject("a"), new byte[512], txId);
-           
-            var oldSize = persistentSource.Data.Length;
+
 
             Commit(txId);
+            var oldSize = persistentSource.Log.Length;
             PerformIdleTasks();
 
-            Assert.True(oldSize > persistentSource.Data.Length);
+            Assert.True(oldSize > persistentSource.Log.Length);
 
             Assert.NotNull(
                 persistentDictionary.Read(JToken.FromObject("a"), Guid.NewGuid())
@@ -75,12 +75,12 @@ namespace Raven.Tests.ManagedStorage.Impl
             var txId2 = Guid.NewGuid();
             persistentDictionary.Put(JToken.FromObject("a"), new byte[512], txId2);
 
-            var oldSize = persistentSource.Data.Length;
 
             Commit(txId);
+            var oldSize = persistentSource.Log.Length;
             PerformIdleTasks();
 
-            Assert.True(oldSize > persistentSource.Data.Length);
+            Assert.True(oldSize > persistentSource.Log.Length);
 
             Assert.NotNull(
                 persistentDictionary.Read(JToken.FromObject("a"), txId2)

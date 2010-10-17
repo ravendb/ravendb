@@ -8,10 +8,8 @@ namespace Raven.Storage.Managed.Impl
     {
         private readonly string basePath;
         private readonly string prefix;
-        private readonly string dataPath;
         private readonly string logPath;
 
-        private FileStream data;
         private FileStream log;
 
         public bool CreatedNew { get; set; }
@@ -21,7 +19,6 @@ namespace Raven.Storage.Managed.Impl
             SyncLock = new object();
             this.basePath = basePath;
             this.prefix = prefix;
-            dataPath = Path.Combine(basePath, prefix + ".data");
             logPath = Path.Combine(basePath, prefix + ".log");
 
             OpenFiles();
@@ -30,7 +27,6 @@ namespace Raven.Storage.Managed.Impl
         private void OpenFiles()
         {
             log = new FileStream(logPath, FileMode.OpenOrCreate, FileAccess.Read, FileShare.ReadWrite, 4096, FileOptions.SequentialScan);
-            data = new FileStream(dataPath, FileMode.OpenOrCreate, FileAccess.Read, FileShare.ReadWrite, 4096, FileOptions.RandomAccess);
         }
 
         #region IPersistentSource Members
@@ -41,28 +37,18 @@ namespace Raven.Storage.Managed.Impl
             private set;
         }
 
-        public Stream Data
-        {
-            get { return data; }
-        }
-
         public Stream Log
         {
             get { return log; }
 
         }
 
-        public void ReplaceAtomically(Stream newData, Stream newLog)
+        public void ReplaceAtomically(Stream newLog)
         {
            throw new NotSupportedException();
         }
 
         public Stream CreateTemporaryStream()
-        {
-            throw new NotSupportedException();
-        }
-
-        public void FlushData()
         {
             throw new NotSupportedException();
         }
@@ -85,7 +71,6 @@ namespace Raven.Storage.Managed.Impl
 
         public void Dispose()
         {
-            data.Dispose();
             log.Dispose();
         }
     }

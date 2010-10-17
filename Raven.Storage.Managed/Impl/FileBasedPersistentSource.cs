@@ -9,10 +9,8 @@ namespace Raven.Storage.Managed.Impl
         private readonly string basePath;
         private readonly string prefix;
         private readonly TransactionMode transactionMode;
-        private readonly string dataPath;
         private readonly string logPath;
 
-        private FileStream data;
         private FileStream log;
 
         public bool CreatedNew { get; set; }
@@ -23,11 +21,9 @@ namespace Raven.Storage.Managed.Impl
             this.basePath = basePath;
             this.prefix = prefix;
             this.transactionMode = transactionMode;
-            dataPath = Path.Combine(basePath, prefix + ".data");
             logPath = Path.Combine(basePath, prefix + ".log");
 
 
-            RecoverFromFailedRename(dataPath);
             RecoverFromFailedRename(logPath);
 
             CreatedNew = File.Exists(logPath) == false;
@@ -40,9 +36,6 @@ namespace Raven.Storage.Managed.Impl
             log = new FileStream(logPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read, 4096,
                                  transactionMode == TransactionMode.Lazy ? FileOptions.SequentialScan : FileOptions.WriteThrough| FileOptions.SequentialScan
                 );
-            data = new FileStream(dataPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read, 4096,
-                                  transactionMode == TransactionMode.Lazy ? FileOptions.RandomAccess : FileOptions.WriteThrough | FileOptions.RandomAccess
-                );
         }
 
         #region IPersistentSource Members
@@ -53,45 +46,29 @@ namespace Raven.Storage.Managed.Impl
             private set;
         }
 
-        public Stream Data
-        {
-            get { return data; }
-        }
-
         public Stream Log
         {
             get { return log; }
 
         }
 
-        public void ReplaceAtomically(Stream newData, Stream newLog)
+        public void ReplaceAtomically(Stream newLog)
         {
-            var newDataStream = ((FileStream)newData);
-            string dataTempName = newDataStream.Name;
-            newDataStream.Flush();
-            newDataStream.Dispose();
-
             var newLogStream = ((FileStream)newLog);
             string logTempName = newLogStream.Name;
             newLogStream.Flush();
             newLogStream.Dispose();
 
-            newData.Dispose();
             newLog.Dispose();
 
             log.Dispose();
-            data.Dispose();
 
-            string renamedDataFile = dataPath + ".rename_op";
             string renamedLogFile = logPath + ".rename_op";
 
-            File.Move(dataPath, renamedDataFile);
             File.Move(logPath, renamedLogFile);
 
             File.Move(logTempName, logPath);
-            File.Move(dataTempName, dataPath);
 
-            File.Delete(renamedDataFile);
             File.Delete(renamedLogFile);
 
             OpenFiles();
@@ -101,11 +78,6 @@ namespace Raven.Storage.Managed.Impl
         {
             string tempFile = Path.Combine(basePath, Path.GetFileName(Path.GetTempFileName()));
             return File.Open(tempFile, FileMode.Create, FileAccess.ReadWrite);
-        }
-
-        public void FlushData()
-        {
-            data.Flush(true);
         }
 
         public void FlushLog()
@@ -145,13 +117,11 @@ namespace Raven.Storage.Managed.Impl
 
         public void Dispose()
         {
-            data.Dispose();
             log.Dispose();
         }
 
         public void Delete()
         {
-            File.Delete(dataPath);
             File.Delete(logPath);
         }
     }

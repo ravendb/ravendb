@@ -17,7 +17,7 @@ namespace Raven.Storage.Managed
             }
             else
             {
-                persistentSource = new MemoryPersistentSource(state.Data, state.Log);
+                persistentSource = new MemoryPersistentSource(state.Log);
             }
         }
         public void Batch(Action<IStorageActionsAccessor> action)

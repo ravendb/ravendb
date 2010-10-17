@@ -5,6 +5,7 @@ namespace Raven.Storage.Managed.Impl
 {
     public class Command
     {
+        public byte[] Payload { get; set; }
         public int Size { get; set; }
         public JToken Key { get; set; }
         public CommandType Type { get; set; }

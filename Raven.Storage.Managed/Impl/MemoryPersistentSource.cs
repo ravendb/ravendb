@@ -8,14 +8,12 @@ namespace Raven.Storage.Managed.Impl
         public MemoryPersistentSource()
         {
             SyncLock = new object();
-            Data = new MemoryStream();
             Log = new MemoryStream();
         }
 
-        public MemoryPersistentSource(byte[] data, byte[] log)
+        public MemoryPersistentSource(byte[] log)
         {
             SyncLock = new object();
-            Data = new MemoryStream(data);
             Log = new MemoryStream(log);
         }
 
@@ -23,12 +21,6 @@ namespace Raven.Storage.Managed.Impl
         {
             get;
             private set;
-        }
-
-        public Stream Data
-        {
-            get;
-            set;
         }
 
         public Stream Log
@@ -42,9 +34,8 @@ namespace Raven.Storage.Managed.Impl
             get { return true; }
         }
 
-        public void ReplaceAtomically(Stream data, Stream log)
+        public void ReplaceAtomically(Stream log)
         {
-            Data = data;
             Log = log;
         }
 
@@ -65,7 +56,6 @@ namespace Raven.Storage.Managed.Impl
         {
             return new RemoteManagedStorageState
             {
-                Data = ((MemoryStream)Data).ToArray(),
                 Log = ((MemoryStream)Log).ToArray(),
             };
         }

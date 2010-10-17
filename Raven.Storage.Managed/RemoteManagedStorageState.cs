@@ -8,7 +8,6 @@ namespace Raven.Storage.Managed
         public string Path { get; set; }
         public string Prefix { get; set; }
 
-        public byte[] Data { get; set; }
         public byte[] Log { get; set; }
     }
 }
