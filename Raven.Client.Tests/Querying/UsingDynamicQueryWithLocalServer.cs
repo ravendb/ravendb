@@ -108,6 +108,27 @@ namespace Raven.Client.Tests.Querying
         }
 
         [Fact]
+        public void QueryForASpecificTypeDoesNotBringBackOtherTypes()
+        {
+            using (var store = this.NewDocumentStore())
+            {
+                using (var s = store.OpenSession())
+                {
+                    s.Store(new BlogTag());
+                    s.SaveChanges();
+                }
+
+                using (var s = store.OpenSession())
+                {
+                    var results = s.Query<Blog>()
+                        .Select(b=> new { b.Category})
+                        .ToArray();
+                    Assert.Equal(0, results.Length);
+                }
+            }
+        }
+
+        [Fact]
         public void CanPerformDynamicQueryUsingClientLuceneQuery()
         {
             var blogOne = new Blog

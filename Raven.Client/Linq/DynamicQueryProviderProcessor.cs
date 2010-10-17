@@ -16,8 +16,8 @@ namespace Raven.Client.Linq
         /// Creates a dynamic query proivder around the provided session
         /// </summary>
        public DynamicQueryProviderProcessor(IDocumentSession session,
-            Action<IDocumentQueryCustomization> customizeQuery, Action<QueryResult> afterQueryExecuted) 
-            : base(session, customizeQuery, afterQueryExecuted, "dynamic")
+            Action<IDocumentQueryCustomization> customizeQuery, Action<QueryResult> afterQueryExecuted, string indexName) 
+            : base(session, customizeQuery, afterQueryExecuted, indexName)
         {
 
         }
