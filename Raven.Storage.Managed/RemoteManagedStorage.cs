@@ -1,6 +1,7 @@
 using System;
 using Raven.Database;
 using Raven.Database.Storage;
+using Raven.Munin;
 using Raven.Storage.Managed.Impl;
 
 namespace Raven.Storage.Managed

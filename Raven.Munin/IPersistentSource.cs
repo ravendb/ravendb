@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 
-namespace Raven.Storage.Managed.Impl
+namespace Raven.Munin
 {
     public interface IPersistentSource : IDisposable
     {

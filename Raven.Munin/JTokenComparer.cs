@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json.Linq;
 
-namespace Raven.Storage.Managed.Impl
+namespace Raven.Munin
 {
     public class JTokenComparer : IComparer<JToken>, IEqualityComparer<JToken>
     {

@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 
-namespace Raven.Storage.Managed.Impl
+namespace Raven.Munin
 {
     public class RecordingComparer : IComparer<JToken>
     {

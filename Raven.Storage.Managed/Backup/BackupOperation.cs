@@ -8,6 +8,7 @@ using Raven.Database;
 using Raven.Database.Backup;
 using Raven.Database.Json;
 using Raven.Database.Extensions;
+using Raven.Munin;
 using Raven.Storage.Managed.Impl;
 
 namespace Raven.Storage.Managed.Backup

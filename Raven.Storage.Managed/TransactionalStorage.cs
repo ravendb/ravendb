@@ -5,6 +5,7 @@ using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Storage;
+using Raven.Munin;
 using Raven.Storage.Managed.Backup;
 using Raven.Storage.Managed.Impl;
 

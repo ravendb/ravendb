@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
+using Raven.Munin;
 
 namespace Raven.Storage.Managed.Impl
 {

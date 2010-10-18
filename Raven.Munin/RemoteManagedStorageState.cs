@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Raven.Storage.Managed
+namespace Raven.Munin
 {
     [Serializable]
     public class RemoteManagedStorageState

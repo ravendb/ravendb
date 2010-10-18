@@ -7,6 +7,7 @@ using Raven.Database;
 using Raven.Database.Exceptions;
 using Raven.Database.Storage;
 using Raven.Database.Storage.StorageActions;
+using Raven.Munin;
 using Raven.Storage.Managed.Impl;
 using System.Linq;
 using Raven.Database.Json;
