@@ -7,7 +7,6 @@ using System.Linq;
 using System.Threading;
 using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
-using Raven.Database.Json;
 
 namespace Raven.Storage.Managed.Impl
 {
@@ -61,7 +60,7 @@ namespace Raven.Storage.Managed.Impl
         {
             try
             {
-                var cmds = persistentSource.Log.ToJObject();
+                var cmds = ReadJObject(persistentSource.Log);
                 return cmds.Values().Select(cmd => new Command
                 {
                     Key = cmd.Value<JToken>("key"),
@@ -76,6 +75,14 @@ namespace Raven.Storage.Managed.Impl
                 persistentSource.Log.SetLength(lastGoodPosition);//truncate log to last known good position
                 return null;
             }
+        }
+
+        private JObject ReadJObject(Stream log)
+        {
+            return JObject.Load(new BsonReader(log)
+            {
+                DateTimeKindHandling = DateTimeKind.Utc,
+            });
         }
 
         public PersistentDictionary this[int i]
@@ -134,11 +141,11 @@ namespace Raven.Storage.Managed.Impl
 
             if(dataSizeInBytes > 0)
             {
-                new JArray(new JObject
+                WriteTo(log, new JArray(new JObject
                 {
                     {"type", (byte) CommandType.Skip},
                     {"size", dataSizeInBytes}
-                }).WriteTo(log);
+                }));
             }
 
             var array = new JArray();
@@ -171,7 +178,15 @@ namespace Raven.Storage.Managed.Impl
 
                 array.Add(cmd);
             }
-            array.WriteTo(log);
+            WriteTo(log, array);
+        }
+
+        private static void WriteTo(Stream log, JToken jToken)
+        {
+            jToken.WriteTo(new BsonWriter(log)
+            {
+                DateTimeKindHandling = DateTimeKind.Unspecified
+            });
         }
 
 

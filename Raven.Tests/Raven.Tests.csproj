@@ -130,14 +130,6 @@
     <Compile Include="ManagedStorage\General.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="ManagedStorage\Impl\CanWorkWithTwoDicsInSameFile.cs" />
-    <Compile Include="ManagedStorage\Impl\Conflicts.cs" />
-    <Compile Include="ManagedStorage\Impl\MultiDicInSingleFile.cs" />
-    <Compile Include="ManagedStorage\Impl\Optimize.cs" />
-    <Compile Include="ManagedStorage\Impl\Puts.cs" />
-    <Compile Include="ManagedStorage\Impl\PutsAfterRestart.cs" />
-    <Compile Include="ManagedStorage\Impl\Removes.cs" />
-    <Compile Include="ManagedStorage\Impl\SimpleFileTest.cs" />
     <Compile Include="ManagedStorage\Indexes.cs" />
     <Compile Include="ManagedStorage\MappedResults.cs" />
     <Compile Include="ManagedStorage\MyTask.cs" />

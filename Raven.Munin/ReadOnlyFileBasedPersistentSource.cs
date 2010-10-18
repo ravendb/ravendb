@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using Raven.Database;
 
 namespace Raven.Storage.Managed.Impl
 {

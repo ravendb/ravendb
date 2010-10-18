@@ -11,7 +11,7 @@ namespace Raven.Database.Json
 	/// </summary>
 	public static class JsonExtensions
 	{
-#if !CLIENT
+#if !CLIENT 
 	    public static JObject ToJObject(object result)
         {
             var dynamicJsonObject = result as Raven.Database.Linq.DynamicJsonObject;

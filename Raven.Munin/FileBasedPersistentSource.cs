@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using Raven.Database;
 
 namespace Raven.Storage.Managed.Impl
 {
@@ -8,19 +7,19 @@ namespace Raven.Storage.Managed.Impl
     {
         private readonly string basePath;
         private readonly string prefix;
-        private readonly TransactionMode transactionMode;
+        private readonly bool writeThrough;
         private readonly string logPath;
 
         private FileStream log;
 
         public bool CreatedNew { get; set; }
 
-        public FileBasedPersistentSource(string basePath, string prefix, TransactionMode transactionMode)
+        public FileBasedPersistentSource(string basePath, string prefix, bool writeThrough)
         {
             SyncLock = new object();
             this.basePath = basePath;
             this.prefix = prefix;
-            this.transactionMode = transactionMode;
+            this.writeThrough = writeThrough;
             logPath = Path.Combine(basePath, prefix + ".log");
 
 
@@ -34,7 +33,7 @@ namespace Raven.Storage.Managed.Impl
         private void OpenFiles()
         {
             log = new FileStream(logPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read, 4096,
-                                 transactionMode == TransactionMode.Lazy ? FileOptions.SequentialScan : FileOptions.WriteThrough| FileOptions.SequentialScan
+                                 writeThrough ? FileOptions.WriteThrough | FileOptions.SequentialScan : FileOptions.SequentialScan
                 );
         }
 

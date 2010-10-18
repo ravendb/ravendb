@@ -104,7 +104,7 @@ namespace Raven.Storage.Managed
 
             persistenceSource = configuration.RunInMemory
                           ? (IPersistentSource)new MemoryPersistentSource()
-                          : new FileBasedPersistentSource(configuration.DataDirectory, "Raven", configuration.TransactionMode);
+                          : new FileBasedPersistentSource(configuration.DataDirectory, "Raven", configuration.TransactionMode == TransactionMode.Safe);
 
             tableStroage = new TableStorage(persistenceSource);
 
