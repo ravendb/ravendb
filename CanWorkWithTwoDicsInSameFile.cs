@@ -2,7 +2,7 @@
 using Newtonsoft.Json.Linq;
 using Xunit;
 
-namespace Raven.Tests.ManagedStorage.Impl
+namespace Raven.Munin.Tests
 {
     public class CanWorkWithTwoDicsInSameFile : MultiDicInSingleFile
     {

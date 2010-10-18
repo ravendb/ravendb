@@ -1,8 +1,7 @@
 using System;
 using System.IO;
-using Raven.Storage.Managed.Impl;
 
-namespace Raven.Tests.ManagedStorage.Impl
+namespace Raven.Munin.Tests
 {
     public class SimpleFileTest : IDisposable
     {
