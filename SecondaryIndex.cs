@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading;
 using Newtonsoft.Json.Linq;
 
-namespace Raven.Storage.Managed.Impl
+namespace Raven.Munin
 {
     public class SecondaryIndex
     {

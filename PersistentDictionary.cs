@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
@@ -10,7 +9,7 @@ using System.Runtime.Caching;
 using System.Threading;
 using Newtonsoft.Json.Linq;
 
-namespace Raven.Storage.Managed.Impl
+namespace Raven.Munin
 {
     public class PersistentDictionary : IEnumerable<PersistentDictionary.ReadResult>
     {

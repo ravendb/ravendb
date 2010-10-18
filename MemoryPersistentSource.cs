@@ -1,7 +1,6 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 
-namespace Raven.Storage.Managed.Impl
+namespace Raven.Munin
 {
     public class MemoryPersistentSource : IPersistentSource
     {

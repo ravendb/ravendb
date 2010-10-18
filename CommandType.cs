@@ -1,4 +1,4 @@
-namespace Raven.Storage.Managed.Impl
+namespace Raven.Munin
 {
     public enum CommandType : byte
     {
