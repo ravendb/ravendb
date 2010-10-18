@@ -20,7 +20,7 @@ namespace Raven.Storage.Managed.Backup
 	    private readonly string to;
 		private readonly string src;
 
-		private readonly ILog log = LogManager.GetLogger(typeof (BackupOperation));
+		private readonly ILog logger = LogManager.GetLogger(typeof (BackupOperation));
 
 		public BackupOperation(DocumentDatabase database, IPersistentSource persistentSource, string src, string to)
 		{
@@ -34,7 +34,7 @@ namespace Raven.Storage.Managed.Backup
 		{
 			try
 			{
-				log.InfoFormat("Starting backup of '{0}' to '{1}'", src, to);
+				logger.InfoFormat("Starting backup of '{0}' to '{1}'", src, to);
 			    var directoryBackups = new List<DirectoryBackup>
 			    {
 			        new DirectoryBackup(src, to, Path.Combine("TempData" + Guid.NewGuid().ToString("N"))),
@@ -48,25 +48,27 @@ namespace Raven.Storage.Managed.Backup
 				                          select new DirectoryBackup(fromIndex, toIndex, tempIndex));
 
 
-                lock (persistentSource.SyncLock)
-                {
-                    persistentSource.FlushLog();
+			    persistentSource.Read(log =>
+			    {
+			        persistentSource.FlushLog();
 
-                    foreach (var directoryBackup in directoryBackups)
-                    {
-                        directoryBackup.Notify += UpdateBackupStatus;
-                        directoryBackup.Prepare();
-                    }
+			        foreach (var directoryBackup in directoryBackups)
+			        {
+			            directoryBackup.Notify += UpdateBackupStatus;
+			            directoryBackup.Prepare();
+			        }
 
-                    foreach (var directoryBackup in directoryBackups)
-                    {
-                        directoryBackup.Execute();
-                    }
-                }
+			        foreach (var directoryBackup in directoryBackups)
+			        {
+			            directoryBackup.Execute();
+			        }
+
+			        return 0;// ignored
+			    });
 			}
 			catch (Exception e)
 			{
-				log.Error("Failed to complete backup", e);
+				logger.Error("Failed to complete backup", e);
 				UpdateBackupStatus("Failed to complete backup because: " + e.Message);
 			}
 			finally
@@ -79,7 +81,7 @@ namespace Raven.Storage.Managed.Backup
 		{
 			try
 			{
-				log.Info("Backup completed");
+				logger.Info("Backup completed");
 				var jsonDocument = database.Get(BackupStatus.RavenBackupStatusDocumentKey, null);
 				if (jsonDocument == null)
 					return;
@@ -93,14 +95,14 @@ namespace Raven.Storage.Managed.Backup
 			}
 			catch (Exception e)
 			{
-				log.Warn("Failed to update completed backup status, will try deleting document", e);
+				logger.Warn("Failed to update completed backup status, will try deleting document", e);
 				try
 				{
 					database.Delete(BackupStatus.RavenBackupStatusDocumentKey, null, null);
 				}
 				catch (Exception ex)
 				{
-					log.Warn("Failed to remove out of date backup status", ex);
+					logger.Warn("Failed to remove out of date backup status", ex);
 				}
 			}
 		}
@@ -109,7 +111,7 @@ namespace Raven.Storage.Managed.Backup
 		{
 			try
 			{
-				log.Info(newMsg);
+				logger.Info(newMsg);
 				var jsonDocument = database.Get(BackupStatus.RavenBackupStatusDocumentKey, null);
 				if(jsonDocument==null)
 					return;
@@ -124,7 +126,7 @@ namespace Raven.Storage.Managed.Backup
 			}
 			catch (Exception e)
 			{
-				log.Warn("Failed to update backup status", e);
+				logger.Warn("Failed to update backup status", e);
 			}
 		}
 	}

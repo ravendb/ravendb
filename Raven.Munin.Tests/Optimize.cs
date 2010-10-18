@@ -23,10 +23,10 @@ namespace Raven.Munin.Tests
 
             Commit(txId);
 
-            var oldSize = persistentSource.Log.Length;
+            var oldSize = persistentSource.Read(log => log.Length);
             PerformIdleTasks();
 
-            Assert.True(oldSize > persistentSource.Log.Length);
+            Assert.True(oldSize > persistentSource.Read(log => log.Length));
         }
 
         [Fact]
@@ -47,10 +47,10 @@ namespace Raven.Munin.Tests
 
 
             Commit(txId);
-            var oldSize = persistentSource.Log.Length;
+            var oldSize = persistentSource.Read(log => log.Length);
             PerformIdleTasks();
 
-            Assert.True(oldSize > persistentSource.Log.Length);
+            Assert.True(oldSize > persistentSource.Read(log => log.Length));
 
             Assert.NotNull(
                 persistentDictionary.Read(JToken.FromObject("a"), Guid.NewGuid())
@@ -77,10 +77,10 @@ namespace Raven.Munin.Tests
 
 
             Commit(txId);
-            var oldSize = persistentSource.Log.Length;
+            var oldSize = persistentSource.Read(log => log.Length);
             PerformIdleTasks();
 
-            Assert.True(oldSize > persistentSource.Log.Length);
+            Assert.True(oldSize > persistentSource.Read(log => log.Length));
 
             Assert.NotNull(
                 persistentDictionary.Read(JToken.FromObject("a"), txId2)

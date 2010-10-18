@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
 
@@ -14,7 +13,6 @@ namespace Raven.Munin
     {
         private readonly IPersistentSource persistentSource;
         private readonly List<PersistentDictionary> dictionaries = new List<PersistentDictionary>();
-        private ReaderWriterLockSlim currentlyCommittingLock;
 
         public AggregateDictionary(IPersistentSource persistentSource)
         {
@@ -24,23 +22,22 @@ namespace Raven.Munin
 
         public void Initialze()
         {
-            currentlyCommittingLock.EnterWriteLock();
-            try
+            persistentSource.Write( log =>
             {
                 while (true)
                 {
-                    long lastGoodPosition = persistentSource.Log.Position;
+                    long lastGoodPosition = log.Position;
 
-                    if (persistentSource.Log.Position == persistentSource.Log.Length)
+                    if (log.Position == log.Length)
                         break;// EOF
 
-                    var cmds = ReadCommands(lastGoodPosition);
+                    var cmds = ReadCommands(log, lastGoodPosition);
                     if (cmds == null)
                         break;
 
-                    if(cmds.Length == 1 && cmds[0].Type==CommandType.Skip)
+                    if (cmds.Length == 1 && cmds[0].Type == CommandType.Skip)
                     {
-                        persistentSource.Log.Position += cmds[0].Size;
+                        log.Position += cmds[0].Size;
                         continue;
                     }
 
@@ -49,18 +46,14 @@ namespace Raven.Munin
                         dictionaries[commandForDictionary.Key].ApplyCommands(commandForDictionary);
                     }
                 }
-            }
-            finally
-            {
-                currentlyCommittingLock.ExitWriteLock();
-            }
+            });
         }
 
-        private Command[] ReadCommands(long lastGoodPosition)
+        private Command[] ReadCommands(Stream log, long lastGoodPosition)
         {
             try
             {
-                var cmds = ReadJObject(persistentSource.Log);
+                var cmds = ReadJObject(log);
                 return cmds.Values().Select(cmd => new Command
                 {
                     Key = cmd.Value<JToken>("key"),
@@ -72,7 +65,7 @@ namespace Raven.Munin
             }
             catch (Exception)
             {
-                persistentSource.Log.SetLength(lastGoodPosition);//truncate log to last known good position
+                log.SetLength(lastGoodPosition);//truncate log to last known good position
                 return null;
             }
         }
@@ -93,33 +86,26 @@ namespace Raven.Munin
         [DebuggerNonUserCode]
         public bool Commit(Guid txId)
         {
-            lock (persistentSource.SyncLock)
+            bool hasChanged = false;
+            persistentSource.Write(log=>
             {
-                currentlyCommittingLock.EnterWriteLock();
-                try
+                log.Position = log.Length; // always write at the end of the file
+                var cmds = new List<Command>();
+                foreach (var persistentDictionary in dictionaries)
                 {
-                    persistentSource.Log.Position = persistentSource.Log.Length; // always write at the end of the file
-                    var cmds = new List<Command>();
-                    foreach (var persistentDictionary in dictionaries)
-                    {
-                        var commandsToCommit = persistentDictionary.GetCommandsToCommit(txId);
-                        if (commandsToCommit == null)
-                            continue;
-                        cmds.AddRange(commandsToCommit);
-                    }
-
-                    WriteCommands(cmds, persistentSource.Log);
-                    persistentSource.FlushLog(); // flush all the index changes to disk
-
-                    return dictionaries.Aggregate(false, (changed, persistentDictionary) => changed | persistentDictionary.CompleteCommit(txId));
-
-
+                    var commandsToCommit = persistentDictionary.GetCommandsToCommit(txId);
+                    if (commandsToCommit == null)
+                        continue;
+                    cmds.AddRange(commandsToCommit);
                 }
-                finally
-                {
-                    currentlyCommittingLock.ExitWriteLock();
-                }
-            }
+
+                WriteCommands(cmds, log);
+                persistentSource.FlushLog(); // flush all the index changes to disk
+
+                hasChanged = dictionaries.Aggregate(false, (changed, persistentDictionary) => changed | persistentDictionary.CompleteCommit(txId));
+
+            });
+            return hasChanged;
         }
 
         public void Rollback(Guid txId)
@@ -192,29 +178,21 @@ namespace Raven.Munin
 
         public void Compact()
         {
-            lock (persistentSource.SyncLock)
+            persistentSource.Write(log=>
             {
-                currentlyCommittingLock.EnterWriteLock();
-                try
+                Stream tempLog = persistentSource.CreateTemporaryStream();
+
+                var cmds = new List<Command>();
+                foreach (var persistentDictionary in dictionaries)
                 {
-                    Stream tempLog = persistentSource.CreateTemporaryStream();
-
-                    var cmds = new List<Command>();
-                    foreach (var persistentDictionary in dictionaries)
-                    {
-                        cmds.AddRange(persistentDictionary.CopyCommittedData(tempLog));
-                        persistentDictionary.ClearCache();
-                    }
-
-                    WriteCommands(cmds, tempLog);
-
-                    persistentSource.ReplaceAtomically(tempLog);
+                    cmds.AddRange(persistentDictionary.CopyCommittedData(tempLog));
+                    persistentDictionary.ClearCache();
                 }
-                finally
-                {
-                    currentlyCommittingLock.ExitWriteLock();
-                }
-            }
+
+                WriteCommands(cmds, tempLog);
+
+                persistentSource.ReplaceAtomically(tempLog);
+            });
         }
 
 
@@ -245,8 +223,6 @@ namespace Raven.Munin
 
         public PersistentDictionary Add(PersistentDictionary dictionary)
         {
-            currentlyCommittingLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
-            dictionary.JoinToAggregate(currentlyCommittingLock);
             dictionaries.Add(dictionary);
             dictionary.DictionaryId = dictionaries.Count - 1;
             return dictionary;

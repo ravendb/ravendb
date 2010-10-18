@@ -1,4 +1,6 @@
-﻿using System.IO;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
 
 namespace Raven.Munin
 {
@@ -10,19 +12,43 @@ namespace Raven.Munin
             Log = new MemoryStream();
         }
 
+        public T Read<T>(Func<Stream, T> readOnlyAction)
+        {
+            lock (SyncLock)
+                return readOnlyAction(Log);
+        }
+
+
+        public IEnumerable<T> Read<T>(Func<Stream, IEnumerable<T>> readOnlyAction)
+        {
+            lock (SyncLock)
+            {
+                foreach (var item in readOnlyAction(Log))
+                {
+                    yield return item;
+                }
+            }
+        }
+
+        public void Write(Action<Stream> readWriteAction)
+        {
+            lock (SyncLock)
+                readWriteAction(Log);
+        }
+
+
         public MemoryPersistentSource(byte[] log)
         {
             SyncLock = new object();
             Log = new MemoryStream(log);
         }
 
-        public object SyncLock
+        private object SyncLock
         {
-            get;
-            private set;
+            get; set;
         }
 
-        public Stream Log
+        private Stream Log
         {
             get;
             set;

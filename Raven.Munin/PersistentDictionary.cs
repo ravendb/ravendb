@@ -6,7 +6,6 @@ using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Runtime.Caching;
-using System.Threading;
 using Newtonsoft.Json.Linq;
 
 namespace Raven.Munin
@@ -31,25 +30,11 @@ namespace Raven.Munin
         {
             get
             {
-                currentlyCommittingLock.EnterReadLock();
-                try
-                {
-                    return keyToFilePos.Keys.ToArray();
-                }
-                finally
-                {
-                    currentlyCommittingLock.ExitReadLock();
-                }
+                return persistentSource.Read(_ => keyToFilePos.Keys);
             }
         }
 
         private readonly ConcurrentDictionary<JToken, PositionInFile> keyToFilePos;
-
-        /// <summary>
-        /// We have to support recursion here, because we want to be able to scan a secondary index and pull records from the main one
-        /// at the same time.
-        /// </summary>
-        private ReaderWriterLockSlim currentlyCommittingLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
 
         private readonly List<SecondaryIndex> secondaryIndices = new List<SecondaryIndex>();
 
@@ -63,10 +48,6 @@ namespace Raven.Munin
         private readonly MemoryCache cache = new MemoryCache(Guid.NewGuid().ToString());
         public int DictionaryId { get; set; }
 
-        public void JoinToAggregate(ReaderWriterLockSlim theCurrentlyCommittingLock)
-        {
-            this.currentlyCommittingLock = theCurrentlyCommittingLock;
-        }
 
         public PersistentDictionary(IPersistentSource persistentSource, IEqualityComparer<JToken> comparer)
         {
@@ -85,7 +66,7 @@ namespace Raven.Munin
 
         public SecondaryIndex AddSecondaryIndex(Expression<Func<JToken, JToken>> func)
         {
-            var secondaryIndex = new SecondaryIndex(new ModifiedJTokenComparer(func.Compile()), func.ToString(),currentlyCommittingLock);
+            var secondaryIndex = new SecondaryIndex(new ModifiedJTokenComparer(func.Compile()), func.ToString(), persistentSource);
             secondaryIndices.Add(secondaryIndex);
             return secondaryIndex;
         }
@@ -193,8 +174,7 @@ namespace Raven.Munin
                 }
             }
 
-            currentlyCommittingLock.EnterReadLock();
-            try
+            return persistentSource.Read(log =>
             {
                 PositionInFile pos;
                 if (keyToFilePos.TryGetValue(key, out pos) == false)
@@ -207,11 +187,7 @@ namespace Raven.Munin
                     Data = () => readData ?? (readData = ReadData(pos.Position, pos.Size)),
                     Key = pos.Key
                 };
-            }
-            finally
-            {
-                currentlyCommittingLock.ExitReadLock();
-            }
+            });
         }
 
         private byte[] ReadData(Command command)
@@ -229,31 +205,28 @@ namespace Raven.Munin
             if (cached != null)
                 return (byte[])cached;
 
-            byte[] buf;
-
-            lock (persistentSource.SyncLock)
+            return persistentSource.Read(log =>
             {
+                byte[] buf;
                 cached = cache.Get(cacheKey);
                 if (cached != null)
-                    return (byte[])cached;
+                    return (byte[]) cached;
 
-                buf = ReadDataNoCaching(pos, size);
-            }
-
-            cache[cacheKey] = buf;
-
-            return buf;
+                buf = ReadDataNoCaching(log, pos, size);
+                cache[cacheKey] = buf;
+                return buf;
+            });
         }
 
-        private byte[] ReadDataNoCaching(long pos, int size)
+        private byte[] ReadDataNoCaching(Stream log, long pos, int size)
         {
-            persistentSource.Log.Position = pos;
+            log.Position = pos;
 
             var read = 0;
             var buf = new byte[size];
             do
             {
-                int dataRead = persistentSource.Log.Read(buf, read, buf.Length - read);
+                int dataRead = log.Read(buf, read, buf.Length - read);
                 if (dataRead == 0) // nothing read, EOF, probably truncated write, 
                 {
                     throw new InvalidDataException("Could not read complete data, the file is probably corrupt");
