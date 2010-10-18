@@ -4,6 +4,11 @@ using System.IO;
 
 namespace Raven.Munin
 {
+    /// <summary>
+    /// Simple read only version of te file based data.
+    /// It is mostly meant for read only access from remote app domain.
+    /// Because it is expected that this will only have very small usage scenario, it is not implemented in an efficent manner.
+    /// </summary>
     public class ReadOnlyFileBasedPersistentSource : IPersistentSource
     {
         private readonly string basePath;
