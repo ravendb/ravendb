@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 
 namespace Raven.Munin
@@ -10,6 +11,31 @@ namespace Raven.Munin
         private readonly string logPath;
 
         private FileStream log;
+
+        public T Read<T>(Func<Stream, T> readOnlyAction)
+        {
+            lock (SyncLock)
+                return readOnlyAction(log);
+        }
+
+        public IEnumerable<T> Read<T>(Func<Stream, IEnumerable<T>> readOnlyAction)
+        {
+            lock (SyncLock)
+            {
+                foreach (var item in readOnlyAction(log))
+                {
+                    yield return item;
+                }
+            }
+        }
+
+        public void Write(Action<Stream> readWriteAction)
+        {
+            lock(SyncLock)
+            {
+                readWriteAction(log);
+            }
+        }
 
         public bool CreatedNew { get; set; }
 
@@ -30,16 +56,9 @@ namespace Raven.Munin
 
         #region IPersistentSource Members
 
-        public object SyncLock
+        private object SyncLock
         {
-            get;
-            private set;
-        }
-
-        public Stream Log
-        {
-            get { return log; }
-
+            get; set;
         }
 
         public void ReplaceAtomically(Stream newLog)
