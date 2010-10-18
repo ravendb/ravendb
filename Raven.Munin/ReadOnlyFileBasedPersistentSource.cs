@@ -7,46 +7,17 @@ namespace Raven.Munin
     /// <summary>
     /// Simple read only version of te file based data.
     /// It is mostly meant for read only access from remote app domain.
-    /// Because it is expected that this will only have very small usage scenario, it is not implemented in an efficent manner.
     /// </summary>
-    public class ReadOnlyFileBasedPersistentSource : IPersistentSource
+    public class ReadOnlyFileBasedPersistentSource : AbstractPersistentSource
     {
         private readonly string basePath;
         private readonly string prefix;
         private readonly string logPath;
 
-        private FileStream log;
-
-        public T Read<T>(Func<Stream, T> readOnlyAction)
-        {
-            lock (SyncLock)
-                return readOnlyAction(log);
-        }
-
-        public IEnumerable<T> Read<T>(Func<Stream, IEnumerable<T>> readOnlyAction)
-        {
-            lock (SyncLock)
-            {
-                foreach (var item in readOnlyAction(log))
-                {
-                    yield return item;
-                }
-            }
-        }
-
-        public void Write(Action<Stream> readWriteAction)
-        {
-            lock(SyncLock)
-            {
-                readWriteAction(log);
-            }
-        }
-
-        public bool CreatedNew { get; set; }
+        private Stream log;
 
         public ReadOnlyFileBasedPersistentSource(string basePath, string prefix)
         {
-            SyncLock = new object();
             this.basePath = basePath;
             this.prefix = prefix;
             logPath = Path.Combine(basePath, prefix + ".log");
@@ -56,32 +27,37 @@ namespace Raven.Munin
 
         private void OpenFiles()
         {
-            log = new FileStream(logPath, FileMode.OpenOrCreate, FileAccess.Read, FileShare.ReadWrite, 4096, FileOptions.SequentialScan);
+            log = CreateClonedStreamForReadOnlyPurposes();
         }
 
         #region IPersistentSource Members
 
-        private object SyncLock
+        protected override Stream CreateClonedStreamForReadOnlyPurposes()
         {
-            get; set;
+            return new FileStream(logPath, FileMode.OpenOrCreate, FileAccess.Read, FileShare.ReadWrite, 4096, FileOptions.SequentialScan);
         }
 
-        public void ReplaceAtomically(Stream newLog)
+        protected override Stream Log
+        {
+            get { return log; }
+        }
+
+        public override void ReplaceAtomically(Stream newLog)
         {
            throw new NotSupportedException();
         }
 
-        public Stream CreateTemporaryStream()
+        public override Stream CreateTemporaryStream()
         {
             throw new NotSupportedException();
         }
 
-        public void FlushLog()
+        public override void FlushLog()
         {
             throw new NotSupportedException();
         }
 
-        public RemoteManagedStorageState CreateRemoteAppDomainState()
+        public override RemoteManagedStorageState CreateRemoteAppDomainState()
         {
             return new RemoteManagedStorageState
             {
@@ -92,9 +68,10 @@ namespace Raven.Munin
 
         #endregion
 
-        public void Dispose()
+        public override void Dispose()
         {
             log.Dispose();
+            base.Dispose();
         }
     }
 }

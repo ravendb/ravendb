@@ -8,7 +8,7 @@ namespace Raven.Munin
     public abstract class AbstractPersistentSource : IPersistentSource
     {
         private readonly ReaderWriterLockSlim locker = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
-        private StreamsPool pool;
+        private readonly StreamsPool pool;
 
         protected AbstractPersistentSource()
         {
@@ -88,6 +88,10 @@ namespace Raven.Munin
         public abstract Stream CreateTemporaryStream();
         public abstract void FlushLog();
         public abstract RemoteManagedStorageState CreateRemoteAppDomainState();
-        public abstract void Dispose();
+        
+        public virtual void Dispose()
+        {
+            pool.Dispose();
+        }
     }
 }

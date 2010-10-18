@@ -53,10 +53,6 @@ namespace Raven.Munin
             };
         }
 
-        public override void Dispose()
-        {
-        }
-
         #endregion
     }
 }
