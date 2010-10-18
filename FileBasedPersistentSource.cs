@@ -1,51 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
+﻿using System.IO;
 
 namespace Raven.Munin
 {
-    public class FileBasedPersistentSource : IPersistentSource
+    public class FileBasedPersistentSource : AbstractPersistentSource
     {
         private readonly string basePath;
+        private readonly string logPath;
         private readonly string prefix;
         private readonly bool writeThrough;
-        private readonly string logPath;
 
         private FileStream log;
 
-        public T Read<T>(Func<Stream, T> readOnlyAction)
-        {
-            lock(SyncLock)
-                return readOnlyAction(log);
-        }
-
-        public IEnumerable<T> Read<T>(Func<Stream, IEnumerable<T>> readOnlyAction)
-        {
-            lock(SyncLock)
-            {
-                foreach (var item in readOnlyAction(log))
-                {
-                    yield return item;
-                }
-            }
-        }
-
-        public void Write(Action<Stream> readWriteAction)
-        {
-            lock (SyncLock)
-                readWriteAction(log);
-        }
-
-        public bool CreatedNew { get; set; }
-
         public FileBasedPersistentSource(string basePath, string prefix, bool writeThrough)
         {
-            SyncLock = new object();
             this.basePath = basePath;
             this.prefix = prefix;
             this.writeThrough = writeThrough;
-            logPath = Path.Combine(basePath, prefix + ".log");
-
+            logPath = Path.Combine(basePath, prefix + ".ravendb");
 
             RecoverFromFailedRename(logPath);
 
@@ -54,23 +25,28 @@ namespace Raven.Munin
             OpenFiles();
         }
 
+        protected override Stream Log
+        {
+            get { return log; }
+        }
+
         private void OpenFiles()
         {
             log = new FileStream(logPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read, 4096,
-                                 writeThrough ? FileOptions.WriteThrough | FileOptions.SequentialScan : FileOptions.SequentialScan
+                                 writeThrough
+                                     ? FileOptions.WriteThrough | FileOptions.SequentialScan
+                                     : FileOptions.SequentialScan
                 );
         }
 
-        #region IPersistentSource Members
-
-        private object SyncLock
+        protected override Stream CreateClonedStreamForReadOnlyPurposes()
         {
-            get; set;
+            return new FileStream(logPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
         }
 
-        public void ReplaceAtomically(Stream newLog)
+        public override void ReplaceAtomically(Stream newLog)
         {
-            var newLogStream = ((FileStream)newLog);
+            var newLogStream = ((FileStream) newLog);
             string logTempName = newLogStream.Name;
             newLogStream.Flush();
             newLogStream.Dispose();
@@ -90,18 +66,18 @@ namespace Raven.Munin
             OpenFiles();
         }
 
-        public Stream CreateTemporaryStream()
+        public override Stream CreateTemporaryStream()
         {
             string tempFile = Path.Combine(basePath, Path.GetFileName(Path.GetTempFileName()));
             return File.Open(tempFile, FileMode.Create, FileAccess.ReadWrite);
         }
 
-        public void FlushLog()
+        public override void FlushLog()
         {
-            log.Flush(true);
+            log.Flush(writeThrough);
         }
 
-        public RemoteManagedStorageState CreateRemoteAppDomainState()
+        public override RemoteManagedStorageState CreateRemoteAppDomainState()
         {
             return new RemoteManagedStorageState
             {
@@ -110,8 +86,6 @@ namespace Raven.Munin
             };
         }
 
-        #endregion
-
         private static void RecoverFromFailedRename(string file)
         {
             string renamedFile = file + ".rename_op";
@@ -119,7 +93,7 @@ namespace Raven.Munin
                 return;
 
             if (File.Exists(file))
-            // we successfully renamed the new file and crashed before we could remove the old copy
+                // we successfully renamed the new file and crashed before we could remove the old copy
             {
                 //just complete the op and we are good (committed)
                 File.Delete(renamedFile);
@@ -131,7 +105,7 @@ namespace Raven.Munin
             }
         }
 
-        public void Dispose()
+        public override void Dispose()
         {
             log.Dispose();
         }

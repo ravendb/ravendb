@@ -6,112 +6,46 @@ using System.Threading;
 
 namespace Raven.Munin
 {
-    public class MemoryPersistentSource : IPersistentSource
+    public class MemoryPersistentSource : AbstractPersistentSource
     {
-        private readonly ReaderWriterLockSlim locker = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
-        private readonly StreamsPool pool;
+        private MemoryStream log;
 
         public MemoryPersistentSource()
         {
-            Log = new MemoryStream();
-            pool = new StreamsPool(CreateClonedStreamForReadOnlyPurposes);
+            log = new MemoryStream();
+            CreatedNew = true;
         }
 
-        private Stream CreateClonedStreamForReadOnlyPurposes()
+        protected override Stream CreateClonedStreamForReadOnlyPurposes()
         {
-            return new MemoryStream(Log.GetBuffer(), 0, (int) Log.Length, false);
+            return new MemoryStream(log.GetBuffer(), 0, (int) Log.Length, false);
         }
 
-        public MemoryPersistentSource(byte[] log)
+        public MemoryPersistentSource(byte[] data)
         {
-            Log = new MemoryStream(log);
-            pool = new StreamsPool(CreateClonedStreamForReadOnlyPurposes);
+            log = new MemoryStream(data);
+            CreatedNew = true;
         }
 
-        private MemoryStream Log { get; set; }
+        protected override Stream Log { get { return log; } }
 
         #region IPersistentSource Members
 
-        public T Read<T>(Func<Stream, T> readOnlyAction)
+        public override void ReplaceAtomically(Stream log)
         {
-            bool lockAlreadyHeld = locker.IsReadLockHeld || locker.IsWriteLockHeld;
-            if (lockAlreadyHeld == false)
-                locker.EnterReadLock();
-            try
-            {
-                Stream stream;
-                using(pool.Use(out stream))
-                    return readOnlyAction(stream);
-            }
-            finally
-            {
-                if (lockAlreadyHeld == false)
-                    locker.ExitReadLock();
-            }
+            log = (MemoryStream)log;
         }
 
-        public IEnumerable<T> Read<T>(Func<Stream, IEnumerable<T>> readOnlyAction)
-        {
-            bool lockAlreadyHeld = locker.IsReadLockHeld || locker.IsWriteLockHeld;
-            if (lockAlreadyHeld == false)
-                locker.EnterReadLock();
-            try
-            {
-                Stream stream;
-                using (pool.Use(out stream))
-                {
-                    foreach (T item in readOnlyAction(Log))
-                    {
-                        yield return item;
-                    }
-                }
-            }
-            finally
-            {
-                if (lockAlreadyHeld == false)
-                    locker.ExitReadLock();
-            }
-        }
-
-        public void Write(Action<Stream> readWriteAction)
-        {
-            bool lockAlreadyHeld = locker.IsWriteLockHeld;
-            if (lockAlreadyHeld == false)
-                locker.EnterWriteLock();
-            try
-            {
-                readWriteAction(Log);
-            }
-            finally
-            {
-                if (lockAlreadyHeld == false)
-                {
-                    pool.Clear();
-                    locker.ExitWriteLock();
-                }
-            }
-        }
-
-        public bool CreatedNew
-        {
-            get { return true; }
-        }
-
-        public void ReplaceAtomically(Stream log)
-        {
-            Log = (MemoryStream)log;
-        }
-
-        public Stream CreateTemporaryStream()
+        public override Stream CreateTemporaryStream()
         {
             return new MemoryStream();
         }
 
-        public void FlushLog()
+        public override void FlushLog()
         {
         }
 
-        public RemoteManagedStorageState CreateRemoteAppDomainState()
+        public override RemoteManagedStorageState CreateRemoteAppDomainState()
         {
             return new RemoteManagedStorageState
             {
@@ -119,14 +53,10 @@ namespace Raven.Munin
             };
         }
 
-        public void Dispose()
+        public override void Dispose()
         {
         }
 
         #endregion
-
-        public void FlushData()
-        {
-        }
     }
 }

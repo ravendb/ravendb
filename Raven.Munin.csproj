@@ -50,6 +50,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AbstractPersistentSource.cs" />
     <Compile Include="AggregateDictionary.cs" />
     <Compile Include="Command.cs" />
     <Compile Include="CommandType.cs" />
