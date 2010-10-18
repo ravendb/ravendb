@@ -87,17 +87,24 @@ namespace Raven.Munin
         public bool Commit(Guid txId)
         {
             bool hasChanged = false;
+
+            // this assume that munin transactions always use a single thread
+
+            var cmds = new List<Command>();
+            foreach (var persistentDictionary in dictionaries)
+            {
+                var commandsToCommit = persistentDictionary.GetCommandsToCommit(txId);
+                if (commandsToCommit == null)
+                    continue;
+                cmds.AddRange(commandsToCommit);
+            }
+
+            if (cmds.Count == 0)
+                return false;
+
             persistentSource.Write(log=>
             {
                 log.Position = log.Length; // always write at the end of the file
-                var cmds = new List<Command>();
-                foreach (var persistentDictionary in dictionaries)
-                {
-                    var commandsToCommit = persistentDictionary.GetCommandsToCommit(txId);
-                    if (commandsToCommit == null)
-                        continue;
-                    cmds.AddRange(commandsToCommit);
-                }
 
                 WriteCommands(cmds, log);
                 persistentSource.FlushLog(); // flush all the index changes to disk
