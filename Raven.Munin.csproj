@@ -65,6 +65,7 @@
     <Compile Include="RecordingComparer.cs" />
     <Compile Include="RemoteManagedStorageState.cs" />
     <Compile Include="SecondaryIndex.cs" />
+    <Compile Include="StreamsPool.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Raven.Database\RavenDB.snk">

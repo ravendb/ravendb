@@ -1,57 +1,95 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 
 namespace Raven.Munin
 {
     public class MemoryPersistentSource : IPersistentSource
     {
+        private readonly ReaderWriterLockSlim locker = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
+        private readonly StreamsPool pool;
+
         public MemoryPersistentSource()
         {
-            SyncLock = new object();
             Log = new MemoryStream();
+            pool = new StreamsPool(CreateClonedStreamForReadOnlyPurposes);
         }
+
+        private Stream CreateClonedStreamForReadOnlyPurposes()
+        {
+            return new MemoryStream(Log.GetBuffer(), 0, (int) Log.Length, false);
+        }
+
+        public MemoryPersistentSource(byte[] log)
+        {
+            Log = new MemoryStream(log);
+            pool = new StreamsPool(CreateClonedStreamForReadOnlyPurposes);
+        }
+
+        private MemoryStream Log { get; set; }
+
+        #region IPersistentSource Members
 
         public T Read<T>(Func<Stream, T> readOnlyAction)
         {
-            lock (SyncLock)
-                return readOnlyAction(Log);
+            bool lockAlreadyHeld = locker.IsReadLockHeld || locker.IsWriteLockHeld;
+            if (lockAlreadyHeld == false)
+                locker.EnterReadLock();
+            try
+            {
+                Stream stream;
+                using(pool.Use(out stream))
+                    return readOnlyAction(stream);
+            }
+            finally
+            {
+                if (lockAlreadyHeld == false)
+                    locker.ExitReadLock();
+            }
         }
-
 
         public IEnumerable<T> Read<T>(Func<Stream, IEnumerable<T>> readOnlyAction)
         {
-            lock (SyncLock)
+            bool lockAlreadyHeld = locker.IsReadLockHeld || locker.IsWriteLockHeld;
+            if (lockAlreadyHeld == false)
+                locker.EnterReadLock();
+            try
             {
-                foreach (var item in readOnlyAction(Log))
+                Stream stream;
+                using (pool.Use(out stream))
                 {
-                    yield return item;
+                    foreach (T item in readOnlyAction(Log))
+                    {
+                        yield return item;
+                    }
                 }
+            }
+            finally
+            {
+                if (lockAlreadyHeld == false)
+                    locker.ExitReadLock();
             }
         }
 
         public void Write(Action<Stream> readWriteAction)
         {
-            lock (SyncLock)
+            bool lockAlreadyHeld = locker.IsWriteLockHeld;
+            if (lockAlreadyHeld == false)
+                locker.EnterWriteLock();
+            try
+            {
                 readWriteAction(Log);
-        }
-
-
-        public MemoryPersistentSource(byte[] log)
-        {
-            SyncLock = new object();
-            Log = new MemoryStream(log);
-        }
-
-        private object SyncLock
-        {
-            get; set;
-        }
-
-        private Stream Log
-        {
-            get;
-            set;
+            }
+            finally
+            {
+                if (lockAlreadyHeld == false)
+                {
+                    pool.Clear();
+                    locker.ExitWriteLock();
+                }
+            }
         }
 
         public bool CreatedNew
@@ -61,16 +99,12 @@ namespace Raven.Munin
 
         public void ReplaceAtomically(Stream log)
         {
-            Log = log;
+            Log = (MemoryStream)log;
         }
 
         public Stream CreateTemporaryStream()
         {
             return new MemoryStream();
-        }
-
-        public void FlushData()
-        {
         }
 
         public void FlushLog()
@@ -81,11 +115,17 @@ namespace Raven.Munin
         {
             return new RemoteManagedStorageState
             {
-                Log = ((MemoryStream)Log).ToArray(),
+                Log = ((MemoryStream) Log).ToArray(),
             };
         }
 
         public void Dispose()
+        {
+        }
+
+        #endregion
+
+        public void FlushData()
         {
         }
     }
