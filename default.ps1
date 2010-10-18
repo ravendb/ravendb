@@ -204,6 +204,7 @@ task CopyWeb {
 
 task CopyBundles {
 	cp $build_dir\Raven.Bundles.*.dll $build_dir\Output\Bundles
+	cp $build_dir\Raven.Client.*.dll $build_dir\Output\Bundles
 	del $build_dir\Output\Bundles\Raven.Bundles.Tests.dll
 }
 
