@@ -33,7 +33,7 @@ namespace Raven.Storage.Managed.Impl
                 Name = "Attachments"
             }))
             {
-                {"ByEtag", x => x.Value<byte[]>("etag")}
+                {"ByEtag", x => new ComparableByteArray(x.Value<byte[]>("etag"))}
             };
 
             Documents = new PersistentDictionaryAdapter(txId, Add(new PersistentDictionary(persistentSource, new ModifiedJTokenComparer(x => x.Value<string>("key")))
@@ -43,7 +43,7 @@ namespace Raven.Storage.Managed.Impl
             {
                 {"ByKey", x => x.Value<string>("key")},
                 {"ById", x => x.Value<string>("id")},
-                {"ByEtag", x => x.Value<byte[]>("etag")}
+                {"ByEtag", x => new ComparableByteArray(x.Value<byte[]>("etag"))}
             };
 
             DocumentsModifiedByTransactions = new PersistentDictionaryAdapter(txId, 
@@ -55,7 +55,7 @@ namespace Raven.Storage.Managed.Impl
                     Name = "DocumentsModifiedByTransactions"
                 }))
             {
-                {"ByTxId", x => x.Value<byte[]>("txId")}
+                {"ByTxId", x => new ComparableByteArray(x.Value<byte[]>("txId"))}
             };
             Transactions = new PersistentDictionaryAdapter(txId,
                 Add(new PersistentDictionary(persistentSource,new ModifiedJTokenComparer(x => x.Value<byte[]>("txId")))
@@ -69,21 +69,15 @@ namespace Raven.Storage.Managed.Impl
                     Name = "IndexingStats"
                 }));
 
-            MappedResults = new PersistentDictionaryAdapter(txId, Add(new PersistentDictionary(persistentSource, JTokenComparer.Instance)
+            MappedResults = new PersistentDictionaryAdapter(txId,
+                                                            Add(new PersistentDictionary(persistentSource,
+                                                                                         JTokenComparer.Instance)
+                                                            {
+                                                                Name = "MappedResults"
+                                                            }))
             {
-                Name = "MappedResults"
-            }))
-            {
-                {"ByViewAndReduceKey", x => new JObject
-                    {
-                        {"view", x.Value<string>("view")},
-                        {"reduceKey", x.Value<string>("reduceKey")}
-                    }},
-               {"ByViewAndDocumentId", x => new JObject
-                    {
-                        {"view", x.Value<string>("view")},
-                        {"docId", x.Value<string>("docId")}
-                    }}
+                {"ByViewAndReduceKey", x => Tuple.Create(x.Value<string>("view"), x.Value<string>("reduceKey"))},
+                {"ByViewAndDocumentId", x => Tuple.Create(x.Value<string>("view"), x.Value<string>("docId"))}
             };
 
             Queues = new PersistentDictionaryAdapter(txId, Add(new PersistentDictionary(persistentSource, 
@@ -109,16 +103,8 @@ namespace Raven.Storage.Managed.Impl
                 Name = "Tasks"
             }))
             {
-                {"ByIndexAndTime", x=>new JObject
-                {
-                    {"index", x.Value<string>("index")},
-                    {"time", x.Value<DateTime>("time")}
-                }},
-                {"ByIndexAndType", x=>new JObject
-                {
-                    {"index", x.Value<string>("index")},
-                    {"type", x.Value<string>("type")},
-                }}
+                {"ByIndexAndTime", x=>Tuple.Create(x.Value<string>("index"), x.Value<DateTime>("time")) },
+                {"ByIndexAndType", x=>Tuple.Create(x.Value<string>("index"), x.Value<string>("type")) }
             };
         }
 

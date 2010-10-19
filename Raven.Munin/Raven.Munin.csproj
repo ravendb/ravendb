@@ -54,6 +54,7 @@
     <Compile Include="AggregateDictionary.cs" />
     <Compile Include="Command.cs" />
     <Compile Include="CommandType.cs" />
+    <Compile Include="ComparableByteArray.cs" />
     <Compile Include="FileBasedPersistentSource.cs" />
     <Compile Include="IPersistentSource.cs" />
     <Compile Include="JTokenComparer.cs" />

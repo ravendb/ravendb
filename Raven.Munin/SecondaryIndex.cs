@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -8,17 +9,17 @@ namespace Raven.Munin
 {
     public class SecondaryIndex
     {
-        private readonly IComparer<JToken> comparer;
+        private readonly Func<JToken, IComparable> transform;
         private readonly string indexDef;
         private readonly IPersistentSource persistentSource;
-        private readonly SortedList<JToken, SortedSet<JToken>> index;
+        private readonly SortedList<IComparable, SortedSet<JToken>> index;
 
-        public SecondaryIndex(IComparer<JToken> comparer, string indexDef, IPersistentSource persistentSource)
+        public SecondaryIndex(Func<JToken, IComparable> transform, string indexDef, IPersistentSource persistentSource)
         {
-            this.comparer = comparer;
+            this.transform = transform;
             this.indexDef = indexDef;
             this.persistentSource = persistentSource;
-            this.index = new SortedList<JToken, SortedSet<JToken>>(comparer);
+            this.index = new SortedList<IComparable, SortedSet<JToken>>();
         }
 
         public override string ToString()
@@ -37,10 +38,11 @@ namespace Raven.Munin
 
         public void Add(JToken key)
         {
-            var indexOfKey = index.IndexOfKey(key);
+            var actualKey = transform(key);
+            var indexOfKey = index.IndexOfKey(actualKey);
             if (indexOfKey < 0)
             {
-                index[key] = new SortedSet<JToken>(JTokenComparer.Instance)
+                index[actualKey] = new SortedSet<JToken>(JTokenComparer.Instance)
                 {
                     key
                 };
@@ -53,14 +55,15 @@ namespace Raven.Munin
 
         public void Remove(JToken key)
         {
-            var indexOfKey = index.IndexOfKey(key);
+            var actualKey = transform(key);
+            var indexOfKey = index.IndexOfKey(actualKey);
             if (indexOfKey < 0)
             {
                 return;
             }
             index.Values[indexOfKey].Remove(key);
             if (index.Values[indexOfKey].Count == 0)
-                index.Remove(key);
+                index.Remove(actualKey);
         }
 
 
@@ -87,15 +90,16 @@ namespace Raven.Munin
 
         private IEnumerable<JToken> Skip(JToken key, Func<int, bool> shouldMoveToNext)
         {
+            var actualKey = transform(key);
             var recordingComparer = new RecordingComparer();
-            Array.BinarySearch(index.Keys.ToArray(), key, recordingComparer);
+            Array.BinarySearch(index.Keys.ToArray(), actualKey, recordingComparer);
 
             if (recordingComparer.LastComparedTo == null)
                 yield break;
 
             var indexOf = index.IndexOfKey(recordingComparer.LastComparedTo);
 
-            if (shouldMoveToNext(comparer.Compare(recordingComparer.LastComparedTo, key)))
+            if (shouldMoveToNext(recordingComparer.LastComparedTo.CompareTo(actualKey)))
                 indexOf += 1; // skip to the next higher value
 
             for (int i = indexOf; i < index.Count; i++)
@@ -118,7 +122,7 @@ namespace Raven.Munin
             {
                 if (index.Count == 0)
                     return null;
-                return index.Keys[index.Count - 1];
+                return index.Values[index.Count - 1].LastOrDefault();
             });
         }
 
@@ -128,7 +132,7 @@ namespace Raven.Munin
             {
                 if (index.Count == 0)
                     return null;
-                return index.Keys[0];
+                return index.Values[0].FirstOrDefault();
             });
         }
     }
