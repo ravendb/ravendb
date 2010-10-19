@@ -5,8 +5,8 @@ namespace Raven.Munin.Tests
 {
     public class SimpleFileTest : IDisposable
     {
-        protected PersistentDictionary persistentDictionary;
-        protected FileBasedPersistentSource persistentSource;
+        protected PersistentDictionaryAdapter PersistentDictionary;
+        protected FileBasedPersistentSource PersistentSource;
         private readonly string tempPath;
         private AggregateDictionary aggregateDictionary;
 
@@ -18,16 +18,23 @@ namespace Raven.Munin.Tests
 
         protected void Reopen()
         {
-            persistentSource.Dispose();
+            PersistentSource.Dispose();
             OpenDictionary();
         }
 
         protected void OpenDictionary()
         {
-            persistentSource = new FileBasedPersistentSource(tempPath, "test_", writeThrough: true);
-            aggregateDictionary = new AggregateDictionary(persistentSource);
-            persistentDictionary = aggregateDictionary.Add(new PersistentDictionary(JTokenComparer.Instance));
+            PersistentSource = new FileBasedPersistentSource(tempPath, "test", writeThrough: true);
+            aggregateDictionary = new AggregateDictionary(PersistentSource);
+            PersistentDictionary = new PersistentDictionaryAdapter(aggregateDictionary.CurrentTransactionId, aggregateDictionary.Add(new PersistentDictionary(JTokenComparer.Instance)));
             aggregateDictionary.Initialze();
+            aggregateDictionary.BeginTransaction();
+        }
+
+        protected void SupressTx(Action action)
+        {
+            using (aggregateDictionary.SuppressTransaction())
+                action();
         }
 
         protected void PerformIdleTasks()
@@ -35,15 +42,22 @@ namespace Raven.Munin.Tests
             aggregateDictionary.PerformIdleTasks();
         }
 
-        protected void Commit(Guid txId)
+        protected void Rollback()
         {
-            aggregateDictionary.Commit(txId);
+            aggregateDictionary.Rollback();
+            aggregateDictionary.BeginTransaction();
+        }
+
+        protected void Commit()
+        {
+            aggregateDictionary.Commit();
+            aggregateDictionary.BeginTransaction();
         }
 
         public void Dispose()
         {
-            persistentSource.Dispose();
-            persistentSource.Delete();
+            PersistentSource.Dispose();
+            PersistentSource.Delete();
         }
     }
 }

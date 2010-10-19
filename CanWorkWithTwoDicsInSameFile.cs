@@ -9,44 +9,41 @@ namespace Raven.Munin.Tests
         [Fact]
         public void StoringSameKeyInBothDicWithTwoDifferentValues()
         {
-            var txId = Guid.NewGuid();
+            persistentDictionaryOne.Put(JToken.FromObject(1), new byte[] { 1, 2 });
+            persistentDictionaryTwo.Put(JToken.FromObject(1), new byte[] { 2, 3 });
 
-            persistentDictionaryOne.Put(JToken.FromObject(1), new byte[] { 1, 2 }, txId);
-            persistentDictionaryTwo.Put(JToken.FromObject(1), new byte[] { 2, 3 }, txId);
-
-            Assert.Equal(new byte[] { 1, 2, }, persistentDictionaryOne.Read(JToken.FromObject(1), txId).Data());
-            Assert.Equal(new byte[] { 2, 3 }, persistentDictionaryTwo.Read(JToken.FromObject(1), txId).Data());
+            Assert.Equal(new byte[] { 1, 2, }, persistentDictionaryOne.Read(JToken.FromObject(1)).Data());
+            Assert.Equal(new byte[] { 2, 3 }, persistentDictionaryTwo.Read(JToken.FromObject(1)).Data());
         }
 
         [Fact]
         public void StoringSameKeyInBothDicWithTwoDifferentValuesAfterCommit()
         {
-            var txId = Guid.NewGuid();
+            
 
-            persistentDictionaryOne.Put(JToken.FromObject(1), new byte[] { 1, 2 }, txId);
-            persistentDictionaryTwo.Put(JToken.FromObject(1), new byte[] { 2, 3 }, txId);
+            persistentDictionaryOne.Put(JToken.FromObject(1), new byte[] { 1, 2 });
+            persistentDictionaryTwo.Put(JToken.FromObject(1), new byte[] { 2, 3 });
 
-            Commit(txId);
-            Commit(txId);
+            Commit();
 
-            Assert.Equal(new byte[] { 1, 2, }, persistentDictionaryOne.Read(JToken.FromObject(1), txId).Data());
-            Assert.Equal(new byte[] { 2, 3 }, persistentDictionaryTwo.Read(JToken.FromObject(1), txId).Data());
+            Assert.Equal(new byte[] { 1, 2, }, persistentDictionaryOne.Read(JToken.FromObject(1)).Data());
+            Assert.Equal(new byte[] { 2, 3 }, persistentDictionaryTwo.Read(JToken.FromObject(1)).Data());
         }
 
         [Fact]
         public void StoringSameKeyInBothDicWithTwoDifferentValuesAfterCommitAndReopen()
         {
-            var txId = Guid.NewGuid();
+            
 
-            persistentDictionaryOne.Put(JToken.FromObject(1), new byte[] { 1, 2 }, txId);
-            persistentDictionaryTwo.Put(JToken.FromObject(1), new byte[] { 2, 3 }, txId);
+            persistentDictionaryOne.Put(JToken.FromObject(1), new byte[] { 1, 2 });
+            persistentDictionaryTwo.Put(JToken.FromObject(1), new byte[] { 2, 3 });
 
-            aggregateDictionary.Commit(txId);
+            aggregateDictionary.Commit();
 
             Reopen();
 
-            Assert.Equal(new byte[] { 1, 2, }, persistentDictionaryOne.Read(JToken.FromObject(1), txId).Data());
-            Assert.Equal(new byte[] { 2, 3 }, persistentDictionaryTwo.Read(JToken.FromObject(1), txId).Data());
+            Assert.Equal(new byte[] { 1, 2, }, persistentDictionaryOne.Read(JToken.FromObject(1)).Data());
+            Assert.Equal(new byte[] { 2, 3 }, persistentDictionaryTwo.Read(JToken.FromObject(1)).Data());
         }
     }
 }

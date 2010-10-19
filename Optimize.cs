@@ -9,51 +9,51 @@ namespace Raven.Munin.Tests
         [Fact]
         public void AfterManyModificationsFileSizeWillGoDownOnCommit()
         {
-            var txId = Guid.NewGuid();
+            
             for (int i = 0; i < 16; i++)
             {
-                persistentDictionary.Put(JToken.FromObject(i), new byte[512], txId);
+                PersistentDictionary.Put(JToken.FromObject(i), new byte[512]);
             }
 
             for (int i = 0; i < 16; i++)
             {
-                persistentDictionary.Remove(JToken.FromObject(i), txId);
+                PersistentDictionary.Remove(JToken.FromObject(i));
             }
 
 
-            Commit(txId);
+            Commit();
 
-            var oldSize = persistentSource.Read(log => log.Length);
+            var oldSize = PersistentSource.Read(log => log.Length);
             PerformIdleTasks();
 
-            Assert.True(oldSize > persistentSource.Read(log => log.Length));
+            Assert.True(oldSize > PersistentSource.Read(log => log.Length));
         }
 
         [Fact]
         public void AfterOptimizeCommittedDataIsStillThere()
         {
-            var txId = Guid.NewGuid();
+            
             for (int i = 0; i < 16; i++)
             {
-                persistentDictionary.Put(JToken.FromObject(i), new byte[512], txId);
+                PersistentDictionary.Put(JToken.FromObject(i), new byte[512]);
             }
 
             for (int i = 0; i < 16; i++)
             {
-                persistentDictionary.Remove(JToken.FromObject(i), txId);
+                PersistentDictionary.Remove(JToken.FromObject(i));
             }
 
-            persistentDictionary.Put(JToken.FromObject("a"), new byte[512], txId);
+            PersistentDictionary.Put(JToken.FromObject("a"), new byte[512]);
 
 
-            Commit(txId);
-            var oldSize = persistentSource.Read(log => log.Length);
+            Commit();
+            var oldSize = PersistentSource.Read(log => log.Length);
             PerformIdleTasks();
 
-            Assert.True(oldSize > persistentSource.Read(log => log.Length));
+            Assert.True(oldSize > PersistentSource.Read(log => log.Length));
 
             Assert.NotNull(
-                persistentDictionary.Read(JToken.FromObject("a"), Guid.NewGuid())
+                PersistentDictionary.Read(JToken.FromObject("a"))
                 );
         }
 
@@ -61,29 +61,29 @@ namespace Raven.Munin.Tests
         [Fact]
         public void AfterOptimizeUnCommittedDataIsStillThere()
         {
-            var txId = Guid.NewGuid();
+            
             for (int i = 0; i < 16; i++)
             {
-                persistentDictionary.Put(JToken.FromObject(i), new byte[512], txId);
+                PersistentDictionary.Put(JToken.FromObject(i), new byte[512]);
             }
 
             for (int i = 0; i < 16; i++)
             {
-                persistentDictionary.Remove(JToken.FromObject(i), txId);
+                PersistentDictionary.Remove(JToken.FromObject(i));
             }
 
             var txId2 = Guid.NewGuid();
-            persistentDictionary.Put(JToken.FromObject("a"), new byte[512], txId2);
+            PersistentDictionary.Put(JToken.FromObject("a"), new byte[512]);
 
 
-            Commit(txId);
-            var oldSize = persistentSource.Read(log => log.Length);
+            Commit();
+            var oldSize = PersistentSource.Read(log => log.Length);
             PerformIdleTasks();
 
-            Assert.True(oldSize > persistentSource.Read(log => log.Length));
+            Assert.True(oldSize > PersistentSource.Read(log => log.Length));
 
             Assert.NotNull(
-                persistentDictionary.Read(JToken.FromObject("a"), txId2)
+                PersistentDictionary.Read(JToken.FromObject("a"))
                 );
         }
     }
