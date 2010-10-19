@@ -11,7 +11,7 @@ namespace Raven.Munin
     {
         private readonly ThreadLocal<Guid> txId;
         private readonly PersistentDictionary persistentDictionary;
-        private readonly Dictionary<string, SecondaryIndex> secondaryIndices = new Dictionary<string, SecondaryIndex>();
+        private readonly Dictionary<string, int> secondaryIndices = new Dictionary<string, int>();
 
         public override string ToString()
         {
@@ -66,7 +66,7 @@ namespace Raven.Munin
 
         public SecondaryIndex this[string indexName]
         {
-            get { return secondaryIndices[indexName]; }
+            get { return persistentDictionary.GetSecondaryIndex(secondaryIndices[indexName]); }
         }
 
         public bool UpdateKey(JToken key)

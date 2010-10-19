@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
+using System.Linq;
+using Newtonsoft.Json.Linq;
 
 namespace Raven.Munin
 {
@@ -10,6 +13,11 @@ namespace Raven.Munin
     {
         private readonly ReaderWriterLockSlim locker = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
         private readonly StreamsPool pool;
+        private IList<PersistentDictionaryState> globalStates = new List<PersistentDictionaryState>();
+
+        private readonly ThreadLocal<IList<PersistentDictionaryState>> currentStates =
+            new ThreadLocal<IList<PersistentDictionaryState>>(() => null);
+
 
         protected AbstractPersistentSource()
         {
@@ -19,6 +27,11 @@ namespace Raven.Munin
         public bool CreatedNew
         {
             get; protected set;
+        }
+
+        public IList<PersistentDictionaryState> DictionariesStates
+        {
+            get { return currentStates.Value ?? globalStates; }
         }
 
         protected abstract Stream CreateClonedStreamForReadOnlyPurposes();
@@ -71,16 +84,33 @@ namespace Raven.Munin
                 locker.EnterWriteLock();
             try
             {
-                if(lockAlreadyHeld == false)
-                    // we need to clear the pool (and dispose all outstanding references, before we execute the write call
-                    pool.Clear();
+
+                if (lockAlreadyHeld == false)
+                {
+                    currentStates.Value = new List<PersistentDictionaryState>(
+                        globalStates.Select(x => new PersistentDictionaryState(x.Comparer)
+                        {
+                            KeyToFilePositionInFiles =
+                                                     new ConcurrentDictionary<JToken, PositionInFile>(
+                                                     x.KeyToFilePositionInFiles, x.Comparer),
+                            SecondaryIndices =
+                                                     new List<SecondaryIndex>(
+                                                     x.SecondaryIndices.Select(y => new SecondaryIndex(y)))
+                        })
+                        );
+                }
 
                 readWriteAction(Log);
             }
             finally
             {
                 if (lockAlreadyHeld == false)
+                {
+                    pool.Clear();
+                    Interlocked.Exchange(ref globalStates, currentStates.Value);
+                    currentStates.Value = null;
                     locker.ExitWriteLock();
+                }
             }
         }
 

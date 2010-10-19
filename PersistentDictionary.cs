@@ -64,11 +64,11 @@ namespace Raven.Munin
             get { return KeyToFilePos.Count; }
         }
 
-        public SecondaryIndex AddSecondaryIndex(Expression<Func<JToken, IComparable>> func)
+        public int AddSecondaryIndex(Expression<Func<JToken, IComparable>> func)
         {
             var secondaryIndex = new SecondaryIndex(func.Compile(), func.ToString(), persistentSource);
             SecondaryIndices.Add(secondaryIndex);
-            return secondaryIndex;
+            return SecondaryIndices.Count - 1;
         }
 
         internal void ApplyCommands(IEnumerable<Command> cmds)
@@ -375,10 +375,12 @@ namespace Raven.Munin
             DictionaryId = dictionaryId;
             parent = aggregateDictionary;
 
-            parent.DictionaryStates[dictionaryId] = new PersistentDictionaryState
-            {
-                KeyToFilePositionInFiles = new ConcurrentDictionary<JToken, PositionInFile>(comparer),
-            };
+            parent.DictionaryStates[dictionaryId] = new PersistentDictionaryState(comparer);
+        }
+
+        public SecondaryIndex GetSecondaryIndex(int idx)
+        {
+            return parent.DictionaryStates[DictionaryId].SecondaryIndices[idx];
         }
     }
 }

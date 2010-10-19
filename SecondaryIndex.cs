@@ -22,6 +22,14 @@ namespace Raven.Munin
             this.index = new SortedList<IComparable, SortedSet<JToken>>();
         }
 
+        public SecondaryIndex(SecondaryIndex other) : this(other.transform, other.indexDef, other.persistentSource)
+        {
+            foreach (var item in other.index)
+            {
+                index.Add(item.Key, new SortedSet<JToken>(item.Value, JTokenComparer.Instance));
+            }
+        }
+
         public override string ToString()
         {
             return indexDef + " (" + index.Count + ")";

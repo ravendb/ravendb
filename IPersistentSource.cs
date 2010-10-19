@@ -13,6 +13,7 @@ namespace Raven.Munin
         void Write(Action<Stream> readWriteAction);
 
         bool CreatedNew { get; }
+        IList<PersistentDictionaryState> DictionariesStates { get; }
 
         void ReplaceAtomically(Stream log);
 

@@ -14,13 +14,13 @@ namespace Raven.Munin
     {
         private readonly IPersistentSource persistentSource;
         private readonly List<PersistentDictionary> dictionaries = new List<PersistentDictionary>();
-        private readonly List<PersistentDictionaryState> dictionaryStates = new List<PersistentDictionaryState>();
+        
 
         public readonly ThreadLocal<Guid> CurrentTransactionId = new ThreadLocal<Guid>(() => Guid.Empty);
 
-        internal List<PersistentDictionaryState> DictionaryStates
+        internal IList<PersistentDictionaryState> DictionaryStates
         {
-            get { return dictionaryStates; }
+            get { return persistentSource.DictionariesStates; }
         }
 
         public AggregateDictionary(IPersistentSource persistentSource)
@@ -134,8 +134,7 @@ namespace Raven.Munin
             CurrentTransactionId.Value = Guid.Empty;
         }
 
-        [DebuggerNonUserCode]
-        private bool Commit(Guid txId)
+        private void Commit(Guid txId)
         {
             bool hasChanged = false;
 
@@ -151,7 +150,7 @@ namespace Raven.Munin
             }
 
             if (cmds.Count == 0)
-                return false;
+                return;
 
             persistentSource.Write(log=>
             {
@@ -163,7 +162,6 @@ namespace Raven.Munin
                 hasChanged = dictionaries.Aggregate(false, (changed, persistentDictionary) => changed | persistentDictionary.CompleteCommit(txId));
 
             });
-            return hasChanged;
         }
 
         private void Rollback(Guid txId)
@@ -284,7 +282,7 @@ namespace Raven.Munin
         public PersistentDictionary Add(PersistentDictionary dictionary)
         {
             dictionaries.Add(dictionary);
-            dictionaryStates.Add(null);
+            DictionaryStates.Add(null);
             dictionary.Initialize(persistentSource, dictionaries.Count - 1, this);
             return dictionary;
         }

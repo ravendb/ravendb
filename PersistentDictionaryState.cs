@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
@@ -10,10 +11,19 @@ namespace Raven.Munin
 
         public List<SecondaryIndex> SecondaryIndices { get; set; }
 
+        public IEqualityComparer<JToken> Comparer { get; set; }
 
-        public PersistentDictionaryState()
+
+        public override string ToString()
         {
+            return KeyToFilePositionInFiles.Count.ToString();
+        }
+
+        public PersistentDictionaryState(IEqualityComparer<JToken> comparer)
+        {
+            Comparer = comparer;
             SecondaryIndices = new List<SecondaryIndex>();
+            KeyToFilePositionInFiles = new ConcurrentDictionary<JToken, PositionInFile>(Comparer);
         }
     }
 }
