@@ -41,6 +41,9 @@ namespace Raven.Munin
             bool lockAlreadyHeld = locker.IsReadLockHeld || locker.IsWriteLockHeld;
             if (lockAlreadyHeld == false)
                 locker.EnterReadLock();
+            var needUpdating = currentStates.Value == null;
+            if (needUpdating)
+                currentStates.Value = globalStates;
             try
             {
                 Stream stream;
@@ -49,6 +52,8 @@ namespace Raven.Munin
             }
             finally
             {
+                if (needUpdating)
+                    currentStates.Value = null;
                 if (lockAlreadyHeld == false)
                     locker.ExitReadLock();
             }
@@ -59,6 +64,9 @@ namespace Raven.Munin
             bool lockAlreadyHeld = locker.IsReadLockHeld || locker.IsWriteLockHeld;
             if (lockAlreadyHeld == false)
                 locker.EnterReadLock();
+            var needUpdating = currentStates.Value == null;
+            if (needUpdating)
+                currentStates.Value = globalStates;
             try
             {
                 Stream stream;
@@ -72,6 +80,8 @@ namespace Raven.Munin
             }
             finally
             {
+                if (needUpdating)
+                    currentStates.Value = null;
                 if (lockAlreadyHeld == false)
                     locker.ExitReadLock();
             }
