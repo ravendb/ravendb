@@ -198,6 +198,8 @@ namespace Raven.Munin
 
                 WriteCommands(cmds, tempLog);
 
+                persistentSource.ClearPool();
+
                 persistentSource.ReplaceAtomically(tempLog);
             });
         }
