@@ -20,7 +20,7 @@ namespace Raven.Munin
         {
             this.basePath = basePath;
             this.prefix = prefix;
-            logPath = Path.Combine(basePath, prefix + ".log");
+            logPath = Path.Combine(basePath, prefix + ".ravendb");
 
             OpenFiles();
         }
@@ -34,7 +34,7 @@ namespace Raven.Munin
 
         protected override Stream CreateClonedStreamForReadOnlyPurposes()
         {
-            return new FileStream(logPath, FileMode.OpenOrCreate, FileAccess.Read, FileShare.ReadWrite, 4096, FileOptions.SequentialScan);
+            return new FileStream(logPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 4096, FileOptions.SequentialScan);
         }
 
         protected override Stream Log
