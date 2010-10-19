@@ -2,10 +2,11 @@ using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Threading;
+using System.Linq;
 
 namespace Raven.Munin
 {
-    public class StreamsPool
+    public class StreamsPool : IDisposable
     {
         private readonly Func<Stream> createNewStream;
         private readonly ConcurrentDictionary<int, ConcurrentQueue<Stream>> openedStreamsPool = new ConcurrentDictionary<int, ConcurrentQueue<Stream>>();
@@ -17,18 +18,51 @@ namespace Raven.Munin
             openedStreamsPool.TryAdd(0, new ConcurrentQueue<Stream>());
         }
 
+        public int Count
+        {
+            get
+            {
+                return openedStreamsPool.Sum(x => x.Value.Count);
+            }
+        }
+
         public void Clear()
         {
             Stream result;
             var currentVersion = Interlocked.Increment(ref version);
             openedStreamsPool.TryAdd(currentVersion, new ConcurrentQueue<Stream>());
-            ConcurrentQueue<Stream> value;
-            if (openedStreamsPool.TryRemove(currentVersion - 1, out value) == false)
-                return;
+            var keysToRemove = openedStreamsPool.Keys.Where(x => x < currentVersion).ToArray();
 
-            while(value.TryDequeue(out result))
+            foreach (var keyToRemove in keysToRemove)
             {
-                result.Dispose();
+                ConcurrentQueue<Stream> value;
+                if (openedStreamsPool.TryRemove(keyToRemove, out value) == false)
+                    continue;
+
+                while (value.TryDequeue(out result))
+                {
+                    result.Dispose();
+                }
+            }
+        }
+
+        public void Dispose()
+        {
+            Stream result;
+            var currentVersion = Interlocked.Increment(ref version);
+            openedStreamsPool.TryAdd(currentVersion, new ConcurrentQueue<Stream>());
+            var keysToRemove = openedStreamsPool.Keys.ToArray();
+
+            foreach (var keyToRemove in keysToRemove)
+            {
+                ConcurrentQueue<Stream> value;
+                if (openedStreamsPool.TryRemove(keyToRemove, out value) == false)
+                    continue;
+
+                while (value.TryDequeue(out result))
+                {
+                    result.Dispose();
+                }
             }
         }
 
