@@ -14,6 +14,7 @@ namespace Raven.Munin
         public StreamsPool(Func<Stream> createNewStream)
         {
             this.createNewStream = createNewStream;
+            openedStreamsPool.TryAdd(0, new ConcurrentQueue<Stream>());
         }
 
         public void Clear()
@@ -22,7 +23,7 @@ namespace Raven.Munin
             var currentVersion = Interlocked.Increment(ref version);
             openedStreamsPool.TryAdd(currentVersion, new ConcurrentQueue<Stream>());
             ConcurrentQueue<Stream> value;
-            if (openedStreamsPool.TryRemove(currentVersion, out value) == false)
+            if (openedStreamsPool.TryRemove(currentVersion - 1, out value) == false)
                 return;
 
             while(value.TryDequeue(out result))
