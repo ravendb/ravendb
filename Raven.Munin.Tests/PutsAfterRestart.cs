@@ -15,13 +15,13 @@ namespace Raven.Munin.Tests
         [Fact]
         public void RestartBeforeTxCommitMeansNoData()
         {
-            var txId = Guid.NewGuid();
+            
 
-            Assert.True(persistentDictionary.Put(JToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }, txId));
+            Assert.True(PersistentDictionary.Put(JToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }));
             
             Reopen();
 
-            var data = persistentDictionary.Read(JToken.FromObject("123"), txId);
+            var data = PersistentDictionary.Read(JToken.FromObject("123"));
             
             Assert.Null(data);
         }
@@ -29,17 +29,17 @@ namespace Raven.Munin.Tests
         [Fact]
         public void AfterCommitValueIsVisibleToAllTxEvenAfterReopen()
         {
-            var txId = Guid.NewGuid();
+            
 
-            Assert.True(persistentDictionary.Put(JToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }, txId));
-            Assert.True(persistentDictionary.Put(JToken.FromObject("431"), new byte[] { 1, 3, 4, 5 }, txId));
+            Assert.True(PersistentDictionary.Put(JToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }));
+            Assert.True(PersistentDictionary.Put(JToken.FromObject("431"), new byte[] { 1, 3, 4, 5 }));
 
-            Commit(txId);
+            Commit();
 
             Reopen();
 
-            Assert.Equal(new byte[] { 1, 2, 4, 5 }, persistentDictionary.Read(JToken.FromObject("123"), Guid.NewGuid()).Data());
-            Assert.Equal(new byte[] { 1, 3, 4, 5 }, persistentDictionary.Read(JToken.FromObject("431"), Guid.NewGuid()).Data());
+            Assert.Equal(new byte[] { 1, 2, 4, 5 }, PersistentDictionary.Read(JToken.FromObject("123")).Data());
+            Assert.Equal(new byte[] { 1, 3, 4, 5 }, PersistentDictionary.Read(JToken.FromObject("431")).Data());
         }
     }
 }

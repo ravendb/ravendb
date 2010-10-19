@@ -9,40 +9,39 @@ namespace Raven.Munin.Tests
         [Fact]
         public void TwoTxCannotAddSameDataBeforeCmmmit()
         {
-            Assert.True(persistentDictionary.Put(JToken.FromObject("a"), new byte[] { 1 }, Guid.NewGuid()));
+            Assert.True(PersistentDictionary.Put(JToken.FromObject("a"), new byte[] { 1 }));
 
-            Assert.False(persistentDictionary.Put(JToken.FromObject("a"), new byte[] { 1 }, Guid.NewGuid()));
+            SupressTx(() => Assert.False(PersistentDictionary.Put(JToken.FromObject("a"), new byte[] { 1 })));
         }
 
         [Fact]
         public void OneTxCannotDeleteTxThatAnotherTxAddedBeforeCommit()
         {
-            Assert.True(persistentDictionary.Put(JToken.FromObject("a"), new byte[] { 1 }, Guid.NewGuid()));
+            Assert.True(PersistentDictionary.Put(JToken.FromObject("a"), new byte[] { 1 }));
 
-            Assert.False(persistentDictionary.Remove(JToken.FromObject("a"), Guid.NewGuid()));
+            SupressTx(() => Assert.False(PersistentDictionary.Remove(JToken.FromObject("a"))));
         }
 
 
         [Fact]
         public void TwoTxCanAddSameDataAfterCmmmit()
         {
-            var txId = Guid.NewGuid();
-            Assert.True(persistentDictionary.Put(JToken.FromObject("a"), new byte[] { 1 }, txId));
+            Assert.True(PersistentDictionary.Put(JToken.FromObject("a"), new byte[] { 1 }));
 
-            Commit(txId);
+            Commit();
 
-            Assert.True(persistentDictionary.Put(JToken.FromObject("a"), new byte[] { 1 }, Guid.NewGuid()));
+            Assert.True(PersistentDictionary.Put(JToken.FromObject("a"), new byte[] { 1 }));
         }
 
         [Fact]
         public void OneTxCanDeleteTxThatAnotherTxAddedAfterCommit()
         {
-            var txId = Guid.NewGuid();
-            Assert.True(persistentDictionary.Put(JToken.FromObject("a"), new byte[] { 1 }, txId));
+            
+            Assert.True(PersistentDictionary.Put(JToken.FromObject("a"), new byte[] { 1 }));
 
-            Commit(txId);
+            Commit();
 
-            Assert.True(persistentDictionary.Remove(JToken.FromObject("a"), Guid.NewGuid()));
+            Assert.True(PersistentDictionary.Remove(JToken.FromObject("a")));
         }
     }
 }

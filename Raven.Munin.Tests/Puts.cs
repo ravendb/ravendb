@@ -15,11 +15,11 @@ namespace Raven.Munin.Tests
         [Fact]
         public void CanAddAndGetDataSameTx()
         {
-            var txId = Guid.NewGuid();
+            
 
-            Assert.True(persistentDictionary.Put(JToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }, txId));
+            Assert.True(PersistentDictionary.Put(JToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }));
 
-            var data = persistentDictionary.Read(JToken.FromObject("123"), txId);
+            var data = PersistentDictionary.Read(JToken.FromObject("123"));
 
             Assert.Equal(new byte[] { 1, 2, 4, 5 }, data.Data());
         }
@@ -27,24 +27,23 @@ namespace Raven.Munin.Tests
         [Fact]
         public void AfterAddInDifferentTxValueDoesNotExists()
         {
-            var txId = Guid.NewGuid();
+            Assert.True(PersistentDictionary.Put(JToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }));
 
-            Assert.True(persistentDictionary.Put(JToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }, txId));
-
-            var data = persistentDictionary.Read(JToken.FromObject("123"), Guid.NewGuid());
+            PersistentDictionary.ReadResult data = null;
+            SupressTx(() => data = PersistentDictionary.Read(JToken.FromObject("123")));
             Assert.Null(data);
         }
 
         [Fact]
         public void AfterCommitValueIsVisibleToAllTx()
         {
-            var txId = Guid.NewGuid();
+            
 
-            Assert.True(persistentDictionary.Put(JToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }, txId));
+            Assert.True(PersistentDictionary.Put(JToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }));
 
-            Commit(txId);
+            Commit();
 
-            var data = persistentDictionary.Read(JToken.FromObject("123"), Guid.NewGuid());
+            var data = PersistentDictionary.Read(JToken.FromObject("123"));
 
             Assert.Equal(new byte[] { 1, 2, 4, 5 }, data.Data());
         }
@@ -53,30 +52,29 @@ namespace Raven.Munin.Tests
         [Fact]
         public void AfterRollbackValueIsGoneToAllTx()
         {
-            var txId = Guid.NewGuid();
 
-            Assert.True(persistentDictionary.Put(JToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }, txId));
+            Assert.True(PersistentDictionary.Put(JToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }));
 
-            persistentDictionary.Rollback(txId);
+            Rollback();
 
-            Assert.Null(persistentDictionary.Read(JToken.FromObject("123"), txId));
-            Assert.Null(persistentDictionary.Read(JToken.FromObject("123"), Guid.NewGuid()));
+            Assert.Null(PersistentDictionary.Read(JToken.FromObject("123")));
+            Assert.Null(PersistentDictionary.Read(JToken.FromObject("123")));
         }
 
         [Fact]
         public void AddReadAndThenAddWillNotCorruptData()
         {
-            var txId = Guid.NewGuid();
+            
 
-            Assert.True(persistentDictionary.Put(JToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }, txId));
+            Assert.True(PersistentDictionary.Put(JToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }));
 
-            Assert.True(persistentDictionary.Put(JToken.FromObject("789"), new byte[] { 3, 1, 4, 5 }, txId));
+            Assert.True(PersistentDictionary.Put(JToken.FromObject("789"), new byte[] { 3, 1, 4, 5 }));
 
-            Assert.Equal(new byte[] { 1, 2, 4, 5 }, persistentDictionary.Read(JToken.FromObject("123"), txId).Data());
+            Assert.Equal(new byte[] { 1, 2, 4, 5 }, PersistentDictionary.Read(JToken.FromObject("123")).Data());
 
-            Assert.True(persistentDictionary.Put(JToken.FromObject("456"), new byte[] { 4, 5 }, txId));
+            Assert.True(PersistentDictionary.Put(JToken.FromObject("456"), new byte[] { 4, 5 }));
 
-            Assert.Equal(new byte[] { 3, 1, 4, 5 }, persistentDictionary.Read(JToken.FromObject("789"), txId).Data());
+            Assert.Equal(new byte[] { 3, 1, 4, 5 }, PersistentDictionary.Read(JToken.FromObject("789")).Data());
         }
     }
 }

@@ -9,26 +9,23 @@ namespace Raven.Storage.Managed.Impl
 {
     public class TableStorage : AggregateDictionary
     {
-        private readonly ThreadLocal<Guid> txId = new ThreadLocal<Guid>(() => Guid.Empty);
-
-
 
         public TableStorage(IPersistentSource persistentSource)
             : base(persistentSource)
         {
-            Details = new PersistentDictionaryAdapter(txId,
+            Details = new PersistentDictionaryAdapter(CurrentTransactionId,
                                                      Add(new PersistentDictionary(JTokenComparer.Instance)
                                                      {
                                                          Name = "Details"
                                                      }));
 
-            Identity = new PersistentDictionaryAdapter(txId,
+            Identity = new PersistentDictionaryAdapter(CurrentTransactionId,
                                                        Add(new PersistentDictionary(new ModifiedJTokenComparer(x=>x.Value<string>("name")))
                                                        {
                                                            Name = "Identity"
                                                        }));
 
-            Attachments = new PersistentDictionaryAdapter(txId, Add(new PersistentDictionary(new ModifiedJTokenComparer(x => x.Value<string>("key")))
+            Attachments = new PersistentDictionaryAdapter(CurrentTransactionId, Add(new PersistentDictionary(new ModifiedJTokenComparer(x => x.Value<string>("key")))
             {
                 Name = "Attachments"
             }))
@@ -36,7 +33,7 @@ namespace Raven.Storage.Managed.Impl
                 {"ByEtag", x => new ComparableByteArray(x.Value<byte[]>("etag"))}
             };
 
-            Documents = new PersistentDictionaryAdapter(txId, Add(new PersistentDictionary(new ModifiedJTokenComparer(x => x.Value<string>("key")))
+            Documents = new PersistentDictionaryAdapter(CurrentTransactionId, Add(new PersistentDictionary(new ModifiedJTokenComparer(x => x.Value<string>("key")))
             {
                 Name = "Documents"
             }))
@@ -46,7 +43,7 @@ namespace Raven.Storage.Managed.Impl
                 {"ByEtag", x => new ComparableByteArray(x.Value<byte[]>("etag"))}
             };
 
-            DocumentsModifiedByTransactions = new PersistentDictionaryAdapter(txId, 
+            DocumentsModifiedByTransactions = new PersistentDictionaryAdapter(CurrentTransactionId, 
                 Add(new PersistentDictionary(new ModifiedJTokenComparer(x => new JObject
                 {
                     {"key", x.Value<string>("key")},
@@ -57,19 +54,19 @@ namespace Raven.Storage.Managed.Impl
             {
                 {"ByTxId", x => new ComparableByteArray(x.Value<byte[]>("txId"))}
             };
-            Transactions = new PersistentDictionaryAdapter(txId,
+            Transactions = new PersistentDictionaryAdapter(CurrentTransactionId,
                 Add(new PersistentDictionary(new ModifiedJTokenComparer(x => x.Value<byte[]>("txId")))
                 {
                     Name = "Transactions"
                 }));
 
-            IndexingStats = new PersistentDictionaryAdapter(txId,
+            IndexingStats = new PersistentDictionaryAdapter(CurrentTransactionId,
                 Add(new PersistentDictionary(new ModifiedJTokenComparer(x =>x.Value<string>("index")))
                 {
                     Name = "IndexingStats"
                 }));
 
-            MappedResults = new PersistentDictionaryAdapter(txId,
+            MappedResults = new PersistentDictionaryAdapter(CurrentTransactionId,
                                                             Add(new PersistentDictionary(JTokenComparer.Instance)
                                                             {
                                                                 Name = "MappedResults"
@@ -79,7 +76,7 @@ namespace Raven.Storage.Managed.Impl
                 {"ByViewAndDocumentId", x => Tuple.Create(x.Value<string>("view"), x.Value<string>("docId"))}
             };
 
-            Queues = new PersistentDictionaryAdapter(txId, Add(new PersistentDictionary(new ModifiedJTokenComparer(x=> new JObject
+            Queues = new PersistentDictionaryAdapter(CurrentTransactionId, Add(new PersistentDictionary(new ModifiedJTokenComparer(x=> new JObject
                                                                                         {
                                                                                             {"name", x.Value<string>("name")},
                                                                                             {"id", x.Value<byte[]>("id")},
@@ -91,7 +88,7 @@ namespace Raven.Storage.Managed.Impl
                 {"ByName", x=>x.Value<string>("name")}
             };
 
-            Tasks = new PersistentDictionaryAdapter(txId, Add(new PersistentDictionary(new ModifiedJTokenComparer(x => new JObject
+            Tasks = new PersistentDictionaryAdapter(CurrentTransactionId, Add(new PersistentDictionary(new ModifiedJTokenComparer(x => new JObject
                                                                                         {
                                                                                             {"index", x.Value<string>("index")},
                                                                                             {"id", x.Value<byte[]>("id")},
@@ -125,34 +122,6 @@ namespace Raven.Storage.Managed.Impl
 
         public PersistentDictionaryAdapter Identity { get; private set; }
 
-        public IDisposable BeginTransaction()
-        {
-            if (txId.Value != Guid.Empty)
-                return new DisposableAction(() => { }); // no op, already in tx
-
-            txId.Value = Guid.NewGuid();
-
-            return new DisposableAction(() =>
-            {
-                if (txId.Value != Guid.Empty) // tx not committed
-                    Rollback();
-            });
-        }
-
-        [DebuggerNonUserCode]
-        public void Commit()
-        {
-            if (txId.Value == Guid.Empty)
-                return;
-
-            Commit(txId.Value);
-        }
-
-        public void Rollback()
-        {
-            Rollback(txId.Value);
-
-            txId.Value = Guid.Empty;
-        }
+       
     }
 }

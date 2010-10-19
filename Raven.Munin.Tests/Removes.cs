@@ -9,19 +9,19 @@ namespace Raven.Munin.Tests
         [Fact]
         public void RemovingNonExistantIsNoOp()
         {
-            Assert.True(persistentDictionary.Remove(JToken.FromObject("a"), Guid.NewGuid()));
+            Assert.True(PersistentDictionary.Remove(JToken.FromObject("a")));
         }
 
         [Fact]
         public void PutThenRemoveInSameTxWillResultInMissingValue()
         {
-            var txId = Guid.NewGuid();
+            
 
-            Assert.True(persistentDictionary.Put(JToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }, txId));
+            Assert.True(PersistentDictionary.Put(JToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }));
 
-            Assert.True(persistentDictionary.Remove(JToken.FromObject("123"), txId));
+            Assert.True(PersistentDictionary.Remove(JToken.FromObject("123")));
 
-            var data = persistentDictionary.Read(JToken.FromObject("123"), txId);
+            var data = PersistentDictionary.Read(JToken.FromObject("123"));
             
             Assert.Null(data);
         }
@@ -29,15 +29,15 @@ namespace Raven.Munin.Tests
         [Fact]
         public void BeforeCommitRemoveIsNotVisibleOutsideTheTx()
         {
-            var txId = Guid.NewGuid();
+            
+            Assert.True(PersistentDictionary.Put(JToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }));
 
-            Assert.True(persistentDictionary.Put(JToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }, txId));
+            Commit();
 
-            Commit(txId);
+            Assert.True(PersistentDictionary.Remove(JToken.FromObject("123")));
 
-            Assert.True(persistentDictionary.Remove(JToken.FromObject("123"), Guid.NewGuid()));
-
-            var data = persistentDictionary.Read(JToken.FromObject("123"), txId);
+            PersistentDictionary.ReadResult data = null;
+            SupressTx(() => data = PersistentDictionary.Read(JToken.FromObject("123")));
 
             Assert.Equal(new byte[] { 1, 2, 4, 5 }, data.Data());
         }
@@ -45,19 +45,15 @@ namespace Raven.Munin.Tests
         [Fact]
         public void AfterCommitRemoveIsVisibleOutsideTheTx()
         {
-            var txId = Guid.NewGuid();
+            Assert.True(PersistentDictionary.Put(JToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }));
 
-            Assert.True(persistentDictionary.Put(JToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }, txId));
+            Commit();
 
-            Commit(txId);
+            Assert.True(PersistentDictionary.Remove(JToken.FromObject("123")));
 
-            txId = Guid.NewGuid();
+            Commit();
 
-            Assert.True(persistentDictionary.Remove(JToken.FromObject("123"), txId));
-
-            Commit(txId);
-
-            Assert.Null(persistentDictionary.Read(JToken.FromObject("123"), txId));
+            Assert.Null(PersistentDictionary.Read(JToken.FromObject("123")));
         }
     }
 }
