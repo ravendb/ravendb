@@ -12,13 +12,6 @@ namespace Raven.Munin
 {
     public class PersistentDictionary : IEnumerable<PersistentDictionary.ReadResult>
     {
-        private class PositionInFile
-        {
-            public long Position { get; set; }
-            public int Size { get; set; }
-            public JToken Key { get; set; }
-        }
-
         public string Name { get; set; }
 
         public override string ToString()
@@ -30,30 +23,37 @@ namespace Raven.Munin
         {
             get
             {
-                return persistentSource.Read(_ => keyToFilePos.Keys);
+                return persistentSource.Read(_ => KeyToFilePos.Keys);
             }
         }
 
-        private readonly ConcurrentDictionary<JToken, PositionInFile> keyToFilePos;
+        private ConcurrentDictionary<JToken, PositionInFile> KeyToFilePos
+        {
+            get { return parent.DictionaryStates[DictionaryId].KeyToFilePositionInFiles; }
+        }
 
-        private readonly List<SecondaryIndex> secondaryIndices = new List<SecondaryIndex>();
+
+        private List<SecondaryIndex> SecondaryIndices
+        {
+            get { return parent.DictionaryStates[DictionaryId].SecondaryIndices; }
+        }
+
 
         private readonly ConcurrentDictionary<JToken, Guid> keysModifiedInTx;
 
         private readonly ConcurrentDictionary<Guid, List<Command>> operationsInTransactions = new ConcurrentDictionary<Guid, List<Command>>();
 
-        private readonly IPersistentSource persistentSource;
+        private IPersistentSource persistentSource;
         private readonly IEqualityComparer<JToken> comparer;
 
         private readonly MemoryCache cache = new MemoryCache(Guid.NewGuid().ToString());
+        private AggregateDictionary parent;
         public int DictionaryId { get; set; }
 
 
-        public PersistentDictionary(IPersistentSource persistentSource, IEqualityComparer<JToken> comparer)
+        public PersistentDictionary(IEqualityComparer<JToken> comparer)
         {
             keysModifiedInTx = new ConcurrentDictionary<JToken, Guid>(comparer);
-            keyToFilePos = new ConcurrentDictionary<JToken, PositionInFile>(comparer);
-            this.persistentSource = persistentSource;
             this.comparer = comparer;
         }
 
@@ -61,13 +61,13 @@ namespace Raven.Munin
 
         public int ItemCount
         {
-            get { return keyToFilePos.Count; }
+            get { return KeyToFilePos.Count; }
         }
 
         public SecondaryIndex AddSecondaryIndex(Expression<Func<JToken, IComparable>> func)
         {
             var secondaryIndex = new SecondaryIndex(func.Compile(), func.ToString(), persistentSource);
-            secondaryIndices.Add(secondaryIndex);
+            SecondaryIndices.Add(secondaryIndex);
             return secondaryIndex;
         }
 
@@ -177,7 +177,7 @@ namespace Raven.Munin
             return persistentSource.Read(log =>
             {
                 PositionInFile pos;
-                if (keyToFilePos.TryGetValue(key, out pos) == false)
+                if (KeyToFilePos.TryGetValue(key, out pos) == false)
                     return null;
 
                 return new ReadResult
@@ -291,16 +291,16 @@ namespace Raven.Munin
 
         private void AddInteral(JToken key, PositionInFile position)
         {
-            keyToFilePos.AddOrUpdate(key, position, (token, oldPos) =>
+            KeyToFilePos.AddOrUpdate(key, position, (token, oldPos) =>
             {
                 WasteCount += 1;
-                foreach (var index in secondaryIndices)
+                foreach (var index in SecondaryIndices)
                 {
                     index.Remove(oldPos.Key);
                 }
                 return position;
             });
-            foreach (var index in secondaryIndices)
+            foreach (var index in SecondaryIndices)
             {
                 index.Add(key);
             }
@@ -309,11 +309,11 @@ namespace Raven.Munin
         private void RemoveInternal(JToken key)
         {
             PositionInFile removedValue;
-            if (keyToFilePos.TryRemove(key, out removedValue) == false)
+            if (KeyToFilePos.TryRemove(key, out removedValue) == false)
                 return;
             cache.Remove(removedValue.Position.ToString());
             WasteCount += 1;
-            foreach (var index in secondaryIndices)
+            foreach (var index in SecondaryIndices)
             {
                 index.Remove(removedValue.Key);
             }
@@ -321,7 +321,7 @@ namespace Raven.Munin
 
         internal IEnumerable<Command> CopyCommittedData(Stream tempData)
         {
-            return from kvp in keyToFilePos
+            return from kvp in KeyToFilePos
                    select new Command
                    {
                        Key = kvp.Key,
@@ -349,7 +349,7 @@ namespace Raven.Munin
 
         public IEnumerator<ReadResult> GetEnumerator()
         {
-            foreach (var positionInFile in keyToFilePos.Values.ToArray())
+            foreach (var positionInFile in KeyToFilePos.Values.ToArray())
             {
                 byte[] readData = null;
                 var pos = positionInFile;
@@ -367,6 +367,18 @@ namespace Raven.Munin
         IEnumerator IEnumerable.GetEnumerator()
         {
             return GetEnumerator();
+        }
+
+        public void Initialize(IPersistentSource source, int dictionaryId, AggregateDictionary aggregateDictionary)
+        {
+            persistentSource = source;
+            DictionaryId = dictionaryId;
+            parent = aggregateDictionary;
+
+            parent.DictionaryStates[dictionaryId] = new PersistentDictionaryState
+            {
+                KeyToFilePositionInFiles = new ConcurrentDictionary<JToken, PositionInFile>(comparer),
+            };
         }
     }
 }
