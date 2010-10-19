@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Threading;
 
@@ -97,7 +98,7 @@ namespace Raven.Munin
 
         public virtual void Dispose()
         {
-            pool.Clear();
+            pool.Dispose();
         }
     }
 }
