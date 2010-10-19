@@ -13,6 +13,12 @@ namespace Raven.Munin
     {
         private readonly IPersistentSource persistentSource;
         private readonly List<PersistentDictionary> dictionaries = new List<PersistentDictionary>();
+        private readonly List<PersistentDictionaryState> dictionaryStates = new List<PersistentDictionaryState>();
+
+        internal List<PersistentDictionaryState> DictionaryStates
+        {
+            get { return dictionaryStates; }
+        }
 
         public AggregateDictionary(IPersistentSource persistentSource)
         {
@@ -70,7 +76,7 @@ namespace Raven.Munin
             }
         }
 
-        private JObject ReadJObject(Stream log)
+        private static JObject ReadJObject(Stream log)
         {
             return JObject.Load(new BsonReader(log)
             {
@@ -233,7 +239,8 @@ namespace Raven.Munin
         public PersistentDictionary Add(PersistentDictionary dictionary)
         {
             dictionaries.Add(dictionary);
-            dictionary.DictionaryId = dictionaries.Count - 1;
+            dictionaryStates.Add(null);
+            dictionary.Initialize(persistentSource, dictionaries.Count - 1, this);
             return dictionary;
         }
 

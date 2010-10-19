@@ -26,7 +26,7 @@ namespace Raven.Munin.Tests
         {
             persistentSource = new FileBasedPersistentSource(tempPath, "test_", writeThrough: true);
             aggregateDictionary = new AggregateDictionary(persistentSource);
-            persistentDictionary = aggregateDictionary.Add(new PersistentDictionary(persistentSource, JTokenComparer.Instance));
+            persistentDictionary = aggregateDictionary.Add(new PersistentDictionary(JTokenComparer.Instance));
             aggregateDictionary.Initialze();
         }
 
