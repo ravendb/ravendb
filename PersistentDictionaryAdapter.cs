@@ -49,7 +49,7 @@ namespace Raven.Munin
             return persistentDictionary.Remove(key, txId.Value);
         }
 
-        public void Add(string name, Expression<Func<JToken, JToken>> func)
+        public void Add(string name, Expression<Func<JToken, IComparable>> func)
         {
             secondaryIndices[name] = persistentDictionary.AddSecondaryIndex(func); 
         }

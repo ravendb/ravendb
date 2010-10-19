@@ -1,16 +1,18 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 
 namespace Raven.Munin
 {
-    public class RecordingComparer : IComparer<JToken>
+    public class RecordingComparer : IComparer<IComparable>
     {
-        public JToken LastComparedTo { get; set; }
+        public IComparable LastComparedTo { get; set; }
 
-        public int Compare(JToken x, JToken y)
+        public int Compare(IComparable x, IComparable y)
         {
             LastComparedTo = x;
-            return JTokenComparer.Instance.Compare(x, y);
+            return x.CompareTo(y);
         }
     }
 }

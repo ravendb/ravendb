@@ -70,15 +70,16 @@ namespace Raven.Munin
                 locker.EnterWriteLock();
             try
             {
+                if(lockAlreadyHeld == false)
+                    // we need to clear the pool (and dispose all outstanding references, before we execute the write call
+                    pool.Clear();
+
                 readWriteAction(Log);
             }
             finally
             {
                 if (lockAlreadyHeld == false)
-                {
-                    pool.Clear();
                     locker.ExitWriteLock();
-                }
             }
         }
 

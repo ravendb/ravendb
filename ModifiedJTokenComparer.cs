@@ -9,20 +9,20 @@ namespace Raven.Munin
 
         public ModifiedJTokenComparer(Func<JToken, JToken> modifier)
         {
-            this.modifier = token =>
-            {
-                return token.Type != JTokenType.Object ? token : modifier(token);
-            };
+            this.modifier = modifier;
         }
 
         public override int Compare(JToken x, JToken y)
         {
-            return base.Compare(modifier(x), modifier(y));
+            var localX = x.Type == JTokenType.Object ? modifier(x) : x;
+            var localY = y.Type == JTokenType.Object ? modifier(y) : y;
+            return base.Compare(localX, localY);
         }
 
         public override int GetHashCode(JToken obj)
         {
-            return base.GetHashCode(modifier(obj));
+            var localObj = obj.Type == JTokenType.Object ? modifier(obj) : obj;
+            return base.GetHashCode(localObj);
         }
     }
 }

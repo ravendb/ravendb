@@ -64,9 +64,9 @@ namespace Raven.Munin
             get { return keyToFilePos.Count; }
         }
 
-        public SecondaryIndex AddSecondaryIndex(Expression<Func<JToken, JToken>> func)
+        public SecondaryIndex AddSecondaryIndex(Expression<Func<JToken, IComparable>> func)
         {
-            var secondaryIndex = new SecondaryIndex(new ModifiedJTokenComparer(func.Compile()), func.ToString(), persistentSource);
+            var secondaryIndex = new SecondaryIndex(func.Compile(), func.ToString(), persistentSource);
             secondaryIndices.Add(secondaryIndex);
             return secondaryIndex;
         }
