@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
 
@@ -14,6 +15,8 @@ namespace Raven.Munin
         private readonly IPersistentSource persistentSource;
         private readonly List<PersistentDictionary> dictionaries = new List<PersistentDictionary>();
         private readonly List<PersistentDictionaryState> dictionaryStates = new List<PersistentDictionaryState>();
+
+        public readonly ThreadLocal<Guid> CurrentTransactionId = new ThreadLocal<Guid>(() => Guid.Empty);
 
         internal List<PersistentDictionaryState> DictionaryStates
         {
@@ -89,8 +92,50 @@ namespace Raven.Munin
             get { return dictionaries[i]; }
         }
 
+        public IDisposable BeginTransaction()
+        {
+            if (CurrentTransactionId.Value != Guid.Empty)
+                return new StreamsPool.DisposableAction(() => { }); // no op, already in tx
+
+            CurrentTransactionId.Value = Guid.NewGuid();
+
+            return new StreamsPool.DisposableAction(() =>
+            {
+                if (CurrentTransactionId.Value != Guid.Empty) // tx not committed
+                    Rollback();
+            });
+        }
+
+        public IDisposable SuppressTransaction()
+        {
+            var old = CurrentTransactionId.Value;
+            
+            CurrentTransactionId.Value = Guid.Empty;
+
+            return new StreamsPool.DisposableAction(() =>
+            {
+                CurrentTransactionId.Value = old;
+            });
+        }
+
         [DebuggerNonUserCode]
-        public bool Commit(Guid txId)
+        public void Commit()
+        {
+            if (CurrentTransactionId.Value == Guid.Empty)
+                return;
+
+            Commit(CurrentTransactionId.Value);
+        }
+
+        public void Rollback()
+        {
+            Rollback(CurrentTransactionId.Value);
+
+            CurrentTransactionId.Value = Guid.Empty;
+        }
+
+        [DebuggerNonUserCode]
+        private bool Commit(Guid txId)
         {
             bool hasChanged = false;
 
@@ -121,7 +166,7 @@ namespace Raven.Munin
             return hasChanged;
         }
 
-        public void Rollback(Guid txId)
+        private void Rollback(Guid txId)
         {
             foreach (var persistentDictionary in dictionaries)
             {

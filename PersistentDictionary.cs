@@ -96,7 +96,7 @@ namespace Raven.Munin
             }
         }
 
-        public bool Put(JToken key, byte[] value, Guid txId)
+        internal bool Put(JToken key, byte[] value, Guid txId)
         {
             Guid existing;
             if (keysModifiedInTx.TryGetValue(key, out existing) && existing != txId)
@@ -117,7 +117,7 @@ namespace Raven.Munin
             return true;
         }
 
-        public bool UpdateKey(JToken key, Guid txId)
+        internal bool UpdateKey(JToken key, Guid txId)
         {
             Guid existing;
             if (keysModifiedInTx.TryGetValue(key, out existing) && existing != txId)
@@ -144,7 +144,7 @@ namespace Raven.Munin
             return true;
         }
 
-        public ReadResult Read(JToken key, Guid txId)
+        internal ReadResult Read(JToken key, Guid txId)
         {
             byte[] readData = null;
 
