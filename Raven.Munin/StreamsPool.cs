@@ -5,7 +5,7 @@ using System.Threading;
 
 namespace Raven.Munin
 {
-    public class StreamsPool : IDisposable
+    public class StreamsPool
     {
         private readonly Func<Stream> createNewStream;
         private readonly ConcurrentDictionary<int, ConcurrentQueue<Stream>> openedStreamsPool = new ConcurrentDictionary<int, ConcurrentQueue<Stream>>();
@@ -78,18 +78,6 @@ namespace Raven.Munin
             public void Dispose()
             {
                 action();
-            }
-        }
-
-        public void Dispose()
-        {
-            foreach (var queue in openedStreamsPool.Values)
-            {
-                Stream result;
-                while (queue.TryDequeue(out result))
-                {
-                    result.Dispose();
-                }
             }
         }
     }

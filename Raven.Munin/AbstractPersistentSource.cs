@@ -97,7 +97,7 @@ namespace Raven.Munin
 
         public virtual void Dispose()
         {
-            pool.Dispose();
+            pool.Clear();
         }
     }
 }
