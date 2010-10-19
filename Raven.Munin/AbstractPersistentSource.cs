@@ -11,7 +11,6 @@ namespace Raven.Munin
 {
     public abstract class AbstractPersistentSource : IPersistentSource
     {
-        private readonly ReaderWriterLockSlim locker = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
         private readonly StreamsPool pool;
         private IList<PersistentDictionaryState> globalStates = new List<PersistentDictionaryState>();
 
@@ -38,9 +37,6 @@ namespace Raven.Munin
 
         public T Read<T>(Func<Stream, T> readOnlyAction)
         {
-            bool lockAlreadyHeld = locker.IsReadLockHeld || locker.IsWriteLockHeld;
-            if (lockAlreadyHeld == false)
-                locker.EnterReadLock();
             var needUpdating = currentStates.Value == null;
             if (needUpdating)
                 currentStates.Value = globalStates;
@@ -54,16 +50,11 @@ namespace Raven.Munin
             {
                 if (needUpdating)
                     currentStates.Value = null;
-                if (lockAlreadyHeld == false)
-                    locker.ExitReadLock();
             }
         }
 
         public IEnumerable<T> Read<T>(Func<Stream, IEnumerable<T>> readOnlyAction)
         {
-            bool lockAlreadyHeld = locker.IsReadLockHeld || locker.IsWriteLockHeld;
-            if (lockAlreadyHeld == false)
-                locker.EnterReadLock();
             var needUpdating = currentStates.Value == null;
             if (needUpdating)
                 currentStates.Value = globalStates;
@@ -82,20 +73,14 @@ namespace Raven.Munin
             {
                 if (needUpdating)
                     currentStates.Value = null;
-                if (lockAlreadyHeld == false)
-                    locker.ExitReadLock();
             }
         }
 
         public void Write(Action<Stream> readWriteAction)
         {
-            bool lockAlreadyHeld = locker.IsWriteLockHeld;
-            if (lockAlreadyHeld == false)
-                locker.EnterWriteLock();
-            try
+            lock (this)
             {
-
-                if (lockAlreadyHeld == false)
+                try
                 {
                     currentStates.Value = new List<PersistentDictionaryState>(
                         globalStates.Select(x => new PersistentDictionaryState(x.Comparer)
@@ -108,18 +93,14 @@ namespace Raven.Munin
                                                      x.SecondaryIndices.Select(y => new SecondaryIndex(y)))
                         })
                         );
-                }
 
-                readWriteAction(Log);
-            }
-            finally
-            {
-                if (lockAlreadyHeld == false)
+                    readWriteAction(Log);
+                }
+                finally
                 {
                     pool.Clear();
                     Interlocked.Exchange(ref globalStates, currentStates.Value);
                     currentStates.Value = null;
-                    locker.ExitWriteLock();
                 }
             }
         }
