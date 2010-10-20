@@ -36,6 +36,16 @@ namespace Raven.Munin.Tree
             get { throw new Exception("empty tree"); }
         }
 
+        public TValue FirstOrDefault
+        {
+            get { return default(TValue); }
+        }
+
+        public TValue LastOrDefault
+        {
+            get { return default(TValue); }
+        }
+
         // IBinarySearchTree
         public IBinarySearchTree<TKey, TValue> Left
         {

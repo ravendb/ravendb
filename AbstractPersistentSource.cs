@@ -85,14 +85,9 @@ namespace Raven.Munin
                     currentStates.Value = new List<PersistentDictionaryState>(
                         globalStates.Select(x => new PersistentDictionaryState(x.Comparer)
                         {
-                            KeyToFilePositionInFiles =
-                                                     new ConcurrentDictionary<JToken, PositionInFile>(
-                                                     x.KeyToFilePositionInFiles, x.Comparer),
-                            SecondaryIndices =
-                                                     new List<SecondaryIndex>(
-                                                     x.SecondaryIndices.Select(y => new SecondaryIndex(y)))
-                        })
-                        );
+                            KeyToFilePositionInFiles = x.KeyToFilePositionInFiles,
+                            SecondaryIndicesState = x.SecondaryIndicesState
+                        }));
 
                     readWriteAction(Log);
                 }

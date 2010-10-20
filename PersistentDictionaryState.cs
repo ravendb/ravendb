@@ -10,14 +10,14 @@ namespace Raven.Munin
     {
         public IBinarySearchTree<JToken, PositionInFile> KeyToFilePositionInFiles { get; set; }
 
-        public List<SecondaryIndex> SecondaryIndices { get; set; }
+        public List<IBinarySearchTree<IComparable, IBinarySearchTree<JToken, JToken>>> SecondaryIndicesState { get; set; }
 
         public ICompererAndEquality<JToken> Comparer { get; set; }
 
         public PersistentDictionaryState(ICompererAndEquality<JToken> comparer)
         {
             Comparer = comparer;
-            SecondaryIndices = new List<SecondaryIndex>();
+            SecondaryIndicesState = new List<IBinarySearchTree<IComparable, IBinarySearchTree<JToken, JToken>>>();
             KeyToFilePositionInFiles = new EmptyAVLTree<JToken, PositionInFile>(Comparer);
         }
     }
