@@ -11,17 +11,20 @@ namespace Raven.Munin.Tree
         bool IsEmpty { get; }
         TValue Value { get; }
 
-        TValue FirstOrDefault { get; }
-        TValue LastOrDefault { get; }
+        IBinarySearchTree<TKey, TValue> LeftMost { get; }
+        IBinarySearchTree<TKey, TValue> RightMost { get; }
 
         // IBinarySearchTree
         IBinarySearchTree<TKey, TValue> Left { get; }
         IBinarySearchTree<TKey, TValue> Right { get; }
         TKey Key { get; }
-        IEnumerable<TKey> Keys { get; }
-        IEnumerable<TValue> Values { get; }
+        IEnumerable<TKey> KeysInOrder { get; }
+        IEnumerable<TValue> ValuesInOrder { get; }
+        IEnumerable<TValue> ValuesInReverseOrder { get; }
         IEnumerable<KeyValuePair<TKey, TValue>> Pairs { get; }
         IBinarySearchTree<TKey, TValue> Search(TKey key);
+        IEnumerable<TValue> GreaterThan(TKey gtKey);
+        IEnumerable<TValue> GreaterThanOrEqual(TKey gteKey);
         IBinarySearchTree<TKey, TValue> Add(TKey key, TValue value);
         IBinarySearchTree<TKey, TValue> AddOrUpdate(TKey key, TValue value, Func<TKey, TValue, TValue> updateValueFactory);
         IBinarySearchTree<TKey, TValue> TryRemove(TKey key, out bool removed, out TValue value);
