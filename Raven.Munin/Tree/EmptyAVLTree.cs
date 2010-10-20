@@ -5,7 +5,7 @@ namespace Raven.Munin.Tree
 {
     internal sealed class EmptyAVLTree<TKey, TValue> : IBinarySearchTree<TKey, TValue>
     {
-        private IComparer<TKey> comparer;
+        private readonly IComparer<TKey> comparer;
 
         public EmptyAVLTree(IComparer<TKey> comparer)
         {
@@ -36,14 +36,14 @@ namespace Raven.Munin.Tree
             get { throw new Exception("empty tree"); }
         }
 
-        public TValue FirstOrDefault
+        public IBinarySearchTree<TKey, TValue> LeftMost
         {
-            get { return default(TValue); }
+            get { return this; }
         }
 
-        public TValue LastOrDefault
+        public IBinarySearchTree<TKey, TValue> RightMost
         {
-            get { return default(TValue); }
+            get { return this; }
         }
 
         // IBinarySearchTree
@@ -60,6 +60,16 @@ namespace Raven.Munin.Tree
         public IBinarySearchTree<TKey, TValue> Search(TKey key)
         {
             return this;
+        }
+
+        public IEnumerable<TValue> GreaterThan(TKey gtKey)
+        {
+            yield break;
+        }
+
+        public IEnumerable<TValue> GreaterThanOrEqual(TKey gteKey)
+        {
+            yield break;
         }
 
         public TKey Key
@@ -97,12 +107,17 @@ namespace Raven.Munin.Tree
             return false;
         }
 
-        public IEnumerable<TKey> Keys
+        public IEnumerable<TKey> KeysInOrder
         {
             get { yield break; }
         }
 
-        public IEnumerable<TValue> Values
+        public IEnumerable<TValue> ValuesInOrder
+        {
+            get { yield break; }
+        }
+
+        public IEnumerable<TValue> ValuesInReverseOrder
         {
             get { yield break; }
         }

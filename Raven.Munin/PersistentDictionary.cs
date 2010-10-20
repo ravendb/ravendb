@@ -19,7 +19,7 @@ namespace Raven.Munin
         {
             get
             {
-                return persistentSource.Read(_ => KeyToFilePos.Keys);
+                return persistentSource.Read(_ => KeyToFilePos.KeysInOrder);
             }
         }
 
@@ -347,7 +347,7 @@ namespace Raven.Munin
 
         public IEnumerator<ReadResult> GetEnumerator()
         {
-            foreach (var positionInFile in KeyToFilePos.Values.ToArray())
+            foreach (var positionInFile in KeyToFilePos.ValuesInOrder.ToArray())
             {
                 byte[] readData = null;
                 var pos = positionInFile;

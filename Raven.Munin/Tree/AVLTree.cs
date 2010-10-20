@@ -47,29 +47,29 @@ namespace Raven.Munin.Tree
             get { return theValue; }
         }
 
-        public TValue FirstOrDefault
+        public IBinarySearchTree<TKey, TValue> LeftMost
         {
             get
             {
                 if(Left.IsEmpty)
-                    return Value;
+                    return this;
                 var current = Left;
                 while (current.Left.IsEmpty == false)
                     current = current.Left;
-                return current.FirstOrDefault;
+                return current.LeftMost;
             }
         }
 
-        public TValue LastOrDefault
+        public IBinarySearchTree<TKey, TValue> RightMost
         {
             get
             {
                 if (Right.IsEmpty)
-                    return Value;
+                    return this;
                 var current = Right;
                 while (current.Right.IsEmpty == false)
                     current = current.Right;
-                return current.LastOrDefault;
+                return current.RightMost;
             }
         }
 
@@ -93,6 +93,52 @@ namespace Raven.Munin.Tree
                 return Right.Search(key);
             return Left.Search(key);
         }
+
+        public IEnumerable<TValue> GreaterThan(TKey gtKey)
+        {
+            int compare = comparer.Compare(Key, gtKey);
+            if (compare <= 0)
+            {
+                foreach (var value in Right.GreaterThan(gtKey))
+                {
+                    yield return value;
+                }
+                yield break;
+            }
+            foreach (var value in Left.GreaterThan(gtKey))
+            {
+                yield return value;
+            }
+            yield return Value;
+            foreach (var value in Right.GreaterThan(gtKey))
+            {
+                yield return value;
+            }
+        }
+
+        public IEnumerable<TValue> GreaterThanOrEqual(TKey gteKey)
+        {
+            int compare = comparer.Compare(Key, gteKey);
+            if (compare < 0)
+            {
+                foreach (var value in Right.GreaterThan(gteKey))
+                {
+                    yield return value;
+                } 
+                yield break;
+            }
+
+            foreach (var value in Left.GreaterThan(gteKey))
+            {
+                yield return value;
+            } 
+            yield return Value;
+            foreach (var value in Right.GreaterThanOrEqual(gteKey))
+            {
+                yield return value;
+            }
+        }
+
 
         public TKey Key
         {
@@ -175,24 +221,29 @@ namespace Raven.Munin.Tree
             return true;
         }
 
-        public IEnumerable<TKey> Keys
+        public IEnumerable<TKey> KeysInOrder
         {
-            get { return from t in Enumerate() select t.Key; }
+            get { return from t in EnumerateInOrder() select t.Key; }
         }
 
-        public IEnumerable<TValue> Values
+        public IEnumerable<TValue> ValuesInOrder
         {
-            get { return from t in Enumerate() select t.Value; }
+            get { return from t in EnumerateInOrder() select t.Value; }
+        }
+
+        public IEnumerable<TValue> ValuesInReverseOrder
+        {
+            get { return from t in EnumerateInReverseOrder() select t.Value; }
         }
 
         public IEnumerable<KeyValuePair<TKey, TValue>> Pairs
         {
-            get { return from t in Enumerate() select new KeyValuePair<TKey, TValue>(t.Key, t.Value); }
+            get { return from t in EnumerateInOrder() select new KeyValuePair<TKey, TValue>(t.Key, t.Value); }
         }
 
         #endregion
 
-        private IEnumerable<IBinarySearchTree<TKey, TValue>> Enumerate()
+        private IEnumerable<IBinarySearchTree<TKey, TValue>> EnumerateInOrder()
         {
             var stack = Stack<IBinarySearchTree<TKey, TValue>>.Empty;
             for (IBinarySearchTree<TKey, TValue> current = this; !current.IsEmpty || !stack.IsEmpty; current = current.Right)
@@ -201,6 +252,22 @@ namespace Raven.Munin.Tree
                 {
                     stack = stack.Push(current);
                     current = current.Left;
+                }
+                current = stack.Peek();
+                stack = stack.Pop();
+                yield return current;
+            }
+        }
+
+        private IEnumerable<IBinarySearchTree<TKey, TValue>> EnumerateInReverseOrder()
+        {
+            var stack = Stack<IBinarySearchTree<TKey, TValue>>.Empty;
+            for (IBinarySearchTree<TKey, TValue> current = this; !current.IsEmpty || !stack.IsEmpty; current = current.Left)
+            {
+                while (!current.IsEmpty)
+                {
+                    stack = stack.Push(current);
+                    current = current.Right;
                 }
                 current = stack.Peek();
                 stack = stack.Pop();

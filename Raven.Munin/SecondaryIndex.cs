@@ -72,51 +72,29 @@ namespace Raven.Munin
 
         public IEnumerable<JToken> SkipFromEnd(int start)
         {
-            return persistentSource.Read(_ => SkipFromEndInternal(start));
-        }
-
-        private IEnumerable<JToken> SkipFromEndInternal(int start)
-        {
-            return Index.Values.Skip(start).Select(item => item.Key);
+            return Index.ValuesInReverseOrder.Skip(start).Select(item => item.Key);
         }
 
         public IEnumerable<JToken> SkipAfter(JToken key)
         {
-            return Skip(key, i => i <= 0);
-        }
-
-        private IEnumerable<JToken> Skip(JToken key, Func<int, bool> shouldMoveToNext)
-        {
-            IComparable actualKey = transform(key);
-            var recordingComparer = new RecordingComparer();
-            Array.BinarySearch(Index.Keys.ToArray(), actualKey, recordingComparer);
-
-            if (recordingComparer.LastComparedTo == null)
-                yield break;
-
-            var result = Index.Search(recordingComparer.LastComparedTo);
-
-            if (shouldMoveToNext(recordingComparer.LastComparedTo.CompareTo(actualKey)))
-                result = result.Right; // skip to the next higher value
-
-            foreach (var item in result.Values)
-            {
-                yield return item.Key;
-            }
+            return Index.GreaterThan(transform(key)).Select(binarySearchTree => binarySearchTree.Value);
         }
 
         public IEnumerable<JToken> SkipTo(JToken key)
         {
-            return persistentSource.Read(_ => Skip(key, i => i < 0));
+            return Index.GreaterThanOrEqual(transform(key)).Select(binarySearchTree => binarySearchTree.Value);
         }
 
         public JToken LastOrDefault()
         {
             return persistentSource.Read(_ =>
             {
-                if (Index.Count == 0)
+                if (Index.RightMost.IsEmpty)
                     return null;
-                return Index.LastOrDefault.LastOrDefault;
+                var binarySearchTree = Index.RightMost.Value.RightMost;
+                if (binarySearchTree.IsEmpty)
+                    return null;
+                return binarySearchTree.Value;
             });
         }
 
@@ -124,9 +102,12 @@ namespace Raven.Munin
         {
             return persistentSource.Read(_ =>
             {
-                if (Index.Count == 0)
+                if (Index.LeftMost.IsEmpty)
                     return null;
-                return Index.FirstOrDefault.FirstOrDefault;
+                var binarySearchTree = Index.LeftMost.Value.LeftMost;
+                if (binarySearchTree.IsEmpty)
+                    return null;
+                return binarySearchTree.Value;
             });
         }
 

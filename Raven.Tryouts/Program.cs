@@ -16,13 +16,14 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
+		    Console.WriteLine("Starting...");
 		    for (int i = 0; i < 1500; i++)
 		    {
-		        Console.Write(i+"\r");
-		        var t = new LinqGitHub147();
+                using(var t = new DocumentStoreServerTests())
                 {
-                    t.CanSelectStringProperty();
+                    t.Can_create_index_using_linq_from_client_using_map_reduce();
                 }
+                Console.Write(i + "\r");
 		    }
 		}
 	}
