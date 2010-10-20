@@ -347,7 +347,7 @@ namespace Raven.Munin
 
         public IEnumerator<ReadResult> GetEnumerator()
         {
-            foreach (var positionInFile in KeyToFilePos.ValuesInOrder.ToArray())
+            foreach (var positionInFile in KeyToFilePos.ValuesInOrder)
             {
                 byte[] readData = null;
                 var pos = positionInFile;
