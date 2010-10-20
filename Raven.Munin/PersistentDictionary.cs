@@ -7,17 +7,13 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Runtime.Caching;
 using Newtonsoft.Json.Linq;
+using Raven.Munin.Tree;
 
 namespace Raven.Munin
 {
     public class PersistentDictionary : IEnumerable<PersistentDictionary.ReadResult>
     {
         public string Name { get; set; }
-
-        public override string ToString()
-        {
-            return Name + " (" + ItemCount + ")";
-        }
 
         public IEnumerable<JToken> Keys
         {
@@ -27,9 +23,10 @@ namespace Raven.Munin
             }
         }
 
-        private ConcurrentDictionary<JToken, PositionInFile> KeyToFilePos
+        private IBinarySearchTree<JToken, PositionInFile> KeyToFilePos
         {
             get { return parent.DictionaryStates[DictionaryId].KeyToFilePositionInFiles; }
+            set { parent.DictionaryStates[DictionaryId].KeyToFilePositionInFiles = value; }
         }
 
 
@@ -44,14 +41,14 @@ namespace Raven.Munin
         private readonly ConcurrentDictionary<Guid, List<Command>> operationsInTransactions = new ConcurrentDictionary<Guid, List<Command>>();
 
         private IPersistentSource persistentSource;
-        private readonly IEqualityComparer<JToken> comparer;
+        private readonly ICompererAndEquality<JToken> comparer;
 
         private readonly MemoryCache cache = new MemoryCache(Guid.NewGuid().ToString());
         private AggregateDictionary parent;
         public int DictionaryId { get; set; }
 
 
-        public PersistentDictionary(IEqualityComparer<JToken> comparer)
+        public PersistentDictionary(ICompererAndEquality<JToken> comparer)
         {
             keysModifiedInTx = new ConcurrentDictionary<JToken, Guid>(comparer);
             this.comparer = comparer;
@@ -59,7 +56,7 @@ namespace Raven.Munin
 
         public int WasteCount { get; private set; }
 
-        public int ItemCount
+        public int ItemsCount
         {
             get { return KeyToFilePos.Count; }
         }
@@ -291,7 +288,7 @@ namespace Raven.Munin
 
         private void AddInteral(JToken key, PositionInFile position)
         {
-            KeyToFilePos.AddOrUpdate(key, position, (token, oldPos) =>
+            KeyToFilePos = KeyToFilePos.AddOrUpdate(key, position, (token, oldPos) =>
             {
                 WasteCount += 1;
                 foreach (var index in SecondaryIndices)
@@ -309,7 +306,9 @@ namespace Raven.Munin
         private void RemoveInternal(JToken key)
         {
             PositionInFile removedValue;
-            if (KeyToFilePos.TryRemove(key, out removedValue) == false)
+            bool removed;
+            KeyToFilePos = KeyToFilePos.TryRemove(key, out removed, out removedValue);
+            if (removed == false)
                 return;
             cache.Remove(removedValue.Position.ToString());
             WasteCount += 1;
@@ -321,7 +320,7 @@ namespace Raven.Munin
 
         internal IEnumerable<Command> CopyCommittedData(Stream tempData)
         {
-            return from kvp in KeyToFilePos
+            return from kvp in KeyToFilePos.Pairs
                    select new Command
                    {
                        Key = kvp.Key,

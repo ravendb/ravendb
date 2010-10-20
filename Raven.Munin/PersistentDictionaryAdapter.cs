@@ -26,7 +26,7 @@ namespace Raven.Munin
 
         public int Count
         {
-            get { return persistentDictionary.ItemCount; }
+            get { return persistentDictionary.ItemsCount; }
         }
 
         public IEnumerable<JToken> Keys

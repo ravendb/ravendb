@@ -52,6 +52,8 @@
   <ItemGroup>
     <Compile Include="AbstractPersistentSource.cs" />
     <Compile Include="AggregateDictionary.cs" />
+    <Compile Include="CompererAndEquality.cs" />
+    <Compile Include="Tree\AVLTree.cs" />
     <Compile Include="Command.cs" />
     <Compile Include="CommandType.cs" />
     <Compile Include="ComparableByteArray.cs" />
@@ -70,6 +72,11 @@
     <Compile Include="RemoteManagedStorageState.cs" />
     <Compile Include="SecondaryIndex.cs" />
     <Compile Include="StreamsPool.cs" />
+    <Compile Include="Tree\EmptyAVLTree.cs" />
+    <Compile Include="Tree\EmptyStack.cs" />
+    <Compile Include="Tree\IBinarySearchTree.cs" />
+    <Compile Include="Tree\IStack.cs" />
+    <Compile Include="Tree\Stack.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Raven.Database\RavenDB.snk">

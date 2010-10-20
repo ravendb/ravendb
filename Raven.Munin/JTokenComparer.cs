@@ -5,7 +5,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Raven.Munin
 {
-    public class JTokenComparer : IComparer<JToken>, IEqualityComparer<JToken>
+    public class JTokenComparer : ICompererAndEquality<JToken>
     {
         public static JTokenComparer Instance = new JTokenComparer();
 
