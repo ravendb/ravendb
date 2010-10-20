@@ -77,12 +77,12 @@ namespace Raven.Munin
 
         public IEnumerable<JToken> SkipAfter(JToken key)
         {
-            return Index.GreaterThan(transform(key)).Select(binarySearchTree => binarySearchTree.Value);
+            return Index.GreaterThan(transform(key)).SelectMany(binarySearchTree => binarySearchTree.ValuesInOrder);
         }
 
         public IEnumerable<JToken> SkipTo(JToken key)
         {
-            return Index.GreaterThanOrEqual(transform(key)).Select(binarySearchTree => binarySearchTree.Value);
+            return Index.GreaterThanOrEqual(transform(key)).SelectMany(binarySearchTree => binarySearchTree.ValuesInOrder);
         }
 
         public JToken LastOrDefault()
