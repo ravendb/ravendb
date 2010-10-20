@@ -10,6 +10,10 @@ namespace Raven.Munin.Tree
         // IBinaryTree
         bool IsEmpty { get; }
         TValue Value { get; }
+
+        TValue FirstOrDefault { get; }
+        TValue LastOrDefault { get; }
+
         // IBinarySearchTree
         IBinarySearchTree<TKey, TValue> Left { get; }
         IBinarySearchTree<TKey, TValue> Right { get; }

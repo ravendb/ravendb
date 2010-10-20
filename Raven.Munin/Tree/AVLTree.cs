@@ -47,6 +47,32 @@ namespace Raven.Munin.Tree
             get { return theValue; }
         }
 
+        public TValue FirstOrDefault
+        {
+            get
+            {
+                if(Left.IsEmpty)
+                    return Value;
+                var current = Left;
+                while (current.Left.IsEmpty == false)
+                    current = current.Left;
+                return current.FirstOrDefault;
+            }
+        }
+
+        public TValue LastOrDefault
+        {
+            get
+            {
+                if (Right.IsEmpty)
+                    return Value;
+                var current = Right;
+                while (current.Right.IsEmpty == false)
+                    current = current.Right;
+                return current.LastOrDefault;
+            }
+        }
+
         // IBinarySearchTree
         public IBinarySearchTree<TKey, TValue> Left
         {

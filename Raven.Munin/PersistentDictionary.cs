@@ -30,12 +30,6 @@ namespace Raven.Munin
         }
 
 
-        private List<SecondaryIndex> SecondaryIndices
-        {
-            get { return parent.DictionaryStates[DictionaryId].SecondaryIndices; }
-        }
-
-
         private readonly ConcurrentDictionary<JToken, Guid> keysModifiedInTx;
 
         private readonly ConcurrentDictionary<Guid, List<Command>> operationsInTransactions = new ConcurrentDictionary<Guid, List<Command>>();
@@ -52,6 +46,7 @@ namespace Raven.Munin
         {
             keysModifiedInTx = new ConcurrentDictionary<JToken, Guid>(comparer);
             this.comparer = comparer;
+            SecondaryIndices = new List<SecondaryIndex>();
         }
 
         public int WasteCount { get; private set; }
@@ -61,12 +56,16 @@ namespace Raven.Munin
             get { return KeyToFilePos.Count; }
         }
 
-        public int AddSecondaryIndex(Expression<Func<JToken, IComparable>> func)
+        public SecondaryIndex AddSecondaryIndex(Expression<Func<JToken, IComparable>> func)
         {
             var secondaryIndex = new SecondaryIndex(func.Compile(), func.ToString(), persistentSource);
             SecondaryIndices.Add(secondaryIndex);
-            return SecondaryIndices.Count - 1;
+            persistentSource.DictionariesStates[DictionaryId].SecondaryIndicesState.Add(new EmptyAVLTree<IComparable, IBinarySearchTree<JToken, JToken>>(Comparer<IComparable>.Default));
+            secondaryIndex.Initialize(DictionaryId, SecondaryIndices.Count - 1);
+            return secondaryIndex;
         }
+
+        public List<SecondaryIndex> SecondaryIndices { get; set; }
 
         internal void ApplyCommands(IEnumerable<Command> cmds)
         {
@@ -375,11 +374,6 @@ namespace Raven.Munin
             parent = aggregateDictionary;
 
             parent.DictionaryStates[dictionaryId] = new PersistentDictionaryState(comparer);
-        }
-
-        public SecondaryIndex GetSecondaryIndex(int idx)
-        {
-            return parent.DictionaryStates[DictionaryId].SecondaryIndices[idx];
         }
     }
 }
