@@ -369,7 +369,20 @@ more responsive application.
 		{
 			var identityProperty = documentStore.Conventions.GetIdentityProperty(entity.GetType());
 			if (identityProperty != null && identityProperty.CanWrite)
-				identityProperty.SetValue(entity, id, null);
+			{
+                if (identityProperty.PropertyType == typeof(string))
+                {
+                    identityProperty.SetValue(entity, id, null);
+                }
+                else // need converting
+                {
+                    var converter = Conventions.IdentityTypeConvertors.FirstOrDefault(x=>x.CanConvertFrom(identityProperty.PropertyType));
+                    if(converter == null)
+                        throw new ArgumentException("Could not convert identity to type " + identityProperty.PropertyType + " because there is not matching type converter registered in the conventions' IdentityTypeConvertors");
+
+                    identityProperty.SetValue(entity, converter.ConvertTo(id), null);
+                }
+			}
 		}
 
 		private static void EnsureNotReadVetoed(JObject metadata)
@@ -469,7 +482,15 @@ more responsive application.
             var identityProperty = GetIdentityProperty(entity.GetType());
 			if (identityProperty != null)
 			{
-			    id = identityProperty.GetValue(entity, null) as string;
+			    var value = identityProperty.GetValue(entity, null);
+			    id = value as string;
+			    if(id == null && value != null) // need convertion
+			    {
+                    var converter = Conventions.IdentityTypeConvertors.FirstOrDefault(x => x.CanConvertFrom(value.GetType()));
+                    if(converter == null)
+                        throw new ArgumentException("Cannot use type " + value.GetType() + " as an identity without having a type converter registered for it in the conventions' IdentityTypeConvertors");
+			        id = converter.ConvertFrom(value);
+			    }
 			    return true;
 			}
             id = null;
@@ -545,11 +566,7 @@ more responsive application.
 				documentMetadata.Metadata = batchResult.Metadata;
 				documentMetadata.OriginalValue = ConvertEntityToJson(entity, documentMetadata.Metadata);
 
-				// Set/Update the id of the entity
-				var identityProperty = GetIdentityProperty(entity.GetType());
-				if (identityProperty != null && identityProperty.CanWrite)
-					// this is allowed because we need to support store anonymous types
-					identityProperty.SetValue(entity, batchResult.Key, null);
+                TrySetIdentity(entity, batchResult.Key);
 
 				if (stored != null)
 					stored(entity);

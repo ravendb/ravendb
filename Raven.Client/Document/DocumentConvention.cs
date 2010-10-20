@@ -1,9 +1,12 @@
 using System;
+using System.Collections.Generic;
+using System.ComponentModel;
 using System.Reflection;
 using System.Runtime.Serialization.Formatters;
 using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
+using Raven.Client.Converters;
 using Raven.Client.Util;
 using System.Linq;
 using Raven.Database.Json;
@@ -21,6 +24,12 @@ namespace Raven.Client.Document
 		/// </summary>
 		public DocumentConvention()
 		{
+            IdentityTypeConvertors = new List<ITypeConverter>
+            {
+                new Converters.GuidConverter(),
+                new Converters.Int32Converter(),
+                new Converters.Int64Converter(),
+            };
 			FindIdentityProperty = q => q.Name == "Id";
 			FindTypeTagName = t => DefaultTypeTagName(t);
 			IdentityPartsSeparator = "/";
@@ -36,6 +45,12 @@ namespace Raven.Client.Document
 		/// Register an action to customize the json serializer used by the <see cref="DocumentStore"/>
 		/// </summary>
 		public Action<JsonSerializer> CustomizeJsonSerializer { get; set; }
+
+        ///<summary>
+        /// A list of type convertors that can be used to translate the document key (string)
+        /// to whatever type it is that is used on the entity, if the type isn't already a string
+        ///</summary>
+        public List<ITypeConverter> IdentityTypeConvertors { get; set; }
 
 		/// <summary>
 		/// Gets or sets the identity parts separator used by the hilo generators

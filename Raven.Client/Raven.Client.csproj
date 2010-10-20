@@ -101,6 +101,10 @@
     <Compile Include="Client\WebRequestEventArgs.cs" />
     <Compile Include="Client\Async\WrapperAsyncData.cs" />
     <Compile Include="Client\WebResponseExtensions.cs" />
+    <Compile Include="Converters\GuidConverter.cs" />
+    <Compile Include="Converters\Int32Converter.cs" />
+    <Compile Include="Converters\Int64Converter.cs" />
+    <Compile Include="Converters\ITypeConverter.cs" />
     <Compile Include="Document\Async\AsyncDocumentSession.cs" />
     <Compile Include="Document\Async\SyncronousLoadResult.cs" />
     <Compile Include="Document\DefaultRavenContractResolver.cs" />
