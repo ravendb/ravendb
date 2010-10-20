@@ -727,6 +727,7 @@ If you really want to do in memory filtering on the data returned from the query
 		{
 			waitForNonStaleResults = true;
 			cutoff = DateTime.UtcNow;
+		    timeout = TimeSpan.FromSeconds(15);
 			return this;
 		}
 
