@@ -9,7 +9,12 @@ namespace Raven.Munin.Tree
     public sealed class AVLTree<TKey, TValue> : IBinarySearchTree<TKey, TValue>
     {
         private readonly int height;
-        
+
+        public override string ToString()
+        {
+            return string.Format("Key: {0}, Value: {1}, Count: {2}", theKey, theValue, Count);
+        }
+
         private readonly IComparer<TKey> comparer;
 
         private readonly TKey theKey;
@@ -121,14 +126,14 @@ namespace Raven.Munin.Tree
             int compare = comparer.Compare(Key, gteKey);
             if (compare < 0)
             {
-                foreach (var value in Right.GreaterThan(gteKey))
+                foreach (var value in Right.GreaterThanOrEqual(gteKey))
                 {
                     yield return value;
                 } 
                 yield break;
             }
 
-            foreach (var value in Left.GreaterThan(gteKey))
+            foreach (var value in Left.GreaterThanOrEqual(gteKey))
             {
                 yield return value;
             } 

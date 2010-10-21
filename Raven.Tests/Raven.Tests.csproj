@@ -189,6 +189,7 @@
     <Compile Include="Triggers\VetoCapitalNamesPutTrigger.cs" />
     <Compile Include="Util\ReflectionUtilTest.cs" />
     <Compile Include="Views\MapReduce.cs" />
+    <Compile Include="Views\MapReduce_IndependentSteps.cs" />
     <Compile Include="Views\ViewCompilation.cs" />
     <Compile Include="Views\ViewStorage.cs" />
   </ItemGroup>
