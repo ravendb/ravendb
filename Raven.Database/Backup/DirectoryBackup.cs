@@ -51,9 +51,6 @@ namespace Raven.Database.Backup
         {
             foreach (var file in Directory.EnumerateFiles(tempPath))
             {
-                if (Path.GetFileName(file) == "write.lock")
-                    continue; // skip the Lucne lock file
-
                 Notify("Copying " + Path.GetFileName(file));
                 var fullName = new FileInfo(file).FullName;
                 FileCopy(file, Path.Combine(destination, Path.GetFileName(file)), fileToSize[fullName]);
@@ -103,6 +100,10 @@ namespace Raven.Database.Backup
             var sourceFilesSnapshot = Directory.GetFiles(source);
             foreach (var sourceFile in sourceFilesSnapshot)
             {
+                if (Path.GetFileName(sourceFile) == "write.lock")
+                    continue; // skip the Lucne lock file
+
+               
                 var destFileName = Path.Combine(tempPath, Path.GetFileName(sourceFile));
                 CreateHardLink(
                     destFileName,
