@@ -144,9 +144,9 @@ namespace Raven.Storage.Managed
             data.WriteTo(ms);
 
             var lastOrefaultKeyById = storage.Documents["ById"].LastOrDefault();
-            int id = 0;
+            int id = 1;
             if (lastOrefaultKeyById != null)
-                id = lastOrefaultKeyById.Value<int>("id");
+                id = lastOrefaultKeyById.Value<int>("id") + 1;
 
             var newEtag = DocumentDatabase.CreateSequentialUuid();
             storage.Documents.Put(new JObject
