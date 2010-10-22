@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Newtonsoft.Json.Linq;
 
 namespace Raven.Munin.Tree
 {
@@ -10,6 +11,8 @@ namespace Raven.Munin.Tree
         // IBinaryTree
         bool IsEmpty { get; }
         TValue Value { get; }
+
+        JObject ToJObject();
 
         IBinarySearchTree<TKey, TValue> LeftMost { get; }
         IBinarySearchTree<TKey, TValue> RightMost { get; }

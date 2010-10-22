@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Newtonsoft.Json.Linq;
 
 namespace Raven.Munin.Tree
 {
@@ -13,6 +14,17 @@ namespace Raven.Munin.Tree
         public override string ToString()
         {
             return string.Format("Key: {0}, Value: {1}, Count: {2}", theKey, theValue, Count);
+        }
+
+        public JObject ToJObject()
+        {
+            return new JObject
+            {
+                {"key", JToken.FromObject(theKey)},
+                {"value", JToken.FromObject(theValue)},
+                {"left", Left.ToJObject()},
+                {"right", Right.ToJObject()}
+            };
         }
 
         private readonly IComparer<TKey> comparer;
@@ -165,9 +177,9 @@ namespace Raven.Munin.Tree
             AVLTree<TKey, TValue> result;
             var compare = comparer.Compare(key, Key);
             if (compare > 0)
-                result = new AVLTree<TKey, TValue>(comparer, Key, Value, Left, Right.Add(key, value));
+                result = new AVLTree<TKey, TValue>(comparer, Key, Value, Left, Right.AddOrUpdate(key, value, updateValueFactory));
             else if(compare < 0)
-                result = new AVLTree<TKey, TValue>(comparer, Key, Value, Left.Add(key, value), Right);
+                result = new AVLTree<TKey, TValue>(comparer, Key, Value, Left.AddOrUpdate(key, value, updateValueFactory), Right);
             else
             {
                 var newValue = updateValueFactory(key, Value);

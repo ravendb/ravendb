@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Newtonsoft.Json.Linq;
 
 namespace Raven.Munin.Tree
 {
@@ -34,6 +35,11 @@ namespace Raven.Munin.Tree
         public TValue Value
         {
             get { throw new Exception("empty tree"); }
+        }
+
+        public JObject ToJObject()
+        {
+            return new JObject();
         }
 
         public IBinarySearchTree<TKey, TValue> LeftMost
