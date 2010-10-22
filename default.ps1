@@ -89,6 +89,7 @@ task Compile -depends Init {
 task Test -depends Compile {
   $old = pwd
   cd $build_dir
+  exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\Raven.Munin.Tests.dll" } 
   exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\Raven.Tests.dll" } 
   exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\Raven.Scenarios.dll" }
   exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\Raven.Client.Tests.dll" }
@@ -164,9 +165,9 @@ task CopyEmbeddedClient {
 	cp $build_dir\Spatial.Net.dll $build_dir\Output\EmbeddedClient
 	cp $build_dir\log4net.dll $build_dir\Output\EmbeddedClient
 	cp $build_dir\Newtonsoft.Json.dll $build_dir\Output\EmbeddedClient
-    cp $build_dir\Raven.Storage.Esent.dll $build_dir\Output\EmbeddedClient
+  cp $build_dir\Raven.Storage.Esent.dll $build_dir\Output\EmbeddedClient
 	cp $build_dir\Raven.Storage.Managed.dll $build_dir\Output\EmbeddedClient
-
+	cp $build_dir\Raven.Munin.dll $build_dir\Output\EmbeddedClient
 }
 
 task CopySmuggler { 
@@ -196,14 +197,14 @@ task CopyWeb {
 	cp $build_dir\Raven.Database.dll $build_dir\Output\Web\bin
 	cp $build_dir\Raven.Storage.Esent.dll $build_dir\Output\Web\bin
 	cp $build_dir\Raven.Storage.Managed.dll $build_dir\Output\Web\bin
-	
-	
+	cp $build_dir\Raven.Munin.dll $build_dir\Output\Web\bin	
 	cp $base_dir\DefaultConfigs\web.config $build_dir\Output\Web\web.config
 	
 }
 
 task CopyBundles {
 	cp $build_dir\Raven.Bundles.*.dll $build_dir\Output\Bundles
+	cp $build_dir\Raven.Client.*.dll $build_dir\Output\Bundles
 	del $build_dir\Output\Bundles\Raven.Bundles.Tests.dll
 }
 
@@ -219,6 +220,7 @@ task CopyServer {
 	cp $build_dir\Raven.Database.dll $build_dir\Output\Server
 	cp $build_dir\Raven.Storage.Esent.dll $build_dir\Output\Server
 	cp $build_dir\Raven.Storage.Managed.dll $build_dir\Output\Server
+	cp $build_dir\Raven.Munin.dll $build_dir\Output\Server
 	cp $base_dir\DefaultConfigs\RavenDb.exe.config $build_dir\Output\Server\Raven.Server.exe.config
 }
 
@@ -265,6 +267,7 @@ task CreateNupack {
 	cp $build_dir\Raven.Database.dll $build_dir\NuPack\Tools
 	cp $build_dir\Raven.Storage.Esent.dll $build_dir\NuPack\Tools
 	cp $build_dir\Raven.Storage.Managed.dll $build_dir\NuPack\Tools
+	cp $build_dir\Raven.Munin.dll $build_dir\NuPack\Tools
 	cp $base_dir\DefaultConfigs\RavenDb.exe.config $build_dir\NuPack\Tools\Raven.Server.exe.config
 	
 	& $tools_dir\NuPack.exe $build_dir\NuPack\RavenDB.nuspec

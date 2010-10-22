@@ -5,7 +5,7 @@ using System.Linq.Expressions;
 using System.Threading;
 using Newtonsoft.Json.Linq;
 
-namespace Raven.Storage.Managed.Impl
+namespace Raven.Munin
 {
     public class PersistentDictionaryAdapter : IEnumerable<PersistentDictionary.ReadResult>
     {
@@ -26,7 +26,7 @@ namespace Raven.Storage.Managed.Impl
 
         public int Count
         {
-            get { return persistentDictionary.ItemCount; }
+            get { return persistentDictionary.ItemsCount; }
         }
 
         public IEnumerable<JToken> Keys
@@ -49,7 +49,7 @@ namespace Raven.Storage.Managed.Impl
             return persistentDictionary.Remove(key, txId.Value);
         }
 
-        public void Add(string name, Expression<Func<JToken, JToken>> func)
+        public void Add(string name, Expression<Func<JToken, IComparable>> func)
         {
             secondaryIndices[name] = persistentDictionary.AddSecondaryIndex(func); 
         }

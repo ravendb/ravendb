@@ -100,6 +100,10 @@ namespace Raven.Database.Backup
             var sourceFilesSnapshot = Directory.GetFiles(source);
             foreach (var sourceFile in sourceFilesSnapshot)
             {
+                if (Path.GetFileName(sourceFile) == "write.lock")
+                    continue; // skip the Lucne lock file
+
+               
                 var destFileName = Path.Combine(tempPath, Path.GetFileName(sourceFile));
                 CreateHardLink(
                     destFileName,

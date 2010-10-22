@@ -32,7 +32,7 @@ namespace Raven.Storage.Tests
 		[Fact]
 		public void CanHandleTruncatedFile()
 		{
-			var fileName = Path.Combine("test", "raven.log");
+			var fileName = Path.Combine("test", "raven.ravendb");
 			long lengthAfterFirstTransaction;
 			using (var tx = NewTransactionalStorage())
 			{

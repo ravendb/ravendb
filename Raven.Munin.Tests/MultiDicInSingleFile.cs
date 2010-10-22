@@ -1,15 +1,13 @@
 using System;
 using System.IO;
-using Raven.Database;
-using Raven.Storage.Managed.Impl;
 
-namespace Raven.Tests.ManagedStorage.Impl
+namespace Raven.Munin.Tests
 {
     public class MultiDicInSingleFile : IDisposable
     {
-        protected PersistentDictionary persistentDictionaryOne;
+        protected PersistentDictionaryAdapter persistentDictionaryOne;
         protected FileBasedPersistentSource persistentSource;
-        protected PersistentDictionary persistentDictionaryTwo;
+        protected PersistentDictionaryAdapter persistentDictionaryTwo;
         protected AggregateDictionary aggregateDictionary;
 
         public MultiDicInSingleFile()
@@ -27,9 +25,10 @@ namespace Raven.Tests.ManagedStorage.Impl
 
         #endregion
 
-        protected void Commit(Guid txId)
+        protected void Commit()
         {
-            aggregateDictionary.Commit(txId);
+            aggregateDictionary.Commit();
+            aggregateDictionary.BeginTransaction();
         }
 
         protected void Reopen()
@@ -40,13 +39,14 @@ namespace Raven.Tests.ManagedStorage.Impl
 
         protected void OpenDictionary()
         {
-            persistentSource = new FileBasedPersistentSource(Path.GetTempPath(), "test_", TransactionMode.Lazy);
+            persistentSource = new FileBasedPersistentSource(Path.GetTempPath(), "test_",  writeThrough: false);
             aggregateDictionary = new AggregateDictionary(persistentSource);
 
-            persistentDictionaryOne = aggregateDictionary.Add(new PersistentDictionary(persistentSource, JTokenComparer.Instance));
-            persistentDictionaryTwo = aggregateDictionary.Add(new PersistentDictionary(persistentSource, JTokenComparer.Instance));
+            persistentDictionaryOne = new PersistentDictionaryAdapter(aggregateDictionary.CurrentTransactionId, aggregateDictionary.Add(new PersistentDictionary(JTokenComparer.Instance)));
+            persistentDictionaryTwo = new PersistentDictionaryAdapter(aggregateDictionary.CurrentTransactionId, aggregateDictionary.Add(new PersistentDictionary(JTokenComparer.Instance)));
 
             aggregateDictionary.Initialze();
+            aggregateDictionary.BeginTransaction();
         }
     }
 }

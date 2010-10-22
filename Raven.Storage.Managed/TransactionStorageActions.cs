@@ -7,6 +7,7 @@ using Raven.Database;
 using Raven.Database.Exceptions;
 using Raven.Database.Storage;
 using Raven.Database.Storage.StorageActions;
+using Raven.Munin;
 using Raven.Storage.Managed.Impl;
 using System.Linq;
 using Raven.Database.Json;
@@ -174,7 +175,7 @@ namespace Raven.Storage.Managed
 
                 JObject metadata = null;
                 JObject data = null;
-                if (readResult.Position >= 0)
+                if (readResult.Position > 0) // position can never be 0, because of the skip record
                 {
                     var ms = new MemoryStream(readResult.Data());
                     metadata = ms.ToJObject();

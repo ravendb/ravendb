@@ -2,94 +2,70 @@
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Runtime.Caching;
-using System.Threading;
 using Newtonsoft.Json.Linq;
+using Raven.Munin.Tree;
 
-namespace Raven.Storage.Managed.Impl
+namespace Raven.Munin
 {
     public class PersistentDictionary : IEnumerable<PersistentDictionary.ReadResult>
     {
-        private class PositionInFile
-        {
-            public long Position { get; set; }
-            public int Size { get; set; }
-            public JToken Key { get; set; }
-        }
-
         public string Name { get; set; }
-
-        public override string ToString()
-        {
-            return Name + " (" + ItemCount + ")";
-        }
 
         public IEnumerable<JToken> Keys
         {
             get
             {
-                currentlyCommittingLock.EnterReadLock();
-                try
-                {
-                    return keyToFilePos.Keys.ToArray();
-                }
-                finally
-                {
-                    currentlyCommittingLock.ExitReadLock();
-                }
+                return persistentSource.Read(_ => KeyToFilePos.KeysInOrder);
             }
         }
 
-        private readonly ConcurrentDictionary<JToken, PositionInFile> keyToFilePos;
+        private IBinarySearchTree<JToken, PositionInFile> KeyToFilePos
+        {
+            get { return parent.DictionaryStates[DictionaryId].KeyToFilePositionInFiles; }
+            set { parent.DictionaryStates[DictionaryId].KeyToFilePositionInFiles = value; }
+        }
 
-        /// <summary>
-        /// We have to support recursion here, because we want to be able to scan a secondary index and pull records from the main one
-        /// at the same time.
-        /// </summary>
-        private ReaderWriterLockSlim currentlyCommittingLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
-
-        private readonly List<SecondaryIndex> secondaryIndices = new List<SecondaryIndex>();
 
         private readonly ConcurrentDictionary<JToken, Guid> keysModifiedInTx;
 
         private readonly ConcurrentDictionary<Guid, List<Command>> operationsInTransactions = new ConcurrentDictionary<Guid, List<Command>>();
 
-        private readonly IPersistentSource persistentSource;
-        private readonly IEqualityComparer<JToken> comparer;
+        private IPersistentSource persistentSource;
+        private readonly ICompererAndEquality<JToken> comparer;
 
         private readonly MemoryCache cache = new MemoryCache(Guid.NewGuid().ToString());
+        private AggregateDictionary parent;
         public int DictionaryId { get; set; }
 
-        public void JoinToAggregate(ReaderWriterLockSlim theCurrentlyCommittingLock)
-        {
-            this.currentlyCommittingLock = theCurrentlyCommittingLock;
-        }
 
-        public PersistentDictionary(IPersistentSource persistentSource, IEqualityComparer<JToken> comparer)
+        public PersistentDictionary(ICompererAndEquality<JToken> comparer)
         {
             keysModifiedInTx = new ConcurrentDictionary<JToken, Guid>(comparer);
-            keyToFilePos = new ConcurrentDictionary<JToken, PositionInFile>(comparer);
-            this.persistentSource = persistentSource;
             this.comparer = comparer;
+            SecondaryIndices = new List<SecondaryIndex>();
         }
 
         public int WasteCount { get; private set; }
 
-        public int ItemCount
+        public int ItemsCount
         {
-            get { return keyToFilePos.Count; }
+            get { return KeyToFilePos.Count; }
         }
 
-        public SecondaryIndex AddSecondaryIndex(Expression<Func<JToken, JToken>> func)
+        public SecondaryIndex AddSecondaryIndex(Expression<Func<JToken, IComparable>> func)
         {
-            var secondaryIndex = new SecondaryIndex(new ModifiedJTokenComparer(func.Compile()), func.ToString(),currentlyCommittingLock);
-            secondaryIndices.Add(secondaryIndex);
+            var secondaryIndex = new SecondaryIndex(func.Compile(), func.ToString(), persistentSource);
+            SecondaryIndices.Add(secondaryIndex);
+            persistentSource.DictionariesStates[DictionaryId].SecondaryIndicesState.Add(new EmptyAVLTree<IComparable, IBinarySearchTree<JToken, JToken>>(Comparer<IComparable>.Default));
+            secondaryIndex.Initialize(DictionaryId, SecondaryIndices.Count - 1);
             return secondaryIndex;
         }
+
+        public List<SecondaryIndex> SecondaryIndices { get; set; }
 
         internal void ApplyCommands(IEnumerable<Command> cmds)
         {
@@ -116,35 +92,17 @@ namespace Raven.Storage.Managed.Impl
             }
         }
 
-        public bool Put(JToken key, byte[] value, Guid txId)
+        internal bool Put(JToken key, byte[] value, Guid txId)
         {
-
             Guid existing;
             if (keysModifiedInTx.TryGetValue(key, out existing) && existing != txId)
                 return false;
 
-            long position;
-            if(value != null)
-            {
-                lock (persistentSource.SyncLock)
-                {
-                    // we *always* write to the end
-                    position = persistentSource.Data.Position = persistentSource.Data.Length;
-                    persistentSource.Data.Write(value, 0, value.Length);
-                }
-                cache[position.ToString()] = value;
-            }
-            else
-            {
-                position = -1;
-                
-            }
             operationsInTransactions.GetOrAdd(txId, new List<Command>())
                 .Add(new Command
                 {
                     Key = key,
-                    Position = position,
-                    Size = (value == null ? 0 : value.Length),
+                    Payload = value,
                     DictionaryId = DictionaryId,
                     Type = CommandType.Put
                 });
@@ -155,7 +113,7 @@ namespace Raven.Storage.Managed.Impl
             return true;
         }
 
-        public bool UpdateKey(JToken key, Guid txId)
+        internal bool UpdateKey(JToken key, Guid txId)
         {
             Guid existing;
             if (keysModifiedInTx.TryGetValue(key, out existing) && existing != txId)
@@ -182,7 +140,7 @@ namespace Raven.Storage.Managed.Impl
             return true;
         }
 
-        public ReadResult Read(JToken key, Guid txId)
+        internal ReadResult Read(JToken key, Guid txId)
         {
             byte[] readData = null;
 
@@ -201,7 +159,7 @@ namespace Raven.Storage.Managed.Impl
                             {
                                 Position = command.Position,
                                 Size = command.Size,
-                                Data = () => readData ?? (readData = ReadData(command.Position, command.Size)),
+                                Data = () => readData ?? (readData = ReadData(command)),
                                 Key = command.Key
                             };
                         case CommandType.Delete:
@@ -212,11 +170,10 @@ namespace Raven.Storage.Managed.Impl
                 }
             }
 
-            currentlyCommittingLock.EnterReadLock();
-            try
+            return persistentSource.Read(log =>
             {
                 PositionInFile pos;
-                if (keyToFilePos.TryGetValue(key, out pos) == false)
+                if (KeyToFilePos.TryGetValue(key, out pos) == false)
                     return null;
 
                 return new ReadResult
@@ -226,11 +183,15 @@ namespace Raven.Storage.Managed.Impl
                     Data = () => readData ?? (readData = ReadData(pos.Position, pos.Size)),
                     Key = pos.Key
                 };
-            }
-            finally
-            {
-                currentlyCommittingLock.ExitReadLock();
-            }
+            });
+        }
+
+        private byte[] ReadData(Command command)
+        {
+            if (command.Payload != null)
+                return command.Payload;
+
+            return ReadData(command.Position, command.Size);
         }
 
         private byte[] ReadData(long pos, int size)
@@ -240,34 +201,31 @@ namespace Raven.Storage.Managed.Impl
             if (cached != null)
                 return (byte[])cached;
 
-            byte[] buf;
-
-            lock (persistentSource.SyncLock)
+            return persistentSource.Read(log =>
             {
+                byte[] buf;
                 cached = cache.Get(cacheKey);
                 if (cached != null)
-                    return (byte[])cached;
+                    return (byte[]) cached;
 
-                buf = ReadDataNoCaching(pos, size);
-            }
-
-            cache[cacheKey] = buf;
-
-            return buf;
+                buf = ReadDataNoCaching(log, pos, size);
+                cache[cacheKey] = buf;
+                return buf;
+            });
         }
 
-        private byte[] ReadDataNoCaching(long pos, int size)
+        private byte[] ReadDataNoCaching(Stream log, long pos, int size)
         {
-            persistentSource.Data.Position = pos;
+            log.Position = pos;
 
             var read = 0;
             var buf = new byte[size];
             do
             {
-                int dataRead = persistentSource.Data.Read(buf, read, buf.Length - read);
+                int dataRead = log.Read(buf, read, buf.Length - read);
                 if (dataRead == 0) // nothing read, EOF, probably truncated write, 
                 {
-                    throw new InvalidDataException("Could not read complete data, the data file is corrupt");
+                    throw new InvalidDataException("Could not read complete data, the file is probably corrupt");
                 }
                 read += dataRead;
             } while (read < buf.Length);
@@ -329,16 +287,16 @@ namespace Raven.Storage.Managed.Impl
 
         private void AddInteral(JToken key, PositionInFile position)
         {
-            keyToFilePos.AddOrUpdate(key, position, (token, oldPos) =>
+            KeyToFilePos = KeyToFilePos.AddOrUpdate(key, position, (token, oldPos) =>
             {
                 WasteCount += 1;
-                foreach (var index in secondaryIndices)
+                foreach (var index in SecondaryIndices)
                 {
                     index.Remove(oldPos.Key);
                 }
                 return position;
             });
-            foreach (var index in secondaryIndices)
+            foreach (var index in SecondaryIndices)
             {
                 index.Add(key);
             }
@@ -347,64 +305,29 @@ namespace Raven.Storage.Managed.Impl
         private void RemoveInternal(JToken key)
         {
             PositionInFile removedValue;
-            if (keyToFilePos.TryRemove(key, out removedValue) == false)
+            bool removed;
+            KeyToFilePos = KeyToFilePos.TryRemove(key, out removed, out removedValue);
+            if (removed == false)
                 return;
             cache.Remove(removedValue.Position.ToString());
             WasteCount += 1;
-            foreach (var index in secondaryIndices)
+            foreach (var index in SecondaryIndices)
             {
                 index.Remove(removedValue.Key);
             }
         }
 
-        internal void CopyCommittedData(Stream tempData, List<Command> cmds)
+        internal IEnumerable<Command> CopyCommittedData(Stream tempData)
         {
-            currentlyCommittingLock.EnterReadLock();
-            try
-            {
-                foreach (var kvp in keyToFilePos) // copy committed data
-                {
-                    long pos = tempData.Position;
-                    byte[] data = ReadData(kvp.Value.Position, kvp.Value.Size);
-
-                    byte[] lenInBytes = BitConverter.GetBytes(data.Length);
-                    tempData.Write(lenInBytes, 0, lenInBytes.Length);
-                    tempData.Write(data, 0, data.Length);
-
-                    cmds.Add(new Command
-                    {
-                        Key = kvp.Key,
-                        Position = pos,
-                        DictionaryId = DictionaryId,
-                        Size = kvp.Value.Size,
-                        Type = CommandType.Put
-                    });
-
-                    kvp.Value.Position = pos;
-                }
-            }
-            finally
-            {
-                currentlyCommittingLock.ExitReadLock();
-            }
-        }
-
-        public void CopyUncommitedData(Stream tempData)
-        {
-            // copy uncommitted data
-            foreach (Command uncommitted in operationsInTransactions
-                .SelectMany(x => x.Value)
-                .Where(x => x.Type == CommandType.Put))
-            {
-                long pos = tempData.Position;
-                byte[] data = ReadData(uncommitted.Position, uncommitted.Size);
-
-                byte[] lenInBytes = BitConverter.GetBytes(data.Length);
-                tempData.Write(lenInBytes, 0, lenInBytes.Length);
-                tempData.Write(data, 0, data.Length);
-
-                uncommitted.Position = pos;
-            }
+            return from kvp in KeyToFilePos.Pairs
+                   select new Command
+                   {
+                       Key = kvp.Key,
+                       Payload = ReadData(kvp.Value.Position, kvp.Value.Size),
+                       DictionaryId = DictionaryId,
+                       Size = kvp.Value.Size,
+                       Type = CommandType.Put
+                   };
         }
 
         public void ClearCache()
@@ -424,7 +347,7 @@ namespace Raven.Storage.Managed.Impl
 
         public IEnumerator<ReadResult> GetEnumerator()
         {
-            foreach (var positionInFile in keyToFilePos.Values.ToArray())
+            foreach (var positionInFile in KeyToFilePos.ValuesInOrder)
             {
                 byte[] readData = null;
                 var pos = positionInFile;
@@ -442,6 +365,15 @@ namespace Raven.Storage.Managed.Impl
         IEnumerator IEnumerable.GetEnumerator()
         {
             return GetEnumerator();
+        }
+
+        public void Initialize(IPersistentSource source, int dictionaryId, AggregateDictionary aggregateDictionary)
+        {
+            persistentSource = source;
+            DictionaryId = dictionaryId;
+            parent = aggregateDictionary;
+
+            parent.DictionaryStates[dictionaryId] = new PersistentDictionaryState(comparer);
         }
     }
 }
