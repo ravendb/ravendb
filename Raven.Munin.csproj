@@ -63,7 +63,6 @@
     <Compile Include="MemoryPersistentSource.cs" />
     <Compile Include="ModifiedJTokenComparer.cs" />
     <Compile Include="Table.cs" />
-    <Compile Include="PersistentDictionaryAdapter.cs" />
     <Compile Include="PersistentDictionaryState.cs" />
     <Compile Include="PositionInFile.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

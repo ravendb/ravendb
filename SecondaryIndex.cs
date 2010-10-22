@@ -34,6 +34,8 @@ namespace Raven.Munin
 
         public int IndexId { get; set; }
 
+        public string Name { get; set; }
+
         public override string ToString()
         {
             return indexDef + " (" + Index.Count + ")";
