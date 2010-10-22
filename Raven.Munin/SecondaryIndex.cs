@@ -9,14 +9,14 @@ namespace Raven.Munin
     public class SecondaryIndex
     {
         private readonly string indexDef;
-        private readonly IPersistentSource persistentSource;
+        private IPersistentSource persistentSource;
         private readonly Func<JToken, IComparable> transform;
 
-        public SecondaryIndex(Func<JToken, IComparable> transform, string indexDef, IPersistentSource persistentSource)
+        public SecondaryIndex(Func<JToken, IComparable> transform, string indexDef)
         {
             this.transform = transform;
             this.indexDef = indexDef;
-            this.persistentSource = persistentSource;
+            IndexId = -1;
         }
 
         private IBinarySearchTree<IComparable, IBinarySearchTree<JToken, JToken>> Index
@@ -38,7 +38,9 @@ namespace Raven.Munin
 
         public override string ToString()
         {
-            return indexDef + " (" + Index.Count + ")";
+            if (IndexId == -1)
+                return Name + ": " + indexDef;
+            return Name + ": " + indexDef + " (" + Index.Count + ")";
         }
 
         public void Add(JToken key)
@@ -113,10 +115,11 @@ namespace Raven.Munin
             });
         }
 
-        public void Initialize(int dictionaryId, int indexId)
+        public void Initialize(IPersistentSource thePersistentSource,int dictionaryId, int indexId)
         {
             DictionaryId = dictionaryId;
             IndexId = indexId;
+            persistentSource = thePersistentSource;
         }
     }
 }
