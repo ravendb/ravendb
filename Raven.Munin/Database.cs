@@ -10,10 +10,10 @@ using Newtonsoft.Json.Linq;
 
 namespace Raven.Munin
 {
-    public class AggregateDictionary : IEnumerable<PersistentDictionary>
+    public class Database : IEnumerable<Table>
     {
         private readonly IPersistentSource persistentSource;
-        private readonly List<PersistentDictionary> dictionaries = new List<PersistentDictionary>();
+        private readonly List<Table> dictionaries = new List<Table>();
         
 
         public readonly ThreadLocal<Guid> CurrentTransactionId = new ThreadLocal<Guid>(() => Guid.Empty);
@@ -23,7 +23,7 @@ namespace Raven.Munin
             get { return persistentSource.DictionariesStates; }
         }
 
-        public AggregateDictionary(IPersistentSource persistentSource)
+        public Database(IPersistentSource persistentSource)
         {
             this.persistentSource = persistentSource;
         }
@@ -87,7 +87,7 @@ namespace Raven.Munin
             });
         }
 
-        public PersistentDictionary this[int i]
+        public Table this[int i]
         {
             get { return dictionaries[i]; }
         }
@@ -279,7 +279,7 @@ namespace Raven.Munin
             return wasteCount > (itemsCount / 10); // on large data size, we cleanup on 10% waste
         }
 
-        public PersistentDictionary Add(PersistentDictionary dictionary)
+        public Table Add(Table dictionary)
         {
             dictionaries.Add(dictionary);
             DictionaryStates.Add(null);
@@ -287,7 +287,7 @@ namespace Raven.Munin
             return dictionary;
         }
 
-        public IEnumerator<PersistentDictionary> GetEnumerator()
+        public IEnumerator<Table> GetEnumerator()
         {
             return dictionaries.GetEnumerator();
         }

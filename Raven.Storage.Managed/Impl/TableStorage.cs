@@ -7,25 +7,25 @@ using Raven.Munin;
 
 namespace Raven.Storage.Managed.Impl
 {
-    public class TableStorage : AggregateDictionary
+    public class TableStorage : Munin.Database
     {
 
         public TableStorage(IPersistentSource persistentSource)
             : base(persistentSource)
         {
             Details = new PersistentDictionaryAdapter(CurrentTransactionId,
-                                                     Add(new PersistentDictionary(JTokenComparer.Instance)
+                                                     Add(new Table(JTokenComparer.Instance)
                                                      {
                                                          Name = "Details"
                                                      }));
 
             Identity = new PersistentDictionaryAdapter(CurrentTransactionId,
-                                                       Add(new PersistentDictionary(new ModifiedJTokenComparer(x=>x.Value<string>("name")))
+                                                       Add(new Table(new ModifiedJTokenComparer(x=>x.Value<string>("name")))
                                                        {
                                                            Name = "Identity"
                                                        }));
 
-            Attachments = new PersistentDictionaryAdapter(CurrentTransactionId, Add(new PersistentDictionary(new ModifiedJTokenComparer(x => x.Value<string>("key")))
+            Attachments = new PersistentDictionaryAdapter(CurrentTransactionId, Add(new Table(new ModifiedJTokenComparer(x => x.Value<string>("key")))
             {
                 Name = "Attachments"
             }))
@@ -33,7 +33,7 @@ namespace Raven.Storage.Managed.Impl
                 {"ByEtag", x => new ComparableByteArray(x.Value<byte[]>("etag"))}
             };
 
-            Documents = new PersistentDictionaryAdapter(CurrentTransactionId, Add(new PersistentDictionary(new ModifiedJTokenComparer(x => x.Value<string>("key")))
+            Documents = new PersistentDictionaryAdapter(CurrentTransactionId, Add(new Table(new ModifiedJTokenComparer(x => x.Value<string>("key")))
             {
                 Name = "Documents"
             }))
@@ -44,7 +44,7 @@ namespace Raven.Storage.Managed.Impl
             };
 
             DocumentsModifiedByTransactions = new PersistentDictionaryAdapter(CurrentTransactionId, 
-                Add(new PersistentDictionary(new ModifiedJTokenComparer(x => new JObject
+                Add(new Table(new ModifiedJTokenComparer(x => new JObject
                 {
                     {"key", x.Value<string>("key")},
                 }))
@@ -55,19 +55,19 @@ namespace Raven.Storage.Managed.Impl
                 {"ByTxId", x => new ComparableByteArray(x.Value<byte[]>("txId"))}
             };
             Transactions = new PersistentDictionaryAdapter(CurrentTransactionId,
-                Add(new PersistentDictionary(new ModifiedJTokenComparer(x => x.Value<byte[]>("txId")))
+                Add(new Table(new ModifiedJTokenComparer(x => x.Value<byte[]>("txId")))
                 {
                     Name = "Transactions"
                 }));
 
             IndexingStats = new PersistentDictionaryAdapter(CurrentTransactionId,
-                Add(new PersistentDictionary(new ModifiedJTokenComparer(x =>x.Value<string>("index")))
+                Add(new Table(new ModifiedJTokenComparer(x =>x.Value<string>("index")))
                 {
                     Name = "IndexingStats"
                 }));
 
             MappedResults = new PersistentDictionaryAdapter(CurrentTransactionId,
-                                                            Add(new PersistentDictionary(JTokenComparer.Instance)
+                                                            Add(new Table(JTokenComparer.Instance)
                                                             {
                                                                 Name = "MappedResults"
                                                             }))
@@ -76,7 +76,7 @@ namespace Raven.Storage.Managed.Impl
                 {"ByViewAndDocumentId", x => Tuple.Create(x.Value<string>("view"), x.Value<string>("docId"))}
             };
 
-            Queues = new PersistentDictionaryAdapter(CurrentTransactionId, Add(new PersistentDictionary(new ModifiedJTokenComparer(x=> new JObject
+            Queues = new PersistentDictionaryAdapter(CurrentTransactionId, Add(new Table(new ModifiedJTokenComparer(x=> new JObject
                                                                                         {
                                                                                             {"name", x.Value<string>("name")},
                                                                                             {"id", x.Value<byte[]>("id")},
@@ -88,7 +88,7 @@ namespace Raven.Storage.Managed.Impl
                 {"ByName", x=>x.Value<string>("name")}
             };
 
-            Tasks = new PersistentDictionaryAdapter(CurrentTransactionId, Add(new PersistentDictionary(new ModifiedJTokenComparer(x => new JObject
+            Tasks = new PersistentDictionaryAdapter(CurrentTransactionId, Add(new Table(new ModifiedJTokenComparer(x => new JObject
                                                                                         {
                                                                                             {"index", x.Value<string>("index")},
                                                                                             {"id", x.Value<byte[]>("id")},

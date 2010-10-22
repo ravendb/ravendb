@@ -10,7 +10,7 @@ namespace Raven.Storage.Managed
 {
     public static class StorageHelper
     {
-        public static void AssertNotModifiedByAnotherTransaction(TableStorage storage, ITransactionStorageActions transactionStorageActions, string key, PersistentDictionary.ReadResult readResult, TransactionInformation transactionInformation)
+        public static void AssertNotModifiedByAnotherTransaction(TableStorage storage, ITransactionStorageActions transactionStorageActions, string key, Table.ReadResult readResult, TransactionInformation transactionInformation)
         {
             if (readResult == null)
                 return;

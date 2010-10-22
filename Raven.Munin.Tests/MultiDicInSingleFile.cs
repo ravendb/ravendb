@@ -8,7 +8,7 @@ namespace Raven.Munin.Tests
         protected PersistentDictionaryAdapter persistentDictionaryOne;
         protected FileBasedPersistentSource persistentSource;
         protected PersistentDictionaryAdapter persistentDictionaryTwo;
-        protected AggregateDictionary aggregateDictionary;
+        protected Database Database;
 
         public MultiDicInSingleFile()
         {
@@ -27,8 +27,8 @@ namespace Raven.Munin.Tests
 
         protected void Commit()
         {
-            aggregateDictionary.Commit();
-            aggregateDictionary.BeginTransaction();
+            Database.Commit();
+            Database.BeginTransaction();
         }
 
         protected void Reopen()
@@ -40,13 +40,13 @@ namespace Raven.Munin.Tests
         protected void OpenDictionary()
         {
             persistentSource = new FileBasedPersistentSource(Path.GetTempPath(), "test_",  writeThrough: false);
-            aggregateDictionary = new AggregateDictionary(persistentSource);
+            Database = new Database(persistentSource);
 
-            persistentDictionaryOne = new PersistentDictionaryAdapter(aggregateDictionary.CurrentTransactionId, aggregateDictionary.Add(new PersistentDictionary(JTokenComparer.Instance)));
-            persistentDictionaryTwo = new PersistentDictionaryAdapter(aggregateDictionary.CurrentTransactionId, aggregateDictionary.Add(new PersistentDictionary(JTokenComparer.Instance)));
+            persistentDictionaryOne = new PersistentDictionaryAdapter(Database.CurrentTransactionId, Database.Add(new Table(JTokenComparer.Instance)));
+            persistentDictionaryTwo = new PersistentDictionaryAdapter(Database.CurrentTransactionId, Database.Add(new Table(JTokenComparer.Instance)));
 
-            aggregateDictionary.Initialze();
-            aggregateDictionary.BeginTransaction();
+            Database.Initialze();
+            Database.BeginTransaction();
         }
     }
 }

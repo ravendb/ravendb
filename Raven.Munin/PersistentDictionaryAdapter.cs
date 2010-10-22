@@ -7,56 +7,56 @@ using Newtonsoft.Json.Linq;
 
 namespace Raven.Munin
 {
-    public class PersistentDictionaryAdapter : IEnumerable<PersistentDictionary.ReadResult>
+    public class PersistentDictionaryAdapter : IEnumerable<Table.ReadResult>
     {
         private readonly ThreadLocal<Guid> txId;
-        private readonly PersistentDictionary persistentDictionary;
+        private readonly Table table;
         private readonly Dictionary<string, SecondaryIndex> secondaryIndices = new Dictionary<string, SecondaryIndex>();
 
         public override string ToString()
         {
-            return persistentDictionary.Name + " (" + Count +")";
+            return table.Name + " (" + Count +")";
         }
 
-        public PersistentDictionaryAdapter(ThreadLocal<Guid> txId, PersistentDictionary persistentDictionary)
+        public PersistentDictionaryAdapter(ThreadLocal<Guid> txId, Table table)
         {
             this.txId = txId;
-            this.persistentDictionary = persistentDictionary;
+            this.table = table;
         }
 
         public int Count
         {
-            get { return persistentDictionary.ItemsCount; }
+            get { return table.ItemsCount; }
         }
 
         public IEnumerable<JToken> Keys
         {
-            get { return persistentDictionary.Keys; }
+            get { return table.Keys; }
         }
 
         public bool Put(JToken key, byte[] value)
         {
-            return persistentDictionary.Put(key, value, txId.Value);
+            return table.Put(key, value, txId.Value);
         }
 
-        public PersistentDictionary.ReadResult Read(JToken key)
+        public Table.ReadResult Read(JToken key)
         {
-            return persistentDictionary.Read(key, txId.Value);
+            return table.Read(key, txId.Value);
         }
 
         public bool Remove(JToken key)
         {
-            return persistentDictionary.Remove(key, txId.Value);
+            return table.Remove(key, txId.Value);
         }
 
         public void Add(string name, Expression<Func<JToken, IComparable>> func)
         {
-            secondaryIndices[name] = persistentDictionary.AddSecondaryIndex(func); 
+            secondaryIndices[name] = table.AddSecondaryIndex(func); 
         }
 
-        public IEnumerator<PersistentDictionary.ReadResult> GetEnumerator()
+        public IEnumerator<Table.ReadResult> GetEnumerator()
         {
-            return persistentDictionary.GetEnumerator();
+            return table.GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()
@@ -71,7 +71,7 @@ namespace Raven.Munin
 
         public bool UpdateKey(JToken key)
         {
-            return persistentDictionary.UpdateKey(key, txId.Value);
+            return table.UpdateKey(key, txId.Value);
         }
     }
 }

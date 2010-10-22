@@ -8,7 +8,7 @@ namespace Raven.Munin.Tests
         protected PersistentDictionaryAdapter PersistentDictionary;
         protected FileBasedPersistentSource PersistentSource;
         private readonly string tempPath;
-        private AggregateDictionary aggregateDictionary;
+        private Database Database;
 
         public SimpleFileTest()
         {
@@ -25,33 +25,33 @@ namespace Raven.Munin.Tests
         protected void OpenDictionary()
         {
             PersistentSource = new FileBasedPersistentSource(tempPath, "test", writeThrough: true);
-            aggregateDictionary = new AggregateDictionary(PersistentSource);
-            PersistentDictionary = new PersistentDictionaryAdapter(aggregateDictionary.CurrentTransactionId, aggregateDictionary.Add(new PersistentDictionary(JTokenComparer.Instance)));
-            aggregateDictionary.Initialze();
-            aggregateDictionary.BeginTransaction();
+            Database = new Database(PersistentSource);
+            PersistentDictionary = new PersistentDictionaryAdapter(Database.CurrentTransactionId, Database.Add(new Table(JTokenComparer.Instance)));
+            Database.Initialze();
+            Database.BeginTransaction();
         }
 
         protected void SupressTx(Action action)
         {
-            using (aggregateDictionary.SuppressTransaction())
+            using (Database.SuppressTransaction())
                 action();
         }
 
         protected void PerformIdleTasks()
         {
-            aggregateDictionary.PerformIdleTasks();
+            Database.PerformIdleTasks();
         }
 
         protected void Rollback()
         {
-            aggregateDictionary.Rollback();
-            aggregateDictionary.BeginTransaction();
+            Database.Rollback();
+            Database.BeginTransaction();
         }
 
         protected void Commit()
         {
-            aggregateDictionary.Commit();
-            aggregateDictionary.BeginTransaction();
+            Database.Commit();
+            Database.BeginTransaction();
         }
 
         public void Dispose()

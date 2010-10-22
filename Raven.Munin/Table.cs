@@ -11,7 +11,7 @@ using Raven.Munin.Tree;
 
 namespace Raven.Munin
 {
-    public class PersistentDictionary : IEnumerable<PersistentDictionary.ReadResult>
+    public class Table : IEnumerable<Table.ReadResult>
     {
         public string Name { get; set; }
 
@@ -38,11 +38,11 @@ namespace Raven.Munin
         private readonly ICompererAndEquality<JToken> comparer;
 
         private readonly MemoryCache cache = new MemoryCache(Guid.NewGuid().ToString());
-        private AggregateDictionary parent;
+        private Database parent;
         public int DictionaryId { get; set; }
 
 
-        public PersistentDictionary(ICompererAndEquality<JToken> comparer)
+        public Table(ICompererAndEquality<JToken> comparer)
         {
             keysModifiedInTx = new ConcurrentDictionary<JToken, Guid>(comparer);
             this.comparer = comparer;
@@ -367,11 +367,11 @@ namespace Raven.Munin
             return GetEnumerator();
         }
 
-        public void Initialize(IPersistentSource source, int dictionaryId, AggregateDictionary aggregateDictionary)
+        public void Initialize(IPersistentSource source, int dictionaryId, Database Database)
         {
             persistentSource = source;
             DictionaryId = dictionaryId;
-            parent = aggregateDictionary;
+            parent = Database;
 
             parent.DictionaryStates[dictionaryId] = new PersistentDictionaryState(comparer);
         }

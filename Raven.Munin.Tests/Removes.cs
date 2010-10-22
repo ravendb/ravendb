@@ -36,7 +36,7 @@ namespace Raven.Munin.Tests
 
             Assert.True(PersistentDictionary.Remove(JToken.FromObject("123")));
 
-            PersistentDictionary.ReadResult data = null;
+            Table.ReadResult data = null;
             SupressTx(() => data = PersistentDictionary.Read(JToken.FromObject("123")));
 
             Assert.Equal(new byte[] { 1, 2, 4, 5 }, data.Data());
