@@ -56,7 +56,7 @@ namespace Raven.Munin
         {
         }
 
-        public Table(Func<JToken, JToken> translator, string name): this(new ModifiedJTokenComparer(translator), name)
+        public Table(Func<JToken, JToken> clusteredIndexeExtractor, string name): this(new ModifiedJTokenComparer(clusteredIndexeExtractor), name)
         {
             
         }
