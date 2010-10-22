@@ -52,7 +52,16 @@ namespace Raven.Munin
             SecondaryIndices.Add(secondaryIndex);
         }
 
-        public Table(ICompererAndEquality<JToken> comparer, string name)
+        public Table(string name) : this(JTokenComparer.Instance, name)
+        {
+        }
+
+        public Table(Func<JToken, JToken> translator, string name): this(new ModifiedJTokenComparer(translator), name)
+        {
+            
+        }
+
+        private Table(ICompererAndEquality<JToken> comparer, string name)
         {
             keysModifiedInTx = new ConcurrentDictionary<JToken, Guid>(comparer);
             this.comparer = comparer;
