@@ -17,11 +17,11 @@ namespace Raven.Munin.Tests
         {
             
 
-            Assert.True(PersistentDictionary.Put(JToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }));
+            Assert.True(Table.Put(JToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }));
             
             Reopen();
 
-            var data = PersistentDictionary.Read(JToken.FromObject("123"));
+            var data = Table.Read(JToken.FromObject("123"));
             
             Assert.Null(data);
         }
@@ -31,15 +31,15 @@ namespace Raven.Munin.Tests
         {
             
 
-            Assert.True(PersistentDictionary.Put(JToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }));
-            Assert.True(PersistentDictionary.Put(JToken.FromObject("431"), new byte[] { 1, 3, 4, 5 }));
+            Assert.True(Table.Put(JToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }));
+            Assert.True(Table.Put(JToken.FromObject("431"), new byte[] { 1, 3, 4, 5 }));
 
             Commit();
 
             Reopen();
 
-            Assert.Equal(new byte[] { 1, 2, 4, 5 }, PersistentDictionary.Read(JToken.FromObject("123")).Data());
-            Assert.Equal(new byte[] { 1, 3, 4, 5 }, PersistentDictionary.Read(JToken.FromObject("431")).Data());
+            Assert.Equal(new byte[] { 1, 2, 4, 5 }, Table.Read(JToken.FromObject("123")).Data());
+            Assert.Equal(new byte[] { 1, 3, 4, 5 }, Table.Read(JToken.FromObject("431")).Data());
         }
     }
 }

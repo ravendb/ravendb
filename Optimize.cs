@@ -12,12 +12,12 @@ namespace Raven.Munin.Tests
             
             for (int i = 0; i < 16; i++)
             {
-                PersistentDictionary.Put(JToken.FromObject(i), new byte[512]);
+                Table.Put(JToken.FromObject(i), new byte[512]);
             }
 
             for (int i = 0; i < 16; i++)
             {
-                PersistentDictionary.Remove(JToken.FromObject(i));
+                Table.Remove(JToken.FromObject(i));
             }
 
 
@@ -35,15 +35,15 @@ namespace Raven.Munin.Tests
             
             for (int i = 0; i < 16; i++)
             {
-                PersistentDictionary.Put(JToken.FromObject(i), new byte[512]);
+                Table.Put(JToken.FromObject(i), new byte[512]);
             }
 
             for (int i = 0; i < 16; i++)
             {
-                PersistentDictionary.Remove(JToken.FromObject(i));
+                Table.Remove(JToken.FromObject(i));
             }
 
-            PersistentDictionary.Put(JToken.FromObject("a"), new byte[512]);
+            Table.Put(JToken.FromObject("a"), new byte[512]);
 
 
             Commit();
@@ -53,7 +53,7 @@ namespace Raven.Munin.Tests
             Assert.True(oldSize > PersistentSource.Read(log => log.Length));
 
             Assert.NotNull(
-                PersistentDictionary.Read(JToken.FromObject("a"))
+                Table.Read(JToken.FromObject("a"))
                 );
         }
 
@@ -64,16 +64,16 @@ namespace Raven.Munin.Tests
             
             for (int i = 0; i < 16; i++)
             {
-                PersistentDictionary.Put(JToken.FromObject(i), new byte[512]);
+                Table.Put(JToken.FromObject(i), new byte[512]);
             }
 
             for (int i = 0; i < 16; i++)
             {
-                PersistentDictionary.Remove(JToken.FromObject(i));
+                Table.Remove(JToken.FromObject(i));
             }
 
             var txId2 = Guid.NewGuid();
-            PersistentDictionary.Put(JToken.FromObject("a"), new byte[512]);
+            Table.Put(JToken.FromObject("a"), new byte[512]);
 
 
             Commit();
@@ -83,7 +83,7 @@ namespace Raven.Munin.Tests
             Assert.True(oldSize > PersistentSource.Read(log => log.Length));
 
             Assert.NotNull(
-                PersistentDictionary.Read(JToken.FromObject("a"))
+                Table.Read(JToken.FromObject("a"))
                 );
         }
     }

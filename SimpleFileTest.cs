@@ -5,10 +5,10 @@ namespace Raven.Munin.Tests
 {
     public class SimpleFileTest : IDisposable
     {
-        protected PersistentDictionaryAdapter PersistentDictionary;
+        protected Table Table;
         protected FileBasedPersistentSource PersistentSource;
         private readonly string tempPath;
-        private Database Database;
+        private Database database;
 
         public SimpleFileTest()
         {
@@ -25,33 +25,33 @@ namespace Raven.Munin.Tests
         protected void OpenDictionary()
         {
             PersistentSource = new FileBasedPersistentSource(tempPath, "test", writeThrough: true);
-            Database = new Database(PersistentSource);
-            PersistentDictionary = new PersistentDictionaryAdapter(Database.CurrentTransactionId, Database.Add(new Table(JTokenComparer.Instance)));
-            Database.Initialze();
-            Database.BeginTransaction();
+            database = new Database(PersistentSource);
+            Table = database.Add(new Table(JTokenComparer.Instance, "Test"));
+            database.Initialze();
+            database.BeginTransaction();
         }
 
         protected void SupressTx(Action action)
         {
-            using (Database.SuppressTransaction())
+            using (database.SuppressTransaction())
                 action();
         }
 
         protected void PerformIdleTasks()
         {
-            Database.PerformIdleTasks();
+            database.PerformIdleTasks();
         }
 
         protected void Rollback()
         {
-            Database.Rollback();
-            Database.BeginTransaction();
+            database.Rollback();
+            database.BeginTransaction();
         }
 
         protected void Commit()
         {
-            Database.Commit();
-            Database.BeginTransaction();
+            database.Commit();
+            database.BeginTransaction();
         }
 
         public void Dispose()

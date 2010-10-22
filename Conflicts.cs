@@ -9,39 +9,39 @@ namespace Raven.Munin.Tests
         [Fact]
         public void TwoTxCannotAddSameDataBeforeCmmmit()
         {
-            Assert.True(PersistentDictionary.Put(JToken.FromObject("a"), new byte[] { 1 }));
+            Assert.True(Table.Put(JToken.FromObject("a"), new byte[] { 1 }));
 
-            SupressTx(() => Assert.False(PersistentDictionary.Put(JToken.FromObject("a"), new byte[] { 1 })));
+            SupressTx(() => Assert.False(Table.Put(JToken.FromObject("a"), new byte[] { 1 })));
         }
 
         [Fact]
         public void OneTxCannotDeleteTxThatAnotherTxAddedBeforeCommit()
         {
-            Assert.True(PersistentDictionary.Put(JToken.FromObject("a"), new byte[] { 1 }));
+            Assert.True(Table.Put(JToken.FromObject("a"), new byte[] { 1 }));
 
-            SupressTx(() => Assert.False(PersistentDictionary.Remove(JToken.FromObject("a"))));
+            SupressTx(() => Assert.False(Table.Remove(JToken.FromObject("a"))));
         }
 
 
         [Fact]
         public void TwoTxCanAddSameDataAfterCmmmit()
         {
-            Assert.True(PersistentDictionary.Put(JToken.FromObject("a"), new byte[] { 1 }));
+            Assert.True(Table.Put(JToken.FromObject("a"), new byte[] { 1 }));
 
             Commit();
 
-            Assert.True(PersistentDictionary.Put(JToken.FromObject("a"), new byte[] { 1 }));
+            Assert.True(Table.Put(JToken.FromObject("a"), new byte[] { 1 }));
         }
 
         [Fact]
         public void OneTxCanDeleteTxThatAnotherTxAddedAfterCommit()
         {
             
-            Assert.True(PersistentDictionary.Put(JToken.FromObject("a"), new byte[] { 1 }));
+            Assert.True(Table.Put(JToken.FromObject("a"), new byte[] { 1 }));
 
             Commit();
 
-            Assert.True(PersistentDictionary.Remove(JToken.FromObject("a")));
+            Assert.True(Table.Remove(JToken.FromObject("a")));
         }
     }
 }
