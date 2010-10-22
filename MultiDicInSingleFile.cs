@@ -42,8 +42,8 @@ namespace Raven.Munin.Tests
             persistentSource = new FileBasedPersistentSource(Path.GetTempPath(), "test_",  writeThrough: false);
             Database = new Database(persistentSource);
 
-            tableOne = Database.Add(new Table(JTokenComparer.Instance, "Test1"));
-            tableTwo = Database.Add(new Table(JTokenComparer.Instance, "Test2"));
+            tableOne = Database.Add(new Table("Test1"));
+            tableTwo = Database.Add(new Table("Test2"));
 
             Database.Initialze();
             Database.BeginTransaction();
