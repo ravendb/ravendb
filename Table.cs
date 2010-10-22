@@ -45,7 +45,7 @@ namespace Raven.Munin
 
         public void Add(string name, Expression<Func<JToken, IComparable>> func)
         {
-            var secondaryIndex = new SecondaryIndex(func.Compile(), func.ToString(), persistentSource)
+            var secondaryIndex = new SecondaryIndex(func.Compile(), func.ToString())
             {
                 Name = name
             };
@@ -404,10 +404,11 @@ namespace Raven.Munin
 
             parent.DictionaryStates[tableId] = new PersistentDictionaryState(comparer);
 
+            int index = 0;
             foreach (var secondaryIndex in SecondaryIndices)
             {
                 persistentSource.DictionariesStates[TableId].SecondaryIndicesState.Add(new EmptyAVLTree<IComparable, IBinarySearchTree<JToken, JToken>>(Comparer<IComparable>.Default));
-                secondaryIndex.Initialize(TableId, SecondaryIndices.Count - 1);
+                secondaryIndex.Initialize(persistentSource, TableId, index++);
             }
         }
     }
