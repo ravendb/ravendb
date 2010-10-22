@@ -5,9 +5,9 @@ namespace Raven.Munin.Tests
 {
     public class MultiDicInSingleFile : IDisposable
     {
-        protected PersistentDictionaryAdapter persistentDictionaryOne;
+        protected Table tableOne;
         protected FileBasedPersistentSource persistentSource;
-        protected PersistentDictionaryAdapter persistentDictionaryTwo;
+        protected Table tableTwo;
         protected Database Database;
 
         public MultiDicInSingleFile()
@@ -42,8 +42,8 @@ namespace Raven.Munin.Tests
             persistentSource = new FileBasedPersistentSource(Path.GetTempPath(), "test_",  writeThrough: false);
             Database = new Database(persistentSource);
 
-            persistentDictionaryOne = new PersistentDictionaryAdapter(Database.CurrentTransactionId, Database.Add(new Table(JTokenComparer.Instance)));
-            persistentDictionaryTwo = new PersistentDictionaryAdapter(Database.CurrentTransactionId, Database.Add(new Table(JTokenComparer.Instance)));
+            tableOne = Database.Add(new Table(JTokenComparer.Instance, "Test1"));
+            tableTwo = Database.Add(new Table(JTokenComparer.Instance, "Test2"));
 
             Database.Initialze();
             Database.BeginTransaction();

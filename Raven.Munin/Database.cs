@@ -269,7 +269,7 @@ namespace Raven.Munin
 
         private bool CompactionRequired()
         {
-            var itemsCount = dictionaries.Sum(x => x.ItemsCount);
+            var itemsCount = dictionaries.Sum(x => x.Count);
             var wasteCount = dictionaries.Sum(x => x.WasteCount);
 
             if (itemsCount < 10000) // for small data sizes, we cleanup on 100% waste
@@ -283,7 +283,7 @@ namespace Raven.Munin
         {
             dictionaries.Add(dictionary);
             DictionaryStates.Add(null);
-            dictionary.Initialize(persistentSource, dictionaries.Count - 1, this);
+            dictionary.Initialize(persistentSource, dictionaries.Count - 1, this, CurrentTransactionId);
             return dictionary;
         }
 
