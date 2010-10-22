@@ -25,6 +25,22 @@ namespace Raven.Munin.Tests
         }
 
         [Fact]
+        public void UpdatingTree()
+        {
+
+            for (int i = 0; i < 11; i++)
+            {
+                PersistentDictionary.Put("docs/" + i, new byte[] {1, 2, 4, 5});
+            }
+
+            PersistentDictionary.Put("docs/0", new byte[] { 5,4,3,2,1 });
+            
+            var data = PersistentDictionary.Read("docs/0");
+
+            Assert.Equal(new byte[] { 5, 4, 3, 2, 1 }, data.Data());
+        }
+
+        [Fact]
         public void AfterAddInDifferentTxValueDoesNotExists()
         {
             Assert.True(PersistentDictionary.Put(JToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }));
