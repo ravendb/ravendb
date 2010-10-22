@@ -38,7 +38,7 @@ namespace Raven.Munin.Tests
             persistentDictionaryOne.Put(JToken.FromObject(1), new byte[] { 1, 2 });
             persistentDictionaryTwo.Put(JToken.FromObject(1), new byte[] { 2, 3 });
 
-            aggregateDictionary.Commit();
+            Database.Commit();
 
             Reopen();
 
