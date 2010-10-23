@@ -6,27 +6,29 @@ using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Runtime.Caching;
+using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Munin.Tree;
 
 namespace Raven.Munin
 {
-    public class PersistentDictionary : IEnumerable<PersistentDictionary.ReadResult>
+    public class Table : IEnumerable<Table.ReadResult>
     {
+        private ThreadLocal<Guid> txId;
         public string Name { get; set; }
 
         public IEnumerable<JToken> Keys
         {
             get
             {
-                return persistentSource.Read(_ => KeyToFilePos.KeysInOrder);
+                return persistentSource.Read(() => KeyToFilePos.KeysInOrder);
             }
         }
 
         private IBinarySearchTree<JToken, PositionInFile> KeyToFilePos
         {
-            get { return parent.DictionaryStates[DictionaryId].KeyToFilePositionInFiles; }
-            set { parent.DictionaryStates[DictionaryId].KeyToFilePositionInFiles = value; }
+            get { return parent.DictionaryStates[TableId].KeyToFilePositionInFiles; }
+            set { parent.DictionaryStates[TableId].KeyToFilePositionInFiles = value; }
         }
 
 
@@ -38,31 +40,40 @@ namespace Raven.Munin
         private readonly ICompererAndEquality<JToken> comparer;
 
         private readonly MemoryCache cache = new MemoryCache(Guid.NewGuid().ToString());
-        private AggregateDictionary parent;
-        public int DictionaryId { get; set; }
+        private Database parent;
+        public int TableId { get; set; }
 
+        public void Add(string name, Expression<Func<JToken, IComparable>> func)
+        {
+            var secondaryIndex = new SecondaryIndex(func.Compile(), func.ToString())
+            {
+                Name = name
+            };
+            SecondaryIndices.Add(secondaryIndex);
+        }
 
-        public PersistentDictionary(ICompererAndEquality<JToken> comparer)
+        public Table(string name) : this(JTokenComparer.Instance, name)
+        {
+        }
+
+        public Table(Func<JToken, JToken> clusteredIndexeExtractor, string name): this(new ModifiedJTokenComparer(clusteredIndexeExtractor), name)
+        {
+            
+        }
+
+        private Table(ICompererAndEquality<JToken> comparer, string name)
         {
             keysModifiedInTx = new ConcurrentDictionary<JToken, Guid>(comparer);
             this.comparer = comparer;
+            Name = name;
             SecondaryIndices = new List<SecondaryIndex>();
         }
 
         public int WasteCount { get; private set; }
 
-        public int ItemsCount
+        public int Count
         {
             get { return KeyToFilePos.Count; }
-        }
-
-        public SecondaryIndex AddSecondaryIndex(Expression<Func<JToken, IComparable>> func)
-        {
-            var secondaryIndex = new SecondaryIndex(func.Compile(), func.ToString(), persistentSource);
-            SecondaryIndices.Add(secondaryIndex);
-            persistentSource.DictionariesStates[DictionaryId].SecondaryIndicesState.Add(new EmptyAVLTree<IComparable, IBinarySearchTree<JToken, JToken>>(Comparer<IComparable>.Default));
-            secondaryIndex.Initialize(DictionaryId, SecondaryIndices.Count - 1);
-            return secondaryIndex;
         }
 
         public List<SecondaryIndex> SecondaryIndices { get; set; }
@@ -92,6 +103,32 @@ namespace Raven.Munin
             }
         }
 
+        public ReadResult Read(JToken key)
+        {
+            return Read(key, txId.Value);
+        }
+
+
+        public bool UpdateKey(JToken key)
+        {
+            return UpdateKey(key, txId.Value);
+        }
+        
+        public SecondaryIndex this[string indexName]
+        {
+            get { return SecondaryIndices.First(x=>x.Name == indexName); }
+        }
+
+        public bool Remove(JToken key)
+        {
+            return Remove(key, txId.Value);
+        }
+
+        public bool Put(JToken key, byte[] value)
+        {
+            return Put(key, value, txId.Value);
+        }
+
         internal bool Put(JToken key, byte[] value, Guid txId)
         {
             Guid existing;
@@ -103,7 +140,7 @@ namespace Raven.Munin
                 {
                     Key = key,
                     Payload = value,
-                    DictionaryId = DictionaryId,
+                    DictionaryId = TableId,
                     Type = CommandType.Put
                 });
 
@@ -121,7 +158,8 @@ namespace Raven.Munin
 
             var readResult = Read(key, txId);
 
-            if (readResult != null && JTokenComparer.Instance.Equals(readResult.Key, key))
+            if (readResult != null && 
+                new JTokenEqualityComparer().Equals(key, readResult.Key))
                 return true; // no need to do anything, user wrote the same data as is already in, hence, no op
 
             operationsInTransactions.GetOrAdd(txId, new List<Command>())
@@ -130,7 +168,7 @@ namespace Raven.Munin
                     Key = key,
                     Position = readResult == null ? -1 : readResult.Position,
                     Size = readResult == null ? -1 : readResult.Size,
-                    DictionaryId = DictionaryId,
+                    DictionaryId = TableId,
                     Type = CommandType.Put
                 });
 
@@ -275,7 +313,7 @@ namespace Raven.Munin
                 .Add(new Command
                 {
                     Key = key,
-                    DictionaryId = DictionaryId,
+                    DictionaryId = TableId,
                     Type = CommandType.Delete
                 });
 
@@ -324,7 +362,7 @@ namespace Raven.Munin
                    {
                        Key = kvp.Key,
                        Payload = ReadData(kvp.Value.Position, kvp.Value.Size),
-                       DictionaryId = DictionaryId,
+                       DictionaryId = TableId,
                        Size = kvp.Value.Size,
                        Type = CommandType.Put
                    };
@@ -367,13 +405,21 @@ namespace Raven.Munin
             return GetEnumerator();
         }
 
-        public void Initialize(IPersistentSource source, int dictionaryId, AggregateDictionary aggregateDictionary)
+        public void Initialize(IPersistentSource source, int tableId, Database database, ThreadLocal<Guid> transactionId)
         {
             persistentSource = source;
-            DictionaryId = dictionaryId;
-            parent = aggregateDictionary;
+            TableId = tableId;
+            parent = database;
+            txId = transactionId;
 
-            parent.DictionaryStates[dictionaryId] = new PersistentDictionaryState(comparer);
+            parent.DictionaryStates[tableId] = new PersistentDictionaryState(comparer);
+
+            int index = 0;
+            foreach (var secondaryIndex in SecondaryIndices)
+            {
+                persistentSource.DictionariesStates[TableId].SecondaryIndicesState.Add(new EmptyAVLTree<IComparable, IBinarySearchTree<JToken, JToken>>(Comparer<IComparable>.Default,x=>x, x=>x));
+                secondaryIndex.Initialize(persistentSource, TableId, index++);
+            }
         }
     }
 }

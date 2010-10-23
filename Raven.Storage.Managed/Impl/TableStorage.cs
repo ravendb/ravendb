@@ -1,127 +1,88 @@
 ﻿using System;
-using System.Diagnostics;
-using System.Threading;
 using Newtonsoft.Json.Linq;
-using Raven.Database.Data;
 using Raven.Munin;
 
 namespace Raven.Storage.Managed.Impl
 {
-    public class TableStorage : AggregateDictionary
+    public class TableStorage : Munin.Database
     {
-
         public TableStorage(IPersistentSource persistentSource)
             : base(persistentSource)
         {
-            Details = new PersistentDictionaryAdapter(CurrentTransactionId,
-                                                     Add(new PersistentDictionary(JTokenComparer.Instance)
-                                                     {
-                                                         Name = "Details"
-                                                     }));
+            Details = Add(new Table("Detauls"));
 
-            Identity = new PersistentDictionaryAdapter(CurrentTransactionId,
-                                                       Add(new PersistentDictionary(new ModifiedJTokenComparer(x=>x.Value<string>("name")))
-                                                       {
-                                                           Name = "Identity"
-                                                       }));
+            Identity = Add(new Table(x => x.Value<string>("name"), "Identity"));
 
-            Attachments = new PersistentDictionaryAdapter(CurrentTransactionId, Add(new PersistentDictionary(new ModifiedJTokenComparer(x => x.Value<string>("key")))
+            Attachments = Add(new Table(x => x.Value<string>("key"), "Attachments")
             {
-                Name = "Attachments"
-            }))
-            {
-                {"ByEtag", x => new ComparableByteArray(x.Value<byte[]>("etag"))}
-            };
+                {"ByEtag", x => new ComparableByteArray(x.Value<byte[]>("etag"))},
+            });
 
-            Documents = new PersistentDictionaryAdapter(CurrentTransactionId, Add(new PersistentDictionary(new ModifiedJTokenComparer(x => x.Value<string>("key")))
-            {
-                Name = "Documents"
-            }))
+            Documents = Add(new Table(x => x.Value<string>("key"), "Documents")
             {
                 {"ByKey", x => x.Value<string>("key")},
                 {"ById", x => x.Value<string>("id")},
                 {"ByEtag", x => new ComparableByteArray(x.Value<byte[]>("etag"))}
-            };
+            });
 
-            DocumentsModifiedByTransactions = new PersistentDictionaryAdapter(CurrentTransactionId, 
-                Add(new PersistentDictionary(new ModifiedJTokenComparer(x => new JObject
+            DocumentsModifiedByTransactions =
+                Add(new Table(x => new JObject {{"key", x.Value<string>("key")}},
+                              "DocumentsModifiedByTransactions")
                 {
-                    {"key", x.Value<string>("key")},
-                }))
-                {
-                    Name = "DocumentsModifiedByTransactions"
-                }))
-            {
-                {"ByTxId", x => new ComparableByteArray(x.Value<byte[]>("txId"))}
-            };
-            Transactions = new PersistentDictionaryAdapter(CurrentTransactionId,
-                Add(new PersistentDictionary(new ModifiedJTokenComparer(x => x.Value<byte[]>("txId")))
-                {
-                    Name = "Transactions"
-                }));
+                    {"ByTxId", x => new ComparableByteArray(x.Value<byte[]>("txId"))}
+                });
 
-            IndexingStats = new PersistentDictionaryAdapter(CurrentTransactionId,
-                Add(new PersistentDictionary(new ModifiedJTokenComparer(x =>x.Value<string>("index")))
-                {
-                    Name = "IndexingStats"
-                }));
+            Transactions =
+                Add(new Table(x => x.Value<byte[]>("txId"), "Transactions"));
 
-            MappedResults = new PersistentDictionaryAdapter(CurrentTransactionId,
-                                                            Add(new PersistentDictionary(JTokenComparer.Instance)
-                                                            {
-                                                                Name = "MappedResults"
-                                                            }))
+            IndexingStats =
+                Add(new Table(x => x.Value<string>("index"), "IndexingStats"));
+
+
+            MappedResults = Add(new Table("MappedResults")
             {
                 {"ByViewAndReduceKey", x => Tuple.Create(x.Value<string>("view"), x.Value<string>("reduceKey"))},
                 {"ByViewAndDocumentId", x => Tuple.Create(x.Value<string>("view"), x.Value<string>("docId"))}
-            };
+            });
 
-            Queues = new PersistentDictionaryAdapter(CurrentTransactionId, Add(new PersistentDictionary(new ModifiedJTokenComparer(x=> new JObject
-                                                                                        {
-                                                                                            {"name", x.Value<string>("name")},
-                                                                                            {"id", x.Value<byte[]>("id")},
-                                                                                        }))
+            Queues = Add(new Table(x => new JObject
             {
-                Name = "Queues"
-            }))
+                {"name", x.Value<string>("name")},
+                {"id", x.Value<byte[]>("id")},
+            }, "Queues")
             {
-                {"ByName", x=>x.Value<string>("name")}
-            };
+                {"ByName", x => x.Value<string>("name")}
+            });
 
-            Tasks = new PersistentDictionaryAdapter(CurrentTransactionId, Add(new PersistentDictionary(new ModifiedJTokenComparer(x => new JObject
-                                                                                        {
-                                                                                            {"index", x.Value<string>("index")},
-                                                                                            {"id", x.Value<byte[]>("id")},
-                                                                                        }))
+            Tasks = Add(new Table(x => new JObject
             {
-                Name = "Tasks"
-            }))
+                {"index", x.Value<string>("index")},
+                {"id", x.Value<byte[]>("id")},
+            }, "Tasks")
             {
-                {"ByIndexAndTime", x=>Tuple.Create(x.Value<string>("index"), x.Value<DateTime>("time")) },
-                {"ByIndexAndType", x=>Tuple.Create(x.Value<string>("index"), x.Value<string>("type")) }
-            };
+                {"ByIndexAndTime", x => Tuple.Create(x.Value<string>("index"), x.Value<DateTime>("time"))},
+                {"ByIndexAndType", x => Tuple.Create(x.Value<string>("index"), x.Value<string>("type"))}
+            });
         }
 
-        public PersistentDictionaryAdapter Details { get; private set; }
+        public Table Details { get; private set; }
 
-        public PersistentDictionaryAdapter Tasks { get; private set; }
+        public Table Tasks { get; private set; }
 
-        public PersistentDictionaryAdapter  Queues { get; private set; }
+        public Table Queues { get; private set; }
 
-        public PersistentDictionaryAdapter MappedResults { get; private set; }
+        public Table MappedResults { get; private set; }
 
-        public PersistentDictionaryAdapter IndexingStats { get; private set; }
+        public Table IndexingStats { get; private set; }
 
-        public PersistentDictionaryAdapter Transactions { get; private set; }
+        public Table Transactions { get; private set; }
 
-        public PersistentDictionaryAdapter DocumentsModifiedByTransactions { get; private set; }
+        public Table DocumentsModifiedByTransactions { get; private set; }
 
-        public PersistentDictionaryAdapter Documents { get; private set; }
+        public Table Documents { get; private set; }
 
-        public PersistentDictionaryAdapter Attachments { get; private set; }
+        public Table Attachments { get; private set; }
 
-        public PersistentDictionaryAdapter Identity { get; private set; }
-
-       
+        public Table Identity { get; private set; }
     }
 }

@@ -51,8 +51,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AbstractPersistentSource.cs" />
-    <Compile Include="AggregateDictionary.cs" />
+    <Compile Include="Database.cs" />
     <Compile Include="CompererAndEquality.cs" />
+    <Compile Include="JTokenCloner.cs" />
     <Compile Include="Tree\AVLTree.cs" />
     <Compile Include="Command.cs" />
     <Compile Include="CommandType.cs" />
@@ -62,8 +63,7 @@
     <Compile Include="JTokenComparer.cs" />
     <Compile Include="MemoryPersistentSource.cs" />
     <Compile Include="ModifiedJTokenComparer.cs" />
-    <Compile Include="PersistentDictionary.cs" />
-    <Compile Include="PersistentDictionaryAdapter.cs" />
+    <Compile Include="Table.cs" />
     <Compile Include="PersistentDictionaryState.cs" />
     <Compile Include="PositionInFile.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

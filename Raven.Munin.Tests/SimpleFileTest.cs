@@ -5,10 +5,10 @@ namespace Raven.Munin.Tests
 {
     public class SimpleFileTest : IDisposable
     {
-        protected PersistentDictionaryAdapter PersistentDictionary;
+        protected Table Table;
         protected FileBasedPersistentSource PersistentSource;
         private readonly string tempPath;
-        private AggregateDictionary aggregateDictionary;
+        private Database database;
 
         public SimpleFileTest()
         {
@@ -25,33 +25,33 @@ namespace Raven.Munin.Tests
         protected void OpenDictionary()
         {
             PersistentSource = new FileBasedPersistentSource(tempPath, "test", writeThrough: true);
-            aggregateDictionary = new AggregateDictionary(PersistentSource);
-            PersistentDictionary = new PersistentDictionaryAdapter(aggregateDictionary.CurrentTransactionId, aggregateDictionary.Add(new PersistentDictionary(JTokenComparer.Instance)));
-            aggregateDictionary.Initialze();
-            aggregateDictionary.BeginTransaction();
+            database = new Database(PersistentSource);
+            Table = database.Add(new Table("Test"));
+            database.Initialze();
+            database.BeginTransaction();
         }
 
         protected void SupressTx(Action action)
         {
-            using (aggregateDictionary.SuppressTransaction())
+            using (database.SuppressTransaction())
                 action();
         }
 
         protected void PerformIdleTasks()
         {
-            aggregateDictionary.PerformIdleTasks();
+            database.PerformIdleTasks();
         }
 
         protected void Rollback()
         {
-            aggregateDictionary.Rollback();
-            aggregateDictionary.BeginTransaction();
+            database.Rollback();
+            database.BeginTransaction();
         }
 
         protected void Commit()
         {
-            aggregateDictionary.Commit();
-            aggregateDictionary.BeginTransaction();
+            database.Commit();
+            database.BeginTransaction();
         }
 
         public void Dispose()

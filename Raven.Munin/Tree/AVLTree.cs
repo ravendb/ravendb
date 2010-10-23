@@ -28,15 +28,27 @@ namespace Raven.Munin.Tree
         }
 
         private readonly IComparer<TKey> comparer;
+        private readonly Func<TKey, TKey> deepCopyKey;
+        private readonly Func<TValue, TValue> deepCopyValue;
 
         private readonly TKey theKey;
         private readonly IBinarySearchTree<TKey, TValue> left;
         private readonly IBinarySearchTree<TKey, TValue> right;
         private readonly TValue theValue;
         public int Count { get; private set; }
-        internal AVLTree(IComparer<TKey> comparer, TKey key, TValue value, IBinarySearchTree<TKey, TValue> left, IBinarySearchTree<TKey, TValue> right)
+
+        internal AVLTree(
+            IComparer<TKey> comparer,
+            Func<TKey, TKey> deepCopyKey,
+            Func<TValue, TValue> deepCopyValue,
+            TKey key, 
+            TValue value, 
+            IBinarySearchTree<TKey, TValue> left, 
+            IBinarySearchTree<TKey, TValue> right)
         {
             this.comparer = comparer;
+            this.deepCopyKey = deepCopyKey;
+            this.deepCopyValue = deepCopyValue;
             this.theKey = key;
             this.theValue = value;
             this.left = left;
@@ -61,7 +73,7 @@ namespace Raven.Munin.Tree
 
         public TValue Value
         {
-            get { return theValue; }
+            get { return deepCopyValue(theValue); }
         }
 
         public IBinarySearchTree<TKey, TValue> LeftMost
@@ -103,7 +115,7 @@ namespace Raven.Munin.Tree
 
         public IBinarySearchTree<TKey, TValue> Search(TKey key)
         {
-            int compare = comparer.Compare(key, Key);
+            int compare = comparer.Compare(key, theKey);
             if (compare == 0)
                 return this;
             if (compare > 0)
@@ -113,7 +125,7 @@ namespace Raven.Munin.Tree
 
         public IEnumerable<TValue> GreaterThan(TKey gtKey)
         {
-            int compare = comparer.Compare(Key, gtKey);
+            int compare = comparer.Compare(theKey, gtKey);
             if (compare <= 0)
             {
                 foreach (var value in Right.GreaterThan(gtKey))
@@ -135,7 +147,7 @@ namespace Raven.Munin.Tree
 
         public IEnumerable<TValue> GreaterThanOrEqual(TKey gteKey)
         {
-            int compare = comparer.Compare(Key, gteKey);
+            int compare = comparer.Compare(theKey, gteKey);
             if (compare < 0)
             {
                 foreach (var value in Right.GreaterThanOrEqual(gteKey))
@@ -159,31 +171,31 @@ namespace Raven.Munin.Tree
 
         public TKey Key
         {
-            get { return theKey; }
+            get { return deepCopyKey(theKey); }
         }
 
         public IBinarySearchTree<TKey, TValue> Add(TKey key, TValue value)
         {
             AVLTree<TKey, TValue> result;
-            if (comparer.Compare(key, Key) > 0)
-                result = new AVLTree<TKey, TValue>(comparer, Key, Value, Left, Right.Add(key, value));
+            if (comparer.Compare(key, theKey) > 0)
+                result = new AVLTree<TKey, TValue>(comparer, deepCopyKey, deepCopyValue, theKey, theValue, Left, Right.Add(key, value));
             else
-                result = new AVLTree<TKey, TValue>(comparer, Key, Value, Left.Add(key, value), Right);
+                result = new AVLTree<TKey, TValue>(comparer, deepCopyKey, deepCopyValue, theKey, theValue, Left.Add(key, value), Right);
             return MakeBalanced(result);
         }
 
         public IBinarySearchTree<TKey, TValue> AddOrUpdate(TKey key, TValue value, Func<TKey, TValue, TValue> updateValueFactory)
         {
             AVLTree<TKey, TValue> result;
-            var compare = comparer.Compare(key, Key);
+            var compare = comparer.Compare(key, theKey);
             if (compare > 0)
-                result = new AVLTree<TKey, TValue>(comparer, Key, Value, Left, Right.AddOrUpdate(key, value, updateValueFactory));
+                result = new AVLTree<TKey, TValue>(comparer, deepCopyKey, deepCopyValue, theKey, theValue, Left, Right.AddOrUpdate(key, value, updateValueFactory));
             else if(compare < 0)
-                result = new AVLTree<TKey, TValue>(comparer, Key, Value, Left.AddOrUpdate(key, value, updateValueFactory), Right);
+                result = new AVLTree<TKey, TValue>(comparer, deepCopyKey, deepCopyValue, theKey, theValue, Left.AddOrUpdate(key, value, updateValueFactory), Right);
             else
             {
-                var newValue = updateValueFactory(key, Value);
-                result = new AVLTree<TKey, TValue>(comparer, key, newValue, Left, Right);
+                var newValue = updateValueFactory(key, theValue);
+                result = new AVLTree<TKey, TValue>(comparer, deepCopyKey, deepCopyValue, key, newValue, Left, Right);
             }
             return MakeBalanced(result);
         }
@@ -191,16 +203,16 @@ namespace Raven.Munin.Tree
         public IBinarySearchTree<TKey, TValue> TryRemove(TKey key, out bool removed, out TValue value)
         {
             IBinarySearchTree<TKey, TValue> result;
-            int compare = comparer.Compare(key, Key);
+            int compare = comparer.Compare(key, theKey);
             if (compare == 0)
             {
                 removed = true;
-                value = Value;
+                value = theValue;
                 // We have a match. If this is a leaf, just remove it 
                 // by returning Empty.  If we have only one child,
                 // replace the node with the child.
                 if (Right.IsEmpty && Left.IsEmpty)
-                    result = new EmptyAVLTree<TKey, TValue>(comparer);
+                    result = new EmptyAVLTree<TKey, TValue>(comparer, deepCopyKey, deepCopyValue);
                 else if (Right.IsEmpty && !Left.IsEmpty)
                     result = Left;
                 else if (!Right.IsEmpty && Left.IsEmpty)
@@ -212,13 +224,13 @@ namespace Raven.Munin.Tree
                     IBinarySearchTree<TKey, TValue> successor = Right;
                     while (!successor.Left.IsEmpty)
                         successor = successor.Left;
-                    result = new AVLTree<TKey, TValue>(comparer, successor.Key, successor.Value, Left, Right.TryRemove(successor.Key, out removed, out value));
+                    result = new AVLTree<TKey, TValue>(comparer, deepCopyKey, deepCopyValue, successor.Key, successor.Value, Left, Right.TryRemove(successor.Key, out removed, out value));
                 }
             }
             else if (compare < 0)
-                result = new AVLTree<TKey, TValue>(comparer, Key, Value, Left.TryRemove(key, out removed, out value), Right);
+                result = new AVLTree<TKey, TValue>(comparer, deepCopyKey, deepCopyValue, theKey, theValue, Left.TryRemove(key, out removed, out value), Right);
             else
-                result = new AVLTree<TKey, TValue>(comparer, Key, Value, Left, Right.TryRemove(key, out removed, out value));
+                result = new AVLTree<TKey, TValue>(comparer, deepCopyKey, deepCopyValue, theKey, theValue, Left, Right.TryRemove(key, out removed, out value));
             return MakeBalanced(result);
         }
 
@@ -300,36 +312,36 @@ namespace Raven.Munin.Tree
             return ((AVLTree<TKey, TValue>)tree).height;
         }
 
-        private static IBinarySearchTree<TKey, TValue> RotateLeft(IBinarySearchTree<TKey, TValue> tree)
+        private IBinarySearchTree<TKey, TValue> RotateLeft(IBinarySearchTree<TKey, TValue> tree)
         {
             if (tree.Right.IsEmpty)
                 return tree;
-            return new AVLTree<TKey, TValue>(tree.Comparer, tree.Right.Key, tree.Right.Value,
-                                     new AVLTree<TKey, TValue>(tree.Comparer, tree.Key, tree.Value, tree.Left, tree.Right.Left),
+            return new AVLTree<TKey, TValue>(tree.Comparer, deepCopyKey, deepCopyValue, tree.Right.Key, tree.Right.Value,
+                                     new AVLTree<TKey, TValue>(tree.Comparer, deepCopyKey, deepCopyValue, tree.Key, tree.Value, tree.Left, tree.Right.Left),
                                      tree.Right.Right);
         }
 
-        private static IBinarySearchTree<TKey, TValue> RotateRight(IBinarySearchTree<TKey, TValue> tree)
+        private IBinarySearchTree<TKey, TValue> RotateRight(IBinarySearchTree<TKey, TValue> tree)
         {
             if (tree.Left.IsEmpty)
                 return tree;
-            return new AVLTree<TKey, TValue>(tree.Comparer, tree.Left.Key, tree.Left.Value, tree.Left.Left,
-                                     new AVLTree<TKey, TValue>(tree.Comparer, tree.Key, tree.Value, tree.Left.Right, tree.Right));
+            return new AVLTree<TKey, TValue>(tree.Comparer, deepCopyKey, deepCopyValue, tree.Left.Key, tree.Left.Value, tree.Left.Left,
+                                     new AVLTree<TKey, TValue>(tree.Comparer, deepCopyKey, deepCopyValue, tree.Key, tree.Value, tree.Left.Right, tree.Right));
         }
 
-        private static IBinarySearchTree<TKey, TValue> DoubleLeft(IBinarySearchTree<TKey, TValue> tree)
+        private IBinarySearchTree<TKey, TValue> DoubleLeft(IBinarySearchTree<TKey, TValue> tree)
         {
             if (tree.Right.IsEmpty)
                 return tree;
-            var rotatedRightChild = new AVLTree<TKey, TValue>(tree.Comparer, tree.Key, tree.Value, tree.Left, RotateRight(tree.Right));
+            var rotatedRightChild = new AVLTree<TKey, TValue>(tree.Comparer, deepCopyKey, deepCopyValue, tree.Key, tree.Value, tree.Left, RotateRight(tree.Right));
             return RotateLeft(rotatedRightChild);
         }
 
-        private static IBinarySearchTree<TKey, TValue> DoubleRight(IBinarySearchTree<TKey, TValue> tree)
+        private IBinarySearchTree<TKey, TValue> DoubleRight(IBinarySearchTree<TKey, TValue> tree)
         {
             if (tree.Left.IsEmpty)
                 return tree;
-            var rotatedLeftChild = new AVLTree<TKey, TValue>(tree.Comparer, tree.Key, tree.Value, RotateLeft(tree.Left), tree.Right);
+            var rotatedLeftChild = new AVLTree<TKey, TValue>(tree.Comparer, deepCopyKey, deepCopyValue, tree.Key, tree.Value, RotateLeft(tree.Left), tree.Right);
             return RotateRight(rotatedLeftChild);
         }
 
@@ -350,7 +362,7 @@ namespace Raven.Munin.Tree
             return Balance(tree) <= -2;
         }
 
-        private static IBinarySearchTree<TKey, TValue> MakeBalanced(IBinarySearchTree<TKey, TValue> tree)
+        private IBinarySearchTree<TKey, TValue> MakeBalanced(IBinarySearchTree<TKey, TValue> tree)
         {
             IBinarySearchTree<TKey, TValue> result;
             if (IsRightHeavy(tree))
@@ -371,9 +383,5 @@ namespace Raven.Munin.Tree
                 result = tree;
             return result;
         }
-
-        #region Nested type: EmptyAVLTree
-
-        #endregion
     }
 }

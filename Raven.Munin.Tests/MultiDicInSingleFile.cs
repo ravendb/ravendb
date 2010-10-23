@@ -5,10 +5,10 @@ namespace Raven.Munin.Tests
 {
     public class MultiDicInSingleFile : IDisposable
     {
-        protected PersistentDictionaryAdapter persistentDictionaryOne;
+        protected Table tableOne;
         protected FileBasedPersistentSource persistentSource;
-        protected PersistentDictionaryAdapter persistentDictionaryTwo;
-        protected AggregateDictionary aggregateDictionary;
+        protected Table tableTwo;
+        protected Database Database;
 
         public MultiDicInSingleFile()
         {
@@ -27,8 +27,8 @@ namespace Raven.Munin.Tests
 
         protected void Commit()
         {
-            aggregateDictionary.Commit();
-            aggregateDictionary.BeginTransaction();
+            Database.Commit();
+            Database.BeginTransaction();
         }
 
         protected void Reopen()
@@ -40,13 +40,13 @@ namespace Raven.Munin.Tests
         protected void OpenDictionary()
         {
             persistentSource = new FileBasedPersistentSource(Path.GetTempPath(), "test_",  writeThrough: false);
-            aggregateDictionary = new AggregateDictionary(persistentSource);
+            Database = new Database(persistentSource);
 
-            persistentDictionaryOne = new PersistentDictionaryAdapter(aggregateDictionary.CurrentTransactionId, aggregateDictionary.Add(new PersistentDictionary(JTokenComparer.Instance)));
-            persistentDictionaryTwo = new PersistentDictionaryAdapter(aggregateDictionary.CurrentTransactionId, aggregateDictionary.Add(new PersistentDictionary(JTokenComparer.Instance)));
+            tableOne = Database.Add(new Table("Test1"));
+            tableTwo = Database.Add(new Table("Test2"));
 
-            aggregateDictionary.Initialze();
-            aggregateDictionary.BeginTransaction();
+            Database.Initialze();
+            Database.BeginTransaction();
         }
     }
 }

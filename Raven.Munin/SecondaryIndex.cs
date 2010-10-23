@@ -9,14 +9,14 @@ namespace Raven.Munin
     public class SecondaryIndex
     {
         private readonly string indexDef;
-        private readonly IPersistentSource persistentSource;
+        private IPersistentSource persistentSource;
         private readonly Func<JToken, IComparable> transform;
 
-        public SecondaryIndex(Func<JToken, IComparable> transform, string indexDef, IPersistentSource persistentSource)
+        public SecondaryIndex(Func<JToken, IComparable> transform, string indexDef)
         {
             this.transform = transform;
             this.indexDef = indexDef;
-            this.persistentSource = persistentSource;
+            IndexId = -1;
         }
 
         private IBinarySearchTree<IComparable, IBinarySearchTree<JToken, JToken>> Index
@@ -34,19 +34,25 @@ namespace Raven.Munin
 
         public int IndexId { get; set; }
 
+        public string Name { get; set; }
+
         public override string ToString()
         {
-            return indexDef + " (" + Index.Count + ")";
+            if (IndexId == -1)
+                return Name + ": " + indexDef;
+            return Name + ": " + indexDef + " (" + Index.Count + ")";
         }
+        // This is called only from inside persistenceStore.Write
 
         public void Add(JToken key)
         {
             IComparable actualKey = transform(key);
-            Index = Index.AddOrUpdate(actualKey, 
-                new EmptyAVLTree<JToken, JToken>(JTokenComparer.Instance).Add(key,key),
+            Index = Index.AddOrUpdate(actualKey,
+                new EmptyAVLTree<JToken, JToken>(JTokenComparer.Instance, JTokenCloner.Clone, JTokenCloner.Clone).Add(key, key),
                 (comparable, tree) => tree.Add(key, key));
         }
 
+        // This is called only from inside persistenceStore.Write
         public void Remove(JToken key)
         {
             IComparable actualKey = transform(key);
@@ -58,7 +64,7 @@ namespace Raven.Munin
             bool removed;
             JToken _;
             var removedResult = result.Value.TryRemove(key, out removed, out _);
-            if(removedResult.IsEmpty)
+            if (removedResult.IsEmpty)
             {
                 IBinarySearchTree<JToken, JToken> ignored;
                 Index = Index.TryRemove(actualKey, out removed, out ignored);
@@ -72,22 +78,29 @@ namespace Raven.Munin
 
         public IEnumerable<JToken> SkipFromEnd(int start)
         {
-            return Index.ValuesInReverseOrder.Skip(start).Select(item => item.Key);
+            return persistentSource.Read(() => Index.ValuesInReverseOrder.Skip(start).Select(item => item.Key));
         }
 
         public IEnumerable<JToken> SkipAfter(JToken key)
         {
-            return Index.GreaterThan(transform(key)).SelectMany(binarySearchTree => binarySearchTree.ValuesInOrder);
+            return
+                persistentSource.Read(
+                    () =>
+                    Index.GreaterThan(transform(key)).SelectMany(binarySearchTree => binarySearchTree.ValuesInOrder));
         }
 
         public IEnumerable<JToken> SkipTo(JToken key)
         {
-            return Index.GreaterThanOrEqual(transform(key)).SelectMany(binarySearchTree => binarySearchTree.ValuesInOrder);
+            return
+                persistentSource.Read(
+                    () =>
+                    Index.GreaterThanOrEqual(transform(key)).SelectMany(
+                        binarySearchTree => binarySearchTree.ValuesInOrder));
         }
 
         public JToken LastOrDefault()
         {
-            return persistentSource.Read(_ =>
+            return persistentSource.Read(()=>
             {
                 if (Index.RightMost.IsEmpty)
                     return null;
@@ -100,7 +113,7 @@ namespace Raven.Munin
 
         public JToken FirstOrDefault()
         {
-            return persistentSource.Read(_ =>
+            return persistentSource.Read(() =>
             {
                 if (Index.LeftMost.IsEmpty)
                     return null;
@@ -111,10 +124,11 @@ namespace Raven.Munin
             });
         }
 
-        public void Initialize(int dictionaryId, int indexId)
+        public void Initialize(IPersistentSource thePersistentSource, int dictionaryId, int indexId)
         {
             DictionaryId = dictionaryId;
             IndexId = indexId;
+            persistentSource = thePersistentSource;
         }
     }
 }

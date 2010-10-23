@@ -65,7 +65,7 @@ namespace Raven.Storage.Managed
             return newEtag;
         }
 
-        private static void AssertValidEtag(string key, PersistentDictionary.ReadResult doc, PersistentDictionary.ReadResult docInTx, Guid? etag)
+        private static void AssertValidEtag(string key, Table.ReadResult doc, Table.ReadResult docInTx, Guid? etag)
         {
             if (doc == null)
                 return;

@@ -9,7 +9,7 @@ namespace Raven.Munin.Tests
         [Fact]
         public void RemovingNonExistantIsNoOp()
         {
-            Assert.True(PersistentDictionary.Remove(JToken.FromObject("a")));
+            Assert.True(Table.Remove(JToken.FromObject("a")));
         }
 
         [Fact]
@@ -17,11 +17,11 @@ namespace Raven.Munin.Tests
         {
             
 
-            Assert.True(PersistentDictionary.Put(JToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }));
+            Assert.True(Table.Put(JToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }));
 
-            Assert.True(PersistentDictionary.Remove(JToken.FromObject("123")));
+            Assert.True(Table.Remove(JToken.FromObject("123")));
 
-            var data = PersistentDictionary.Read(JToken.FromObject("123"));
+            var data = Table.Read(JToken.FromObject("123"));
             
             Assert.Null(data);
         }
@@ -30,14 +30,14 @@ namespace Raven.Munin.Tests
         public void BeforeCommitRemoveIsNotVisibleOutsideTheTx()
         {
             
-            Assert.True(PersistentDictionary.Put(JToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }));
+            Assert.True(Table.Put(JToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }));
 
             Commit();
 
-            Assert.True(PersistentDictionary.Remove(JToken.FromObject("123")));
+            Assert.True(Table.Remove(JToken.FromObject("123")));
 
-            PersistentDictionary.ReadResult data = null;
-            SupressTx(() => data = PersistentDictionary.Read(JToken.FromObject("123")));
+            Table.ReadResult data = null;
+            SupressTx(() => data = Table.Read(JToken.FromObject("123")));
 
             Assert.Equal(new byte[] { 1, 2, 4, 5 }, data.Data());
         }
@@ -45,15 +45,15 @@ namespace Raven.Munin.Tests
         [Fact]
         public void AfterCommitRemoveIsVisibleOutsideTheTx()
         {
-            Assert.True(PersistentDictionary.Put(JToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }));
+            Assert.True(Table.Put(JToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }));
 
             Commit();
 
-            Assert.True(PersistentDictionary.Remove(JToken.FromObject("123")));
+            Assert.True(Table.Remove(JToken.FromObject("123")));
 
             Commit();
 
-            Assert.Null(PersistentDictionary.Read(JToken.FromObject("123")));
+            Assert.Null(Table.Read(JToken.FromObject("123")));
         }
     }
 }
