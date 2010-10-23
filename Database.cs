@@ -208,11 +208,6 @@ namespace Raven.Munin
                         command.Size = command.Payload.Length;
                         log.Write(command.Payload, 0, command.Payload.Length);
                     }
-                    else
-                    {
-                        command.Position = 0;
-                        command.Size = 0;
-                    }
 
                     cmd.Add("position", command.Position);
                     cmd.Add("size", command.Size);
