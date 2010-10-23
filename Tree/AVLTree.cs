@@ -115,7 +115,7 @@ namespace Raven.Munin.Tree
 
         public IBinarySearchTree<TKey, TValue> Search(TKey key)
         {
-            int compare = comparer.Compare(key, Key);
+            int compare = comparer.Compare(key, theKey);
             if (compare == 0)
                 return this;
             if (compare > 0)
@@ -125,7 +125,7 @@ namespace Raven.Munin.Tree
 
         public IEnumerable<TValue> GreaterThan(TKey gtKey)
         {
-            int compare = comparer.Compare(Key, gtKey);
+            int compare = comparer.Compare(theKey, gtKey);
             if (compare <= 0)
             {
                 foreach (var value in Right.GreaterThan(gtKey))
@@ -147,7 +147,7 @@ namespace Raven.Munin.Tree
 
         public IEnumerable<TValue> GreaterThanOrEqual(TKey gteKey)
         {
-            int compare = comparer.Compare(Key, gteKey);
+            int compare = comparer.Compare(theKey, gteKey);
             if (compare < 0)
             {
                 foreach (var value in Right.GreaterThanOrEqual(gteKey))
@@ -177,24 +177,24 @@ namespace Raven.Munin.Tree
         public IBinarySearchTree<TKey, TValue> Add(TKey key, TValue value)
         {
             AVLTree<TKey, TValue> result;
-            if (comparer.Compare(key, Key) > 0)
-                result = new AVLTree<TKey, TValue>(comparer,deepCopyKey, deepCopyValue, Key, Value, Left, Right.Add(key, value));
+            if (comparer.Compare(key, theKey) > 0)
+                result = new AVLTree<TKey, TValue>(comparer, deepCopyKey, deepCopyValue, theKey, theValue, Left, Right.Add(key, value));
             else
-                result = new AVLTree<TKey, TValue>(comparer, deepCopyKey, deepCopyValue, Key, Value, Left.Add(key, value), Right);
+                result = new AVLTree<TKey, TValue>(comparer, deepCopyKey, deepCopyValue, theKey, theValue, Left.Add(key, value), Right);
             return MakeBalanced(result);
         }
 
         public IBinarySearchTree<TKey, TValue> AddOrUpdate(TKey key, TValue value, Func<TKey, TValue, TValue> updateValueFactory)
         {
             AVLTree<TKey, TValue> result;
-            var compare = comparer.Compare(key, Key);
+            var compare = comparer.Compare(key, theKey);
             if (compare > 0)
-                result = new AVLTree<TKey, TValue>(comparer, deepCopyKey, deepCopyValue, Key, Value, Left, Right.AddOrUpdate(key, value, updateValueFactory));
+                result = new AVLTree<TKey, TValue>(comparer, deepCopyKey, deepCopyValue, theKey, theValue, Left, Right.AddOrUpdate(key, value, updateValueFactory));
             else if(compare < 0)
-                result = new AVLTree<TKey, TValue>(comparer, deepCopyKey, deepCopyValue, Key, Value, Left.AddOrUpdate(key, value, updateValueFactory), Right);
+                result = new AVLTree<TKey, TValue>(comparer, deepCopyKey, deepCopyValue, theKey, theValue, Left.AddOrUpdate(key, value, updateValueFactory), Right);
             else
             {
-                var newValue = updateValueFactory(key, Value);
+                var newValue = updateValueFactory(key, theValue);
                 result = new AVLTree<TKey, TValue>(comparer, deepCopyKey, deepCopyValue, key, newValue, Left, Right);
             }
             return MakeBalanced(result);
@@ -203,11 +203,11 @@ namespace Raven.Munin.Tree
         public IBinarySearchTree<TKey, TValue> TryRemove(TKey key, out bool removed, out TValue value)
         {
             IBinarySearchTree<TKey, TValue> result;
-            int compare = comparer.Compare(key, Key);
+            int compare = comparer.Compare(key, theKey);
             if (compare == 0)
             {
                 removed = true;
-                value = Value;
+                value = theValue;
                 // We have a match. If this is a leaf, just remove it 
                 // by returning Empty.  If we have only one child,
                 // replace the node with the child.
@@ -228,9 +228,9 @@ namespace Raven.Munin.Tree
                 }
             }
             else if (compare < 0)
-                result = new AVLTree<TKey, TValue>(comparer, deepCopyKey, deepCopyValue, Key, Value, Left.TryRemove(key, out removed, out value), Right);
+                result = new AVLTree<TKey, TValue>(comparer, deepCopyKey, deepCopyValue, theKey, theValue, Left.TryRemove(key, out removed, out value), Right);
             else
-                result = new AVLTree<TKey, TValue>(comparer, deepCopyKey, deepCopyValue, Key, Value, Left, Right.TryRemove(key, out removed, out value));
+                result = new AVLTree<TKey, TValue>(comparer, deepCopyKey, deepCopyValue, theKey, theValue, Left, Right.TryRemove(key, out removed, out value));
             return MakeBalanced(result);
         }
 
