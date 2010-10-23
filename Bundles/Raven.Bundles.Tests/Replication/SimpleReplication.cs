@@ -60,6 +60,8 @@ namespace Raven.Bundles.Tests.Replication
 
             using (var session = store2.OpenSession())
             {
+                session.Advanced.MaxNumberOfRequestsPerSession = RetriesCount * 2;
+                
                 bool foundAll = false;
                 for (int i = 0; i < RetriesCount; i++)
                 {
@@ -106,6 +108,7 @@ namespace Raven.Bundles.Tests.Replication
 
             using (var session = store2.OpenSession()) // waiting for document to show up.
             {
+                session.Advanced.MaxNumberOfRequestsPerSession = RetriesCount * 2;
                 Company company = null;
                 for (int i = 0; i < RetriesCount; i++)
                 {
@@ -146,6 +149,8 @@ namespace Raven.Bundles.Tests.Replication
 
             using (var session = store2.OpenSession())
             {
+                session.Advanced.MaxNumberOfRequestsPerSession = RetriesCount * 2;
+                
                 Company company = null;
                 for (int i = 0; i < RetriesCount; i++)
                 {
