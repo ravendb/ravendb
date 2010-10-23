@@ -1,5 +1,7 @@
+cd build
 for($i = 0; $i -le 250; $i++) 
 {
+    $sp = [System.Diagnostics.Stopwatch]::StartNew()
     Write-Host "Starting test #$i" -foregroundcolor Cyan
     ..\Tools\XUnit\xunit.console.clr4.exe "Raven.Munin.Tests.dll" 
     if ($lastExitCode -ne 0)
@@ -19,5 +21,6 @@ for($i = 0; $i -le 250; $i++)
     ..\Tools\XUnit\xunit.console.clr4.exe "Raven.Bundles.Tests.dll" 
     if ($lastExitCode -ne 0)
       { throw "err" }
-    
+     Write-Host "Completed in " $sp.Elapsed -foregroundcolor Cyan
+   
 }
