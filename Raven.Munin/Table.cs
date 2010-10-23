@@ -416,7 +416,7 @@ namespace Raven.Munin
             int index = 0;
             foreach (var secondaryIndex in SecondaryIndices)
             {
-                persistentSource.DictionariesStates[TableId].SecondaryIndicesState.Add(new EmptyAVLTree<IComparable, IBinarySearchTree<JToken, JToken>>(Comparer<IComparable>.Default));
+                persistentSource.DictionariesStates[TableId].SecondaryIndicesState.Add(new EmptyAVLTree<IComparable, IBinarySearchTree<JToken, JToken>>(Comparer<IComparable>.Default,x=>x, x=>x));
                 secondaryIndex.Initialize(persistentSource, TableId, index++);
             }
         }

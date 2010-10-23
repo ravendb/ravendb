@@ -91,7 +91,7 @@ namespace Raven.Storage.Managed
             {
                 {"index", name},
                 {"attempts", 0},
-                {"sucesses", 0},
+                {"successes", 0},
                 {"failures", 0},
                 {"lastEtag", Guid.Empty.ToByteArray()},
                 {"lastTimestamp", DateTime.MinValue}
