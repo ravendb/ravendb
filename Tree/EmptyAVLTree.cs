@@ -7,10 +7,15 @@ namespace Raven.Munin.Tree
     internal sealed class EmptyAVLTree<TKey, TValue> : IBinarySearchTree<TKey, TValue>
     {
         private readonly IComparer<TKey> comparer;
+        private readonly Func<TKey, TKey> deepCopyKey;
+        private readonly Func<TValue, TValue> deepCopyValue;
 
-        public EmptyAVLTree(IComparer<TKey> comparer)
+
+        public EmptyAVLTree(IComparer<TKey> comparer, Func<TKey, TKey> deepCopyKey, Func<TValue, TValue> deepCopyValue)
         {
             this.comparer = comparer;
+            this.deepCopyValue = deepCopyValue;
+            this.deepCopyKey = deepCopyKey;
         }
 
         // IBinaryTree
@@ -85,13 +90,13 @@ namespace Raven.Munin.Tree
 
         public IBinarySearchTree<TKey, TValue> Add(TKey key, TValue value)
         {
-            return new AVLTree<TKey, TValue>(comparer, key, value, this, this);
+            return new AVLTree<TKey, TValue>(comparer,deepCopyKey, deepCopyValue, key, value, this, this);
         }
 
         public IBinarySearchTree<TKey, TValue> AddOrUpdate(TKey key, TValue value, Func<TKey, TValue, TValue> updateValueFactory)
         {
             // we don't udpate, so we don't care about the update value factory
-            return new AVLTree<TKey, TValue>(comparer, key, value, this, this);
+            return new AVLTree<TKey, TValue>(comparer, deepCopyKey, deepCopyValue, key, value, this, this);
         }
 
         public IBinarySearchTree<TKey, TValue> TryRemove(TKey key, out bool removed, out TValue value)
