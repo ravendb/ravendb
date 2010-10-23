@@ -71,7 +71,7 @@ namespace Raven.Client.Tests.Bugs
 
                 using (var s = documentStore.OpenSession())
                 {
-                    var result = s.Advanced.DynamicLuceneQuery<User>()
+                    var result = s.Advanced.DynamicLuceneQuery<Person>()
                         .WhereEquals("Name", "Ayende", isAnalyzed: true)
                         .SelectFields<JObject>("BillingAddress")
                         .First();
@@ -101,7 +101,7 @@ namespace Raven.Client.Tests.Bugs
 
                 using (var s = documentStore.OpenSession())
                 {
-                    var result = s.Advanced.DynamicLuceneQuery<User>()
+                    var result = s.Advanced.DynamicLuceneQuery<Person>()
                         .WhereEquals("Name", "Ayende", isAnalyzed: true)
                         .SelectFields<JObject>("BillingAddress.City")
                         .First();
@@ -136,7 +136,7 @@ namespace Raven.Client.Tests.Bugs
 
                 using (var s = documentStore.OpenSession())
                 {
-                    var result = s.Advanced.DynamicLuceneQuery<User>()
+                    var result = s.Advanced.DynamicLuceneQuery<Person>()
                         .WhereEquals("Name", "Ayende", isAnalyzed: true)
                         .SelectFields<JObject>("Addresses[0].City")
                         .First();

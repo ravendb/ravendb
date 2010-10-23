@@ -113,3 +113,4 @@ AssemblyInfo.cs
 /Samples/Raven.Sample.ShardClient/Servers/Shard2/Raven.Storage.Esent.dll
 /Samples/Raven.Sample.ShardClient/Servers/Shard2/Rhino.Licensing.dll
 /Samples/Raven.Sample.ShardClient/Servers/Shard2/log4net.dll
+*.nupkg
