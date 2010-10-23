@@ -8,7 +8,9 @@ namespace Raven.Munin
     {
         T Read<T>(Func<Stream,T> readOnlyAction);
 
-        IEnumerable<T> Read<T>(Func<Stream, IEnumerable<T>> readOnlyAction);
+        T Read<T>(Func<T> readOnlyAction);
+
+        IEnumerable<T> Read<T>(Func<IEnumerable<T>> readOnlyAction);
 
         void Write(Action<Stream> readWriteAction);
 

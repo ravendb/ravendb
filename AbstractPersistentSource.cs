@@ -25,7 +25,8 @@ namespace Raven.Munin
 
         public bool CreatedNew
         {
-            get; protected set;
+            get;
+            protected set;
         }
 
         public IList<PersistentDictionaryState> DictionariesStates
@@ -43,7 +44,7 @@ namespace Raven.Munin
             try
             {
                 Stream stream;
-                using(pool.Use(out stream))
+                using (pool.Use(out stream))
                     return readOnlyAction(stream);
             }
             finally
@@ -53,20 +54,32 @@ namespace Raven.Munin
             }
         }
 
-        public IEnumerable<T> Read<T>(Func<Stream, IEnumerable<T>> readOnlyAction)
+        public T Read<T>(Func<T> readOnlyAction)
         {
             var needUpdating = currentStates.Value == null;
             if (needUpdating)
                 currentStates.Value = globalStates;
             try
             {
-                Stream stream;
-                using (pool.Use(out stream))
+                return readOnlyAction();
+            }
+            finally
+            {
+                if (needUpdating)
+                    currentStates.Value = null;
+            }
+        }
+
+        public IEnumerable<T> Read<T>(Func<IEnumerable<T>> readOnlyAction)
+        {
+            var needUpdating = currentStates.Value == null;
+            if (needUpdating)
+                currentStates.Value = globalStates;
+            try
+            {
+                foreach (T item in readOnlyAction())
                 {
-                    foreach (T item in readOnlyAction(stream))
-                    {
-                        yield return item;
-                    }
+                    yield return item;
                 }
             }
             finally

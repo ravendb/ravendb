@@ -21,7 +21,7 @@ namespace Raven.Munin
         {
             get
             {
-                return persistentSource.Read(_ => KeyToFilePos.KeysInOrder);
+                return persistentSource.Read(() => KeyToFilePos.KeysInOrder);
             }
         }
 
@@ -158,7 +158,8 @@ namespace Raven.Munin
 
             var readResult = Read(key, txId);
 
-            if (readResult != null && JTokenComparer.Instance.Equals(readResult.Key, key))
+            if (readResult != null && 
+                new JTokenEqualityComparer().Equals(key, readResult.Key))
                 return true; // no need to do anything, user wrote the same data as is already in, hence, no op
 
             operationsInTransactions.GetOrAdd(txId, new List<Command>())
