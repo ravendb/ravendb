@@ -12,8 +12,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Client", "Raven.Clien
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Client.Tests", "Raven.Client.Tests\Raven.Client.Tests.csproj", "{36B31D69-508B-4594-8F8E-85774BAA7D3F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.PowerShellIntegration", "Raven.PowerShellIntegration\Raven.PowerShellIntegration.csproj", "{39AEF13E-8F87-4976-B09A-13944F59C97E}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Web", "Raven.Web\Raven.Web.csproj", "{F49C2ED0-1844-44B4-A595-5FD152853B9C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Client.3.5", "Raven.Client.3.5\Raven.Client.3.5.csproj", "{FCAF4299-10DF-4ECF-A81E-28BA158174BF}"
