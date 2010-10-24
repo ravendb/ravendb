@@ -65,7 +65,7 @@
     <Compile Include="Abstractions\IHttpResponse.cs" />
     <Compile Include="Abstractions\UrlExtension.cs" />
     <Compile Include="AnonymousUserAccessMode.cs" />
-    <Compile Include="CurrentOperation.cs" />
+    <Compile Include="CurrentOperationContext.cs" />
     <Compile Include="Exceptions\BadRequestException.cs" />
     <Compile Include="Exceptions\ConcurrencyException.cs" />
     <Compile Include="Extensions\HttpExtensions.cs" />

@@ -125,7 +125,7 @@ namespace Raven.Client.Tests.Bugs
 
 			public override void OnPut(string key, Newtonsoft.Json.Linq.JObject document, Newtonsoft.Json.Linq.JObject metadata, TransactionInformation transactionInformation)
 			{
-				Hello = CurrentOperation.Headers.Value["Hello"];
+				Hello = CurrentOperationContext.Headers.Value["Hello"];
 				base.OnPut(key, document, metadata, transactionInformation);
 			}
 		}

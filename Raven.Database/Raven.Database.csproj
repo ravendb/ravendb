@@ -114,7 +114,6 @@
     <Compile Include="Backup\RemoveBackupDocumentStartupTask.cs" />
     <Compile Include="Commercial\ValidateLicense.cs" />
     <Compile Include="Commercial\WarningMessagesHolder.cs" />
-    <Compile Include="CurrentOperation.cs" />
     <Compile Include="DatabaseBulkOperations.cs" />
     <Compile Include="Data\AttachmentInformation.cs" />
     <Compile Include="Data\BackupRequest.cs" />

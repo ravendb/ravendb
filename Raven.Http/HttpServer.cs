@@ -288,7 +288,7 @@ namespace Raven.Database.Server
 
             SetupRequestToProperDatabase(ctx);
 
-            CurrentRavenOperation.Headers.Value = ctx.Request.Headers;
+            CurrentOperationContext.Headers.Value = ctx.Request.Headers;
             try
             {
 
@@ -321,7 +321,7 @@ namespace Raven.Database.Server
             }
             finally
             {
-                CurrentRavenOperation.Headers.Value = null;
+                CurrentOperationContext.Headers.Value = null;
                 currentDatabase.Value = DefaultResourceStore;
                 currentConfiguration.Value = DefaultConfiguration;
             }
