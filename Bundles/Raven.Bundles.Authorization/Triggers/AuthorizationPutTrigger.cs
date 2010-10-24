@@ -34,8 +34,8 @@ namespace Raven.Bundles.Authorization.Triggers
 
 			using(AuthorizationContext.Enter())
 			{
-				var user = CurrentRavenOperation.Headers.Value[Constants.RavenAuthorizationUser];
-				var operation = CurrentRavenOperation.Headers.Value[Constants.RavenAuthorizationOperation];
+                var user = CurrentOperationContext.Headers.Value[Constants.RavenAuthorizationUser];
+                var operation = CurrentOperationContext.Headers.Value[Constants.RavenAuthorizationOperation];
 				if (string.IsNullOrEmpty(operation) || string.IsNullOrEmpty(user))
 					return VetoResult.Allowed;
 
