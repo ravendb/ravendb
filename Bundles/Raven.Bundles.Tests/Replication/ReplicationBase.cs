@@ -43,7 +43,7 @@ namespace Raven.Bundles.Tests.Replication
         }
 
         private const int PortRangeStart = 9101;
-        protected const int RetriesCount = 150;
+        protected const int RetriesCount = 300;
 
         public IDocumentStore CreateStore()
         {

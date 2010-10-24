@@ -159,6 +159,7 @@ namespace Raven.Bundles.Tests.Replication
                         break;
                     Thread.Sleep(100);
                 }
+                Assert.NotNull(company);
                 Assert.Equal("Hibernating Rhinos", company.Name);
             }
 
