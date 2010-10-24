@@ -27,7 +27,7 @@ namespace Raven.Server
 			try
 			{
 				database.SpinBackgroundWorkers();
-				server = new HttpServer(settings, database);
+				server = new RavenDbHttpServer(settings, database);
 				server.Start();
 			}
 			catch (Exception)

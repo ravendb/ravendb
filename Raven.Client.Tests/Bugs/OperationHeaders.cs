@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel.Composition.Hosting;
 using System.IO;
 using System.Reflection;
+using System.Transactions;
 using Raven.Client.Document;
 using Raven.Client.Tests.Document;
 using Raven.Database;
@@ -9,6 +10,7 @@ using Raven.Database.Extensions;
 using Raven.Database.Plugins;
 using Raven.Server;
 using Xunit;
+using TransactionInformation = Raven.Database.TransactionInformation;
 
 namespace Raven.Client.Tests.Bugs
 {
@@ -123,7 +125,7 @@ namespace Raven.Client.Tests.Bugs
 
 			public override void OnPut(string key, Newtonsoft.Json.Linq.JObject document, Newtonsoft.Json.Linq.JObject metadata, TransactionInformation transactionInformation)
 			{
-				Hello = CurrentRavenOperation.Headers.Value["Hello"];
+				Hello = CurrentOperation.Headers.Value["Hello"];
 				base.OnPut(key, document, metadata, transactionInformation);
 			}
 		}

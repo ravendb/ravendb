@@ -8,42 +8,44 @@ using System.IO.Compression;
 using System.Net;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Xml;
 using log4net;
 using Newtonsoft.Json;
-using Raven.Database.Data;
 using Raven.Database.Exceptions;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Responders;
-using Raven.Database.Json;
 using System.Linq;
+using Raven.Http;
+using Formatting = Newtonsoft.Json.Formatting;
 
 namespace Raven.Database.Server
 {
-    public class HttpServer : IDisposable
+    public abstract class HttpServer : IDisposable
     {
-        private readonly DocumentDatabase defaultDatabase;
-        private readonly RavenConfiguration defaultConfiguration;
+        protected readonly IResourceStore DefaultResourceStore;
+        protected readonly IRaveHttpnConfiguration DefaultConfiguration;
 
-        private readonly ThreadLocal<DocumentDatabase> currentDatabase = new ThreadLocal<DocumentDatabase>();
-        private readonly ThreadLocal<InMemroyRavenConfiguration> currentConfiguration = new ThreadLocal<InMemroyRavenConfiguration>();
+        private readonly ThreadLocal<IResourceStore> currentDatabase = new ThreadLocal<IResourceStore>();
+        private readonly ThreadLocal<IRaveHttpnConfiguration> currentConfiguration = new ThreadLocal<IRaveHttpnConfiguration>();
 
-        private readonly ConcurrentDictionary<string, DocumentDatabase> databaseCache =
-            new ConcurrentDictionary<string, DocumentDatabase>();
+        protected readonly ConcurrentDictionary<string, IResourceStore> ResourcesStoresCache =
+            new ConcurrentDictionary<string, IResourceStore>();
 
         private readonly ConcurrentDictionary<string, DateTime> databaseLastRecentlyUsed = new ConcurrentDictionary<string, DateTime>();
 
-        private static readonly Regex databaseQuery = new Regex("^/databases/([^/]+)(?=/?)");
 
         [ImportMany]
-        public IEnumerable<RequestResponder> RequestResponders { get; set; }
+        public IEnumerable<AbstractRequestResponder> RequestResponders { get; set; }
 
-        public InMemroyRavenConfiguration Configuration
+        public IRaveHttpnConfiguration Configuration
         {
             get
             {
-                return defaultConfiguration;
+                return DefaultConfiguration;
             }
         }
+
+        public abstract Regex TenantsQuery { get; }
 
         private HttpListener listener;
 
@@ -57,10 +59,10 @@ namespace Raven.Database.Server
         private readonly SemaphoreSlim concurretRequestSemaphore = new SemaphoreSlim(192);
         private Timer databasesCleanupTimer;
 
-        public HttpServer(RavenConfiguration configuration, DocumentDatabase database)
+        protected HttpServer(IRaveHttpnConfiguration configuration, IResourceStore resourceStore)
         {
-            defaultDatabase = database;
-            defaultConfiguration = configuration;
+            DefaultResourceStore = resourceStore;
+            DefaultConfiguration = configuration;
 
             configuration.Container.SatisfyImportsOnce(this);
 
@@ -77,7 +79,7 @@ namespace Raven.Database.Server
             databasesCleanupTimer.Dispose();
             if (listener != null)
                 listener.Stop();
-            foreach (var documentDatabase in databaseCache)
+            foreach (var documentDatabase in ResourcesStoresCache)
             {
                 documentDatabase.Value.Dispose();
             }
@@ -88,11 +90,11 @@ namespace Raven.Database.Server
         public void Start()
         {
             listener = new HttpListener();
-            string virtualDirectory = defaultConfiguration.VirtualDirectory;
+            string virtualDirectory = DefaultConfiguration.VirtualDirectory;
             if (virtualDirectory.EndsWith("/") == false)
                 virtualDirectory = virtualDirectory + "/";
-            listener.Prefixes.Add("http://" + (defaultConfiguration.HostName ?? "+") + ":" + defaultConfiguration.Port + virtualDirectory);
-            switch (defaultConfiguration.AnonymousUserAccessMode)
+            listener.Prefixes.Add("http://" + (DefaultConfiguration.HostName ?? "+") + ":" + DefaultConfiguration.Port + virtualDirectory);
+            switch (DefaultConfiguration.AnonymousUserAccessMode)
             {
                 case AnonymousUserAccessMode.None:
                     listener.AuthenticationSchemes = AuthenticationSchemes.IntegratedWindowsAuthentication;
@@ -110,7 +112,7 @@ namespace Raven.Database.Server
                     };
                     break;
                 default:
-                    throw new ArgumentException("Cannot understand access mode: " + defaultConfiguration.AnonymousUserAccessMode);
+                    throw new ArgumentException("Cannot understand access mode: " + DefaultConfiguration.AnonymousUserAccessMode);
             }
             databasesCleanupTimer = new Timer(CleanupDatabases, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
             listener.Start();
@@ -129,8 +131,8 @@ namespace Raven.Database.Server
                 DateTime _;
                 databaseLastRecentlyUsed.TryRemove(db, out _);
 
-                DocumentDatabase database;
-                if(databaseCache.TryRemove(db, out database))
+                IResourceStore database;
+                if(ResourcesStoresCache.TryRemove(db, out database))
                     database.Dispose();
             }
         }
@@ -140,7 +142,7 @@ namespace Raven.Database.Server
             IHttpContext ctx;
             try
             {
-                ctx = new HttpListenerContextAdpater(listener.EndGetContext(ar), defaultConfiguration);
+                ctx = new HttpListenerContextAdpater(listener.EndGetContext(ar), DefaultConfiguration);
                 //setup waiting for the next request
                 listener.BeginGetContext(GetContext, null);
             }
@@ -208,10 +210,8 @@ namespace Raven.Database.Server
                     HandleBadRequest(ctx, (BadRequestException)e);
                 else if (e is ConcurrencyException)
                     HandleConcurrencyException(ctx, (ConcurrencyException)e);
-                else if (e is IndexDisabledException)
-                    HandleIndexDisabledException(ctx, (IndexDisabledException)e);
-                else if (e is IndexDoesNotExistsException)
-                    HandleIndexDoesNotExistsException(ctx, e);
+                else if (TryHandleException(ctx, e))
+                    return;
                 else
                     HandleGenericException(ctx, e);
             }
@@ -221,16 +221,9 @@ namespace Raven.Database.Server
             }
         }
 
-        private static void HandleIndexDoesNotExistsException(IHttpContext ctx, Exception e)
-        {
-            ctx.SetStatusToNotFound();
-            SerializeError(ctx, new
-            {
-                Url = ctx.Request.RawUrl,
-                Error = e.Message
-            });
-        }
+        protected abstract bool TryHandleException(IHttpContext ctx, Exception exception);
 
+       
         private static void HandleTooBusyError(IHttpContext ctx)
         {
             ctx.Response.StatusCode = 503;
@@ -242,17 +235,6 @@ namespace Raven.Database.Server
             });
         }
 
-        private static void HandleIndexDisabledException(IHttpContext ctx, IndexDisabledException e)
-        {
-            ctx.Response.StatusCode = 503;
-            ctx.Response.StatusDescription = "Service Unavailable";
-            SerializeError(ctx, new
-            {
-                Url = ctx.Request.RawUrl,
-                Error = e.Information.GetErrorMessage(),
-                Index = e.Information.Name,
-            });
-        }
 
         private static void HandleGenericException(IHttpContext ctx, Exception e)
         {
@@ -289,7 +271,7 @@ namespace Raven.Database.Server
             });
         }
 
-        private static void SerializeError(IHttpContext ctx, object error)
+        protected static void SerializeError(IHttpContext ctx, object error)
         {
             var sw = new StreamWriter(ctx.Response.OutputStream);
             new JsonSerializer().Serialize(new JsonTextWriter(sw)
@@ -311,7 +293,7 @@ namespace Raven.Database.Server
             {
 
 
-                if (defaultConfiguration.HttpCompression)
+                if (DefaultConfiguration.HttpCompression)
                     AddHttpCompressionIfClientCanAcceptIt(ctx);
 
                 AddAccessControlAllowOriginHeader(ctx);
@@ -321,7 +303,7 @@ namespace Raven.Database.Server
                     if (requestResponder.WillRespond(ctx))
                     {
                         requestResponder.Respond(ctx);
-                        return requestResponder is RavenUI || requestResponder is RavenRoot || requestResponder is Favicon;
+                        return requestResponder.IsUserInterfaceRequest;
                     }
                 }
                 ctx.SetStatusToBadRequest();
@@ -340,8 +322,8 @@ namespace Raven.Database.Server
             finally
             {
                 CurrentRavenOperation.Headers.Value = null;
-                currentDatabase.Value = defaultDatabase;
-                currentConfiguration.Value = defaultConfiguration;
+                currentDatabase.Value = DefaultResourceStore;
+                currentConfiguration.Value = DefaultConfiguration;
             }
             return true;
         }
@@ -349,20 +331,20 @@ namespace Raven.Database.Server
         private void SetupRequestToProperDatabase(IHttpContext ctx)
         {
             var requestUrl = ctx.GetRequestUrl();
-            var match = databaseQuery.Match(requestUrl);
+            var match = TenantsQuery.Match(requestUrl);
 
-            DocumentDatabase database;
+            IResourceStore resourceStore;
             if (match.Success == false)
             {
-                currentDatabase.Value = defaultDatabase;
-                currentConfiguration.Value = defaultConfiguration;
+                currentDatabase.Value = DefaultResourceStore;
+                currentConfiguration.Value = DefaultConfiguration;
             } 
-            else if(TryGetOrCreateDatabase(match.Groups[1].Value, out database))
+            else if(TryGetOrCreateResourceStore(match.Groups[1].Value, out resourceStore))
             {
                 databaseLastRecentlyUsed.AddOrUpdate(match.Groups[1].Value, DateTime.Now, (s, time) => DateTime.Now);
                 ctx.AdjustUrl(match.Value);
-                currentDatabase.Value = database;
-                currentConfiguration.Value = database.Configuration;
+                currentDatabase.Value = resourceStore;
+                currentConfiguration.Value = resourceStore.Configuration;
             }
             else
             {
@@ -370,43 +352,14 @@ namespace Raven.Database.Server
             }
         }
 
-        private bool TryGetOrCreateDatabase(string tenantId, out DocumentDatabase database)
-        {
-            if (databaseCache.TryGetValue(tenantId, out database))
-                return true;
-
-            var jsonDocument = defaultDatabase.Get("Raven/Databases/" + tenantId, null);
-
-            if (jsonDocument == null)
-                return false;
-
-            var document = jsonDocument.DataAsJson.JsonDeserialization<DatabaseDocument>();
-
-            database = databaseCache.GetOrAdd(tenantId, s =>
-            {
-                var config = new InMemroyRavenConfiguration
-                {
-                    Settings = defaultConfiguration.Settings,
-                };
-                config.Settings["Raven/VirtualDir"] = config.Settings["Raven/VirtualDir"] + "/" + tenantId;
-                foreach (var setting in document.Settings)
-                {
-                    config.Settings[setting.Key] = setting.Value;
-                }
-                config.Initialize();
-                return new DocumentDatabase(config);
-            });
-            return true;
-
-
-        }
+        protected abstract bool TryGetOrCreateResourceStore(string name, out IResourceStore database);
 
 
         private void AddAccessControlAllowOriginHeader(IHttpContext ctx)
         {
-            if (string.IsNullOrEmpty(defaultConfiguration.AccessControlAllowOrigin))
+            if (string.IsNullOrEmpty(DefaultConfiguration.AccessControlAllowOrigin))
                 return;
-            ctx.Response.Headers["Access-Control-Allow-Origin"] = defaultConfiguration.AccessControlAllowOrigin;
+            ctx.Response.Headers["Access-Control-Allow-Origin"] = DefaultConfiguration.AccessControlAllowOrigin;
         }
 
         private static void AddHttpCompressionIfClientCanAcceptIt(IHttpContext ctx)
@@ -433,7 +386,7 @@ namespace Raven.Database.Server
 
         private bool AssertSecurityRights(IHttpContext ctx)
         {
-            if (defaultConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.Get &&
+            if (DefaultConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.Get &&
                 (ctx.User == null || ctx.User.Identity == null || ctx.User.Identity.IsAuthenticated == false) &&
                     (ctx.Request.HttpMethod != "GET" && ctx.Request.HttpMethod != "HEAD")
                 )

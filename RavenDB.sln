@@ -33,6 +33,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Munin.Tests", "Raven.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Performance", "Raven.Performance\Raven.Performance.csproj", "{A52B2972-B39E-429B-B326-871E27AEF7B6}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Http", "Raven.Http\Raven.Http.csproj", "{508E5F54-A8F3-47F4-9297-CB96F91D4DF8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -203,6 +205,16 @@ Global
 		{A52B2972-B39E-429B-B326-871E27AEF7B6}.Release|Mixed Platforms.Build.0 = Release|x86
 		{A52B2972-B39E-429B-B326-871E27AEF7B6}.Release|x86.ActiveCfg = Release|x86
 		{A52B2972-B39E-429B-B326-871E27AEF7B6}.Release|x86.Build.0 = Release|x86
+		{508E5F54-A8F3-47F4-9297-CB96F91D4DF8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{508E5F54-A8F3-47F4-9297-CB96F91D4DF8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{508E5F54-A8F3-47F4-9297-CB96F91D4DF8}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{508E5F54-A8F3-47F4-9297-CB96F91D4DF8}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{508E5F54-A8F3-47F4-9297-CB96F91D4DF8}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{508E5F54-A8F3-47F4-9297-CB96F91D4DF8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{508E5F54-A8F3-47F4-9297-CB96F91D4DF8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{508E5F54-A8F3-47F4-9297-CB96F91D4DF8}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{508E5F54-A8F3-47F4-9297-CB96F91D4DF8}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{508E5F54-A8F3-47F4-9297-CB96F91D4DF8}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

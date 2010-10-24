@@ -114,7 +114,7 @@
     <Compile Include="Backup\RemoveBackupDocumentStartupTask.cs" />
     <Compile Include="Commercial\ValidateLicense.cs" />
     <Compile Include="Commercial\WarningMessagesHolder.cs" />
-    <Compile Include="CurrentRavenOperation.cs" />
+    <Compile Include="CurrentOperation.cs" />
     <Compile Include="DatabaseBulkOperations.cs" />
     <Compile Include="Data\AttachmentInformation.cs" />
     <Compile Include="Data\BackupRequest.cs" />
@@ -129,11 +129,11 @@
     <Compile Include="Exceptions\IndexDoesNotExistsException.cs" />
     <Compile Include="Extensions\ExpressionExtensions.cs" />
     <Compile Include="Extensions\GuidExtensions.cs" />
+    <Compile Include="Extensions\HttpContextExtensions.cs" />
     <Compile Include="Extensions\MonoHttpEncoder.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Extensions\MonoHttpUtility.cs" />
-    <Compile Include="Extensions\StreamExtension.cs" />
     <Compile Include="Extensions\IOExtensions.cs" />
     <Compile Include="Indexing\GatherAllCollector.cs" />
     <Compile Include="Indexing\LowerCaseAnalyzer.cs" />
@@ -172,16 +172,6 @@
     <Compile Include="Data\QueryResults.cs" />
     <Compile Include="LinearQueries\QueryRunnerManager.cs" />
     <Compile Include="LinearQueries\RemoteQueryResults.cs" />
-    <Compile Include="Server\Abstractions\HttpContextAdapter.cs" />
-    <Compile Include="Server\Abstractions\HttpListenerContextAdpater.cs" />
-    <Compile Include="Server\Abstractions\HttpListenerRequestAdapter.cs" />
-    <Compile Include="Server\Abstractions\HttpListenerResponseAdapter.cs" />
-    <Compile Include="Server\Abstractions\HttpRequestAdapter.cs" />
-    <Compile Include="Server\Abstractions\HttpResponseAdapter.cs" />
-    <Compile Include="Server\Abstractions\IHttpContext.cs" />
-    <Compile Include="Server\Abstractions\IHttpRequest.cs" />
-    <Compile Include="Server\Abstractions\IHttpResponse.cs" />
-    <Compile Include="AnonymousUserAccessMode.cs" />
     <Compile Include="BatchResult.cs" />
     <Compile Include="Data\Attachment.cs" />
     <Compile Include="Data\CommandDataFactory.cs" />
@@ -197,7 +187,6 @@
     <Compile Include="Data\IndexStats.cs" />
     <Compile Include="Data\QueryResult.cs" />
     <Compile Include="Data\SortedField.cs" />
-    <Compile Include="Exceptions\BadRequestException.cs" />
     <Compile Include="Exceptions\IndexDisabledException.cs" />
     <Compile Include="Data\IndexQuery.cs" />
     <Compile Include="Exceptions\OperationVetoedException.cs" />
@@ -213,7 +202,6 @@
     <Compile Include="Plugins\IRequiresDocumentDatabaseInitialization.cs" />
     <Compile Include="JsonDocument.cs" />
     <Compile Include="DocumentDatabase.cs" />
-    <Compile Include="Exceptions\ConcurrencyException.cs" />
     <Compile Include="Extensions\LoggingExtensions.cs" />
     <Compile Include="Extensions\Reference.cs" />
     <Compile Include="Indexing\Index.cs" />
@@ -222,7 +210,6 @@
     <Compile Include="Indexing\TaskExecuter.cs" />
     <Compile Include="Indexing\WorkContext.cs" />
     <Compile Include="Json\DynamicObjectExtensions.cs" />
-    <Compile Include="Json\JsonEnumConverter.cs" />
     <Compile Include="Json\JsonExtensions.cs" />
     <Compile Include="Json\JsonPatcher.cs" />
     <Compile Include="Json\JsonToExpando.cs" />
@@ -238,24 +225,17 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="PutResult.cs" />
     <Compile Include="RavenConfiguration.cs" />
-    <Compile Include="Server\Abstractions\UrlExtension.cs" />
-    <Compile Include="Server\HttpServer.cs" />
-    <Compile Include="Server\NonAdminHttp.cs" />
+    <Compile Include="Server\RavenDbHttpServer.cs" />
     <Compile Include="Server\Responders\AddIncludesCommand.cs" />
     <Compile Include="Server\Responders\AdminBackup.cs" />
     <Compile Include="Server\Responders\Docs.cs" />
     <Compile Include="Server\Responders\Document.cs" />
     <Compile Include="Server\Responders\DocumentBatch.cs" />
     <Compile Include="Server\Responders\EnumerableExtensions.cs" />
-    <Compile Include="Server\Responders\Favicon.cs" />
-    <Compile Include="Server\Responders\HttpExtensions.cs" />
     <Compile Include="Server\Responders\Index.cs" />
     <Compile Include="Server\Responders\Indexes.cs" />
     <Compile Include="Server\Responders\LinearQueryResponder.cs" />
     <Compile Include="Server\Responders\Queries.cs" />
-    <Compile Include="Server\Responders\RavenRoot.cs" />
-    <Compile Include="Server\Responders\RavenUI.cs" />
-    <Compile Include="Server\Responders\RequestResponder.cs" />
     <Compile Include="Server\Responders\Root.cs" />
     <Compile Include="Server\Responders\Static.cs" />
     <Compile Include="Server\Responders\Statics.cs" />
@@ -282,7 +262,6 @@
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
     <Compile Include="Tasks\Task.cs" />
     <Compile Include="Indexing\IndexStorage.cs" />
-    <Compile Include="TransactionInformation.cs" />
     <Compile Include="TransactionMode.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -393,7 +372,12 @@
     <EmbeddedResource Include="Commercial\RavenDB.public" />
     <None Include="RavenDB.snk" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="..\Raven.Http\Raven.Http.csproj">
+      <Project>{508E5F54-A8F3-47F4-9297-CB96F91D4DF8}</Project>
+      <Name>Raven.Http</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

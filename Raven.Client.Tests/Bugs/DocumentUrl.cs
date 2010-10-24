@@ -12,7 +12,7 @@ namespace Raven.Client.Tests.Bugs
 		public void CanGetFullUrl()
 		{
 			using (var store = NewDocumentStore())
-			using (var server = new HttpServer(store.Configuration, store.DocumentDatabase))
+			using (var server = new RavenDbHttpServer(store.Configuration, store.DocumentDatabase))
 			{
 				server.Start();
 				var documentStore = new DocumentStore
@@ -35,7 +35,7 @@ namespace Raven.Client.Tests.Bugs
 		public void CanGetFullUrlWithSlashOnTheEnd()
 		{
 			using (var store = NewDocumentStore())
-			using (var server = new HttpServer(store.Configuration, store.DocumentDatabase))
+            using (var server = new RavenDbHttpServer(store.Configuration, store.DocumentDatabase))
 			{
 				server.Start();
 				var documentStore = new DocumentStore

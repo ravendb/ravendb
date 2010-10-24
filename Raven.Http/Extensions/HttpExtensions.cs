@@ -6,12 +6,10 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Raven.Database.Data;
 using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
 using Raven.Database.Json;
 using Raven.Database.Server.Abstractions;
-using System.Collections.Generic;
 
 namespace Raven.Database.Server.Responders
 {
@@ -291,35 +289,6 @@ namespace Raven.Database.Server.Responders
 			bool sort;
 			bool.TryParse(sortAsString, out sort);
 			return sort;
-		}
-
-		public static IndexQuery GetIndexQueryFromHttpContext(this IHttpContext context, int maxPageSize)
-		{
-			var query = new IndexQuery
-			{
-				Query = context.Request.QueryString["query"] ?? "",
-				Start = context.GetStart(),
-				Cutoff = context.GetCutOff(),
-				PageSize = context.GetPageSize(maxPageSize),
-				FieldsToFetch = context.Request.QueryString.GetValues("fetch"),
-				SortedFields = context.Request.QueryString.GetValues("sort")
-					.EmptyIfNull()
-					.Select(x => new SortedField(x))
-					.ToArray()
-			};
-
-			double lat = context.GetLat(), lng = context.GetLng(), radius = context.GetRadius();
-			if (lat != 0 || lng != 0 || radius != 0)
-			{
-				return new SpatialIndexQuery(query)
-				{
-					Latitude = lat,
-					Longitude = lng,
-					Radius = radius,
-					SortByDistance = context.SortByDistance()
-				};
-			}
-			return query;
 		}
 
 		public static Guid? GetEtagFromQueryString(this IHttpContext context)

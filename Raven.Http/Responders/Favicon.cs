@@ -2,7 +2,7 @@ using Raven.Database.Server.Abstractions;
 
 namespace Raven.Database.Server.Responders
 {
-	public class Favicon : RequestResponder
+	public class Favicon : AbstractRequestResponder
 	{
 		public override string UrlPattern
 		{
@@ -18,5 +18,13 @@ namespace Raven.Database.Server.Responders
 		{
 			context.WriteEmbeddedFile(Settings.WebDir,"favicon.ico");
 		}
+
+        public override bool IsUserInterfaceRequest
+        {
+            get
+            {
+                return true;
+            }
+        }
 	}
 }

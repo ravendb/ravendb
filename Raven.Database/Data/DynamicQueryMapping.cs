@@ -114,7 +114,7 @@ namespace Raven.Database.Data
                 fields.Add(field);
             }
 
-            var headers = CurrentRavenOperation.Headers.Value;
+            var headers = CurrentOperation.Headers.Value;
 
             List<DynamicSortInfo> sortInfo = new List<DynamicSortInfo>();
             String[] sortHintHeaders = headers.AllKeys

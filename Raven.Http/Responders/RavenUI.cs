@@ -2,12 +2,20 @@ using Raven.Database.Server.Abstractions;
 
 namespace Raven.Database.Server.Responders
 {
-	public class RavenUI : RequestResponder
+	public class RavenUI : AbstractRequestResponder
 	{
 		public override string UrlPattern
 		{
 			get { return "^/raven/"; }
 		}
+
+        public override bool IsUserInterfaceRequest
+        {
+            get
+            {
+                return true;
+            }
+        }
 
 		public override string[] SupportedVerbs
 		{

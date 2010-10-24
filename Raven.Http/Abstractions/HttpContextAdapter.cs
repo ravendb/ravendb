@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Security.Principal;
 using System.Web;
+using Raven.Database.Server.Responders;
 
 namespace Raven.Database.Server.Abstractions
 {
@@ -10,9 +11,9 @@ namespace Raven.Database.Server.Abstractions
 		private readonly HttpContext context;
 		private readonly HttpRequestAdapter request;
 		private readonly HttpResponseAdapter response;
-        private readonly InMemroyRavenConfiguration configuration;
+        private readonly IRaveHttpnConfiguration configuration;
 
-		public HttpContextAdapter(HttpContext context, InMemroyRavenConfiguration configuration)
+        public HttpContextAdapter(HttpContext context, IRaveHttpnConfiguration configuration)
 		{
 			this.context = context;
 			this.configuration = configuration;
@@ -20,7 +21,7 @@ namespace Raven.Database.Server.Abstractions
 			response = new HttpResponseAdapter(context.Response);
 		}
 
-        public InMemroyRavenConfiguration Configuration
+        public IRaveHttpnConfiguration Configuration
 		{
 			get { return configuration; }
 		}

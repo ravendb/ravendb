@@ -52,19 +52,19 @@ namespace Raven.Client.Client
 
 		public JsonDocument Get(string key)
 		{
-			CurrentRavenOperation.Headers.Value = OperationsHeaders;
+			CurrentOperation.Headers.Value = OperationsHeaders;
 			return database.Get(key, RavenTransactionAccessor.GetTransactionInformation());
 		}
 
 		public PutResult Put(string key, Guid? etag, JObject document, JObject metadata)
 		{
-			CurrentRavenOperation.Headers.Value = OperationsHeaders;
+			CurrentOperation.Headers.Value = OperationsHeaders;
 			return database.Put(key, etag, document, metadata, RavenTransactionAccessor.GetTransactionInformation());
 		}
 
 	    public void Delete(string key, Guid? etag)
 		{
-			CurrentRavenOperation.Headers.Value = OperationsHeaders;
+			CurrentOperation.Headers.Value = OperationsHeaders;
 			database.Delete(key, etag, RavenTransactionAccessor.GetTransactionInformation());
 		}
 
@@ -101,19 +101,19 @@ namespace Raven.Client.Client
 
 		public IndexDefinition GetIndex(string name)
 		{
-			CurrentRavenOperation.Headers.Value = OperationsHeaders;
+			CurrentOperation.Headers.Value = OperationsHeaders;
 			return database.GetIndexDefinition(name);
 		}
 
 		public string PutIndex(string name, IndexDefinition definition)
 		{
-			CurrentRavenOperation.Headers.Value = OperationsHeaders;
+			CurrentOperation.Headers.Value = OperationsHeaders;
 		    return PutIndex(name, definition, false);
 		}
 
         public string PutIndex(string name, IndexDefinition definition, bool overwrite)
         {
-			CurrentRavenOperation.Headers.Value = OperationsHeaders;
+			CurrentOperation.Headers.Value = OperationsHeaders;
 			if (overwrite == false && database.IndexStorage.Indexes.Contains(name))
                 throw new InvalidOperationException("Cannot put index: " + name + ", index already exists"); 
             return database.PutIndex(name, definition);
@@ -131,7 +131,7 @@ namespace Raven.Client.Client
 
 		public QueryResult Query(string index, IndexQuery query, string[] ignored)
 		{
-			CurrentRavenOperation.Headers.Value = OperationsHeaders;
+			CurrentOperation.Headers.Value = OperationsHeaders;
 
             if (index.StartsWith("dynamic", StringComparison.InvariantCultureIgnoreCase))
             {
@@ -148,13 +148,13 @@ namespace Raven.Client.Client
 
 		public void DeleteIndex(string name)
 		{
-			CurrentRavenOperation.Headers.Value = OperationsHeaders; 
+			CurrentOperation.Headers.Value = OperationsHeaders; 
 			database.DeleteIndex(name);
 		}
 
 		public MultiLoadResult Get(string[] ids, string[] includes)
 	    {
-			CurrentRavenOperation.Headers.Value = OperationsHeaders;
+			CurrentOperation.Headers.Value = OperationsHeaders;
 			return new MultiLoadResult
 			{
 				Results = ids
@@ -171,31 +171,31 @@ namespace Raven.Client.Client
 			{
 				commandData.TransactionInformation = RavenTransactionAccessor.GetTransactionInformation();
 			}
-			CurrentRavenOperation.Headers.Value = OperationsHeaders; 
+			CurrentOperation.Headers.Value = OperationsHeaders; 
 			return database.Batch(commandDatas);
 		}
 
 		public void Commit(Guid txId)
 	    {
-			CurrentRavenOperation.Headers.Value = OperationsHeaders;
+			CurrentOperation.Headers.Value = OperationsHeaders;
 			database.Commit(txId);
 	    }
 
 	    public void Rollback(Guid txId)
 	    {
-			CurrentRavenOperation.Headers.Value = OperationsHeaders; 
+			CurrentOperation.Headers.Value = OperationsHeaders; 
 			database.Rollback(txId);
 	    }
 
 		public byte[] PromoteTransaction(Guid fromTxId)
 		{
-			CurrentRavenOperation.Headers.Value = OperationsHeaders; 
+			CurrentOperation.Headers.Value = OperationsHeaders; 
 			return database.PromoteTransaction(fromTxId);
 		}
 
 		public void StoreRecoveryInformation(Guid resourceManagerId,Guid txId, byte[] recoveryInformation)
 		{
-			CurrentRavenOperation.Headers.Value = OperationsHeaders;
+			CurrentOperation.Headers.Value = OperationsHeaders;
             database.PutStatic("transactions/recoveryInformation/" + txId, null, recoveryInformation, new JObject(new JProperty("Resource-Manager-Id", resourceManagerId.ToString())));
 		}
 
@@ -243,19 +243,19 @@ namespace Raven.Client.Client
 
 		public Attachment GetStatic(string name)
 		{
-			CurrentRavenOperation.Headers.Value = OperationsHeaders; 
+			CurrentOperation.Headers.Value = OperationsHeaders; 
 			return database.GetStatic(name);
 		}
 
 		public void PutStatic(string name, Guid? etag, byte[] data, JObject metadata)
 		{
-			CurrentRavenOperation.Headers.Value = OperationsHeaders; 
+			CurrentOperation.Headers.Value = OperationsHeaders; 
 			database.PutStatic(name, etag, data, metadata);
 		}
 
 		public void DeleteStatic(string name, Guid? etag)
 		{
-			CurrentRavenOperation.Headers.Value = OperationsHeaders; 
+			CurrentOperation.Headers.Value = OperationsHeaders; 
 			database.DeleteStatic(name, etag);
 		}
 	}

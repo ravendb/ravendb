@@ -2,7 +2,7 @@ using Raven.Database.Server.Abstractions;
 
 namespace Raven.Database.Server.Responders
 {
-	public class RavenRoot : RequestResponder
+	public class RavenRoot : AbstractRequestResponder
 	{
 		public override string UrlPattern
 		{
@@ -21,5 +21,13 @@ namespace Raven.Database.Server.Responders
 			else
 				context.Response.Redirect("/raven/index.html");
 		}
+
+        public override bool IsUserInterfaceRequest
+        {
+            get
+            {
+                return true;
+            }
+        }
 	}
 }

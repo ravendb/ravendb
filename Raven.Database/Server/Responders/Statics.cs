@@ -23,4 +23,15 @@ namespace Raven.Database.Server.Responders
 			context.WriteJson(array);
 		}
 	}
+
+    public abstract class RequestResponder : AbstractRequestResponder
+    {
+        public DocumentDatabase Database
+        {
+            get
+            {
+                return (DocumentDatabase)ResourceStore;
+            }
+        }
+    }
 }

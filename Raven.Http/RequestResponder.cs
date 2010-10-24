@@ -4,18 +4,19 @@ using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Raven.Database.Server.Abstractions;
+using Raven.Http;
 
 namespace Raven.Database.Server.Responders
 {
 	[InheritedExport]
-	public abstract class RequestResponder
+	public abstract class AbstractRequestResponder
 	{
 		private readonly string[] supportedVerbsCached;
 		protected readonly Regex urlMatcher;
-        private Func<InMemroyRavenConfiguration> settings;
-	    private Func<DocumentDatabase> database;
+        private Func<IRaveHttpnConfiguration> settings;
+        private Func<IResourceStore> database;
 
-	    protected RequestResponder()
+	    protected AbstractRequestResponder()
 		{
 			urlMatcher = new Regex(UrlPattern);
 			supportedVerbsCached = SupportedVerbs;
@@ -24,10 +25,11 @@ namespace Raven.Database.Server.Responders
 		public abstract string UrlPattern { get; }
 		public abstract string[] SupportedVerbs { get; }
 
-        public DocumentDatabase Database { get { return database(); } }
-        public InMemroyRavenConfiguration Settings { get { return settings(); } }
+        public IResourceStore ResourceStore { get { return database(); } }
+        public IRaveHttpnConfiguration Settings { get { return settings(); } }
+        public virtual bool IsUserInterfaceRequest { get { return false; } }
 
-        public void Initialize(Func<DocumentDatabase> databaseGetter, Func<InMemroyRavenConfiguration> settingsGetter)
+        public void Initialize(Func<IResourceStore> databaseGetter, Func<IRaveHttpnConfiguration> settingsGetter)
         {
             this.database = databaseGetter;
             this.settings = settingsGetter;

@@ -1,12 +1,13 @@
 using System;
 using System.IO;
 using System.Security.Principal;
+using Raven.Database.Server.Responders;
 
 namespace Raven.Database.Server.Abstractions
 {
 	public interface IHttpContext
 	{
-        InMemroyRavenConfiguration Configuration { get; }
+        IRaveHttpnConfiguration Configuration { get; }
 		IHttpRequest Request { get; }
 		IHttpResponse Response { get; }
 		IPrincipal User { get; }

@@ -18,13 +18,16 @@ using Raven.Database.Json;
 using Raven.Database.LinearQueries;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
+using Raven.Database.Server.Responders;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
+using Raven.Http;
+using Index = Raven.Database.Indexing.Index;
 using Task = Raven.Database.Tasks.Task;
 
 namespace Raven.Database
 {
-    public class DocumentDatabase : IDisposable
+    public class DocumentDatabase : IResourceStore
     {
         [ImportMany]
         public IEnumerable<AbstractPutTrigger> PutTriggers { get; set; }
@@ -175,6 +178,11 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
                 });
                 return result;
             }
+        }
+
+        IRaveHttpnConfiguration IResourceStore.Configuration
+        {
+            get { return Configuration;  }
         }
 
         public InMemroyRavenConfiguration Configuration

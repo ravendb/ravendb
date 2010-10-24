@@ -348,12 +348,6 @@
     <Compile Include="..\Raven.Database\Data\SpatialIndexQuery.cs">
       <Link>Data\SpatialIndexQuery.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Database\Exceptions\BadRequestException.cs">
-      <Link>Exceptions\BadRequestException.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Database\Exceptions\ConcurrencyException.cs">
-      <Link>Exceptions\ConcurrencyException.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Database\Exceptions\IndexDisabledException.cs">
       <Link>Exceptions\IndexDisabledException.cs</Link>
     </Compile>
@@ -368,9 +362,6 @@
     </Compile>
     <Compile Include="..\Raven.Database\Extensions\Reference.cs">
       <Link>Data\Reference.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Database\Extensions\StreamExtension.cs">
-      <Link>Extensions\StreamExtension.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Database\Indexing\FieldIndexing.cs">
       <Link>Data\FieldIndexing.cs</Link>
@@ -390,9 +381,6 @@
     <Compile Include="..\Raven.Database\JsonDocument.cs">
       <Link>Data\JsonDocument.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Database\Json\JsonEnumConverter.cs">
-      <Link>Json\JsonEnumConverter.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Database\Json\JsonExtensions.cs">
       <Link>Extensions\JsonExtensions.cs</Link>
     </Compile>
@@ -408,7 +396,19 @@
     <Compile Include="..\Raven.Database\PutResult.cs">
       <Link>Data\PutResult.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Database\TransactionInformation.cs">
+    <Compile Include="..\Raven.Http\Exceptions\BadRequestException.cs">
+      <Link>Exceptions\BadRequestException.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Http\Exceptions\ConcurrencyException.cs">
+      <Link>Exceptions\ConcurrencyException.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Http\Extensions\StreamExtension.cs">
+      <Link>Extensions\StreamExtension.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Http\Json\JsonEnumConverter.cs">
+      <Link>Json\JsonEnumConverter.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Http\TransactionInformation.cs">
       <Link>Data\TransactionInformation.cs</Link>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
