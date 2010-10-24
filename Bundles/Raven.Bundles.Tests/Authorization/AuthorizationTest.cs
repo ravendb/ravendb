@@ -34,7 +34,7 @@ namespace Raven.Bundles.Tests.Authorization
 		    database::Raven.Database.Extensions.IOExtensions.DeleteDirectory("Data");
 			server = new RavenDbServer(new database::Raven.Database.RavenConfiguration
 			{
-				AnonymousUserAccessMode = database::Raven.Database.AnonymousUserAccessMode.All,
+				AnonymousUserAccessMode = AnonymousUserAccessMode.All,
 				Catalog = { Catalogs = { new AssemblyCatalog(typeof(AuthorizationDecisions).Assembly) } },
 				DataDirectory = "Data",
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
