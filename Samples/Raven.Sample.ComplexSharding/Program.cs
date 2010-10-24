@@ -11,6 +11,7 @@ using Raven.Client.Shard;
 using Raven.Client.Shard.ShardStrategy;
 using Raven.Client.Shard.ShardStrategy.ShardAccess;
 using Raven.Database;
+using Raven.Http;
 using Raven.Server;
 using System.Linq;
 using Raven.Client;

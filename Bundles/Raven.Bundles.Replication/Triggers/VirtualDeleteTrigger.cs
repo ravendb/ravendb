@@ -2,6 +2,7 @@ using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Plugins;
+using Raven.Http;
 
 namespace Raven.Bundles.Replication.Triggers
 {

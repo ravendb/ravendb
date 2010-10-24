@@ -2,6 +2,7 @@ using System.IO;
 using System.Web;
 using Raven.Database;
 using Raven.Database.Plugins;
+using Raven.Http;
 
 namespace Raven.Bundles.Authorization.Triggers
 {

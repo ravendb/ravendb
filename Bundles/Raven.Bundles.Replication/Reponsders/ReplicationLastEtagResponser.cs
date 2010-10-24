@@ -1,9 +1,10 @@
 using System;
 using Raven.Bundles.Replication.Data;
-using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Responders;
 using Raven.Database.Json;
 using log4net;
+using Raven.Http.Abstractions;
+using Raven.Http.Extensions;
 
 namespace Raven.Bundles.Replication.Reponsders
 {

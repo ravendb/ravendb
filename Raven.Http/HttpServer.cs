@@ -13,6 +13,7 @@ using Newtonsoft.Json;
 using System.Linq;
 using Raven.Http.Abstractions;
 using Raven.Http.Exceptions;
+using Raven.Http.Extensions;
 using Formatting = Newtonsoft.Json.Formatting;
 
 namespace Raven.Http

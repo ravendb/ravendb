@@ -11,8 +11,7 @@ using log4net.Filter;
 using log4net.Layout;
 using Raven.Client;
 using Raven.Client.Document;
-using Raven.Database;
-using Raven.Database.Server;
+using Raven.Http;
 using Raven.Server;
 
 namespace Raven.Bundles.Tests.Replication

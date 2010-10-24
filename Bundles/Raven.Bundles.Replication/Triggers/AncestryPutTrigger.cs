@@ -5,6 +5,8 @@ using Raven.Database;
 using Raven.Database.Exceptions;
 using Raven.Database.Json;
 using Raven.Database.Plugins;
+using Raven.Http;
+using Raven.Http.Exceptions;
 
 namespace Raven.Bundles.Replication.Triggers
 {

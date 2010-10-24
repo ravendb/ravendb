@@ -4,10 +4,11 @@ using log4net;
 using Newtonsoft.Json.Linq;
 using Raven.Bundles.Replication.Data;
 using Raven.Database;
-using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Responders;
 using Raven.Database.Storage;
 using Raven.Database.Storage.StorageActions;
+using Raven.Http.Abstractions;
+using Raven.Http.Extensions;
 
 namespace Raven.Bundles.Replication.Reponsders
 {

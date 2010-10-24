@@ -8,6 +8,7 @@ using System.Web;
 using Raven.Bundles.Authorization;
 using Raven.Client.Document;
 using Raven.Database;
+using Raven.Http;
 using Raven.Server;
 
 namespace Raven.Bundles.Tests.Authorization

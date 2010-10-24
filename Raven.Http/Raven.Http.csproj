@@ -75,7 +75,7 @@
     <Compile Include="Json\JsonEnumConverter.cs" />
     <Compile Include="NonAdminHttp.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="RequestResponder.cs" />
+    <Compile Include="AbstractRequestResponder.cs" />
     <Compile Include="Extensions\StreamExtension.cs" />
     <Compile Include="Responders\Favicon.cs" />
     <Compile Include="Responders\RavenRoot.cs" />
