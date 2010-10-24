@@ -14,7 +14,7 @@ namespace Raven.Web
 		{
 			database = new DocumentDatabase(ravenConfiguration);
 			database.SpinBackgroundWorkers();
-			server = new HttpServer(ravenConfiguration, database);
+			server = new RavenDbHttpServer(ravenConfiguration, database);
 		}
 
 		public IHttpHandler GetHandler(HttpContext context, string requestType, string url, string pathTranslated)
