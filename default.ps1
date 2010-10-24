@@ -159,6 +159,7 @@ task CleanOutputDirectory {
 task CopyEmbeddedClient { 
 	cp $build_dir\Raven.Client.dll $build_dir\Output\EmbeddedClient
 	cp $build_dir\Raven.Database.dll $build_dir\Output\EmbeddedClient
+	cp $build_dir\Raven.Http.dll $build_dir\Output\EmbeddedClient
 	cp $build_dir\Esent.Interop.dll $build_dir\Output\EmbeddedClient
 	cp $build_dir\ICSharpCode.NRefactory.dll $build_dir\Output\EmbeddedClient
 	cp $build_dir\Lucene.Net.dll $build_dir\Output\EmbeddedClient
@@ -195,6 +196,7 @@ task CopyWeb {
 	cp $build_dir\Rhino.Licensing.dll $build_dir\Output\Web\bin
 	cp $build_dir\Esent.Interop.dll $build_dir\Output\Web\bin
 	cp $build_dir\Raven.Database.dll $build_dir\Output\Web\bin
+	cp $build_dir\Raven.Http.dll $build_dir\Output\Web\bin
 	cp $build_dir\Raven.Storage.Esent.dll $build_dir\Output\Web\bin
 	cp $build_dir\Raven.Storage.Managed.dll $build_dir\Output\Web\bin
 	cp $build_dir\Raven.Munin.dll $build_dir\Output\Web\bin	
@@ -218,6 +220,7 @@ task CopyServer {
 	cp $build_dir\Rhino.Licensing.dll $build_dir\Output\Server
 	cp $build_dir\Esent.Interop.dll $build_dir\Output\Server
 	cp $build_dir\Raven.Database.dll $build_dir\Output\Server
+	cp $build_dir\Raven.Http.dll $build_dir\Output\Server
 	cp $build_dir\Raven.Storage.Esent.dll $build_dir\Output\Server
 	cp $build_dir\Raven.Storage.Managed.dll $build_dir\Output\Server
 	cp $build_dir\Raven.Munin.dll $build_dir\Output\Server
@@ -265,6 +268,7 @@ task CreateNupack {
 	cp $build_dir\Rhino.Licensing.dll $build_dir\NuPack\Toolsr
 	cp $build_dir\Esent.Interop.dll $build_dir\NuPack\Tools
 	cp $build_dir\Raven.Database.dll $build_dir\NuPack\Tools
+	cp $build_dir\Raven.Http.dll $build_dir\NuPack\Tools
 	cp $build_dir\Raven.Storage.Esent.dll $build_dir\NuPack\Tools
 	cp $build_dir\Raven.Storage.Managed.dll $build_dir\NuPack\Tools
 	cp $build_dir\Raven.Munin.dll $build_dir\NuPack\Tools
