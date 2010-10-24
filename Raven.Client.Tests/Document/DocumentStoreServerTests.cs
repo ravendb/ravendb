@@ -14,6 +14,8 @@ using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Database.Server;
+using Raven.Http;
+using Raven.Http.Exceptions;
 using Raven.Server;
 using Xunit;
 using System.Linq;

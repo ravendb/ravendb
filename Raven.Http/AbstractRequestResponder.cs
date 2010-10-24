@@ -3,10 +3,9 @@ using System.ComponentModel.Composition;
 using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Raven.Database.Server.Abstractions;
-using Raven.Http;
+using Raven.Http.Abstractions;
 
-namespace Raven.Database.Server.Responders
+namespace Raven.Http
 {
 	[InheritedExport]
 	public abstract class AbstractRequestResponder

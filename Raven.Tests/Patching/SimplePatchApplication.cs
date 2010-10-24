@@ -2,6 +2,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Exceptions;
 using Raven.Database.Json;
+using Raven.Http.Exceptions;
 using Xunit;
 
 namespace Raven.Tests.Patching

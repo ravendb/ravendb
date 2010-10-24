@@ -1,6 +1,7 @@
 using System;
 using Raven.Database;
 using Raven.Database.Server;
+using Raven.Http;
 
 namespace Raven.Server
 {

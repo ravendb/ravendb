@@ -8,17 +8,14 @@ using System.IO.Compression;
 using System.Net;
 using System.Text.RegularExpressions;
 using System.Threading;
-using System.Xml;
 using log4net;
 using Newtonsoft.Json;
-using Raven.Database.Exceptions;
-using Raven.Database.Server.Abstractions;
-using Raven.Database.Server.Responders;
 using System.Linq;
-using Raven.Http;
+using Raven.Http.Abstractions;
+using Raven.Http.Exceptions;
 using Formatting = Newtonsoft.Json.Formatting;
 
-namespace Raven.Database.Server
+namespace Raven.Http
 {
     public abstract class HttpServer : IDisposable
     {

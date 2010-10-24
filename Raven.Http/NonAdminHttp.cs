@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Security.Principal;
 
-namespace Raven.Database.Server
+namespace Raven.Http
 {
 	public static class NonAdminHttp
 	{

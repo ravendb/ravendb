@@ -5,6 +5,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Client.Client;
 using Raven.Database.Exceptions;
 using Raven.Database.Json;
+using Raven.Http.Exceptions;
 
 namespace Raven.Client.Document
 {

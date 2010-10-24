@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using Raven.Database.Indexing;
 using System.Text.RegularExpressions;
+using Raven.Http;
 
 namespace Raven.Database.Data
 {

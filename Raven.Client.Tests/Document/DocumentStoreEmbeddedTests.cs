@@ -13,6 +13,7 @@ using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
+using Raven.Http.Exceptions;
 using Xunit;
 using System.Linq;
 

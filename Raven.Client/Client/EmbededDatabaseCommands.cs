@@ -11,6 +11,7 @@ using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Database.Storage;
 using Raven.Database.Extensions;
+using Raven.Http;
 
 namespace Raven.Client.Client
 {

@@ -1,7 +1,7 @@
 ﻿using System.Collections.Specialized;
 using System.ComponentModel.Composition.Hosting;
 
-namespace Raven.Database.Server.Responders
+namespace Raven.Http
 {
     public interface IRaveHttpnConfiguration
     {

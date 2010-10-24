@@ -1,7 +1,8 @@
 using System.Linq;
 using Raven.Database.Data;
-using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Responders;
+using Raven.Http.Abstractions;
+using Raven.Http.Extensions;
 
 namespace Raven.Database.Extensions
 {

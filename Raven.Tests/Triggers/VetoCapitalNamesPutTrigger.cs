@@ -2,6 +2,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Plugins;
 using System.Linq;
+using Raven.Http;
 
 namespace Raven.Tests.Triggers
 {

@@ -10,6 +10,7 @@ using Raven.Client.Converters;
 using Raven.Client.Util;
 using System.Linq;
 using Raven.Database.Json;
+using Raven.Http.Json;
 
 namespace Raven.Client.Document
 {

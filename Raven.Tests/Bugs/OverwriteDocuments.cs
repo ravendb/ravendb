@@ -6,6 +6,7 @@ using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
+using Raven.Http.Exceptions;
 using Xunit;
 
 namespace Raven.Tests.Bugs

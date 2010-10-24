@@ -1,6 +1,6 @@
 using System;
 
-namespace Raven.Database
+namespace Raven.Http
 {
 	/// <summary>
 	/// Transaction information that identify the transaction id and timeout

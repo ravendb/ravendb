@@ -6,7 +6,8 @@ using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Json;
-using Raven.Database.Server.Abstractions;
+using Raven.Http.Abstractions;
+using Raven.Http.Extensions;
 
 namespace Raven.Database.Server.Responders
 {

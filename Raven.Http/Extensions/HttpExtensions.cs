@@ -1,17 +1,15 @@
 using System;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Raven.Database.Exceptions;
-using Raven.Database.Extensions;
-using Raven.Database.Json;
-using Raven.Database.Server.Abstractions;
+using Raven.Http.Abstractions;
+using Raven.Http.Exceptions;
+using Raven.Http.Json;
 
-namespace Raven.Database.Server.Responders
+namespace Raven.Http.Extensions
 {
 	public static class HttpExtensions
 	{

@@ -5,6 +5,7 @@ using Raven.Database.Data;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
+using Raven.Http;
 
 namespace Raven.Database
 {

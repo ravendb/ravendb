@@ -3,9 +3,10 @@ using System.Text.RegularExpressions;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
 using Raven.Database.Json;
-using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Responders;
 using Raven.Http;
+using Raven.Http.Abstractions;
+using Raven.Http.Extensions;
 
 namespace Raven.Database.Server
 {

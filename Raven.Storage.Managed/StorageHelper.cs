@@ -3,6 +3,8 @@ using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Exceptions;
 using Raven.Database.Storage.StorageActions;
+using Raven.Http;
+using Raven.Http.Exceptions;
 using Raven.Munin;
 using Raven.Storage.Managed.Impl;
 

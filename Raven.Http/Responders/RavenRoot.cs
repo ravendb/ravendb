@@ -1,6 +1,6 @@
-using Raven.Database.Server.Abstractions;
+using Raven.Http.Abstractions;
 
-namespace Raven.Database.Server.Responders
+namespace Raven.Http.Responders
 {
 	public class RavenRoot : AbstractRequestResponder
 	{

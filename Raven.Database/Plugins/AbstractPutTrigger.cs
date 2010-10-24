@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel.Composition;
 using System.Threading;
 using Newtonsoft.Json.Linq;
+using Raven.Http;
 
 namespace Raven.Database.Plugins
 {

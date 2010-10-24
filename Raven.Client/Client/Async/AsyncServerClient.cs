@@ -16,6 +16,7 @@ using Raven.Database.Data;
 using Raven.Database.Exceptions;
 using Raven.Client.Client;
 using System.Collections.Generic;
+using Raven.Http.Exceptions;
 
 namespace Raven.Client.Client.Async
 {

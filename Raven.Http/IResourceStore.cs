@@ -1,5 +1,4 @@
 using System;
-using Raven.Database.Server.Responders;
 
 namespace Raven.Http
 {

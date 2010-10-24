@@ -3,6 +3,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
 using Raven.Database.Exceptions;
+using Raven.Http.Exceptions;
 
 namespace Raven.Client
 {

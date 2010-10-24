@@ -8,9 +8,10 @@ using Raven.Client.Tests.Document;
 using Raven.Database;
 using Raven.Database.Extensions;
 using Raven.Database.Plugins;
+using Raven.Http;
 using Raven.Server;
 using Xunit;
-using TransactionInformation = Raven.Database.TransactionInformation;
+using TransactionInformation = Raven.Http.TransactionInformation;
 
 namespace Raven.Client.Tests.Bugs
 {

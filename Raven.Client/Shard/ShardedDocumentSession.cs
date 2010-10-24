@@ -12,6 +12,7 @@ using Raven.Client.Shard.ShardStrategy;
 using Raven.Client.Shard.ShardStrategy.ShardResolution;
 using System;
 using Raven.Database.Exceptions;
+using Raven.Http.Exceptions;
 
 namespace Raven.Client.Shard
 {

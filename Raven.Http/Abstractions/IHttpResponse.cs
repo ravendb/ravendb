@@ -1,7 +1,7 @@
 using System.Collections.Specialized;
 using System.IO;
 
-namespace Raven.Database.Server.Abstractions
+namespace Raven.Http.Abstractions
 {
 	public interface IHttpResponse
 	{

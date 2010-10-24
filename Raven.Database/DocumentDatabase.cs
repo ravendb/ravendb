@@ -22,8 +22,10 @@ using Raven.Database.Server.Responders;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
 using Raven.Http;
+using Raven.Http.Exceptions;
 using Index = Raven.Database.Indexing.Index;
 using Task = Raven.Database.Tasks.Task;
+using TransactionInformation = Raven.Http.TransactionInformation;
 
 namespace Raven.Database
 {

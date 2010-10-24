@@ -4,7 +4,7 @@ using System.Threading;
 using System.Transactions;
 using Raven.Client.Document;
 using Raven.Database.Data;
-using TransactionInformation = Raven.Database.TransactionInformation;
+using TransactionInformation = Raven.Http.TransactionInformation;
 
 namespace Raven.Client.Client
 {

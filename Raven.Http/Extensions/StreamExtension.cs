@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-namespace Raven.Database.Extensions
+namespace Raven.Http.Extensions
 {
 	/// <summary>
 	/// Extentions for working with streams

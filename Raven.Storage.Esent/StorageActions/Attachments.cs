@@ -9,6 +9,7 @@ using Raven.Database.Data;
 using Raven.Database.Exceptions;
 using Raven.Database.Storage.StorageActions;
 using Raven.Database.Extensions;
+using Raven.Http.Exceptions;
 
 namespace Raven.Storage.Esent.StorageActions
 {

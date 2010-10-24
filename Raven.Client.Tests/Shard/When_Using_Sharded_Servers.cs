@@ -9,6 +9,7 @@ using Raven.Client.Shard.ShardStrategy.ShardSelection;
 using Raven.Client.Tests.Document;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
+using Raven.Http;
 using Raven.Server;
 using Xunit;
 using System.Collections.Generic;

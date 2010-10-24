@@ -1,5 +1,7 @@
 using System;
-using Raven.Database.Server.Abstractions;
+using Raven.Http;
+using Raven.Http.Abstractions;
+using Raven.Http.Extensions;
 
 namespace Raven.Database.Server.Responders
 {

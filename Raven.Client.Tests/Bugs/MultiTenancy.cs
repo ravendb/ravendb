@@ -1,6 +1,7 @@
 using Raven.Client.Document;
 using Raven.Database;
 using Raven.Database.Data;
+using Raven.Http;
 using Raven.Server;
 using Xunit;
 

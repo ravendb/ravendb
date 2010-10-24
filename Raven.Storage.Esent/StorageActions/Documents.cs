@@ -8,6 +8,7 @@ using Raven.Database;
 using Raven.Database.Json;
 using Raven.Database.Storage.StorageActions;
 using Raven.Database.Extensions;
+using Raven.Http;
 
 namespace Raven.Storage.Esent.StorageActions
 {

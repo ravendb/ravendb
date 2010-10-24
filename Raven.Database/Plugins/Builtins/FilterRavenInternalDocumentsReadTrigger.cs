@@ -1,5 +1,6 @@
 using System;
 using Newtonsoft.Json.Linq;
+using Raven.Http;
 
 namespace Raven.Database.Plugins.Builtins
 {

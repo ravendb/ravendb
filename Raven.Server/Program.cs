@@ -13,6 +13,7 @@ using log4net.Layout;
 using Raven.Database;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
+using Raven.Http;
 
 namespace Raven.Server
 {

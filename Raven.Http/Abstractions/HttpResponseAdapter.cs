@@ -1,9 +1,8 @@
-using System;
 using System.Collections.Specialized;
 using System.IO;
 using System.Web;
 
-namespace Raven.Database.Server.Abstractions
+namespace Raven.Http.Abstractions
 {
 	public class HttpResponseAdapter : IHttpResponse
 	{

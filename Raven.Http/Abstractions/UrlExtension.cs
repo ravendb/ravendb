@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Raven.Database.Server.Abstractions
+namespace Raven.Http.Abstractions
 {
     public static class UrlExtension
     {

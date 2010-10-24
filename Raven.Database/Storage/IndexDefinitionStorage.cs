@@ -14,6 +14,7 @@ using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
+using Raven.Http.Json;
 
 namespace Raven.Database.Storage
 {

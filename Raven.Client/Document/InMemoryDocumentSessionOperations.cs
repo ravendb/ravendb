@@ -15,6 +15,7 @@ using System.Dynamic;
 using Microsoft.CSharp.RuntimeBinder;
 using Raven.Database.Exceptions;
 using Raven.Database.Linq;
+using Raven.Http.Exceptions;
 
 #endif
 

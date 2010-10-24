@@ -14,6 +14,8 @@ using Raven.Database;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
 using Raven.Database.Server.Responders;
+using Raven.Http;
+using Raven.Http.Extensions;
 using Raven.Server;
 using Xunit;
 

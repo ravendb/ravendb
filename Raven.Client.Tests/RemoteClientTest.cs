@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using Raven.Client.Tests.Document;
 using Raven.Database.Extensions;
+using Raven.Http;
 using Raven.Server;
 using Raven.Database;
 using System.Reflection;

@@ -1,7 +1,7 @@
 using System.Collections.Specialized;
 using System.Threading;
 
-namespace Raven.Database
+namespace Raven.Http
 {
 	public static class CurrentOperationContext
 	{

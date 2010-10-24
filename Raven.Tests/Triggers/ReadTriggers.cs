@@ -6,6 +6,7 @@ using Raven.Database;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
 using Raven.Database.Plugins;
+using Raven.Http;
 using Raven.Tests.Storage;
 using Xunit;
 

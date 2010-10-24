@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
+using Raven.Http;
 using Xunit;
 using Raven.Client.Document;
 using Raven.Client.Tests.Document;

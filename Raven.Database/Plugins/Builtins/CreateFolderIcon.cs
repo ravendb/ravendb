@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using Raven.Database.Extensions;
+using Raven.Http.Extensions;
 
 namespace Raven.Database.Plugins.Builtins
 {

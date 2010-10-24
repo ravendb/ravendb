@@ -2,9 +2,8 @@ using System;
 using System.IO;
 using System.Net;
 using System.Security.Principal;
-using Raven.Database.Server.Responders;
 
-namespace Raven.Database.Server.Abstractions
+namespace Raven.Http.Abstractions
 {
 	public class HttpListenerContextAdpater : IHttpContext
 	{
