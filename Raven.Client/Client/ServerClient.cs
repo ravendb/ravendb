@@ -265,6 +265,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		{
 			var webRequest = WebRequest.Create(url + "/static/" + key);
 			webRequest.Method = "PUT";
+            webRequest.Credentials = credentials;
 			foreach (var header in metadata.Properties())
 			{
 				if (header.Name.StartsWith("@"))
@@ -318,6 +319,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		public Attachment GetAttachment(string key)
 		{
 			var webRequest = WebRequest.Create(url + "/static/" + key);
+		    webRequest.Credentials = credentials;
 			try
 			{
 				using (var response = webRequest.GetResponse())
@@ -351,6 +353,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		{
 			var webRequest = WebRequest.Create(url + "/static/" + key);
 			webRequest.Method = "DELETE";
+		    webRequest.Credentials = credentials;
 			if (etag != null)
 			{
 				webRequest.Headers[" If-None-Match"] = etag.Value.ToString();

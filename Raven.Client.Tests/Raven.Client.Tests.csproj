@@ -99,6 +99,7 @@
       <Link>Spatial\SpatialIndexTestHelper.cs</Link>
     </Compile>
     <Compile Include="Bugs\AsyncCommit.cs" />
+    <Compile Include="Bugs\AttachmentsWithCredentials.cs" />
     <Compile Include="Bugs\CanGetMetadataForTransient.cs" />
     <Compile Include="Bugs\CanUseNonStringsForId.cs" />
     <Compile Include="Bugs\EntityWithoutId.cs" />

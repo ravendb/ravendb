@@ -20,6 +20,11 @@ namespace Raven.Client.Tests
             return new RavenDbServer(new RavenConfiguration { Port = port, DataDirectory = path, AnonymousUserAccessMode = AnonymousUserAccessMode.All });
         }
 
+        protected RavenDbServer GetNewServerWithoutAnonymousAccess(int port, string path)
+        {
+            return new RavenDbServer(new RavenConfiguration { Port = port, DataDirectory = path, AnonymousUserAccessMode = AnonymousUserAccessMode.None });
+        }
+
         protected string GetPath(string subFolderName)
         {
             string retPath = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
