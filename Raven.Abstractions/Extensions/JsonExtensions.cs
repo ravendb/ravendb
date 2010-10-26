@@ -13,9 +13,11 @@ namespace Raven.Database.Json
 	{
 	    public static JObject ToJObject(object result)
         {
+#if !NET_3_5
             var dynamicJsonObject = result as Raven.Database.Linq.DynamicJsonObject;
             if (dynamicJsonObject != null)
                 return dynamicJsonObject.Inner;
+#endif
             if (result is string || result is ValueType)
             {
                 return new JObject(new JProperty("Value", new JValue(result)));

@@ -1,0 +1,168 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{49E90093-6700-4712-8527-616244221259}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Raven.Client</RootNamespace>
+    <AssemblyName>Raven.Client.Lightweight-3.5</AssemblyName>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile>Client</TargetFrameworkProfile>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>TRACE;DEBUG;CLIENT;NET_3_5</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <DocumentationFile>bin\Debug\Raven.Client.Lightweight-3.5.XML</DocumentationFile>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE;CLIENT;NET_3_5</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>true</SignAssembly>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>..\Raven.Database\RavenDB.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\SharedLibs\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Transactions" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Client\Async\AsyncServerClient.cs" />
+    <Compile Include="Client\Async\IAsyncDatabaseCommands.cs" />
+    <Compile Include="Client\Async\WrapperAsyncData.cs" />
+    <Compile Include="Client\HttpJsonRequest.cs" />
+    <Compile Include="Client\IDatabaseCommands.cs" />
+    <Compile Include="Client\JsonExtensions.cs" />
+    <Compile Include="Client\JsonLuceneDateTimeConverter.cs" />
+    <Compile Include="Client\RavenQuery.cs" />
+    <Compile Include="Client\RavenTransactionAccessor.cs" />
+    <Compile Include="Client\ReplicationInformer.cs" />
+    <Compile Include="Client\SerializationHelper.cs" />
+    <Compile Include="Client\ServerClient.cs" />
+    <Compile Include="Client\WebRequestEventArgs.cs" />
+    <Compile Include="Client\WebResponseExtensions.cs" />
+    <Compile Include="Converters\GuidConverter.cs" />
+    <Compile Include="Converters\Int32Converter.cs" />
+    <Compile Include="Converters\Int64Converter.cs" />
+    <Compile Include="Converters\ITypeConverter.cs" />
+    <Compile Include="Document\Async\AsyncDocumentSession.cs" />
+    <Compile Include="Document\Async\SyncronousLoadResult.cs" />
+    <Compile Include="Document\DefaultRavenContractResolver.cs" />
+    <Compile Include="Document\DocumentConvention.cs" />
+    <Compile Include="Document\DocumentQuery.cs" />
+    <Compile Include="Document\DocumentSession.cs" />
+    <Compile Include="Document\DocumentStore.cs" />
+    <Compile Include="Document\HiLoKeyGenerator.cs" />
+    <Compile Include="Document\ILoaderWithInclude.cs" />
+    <Compile Include="Document\InMemoryDocumentSessionOperations.cs" />
+    <Compile Include="Document\MultiLoaderWithInclude.cs" />
+    <Compile Include="Document\MultiTypeHiLoKeyGenerator.cs" />
+    <Compile Include="Document\PromotableRavenClientEnlistment.cs" />
+    <Compile Include="Document\RavenClientEnlistment.cs" />
+    <Compile Include="Document\ReflectionUtil.cs" />
+    <Compile Include="Document\ShardedDocumentQuery.cs" />
+    <Compile Include="Document\SpatialDocumentQuery.cs" />
+    <Compile Include="EntityStored.cs" />
+    <Compile Include="EntityToDocument.cs" />
+    <Compile Include="Exceptions\ConflictException.cs" />
+    <Compile Include="Exceptions\NonAuthoritiveInformationException.cs" />
+    <Compile Include="Exceptions\NonUniqueObjectException.cs" />
+    <Compile Include="Exceptions\ReadVetoException.cs" />
+    <Compile Include="IAdvancedDocumentSessionOperations.cs" />
+    <Compile Include="IAsyncAdvancedSessionOperations.cs" />
+    <Compile Include="IAsyncDocumentSession.cs" />
+    <Compile Include="IDocumentDeleteListener.cs" />
+    <Compile Include="IDocumentQuery.cs" />
+    <Compile Include="IDocumentQueryCustomization.cs" />
+    <Compile Include="IDocumentSession.cs" />
+    <Compile Include="IDocumentStore.cs" />
+    <Compile Include="IDocumentStoreListener.cs" />
+    <Compile Include="Indexes\AbstractIndexCreationTask.cs" />
+    <Compile Include="Indexes\ExpressionOperatorPrecedence.cs" />
+    <Compile Include="Indexes\ExpressionOperatorPrecedenceExtension.cs" />
+    <Compile Include="Indexes\ExpressionStringBuilder.cs" />
+    <Compile Include="Indexes\IClientSideDatabase.cs" />
+    <Compile Include="Indexes\IndexCreation.cs" />
+    <Compile Include="Indexes\IndexDefinition.cs" />
+    <Compile Include="ISyncAdvancedSessionOperation.cs" />
+    <Compile Include="ITransactionalDocumentSession.cs" />
+    <Compile Include="Linq\DateTools.cs" />
+    <Compile Include="Linq\DynamicQueryProviderProcessor.cs" />
+    <Compile Include="Linq\DynamicRavenQueryable.cs" />
+    <Compile Include="Linq\DynamicRavenQueryProvider.cs" />
+    <Compile Include="Linq\ExpressionMemberInfo.cs" />
+    <Compile Include="Linq\IRavenQueryable.cs" />
+    <Compile Include="Linq\IRavenQueryProvider.cs" />
+    <Compile Include="Linq\LinqExtensions.cs" />
+    <Compile Include="Linq\RavenQueryable.cs" />
+    <Compile Include="Linq\RavenQueryProvider.cs" />
+    <Compile Include="Linq\RavenQueryProviderProcessor.cs" />
+    <Compile Include="Linq\RavenQueryStatistics.cs" />
+    <Compile Include="Linq\TypeSystem.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RavenExtensions.cs" />
+    <Compile Include="Shard\ShardedDocumentSession.cs" />
+    <Compile Include="Shard\ShardedDocumentStore.cs" />
+    <Compile Include="Shard\Shards.cs" />
+    <Compile Include="Shard\ShardStrategy\IShardStrategy.cs" />
+    <Compile Include="Shard\ShardStrategy\ShardAccess\IShardAccessStrategy.cs" />
+    <Compile Include="Shard\ShardStrategy\ShardAccess\ParallelExtensions.cs" />
+    <Compile Include="Shard\ShardStrategy\ShardAccess\ParallelShardAccessStrategy.cs" />
+    <Compile Include="Shard\ShardStrategy\ShardAccess\SequentialShardAccessStrategy.cs" />
+    <Compile Include="Shard\ShardStrategy\ShardResolution\AllShardsResolutionStrategy.cs" />
+    <Compile Include="Shard\ShardStrategy\ShardResolution\IShardResolutionStrategy.cs" />
+    <Compile Include="Shard\ShardStrategy\ShardResolution\ShardResolutionStrategyData.cs" />
+    <Compile Include="Shard\ShardStrategy\ShardSelection\IShardSelectionStrategy.cs" />
+    <Compile Include="Shard\ShardStrategy\ShardStrategy.cs" />
+    <Compile Include="StoredEntityEventArgs.cs" />
+    <Compile Include="Util\Inflector.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\Raven.Database\RavenDB.snk">
+      <Link>RavenDB.snk</Link>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Data\" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.g.3.5.csproj">
+      <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
+      <Name>Raven.Abstractions-3.5</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

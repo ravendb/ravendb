@@ -1,3 +1,4 @@
+#if !NET_3_5
 using System.ComponentModel.Composition.Hosting;
 using System.Reflection;
 
@@ -34,3 +35,4 @@ namespace Raven.Client.Indexes
 		}
 	}
 }
+#endif

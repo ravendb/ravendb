@@ -13,8 +13,6 @@ using Raven.Database.Data;
 using System.Dynamic;
 using Microsoft.CSharp.RuntimeBinder;
 using Raven.Database.Linq;
-using Raven.Http.Exceptions;
-
 #endif
 
 namespace Raven.Client.Document
@@ -120,7 +118,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Gets or sets a value indicating whether the session should use optimistic concurrency.
 		/// When set to <c>true</c>, a check is made so that a change made behind the session back would fail
-		/// and raise <see cref="ConcurrencyException"/>.
+		/// and raise <see cref="Raven.Http.Exceptions.ConcurrencyException"/>.
 		/// </summary>
 		/// <value></value>
 		public bool UseOptimisticConcurrency { get; set; }

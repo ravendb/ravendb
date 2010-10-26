@@ -7,7 +7,6 @@ using Raven.Database.Indexing;
 namespace Raven.Client.Indexes
 {
 
-#if !NET_3_5
     /// <summary>
     /// Base class for creating indexes
     /// </summary>
@@ -15,6 +14,7 @@ namespace Raven.Client.Indexes
     /// The naming convention is that underscores in the inherited class names are replaced by slashed
     /// For example: Posts_ByName will be saved to Posts/ByName
     /// </remarks>
+#if !NET_3_5
     [System.ComponentModel.Composition.InheritedExport]
 #endif
     public abstract class AbstractIndexCreationTask

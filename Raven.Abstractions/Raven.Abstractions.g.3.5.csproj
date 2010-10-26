@@ -1,0 +1,107 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{4C18FC25-0B1E-42E3-A423-3A99F1AC57EE}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Raven.Abstractions</RootNamespace>
+    <AssemblyName>Raven.Abstractions-3.5</AssemblyName>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE;NET_3_5</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE;NET_3_5</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>true</SignAssembly>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>..\Raven.Database\RavenDB.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\SharedLibs\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Commands\DeleteCommandData.cs" />
+    <Compile Include="Commands\PatchCommandData.cs" />
+    <Compile Include="Commands\PutCommandData.cs" />
+    <Compile Include="Data\Attachment.cs" />
+    <Compile Include="Data\BatchResult.cs" />
+    <Compile Include="Data\DatabaseStatistics.cs" />
+    <Compile Include="Commands\ICommandData.cs" />
+    <Compile Include="Data\IndexStats.cs" />
+    <Compile Include="Data\JsonDocument.cs" />
+    <Compile Include="Data\MultiLoadResult.cs" />
+    <Compile Include="Data\PatchCommandType.cs" />
+    <Compile Include="Data\PatchRequest.cs" />
+    <Compile Include="Data\PutResult.cs" />
+    <Compile Include="Data\ServerError.cs" />
+    <Compile Include="Data\SortedField.cs" />
+    <Compile Include="Data\SpatialIndexQuery.cs" />
+    <Compile Include="Data\TransactionInformation.cs" />
+    <Compile Include="Exceptions\ConcurrencyException.cs" />
+    <Compile Include="Extensions\DisposableAction.cs" />
+    <Compile Include="Extensions\ExpressionExtensions.cs" />
+    <Compile Include="Extensions\JsonExtensions.cs" />
+    <Compile Include="Extensions\MetadataExtensions.cs" />
+    <Compile Include="Extensions\Reference.cs" />
+    <Compile Include="Extensions\StreamExtension.cs" />
+    <Compile Include="Indexing\FieldIndexing.cs" />
+    <Compile Include="Indexing\FieldStorage.cs" />
+    <Compile Include="Indexing\IndexDefinition.cs" />
+    <Compile Include="Indexing\NumberUtil.cs" />
+    <Compile Include="Data\IndexQuery.cs" />
+    <Compile Include="Json\DynamicUtil.cs" />
+    <Compile Include="Json\JsonDynamicConverter.cs" />
+    <Compile Include="Json\JsonEnumConverter.cs" />
+    <Compile Include="Linq\DynamicJsonObject.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs">
+      <SubType>
+      </SubType>
+    </Compile>
+    <Compile Include="Data\QueryResult.cs" />
+    <Compile Include="Indexing\SortOptions.cs" />
+    <Compile Include="Replication\ReplicationDestination.cs" />
+    <Compile Include="Replication\ReplicationDocument.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\Raven.Database\RavenDB.snk">
+      <Link>RavenDB.snk</Link>
+    </None>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

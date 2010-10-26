@@ -1,3 +1,4 @@
+#if !NET_3_5
 using System;
 using System.Dynamic;
 using System.Linq.Expressions;
@@ -62,3 +63,4 @@ namespace Raven.Database.Json
 		}
 	}
 }
+#endif

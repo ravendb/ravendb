@@ -1,3 +1,4 @@
+#if !NET_3_5
 using System;
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
@@ -32,3 +33,4 @@ namespace Raven.Database.Json
 		}
 	}
 }
+#endif

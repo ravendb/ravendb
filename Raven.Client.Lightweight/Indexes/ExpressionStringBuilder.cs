@@ -1,3 +1,4 @@
+#if !NET_3_5
 using System;
 using System.Collections.Generic;
 using System.Dynamic;
@@ -1358,3 +1359,4 @@ namespace Raven.Client.Indexes
 
 
 }
+#endif
