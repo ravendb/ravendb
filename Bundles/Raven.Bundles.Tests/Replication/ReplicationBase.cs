@@ -9,6 +9,7 @@ using log4net.Appender;
 using log4net.Config;
 using log4net.Filter;
 using log4net.Layout;
+using Raven.Bundles.Replication.Data;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Http;
@@ -97,9 +98,9 @@ namespace Raven.Bundles.Tests.Replication
         {
             using (var session = stores[src].OpenSession())
             {
-                session.Store(new replication::Raven.Bundles.Replication.Data.ReplicationDocument
+                session.Store(new ReplicationDocument
                 {
-                    Destinations = {new replication::Raven.Bundles.Replication.Data.ReplicationDestination
+                    Destinations = {new ReplicationDestination
                     {
                         Url = servers[dest].Database.Configuration.ServerUrl
                     }}
