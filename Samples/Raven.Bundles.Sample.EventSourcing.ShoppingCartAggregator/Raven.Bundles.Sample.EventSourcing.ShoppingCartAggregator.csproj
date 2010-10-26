@@ -54,6 +54,10 @@
     <Compile Include="ShoppingCartItemProduct.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\Raven.Abstractions\Raven.Abstractions.csproj">
+      <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
+      <Name>Raven.Abstractions</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\Raven.Database\Raven.Database.csproj">
       <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
       <Name>Raven.Database</Name>

@@ -6,7 +6,6 @@ using System.Linq;
 using System.Text;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Database.Indexing;
 
 namespace Raven.Samples.IndexReplication
 {

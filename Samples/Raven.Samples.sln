@@ -32,6 +32,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Samples.Includes", "R
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Http", "..\Raven.Http\Raven.Http.csproj", "{508E5F54-A8F3-47F4-9297-CB96F91D4DF8}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Abstractions", "..\Raven.Abstractions\Raven.Abstractions.csproj", "{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -192,6 +194,16 @@ Global
 		{508E5F54-A8F3-47F4-9297-CB96F91D4DF8}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{508E5F54-A8F3-47F4-9297-CB96F91D4DF8}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{508E5F54-A8F3-47F4-9297-CB96F91D4DF8}.Release|x86.ActiveCfg = Release|Any CPU
+		{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -202,5 +214,6 @@ Global
 		{3B90EB20-AEA3-4972-8219-936F1A62768C} = {5A163257-377D-455F-B852-6425B7BAE6EE}
 		{9DEE8674-D0CD-430D-BD9B-6CD95F3CAB22} = {5A163257-377D-455F-B852-6425B7BAE6EE}
 		{508E5F54-A8F3-47F4-9297-CB96F91D4DF8} = {5A163257-377D-455F-B852-6425B7BAE6EE}
+		{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA} = {5A163257-377D-455F-B852-6425B7BAE6EE}
 	EndGlobalSection
 EndGlobal
