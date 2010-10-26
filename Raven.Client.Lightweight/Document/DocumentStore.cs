@@ -138,10 +138,10 @@ namespace Raven.Client.Document
 					ProcessConnectionStringOption(networkCredential, match.Groups[1].Value.ToLower(), match.Groups[2].Value.Trim());
 				}
 
-                if (networkCredential.UserName == null && networkCredential.Password == null) 
+                if (string.IsNullOrEmpty(networkCredential.UserName) && string.IsNullOrEmpty(networkCredential.Password)) 
 					return;
 
-                if (networkCredential.UserName == null || networkCredential.Password== null)
+                if (string.IsNullOrEmpty(networkCredential.UserName) || string.IsNullOrEmpty(networkCredential.Password))
 					throw new ArgumentException("User and Password must both be specified in the connection string: " + connectionStringName);
 			    Credentials = networkCredential;
 			}
