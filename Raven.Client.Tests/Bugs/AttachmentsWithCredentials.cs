@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Reflection;
 using Newtonsoft.Json.Linq;
@@ -10,7 +11,7 @@ using Xunit;
 
 namespace Raven.Client.Tests.Bugs
 {
-    public class AttachmentsWithCredentials : RemoteClientTest
+    public class AttachmentsWithCredentials : RemoteClientTest, IDisposable
     {
         private readonly string path;
 
