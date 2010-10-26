@@ -114,7 +114,6 @@
     <Compile Include="Indexes\IndexDefinition.cs" />
     <Compile Include="ISyncAdvancedSessionOperation.cs" />
     <Compile Include="ITransactionalDocumentSession.cs" />
-    <Compile Include="Linq\DateTools.cs" />
     <Compile Include="Linq\DynamicQueryProviderProcessor.cs" />
     <Compile Include="Linq\DynamicRavenQueryable.cs" />
     <Compile Include="Linq\DynamicRavenQueryProvider.cs" />

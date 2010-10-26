@@ -5,7 +5,7 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProductVersion>8.0.30703</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{4C18FC25-0B1E-42E3-A423-3A99F1AC57EE}</ProjectGuid>
+    <ProjectGuid>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Raven.Abstractions</RootNamespace>
@@ -81,10 +81,10 @@
     <Compile Include="Json\DynamicUtil.cs" />
     <Compile Include="Json\JsonDynamicConverter.cs" />
     <Compile Include="Json\JsonEnumConverter.cs" />
+    <Compile Include="Linq\DateTools.cs" />
     <Compile Include="Linq\DynamicJsonObject.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">
-      <SubType>
-      </SubType>
+      <SubType></SubType>
     </Compile>
     <Compile Include="Data\QueryResult.cs" />
     <Compile Include="Indexing\SortOptions.cs" />

@@ -5,7 +5,7 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProductVersion>8.0.30703</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{49E90093-6700-4712-8527-616244221259}</ProjectGuid>
+    <ProjectGuid>{4E087ECB-E7CA-4891-AC3C-3C76702715B6}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Raven.Client</RootNamespace>
@@ -112,7 +112,6 @@
     <Compile Include="Indexes\IndexDefinition.cs" />
     <Compile Include="ISyncAdvancedSessionOperation.cs" />
     <Compile Include="ITransactionalDocumentSession.cs" />
-    <Compile Include="Linq\DateTools.cs" />
     <Compile Include="Linq\DynamicQueryProviderProcessor.cs" />
     <Compile Include="Linq\DynamicRavenQueryable.cs" />
     <Compile Include="Linq\DynamicRavenQueryProvider.cs" />
