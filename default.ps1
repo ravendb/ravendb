@@ -264,7 +264,7 @@ task CreateNupack {
 	cp $build_dir\Newtonsoft.Json.dll $build_dir\NuPack\Lib\3.5
 	cp $build_dir\Raven.Client.Lightweight-3.5.dll $build_dir\NuPack\Lib\3.5
 	cp $build_dir\Raven.Client.Lightweight-3.5.xml $build_dir\NuPack\Lib\3.5
-	cp $build_dir\Raven.Abstractons-3.5.dll $build_dir\NuPack\Lib\3.5
+	cp $build_dir\Raven.Abstractions-3.5.dll $build_dir\NuPack\Lib\3.5
 	
 	cp $build_dir\Newtonsoft.Json.dll $build_dir\NuPack\Lib\4.0
 	cp $build_dir\Raven.Client.Lightweight.dll $build_dir\NuPack\Lib\4.0
