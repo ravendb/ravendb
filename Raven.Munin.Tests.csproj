@@ -46,6 +46,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Bugs\Compaction.cs" />
     <Compile Include="CanWorkWithTwoDicsInSameFile.cs" />
     <Compile Include="Conflicts.cs" />
     <Compile Include="MultiDicInSingleFile.cs" />
