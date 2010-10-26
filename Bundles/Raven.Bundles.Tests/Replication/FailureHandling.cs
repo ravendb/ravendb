@@ -28,6 +28,16 @@ namespace Raven.Bundles.Tests.Replication
 
             TellInstanceToReplicateToAnotherInstance(0, 2);
 
+            for (int i = 0; i < RetriesCount; i++)
+            {
+                using (var session = store3.OpenSession())
+                {
+                    if(session.Load<Company>("companies/1") != null)
+                        break;
+                    Thread.Sleep(100);
+                }
+            }
+
             TellInstanceToReplicateToAnotherInstance(1, 2);
 
             var conflictException = Assert.Throws<ConflictException>(() =>
