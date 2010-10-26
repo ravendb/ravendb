@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Database.Linq;
 using Raven.Http.Abstractions;
 using Raven.Http.Exceptions;
 using Raven.Http.Json;
@@ -376,7 +377,10 @@ namespace Raven.Http.Extensions
 		{
 			public override void WriteJson (JsonWriter writer, object value, JsonSerializer serializer)
 			{
-				((JObject)value).WriteTo(writer);
+                if (value is JObject)
+                    ((JObject)value).WriteTo(writer);
+                else
+                    ((DynamicJsonObject) value).Inner.WriteTo(writer);
 			}
 
             public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
@@ -386,7 +390,7 @@ namespace Raven.Http.Extensions
 
 			public override bool CanConvert (Type objectType)
 			{
-				return objectType == typeof(JObject);
+				return objectType == typeof(JObject) || objectType == typeof(DynamicJsonObject);
 			}
 		}
 
