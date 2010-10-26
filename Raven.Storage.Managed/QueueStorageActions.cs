@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
+using Raven.Database.Impl;
 using Raven.Database.Storage.StorageActions;
 using Raven.Storage.Managed.Impl;
 using System.Linq;
@@ -11,10 +12,12 @@ namespace Raven.Storage.Managed
     public class QueueStorageActions : IQueueStorageActions
     {
         private readonly TableStorage storage;
+        private readonly IUuidGenerator generator;
 
-        public QueueStorageActions(TableStorage storage)
+        public QueueStorageActions(TableStorage storage, IUuidGenerator generator)
         {
             this.storage = storage;
+            this.generator = generator;
         }
 
         public void EnqueueToQueue(string name, byte[] data)
@@ -22,7 +25,7 @@ namespace Raven.Storage.Managed
             storage.Queues.Put(new JObject
             {
                 {"name", name},
-                {"id", DocumentDatabase.CreateSequentialUuid().ToByteArray()},
+                {"id", generator.CreateSequentialUuid().ToByteArray()},
                 {"reads", 0}
             }, data);
         }

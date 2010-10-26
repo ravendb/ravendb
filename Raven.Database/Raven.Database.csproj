@@ -132,18 +132,21 @@
     </Compile>
     <Compile Include="Extensions\MonoHttpUtility.cs" />
     <Compile Include="Extensions\IOExtensions.cs" />
+    <Compile Include="Impl\DummyUuidGenerator.cs" />
     <Compile Include="Indexing\GatherAllCollector.cs" />
     <Compile Include="Indexing\LowerCaseAnalyzer.cs" />
     <Compile Include="Indexing\RangeQueryParser.cs" />
     <Compile Include="Indexing\RobustEnumerator.cs" />
     <Compile Include="Indexing\SpatialIndex.cs" />
     <Compile Include="InMemroyRavenConfiguration.cs" />
-    <Compile Include="IStartupTask.cs" />
+    <Compile Include="Impl\IUuidGenerator.cs" />
+    <Compile Include="Plugins\IStartupTask.cs" />
     <Compile Include="Data\LinearQuery.cs" />
     <Compile Include="LinearQueries\IRemoteSingleQueryRunner.cs" />
     <Compile Include="LinearQueries\SingleQueryRunner.cs" />
     <Compile Include="Linq\GroupByKeyFunc.cs" />
     <Compile Include="Linq\ITranslatorDatabaseAccessor.cs" />
+    <Compile Include="Linq\PrivateExtensions\MetadataExtensions.cs" />
     <Compile Include="Linq\TranslatorFunc.cs" />
     <Compile Include="PerformanceCounters.cs" />
     <Compile Include="Plugins\AbstractBackgroundTask.cs" />

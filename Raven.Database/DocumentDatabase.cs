@@ -13,6 +13,7 @@ using Raven.Database.Backup;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
+using Raven.Database.Impl;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Database.LinearQueries;
@@ -29,7 +30,7 @@ using TransactionInformation = Raven.Http.TransactionInformation;
 
 namespace Raven.Database
 {
-    public class DocumentDatabase : IResourceStore
+    public class DocumentDatabase : IResourceStore, IUuidGenerator
     {
         [ImportMany]
         public IEnumerable<AbstractPutTrigger> PutTriggers { get; set; }
@@ -78,7 +79,7 @@ namespace Raven.Database
             bool newDb;
             try
             {
-                newDb = TransactionalStorage.Initialize();
+                newDb = TransactionalStorage.Initialize(this);
             }
             catch (Exception)
             {
@@ -236,7 +237,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 		private static int sequentialUuidCounter;
         private QueryRunnerManager queryRunnerManager;
 
-        public static Guid CreateSequentialUuid()
+        public Guid CreateSequentialUuid()
 		{
 			var ticksAsBytes = BitConverter.GetBytes(DateTime.Now.Ticks);
 			Array.Reverse(ticksAsBytes);

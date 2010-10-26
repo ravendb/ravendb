@@ -66,9 +66,10 @@ namespace Raven.Client.Indexes
 		/// <returns></returns>
 		public IndexDefinition ToIndexDefinition(DocumentConvention convention)
 		{
-			return new IndexDefinition
+		    string querySource = (typeof(TDocument) == typeof(object)) ? "docs" : "docs." + convention.GetTypeTagName(typeof(TDocument));
+		    return new IndexDefinition
 			{
-				Map = PruneToFailureLinqQueryAsStringToWorkableCode(Map, convention, "docs." + convention.GetTypeTagName(typeof(TDocument))),
+				Map = PruneToFailureLinqQueryAsStringToWorkableCode(Map, convention, querySource),
 				Reduce = PruneToFailureLinqQueryAsStringToWorkableCode(Reduce, convention, "results"),
                 TransformResults = PruneToFailureLinqQueryAsStringToWorkableCode(TransformResults, convention, "results"),
 				Indexes = ConvertToStringDictionary(Indexes),
@@ -77,7 +78,7 @@ namespace Raven.Client.Indexes
 			};
 		}
 
-		private static IDictionary<string, TValue> ConvertToStringDictionary<TValue>(IEnumerable<KeyValuePair<Expression<Func<TReduceResult, object>>, TValue>> input)
+	    private static IDictionary<string, TValue> ConvertToStringDictionary<TValue>(IEnumerable<KeyValuePair<Expression<Func<TReduceResult, object>>, TValue>> input)
 		{
 			var result = new Dictionary<string, TValue>();
 			foreach (var value in input)

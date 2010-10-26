@@ -39,7 +39,7 @@ namespace Raven.Storage.Esent.StorageActions
 					Api.EscrowUpdate(session, Details, tableColumnsCache.DetailsColumns["attachment_count"], 1);
 			}
 
-			Guid newETag = DocumentDatabase.CreateSequentialUuid();
+			Guid newETag = uuidGenerator.CreateSequentialUuid();
 			using (var update = new Update(session, Files, isUpdate ? JET_prep.Replace : JET_prep.Insert))
 			{
 				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["name"], key, Encoding.Unicode);

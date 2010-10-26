@@ -4,6 +4,7 @@ using log4net;
 using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
+using Raven.Database.Impl;
 using Raven.Database.Storage.StorageActions;
 using Raven.Database.Tasks;
 using Raven.Storage.Managed.Impl;
@@ -15,11 +16,13 @@ namespace Raven.Storage.Managed
     public class TasksStorageActions : ITasksStorageActions
     {
         private readonly TableStorage storage;
+        private readonly IUuidGenerator generator;
         private ILog logger = LogManager.GetLogger(typeof(TasksStorageActions));
 
-        public TasksStorageActions(TableStorage storage)
+        public TasksStorageActions(TableStorage storage, IUuidGenerator generator)
         {
             this.storage = storage;
+            this.generator = generator;
         }
 
         public void AddTask(Task task, DateTime addedAt)
@@ -27,7 +30,7 @@ namespace Raven.Storage.Managed
             storage.Tasks.Put(new JObject
             {
                 {"index", task.Index},
-                {"id", DocumentDatabase.CreateSequentialUuid().ToByteArray()},
+                {"id", generator.CreateSequentialUuid().ToByteArray()},
                 {"time", addedAt},
                 {"type", task.Type},
                 {"mergable", task.SupportsMerging}

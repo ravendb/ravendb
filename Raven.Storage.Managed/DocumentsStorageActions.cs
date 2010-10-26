@@ -5,6 +5,7 @@ using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Exceptions;
+using Raven.Database.Impl;
 using Raven.Database.Json;
 using Raven.Database.Storage.StorageActions;
 using Raven.Http;
@@ -18,11 +19,13 @@ namespace Raven.Storage.Managed
     {
         private readonly TableStorage storage;
         private readonly ITransactionStorageActions transactionStorageActions;
+        private readonly IUuidGenerator generator;
 
-        public DocumentsStorageActions(TableStorage storage, ITransactionStorageActions transactionStorageActions)
+        public DocumentsStorageActions(TableStorage storage, ITransactionStorageActions transactionStorageActions, IUuidGenerator generator)
         {
             this.storage = storage;
             this.transactionStorageActions = transactionStorageActions;
+            this.generator = generator;
         }
 
         public Tuple<int, int> FirstAndLastDocumentIds()
@@ -150,7 +153,7 @@ namespace Raven.Storage.Managed
             if (lastOrefaultKeyById != null)
                 id = lastOrefaultKeyById.Value<int>("id") + 1;
 
-            var newEtag = DocumentDatabase.CreateSequentialUuid();
+            var newEtag = generator.CreateSequentialUuid();
             storage.Documents.Put(new JObject
             {
                 {"key", key},

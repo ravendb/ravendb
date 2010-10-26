@@ -4,6 +4,7 @@ using System.IO;
 using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
+using Raven.Database.Impl;
 using Raven.Database.Storage.StorageActions;
 using Raven.Storage.Managed.Impl;
 using System.Linq;
@@ -14,10 +15,12 @@ namespace Raven.Storage.Managed
     public class MappedResultsStorageAction : IMappedResultsStorageAction
     {
         private readonly TableStorage storage;
+        private readonly IUuidGenerator generator;
 
-        public MappedResultsStorageAction(TableStorage storage)
+        public MappedResultsStorageAction(TableStorage storage, IUuidGenerator generator)
         {
             this.storage = storage;
+            this.generator = generator;
         }
 
         public void PutMappedResult(string view, string docId, string reduceKey, JObject data, byte[] viewAndReduceKeyHashed)
@@ -29,7 +32,7 @@ namespace Raven.Storage.Managed
                 {"view", view},
                 {"reduceKey", reduceKey},
                 {"docId", docId},
-                {"mapResultId", DocumentDatabase.CreateSequentialUuid().ToByteArray()}
+                {"mapResultId", generator.CreateSequentialUuid().ToByteArray()}
             }, ms.ToArray());
         }
 

@@ -8,6 +8,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
+using Raven.Database.Impl;
 using Raven.Database.Json;
 using Raven.Database.Storage.StorageActions;
 using Raven.Http.Exceptions;
@@ -18,11 +19,13 @@ namespace Raven.Storage.Managed
     public class AttachmentsStorageActions : IAttachmentsStorageActions
     {
         private readonly TableStorage storage;
+        private readonly IUuidGenerator generator;
         private readonly ILog logger = LogManager.GetLogger(typeof (AttachmentsStorageActions));
 
-        public AttachmentsStorageActions(TableStorage storage)
+        public AttachmentsStorageActions(TableStorage storage, IUuidGenerator generator)
         {
             this.storage = storage;
+            this.generator = generator;
         }
 
         public void AddAttachment(string key, Guid? etag, byte[] data, JObject headers)
@@ -32,7 +35,7 @@ namespace Raven.Storage.Managed
             var ms = new MemoryStream();
             headers.WriteTo(ms);
             ms.Write(data,0,data.Length);
-            var newEtag = DocumentDatabase.CreateSequentialUuid();
+            var newEtag = generator.CreateSequentialUuid();
            var result = storage.Attachments.Put(new JObject
             {
                 {"key", key},
