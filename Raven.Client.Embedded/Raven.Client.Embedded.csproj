@@ -5,11 +5,11 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProductVersion>8.0.30703</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{9DEE8674-D0CD-430D-BD9B-6CD95F3CAB22}</ProjectGuid>
+    <ProjectGuid>{0F5287AD-37B3-4375-BA3E-3CED64B1FC5B}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Raven.Storage.Esent</RootNamespace>
-    <AssemblyName>Raven.Storage.Esent</AssemblyName>
+    <RootNamespace>Raven.Client.Embedded</RootNamespace>
+    <AssemblyName>Raven.Client.Embedded</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -37,17 +37,11 @@
     <AssemblyOriginatorKeyFile>..\Raven.Database\RavenDB.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Esent.Interop">
-      <HintPath>..\SharedLibs\Esent.Interop.dll</HintPath>
-    </Reference>
-    <Reference Include="log4net">
-      <HintPath>..\SharedLibs\log4net.dll</HintPath>
-    </Reference>
     <Reference Include="Newtonsoft.Json">
       <HintPath>..\SharedLibs\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
-    <Reference Include="System.ComponentModel.Composition" />
+    <Reference Include="System.configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -56,43 +50,18 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Backup\BackupOperation.cs" />
-    <Compile Include="Backup\EsentBackup.cs" />
-    <Compile Include="Backup\RestoreOperation.cs" />
-    <Compile Include="EsentExtension.cs" />
+    <Compile Include="EmbeddablDocumentStore.cs" />
+    <Compile Include="EmbededDatabaseCommands.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="RemoteEsentStorage.cs" />
-    <Compile Include="RemoteEsentStorageState.cs" />
-    <Compile Include="SchemaCreator.cs" />
-    <Compile Include="SchemaUpdates\From29To30.cs" />
-    <Compile Include="SchemaUpdates\From21To22.cs" />
-    <Compile Include="SchemaUpdates\From22To23.cs" />
-    <Compile Include="SchemaUpdates\From23To24.cs" />
-    <Compile Include="SchemaUpdates\From24To25.cs" />
-    <Compile Include="SchemaUpdates\From25To26.cs" />
-    <Compile Include="SchemaUpdates\From26To27.cs" />
-    <Compile Include="SchemaUpdates\From27To28.cs" />
-    <Compile Include="SchemaUpdates\From28To29.cs" />
-    <Compile Include="SchemaUpdates\ISchemaUpdate.cs" />
-    <Compile Include="StorageActionsAccessor.cs" />
-    <Compile Include="StorageActions\Attachments.cs" />
-    <Compile Include="StorageActions\Documents.cs" />
-    <Compile Include="StorageActions\General.cs" />
-    <Compile Include="StorageActions\Indexing.cs" />
-    <Compile Include="StorageActions\MappedResults.cs" />
-    <Compile Include="StorageActions\Queue.cs" />
-    <Compile Include="StorageActions\Staleness.cs" />
-    <Compile Include="StorageActions\TableProperties.cs" />
-    <Compile Include="StorageActions\Tasks.cs" />
-    <Compile Include="StorageActions\Util.cs" />
-    <Compile Include="TableColumnsCache.cs" />
-    <Compile Include="TransactionalStorage.cs" />
-    <Compile Include="TransactionalStorageConfigurator.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
       <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
       <Name>Raven.Abstractions</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj">
+      <Project>{4E087ECB-E7CA-4891-AC3C-3C76702715B6}</Project>
+      <Name>Raven.Client.Lightweight</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Database\Raven.Database.csproj">
       <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>

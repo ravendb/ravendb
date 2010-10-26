@@ -4,8 +4,14 @@ using System.Linq;
 
 namespace Raven.Client.Linq
 {
-    public static class LindExtensions
+    ///<summary>
+    /// Extensions to the linq syntax
+    ///</summary>
+    public static class LinqExtensions
     {
+        /// <summary>
+        /// Project using a different type
+        /// </summary>
         public static IEnumerable<TResult> As<TResult>(this IQueryable queryable)
         {
             var results = queryable.Provider.CreateQuery<TResult>(queryable.Expression);

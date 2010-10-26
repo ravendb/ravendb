@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -13,9 +12,6 @@ using Raven.Client.Document;
 using Raven.Client.Exceptions;
 using Raven.Database;
 using Raven.Database.Data;
-using Raven.Database.Exceptions;
-using Raven.Client.Client;
-using System.Collections.Generic;
 using Raven.Http.Exceptions;
 
 namespace Raven.Client.Client.Async

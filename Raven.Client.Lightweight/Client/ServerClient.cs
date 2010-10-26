@@ -14,8 +14,6 @@ using Raven.Client.Exceptions;
 using Raven.Client.Indexes;
 using Raven.Database;
 using Raven.Database.Data;
-using Raven.Database.Exceptions;
-using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Http.Exceptions;

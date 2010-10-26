@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Reflection;
+using Raven.Client.Client;
 using Raven.Client.Document;
 using Raven.Database.Extensions;
 using Xunit;
@@ -26,7 +27,7 @@ namespace Raven.Client.Tests.Document
 		{
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
 			path = Path.Combine(path, "TestDb").Substring(6);
-			var documentStore = new DocumentStore
+            var documentStore = new EmbeddablDocumentStore
 			{
 				Configuration =
 					{

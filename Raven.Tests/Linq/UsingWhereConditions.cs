@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Raven.Client.Client;
 using Raven.Client.Indexes;
 using Raven.Database.Extensions;
 using Xunit;
@@ -29,7 +30,7 @@ namespace Raven.Tests.Linq
             string directoryName =  Path.Combine(Path.GetTempPath(), "ravendb.RavenWhereTests");
             IOExtensions.DeleteDirectory(directoryName);
 
-            using (var db = new DocumentStore() { DataDirectory = directoryName })
+            using (var db = new EmbeddablDocumentStore() { DataDirectory = directoryName })
             {
                 db.Initialize();
 

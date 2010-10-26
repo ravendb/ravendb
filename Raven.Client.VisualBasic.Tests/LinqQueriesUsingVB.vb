@@ -1,4 +1,5 @@
-﻿Imports Raven.Client.Indexes
+﻿Imports Raven.Client.Client
+Imports Raven.Client.Indexes
 Imports Raven.Client.Document
 Imports Raven.Client.Tests
 Imports Xunit
@@ -9,7 +10,7 @@ Public Class LinqQueriesUsingVB
     <Fact()> _
     Public Sub CanUseSelectMany_WithFixedParameter()
 
-        Using store As DocumentStore = NewDocumentStore()
+        Using store As EmbeddablDocumentStore = NewDocumentStore()
 
             store.DatabaseCommands.PutIndex("test", New IndexDefinition(Of PortalPageSettings)() With
             { _
@@ -26,7 +27,7 @@ Public Class LinqQueriesUsingVB
     <Fact()> _
     Public Sub CanUseSelectMany_WithVaraible()
 
-        Using store As DocumentStore = NewDocumentStore()
+        Using store As EmbeddablDocumentStore = NewDocumentStore()
 
             store.DatabaseCommands.PutIndex("test", New IndexDefinition(Of PortalPageSettings)() With
             { _

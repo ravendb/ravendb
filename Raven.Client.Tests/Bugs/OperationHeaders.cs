@@ -3,6 +3,7 @@ using System.ComponentModel.Composition.Hosting;
 using System.IO;
 using System.Reflection;
 using System.Transactions;
+using Raven.Client.Client;
 using Raven.Client.Document;
 using Raven.Client.Tests.Document;
 using Raven.Database;
@@ -33,7 +34,7 @@ namespace Raven.Client.Tests.Bugs
 		[Fact]
 		public void CanPassOperationHeadersUsingEmbedded()
 		{
-			using(var documentStore = new DocumentStore
+            using (var documentStore = new EmbeddablDocumentStore
 			{
 				Configuration = new RavenConfiguration
 				{

@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Threading;
 using System.Transactions;
 using Newtonsoft.Json.Linq;
+using Raven.Client.Client;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
 using Raven.Client.Indexes;
@@ -32,11 +33,11 @@ namespace Raven.Client.Tests.Document
 
 		#endregion
 
-		private DocumentStore NewDocumentStore()
+        private EmbeddablDocumentStore NewDocumentStore()
 		{
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof (DocumentStoreServerTests)).CodeBase);
 			path = Path.Combine(path, "TestDb").Substring(6);
-			var documentStore = new DocumentStore
+            var documentStore = new EmbeddablDocumentStore
 			{
 				Configuration =
 					{
@@ -681,7 +682,7 @@ namespace Raven.Client.Tests.Document
 		[Fact]
 		public void Should_retrieve_all_entities_using_connection_string()
 		{
-			using (var documentStore =  new DocumentStore
+            using (var documentStore = new EmbeddablDocumentStore
 			{
 				ConnectionStringName = "Local",
 				Configuration =

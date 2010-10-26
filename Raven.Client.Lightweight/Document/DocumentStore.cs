@@ -20,7 +20,10 @@ namespace Raven.Client.Document
 		private static readonly Regex connectionStringArgumentsSplitterRegex = new Regex(@"; (?=\s* \w+ \s* =)",
 			RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
 
-		private Func<IDatabaseCommands> databaseCommandsGenerator;
+        /// <summary>
+        /// Generate new instance of database commands
+        /// </summary>
+	    protected Func<IDatabaseCommands> databaseCommandsGenerator;
 		/// <summary>
 		/// Gets the shared operations headers.
 		/// </summary>
@@ -102,64 +105,16 @@ namespace Raven.Client.Document
 		/// Gets or sets the identifier for this store.
 		/// </summary>
 		/// <value>The identifier.</value>
-	    public string Identifier
+	    public virtual string Identifier
 		{
 			get
 			{
-			    return identifier ?? Url
-#if !CLIENT
-			        ?? ( RunInMemory ? "memory" :  DataDirectory);
-#endif
-;
+			    return identifier ?? Url;
 			}
 			set { identifier = value; }
 		}
-#if !CLIENT
-		private Raven.Database.RavenConfiguration configuration;
-		
-		public Raven.Database.RavenConfiguration Configuration
-		{
-			get
-			{
-				if(configuration == null)
-                    configuration = new Raven.Database.RavenConfiguration();
-				return configuration;
-			}
-			set { configuration = value; }
-		}
-
-
-	    /// <summary>
-        /// Run RavenDB in an embedded mode, using in memory only storage.
-        /// This is useful for unit tests, since it is very fast.
-        /// </summary>
-        public bool RunInMemory
-	    {
-            get { return Configuration.RunInMemory; }
-	        set
-	        {
-	            Configuration.RunInMemory = true;
-                Configuration.StorageTypeName = "Raven.Storage.Managed.TransactionalStorage, Raven.Storage.Managed";
-	        }
-	    }
-
-	    /// <summary>
-        /// Run RavenDB in embedded mode, using the specified directory for data storage
-        /// </summary>
-        /// <value>The data directory.</value>
-		public string DataDirectory
-		{
-			get
-			{
-				return Configuration.DataDirectory;
-			}
-			set
-			{
-				Configuration.DataDirectory = value;
-			}
-		}
-#endif
-		private string connectionStringName;
+	
+        private string connectionStringName;
 
 		/// <summary>
 		/// Gets or sets the name of the connection string name.
@@ -173,58 +128,53 @@ namespace Raven.Client.Document
 				var connectionString = ConfigurationManager.ConnectionStrings[connectionStringName];
 				if(connectionString == null)
 					throw new ArgumentException("Could not find connection string name: " + connectionStringName);
-				string user = null;
-				string pass = null;
 				var strings = connectionStringArgumentsSplitterRegex.Split(connectionString.ConnectionString);
-				foreach(var arg in strings)
+                var networkCredential = new NetworkCredential();
+                foreach (var arg in strings)
 				{
 					var match = connectionStringRegex.Match(arg);
 					if (match.Success == false)
 						throw new ArgumentException("Connection string name: " + connectionStringName + " could not be parsed");
-					switch (match.Groups[1].Value.ToLower())
-					{
-#if !CLIENT
-                        case "memory":
-					        bool result;
-                            if (bool.TryParse(match.Groups[2].Value, out result) == false)
-                                throw new ConfigurationErrorsException("Could not understand memory setting: " +
-                                    match.Groups[2].Value);
-					        RunInMemory = result;
-					        break;
-						case "datadir":
-							DataDirectory = match.Groups[2].Value.Trim();
-							break;
-#endif
-                        case "resourcemanagerid":
-                            ResourceManagerId = new Guid(match.Groups[2].Value.Trim());
-					        break;
-						case "url":
-							Url = match.Groups[2].Value.Trim();
-							break;
-
-						case "user":
-							user = match.Groups[2].Value.Trim();
-							break;
-						case "password":
-								pass = match.Groups[2].Value.Trim();
-							break;
-
-						default:
-							throw new ArgumentException("Connection string name: " + connectionStringName + " could not be parsed, unknown option: " + match.Groups[1].Value);
-					}
+					ProcessConnectionStringOption(networkCredential, match.Groups[1].Value.ToLower(), match.Groups[2].Value.Trim());
 				}
 
-				if (user == null && pass == null) 
+                if (networkCredential.UserName == null && networkCredential.Password == null) 
 					return;
 
-				if(user == null || pass == null)
+                if (networkCredential.UserName == null || networkCredential.Password== null)
 					throw new ArgumentException("User and Password must both be specified in the connection string: " + connectionStringName);
-				Credentials = new NetworkCredential(user, pass);
+			    Credentials = networkCredential;
 			}
 		}
 
+        /// <summary>
+        /// Parse the connection string option
+        /// </summary>
+	    protected virtual void ProcessConnectionStringOption(NetworkCredential neworkCredentials, string key, string value)
+	    {
+	        switch (key)
+	        {
+	            case "resourcemanagerid":
+	                ResourceManagerId = new Guid(value);
+	                break;
+	            case "url":
+	                Url = value;
+	                break;
 
-		/// <summary>
+	            case "user":
+	                neworkCredentials.UserName = value;
+	                break;
+	            case "password":
+                    neworkCredentials.Password = value;
+	                break;
+
+	            default:
+                    throw new ArgumentException("Connection string name: " + connectionStringName + " could not be parsed, unknown option: " + key);
+	        }
+	    }
+
+
+	    /// <summary>
 		/// Gets or sets the URL.
 		/// </summary>
 		/// <value>The URL.</value>
@@ -241,13 +191,9 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
 		/// </summary>
-		public void Dispose()
+		public virtual void Dispose()
 		{
             Stored = null;
-#if !CLIENT
-			if (DocumentDatabase != null)
-				DocumentDatabase.Dispose();
-#endif
 		}
 
 		#endregion
@@ -324,33 +270,16 @@ namespace Raven.Client.Document
         /// </summary>
         public Guid ResourceManagerId { get; set; }
 
-#if !CLIENT
-		public Raven.Database.DocumentDatabase DocumentDatabase { get; set; }
-
-#endif
 
 		/// <summary>
 		/// Initializes this instance.
 		/// </summary>
 		/// <returns></returns>
-		public IDocumentStore Initialize()
+		public  IDocumentStore Initialize()
 		{
 			try
 			{
-#if !CLIENT
-				if (configuration != null)
-				{
-					DocumentDatabase = new Raven.Database.DocumentDatabase(configuration);
-					DocumentDatabase.SpinBackgroundWorkers();
-					databaseCommandsGenerator = () => new EmbededDatabaseCommands(DocumentDatabase, Conventions);
-				}
-				else
-#endif
-				{
-					var replicationInformer = new ReplicationInformer();
-					databaseCommandsGenerator = ()=>new ServerClient(Url, Conventions, credentials, replicationInformer);
-					asyncDatabaseCommandsGenerator = ()=>new AsyncServerClient(Url, Conventions, credentials);
-				}
+			    InitializeInternal();
                 if(Conventions.DocumentKeyGenerator == null)// don't overwrite what the user is doing
                 {
                     var generator = new MultiTypeHiLoKeyGenerator(this, 1024);
@@ -366,7 +295,17 @@ namespace Raven.Client.Document
             return this;
 		}
 
-		/// <summary>
+        /// <summary>
+        /// Initialize the document store access method to RavenDB
+        /// </summary>
+	    protected virtual void InitializeInternal()
+	    {
+	        var replicationInformer = new ReplicationInformer();
+	        databaseCommandsGenerator = () => new ServerClient(Url, Conventions, credentials, replicationInformer);
+	        asyncDatabaseCommandsGenerator = () => new AsyncServerClient(Url, Conventions, credentials);
+	    }
+
+	    /// <summary>
 		/// Registers the delete listener.
 		/// </summary>
 		/// <param name="deleteListener">The delete listener.</param>

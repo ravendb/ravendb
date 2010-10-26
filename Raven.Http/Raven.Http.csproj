@@ -67,23 +67,25 @@
     <Compile Include="AnonymousUserAccessMode.cs" />
     <Compile Include="CurrentOperationContext.cs" />
     <Compile Include="Exceptions\BadRequestException.cs" />
-    <Compile Include="Exceptions\ConcurrencyException.cs" />
     <Compile Include="Extensions\HttpExtensions.cs" />
     <Compile Include="HttpServer.cs" />
     <Compile Include="IResourceStore.cs" />
     <Compile Include="IRaveHttpnConfiguration.cs" />
-    <Compile Include="Json\JsonEnumConverter.cs" />
     <Compile Include="NonAdminHttp.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="AbstractRequestResponder.cs" />
-    <Compile Include="Extensions\StreamExtension.cs" />
     <Compile Include="Responders\Favicon.cs" />
     <Compile Include="Responders\RavenRoot.cs" />
     <Compile Include="Responders\RavenUI.cs" />
-    <Compile Include="TransactionInformation.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="RavenDB.snk" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
+      <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
+      <Name>Raven.Abstractions</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

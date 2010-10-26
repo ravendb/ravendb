@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Reflection;
 using System.Threading;
+using Raven.Client.Client;
 using Raven.Client.Document;
 using Raven.Client.Tests.Document;
 using Raven.Database;
@@ -13,14 +14,14 @@ namespace Raven.Client.Tests
 	{
 		private string path;
 
-		protected DocumentStore NewDocumentStore()
+        protected EmbeddablDocumentStore NewDocumentStore()
 		{
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
 			path = Path.Combine(path, "TestDb").Substring(6);
 
             IOExtensions.DeleteDirectory(path);
 
-            var documentStore = new DocumentStore
+            var documentStore = new EmbeddablDocumentStore()
 			{
 				Configuration = new RavenConfiguration
 				{
@@ -33,7 +34,7 @@ namespace Raven.Client.Tests
 			return documentStore;
 		}
 
-        public void WaitForIndexing(DocumentStore store)
+        public void WaitForIndexing(EmbeddablDocumentStore store)
         {
             while (store.DocumentDatabase.Statistics.StaleIndexes.Length > 0)
             {

@@ -24,12 +24,11 @@ namespace Raven.Database.Data
 		/// </summary>
 		/// <value>The etag.</value>
 		Guid? Etag { get; }
-#if !CLIENT
+
 		TransactionInformation TransactionInformation { get; set; }
     	JObject Metadata { get; }
-    	void Execute(DocumentDatabase database);
-#endif
-		/// <summary>
+
+        /// <summary>
 		/// Translate this instance to a Json object.
 		/// </summary>
 		JObject ToJson();

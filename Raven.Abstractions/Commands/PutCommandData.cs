@@ -24,19 +24,11 @@ namespace Raven.Database.Data
 			get { return "PUT"; }
     	}
 
-#if !CLIENT
     	public TransactionInformation TransactionInformation
         {
             get;
             set;
         }
-		public void Execute(DocumentDatabase database)
-		{
-			var putResult = database.Put(Key, Etag, Document, Metadata, TransactionInformation);
-			Etag = putResult.ETag;
-			Key = putResult.Key;
-		}
-#endif
 
 		/// <summary>
 		/// Gets or sets the etag.

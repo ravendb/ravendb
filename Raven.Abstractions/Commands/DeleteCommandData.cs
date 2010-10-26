@@ -29,7 +29,6 @@ namespace Raven.Database.Data
 		/// <value>The etag.</value>
 		public virtual Guid? Etag { get; set; }
 
-#if !CLIENT
         public TransactionInformation TransactionInformation
         {
             get; set;
@@ -40,11 +39,6 @@ namespace Raven.Database.Data
 			get { return null; }
     	}
 
-    	public void Execute(DocumentDatabase database)
-    	{
-    		database.Delete(Key, Etag, TransactionInformation);
-    	}
-#endif
 		/// <summary>
 		/// Translate this instance to a Json object.
 		/// </summary>

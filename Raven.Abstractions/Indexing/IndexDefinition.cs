@@ -1,16 +1,4 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
-#if !CLIENT
-using System.Linq.Expressions;
-using System.Text.RegularExpressions;
-using Lucene.Net.Analysis;
-using Lucene.Net.Analysis.Standard;
-using Lucene.Net.Documents;
-using Lucene.Net.Search;
-using Version = Lucene.Net.Util.Version;
-
-#endif
 
 namespace Raven.Database.Indexing
 {
@@ -47,7 +35,7 @@ namespace Raven.Database.Indexing
 			get { return Reduce != null; }
 		}
 
-        internal bool IsCompiled { get; set; }
+	    public bool IsCompiled { get; set; }
 
 		/// <summary>
 		/// Gets or sets the stores options
@@ -72,94 +60,6 @@ namespace Raven.Database.Indexing
 		/// </summary>
 		/// <value>The analyzers.</value>
 		public IDictionary<string, string> Analyzers { get; set; }
-		
-#if !CLIENT
-		[CLSCompliant(false)]
-		public Analyzer GetAnalyzer(string name)
-		{
-			if (Analyzers == null)
-				return null;
-			string analyzerTypeAsString;
-			if(Analyzers.TryGetValue(name, out analyzerTypeAsString) == false)
-				return null;
-			return CreateAnalyzerInstance(name, analyzerTypeAsString);
-		}
-
-		[CLSCompliant(false)]
-		public Analyzer CreateAnalyzerInstance(string name, string analyzerTypeAsString)
-		{
-			var analyzerType = typeof (StandardAnalyzer).Assembly.GetType(analyzerTypeAsString) ??
-				Type.GetType(analyzerTypeAsString);
-			if(analyzerType == null)
-				throw new InvalidOperationException("Cannot find type '" + analyzerTypeAsString + "' for field: " + name);
-			return (Analyzer) Activator.CreateInstance(analyzerType);
-		}
-
-		[CLSCompliant(false)]
-		public Field.Store GetStorage(string name, Field.Store defaultStorage)
-		{
-			if(Stores == null)
-				return defaultStorage;
-			FieldStorage value;
-			if (Stores.TryGetValue(name, out value) == false)
-				return defaultStorage;
-			switch (value)
-			{
-				case FieldStorage.Yes:
-					return Field.Store.YES;
-				case FieldStorage.No:
-					return Field.Store.NO;
-				case FieldStorage.Compress:
-					return Field.Store.COMPRESS;
-				default:
-					throw new ArgumentOutOfRangeException();
-			}
-		}
-
-		public SortOptions? GetSortOption(string name)
-		{
-			SortOptions value;
-			if (!SortOptions.TryGetValue(name, out value))
-			{
-				if (!name.EndsWith("_Range"))
-				{
-					return null;
-				}
-				var nameWithoutRange = name.Substring(0, name.Length - "_Range".Length);
-				if (!SortOptions.TryGetValue(nameWithoutRange, out value))
-					return null;
-			}
-			return value;
-		}
-
-		[CLSCompliant(false)]
-		public Field.Index GetIndex(string name, Field.Index defaultIndex)
-		{
-			if (Indexes == null)
-				return defaultIndex;
-			FieldIndexing value;
-			if (Indexes.TryGetValue(name, out value) == false)
-			{
-			    string ignored;
-			    if(Analyzers.TryGetValue(name, out ignored))
-                    return Field.Index.ANALYZED;// if there is a custom analyzer, the value should be analyzer
-			    return defaultIndex;
-			}
-		    switch (value)
-			{
-				case FieldIndexing.No:
-					return Field.Index.NO;
-				case FieldIndexing.NotAnalyzedNoNorms:
-					return Field.Index.NOT_ANALYZED_NO_NORMS;
-				case FieldIndexing.Analyzed:
-					return Field.Index.ANALYZED;
-				case FieldIndexing.NotAnalyzed:
-					return Field.Index.NOT_ANALYZED;
-				default:
-					throw new ArgumentOutOfRangeException();
-			}
-		}
-#endif
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="IndexDefinition"/> class.

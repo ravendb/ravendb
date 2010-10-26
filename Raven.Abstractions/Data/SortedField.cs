@@ -36,15 +36,6 @@ namespace Raven.Database.Data
 		/// </summary>
 		/// <value><c>true</c> if descending; otherwise, <c>false</c>.</value>
 		public bool Descending { get; set; }
-#if !CLIENT
-		[System.CLSCompliant(false)]
-		public Lucene.Net.Search.SortField ToLuceneSortField(Raven.Database.Indexing.IndexDefinition definition)
-		{
-			var sortOptions = definition.GetSortOption(Field);
-			if(sortOptions == null)
-				return new  Lucene.Net.Search.SortField(Field, System.Globalization.CultureInfo.InvariantCulture, Descending);
-			return new Lucene.Net.Search.SortField(Field, (int)sortOptions.Value, Descending);
-		}
-#endif
+
 	}
 }

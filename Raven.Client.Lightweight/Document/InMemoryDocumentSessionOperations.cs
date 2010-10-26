@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Linq;
 using System.Reflection;
 using System.Transactions;
@@ -13,7 +12,6 @@ using Raven.Database.Data;
 #if !NET_3_5
 using System.Dynamic;
 using Microsoft.CSharp.RuntimeBinder;
-using Raven.Database.Exceptions;
 using Raven.Database.Linq;
 using Raven.Http.Exceptions;
 

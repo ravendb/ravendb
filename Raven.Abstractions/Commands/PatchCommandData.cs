@@ -43,7 +43,6 @@ namespace Raven.Database.Data
 		{
 			get; set;
 		}
-#if !CLIENT
 		public TransactionInformation TransactionInformation
 		{
 			get; set;
@@ -54,16 +53,7 @@ namespace Raven.Database.Data
 			get; set;
 		}
 
-		public void Execute(DocumentDatabase database)
-		{
-			database.ApplyPatch(Key, Etag, Patches, TransactionInformation);
-
-			var doc = database.Get(Key, TransactionInformation);
-			if (doc != null)
-				Metadata = doc.Metadata;
-		}
-#endif
-		/// <summary>
+        /// <summary>
 		/// Translate this instance to a Json object.
 		/// </summary>
 		public JObject ToJson()

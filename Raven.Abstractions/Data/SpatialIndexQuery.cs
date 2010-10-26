@@ -63,29 +63,5 @@ namespace Raven.Database.Data
 				Uri.EscapeDataString(Radius.ToString()),
 				Uri.EscapeDataString(SortByDistance ? "true" : "false"));
 		}
-
-#if !CLIENT
-		internal override Lucene.Net.Search.Filter GetFilter()
-		{
-			var dq = new Lucene.Net.Spatial.Tier.DistanceQueryBuilder(
-					Latitude, Longitude, Radius,
-					SpatialIndex.LatField, 
-					SpatialIndex.LngField, 
-					Lucene.Net.Spatial.Tier.Projectors.CartesianTierPlotter.DefaltFieldPrefix, 
-					true);
-
-			return dq.Filter;
-		}
-
-		internal override Lucene.Net.Search.Sort GetSort(Lucene.Net.Search.Filter filter, IndexDefinition indexDefinition)
-		{
-			if (SortByDistance == false)
-				return base.GetSort(filter, indexDefinition);
-
-			var dsort = new Lucene.Net.Spatial.Tier.DistanceFieldComparatorSource((Lucene.Net.Spatial.Tier.DistanceFilter)filter);
-
-			return new Lucene.Net.Search.Sort(new Lucene.Net.Search.SortField("foo", dsort, false));
-		}
-#endif
 	}
 }
