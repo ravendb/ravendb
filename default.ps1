@@ -59,10 +59,11 @@ task Init -depends Verify40, Clean {
 	copy $tools_dir\xUnit\*.* $build_dir
 	 
 	if($global:commercial) {
-		exec { .\Utilities\Binaries\Raven.ProjectRewriter.exe }
+		exec { .\Utilities\Binaries\Raven.ProjectRewriter.exe commercial }
 		cp "..\RavenDB_Commercial.snk" "Raven.Database\RavenDB.snk"
 	}
 	else {
+		exec { .\Utilities\Binaries\Raven.ProjectRewriter.exe }
 		cp "Raven.Database\Raven.Database.csproj" "Raven.Database\Raven.Database.g.csproj"
 	}
 }
@@ -157,7 +158,12 @@ task CleanOutputDirectory {
 }
 
 task CopyEmbeddedClient { 
-	cp $build_dir\Raven.Client.dll $build_dir\Output\EmbeddedClient
+	cp $build_dir\Raven.Client.Lightweight.dll $build_dir\Output\EmbeddedClient
+	cp $build_dir\Raven.Client.Lightweight.xml $build_dir\Output\EmbeddedClient
+	cp $build_dir\Raven.Client.Embedded.dll $build_dir\Output\EmbeddedClient
+	cp $build_dir\Raven.Client.Embedded.xml $build_dir\Output\EmbeddedClient
+	cp $build_dir\Raven.Abstractions.dll $build_dir\Output\EmbeddedClient
+	cp $build_dir\Raven.Http.dll $build_dir\Output\EmbeddedClient
 	cp $build_dir\Raven.Database.dll $build_dir\Output\EmbeddedClient
 	cp $build_dir\Raven.Http.dll $build_dir\Output\EmbeddedClient
 	cp $build_dir\Esent.Interop.dll $build_dir\Output\EmbeddedClient
@@ -177,16 +183,19 @@ task CopySmuggler {
 
 task CopyClient {
 	cp $build_dir\Newtonsoft.Json.dll $build_dir\Output\Client
+  cp $build_dir\Raven.Abstractions.dll $build_dir\Output\Client
 	cp $build_dir\Raven.Client.Lightweight.dll $build_dir\Output\Client
 	cp $build_dir\Raven.Client.Lightweight.xml $build_dir\Output\Client
 }
 
 task CopyClient35 {
 	cp $build_dir\Newtonsoft.Json.dll $build_dir\Output\Client-3.5
-	cp $build_dir\Raven.Client-3.5.dll $build_dir\Output\Client-3.5
+	cp $build_dir\Raven.Abstractions-3.5.dll $build_dir\Output\Client-3.5
+	cp $build_dir\Raven.Client.Lightweight-3.5.dll $build_dir\Output\Client-3.5
 }
 
 task CopyWeb { 
+	cp $build_dir\Raven.Abstractions.dll $build_dir\Output\Web\bin
 	cp $build_dir\Raven.Web.dll $build_dir\Output\Web\bin
 	cp $build_dir\log4net.dll $build_dir\Output\Web\bin
 	cp $build_dir\Newtonsoft.Json.dll $build_dir\Output\Web\bin
@@ -219,6 +228,7 @@ task CopyServer {
 	cp $build_dir\ICSharpCode.NRefactory.dll $build_dir\Output\Server
 	cp $build_dir\Rhino.Licensing.dll $build_dir\Output\Server
 	cp $build_dir\Esent.Interop.dll $build_dir\Output\Server
+	cp $build_dir\Raven.Abstractions.dll $build_dir\Output\Server
 	cp $build_dir\Raven.Database.dll $build_dir\Output\Server
 	cp $build_dir\Raven.Http.dll $build_dir\Output\Server
 	cp $build_dir\Raven.Storage.Esent.dll $build_dir\Output\Server
@@ -252,10 +262,13 @@ task CreateNupack {
 	$writer.Close()
 	
 	cp $build_dir\Newtonsoft.Json.dll $build_dir\NuPack\Lib\3.5
-	cp $build_dir\Raven.Client-3.5.dll $build_dir\NuPack\Lib\3.5
+	cp $build_dir\Raven.Client.Lightweight-3.5.dll $build_dir\NuPack\Lib\3.5
+	cp $build_dir\Raven.Client.Lightweight-3.5.xml $build_dir\NuPack\Lib\3.5
+	cp $build_dir\Raven.Abstractons-3.5.dll $build_dir\NuPack\Lib\3.5
 	
 	cp $build_dir\Newtonsoft.Json.dll $build_dir\NuPack\Lib\4.0
 	cp $build_dir\Raven.Client.Lightweight.dll $build_dir\NuPack\Lib\4.0
+	cp $build_dir\Raven.Abstractions.dll $build_dir\NuPack\Lib\4.0
 	cp $build_dir\Raven.Client.Lightweight.xml $build_dir\NuPack\Lib\4.0
 	
 	
