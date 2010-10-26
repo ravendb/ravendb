@@ -1,14 +1,13 @@
 using System;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
-using Microsoft.Isam.Esent.Interop.Vista;
 
 namespace Raven.Storage.Esent
 {
 	[CLSCompliant(false)]
 	public class SchemaCreator
 	{
-		public const string SchemaVersion = "3.0";
+		public const string SchemaVersion = "3.2";
 		private readonly Session session;
 
 		public SchemaCreator(Session session)
