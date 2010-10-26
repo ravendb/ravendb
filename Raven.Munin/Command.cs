@@ -12,6 +12,12 @@ namespace Raven.Munin
         public long Position { get; set; }
         public int DictionaryId { get; set; }
 
+        public Command()
+        {
+            Position = -1;
+            Size = 0;
+        }
+
         public override string ToString()
         {
             return Type + " " + Key.ToString(Formatting.None);

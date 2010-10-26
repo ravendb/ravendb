@@ -71,6 +71,11 @@ namespace Raven.Munin
 
         public int WasteCount { get; private set; }
 
+        public void ResetWaste()
+        {
+            WasteCount = 0;
+        }
+
         public int Count
         {
             get { return KeyToFilePos.Count; }
@@ -167,7 +172,7 @@ namespace Raven.Munin
                 {
                     Key = key,
                     Position = readResult == null ? -1 : readResult.Position,
-                    Size = readResult == null ? -1 : readResult.Size,
+                    Size = readResult == null ? 0 : readResult.Size,
                     DictionaryId = TableId,
                     Type = CommandType.Put
                 });
@@ -234,6 +239,9 @@ namespace Raven.Munin
 
         private byte[] ReadData(long pos, int size)
         {
+            if (pos == -1)
+                return null;
+
             var cacheKey = pos.ToString();
             var cached = cache.Get(cacheKey);
             if (cached != null)

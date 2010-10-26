@@ -13,8 +13,12 @@ namespace Raven.Munin
     public class Database : IEnumerable<Table>
     {
         private readonly IPersistentSource persistentSource;
-        private readonly List<Table> dictionaries = new List<Table>();
-        
+        private readonly List<Table> tables = new List<Table>();
+
+        public List<Table> Tables
+        {
+            get { return tables; }
+        }
 
         public readonly ThreadLocal<Guid> CurrentTransactionId = new ThreadLocal<Guid>(() => Guid.Empty);
 
@@ -52,7 +56,7 @@ namespace Raven.Munin
 
                     foreach (var commandForDictionary in cmds.GroupBy(x => x.DictionaryId))
                     {
-                        dictionaries[commandForDictionary.Key].ApplyCommands(commandForDictionary);
+                        tables[commandForDictionary.Key].ApplyCommands(commandForDictionary);
                     }
                 }
             });
@@ -89,7 +93,7 @@ namespace Raven.Munin
 
         public Table this[int i]
         {
-            get { return dictionaries[i]; }
+            get { return tables[i]; }
         }
 
         public IDisposable BeginTransaction()
@@ -141,7 +145,7 @@ namespace Raven.Munin
             // this assume that munin transactions always use a single thread
 
             var cmds = new List<Command>();
-            foreach (var persistentDictionary in dictionaries)
+            foreach (var persistentDictionary in tables)
             {
                 var commandsToCommit = persistentDictionary.GetCommandsToCommit(txId);
                 if (commandsToCommit == null)
@@ -159,14 +163,14 @@ namespace Raven.Munin
                 WriteCommands(cmds, log);
                 persistentSource.FlushLog(); // flush all the index changes to disk
 
-                hasChanged = dictionaries.Aggregate(false, (changed, persistentDictionary) => changed | persistentDictionary.CompleteCommit(txId));
+                hasChanged = tables.Aggregate(false, (changed, persistentDictionary) => changed | persistentDictionary.CompleteCommit(txId));
 
             });
         }
 
         private void Rollback(Guid txId)
         {
-            foreach (var persistentDictionary in dictionaries)
+            foreach (var persistentDictionary in tables)
             {
                 persistentDictionary.Rollback(txId);
             }
@@ -208,7 +212,6 @@ namespace Raven.Munin
                         command.Size = command.Payload.Length;
                         log.Write(command.Payload, 0, command.Payload.Length);
                     }
-
                     cmd.Add("position", command.Position);
                     cmd.Add("size", command.Size);
                 }
@@ -234,10 +237,11 @@ namespace Raven.Munin
                 Stream tempLog = persistentSource.CreateTemporaryStream();
 
                 var cmds = new List<Command>();
-                foreach (var persistentDictionary in dictionaries)
+                foreach (var persistentDictionary in tables)
                 {
                     cmds.AddRange(persistentDictionary.CopyCommittedData(tempLog));
                     persistentDictionary.ClearCache();
+                    persistentDictionary.ResetWaste();
                 }
 
                 WriteCommands(cmds, tempLog);
@@ -264,8 +268,8 @@ namespace Raven.Munin
 
         private bool CompactionRequired()
         {
-            var itemsCount = dictionaries.Sum(x => x.Count);
-            var wasteCount = dictionaries.Sum(x => x.WasteCount);
+            var itemsCount = tables.Sum(x => x.Count);
+            var wasteCount = tables.Sum(x => x.WasteCount);
 
             if (itemsCount < 10000) // for small data sizes, we cleanup on 100% waste
                 return wasteCount > itemsCount;
@@ -276,15 +280,15 @@ namespace Raven.Munin
 
         public Table Add(Table dictionary)
         {
-            dictionaries.Add(dictionary);
+            tables.Add(dictionary);
             DictionaryStates.Add(null);
-            dictionary.Initialize(persistentSource, dictionaries.Count - 1, this, CurrentTransactionId);
+            dictionary.Initialize(persistentSource, tables.Count - 1, this, CurrentTransactionId);
             return dictionary;
         }
 
         public IEnumerator<Table> GetEnumerator()
         {
-            return dictionaries.GetEnumerator();
+            return tables.GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()
