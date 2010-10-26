@@ -114,3 +114,5 @@ AssemblyInfo.cs
 /Samples/Raven.Sample.ShardClient/Servers/Shard2/Rhino.Licensing.dll
 /Samples/Raven.Sample.ShardClient/Servers/Shard2/log4net.dll
 *.nupkg
+/Raven.Abstractions/Raven.Abstractions.g.3.5.csproj
+/Raven.Client.Lightweight/Raven.Client.Lightweight.g.3.5.csproj
