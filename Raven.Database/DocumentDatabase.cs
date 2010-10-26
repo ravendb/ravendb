@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,7 +18,6 @@ using Raven.Database.Json;
 using Raven.Database.LinearQueries;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
-using Raven.Database.Server.Responders;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
 using Raven.Http;
@@ -60,6 +58,8 @@ namespace Raven.Database
 
         private readonly ILog log = LogManager.GetLogger(typeof(DocumentDatabase));
 
+        private long currentEtagBase;
+
         public DocumentDatabase(InMemroyRavenConfiguration configuration)
         {
             Configuration = configuration;
@@ -86,6 +86,8 @@ namespace Raven.Database
                 TransactionalStorage.Dispose();
                 throw;
             }
+
+            TransactionalStorage.Batch(actions => currentEtagBase = actions.General.GetNextIdentityValue("Raven/Etag"));
 
             IndexDefinitionStorage = new IndexDefinitionStorage(
                 configuration,
@@ -234,19 +236,19 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
             backgroundWorkerTask.Start();
         }
 
-		private static int sequentialUuidCounter;
+		private static long sequentialUuidCounter;
         private QueryRunnerManager queryRunnerManager;
 
         public Guid CreateSequentialUuid()
 		{
-			var ticksAsBytes = BitConverter.GetBytes(DateTime.Now.Ticks);
+			var ticksAsBytes = BitConverter.GetBytes(currentEtagBase);
 			Array.Reverse(ticksAsBytes);
 			var increment = Interlocked.Increment(ref sequentialUuidCounter);
 			var currentAsBytes = BitConverter.GetBytes(increment);
 			Array.Reverse(currentAsBytes);
 			var bytes = new byte[16];
 			Array.Copy(ticksAsBytes, 0, bytes, 0, ticksAsBytes.Length);
-			Array.Copy(currentAsBytes, 0, bytes, 12, currentAsBytes.Length);
+			Array.Copy(currentAsBytes, 0, bytes, 8, currentAsBytes.Length);
 			return bytes.TransfromToGuidWithProperSorting();
 		}
 
