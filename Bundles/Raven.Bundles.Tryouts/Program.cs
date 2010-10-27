@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Raven.Bundles.Tests.Expiration;
+using Raven.Bundles.Tests.Replication;
 
 namespace Raven.Bundles.Tryouts
 {
@@ -10,13 +11,15 @@ namespace Raven.Bundles.Tryouts
     {
         static void Main(string[] args)
         {
+            Console.WriteLine("starting...");
             for (int i = 0; i < 10000; i++)
             {
-                Console.Write(i+"\r");
-                using (var x = new Expiration())
+                using (var x = new SimpleReplication())
                 {
-                    x.After_expiry_passed_document_will_be_physically_deleted();
+                    x.Can_replicate_between_two_instances();
                 }
+                Console.Write(i + "\r");
+
             }
         }
     }
