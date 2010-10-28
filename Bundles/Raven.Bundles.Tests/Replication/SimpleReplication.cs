@@ -91,12 +91,13 @@ namespace Raven.Bundles.Tests.Replication
             TellFirstInstanceToReplicateToSecondInstance();
 
             TellSecondInstanceToReplicateToFirstInstance();
+            Company company = null;
 
             string etag;
             string id;
             using (var session = store1.OpenSession())
             {
-                var company = new Company { Name = "Hibernating Rhinos" };
+                 company = new Company { Name = "Hibernating Rhinos" };
                 session.Store(company);
                 session.SaveChanges();
                 id = company.Id;
@@ -106,27 +107,27 @@ namespace Raven.Bundles.Tests.Replication
             }
 
 
-            using (var session = store2.OpenSession()) // waiting for document to show up.
+
+            for (int i = 0; i < RetriesCount; i++)
             {
-                session.Advanced.MaxNumberOfRequestsPerSession = RetriesCount * 2;
-                Company company = null;
-                for (int i = 0; i < RetriesCount; i++)
+                using (var session = store2.OpenSession()) // waiting for document to show up.
                 {
                     company = session.Load<Company>(id);
                     if (company != null)
                         break;
                     Thread.Sleep(100);
+
                 }
-                Assert.NotNull(company);
-                Assert.Equal("Hibernating Rhinos", company.Name);
             }
+            Assert.NotNull(company);
+            Assert.Equal("Hibernating Rhinos", company.Name);
 
             // assert that the etag haven't changed (we haven't replicated)
             for (int i = 0; i < 15; i++)
             {
                 using (var session = store1.OpenSession())
                 {
-                    Company company = session.Load<Company>(id);
+                    company = session.Load<Company>(id);
                     Assert.Equal(etag, session.Advanced.GetMetadataFor(company).Value<string>("@etag"));
                 }
                 Thread.Sleep(100);
