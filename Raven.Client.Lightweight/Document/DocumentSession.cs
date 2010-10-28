@@ -334,7 +334,7 @@ namespace Raven.Client.Document
         /// <summary>
         /// Dynamically query RavenDB using Lucene syntax
         /// </summary>
-        public IDocumentQuery<T> DynamicLuceneQuery<T>()
+        public IDocumentQuery<T> LuceneQuery<T>()
         {
             string indexName = "dynamic";
             if (typeof(T) != typeof(object))

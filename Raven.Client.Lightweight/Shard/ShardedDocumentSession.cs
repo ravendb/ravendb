@@ -504,7 +504,7 @@ namespace Raven.Client.Shard
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public IDocumentQuery<T> DynamicLuceneQuery<T>()
+        public IDocumentQuery<T> LuceneQuery<T>()
         {
 			return new ShardedDocumentQuery<T>("dynamic",
 											   GetAppropriateShardedSessions<T>(null));		
