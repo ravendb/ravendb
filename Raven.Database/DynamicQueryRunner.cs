@@ -81,16 +81,17 @@ namespace Raven.Database
             var combinedFields = String.Join("And",
                 map.Items
                 .OrderBy(x => x.To)
-                .Select(x => x.To)
-                .ToArray());
-            var indexName = combinedFields;                     
-            
-            indexName = string.Format("{0}SortBy{1}", indexName ,  
-                    String.Join("", 
-                    map.SortDescriptors
-                    .Select(x=>x.Field)
-                    .OrderBy(x=>x)
-                    .ToArray()));
+                .Select(x => x.To));
+            var indexName = combinedFields;
+
+            if (map.SortDescriptors != null && map.SortDescriptors.Length > 0)
+            {
+                indexName = string.Format("{0}SortBy{1}", indexName,
+                                          String.Join("",
+                                                      map.SortDescriptors
+                                                          .Select(x => x.Field)
+                                                          .OrderBy(x => x)));
+            }
 
 
             // Hash the name if it's too long
