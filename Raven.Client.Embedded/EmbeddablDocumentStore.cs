@@ -5,16 +5,27 @@ using Raven.Database;
 
 namespace Raven.Client.Client
 {
+    /// <summary>
+    /// Manages access to RavenDB and open sessions to work with RavenDB.
+    /// Also supports hosting RavenDB in an embedded mode
+    /// </summary>
     public class EmbeddablDocumentStore : DocumentStore
     {
         private RavenConfiguration configuration;
 
+        /// <summary>
+        /// Gets or sets the identifier for this store.
+        /// </summary>
+        /// <value>The identifier.</value>
         public override string Identifier
         {
             get { return base.Identifier ?? (RunInMemory ? "memory" : DataDirectory); }
             set { base.Identifier = value; }
         }
 
+        ///<summary>
+        /// Get or set the configuration instance for embedded RavenDB
+        ///</summary>
         public RavenConfiguration Configuration
         {
             get
@@ -51,8 +62,14 @@ namespace Raven.Client.Client
             set { Configuration.DataDirectory = value; }
         }
 
-        public DocumentDatabase DocumentDatabase { get; set; }
+        ///<summary>
+        /// Access the embedded instnace of RavenDB
+        ///</summary>
+        public DocumentDatabase DocumentDatabase { get; private set; }
 
+        /// <summary>
+        /// Parse the connection string option
+        /// </summary>
         protected override void ProcessConnectionStringOption(NetworkCredential neworkCredentials, string key,
                                                              string value)
         {
@@ -74,6 +91,9 @@ namespace Raven.Client.Client
             }
         }
 
+        /// <summary>
+        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+        /// </summary>
         public override void Dispose()
         {
             base.Dispose();
@@ -81,6 +101,9 @@ namespace Raven.Client.Client
                 DocumentDatabase.Dispose();
         }
 
+        /// <summary>
+        /// Initialize the document store access method to RavenDB
+        /// </summary>
         protected override void InitializeInternal()
         {
             if (configuration != null)
