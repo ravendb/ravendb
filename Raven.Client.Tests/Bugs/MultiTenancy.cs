@@ -1,13 +1,15 @@
+using System;
 using Raven.Client.Document;
 using Raven.Database;
 using Raven.Database.Data;
+using Raven.Database.Extensions;
 using Raven.Http;
 using Raven.Server;
 using Xunit;
 
 namespace Raven.Client.Tests.Bugs
 {
-    public class MultiTenancy : RemoteClientTest
+    public class MultiTenancy : RemoteClientTest, IDisposable
     {
         protected RavenDbServer GetNewServer(int port)
         {
@@ -16,6 +18,7 @@ namespace Raven.Client.Tests.Bugs
                 {
                     Port = port,
                     RunInMemory = true,
+                    DataDirectory = "Data",
                     AnonymousUserAccessMode = AnonymousUserAccessMode.All
                 });
         }
@@ -36,7 +39,8 @@ namespace Raven.Client.Tests.Bugs
                         Id = "Raven/Databases/Northwind",
                         Settings =
                             {
-                                {"Raven/RunInMemory", "true"}
+                                {"Raven/RunInMemory", "true"},
+                                {"Raven/DataDir", "Northwind"}
                             }
                     });
 
@@ -66,6 +70,12 @@ namespace Raven.Client.Tests.Bugs
                     Assert.NotNull(s.Load<User>(userId));
                 }
             }
+        }
+
+        public void Dispose()
+        {
+            IOExtensions.DeleteDirectory("Data");
+            IOExtensions.DeleteDirectory("NHibernate");
         }
     }
 }
