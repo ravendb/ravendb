@@ -147,21 +147,19 @@ namespace Raven.Bundles.Tests.Replication
                 session.SaveChanges();
             }
 
-            using (var session = store2.OpenSession())
+            Company company = null;
+            for (int i = 0; i < RetriesCount; i++)
             {
-                session.Advanced.MaxNumberOfRequestsPerSession = RetriesCount * 2;
-
-                Company company = null;
-                for (int i = 0; i < RetriesCount; i++)
+                using (var session = store2.OpenSession())
                 {
                     company = session.Load<Company>("companies/1");
                     if (company != null)
                         break;
                     Thread.Sleep(100);
                 }
-                Assert.NotNull(company);
-                Assert.Equal("Hibernating Rhinos", company.Name);
             }
+            Assert.NotNull(company);
+            Assert.Equal("Hibernating Rhinos", company.Name);
 
             using (var session = store1.OpenSession())
             {
