@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using System.IO;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
@@ -308,7 +309,7 @@ namespace Raven.Http.Extensions
 			return context.Request.Headers["If-None-Match"] == etag.ToString();
 		}
 
-		public static void WriteEmbeddedFile(this IHttpContext context, string ravenPath, string docPath)
+		public static void WriteEmbeddedFile(this IHttpContext context, Assembly asm, string ravenPath, string docPath)
 		{
 			var filePath = Path.Combine(ravenPath, docPath);
 			byte[] bytes;
@@ -322,7 +323,7 @@ namespace Raven.Http.Extensions
 					return;
 				}
 				string resourceName = "Raven.Database.Server.WebUI." + docPath.Replace("/", "."); 
-				using (var resource = typeof(HttpExtensions).Assembly.GetManifestResourceStream(resourceName))
+				using (var resource = asm.GetManifestResourceStream(resourceName))
 				{
 					if (resource == null)
 					{
