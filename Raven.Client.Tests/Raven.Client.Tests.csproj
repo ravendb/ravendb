@@ -109,6 +109,7 @@
     <Compile Include="Bugs\ImageByTagSearchModel.cs" />
     <Compile Include="Bugs\IndexNestedFields.cs" />
     <Compile Include="Bugs\KeysAreCaseInsensitive.cs" />
+    <Compile Include="Bugs\LinqOnUrls.cs" />
     <Compile Include="Bugs\MultiEntityIndex.cs" />
     <Compile Include="Bugs\MultiTenancy.cs" />
     <Compile Include="Bugs\NameAndId.cs" />
