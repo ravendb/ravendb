@@ -203,7 +203,7 @@ Copyright (C) 2010 - Hibernating Rhinos
 Command line ptions:
     RavenDb             - with no args, starts Raven in local server mode
     RavenDb /install    - installs and starts the Raven service
-    RavenDb /unisntall  - stops and uninstalls the Raven service
+    RavenDb /uninstall  - stops and uninstalls the Raven service
     RavenDb /start		- starts the previously installed Raven service
     RavenDb /stop		- stops the previously installed Raven service
     RavenDb /restart	- restarts the previously installed Raven service
