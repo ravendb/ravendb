@@ -24,6 +24,37 @@ Public Class LinqQueriesUsingVB
     End Sub
 
     <Fact()> _
+    Public Sub CanQueryUsingStringProperty()
+
+        Using store = NewDocumentStore()
+
+            Using session = store.OpenSession()
+
+                session.Query(Of PortalPageSettings)().Where(Function(x) x.Name = "ayende").FirstOrDefault()
+
+                Dim query = session.Query(Of PortalPageSettings)().Where(Function(x) x.Name = "ayende").ToString()
+
+                Assert.Equal("Name:ayende", query)
+
+                Dim user = "rahien"
+
+                query = session.Query(Of PortalPageSettings)().Where(Function(x) x.Name = user).ToString()
+
+                user = "oren"
+
+                Assert.Equal("Name:rahien", query)
+
+                query = session.Query(Of PortalPageSettings)().Where(Function(x) x.Name = user).ToString()
+
+                Assert.Equal("Name:oren", query)
+
+            End Using
+
+        End Using
+
+    End Sub
+
+    <Fact()> _
     Public Sub CanUseWithEntityIsExtensionMethod()
 
         Using store As EmbeddablDocumentStore = NewDocumentStore()

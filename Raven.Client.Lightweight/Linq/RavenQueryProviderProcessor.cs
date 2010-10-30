@@ -173,6 +173,23 @@ namespace Raven.Client.Linq
 
 		private void VisitEquals(BinaryExpression expression)
 		{
+            var methodCallExpression = expression.Left as MethodCallExpression;
+            // checking for VB.NET string equality
+            if (methodCallExpression != null && methodCallExpression.Method.Name == "CompareString" &&
+                expression.Right.NodeType == ExpressionType.Constant &&
+                    Equals(((ConstantExpression)expression.Right).Value, 0))
+            {
+                var expressionMemberInfo = GetMember(methodCallExpression.Arguments[0]);
+                luceneQuery.WhereEquals(
+                    expressionMemberInfo.Path,
+                    GetValueFromExpression(methodCallExpression.Arguments[1], GetMemberType(expressionMemberInfo)),
+                    true,
+                    false
+                    );
+
+                return;
+            }
+
 			var memberInfo = GetMember(expression.Left);
 
 			luceneQuery.WhereEquals(
@@ -184,7 +201,24 @@ namespace Raven.Client.Linq
 
 		private void VisitNotEquals(BinaryExpression expression)
 		{
-			var memberInfo = GetMember(expression.Left);
+		    var methodCallExpression = expression.Left as MethodCallExpression;
+            // checking for VB.NET string equality
+		    if(methodCallExpression != null && methodCallExpression.Method.Name == "CompareString" && 
+                expression.Right.NodeType==ExpressionType.Constant &&
+                    Equals(((ConstantExpression) expression.Right).Value, 0))
+		    {
+		        var expressionMemberInfo = GetMember(methodCallExpression.Arguments[0]);
+		        luceneQuery.Not.WhereEquals(
+		            expressionMemberInfo.Path, 
+                    GetValueFromExpression(methodCallExpression.Arguments[0], GetMemberType(expressionMemberInfo)),
+                    true,
+                    false
+		            );
+
+		        return;
+		    }
+
+		    var memberInfo = GetMember(expression.Left);
 
 			luceneQuery.Not.WhereEquals(
                 memberInfo.Path,
@@ -720,7 +754,7 @@ namespace Raven.Client.Linq
 				var property = (PropertyInfo) memberInfo;
 				return property.GetValue(obj, null);
 			}
-			if (memberInfo is FieldInfo)
+			if (memberInfo is FieldInfo )
 			{
 				var value = Expression.Lambda(memberExpression).Compile().DynamicInvoke();
 				return value;
