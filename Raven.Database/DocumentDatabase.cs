@@ -83,7 +83,7 @@ namespace Raven.Database
             };
             dynamicQueryRunner = new DynamicQueryRunner(this);
 
-            TransactionalStorage = configuration.CreateTransactionalStorage(workContext.NotifyAboutWork);
+            TransactionalStorage = configuration.CreateTransactionalStorage(workContext.HandleWorkNotifications);
             configuration.Container.SatisfyImportsOnce(TransactionalStorage);
 
             bool newDb;
