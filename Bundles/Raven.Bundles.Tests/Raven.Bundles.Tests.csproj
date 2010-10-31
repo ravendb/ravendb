@@ -59,6 +59,7 @@
     <Compile Include="Authorization\Writing.cs" />
     <Compile Include="Expiration\Expiration.cs" />
     <Compile Include="IndexReplication\ReplicateToSql.cs" />
+    <Compile Include="Replication\AttachmentReplication.cs" />
     <Compile Include="Replication\ConflictWhenReplicating.cs" />
     <Compile Include="Replication\FailureHandling.cs" />
     <Compile Include="Replication\ReplicationBase.cs" />
