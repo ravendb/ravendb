@@ -691,6 +691,8 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
                 newEtag = actions.Attachments.AddAttachment(name, etag, data, metadata);
 
                 AttachmentPutTriggers.Apply(trigger => trigger.AfterPut(name, data, metadata, newEtag));
+            
+                workContext.ShouldNotifyAboutWork();
             });
 
             TransactionalStorage
@@ -710,6 +712,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 
                 AttachmentDeleteTriggers.Apply(x => x.AfterDelete(name));
 
+                workContext.ShouldNotifyAboutWork();
             });
 
             TransactionalStorage

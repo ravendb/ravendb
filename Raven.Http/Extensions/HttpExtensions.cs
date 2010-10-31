@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Linq;
 using Raven.Http.Abstractions;
@@ -54,6 +55,15 @@ namespace Raven.Http.Extensions
 			using (var jsonReader = new JsonTextReader(streamReader))
 				return JArray.Load(jsonReader);
 		}
+
+        public static JArray ReadBsonArray(this IHttpContext context)
+        {
+            using (var jsonReader = new BsonReader(context.Request.InputStream))
+            {
+                var jObject = JObject.Load(jsonReader);
+                return new JArray(jObject.Values());
+            }
+        }
 
 		public static string ReadString(this IHttpContext context)
 		{

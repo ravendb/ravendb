@@ -47,6 +47,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Data\DestinationFailureInformation.cs" />
+    <Compile Include="Reponsders\AttachmentReplicationResponder.cs" />
     <Compile Include="Triggers\AttachmentAncestryPutTrigger.cs" />
     <Compile Include="Triggers\HideVirtuallyDeletedAttachmentsReadTrigger.cs" />
     <Compile Include="Triggers\HideVirtuallyDeletedDocumentsReadTrigger.cs" />
@@ -57,7 +58,7 @@
     <Compile Include="ReplicationConstants.cs" />
     <Compile Include="ReplicationContext.cs" />
     <Compile Include="Reponsders\ReplicationLastEtagResponser.cs" />
-    <Compile Include="Reponsders\ReplicationResponder.cs" />
+    <Compile Include="Reponsders\DocumentReplicationResponder.cs" />
     <Compile Include="Tasks\ReplicationTask.cs" />
     <Compile Include="Data\SourceReplicationInformation.cs" />
     <Compile Include="Triggers\ReplicationHiLo.cs" />

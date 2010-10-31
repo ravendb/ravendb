@@ -296,10 +296,25 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 				stream.Write(data, 0, data.Length);
 				stream.Flush();
 			}
-			using (webRequest.GetResponse())
-			{
+		    try
+		    {
+		        using (webRequest.GetResponse())
+		        {
 
-			}
+		        }
+		    }
+		    catch (WebException e)
+		    {
+		        var httpWebResponse = e.Response as HttpWebResponse;
+                if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.InternalServerError)
+                    throw;
+
+                using(var stream = httpWebResponse.GetResponseStream())
+                using(var reader = new StreamReader(stream))
+                {
+                    throw new InvalidOperationException("Internal Server Error: " + Environment.NewLine + reader.ReadToEnd());
+                }
+		    }
 		}
 
 		private static string StripQuotesIfNeeded(string str)
