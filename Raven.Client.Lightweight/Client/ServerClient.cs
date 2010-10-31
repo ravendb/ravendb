@@ -8,6 +8,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
@@ -351,6 +352,17 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 				var httpWebResponse = e.Response as HttpWebResponse;
 				if (httpWebResponse == null)
 					throw;
+                if (httpWebResponse.StatusCode == HttpStatusCode.Conflict)
+                {
+                    var conflictsDoc = JObject.Load(new BsonReader(httpWebResponse.GetResponseStreamWithHttpDecompression()));
+                    var conflictIds = conflictsDoc.Value<JArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
+
+                    throw new ConflictException("Conflict detected on " + key +
+                                                ", conflict must be resolved before the attachment will be accessible")
+                    {
+                        ConflictedVersionIds = conflictIds
+                    };
+                }
 				if (httpWebResponse.StatusCode == HttpStatusCode.NotFound)
 					return null;
 				throw;

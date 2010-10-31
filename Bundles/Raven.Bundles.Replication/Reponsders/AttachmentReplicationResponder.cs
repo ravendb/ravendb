@@ -48,7 +48,7 @@ namespace Raven.Bundles.Replication.Reponsders
                         }
                         lastEtag = attachment.Value<byte[]>("@etag");
                         var id = attachment.Value<string>("@id");
-                        ReplicateAttachment(actions, id, metadata, attachment.Value<byte[]>("data"), src);
+                        ReplicateAttachment(actions, id, metadata, attachment.Value<byte[]>("data"), new Guid(lastEtag), src);
                     }
 
 
@@ -72,7 +72,7 @@ namespace Raven.Bundles.Replication.Reponsders
             }
         }
 
-        private void ReplicateAttachment(IStorageActionsAccessor actions, string id, JObject metadata, byte[] data, string src)
+        private void ReplicateAttachment(IStorageActionsAccessor actions, string id, JObject metadata, byte[] data, Guid lastEtag ,string src)
         {
             var existingAttachment = actions.Attachments.GetAttachment(id);
             if (existingAttachment == null)
@@ -92,7 +92,7 @@ namespace Raven.Bundles.Replication.Reponsders
             }
 
 
-            var newDocumentConflictId = id + "/conflicts/" + metadata.Value<string>("@etag");
+            var newDocumentConflictId = id + "/conflicts/" + lastEtag;
             metadata.Add(ReplicationConstants.RavenReplicationConflict, JToken.FromObject(true));
             actions.Attachments.AddAttachment(newDocumentConflictId, null, data, metadata);
 
