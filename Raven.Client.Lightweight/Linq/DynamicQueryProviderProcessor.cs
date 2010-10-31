@@ -1,7 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using Raven.Database.Data;
 
 namespace Raven.Client.Linq
@@ -29,7 +26,7 @@ namespace Raven.Client.Linq
         /// <returns></returns>
         protected override ExpressionMemberInfo GetMember(System.Linq.Expressions.Expression expression)
         {
-            var memberExpression = base.GetMemberExpression(expression);
+            var memberExpression = GetMemberExpression(expression);
 
             //for stnadard queries, we take just the last part. Bu for dynamic queries, we take the whole part
             var path = memberExpression.ToString();
@@ -39,7 +36,7 @@ namespace Raven.Client.Linq
             var info = new ExpressionMemberInfo(path, memberExpression.Member);
 
             return new ExpressionMemberInfo(
-                this.CurrentPath + info.Path,
+                CurrentPath + info.Path,
                 info.InnerMemberInfo);
         }
  
