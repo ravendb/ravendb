@@ -53,7 +53,7 @@ namespace Raven.Bundles.Replication.Reponsders
                     }
 
                     Database.Put(ReplicationConstants.RavenReplicationSourcesBasePath + "/" + src, null,
-                                 JObject.FromObject(new SourceReplicationInformation {LastEtag = new Guid(lastEtag)}),
+                                 JObject.FromObject(new SourceReplicationInformation {LastDocumentEtag = new Guid(lastEtag)}),
                                  new JObject(), null);
                 });
             }
@@ -120,7 +120,7 @@ namespace Raven.Bundles.Replication.Reponsders
 
         public override string UrlPattern
         {
-            get { return "^/replication/replicate$"; }
+            get { return "^/replication/replicateDocs$"; }
         }
 
         public override string[] SupportedVerbs

@@ -10,7 +10,6 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Bundles.Replication.Data;
 using Raven.Database;
-using Raven.Database.Extensions;
 using Raven.Database.Json;
 
 namespace Raven.Bundles.Replication.Tasks
@@ -25,7 +24,7 @@ namespace Raven.Bundles.Replication.Tasks
         private DocumentDatabase docDb;
         private readonly ILog log = LogManager.GetLogger(typeof(ReplicationTask));
         private bool firstTimeFoundNoReplicationDocument = true;
-        private ConcurrentDictionary<string, IntHolder> activeReplicationTasks = new ConcurrentDictionary<string, IntHolder>();
+        private readonly ConcurrentDictionary<string, IntHolder> activeReplicationTasks = new ConcurrentDictionary<string, IntHolder>();
 
         private int replicationAttempts;
         private int workCounter;
@@ -125,7 +124,7 @@ namespace Raven.Bundles.Replication.Tasks
             }
         }
 
-        private void ReplicateTo(string destination)
+        private bool ReplicateTo(string destination)
         {
             try
             {
@@ -134,30 +133,32 @@ namespace Raven.Bundles.Replication.Tasks
                     JArray jsonDocuments;
                     try
                     {
-                        var etag = GetLastReplicatedEtagFrom(destination);
-                        if (etag == null)
-                            return;
-                        jsonDocuments = GetJsonDocuments(etag.Value);
+                        var sourceReplicationInformation = GetLastReplicatedEtagFrom(destination);
+                        if (sourceReplicationInformation == null)
+                            return false;
+                        jsonDocuments = GetJsonDocuments(sourceReplicationInformation.LastDocumentEtag);
                         if (jsonDocuments == null || jsonDocuments.Count == 0)
-                            return;
+                            return false;
                     }
                     catch (Exception e)
                     {
                         log.Warn("Failed to replicate to: " + destination, e);
-                        return;
+                        return false;
                     }
-                    if (TryReplicatingData(destination, jsonDocuments) == false)// failed to replicate, start error handling strategy
+                    if (TryReplicationDocuments(destination, jsonDocuments) == false)// failed to replicate, start error handling strategy
                     {
                         if (IsFirstFailue(destination))
                         {
                             log.InfoFormat(
                                 "This is the first failure for {0}, assuming transinet failure and trying again",
                                 destination);
-                            if (TryReplicatingData(destination, jsonDocuments))// second failure!
-                                return;
+                            if (TryReplicationDocuments(destination, jsonDocuments))// success on second faile
+                                return true;
                         }
                         IncrementFailureCount(destination);
+                        return false;
                     }
+                    return true;
                 }
             }
             finally 
@@ -189,11 +190,56 @@ namespace Raven.Bundles.Replication.Tasks
             return failureInformation.FailureCount == 0;
         }
 
-        private bool TryReplicatingData(string destination, JArray jsonDocuments)
+        private bool TryReplicationAttachments(string destination, JArray jsonDocuments)
         {
             try
             {
-                var request = (HttpWebRequest)WebRequest.Create(destination + "/replication/replicate?from=" + docDb.Configuration.ServerUrl);
+                var request = (HttpWebRequest)WebRequest.Create(destination + "/replication/replicateAttachments?from=" + docDb.Configuration.ServerUrl);
+                request.UseDefaultCredentials = true;
+                request.Credentials = CredentialCache.DefaultNetworkCredentials;
+                request.Method = "POST";
+                using (var stream = request.GetRequestStream())
+                using (var streamWriter = new StreamWriter(stream))
+                {
+                    jsonDocuments.WriteTo(new JsonTextWriter(streamWriter));
+                    streamWriter.Flush();
+                    stream.Flush();
+                }
+                using (request.GetResponse())
+                {
+                    log.InfoFormat("Replicated {0} to {1}", jsonDocuments.Count, destination);
+                }
+                return true;
+            }
+            catch (WebException e)
+            {
+                var response = e.Response as HttpWebResponse;
+                if (response != null)
+                {
+                    using (var streamReader = new StreamReader(response.GetResponseStream()))
+                    {
+                        var error = streamReader.ReadToEnd();
+                        log.Warn("Replication to " + destination + " had failed\r\n" + error, e);
+                    }
+                }
+                else
+                {
+                    log.Warn("Replication to " + destination + " had failed", e);
+                }
+                return false;
+            }
+            catch (Exception e)
+            {
+                log.Warn("Replication to " + destination + " had failed", e);
+                return false;
+            }
+        }
+
+        private bool TryReplicationDocuments(string destination, JArray jsonDocuments)
+        {
+            try
+            {
+                var request = (HttpWebRequest)WebRequest.Create(destination + "/replication/replicateDocs?from=" + docDb.Configuration.ServerUrl);
                 request.UseDefaultCredentials = true;
                 request.Credentials = CredentialCache.DefaultNetworkCredentials;
                 request.Method = "POST";
@@ -257,7 +303,7 @@ namespace Raven.Bundles.Replication.Tasks
             return jsonDocuments;
         }
 
-        private Guid? GetLastReplicatedEtagFrom(string destination)
+        private SourceReplicationInformation GetLastReplicatedEtagFrom(string destination)
         {
             try
             {
@@ -268,8 +314,8 @@ namespace Raven.Bundles.Replication.Tasks
                 using (var response = request.GetResponse())
                 using (var stream = response.GetResponseStream())
                 {
-                    var etagFromServer = (EtagFromServer)new JsonSerializer().Deserialize(new StreamReader(stream), typeof(EtagFromServer));
-                    return etagFromServer.Etag;
+                    var etagFromServer = (SourceReplicationInformation)new JsonSerializer().Deserialize(new StreamReader(stream), typeof(SourceReplicationInformation));
+                    return etagFromServer;
                 }
             }
             catch (WebException e)
@@ -285,11 +331,6 @@ namespace Raven.Bundles.Replication.Tasks
                 log.Warn("Failed to contact replication destination: " + destination, e);
             }
             return null;
-        }
-
-        private class EtagFromServer
-        {
-            public Guid Etag { get; set; }
         }
 
         private string[] GetReplicationDestinations()

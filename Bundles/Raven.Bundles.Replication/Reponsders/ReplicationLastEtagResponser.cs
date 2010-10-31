@@ -32,14 +32,14 @@ namespace Raven.Bundles.Replication.Reponsders
                 var document = Database.Get(ReplicationConstants.RavenReplicationSourcesBasePath + "/" + src, null);
                 if (document == null)
                 {
-                    log.DebugFormat("Got replication last etag request from {0}: [{1}]", src, Guid.Empty);
-                    context.WriteJson(new { Etag = Guid.Empty });
+                    log.DebugFormat("Got replication last etag request from {0}: [{1}]", src, new SourceReplicationInformation());
+                    context.WriteJson(new SourceReplicationInformation());
                 }
                 else
                 {
                     var sourceReplicationInformation = document.DataAsJson.JsonDeserialization<SourceReplicationInformation>();
-                    log.DebugFormat("Got replication last etag request from {0}: [{1}]", src, sourceReplicationInformation.LastEtag);
-                    context.WriteJson(new { Etag = sourceReplicationInformation.LastEtag });
+                    log.DebugFormat("Got replication last etag request from {0}: [{1}]", src, sourceReplicationInformation);
+                    context.WriteJson(sourceReplicationInformation);
                 }
             }
         }
