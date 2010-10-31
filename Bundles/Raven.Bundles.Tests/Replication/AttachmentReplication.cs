@@ -145,8 +145,8 @@ namespace Raven.Bundles.Tests.Replication
                 }
             });
 
-            Assert.Equal("ayende/conflicts/00000000-0000-0100-0000-000000000006", conflictException.ConflictedVersionIds[0]);
-            Assert.Equal("ayende/conflicts/00000000-0000-0100-0000-000000000004", conflictException.ConflictedVersionIds[1]);
+            Assert.True(conflictException.ConflictedVersionIds[0].StartsWith("ayende/conflicts/00000000-0000-"));
+            Assert.True(conflictException.ConflictedVersionIds[1].StartsWith("ayende/conflicts/00000000-0000-"));
         }
     }
 }
