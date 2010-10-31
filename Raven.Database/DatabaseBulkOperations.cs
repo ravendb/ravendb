@@ -3,6 +3,8 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
 using Raven.Database.Json;
+using Raven.Http;
+using Raven.Http.Json;
 
 namespace Raven.Database
 {

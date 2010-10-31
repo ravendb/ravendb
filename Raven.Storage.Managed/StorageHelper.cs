@@ -3,13 +3,16 @@ using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Exceptions;
 using Raven.Database.Storage.StorageActions;
+using Raven.Http;
+using Raven.Http.Exceptions;
+using Raven.Munin;
 using Raven.Storage.Managed.Impl;
 
 namespace Raven.Storage.Managed
 {
     public static class StorageHelper
     {
-        public static void AssertNotModifiedByAnotherTransaction(TableStorage storage, ITransactionStorageActions transactionStorageActions, string key, PersistentDictionary.ReadResult readResult, TransactionInformation transactionInformation)
+        public static void AssertNotModifiedByAnotherTransaction(TableStorage storage, ITransactionStorageActions transactionStorageActions, string key, Table.ReadResult readResult, TransactionInformation transactionInformation)
         {
             if (readResult == null)
                 return;

@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using Raven.Client.Tests.Document;
 using Raven.Database.Extensions;
+using Raven.Http;
 using Raven.Server;
 using Raven.Database;
 using System.Reflection;
@@ -17,6 +18,11 @@ namespace Raven.Client.Tests
         protected RavenDbServer GetNewServer(int port, string path)
         {
             return new RavenDbServer(new RavenConfiguration { Port = port, DataDirectory = path, AnonymousUserAccessMode = AnonymousUserAccessMode.All });
+        }
+
+        protected RavenDbServer GetNewServerWithoutAnonymousAccess(int port, string path)
+        {
+            return new RavenDbServer(new RavenConfiguration { Port = port, DataDirectory = path, AnonymousUserAccessMode = AnonymousUserAccessMode.None });
         }
 
         protected string GetPath(string subFolderName)

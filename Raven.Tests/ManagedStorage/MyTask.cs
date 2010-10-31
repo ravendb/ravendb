@@ -1,4 +1,4 @@
-﻿using Raven.Database.Indexing;
+using Raven.Database.Indexing;
 using Raven.Database.Tasks;
 
 namespace Raven.Storage.Tests

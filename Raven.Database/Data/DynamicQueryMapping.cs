@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using Raven.Database.Indexing;
 using System.Text.RegularExpressions;
+using Raven.Http;
 
 namespace Raven.Database.Data
 {
@@ -114,9 +115,9 @@ namespace Raven.Database.Data
                 fields.Add(field);
             }
 
-            var headers = CurrentRavenOperation.Headers.Value;
+            var headers = CurrentOperationContext.Headers.Value;
 
-            List<DynamicSortInfo> sortInfo = new List<DynamicSortInfo>();
+            var sortInfo = new List<DynamicSortInfo>();
             String[] sortHintHeaders = headers.AllKeys
                .Where(key => key.StartsWith("SortHint")).ToArray();
             foreach (string sortHintHeader in sortHintHeaders)

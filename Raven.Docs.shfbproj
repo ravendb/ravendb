@@ -69,9 +69,10 @@
       </ComponentConfig>
     </ComponentConfigurations>
     <DocumentationSources>
-      <DocumentationSource sourceFile="build\Raven.Client.Lightweight.dll" xmlns="" />
-      <DocumentationSource sourceFile="build\Raven.Client.Lightweight.xml" xmlns="" />
-    </DocumentationSources>
+      <DocumentationSource sourceFile="build\Raven.Client.Embedded.dll" />
+<DocumentationSource sourceFile="build\Raven.Client.Embedded.xml" />
+<DocumentationSource sourceFile="build\Raven.Client.Lightweight.dll" />
+<DocumentationSource sourceFile="build\Raven.Client.Lightweight.xml" /></DocumentationSources>
     <HelpTitle>RavenDB API Documentation</HelpTitle>
     <FooterText>Copyright Hibernating Rhinos 2010</FooterText>
     <NamingMethod>MemberName</NamingMethod>

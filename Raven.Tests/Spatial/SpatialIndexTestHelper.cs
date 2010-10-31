@@ -2,6 +2,7 @@ using System.IO;
 using Newtonsoft.Json;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
+using Raven.Http.Json;
 
 namespace Raven.Tests.Spatial
 {

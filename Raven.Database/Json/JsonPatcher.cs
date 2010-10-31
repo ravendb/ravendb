@@ -1,6 +1,7 @@
 using System;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Exceptions;
+using Raven.Http.Exceptions;
 
 namespace Raven.Database.Json
 {

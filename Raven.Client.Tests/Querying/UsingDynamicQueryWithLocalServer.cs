@@ -159,7 +159,7 @@ namespace Raven.Client.Tests.Querying
 
                 using (var s = store.OpenSession())
                 {
-                    var results = s.Advanced.DynamicLuceneQuery<Blog>()
+                    var results = s.Advanced.LuceneQuery<Blog>()
                         .Where("Title.Length:3 AND Category:Rhinos")
                         .WaitForNonStaleResultsAsOfNow().ToArray();
 

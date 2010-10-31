@@ -7,10 +7,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using log4net;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
 using Raven.Bundles.Replication.Data;
 using Raven.Database;
-using Raven.Database.Extensions;
 using Raven.Database.Json;
 
 namespace Raven.Bundles.Replication.Tasks
@@ -25,7 +25,7 @@ namespace Raven.Bundles.Replication.Tasks
         private DocumentDatabase docDb;
         private readonly ILog log = LogManager.GetLogger(typeof(ReplicationTask));
         private bool firstTimeFoundNoReplicationDocument = true;
-        private ConcurrentDictionary<string, IntHolder> activeReplicationTasks = new ConcurrentDictionary<string, IntHolder>();
+        private readonly ConcurrentDictionary<string, IntHolder> activeReplicationTasks = new ConcurrentDictionary<string, IntHolder>();
 
         private int replicationAttempts;
         private int workCounter;
@@ -71,7 +71,13 @@ namespace Raven.Bundles.Replication.Tasks
                                 if (Thread.VolatileRead(ref holder.Value) == 1)
                                     continue;
                                 Thread.VolatileWrite(ref holder.Value, 1);
-                                new Task(() => ReplicateTo(destination), TaskCreationOptions.LongRunning).Start();
+                                var task = new Task<bool>(() => ReplicateTo(destination), TaskCreationOptions.LongRunning);
+                                task.Start();
+                                task.ContinueWith(completedTask =>
+                                {
+                                    if (completedTask.Result) // force re-evaluation of replication again
+                                        docDb.WorkContext.NotifyAboutWork();
+                                });
                             }
                         }
                     }
@@ -125,39 +131,32 @@ namespace Raven.Bundles.Replication.Tasks
             }
         }
 
-        private void ReplicateTo(string destination)
+        private bool ReplicateTo(string destination)
         {
             try
             {
                 using (ReplicationContext.Enter())
                 {
-                    JArray jsonDocuments;
+                    SourceReplicationInformation sourceReplicationInformation;
                     try
                     {
-                        var etag = GetLastReplicatedEtagFrom(destination);
-                        if (etag == null)
-                            return;
-                        jsonDocuments = GetJsonDocuments(etag.Value);
-                        if (jsonDocuments == null || jsonDocuments.Count == 0)
-                            return;
+                        sourceReplicationInformation = GetLastReplicatedEtagFrom(destination);
+                        if (sourceReplicationInformation == null)
+                            return false;
                     }
                     catch (Exception e)
                     {
                         log.Warn("Failed to replicate to: " + destination, e);
-                        return;
+                        return false;
                     }
-                    if (TryReplicatingData(destination, jsonDocuments) == false)// failed to replicate, start error handling strategy
-                    {
-                        if (IsFirstFailue(destination))
-                        {
-                            log.InfoFormat(
-                                "This is the first failure for {0}, assuming transinet failure and trying again",
-                                destination);
-                            if (TryReplicatingData(destination, jsonDocuments))// second failure!
-                                return;
-                        }
-                        IncrementFailureCount(destination);
-                    }
+
+                    if (ReplicateDocuments(destination, sourceReplicationInformation) == false)
+                        return false;
+
+                    if (ReplicateAttachments(destination, sourceReplicationInformation) == false)
+                        return false;
+
+                    return true;
                 }
             }
             finally 
@@ -165,6 +164,51 @@ namespace Raven.Bundles.Replication.Tasks
                 var holder = activeReplicationTasks.GetOrAdd(destination, new IntHolder());
                 Thread.VolatileWrite(ref holder.Value, 0);
             }
+        }
+
+        private bool? ReplicateAttachments(string destination, SourceReplicationInformation sourceReplicationInformation)
+        {
+            var attachments = GetAttachments(sourceReplicationInformation.LastAttachmentEtag);
+
+            if (attachments == null || attachments.Count == 0)
+                return null;
+
+            if (TryReplicationAttachments(destination, attachments) == false)// failed to replicate, start error handling strategy
+            {
+                if (IsFirstFailue(destination))
+                {
+                    log.InfoFormat(
+                        "This is the first failure for {0}, assuming transinet failure and trying again",
+                        destination);
+                    if (TryReplicationAttachments(destination, attachments))// success on second faile
+                        return true;
+                }
+                IncrementFailureCount(destination);
+                return false;
+            }
+
+            return true;
+        }
+
+        private bool? ReplicateDocuments(string destination, SourceReplicationInformation sourceReplicationInformation)
+        {
+            var jsonDocuments = GetJsonDocuments(sourceReplicationInformation.LastDocumentEtag);
+            if (jsonDocuments == null || jsonDocuments.Count == 0)
+                return null;
+            if (TryReplicationDocuments(destination, jsonDocuments) == false)// failed to replicate, start error handling strategy
+            {
+                if (IsFirstFailue(destination))
+                {
+                    log.InfoFormat(
+                        "This is the first failure for {0}, assuming transinet failure and trying again",
+                        destination);
+                    if (TryReplicationDocuments(destination, jsonDocuments))// success on second faile
+                        return true;
+                }
+                IncrementFailureCount(destination);
+                return false;
+            }
+            return true;
         }
 
         private void IncrementFailureCount(string destination)
@@ -189,11 +233,54 @@ namespace Raven.Bundles.Replication.Tasks
             return failureInformation.FailureCount == 0;
         }
 
-        private bool TryReplicatingData(string destination, JArray jsonDocuments)
+        private bool TryReplicationAttachments(string destination, JArray jsonAttachments)
         {
             try
             {
-                var request = (HttpWebRequest)WebRequest.Create(destination + "/replication/replicate?from=" + docDb.Configuration.ServerUrl);
+                var request = (HttpWebRequest)WebRequest.Create(destination + "/replication/replicateAttachments?from=" + docDb.Configuration.ServerUrl);
+                request.UseDefaultCredentials = true;
+                request.Credentials = CredentialCache.DefaultNetworkCredentials;
+                request.Method = "POST";
+                using (var stream = request.GetRequestStream())
+                {
+                    jsonAttachments.WriteTo(new BsonWriter(stream));
+                    stream.Flush();
+                }
+                using (request.GetResponse())
+                {
+                    log.InfoFormat("Replicated {0} attachments to {1}", jsonAttachments.Count, destination);
+                }
+                return true;
+            }
+            catch (WebException e)
+            {
+                var response = e.Response as HttpWebResponse;
+                if (response != null)
+                {
+                    using (var streamReader = new StreamReader(response.GetResponseStream()))
+                    {
+                        var error = streamReader.ReadToEnd();
+                        log.Warn("Replication to " + destination + " had failed\r\n" + error, e);
+                    }
+                }
+                else
+                {
+                    log.Warn("Replication to " + destination + " had failed", e);
+                }
+                return false;
+            }
+            catch (Exception e)
+            {
+                log.Warn("Replication to " + destination + " had failed", e);
+                return false;
+            }
+        }
+
+        private bool TryReplicationDocuments(string destination, JArray jsonDocuments)
+        {
+            try
+            {
+                var request = (HttpWebRequest)WebRequest.Create(destination + "/replication/replicateDocs?from=" + docDb.Configuration.ServerUrl);
                 request.UseDefaultCredentials = true;
                 request.Credentials = CredentialCache.DefaultNetworkCredentials;
                 request.Method = "POST";
@@ -206,7 +293,7 @@ namespace Raven.Bundles.Replication.Tasks
                 }
                 using (request.GetResponse())
                 {
-                    log.InfoFormat("Replicated {0} to {1}", jsonDocuments.Count, destination);
+                    log.InfoFormat("Replicated {0} documents to {1}", jsonDocuments.Count, destination);
                 }
                 return true;
             }
@@ -257,7 +344,36 @@ namespace Raven.Bundles.Replication.Tasks
             return jsonDocuments;
         }
 
-        private Guid? GetLastReplicatedEtagFrom(string destination)
+        private JArray GetAttachments(Guid etag)
+        {
+            JArray jsonDocuments = null;
+            try
+            {
+                var instanceId = docDb.TransactionalStorage.Id.ToString();
+                docDb.TransactionalStorage.Batch(actions =>
+                {
+                    jsonDocuments = new JArray(actions.Attachments.GetAttachmentsAfter(etag)
+                        .Where(x => x.Key.StartsWith("Raven/") == false) // don't replicate system docs
+                        .Where(x => x.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource) == instanceId) // only replicate documents created on this instance
+                        .Where(x => x.Metadata[ReplicationConstants.RavenReplicationConflict] == null) // don't replicate conflicted documents, that just propgate the conflict
+                        .Take(100)
+                        .Select(x => new JObject
+                        {
+                            {"@metadata", x.Metadata},
+                            {"@id", x.Key},
+                            {"@etag", x.Etag.ToByteArray()},
+                            {"data", actions.Attachments.GetAttachment(x.Key).Data}
+                        }));
+                });
+            }
+            catch (Exception e)
+            {
+                log.Warn("Could not get documents to replicate after: " + etag, e);
+            }
+            return jsonDocuments;
+        }
+
+        private SourceReplicationInformation GetLastReplicatedEtagFrom(string destination)
         {
             try
             {
@@ -268,8 +384,8 @@ namespace Raven.Bundles.Replication.Tasks
                 using (var response = request.GetResponse())
                 using (var stream = response.GetResponseStream())
                 {
-                    var etagFromServer = (EtagFromServer)new JsonSerializer().Deserialize(new StreamReader(stream), typeof(EtagFromServer));
-                    return etagFromServer.Etag;
+                    var etagFromServer = (SourceReplicationInformation)new JsonSerializer().Deserialize(new StreamReader(stream), typeof(SourceReplicationInformation));
+                    return etagFromServer;
                 }
             }
             catch (WebException e)
@@ -285,11 +401,6 @@ namespace Raven.Bundles.Replication.Tasks
                 log.Warn("Failed to contact replication destination: " + destination, e);
             }
             return null;
-        }
-
-        private class EtagFromServer
-        {
-            public Guid Etag { get; set; }
         }
 
         private string[] GetReplicationDestinations()

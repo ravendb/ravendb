@@ -1,4 +1,4 @@
-using Raven.Database.Server.Abstractions;
+using Raven.Http.Abstractions;
 
 namespace Raven.Database.Server.Responders
 {

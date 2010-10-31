@@ -252,7 +252,7 @@ namespace Raven.Database.Indexing
             var perFieldAnalyzerWrapper = new PerFieldAnalyzerWrapper(defaultAnalyzer);
             foreach (var analyzer in indexDefinition.Analyzers)
             {
-                var analyzerInstance = indexDefinition.CreateAnalyzerInstance(analyzer.Key, analyzer.Value);
+                var analyzerInstance = IndexingExtensions.CreateAnalyzerInstance(analyzer.Key, analyzer.Value);
                 if (analyzerInstance == null)
                     continue;
                 toDispose.Add(analyzerInstance.Close);

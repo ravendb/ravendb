@@ -4,7 +4,9 @@ using System.IO;
 using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
+using Raven.Database.Impl;
 using Raven.Database.Storage;
+using Raven.Munin;
 using Raven.Storage.Managed.Backup;
 using Raven.Storage.Managed.Impl;
 
@@ -22,6 +24,7 @@ namespace Raven.Storage.Managed
         private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
         private Timer idleTimer;
         private long lastUsageTime;
+        private IUuidGenerator uuidGenerator;
 
         public TransactionalStorage(InMemroyRavenConfiguration configuration, Action onCommit)
         {
@@ -72,7 +75,7 @@ namespace Raven.Storage.Managed
                 Interlocked.Exchange(ref lastUsageTime, DateTime.Now.ToBinary());
                 using (tableStroage.BeginTransaction())
                 {
-                    var storageActionsAccessor = new StorageActionsAccessor(tableStroage);
+                    var storageActionsAccessor = new StorageActionsAccessor(tableStroage, uuidGenerator);
                     current.Value = storageActionsAccessor;
                     action(current.Value);
                     tableStroage.Commit();
@@ -97,14 +100,15 @@ namespace Raven.Storage.Managed
             current.Value.OnCommit += action;
         }
 
-        public bool Initialize()
+        public bool Initialize(IUuidGenerator generator)
         {
+            uuidGenerator = generator;
             if (configuration.RunInMemory  == false && Directory.Exists(configuration.DataDirectory) == false)
                 Directory.CreateDirectory(configuration.DataDirectory);
 
             persistenceSource = configuration.RunInMemory
                           ? (IPersistentSource)new MemoryPersistentSource()
-                          : new FileBasedPersistentSource(configuration.DataDirectory, "Raven", configuration.TransactionMode);
+                          : new FileBasedPersistentSource(configuration.DataDirectory, "Raven", configuration.TransactionMode == TransactionMode.Safe);
 
             tableStroage = new TableStorage(persistenceSource);
 

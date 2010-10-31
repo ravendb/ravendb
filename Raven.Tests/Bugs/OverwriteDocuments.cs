@@ -2,10 +2,12 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using Raven.Client.Client;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
+using Raven.Http.Exceptions;
 using Xunit;
 
 namespace Raven.Tests.Bugs
@@ -19,7 +21,7 @@ namespace Raven.Tests.Bugs
                 documentStore.Dispose();
 
             IOExtensions.DeleteDirectory("HiLoData");
-            documentStore = new DocumentStore
+            documentStore = new EmbeddablDocumentStore
             {
             	Configuration =
             		{

@@ -1,6 +1,8 @@
 using System;
 using Raven.Database;
+using Raven.Database.Impl;
 using Raven.Database.Storage;
+using Raven.Munin;
 using Raven.Storage.Managed.Impl;
 
 namespace Raven.Storage.Managed
@@ -17,14 +19,14 @@ namespace Raven.Storage.Managed
             }
             else
             {
-                persistentSource = new MemoryPersistentSource(state.Data, state.Log);
+                persistentSource = new MemoryPersistentSource(state.Log);
             }
         }
         public void Batch(Action<IStorageActionsAccessor> action)
         {
             var tableStorage = new TableStorage(persistentSource);
             tableStorage.Initialze();
-            var accessor = new StorageActionsAccessor(tableStorage);
+            var accessor = new StorageActionsAccessor(tableStorage, new DummyUuidGenerator());
             action(accessor);
         }
 

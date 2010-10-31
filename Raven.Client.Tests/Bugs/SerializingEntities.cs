@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using Newtonsoft.Json;
+using Raven.Client.Client;
 using Raven.Client.Document;
 using Raven.Database;
 using Raven.Database.Extensions;
@@ -118,7 +119,7 @@ namespace Raven.Client.Tests.Bugs
             IOExtensions.DeleteDirectory("Data");
             try
 			{
-				using (var documentStore = new DocumentStore())
+                using (var documentStore = new EmbeddablDocumentStore())
 				{
 					documentStore.Configuration.DataDirectory = "Data";
 					documentStore.Conventions.CustomizeJsonSerializer = x => x.TypeNameHandling = TypeNameHandling.Auto;

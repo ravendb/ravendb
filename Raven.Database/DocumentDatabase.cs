@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,6 +12,7 @@ using Raven.Database.Backup;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
+using Raven.Database.Impl;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Database.LinearQueries;
@@ -20,12 +20,25 @@ using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
+using Raven.Http;
+using Raven.Http.Exceptions;
+using Index = Raven.Database.Indexing.Index;
 using Task = Raven.Database.Tasks.Task;
+using TransactionInformation = Raven.Http.TransactionInformation;
 
 namespace Raven.Database
 {
-    public class DocumentDatabase : IDisposable
+    public class DocumentDatabase : IResourceStore, IUuidGenerator
     {
+        [ImportMany]
+        public IEnumerable<AbstractAttachmentPutTrigger> AttachmentPutTriggers { get; set; }
+
+        [ImportMany]
+        public IEnumerable<AbstractAttachmentDeleteTrigger> AttachmentDeleteTriggers { get; set; }
+
+        [ImportMany]
+        public IEnumerable<AbstractAttachmentReadTrigger> AttachmentReadTriggers { get; set; }
+
         [ImportMany]
         public IEnumerable<AbstractPutTrigger> PutTriggers { get; set; }
 
@@ -50,9 +63,11 @@ namespace Raven.Database
         private readonly WorkContext workContext;
         private readonly DynamicQueryRunner dynamicQueryRunner;
 
-        private System.Threading.Tasks.Task backgroundWorkerTask = null;
+        private System.Threading.Tasks.Task backgroundWorkerTask;
 
         private readonly ILog log = LogManager.GetLogger(typeof(DocumentDatabase));
+
+        private long currentEtagBase;
 
         public DocumentDatabase(InMemroyRavenConfiguration configuration)
         {
@@ -67,19 +82,21 @@ namespace Raven.Database
             };
             dynamicQueryRunner = new DynamicQueryRunner(this);
 
-            TransactionalStorage = configuration.CreateTransactionalStorage(workContext.NotifyAboutWork);
+            TransactionalStorage = configuration.CreateTransactionalStorage(workContext.HandleWorkNotifications);
             configuration.Container.SatisfyImportsOnce(TransactionalStorage);
 
             bool newDb;
             try
             {
-                newDb = TransactionalStorage.Initialize();
+                newDb = TransactionalStorage.Initialize(this);
             }
             catch (Exception)
             {
                 TransactionalStorage.Dispose();
                 throw;
             }
+
+            TransactionalStorage.Batch(actions => currentEtagBase = actions.General.GetNextIdentityValue("Raven/Etag"));
 
             IndexDefinitionStorage = new IndexDefinitionStorage(
                 configuration,
@@ -116,6 +133,11 @@ namespace Raven.Database
             PutTriggers.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
             DeleteTriggers.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
             ReadTriggers.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+
+            AttachmentPutTriggers.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+            AttachmentDeleteTriggers.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+            AttachmentReadTriggers.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+            
             IndexUpdateTriggers.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
         }
 
@@ -177,6 +199,11 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
             }
         }
 
+        IRaveHttpnConfiguration IResourceStore.Configuration
+        {
+            get { return Configuration;  }
+        }
+
         public InMemroyRavenConfiguration Configuration
         {
             get;
@@ -223,19 +250,19 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
             backgroundWorkerTask.Start();
         }
 
-		private static int sequentialUuidCounter;
+		private static long sequentialUuidCounter;
         private QueryRunnerManager queryRunnerManager;
 
-        public static Guid CreateSequentialUuid()
+        public Guid CreateSequentialUuid()
 		{
-			var ticksAsBytes = BitConverter.GetBytes(DateTime.Now.Ticks);
+			var ticksAsBytes = BitConverter.GetBytes(currentEtagBase);
 			Array.Reverse(ticksAsBytes);
 			var increment = Interlocked.Increment(ref sequentialUuidCounter);
 			var currentAsBytes = BitConverter.GetBytes(increment);
 			Array.Reverse(currentAsBytes);
 			var bytes = new byte[16];
 			Array.Copy(ticksAsBytes, 0, bytes, 0, ticksAsBytes.Length);
-			Array.Copy(currentAsBytes, 0, bytes, 12, currentAsBytes.Length);
+			Array.Copy(currentAsBytes, 0, bytes, 8, currentAsBytes.Length);
 			return bytes.TransfromToGuidWithProperSorting();
 		}
 
@@ -325,6 +352,28 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
             if (vetoResult != null)
             {
                 throw new OperationVetoedException("PUT vetoed by " + vetoResult.Trigger + " because: " + vetoResult.VetoResult.Reason);
+            }
+        }
+
+        private void AssertAttachmentPutOperationNotVetoed(string key, JObject metadata, byte[] data)
+        {
+            var vetoResult = AttachmentPutTriggers
+                .Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowPut(key, data, metadata) })
+                .FirstOrDefault(x => x.VetoResult.IsAllowed == false);
+            if (vetoResult != null)
+            {
+                throw new OperationVetoedException("PUT vetoed by " + vetoResult.Trigger + " because: " + vetoResult.VetoResult.Reason);
+            }
+        }
+
+        private void AssertAttachmentDeleteOperationNotVetoed(string key)
+        {
+            var vetoResult = AttachmentDeleteTriggers
+                .Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowDelete(key) })
+                .FirstOrDefault(x => x.VetoResult.IsAllowed == false);
+            if (vetoResult != null)
+            {
+                throw new OperationVetoedException("DELETE vetoed by " + vetoResult.Trigger + " because: " + vetoResult.VetoResult.Reason);
             }
         }
 
@@ -574,18 +623,102 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
             TransactionalStorage.Batch(actions =>
             {
                 attachment = actions.Attachments.GetAttachment(name);
+
+                attachment = ProcessAttachmentReadVetoes(name, attachment);
+
+                ExecuteAttachmentReadTriggers(name, attachment);
             });
             return attachment;
         }
 
+        private Attachment ProcessAttachmentReadVetoes(string name, Attachment attachment)
+        {
+            if (attachment == null)
+                return attachment;
+
+            var foundResult = false;
+            foreach (var attachmentReadTrigger in AttachmentReadTriggers)
+            {
+                if (foundResult)
+                    break;
+                var readVetoResult = attachmentReadTrigger.AllowRead(name, attachment.Data, attachment.Metadata,
+                                                                     ReadOperation.Load);
+                switch (readVetoResult.Veto)
+                {
+                    case ReadVetoResult.ReadAllow.Allow:
+                        break;
+                    case ReadVetoResult.ReadAllow.Deny:
+                        attachment.Data = new byte[0];
+                        attachment.Metadata = new JObject(
+                            new JProperty("Raven-Read-Veto",
+                                          new JObject(new JProperty("Reason", readVetoResult.Reason),
+                                                      new JProperty("Trigger", attachmentReadTrigger.ToString())
+                                              )));
+
+                        foundResult = true;
+                        break;
+                    case ReadVetoResult.ReadAllow.Ignore:
+                        attachment = null;
+                        foundResult = true;
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException(readVetoResult.Veto.ToString());
+                }
+            }
+            return attachment;
+        }
+
+        private void ExecuteAttachmentReadTriggers(string name, Attachment attachment)
+        {
+            if(attachment == null)
+                return;
+
+            foreach (var attachmentReadTrigger in AttachmentReadTriggers)
+            {
+                attachment.Data = attachmentReadTrigger.OnRead(name, attachment.Data,attachment.Metadata, ReadOperation.Load);
+            }
+        }
+
         public void PutStatic(string name, Guid? etag, byte[] data, JObject metadata)
         {
-            TransactionalStorage.Batch(actions => actions.Attachments.AddAttachment(name, etag, data, metadata));
+            Guid newEtag = Guid.Empty;
+            TransactionalStorage.Batch(actions =>
+            {
+                AssertAttachmentPutOperationNotVetoed(name, metadata, data);
+
+                AttachmentPutTriggers.Apply(trigger => trigger.OnPut(name, data, metadata));
+
+                newEtag = actions.Attachments.AddAttachment(name, etag, data, metadata);
+
+                AttachmentPutTriggers.Apply(trigger => trigger.AfterPut(name, data, metadata, newEtag));
+            
+                workContext.ShouldNotifyAboutWork();
+            });
+
+            TransactionalStorage
+                .ExecuteImmediatelyOrRegisterForSyncronization(() => AttachmentPutTriggers.Apply(trigger => trigger.AfterCommit(name, data, metadata, newEtag)));
+
         }
 
         public void DeleteStatic(string name, Guid? etag)
         {
-            TransactionalStorage.Batch(actions => actions.Attachments.DeleteAttachment(name, etag));
+            TransactionalStorage.Batch(actions =>
+            {
+                AssertAttachmentDeleteOperationNotVetoed(name);
+
+                AttachmentDeleteTriggers.Apply(x => x.OnDelete(name));
+
+                actions.Attachments.DeleteAttachment(name, etag);
+
+                AttachmentDeleteTriggers.Apply(x => x.AfterDelete(name));
+
+                workContext.ShouldNotifyAboutWork();
+            });
+
+            TransactionalStorage
+                .ExecuteImmediatelyOrRegisterForSyncronization(
+                    () => AttachmentDeleteTriggers.Apply(trigger => trigger.AfterCommit(name)));
+
         }
 
         public JArray GetDocuments(int start, int pageSize, Guid? etag)

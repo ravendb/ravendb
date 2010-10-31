@@ -15,7 +15,7 @@ namespace Raven.Client.Tests.Bugs
         public void CanProjectFromIndex()
         {
             using (var documentStore = NewDocumentStore())
-            using (var httpServer = new HttpServer(documentStore.Configuration, documentStore.DocumentDatabase))
+            using (var httpServer = new RavenDbHttpServer(documentStore.Configuration, documentStore.DocumentDatabase))
             {
                 httpServer.Start();
                 documentStore.DatabaseCommands.PutIndex("ImagesByTag",

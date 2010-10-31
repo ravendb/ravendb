@@ -5,6 +5,7 @@ using Raven.Database;
 using Raven.Database.Plugins;
 using System.Linq;
 using Raven.Database.Json;
+using Raven.Http;
 
 namespace Raven.Bundles.Versioning.Triggers
 {

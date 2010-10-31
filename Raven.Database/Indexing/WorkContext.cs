@@ -65,11 +65,16 @@ namespace Raven.Database.Indexing
             shouldNotifyOnWork.Value = true;
         }
 
-        public void NotifyAboutWork()
+        public void HandleWorkNotifications()
         {
             if (shouldNotifyOnWork.Value == false)
                 return;
             shouldNotifyOnWork.Value = false;
+            NotifyAboutWork();
+        }
+
+        public void NotifyAboutWork()
+        {
             Interlocked.Increment(ref workCounter);
             lock (waitForWork)
             {

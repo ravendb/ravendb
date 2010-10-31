@@ -4,8 +4,9 @@ using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
 using System.Linq;
-using Raven.Database.Server.Abstractions;
 using Raven.Database.Extensions;
+using Raven.Http.Abstractions;
+using Raven.Http.Extensions;
 
 namespace Raven.Database.Server.Responders
 {

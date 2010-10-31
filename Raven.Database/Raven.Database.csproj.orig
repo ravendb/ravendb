@@ -1,0 +1,774 @@
+<<<<<<< HEAD
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>9.0.30729</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Raven.Database</RootNamespace>
+    <AssemblyName>Raven.Database</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <FileUpgradeFlags>
+    </FileUpgradeFlags>
+    <OldToolsVersion>3.5</OldToolsVersion>
+    <UpgradeBackupLocation />
+    <PublishUrl>publish\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Disk</InstallFrom>
+    <UpdateEnabled>false</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <ApplicationRevision>0</ApplicationRevision>
+    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>TRACE;DEBUG;NET_4_0</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <NoWarn>1607</NoWarn>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>true</SignAssembly>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>RavenDB.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Esent.Interop">
+      <HintPath>..\SharedLibs\Esent.Interop.dll</HintPath>
+    </Reference>
+    <Reference Include="ICSharpCode.NRefactory, Version=3.0.0.3800, Culture=neutral, PublicKeyToken=efe927acf176eea2, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SharedLibs\ICSharpCode.NRefactory.dll</HintPath>
+    </Reference>
+    <Reference Include="log4net, Version=1.2.10.0, Culture=neutral, PublicKeyToken=1b44e1d426115821, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SharedLibs\log4net.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Lucene.Net, Version=2.3.2.1, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SharedLibs\Lucene.Net.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="Newtonsoft.Json, Version=3.5.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SharedLibs\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="Rhino.Licensing">
+      <HintPath>..\SharedLibs\Rhino.Licensing.dll</HintPath>
+    </Reference>
+    <Reference Include="Spatial.Net">
+      <HintPath>..\SharedLibs\Spatial.Net.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.ComponentModel.Composition" />
+    <Reference Include="System.configuration" />
+    <Reference Include="System.Core">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Transactions" />
+    <Reference Include="System.Web" />
+    <Reference Include="System.Xml.Linq">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Data.DataSetExtensions">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+    <Reference Include="xunit, Version=1.5.0.1479, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SharedLibs\xunit.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Backup\BackupStatus.cs" />
+    <Compile Include="Backup\DirectoryBackup.cs" />
+    <Compile Include="Backup\RemoveBackupDocumentStartupTask.cs" />
+    <Compile Include="Commercial\ValidateLicense.cs" />
+    <Compile Include="Commercial\WarningMessagesHolder.cs" />
+    <Compile Include="CurrentRavenOperation.cs" />
+    <Compile Include="DatabaseBulkOperations.cs" />
+    <Compile Include="Data\AttachmentInformation.cs" />
+    <Compile Include="Data\BackupRequest.cs" />
+    <Compile Include="Data\DatabaseDocument.cs" />
+    <Compile Include="Data\DisposableAction.cs" />
+    <Compile Include="Data\DynamicQueryMapping.cs" />
+    <Compile Include="Data\DynamicQueryMappingItem.cs" />
+    <Compile Include="Data\SpatialIndexQuery.cs" />
+    <Compile Include="Data\MultiLoadResult.cs" />
+    <Compile Include="DocumentRetriever.cs" />
+    <Compile Include="DynamicQueryRunner.cs" />
+    <Compile Include="Exceptions\IndexDoesNotExistsException.cs" />
+    <Compile Include="Extensions\ExpressionExtensions.cs" />
+    <Compile Include="Extensions\GuidExtensions.cs" />
+    <Compile Include="Extensions\MonoHttpEncoder.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Extensions\MonoHttpUtility.cs" />
+    <Compile Include="Extensions\StreamExtension.cs" />
+    <Compile Include="Extensions\IOExtensions.cs" />
+    <Compile Include="Indexing\GatherAllCollector.cs" />
+    <Compile Include="Indexing\LowerCaseAnalyzer.cs" />
+    <Compile Include="Indexing\NumberUtil.cs" />
+    <Compile Include="Indexing\RangeQueryParser.cs" />
+    <Compile Include="Indexing\RobustEnumerator.cs" />
+    <Compile Include="Indexing\SpatialIndex.cs" />
+    <Compile Include="Indexing\SortOptions.cs" />
+    <Compile Include="InMemroyRavenConfiguration.cs" />
+    <Compile Include="IStartupTask.cs" />
+    <Compile Include="Json\DynamicUtil.cs" />
+    <Compile Include="Json\JsonDynamicConverter.cs" />
+    <Compile Include="Data\LinearQuery.cs" />
+    <Compile Include="Json\PatchCommandType.cs" />
+    <Compile Include="LinearQueries\IRemoteSingleQueryRunner.cs" />
+    <Compile Include="LinearQueries\SingleQueryRunner.cs" />
+    <Compile Include="Linq\GroupByKeyFunc.cs" />
+    <Compile Include="Linq\ITranslatorDatabaseAccessor.cs" />
+    <Compile Include="Linq\TranslatorFunc.cs" />
+    <Compile Include="PerformanceCounters.cs" />
+    <Compile Include="Plugins\AbstractBackgroundTask.cs" />
+    <Compile Include="Plugins\AbstractDocumentCodec.cs" />
+    <Compile Include="Plugins\AbstractDynamicCompilationExtension.cs" />
+    <Compile Include="Plugins\Builtins\CleanupOldDynamicIndexes.cs" />
+    <Compile Include="Plugins\Builtins\CreateFolderIcon.cs" />
+    <Compile Include="Plugins\Builtins\DeleteRemovedIndexes.cs" />
+    <Compile Include="Plugins\Builtins\FilterRavenInternalDocumentsReadTrigger.cs" />
+    <Compile Include="Plugins\AbstractIndexUpdateTrigger.cs" />
+    <Compile Include="Plugins\AbstractReadTrigger.cs" />
+    <Compile Include="Plugins\Builtins\PendingTransactionRecovery.cs" />
+    <Compile Include="Plugins\Builtins\SpatialDynamicCompilationExtension.cs" />
+    <Compile Include="Plugins\AbstractIndexUpdateTriggerBatcher.cs" />
+    <Compile Include="Plugins\Builtins\DeleteTemporaryIndexes.cs" />
+    <Compile Include="Plugins\ReadOperation.cs" />
+    <Compile Include="Plugins\ReadVetoResult.cs" />
+    <Compile Include="Data\QueryResults.cs" />
+    <Compile Include="LinearQueries\QueryRunnerManager.cs" />
+    <Compile Include="LinearQueries\RemoteQueryResults.cs" />
+    <Compile Include="Server\Abstractions\HttpContextAdapter.cs" />
+    <Compile Include="Server\Abstractions\HttpListenerContextAdpater.cs" />
+    <Compile Include="Server\Abstractions\HttpListenerRequestAdapter.cs" />
+    <Compile Include="Server\Abstractions\HttpListenerResponseAdapter.cs" />
+    <Compile Include="Server\Abstractions\HttpRequestAdapter.cs" />
+    <Compile Include="Server\Abstractions\HttpResponseAdapter.cs" />
+    <Compile Include="Server\Abstractions\IHttpContext.cs" />
+    <Compile Include="Server\Abstractions\IHttpRequest.cs" />
+    <Compile Include="Server\Abstractions\IHttpResponse.cs" />
+    <Compile Include="AnonymousUserAccessMode.cs" />
+    <Compile Include="BatchResult.cs" />
+    <Compile Include="Data\Attachment.cs" />
+    <Compile Include="Data\CommandDataFactory.cs" />
+    <Compile Include="Data\DatabaseStatistics.cs" />
+    <Compile Include="Data\DeleteCommandData.cs" />
+    <Compile Include="Data\ICommandData.cs" />
+    <Compile Include="Data\IndexFailureInformation.cs" />
+    <Compile Include="Data\IndexQueryResult.cs" />
+    <Compile Include="Data\MetadataExtensions.cs" />
+    <Compile Include="Data\PatchCommandData.cs" />
+    <Compile Include="Data\PutCommandData.cs" />
+    <Compile Include="Data\ServerError.cs" />
+    <Compile Include="Data\IndexStats.cs" />
+    <Compile Include="Data\QueryResult.cs" />
+    <Compile Include="Data\SortedField.cs" />
+    <Compile Include="Exceptions\BadRequestException.cs" />
+    <Compile Include="Exceptions\IndexDisabledException.cs" />
+    <Compile Include="Data\IndexQuery.cs" />
+    <Compile Include="Exceptions\OperationVetoedException.cs" />
+    <Compile Include="Extensions\EnumerableExtensions.cs" />
+    <Compile Include="Indexing\FieldIndexing.cs" />
+    <Compile Include="Indexing\FieldStorage.cs" />
+    <Compile Include="Indexing\IndexDefinition.cs" />
+    <Compile Include="Indexing\MapReduceIndex.cs" />
+    <Compile Include="Indexing\QueryBuilder.cs" />
+    <Compile Include="Indexing\SimpleIndex.cs" />
+    <Compile Include="Plugins\AbstractDeleteTrigger.cs" />
+    <Compile Include="Plugins\AbstractPutTrigger.cs" />
+    <Compile Include="Plugins\IRequiresDocumentDatabaseInitialization.cs" />
+    <Compile Include="JsonDocument.cs" />
+    <Compile Include="DocumentDatabase.cs" />
+    <Compile Include="Exceptions\ConcurrencyException.cs" />
+    <Compile Include="Extensions\LoggingExtensions.cs" />
+    <Compile Include="Extensions\Reference.cs" />
+    <Compile Include="Indexing\Index.cs" />
+    <Compile Include="Indexing\AnonymousObjectToLuceneDocumentConverter.cs" />
+    <Compile Include="Indexing\StatefulEnumerableWrapper.cs" />
+    <Compile Include="Indexing\TaskExecuter.cs" />
+    <Compile Include="Indexing\WorkContext.cs" />
+    <Compile Include="Json\DynamicObjectExtensions.cs" />
+    <Compile Include="Json\JsonEnumConverter.cs" />
+    <Compile Include="Json\JsonExtensions.cs" />
+    <Compile Include="Json\JsonPatcher.cs" />
+    <Compile Include="Json\JsonToExpando.cs" />
+    <Compile Include="Json\PatchRequest.cs" />
+    <Compile Include="Linq\AbstractViewGenerator.cs" />
+    <Compile Include="Linq\DynamicJsonObject.cs" />
+    <Compile Include="Linq\QueryParsingUtils.cs" />
+    <Compile Include="Linq\DynamicViewCompiler.cs" />
+    <Compile Include="Linq\IndexingFunc.cs" />
+    <Compile Include="Linq\PrivateExtensions\LinqOnDynamic.cs" />
+    <Compile Include="PatchResult.cs" />
+    <Compile Include="Plugins\VetoResult.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="PutResult.cs" />
+    <Compile Include="RavenConfiguration.cs" />
+    <Compile Include="Server\Abstractions\UrlExtension.cs" />
+    <Compile Include="Server\HttpServer.cs" />
+    <Compile Include="Server\NonAdminHttp.cs" />
+    <Compile Include="Server\Responders\AddIncludesCommand.cs" />
+    <Compile Include="Server\Responders\AdminBackup.cs" />
+    <Compile Include="Server\Responders\Docs.cs" />
+    <Compile Include="Server\Responders\Document.cs" />
+    <Compile Include="Server\Responders\DocumentBatch.cs" />
+    <Compile Include="Server\Responders\EnumerableExtensions.cs" />
+    <Compile Include="Server\Responders\Favicon.cs" />
+    <Compile Include="Server\Responders\HttpExtensions.cs" />
+    <Compile Include="Server\Responders\Index.cs" />
+    <Compile Include="Server\Responders\Indexes.cs" />
+    <Compile Include="Server\Responders\LinearQueryResponder.cs" />
+    <Compile Include="Server\Responders\Queries.cs" />
+    <Compile Include="Server\Responders\RavenRoot.cs" />
+    <Compile Include="Server\Responders\RavenUI.cs" />
+    <Compile Include="Server\Responders\RequestResponder.cs" />
+    <Compile Include="Server\Responders\Root.cs" />
+    <Compile Include="Server\Responders\Static.cs" />
+    <Compile Include="Server\Responders\Statics.cs" />
+    <Compile Include="Server\Responders\Statistics.cs" />
+    <Compile Include="Server\Responders\TransactionCommit.cs" />
+    <Compile Include="Server\Responders\TransactionPromote.cs" />
+    <Compile Include="Server\Responders\TransactionRollback.cs" />
+    <Compile Include="Storage\DocumentInTransactionData.cs" />
+    <Compile Include="Storage\IAttachmentsStorageActions.cs" />
+    <Compile Include="Storage\IDocumentStorageActions.cs" />
+    <Compile Include="Storage\IGeneralStorageActions.cs" />
+    <Compile Include="Storage\IIndexingStorageActions.cs" />
+    <Compile Include="Storage\IMappedResultsStorageAction.cs" />
+    <Compile Include="Storage\IndexCreationOptions.cs" />
+    <Compile Include="Storage\IndexDefinitionStorage.cs" />
+    <Compile Include="Storage\IQueueStorageActions.cs" />
+    <Compile Include="Storage\IRemoteStorage.cs" />
+    <Compile Include="Storage\IStalenessStorageActions.cs" />
+    <Compile Include="Storage\IStorageActionsAccessor.cs" />
+    <Compile Include="Storage\ITasksStorageActions.cs" />
+    <Compile Include="Storage\ITransactionalStorage.cs" />
+    <Compile Include="Storage\ITransactionStorageActions.cs" />
+    <Compile Include="Tasks\ReduceTask.cs" />
+    <Compile Include="Tasks\RemoveFromIndexTask.cs" />
+    <Compile Include="Tasks\Task.cs" />
+    <Compile Include="Indexing\IndexStorage.cs" />
+    <Compile Include="TransactionInformation.cs" />
+    <Compile Include="TransactionMode.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1 Client Profile</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Windows.Installer.3.1">
+      <Visible>False</Visible>
+      <ProductName>Windows Installer 3.1</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Server\WebUI\raven-data.ico" />
+    <Content Include="Server\WebUI\css\Pager.css" />
+    <Content Include="Server\WebUI\css\rdb.css" />
+    <Content Include="Server\WebUI\css\rdb.jsonEditor.css" />
+    <Content Include="Server\WebUI\css\smoothness\images\ui-bg_flat_0_aaaaaa_40x100.png" />
+    <Content Include="Server\WebUI\css\smoothness\images\ui-bg_flat_75_ffffff_40x100.png" />
+    <Content Include="Server\WebUI\css\smoothness\images\ui-bg_glass_55_fbf9ee_1x400.png" />
+    <Content Include="Server\WebUI\css\smoothness\images\ui-bg_glass_65_ffffff_1x400.png" />
+    <Content Include="Server\WebUI\css\smoothness\images\ui-bg_glass_75_dadada_1x400.png" />
+    <Content Include="Server\WebUI\css\smoothness\images\ui-bg_glass_75_e6e6e6_1x400.png" />
+    <Content Include="Server\WebUI\css\smoothness\images\ui-bg_glass_95_fef1ec_1x400.png" />
+    <Content Include="Server\WebUI\css\smoothness\images\ui-bg_highlight-soft_75_cccccc_1x100.png" />
+    <Content Include="Server\WebUI\css\smoothness\images\ui-icons_222222_256x240.png" />
+    <Content Include="Server\WebUI\css\smoothness\images\ui-icons_2e83ff_256x240.png" />
+    <Content Include="Server\WebUI\css\smoothness\images\ui-icons_454545_256x240.png" />
+    <Content Include="Server\WebUI\css\smoothness\images\ui-icons_888888_256x240.png" />
+    <Content Include="Server\WebUI\css\smoothness\images\ui-icons_cd0a0a_256x240.png" />
+    <Content Include="Server\WebUI\css\smoothness\jquery-ui-1.8rc2.custom.css" />
+    <Content Include="Server\WebUI\documents.html" />
+    <Content Include="Server\WebUI\favicon.ico" />
+    <Content Include="Server\WebUI\images\ajax-loader.gif" />
+    <Content Include="Server\WebUI\images\bgR.png" />
+    <Content Include="Server\WebUI\images\c1_i1.png" />
+    <Content Include="Server\WebUI\images\c2_i2.png" />
+    <Content Include="Server\WebUI\images\c2_i3.png" />
+    <Content Include="Server\WebUI\images\c2_i4.png" />
+    <Content Include="Server\WebUI\images\c2_i5.png" />
+    <Content Include="Server\WebUI\images\c2_i6.png" />
+    <Content Include="Server\WebUI\images\c3_i7.png" />
+    <Content Include="Server\WebUI\images\footerContainerBgR.png" />
+    <Content Include="Server\WebUI\images\footer_bg.png" />
+    <Content Include="Server\WebUI\images\header_bg.png" />
+    <Content Include="Server\WebUI\images\jsonEditor\doc.gif" />
+    <Content Include="Server\WebUI\images\jsonEditor\docNode.gif" />
+    <Content Include="Server\WebUI\images\jsonEditor\docNodeLast.gif" />
+    <Content Include="Server\WebUI\images\jsonEditor\docNodeLastFirst.gif" />
+    <Content Include="Server\WebUI\images\jsonEditor\folder.gif" />
+    <Content Include="Server\WebUI\images\jsonEditor\folderNode.gif" />
+    <Content Include="Server\WebUI\images\jsonEditor\folderNodeFirst.gif" />
+    <Content Include="Server\WebUI\images\jsonEditor\folderNodeLast.gif" />
+    <Content Include="Server\WebUI\images\jsonEditor\folderNodeLastFirst.gif" />
+    <Content Include="Server\WebUI\images\jsonEditor\folderNodeOpen.gif" />
+    <Content Include="Server\WebUI\images\jsonEditor\folderNodeOpenFirst.gif" />
+    <Content Include="Server\WebUI\images\jsonEditor\folderNodeOpenLast.gif" />
+    <Content Include="Server\WebUI\images\jsonEditor\folderNodeOpenLastFirst.gif" />
+    <Content Include="Server\WebUI\images\jsonEditor\folderOpen.gif" />
+    <Content Include="Server\WebUI\images\jsonEditor\vertLine.gif" />
+    <Content Include="Server\WebUI\images\logo.png" />
+    <Content Include="Server\WebUI\images\midBox1.png" />
+    <Content Include="Server\WebUI\images\midBox2Arrow.png" />
+    <Content Include="Server\WebUI\images\sideBarArrow.png" />
+    <Content Include="Server\WebUI\images\sideBarListBoxBottom.png" />
+    <Content Include="Server\WebUI\images\sideBarListBoxTop.png" />
+    <Content Include="Server\WebUI\images\submit.png" />
+    <Content Include="Server\WebUI\images\topNavSep.png" />
+    <Content Include="Server\WebUI\index.html" />
+    <Content Include="Server\WebUI\indexes.html" />
+    <Content Include="Server\WebUI\JSONTemplates\errorsMsgs.html" />
+    <Content Include="Server\WebUI\JSONTemplates\warningMsgs.html" />
+    <Content Include="Server\WebUI\JSONTemplates\documentation.html" />
+    <Content Include="Server\WebUI\JSONTemplates\globalStats.html" />
+    <Content Include="Server\WebUI\JSONTemplates\indexPage.html" />
+    <Content Include="Server\WebUI\JSONTemplates\quickStats.html" />
+    <Content Include="Server\WebUI\js\jquery-1.4.2.min.js" />
+    <Content Include="Server\WebUI\js\jquery-jtemplates.js" />
+    <Content Include="Server\WebUI\js\jquery-ui.js" />
+    <Content Include="Server\WebUI\js\jquery.pager.js" />
+    <Content Include="Server\WebUI\js\jquery.query-2.1.7.js" />
+    <Content Include="Server\WebUI\js\jquery.RavenDB.js" />
+    <Content Include="Server\WebUI\js\json2.js" />
+    <Content Include="Server\WebUI\js\jstree\jquery.tree.js" />
+    <Content Include="Server\WebUI\js\jstree\themes\default\dot_for_ie.gif" />
+    <Content Include="Server\WebUI\js\jstree\themes\default\icons.png" />
+    <Content Include="Server\WebUI\js\jstree\themes\default\style.css" />
+    <Content Include="Server\WebUI\js\jstree\themes\default\throbber.gif" />
+    <Content Include="Server\WebUI\js\jstree\themes\icons\txt.png" />
+    <Content Include="Server\WebUI\js\raven-ui.documents.js" />
+    <Content Include="Server\WebUI\js\raven-ui.js" />
+    <Content Include="Server\WebUI\js\rdb.jsonEditor\editor.html" />
+    <Content Include="Server\WebUI\js\rdb.jsonEditor\rdb.jsonEditor.js" />
+    <Content Include="Server\WebUI\statistics.html" />
+    <Content Include="Server\WebUI\view.html" />
+  </ItemGroup>
+  <ItemGroup>
+    <WCFMetadata Include="Service References\" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Commercial\RavenDB.public" />
+    <None Include="RavenDB.snk" />
+  </ItemGroup>
+  <ItemGroup />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+=======
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>9.0.30729</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Raven.Database</RootNamespace>
+    <AssemblyName>Raven.Database</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <FileUpgradeFlags>
+    </FileUpgradeFlags>
+    <OldToolsVersion>3.5</OldToolsVersion>
+    <UpgradeBackupLocation />
+    <PublishUrl>publish\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Disk</InstallFrom>
+    <UpdateEnabled>false</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <ApplicationRevision>0</ApplicationRevision>
+    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>TRACE;DEBUG;NET_4_0</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <NoWarn>1607</NoWarn>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>true</SignAssembly>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>RavenDB.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Esent.Interop">
+      <HintPath>..\SharedLibs\Esent.Interop.dll</HintPath>
+    </Reference>
+    <Reference Include="ICSharpCode.NRefactory, Version=3.0.0.3800, Culture=neutral, PublicKeyToken=efe927acf176eea2, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SharedLibs\ICSharpCode.NRefactory.dll</HintPath>
+    </Reference>
+    <Reference Include="log4net, Version=1.2.10.0, Culture=neutral, PublicKeyToken=1b44e1d426115821, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SharedLibs\log4net.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Lucene.Net, Version=2.3.2.1, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SharedLibs\Lucene.Net.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="Newtonsoft.Json, Version=3.5.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SharedLibs\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="Rhino.Licensing">
+      <HintPath>..\SharedLibs\Rhino.Licensing.dll</HintPath>
+    </Reference>
+    <Reference Include="Spatial.Net">
+      <HintPath>..\SharedLibs\Spatial.Net.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.ComponentModel.Composition" />
+    <Reference Include="System.configuration" />
+    <Reference Include="System.Core">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Transactions" />
+    <Reference Include="System.Web" />
+    <Reference Include="System.Xml.Linq">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Data.DataSetExtensions">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+    <Reference Include="xunit, Version=1.5.0.1479, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SharedLibs\xunit.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Backup\BackupStatus.cs" />
+    <Compile Include="Backup\DirectoryBackup.cs" />
+    <Compile Include="Backup\RemoveBackupDocumentStartupTask.cs" />
+    <Compile Include="Commercial\ValidateLicense.cs" />
+    <Compile Include="Commercial\WarningMessagesHolder.cs" />
+    <Compile Include="DatabaseBulkOperations.cs" />
+    <Compile Include="Data\AttachmentInformation.cs" />
+    <Compile Include="Data\BackupRequest.cs" />
+    <Compile Include="Data\DatabaseDocument.cs" />
+    <Compile Include="Data\DynamicQueryMapping.cs" />
+    <Compile Include="Data\DynamicQueryMappingItem.cs" />
+    <Compile Include="DocumentRetriever.cs" />
+    <Compile Include="DynamicQueryRunner.cs" />
+    <Compile Include="Exceptions\IndexDoesNotExistsException.cs" />
+    <Compile Include="Extensions\CommandExtensions.cs" />
+    <Compile Include="Extensions\GuidExtensions.cs" />
+    <Compile Include="Extensions\HttpContextExtensions.cs" />
+    <Compile Include="Extensions\IndexingExtensions.cs" />
+    <Compile Include="Extensions\MonoHttpEncoder.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Extensions\MonoHttpUtility.cs" />
+    <Compile Include="Extensions\IOExtensions.cs" />
+    <Compile Include="Impl\DummyUuidGenerator.cs" />
+    <Compile Include="Indexing\GatherAllCollector.cs" />
+    <Compile Include="Indexing\LowerCaseAnalyzer.cs" />
+    <Compile Include="Indexing\RangeQueryParser.cs" />
+    <Compile Include="Indexing\RobustEnumerator.cs" />
+    <Compile Include="Indexing\SpatialIndex.cs" />
+    <Compile Include="InMemroyRavenConfiguration.cs" />
+    <Compile Include="Impl\IUuidGenerator.cs" />
+    <Compile Include="Plugins\AbstractAttachmentDeleteTrigger.cs" />
+    <Compile Include="Plugins\AbstractAttachmentPutTrigger.cs" />
+    <Compile Include="Plugins\AbstractAttachmentReadTrigger.cs" />
+    <Compile Include="Plugins\IStartupTask.cs" />
+    <Compile Include="Data\LinearQuery.cs" />
+    <Compile Include="LinearQueries\IRemoteSingleQueryRunner.cs" />
+    <Compile Include="LinearQueries\SingleQueryRunner.cs" />
+    <Compile Include="Linq\GroupByKeyFunc.cs" />
+    <Compile Include="Linq\ITranslatorDatabaseAccessor.cs" />
+    <Compile Include="Linq\PrivateExtensions\MetadataExtensions.cs" />
+    <Compile Include="Linq\TranslatorFunc.cs" />
+    <Compile Include="PerformanceCounters.cs" />
+    <Compile Include="Plugins\AbstractBackgroundTask.cs" />
+    <Compile Include="Plugins\AbstractDocumentCodec.cs" />
+    <Compile Include="Plugins\AbstractDynamicCompilationExtension.cs" />
+    <Compile Include="Plugins\Builtins\CleanupOldDynamicIndexes.cs" />
+    <Compile Include="Plugins\Builtins\CreateFolderIcon.cs" />
+    <Compile Include="Plugins\Builtins\DeleteRemovedIndexes.cs" />
+    <Compile Include="Plugins\Builtins\FilterRavenInternalDocumentsReadTrigger.cs" />
+    <Compile Include="Plugins\AbstractIndexUpdateTrigger.cs" />
+    <Compile Include="Plugins\AbstractReadTrigger.cs" />
+    <Compile Include="Plugins\Builtins\PendingTransactionRecovery.cs" />
+    <Compile Include="Plugins\Builtins\SpatialDynamicCompilationExtension.cs" />
+    <Compile Include="Plugins\AbstractIndexUpdateTriggerBatcher.cs" />
+    <Compile Include="Plugins\Builtins\DeleteTemporaryIndexes.cs" />
+    <Compile Include="Plugins\ReadOperation.cs" />
+    <Compile Include="Plugins\ReadVetoResult.cs" />
+    <Compile Include="Data\QueryResults.cs" />
+    <Compile Include="LinearQueries\QueryRunnerManager.cs" />
+    <Compile Include="LinearQueries\RemoteQueryResults.cs" />
+    <Compile Include="Data\CommandDataFactory.cs" />
+    <Compile Include="Data\IndexFailureInformation.cs" />
+    <Compile Include="Data\IndexQueryResult.cs" />
+    <Compile Include="Exceptions\IndexDisabledException.cs" />
+    <Compile Include="Exceptions\OperationVetoedException.cs" />
+    <Compile Include="Extensions\EnumerableExtensions.cs" />
+    <Compile Include="Indexing\MapReduceIndex.cs" />
+    <Compile Include="Indexing\QueryBuilder.cs" />
+    <Compile Include="Indexing\SimpleIndex.cs" />
+    <Compile Include="Plugins\AbstractDeleteTrigger.cs" />
+    <Compile Include="Plugins\AbstractPutTrigger.cs" />
+    <Compile Include="Plugins\IRequiresDocumentDatabaseInitialization.cs" />
+    <Compile Include="DocumentDatabase.cs" />
+    <Compile Include="Extensions\LoggingExtensions.cs" />
+    <Compile Include="Indexing\Index.cs" />
+    <Compile Include="Indexing\AnonymousObjectToLuceneDocumentConverter.cs" />
+    <Compile Include="Indexing\StatefulEnumerableWrapper.cs" />
+    <Compile Include="Indexing\TaskExecuter.cs" />
+    <Compile Include="Indexing\WorkContext.cs" />
+    <Compile Include="Json\DynamicObjectExtensions.cs" />
+    <Compile Include="Json\JsonPatcher.cs" />
+    <Compile Include="Json\JsonToExpando.cs" />
+    <Compile Include="Linq\AbstractViewGenerator.cs" />
+    <Compile Include="Linq\QueryParsingUtils.cs" />
+    <Compile Include="Linq\DynamicViewCompiler.cs" />
+    <Compile Include="Linq\IndexingFunc.cs" />
+    <Compile Include="Linq\PrivateExtensions\LinqOnDynamic.cs" />
+    <Compile Include="PatchResult.cs" />
+    <Compile Include="Plugins\VetoResult.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RavenConfiguration.cs" />
+    <Compile Include="Server\RavenDbHttpServer.cs" />
+    <Compile Include="Server\Responders\AddIncludesCommand.cs" />
+    <Compile Include="Server\Responders\AdminBackup.cs" />
+    <Compile Include="Server\Responders\Docs.cs" />
+    <Compile Include="Server\Responders\Document.cs" />
+    <Compile Include="Server\Responders\DocumentBatch.cs" />
+    <Compile Include="Server\Responders\EnumerableExtensions.cs" />
+    <Compile Include="Server\Responders\Index.cs" />
+    <Compile Include="Server\Responders\Indexes.cs" />
+    <Compile Include="Server\Responders\LinearQueryResponder.cs" />
+    <Compile Include="Server\Responders\Queries.cs" />
+    <Compile Include="Server\Responders\Root.cs" />
+    <Compile Include="Server\Responders\Static.cs" />
+    <Compile Include="Server\Responders\Statics.cs" />
+    <Compile Include="Server\Responders\Statistics.cs" />
+    <Compile Include="Server\Responders\TransactionCommit.cs" />
+    <Compile Include="Server\Responders\TransactionPromote.cs" />
+    <Compile Include="Server\Responders\TransactionRollback.cs" />
+    <Compile Include="Storage\DocumentInTransactionData.cs" />
+    <Compile Include="Storage\IAttachmentsStorageActions.cs" />
+    <Compile Include="Storage\IDocumentStorageActions.cs" />
+    <Compile Include="Storage\IGeneralStorageActions.cs" />
+    <Compile Include="Storage\IIndexingStorageActions.cs" />
+    <Compile Include="Storage\IMappedResultsStorageAction.cs" />
+    <Compile Include="Storage\IndexCreationOptions.cs" />
+    <Compile Include="Storage\IndexDefinitionStorage.cs" />
+    <Compile Include="Storage\IQueueStorageActions.cs" />
+    <Compile Include="Storage\IRemoteStorage.cs" />
+    <Compile Include="Storage\IStalenessStorageActions.cs" />
+    <Compile Include="Storage\IStorageActionsAccessor.cs" />
+    <Compile Include="Storage\ITasksStorageActions.cs" />
+    <Compile Include="Storage\ITransactionalStorage.cs" />
+    <Compile Include="Storage\ITransactionStorageActions.cs" />
+    <Compile Include="Tasks\ReduceTask.cs" />
+    <Compile Include="Tasks\RemoveFromIndexTask.cs" />
+    <Compile Include="Tasks\Task.cs" />
+    <Compile Include="Indexing\IndexStorage.cs" />
+    <Compile Include="TransactionMode.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1 Client Profile</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Windows.Installer.3.1">
+      <Visible>False</Visible>
+      <ProductName>Windows Installer 3.1</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Server\WebUI\raven-data.ico" />
+    <Content Include="Server\WebUI\css\Pager.css" />
+    <Content Include="Server\WebUI\css\rdb.css" />
+    <Content Include="Server\WebUI\css\rdb.jsonEditor.css" />
+    <Content Include="Server\WebUI\css\smoothness\images\ui-bg_flat_0_aaaaaa_40x100.png" />
+    <Content Include="Server\WebUI\css\smoothness\images\ui-bg_flat_75_ffffff_40x100.png" />
+    <Content Include="Server\WebUI\css\smoothness\images\ui-bg_glass_55_fbf9ee_1x400.png" />
+    <Content Include="Server\WebUI\css\smoothness\images\ui-bg_glass_65_ffffff_1x400.png" />
+    <Content Include="Server\WebUI\css\smoothness\images\ui-bg_glass_75_dadada_1x400.png" />
+    <Content Include="Server\WebUI\css\smoothness\images\ui-bg_glass_75_e6e6e6_1x400.png" />
+    <Content Include="Server\WebUI\css\smoothness\images\ui-bg_glass_95_fef1ec_1x400.png" />
+    <Content Include="Server\WebUI\css\smoothness\images\ui-bg_highlight-soft_75_cccccc_1x100.png" />
+    <Content Include="Server\WebUI\css\smoothness\images\ui-icons_222222_256x240.png" />
+    <Content Include="Server\WebUI\css\smoothness\images\ui-icons_2e83ff_256x240.png" />
+    <Content Include="Server\WebUI\css\smoothness\images\ui-icons_454545_256x240.png" />
+    <Content Include="Server\WebUI\css\smoothness\images\ui-icons_888888_256x240.png" />
+    <Content Include="Server\WebUI\css\smoothness\images\ui-icons_cd0a0a_256x240.png" />
+    <Content Include="Server\WebUI\css\smoothness\jquery-ui-1.8rc2.custom.css" />
+    <Content Include="Server\WebUI\documents.html" />
+    <Content Include="Server\WebUI\favicon.ico" />
+    <Content Include="Server\WebUI\images\ajax-loader.gif" />
+    <Content Include="Server\WebUI\images\bgR.png" />
+    <Content Include="Server\WebUI\images\c1_i1.png" />
+    <Content Include="Server\WebUI\images\c2_i2.png" />
+    <Content Include="Server\WebUI\images\c2_i3.png" />
+    <Content Include="Server\WebUI\images\c2_i4.png" />
+    <Content Include="Server\WebUI\images\c2_i5.png" />
+    <Content Include="Server\WebUI\images\c2_i6.png" />
+    <Content Include="Server\WebUI\images\c3_i7.png" />
+    <Content Include="Server\WebUI\images\footerContainerBgR.png" />
+    <Content Include="Server\WebUI\images\footer_bg.png" />
+    <Content Include="Server\WebUI\images\header_bg.png" />
+    <Content Include="Server\WebUI\images\jsonEditor\doc.gif" />
+    <Content Include="Server\WebUI\images\jsonEditor\docNode.gif" />
+    <Content Include="Server\WebUI\images\jsonEditor\docNodeLast.gif" />
+    <Content Include="Server\WebUI\images\jsonEditor\docNodeLastFirst.gif" />
+    <Content Include="Server\WebUI\images\jsonEditor\folder.gif" />
+    <Content Include="Server\WebUI\images\jsonEditor\folderNode.gif" />
+    <Content Include="Server\WebUI\images\jsonEditor\folderNodeFirst.gif" />
+    <Content Include="Server\WebUI\images\jsonEditor\folderNodeLast.gif" />
+    <Content Include="Server\WebUI\images\jsonEditor\folderNodeLastFirst.gif" />
+    <Content Include="Server\WebUI\images\jsonEditor\folderNodeOpen.gif" />
+    <Content Include="Server\WebUI\images\jsonEditor\folderNodeOpenFirst.gif" />
+    <Content Include="Server\WebUI\images\jsonEditor\folderNodeOpenLast.gif" />
+    <Content Include="Server\WebUI\images\jsonEditor\folderNodeOpenLastFirst.gif" />
+    <Content Include="Server\WebUI\images\jsonEditor\folderOpen.gif" />
+    <Content Include="Server\WebUI\images\jsonEditor\vertLine.gif" />
+    <Content Include="Server\WebUI\images\logo.png" />
+    <Content Include="Server\WebUI\images\midBox1.png" />
+    <Content Include="Server\WebUI\images\midBox2Arrow.png" />
+    <Content Include="Server\WebUI\images\sideBarArrow.png" />
+    <Content Include="Server\WebUI\images\sideBarListBoxBottom.png" />
+    <Content Include="Server\WebUI\images\sideBarListBoxTop.png" />
+    <Content Include="Server\WebUI\images\submit.png" />
+    <Content Include="Server\WebUI\images\topNavSep.png" />
+    <Content Include="Server\WebUI\index.html" />
+    <Content Include="Server\WebUI\indexes.html" />
+    <Content Include="Server\WebUI\JSONTemplates\errorsMsgs.html" />
+    <Content Include="Server\WebUI\JSONTemplates\warningMsgs.html" />
+    <Content Include="Server\WebUI\JSONTemplates\documentation.html" />
+    <Content Include="Server\WebUI\JSONTemplates\globalStats.html" />
+    <Content Include="Server\WebUI\JSONTemplates\indexPage.html" />
+    <Content Include="Server\WebUI\JSONTemplates\quickStats.html" />
+    <Content Include="Server\WebUI\js\jquery-1.4.2.min.js" />
+    <Content Include="Server\WebUI\js\jquery-jtemplates.js" />
+    <Content Include="Server\WebUI\js\jquery-ui.js" />
+    <Content Include="Server\WebUI\js\jquery.pager.js" />
+    <Content Include="Server\WebUI\js\jquery.query-2.1.7.js" />
+    <Content Include="Server\WebUI\js\jquery.RavenDB.js" />
+    <Content Include="Server\WebUI\js\json2.js" />
+    <Content Include="Server\WebUI\js\jstree\jquery.tree.js" />
+    <Content Include="Server\WebUI\js\jstree\themes\default\dot_for_ie.gif" />
+    <Content Include="Server\WebUI\js\jstree\themes\default\icons.png" />
+    <Content Include="Server\WebUI\js\jstree\themes\default\style.css" />
+    <Content Include="Server\WebUI\js\jstree\themes\default\throbber.gif" />
+    <Content Include="Server\WebUI\js\jstree\themes\icons\txt.png" />
+    <Content Include="Server\WebUI\js\raven-ui.documents.js" />
+    <Content Include="Server\WebUI\js\raven-ui.js" />
+    <Content Include="Server\WebUI\js\rdb.jsonEditor\editor.html" />
+    <Content Include="Server\WebUI\js\rdb.jsonEditor\rdb.jsonEditor.js" />
+    <Content Include="Server\WebUI\statistics.html" />
+    <Content Include="Server\WebUI\view.html" />
+  </ItemGroup>
+  <ItemGroup>
+    <WCFMetadata Include="Service References\" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Commercial\RavenDB.public" />
+    <None Include="RavenDB.snk" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
+      <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
+      <Name>Raven.Abstractions</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Http\Raven.Http.csproj">
+      <Project>{508E5F54-A8F3-47F4-9297-CB96F91D4DF8}</Project>
+      <Name>Raven.Http</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+>>>>>>> ee1d5f6180eeb8e32a16e340d8a675f73b603575
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+  <Target Name="BeforeBuild">
+    <CreateItem Include="Server\WebUI\**\*.*">
+      <Output ItemName="EmbeddedResource" TaskParameter="Include" />
+    </CreateItem>
+  </Target>
+</Project>

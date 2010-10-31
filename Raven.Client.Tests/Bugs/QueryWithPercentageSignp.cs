@@ -5,6 +5,7 @@ using Raven.Client.Document;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Database.Server;
+using Raven.Http;
 using Xunit;
 using Directory = System.IO.Directory;
 

@@ -6,11 +6,14 @@ using System.IO;
 using System.Linq;
 using log4net.Config;
 using Raven.Database.Extensions;
+using Raven.Database.Server;
+using Raven.Database.Server.Responders;
 using Raven.Database.Storage;
+using Raven.Http;
 
 namespace Raven.Database
 {
-    public class InMemroyRavenConfiguration
+    public class InMemroyRavenConfiguration : IRaveHttpnConfiguration
     {
         private CompositionContainer container;
         private bool containerExternallySet;
@@ -24,6 +27,7 @@ namespace Raven.Database
 
 
             Catalog = new AggregateCatalog(
+                new AssemblyCatalog(typeof(HttpServer).Assembly),
                 new AssemblyCatalog(typeof(DocumentDatabase).Assembly)
                 );
 

@@ -2,6 +2,7 @@ using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Plugins;
+using Raven.Http;
 
 namespace Raven.Bundles.Replication.Triggers
 {
@@ -13,8 +14,8 @@ namespace Raven.Bundles.Replication.Triggers
     /// </summary>
     public class VirtualDeleteTrigger : AbstractDeleteTrigger
     {
-        ThreadLocal<JToken> deletedSource = new ThreadLocal<JToken>();
-        ThreadLocal<JToken> deletedVersion = new ThreadLocal<JToken>();
+        readonly ThreadLocal<JToken> deletedSource = new ThreadLocal<JToken>();
+        readonly ThreadLocal<JToken> deletedVersion = new ThreadLocal<JToken>();
 
         public override void OnDelete(string key, TransactionInformation transactionInformation)
         {

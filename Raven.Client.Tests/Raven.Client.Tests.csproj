@@ -98,7 +98,9 @@
     <Compile Include="..\Raven.Tests\Spatial\SpatialIndexTestHelper.cs">
       <Link>Spatial\SpatialIndexTestHelper.cs</Link>
     </Compile>
+    <Compile Include="Bugs\AnyQueries.cs" />
     <Compile Include="Bugs\AsyncCommit.cs" />
+    <Compile Include="Bugs\AttachmentsWithCredentials.cs" />
     <Compile Include="Bugs\CanGetMetadataForTransient.cs" />
     <Compile Include="Bugs\CanUseNonStringsForId.cs" />
     <Compile Include="Bugs\EntityWithoutId.cs" />
@@ -108,6 +110,9 @@
     <Compile Include="Bugs\ImageByTagSearchModel.cs" />
     <Compile Include="Bugs\IndexNestedFields.cs" />
     <Compile Include="Bugs\KeysAreCaseInsensitive.cs" />
+    <Compile Include="Bugs\LinqOnUrls.cs" />
+    <Compile Include="Bugs\LuceneQueryShouldWorkWithoutExtensionMethod.cs" />
+    <Compile Include="Bugs\MultiEntityIndex.cs" />
     <Compile Include="Bugs\MultiTenancy.cs" />
     <Compile Include="Bugs\NameAndId.cs" />
     <Compile Include="Bugs\OverwriteIndexLocally.cs" />
@@ -195,13 +200,25 @@
     <Compile Include="Spatial\Event.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Raven.Client\Raven.Client.csproj">
-      <Project>{9F92FD36-60B6-4655-B8C6-00125B46AB6A}</Project>
-      <Name>Raven.Client</Name>
+    <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
+      <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
+      <Name>Raven.Abstractions</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Client.Embedded\Raven.Client.Embedded.csproj">
+      <Project>{0F5287AD-37B3-4375-BA3E-3CED64B1FC5B}</Project>
+      <Name>Raven.Client.Embedded</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj">
+      <Project>{4E087ECB-E7CA-4891-AC3C-3C76702715B6}</Project>
+      <Name>Raven.Client.Lightweight</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Database\Raven.Database.csproj">
       <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
       <Name>Raven.Database</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Http\Raven.Http.csproj">
+      <Project>{508E5F54-A8F3-47F4-9297-CB96F91D4DF8}</Project>
+      <Name>Raven.Http</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Server\Raven.Server.csproj">
       <Project>{3B90EB20-AEA3-4972-8219-936F1A62768C}</Project>

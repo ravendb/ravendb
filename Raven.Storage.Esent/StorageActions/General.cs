@@ -6,11 +6,13 @@ using System.Text;
 using log4net;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Database;
+using Raven.Database.Impl;
 using Raven.Database.Plugins;
 using Raven.Database.Json;
 using Raven.Database.Storage;
 using Raven.Database.Storage.StorageActions;
 using Raven.Database.Extensions;
+using Raven.Http;
 
 namespace Raven.Storage.Esent.StorageActions
 {
@@ -20,7 +22,8 @@ namespace Raven.Storage.Esent.StorageActions
 		public event Action OnCommit = delegate { }; 
 		private readonly TableColumnsCache tableColumnsCache;
 		private readonly IEnumerable<AbstractDocumentCodec> documentCodecs;
-		protected readonly JET_DBID dbid;
+	    private readonly IUuidGenerator uuidGenerator;
+	    protected readonly JET_DBID dbid;
 
 		protected readonly ILog logger = LogManager.GetLogger(typeof(DocumentStorageActions));
 		protected readonly Session session;
@@ -33,11 +36,17 @@ namespace Raven.Storage.Esent.StorageActions
 
 		[CLSCompliant(false)]
 		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
-		public DocumentStorageActions(JET_INSTANCE instance, string database, TableColumnsCache tableColumnsCache, IEnumerable<AbstractDocumentCodec> documentCodecs)
+		public DocumentStorageActions(
+            JET_INSTANCE instance, 
+            string database, 
+            TableColumnsCache tableColumnsCache, 
+            IEnumerable<AbstractDocumentCodec> documentCodecs,
+            IUuidGenerator uuidGenerator)
 		{
 			this.tableColumnsCache = tableColumnsCache;
 			this.documentCodecs = documentCodecs;
-			try
+		    this.uuidGenerator = uuidGenerator;
+		    try
 			{
 				session = new Session(instance);
 				transaction = new Transaction(session);

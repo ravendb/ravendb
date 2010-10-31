@@ -5,6 +5,7 @@ using System.Reflection;
 using log4net.Appender;
 using log4net.Config;
 using log4net.Layout;
+using Raven.Client.Client;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Database.Extensions;
@@ -31,7 +32,7 @@ namespace Raven.Client.Tests.Document
 		{
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
 			path = Path.Combine(path, "TestDb").Substring(6);
-			var documentStore = new DocumentStore
+            var documentStore = new EmbeddablDocumentStore
 			{
 				Configuration =
 				{

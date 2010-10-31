@@ -7,6 +7,7 @@ using log4net.Layout;
 using Raven.Client.Tests.Bugs;
 using Raven.Client.Tests.Document;
 using Raven.Client.Tests.Indexes;
+using Raven.Scenarios;
 using Raven.Tests.Indexes;
 using Raven.Tests.Triggers;
 
@@ -16,13 +17,14 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
+		    Environment.CurrentDirectory = @"C:\Work\ravendb\Raven.Scenarios";
+		    Console.WriteLine("Starting...");
 		    for (int i = 0; i < 1500; i++)
 		    {
-		        Console.Write(i+"\r");
-		        var t = new LinqGitHub147();
-                {
-                    t.CanSelectStringProperty();
-                }
+                new Scenario(
+                @"C:\Work\ravendb\Raven.Scenarios\Scenarios\WhenDeletingDocsWillUpdateMapReduceIndex.saz"
+                ).Execute();
+                Console.Write(i + "\r");
 		    }
 		}
 	}

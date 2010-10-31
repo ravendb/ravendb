@@ -6,6 +6,7 @@ using System.Linq;
 using Lucene.Net.Documents;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Database.Extensions;
 using Raven.Database.Linq;
 
 namespace Raven.Database.Indexing

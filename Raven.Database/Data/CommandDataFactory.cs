@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Json;
+using Raven.Http;
 
 namespace Raven.Database.Data
 {

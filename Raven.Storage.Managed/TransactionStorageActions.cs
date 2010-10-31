@@ -5,8 +5,12 @@ using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Exceptions;
+using Raven.Database.Impl;
 using Raven.Database.Storage;
 using Raven.Database.Storage.StorageActions;
+using Raven.Http;
+using Raven.Http.Exceptions;
+using Raven.Munin;
 using Raven.Storage.Managed.Impl;
 using System.Linq;
 using Raven.Database.Json;
@@ -16,10 +20,12 @@ namespace Raven.Storage.Managed
     public class TransactionStorageActions : ITransactionStorageActions
     {
         private readonly TableStorage storage;
+        private readonly IUuidGenerator generator;
 
-        public TransactionStorageActions(TableStorage storage)
+        public TransactionStorageActions(TableStorage storage, IUuidGenerator generator)
         {
             this.storage = storage;
+            this.generator = generator;
         }
 
         public Guid AddDocumentInTransaction(string key, Guid? etag, JObject data, JObject metadata, TransactionInformation transactionInformation)
@@ -52,7 +58,7 @@ namespace Raven.Storage.Managed
             metadata.WriteTo(ms);
             data.WriteTo(ms);
 
-            var newEtag = DocumentDatabase.CreateSequentialUuid();
+            var newEtag = generator.CreateSequentialUuid();
             storage.DocumentsModifiedByTransactions.Put(new JObject
             {
                 {"key", key},
@@ -64,7 +70,7 @@ namespace Raven.Storage.Managed
             return newEtag;
         }
 
-        private static void AssertValidEtag(string key, PersistentDictionary.ReadResult doc, PersistentDictionary.ReadResult docInTx, Guid? etag)
+        private static void AssertValidEtag(string key, Table.ReadResult doc, Table.ReadResult docInTx, Guid? etag)
         {
             if (doc == null)
                 return;
@@ -110,7 +116,7 @@ namespace Raven.Storage.Managed
                 {"timeout", DateTime.UtcNow.Add(transactionInformation.Timeout)}
             });
 
-            var newEtag = DocumentDatabase.CreateSequentialUuid();
+            var newEtag = generator.CreateSequentialUuid();
             storage.DocumentsModifiedByTransactions.UpdateKey(new JObject
             {
                 {"key", key},
@@ -174,7 +180,7 @@ namespace Raven.Storage.Managed
 
                 JObject metadata = null;
                 JObject data = null;
-                if (readResult.Position >= 0)
+                if (readResult.Position > 0) // position can never be 0, because of the skip record
                 {
                     var ms = new MemoryStream(readResult.Data());
                     metadata = ms.ToJObject();

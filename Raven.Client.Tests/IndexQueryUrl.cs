@@ -4,8 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Web;
 using Raven.Database.Data;
-using Raven.Database.Server.Abstractions;
+using Raven.Database.Extensions;
 using Raven.Database.Server.Responders;
+using Raven.Http.Abstractions;
 using Rhino.Mocks;
 using Xunit;
 

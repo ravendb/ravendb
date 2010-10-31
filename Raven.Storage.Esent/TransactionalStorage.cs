@@ -8,9 +8,11 @@ using System.Threading;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Database;
 using Raven.Database.Exceptions;
+using Raven.Database.Impl;
 using Raven.Database.Plugins;
 using System.Linq;
 using Raven.Database.Storage;
+using Raven.Http.Exceptions;
 using Raven.Storage.Esent.Backup;
 using Raven.Storage.Esent.SchemaUpdates;
 using Raven.Storage.Esent.StorageActions;
@@ -29,8 +31,9 @@ namespace Raven.Storage.Esent
 
 		private JET_INSTANCE instance;
 		private readonly TableColumnsCache tableColumnsCache = new TableColumnsCache();
+	    private IUuidGenerator generator;
 
-		[ImportMany]
+	    [ImportMany]
 		public IEnumerable<ISchemaUpdate> Updaters { get; set; }
 
 		[ImportMany]
@@ -117,10 +120,11 @@ namespace Raven.Storage.Esent
 
 	    #endregion
 
-		public bool Initialize()
+        public bool Initialize(IUuidGenerator uuidGenerator)
 		{
 			try
 			{
+			    generator = uuidGenerator;
 				new TransactionalStorageConfigurator(configuration).ConfigureInstance(instance, path);
 
 				if (configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction)
@@ -183,6 +187,7 @@ namespace Raven.Storage.Esent
 							var updater = Updaters.FirstOrDefault(update => update.FromSchemaVersion == schemaVersion);
 							if (updater == null)
 								throw new InvalidOperationException(string.Format("The version on disk ({0}) is different that the version supported by this library: {1}{2}You need to migrate the disk version to the library version, alternatively, if the data isn't important, you can delete the file and it will be re-created (with no data) with the library version.", schemaVersion, SchemaCreator.SchemaVersion, Environment.NewLine));
+                            updater.Init(generator);
 							updater.Update(session, dbid);
 							schemaVersion = Api.RetrieveColumnAsString(session, details, columnids["schema_version"]);
 						} while (schemaVersion != SchemaCreator.SchemaVersion);
@@ -307,7 +312,7 @@ namespace Raven.Storage.Esent
 			var txMode = configuration.TransactionMode == TransactionMode.Lazy
 				? CommitTransactionGrbit.LazyFlush
 				: CommitTransactionGrbit.None;
-			using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs))
+			using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator))
 			{
 				current.Value = new StorageActionsAccessor(pht);
 				action(current.Value);

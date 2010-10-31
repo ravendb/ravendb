@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Raven.Database.Extensions;
+using Raven.Http;
 using Xunit;
 using Raven.Client.Document;
 using Raven.Database.Server;
@@ -71,7 +72,7 @@ namespace Raven.Client.Tests.Querying
                         .Where(x => x.Category == "Rhinos" && x.Title.Length == 3)
                         .ToArray();
 
-                    var blogs = s.Advanced.DynamicLuceneQuery<Blog>()
+                    var blogs = s.Advanced.LuceneQuery<Blog>()
                         .Where("Category:Rhinos AND Title.Length:3")
                         .ToArray();
 
@@ -116,7 +117,7 @@ namespace Raven.Client.Tests.Querying
 
                 using (var s = store.OpenSession())
                 {
-                    var results = s.Advanced.DynamicLuceneQuery<Blog>()
+                    var results = s.Advanced.LuceneQuery<Blog>()
                         .Where("Title.Length:3 AND Category:Rhinos")
                         .WaitForNonStaleResultsAsOfNow().ToArray();
 

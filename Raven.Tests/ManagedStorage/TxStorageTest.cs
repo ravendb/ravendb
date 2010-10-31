@@ -1,5 +1,6 @@
 using System.IO;
 using Raven.Database;
+using Raven.Database.Impl;
 using Raven.Database.Storage;
 using Raven.Storage.Managed;
 
@@ -19,7 +20,7 @@ namespace Raven.Storage.Tests
             {
                 DataDirectory = "test",
             }, () => { });
-            newTransactionalStorage.Initialize();
+            newTransactionalStorage.Initialize(new DummyUuidGenerator());
             return newTransactionalStorage;
         }
 	}

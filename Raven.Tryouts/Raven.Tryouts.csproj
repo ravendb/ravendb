@@ -95,13 +95,13 @@
       <Project>{36B31D69-508B-4594-8F8E-85774BAA7D3F}</Project>
       <Name>Raven.Client.Tests</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Raven.Client\Raven.Client.csproj">
-      <Project>{9F92FD36-60B6-4655-B8C6-00125B46AB6A}</Project>
-      <Name>Raven.Client</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Raven.Database\Raven.Database.csproj">
       <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
       <Name>Raven.Database</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Scenarios\Raven.Scenarios.csproj">
+      <Project>{46DB852F-4E76-44BD-B46F-5E7DE7E4B3B7}</Project>
+      <Name>Raven.Scenarios</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Server\Raven.Server.csproj">
       <Project>{3B90EB20-AEA3-4972-8219-936F1A62768C}</Project>

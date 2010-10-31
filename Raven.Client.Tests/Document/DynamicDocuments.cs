@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Raven.Client.Client;
 using Raven.Database.Extensions;
 using Xunit;
 using System.Dynamic;
@@ -32,9 +33,9 @@ namespace Raven.Client.Tests.Document
             employee.Phones = new ExpandoObject();
             employee.Phones.Home = "0111 123123";
             employee.Phones.Office = "0772 321123";
-            employee.Prices = new List<decimal>() { 123.4M, 123432.54M };            
+            employee.Prices = new List<decimal>() { 123.4M, 123432.54M };
 
-            using (var db = new DocumentStore() { DataDirectory = directoryName })
+            using (var db = new EmbeddablDocumentStore() { DataDirectory = directoryName })
             {
                 db.Initialize();
                 
