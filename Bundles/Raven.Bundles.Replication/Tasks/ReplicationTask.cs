@@ -70,7 +70,13 @@ namespace Raven.Bundles.Replication.Tasks
                                 if (Thread.VolatileRead(ref holder.Value) == 1)
                                     continue;
                                 Thread.VolatileWrite(ref holder.Value, 1);
-                                new Task(() => ReplicateTo(destination), TaskCreationOptions.LongRunning).Start();
+                                new Task<bool>(() => ReplicateTo(destination), TaskCreationOptions.LongRunning)
+                                    .ContinueWith(task =>
+                                    {
+                                        if(task.Result) // force re-evaluation of replication again
+                                            docDb.WorkContext.NotifyAboutWork();
+                                    })
+                                    .Start();
                             }
                         }
                     }
