@@ -312,7 +312,7 @@ namespace Raven.Client.Linq
 			var value = GetValueFromExpression(expression.Right, GetMemberType(memberInfo));
 
 			luceneQuery.WhereGreaterThan(
-				GetFieldNameForRangeQuery(expression.Left, value),
+                GetFieldNameForRangeQuery(memberInfo, value),
 				value);
 		}
 
@@ -322,7 +322,7 @@ namespace Raven.Client.Linq
 			var value = GetValueFromExpression(expression.Right, GetMemberType(memberInfo));
 
 			luceneQuery.WhereGreaterThanOrEqual(
-				GetFieldNameForRangeQuery(expression.Left, value),
+                GetFieldNameForRangeQuery(memberInfo, value),
 				value);
 		}
 
@@ -332,7 +332,7 @@ namespace Raven.Client.Linq
 			var value = GetValueFromExpression(expression.Right, GetMemberType(memberInfo));
 
 			luceneQuery.WhereLessThan(
-				GetFieldNameForRangeQuery(expression.Left, value),
+                GetFieldNameForRangeQuery(memberInfo, value),
 				value);
 		}
 
@@ -342,7 +342,7 @@ namespace Raven.Client.Linq
 			var value = GetValueFromExpression(expression.Right, GetMemberType(memberInfo));
 
 			luceneQuery.WhereLessThanOrEqual(
-				GetFieldNameForRangeQuery(expression.Left, value),
+                GetFieldNameForRangeQuery(memberInfo, value),
 				value);
 		}
 
@@ -652,6 +652,13 @@ namespace Raven.Client.Linq
 				return ((MemberExpression) expression).Member.Name + "_Range";
 			return ((MemberExpression) expression).Member.Name;
 		}
+
+        private static string GetFieldNameForRangeQuery(ExpressionMemberInfo expression, object value)
+        {
+            if (value is int || value is long || value is double || value is float || value is decimal)
+                return expression.Path + "_Range";
+            return expression.Path;
+        }
 
 		private Type GetFieldType(ExpressionMemberInfo member)
 		{

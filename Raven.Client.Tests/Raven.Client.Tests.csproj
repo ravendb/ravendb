@@ -98,6 +98,7 @@
     <Compile Include="..\Raven.Tests\Spatial\SpatialIndexTestHelper.cs">
       <Link>Spatial\SpatialIndexTestHelper.cs</Link>
     </Compile>
+    <Compile Include="Bugs\AnyQueries.cs" />
     <Compile Include="Bugs\AsyncCommit.cs" />
     <Compile Include="Bugs\AttachmentsWithCredentials.cs" />
     <Compile Include="Bugs\CanGetMetadataForTransient.cs" />
