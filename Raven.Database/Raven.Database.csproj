@@ -140,6 +140,9 @@
     <Compile Include="Indexing\SpatialIndex.cs" />
     <Compile Include="InMemroyRavenConfiguration.cs" />
     <Compile Include="Impl\IUuidGenerator.cs" />
+    <Compile Include="Plugins\AbstractAttachmentDeleteTrigger.cs" />
+    <Compile Include="Plugins\AbstractAttachmentPutTrigger.cs" />
+    <Compile Include="Plugins\AbstractAttachmentReadTrigger.cs" />
     <Compile Include="Plugins\IStartupTask.cs" />
     <Compile Include="Data\LinearQuery.cs" />
     <Compile Include="LinearQueries\IRemoteSingleQueryRunner.cs" />

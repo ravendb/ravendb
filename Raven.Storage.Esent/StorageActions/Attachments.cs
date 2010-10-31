@@ -15,7 +15,7 @@ namespace Raven.Storage.Esent.StorageActions
 {
 	public partial class DocumentStorageActions : IAttachmentsStorageActions
 	{
-		public void AddAttachment(string key, Guid? etag, byte[] data, JObject headers)
+		public Guid AddAttachment(string key, Guid? etag, byte[] data, JObject headers)
 		{
 			Api.JetSetCurrentIndex(session, Files, "by_name");
 			Api.MakeKey(session, Files, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -50,6 +50,8 @@ namespace Raven.Storage.Esent.StorageActions
 				update.Save();
 			}
 			logger.DebugFormat("Adding attachment {0}", key);
+
+		    return newETag;
 		}
 
 		public void DeleteAttachment(string key, Guid? etag)

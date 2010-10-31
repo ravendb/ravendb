@@ -179,6 +179,9 @@
     <Compile Include="Transactions\MuiltipleDocuments.cs" />
     <Compile Include="Transactions\Simple.cs" />
     <Compile Include="Transactions\WriteConflicts.cs" />
+    <Compile Include="Triggers\AttachmentDeleteTrigger.cs" />
+    <Compile Include="Triggers\AttachmentReadTrigger.cs" />
+    <Compile Include="Triggers\AttachmentPutTriggers.cs" />
     <Compile Include="Triggers\AuditPutTrigger.cs" />
     <Compile Include="Triggers\CascadeDeleteTrigger.cs" />
     <Compile Include="Triggers\DeleteTriggers.cs" />

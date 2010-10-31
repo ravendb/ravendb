@@ -87,11 +87,11 @@ namespace Raven.Database
 
             AnonymousUserAccessMode = GetAnonymousUserAccessMode();
 
-            StorageTypeName = Settings["Raven/StorageTypeName"] ??
-                "Raven.Storage.Esent.TransactionalStorage, Raven.Storage.Esent";
-
             //StorageTypeName = Settings["Raven/StorageTypeName"] ??
-            //    "Raven.Storage.Managed.TransactionalStorage, Raven.Storage.Managed";
+            //    "Raven.Storage.Esent.TransactionalStorage, Raven.Storage.Esent";
+
+            StorageTypeName = Settings["Raven/StorageTypeName"] ??
+                "Raven.Storage.Managed.TransactionalStorage, Raven.Storage.Managed";
         }
 
         public NameValueCollection Settings { get; set; }

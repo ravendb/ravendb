@@ -28,7 +28,7 @@ namespace Raven.Storage.Managed
             this.generator = generator;
         }
 
-        public void AddAttachment(string key, Guid? etag, byte[] data, JObject headers)
+        public Guid AddAttachment(string key, Guid? etag, byte[] data, JObject headers)
         {
             AssertValidEtag(key, etag, "PUT");
 
@@ -44,6 +44,7 @@ namespace Raven.Storage.Managed
            if (result == false)
                throw new ConcurrencyException("PUT attempted on attachment '" + key + "' while it was locked by another transaction");
             logger.DebugFormat("Adding attachment {0}", key);
+            return newEtag;
         }
 
         private void AssertValidEtag(string key, Guid? etag, string op)

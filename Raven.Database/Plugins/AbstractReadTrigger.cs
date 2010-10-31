@@ -7,7 +7,6 @@ namespace Raven.Database.Plugins
 {
     /// <summary>
     /// * Read triggers may be called on projections from indexes, not just documents
-    /// * Read triggers do NOT run while indexing documents.
     /// </summary>
     [InheritedExport]
     public abstract class AbstractReadTrigger : IRequiresDocumentDatabaseInitialization

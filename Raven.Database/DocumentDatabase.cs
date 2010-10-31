@@ -30,6 +30,16 @@ namespace Raven.Database
 {
     public class DocumentDatabase : IResourceStore, IUuidGenerator
     {
+
+        [ImportMany]
+        public IEnumerable<AbstractAttachmentPutTrigger> AttachmentPutTriggers { get; set; }
+
+        [ImportMany]
+        public IEnumerable<AbstractAttachmentDeleteTrigger> AttachmentDeleteTriggers { get; set; }
+
+        [ImportMany]
+        public IEnumerable<AbstractAttachmentReadTrigger> AttachmentReadTriggers { get; set; }
+
         [ImportMany]
         public IEnumerable<AbstractPutTrigger> PutTriggers { get; set; }
 
@@ -54,7 +64,7 @@ namespace Raven.Database
         private readonly WorkContext workContext;
         private readonly DynamicQueryRunner dynamicQueryRunner;
 
-        private System.Threading.Tasks.Task backgroundWorkerTask = null;
+        private System.Threading.Tasks.Task backgroundWorkerTask;
 
         private readonly ILog log = LogManager.GetLogger(typeof(DocumentDatabase));
 
@@ -341,6 +351,28 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
             }
         }
 
+        private void AssertAttachmentPutOperationNotVetoed(string key, JObject metadata, byte[] data)
+        {
+            var vetoResult = AttachmentPutTriggers
+                .Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowPut(key, data, metadata) })
+                .FirstOrDefault(x => x.VetoResult.IsAllowed == false);
+            if (vetoResult != null)
+            {
+                throw new OperationVetoedException("PUT vetoed by " + vetoResult.Trigger + " because: " + vetoResult.VetoResult.Reason);
+            }
+        }
+
+        private void AssertAttachmentDeleteOperationNotVetoed(string key)
+        {
+            var vetoResult = AttachmentDeleteTriggers
+                .Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowDelete(key) })
+                .FirstOrDefault(x => x.VetoResult.IsAllowed == false);
+            if (vetoResult != null)
+            {
+                throw new OperationVetoedException("DELETE vetoed by " + vetoResult.Trigger + " because: " + vetoResult.VetoResult.Reason);
+            }
+        }
+
         private void AssertDeleteOperationNotVetoed(string key, TransactionInformation transactionInformation)
         {
             var vetoResult = DeleteTriggers
@@ -587,18 +619,99 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
             TransactionalStorage.Batch(actions =>
             {
                 attachment = actions.Attachments.GetAttachment(name);
+
+                attachment = ProcessAttachmentReadVetoes(name, attachment);
+
+                ExecuteAttachmentReadTriggers(name, attachment);
             });
             return attachment;
         }
 
+        private Attachment ProcessAttachmentReadVetoes(string name, Attachment attachment)
+        {
+            if (attachment == null)
+                return attachment;
+
+            var foundResult = false;
+            foreach (var attachmentReadTrigger in AttachmentReadTriggers)
+            {
+                if (foundResult)
+                    break;
+                var readVetoResult = attachmentReadTrigger.AllowRead(name, attachment.Data, attachment.Metadata,
+                                                                     ReadOperation.Load);
+                switch (readVetoResult.Veto)
+                {
+                    case ReadVetoResult.ReadAllow.Allow:
+                        break;
+                    case ReadVetoResult.ReadAllow.Deny:
+                        attachment.Data = new byte[0];
+                        attachment.Metadata = new JObject(
+                            new JProperty("Raven-Read-Veto",
+                                          new JObject(new JProperty("Reason", readVetoResult.Reason),
+                                                      new JProperty("Trigger", attachmentReadTrigger.ToString())
+                                              )));
+
+                        foundResult = true;
+                        break;
+                    case ReadVetoResult.ReadAllow.Ignore:
+                        attachment = null;
+                        foundResult = true;
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException(readVetoResult.Veto.ToString());
+                }
+            }
+            return attachment;
+        }
+
+        private void ExecuteAttachmentReadTriggers(string name, Attachment attachment)
+        {
+            if(attachment == null)
+                return;
+
+            foreach (var attachmentReadTrigger in AttachmentReadTriggers)
+            {
+                attachment.Data = attachmentReadTrigger.OnRead(name, attachment.Data,attachment.Metadata, ReadOperation.Load);
+            }
+        }
+
         public void PutStatic(string name, Guid? etag, byte[] data, JObject metadata)
         {
-            TransactionalStorage.Batch(actions => actions.Attachments.AddAttachment(name, etag, data, metadata));
+            Guid newEtag = Guid.Empty;
+            TransactionalStorage.Batch(actions =>
+            {
+                AssertAttachmentPutOperationNotVetoed(name, metadata, data);
+
+                AttachmentPutTriggers.Apply(trigger => trigger.OnPut(name, data, metadata));
+
+                newEtag = actions.Attachments.AddAttachment(name, etag, data, metadata);
+
+                AttachmentPutTriggers.Apply(trigger => trigger.AfterPut(name, data, metadata, newEtag));
+            });
+
+            TransactionalStorage
+                .ExecuteImmediatelyOrRegisterForSyncronization(() => AttachmentPutTriggers.Apply(trigger => trigger.AfterCommit(name, data, metadata, newEtag)));
+
         }
 
         public void DeleteStatic(string name, Guid? etag)
         {
-            TransactionalStorage.Batch(actions => actions.Attachments.DeleteAttachment(name, etag));
+            TransactionalStorage.Batch(actions =>
+            {
+                AssertAttachmentDeleteOperationNotVetoed(name);
+
+                AttachmentDeleteTriggers.Apply(x => x.OnDelete(name));
+
+                actions.Attachments.DeleteAttachment(name, etag);
+
+                AttachmentDeleteTriggers.Apply(x => x.AfterDelete(name));
+
+            });
+
+            TransactionalStorage
+                .ExecuteImmediatelyOrRegisterForSyncronization(
+                    () => AttachmentDeleteTriggers.Apply(trigger => trigger.AfterCommit(name)));
+
         }
 
         public JArray GetDocuments(int start, int pageSize, Guid? etag)
