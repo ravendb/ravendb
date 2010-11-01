@@ -1,0 +1,13 @@
+﻿<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <SolidColorBrush x:Key="ToolbarBackgroundBrush"
+			Color="#FF123C65" />
+
+    <SolidColorBrush x:Key="ButtonForegroundBrush"
+			Color="White" />
+
+    <SolidColorBrush x:Key="DarkGradient"
+			Color="#FF123C65" />
+</ResourceDictionary>

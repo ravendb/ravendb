@@ -1,4 +1,4 @@
-<mockup version="1.0" skin="sketch" measuredW="1228" measuredH="676" mockupW="855" mockupH="635">
+<mockup version="1.0" skin="sketch" measuredW="1270" measuredH="676" mockupW="897" mockupH="635">
   <controls>
     <control controlID="0" controlTypeID="com.balsamiq.mockups::TitleWindow" x="363" y="31" w="855" h="635" measuredW="450" measuredH="400" zOrder="0" locked="false" isInGroup="-1">
       <controlProperties>
@@ -117,6 +117,12 @@
       <controlProperties>
         <leftArrow>false</leftArrow>
         <text/>
+      </controlProperties>
+    </control>
+    <control controlID="29" controlTypeID="com.balsamiq.mockups::StickyNote" x="1151" y="39" w="109" h="65" measuredW="109" measuredH="123" zOrder="22" locked="false" isInGroup="-1">
+      <controlProperties>
+        <color>2848996</color>
+        <text>Deprecated</text>
       </controlProperties>
     </control>
   </controls>
