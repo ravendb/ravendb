@@ -43,6 +43,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CascadeDeleteContext.cs" />
     <Compile Include="CascadeDeleteTrigger.cs" />
     <Compile Include="MetadataKeys.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

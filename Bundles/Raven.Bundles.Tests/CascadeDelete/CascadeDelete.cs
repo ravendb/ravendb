@@ -338,7 +338,7 @@ namespace Raven.Bundles.Tests.CascadeDelete
 
         }
 
-       [Fact(Skip="Need to determine how this should be handled")]
+       [Fact]
        public void Can_cascade_delete_documents_that_specify_each_other_as_cascade_deletes()
        {
            var master1 = new CascadeTester { Name = "Master 1" };

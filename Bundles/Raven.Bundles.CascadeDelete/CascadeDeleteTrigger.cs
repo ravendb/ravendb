@@ -14,29 +14,38 @@ namespace Raven.Bundles.CascadeDelete
 
         public override void OnDelete(string key, TransactionInformation transactionInformation)
         {
+
+            if (CascadeDeleteContext.IsInCascadeDeleteContext)
+                return;
+
             var document = Database.Get(key, null);
             if (document == null)
                 return;
 
-            var documentsToDelete = document.Metadata.Value<JArray>(MetadataKeys.DocumentsToCascadeDelete);
-
-            if (documentsToDelete != null)
+            using (CascadeDeleteContext.Enter())
             {
-                foreach (var documentToDelete in documentsToDelete)
+                var documentsToDelete = document.Metadata.Value<JArray>(MetadataKeys.DocumentsToCascadeDelete);
+
+                if (documentsToDelete != null)
                 {
-                    Database.Delete(documentToDelete.Value<string>(), null, null);
+                    foreach (var documentToDelete in documentsToDelete)
+                    {
+                        var documentId = documentToDelete.Value<string>();
+                        if (!CascadeDeleteContext.HasAlreadyDeletedDocument(documentId))
+                        {
+                            CascadeDeleteContext.AddDeletedDocument(documentId);
+                            Database.Delete(documentId, null, null);
+                        }
+                    }
                 }
+
+                var attachmentsToDelete = document.Metadata.Value<JArray>(MetadataKeys.AttachmentsToCascadeDelete);
+
+                if (attachmentsToDelete != null)
+                    foreach (var attachmentToDelete in attachmentsToDelete)
+                        Database.DeleteStatic(attachmentToDelete.Value<string>(), null);
             }
 
-            var attachmentsToDelete = document.Metadata.Value<JArray>(MetadataKeys.AttachmentsToCascadeDelete);
-
-            if (attachmentsToDelete != null)
-            {
-                foreach (var attachmentToDelete in attachmentsToDelete)
-                {
-                    Database.DeleteStatic(attachmentToDelete.Value<string>(), null);
-                }
-            }
         }
 
         public override void AfterCommit(string key)
