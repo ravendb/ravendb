@@ -35,7 +35,7 @@ namespace Raven.Client.Tests.Document
             employee.Phones.Office = "0772 321123";
             employee.Prices = new List<decimal>() { 123.4M, 123432.54M };
 
-            using (var db = new EmbeddablDocumentStore() { DataDirectory = directoryName })
+            using (var db = new EmbeddableDocumentStore() { DataDirectory = directoryName })
             {
                 db.Initialize();
                 

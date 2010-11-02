@@ -33,11 +33,11 @@ namespace Raven.Client.Tests.Document
 
 		#endregion
 
-        private EmbeddablDocumentStore NewDocumentStore()
+        private EmbeddableDocumentStore NewDocumentStore()
 		{
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof (DocumentStoreServerTests)).CodeBase);
 			path = Path.Combine(path, "TestDb").Substring(6);
-            var documentStore = new EmbeddablDocumentStore
+            var documentStore = new EmbeddableDocumentStore
 			{
 				Configuration =
 					{
@@ -682,7 +682,7 @@ namespace Raven.Client.Tests.Document
 		[Fact]
 		public void Should_retrieve_all_entities_using_connection_string()
 		{
-            using (var documentStore = new EmbeddablDocumentStore
+            using (var documentStore = new EmbeddableDocumentStore
 			{
 				ConnectionStringName = "Local",
 				Configuration =

@@ -52,7 +52,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="EmbeddablDocumentStore.cs" />
+    <Compile Include="EmbeddableDocumentStore.cs" />
     <Compile Include="EmbededDatabaseCommands.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

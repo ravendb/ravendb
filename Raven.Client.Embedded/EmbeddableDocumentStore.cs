@@ -9,7 +9,7 @@ namespace Raven.Client.Client
     /// Manages access to RavenDB and open sessions to work with RavenDB.
     /// Also supports hosting RavenDB in an embedded mode
     /// </summary>
-    public class EmbeddablDocumentStore : DocumentStore
+    public class EmbeddableDocumentStore : DocumentStore
     {
         private RavenConfiguration configuration;
 

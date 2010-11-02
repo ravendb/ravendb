@@ -30,7 +30,7 @@ namespace Raven.Tests.Linq
             string directoryName =  Path.Combine(Path.GetTempPath(), "ravendb.RavenWhereTests");
             IOExtensions.DeleteDirectory(directoryName);
 
-            using (var db = new EmbeddablDocumentStore() { DataDirectory = directoryName })
+            using (var db = new EmbeddableDocumentStore() { DataDirectory = directoryName })
             {
                 db.Initialize();
 
