@@ -171,6 +171,7 @@
     <Compile Include="Bugs\SortingOnLong.cs" />
     <Compile Include="Bugs\SortingWithWildcardQuery.cs" />
     <Compile Include="Bugs\StalenessWontAffectUnrelatedIndexes.cs" />
+    <Compile Include="Bugs\TranslatingLinqQueryUsingNestedId.cs" />
     <Compile Include="Bugs\Translators.cs" />
     <Compile Include="Bugs\User.cs" />
     <Compile Include="Bugs\UsingEnumInLinq.cs" />
