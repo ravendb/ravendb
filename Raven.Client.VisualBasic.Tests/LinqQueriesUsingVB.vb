@@ -8,6 +8,15 @@ Public Class LinqQueriesUsingVB
     Inherits LocalClientTest
 
     <Fact()> _
+    Public Sub CanUseWhereEntityIs()
+        Using store As EmbeddableDocumentStore = NewDocumentStore()
+            Dim x = New Data_NewIndex()
+            x.Execute(store)
+        End Using
+    End Sub
+
+
+    <Fact()> _
     Public Sub CanUseSelectMany_WithFixedParameter()
 
         Using store As EmbeddableDocumentStore = NewDocumentStore()

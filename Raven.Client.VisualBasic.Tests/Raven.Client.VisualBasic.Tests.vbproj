@@ -67,6 +67,7 @@
     <Import Include="System.Xml.Linq" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Data_NewIndex.vb" />
     <Compile Include="PortalModule.vb" />
     <Compile Include="LinqQueriesUsingVB.vb" />
     <Compile Include="My Project\AssemblyInfo.vb" />
@@ -86,6 +87,7 @@
     </Compile>
     <Compile Include="PortalPageSettings.vb" />
     <Compile Include="PortalZone.vb" />
+    <Compile Include="TestClass.vb" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="My Project\Resources.resx">
