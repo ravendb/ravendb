@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using Raven.Database.Data;
 
 
@@ -8,40 +9,39 @@ namespace Raven.Bundles.CascadeDelete
 
     public static class CascadeDeleteContext
     {
-        [ThreadStatic]
-        private static bool _currentlyInContext;
+        private static ThreadLocal<bool> _currentlyInContext;
 
-        [ThreadStatic]
-        private static HashSet<string> _deletedDocuments = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
+        private static readonly ThreadLocal<HashSet<string>> _deletedDocuments =
+            new ThreadLocal<HashSet<string>>(() => new HashSet<string>(StringComparer.InvariantCultureIgnoreCase));
 
         public static bool IsInCascadeDeleteContext
         {
             get
             {
-                return _currentlyInContext;
+                return _currentlyInContext.Value;
             }
         }
 
         public static bool HasAlreadyDeletedDocument(string key)
         {
-            return _deletedDocuments.Contains(key);
+            return _deletedDocuments.Value.Contains(key);
         }
 
         public static void AddDeletedDocument(string key)
         {
-            _deletedDocuments.Add(key);
+            _deletedDocuments.Value.Add(key);
         }
 
         public static IDisposable Enter()
         {
-            var oldCurrentlyInContext = _currentlyInContext;
-            var oldDeletedDocuments = _deletedDocuments;
-            _currentlyInContext = true;
-            _deletedDocuments = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
+            var oldCurrentlyInContext = _currentlyInContext.Value;
+            var oldDeletedDocuments = _deletedDocuments.Value;
+            _currentlyInContext.Value = true;
+            _deletedDocuments.Value = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
             return new DisposableAction(delegate
             {
-                _currentlyInContext = oldCurrentlyInContext;
-                _deletedDocuments = oldDeletedDocuments;
+                _currentlyInContext.Value = oldCurrentlyInContext;
+                _deletedDocuments.Value = oldDeletedDocuments;
             });
         }
     }
