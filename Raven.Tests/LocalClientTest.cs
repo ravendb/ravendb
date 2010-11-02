@@ -14,7 +14,7 @@ namespace Raven.Client.Tests
 	{
 		private string path;
 
-        protected EmbeddableDocumentStore NewDocumentStore()
+        public EmbeddableDocumentStore NewDocumentStore()
 		{
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
 			path = Path.Combine(path, "TestDb").Substring(6);

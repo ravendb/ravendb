@@ -91,10 +91,6 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Raven.Client.Tests\Raven.Client.Tests.csproj">
-      <Project>{36B31D69-508B-4594-8F8E-85774BAA7D3F}</Project>
-      <Name>Raven.Client.Tests</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Raven.Database\Raven.Database.csproj">
       <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
       <Name>Raven.Database</Name>

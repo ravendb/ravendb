@@ -119,10 +119,6 @@
       <Project>{4E087ECB-E7CA-4891-AC3C-3C76702715B6}</Project>
       <Name>Raven.Client.Lightweight</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Raven.Client.Tests\Raven.Client.Tests.csproj">
-      <Project>{36B31D69-508B-4594-8F8E-85774BAA7D3F}</Project>
-      <Name>Raven.Client.Tests</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Raven.Database\Raven.Database.csproj">
       <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
       <Name>Raven.Database</Name>
@@ -134,6 +130,10 @@
     <ProjectReference Include="..\Raven.Storage.Managed\Raven.Storage.Managed.csproj">
       <Project>{DA99A419-E137-40DB-9495-0C363B479D4B}</Project>
       <Name>Raven.Storage.Managed</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Tests\Raven.Tests.csproj">
+      <Project>{267AC60C-751E-42E9-AA18-66035DEFF63A}</Project>
+      <Name>Raven.Tests</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />
