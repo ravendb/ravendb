@@ -9,7 +9,7 @@ namespace Raven.Bundles.CascadeDelete
 
     public static class CascadeDeleteContext
     {
-        private static ThreadLocal<bool> _currentlyInContext;
+        private static ThreadLocal<bool> _currentlyInContext = new ThreadLocal<bool>();
 
         private static readonly ThreadLocal<HashSet<string>> _deletedDocuments =
             new ThreadLocal<HashSet<string>>(() => new HashSet<string>(StringComparer.InvariantCultureIgnoreCase));
