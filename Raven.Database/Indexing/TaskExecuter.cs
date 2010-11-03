@@ -111,7 +111,6 @@ namespace Raven.Database.Indexing
 					log.WarnFormat(e, "Task {0} has failed and was deleted without completing any work", task);
 				}
 			});
-			context.PerformanceCounters.IncrementProcessedTask(tasks);
 			return foundWork;
 		}
 
