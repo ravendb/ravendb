@@ -101,6 +101,8 @@ namespace Raven.Client.Client
             base.Dispose();
             if (DocumentDatabase != null)
                 DocumentDatabase.Dispose();
+            if(HttpServer != null)
+                HttpServer.Dispose();
         }
 
         /// <summary>
