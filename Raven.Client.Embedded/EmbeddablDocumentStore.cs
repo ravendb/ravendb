@@ -2,6 +2,7 @@ using System.Configuration;
 using System.Net;
 using Raven.Client.Document;
 using Raven.Database;
+using Raven.Database.Server;
 
 namespace Raven.Client.Client
 {
@@ -12,6 +13,7 @@ namespace Raven.Client.Client
     public class EmbeddablDocumentStore : DocumentStore
     {
         private RavenConfiguration configuration;
+        private RavenDbHttpServer HttpServer;
 
         /// <summary>
         /// Gets or sets the identifier for this store.
@@ -110,6 +112,8 @@ namespace Raven.Client.Client
             {
                 DocumentDatabase = new DocumentDatabase(configuration);
                 DocumentDatabase.SpinBackgroundWorkers();
+                if (configuration.Port != 0)
+                    HttpServer = new RavenDbHttpServer(configuration, DocumentDatabase);
                 databaseCommandsGenerator = () => new EmbededDatabaseCommands(DocumentDatabase, Conventions);
             }
             else
