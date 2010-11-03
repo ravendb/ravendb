@@ -81,7 +81,7 @@ namespace Raven.Database.Indexing
 		{
 			if (ReferenceEquals(null, other)) return false;
 			if (ReferenceEquals(this, other)) return true;
-			return Equals(other.Map, Map) && Equals(other.Reduce, Reduce) && DictionaryEquals(other.Stores, Stores) &&
+			return Equals(other.Map, Map) && Equals(other.Reduce, Reduce) && Equals(other.TransformResults, TransformResults) && DictionaryEquals(other.Stores, Stores) &&
 				DictionaryEquals(other.Indexes, Indexes);
 		}
 

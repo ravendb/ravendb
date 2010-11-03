@@ -101,6 +101,7 @@
   <ItemGroup>
     <Compile Include="Bugs\HierarchicalData.cs" />
     <Compile Include="Bugs\HiLoServerKeysNotExported.cs" />
+    <Compile Include="Bugs\IndexDefinitionEquality.cs" />
     <Compile Include="Bugs\IndexingBehavior.cs" />
     <Compile Include="Bugs\OverwriteDocuments.cs" />
     <Compile Include="Bugs\ReadDataFromServer.cs" />
