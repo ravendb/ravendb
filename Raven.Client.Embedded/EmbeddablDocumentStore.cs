@@ -116,6 +116,7 @@ namespace Raven.Client.Client
                 DocumentDatabase.SpinBackgroundWorkers();
                 if (configuration.Port != 0)
                     HttpServer = new RavenDbHttpServer(configuration, DocumentDatabase);
+                HttpServer.Start();
                 databaseCommandsGenerator = () => new EmbededDatabaseCommands(DocumentDatabase, Conventions);
             }
             else
