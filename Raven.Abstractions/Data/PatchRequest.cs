@@ -15,11 +15,11 @@ namespace Raven.Database.Json
 		/// <value>The type.</value>
 		public PatchCommandType Type { get; set; }
 		/// <summary>
-		/// Gets or sets the prev val, which is compared against the current value to verify a
+		/// Gets or sets the previous val, which is compared against the current value to verify a
 		/// change isn't overwriting new values.
 		/// If the value is null, the operation is always successful
 		/// </summary>
-		/// <value>The prev val.</value>
+		/// <value>The previous val.</value>
 		public JToken PrevVal { get; set; }
 		/// <summary>
 		/// Gets or sets the value.

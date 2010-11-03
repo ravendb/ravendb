@@ -4,7 +4,7 @@ using System.Threading;
 namespace Raven.Client.Document.Async
 {
 	/// <summary>
-	/// An <see cref="IAsyncResult"/> for a syncronous load
+	/// An <see cref="IAsyncResult"/> for a synchronous load
 	/// </summary>
 	public class SyncronousLoadResult : IAsyncResult
 	{

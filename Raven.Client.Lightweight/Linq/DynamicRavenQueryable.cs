@@ -7,7 +7,7 @@ using System.Linq.Expressions;
 namespace Raven.Client.Linq
 {
     /// <summary>
-    /// A specialised queryable object for querying dynamic indexes
+    /// A specialized queryable object for querying dynamic indexes
     /// </summary>
     /// <typeparam name="T"></typeparam>
     public class DynamicRavenQueryable<T> : RavenQueryable<T>    

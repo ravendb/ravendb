@@ -9,7 +9,7 @@ namespace Raven.Client
 	public interface ITransactionalDocumentSession
 	{
         /// <summary>
-        /// The transaction resource manager identifer
+        /// The transaction resource manager identifier
         /// </summary>
         Guid ResourceManagerId { get; }
 

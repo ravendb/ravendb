@@ -22,7 +22,7 @@ namespace Raven.Client.Client
 		NameValueCollection OperationsHeaders { get; set; }
 
 		/// <summary>
-		/// Gets the docuent for the specified key.
+		/// Gets the document for the specified key.
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <returns></returns>
@@ -139,7 +139,7 @@ namespace Raven.Client.Client
 		/// <summary>
 		/// Executed the specified commands as a single batch
 		/// </summary>
-		/// <param name="commandDatas">The command datas.</param>
+		/// <param name="commandDatas">The command data.</param>
 		BatchResult[] Batch(ICommandData[] commandDatas);
 
 		/// <summary>

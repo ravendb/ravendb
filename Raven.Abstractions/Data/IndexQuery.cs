@@ -8,7 +8,7 @@ using Raven.Database.Indexing;
 namespace Raven.Database.Data
 {
 	/// <summary>
-	/// All the infomration required to query a Raven index
+	/// All the information required to query a Raven index
 	/// </summary>
     public class IndexQuery
     {

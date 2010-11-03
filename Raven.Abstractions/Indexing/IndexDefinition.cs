@@ -73,7 +73,7 @@ namespace Raven.Database.Indexing
 		}
 
 		/// <summary>
-		/// Equalses the specified other.
+		/// Equals the specified other.
 		/// </summary>
 		/// <param name="other">The other.</param>
 		/// <returns></returns>

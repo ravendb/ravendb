@@ -8,7 +8,7 @@ using Newtonsoft.Json.Linq;
 namespace Raven.Client.Client
 {
 	/// <summary>
-	/// A representation of an http json request to the RavenDB server
+	/// A representation of an HTTP json request to the RavenDB server
 	/// </summary>
     public class HttpJsonRequest
     {
@@ -73,7 +73,7 @@ namespace Raven.Client.Client
         }
 
 		/// <summary>
-		/// Begins tp read response string.
+		/// Begins the read response string.
 		/// </summary>
 		/// <param name="callback">The callback.</param>
 		/// <param name="state">The state.</param>

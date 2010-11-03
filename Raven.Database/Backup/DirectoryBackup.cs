@@ -42,7 +42,7 @@ namespace Raven.Database.Backup
         /// <summary>
         /// The process for backing up a directory index is simple:
         /// a) create hard links to all the files in the lucene directory in a temp director
-        ///	   that gives us the current snapshop, and protect us from lucene's
+        ///	   that gives us the current snapshot, and protect us from lucene's
         ///    deleting files.
         /// b) copy the hard links to the destination directory
         /// c) delete the temp directory

@@ -66,7 +66,7 @@ namespace Raven.Client.Client
 		}
 
 		/// <summary>
-		/// Gets the docuent for the specified key.
+		/// Gets the document for the specified key.
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <returns></returns>
@@ -135,7 +135,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		}
 
 		/// <summary>
-		/// Perform a direct get for a document with the specified key on the sepcified server URL.
+		/// Perform a direct get for a document with the specified key on the specified server URL.
 		/// </summary>
 		/// <param name="serverUrl">The server URL.</param>
 		/// <param name="key">The key.</param>
@@ -688,7 +688,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		/// <summary>
 		/// Executed the specified commands as a single batch
 		/// </summary>
-		/// <param name="commandDatas">The command datas.</param>
+		/// <param name="commandDatas">The command data.</param>
 		/// <returns></returns>
 		public BatchResult[] Batch(ICommandData[] commandDatas)
 		{

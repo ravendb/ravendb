@@ -4,7 +4,7 @@ using Raven.Client.Document;
 namespace Raven.Client.Shard
 {
 	/// <summary>
-	/// Referest a list of shards
+	/// Holds a list of shards
 	/// </summary>
     public class Shards : List<IDocumentStore>
     {

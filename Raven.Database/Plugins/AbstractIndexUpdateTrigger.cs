@@ -13,7 +13,7 @@ namespace Raven.Database.Plugins
     /// <remarks>
     /// * All operations are delete/create operations, whatever the value
     ///   previously existed or not.
-    /// * It is possible for OnIndexEntryDeleted to be called for non existant
+    /// * It is possible for OnIndexEntryDeleted to be called for non existent
     ///   values.
     /// * It is possible for a single entry key to be called inserted several times
     ///   entry keys are NOT unique.

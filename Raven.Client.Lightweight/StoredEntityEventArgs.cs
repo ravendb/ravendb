@@ -3,7 +3,7 @@
 namespace Raven.Client
 {
     /// <summary>
-    /// The event args raised when an entity is stored
+    /// The event arguments raised when an entity is stored
     /// </summary>
     public class StoredEntityEventArgs : EventArgs
     {

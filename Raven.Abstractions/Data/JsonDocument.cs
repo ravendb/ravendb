@@ -30,7 +30,7 @@ namespace Raven.Database
 		public string Key { get; set; }
 
 		/// <summary>
-		/// 	Gets or sets a value indicating whether this document is non authoritive (modified by uncommited transaction).
+		/// 	Gets or sets a value indicating whether this document is non authoritive (modified by uncommitted transaction).
 		/// </summary>
 		public bool NonAuthoritiveInformation { get; set; }
 

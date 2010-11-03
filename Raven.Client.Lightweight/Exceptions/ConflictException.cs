@@ -5,7 +5,7 @@ namespace Raven.Client.Exceptions
 {
 	/// <summary>
 	/// This exception occurs when a (replication) conflict is encountered.
-	/// Usually this required a user to manually resolve the conlict.
+	/// Usually this required a user to manually resolve the conflict.
 	/// </summary>
     [Serializable]
     public class ConflictException : Exception

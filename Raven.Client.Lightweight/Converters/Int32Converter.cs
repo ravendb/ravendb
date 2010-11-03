@@ -3,7 +3,7 @@
 namespace Raven.Client.Converters
 {
     /// <summary>
-    /// Covnert strings from / to int32
+    /// Convert strings from / to int32
     /// </summary>
     public class Int32Converter : ITypeConverter
     {

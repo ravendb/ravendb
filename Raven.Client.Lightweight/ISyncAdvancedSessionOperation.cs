@@ -4,7 +4,7 @@ using Raven.Client.Indexes;
 namespace Raven.Client
 {
     /// <summary>
-    /// Advanced syncronous session operations
+    /// Advanced synchronous session operations
     /// </summary>
     public interface ISyncAdvancedSessionOperation : IAdvancedDocumentSessionOperations
     {

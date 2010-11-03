@@ -97,13 +97,13 @@ namespace Raven.Client.Indexes
         protected Expression<Func<IClientSideDatabase, IEnumerable<TReduceResult>, IEnumerable>> TransformResults { get; set; }
 
         /// <summary>
-        /// The reduce defintion
+        /// The reduce definition
         /// </summary>
         protected Expression<Func<IEnumerable<TReduceResult>, IEnumerable>> Reduce { get; set; }
 
 
         /// <summary>
-        /// The map defintion
+        /// The map definition
         /// </summary>
         protected Expression<Func<IEnumerable<TDocument>, IEnumerable>> Map { get; set; }
 
@@ -149,7 +149,7 @@ namespace Raven.Client.Indexes
 
 
         /// <summary>
-        /// Register a field to be indexeed
+        /// Register a field to be indexed
         /// </summary>
         protected void Index(Expression<Func<TReduceResult, object>> field, FieldIndexing indexing)
         {

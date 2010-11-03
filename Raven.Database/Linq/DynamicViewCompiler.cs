@@ -14,8 +14,8 @@ namespace Raven.Database.Linq
 {
 	/// <summary>
 	/// 	Takes two query expressions as strings, and compile them.
-	/// 	Along the way we apply some minimal transofrmations, the end result is an instance
-	/// 	of AbstractViewGenerator, representing the map/reduce fucntions
+	/// 	Along the way we apply some minimal transformations, the end result is an instance
+	/// 	of AbstractViewGenerator, representing the map/reduce functions
 	/// </summary>
 	public class DynamicViewCompiler
 	{

@@ -6,7 +6,7 @@ using System.Linq;
 namespace Raven.Http.Extensions
 {
 	/// <summary>
-	/// Extentions for working with streams
+	/// Extensions for working with streams
 	/// </summary>
 	public static class StreamExtension
 	{

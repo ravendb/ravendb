@@ -4,13 +4,13 @@ using Raven.Database.Data;
 namespace Raven.Client.Linq
 {
     /// <summary>
-    /// A specialised query provider processor for querying dynamic types
+    /// A specialized query provider processor for querying dynamic types
     /// </summary>
     /// <typeparam name="T"></typeparam>
     public class DynamicQueryProviderProcessor<T> : RavenQueryProviderProcessor<T>
     {
         /// <summary>
-        /// Creates a dynamic query proivder around the provided session
+        /// Creates a dynamic query provider around the provided session
         /// </summary>
        public DynamicQueryProviderProcessor(IDocumentSession session,
             Action<IDocumentQueryCustomization> customizeQuery, Action<QueryResult> afterQueryExecuted, string indexName) 

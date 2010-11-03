@@ -3,7 +3,7 @@ using System;
 namespace Raven.Client.Converters
 {
     /// <summary>
-    /// Covnert strings from / to guids
+    /// Convert strings from / to guids
     /// </summary>
     public class GuidConverter : ITypeConverter
     {
