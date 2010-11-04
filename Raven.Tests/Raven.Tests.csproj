@@ -176,6 +176,7 @@
     <Compile Include="Bugs\User.cs" />
     <Compile Include="Bugs\UsingEnumInLinq.cs" />
     <Compile Include="Bugs\UsingStartsWith.cs" />
+    <Compile Include="Bugs\UsingSwedishCollation.cs" />
     <Compile Include="Bugs\WithPrivateProtectedSetter.cs" />
     <Compile Include="Document\AsyncDocumentStoreServerTests.cs" />
     <Compile Include="Document\CasingIssue.cs" />
