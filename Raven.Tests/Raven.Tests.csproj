@@ -130,6 +130,7 @@
     <Compile Include="Bugs\FailStore.cs" />
     <Compile Include="Bugs\HierarchicalData.cs" />
     <Compile Include="Bugs\HiLoServerKeysNotExported.cs" />
+    <Compile Include="Bugs\IndexDefinitionEquality.cs" />
     <Compile Include="Bugs\Image.cs" />
     <Compile Include="Bugs\ImageByTagSearchModel.cs" />
     <Compile Include="Bugs\Includes.cs" />
@@ -149,6 +150,7 @@
     <Compile Include="Bugs\NameAndId.cs" />
     <Compile Include="Bugs\OperationHeaders.cs" />
     <Compile Include="Bugs\OverwriteDocuments.cs" />
+    <Compile Include="Bugs\QueryResultCountsWithProjections.cs" />
     <Compile Include="Bugs\OverwriteIndexLocally.cs" />
     <Compile Include="Bugs\OverwriteIndexRemotely.cs" />
     <Compile Include="Bugs\Patching.cs" />
