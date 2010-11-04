@@ -2,6 +2,8 @@ using System.Configuration;
 using System.Net;
 using Raven.Client.Document;
 using Raven.Database;
+using Raven.Database.Server;
+using Raven.Http;
 
 namespace Raven.Client.Client
 {
@@ -9,9 +11,10 @@ namespace Raven.Client.Client
     /// Manages access to RavenDB and open sessions to work with RavenDB.
     /// Also supports hosting RavenDB in an embedded mode
     /// </summary>
-    public class EmbeddablDocumentStore : DocumentStore
+    public class EmbeddableDocumentStore : DocumentStore
     {
         private RavenConfiguration configuration;
+        private RavenDbHttpServer HttpServer;
 
         /// <summary>
         /// Gets or sets the identifier for this store.
@@ -99,6 +102,8 @@ namespace Raven.Client.Client
             base.Dispose();
             if (DocumentDatabase != null)
                 DocumentDatabase.Dispose();
+            if (HttpServer != null)
+                HttpServer.Dispose();
         }
 
         /// <summary>
@@ -110,6 +115,11 @@ namespace Raven.Client.Client
             {
                 DocumentDatabase = new DocumentDatabase(configuration);
                 DocumentDatabase.SpinBackgroundWorkers();
+                if (configuration.Port != 0)
+                {
+                    HttpServer = new RavenDbHttpServer(configuration, DocumentDatabase);
+                    HttpServer.Start();
+                }
                 databaseCommandsGenerator = () => new EmbededDatabaseCommands(DocumentDatabase, Conventions);
             }
             else
