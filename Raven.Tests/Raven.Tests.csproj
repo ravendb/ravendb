@@ -104,6 +104,7 @@
     <Compile Include="Bugs\IndexDefinitionEquality.cs" />
     <Compile Include="Bugs\IndexingBehavior.cs" />
     <Compile Include="Bugs\OverwriteDocuments.cs" />
+    <Compile Include="Bugs\QueryResultCountsWithProjections.cs" />
     <Compile Include="Bugs\ReadDataFromServer.cs" />
     <Compile Include="Indexes\CompiledIndex.cs" />
     <Compile Include="Indexes\ComplexIndexOnNotAnalyzedField.cs" />
