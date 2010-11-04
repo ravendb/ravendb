@@ -9,7 +9,7 @@ namespace Raven.Client
 	public static class RavenExtensions
 	{
 		/// <summary>
-		/// Constant for the builtin index 
+		/// Constant for the built-in index 
 		/// </summary>
 		public const string RavenDocumentByEntityName = "Raven/DocumentsByEntityName";
 

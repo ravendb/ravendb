@@ -10,8 +10,8 @@ using System.Linq;
 namespace Raven.Client.Indexes
 {
 	/// <summary>
-	/// This class attempts to provide a strongly typed index defintion on the client.
-	/// It is here solely as a convienance, and it is _expected_ to fail in some scenarios.
+	/// This class attempts to provide a strongly typed index definition on the client.
+	/// It is here solely as a convenience, and it is _expected_ to fail in some scenarios.
 	/// The recommended way is to define indexes outside your code, using the Web UI.
 	/// </summary>
 	public class IndexDefinition<TDocument, TReduceResult> 
@@ -182,8 +182,8 @@ namespace Raven.Client.Indexes
 	}
 
     /// <summary>
-	/// This class attempts to provide a strongly typed index defintion on the client.
-	/// It is here solely as a convienance, and it is _expected_ to fail in some scenarios.
+	/// This class attempts to provide a strongly typed index definition on the client.
+	/// It is here solely as a convenience, and it is _expected_ to fail in some scenarios.
 	/// The recommended way is to define indexes outside your code, using the Web UI.
 	/// </summary>
 	public class IndexDefinition<TDocument> : IndexDefinition<TDocument, object> { }

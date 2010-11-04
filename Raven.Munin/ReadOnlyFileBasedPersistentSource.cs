@@ -5,8 +5,8 @@ using System.IO;
 namespace Raven.Munin
 {
     /// <summary>
-    /// Simple read only version of te file based data.
-    /// It is mostly meant for read only access from remote app domain.
+    /// Simple read only version of the file based data.
+    /// It is mostly meant for read only access from remote application domain.
     /// </summary>
     public class ReadOnlyFileBasedPersistentSource : AbstractPersistentSource
     {

@@ -27,7 +27,7 @@ namespace Raven.Database.Data
 
         /// <summary>
         /// The last time the index was updated.
-        /// This can be used to determaine the freshness of the data.
+        /// This can be used to determine the freshness of the data.
         /// </summary>
         public DateTime IndexTimestamp { get; set; }
 

@@ -43,7 +43,7 @@ namespace Raven.Client.Document.Async
 	    }
 
 	    /// <summary>
-		/// Begins the aysnc load operation
+		/// Begins the async load operation
 		/// </summary>
 		/// <param name="id">The id.</param>
 		/// <param name="asyncCallback">The async callback.</param>

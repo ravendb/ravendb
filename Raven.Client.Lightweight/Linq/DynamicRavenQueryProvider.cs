@@ -9,7 +9,7 @@ using Raven.Database.Data;
 namespace Raven.Client.Linq
 {
     /// <summary>
-    /// This is a specialised query provider for querying dynamic indexes
+    /// This is a specialized query provider for querying dynamic indexes
     /// </summary>
     /// <typeparam name="T"></typeparam>
     public class DynamicRavenQueryProvider<T> : IRavenQueryProvider
@@ -42,7 +42,7 @@ namespace Raven.Client.Linq
         }
 
         /// <summary>
-        /// Gets the actions for customising the generated lucene query
+        /// Gets the actions for customizing the generated lucene query
         /// </summary>
         public Action<IDocumentQueryCustomization> CustomizedQuery
         {

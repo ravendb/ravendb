@@ -4,7 +4,7 @@ using System.Net;
 namespace Raven.Client.Client
 {
 	/// <summary>
-	/// Event args for the event of creating a <see cref="WebRequest"/>
+	/// Event arguments for the event of creating a <see cref="WebRequest"/>
 	/// </summary>
     public class WebRequestEventArgs : EventArgs
     {

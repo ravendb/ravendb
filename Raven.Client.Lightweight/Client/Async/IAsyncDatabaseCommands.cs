@@ -30,13 +30,13 @@ namespace Raven.Client.Client.Async
 		/// <param name="state">The state.</param>
 		IAsyncResult BeginMultiGet(string[] keys, AsyncCallback callback, object state);
 		/// <summary>
-		/// Ends the aync multi get operation
+		/// Ends the async multi get operation
 		/// </summary>
 		/// <param name="result">The result.</param>
 		JsonDocument[] EndMultiGet(IAsyncResult result);
 
 		/// <summary>
-		/// Begins the aysnc query.
+		/// Begins the async query.
 		/// </summary>
 		/// <param name="index">The index.</param>
 		/// <param name="query">The query.</param>
@@ -53,12 +53,12 @@ namespace Raven.Client.Client.Async
 		/// <summary>
 		/// Begins the async batch operation
 		/// </summary>
-		/// <param name="commandDatas">The command datas.</param>
+		/// <param name="commandDatas">The command data.</param>
 		/// <param name="callback">The callback.</param>
 		/// <param name="state">The state.</param>
 		IAsyncResult BeginBatch(ICommandData[] commandDatas, AsyncCallback callback, object state);
 		/// <summary>
-		/// Ends the aync batch operation
+		/// Ends the async batch operation
 		/// </summary>
 		/// <param name="result">The result.</param>
 		BatchResult[] EndBatch(IAsyncResult result);

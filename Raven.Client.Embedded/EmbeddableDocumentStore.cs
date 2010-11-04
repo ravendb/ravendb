@@ -63,7 +63,7 @@ namespace Raven.Client.Client
         }
 
         ///<summary>
-        /// Access the embedded instnace of RavenDB
+        /// Access the embedded instance of RavenDB
         ///</summary>
         public DocumentDatabase DocumentDatabase { get; private set; }
 

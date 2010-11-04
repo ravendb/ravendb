@@ -142,7 +142,7 @@ namespace Raven.Client.Client.Async
 		}
 
 		/// <summary>
-		/// Ends the aync multi get operation
+		/// Ends the async multi get operation
 		/// </summary>
 		/// <param name="result">The result.</param>
 		/// <returns></returns>
@@ -173,7 +173,7 @@ namespace Raven.Client.Client.Async
 		}
 
 		/// <summary>
-		/// Begins the aysnc query.
+		/// Begins the async query.
 		/// </summary>
 		/// <param name="index">The index.</param>
 		/// <param name="query">The query.</param>
@@ -220,7 +220,7 @@ namespace Raven.Client.Client.Async
 		/// <summary>
 		/// Begins the async batch operation
 		/// </summary>
-		/// <param name="commandDatas">The command datas.</param>
+		/// <param name="commandDatas">The command data.</param>
 		/// <param name="callback">The callback.</param>
 		/// <param name="state">The state.</param>
 		/// <returns></returns>
@@ -250,7 +250,7 @@ namespace Raven.Client.Client.Async
 		}
 
 		/// <summary>
-		/// Ends the aync batch operation
+		/// Ends the async batch operation
 		/// </summary>
 		/// <param name="result">The result.</param>
 		/// <returns></returns>
@@ -402,7 +402,7 @@ namespace Raven.Client.Client.Async
 		}
 
 		/// <summary>
-		/// An async result that contains mulitple steps 
+		/// An async result that contains multiple steps 
 		/// </summary>
 		public class MultiStepAsyncResult : IAsyncResult
 		{
@@ -419,7 +419,7 @@ namespace Raven.Client.Client.Async
 			/// Initializes a new instance of the <see cref="MultiStepAsyncResult"/> class.
 			/// </summary>
 			/// <param name="state">The state.</param>
-			/// <param name="req">The req.</param>
+			/// <param name="req">The request</param>
 			public MultiStepAsyncResult(object state, HttpJsonRequest req)
 			{
 				this.state = state;

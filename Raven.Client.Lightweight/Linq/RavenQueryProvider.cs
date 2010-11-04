@@ -18,7 +18,7 @@ namespace Raven.Client.Linq
 		private readonly IDocumentSession session;
 
         /// <summary>
-        /// Gets the actions for customising the generated lucene query
+        /// Gets the actions for customizing the generated lucene query
         /// </summary>
         public Action<IDocumentQueryCustomization> CustomizedQuery
         {

@@ -16,8 +16,8 @@ namespace Raven.Database.Plugins
         /// <param name="metadata">The document metadata</param>
         /// <param name="operation">Whatever the operation is a load or a query</param>
         /// <returns>
-        ///  * If the result is Allow, the operation contiues as usual. 
-        ///  * If the result is Deny, the opeartion will return an error to the user 
+        ///  * If the result is Allow, the operation continues as usual. 
+        ///  * If the result is Deny, the operation will return an error to the user 
         ///    if asking for a particular document, or an error document in place of 
         ///    the result if asking for a query.
         ///  * If the result is Ignore, the operation will return null to the user if
