@@ -15,11 +15,11 @@ namespace Raven.Tests.Bugs
 {
     public class QueryResultCountsWithProjections : IDisposable
     {
-        EmbeddablDocumentStore store = null;
+        EmbeddableDocumentStore store = null;
 
         public QueryResultCountsWithProjections()
         {
-            store = new EmbeddablDocumentStore()
+            store = new EmbeddableDocumentStore()
             {
                 RunInMemory = true
             };
