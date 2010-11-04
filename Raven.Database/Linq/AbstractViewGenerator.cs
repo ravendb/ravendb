@@ -9,7 +9,7 @@ namespace Raven.Database.Linq
     [InheritedExport]
 	public abstract class AbstractViewGenerator
 	{
-        private HashSet<string> fields = new HashSet<string>();
+        private readonly HashSet<string> fields = new HashSet<string>();
 
 		public IndexingFunc MapDefinition { get; set; }
 		

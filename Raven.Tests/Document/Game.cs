@@ -262,46 +262,46 @@ namespace Raven.Client.Tests.Document
 				{
 					Layout = new SimpleLayout()
 				});
-				store.DatabaseCommands.PutIndex("GameEventCountZoneBySpecificCharacter",
-					new IndexDefinition<GameEvent, GameEventCount>
-	{
-		Map = docs =>
-			from doc in docs
-			where doc.DataUploadId != null
-				&& doc.RealmName != null
-				&& doc.Region != null
-				&& doc.CharacterName != null
-				&& doc.Zone != null
-				&& doc.SubZone != null
-			select new
-			{
-				doc.DataUploadId,
-				doc.RealmName,
-				doc.Region,
-				doc.CharacterName,
-				doc.Zone,
-				Count = 1
-			},
-		Reduce = results => from result in results
-							group result by new
-							{
-								result.DataUploadId,
-								result.RealmName,
-								result.Region,
-								result.CharacterName,
-								result.Zone
-							}
-								into g
-								select new
-								{
-									g.Key.DataUploadId,
-									g.Key.RealmName,
-									g.Key.Region,
-									g.Key.CharacterName,
-									g.Key.Zone,
-									Count = g.Sum(x => x.Count)
-								}
-	});
+			    store.DatabaseCommands.PutIndex("GameEventCountZoneBySpecificCharacter",
+			                                    new IndexDefinition<GameEvent, GameEventCount>
+			                                    {
+			                                        Map = docs =>
+			                                            from doc in docs
+			                                            where doc.DataUploadId != null
+			                                                && doc.RealmName != null
+			                                                    && doc.Region != null
+			                                                        && doc.CharacterName != null
+			                                                            && doc.Zone != null
+			                                                                && doc.SubZone != null
+			                                            select new
+			                                            {
+			                                                doc.DataUploadId,
+			                                                doc.RealmName,
+			                                                doc.Region,
+			                                                doc.CharacterName,
+			                                                doc.Zone,
+			                                                Count = 1
+			                                            },
+			                                        Reduce = results => from result in results
+			                                                            group result by new
+			                                                            {
+			                                                                result.DataUploadId,
+			                                                                result.RealmName,
+			                                                                result.Region,
+			                                                                result.CharacterName,
+			                                                                result.Zone
+			                                                            }
+			                                                            into g
+			                                                            select new
+			                                                            {
+			                                                                g.Key.DataUploadId,
+			                                                                g.Key.RealmName,
+			                                                                g.Key.Region,
+			                                                                g.Key.CharacterName,
+			                                                                g.Key.Zone,
+			                                                                Count = g.Sum(x => x.Count)
+			                                                            }
+			                                    });
 
 				using (var documentSession = store.OpenSession())
 				{

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
+using Raven.Database.Indexing;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
@@ -23,13 +24,13 @@ namespace Raven.Database
             this.triggers = triggers;
         }
 
-        public JsonDocument RetrieveDocumentForQuery(IndexQueryResult queryResult, string[] fieldsToFetch)
+        public JsonDocument RetrieveDocumentForQuery(IndexQueryResult queryResult, IndexDefinition indexDefinition, string[] fieldsToFetch)
         {
-            var doc = RetrieveDocumentInternal(queryResult, loadedIdsForRetrieval, fieldsToFetch);
+            var doc = RetrieveDocumentInternal(queryResult, loadedIdsForRetrieval, fieldsToFetch, indexDefinition);
             return ExecuteReadTriggers(doc, null, ReadOperation.Query);
         }
 
-        private JsonDocument RetrieveDocumentInternal(IndexQueryResult queryResult, HashSet<string> loadedIds, string[] fieldsToFetch)
+        private JsonDocument RetrieveDocumentInternal(IndexQueryResult queryResult, HashSet<string> loadedIds, string[] fieldsToFetch, IndexDefinition indexDefinition)
         {
             if (queryResult.Projection == null)
             {
@@ -41,6 +42,24 @@ namespace Raven.Database
 
             if (fieldsToFetch != null)
             {
+                if (indexDefinition.IsMapReduce == false)
+                {
+                    bool hasStoredFields = false;
+                    foreach (var fieldToFetch in fieldsToFetch)
+                    {
+                        FieldStorage value;
+                        if (indexDefinition.Stores.TryGetValue(fieldToFetch, out value) == false &&
+                            value != FieldStorage.No)
+                            continue;
+                        hasStoredFields = true;
+                    }
+                    if (hasStoredFields == false)
+                    {
+                        // duplicate document, filter it out
+                        if (loadedIds.Add(queryResult.Key) == false)
+                            return null;
+                    }
+                }
                 foreach (var fieldToFetch in fieldsToFetch)
                 {
                     if (queryResult.Projection.Property(fieldToFetch) != null)
@@ -71,9 +90,9 @@ namespace Raven.Database
             return doc;
         }
 
-        public bool ShouldIncludeResultInQuery(IndexQueryResult arg, string[] fieldsToFetch)
+        public bool ShouldIncludeResultInQuery(IndexQueryResult arg, IndexDefinition indexDefinition, string[] fieldsToFetch)
         {
-            var doc = RetrieveDocumentInternal(arg, loadedIdsForFilter, fieldsToFetch);
+            var doc = RetrieveDocumentInternal(arg, loadedIdsForFilter, fieldsToFetch, indexDefinition);
             if (doc == null)
                 return false;
             doc = ProcessReadVetoes(doc, null, ReadOperation.Query);

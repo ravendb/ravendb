@@ -511,9 +511,9 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
                 {
                     string entityName = null;
 
-                    var abstractViewGenerator = IndexDefinitionStorage.GetViewGenerator(index);
-                    if (abstractViewGenerator != null)
-                        entityName = abstractViewGenerator.ForEntityName;
+                    var viewGenerator = IndexDefinitionStorage.GetViewGenerator(index);
+                    if (viewGenerator != null)
+                        entityName = viewGenerator.ForEntityName;
 
                     stale = actions.Staleness.IsIndexStale(index, query.Cutoff, entityName);
                     indexTimestamp = actions.Staleness.IndexLastUpdatedAt(index);
@@ -523,16 +523,16 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
                         throw new IndexDisabledException(indexFailureInformation);
                     }
                     var docRetriever = new DocumentRetriever(actions, ReadTriggers);
-                    var collection = from queryResult in IndexStorage.Query(index, query, result => docRetriever.ShouldIncludeResultInQuery(result, query.FieldsToFetch))
-                                     select docRetriever.RetrieveDocumentForQuery(queryResult, query.FieldsToFetch)
+                    var collection = from queryResult in IndexStorage.Query(index, query, result => docRetriever.ShouldIncludeResultInQuery(result, GetIndexDefinition(index), query.FieldsToFetch))
+                                     select docRetriever.RetrieveDocumentForQuery(queryResult, GetIndexDefinition(index), query.FieldsToFetch)
                                          into doc
                                          where doc != null
                                          select doc;
 
                     var transformerErrors = new List<string>();
                     IEnumerable<JObject> results;
-                    if (abstractViewGenerator != null && 
-                        abstractViewGenerator.TransformResultsDefinition != null)
+                    if (viewGenerator != null && 
+                        viewGenerator.TransformResultsDefinition != null)
                     {
                         var robustEnumerator = new RobustEnumerator
                         {
@@ -544,7 +544,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
                         results =
                             robustEnumerator.RobustEnumeration(
                                 collection.Select(x => new DynamicJsonObject(x.ToJson())),
-                                source => abstractViewGenerator.TransformResultsDefinition(docRetriever, source))
+                                source => viewGenerator.TransformResultsDefinition(docRetriever, source))
                                 .Select(JsonExtensions.ToJObject);
                     }
                     else

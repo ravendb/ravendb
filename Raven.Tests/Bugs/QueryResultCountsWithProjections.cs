@@ -93,7 +93,7 @@ namespace Raven.Tests.Bugs
                     .Select(x=> new 
                     {
                          x.Title,
-                         x.Tags
+                         x.Tag
                     })
                     .ToArray();
                 Assert.Equal(2, results.Length);
@@ -103,7 +103,7 @@ namespace Raven.Tests.Bugs
         private void PopulateDatastore()
         {
             store.DatabaseCommands.PutIndex("SelectManyIndexWithNoTransformer",
-                new IndexDefinition<Blog>()
+                new IndexDefinition<Blog,BlogProjection>()
                 {
                     Map = docs => from doc in docs
                                   from tag in doc.Tags
@@ -111,7 +111,8 @@ namespace Raven.Tests.Bugs
                                   {
                                       doc.Title,
                                       tag.Name
-                                  }
+                                  },
+                    Stores = {{x=>x.Tag, FieldStorage.Yes}}
                 }.ToIndexDefinition(store.Conventions));
 
              store.DatabaseCommands.PutIndex("SelectManyIndexWithTransformer",
@@ -154,7 +155,7 @@ namespace Raven.Tests.Bugs
         public class BlogProjection
         {
             public string Title { get; set; }
-            public BlogTag[] Tags { get; set; }
+            public string Tag { get; set; }
         }
 
 
