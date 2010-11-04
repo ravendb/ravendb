@@ -20,8 +20,8 @@ namespace Raven.Database.Indexing
     public class MapReduceIndex : Index
     {
 		[CLSCompliant(false)]
-		public MapReduceIndex(Directory directory, string name, IndexDefinition indexDefinition)
-            : base(directory, name, indexDefinition)
+		public MapReduceIndex(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator)
+            : base(directory, name, indexDefinition, viewGenerator)
         {
         }
 

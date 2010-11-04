@@ -93,6 +93,10 @@ namespace Raven.Database.Linq
 			                   		})));
 
 
+		    var captureSelectNewFieldNamesVisitor = new CaptureSelectNewFieldNamesVisitor();
+
+		    mapDefinition.Initializer.AcceptVisitor(captureSelectNewFieldNamesVisitor, null);
+
             if(indexDefinition.TransformResults != null)
             {
                 VariableDeclaration translatorDeclaration;
@@ -149,6 +153,10 @@ namespace Raven.Database.Linq
 					groupByParamter = lambdaExpression.Parameters[0].ParameterName;
 					groupBySource = lambdaExpression.ExpressionBody;
 				}
+
+                captureSelectNewFieldNamesVisitor.FieldNames.Clear();// reduce override the map fields
+                reduceDefiniton.Initializer.AcceptVisitor(captureSelectNewFieldNamesVisitor, null);
+
 				// this.ReduceDefinition = from result in results...;
 				ctor.Body.AddChild(new ExpressionStatement(
 				                   	new AssignmentExpression(
@@ -178,6 +186,21 @@ namespace Raven.Database.Linq
 											ExpressionBody = groupBySource
 				                   		})));
 			}
+
+		    foreach (var fieldName in captureSelectNewFieldNamesVisitor.FieldNames)
+		    {
+		        ctor.Body.AddChild(
+		            new ExpressionStatement(
+                        new InvocationExpression(
+                            new MemberReferenceExpression(
+                                new ThisReferenceExpression(),
+                                "AddField"
+                                ),
+                            new List<Expression> { new PrimitiveExpression(fieldName, fieldName) }
+                            )
+		                )
+		            );
+		    }
 
 			CompiledQueryText = QueryParsingUtils.GenerateText(type, extensions);
 			var compiledQueryText = "@\"" + indexDefinition.Map.Replace("\"", "\"\"");

@@ -69,7 +69,7 @@ namespace Raven.Tests.Indexes
 			{
 				docs = db.Query("pagesByTitle2", new IndexQuery
 				{
-					Query = "some:val",
+					Query = "f:val",
 					Start = 0,
 					PageSize = 10
 				});
@@ -116,7 +116,7 @@ namespace Raven.Tests.Indexes
 			{
 				docs = db.Query("pagesByTitle2", new IndexQuery
 				{
-					Query = "some:val",
+					Query = "f:val",
 					Start = 0,
 					PageSize = 10
 				});
@@ -152,7 +152,7 @@ namespace Raven.Tests.Indexes
 			{
 				docs = db.Query("pagesByTitle2", new IndexQuery
 				{
-					Query = "some:val",
+					Query = "f:val",
 					Start = 0,
 					PageSize = 10
 				});

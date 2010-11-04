@@ -266,8 +266,10 @@
     <Compile Include="Indexing\RangeQueryParser.cs" />
     <Compile Include="Indexing\RobustEnumerator.cs" />
     <Compile Include="Indexing\SpatialIndex.cs" />
+    <Compile Include="Indexing\SimpleQueryParser.cs" />
     <Compile Include="InMemroyRavenConfiguration.cs" />
     <Compile Include="Impl\IUuidGenerator.cs" />
+    <Compile Include="Linq\CaptureSelectNewFieldNamesVisitor.cs" />
     <Compile Include="Plugins\AbstractAttachmentDeleteTrigger.cs" />
     <Compile Include="Plugins\AbstractAttachmentPutTrigger.cs" />
     <Compile Include="Plugins\AbstractAttachmentReadTrigger.cs" />

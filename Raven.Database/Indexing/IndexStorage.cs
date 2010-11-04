@@ -23,14 +23,16 @@ namespace Raven.Database.Indexing
 	/// </summary>
 	public class IndexStorage : CriticalFinalizerObject, IDisposable
 	{
-        private readonly InMemroyRavenConfiguration configuration;
+	    private readonly IndexDefinitionStorage indexDefinitionStorage;
+	    private readonly InMemroyRavenConfiguration configuration;
 		private readonly string path;
 		private readonly ConcurrentDictionary<string, Index> indexes = new ConcurrentDictionary<string, Index>(StringComparer.InvariantCultureIgnoreCase);
 		private readonly ILog log = LogManager.GetLogger(typeof (IndexStorage));
 
         public IndexStorage(IndexDefinitionStorage indexDefinitionStorage, InMemroyRavenConfiguration configuration)
 		{
-		    this.configuration = configuration;
+            this.indexDefinitionStorage = indexDefinitionStorage;
+            this.configuration = configuration;
 		    path = Path.Combine(configuration.DataDirectory, "Indexes");
 
             if (Directory.Exists(path) == false && configuration.RunInMemory == false)
@@ -71,11 +73,12 @@ namespace Raven.Database.Indexing
             return directory;
 		}
 
-		private static Index CreateIndexImplementation(string name, IndexDefinition indexDefinition, Lucene.Net.Store.Directory directory)
+		private Index CreateIndexImplementation(string name, IndexDefinition indexDefinition, Lucene.Net.Store.Directory directory)
 		{
-			return indexDefinition.IsMapReduce
-				? (Index) new MapReduceIndex(directory, name, indexDefinition)
-				: new SimpleIndex(directory, name, indexDefinition);
+		    var viewGenerator = indexDefinitionStorage.GetViewGenerator(name);
+		    return indexDefinition.IsMapReduce
+                ? (Index)new MapReduceIndex(directory, name, indexDefinition, viewGenerator)
+                : new SimpleIndex(directory, name, indexDefinition, viewGenerator);
 		}
 
 		public string[] Indexes
