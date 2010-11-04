@@ -14,14 +14,14 @@ namespace Raven.Client.Tests
 	{
 		private string path;
 
-        protected EmbeddablDocumentStore NewDocumentStore()
+        public EmbeddableDocumentStore NewDocumentStore()
 		{
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
 			path = Path.Combine(path, "TestDb").Substring(6);
 
             IOExtensions.DeleteDirectory(path);
 
-            var documentStore = new EmbeddablDocumentStore()
+            var documentStore = new EmbeddableDocumentStore()
 			{
 				Configuration = new RavenConfiguration
 				{
@@ -34,7 +34,7 @@ namespace Raven.Client.Tests
 			return documentStore;
 		}
 
-        public void WaitForIndexing(EmbeddablDocumentStore store)
+        public void WaitForIndexing(EmbeddableDocumentStore store)
         {
             while (store.DocumentDatabase.Statistics.StaleIndexes.Length > 0)
             {

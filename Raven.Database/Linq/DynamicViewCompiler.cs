@@ -210,16 +210,18 @@ namespace Raven.Database.Linq
 			var variableDeclaration = QueryParsingUtils.GetVariableDeclarationForLinqMethods(indexDefinition.Map);
 			AddEntityNameFilteringIfNeeded(variableDeclaration, out entityName);
 
-			var invocationExpression = ((InvocationExpression)variableDeclaration.Initializer);
-			var targetExpression = ((MemberReferenceExpression)invocationExpression.TargetObject);
-			do
-			{
-				AddDocumentIdFieldToLambdaIfCreatingNewObject((LambdaExpression)invocationExpression.Arguments.Last());
-				invocationExpression = (InvocationExpression)targetExpression.TargetObject;
-				targetExpression = (MemberReferenceExpression) invocationExpression.TargetObject;
-			} while (targetExpression.TargetObject is InvocationExpression);
+            variableDeclaration.AcceptVisitor(new AddDocumentIdToLambdas(), null);
 			return variableDeclaration;
 		}
+
+        public class AddDocumentIdToLambdas : ICSharpCode.NRefactory.Visitors.AbstractAstTransformer
+        {
+            public override object VisitLambdaExpression(LambdaExpression lambdaExpression, object data)
+            {
+                AddDocumentIdFieldToLambdaIfCreatingNewObject(lambdaExpression);
+                return base.VisitLambdaExpression(lambdaExpression, data);
+            }
+        }
 
 		private void AddEntityNameFilteringIfNeeded(VariableDeclaration variableDeclaration, out string entityName)
 		{

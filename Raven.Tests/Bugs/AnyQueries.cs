@@ -1,42 +1,40 @@
 using System;
 using System.Linq;
 using System.Collections.Generic;
-using Rhino.Mocks.Constraints;
 using Xunit;
 
 namespace Raven.Client.Tests.Bugs
 {
    public class RavenDbAnyOfPropertyCollection : LocalClientTest, IDisposable
    {
-       IDocumentStore store;
+       readonly IDocumentStore store;
+       DateTime now = new DateTime(2010, 10, 31);
 
        public RavenDbAnyOfPropertyCollection()
        {
            store = NewDocumentStore();
            using(var session = store.OpenSession())
            {
-               session.Store(new Account
-               {
-                   Transactions =
-                       {
-                           new Transaction(1),
-                           new Transaction(3),
-                       }
-               });
-               session.Store(new Account
-               {
-                   Transactions =
-                       {
-                           new Transaction(2),
-                           new Transaction(4),
-                       }
-               });
-
+              session.Store(new Account
+              {
+                  Transactions =
+                      {
+                          new Transaction(1, now.AddDays(-2)),
+                          new Transaction(3, now.AddDays(-1)),
+                      }
+              });
+              session.Store(new Account
+              {
+                  Transactions =
+                      {
+                          new Transaction(2, now.AddDays(1)),
+                          new Transaction(4, now.AddDays(2)),
+                      }
+              });
                session.SaveChanges();
            }
        }
 
-       // works as expected
        [Fact]
        public void ShouldBeAbleToQueryOnTransactionAmount()
        {
@@ -48,7 +46,6 @@ namespace Raven.Client.Tests.Bugs
            }
        }
 
-       // This test fails, should return two results but actually reurns zero.
        [Fact]
        public void InequalityOperatorDoesNotWorkOnAny()
        {
@@ -70,6 +67,16 @@ namespace Raven.Client.Tests.Bugs
            }
        }
 
+      [Fact]
+      public void CanSelectADateRange()
+      {
+          using(var session = store.OpenSession())
+          {
+              var accounts = session.Query<Account>().Where(x => x.Transactions.Any(y => y.Date < now));
+              var array = accounts.ToArray();
+              Assert.Equal(1, array.Count());
+          }
+      }
        public void Dispose()
        {
            if (store != null) store.Dispose();
@@ -89,11 +96,18 @@ namespace Raven.Client.Tests.Bugs
 
    public class Transaction
    {
-       public Transaction(int amount)
+       public Transaction(int amount, DateTime date)
        {
            Amount = amount;
+           Date = date;
+       }
+
+       public Transaction()
+       {
+           
        }
 
        public int Amount { get; private set; }
+       public DateTime Date { get; private set; }
    }
 }

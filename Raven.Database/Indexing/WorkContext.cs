@@ -21,7 +21,6 @@ namespace Raven.Database.Indexing
         private readonly ReaderWriterLockSlim readerWriterLockSlim = new ReaderWriterLockSlim();
         public IEnumerable<AbstractIndexUpdateTrigger> IndexUpdateTriggers { get; set; }
         public IEnumerable<AbstractReadTrigger> ReadTriggers { get; set; }
-        public PerformanceCounters PerformanceCounters { get; set; }
         public bool DoWork
         {
             get { return doWork; }

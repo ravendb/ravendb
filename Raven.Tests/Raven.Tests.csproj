@@ -77,6 +77,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Newtonsoft.Json.dll</HintPath>
     </Reference>
+    <Reference Include="Rhino.Mocks">
+      <HintPath>..\SharedLibs\Rhino.Mocks.dll</HintPath>
+    </Reference>
     <Reference Include="Spatial.Net">
       <HintPath>..\SharedLibs\Spatial.Net.dll</HintPath>
     </Reference>
@@ -85,6 +88,9 @@
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
+    <Reference Include="System.Transactions" />
+    <Reference Include="System.Web" />
+    <Reference Include="System.Web.Abstractions" />
     <Reference Include="System.Xml.Linq">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
@@ -99,24 +105,115 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Bugs\AccurateCount.cs" />
+    <Compile Include="Bugs\AnalyzerPerField.cs" />
+    <Compile Include="Bugs\AnyQueries.cs" />
+    <Compile Include="Bugs\AsyncCommit.cs" />
+    <Compile Include="Bugs\AttachmentsWithCredentials.cs" />
+    <Compile Include="Bugs\AutoCreateIndexes.cs" />
+    <Compile Include="Bugs\AutoDetectAnaylzersForQuery.cs" />
+    <Compile Include="Bugs\CanDetectChanges.cs" />
+    <Compile Include="Bugs\CanGetMetadataForTransient.cs" />
+    <Compile Include="Bugs\CanSelectFieldsFromIndex.cs" />
+    <Compile Include="Bugs\CanUseNonStringsForId.cs" />
+    <Compile Include="Bugs\CustomEntityName.cs" />
+    <Compile Include="Bugs\DateRanges.cs" />
+    <Compile Include="Bugs\DecimalPrecision.cs" />
+    <Compile Include="Bugs\DocumentToJsonAndBackTest.cs" />
+    <Compile Include="Bugs\DocumentUrl.cs" />
+    <Compile Include="Bugs\EntityWithDate.cs" />
+    <Compile Include="Bugs\EntityWithoutId.cs" />
+    <Compile Include="Bugs\Etag.cs" />
+    <Compile Include="Bugs\ExplicitTransaction.cs" />
+    <Compile Include="Bugs\ExtendingClientSideViaListeners.cs" />
+    <Compile Include="Bugs\FailDelete.cs" />
+    <Compile Include="Bugs\FailStore.cs" />
     <Compile Include="Bugs\HierarchicalData.cs" />
     <Compile Include="Bugs\HiLoServerKeysNotExported.cs" />
     <Compile Include="Bugs\IndexDefinitionEquality.cs" />
+    <Compile Include="Bugs\Image.cs" />
+    <Compile Include="Bugs\ImageByTagSearchModel.cs" />
+    <Compile Include="Bugs\Includes.cs" />
     <Compile Include="Bugs\IndexingBehavior.cs" />
+    <Compile Include="Bugs\IndexingRavenDocuments.cs" />
+    <Compile Include="Bugs\IndexNestedFields.cs" />
+    <Compile Include="Bugs\IndexWithTwoProperties.cs" />
+    <Compile Include="Bugs\KeyGeneration.cs" />
+    <Compile Include="Bugs\KeysAreCaseInsensitive.cs" />
+    <Compile Include="Bugs\LinqGitHub147.cs" />
+    <Compile Include="Bugs\LinqOnUrls.cs" />
+    <Compile Include="Bugs\LuceneQueryShouldWorkWithoutExtensionMethod.cs" />
+    <Compile Include="Bugs\MetadataUpdates.cs" />
+    <Compile Include="Bugs\MultiEntityIndex.cs" />
+    <Compile Include="Bugs\MultipleResultsPerDocumentAndPaging.cs" />
+    <Compile Include="Bugs\MultiTenancy.cs" />
+    <Compile Include="Bugs\NameAndId.cs" />
+    <Compile Include="Bugs\OperationHeaders.cs" />
     <Compile Include="Bugs\OverwriteDocuments.cs" />
     <Compile Include="Bugs\QueryResultCountsWithProjections.cs" />
+    <Compile Include="Bugs\OverwriteIndexLocally.cs" />
+    <Compile Include="Bugs\OverwriteIndexRemotely.cs" />
+    <Compile Include="Bugs\Patching.cs" />
+    <Compile Include="Bugs\Polymorphic.cs" />
+    <Compile Include="Bugs\ProjectingDates.cs" />
+    <Compile Include="Bugs\ProjectingDocumentId.cs" />
+    <Compile Include="Bugs\ProjectingFromIndexes.cs" />
+    <Compile Include="Bugs\ProjectionFromDynamicQuery.cs" />
+    <Compile Include="Bugs\QueryingByNegative.cs" />
+    <Compile Include="Bugs\QueryingByNull.cs" />
+    <Compile Include="Bugs\QueryingFromIndex.cs" />
+    <Compile Include="Bugs\QueryWithPercentageSignp.cs" />
+    <Compile Include="Bugs\QueryWithReservedCharacters.cs" />
     <Compile Include="Bugs\ReadDataFromServer.cs" />
+    <Compile Include="Bugs\ReportQueryCount.cs" />
+    <Compile Include="Bugs\ReuseQuery.cs" />
+    <Compile Include="Bugs\SerializingDates.cs" />
+    <Compile Include="Bugs\SerializingEntities.cs" />
+    <Compile Include="Bugs\SinglePropertyDocument.cs" />
+    <Compile Include="Bugs\SortingOnLong.cs" />
+    <Compile Include="Bugs\SortingWithWildcardQuery.cs" />
+    <Compile Include="Bugs\StalenessWontAffectUnrelatedIndexes.cs" />
+    <Compile Include="Bugs\TranslatingLinqQueryUsingNestedId.cs" />
+    <Compile Include="Bugs\Translators.cs" />
+    <Compile Include="Bugs\User.cs" />
+    <Compile Include="Bugs\UsingEnumInLinq.cs" />
+    <Compile Include="Bugs\UsingStartsWith.cs" />
+    <Compile Include="Bugs\WithPrivateProtectedSetter.cs" />
+    <Compile Include="Document\AsyncDocumentStoreServerTests.cs" />
+    <Compile Include="Document\CasingIssue.cs" />
+    <Compile Include="Document\ClientKeyGeneratorTests.cs" />
+    <Compile Include="Document\Company.cs" />
+    <Compile Include="Document\Contact.cs" />
+    <Compile Include="Document\CustomDynamicClass.cs" />
+    <Compile Include="Document\DocumentStoreEmbeddedTests.cs" />
+    <Compile Include="Document\DocumentStoreServerTests.cs" />
+    <Compile Include="Document\DocumentStoreServerTests_DifferentProcess.cs" />
+    <Compile Include="Document\DynamicDocuments.cs" />
+    <Compile Include="Document\Game.cs" />
+    <Compile Include="Document\Inheritance.cs" />
+    <Compile Include="Document\TagCloud.cs" />
+    <Compile Include="Document\TotalCountServerTest.cs" />
+    <Compile Include="Document\When_Using_Multiple_Unsharded_Servers.cs" />
+    <Compile Include="Document\ZoneCountResult.cs" />
     <Compile Include="Indexes\CompiledIndex.cs" />
     <Compile Include="Indexes\ComplexIndexOnNotAnalyzedField.cs" />
+    <Compile Include="Indexes\CustomAnalyzer.cs" />
     <Compile Include="Indexes\DynamicQueryMapping.cs" />
+    <Compile Include="Indexes\ExpressionOperatorPrecedenceTest.cs" />
+    <Compile Include="Indexes\LinqIndexesFromClient.cs" />
+    <Compile Include="Indexes\LuceneAnalyzerUtils.cs" />
     <Compile Include="Indexes\MapOnlyView.cs" />
     <Compile Include="Indexes\QueryingOnDefaultIndex.cs" />
     <Compile Include="Indexes\QueryingOnStaleIndexes.cs" />
     <Compile Include="Indexes\ShoppingCartEventsToShopingCart.cs" />
+    <Compile Include="Indexes\UsingCustomLuceneAnalyzer.cs" />
+    <Compile Include="IndexQueryUrl.cs" />
     <Compile Include="Linq\CommitInfo.cs" />
     <Compile Include="Linq\SampleDynamicCompilationExtension.cs" />
     <Compile Include="Linq\SampleGeoLocation.cs" />
     <Compile Include="Linq\User.cs" />
+    <Compile Include="Linq\WhereClause.cs" />
+    <Compile Include="LocalClientTest.cs" />
     <Compile Include="ManagedStorage\Attachments.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -146,6 +243,14 @@
     </Compile>
     <Compile Include="Queries\DyanmicQueries.cs" />
     <Compile Include="Queries\ParameterisedDynamicQuery.cs" />
+    <Compile Include="Querying\IndexedUser.cs" />
+    <Compile Include="Querying\UsingDocumentQuery.cs" />
+    <Compile Include="Querying\UsingDynamicQueryWithLocalServer.cs" />
+    <Compile Include="Querying\UsingDynamicQueryWithRemoteServer.cs" />
+    <Compile Include="RemoteClientTest.cs" />
+    <Compile Include="Shard\When_Using_Parallel_Access_Strategy.cs" />
+    <Compile Include="Shard\When_Using_Sharded_Servers.cs" />
+    <Compile Include="Some.cs" />
     <Compile Include="Spatial\Event.cs" />
     <Compile Include="Spatial\SpatialIndex.cs" />
     <Compile Include="Indexes\Statistics.cs" />
@@ -253,6 +358,7 @@
     <None Include="..\Raven.Database\RavenDB.snk">
       <Link>RavenDB.snk</Link>
     </None>
+    <None Include="App.config" />
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

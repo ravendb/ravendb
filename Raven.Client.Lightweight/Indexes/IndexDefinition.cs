@@ -119,9 +119,16 @@ namespace Raven.Client.Indexes
             var linqQuery =expression.ToString();
 #endif
 
-			linqQuery = querySource + linqQuery.Substring(expr.Parameters.First(x=>x.Type!=typeof(IClientSideDatabase)).Name.Length);
+		    var querySourceName = expr.Parameters.First(x=>x.Type!=typeof(IClientSideDatabase)).Name;
+          
+            if(linqQuery.StartsWith(querySourceName))
+		        linqQuery = querySource + linqQuery.Substring(querySourceName.Length);
+            else if (linqQuery.StartsWith("(" + querySourceName + ")"))
+                linqQuery = querySource + linqQuery.Substring(querySourceName.Length + 2);
+            else
+                throw new InvalidOperationException("Canot understand how to parse the query");
 
-			linqQuery = ReplaceAnonymousTypeBraces(linqQuery);
+		    linqQuery = ReplaceAnonymousTypeBraces(linqQuery);
 			linqQuery = Regex.Replace(linqQuery, @"new ((VB\$)|(<>))[\w_]+`\d+", "new ");// remove anonymous types
 			linqQuery = Regex.Replace(linqQuery, @"<>([a-z])_", "__$1_"); // replace <>h_ in transperant identifiers
 			const string pattern = @"(\.Where\(|\.Select\(|\.GroupBy\(|\.SelectMany)";

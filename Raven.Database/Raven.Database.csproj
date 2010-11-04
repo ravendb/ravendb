@@ -151,7 +151,6 @@
     <Compile Include="Linq\ITranslatorDatabaseAccessor.cs" />
     <Compile Include="Linq\PrivateExtensions\MetadataExtensions.cs" />
     <Compile Include="Linq\TranslatorFunc.cs" />
-    <Compile Include="PerformanceCounters.cs" />
     <Compile Include="Plugins\AbstractBackgroundTask.cs" />
     <Compile Include="Plugins\AbstractDocumentCodec.cs" />
     <Compile Include="Plugins\AbstractDynamicCompilationExtension.cs" />

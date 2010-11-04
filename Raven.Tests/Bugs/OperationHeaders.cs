@@ -34,7 +34,7 @@ namespace Raven.Client.Tests.Bugs
 		[Fact]
 		public void CanPassOperationHeadersUsingEmbedded()
 		{
-            using (var documentStore = new EmbeddablDocumentStore
+            using (var documentStore = new EmbeddableDocumentStore
 			{
 				Configuration = new RavenConfiguration
 				{

@@ -8,9 +8,18 @@ Public Class LinqQueriesUsingVB
     Inherits LocalClientTest
 
     <Fact()> _
+    Public Sub CanUseWhereEntityIs()
+        Using store As EmbeddableDocumentStore = NewDocumentStore()
+            Dim x = New Data_NewIndex()
+            x.Execute(store)
+        End Using
+    End Sub
+
+
+    <Fact()> _
     Public Sub CanUseSelectMany_WithFixedParameter()
 
-        Using store As EmbeddablDocumentStore = NewDocumentStore()
+        Using store As EmbeddableDocumentStore = NewDocumentStore()
 
             store.DatabaseCommands.PutIndex("test", New IndexDefinition(Of PortalPageSettings)() With
             { _
@@ -57,7 +66,7 @@ Public Class LinqQueriesUsingVB
     <Fact()> _
     Public Sub CanUseWithEntityIsExtensionMethod()
 
-        Using store As EmbeddablDocumentStore = NewDocumentStore()
+        Using store As EmbeddableDocumentStore = NewDocumentStore()
 
             Dim index As New IndexDefinition(Of Object)() With
             { _
@@ -75,7 +84,7 @@ Public Class LinqQueriesUsingVB
     <Fact()> _
     Public Sub EntityIsExtensionMethodWillBeTranslatedProperly()
 
-        Using store As EmbeddablDocumentStore = NewDocumentStore()
+        Using store As EmbeddableDocumentStore = NewDocumentStore()
 
             Dim index As New IndexDefinition(Of Object)() With
             { _
@@ -96,7 +105,7 @@ Public Class LinqQueriesUsingVB
     <Fact()> _
     Public Sub CanUseSelectMany_WithVaraible()
 
-        Using store As EmbeddablDocumentStore = NewDocumentStore()
+        Using store As EmbeddableDocumentStore = NewDocumentStore()
 
             store.DatabaseCommands.PutIndex("test", New IndexDefinition(Of PortalPageSettings)() With
             { _
