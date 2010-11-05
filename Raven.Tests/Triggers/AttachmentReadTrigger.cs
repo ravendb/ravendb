@@ -19,7 +19,7 @@ namespace Raven.Tests.Triggers
             {
                 DataDirectory = "raven.db.test.esent",
                 Container = new CompositionContainer(new TypeCatalog(
-                    typeof(HideAttachmnetByCaseReadTrigger)))
+                    typeof(HideAttachmentByCaseReadTrigger)))
             });
 
         }
@@ -62,7 +62,7 @@ namespace Raven.Tests.Triggers
             Assert.Equal(attachment.Data.Length, 4);
         }
 
-        public class HideAttachmnetByCaseReadTrigger : AbstractAttachmentReadTrigger
+        public class HideAttachmentByCaseReadTrigger : AbstractAttachmentReadTrigger
         {
             public override ReadVetoResult AllowRead(string key, byte[] data, Newtonsoft.Json.Linq.JObject metadata, ReadOperation operation)
             {
