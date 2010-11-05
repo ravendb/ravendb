@@ -34,7 +34,7 @@
     <SignAssembly>true</SignAssembly>
   </PropertyGroup>
   <PropertyGroup>
-    <AssemblyOriginatorKeyFile>..\Raven.Database\RavenDB.snk</AssemblyOriginatorKeyFile>
+    <AssemblyOriginatorKeyFile>Raven.Munin.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Newtonsoft.Json">
@@ -79,9 +79,7 @@
     <Compile Include="Tree\Stack.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\Raven.Database\RavenDB.snk">
-      <Link>RavenDB.snk</Link>
-    </None>
+    <None Include="Raven.Munin.snk" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
