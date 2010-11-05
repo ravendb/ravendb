@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Threading;
 using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
@@ -181,14 +182,12 @@ namespace Raven.Munin
 
         private void Commit(Guid txId)
         {
-            bool hasChanged = false;
-
             // this assume that munin transactions always use a single thread
 
             var cmds = new List<Command>();
-            foreach (var persistentDictionary in tables)
+            foreach (var table in tables)
             {
-                var commandsToCommit = persistentDictionary.GetCommandsToCommit(txId);
+                var commandsToCommit = table.GetCommandsToCommit(txId);
                 if (commandsToCommit == null)
                     continue;
                 cmds.AddRange(commandsToCommit);
@@ -204,7 +203,10 @@ namespace Raven.Munin
                 WriteCommands(cmds, log);
                 persistentSource.FlushLog(); // flush all the index changes to disk
 
-                hasChanged = tables.Aggregate(false, (changed, persistentDictionary) => changed | persistentDictionary.CompleteCommit(txId));
+                foreach (var table in tables)
+                {
+                    table.CompleteCommit(txId);
+                }
 
             });
         }
@@ -222,9 +224,10 @@ namespace Raven.Munin
             if (cmds.Count == 0)
                 return;
 
+            const int shaSize = 32;
             var dataSizeInBytes = cmds
                 .Where(x => x.Type == CommandType.Put && x.Payload != null)
-                .Sum(x => x.Payload.Length);
+                .Sum(x => x.Payload.Length + shaSize);
 
             if (dataSizeInBytes > 0)
             {
@@ -252,6 +255,11 @@ namespace Raven.Munin
                         command.Position = log.Position;
                         command.Size = command.Payload.Length;
                         log.Write(command.Payload, 0, command.Payload.Length);
+                        using (var sha256 = SHA256.Create())
+                        {
+                            var sha = sha256.ComputeHash(command.Payload);
+                            log.Write(sha, 0, sha.Length);
+                        }
                     }
                     cmd.Add("position", command.Position);
                     cmd.Add("size", command.Size);

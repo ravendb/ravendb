@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Runtime.Caching;
+using System.Security.Cryptography;
 using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Munin.Tree;
@@ -260,22 +261,28 @@ namespace Raven.Munin
             });
         }
 
-        private byte[] ReadDataNoCaching(Stream log, long pos, int size)
+        private static byte[] ReadDataNoCaching(Stream log, long pos, int size)
         {
             log.Position = pos;
+            var binaryReader = new BinaryReader(log);
+            var data = binaryReader.ReadBytes(size);
+            if(data.Length != size)
+                throw new InvalidDataException("Could not read complete data, the file is probably corrupt");
 
-            var read = 0;
-            var buf = new byte[size];
-            do
+            using(var sha256 = SHA256.Create())
             {
-                int dataRead = log.Read(buf, read, buf.Length - read);
-                if (dataRead == 0) // nothing read, EOF, probably truncated write, 
+                var hash = sha256.ComputeHash(data);
+                var hashFromFile = binaryReader.ReadBytes(hash.Length);
+                if(hashFromFile.Length != hash.Length)
+                    throw new InvalidDataException("Could not read complete SHA data, the file is probably corrupt");
+
+                if (hashFromFile.Where((t, i) => hash[i] != t).Any())
                 {
-                    throw new InvalidDataException("Could not read complete data, the file is probably corrupt");
+                    throw new InvalidDataException("Invalid SHA signature, the file is probably corrupt");
                 }
-                read += dataRead;
-            } while (read < buf.Length);
-            return buf;
+            }
+
+            return data;
         }
 
         internal List<Command> GetCommandsToCommit(Guid txId)
