@@ -32,11 +32,25 @@ namespace Raven.Munin
             this.persistentSource = persistentSource;
         }
 
+        const int version = 1;
 
         public void Initialze()
         {
-            persistentSource.Write( log =>
+            persistentSource.Write(log =>
             {
+                if (log.Length == 0) // new file
+                {
+                    new JObject
+                    {
+                        {"Version", version},
+                        {"Tables", new JArray(Tables.Select(x=>x.Name).ToArray())}
+                    }.WriteTo(new BsonWriter(log));
+                    log.Flush();
+                }
+                log.Position = 0;
+                
+                AssertValidVersionAndTables(log);
+
                 while (true)
                 {
                     long lastGoodPosition = log.Position;
@@ -62,7 +76,34 @@ namespace Raven.Munin
             });
         }
 
-        private Command[] ReadCommands(Stream log, long lastGoodPosition)
+        private void AssertValidVersionAndTables(Stream log)
+        {
+            try
+            {
+                var versionInfo = (JObject)JToken.ReadFrom(new BsonReader(log));
+
+                if (versionInfo.Value<int>("Version") != version)
+                    throw new InvalidOperationException("Invalid Munin file version!");
+
+                var tableNames = versionInfo.Value<JArray>("Tables");
+
+                if (tableNames.Count != tables.Count)
+                    throw new InvalidOperationException("Different number of tables stored in the Munin file");
+
+                for (int i = 0; i < tableNames.Count; i++)
+                {
+                    if (tableNames[i].Value<string>() != tables[i].Name)
+                        throw new InvalidOperationException("Table at position " + i + " is expected to be " + tables[i].Name + " but was actually " + tableNames[i]);
+                }
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException(
+                    "Could not open Munin data file, probably not a Munin file or an out of date file", e);
+            }
+        }
+
+        private static Command[] ReadCommands(Stream log, long lastGoodPosition)
         {
             try
             {
@@ -113,7 +154,7 @@ namespace Raven.Munin
         public IDisposable SuppressTransaction()
         {
             var old = CurrentTransactionId.Value;
-            
+
             CurrentTransactionId.Value = Guid.Empty;
 
             return new StreamsPool.DisposableAction(() =>
@@ -156,7 +197,7 @@ namespace Raven.Munin
             if (cmds.Count == 0)
                 return;
 
-            persistentSource.Write(log=>
+            persistentSource.Write(log =>
             {
                 log.Position = log.Length; // always write at the end of the file
 
@@ -178,14 +219,14 @@ namespace Raven.Munin
 
         private static void WriteCommands(IList<Command> cmds, Stream log)
         {
-            if(cmds.Count ==0)
+            if (cmds.Count == 0)
                 return;
 
             var dataSizeInBytes = cmds
                 .Where(x => x.Type == CommandType.Put && x.Payload != null)
                 .Sum(x => x.Payload.Length);
 
-            if(dataSizeInBytes > 0)
+            if (dataSizeInBytes > 0)
             {
                 WriteTo(log, new JArray(new JObject
                 {
@@ -206,7 +247,7 @@ namespace Raven.Munin
 
                 if (command.Type == CommandType.Put)
                 {
-                    if(command.Payload != null)
+                    if (command.Payload != null)
                     {
                         command.Position = log.Position;
                         command.Size = command.Payload.Length;
@@ -232,7 +273,7 @@ namespace Raven.Munin
 
         public void Compact()
         {
-            persistentSource.Write(log=>
+            persistentSource.Write(log =>
             {
                 Stream tempLog = persistentSource.CreateTemporaryStream();
 
