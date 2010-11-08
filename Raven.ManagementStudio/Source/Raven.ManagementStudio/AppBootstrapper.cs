@@ -1,6 +1,6 @@
-﻿using Raven.Admin.ViewModels.Interfaces;
+﻿using Raven.ManagementStudio.ViewModels.Interfaces;
 
-namespace Raven.Admin
+namespace Raven.ManagementStudio
 {
     using System;
     using System.Collections.Generic;

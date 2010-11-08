@@ -1,6 +1,6 @@
-﻿using Raven.Admin.ViewModels.Interfaces;
+﻿using Raven.ManagementStudio.ViewModels.Interfaces;
 
-namespace Raven.Admin.ViewModels
+namespace Raven.ManagementStudio.ViewModels
 {
     using System.ComponentModel.Composition;
     using Caliburn.Micro;

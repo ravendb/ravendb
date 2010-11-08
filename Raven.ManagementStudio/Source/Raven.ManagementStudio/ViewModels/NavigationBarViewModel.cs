@@ -1,4 +1,4 @@
-﻿namespace Raven.Admin.ViewModels
+﻿namespace Raven.ManagementStudio.ViewModels
 {
     using System.ComponentModel.Composition;
     using Interfaces;

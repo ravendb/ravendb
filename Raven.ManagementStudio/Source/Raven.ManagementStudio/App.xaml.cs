@@ -1,4 +1,4 @@
-﻿namespace Raven.Admin
+﻿namespace Raven.ManagementStudio
 {
     using System.Windows;
 

@@ -1,4 +1,4 @@
-﻿namespace Raven.Admin.ViewModels.Interfaces
+﻿namespace Raven.ManagementStudio.ViewModels.Interfaces
 {
     public interface IShell
     {

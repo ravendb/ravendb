@@ -9,7 +9,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Shapes;
 
-namespace Raven.Admin.Controls
+namespace Raven.ManagementStudio.Controls
 {
     public class Gears : Control
     {

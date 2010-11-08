@@ -1,4 +1,4 @@
-﻿namespace Raven.Admin.Views
+﻿namespace Raven.ManagementStudio.Views
 {
     using System.Windows.Controls;
 

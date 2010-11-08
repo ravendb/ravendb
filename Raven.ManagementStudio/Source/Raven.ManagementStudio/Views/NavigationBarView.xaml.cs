@@ -10,7 +10,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Shapes;
 
-namespace Raven.Admin.Views
+namespace Raven.ManagementStudio.Views
 {
     public partial class NavigationBarView : UserControl
     {
