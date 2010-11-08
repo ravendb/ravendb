@@ -1,0 +1,3 @@
+[submodule "Modules/Munin"]
+	path = Modules/Munin
+	url = git://github.com/ravendb/raven.munin.git
