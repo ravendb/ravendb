@@ -1,4 +1,5 @@
-﻿using System.Windows.Controls;
+﻿using System.Windows;
+using System.Windows.Controls;
 
 namespace Raven.ManagementStudio.UI.Silverlight.Views
 {
@@ -7,6 +8,11 @@ namespace Raven.ManagementStudio.UI.Silverlight.Views
         public ShellView()
         {
             InitializeComponent();
+        }
+
+        private void TitleBarMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            Application.Current.MainWindow.DragMove();
         }
     }
 }

@@ -48,7 +48,7 @@
   <ItemGroup>
     <Reference Include="mscorlib" />
     <Reference Include="Newtonsoft.Json.Silverlight">
-      <HintPath>..\..\..\Components\Newtonsoft.Json.Silverlight.dll</HintPath>
+      <HintPath>..\..\Components\Newtonsoft.Json.Silverlight.dll</HintPath>
     </Reference>
     <Reference Include="System.Windows" />
     <Reference Include="system" />
@@ -80,10 +80,10 @@
     <Compile Include="Document\IAsyncDocumentSession.cs" />
     <Compile Include="Document\IDocumentRepository.cs" />
     <Compile Include="Document\InMemoryDocumentSessionOperations.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Common\Exceptions\" />
+    <Folder Include="Properties\" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Common\DatabaseUrl.resx">
