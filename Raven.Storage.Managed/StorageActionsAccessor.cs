@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using Raven.Database;
 using Raven.Database.Impl;
+using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Database.Storage.StorageActions;
 using Raven.Storage.Managed.Impl;
@@ -10,12 +12,15 @@ namespace Raven.Storage.Managed
 {
     public class StorageActionsAccessor : IStorageActionsAccessor
     {
-        public StorageActionsAccessor(TableStorage storage, IUuidGenerator generator)
+        private readonly IEnumerable<AbstractDocumentCodec> documentCodecs;
+
+        public StorageActionsAccessor(TableStorage storage, IUuidGenerator generator, IEnumerable<AbstractDocumentCodec> documentCodecs)
         {
+            this.documentCodecs = documentCodecs;
             General = new GeneralStorageActions(storage);
             Attachments = new AttachmentsStorageActions(storage, generator);
-            Transactions = new TransactionStorageActions(storage, generator);
-            Documents = new DocumentsStorageActions(storage, Transactions, generator);
+            Transactions = new TransactionStorageActions(storage, generator, documentCodecs);
+            Documents = new DocumentsStorageActions(storage, Transactions, generator, documentCodecs);
             Indexing = new IndexingStorageActions(storage);
             MappedResults = new MappedResultsStorageAction(storage, generator);
             Queue = new QueueStorageActions(storage, generator);

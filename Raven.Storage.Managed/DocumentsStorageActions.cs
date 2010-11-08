@@ -7,11 +7,13 @@ using Raven.Database;
 using Raven.Database.Exceptions;
 using Raven.Database.Impl;
 using Raven.Database.Json;
+using Raven.Database.Plugins;
 using Raven.Database.Storage.StorageActions;
 using Raven.Http;
 using Raven.Http.Exceptions;
 using Raven.Storage.Managed.Impl;
 using System.Linq;
+using Raven.Database.Extensions;
 
 namespace Raven.Storage.Managed
 {
@@ -20,12 +22,14 @@ namespace Raven.Storage.Managed
         private readonly TableStorage storage;
         private readonly ITransactionStorageActions transactionStorageActions;
         private readonly IUuidGenerator generator;
+        private readonly IEnumerable<AbstractDocumentCodec> documentCodecs;
 
-        public DocumentsStorageActions(TableStorage storage, ITransactionStorageActions transactionStorageActions, IUuidGenerator generator)
+        public DocumentsStorageActions(TableStorage storage, ITransactionStorageActions transactionStorageActions, IUuidGenerator generator, IEnumerable<AbstractDocumentCodec> documentCodecs)
         {
             this.storage = storage;
             this.transactionStorageActions = transactionStorageActions;
             this.generator = generator;
+            this.documentCodecs = documentCodecs;
         }
 
         public Tuple<int, int> FirstAndLastDocumentIds()
@@ -75,6 +79,9 @@ namespace Raven.Storage.Managed
 
         public JsonDocument DocumentByKey(string key, TransactionInformation transactionInformation)
         {
+            JObject metadata = null;
+            JObject dataAsJson = null;
+            
             var resultInTx = storage.DocumentsModifiedByTransactions.Read(new JObject { { "key", key } });
             if (transactionInformation != null && resultInTx != null)
             {
@@ -83,14 +90,12 @@ namespace Raven.Storage.Managed
                     if (resultInTx.Key.Value<bool>("deleted"))
                         return null;
 
-                    JObject metadata = null;
-                    JObject dataAsJson = null;
-                    if (resultInTx.Position != -1)
+                   if (resultInTx.Position != -1)
                     {
-                        using (var memoryStreamFromTx = new MemoryStream(resultInTx.Data()))
+                        var bufferFromTx = resultInTx.Data();
+                        using (var memoryStreamFromTx = new MemoryStream(bufferFromTx, 0, bufferFromTx.Length, writable: false, publiclyVisible: true))
                         {
-                            metadata = memoryStreamFromTx.ToJObject();
-                            dataAsJson = memoryStreamFromTx.ToJObject();
+                            ReadMetadataAndData(key, memoryStreamFromTx, out metadata, out dataAsJson);
                         }
                     }
                     return new JsonDocument
@@ -108,16 +113,29 @@ namespace Raven.Storage.Managed
             if (readResult == null)
                 return null;
 
-            var memoryStream = new MemoryStream(readResult.Data());
+            var buffer = readResult.Data();
+            var memoryStream = new MemoryStream(buffer, 0, buffer.Length, writable: false, publiclyVisible: true);
+            ReadMetadataAndData(key, memoryStream, out metadata, out dataAsJson);
             return new JsonDocument
             {
                 Key = readResult.Key.Value<string>("key"),
                 Etag = new Guid(readResult.Key.Value<byte[]>("etag")),
-                Metadata = memoryStream.ToJObject(),
-                DataAsJson = memoryStream.ToJObject(),
+                Metadata = metadata,
+                DataAsJson = dataAsJson,
                 LastModified = readResult.Key.Value<DateTime>("modified"),
                 NonAuthoritiveInformation = resultInTx != null
             };
+        }
+
+        private void ReadMetadataAndData(string key, MemoryStream memoryStreamFromTx, out JObject metadata, out JObject dataAsJson)
+        {
+            metadata = memoryStreamFromTx.ToJObject();
+            var metadataCopy = metadata;
+            var dataBuffer = new byte[memoryStreamFromTx.Length - memoryStreamFromTx.Position];
+            Buffer.BlockCopy(memoryStreamFromTx.GetBuffer(), (int)memoryStreamFromTx.Position, dataBuffer, 0,
+                             dataBuffer.Length);
+            documentCodecs.Aggregate(dataBuffer, (bytes, codec) => codec.Decode(key, metadataCopy, bytes));
+            dataAsJson = dataBuffer.ToJObject();
         }
 
         public bool DeleteDocument(string key, Guid? etag, out JObject metadata)
@@ -146,7 +164,10 @@ namespace Raven.Storage.Managed
             var ms = new MemoryStream();
 
             metadata.WriteTo(ms);
-            data.WriteTo(ms);
+
+            var bytes = documentCodecs.Aggregate(data.ToBytes(), (current, codec) => codec.Encode(key, data, metadata, current));
+
+            ms.Write(bytes, 0, bytes.Length);
 
             var lastOrefaultKeyById = storage.Documents["ById"].LastOrDefault();
             int id = 1;

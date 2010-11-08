@@ -1,10 +1,13 @@
 using System;
+using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Impl;
+using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Munin;
 using Raven.Storage.Managed.Backup;
@@ -25,6 +28,9 @@ namespace Raven.Storage.Managed
         private Timer idleTimer;
         private long lastUsageTime;
         private IUuidGenerator uuidGenerator;
+
+        [ImportMany]
+        public IEnumerable<AbstractDocumentCodec> DocumentCodecs { get; set; }
 
         public TransactionalStorage(InMemroyRavenConfiguration configuration, Action onCommit)
         {
@@ -75,7 +81,7 @@ namespace Raven.Storage.Managed
                 Interlocked.Exchange(ref lastUsageTime, DateTime.Now.ToBinary());
                 using (tableStroage.BeginTransaction())
                 {
-                    var storageActionsAccessor = new StorageActionsAccessor(tableStroage, uuidGenerator);
+                    var storageActionsAccessor = new StorageActionsAccessor(tableStroage, uuidGenerator, DocumentCodecs);
                     current.Value = storageActionsAccessor;
                     action(current.Value);
                     tableStroage.Commit();
