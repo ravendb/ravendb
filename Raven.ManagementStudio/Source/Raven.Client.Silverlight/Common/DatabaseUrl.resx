@@ -132,4 +132,16 @@
   <data name="DocumentPut" xml:space="preserve">
     <value>{0}/docs/{1}</value>
   </data>
+  <data name="IndexGet" xml:space="preserve">
+    <value>{0}/indexes/{1}</value>
+  </data>
+  <data name="IndexGetAll" xml:space="preserve">
+    <value>{0}/indexes</value>
+  </data>
+  <data name="IndexGetMany" xml:space="preserve">
+    <value>{0}/indexes</value>
+  </data>
+  <data name="IndexPut" xml:space="preserve">
+    <value>{0}/indexes/{1}</value>
+  </data>
 </root>

@@ -104,5 +104,41 @@ namespace Raven.Client.Silverlight.Common {
                 return ResourceManager.GetString("DocumentPut", resourceCulture);
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to {0}/indexes/{1}.
+        /// </summary>
+        internal static string IndexGet {
+            get {
+                return ResourceManager.GetString("IndexGet", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to {0}/indexes.
+        /// </summary>
+        internal static string IndexGetAll {
+            get {
+                return ResourceManager.GetString("IndexGetAll", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to {0}/indexes.
+        /// </summary>
+        internal static string IndexGetMany {
+            get {
+                return ResourceManager.GetString("IndexGetMany", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to {0}/indexes/{1}.
+        /// </summary>
+        internal static string IndexPut {
+            get {
+                return ResourceManager.GetString("IndexPut", resourceCulture);
+            }
+        }
     }
 }
