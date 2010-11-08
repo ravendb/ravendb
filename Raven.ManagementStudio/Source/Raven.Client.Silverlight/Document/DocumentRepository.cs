@@ -81,7 +81,7 @@
 
         private void CreateContext<T>(Uri requestUri, RequestMethod method, CallbackFunction.Load<T> callback, CallbackFunction.Store<T> storeCallback, object state, out HttpWebRequest request) where T : JsonDocument
         {
-            request = (HttpWebRequest)WebRequest.Create(requestUri);
+            request = (HttpWebRequest)WebRequest.Create(new Uri(requestUri.AbsoluteUri + "?" + Guid.NewGuid())); // TODO [ppekrol] workaround for caching problem in SL
             request.Method = method.GetName();
 
             this.ContextStorage.Add(request, new DocumentRepositoryContext<T>(callback, storeCallback, state));
@@ -89,7 +89,7 @@
 
         private void CreateContext<T>(Uri requestUri, RequestMethod method, CallbackFunction.Load<IList<T>> callback, CallbackFunction.Store<IList<T>> storeCallback, object state, out HttpWebRequest request) where T : JsonDocument
         {
-            request = (HttpWebRequest)WebRequest.Create(requestUri);
+            request = (HttpWebRequest)WebRequest.Create(new Uri(requestUri.AbsoluteUri + "?" + Guid.NewGuid())); // TODO [ppekrol] workaround for caching problem in SL
             request.Method = method.GetName();
 
             this.ContextStorage.Add(request, new DocumentRepositoryContext<T>(callback, storeCallback, state));
@@ -97,7 +97,7 @@
 
         private void CreateContext<T>(Uri requestUri, RequestMethod method, CallbackFunction.Save callback, CallbackFunction.Store<T> storeCallback, object state, out HttpWebRequest request) where T : JsonDocument
         {
-            request = (HttpWebRequest)WebRequest.Create(requestUri);
+            request = (HttpWebRequest)WebRequest.Create(new Uri(requestUri.AbsoluteUri + "?" + Guid.NewGuid())); // TODO [ppekrol] workaround for caching problem in SL
             request.Method = method.GetName();
 
             this.ContextStorage.Add(request, new DocumentRepositoryContext<T>(callback, storeCallback, state));

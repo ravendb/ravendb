@@ -1,28 +1,29 @@
-﻿namespace Raven.Client.Silverlight.Document
+﻿namespace Raven.Client.Silverlight.Common
 {
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using Newtonsoft.Json.Linq;
     using Raven.Client.Silverlight.Common.Helpers;
     using Raven.Client.Silverlight.Data;
 
-    public class InMemoryDocumentSessionOperations : IDisposable
+    public class InMemorySessionOperations<T> : IDisposable where T : Entity
     {
-        protected readonly HashSet<object> DeletedEntities;
+        protected readonly HashSet<T> DeletedEntities;
 
-        protected readonly IDictionary<string, DocumentSession.StoredDocument> StoredEntities;
+        protected readonly IDictionary<string, StoredEntity> StoredEntities;
 
-        public InMemoryDocumentSessionOperations()
+        public InMemorySessionOperations()
         {
-            this.StoredEntities = new Dictionary<string, DocumentSession.StoredDocument>(StringComparer.InvariantCultureIgnoreCase);
-            this.DeletedEntities = new HashSet<object>();
+            this.StoredEntities = new Dictionary<string, StoredEntity>(StringComparer.InvariantCultureIgnoreCase);
+            this.DeletedEntities = new HashSet<T>();
         }
 
         public void Dispose()
         {
         }
 
-        public void Store(object entity)
+        public void Store(T entity)
         {
             Guard.Assert(() => entity != null);
 
@@ -37,7 +38,7 @@
             }
             else
             {
-                var storedDocument = new DocumentSession.StoredDocument()
+                var storedDocument = new StoredEntity()
                                          {
                                              CurrentState = entity,
                                              BaseState = (entity as Entity).ToJson(),
@@ -48,7 +49,7 @@
             }
         }
 
-        public void StoreMany<T>(IList<T> entities)
+        public void StoreMany<T1>(IList<T1> entities) where T1 : T
         {
             foreach (var entity in entities)
             {
@@ -81,6 +82,20 @@
             }
 
             return id;
+        }
+
+        protected class StoredEntity
+        {
+            public T CurrentState { get; set; }
+
+            public JObject BaseState { get; set; }
+
+            public bool IsDirty
+            {
+                get { return this.IsNew || this.CurrentState.ToJson().ToString() != this.BaseState.ToString(); }
+            }
+
+            public bool IsNew { get; set; }
         }
     }
 }

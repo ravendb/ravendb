@@ -4,12 +4,11 @@
     using System.Collections.Generic;
     using System.Linq;
     using System.Threading;
-    using Newtonsoft.Json.Linq;
     using Raven.Client.Silverlight.Common;
     using Raven.Client.Silverlight.Common.Helpers;
     using Raven.Client.Silverlight.Data;
 
-    public class DocumentSession : InMemoryDocumentSessionOperations, IAsyncDocumentSession
+    public class DocumentSession : InMemorySessionOperations<JsonDocument>, IAsyncDocumentSession
     {
         private readonly IDocumentRepository documentRepository;
 
@@ -20,7 +19,7 @@
 
         public void Load<T>(string key, CallbackFunction.Load<T> callback) where T : JsonDocument
         {
-            StoredDocument existingEntity;
+            StoredEntity existingEntity;
             if (StoredEntities.TryGetValue(key, out existingEntity))
             {
                 SynchronizationContext.Current.Post(
@@ -41,7 +40,7 @@
             Guard.Assert(() => keys != null);
             Guard.Assert(() => keys.Length > 0);
 
-            StoredDocument existingEntity;
+            StoredEntity existingEntity;
 
             var existingEntities = new List<T>();
 
@@ -66,12 +65,12 @@
                 return;
             }
 
-            this.documentRepository.GetMany(keys, existingEntities.Select(x => x.Id).ToArray(), callback, this.StoreMany);
+            this.documentRepository.GetMany<T>(keys, existingEntities.Select(x => x.Id).ToArray(), callback, this.StoreMany);
         }
 
         public void LoadMany<T>(CallbackFunction.Load<IList<T>> callback) where T : JsonDocument
         {
-            this.documentRepository.GetMany(null, StoredEntities.Select(x => (x.Value.CurrentState as JsonDocument).Key).ToArray(), callback, this.StoreMany);
+            this.documentRepository.GetMany<T>(null, StoredEntities.Select(x => x.Value.CurrentState.Key).ToArray(), callback, this.StoreMany);
         }
 
         public void StoreEntity<T>(T entity) where T : JsonDocument
@@ -96,7 +95,7 @@
                     StoredEntities.Remove(StoredEntities.Where(x => x.Value.CurrentState == deletedEntity).FirstOrDefault());
                 }
 
-                this.documentRepository.Delete(deletedEntity as JsonDocument, callback);
+                this.documentRepository.Delete(deletedEntity, callback);
             }
 
             this.DeletedEntities.Clear();
@@ -106,13 +105,13 @@
             {
                 if (storedDocument.Value.IsNew)
                 {
-                    if ((storedDocument.Value.CurrentState as JsonDocument).Key == "auto-generated")
+                    if (storedDocument.Value.CurrentState.Key == "auto-generated")
                     {
-                        this.documentRepository.Post(storedDocument.Value.CurrentState as JsonDocument, callback, this.Store);
+                        this.documentRepository.Post(storedDocument.Value.CurrentState, callback, this.Store);
                     }
                     else
                     {
-                        this.documentRepository.Put(storedDocument.Value.CurrentState as JsonDocument, callback, this.Store);
+                        this.documentRepository.Put(storedDocument.Value.CurrentState, callback, this.Store);
                     }
                 }
                 else
@@ -122,20 +121,6 @@
 
                 StoredEntities.Remove(storedDocument);
             }
-        }
-
-        public class StoredDocument
-        {
-            public object CurrentState { get; set; }
-
-            public JObject BaseState { get; set; }
-
-            public bool IsDirty
-            {
-                get { return this.IsNew || (this.CurrentState as Entity).ToJson().ToString() != this.BaseState.ToString(); }
-            }
-
-            public bool IsNew { get; set; }
         }
     }
 }

@@ -64,13 +64,19 @@
       <DependentUpon>DatabaseUrl.resx</DependentUpon>
     </Compile>
     <Compile Include="Common\CallbackFunction.cs" />
+    <Compile Include="Common\IndexType.cs" />
+    <Compile Include="Common\InMemorySessionOperations.cs" />
     <Compile Include="Common\IRepositoryContext.cs" />
     <Compile Include="Common\Mappers\DocumentMapper.cs" />
     <Compile Include="Common\Mappers\IMapper.cs" />
+    <Compile Include="Common\Mappers\IndexMapper.cs" />
     <Compile Include="Common\RequestMethod.cs" />
     <Compile Include="Common\RequestMethodExtensions.cs" />
     <Compile Include="Common\SaveResponse.cs" />
+    <Compile Include="Common\StoreType.cs" />
     <Compile Include="Data\Entity.cs" />
+    <Compile Include="Data\Index.cs" />
+    <Compile Include="Data\IndexField.cs" />
     <Compile Include="Data\JsonDocument.cs" />
     <Compile Include="Common\Helpers\Guard.cs" />
     <Compile Include="Document\DocumentRepository.cs" />
@@ -79,7 +85,12 @@
     <Compile Include="Document\DocumentStore.cs" />
     <Compile Include="Document\IAsyncDocumentSession.cs" />
     <Compile Include="Document\IDocumentRepository.cs" />
-    <Compile Include="Document\InMemoryDocumentSessionOperations.cs" />
+    <Compile Include="Index\IAsyncIndexSession.cs" />
+    <Compile Include="Index\IIndexRepository.cs" />
+    <Compile Include="Index\IndexRepository.cs" />
+    <Compile Include="Index\IndexRepositoryContext.cs" />
+    <Compile Include="Index\IndexSession.cs" />
+    <Compile Include="Index\IndexStore.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
