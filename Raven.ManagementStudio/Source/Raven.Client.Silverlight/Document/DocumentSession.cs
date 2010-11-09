@@ -3,6 +3,7 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Net;
     using System.Threading;
     using Raven.Client.Silverlight.Common;
     using Raven.Client.Silverlight.Common.Helpers;
@@ -25,7 +26,11 @@
                 SynchronizationContext.Current.Post(
                     delegate
                     {
-                        callback.Invoke((T)existingEntity.CurrentState);
+                        callback.Invoke(new LoadResponse<T>()
+                                            {
+                                                Data = existingEntity.CurrentState as T,
+                                                StatusCode = HttpStatusCode.OK
+                                            });
                     },
                     null);
 
@@ -57,20 +62,25 @@
             {
                 SynchronizationContext.Current.Post(
                     delegate
-                    {
-                        callback.Invoke(existingEntities);
-                    },
+                        {
+                            callback.Invoke(
+                                new LoadResponse<IList<T>>()
+                                    {
+                                        Data = existingEntities,
+                                        StatusCode = HttpStatusCode.OK
+                                    });
+                        },
                     null);
 
                 return;
             }
 
-            this.documentRepository.GetMany<T>(keys, existingEntities.Select(x => x.Id).ToArray(), callback, this.StoreMany);
+            this.documentRepository.GetMany(keys, existingEntities, callback, this.StoreMany);
         }
 
         public void LoadMany<T>(CallbackFunction.Load<IList<T>> callback) where T : JsonDocument
         {
-            this.documentRepository.GetMany<T>(null, StoredEntities.Select(x => x.Value.CurrentState.Key).ToArray(), callback, this.StoreMany);
+            this.documentRepository.GetMany(null, null, callback, this.StoreMany);
         }
 
         public void StoreEntity<T>(T entity) where T : JsonDocument
@@ -86,7 +96,7 @@
             DeletedEntities.Add(entity);
         }
 
-        public void SaveChanges(CallbackFunction.Save callback)
+        public void SaveChanges(CallbackFunction.Save<JsonDocument> callback)
         {
             foreach (var deletedEntity in DeletedEntities)
             {

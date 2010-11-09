@@ -1,6 +1,6 @@
 ﻿namespace Raven.Client.Silverlight.Common
 {
-    public class SaveResponse<T> : Response<T>
+    public class LoadResponse<T> : Response<T>
     {
 
     }

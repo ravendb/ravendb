@@ -17,6 +17,6 @@
 
         void Delete<T>(T entity) where T : JsonDocument;
 
-        void SaveChanges(CallbackFunction.Save callback);
+        void SaveChanges(CallbackFunction.Save<JsonDocument> callback);
     }
 }

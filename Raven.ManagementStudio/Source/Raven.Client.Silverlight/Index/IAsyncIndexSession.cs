@@ -13,6 +13,6 @@
 
         void Delete<T>(T entity) where T : Data.Index;
 
-        void SaveChanges(CallbackFunction.Save callback);
+        void SaveChanges(CallbackFunction.Save<Data.Index> callback);
     }
 }

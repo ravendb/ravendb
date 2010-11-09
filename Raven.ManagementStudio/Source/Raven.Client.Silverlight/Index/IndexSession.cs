@@ -3,6 +3,7 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Net;
     using System.Threading;
     using Raven.Client.Silverlight.Common;
     using Raven.Client.Silverlight.Common.Helpers;
@@ -25,7 +26,11 @@
                 SynchronizationContext.Current.Post(
                     delegate
                     {
-                        callback.Invoke((T)existingEntity.CurrentState);
+                        callback.Invoke(new LoadResponse<T>()
+                                            {
+                                                Data = existingEntity.CurrentState as T,
+                                                StatusCode = HttpStatusCode.OK
+                                            });
                     },
                     null);
 
@@ -37,12 +42,12 @@
 
         public void LoadMany<T>(string[] names, CallbackFunction.Load<IList<T>> callback) where T : Index
         {
-            this.indexRepository.GetMany<T>(names, StoredEntities.Select(x => (x.Value.CurrentState as T).Name).ToArray(), callback, this.StoreMany);
+            this.indexRepository.GetMany(names, StoredEntities.Select(x => (x.Value.CurrentState as T)).ToList(), callback, this.StoreMany);
         }
 
         public void LoadMany<T>(CallbackFunction.Load<IList<T>> callback) where T : Index
         {
-            this.indexRepository.GetMany<T>(null, StoredEntities.Select(x => (x.Value.CurrentState as T).Name).ToArray(), callback, this.StoreMany);
+            this.indexRepository.GetMany(null, null, callback, this.StoreMany);
         }
 
         public void StoreEntity<T>(T entity) where T : Index
@@ -58,7 +63,7 @@
             DeletedEntities.Add(entity);
         }
 
-        public void SaveChanges(CallbackFunction.Save callback)
+        public void SaveChanges(CallbackFunction.Save<Index> callback)
         {
             foreach (var deletedEntity in DeletedEntities)
             {
