@@ -93,7 +93,6 @@
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
     <Compile Include="DocumentSessionTests.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="DocumentRepositoryTests.cs" />
   </ItemGroup>
   <ItemGroup>

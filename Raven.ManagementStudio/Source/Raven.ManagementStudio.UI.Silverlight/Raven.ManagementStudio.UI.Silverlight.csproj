@@ -64,6 +64,9 @@
       <HintPath>..\..\Components\Caliburn.Micro.dll</HintPath>
     </Reference>
     <Reference Include="mscorlib" />
+    <Reference Include="Newtonsoft.Json.Silverlight">
+      <HintPath>..\..\Components\Newtonsoft.Json.Silverlight.dll</HintPath>
+    </Reference>
     <Reference Include="System.ComponentModel.Composition, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="System.ComponentModel.Composition.Initialization, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="System.Windows" />
@@ -71,9 +74,7 @@
     <Reference Include="System.Core" />
     <Reference Include="System.Net" />
     <Reference Include="System.Windows.Controls, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
-    <Reference Include="System.Windows.Interactivity">
-      <HintPath>..\..\Components\System.Windows.Interactivity.dll</HintPath>
-    </Reference>
+    <Reference Include="System.Windows.Controls.Toolkit, Version=4.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Windows.Browser" />
   </ItemGroup>
@@ -83,12 +84,29 @@
     </Compile>
     <Compile Include="AppBootstrapper.cs" />
     <Compile Include="Controls\Gears.cs" />
+    <Compile Include="Messages\ActiveScreenChangedMessage.cs" />
+    <Compile Include="ViewModels\DocumentsScreenViewModel.cs" />
     <Compile Include="ViewModels\GadgetsViewModel.cs" />
+    <Compile Include="ViewModels\Interfaces\IMenuItem.cs" />
     <Compile Include="ViewModels\Interfaces\INavigationBar.cs" />
+    <Compile Include="ViewModels\Interfaces\IRavenScreen.cs" />
+    <Compile Include="ViewModels\Interfaces\ISection.cs" />
     <Compile Include="ViewModels\Interfaces\IShell.cs" />
+    <Compile Include="ViewModels\MenuScreenViewModel.cs" />
     <Compile Include="ViewModels\NavigationBarViewModel.cs" />
+    <Compile Include="ViewModels\RavenScreensViewModel.cs" />
+    <Compile Include="ViewModels\SectionType.cs" />
+    <Compile Include="Views\DocumentsScreenView.xaml.cs">
+      <DependentUpon>DocumentsScreenView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\MenuScreenView.xaml.cs">
+      <DependentUpon>MenuScreenView.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\NavigationBarView.xaml.cs">
       <DependentUpon>NavigationBarView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\RavenScreensView.xaml.cs">
+      <DependentUpon>RavenScreensView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\ShellView.xaml.cs">
       <DependentUpon>ShellView.xaml</DependentUpon>
@@ -120,7 +138,19 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Resource>
+    <Page Include="Views\DocumentsScreenView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\MenuScreenView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Views\NavigationBarView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\RavenScreensView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -133,6 +163,7 @@
     <None Include="Properties\AppManifest.xml" />
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="Converters\" />
     <Folder Include="Models\" />
   </ItemGroup>
   <ItemGroup>
@@ -140,6 +171,12 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Properties\OutOfBrowserSettings.xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Raven.Client.Silverlight\Raven.Client.Silverlight.csproj">
+      <Project>{250E7A4E-D717-4C16-8048-B5BE99D77715}</Project>
+      <Name>Raven.Client.Silverlight</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
