@@ -2,7 +2,7 @@
 {
     using Raven.Client.Silverlight.Common;
 
-    public class IndexField
+    public class JsonIndexField
     {
         public string Name { get; set; }
 

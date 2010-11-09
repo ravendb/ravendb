@@ -2,6 +2,5 @@
 {
     public class DeleteResponse<T> : SaveResponse<T>
     {
-
     }
 }

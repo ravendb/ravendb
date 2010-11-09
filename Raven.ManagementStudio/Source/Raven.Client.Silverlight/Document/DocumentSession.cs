@@ -62,14 +62,14 @@
             {
                 SynchronizationContext.Current.Post(
                     delegate
-                        {
-                            callback.Invoke(
-                                new LoadResponse<IList<T>>()
-                                    {
-                                        Data = existingEntities,
-                                        StatusCode = HttpStatusCode.OK
-                                    });
-                        },
+                    {
+                        callback.Invoke(
+                            new LoadResponse<IList<T>>()
+                                {
+                                    Data = existingEntities,
+                                    StatusCode = HttpStatusCode.OK
+                                });
+                    },
                     null);
 
                 return;
@@ -93,7 +93,7 @@
             bool generated;
             Guard.Assert(() => StoredEntities.ContainsKey(GetOrGenerateDocumentKey(entity, out generated)));
 
-            DeletedEntities.Add(entity);
+            this.DeletedEntities.Add(entity);
         }
 
         public void SaveChanges(CallbackFunction.Save<JsonDocument> callback)
@@ -110,7 +110,7 @@
 
             this.DeletedEntities.Clear();
 
-            var dirtyEntities = StoredEntities.Where(x => x.Value.IsDirty).ToDictionary(x => x.Key, y => y.Value);
+            var dirtyEntities = this.StoredEntities.Where(x => x.Value.IsDirty).ToDictionary(x => x.Key, y => y.Value);
             foreach (var storedDocument in dirtyEntities)
             {
                 if (storedDocument.Value.IsNew)
@@ -129,8 +129,25 @@
                     // PATCH
                 }
 
-                StoredEntities.Remove(storedDocument);
+                this.StoredEntities.Remove(storedDocument);
             }
+        }
+
+        public void Refresh<T>(T entity, CallbackFunction.Load<T> callback) where T : JsonDocument
+        {
+            Guard.Assert(() => !string.IsNullOrEmpty(entity.Id));
+
+            if (this.StoredEntities.ContainsKey(entity.Id))
+            {
+                this.StoredEntities.Remove(entity.Id);
+            }
+
+            if (this.DeletedEntities.Contains(entity))
+            {
+                this.DeletedEntities.Remove(entity);
+            }
+
+            this.documentRepository.Get(entity.Key, callback, this.Store);
         }
     }
 }

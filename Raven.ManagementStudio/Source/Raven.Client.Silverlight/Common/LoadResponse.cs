@@ -2,6 +2,5 @@
 {
     public class LoadResponse<T> : Response<T>
     {
-
     }
 }

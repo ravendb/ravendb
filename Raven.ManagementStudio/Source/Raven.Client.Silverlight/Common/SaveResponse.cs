@@ -2,6 +2,5 @@
 {
     public class SaveResponse<T> : Response<T>
     {
-
     }
 }

@@ -11,6 +11,9 @@
 
         public Exception Exception { get; set; }
 
-        public bool IsSuccess { get { return this.Exception == null; } }
+        public bool IsSuccess
+        {
+            get { return this.Exception == null; }
+        }
     }
 }

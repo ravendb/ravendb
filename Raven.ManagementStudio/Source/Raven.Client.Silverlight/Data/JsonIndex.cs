@@ -3,11 +3,11 @@
     using System.Collections.Generic;
     using Newtonsoft.Json.Linq;
 
-    public class Index : Entity
+    public class JsonIndex : Entity
     {
-        public Index()
+        public JsonIndex()
         {
-            this.Fields = new List<IndexField>();
+            this.Fields = new List<JsonIndexField>();
         }
 
         public string Name { get; set; }
@@ -16,13 +16,13 @@
 
         public string Reduce { get; set; }
 
-        public IList<IndexField> Fields { get; private set; }
+        public IList<JsonIndexField> Fields { get; private set; }
 
         public override JObject ToJson()
         {
             var index = new JObject();
 
-            if(string.IsNullOrEmpty(this.Map))
+            if (string.IsNullOrEmpty(this.Map))
             {
                 this.Map = string.Empty;
             }

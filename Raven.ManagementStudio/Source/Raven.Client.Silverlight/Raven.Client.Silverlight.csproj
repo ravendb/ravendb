@@ -79,8 +79,8 @@
     <Compile Include="Common\SaveResponse.cs" />
     <Compile Include="Common\StoreType.cs" />
     <Compile Include="Data\Entity.cs" />
-    <Compile Include="Data\Index.cs" />
-    <Compile Include="Data\IndexField.cs" />
+    <Compile Include="Data\JsonIndex.cs" />
+    <Compile Include="Data\JsonIndexField.cs" />
     <Compile Include="Data\JsonDocument.cs" />
     <Compile Include="Common\Helpers\Guard.cs" />
     <Compile Include="Document\DocumentRepository.cs" />
@@ -93,16 +93,21 @@
     <Compile Include="Index\IndexRepository.cs" />
     <Compile Include="Index\IndexSession.cs" />
     <Compile Include="Index\IndexStore.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Common\Exceptions\" />
-    <Folder Include="Properties\" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Common\DatabaseUrl.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>DatabaseUrl.Designer.cs</LastGenOutput>
     </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\Settings.StyleCop">
+      <Link>Settings.StyleCop</Link>
+    </None>
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />
   <ProjectExtensions>

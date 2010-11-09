@@ -10,8 +10,9 @@
     using Newtonsoft.Json.Linq;
     using Raven.Client.Silverlight.Common;
     using Raven.Client.Silverlight.Common.Mappers;
+    using Raven.Client.Silverlight.Data;
 
-    public class IndexRepository : BaseRepository<Data.Index>, IIndexRepository
+    public class IndexRepository : BaseRepository<JsonIndex>, IIndexRepository
     {
         public IndexRepository(Uri databaseAddress)
         {
@@ -23,12 +24,15 @@
             this.Mapper = new IndexMapper();
         }
 
-        public void Get<T>(string name, CallbackFunction.Load<T> callback, CallbackFunction.Store<T> storeCallback) where T : Data.Index
+        public void Get<T>(string name, CallbackFunction.Load<T> callback, CallbackFunction.Store<T> storeCallback) where T : JsonIndex
         {
-            throw new NotImplementedException();
+            HttpWebRequest request;
+            this.CreateContext(new Uri(string.Format(DatabaseUrl.IndexGet, this.DatabaseAddress, name)), RequestMethod.GET, out request);
+
+            request.BeginGetResponse((result) => this.Get_Callback(name, request, result, callback, storeCallback), request);
         }
 
-        public void GetMany<T>(string[] names, IList<T> existingEntities, CallbackFunction.Load<IList<T>> callback, CallbackFunction.Store<IList<T>> storeCallback) where T : Data.Index
+        public void GetMany<T>(string[] names, IList<T> existingEntities, CallbackFunction.Load<IList<T>> callback, CallbackFunction.Store<IList<T>> storeCallback) where T : JsonIndex
         {
             HttpWebRequest request;
 
@@ -44,24 +48,25 @@
             }
         }
 
-        public void Put<T>(T entity, CallbackFunction.Save<T> callback, CallbackFunction.Store<T> storeCallback) where T : Data.Index
+        public void Put<T>(T entity, CallbackFunction.Save<T> callback, CallbackFunction.Store<T> storeCallback) where T : JsonIndex
         {
             HttpWebRequest request;
             this.CreateContext(new Uri(string.Format(DatabaseUrl.IndexPut, this.DatabaseAddress, entity.Name)), RequestMethod.PUT, out request);
 
-            request.BeginGetRequestStream((requestResult) =>
-                                              {
-                                                  var writer = new StreamWriter(request.EndGetRequestStream(requestResult));
+            request.BeginGetRequestStream(
+                (requestResult) =>
+                {
+                    var writer = new StreamWriter(request.EndGetRequestStream(requestResult));
 
-                                                  writer.Write(entity.ToJson());
-                                                  writer.Close();
+                    writer.Write(entity.ToJson());
+                    writer.Close();
 
-                                                  request.BeginGetResponse((responseResult) => this.Save_Callback(entity, request, responseResult, callback, storeCallback), request);
-                                              },
-                                              request);
+                    request.BeginGetResponse((responseResult) => this.Save_Callback(entity, request, responseResult, callback, storeCallback), request);
+                },
+                request);
         }
 
-        public void Delete<T>(T entity, CallbackFunction.Save<T> callback) where T : Data.Index
+        public void Delete<T>(T entity, CallbackFunction.Save<T> callback) where T : JsonIndex
         {
             HttpWebRequest request;
             this.CreateContext(new Uri(string.Format(DatabaseUrl.IndexPut, this.DatabaseAddress, entity.Name)), RequestMethod.DELETE, out request);
@@ -69,7 +74,38 @@
             request.BeginGetResponse((result) => this.Delete_Callback(entity, request, result, callback), request);
         }
 
-        private void GetMany_Callback<T>(IList<T> existingEntities, HttpWebRequest request, IAsyncResult result, CallbackFunction.Load<IList<T>> callback, CallbackFunction.Store<IList<T>> storeCallback) where T : Data.Index
+        private void Get_Callback<T>(string name, HttpWebRequest request, IAsyncResult result, CallbackFunction.Load<T> callback, CallbackFunction.Store<T> storeCallback) where T : JsonIndex
+        {
+            var context = this.GetContext(request);
+
+            HttpStatusCode statusCode;
+            var json = this.GetResponseStream(request, result, out statusCode);
+
+            var document = this.Mapper.Map(json); // TODO
+            document.Id = document.Name = name;
+
+            var loadResponse = new LoadResponse<T>()
+            {
+                Data = document as T,
+                StatusCode = statusCode
+            };
+
+            context.Post(
+                delegate
+                {
+                    callback.Invoke(loadResponse);
+                },
+                null);
+
+            context.Post(
+                delegate
+                {
+                    storeCallback.Invoke(loadResponse.Data);
+                },
+                null);
+        }
+
+        private void GetMany_Callback<T>(IList<T> existingEntities, HttpWebRequest request, IAsyncResult result, CallbackFunction.Load<IList<T>> callback, CallbackFunction.Store<IList<T>> storeCallback) where T : JsonIndex
         {
             var context = this.GetContext(request);
 
@@ -86,20 +122,22 @@
                                        StatusCode = statusCode
                                    };
 
-            context.Post(delegate
-                             {
-                                 callback.Invoke(loadResponse);
-                             },
-                         null);
+            context.Post(
+                delegate
+                {
+                    callback.Invoke(loadResponse);
+                },
+                null);
 
-            context.Post(delegate
-                             {
-                                 storeCallback.Invoke(loadResponse.Data);
-                             },
-                         null);
+            context.Post(
+                delegate
+                {
+                    storeCallback.Invoke(loadResponse.Data);
+                },
+                null);
         }
 
-        private void Save_Callback<T>(T entity, HttpWebRequest request, IAsyncResult result, CallbackFunction.Save<T> callback, CallbackFunction.Store<T> storeCallback) where T : Data.Index
+        private void Save_Callback<T>(T entity, HttpWebRequest request, IAsyncResult result, CallbackFunction.Save<T> callback, CallbackFunction.Store<T> storeCallback) where T : JsonIndex
         {
             var context = this.GetContext(request);
 
@@ -116,20 +154,22 @@
                                        StatusCode = statusCode
                                    };
 
-            context.Post(delegate
-                             {
-                                 callback.Invoke(saveResponse);
-                             },
-                         null);
+            context.Post(
+                delegate
+                {
+                    callback.Invoke(saveResponse);
+                },
+                null);
 
-            context.Post(delegate
-                             {
-                                 storeCallback.Invoke(saveResponse.Data);
-                             },
-                         null);
+            context.Post(
+                delegate
+                {
+                    storeCallback.Invoke(saveResponse.Data);
+                },
+                null);
         }
 
-        private void Delete_Callback<T>(T entity, HttpWebRequest request, IAsyncResult result, CallbackFunction.Save<T> callback) where T : Data.Index
+        private void Delete_Callback<T>(T entity, HttpWebRequest request, IAsyncResult result, CallbackFunction.Save<T> callback) where T : JsonIndex
         {
             var context = this.GetContext(request);
 
@@ -142,11 +182,12 @@
                                          StatusCode = statusCode
                                      };
 
-            context.Post(delegate
-                             {
-                                 callback.Invoke(deleteResponse);
-                             },
-                         null);
+            context.Post(
+                delegate
+                {
+                    callback.Invoke(deleteResponse);
+                },
+                null);
         }
     }
 }
