@@ -231,17 +231,9 @@ namespace Raven.Client.Linq
 		        .WhereEquals(memberInfo.Path, "*", true, true);
 		}
 
-        private static Type GetMemberType(ExpressionMemberInfo memberInfo)
-		{
-			switch (memberInfo.InnerMemberInfo.MemberType)
-			{
-				case MemberTypes.Field:
-					return ((FieldInfo) memberInfo.InnerMemberInfo).FieldType;
-				case MemberTypes.Property:
-					return ((PropertyInfo) memberInfo.InnerMemberInfo).PropertyType;
-				default:
-					throw new ArgumentOutOfRangeException();
-			}
+        private static Type GetMemberType(ExpressionInfo info)
+        {
+            return info.Type;
 		}
 
         /// <summary>
@@ -249,15 +241,21 @@ namespace Raven.Client.Linq
         /// </summary>
         /// <param name="expression"></param>
         /// <returns></returns>
-        protected virtual ExpressionMemberInfo GetMember(Expression expression)
+        protected virtual ExpressionInfo GetMember(Expression expression)
 		{
+            var parameterExpression = expression as ParameterExpression;
+            if(parameterExpression != null)
+            {
+                return new ExpressionInfo(CurrentPath, parameterExpression.Type);
+            }
+            
 			MemberExpression memberExpression = GetMemberExpression(expression);
 
-            //for stnadard queries, we take just the last part. Bu for dynamic queries, we take the whole part
+            //for stnadard queries, we take just the last part. But for dynamic queries, we take the whole part
             var path = memberExpression.ToString();
             path = path.Substring(path.LastIndexOf('.') + 1);
 
-            return new ExpressionMemberInfo(path, memberExpression.Member);
+            return new ExpressionInfo(path, memberExpression.Member.GetMemberType());
 		}
 
         /// <summary>
@@ -279,7 +277,7 @@ namespace Raven.Client.Linq
 			luceneQuery.WhereEquals(
 				memberInfo.Path,
 				GetValueFromExpression(expression.Arguments[0], GetMemberType(memberInfo)),
-				GetFieldType(memberInfo) != typeof (string),
+				memberInfo.Type != typeof (string),
 				false);
 		}
 
@@ -657,29 +655,12 @@ namespace Raven.Client.Linq
 			return ((MemberExpression) expression).Member.Name;
 		}
 
-        private static string GetFieldNameForRangeQuery(ExpressionMemberInfo expression, object value)
+        private static string GetFieldNameForRangeQuery(ExpressionInfo expression, object value)
         {
             if (value is int || value is long || value is double || value is float || value is decimal)
                 return expression.Path + "_Range";
             return expression.Path;
         }
-
-		private Type GetFieldType(ExpressionMemberInfo member)
-		{
-			var property = member.InnerMemberInfo as PropertyInfo;
-			if (property != null)
-			{
-				return property.PropertyType;
-			}
-
-			var field = member.InnerMemberInfo as FieldInfo;
-			if (field != null)
-			{
-				return field.FieldType;
-			}
-
-			throw new NotSupportedException("Unable to determine field type from expression");
-		}
 
 		private static object GetValueFromExpression(Expression expression, Type type)
 		{

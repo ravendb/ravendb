@@ -60,5 +60,33 @@ namespace Raven.Tests.Bugs
                 }
             }
         }
+
+        [Fact]
+        public void Can_query_on_collection_primitiv()
+        {
+            using (var store = NewDocumentStore())
+            {
+                using (var s = store.OpenSession())
+                {
+                    s.Store(new User
+                    {
+                        Name = "Ayende",
+                        Tags = new[]{"Hello", "World"}
+                    });
+
+                    s.SaveChanges();
+                }
+
+                using (var s = store.OpenSession())
+                {
+                    var users = s.Query<User>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Where(x => x.Tags.Any(y=>y == "Hello"))
+                        .ToList();
+
+                    Assert.Equal(1, users.Count);
+                }
+            }
+        }
     }
 }

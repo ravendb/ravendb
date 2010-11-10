@@ -117,7 +117,7 @@
     <Compile Include="Linq\DynamicQueryProviderProcessor.cs" />
     <Compile Include="Linq\DynamicRavenQueryable.cs" />
     <Compile Include="Linq\DynamicRavenQueryProvider.cs" />
-    <Compile Include="Linq\ExpressionMemberInfo.cs" />
+    <Compile Include="Linq\ExpressionInfo.cs" />
     <Compile Include="Linq\IRavenQueryable.cs" />
     <Compile Include="Linq\IRavenQueryProvider.cs" />
     <Compile Include="Linq\LinqExtensions.cs" />
@@ -125,6 +125,7 @@
     <Compile Include="Linq\RavenQueryProvider.cs" />
     <Compile Include="Linq\RavenQueryProviderProcessor.cs" />
     <Compile Include="Linq\RavenQueryStatistics.cs" />
+    <Compile Include="Linq\ReflectionExtensions.cs" />
     <Compile Include="Linq\TypeSystem.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RavenExtensions.cs" />

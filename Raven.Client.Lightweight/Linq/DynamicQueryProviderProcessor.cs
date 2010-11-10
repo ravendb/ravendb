@@ -1,4 +1,5 @@
 using System;
+using System.Linq.Expressions;
 using Raven.Database.Data;
 
 namespace Raven.Client.Linq
@@ -24,8 +25,14 @@ namespace Raven.Client.Linq
         /// </summary>
         /// <param name="expression"></param>
         /// <returns></returns>
-        protected override ExpressionMemberInfo GetMember(System.Linq.Expressions.Expression expression)
+        protected override ExpressionInfo GetMember(System.Linq.Expressions.Expression expression)
         {
+            var parameterExpression = expression as ParameterExpression;
+            if (parameterExpression != null)
+            {
+                return new ExpressionInfo(CurrentPath, parameterExpression.Type);
+            }
+
             var memberExpression = GetMemberExpression(expression);
 
             //for stnadard queries, we take just the last part. Bu for dynamic queries, we take the whole part
@@ -33,11 +40,11 @@ namespace Raven.Client.Linq
             path = path.Substring(path.IndexOf('.') + 1);
 
 
-            var info = new ExpressionMemberInfo(path, memberExpression.Member);
+            var info = new ExpressionInfo(path, memberExpression.Member.GetMemberType());
 
-            return new ExpressionMemberInfo(
+            return new ExpressionInfo(
                 CurrentPath + info.Path,
-                info.InnerMemberInfo);
+                info.Type);
         }
  
         

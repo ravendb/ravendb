@@ -382,7 +382,7 @@ namespace Raven.Tests.Linq
 								.ToArray();
 
 
-					Assert.Empty(s.Query<DateTimeInfo>("DateTime").Where(x => x.TimeOfDay != DateTime.MinValue));
+					Assert.NotEmpty(s.Query<DateTimeInfo>("DateTime").Where(x => x.TimeOfDay != DateTime.MinValue));
 				}
 			}
 		}

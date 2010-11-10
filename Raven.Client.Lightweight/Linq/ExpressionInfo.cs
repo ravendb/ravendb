@@ -9,7 +9,7 @@ namespace Raven.Client.Linq
     /// <summary>
     /// This class represents a node in an expression, usually a member - but in the case of dynamic queries the path to a member
     /// </summary>
-    public class ExpressionMemberInfo
+    public class ExpressionInfo
     {
         /// <summary>
         /// Gets the full path of the member being referred to by this node
@@ -21,9 +21,9 @@ namespace Raven.Client.Linq
         }
 
         /// <summary>
-        /// Gets the actual member being referred to
+        /// Gets the actual type being referred to
         /// </summary>
-        public MemberInfo InnerMemberInfo
+        public Type Type
         {
             get;
             private set;
@@ -33,11 +33,11 @@ namespace Raven.Client.Linq
         /// Creates an ExpressionMemberInfo
         /// </summary>
         /// <param name="path"></param>
-        /// <param name="innerMemberInfo"></param>
-        public ExpressionMemberInfo(string path, MemberInfo innerMemberInfo)
+        /// <param name="type"></param>
+        public ExpressionInfo(string path, Type type)
         {
             this.Path = path;
-            this.InnerMemberInfo = innerMemberInfo;
+            this.Type = type;
         }
     }
 }
