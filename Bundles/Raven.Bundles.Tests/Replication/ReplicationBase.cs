@@ -49,7 +49,7 @@ namespace Raven.Bundles.Tests.Replication
         {
             var port = PortRangeStart + servers.Count;
             NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
-            var ravenDbServer = new RavenDbServer(new database::Raven.Database.RavenConfiguration
+            var ravenDbServer = new RavenDbServer(new database::Raven.Database.Config.RavenConfiguration
             {
                 AnonymousUserAccessMode = AnonymousUserAccessMode.All,
                 Catalog = {Catalogs = {new AssemblyCatalog(typeof (replication::Raven.Bundles.Replication.Triggers.AncestryPutTrigger).Assembly)}},

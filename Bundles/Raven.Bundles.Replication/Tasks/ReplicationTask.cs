@@ -11,6 +11,7 @@ using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
 using Raven.Bundles.Replication.Data;
 using Raven.Database;
+using Raven.Database.Plugins;
 using Raven.Database.Json;
 
 namespace Raven.Bundles.Replication.Tasks

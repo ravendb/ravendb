@@ -27,7 +27,7 @@ namespace Raven.Bundles.Tests.Expiration
             path = Path.Combine(path, "TestDb").Substring(6);
             database::Raven.Database.Extensions.IOExtensions.DeleteDirectory("Data");
             ravenDbServer = new RavenDbServer(
-                new database::Raven.Database.RavenConfiguration
+                new database::Raven.Database.Config.RavenConfiguration
                 {
                     Port = 58080,
                     RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
