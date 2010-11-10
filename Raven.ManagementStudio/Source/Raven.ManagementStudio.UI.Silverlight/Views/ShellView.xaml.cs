@@ -1,18 +1,12 @@
-﻿using System.Windows;
-using System.Windows.Controls;
-
-namespace Raven.ManagementStudio.UI.Silverlight.Views
+﻿namespace Raven.ManagementStudio.UI.Silverlight.Views
 {
+    using System.Windows.Controls;
+
     public partial class ShellView : UserControl
     {
         public ShellView()
         {
             InitializeComponent();
-        }
-
-        private void TitleBarMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
-        {
-            Application.Current.MainWindow.DragMove();
         }
     }
 }

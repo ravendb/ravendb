@@ -1,33 +1,28 @@
-﻿using System;
-
-namespace Raven.ManagementStudio.UI.Silverlight.ViewModels
+﻿namespace Raven.ManagementStudio.UI.Silverlight.ViewModels
 {
     using System.ComponentModel.Composition;
     using System.Windows;
     using Caliburn.Micro;
     using Interfaces;
+    using Messages;
 
     [Export(typeof(IShell))]
-    public class ShellViewModel : Screen, IShell
+    public class ShellViewModel : Conductor<DatabaseViewModel>.Collection.OneActive, IShell, IHandle<OpenNewScreen>
     {
         private readonly INavigationBar navigationBar;
-        private readonly RavenScreensViewModel ravenScreens;
 
         [ImportingConstructor]
-        public ShellViewModel(INavigationBar navigationBar, RavenScreensViewModel ravenScreens)
+        public ShellViewModel(INavigationBar navigationBar, IEventAggregator eventAggregator)
         {
             this.navigationBar = navigationBar;
-            this.ravenScreens = ravenScreens;
+            ActivateItem(new DatabaseViewModel("Northwind"));
+            ActivateItem(new DatabaseViewModel("Raven"));
+            eventAggregator.Subscribe(this);
         }
 
         public INavigationBar NavigationBar
         {
-            get { return navigationBar; }
-        }
-
-        public RavenScreensViewModel RavenScreens
-        {
-            get { return ravenScreens; }
+            get { return this.navigationBar; }
         }
 
         public void CloseWindow()
@@ -43,6 +38,16 @@ namespace Raven.ManagementStudio.UI.Silverlight.ViewModels
         public void MinimizeWindow()
         {
             Application.Current.MainWindow.WindowState = WindowState.Minimized;
+        }
+
+        public void DragWindow()
+        {
+            Application.Current.MainWindow.DragMove();
+        }
+
+        public void Handle(OpenNewScreen message)
+        {
+            this.ActiveItem.ActivateItem(message.NewScreen);
         }
     }
 }

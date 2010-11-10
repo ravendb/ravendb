@@ -84,19 +84,17 @@
     </Compile>
     <Compile Include="AppBootstrapper.cs" />
     <Compile Include="Controls\Gears.cs" />
-    <Compile Include="Messages\ActiveScreenChangedMessage.cs" />
-    <Compile Include="ViewModels\DocumentsScreenViewModel.cs" />
+    <Compile Include="Messages\ActiveScreenChanged.cs" />
+    <Compile Include="Messages\OpenNewScreen.cs" />
+    <Compile Include="Plugins\Documents\Browse\BrowseDocuments.cs" />
+    <Compile Include="Plugins\Documents\Browse\DocumentsScreenViewModel.cs" />
     <Compile Include="ViewModels\GadgetsViewModel.cs" />
-    <Compile Include="ViewModels\Interfaces\IMenuItem.cs" />
     <Compile Include="ViewModels\Interfaces\INavigationBar.cs" />
-    <Compile Include="ViewModels\Interfaces\IRavenScreen.cs" />
-    <Compile Include="ViewModels\Interfaces\ISection.cs" />
     <Compile Include="ViewModels\Interfaces\IShell.cs" />
     <Compile Include="ViewModels\MenuScreenViewModel.cs" />
     <Compile Include="ViewModels\NavigationBarViewModel.cs" />
-    <Compile Include="ViewModels\RavenScreensViewModel.cs" />
-    <Compile Include="ViewModels\SectionType.cs" />
-    <Compile Include="Views\DocumentsScreenView.xaml.cs">
+    <Compile Include="ViewModels\DatabaseViewModel.cs" />
+    <Compile Include="Plugins\Documents\Browse\DocumentsScreenView.xaml.cs">
       <DependentUpon>DocumentsScreenView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\MenuScreenView.xaml.cs">
@@ -105,8 +103,8 @@
     <Compile Include="Views\NavigationBarView.xaml.cs">
       <DependentUpon>NavigationBarView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Views\RavenScreensView.xaml.cs">
-      <DependentUpon>RavenScreensView.xaml</DependentUpon>
+    <Compile Include="Views\DatabaseView.xaml.cs">
+      <DependentUpon>DatabaseView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\ShellView.xaml.cs">
       <DependentUpon>ShellView.xaml</DependentUpon>
@@ -138,7 +136,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Resource>
-    <Page Include="Views\DocumentsScreenView.xaml">
+    <Page Include="Plugins\Documents\Browse\DocumentsScreenView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -150,7 +148,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Views\RavenScreensView.xaml">
+    <Page Include="Views\DatabaseView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -179,6 +177,10 @@
     <ProjectReference Include="..\Raven.Client.Silverlight\Raven.Client.Silverlight.csproj">
       <Project>{250E7A4E-D717-4C16-8048-B5BE99D77715}</Project>
       <Name>Raven.Client.Silverlight</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.ManagementStudio.Plugin\Raven.ManagementStudio.Plugin.csproj">
+      <Project>{0BA36A77-F8CA-400C-8F89-3726143BFA96}</Project>
+      <Name>Raven.ManagementStudio.Plugin</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />

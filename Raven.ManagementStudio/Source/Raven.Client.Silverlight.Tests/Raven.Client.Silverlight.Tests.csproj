@@ -96,7 +96,6 @@
     </Compile>
     <Compile Include="DocumentRepositoryTests.cs" />
     <Compile Include="DocumentSessionTests.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml">

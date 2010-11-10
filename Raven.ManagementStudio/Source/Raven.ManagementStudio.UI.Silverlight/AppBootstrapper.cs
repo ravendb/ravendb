@@ -1,14 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.Composition;
-using System.ComponentModel.Composition.Hosting;
-using System.ComponentModel.Composition.Primitives;
-using System.Linq;
-using Caliburn.Micro;
-using Raven.ManagementStudio.UI.Silverlight.ViewModels.Interfaces;
-
-namespace Raven.ManagementStudio.UI.Silverlight
+﻿namespace Raven.ManagementStudio.UI.Silverlight
 {
+    using System;
+    using System.Collections.Generic;
+    using System.ComponentModel.Composition;
+    using System.ComponentModel.Composition.Hosting;
+    using System.ComponentModel.Composition.Primitives;
+    using System.Linq;
+    using Caliburn.Micro;
+    using ViewModels.Interfaces;
+
     public class AppBootstrapper : Bootstrapper<IShell>
     {
         private CompositionContainer container;
@@ -16,8 +16,7 @@ namespace Raven.ManagementStudio.UI.Silverlight
         protected override void Configure()
         {
             var catalog = new AggregateCatalog(
-                AssemblySource.Instance.Select(x => new AssemblyCatalog(x)).OfType<ComposablePartCatalog>()
-                );
+                AssemblySource.Instance.Select(x => new AssemblyCatalog(x)).OfType<ComposablePartCatalog>());
 
             this.container = CompositionHost.Initialize(catalog);
 
@@ -37,7 +36,9 @@ namespace Raven.ManagementStudio.UI.Silverlight
             var exports = this.container.GetExportedValues<object>(contract);
 
             if (exports.Count() > 0)
+            {
                 return exports.First();
+            }
 
             throw new Exception(string.Format("Could not locate any instances of contract {0}.", contract));
         }

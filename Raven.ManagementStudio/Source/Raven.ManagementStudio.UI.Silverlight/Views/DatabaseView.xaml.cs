@@ -2,9 +2,9 @@
 {
     using System.Windows.Controls;
 
-    public partial class MenuScreenView : UserControl
+    public partial class DatabaseView : UserControl
     {
-        public MenuScreenView()
+        public DatabaseView()
         {
             InitializeComponent();
         }

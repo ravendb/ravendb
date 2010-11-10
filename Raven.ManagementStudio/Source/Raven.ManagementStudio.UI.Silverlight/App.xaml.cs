@@ -1,15 +1,14 @@
-﻿using System.Windows;
-
-namespace Raven.ManagementStudio.UI.Silverlight
+﻿namespace Raven.ManagementStudio.UI.Silverlight
 {
+    using System.Windows;
+
     public partial class App : Application
     {
-        AppBootstrapper bootstrapper;
+        private AppBootstrapper bootstrapper;
 
         public App()
         {
-            bootstrapper = new AppBootstrapper();
-
+            this.bootstrapper = new AppBootstrapper();
             InitializeComponent();
         }
     }

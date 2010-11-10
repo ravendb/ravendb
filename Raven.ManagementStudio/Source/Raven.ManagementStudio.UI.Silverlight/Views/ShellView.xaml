@@ -17,7 +17,7 @@
             <RowDefinition Height="20" />
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Background="{StaticResource ToolbarBackgroundBrush}" MouseLeftButtonDown="TitleBarMouseLeftButtonDown">
+        <Border Grid.Row="0" Background="{StaticResource ToolbarBackgroundBrush}" cal:Message.Attach="[Event MouseLeftButtonDown] = [Action DragWindow]">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
@@ -42,15 +42,26 @@
             </Grid>
         </Border>
         
-        <ContentControl x:Name="NavigationBar" Grid.Row="1" />
-        
+        <Grid Grid.Row="1">
+            <StackPanel Orientation="Horizontal">
+                <ComboBox x:Name="Items">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding DisplayName}" cal:Message.Attach="ActivateItem" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <ContentControl x:Name="NavigationBar" Grid.Row="1" />
+            </StackPanel>      
+        </Grid>
+               
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <ContentControl x:Name="RavenScreens" Grid.Column="0" />
+            <ContentControl x:Name="ActiveItem" Grid.Column="0" />
             <TextBlock Text="Gadgets" Grid.Column="1"/>
             
         </Grid>

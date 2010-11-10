@@ -1,4 +1,4 @@
-namespace Raven.ManagementStudio.UI.Silverlight.ViewModels
+namespace Raven.ManagementStudio.Plugin
 {
     public enum SectionType
     { 

@@ -1,4 +1,4 @@
-namespace Raven.ManagementStudio.UI.Silverlight.ViewModels.Interfaces
+namespace Raven.ManagementStudio.Plugin
 {
     public interface ISection
     {

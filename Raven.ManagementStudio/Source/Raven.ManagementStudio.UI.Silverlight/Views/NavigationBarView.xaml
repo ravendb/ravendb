@@ -7,6 +7,6 @@
     d:DesignHeight="300" d:DesignWidth="400">
     
     <Grid x:Name="LayoutRoot" Background="White">
-        <TextBlock Text="{Binding ActiveScreen.DisplayName, FallbackValue='screeen'}" />
+        <TextBlock Text="{Binding ActiveScreen.DisplayName, StringFormat='Selected screen: {0}', FallbackValue='Selected screen: Menu'}" />
     </Grid>
 </UserControl>

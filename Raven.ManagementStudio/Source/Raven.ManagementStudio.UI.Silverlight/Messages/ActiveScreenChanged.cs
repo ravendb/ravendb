@@ -1,10 +1,10 @@
 namespace Raven.ManagementStudio.UI.Silverlight.Messages
 {
-    using ViewModels.Interfaces;
+    using Plugin;
 
-    public class ActiveScreenChangedMessage
+    public class ActiveScreenChanged
     {
-        public ActiveScreenChangedMessage(IRavenScreen screen)
+        public ActiveScreenChanged(IRavenScreen screen)
         {
             this.ActiveScreen = screen;
         }
