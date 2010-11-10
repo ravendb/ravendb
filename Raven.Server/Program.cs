@@ -201,13 +201,13 @@ Document Database for the .Net Platform
 Copyright (C) 2010 - Hibernating Rhinos
 ----------------------------------------
 Command line ptions:
-    RavenDb             - with no args, starts Raven in local server mode
-    RavenDb /install    - installs and starts the Raven service
-    RavenDb /uninstall  - stops and uninstalls the Raven service
-    RavenDb /start		- starts the previously installed Raven service
-    RavenDb /stop		- stops the previously installed Raven service
-    RavenDb /restart	- restarts the previously installed Raven service
-	RavenDB /restore [backup location] [new database location]
+    Raven.Server             - with no args, starts Raven in local server mode
+    Raven.Server /install    - installs and starts the Raven service
+    Raven.Server /uninstall  - stops and uninstalls the Raven service
+    Raven.Server /start		- starts the previously installed Raven service
+    Raven.Server /stop		- stops the previously installed Raven service
+    Raven.Server /restart	- restarts the previously installed Raven service
+	Raven.Server /restore [backup location] [new database location]
 						- restore a previously backed up database to the new
 						  location
 Enjoy...
