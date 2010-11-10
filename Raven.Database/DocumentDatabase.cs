@@ -6,7 +6,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
 using log4net;
-using Microsoft.Isam.Esent.Interop;
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Database.Backup;
@@ -453,12 +452,11 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
                     workContext.ShouldNotifyAboutWork();
                 });
             }
-            catch (EsentErrorException e)
+            catch (Exception e)
             {
-                // we need to protect ourselve from rollbacks happening in an async manner
-                // after the database was already shut down.
-                if (e.Error != JET_err.InvalidInstance)
-                    throw;
+                if (TransactionalStorage.HandleException(e))
+                    return;
+                throw;
             }
         }
 
@@ -472,12 +470,12 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
                     workContext.ShouldNotifyAboutWork();
                 });
             }
-            catch (EsentErrorException e)
+            catch (Exception e)
             {
-                // we need to protect ourselve from rollbacks happening in an async manner
-                // after the database was already shut down.
-                if (e.Error != JET_err.InvalidInstance)
-                    throw;
+                if (TransactionalStorage.HandleException(e))
+                    return;
+
+                throw;
             }
         }
 

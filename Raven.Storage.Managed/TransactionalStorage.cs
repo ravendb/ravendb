@@ -159,6 +159,11 @@ namespace Raven.Storage.Managed
             get { return persistenceSource.CreateRemoteAppDomainState(); }
         }
 
+        public bool HandleException(Exception exception)
+        {
+            return false;
+        }
+
         private void MaybeOnIdle(object _)
         {
             var ticks = Interlocked.Read(ref lastUsageTime);

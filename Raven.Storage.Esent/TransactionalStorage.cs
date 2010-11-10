@@ -119,6 +119,16 @@ namespace Raven.Storage.Esent
             }
 	    }
 
+	    public bool HandleException(Exception exception)
+	    {
+	        var e = exception as EsentErrorException;
+            if (e == null)
+                return false;
+            // we need to protect ourselve from rollbacks happening in an async manner
+            // after the database was already shut down.
+	        return e.Error == JET_err.InvalidInstance;
+	    }
+
 	    #endregion
 
         public bool Initialize(IUuidGenerator uuidGenerator)
