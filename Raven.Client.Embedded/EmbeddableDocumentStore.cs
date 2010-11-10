@@ -1,3 +1,4 @@
+using System;
 using System.Configuration;
 using System.Net;
 using Raven.Client.Document;
@@ -115,7 +116,7 @@ namespace Raven.Client.Client
             {
                 DocumentDatabase = new DocumentDatabase(configuration);
                 DocumentDatabase.SpinBackgroundWorkers();
-                if (configuration.Port != 0)
+                if (UseEmbeddedHttpServer)
                 {
                     HttpServer = new RavenDbHttpServer(configuration, DocumentDatabase);
                     HttpServer.Start();
@@ -127,5 +128,10 @@ namespace Raven.Client.Client
                 base.InitializeInternal();
             }
         }
+
+        ///<summary>
+        /// Whatever we should also host an HTTP endpoint for the document database
+        ///</summary>
+        public bool UseEmbeddedHttpServer { get; set; }
     }
 }
