@@ -1,6 +1,7 @@
 using System.IO;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Database;
+using Raven.Database.Config;
 
 namespace Raven.Storage.Esent
 {

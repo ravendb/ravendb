@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
+using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
 using Raven.Database.Indexing;

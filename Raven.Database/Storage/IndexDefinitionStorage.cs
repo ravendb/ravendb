@@ -9,6 +9,7 @@ using System.Web;
 using log4net;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Database.Json;

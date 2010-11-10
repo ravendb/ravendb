@@ -1,5 +1,6 @@
 using System;
 using System.Text.RegularExpressions;
+using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
 using Raven.Database.Json;

@@ -1,4 +1,4 @@
-namespace Raven.Database.Storage.StorageActions
+namespace Raven.Database.Storage
 {
 	public interface IGeneralStorageActions
 	{

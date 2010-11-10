@@ -7,6 +7,7 @@ using System.Runtime.ConstrainedExecution;
 using System.Threading;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Database;
+using Raven.Database.Config;
 using Raven.Database.Exceptions;
 using Raven.Database.Impl;
 using Raven.Database.Plugins;

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Impl;
-using Raven.Database.Storage.StorageActions;
+using Raven.Database.Storage;
 using Raven.Storage.Managed.Impl;
 using System.Linq;
 

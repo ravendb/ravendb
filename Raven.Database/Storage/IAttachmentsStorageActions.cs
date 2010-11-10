@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
 
-namespace Raven.Database.Storage.StorageActions
+namespace Raven.Database.Storage
 {
 	public interface IAttachmentsStorageActions
 	{

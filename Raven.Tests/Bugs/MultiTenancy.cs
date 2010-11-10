@@ -1,6 +1,7 @@
 using System;
 using Raven.Client.Document;
 using Raven.Database;
+using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Http;

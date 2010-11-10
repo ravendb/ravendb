@@ -8,7 +8,6 @@ using Raven.Database.Exceptions;
 using Raven.Database.Impl;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
-using Raven.Database.Storage.StorageActions;
 using Raven.Http;
 using Raven.Http.Exceptions;
 using Raven.Munin;

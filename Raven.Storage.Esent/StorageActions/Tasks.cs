@@ -1,7 +1,7 @@
 using System;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
-using Raven.Database.Storage.StorageActions;
+using Raven.Database.Storage;
 using Raven.Database.Tasks;
 using Raven.Database.Extensions;
 using Raven.Database.Json;

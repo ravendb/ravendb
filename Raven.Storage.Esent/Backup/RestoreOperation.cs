@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Database;
+using Raven.Database.Config;
 using Raven.Database.Extensions;
 
 namespace Raven.Storage.Esent.Backup

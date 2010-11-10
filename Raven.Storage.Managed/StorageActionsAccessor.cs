@@ -5,7 +5,6 @@ using Raven.Database;
 using Raven.Database.Impl;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
-using Raven.Database.Storage.StorageActions;
 using Raven.Storage.Managed.Impl;
 
 namespace Raven.Storage.Managed

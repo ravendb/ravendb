@@ -10,7 +10,7 @@ using Raven.Database.Data;
 using Raven.Database.Exceptions;
 using Raven.Database.Impl;
 using Raven.Database.Json;
-using Raven.Database.Storage.StorageActions;
+using Raven.Database.Storage;
 using Raven.Http.Exceptions;
 using Raven.Storage.Managed.Impl;
 

@@ -1,6 +1,7 @@
 using System;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
+using Raven.Database.Config;
 using Xunit;
 
 namespace Raven.Tests.Storage

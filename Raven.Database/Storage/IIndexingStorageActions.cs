@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using Raven.Database.Data;
 
-namespace Raven.Database.Storage.StorageActions
+namespace Raven.Database.Storage
 {
 	public interface IIndexingStorageActions
 	{

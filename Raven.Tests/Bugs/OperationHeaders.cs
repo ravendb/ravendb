@@ -7,6 +7,7 @@ using Raven.Client.Client;
 using Raven.Client.Document;
 using Raven.Client.Tests.Document;
 using Raven.Database;
+using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Plugins;
 using Raven.Http;

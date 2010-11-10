@@ -6,6 +6,7 @@ using System.IO;
 using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
+using Raven.Database.Config;
 using Raven.Database.Impl;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
