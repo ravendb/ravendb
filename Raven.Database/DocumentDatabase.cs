@@ -8,7 +8,9 @@ using System.Transactions;
 using log4net;
 using Microsoft.Isam.Esent.Interop;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
 using Raven.Database.Backup;
+using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
@@ -62,6 +64,7 @@ namespace Raven.Database
         private AppDomain queriesAppDomain;
         private readonly WorkContext workContext;
         private readonly DynamicQueryRunner dynamicQueryRunner;
+        private readonly SuggestionQueryRunner suggestionQueryRunner;
 
         private System.Threading.Tasks.Task backgroundWorkerTask;
 
@@ -81,6 +84,7 @@ namespace Raven.Database
 				ReadTriggers = ReadTriggers
             };
             dynamicQueryRunner = new DynamicQueryRunner(this);
+            suggestionQueryRunner = new SuggestionQueryRunner(this);
 
             TransactionalStorage = configuration.CreateTransactionalStorage(workContext.HandleWorkNotifications);
             configuration.Container.SatisfyImportsOnce(TransactionalStorage);
@@ -967,6 +971,11 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
         public QueryResult ExecuteDynamicQuery(string entityName, IndexQuery indexQuery)
         {
             return dynamicQueryRunner.ExecuteDynamicQuery(entityName, indexQuery);
+        }
+
+        public SuggestionQueryResult ExecuteSuggestionQuery(string index, SuggestionQuery suggestionQuery)
+        {
+            return suggestionQueryRunner.ExecuteSuggestionQuery(index, suggestionQuery);
         }
 
         private void UnloadQueriesAppDomain()

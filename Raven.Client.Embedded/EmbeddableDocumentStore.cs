@@ -3,6 +3,7 @@ using System.Configuration;
 using System.Net;
 using Raven.Client.Document;
 using Raven.Database;
+using Raven.Database.Config;
 using Raven.Database.Server;
 using Raven.Http;
 

@@ -1,6 +1,6 @@
 using System.ComponentModel.Composition;
 
-namespace Raven.Database
+namespace Raven.Database.Plugins
 {
 	[InheritedExport]
 	public interface IStartupTask

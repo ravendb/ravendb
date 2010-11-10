@@ -366,7 +366,12 @@ namespace Raven.Database.Indexing
             }
         }
 
-        private class CurrentIndexSearcher
+        internal CurrentIndexSearcher Searcher
+        {
+            get { return searcher; }
+        }
+
+        internal class CurrentIndexSearcher
         {
             private bool shouldDisposeWhenThereAreNoUsages;
             private int useCount;

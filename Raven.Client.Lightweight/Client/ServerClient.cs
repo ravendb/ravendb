@@ -10,6 +10,7 @@ using System.Threading;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
 using Raven.Client.Indexes;
@@ -921,6 +922,48 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 				return null;
 			});
 		}
+
+
+        /// <summary>
+        /// Returns a list of suggestions based on the specified suggestion query.
+        /// </summary>
+        /// <param name="index">The index to query for suggestions</param>
+        /// <param name="suggestionQuery">The suggestion query.</param>
+        /// <returns></returns>
+        public SuggestionQueryResult Suggest(string index, SuggestionQuery suggestionQuery)
+        {
+            if (suggestionQuery == null) throw new ArgumentNullException("suggestionQuery");
+
+            var requestUri = url + string.Format("/suggest/{0}?term={1}&field={2}&max={3}&distance={4}&accuracy={5}",
+                Uri.EscapeUriString(index),
+                Uri.EscapeDataString(suggestionQuery.Term),
+                Uri.EscapeDataString(suggestionQuery.Field),
+                Uri.EscapeDataString(suggestionQuery.MaxSuggestions.ToString()),
+                Uri.EscapeDataString(suggestionQuery.Distance.ToString()),
+                Uri.EscapeDataString(suggestionQuery.Accuracy.ToString()));
+
+            var request = HttpJsonRequest.CreateHttpJsonRequest(this, requestUri, "GET", credentials);
+            request.AddOperationHeaders(OperationsHeaders);
+            var serializer = convention.CreateSerializer();
+            JToken json;
+            try
+            {
+                using (var reader = new JsonTextReader(new StringReader(request.ReadResponseString())))
+                    json = (JToken)serializer.Deserialize(reader);
+            }
+            catch (WebException e)
+            {
+                var httpWebResponse = e.Response as HttpWebResponse;
+                if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.InternalServerError)
+                    throw new InvalidOperationException("could not execute suggestions at this time");
+                throw;
+            }
+
+            return new SuggestionQueryResult
+            {
+                Suggestions = json["Suggestions"].Children().Cast<string>().ToArray(),
+            };
+        }
 
 		#endregion
 	}

@@ -87,6 +87,9 @@
     <Reference Include="Spatial.Net">
       <HintPath>..\SharedLibs\Spatial.Net.dll</HintPath>
     </Reference>
+    <Reference Include="SpellChecker.Net">
+      <HintPath>..\SharedLibs\SpellChecker.Net.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.configuration" />
@@ -114,14 +117,14 @@
     <Compile Include="Backup\RemoveBackupDocumentStartupTask.cs" />
     <Compile Include="Commercial\ValidateLicense.cs" />
     <Compile Include="Commercial\WarningMessagesHolder.cs" />
-    <Compile Include="DatabaseBulkOperations.cs" />
+    <Compile Include="Impl\DatabaseBulkOperations.cs" />
     <Compile Include="Data\AttachmentInformation.cs" />
     <Compile Include="Data\BackupRequest.cs" />
     <Compile Include="Data\DatabaseDocument.cs" />
     <Compile Include="Data\DynamicQueryMapping.cs" />
     <Compile Include="Data\DynamicQueryMappingItem.cs" />
-    <Compile Include="DocumentRetriever.cs" />
-    <Compile Include="DynamicQueryRunner.cs" />
+    <Compile Include="Impl\DocumentRetriever.cs" />
+    <Compile Include="Impl\DynamicQueryRunner.cs" />
     <Compile Include="Exceptions\IndexDoesNotExistsException.cs" />
     <Compile Include="Extensions\CommandExtensions.cs" />
     <Compile Include="Extensions\GuidExtensions.cs" />
@@ -267,7 +270,7 @@
     <Compile Include="Indexing\RobustEnumerator.cs" />
     <Compile Include="Indexing\SpatialIndex.cs" />
     <Compile Include="Indexing\SimpleQueryParser.cs" />
-    <Compile Include="InMemroyRavenConfiguration.cs" />
+    <Compile Include="Config\InMemroyRavenConfiguration.cs" />
     <Compile Include="Impl\IUuidGenerator.cs" />
     <Compile Include="Linq\CaptureSelectNewFieldNamesVisitor.cs" />
     <Compile Include="Plugins\AbstractAttachmentDeleteTrigger.cs" />
@@ -326,10 +329,9 @@
     <Compile Include="Linq\DynamicViewCompiler.cs" />
     <Compile Include="Linq\IndexingFunc.cs" />
     <Compile Include="Linq\PrivateExtensions\LinqOnDynamic.cs" />
-    <Compile Include="PatchResult.cs" />
     <Compile Include="Plugins\VetoResult.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="RavenConfiguration.cs" />
+    <Compile Include="Config\RavenConfiguration.cs" />
     <Compile Include="Server\RavenDbHttpServer.cs" />
     <Compile Include="Server\Responders\AddIncludesCommand.cs" />
     <Compile Include="Server\Responders\AdminBackup.cs" />
@@ -345,6 +347,7 @@
     <Compile Include="Server\Responders\Static.cs" />
     <Compile Include="Server\Responders\Statics.cs" />
     <Compile Include="Server\Responders\Statistics.cs" />
+    <Compile Include="Server\Responders\SuggestionResponder.cs" />
     <Compile Include="Server\Responders\TransactionCommit.cs" />
     <Compile Include="Server\Responders\TransactionPromote.cs" />
     <Compile Include="Server\Responders\TransactionRollback.cs" />
@@ -363,11 +366,11 @@
     <Compile Include="Storage\ITasksStorageActions.cs" />
     <Compile Include="Storage\ITransactionalStorage.cs" />
     <Compile Include="Storage\ITransactionStorageActions.cs" />
+    <Compile Include="Impl\SuggestionQueryRunner.cs" />
     <Compile Include="Tasks\ReduceTask.cs" />
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
     <Compile Include="Tasks\Task.cs" />
     <Compile Include="Indexing\IndexStorage.cs" />
-    <Compile Include="TransactionMode.cs" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include="Microsoft.Net.Client.3.5">

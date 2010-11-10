@@ -9,6 +9,7 @@ using log4net;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
+using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
@@ -186,5 +187,16 @@ namespace Raven.Database.Indexing
 			}
 			mapReduceIndex.ReduceDocuments(viewGenerator, mappedResults, context, actions, reduceKeys);
 		}
+
+        internal Index.CurrentIndexSearcher GetCurrentIndexSearcher(string indexName)
+        {
+            var result = indexes.Where(index => string.Compare(index.Key, indexName, true) == 0)
+                .Select(x => x.Value)
+                .FirstOrDefault();
+            if (result == null)
+                throw new InvalidOperationException(string.Format("Index '{0}' does not exist", indexName));
+
+            return result.Searcher;
+        }
 	}
 }

@@ -61,11 +61,16 @@
     <Compile Include="Data\MultiLoadResult.cs" />
     <Compile Include="Data\PatchCommandType.cs" />
     <Compile Include="Data\PatchRequest.cs" />
+    <Compile Include="Data\PatchResult.cs" />
     <Compile Include="Data\PutResult.cs" />
     <Compile Include="Data\ServerError.cs" />
     <Compile Include="Data\SortedField.cs" />
     <Compile Include="Data\SpatialIndexQuery.cs" />
+    <Compile Include="Data\StringDistanceTypes.cs" />
+    <Compile Include="Data\SuggestionQuery.cs" />
+    <Compile Include="Data\SuggestionQueryResult.cs" />
     <Compile Include="Data\TransactionInformation.cs" />
+    <Compile Include="Data\TransactionMode.cs" />
     <Compile Include="Exceptions\ConcurrencyException.cs" />
     <Compile Include="Extensions\DisposableAction.cs" />
     <Compile Include="Extensions\ExpressionExtensions.cs" />

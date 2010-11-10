@@ -2,6 +2,7 @@ using System;
 using System.Collections.Specialized;
 using System.Net;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
 using Raven.Client.Indexes;
 using Raven.Database;
 using Raven.Database.Data;
@@ -201,5 +202,12 @@ namespace Raven.Client.Client
         /// with the specified database
         /// </summary>
         IDatabaseCommands ForDatabase(string database);
+
+        /// <summary>
+        /// Returns a list of suggestions based on the specified suggestion query.
+        /// </summary>
+        /// <param name="index">The index to query for suggestions</param>
+        /// <param name="suggestionQuery">The suggestion query.</param>
+        SuggestionQueryResult Suggest(string index, SuggestionQuery suggestionQuery);
 	}
 }
