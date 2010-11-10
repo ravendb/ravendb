@@ -59,6 +59,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Common\BaseRepository.cs" />
+    <Compile Include="Common\BatchCommand.cs" />
     <Compile Include="Common\DatabaseUrl.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>

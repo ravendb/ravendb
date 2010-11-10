@@ -117,31 +117,34 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="DocumentBatch" xml:space="preserve">
+    <value>{0}/bulk_docs?</value>
+  </data>
   <data name="DocumentGet" xml:space="preserve">
-    <value>{0}/docs/{1}</value>
+    <value>{0}/docs/{1}?</value>
   </data>
   <data name="DocumentGetAll" xml:space="preserve">
-    <value>{0}/docs</value>
+    <value>{0}/docs?</value>
   </data>
   <data name="DocumentGetMany" xml:space="preserve">
-    <value>{0}/queries</value>
+    <value>{0}/queries?</value>
   </data>
   <data name="DocumentPost" xml:space="preserve">
-    <value>{0}/docs</value>
+    <value>{0}/docs?</value>
   </data>
   <data name="DocumentPut" xml:space="preserve">
-    <value>{0}/docs/{1}</value>
+    <value>{0}/docs/{1}?</value>
   </data>
   <data name="IndexGet" xml:space="preserve">
-    <value>{0}/indexes/{1}</value>
+    <value>{0}/indexes/{1}?definition=yes&amp;</value>
   </data>
   <data name="IndexGetAll" xml:space="preserve">
-    <value>{0}/indexes</value>
+    <value>{0}/indexes?</value>
   </data>
   <data name="IndexGetMany" xml:space="preserve">
-    <value>{0}/indexes</value>
+    <value>{0}/indexes?</value>
   </data>
   <data name="IndexPut" xml:space="preserve">
-    <value>{0}/indexes/{1}</value>
+    <value>{0}/indexes/{1}?</value>
   </data>
 </root>

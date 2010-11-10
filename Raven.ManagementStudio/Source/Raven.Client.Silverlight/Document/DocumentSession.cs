@@ -90,13 +90,10 @@
 
         public void Delete<T>(T entity) where T : JsonDocument
         {
-            bool generated;
-            Guard.Assert(() => StoredEntities.ContainsKey(GetOrGenerateDocumentKey(entity, out generated)));
-
             this.DeletedEntities.Add(entity);
         }
 
-        public void SaveChanges(CallbackFunction.Save<JsonDocument> callback)
+        public void SaveChanges(CallbackFunction.Save<IList<JsonDocument>> callback)
         {
             foreach (var deletedEntity in DeletedEntities)
             {
@@ -111,6 +108,7 @@
             this.DeletedEntities.Clear();
 
             var dirtyEntities = this.StoredEntities.Where(x => x.Value.IsDirty).ToDictionary(x => x.Key, y => y.Value);
+            var batchCommands = new List<BatchCommand<JsonDocument>>();
             foreach (var storedDocument in dirtyEntities)
             {
                 if (storedDocument.Value.IsNew)
@@ -122,6 +120,11 @@
                     else
                     {
                         this.documentRepository.Put(storedDocument.Value.CurrentState, callback, this.Store);
+                        batchCommands.Add(new BatchCommand<JsonDocument>()
+                                              {
+                                                  Entity = storedDocument.Value.CurrentState,
+                                                  Method = RequestMethod.PUT
+                                              });
                     }
                 }
                 else
@@ -131,6 +134,8 @@
 
                 this.StoredEntities.Remove(storedDocument);
             }
+
+            //this.documentRepository.Batch(batchCommands, callback);
         }
 
         public void Refresh<T>(T entity, CallbackFunction.Load<T> callback) where T : JsonDocument

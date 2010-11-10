@@ -22,12 +22,12 @@
         {
             var index = new JObject();
 
-            if (string.IsNullOrEmpty(this.Map))
+            if (!string.IsNullOrEmpty(this.Map))
             {
-                this.Map = string.Empty;
+                index["Map"] = this.Map;
             }
 
-            index["Map"] = this.Map;
+            index["Reduce"] = this.Reduce;
 
             return index;
         }

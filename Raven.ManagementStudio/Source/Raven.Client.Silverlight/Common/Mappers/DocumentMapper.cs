@@ -10,40 +10,45 @@
         public JsonDocument Map(string json)
         {
             var document = new JsonDocument();
-            document.DataAsJson = JObject.Parse(json);
 
-            if (document.DataAsJson["@metadata"] != null)
+            if (!string.IsNullOrEmpty(json))
             {
-                document.Metadata = JObject.Parse(document.DataAsJson["@metadata"].ToString());
-            }
+                document.DataAsJson = JObject.Parse(json);
 
-            if (document.Metadata != null)
-            {
-                document.DataAsJson.Remove("@metadata");
-
-                var id = document.Metadata["@id"];
-                if (id != null)
+                if (document.DataAsJson["@metadata"] != null)
                 {
-                    document.Key = id.ToString().Replace("\"", string.Empty);
-                    document.Id = document.Key;
+                    document.Metadata = JObject.Parse(document.DataAsJson["@metadata"].ToString());
                 }
 
-                var etag = document.Metadata["@etag"];
-                if (etag != null)
+                if (document.Metadata != null)
                 {
-                    document.Etag = new Guid(etag.ToString().Replace("\"", string.Empty));
-                }
+                    document.DataAsJson.Remove("@metadata");
 
-                var nonAuthoritiveInformation = document.Metadata["Non-Authoritive-Information"];
-                if (nonAuthoritiveInformation != null)
-                {
-                    document.NonAuthoritiveInformation = Convert.ToBoolean(nonAuthoritiveInformation.ToString());
-                }
+                    var id = document.Metadata["@id"];
+                    if (id != null)
+                    {
+                        document.Key = id.ToString().Replace("\"", string.Empty);
+                        document.Id = document.Key;
+                    }
 
-                var lastModified = document.Metadata["Last-Modified"];
-                if (lastModified != null)
-                {
-                    document.LastModified = DateTime.ParseExact(lastModified.ToString().Replace("\"", string.Empty), "r", CultureInfo.InvariantCulture);
+                    var etag = document.Metadata["@etag"];
+                    if (etag != null)
+                    {
+                        document.Etag = new Guid(etag.ToString().Replace("\"", string.Empty));
+                    }
+
+                    var nonAuthoritiveInformation = document.Metadata["Non-Authoritive-Information"];
+                    if (nonAuthoritiveInformation != null)
+                    {
+                        document.NonAuthoritiveInformation = Convert.ToBoolean(nonAuthoritiveInformation.ToString());
+                    }
+
+                    var lastModified = document.Metadata["Last-Modified"];
+                    if (lastModified != null)
+                    {
+                        document.LastModified = DateTime.ParseExact(
+                            lastModified.ToString().Replace("\"", string.Empty), "r", CultureInfo.InvariantCulture);
+                    }
                 }
             }
 

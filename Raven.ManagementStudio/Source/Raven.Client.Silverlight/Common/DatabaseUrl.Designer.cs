@@ -61,7 +61,16 @@ namespace Raven.Client.Silverlight.Common {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to {0}/docs/{1}.
+        ///   Looks up a localized string similar to {0}/bulk_docs?.
+        /// </summary>
+        internal static string DocumentBatch {
+            get {
+                return ResourceManager.GetString("DocumentBatch", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to {0}/docs/{1}?.
         /// </summary>
         internal static string DocumentGet {
             get {
@@ -70,7 +79,7 @@ namespace Raven.Client.Silverlight.Common {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to {0}/docs.
+        ///   Looks up a localized string similar to {0}/docs?.
         /// </summary>
         internal static string DocumentGetAll {
             get {
@@ -79,7 +88,7 @@ namespace Raven.Client.Silverlight.Common {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to {0}/queries.
+        ///   Looks up a localized string similar to {0}/queries?.
         /// </summary>
         internal static string DocumentGetMany {
             get {
@@ -88,7 +97,7 @@ namespace Raven.Client.Silverlight.Common {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to {0}/docs.
+        ///   Looks up a localized string similar to {0}/docs?.
         /// </summary>
         internal static string DocumentPost {
             get {
@@ -97,7 +106,7 @@ namespace Raven.Client.Silverlight.Common {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to {0}/docs/{1}.
+        ///   Looks up a localized string similar to {0}/docs/{1}?.
         /// </summary>
         internal static string DocumentPut {
             get {
@@ -106,7 +115,7 @@ namespace Raven.Client.Silverlight.Common {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to {0}/indexes/{1}.
+        ///   Looks up a localized string similar to {0}/indexes/{1}?definition=yes&amp;.
         /// </summary>
         internal static string IndexGet {
             get {
@@ -115,7 +124,7 @@ namespace Raven.Client.Silverlight.Common {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to {0}/indexes.
+        ///   Looks up a localized string similar to {0}/indexes?.
         /// </summary>
         internal static string IndexGetAll {
             get {
@@ -124,7 +133,7 @@ namespace Raven.Client.Silverlight.Common {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to {0}/indexes.
+        ///   Looks up a localized string similar to {0}/indexes?.
         /// </summary>
         internal static string IndexGetMany {
             get {
@@ -133,7 +142,7 @@ namespace Raven.Client.Silverlight.Common {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to {0}/indexes/{1}.
+        ///   Looks up a localized string similar to {0}/indexes/{1}?.
         /// </summary>
         internal static string IndexPut {
             get {

@@ -9,18 +9,21 @@
         {
             var index = new JsonIndex();
 
-            JObject jObject = JObject.Parse(json);
-
-            if (jObject["name"] != null)
+            if (!string.IsNullOrEmpty(json))
             {
-                index.Name = jObject["name"].ToString().Replace("\"", string.Empty);
-                index.Id = index.Name;
-            }
+                JObject jObject = JObject.Parse(json);
 
-            if (jObject["definition"] != null)
-            {
-                index.Map = jObject["definition"]["Map"].ToString().Replace("\"", string.Empty);
-                index.Reduce = jObject["definition"]["Reduce"].ToString().Replace("\"", string.Empty);
+                if (jObject["name"] != null)
+                {
+                    index.Name = jObject["name"].ToString().Replace("\"", string.Empty);
+                    index.Id = index.Name;
+                }
+
+                if (jObject["definition"] != null)
+                {
+                    index.Map = jObject["definition"]["Map"].ToString().Replace("\"", string.Empty);
+                    index.Reduce = jObject["definition"]["Reduce"].ToString().Replace("\"", string.Empty);
+                }
             }
 
             return index;

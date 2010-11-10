@@ -1,4 +1,6 @@
-﻿namespace Raven.ManagementStudio.UI.Silverlight.ViewModels
+﻿using System;
+
+namespace Raven.ManagementStudio.UI.Silverlight.ViewModels
 {
     using System.ComponentModel.Composition;
     using System.Windows;

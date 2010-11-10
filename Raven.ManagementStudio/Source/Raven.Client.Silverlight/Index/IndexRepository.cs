@@ -77,9 +77,11 @@
         private void Get_Callback<T>(string name, HttpWebRequest request, IAsyncResult result, CallbackFunction.Load<T> callback, CallbackFunction.Store<T> storeCallback) where T : JsonIndex
         {
             var context = this.GetContext(request);
+            this.DeleteContext(request);
 
             HttpStatusCode statusCode;
-            var json = this.GetResponseStream(request, result, out statusCode);
+            Exception exception;
+            var json = this.GetResponseStream(request, result, out statusCode, out exception);
 
             var document = this.Mapper.Map(json); // TODO
             document.Id = document.Name = name;
@@ -87,7 +89,8 @@
             var loadResponse = new LoadResponse<T>()
             {
                 Data = document as T,
-                StatusCode = statusCode
+                StatusCode = statusCode,
+                Exception = exception
             };
 
             context.Post(
@@ -97,20 +100,25 @@
                 },
                 null);
 
-            context.Post(
-                delegate
-                {
-                    storeCallback.Invoke(loadResponse.Data);
-                },
-                null);
+            if (loadResponse.IsSuccess)
+            {
+                context.Post(
+                    delegate
+                    {
+                        storeCallback.Invoke(loadResponse.Data);
+                    },
+                    null);
+            }
         }
 
         private void GetMany_Callback<T>(IList<T> existingEntities, HttpWebRequest request, IAsyncResult result, CallbackFunction.Load<IList<T>> callback, CallbackFunction.Store<IList<T>> storeCallback) where T : JsonIndex
         {
             var context = this.GetContext(request);
+            this.DeleteContext(request);
 
             HttpStatusCode statusCode;
-            var json = this.GetResponseStream(request, result, out statusCode);
+            Exception exception;
+            var json = this.GetResponseStream(request, result, out statusCode, out exception);
             var array = JArray.Parse(json);
 
             var entities = array.Select(jsonIndex => (T)this.Mapper.Map(jsonIndex.ToString()));
@@ -119,7 +127,8 @@
             var loadResponse = new LoadResponse<IList<T>>()
                                    {
                                        Data = responseResult,
-                                       StatusCode = statusCode
+                                       StatusCode = statusCode,
+                                       Exception = exception
                                    };
 
             context.Post(
@@ -129,20 +138,25 @@
                 },
                 null);
 
-            context.Post(
-                delegate
-                {
-                    storeCallback.Invoke(loadResponse.Data);
-                },
-                null);
+            if (loadResponse.IsSuccess)
+            {
+                context.Post(
+                    delegate
+                    {
+                        storeCallback.Invoke(loadResponse.Data);
+                    },
+                    null);
+            }
         }
 
         private void Save_Callback<T>(T entity, HttpWebRequest request, IAsyncResult result, CallbackFunction.Save<T> callback, CallbackFunction.Store<T> storeCallback) where T : JsonIndex
         {
             var context = this.GetContext(request);
+            this.DeleteContext(request);
 
             HttpStatusCode statusCode;
-            var json = this.GetResponseStream(request, result, out statusCode);
+            Exception exception;
+            var json = this.GetResponseStream(request, result, out statusCode, out exception);
 
             var responseJson = JObject.Parse(json);
 
@@ -151,7 +165,8 @@
             var saveResponse = new SaveResponse<T>()
                                    {
                                        Data = entity,
-                                       StatusCode = statusCode
+                                       StatusCode = statusCode,
+                                       Exception = exception
                                    };
 
             context.Post(
@@ -161,25 +176,31 @@
                 },
                 null);
 
-            context.Post(
-                delegate
-                {
-                    storeCallback.Invoke(saveResponse.Data);
-                },
-                null);
+            if (saveResponse.IsSuccess)
+            {
+                context.Post(
+                    delegate
+                    {
+                        storeCallback.Invoke(saveResponse.Data);
+                    },
+                    null);
+            }
         }
 
         private void Delete_Callback<T>(T entity, HttpWebRequest request, IAsyncResult result, CallbackFunction.Save<T> callback) where T : JsonIndex
         {
             var context = this.GetContext(request);
+            this.DeleteContext(request);
 
             HttpStatusCode statusCode;
-            var json = this.GetResponseStream(request, result, out statusCode);
+            Exception exception;
+            var json = this.GetResponseStream(request, result, out statusCode, out exception);
 
             var deleteResponse = new DeleteResponse<T>()
                                      {
                                          Data = entity,
-                                         StatusCode = statusCode
+                                         StatusCode = statusCode,
+                                         Exception = exception
                                      };
 
             context.Post(

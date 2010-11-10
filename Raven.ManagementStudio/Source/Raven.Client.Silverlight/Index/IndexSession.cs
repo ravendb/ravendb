@@ -57,9 +57,6 @@
 
         public void Delete<T>(T entity) where T : JsonIndex
         {
-            bool generated;
-            Guard.Assert(() => StoredEntities.ContainsKey(GetOrGenerateDocumentKey(entity, out generated)));
-
             DeletedEntities.Add(entity);
         }
 
