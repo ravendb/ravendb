@@ -3,13 +3,12 @@ using System.IO;
 using System.Reflection;
 using Raven.Client.Client;
 using Raven.Client.Document;
-using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Xunit;
 using System.Linq;
 
-namespace Raven.Client.Tests.Document
+namespace Raven.Tests.Document
 {
 	public class CasingIssue : RemoteClientTest, IDisposable
 	{

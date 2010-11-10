@@ -1,5 +1,3 @@
-using Raven.Client.Tests;
-using Raven.Client.Tests.Bugs;
 using Xunit;
 using System.Linq;
 

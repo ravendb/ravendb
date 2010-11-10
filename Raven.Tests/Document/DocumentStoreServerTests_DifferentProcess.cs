@@ -4,7 +4,7 @@ using System.Transactions;
 using Raven.Client.Document;
 using Xunit;
 
-namespace Raven.Client.Tests.Document
+namespace Raven.Tests.Document
 {
 	public class DocumentStoreServerTests_DifferentProcess
 	{

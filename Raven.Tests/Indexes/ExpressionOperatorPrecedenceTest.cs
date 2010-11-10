@@ -1,8 +1,7 @@
-using System;
 using Raven.Client.Indexes;
 using Xunit;
 
-namespace Raven.Client.Tests.Indexes
+namespace Raven.Tests.Indexes
 {
     public class ExpressionOperatorPrecedenceTest
     {

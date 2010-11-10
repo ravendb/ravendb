@@ -1,9 +1,8 @@
 using Newtonsoft.Json.Linq;
-using Raven.Storage.Managed;
 using Xunit;
 using System.Linq;
 
-namespace Raven.Storage.Tests
+namespace Raven.Tests.ManagedStorage
 {
 	public class MappedResults : TxStorageTest
 	{

@@ -1,7 +1,8 @@
 ﻿using System;
 using Newtonsoft.Json.Linq;
+using Raven.Client;
 
-namespace Raven.Client.Tests.Bugs
+namespace Raven.Tests.Bugs
 {
     public class FailStore : IDocumentStoreListener
     {

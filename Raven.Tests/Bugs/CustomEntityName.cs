@@ -3,7 +3,7 @@ using System.Linq;
 using Raven.Client.Document;
 using Xunit;
 
-namespace Raven.Client.Tests.Bugs
+namespace Raven.Tests.Bugs
 {
 	public class CustomEntityName : LocalClientTest
 	{

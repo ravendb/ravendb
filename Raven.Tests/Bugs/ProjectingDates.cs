@@ -1,12 +1,10 @@
 using System;
 using System.Linq;
-using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Client.Tests.Document;
 using Raven.Database.Indexing;
 using Xunit;
 
-namespace Raven.Client.Tests.Bugs
+namespace Raven.Tests.Bugs
 {
 	public class ProjectingDates : LocalClientTest
 	{

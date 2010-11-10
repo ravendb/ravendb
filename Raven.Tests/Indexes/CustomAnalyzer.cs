@@ -2,7 +2,7 @@
 using System.IO;
 using Lucene.Net.Analysis;
 
-namespace Raven.Client.Tests.Indexes
+namespace Raven.Tests.Indexes
 {
     [CLSCompliant(false)]
     public class CustomAnalyzer : KeywordAnalyzer

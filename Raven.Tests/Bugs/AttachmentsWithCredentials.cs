@@ -1,15 +1,12 @@
 using System;
-using System.IO;
-using System.Reflection;
 using Newtonsoft.Json.Linq;
+using Raven.Client;
 using Raven.Client.Document;
-using Raven.Client.Tests.Document;
-using Raven.Database;
 using Raven.Database.Extensions;
 using Raven.Server;
 using Xunit;
 
-namespace Raven.Client.Tests.Bugs
+namespace Raven.Tests.Bugs
 {
     public class AttachmentsWithCredentials : RemoteClientTest, IDisposable
     {

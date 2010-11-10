@@ -1,10 +1,8 @@
 using System.Collections.Generic;
-using System.IO;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Xunit;
 
-namespace Raven.Client.Tests.Bugs
+namespace Raven.Tests.Bugs
 {
 	public class Polymorphic : LocalClientTest
 	{

@@ -7,7 +7,7 @@ using Raven.Database.Extensions;
 using Xunit;
 using System.Linq;
 
-namespace Raven.Client.Tests.Document
+namespace Raven.Tests.Document
 {
 	public class Inheritance : RemoteClientTest, IDisposable
 	{

@@ -1,15 +1,12 @@
-using System.IO;
 using System.Linq;
-using System.Threading;
 using Raven.Client.Document;
-using Raven.Client.Tests.Document;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
-using Raven.Database.Server;
 using Raven.Http;
+using Raven.Tests.Document;
 using Xunit;
 
-namespace Raven.Client.Tests.Bugs
+namespace Raven.Tests.Bugs
 {
 	public class SortingWithWildcardQuery : RemoteClientTest
 	{

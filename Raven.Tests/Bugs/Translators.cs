@@ -8,7 +8,7 @@ using Xunit;
 using System.Linq;
 using Raven.Client.Linq;
 
-namespace Raven.Client.Tests.Bugs
+namespace Raven.Tests.Bugs
 {
     public class Translators : LocalClientTest
     {

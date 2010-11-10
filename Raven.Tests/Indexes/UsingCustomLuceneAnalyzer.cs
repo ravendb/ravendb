@@ -1,14 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
-using Raven.Client.Document;
+using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Database;
 using Raven.Database.Indexing;
 using Xunit;
 
-namespace Raven.Client.Tests.Indexes
+namespace Raven.Tests.Indexes
 {
     public class UsingCustomLuceneAnalyzer : LocalClientTest
     {

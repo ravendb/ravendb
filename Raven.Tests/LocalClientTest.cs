@@ -1,15 +1,12 @@
-using System;
 using System.IO;
 using System.Reflection;
 using System.Threading;
 using Raven.Client.Client;
-using Raven.Client.Document;
-using Raven.Client.Tests.Document;
-using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
+using Raven.Tests.Document;
 
-namespace Raven.Client.Tests
+namespace Raven.Tests
 {
 	public abstract class LocalClientTest
 	{

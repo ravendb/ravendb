@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Linq;
+using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Database.Indexing;
 using Xunit;
 
-namespace Raven.Client.Tests.Bugs
+namespace Raven.Tests.Bugs
 {
     public class IndexNestedFields : LocalClientTest
     {

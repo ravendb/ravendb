@@ -1,14 +1,10 @@
 using System;
-using System.IO;
-using System.Threading;
 using Raven.Client.Document;
 using Raven.Database.Extensions;
-using Raven.Database.Server;
 using Raven.Http;
-using Raven.Server;
 using Xunit;
 
-namespace Raven.Client.Tests.Document
+namespace Raven.Tests.Document
 {
 	public class AsyncDocumentStoreServerTests : RemoteClientTest, IDisposable
 	{

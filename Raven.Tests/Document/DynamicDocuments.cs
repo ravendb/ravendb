@@ -1,18 +1,12 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using Raven.Client.Client;
 using Raven.Database.Extensions;
 using Xunit;
 using System.Dynamic;
-using System.Runtime.CompilerServices;
-using Microsoft.CSharp.RuntimeBinder;
-using Newtonsoft.Json.Linq;
 using System.IO;
-using Raven.Client.Document;
 
-namespace Raven.Client.Tests.Document
+namespace Raven.Tests.Document
 {        
     public class DynamicDocuments
     {
@@ -55,7 +49,7 @@ namespace Raven.Client.Tests.Document
                     session.SaveChanges();
                     session.Advanced.Clear();
                     //Pull the docs back out of RavenDB and see if the values are the same
-                    dynamic employeeLoad = session.Load<dynamic>(idEmployee);
+                    dynamic employeeLoad = session.Load<object>(idEmployee);
 					Assert.Equal("John Smith", employeeLoad.Name);
 					Assert.Equal("0111 123123", employeeLoad.Phones.Home);
 					Assert.Equal("0772 321123", employeeLoad.Phones.Office);
@@ -63,7 +57,7 @@ namespace Raven.Client.Tests.Document
 					Assert.Contains(123432.54D, employeeLoad.Prices);
 					Assert.Null(employeeLoad.Address);
 
-                    dynamic personLoad = session.Load<dynamic>(idPerson);
+                    dynamic personLoad = session.Load<object>(idPerson);
 					Assert.Equal("Ellen", personLoad.FirstName);
 					Assert.Equal("Adams", personLoad.LastName);
 					Assert.Null(personLoad.Age);

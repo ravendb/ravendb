@@ -1,16 +1,11 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Raven.Database.Extensions;
 using Raven.Http;
 using Xunit;
 using Raven.Client.Document;
-using Raven.Database.Server;
-using System.Threading;
-using System.IO;
 
-namespace Raven.Client.Tests.Querying
+namespace Raven.Tests.Querying
 {
     public class UsingDynamicQueryWithRemoteServer : RemoteClientTest, IDisposable
     {   

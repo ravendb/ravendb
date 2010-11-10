@@ -1,10 +1,9 @@
 using Raven.Client.Document;
-using Raven.Client.Tests.Indexes;
 using Raven.Database.Server;
-using Raven.Server;
+using Raven.Tests.Indexes;
 using Xunit;
 
-namespace Raven.Client.Tests.Bugs
+namespace Raven.Tests.Bugs
 {
 	public class DocumentUrl : LocalClientTest
 	{

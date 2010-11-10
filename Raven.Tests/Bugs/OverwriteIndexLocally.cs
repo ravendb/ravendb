@@ -1,12 +1,7 @@
-using System.IO;
-using System.Reflection;
-using System.Threading;
-using Raven.Client.Tests.Document;
-using Raven.Database;
 using Raven.Database.Indexing;
 using Xunit;
 
-namespace Raven.Client.Tests.Bugs
+namespace Raven.Tests.Bugs
 {
     public class OverwriteIndexLocally : LocalClientTest
     {

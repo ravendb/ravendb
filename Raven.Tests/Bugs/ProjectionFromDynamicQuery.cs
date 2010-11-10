@@ -2,7 +2,7 @@ using Newtonsoft.Json.Linq;
 using Xunit;
 using System.Linq;
 
-namespace Raven.Client.Tests.Bugs
+namespace Raven.Tests.Bugs
 {
     public class ProjectionFromDynamicQuery : LocalClientTest
     {

@@ -1,19 +1,11 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using Raven.Database.Extensions;
-using Raven.Database.Server;
 using Raven.Http;
 using Xunit;
 using Raven.Client.Document;
-using Raven.Client.Tests.Document;
-using System.Reflection;
-using System.IO;
-using Raven.Server;
-using System.Threading;
 
-namespace Raven.Client.Tests.Document
+namespace Raven.Tests.Document
 {
     public class TotalCountServerTest : RemoteClientTest, IDisposable
     {

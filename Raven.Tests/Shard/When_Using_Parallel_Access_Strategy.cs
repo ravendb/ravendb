@@ -1,18 +1,13 @@
 using System;
-using System.IO;
-using System.Threading;
 using Raven.Client.Document;
-using Raven.Client.Tests.Document;
 using Raven.Database.Extensions;
-using Raven.Database.Server;
 using Raven.Http;
-using Raven.Server;
+using Raven.Tests.Document;
 using Xunit;
 using System.Collections.Generic;
 using Raven.Client.Shard.ShardStrategy.ShardAccess;
-using System.Linq;
 
-namespace Raven.Client.Tests.Shard
+namespace Raven.Tests.Shard
 {
     public class When_Using_Parallel_Access_Strategy  : RemoteClientTest, IDisposable
 	{

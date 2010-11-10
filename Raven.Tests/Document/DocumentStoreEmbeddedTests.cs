@@ -5,20 +5,18 @@ using System.Threading;
 using System.Transactions;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Client;
-using Raven.Client.Document;
 using Raven.Client.Exceptions;
 using Raven.Client.Indexes;
-using Raven.Client.Tests.Indexes;
 using Raven.Database.Data;
-using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Http.Exceptions;
+using Raven.Tests.Indexes;
 using Xunit;
 using System.Linq;
 
-namespace Raven.Client.Tests.Document
+namespace Raven.Tests.Document
 {
 	public class DocumentStoreEmbeddedTests : RemoteClientTest, IDisposable
 	{

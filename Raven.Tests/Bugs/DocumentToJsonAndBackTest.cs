@@ -8,7 +8,7 @@ using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Xunit;
 
-namespace Raven.Client.Tests.Bugs
+namespace Raven.Tests.Bugs
 {
 	public class DocumentToJsonAndBackTest
 	{
@@ -93,7 +93,7 @@ namespace Raven.Client.Tests.Bugs
 				);
 			dynamic dynamicObject = new DynamicJsonObject(o);
 
-			var result = mapInstance.MapDefinition(new[] { dynamicObject }).ToList();
+			var result = mapInstance.MapDefinition(new[] { dynamicObject }).ToList<object>();
 			Assert.Equal("{ Id = 0, CoAuthorUserID = 1, __document_id =  }", result[0].ToString());
 			Assert.Equal("{ Id = 0, CoAuthorUserID = 2, __document_id =  }", result[1].ToString());
 		}

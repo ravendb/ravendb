@@ -2,7 +2,7 @@ using System.Linq;
 using Raven.Client.Indexes;
 using Xunit;
 
-namespace Raven.Client.Tests.Bugs
+namespace Raven.Tests.Bugs
 {
     public class UsingStartsWith : LocalClientTest
     {

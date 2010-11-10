@@ -1,12 +1,7 @@
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Dynamic;
-using System.Linq.Expressions;
-using System.Diagnostics;
 
-namespace Raven.Client.Tests.Document
+namespace Raven.Tests.Document
 {
 	public class CustomDynamicClass : DynamicObject
     {

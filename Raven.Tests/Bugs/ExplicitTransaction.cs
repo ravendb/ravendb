@@ -1,9 +1,9 @@
 using System.Threading;
 using Raven.Client.Client;
-using Raven.Client.Tests.Document;
+using Raven.Tests.Document;
 using Xunit;
 
-namespace Raven.Client.Tests.Bugs
+namespace Raven.Tests.Bugs
 {
 	public class ExplicitTransaction : LocalClientTest
 	{

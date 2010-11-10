@@ -1,10 +1,9 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using Xunit;
 using Raven.Client.Document;
 
-namespace Raven.Client.Tests.Querying
+namespace Raven.Tests.Querying
 {
     public class UsingDocumentQuery
 	{

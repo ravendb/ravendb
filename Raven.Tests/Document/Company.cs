@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Raven.Client.Tests.Document
+namespace Raven.Tests.Document
 {
 	public class Company
 	{

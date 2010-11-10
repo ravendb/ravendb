@@ -1,9 +1,9 @@
 using System.Linq;
 using Raven.Client.Indexes;
-using Raven.Client.Tests.Document;
+using Raven.Tests.Document;
 using Xunit;
 
-namespace Raven.Client.Tests.Bugs
+namespace Raven.Tests.Bugs
 {
     public class QueryingFromIndex : LocalClientTest
     {

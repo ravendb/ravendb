@@ -2,21 +2,18 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Client.Tests.Document;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Xunit;
 
-namespace Raven.Client.Tests.Indexes
+namespace Raven.Tests.Indexes
 {
 	public class LinqIndexesFromClient
 	{

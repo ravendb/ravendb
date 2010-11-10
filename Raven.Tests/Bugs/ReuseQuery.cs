@@ -1,7 +1,8 @@
+using Raven.Client;
 using Xunit;
 using System.Linq;
 
-namespace Raven.Client.Tests.Bugs
+namespace Raven.Tests.Bugs
 {
 	public class ReuseQuery : LocalClientTest
 	{

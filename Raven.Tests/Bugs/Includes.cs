@@ -1,11 +1,12 @@
 using System;
 using System.Linq;
+using Raven.Client;
 using Raven.Client.Document;
 using Raven.Database.Indexing;
 using Raven.Server;
 using Xunit;
 
-namespace Raven.Client.Tests.Bugs
+namespace Raven.Tests.Bugs
 {
 	public class Includes : RemoteClientTest, IDisposable
 	{

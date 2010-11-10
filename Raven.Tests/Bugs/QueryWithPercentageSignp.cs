@@ -1,15 +1,12 @@
 using System;
 using System.Linq;
-using Lucene.Net.Store;
 using Raven.Client.Document;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
-using Raven.Database.Server;
 using Raven.Http;
 using Xunit;
-using Directory = System.IO.Directory;
 
-namespace Raven.Client.Tests.Bugs
+namespace Raven.Tests.Bugs
 {
     public class QueryWithPercentageSignp : RemoteClientTest, IDisposable
     {

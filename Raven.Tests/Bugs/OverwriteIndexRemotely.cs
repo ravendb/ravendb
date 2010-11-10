@@ -2,11 +2,10 @@
 using Raven.Client.Document;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
-using Raven.Database.Server;
 using Raven.Http;
 using Xunit;
 
-namespace Raven.Client.Tests.Bugs
+namespace Raven.Tests.Bugs
 {
     public class OverwriteIndexRemotely : RemoteClientTest, IDisposable
     {

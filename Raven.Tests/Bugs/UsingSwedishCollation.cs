@@ -1,7 +1,6 @@
 using System;
 using System.Globalization;
 using Lucene.Net.Util;
-using Raven.Client.Tests;
 using Raven.Database.Indexing;
 using Raven.Database.Indexing.Collation;
 using Raven.Database.Indexing.Collation.Cultures;

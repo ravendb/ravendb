@@ -1,9 +1,9 @@
-using Raven.Client.Tests.Document;
 using Raven.Database.Indexing;
+using Raven.Tests.Document;
 using Xunit;
 using System.Linq;
 
-namespace Raven.Client.Tests.Bugs
+namespace Raven.Tests.Bugs
 {
     public class MultiEntityIndex : LocalClientTest
     {

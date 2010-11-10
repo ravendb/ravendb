@@ -12,7 +12,7 @@ using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Xunit;
 
-namespace Raven.Client.Tests.Document
+namespace Raven.Tests.Document
 {
 	public class Game : RemoteClientTest, IDisposable
 	{

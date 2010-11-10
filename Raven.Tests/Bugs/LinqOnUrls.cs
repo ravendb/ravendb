@@ -5,7 +5,7 @@ using Raven.Http;
 using Xunit;
 using System.Linq;
 
-namespace Raven.Client.Tests.Bugs
+namespace Raven.Tests.Bugs
 {
     public class LinqOnUrls : RemoteClientTest, IDisposable
 	{

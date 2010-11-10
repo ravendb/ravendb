@@ -1,7 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.IO;
 using Raven.Client.Client;
 using Raven.Client.Document;
@@ -9,7 +6,7 @@ using System.Reflection;
 using Raven.Database.Extensions;
 using Xunit;
 
-namespace Raven.Client.Tests.Document
+namespace Raven.Tests.Document
 {
     public class ClientKeyGeneratorTests : RemoteClientTest, IDisposable
     {

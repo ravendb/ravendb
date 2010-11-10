@@ -2,7 +2,7 @@ using System.Linq;
 using Raven.Database.Indexing;
 using Xunit;
 
-namespace Raven.Client.Tests.Bugs
+namespace Raven.Tests.Bugs
 {
     public class QueryingByNegative : LocalClientTest
     {

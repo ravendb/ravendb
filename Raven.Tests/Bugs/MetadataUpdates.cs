@@ -1,7 +1,7 @@
 using Xunit;
 using Newtonsoft.Json.Linq;
 
-namespace Raven.Client.Tests.Bugs
+namespace Raven.Tests.Bugs
 {
 	public class MetadataUpdates : LocalClientTest
 	{

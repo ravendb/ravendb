@@ -1,9 +1,10 @@
 using System;
 using System.Linq;
 using System.Collections.Generic;
+using Raven.Client;
 using Xunit;
 
-namespace Raven.Client.Tests.Bugs
+namespace Raven.Tests.Bugs
 {
    public class RavenDbAnyOfPropertyCollection : LocalClientTest, IDisposable
    {

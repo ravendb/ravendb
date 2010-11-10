@@ -3,7 +3,7 @@ using Raven.Database.Indexing;
 using Xunit;
 using System.Linq;
 
-namespace Raven.Client.Tests.Bugs
+namespace Raven.Tests.Bugs
 {
 	public class AsyncCommit : LocalClientTest
 	{

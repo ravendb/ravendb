@@ -7,7 +7,6 @@ using Raven.Client.Client;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
-using Raven.Client.Tests;
 using Xunit;
 
 namespace Raven.Tests.Bugs

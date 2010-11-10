@@ -3,7 +3,7 @@ using Raven.Database.Data;
 using Raven.Database.Json;
 using Xunit;
 
-namespace Raven.Client.Tests.Bugs
+namespace Raven.Tests.Bugs
 {
 	public class Patching : LocalClientTest
 	{

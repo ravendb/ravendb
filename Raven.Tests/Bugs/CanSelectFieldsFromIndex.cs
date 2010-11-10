@@ -4,7 +4,7 @@ using Raven.Database.Data;
 using Raven.Database.Indexing;
 using Xunit;
 
-namespace Raven.Client.Tests.Bugs
+namespace Raven.Tests.Bugs
 {
     public class CanSelectFieldsFromIndex : LocalClientTest
     {

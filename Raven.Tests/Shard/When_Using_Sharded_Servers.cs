@@ -1,23 +1,21 @@
 using System;
-using System.IO;
 using System.Threading;
 using Raven.Client.Document;
 using Raven.Client.Shard.ShardStrategy;
 using Raven.Client.Shard.ShardStrategy.ShardAccess;
 using Raven.Client.Shard.ShardStrategy.ShardResolution;
 using Raven.Client.Shard.ShardStrategy.ShardSelection;
-using Raven.Client.Tests.Document;
 using Raven.Database.Extensions;
-using Raven.Database.Server;
 using Raven.Http;
 using Raven.Server;
+using Raven.Tests.Document;
 using Xunit;
 using System.Collections.Generic;
 using Raven.Client.Shard;
 using Rhino.Mocks;
 using System.Linq;
 
-namespace Raven.Client.Tests.Shard
+namespace Raven.Tests.Shard
 {
     public class When_Using_Sharded_Servers : RemoteClientTest, IDisposable
 	{

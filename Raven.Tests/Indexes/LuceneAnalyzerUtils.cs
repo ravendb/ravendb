@@ -1,13 +1,10 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Tokenattributes;
 
-namespace Raven.Client.Tests.Indexes
+namespace Raven.Tests.Indexes
 {
     public class LuceneAnalyzerUtils
     {

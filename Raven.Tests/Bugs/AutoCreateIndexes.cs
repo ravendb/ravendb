@@ -1,11 +1,9 @@
-using System;
 using System.Linq;
 using Raven.Client.Indexes;
 using Raven.Database.Indexing;
 using Xunit;
-using Raven.Client.Document;
 
-namespace Raven.Client.Tests.Bugs
+namespace Raven.Tests.Bugs
 {
 	public class AutoCreateIndexes : LocalClientTest
 	{

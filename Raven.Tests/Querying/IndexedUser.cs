@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Raven.Client.Tests.Querying
+namespace Raven.Tests.Querying
 {
     public class IndexedUser
     {

@@ -1,5 +1,4 @@
 using System;
-using Raven.Client.Tests;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
 using Xunit;

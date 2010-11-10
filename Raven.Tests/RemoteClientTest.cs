@@ -1,15 +1,13 @@
 using System;
-using System.Diagnostics;
 using System.IO;
-using Raven.Client.Tests.Document;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Http;
 using Raven.Server;
-using Raven.Database;
 using System.Reflection;
+using Raven.Tests.Document;
 
-namespace Raven.Client.Tests
+namespace Raven.Tests
 {
 	public class RemoteClientTest
 	{
