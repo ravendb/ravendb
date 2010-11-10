@@ -160,6 +160,18 @@ namespace Raven.Client.Document
         }
 
         /// <summary>
+        /// Filter matches to be inside the specified radius
+        /// </summary>
+        /// <param name="radius">The radius.</param>
+        /// <param name="latitude">The latitude.</param>
+        /// <param name="longitude">The longitude.</param>
+        IDocumentQueryCustomization IDocumentQueryCustomization.WithinRadiusOf(double radius, double latitude, double longitude)
+        {
+            WithinRadiusOf(radius, latitude, longitude);
+            return this;
+        }
+
+        /// <summary>
         /// EXPERT ONLY: Instructs the query to wait for non stale results.
         /// This shouldn't be used outside of unit tests unless you are well aware of the implications
         /// </summary>
