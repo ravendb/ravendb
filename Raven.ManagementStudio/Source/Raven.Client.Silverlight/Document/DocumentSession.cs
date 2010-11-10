@@ -119,7 +119,7 @@
                     }
                     else
                     {
-                        this.documentRepository.Put(storedDocument.Value.CurrentState, callback, this.Store);
+                        //this.documentRepository.Put(storedDocument.Value.CurrentState, callback, this.Store);
                         batchCommands.Add(new BatchCommand<JsonDocument>()
                                               {
                                                   Entity = storedDocument.Value.CurrentState,
@@ -135,7 +135,7 @@
                 this.StoredEntities.Remove(storedDocument);
             }
 
-            //this.documentRepository.Batch(batchCommands, callback);
+            this.documentRepository.Batch(batchCommands, callback);
         }
 
         public void Refresh<T>(T entity, CallbackFunction.Load<T> callback) where T : JsonDocument
