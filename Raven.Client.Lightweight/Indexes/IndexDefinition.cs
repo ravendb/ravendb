@@ -66,7 +66,7 @@ namespace Raven.Client.Indexes
 		/// <returns></returns>
 		public IndexDefinition ToIndexDefinition(DocumentConvention convention)
 		{
-		    string querySource = (typeof(TDocument) == typeof(object)) ? "docs" : "docs." + convention.GetTypeTagName(typeof(TDocument));
+		    string querySource = (typeof(TDocument) == typeof(object) || ContainsWhereEntityIs(Map.Body)) ? "docs" : "docs." + convention.GetTypeTagName(typeof(TDocument));
 		    return new IndexDefinition
 			{
 				Map = PruneToFailureLinqQueryAsStringToWorkableCode(Map, convention, querySource),
@@ -78,7 +78,33 @@ namespace Raven.Client.Indexes
 			};
 		}
 
-	    private static IDictionary<string, TValue> ConvertToStringDictionary<TValue>(IEnumerable<KeyValuePair<Expression<Func<TReduceResult, object>>, TValue>> input)
+#if !NET_3_5
+	    private static bool ContainsWhereEntityIs(Expression body)
+	    {
+	        var whereEntityIsVisitor = new WhereEntityIsVisitor();
+	        whereEntityIsVisitor.Visit(body);
+	        return whereEntityIsVisitor.HasWhereEntityIs;
+	    }
+
+	    private class WhereEntityIsVisitor : ExpressionVisitor
+        {
+            public bool HasWhereEntityIs { get; set; }
+
+            protected override Expression VisitMethodCall(MethodCallExpression node)
+            {
+                if (node.Method.Name == "WhereEntityIs")
+                    HasWhereEntityIs = true;
+                return base.VisitMethodCall(node);
+            }
+        }
+#else
+         private static bool ContainsWhereEntityIs(Expression body)
+	    {
+	        return body.ToString().Contains("WhereEntityIs");
+	    }
+#endif
+
+        private static IDictionary<string, TValue> ConvertToStringDictionary<TValue>(IEnumerable<KeyValuePair<Expression<Func<TReduceResult, object>>, TValue>> input)
 		{
 			var result = new Dictionary<string, TValue>();
 			foreach (var value in input)
