@@ -3,7 +3,7 @@ using System.Linq;
 using Raven.Client.Linq;
 using Xunit;
 
-namespace Raven.Client.Tests.Linq
+namespace Raven.Tests.Linq
 {
     public class WhereClause
     {

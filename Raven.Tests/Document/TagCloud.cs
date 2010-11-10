@@ -9,7 +9,7 @@ using Raven.Database.Indexing;
 using Xunit;
 using System.Linq;
 
-namespace Raven.Client.Tests.Document
+namespace Raven.Tests.Document
 {
 	public class TagCloud : RemoteClientTest, IDisposable
 	{

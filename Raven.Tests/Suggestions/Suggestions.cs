@@ -2,9 +2,8 @@
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Client.Linq;
-using Raven.Client.Tests;
-using Raven.Client.Tests.Bugs;
 using Raven.Database.Indexing;
+using Raven.Tests.Bugs;
 using Xunit;
 using System.Linq;
 

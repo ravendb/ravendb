@@ -32,7 +32,7 @@ namespace Raven.Tests.Bugs
                 {
                     for (int i = 0; i < names.Length; i++)
                     {
-                        s.Store(new User
+                        s.Store(new Linq.User()
                         {
                             Age = i,
                             Info = names[i],
@@ -45,7 +45,7 @@ namespace Raven.Tests.Bugs
 
                 using (var s = store.OpenSession())
                 {
-                    var users = s.Query<User>("test")
+                    var users = s.Query<Linq.User>("test")
                         .Customize(x=>x.WaitForNonStaleResults(TimeSpan.FromHours(1)))
                         .OrderBy(x=>x.Name).ToList();
 
