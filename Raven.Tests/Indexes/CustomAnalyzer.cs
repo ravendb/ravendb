@@ -4,7 +4,6 @@ using Lucene.Net.Analysis;
 
 namespace Raven.Tests.Indexes
 {
-    [CLSCompliant(false)]
     public class CustomAnalyzer : KeywordAnalyzer
     {
         public override TokenStream TokenStream(string fieldName, TextReader reader)

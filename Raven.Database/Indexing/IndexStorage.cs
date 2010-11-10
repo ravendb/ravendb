@@ -52,7 +52,7 @@ namespace Raven.Database.Indexing
 		    }
 		}
 
-		[CLSCompliant(false)]
+		
 		protected Lucene.Net.Store.Directory OpenOrCreateLuceneDirectory(string indexDirectory)
 		{
 			Lucene.Net.Store.Directory directory;

@@ -8,7 +8,7 @@ using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Database.Indexing
 {
-	[CLSCompliant(false)]
+	
 	public static class QueryBuilder
 	{
 		static readonly Regex untokenizedQuery = new Regex(@"([\w\d_]+?):(\[\[.+?\]\])", RegexOptions.Compiled);

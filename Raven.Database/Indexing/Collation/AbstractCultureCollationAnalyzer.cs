@@ -3,7 +3,6 @@ using System.Globalization;
 
 namespace Raven.Database.Indexing.Collation
 {
-    [CLSCompliant(false)]
     public class AbstractCultureCollationAnalyzer : CollationAnalyzer
     {
         public AbstractCultureCollationAnalyzer()

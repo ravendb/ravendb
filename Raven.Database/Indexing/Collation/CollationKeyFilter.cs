@@ -5,7 +5,6 @@ using Lucene.Net.Analysis.Tokenattributes;
 
 namespace Raven.Database.Indexing.Collation
 {
-    [CLSCompliant(false)]
     public class CollationKeyFilter : TokenFilter
     {
         private readonly TermAttribute termAtt;

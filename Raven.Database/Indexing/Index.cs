@@ -35,7 +35,7 @@ namespace Raven.Database.Indexing
         private readonly object writeLock = new object();
         private volatile bool disposed;
 
-        [CLSCompliant(false)]
+        
         protected Index(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator)
         {
             this.name = name;
@@ -197,7 +197,7 @@ namespace Raven.Database.Indexing
 
         public abstract void IndexDocuments(AbstractViewGenerator viewGenerator, IEnumerable<object> documents, WorkContext context, IStorageActionsAccessor actions, DateTime minimumTimestamp);
 
-        [CLSCompliant(false)]
+        
         protected virtual IndexQueryResult RetrieveDocument(Document document, string[] fieldsToFetch)
         {
             var shouldBuildProjection = fieldsToFetch == null || fieldsToFetch.Length == 0;

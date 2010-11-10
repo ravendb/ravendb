@@ -5,7 +5,6 @@ using Lucene.Net.Analysis;
 
 namespace Raven.Database.Indexing.Collation
 {
-    [CLSCompliant(false)]
     public class CollationAnalyzer : Analyzer
     {
         private CultureInfo cultureInfo;

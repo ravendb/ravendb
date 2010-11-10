@@ -14,7 +14,7 @@ namespace Raven.Database.Indexing
 {
     public class SimpleIndex : Index
     {
-        [CLSCompliant(false)]
+        
         public SimpleIndex(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator)
             : base(directory, name, indexDefinition, viewGenerator)
         {

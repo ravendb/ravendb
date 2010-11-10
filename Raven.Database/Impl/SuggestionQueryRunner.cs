@@ -1,5 +1,6 @@
 ﻿using System;
 using Lucene.Net.Search;
+using Lucene.Net.Store;
 using Raven.Abstractions.Data;
 using SpellChecker.Net.Search.Spell;
 
@@ -31,17 +32,18 @@ namespace Raven.Database.Impl
             using(currentSearcher.Use(out searcher))
             {
                 var indexReader = searcher.GetIndexReader();
-                var directory = indexReader.Directory();
 
-                var spellChecker = new SpellChecker.Net.Search.Spell.SpellChecker(directory, GetStringDistance(suggestionQuery));
+                var spellChecker = new SpellChecker.Net.Search.Spell.SpellChecker(new RAMDirectory(), GetStringDistance(suggestionQuery));
                 try
                 {
                     spellChecker.IndexDictionary(new LuceneDictionary(indexReader, suggestionQuery.Field));
                     spellChecker.SetAccuracy(suggestionQuery.Accuracy);
 
-                    var suggestions = spellChecker.SuggestSimilar(suggestionQuery.Term, suggestionQuery.MaxSuggestions,
-                                                                  indexReader,
-                                                                  suggestionQuery.Field, true);
+                    var suggestions = spellChecker.SuggestSimilar(suggestionQuery.Term, 
+                        suggestionQuery.MaxSuggestions,
+                        indexReader,
+                        suggestionQuery.Field, 
+                        true);
 
                     return new SuggestionQueryResult
                     {
@@ -51,6 +53,8 @@ namespace Raven.Database.Impl
                 finally
                 {
                     spellChecker.Close();
+                    // this is really stupid, but it doesn't handle this in its close method!
+                    GC.SuppressFinalize(spellChecker);
                 }
             }
             

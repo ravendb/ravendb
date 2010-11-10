@@ -11,7 +11,6 @@ using Raven.Database.Linq;
 
 namespace Raven.Database.Indexing
 {
-	[CLSCompliant(false)]
 	public static class AnonymousObjectToLuceneDocumentConverter
 	{
 		public static IEnumerable<AbstractField> Index(object val, PropertyDescriptorCollection properties, IndexDefinition indexDefinition, Field.Store defaultStorage)
