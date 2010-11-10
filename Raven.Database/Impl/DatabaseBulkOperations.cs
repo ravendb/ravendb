@@ -6,7 +6,7 @@ using Raven.Database.Json;
 using Raven.Http;
 using Raven.Http.Json;
 
-namespace Raven.Database
+namespace Raven.Database.Impl
 {
 	public class DatabaseBulkOperations
 	{

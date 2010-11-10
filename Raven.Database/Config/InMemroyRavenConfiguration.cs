@@ -1,17 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel.Composition.Hosting;
 using System.IO;
 using System.Linq;
 using log4net.Config;
 using Raven.Database.Extensions;
-using Raven.Database.Server;
-using Raven.Database.Server.Responders;
 using Raven.Database.Storage;
 using Raven.Http;
 
-namespace Raven.Database
+namespace Raven.Database.Config
 {
     public class InMemroyRavenConfiguration : IRaveHttpnConfiguration
     {

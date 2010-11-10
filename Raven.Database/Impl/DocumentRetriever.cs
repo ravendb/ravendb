@@ -8,7 +8,7 @@ using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Http;
 
-namespace Raven.Database
+namespace Raven.Database.Impl
 {
     public class DocumentRetriever : ITranslatorDatabaseAccessor
     {

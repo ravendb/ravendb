@@ -1,9 +1,7 @@
 ﻿using System;
-using System.ComponentModel.Composition.Hosting;
 using System.Configuration;
-using System.IO;
 
-namespace Raven.Database
+namespace Raven.Database.Config
 {
     public class RavenConfiguration : InMemroyRavenConfiguration
     {
