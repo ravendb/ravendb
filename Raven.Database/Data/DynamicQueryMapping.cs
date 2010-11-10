@@ -81,11 +81,22 @@ namespace Raven.Database.Data
                 }
 
                 // We get rid of any _Range(s) etc
-                realMappings.Add(string.Format("{0} = {1}.{2}",
+                var indexedMember = currentExpression.ToString().Replace("_Range", "");
+                if(indexedMember.Length == 0)
+                {
+                    realMappings.Add(string.Format("{0} = {1}",
+                        map.To.Replace("_Range", ""),
+                        currentDoc
+                        ));
+                }
+                else
+                {
+                    realMappings.Add(string.Format("{0} = {1}.{2}",
                         map.To.Replace("_Range", ""),
                         currentDoc,
-                        currentExpression.ToString().Replace("_Range", "")
+                        indexedMember
                         ));
+                }
             }
 
            var index =  new IndexDefinition()
