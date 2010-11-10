@@ -209,22 +209,26 @@ namespace Raven.Client.Linq
 		    {
 		        var expressionMemberInfo = GetMember(methodCallExpression.Arguments[0]);
 		        luceneQuery.Not.WhereEquals(
-		            expressionMemberInfo.Path, 
-                    GetValueFromExpression(methodCallExpression.Arguments[0], GetMemberType(expressionMemberInfo)),
-                    true,
-                    false
-		            );
+		            expressionMemberInfo.Path,
+		            GetValueFromExpression(methodCallExpression.Arguments[0], GetMemberType(expressionMemberInfo)),
+		            true,
+		            false
+		            )
+		            .AndAlso()
+		            .WhereEquals(expressionMemberInfo.Path, "*", true, true);
 
 		        return;
 		    }
 
 		    var memberInfo = GetMember(expression.Left);
 
-			luceneQuery.Not.WhereEquals(
-                memberInfo.Path,
-				GetValueFromExpression(expression.Right, GetMemberType(memberInfo)),
-				true,
-				false);
+		    luceneQuery.Not.WhereEquals(
+		        memberInfo.Path,
+		        GetValueFromExpression(expression.Right, GetMemberType(memberInfo)),
+		        true,
+		        false)
+		        .AndAlso()
+		        .WhereEquals(memberInfo.Path, "*", true, true);
 		}
 
         private static Type GetMemberType(ExpressionMemberInfo memberInfo)

@@ -144,6 +144,7 @@
     <Compile Include="Bugs\LinqOnUrls.cs" />
     <Compile Include="Bugs\LiveProjection.cs" />
     <Compile Include="Bugs\LuceneQueryShouldWorkWithoutExtensionMethod.cs" />
+    <Compile Include="Bugs\LukeQuerying.cs" />
     <Compile Include="Bugs\MetadataUpdates.cs" />
     <Compile Include="Bugs\MultiEntityIndex.cs" />
     <Compile Include="Bugs\MultipleResultsPerDocumentAndPaging.cs" />
