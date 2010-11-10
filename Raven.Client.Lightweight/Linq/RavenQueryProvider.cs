@@ -83,7 +83,7 @@ namespace Raven.Client.Linq
 
 		IQueryable<S> IQueryProvider.CreateQuery<S>(Expression expression)
         {
-            return new RavenQueryable<S>(this, expression, ravenQueryStatistics);
+            return new RavenQueryInspector<S>(this, expression, ravenQueryStatistics);
         }
 
         IQueryable IQueryProvider.CreateQuery(Expression expression)
@@ -93,7 +93,7 @@ namespace Raven.Client.Linq
             {
                 return
                     (IQueryable)
-                    Activator.CreateInstance(typeof(RavenQueryable<>).MakeGenericType(elementType),
+                    Activator.CreateInstance(typeof(RavenQueryInspector<>).MakeGenericType(elementType),
                                              new object[] { this, expression });
             }
             catch (TargetInvocationException tie)

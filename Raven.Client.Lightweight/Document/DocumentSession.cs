@@ -145,7 +145,7 @@ namespace Raven.Client.Document
         public IRavenQueryable<T> Query<T>(string indexName)
         {
             var ravenQueryStatistics = new RavenQueryStatistics();
-            return new RavenQueryable<T>(new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics),ravenQueryStatistics);
+            return new RavenQueryInspector<T>(new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics),ravenQueryStatistics);
         }
 
         /// <summary>
@@ -328,7 +328,7 @@ namespace Raven.Client.Document
                 indexName += "/" + Conventions.GetTypeTagName(typeof(T));
             }
             var ravenQueryStatistics = new RavenQueryStatistics();
-            return new RavenQueryable<T>(new DynamicRavenQueryProvider<T>(this, indexName, ravenQueryStatistics), ravenQueryStatistics);
+            return new RavenQueryInspector<T>(new DynamicRavenQueryProvider<T>(this, indexName, ravenQueryStatistics), ravenQueryStatistics);
         }
 
         /// <summary>

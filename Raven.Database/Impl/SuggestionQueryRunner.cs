@@ -36,7 +36,8 @@ namespace Raven.Database.Impl
                 var spellChecker = new SpellChecker.Net.Search.Spell.SpellChecker(directory, GetStringDistance(suggestionQuery));
                 try
                 {
-                     spellChecker.SetAccuracy(suggestionQuery.Accuracy);
+                    spellChecker.IndexDictionary(new LuceneDictionary(indexReader, suggestionQuery.Field));
+                    spellChecker.SetAccuracy(suggestionQuery.Accuracy);
 
                     var suggestions = spellChecker.SuggestSimilar(suggestionQuery.Term, suggestionQuery.MaxSuggestions,
                                                                   indexReader,

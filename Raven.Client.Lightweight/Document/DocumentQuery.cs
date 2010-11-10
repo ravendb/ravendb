@@ -20,12 +20,15 @@ namespace Raven.Client.Document
     /// <summary>
     /// A query against a Raven index
     /// </summary>
-    public class DocumentQuery<T> : IDocumentQuery<T>, IDocumentQueryCustomization
+    public class DocumentQuery<T> : IDocumentQuery<T>, IDocumentQueryCustomization, IRavenQueryInspector
     {
         private bool negate;
         private readonly IDatabaseCommands databaseCommands;
         private readonly string indexName;
-        private int currentClauseDepth = 0;
+        private int currentClauseDepth;
+
+        private KeyValuePair<string, string> lastEquality;
+
         /// <summary>
         /// The list of fields to project directly from the index
         /// </summary>
@@ -74,9 +77,17 @@ namespace Raven.Client.Document
         }
 
         /// <summary>
+        /// Get the name of the index being queried
+        /// </summary>
+        public string IndexQueried
+        {
+            get { return indexName; }
+        }
+
+        /// <summary>
         /// Gets the session associated with this document query
         /// </summary>
-        public DocumentSession Session
+        public IDocumentSession Session
         {
             get { return this.session; }
         }
@@ -420,6 +431,8 @@ If you really want to do in memory filtering on the data returned from the query
         /// </summary>
         public IDocumentQuery<T> WhereEquals(string fieldName, object value, bool isAnalyzed, bool allowWildcards)
         {
+            var transformToEqualValue = TransformToEqualValue(value, isAnalyzed, allowWildcards);
+            lastEquality = new KeyValuePair<string, string>(fieldName, transformToEqualValue);
             if (queryText.Length > 0 && queryText[queryText.Length - 1] != '(')
             {
                 queryText.Append(" ");
@@ -429,7 +442,7 @@ If you really want to do in memory filtering on the data returned from the query
 
             queryText.Append(fieldName);
             queryText.Append(":");
-            queryText.Append(TransformToEqualValue(value, isAnalyzed, allowWildcards));
+            queryText.Append(transformToEqualValue);
 
             return this;
         }
@@ -1004,5 +1017,12 @@ If you really want to do in memory filtering on the data returned from the query
             return this.queryText.ToString();
         }
 
+        /// <summary>
+        /// The last term that we asked the query to use equals on
+        /// </summary>
+        public KeyValuePair<string, string> GetLastEqualityTerm()
+        {
+            return lastEquality;
+        }
     }
 }

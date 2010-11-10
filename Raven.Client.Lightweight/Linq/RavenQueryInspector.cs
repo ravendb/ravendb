@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using Raven.Client.Client;
 using Raven.Database.Data;
 
 namespace Raven.Client.Linq
@@ -10,18 +11,18 @@ namespace Raven.Client.Linq
 	/// <summary>
 	/// Implements <see cref="IRavenQueryable{T}"/>
 	/// </summary>
-    public class RavenQueryable<T> : IRavenQueryable<T>
+    public class RavenQueryInspector<T> : IRavenQueryable<T>, IRavenQueryInspector
     {
         private readonly Expression expression;
         private readonly IRavenQueryProvider provider;
 	    private readonly RavenQueryStatistics queryStats;
 
 	    /// <summary>
-	    /// Initializes a new instance of the <see cref="RavenQueryable&lt;T&gt;"/> class.
+	    /// Initializes a new instance of the <see cref="RavenQueryInspector{T}"/> class.
 	    /// </summary>
 	    /// <param name="provider">The provider.</param>
 	    /// <param name="queryStats">The query stats to fill</param>
-	    public RavenQueryable(IRavenQueryProvider provider, RavenQueryStatistics queryStats)
+	    public RavenQueryInspector(IRavenQueryProvider provider, RavenQueryStatistics queryStats)
         {
             if (provider == null)
             {
@@ -34,12 +35,12 @@ namespace Raven.Client.Linq
         }
 
 	    /// <summary>
-		/// Initializes a new instance of the <see cref="RavenQueryable&lt;T&gt;"/> class.
+		/// Initializes a new instance of the <see cref="RavenQueryInspector{T}"/> class.
 		/// </summary>
 		/// <param name="provider">The provider.</param>
 		/// <param name="expression">The expression.</param>
         /// <param name="queryStats">The query stats to fill</param>
-        public RavenQueryable(IRavenQueryProvider provider, Expression expression, RavenQueryStatistics queryStats)
+        public RavenQueryInspector(IRavenQueryProvider provider, Expression expression, RavenQueryStatistics queryStats)
         {
             if (provider == null)
             {
@@ -133,5 +134,35 @@ namespace Raven.Client.Linq
                 fields + 
                 ravenQueryProvider.LuceneQuery;
         }
+
+        /// <summary>
+        /// Get the name of the index being queried
+        /// </summary>
+	    public string IndexQueried
+	    {
+	        get
+	        {
+                var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.Session, null, null, provider.IndexName);
+                ravenQueryProvider.ProcessExpression(expression);
+	            return ((IRavenQueryInspector) ravenQueryProvider.LuceneQuery).IndexQueried;
+	        }
+	    }
+
+        /// <summary>
+        /// Grant access ot the query session
+        /// </summary>
+	    public IDocumentSession Session
+	    {
+            get { return provider.Session; }
+	    }
+
+	    ///<summary>
+	    ///</summary>
+	    public KeyValuePair<string, string> GetLastEqualityTerm()
+	    {
+            var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.Session, null, null, provider.IndexName);
+            ravenQueryProvider.ProcessExpression(expression);
+	        return ((IRavenQueryInspector) ravenQueryProvider.LuceneQuery).GetLastEqualityTerm();
+	    }
     }
 }

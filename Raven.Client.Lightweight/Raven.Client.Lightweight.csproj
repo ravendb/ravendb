@@ -115,13 +115,14 @@
     <Compile Include="ISyncAdvancedSessionOperation.cs" />
     <Compile Include="ITransactionalDocumentSession.cs" />
     <Compile Include="Linq\DynamicQueryProviderProcessor.cs" />
-    <Compile Include="Linq\DynamicRavenQueryable.cs" />
+    <Compile Include="Linq\DynamicRavenQueryInspector.cs" />
     <Compile Include="Linq\DynamicRavenQueryProvider.cs" />
     <Compile Include="Linq\ExpressionInfo.cs" />
     <Compile Include="Linq\IRavenQueryable.cs" />
+    <Compile Include="Client\IRavenQueryInspector.cs" />
     <Compile Include="Linq\IRavenQueryProvider.cs" />
     <Compile Include="Linq\LinqExtensions.cs" />
-    <Compile Include="Linq\RavenQueryable.cs" />
+    <Compile Include="Linq\RavenQueryInspector.cs" />
     <Compile Include="Linq\RavenQueryProvider.cs" />
     <Compile Include="Linq\RavenQueryProviderProcessor.cs" />
     <Compile Include="Linq\RavenQueryStatistics.cs" />
