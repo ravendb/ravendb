@@ -348,6 +348,39 @@ namespace Raven.Tests.Linq
             }
         }
 
+		public void Can_Use_Static_Properties_In_Where_Clauses()
+		{
+			using (var db = new EmbeddablDocumentStore() { DataDirectory = directoryName })
+			{
+				db.Initialize();
+
+				db.DatabaseCommands.PutIndex("DateTime",
+						new IndexDefinition
+						{
+							Map = @"from info in docs.DateTimeInfos                                    
+									select new { info.TimeOfDay }",
+						});
+
+				using (var s = db.OpenSession())
+				{
+					s.Store(new DateTimeInfo { TimeOfDay = DateTime.Now.AddDays(1) });
+					s.Store(new DateTimeInfo { TimeOfDay = DateTime.Now.AddDays(-1) });
+					s.Store(new DateTimeInfo { TimeOfDay = DateTime.Now.AddDays(1) });
+					s.SaveChanges();
+				}
+
+				using (var s = db.OpenSession())
+				{
+					//Just issue a blank query to make sure there are no stale results                    
+					s.Query<DateTimeInfo>("DateTime")
+						.Customize(x => x.WaitForNonStaleResults()).FirstOrDefault();
+
+					var count = s.Query<DateTimeInfo>("DateTime").Where(x => x.TimeOfDay > DateTime.Now).Count();
+					Assert.Equal(2, count);
+				}
+			}
+		}
+
 		[Fact] // See issue #145 (http://github.com/ravendb/ravendb/issues/#issue/145)
 		public void Can_use_inequality_to_compare_dates()
 		{
