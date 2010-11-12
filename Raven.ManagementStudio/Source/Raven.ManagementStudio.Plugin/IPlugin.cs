@@ -4,6 +4,8 @@ namespace Raven.ManagementStudio.Plugin
     {
         string Name { get; }
 
+        IDatabase Database { get; set; }
+
         void GoToScreen();
     }
 }

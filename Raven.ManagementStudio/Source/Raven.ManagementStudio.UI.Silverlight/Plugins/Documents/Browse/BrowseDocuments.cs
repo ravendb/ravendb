@@ -23,12 +23,17 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Documents.Browse
 
         public IRavenScreen RelatedScreen
         {
-            get { return new DocumentsScreenViewModel(); }
+            get
+            {
+                return new DocumentsScreenViewModel(this.Database);
+            }
         }
+
+        public IDatabase Database { get; set; }
 
         public object MenuView
         {
-            get { return null; }
+            get { return new BrowseMenuIcon(); }
         }
 
         public void GoToScreen()

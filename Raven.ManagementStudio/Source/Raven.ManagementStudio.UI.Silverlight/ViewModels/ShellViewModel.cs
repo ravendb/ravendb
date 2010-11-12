@@ -5,6 +5,7 @@
     using Caliburn.Micro;
     using Interfaces;
     using Messages;
+    using Models;
 
     [Export(typeof(IShell))]
     public class ShellViewModel : Conductor<DatabaseViewModel>.Collection.OneActive, IShell, IHandle<OpenNewScreen>
@@ -15,8 +16,8 @@
         public ShellViewModel(INavigationBar navigationBar, IEventAggregator eventAggregator)
         {
             this.navigationBar = navigationBar;
-            ActivateItem(new DatabaseViewModel("Northwind"));
-            ActivateItem(new DatabaseViewModel("Raven"));
+            ActivateItem(new DatabaseViewModel(new Database("http://localhost:8080", "Local")));
+            ActivateItem(new DatabaseViewModel(new Database("http://localhost:8080", "Raven")));
             eventAggregator.Subscribe(this);
         }
 

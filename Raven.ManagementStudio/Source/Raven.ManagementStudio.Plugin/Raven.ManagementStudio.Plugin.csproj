@@ -58,6 +58,7 @@
     <Reference Include="System.Windows.Browser" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="IDatabase.cs" />
     <Compile Include="IMenuItem.cs" />
     <Compile Include="IPlugin.cs" />
     <Compile Include="IRavenScreen.cs" />
@@ -69,6 +70,12 @@
     <None Include="..\Settings.StyleCop">
       <Link>Settings.StyleCop</Link>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Raven.Client.Silverlight\Raven.Client.Silverlight.csproj">
+      <Project>{250E7A4E-D717-4C16-8048-B5BE99D77715}</Project>
+      <Name>Raven.Client.Silverlight</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />
   <ProjectExtensions>

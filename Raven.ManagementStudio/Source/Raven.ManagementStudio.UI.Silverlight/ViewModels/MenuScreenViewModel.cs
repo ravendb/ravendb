@@ -9,8 +9,9 @@ namespace Raven.ManagementStudio.UI.Silverlight.ViewModels
     {
         private IEnumerable<IPlugin> plugins;
 
-        public MenuScreenViewModel()
+        public MenuScreenViewModel(IDatabase database)
         {
+            this.Database = database;
             this.DisplayName = "Menu";
             CompositionInitializer.SatisfyImports(this);
         }
@@ -28,10 +29,18 @@ namespace Raven.ManagementStudio.UI.Silverlight.ViewModels
 
             set
             {
-                this.plugins = value; 
+                this.plugins = value;
+
+                foreach (var plugin in this.plugins)
+                {
+                    plugin.Database = this.Database;
+                }
+
                 NotifyOfPropertyChange(() => this.Plugins);
             }
         }
+
+        public IDatabase Database { get; set; }
 
         public void ChangeView(object view)
         {

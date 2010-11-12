@@ -74,7 +74,9 @@
     <Reference Include="System.Core" />
     <Reference Include="System.Net" />
     <Reference Include="System.Windows.Controls, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
+    <Reference Include="System.Windows.Controls.Input.Toolkit, Version=4.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="System.Windows.Controls.Toolkit, Version=4.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
+    <Reference Include="System.Windows.Interactivity, Version=4.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Windows.Browser" />
   </ItemGroup>
@@ -83,10 +85,16 @@
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
     <Compile Include="AppBootstrapper.cs" />
+    <Compile Include="Behaviors\Watermark.cs" />
     <Compile Include="Controls\Gears.cs" />
     <Compile Include="Messages\ActiveScreenChanged.cs" />
     <Compile Include="Messages\OpenNewScreen.cs" />
+    <Compile Include="Models\Database.cs" />
+    <Compile Include="Models\Document.cs" />
     <Compile Include="Plugins\Documents\Browse\BrowseDocuments.cs" />
+    <Compile Include="Plugins\Documents\Browse\BrowseMenuIcon.xaml.cs">
+      <DependentUpon>BrowseMenuIcon.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Plugins\Documents\Browse\DocumentsScreenViewModel.cs" />
     <Compile Include="ViewModels\GadgetsViewModel.cs" />
     <Compile Include="ViewModels\Interfaces\INavigationBar.cs" />
@@ -96,6 +104,9 @@
     <Compile Include="ViewModels\DatabaseViewModel.cs" />
     <Compile Include="Plugins\Documents\Browse\DocumentsScreenView.xaml.cs">
       <DependentUpon>DocumentsScreenView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\DocumentView.xaml.cs">
+      <DependentUpon>DocumentView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\MenuScreenView.xaml.cs">
       <DependentUpon>MenuScreenView.xaml</DependentUpon>
@@ -136,7 +147,15 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Resource>
+    <Page Include="Plugins\Documents\Browse\BrowseMenuIcon.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Plugins\Documents\Browse\DocumentsScreenView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\DocumentView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -165,7 +184,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Converters\" />
-    <Folder Include="Models\" />
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Resources\Images\logo.png" />

@@ -5,14 +5,19 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:cal="http://www.caliburnproject.org" 
     mc:Ignorable="d"
-    d:DesignHeight="300" d:DesignWidth="400">
+    d:DesignHeight="300" d:DesignWidth="400"
+    Margin="20 0 10 0">
     
     <Grid x:Name="LayoutRoot" Background="White">
         <StackPanel>
             <ListBox x:Name="Plugins">
                 <ListBox.ItemTemplate>
                     <DataTemplate>
-                        <Button Content="{Binding Name}" cal:Message.Attach="GoToScreen" />
+                        <Button cal:Message.Attach="GoToScreen" >
+                            <Button.Content>
+                                <ContentControl Content="{Binding MenuView}" />
+                            </Button.Content>
+                        </Button>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>
