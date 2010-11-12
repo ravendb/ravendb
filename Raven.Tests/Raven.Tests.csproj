@@ -114,6 +114,7 @@
     <Compile Include="Bugs\AutoDetectAnaylzersForQuery.cs" />
     <Compile Include="Bugs\CanDetectChanges.cs" />
     <Compile Include="Bugs\CanGetMetadataForTransient.cs" />
+    <Compile Include="Bugs\CanProjectIdFromDocumentInQueries.cs" />
     <Compile Include="Bugs\CanSelectFieldsFromIndex.cs" />
     <Compile Include="Bugs\CanUseNonStringsForId.cs" />
     <Compile Include="Bugs\CustomEntityName.cs" />
