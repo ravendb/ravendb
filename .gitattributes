@@ -1,0 +1,8 @@
+*.jpg binary
+*.png binary
+*.dll binary
+*.pdb binary
+*.doc binary
+*.pdf binary
+*.exe binary
+* eol=crlf
