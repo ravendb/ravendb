@@ -1,4 +1,4 @@
-namespace Raven.ManagementStudio.UI.Silverlight.ViewModels
+namespace Raven.ManagementStudio.UI.Silverlight.ViewModels.Screens
 {
     using System.Collections.Generic;
     using System.ComponentModel.Composition;
@@ -41,9 +41,5 @@ namespace Raven.ManagementStudio.UI.Silverlight.ViewModels
         }
 
         public IDatabase Database { get; set; }
-
-        public void ChangeView(object view)
-        {
-        }
     }
 }

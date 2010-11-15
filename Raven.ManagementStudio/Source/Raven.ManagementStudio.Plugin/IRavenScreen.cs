@@ -4,6 +4,5 @@ namespace Raven.ManagementStudio.Plugin
 
     public interface IRavenScreen : IScreen
     {
-        void ChangeView(object view);
     }
 }

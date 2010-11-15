@@ -56,10 +56,6 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Documents.Browse
             }
         }
 
-        public void ChangeView(object view)
-        { 
-        }
-
         public void GetAll(LoadResponse<IList<JsonDocument>> response)
         {
             IList<Document> result = response.Data.Select(jsonDocument => new Document(jsonDocument)).ToList();

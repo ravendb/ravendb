@@ -29,24 +29,20 @@
                 <TextBlock Text="{Binding Documents.Count, StringFormat=' {0} results', FallbackValue='No results'}" VerticalAlignment="Center" Foreground="{StaticResource ToolbarBackgroundBrush}"/>
             </Border>
             <toolkit:BusyIndicator IsBusy="{Binding IsBusy}">
-                <ListBox x:Name="Documents">
-                    <!--<ListBox.ItemTemplate>
-                        <DataTemplate>-->
-                            <!--<TextBlock Text="{Binding Id}" />-->
-                            <!--<views:DocumentView />
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>-->
-                    <ListBox.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <controlsToolkit:WrapPanel Orientation="Horizontal" />
-                        </ItemsPanelTemplate>
-                    </ListBox.ItemsPanel>
-                    <ListBox.Template>
-                        <ControlTemplate TargetType="ListBox">
-                            <ItemsPresenter />
-                        </ControlTemplate>
-                    </ListBox.Template>
-                </ListBox>
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                    <ListBox x:Name="Documents">
+                        <ListBox.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <controlsToolkit:WrapPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
+                        <ListBox.Template>
+                            <ControlTemplate TargetType="ListBox">
+                                <ItemsPresenter />
+                            </ControlTemplate>
+                        </ListBox.Template>
+                    </ListBox>
+                </ScrollViewer>
             </toolkit:BusyIndicator>
         </StackPanel>
 

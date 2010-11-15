@@ -5,6 +5,7 @@ namespace Raven.ManagementStudio.UI.Silverlight.ViewModels
     using Messages;
     using Models;
     using Plugin;
+    using Screens;
 
     public class DatabaseViewModel : Conductor<IRavenScreen>.Collection.OneActive
     {
