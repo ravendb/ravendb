@@ -9,6 +9,7 @@ namespace Raven.Tests.Indexes
     {
         public MapOnlyView()
         {
+            AddField("CustomerId");
             MapDefinition = source => from doc in source
                                       select doc;
         }

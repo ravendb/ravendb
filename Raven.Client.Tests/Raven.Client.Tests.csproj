@@ -98,6 +98,7 @@
     <Compile Include="..\Raven.Tests\Spatial\SpatialIndexTestHelper.cs">
       <Link>Spatial\SpatialIndexTestHelper.cs</Link>
     </Compile>
+    <Compile Include="Bugs\AnyQueries.cs" />
     <Compile Include="Bugs\AsyncCommit.cs" />
     <Compile Include="Bugs\AttachmentsWithCredentials.cs" />
     <Compile Include="Bugs\CanGetMetadataForTransient.cs" />
@@ -109,6 +110,9 @@
     <Compile Include="Bugs\ImageByTagSearchModel.cs" />
     <Compile Include="Bugs\IndexNestedFields.cs" />
     <Compile Include="Bugs\KeysAreCaseInsensitive.cs" />
+    <Compile Include="Bugs\LinqOnUrls.cs" />
+    <Compile Include="Bugs\LuceneQueryShouldWorkWithoutExtensionMethod.cs" />
+    <Compile Include="Bugs\MultiEntityIndex.cs" />
     <Compile Include="Bugs\MultiTenancy.cs" />
     <Compile Include="Bugs\NameAndId.cs" />
     <Compile Include="Bugs\OverwriteIndexLocally.cs" />

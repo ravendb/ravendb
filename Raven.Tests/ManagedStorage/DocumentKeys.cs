@@ -1,10 +1,9 @@
-﻿using System;
+using System;
 using System.Linq;
 using Newtonsoft.Json.Linq;
-using Raven.Storage.Managed;
 using Xunit;
 
-namespace Raven.Storage.Tests
+namespace Raven.Tests.ManagedStorage
 {
 	public class DocumentKeys : TxStorageTest
 	{

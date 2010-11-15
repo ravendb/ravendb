@@ -4,7 +4,6 @@ using Microsoft.Isam.Esent.Interop;
 using Raven.Database.Exceptions;
 using Raven.Database.Json;
 using Raven.Database.Storage;
-using Raven.Database.Storage.StorageActions;
 
 namespace Raven.Storage.Esent.StorageActions
 {

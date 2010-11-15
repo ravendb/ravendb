@@ -1,4 +1,4 @@
-//
+﻿//
 // Authors:
 //   Patrik Torstensson (Patrik.Torstensson@labs2.com)
 //   Wictor Wilén (decode/encode functions) (wictor@ibizkit.se)
@@ -36,11 +36,13 @@ using System.Configuration;
 using System.Globalization;
 using System.IO;
 using System.Text;
-#if NET_4_0
 using System.Web.Configuration;
+using System.Web.Util;
+#if NET_4_0
+
 #endif
 
-namespace System.Web.Util
+namespace Raven.Database.Extensions
 {
 #if NET_4_0
 	public

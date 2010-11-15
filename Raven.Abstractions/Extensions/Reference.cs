@@ -1,7 +1,7 @@
 namespace Raven.Database.Extensions
 {
 	/// <summary>
-	/// A reference that can be used with labmda expression
+	/// A reference that can be used with lambda expression
 	/// to pass a value out.
 	/// </summary>
 	public class Reference<T>

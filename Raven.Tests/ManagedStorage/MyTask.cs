@@ -1,7 +1,7 @@
-﻿using Raven.Database.Indexing;
+using Raven.Database.Indexing;
 using Raven.Database.Tasks;
 
-namespace Raven.Storage.Tests
+namespace Raven.Tests.ManagedStorage
 {
     public class MyTask : Task
     {

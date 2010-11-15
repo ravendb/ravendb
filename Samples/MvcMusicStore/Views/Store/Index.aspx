@@ -10,12 +10,6 @@
 
     <p>Select from <%: Model.NumberOfGenres %> genres:</p>
 
-    <ul>
-        <% foreach (var genre in Model.Genres) { %>
-           <li>
-            <%: Html.ActionLink(genre.Name, "Browse", "Store", new { genre = genre.Id }, null)%>
-           </li>
-        <% } %>
-    </ul>
+    <%: Html.RenderPartial("GenreMenu", Model.Genres) %>
 
 </asp:Content>

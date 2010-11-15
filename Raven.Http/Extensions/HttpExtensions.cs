@@ -1,10 +1,13 @@
 using System;
 using System.Globalization;
 using System.IO;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
+using Raven.Database.Linq;
 using Raven.Http.Abstractions;
 using Raven.Http.Exceptions;
 using Raven.Http.Json;
@@ -52,6 +55,15 @@ namespace Raven.Http.Extensions
 			using (var jsonReader = new JsonTextReader(streamReader))
 				return JArray.Load(jsonReader);
 		}
+
+        public static JArray ReadBsonArray(this IHttpContext context)
+        {
+            using (var jsonReader = new BsonReader(context.Request.InputStream))
+            {
+                var jObject = JObject.Load(jsonReader);
+                return new JArray(jObject.Values());
+            }
+        }
 
 		public static string ReadString(this IHttpContext context)
 		{
@@ -307,7 +319,7 @@ namespace Raven.Http.Extensions
 			return context.Request.Headers["If-None-Match"] == etag.ToString();
 		}
 
-		public static void WriteEmbeddedFile(this IHttpContext context, string ravenPath, string docPath)
+		public static void WriteEmbeddedFile(this IHttpContext context, Assembly asm, string ravenPath, string docPath)
 		{
 			var filePath = Path.Combine(ravenPath, docPath);
 			byte[] bytes;
@@ -321,7 +333,7 @@ namespace Raven.Http.Extensions
 					return;
 				}
 				string resourceName = "Raven.Database.Server.WebUI." + docPath.Replace("/", "."); 
-				using (var resource = typeof(HttpExtensions).Assembly.GetManifestResourceStream(resourceName))
+				using (var resource = asm.GetManifestResourceStream(resourceName))
 				{
 					if (resource == null)
 					{
@@ -376,7 +388,10 @@ namespace Raven.Http.Extensions
 		{
 			public override void WriteJson (JsonWriter writer, object value, JsonSerializer serializer)
 			{
-				((JObject)value).WriteTo(writer);
+                if (value is JObject)
+                    ((JObject)value).WriteTo(writer);
+                else
+                    ((DynamicJsonObject) value).Inner.WriteTo(writer);
 			}
 
             public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
@@ -386,7 +401,7 @@ namespace Raven.Http.Extensions
 
 			public override bool CanConvert (Type objectType)
 			{
-				return objectType == typeof(JObject);
+				return objectType == typeof(JObject) || objectType == typeof(DynamicJsonObject);
 			}
 		}
 

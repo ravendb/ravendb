@@ -60,9 +60,6 @@
     <AssemblyOriginatorKeyFile>RavenDB.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Esent.Interop">
-      <HintPath>..\SharedLibs\Esent.Interop.dll</HintPath>
-    </Reference>
     <Reference Include="ICSharpCode.NRefactory, Version=3.0.0.3800, Culture=neutral, PublicKeyToken=efe927acf176eea2, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\ICSharpCode.NRefactory.dll</HintPath>
@@ -86,6 +83,9 @@
     </Reference>
     <Reference Include="Spatial.Net">
       <HintPath>..\SharedLibs\Spatial.Net.dll</HintPath>
+    </Reference>
+    <Reference Include="SpellChecker.Net">
+      <HintPath>..\SharedLibs\SpellChecker.Net.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
@@ -114,14 +114,14 @@
     <Compile Include="Backup\RemoveBackupDocumentStartupTask.cs" />
     <Compile Include="Commercial\ValidateLicense.cs" />
     <Compile Include="Commercial\WarningMessagesHolder.cs" />
-    <Compile Include="DatabaseBulkOperations.cs" />
+    <Compile Include="Impl\DatabaseBulkOperations.cs" />
     <Compile Include="Data\AttachmentInformation.cs" />
     <Compile Include="Data\BackupRequest.cs" />
     <Compile Include="Data\DatabaseDocument.cs" />
     <Compile Include="Data\DynamicQueryMapping.cs" />
     <Compile Include="Data\DynamicQueryMappingItem.cs" />
-    <Compile Include="DocumentRetriever.cs" />
-    <Compile Include="DynamicQueryRunner.cs" />
+    <Compile Include="Impl\DocumentRetriever.cs" />
+    <Compile Include="Impl\DynamicQueryRunner.cs" />
     <Compile Include="Exceptions\IndexDoesNotExistsException.cs" />
     <Compile Include="Extensions\CommandExtensions.cs" />
     <Compile Include="Extensions\GuidExtensions.cs" />
@@ -132,20 +132,155 @@
     </Compile>
     <Compile Include="Extensions\MonoHttpUtility.cs" />
     <Compile Include="Extensions\IOExtensions.cs" />
+    <Compile Include="Impl\DummyUuidGenerator.cs" />
+    <Compile Include="Indexing\Collation\AbstractCultureCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\CollationKeyFilter.cs" />
+    <Compile Include="Indexing\Collation\CollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\AfCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\AmCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\ArCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\ArnCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\AsCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\AzCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\BaCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\BeCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\BgCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\BnCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\BoCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\BrCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\BsCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\CaCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\CoCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\CsCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\CyCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\DaCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\DeCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\DsbCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\DvCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\ElCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\EnCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\EsCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\EtCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\EuCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\FaCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\FiCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\FilCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\FoCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\FrCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\FyCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\GaCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\GdCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\GlCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\GswCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\GuCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\HaCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\HeCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\HiCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\HrCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\HsbCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\HuCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\HyCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\IdCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\IgCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\IiCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\IsCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\ItCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\IuCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\IvCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\JaCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\KaCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\KkCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\KlCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\KmCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\KnCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\KoCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\KokCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\KyCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\LbCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\LoCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\LtCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\LvCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\MiCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\MkCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\MlCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\MnCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\MohCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\MrCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\MsCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\MtCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\NbCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\NeCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\NlCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\NnCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\NsoCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\OcCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\OrCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\PaCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\PlCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\PrsCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\PsCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\PtCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\QutCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\QuzCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\RmCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\RoCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\RuCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\RwCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\SaCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\SahCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\SeCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\SiCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\SkCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\SlCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\SmaCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\SmjCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\SmnCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\SmsCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\SqCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\SrCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\SvCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\SwCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\SyrCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\TaCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\TeCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\TgCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\ThCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\TkCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\TnCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\TrCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\TtCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\TzmCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\UgCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\UkCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\UrCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\UzCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\ViCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\WoCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\XhCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\YoCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\ZhCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\Cultures\ZuCollationAnalyzer.cs" />
+    <Compile Include="Indexing\Collation\IndexableBinaryStringTools_UsingArrays.cs" />
     <Compile Include="Indexing\GatherAllCollector.cs" />
     <Compile Include="Indexing\LowerCaseAnalyzer.cs" />
     <Compile Include="Indexing\RangeQueryParser.cs" />
     <Compile Include="Indexing\RobustEnumerator.cs" />
     <Compile Include="Indexing\SpatialIndex.cs" />
-    <Compile Include="InMemroyRavenConfiguration.cs" />
-    <Compile Include="IStartupTask.cs" />
+    <Compile Include="Indexing\SimpleQueryParser.cs" />
+    <Compile Include="Config\InMemoryRavenConfiguration.cs" />
+    <Compile Include="Impl\IUuidGenerator.cs" />
+    <Compile Include="Linq\CaptureSelectNewFieldNamesVisitor.cs" />
+    <Compile Include="Plugins\AbstractAttachmentDeleteTrigger.cs" />
+    <Compile Include="Plugins\AbstractAttachmentPutTrigger.cs" />
+    <Compile Include="Plugins\AbstractAttachmentReadTrigger.cs" />
+    <Compile Include="Plugins\IStartupTask.cs" />
     <Compile Include="Data\LinearQuery.cs" />
     <Compile Include="LinearQueries\IRemoteSingleQueryRunner.cs" />
     <Compile Include="LinearQueries\SingleQueryRunner.cs" />
     <Compile Include="Linq\GroupByKeyFunc.cs" />
     <Compile Include="Linq\ITranslatorDatabaseAccessor.cs" />
+    <Compile Include="Linq\PrivateExtensions\MetadataExtensions.cs" />
     <Compile Include="Linq\TranslatorFunc.cs" />
-    <Compile Include="PerformanceCounters.cs" />
     <Compile Include="Plugins\AbstractBackgroundTask.cs" />
     <Compile Include="Plugins\AbstractDocumentCodec.cs" />
     <Compile Include="Plugins\AbstractDynamicCompilationExtension.cs" />
@@ -191,10 +326,9 @@
     <Compile Include="Linq\DynamicViewCompiler.cs" />
     <Compile Include="Linq\IndexingFunc.cs" />
     <Compile Include="Linq\PrivateExtensions\LinqOnDynamic.cs" />
-    <Compile Include="PatchResult.cs" />
     <Compile Include="Plugins\VetoResult.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="RavenConfiguration.cs" />
+    <Compile Include="Config\RavenConfiguration.cs" />
     <Compile Include="Server\RavenDbHttpServer.cs" />
     <Compile Include="Server\Responders\AddIncludesCommand.cs" />
     <Compile Include="Server\Responders\AdminBackup.cs" />
@@ -210,6 +344,7 @@
     <Compile Include="Server\Responders\Static.cs" />
     <Compile Include="Server\Responders\Statics.cs" />
     <Compile Include="Server\Responders\Statistics.cs" />
+    <Compile Include="Server\Responders\SuggestionResponder.cs" />
     <Compile Include="Server\Responders\TransactionCommit.cs" />
     <Compile Include="Server\Responders\TransactionPromote.cs" />
     <Compile Include="Server\Responders\TransactionRollback.cs" />
@@ -228,11 +363,11 @@
     <Compile Include="Storage\ITasksStorageActions.cs" />
     <Compile Include="Storage\ITransactionalStorage.cs" />
     <Compile Include="Storage\ITransactionStorageActions.cs" />
+    <Compile Include="Impl\SuggestionQueryRunner.cs" />
     <Compile Include="Tasks\ReduceTask.cs" />
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
     <Compile Include="Tasks\Task.cs" />
     <Compile Include="Indexing\IndexStorage.cs" />
-    <Compile Include="TransactionMode.cs" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include="Microsoft.Net.Client.3.5">

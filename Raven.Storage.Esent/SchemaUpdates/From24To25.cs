@@ -1,5 +1,7 @@
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
+using Raven.Database;
+using Raven.Database.Impl;
 
 namespace Raven.Storage.Esent.SchemaUpdates
 {
@@ -9,6 +11,14 @@ namespace Raven.Storage.Esent.SchemaUpdates
         {
             get { return "2.4"; }
         }
+
+        private IUuidGenerator uuidGenerator;
+
+        public void Init(IUuidGenerator generator)
+        {
+            uuidGenerator = generator;
+        }
+
 
         public void Update(Session session, JET_DBID dbid)
         {

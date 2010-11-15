@@ -10,7 +10,6 @@ using Raven.Database.Indexing;
 
 namespace Raven.Database.Extensions
 {
-    [CLSCompliant(false)]
     public static class IndexingExtensions
     {
         public static Analyzer CreateAnalyzerInstance(string name, string analyzerTypeAsString)

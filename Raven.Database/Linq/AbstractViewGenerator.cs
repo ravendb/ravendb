@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
@@ -8,6 +9,8 @@ namespace Raven.Database.Linq
     [InheritedExport]
 	public abstract class AbstractViewGenerator
 	{
+        private readonly HashSet<string> fields = new HashSet<string>();
+
 		public IndexingFunc MapDefinition { get; set; }
 		
         public IndexingFunc ReduceDefinition { get; set; }
@@ -42,5 +45,15 @@ namespace Raven.Database.Linq
 				}
 			}
 		}
+
+        public void AddField(string field)
+        {
+            fields.Add(field);
+        }
+
+        public bool ContainsField(string field)
+        {
+            return fields.Contains(field);
+        }
 	}
 }

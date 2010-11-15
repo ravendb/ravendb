@@ -3,7 +3,7 @@
 namespace Raven.Client
 {
     /// <summary>
-    /// Hook for users to provide additioanl logic on store operations
+    /// Hook for users to provide additional logic on store operations
     /// </summary>
     public interface IDocumentStoreListener
     {

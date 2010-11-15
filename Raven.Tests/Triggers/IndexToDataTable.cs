@@ -40,7 +40,6 @@ namespace Raven.Tests.Triggers
                 }
             }
 
-            [CLSCompliant(false)]
             public override void OnIndexEntryCreated(string indexName, string entryKey, Lucene.Net.Documents.Document document)
             {
                 parent.DataTable.Rows.Add(entryKey, document.GetField("Project").StringValue());

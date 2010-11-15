@@ -1,19 +1,17 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Linq.Expressions;
 using Raven.Database.Data;
 
 namespace Raven.Client.Linq
 {
     /// <summary>
-    /// A specialised query provider processor for querying dynamic types
+    /// A specialized query provider processor for querying dynamic types
     /// </summary>
     /// <typeparam name="T"></typeparam>
     public class DynamicQueryProviderProcessor<T> : RavenQueryProviderProcessor<T>
     {
         /// <summary>
-        /// Creates a dynamic query proivder around the provided session
+        /// Creates a dynamic query provider around the provided session
         /// </summary>
        public DynamicQueryProviderProcessor(IDocumentSession session,
             Action<IDocumentQueryCustomization> customizeQuery, Action<QueryResult> afterQueryExecuted, string indexName) 
@@ -27,20 +25,26 @@ namespace Raven.Client.Linq
         /// </summary>
         /// <param name="expression"></param>
         /// <returns></returns>
-        protected override ExpressionMemberInfo GetMember(System.Linq.Expressions.Expression expression)
+        protected override ExpressionInfo GetMember(System.Linq.Expressions.Expression expression)
         {
-            var memberExpression = base.GetMemberExpression(expression);
+            var parameterExpression = expression as ParameterExpression;
+            if (parameterExpression != null)
+            {
+                return new ExpressionInfo(CurrentPath, parameterExpression.Type);
+            }
+
+            var memberExpression = GetMemberExpression(expression);
 
             //for stnadard queries, we take just the last part. Bu for dynamic queries, we take the whole part
             var path = memberExpression.ToString();
             path = path.Substring(path.IndexOf('.') + 1);
 
 
-            var info = new ExpressionMemberInfo(path, memberExpression.Member);
+            var info = new ExpressionInfo(path, memberExpression.Member.GetMemberType());
 
-            return new ExpressionMemberInfo(
-                this.CurrentPath + info.Path,
-                info.InnerMemberInfo);
+            return new ExpressionInfo(
+                CurrentPath + info.Path,
+                info.Type);
         }
  
         

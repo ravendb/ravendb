@@ -2,6 +2,7 @@ using System.Net;
 using System.Text;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
+using Raven.Database.Config;
 using Raven.Server;
 using Raven.Tests.Storage;
 using Xunit;

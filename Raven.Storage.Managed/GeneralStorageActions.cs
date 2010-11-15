@@ -1,6 +1,6 @@
 ﻿using System;
 using Newtonsoft.Json.Linq;
-using Raven.Database.Storage.StorageActions;
+using Raven.Database.Storage;
 using Raven.Storage.Managed.Impl;
 
 namespace Raven.Storage.Managed

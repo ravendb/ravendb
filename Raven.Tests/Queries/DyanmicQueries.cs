@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
+using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Tests.Storage;
 using Xunit;

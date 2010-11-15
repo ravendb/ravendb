@@ -4,7 +4,7 @@ namespace Raven.Client.Converters
 {
     /// <summary>
     /// Interface for performing type conversions.
-    /// We couldn't use te builtin TypeConverter because it is too big an interface for people to build on.
+    /// We couldn't use the built-in TypeConverter because it is too big an interface for people to build on.
     /// </summary>
     public interface ITypeConverter
     {

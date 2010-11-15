@@ -7,18 +7,18 @@ namespace Raven.Database.Plugins
     {
         /// <summary>
         ///  Notify that a document with the specified key was deleted
-        ///  Key may represent a mising document
+        ///  Key may represent a missing document
         ///  </summary><param name="indexName">The updated index name</param><param name="entryKey">The entry key</param>
         public virtual void OnIndexEntryDeleted(string indexName, string entryKey) { }
 
         /// <summary>
-        ///  Notify that the specifid document with the specified key is about 
+        ///  Notify that the specified document with the specified key is about 
         ///  to be inserted.
         ///  </summary><remarks>
         ///  You may modify the provided lucene document, changes made to the document
         ///  will be written to the Lucene index
         ///  </remarks><param name="indexName">The updated index name</param><param name="entryKey">The entry key</param><param name="document">The lucene document about to be written</param>
-        [CLSCompliant(false)]
+        
         public virtual void OnIndexEntryCreated(string indexName, string entryKey, Document document) { }
 
         /// <summary>

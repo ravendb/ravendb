@@ -1,5 +1,6 @@
 using System.Web;
 using Raven.Database;
+using Raven.Database.Config;
 using Raven.Database.Server;
 using Raven.Http;
 

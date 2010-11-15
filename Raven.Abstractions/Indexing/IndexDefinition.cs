@@ -73,7 +73,7 @@ namespace Raven.Database.Indexing
 		}
 
 		/// <summary>
-		/// Equalses the specified other.
+		/// Equals the specified other.
 		/// </summary>
 		/// <param name="other">The other.</param>
 		/// <returns></returns>
@@ -81,7 +81,7 @@ namespace Raven.Database.Indexing
 		{
 			if (ReferenceEquals(null, other)) return false;
 			if (ReferenceEquals(this, other)) return true;
-			return Equals(other.Map, Map) && Equals(other.Reduce, Reduce) && DictionaryEquals(other.Stores, Stores) &&
+			return Equals(other.Map, Map) && Equals(other.Reduce, Reduce) && Equals(other.TransformResults, TransformResults) && DictionaryEquals(other.Stores, Stores) &&
 				DictionaryEquals(other.Indexes, Indexes);
 		}
 

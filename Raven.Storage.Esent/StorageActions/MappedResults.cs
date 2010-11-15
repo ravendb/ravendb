@@ -5,8 +5,8 @@ using Microsoft.Isam.Esent.Interop;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Json;
-using Raven.Database.Storage.StorageActions;
 using Raven.Database.Extensions;
+using Raven.Database.Storage;
 
 namespace Raven.Storage.Esent.StorageActions
 {
@@ -20,7 +20,7 @@ namespace Raven.Storage.Esent.StorageActions
 			Api.MakeKey(session, MappedResults, reduceKey, Encoding.Unicode, MakeKeyGrbit.None);
 			var isUpdate = Api.TrySeek(session, MappedResults, SeekGrbit.SeekEQ);
 			
-	        Guid etag = DocumentDatabase.CreateSequentialUuid();
+	        Guid etag = uuidGenerator.CreateSequentialUuid();
 
 			using (var update = new Update(session, MappedResults, isUpdate ? JET_prep.Replace : JET_prep.Insert))
 			{

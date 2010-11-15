@@ -14,8 +14,8 @@ namespace Raven.Database.Linq
 {
 	/// <summary>
 	/// 	Takes two query expressions as strings, and compile them.
-	/// 	Along the way we apply some minimal transofrmations, the end result is an instance
-	/// 	of AbstractViewGenerator, representing the map/reduce fucntions
+	/// 	Along the way we apply some minimal transformations, the end result is an instance
+	/// 	of AbstractViewGenerator, representing the map/reduce functions
 	/// </summary>
 	public class DynamicViewCompiler
 	{
@@ -93,6 +93,10 @@ namespace Raven.Database.Linq
 			                   		})));
 
 
+		    var captureSelectNewFieldNamesVisitor = new CaptureSelectNewFieldNamesVisitor();
+
+		    mapDefinition.Initializer.AcceptVisitor(captureSelectNewFieldNamesVisitor, null);
+
             if(indexDefinition.TransformResults != null)
             {
                 VariableDeclaration translatorDeclaration;
@@ -149,6 +153,10 @@ namespace Raven.Database.Linq
 					groupByParamter = lambdaExpression.Parameters[0].ParameterName;
 					groupBySource = lambdaExpression.ExpressionBody;
 				}
+
+                captureSelectNewFieldNamesVisitor.FieldNames.Clear();// reduce override the map fields
+                reduceDefiniton.Initializer.AcceptVisitor(captureSelectNewFieldNamesVisitor, null);
+
 				// this.ReduceDefinition = from result in results...;
 				ctor.Body.AddChild(new ExpressionStatement(
 				                   	new AssignmentExpression(
@@ -178,6 +186,21 @@ namespace Raven.Database.Linq
 											ExpressionBody = groupBySource
 				                   		})));
 			}
+
+		    foreach (var fieldName in captureSelectNewFieldNamesVisitor.FieldNames)
+		    {
+		        ctor.Body.AddChild(
+		            new ExpressionStatement(
+                        new InvocationExpression(
+                            new MemberReferenceExpression(
+                                new ThisReferenceExpression(),
+                                "AddField"
+                                ),
+                            new List<Expression> { new PrimitiveExpression(fieldName, fieldName) }
+                            )
+		                )
+		            );
+		    }
 
 			CompiledQueryText = QueryParsingUtils.GenerateText(type, extensions);
 			var compiledQueryText = "@\"" + indexDefinition.Map.Replace("\"", "\"\"");
@@ -210,16 +233,18 @@ namespace Raven.Database.Linq
 			var variableDeclaration = QueryParsingUtils.GetVariableDeclarationForLinqMethods(indexDefinition.Map);
 			AddEntityNameFilteringIfNeeded(variableDeclaration, out entityName);
 
-			var invocationExpression = ((InvocationExpression)variableDeclaration.Initializer);
-			var targetExpression = ((MemberReferenceExpression)invocationExpression.TargetObject);
-			do
-			{
-				AddDocumentIdFieldToLambdaIfCreatingNewObject((LambdaExpression)invocationExpression.Arguments.Last());
-				invocationExpression = (InvocationExpression)targetExpression.TargetObject;
-				targetExpression = (MemberReferenceExpression) invocationExpression.TargetObject;
-			} while (targetExpression.TargetObject is InvocationExpression);
+            variableDeclaration.AcceptVisitor(new AddDocumentIdToLambdas(), null);
 			return variableDeclaration;
 		}
+
+        public class AddDocumentIdToLambdas : ICSharpCode.NRefactory.Visitors.AbstractAstTransformer
+        {
+            public override object VisitLambdaExpression(LambdaExpression lambdaExpression, object data)
+            {
+                AddDocumentIdFieldToLambdaIfCreatingNewObject(lambdaExpression);
+                return base.VisitLambdaExpression(lambdaExpression, data);
+            }
+        }
 
 		private void AddEntityNameFilteringIfNeeded(VariableDeclaration variableDeclaration, out string entityName)
 		{

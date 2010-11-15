@@ -1,7 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
-namespace Raven.Database.Storage.StorageActions
+namespace Raven.Database.Storage
 {
 	public interface IQueueStorageActions
 	{

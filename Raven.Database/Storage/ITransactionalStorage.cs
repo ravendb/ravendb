@@ -1,4 +1,5 @@
 using System;
+using Raven.Database.Impl;
 
 namespace Raven.Database.Storage
 {
@@ -10,11 +11,12 @@ namespace Raven.Database.Storage
 		Guid Id { get; }
 		void Batch(Action<IStorageActionsAccessor> action);
 		void ExecuteImmediatelyOrRegisterForSyncronization(Action action);
-		bool Initialize();
+        bool Initialize(IUuidGenerator generator);
 		void StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory);
 		void Restore(string backupLocation, string databaseLocation);
 
 	    Type TypeForRunningQueriesInRemoteAppDomain { get;}
         object StateForRunningQueriesInRemoteAppDomain { get; }
+        bool HandleException(Exception exception);
 	}
 }

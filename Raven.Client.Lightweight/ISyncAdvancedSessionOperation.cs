@@ -4,7 +4,7 @@ using Raven.Client.Indexes;
 namespace Raven.Client
 {
     /// <summary>
-    /// Advanced syncronous session operations
+    /// Advanced synchronous session operations
     /// </summary>
     public interface ISyncAdvancedSessionOperation : IAdvancedDocumentSessionOperations
     {
@@ -37,7 +37,7 @@ namespace Raven.Client
         /// <summary>
         /// Dynamically query RavenDB using Lucene syntax
         /// </summary>
-        IDocumentQuery<T> DynamicLuceneQuery<T>();
+        IDocumentQuery<T> LuceneQuery<T>();
 
         /// <summary>
         /// Gets the document URL for the specified entity.

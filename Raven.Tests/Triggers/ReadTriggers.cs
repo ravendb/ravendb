@@ -3,6 +3,7 @@ using System.ComponentModel.Composition.Hosting;
 using System.Linq;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
+using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
 using Raven.Database.Plugins;

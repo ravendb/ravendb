@@ -8,7 +8,7 @@ using Raven.Database.Indexing;
 namespace Raven.Database.Data
 {
 	/// <summary>
-	/// All the infomration required to query a Raven index
+	/// All the information required to query a Raven index
 	/// </summary>
     public class IndexQuery
     {
@@ -80,7 +80,7 @@ namespace Raven.Database.Data
         public string GetIndexQueryUrl(string operationUrl, string index, string operationName)
         {
             var path = string.Format("{0}/{5}/{1}?query={2}&start={3}&pageSize={4}", operationUrl, index,
-                                     Uri.EscapeDataString(Query ?? ""),
+                                     Uri.EscapeUriString(Uri.EscapeDataString(Query ?? "")),
                                      Start, PageSize, operationName);
             if (FieldsToFetch != null && FieldsToFetch.Length > 0)
             {

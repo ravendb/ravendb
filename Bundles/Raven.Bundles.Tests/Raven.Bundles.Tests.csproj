@@ -57,8 +57,10 @@
     <Compile Include="Authorization\Deleting.cs" />
     <Compile Include="Authorization\Reading.cs" />
     <Compile Include="Authorization\Writing.cs" />
+    <Compile Include="CascadeDelete\CascadeDelete.cs" />
     <Compile Include="Expiration\Expiration.cs" />
     <Compile Include="IndexReplication\ReplicateToSql.cs" />
+    <Compile Include="Replication\AttachmentReplication.cs" />
     <Compile Include="Replication\ConflictWhenReplicating.cs" />
     <Compile Include="Replication\FailureHandling.cs" />
     <Compile Include="Replication\ReplicationBase.cs" />
@@ -95,6 +97,10 @@
     <ProjectReference Include="..\Raven.Bundles.Authorization\Raven.Bundles.Authorization.csproj">
       <Project>{034FFD8F-F917-4A45-B920-9C460CD66BAF}</Project>
       <Name>Raven.Bundles.Authorization</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Bundles.CascadeDelete\Raven.Bundles.CascadeDelete.csproj">
+      <Project>{D9CCC62F-0B4E-4B37-BE7E-203D34B4EC4F}</Project>
+      <Name>Raven.Bundles.CascadeDelete</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Bundles.Expiration\Raven.Bundles.Expiration.csproj">
       <Project>{5E2C2AAA-31E4-4F2B-A3E3-E1332D2D338A}</Project>

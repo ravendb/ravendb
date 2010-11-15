@@ -6,7 +6,7 @@ using Lucene.Net.Search;
 
 namespace Raven.Database.Indexing
 {
-	[CLSCompliant(false)]
+	
 	public class GatherAllCollector : Collector
 	{
 		private int _docBase;

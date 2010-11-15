@@ -16,7 +16,10 @@ namespace Raven.Tests.Indexes
             GroupByExtraction = source => source.ShoppingCartId;
             ReduceDefinition = Reduce;
 
-            Indexes.Add("Id", FieldIndexing.NotAnalyzed);
+            AddField("ShoppingCartId");
+            AddField("Aggregate");
+
+            Indexes.Add("ShoppingCartId", FieldIndexing.NotAnalyzed);
             Indexes.Add("Aggregate", FieldIndexing.No);
         }
 

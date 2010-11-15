@@ -3,7 +3,7 @@
 namespace Raven.Client.Converters
 {
     /// <summary>
-    /// Covnert strings from / to int64
+    /// Convert strings from / to int64
     /// </summary>
     public class Int64Converter : ITypeConverter
     {

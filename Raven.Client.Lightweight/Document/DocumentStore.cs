@@ -265,7 +265,7 @@ namespace Raven.Client.Document
 
 	    /// <summary>
         /// The resource manager id for the document store.
-        /// IMPORTANT: Using Guid.NewGuid() to set this value is almost cetainly a mistake, you should set
+        /// IMPORTANT: Using Guid.NewGuid() to set this value is almost certainly a mistake, you should set
         /// it to a value that remains consistent between restart of the system.
         /// </summary>
         public Guid ResourceManagerId { get; set; }

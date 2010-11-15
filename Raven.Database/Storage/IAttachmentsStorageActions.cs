@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
 
-namespace Raven.Database.Storage.StorageActions
+namespace Raven.Database.Storage
 {
 	public interface IAttachmentsStorageActions
 	{
-		void AddAttachment(string key, Guid? etag, byte[] data, JObject headers);
+		Guid AddAttachment(string key, Guid? etag, byte[] data, JObject headers);
 		void DeleteAttachment(string key, Guid? etag);
 		Attachment GetAttachment(string key);
 		IEnumerable<AttachmentInformation> GetAttachmentsByReverseUpdateOrder(int start);

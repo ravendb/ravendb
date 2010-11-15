@@ -7,15 +7,15 @@ using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
-using Raven.Database.Storage.StorageActions;
 using Raven.Database.Extensions;
+using Raven.Database.Storage;
 using Raven.Http.Exceptions;
 
 namespace Raven.Storage.Esent.StorageActions
 {
 	public partial class DocumentStorageActions : IAttachmentsStorageActions
 	{
-		public void AddAttachment(string key, Guid? etag, byte[] data, JObject headers)
+		public Guid AddAttachment(string key, Guid? etag, byte[] data, JObject headers)
 		{
 			Api.JetSetCurrentIndex(session, Files, "by_name");
 			Api.MakeKey(session, Files, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -39,7 +39,7 @@ namespace Raven.Storage.Esent.StorageActions
 					Api.EscrowUpdate(session, Details, tableColumnsCache.DetailsColumns["attachment_count"], 1);
 			}
 
-			Guid newETag = DocumentDatabase.CreateSequentialUuid();
+			Guid newETag = uuidGenerator.CreateSequentialUuid();
 			using (var update = new Update(session, Files, isUpdate ? JET_prep.Replace : JET_prep.Insert))
 			{
 				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["name"], key, Encoding.Unicode);
@@ -50,6 +50,8 @@ namespace Raven.Storage.Esent.StorageActions
 				update.Save();
 			}
 			logger.DebugFormat("Adding attachment {0}", key);
+
+		    return newETag;
 		}
 
 		public void DeleteAttachment(string key, Guid? etag)

@@ -1,6 +1,7 @@
 using System.IO;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Database;
+using Raven.Database.Config;
 
 namespace Raven.Storage.Esent
 {
@@ -8,9 +9,9 @@ namespace Raven.Storage.Esent
 	{
 		public const int MaxSessions = 256;
 
-        private readonly InMemroyRavenConfiguration configuration;
+        private readonly InMemoryRavenConfiguration configuration;
 
-        public TransactionalStorageConfigurator(InMemroyRavenConfiguration configuration)
+        public TransactionalStorageConfigurator(InMemoryRavenConfiguration configuration)
 		{
 			this.configuration = configuration;
 		}

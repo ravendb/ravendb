@@ -5,7 +5,7 @@ using Raven.Database.Data;
 namespace Raven.Client.Linq
 {
 	/// <summary>
-	/// Extension for the builtin <see cref="IQueryProvider"/> allowing for Raven specific operations
+	/// Extension for the built-in <see cref="IQueryProvider"/> allowing for Raven specific operations
 	/// </summary>
     public interface IRavenQueryProvider : IQueryProvider
 	{

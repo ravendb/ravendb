@@ -16,6 +16,7 @@
  */
 
 using System;
+using System.Runtime.Serialization;
 
 namespace Lucene.Net.Store
 {
@@ -29,5 +30,12 @@ namespace Lucene.Net.Store
 		public AlreadyClosedException(System.String message):base(message)
 		{
 		}
+
+        
+        protected AlreadyClosedException(
+            SerializationInfo info,
+            StreamingContext context) : base(info, context)
+        {
+        }
 	}
 }

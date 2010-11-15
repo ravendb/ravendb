@@ -6,8 +6,8 @@ using Microsoft.Isam.Esent.Interop;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Json;
-using Raven.Database.Storage.StorageActions;
 using Raven.Database.Extensions;
+using Raven.Database.Storage;
 using Raven.Http;
 
 namespace Raven.Storage.Esent.StorageActions
@@ -196,7 +196,7 @@ namespace Raven.Storage.Esent.StorageActions
 				if (Api.TryMoveFirst(session, Details))
 					Api.EscrowUpdate(session, Details, tableColumnsCache.DetailsColumns["document_count"], 1);
 			}
-		    Guid newEtag = DocumentDatabase.CreateSequentialUuid();
+            Guid newEtag = uuidGenerator.CreateSequentialUuid();
 
 			var bytes = documentCodecs.Aggregate(data.ToBytes(), (current, codec) => codec.Encode(key, data, metadata, current));
 
@@ -238,7 +238,7 @@ namespace Raven.Storage.Esent.StorageActions
 				EnsureDocumentIsNotCreatedInAnotherTransaction(key, transactionInformation.Id);
 			}
 			EnsureTransactionExists(transactionInformation);
-		    Guid newEtag = DocumentDatabase.CreateSequentialUuid();
+            Guid newEtag = uuidGenerator.CreateSequentialUuid();
 
 			Api.JetSetCurrentIndex(session, DocumentsModifiedByTransactions, "by_key");
 			Api.MakeKey(session, DocumentsModifiedByTransactions, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -310,7 +310,7 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 			EnsureTransactionExists(transactionInformation);
 
-		    Guid newEtag = DocumentDatabase.CreateSequentialUuid();
+            Guid newEtag = uuidGenerator.CreateSequentialUuid();
 
 			Api.JetSetCurrentIndex(session, DocumentsModifiedByTransactions, "by_key");
 			Api.MakeKey(session, DocumentsModifiedByTransactions, key, Encoding.Unicode, MakeKeyGrbit.NewKey);

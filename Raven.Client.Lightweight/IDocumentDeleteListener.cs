@@ -3,7 +3,7 @@ using Newtonsoft.Json.Linq;
 namespace Raven.Client
 {
     /// <summary>
-	/// Hook for users to provide additioanl logic on delete operations
+	/// Hook for users to provide additional logic on delete operations
 	/// </summary>
 	public interface IDocumentDeleteListener
 	{

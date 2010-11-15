@@ -21,7 +21,6 @@ namespace Raven.Database.Indexing
         private readonly ReaderWriterLockSlim readerWriterLockSlim = new ReaderWriterLockSlim();
         public IEnumerable<AbstractIndexUpdateTrigger> IndexUpdateTriggers { get; set; }
         public IEnumerable<AbstractReadTrigger> ReadTriggers { get; set; }
-        public PerformanceCounters PerformanceCounters { get; set; }
         public bool DoWork
         {
             get { return doWork; }
@@ -65,11 +64,16 @@ namespace Raven.Database.Indexing
             shouldNotifyOnWork.Value = true;
         }
 
-        public void NotifyAboutWork()
+        public void HandleWorkNotifications()
         {
             if (shouldNotifyOnWork.Value == false)
                 return;
             shouldNotifyOnWork.Value = false;
+            NotifyAboutWork();
+        }
+
+        public void NotifyAboutWork()
+        {
             Interlocked.Increment(ref workCounter);
             lock (waitForWork)
             {

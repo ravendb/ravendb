@@ -1,3 +1,5 @@
+using Raven.Database.Plugins;
+
 namespace Raven.Database.Backup
 {
 	/// <summary>

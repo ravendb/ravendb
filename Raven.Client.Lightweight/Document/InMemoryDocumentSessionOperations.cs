@@ -103,7 +103,7 @@ namespace Raven.Client.Document
 		}
 
         /// <summary>
-        /// The transaction resource manager identifer
+        /// The transaction resource manager identifier
         /// </summary>
         public Guid ResourceManagerId { get; private set; }
 

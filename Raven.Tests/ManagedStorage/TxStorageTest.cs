@@ -1,9 +1,11 @@
 using System.IO;
-using Raven.Database;
+using Raven.Database.Config;
+using Raven.Database.Impl;
+using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Storage.Managed;
 
-namespace Raven.Storage.Tests
+namespace Raven.Tests.ManagedStorage
 {
 	public class TxStorageTest
 	{
@@ -18,8 +20,11 @@ namespace Raven.Storage.Tests
             var newTransactionalStorage = new TransactionalStorage(new RavenConfiguration
             {
                 DataDirectory = "test",
-            }, () => { });
-            newTransactionalStorage.Initialize();
+            }, () => { })
+            {
+                DocumentCodecs = new AbstractDocumentCodec[0]
+            };
+            newTransactionalStorage.Initialize(new DummyUuidGenerator());
             return newTransactionalStorage;
         }
 	}

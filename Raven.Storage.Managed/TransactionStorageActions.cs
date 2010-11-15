@@ -5,8 +5,9 @@ using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Exceptions;
+using Raven.Database.Impl;
+using Raven.Database.Plugins;
 using Raven.Database.Storage;
-using Raven.Database.Storage.StorageActions;
 using Raven.Http;
 using Raven.Http.Exceptions;
 using Raven.Munin;
@@ -19,10 +20,14 @@ namespace Raven.Storage.Managed
     public class TransactionStorageActions : ITransactionStorageActions
     {
         private readonly TableStorage storage;
+        private readonly IUuidGenerator generator;
+        private readonly IEnumerable<AbstractDocumentCodec> documentCodecs;
 
-        public TransactionStorageActions(TableStorage storage)
+        public TransactionStorageActions(TableStorage storage, IUuidGenerator generator, IEnumerable<AbstractDocumentCodec> documentCodecs)
         {
             this.storage = storage;
+            this.generator = generator;
+            this.documentCodecs = documentCodecs;
         }
 
         public Guid AddDocumentInTransaction(string key, Guid? etag, JObject data, JObject metadata, TransactionInformation transactionInformation)
@@ -53,9 +58,10 @@ namespace Raven.Storage.Managed
             var ms = new MemoryStream();
 
             metadata.WriteTo(ms);
-            data.WriteTo(ms);
+            var dataBytes = documentCodecs.Aggregate(data.ToBytes(), (bytes, codec) => codec.Encode(key, data, metadata, bytes));
+            ms.Write(dataBytes, 0, dataBytes.Length);
 
-            var newEtag = DocumentDatabase.CreateSequentialUuid();
+            var newEtag = generator.CreateSequentialUuid();
             storage.DocumentsModifiedByTransactions.Put(new JObject
             {
                 {"key", key},
@@ -113,7 +119,7 @@ namespace Raven.Storage.Managed
                 {"timeout", DateTime.UtcNow.Add(transactionInformation.Timeout)}
             });
 
-            var newEtag = DocumentDatabase.CreateSequentialUuid();
+            var newEtag = generator.CreateSequentialUuid();
             storage.DocumentsModifiedByTransactions.UpdateKey(new JObject
             {
                 {"key", key},

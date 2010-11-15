@@ -9,7 +9,7 @@ using Raven.Database.Data;
 namespace Raven.Client.Linq
 {
     /// <summary>
-    /// This is a specialised query provider for querying dynamic indexes
+    /// This is a specialized query provider for querying dynamic indexes
     /// </summary>
     /// <typeparam name="T"></typeparam>
     public class DynamicRavenQueryProvider<T> : IRavenQueryProvider
@@ -42,7 +42,7 @@ namespace Raven.Client.Linq
         }
 
         /// <summary>
-        /// Gets the actions for customising the generated lucene query
+        /// Gets the actions for customizing the generated lucene query
         /// </summary>
         public Action<IDocumentQueryCustomization> CustomizedQuery
         {
@@ -85,7 +85,7 @@ namespace Raven.Client.Linq
 
 		IQueryable<S> IQueryProvider.CreateQuery<S>(Expression expression)
         {
-            return new DynamicRavenQueryable<S>(this, expression, ravenQueryStatistics);
+            return new DynamicRavenQueryInspector<S>(this, expression, ravenQueryStatistics);
         }
 
         IQueryable IQueryProvider.CreateQuery(Expression expression)
@@ -95,7 +95,7 @@ namespace Raven.Client.Linq
             {
                 return
                     (IQueryable)
-                    Activator.CreateInstance(typeof(DynamicRavenQueryable<>).MakeGenericType(elementType),
+                    Activator.CreateInstance(typeof(DynamicRavenQueryInspector<>).MakeGenericType(elementType),
                                              new object[] { this, expression });
             }
             catch (TargetInvocationException tie)

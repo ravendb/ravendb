@@ -30,15 +30,17 @@ namespace Raven.Database.Indexing
         protected readonly ILog logQuerying = LogManager.GetLogger(typeof(Index) + ".Querying");
         protected readonly string name;
         protected readonly IndexDefinition indexDefinition;
+        private readonly AbstractViewGenerator viewGenerator;
         private CurrentIndexSearcher searcher;
         private readonly object writeLock = new object();
         private volatile bool disposed;
 
-        [CLSCompliant(false)]
-        protected Index(Directory directory, string name, IndexDefinition indexDefinition)
+        
+        protected Index(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator)
         {
             this.name = name;
             this.indexDefinition = indexDefinition;
+            this.viewGenerator = viewGenerator;
             logIndexing.DebugFormat("Creating index for {0}", name);
             this.directory = directory;
 
@@ -71,6 +73,8 @@ namespace Raven.Database.Indexing
 
         public IEnumerable<IndexQueryResult> Query(IndexQuery indexQuery, Func<IndexQueryResult, bool> shouldIncludeInResults)
         {
+            AssertQueryDoesNotContainFieldsThatAreNotIndexes(indexQuery.Query, indexQuery.SortedFields);
+
             IndexSearcher indexSearcher;
             using (searcher.Use(out indexSearcher))
             {
@@ -107,6 +111,35 @@ namespace Raven.Database.Indexing
                             yield break;
                     }
                 } while (skippedResultsInCurrentLoop > 0 && returnedResults < indexQuery.PageSize);
+            }
+        }
+
+        private void AssertQueryDoesNotContainFieldsThatAreNotIndexes(string query, SortedField[] fields)
+        {
+            var hashSet = SimpleQueryParser.GetFields(query);
+            foreach (var field in hashSet)
+            {
+                var f = field;
+                if (f.EndsWith("_Range"))
+                {
+                    f = f.Substring(0, f.Length - "_Range".Length);
+                }
+                if (viewGenerator.ContainsField(f) == false)
+                    throw new ArgumentException("The field '" + f  + "' is not indexed, cannot query on fields that are not indexed");
+            }
+
+            if (fields == null)
+                return;
+
+            foreach (var field in fields)
+            {
+                var f = field.Field;
+                if (f.EndsWith("_Range"))
+                {
+                    f = f.Substring(0, f.Length - "_Range".Length);
+                }
+                if (viewGenerator.ContainsField(f) == false)
+                    throw new ArgumentException("The field '" + f + "' is not indexed, cannot sort on fields that are not indexed");
             }
         }
 
@@ -164,7 +197,7 @@ namespace Raven.Database.Indexing
 
         public abstract void IndexDocuments(AbstractViewGenerator viewGenerator, IEnumerable<object> documents, WorkContext context, IStorageActionsAccessor actions, DateTime minimumTimestamp);
 
-        [CLSCompliant(false)]
+        
         protected virtual IndexQueryResult RetrieveDocument(Document document, string[] fieldsToFetch)
         {
             var shouldBuildProjection = fieldsToFetch == null || fieldsToFetch.Length == 0;
@@ -333,7 +366,12 @@ namespace Raven.Database.Indexing
             }
         }
 
-        private class CurrentIndexSearcher
+        internal CurrentIndexSearcher Searcher
+        {
+            get { return searcher; }
+        }
+
+        internal class CurrentIndexSearcher
         {
             private bool shouldDisposeWhenThereAreNoUsages;
             private int useCount;

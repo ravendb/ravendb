@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
@@ -32,7 +33,7 @@ using System.Runtime.CompilerServices;
 [assembly: AssemblyTrademark("Copyright 2006 - 2009 The Apache Software Foundation")]
 [assembly: AssemblyDefaultAlias("Lucene.Net")]
 [assembly: AssemblyCulture("")]
-
+[assembly: CLSCompliant(true)]
 [assembly: AssemblyInformationalVersionAttribute("2.9.2")]
 
 

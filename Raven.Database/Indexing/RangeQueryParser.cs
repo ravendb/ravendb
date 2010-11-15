@@ -8,7 +8,7 @@ using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Database.Indexing
 {
-	[CLSCompliant(false)]
+	
 	public class RangeQueryParser : QueryParser
 	{
 		static readonly Regex rangeValue = new Regex(@"^[\w\d]x[\w\d.]+$", RegexOptions.Compiled);

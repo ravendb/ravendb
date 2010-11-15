@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Diagnostics;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
-using Raven.Storage.Managed;
 using Xunit;
 using System.Linq;
 
-namespace Raven.Storage.Tests
+namespace Raven.Tests.ManagedStorage
 {
     public class Attachments : TxStorageTest
     {

@@ -10,8 +10,8 @@ using System.Linq;
 namespace Raven.Client.Indexes
 {
 	/// <summary>
-	/// This class attempts to provide a strongly typed index defintion on the client.
-	/// It is here solely as a convienance, and it is _expected_ to fail in some scenarios.
+	/// This class attempts to provide a strongly typed index definition on the client.
+	/// It is here solely as a convenience, and it is _expected_ to fail in some scenarios.
 	/// The recommended way is to define indexes outside your code, using the Web UI.
 	/// </summary>
 	public class IndexDefinition<TDocument, TReduceResult> 
@@ -66,9 +66,10 @@ namespace Raven.Client.Indexes
 		/// <returns></returns>
 		public IndexDefinition ToIndexDefinition(DocumentConvention convention)
 		{
-			return new IndexDefinition
+		    string querySource = (typeof(TDocument) == typeof(object) || ContainsWhereEntityIs(Map.Body)) ? "docs" : "docs." + convention.GetTypeTagName(typeof(TDocument));
+		    return new IndexDefinition
 			{
-				Map = PruneToFailureLinqQueryAsStringToWorkableCode(Map, convention, "docs." + convention.GetTypeTagName(typeof(TDocument))),
+				Map = PruneToFailureLinqQueryAsStringToWorkableCode(Map, convention, querySource),
 				Reduce = PruneToFailureLinqQueryAsStringToWorkableCode(Reduce, convention, "results"),
                 TransformResults = PruneToFailureLinqQueryAsStringToWorkableCode(TransformResults, convention, "results"),
 				Indexes = ConvertToStringDictionary(Indexes),
@@ -77,7 +78,33 @@ namespace Raven.Client.Indexes
 			};
 		}
 
-		private static IDictionary<string, TValue> ConvertToStringDictionary<TValue>(IEnumerable<KeyValuePair<Expression<Func<TReduceResult, object>>, TValue>> input)
+#if !NET_3_5
+	    private static bool ContainsWhereEntityIs(Expression body)
+	    {
+	        var whereEntityIsVisitor = new WhereEntityIsVisitor();
+	        whereEntityIsVisitor.Visit(body);
+	        return whereEntityIsVisitor.HasWhereEntityIs;
+	    }
+
+	    private class WhereEntityIsVisitor : ExpressionVisitor
+        {
+            public bool HasWhereEntityIs { get; set; }
+
+            protected override Expression VisitMethodCall(MethodCallExpression node)
+            {
+                if (node.Method.Name == "WhereEntityIs")
+                    HasWhereEntityIs = true;
+                return base.VisitMethodCall(node);
+            }
+        }
+#else
+         private static bool ContainsWhereEntityIs(Expression body)
+	    {
+	        return body.ToString().Contains("WhereEntityIs");
+	    }
+#endif
+
+        private static IDictionary<string, TValue> ConvertToStringDictionary<TValue>(IEnumerable<KeyValuePair<Expression<Func<TReduceResult, object>>, TValue>> input)
 		{
 			var result = new Dictionary<string, TValue>();
 			foreach (var value in input)
@@ -118,9 +145,16 @@ namespace Raven.Client.Indexes
             var linqQuery =expression.ToString();
 #endif
 
-			linqQuery = querySource + linqQuery.Substring(expr.Parameters.First(x=>x.Type!=typeof(IClientSideDatabase)).Name.Length);
+		    var querySourceName = expr.Parameters.First(x=>x.Type!=typeof(IClientSideDatabase)).Name;
+          
+            if(linqQuery.StartsWith(querySourceName))
+		        linqQuery = querySource + linqQuery.Substring(querySourceName.Length);
+            else if (linqQuery.StartsWith("(" + querySourceName + ")"))
+                linqQuery = querySource + linqQuery.Substring(querySourceName.Length + 2);
+            else
+                throw new InvalidOperationException("Canot understand how to parse the query");
 
-			linqQuery = ReplaceAnonymousTypeBraces(linqQuery);
+		    linqQuery = ReplaceAnonymousTypeBraces(linqQuery);
 			linqQuery = Regex.Replace(linqQuery, @"new ((VB\$)|(<>))[\w_]+`\d+", "new ");// remove anonymous types
 			linqQuery = Regex.Replace(linqQuery, @"<>([a-z])_", "__$1_"); // replace <>h_ in transperant identifiers
 			const string pattern = @"(\.Where\(|\.Select\(|\.GroupBy\(|\.SelectMany)";
@@ -174,8 +208,8 @@ namespace Raven.Client.Indexes
 	}
 
     /// <summary>
-	/// This class attempts to provide a strongly typed index defintion on the client.
-	/// It is here solely as a convienance, and it is _expected_ to fail in some scenarios.
+	/// This class attempts to provide a strongly typed index definition on the client.
+	/// It is here solely as a convenience, and it is _expected_ to fail in some scenarios.
 	/// The recommended way is to define indexes outside your code, using the Web UI.
 	/// </summary>
 	public class IndexDefinition<TDocument> : IndexDefinition<TDocument, object> { }

@@ -9,7 +9,7 @@ namespace Raven.Storage.Managed.Impl
         public TableStorage(IPersistentSource persistentSource)
             : base(persistentSource)
         {
-            Details = Add(new Table("Detauls"));
+            Details = Add(new Table("Details"));
 
             Identity = Add(new Table(x => x.Value<string>("name"), "Identity"));
 

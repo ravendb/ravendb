@@ -3,6 +3,8 @@ using System.Linq;
 using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
+using Raven.Database.Config;
+using Raven.Database.Impl;
 using Raven.Database.Indexing;
 using Raven.Database.Storage;
 using Raven.Storage.Esent;
@@ -22,7 +24,7 @@ namespace Raven.Tests.Views
 				DataDirectory = "raven.db.test.esent",
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true
 			}, () => { });
-			transactionalStorage.Initialize();
+			transactionalStorage.Initialize(new DummyUuidGenerator());
 		}
 
 		#region IDisposable Members

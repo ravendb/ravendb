@@ -49,5 +49,13 @@ namespace Raven.Client
         /// <typeparam name="TProjection">The type of the projection.</typeparam>
         /// <param name="fields">The fields.</param>
         IDocumentQuery<TProjection> SelectFields<TProjection>(params string[] fields);
+
+        /// <summary>
+        /// Filter matches to be inside the specified radius
+        /// </summary>
+        /// <param name="radius">The radius.</param>
+        /// <param name="latitude">The latitude.</param>
+        /// <param name="longitude">The longitude.</param>
+        IDocumentQueryCustomization WithinRadiusOf(double radius, double latitude, double longitude);
     }
 }

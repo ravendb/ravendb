@@ -4,6 +4,7 @@ using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Backup;
+using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Json;

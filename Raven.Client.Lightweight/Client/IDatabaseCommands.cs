@@ -2,6 +2,7 @@ using System;
 using System.Collections.Specialized;
 using System.Net;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
 using Raven.Client.Indexes;
 using Raven.Database;
 using Raven.Database.Data;
@@ -22,7 +23,7 @@ namespace Raven.Client.Client
 		NameValueCollection OperationsHeaders { get; set; }
 
 		/// <summary>
-		/// Gets the docuent for the specified key.
+		/// Gets the document for the specified key.
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <returns></returns>
@@ -139,7 +140,7 @@ namespace Raven.Client.Client
 		/// <summary>
 		/// Executed the specified commands as a single batch
 		/// </summary>
-		/// <param name="commandDatas">The command datas.</param>
+		/// <param name="commandDatas">The command data.</param>
 		BatchResult[] Batch(ICommandData[] commandDatas);
 
 		/// <summary>
@@ -201,5 +202,12 @@ namespace Raven.Client.Client
         /// with the specified database
         /// </summary>
         IDatabaseCommands ForDatabase(string database);
+
+        /// <summary>
+        /// Returns a list of suggestions based on the specified suggestion query.
+        /// </summary>
+        /// <param name="index">The index to query for suggestions</param>
+        /// <param name="suggestionQuery">The suggestion query.</param>
+        SuggestionQueryResult Suggest(string index, SuggestionQuery suggestionQuery);
 	}
 }

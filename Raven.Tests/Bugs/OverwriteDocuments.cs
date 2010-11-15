@@ -21,7 +21,7 @@ namespace Raven.Tests.Bugs
                 documentStore.Dispose();
 
             IOExtensions.DeleteDirectory("HiLoData");
-            documentStore = new EmbeddablDocumentStore
+            documentStore = new EmbeddableDocumentStore
             {
             	Configuration =
             		{

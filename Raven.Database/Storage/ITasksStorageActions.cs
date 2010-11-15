@@ -1,7 +1,7 @@
 ﻿using System;
 using Raven.Database.Tasks;
 
-namespace Raven.Database.Storage.StorageActions
+namespace Raven.Database.Storage
 {
 	public interface ITasksStorageActions
 	{

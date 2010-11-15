@@ -1,11 +1,7 @@
 using System;
-using Newtonsoft.Json.Linq;
-using Raven.Database;
-using Raven.Storage.Managed;
 using Xunit;
-using System.Linq;
 
-namespace Raven.Storage.Tests
+namespace Raven.Tests.ManagedStorage
 {
 	public class General : TxStorageTest
 	{

@@ -8,8 +8,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Server", "Raven.Serve
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Tests", "Raven.Tests\Raven.Tests.csproj", "{267AC60C-751E-42E9-AA18-66035DEFF63A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Client.Tests", "Raven.Client.Tests\Raven.Client.Tests.csproj", "{36B31D69-508B-4594-8F8E-85774BAA7D3F}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Web", "Raven.Web\Raven.Web.csproj", "{F49C2ED0-1844-44B4-A595-5FD152853B9C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Client.Lightweight", "Raven.Client.Lightweight\Raven.Client.Lightweight.csproj", "{4E087ECB-E7CA-4891-AC3C-3C76702715B6}"
@@ -20,9 +18,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Smuggler", "Raven.Smu
 EndProject
 Project("{F184B08F-C81C-45F6-A57F-5ABD9991F28F}") = "Raven.Client.VisualBasic.Tests", "Raven.Client.VisualBasic.Tests\Raven.Client.VisualBasic.Tests.vbproj", "{F4D4FDE0-BE9B-4139-A76C-7848A641324A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Munin", "Raven.Munin\Raven.Munin.csproj", "{486537C2-EDF7-404F-9CFB-EEE25996DF5F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Munin", "Modules\Munin\Raven.Munin\Raven.Munin.csproj", "{486537C2-EDF7-404F-9CFB-EEE25996DF5F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Munin.Tests", "Raven.Munin.Tests\Raven.Munin.Tests.csproj", "{08BE1CAB-13B1-4707-A0A3-6A2FDC1F916D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Munin.Tests", "Modules\Munin\Raven.Munin.Tests\Raven.Munin.Tests.csproj", "{08BE1CAB-13B1-4707-A0A3-6A2FDC1F916D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Http", "Raven.Http\Raven.Http.csproj", "{508E5F54-A8F3-47F4-9297-CB96F91D4DF8}"
 EndProject

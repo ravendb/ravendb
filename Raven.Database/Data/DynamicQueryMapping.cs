@@ -10,8 +10,6 @@ namespace Raven.Database.Data
 {
     public class DynamicQueryMapping
     {
-        static readonly Regex QueryTerms = new Regex(@"([^\s\(\+\-][\w._,]+)\:", RegexOptions.Compiled);
-
         public string ForEntityName { get; set; }
 
         public DynamicQueryMapping()
@@ -83,11 +81,22 @@ namespace Raven.Database.Data
                 }
 
                 // We get rid of any _Range(s) etc
-                realMappings.Add(string.Format("{0} = {1}.{2}",
+                var indexedMember = currentExpression.ToString().Replace("_Range", "");
+                if(indexedMember.Length == 0)
+                {
+                    realMappings.Add(string.Format("{0} = {1}",
+                        map.To.Replace("_Range", ""),
+                        currentDoc
+                        ));
+                }
+                else
+                {
+                    realMappings.Add(string.Format("{0} = {1}.{2}",
                         map.To.Replace("_Range", ""),
                         currentDoc,
-                        currentExpression.ToString().Replace("_Range", "")
+                        indexedMember
                         ));
+                }
             }
 
            var index =  new IndexDefinition()
@@ -106,14 +115,7 @@ namespace Raven.Database.Data
 
         public static DynamicQueryMapping Create(string query, string entityName)
         {
-            var queryTermMatches = QueryTerms.Matches(query);
-             var fields = new HashSet<string>();
-            for (int x = 0; x < queryTermMatches.Count; x++)
-            {
-                Match match = queryTermMatches[x];
-                String field = match.Groups[1].Value;
-                fields.Add(field);
-            }
+            var fields = SimpleQueryParser.GetFields(query);
 
             var headers = CurrentOperationContext.Headers.Value;
 
@@ -146,6 +148,8 @@ namespace Raven.Database.Data
                 }).ToArray()
             };                      
         }
+
+        
 
         public class DynamicSortInfo
         {
