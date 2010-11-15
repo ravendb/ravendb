@@ -24,9 +24,11 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 
                 <StackPanel Orientation="Horizontal" Grid.Column="0">
+                    <Rectangle Cursor="SizeNWSE"  VerticalAlignment="Top" Fill="#00FFFFFF" Width="5" Height="5" cal:Message.Attach="[Event MouseLeftButtonDown] = [Action ResizeWindow(4)]" />
                     <Image Source="../Resources/Images/logo.png"  Grid.Column="0" />
                     <TextBlock Text="Raven DB Management Studio" 
                                FontFamily="Georgia"
@@ -40,6 +42,9 @@
                     <Button x:Name="ToogleWindow" Style="{StaticResource ToggleWindowButton}" />
                     <Button x:Name="CloseWindow" Style="{StaticResource CloseWindowButton}" />
                 </StackPanel>
+
+                <Rectangle Cursor="SizeNESW" Grid.Column="3" VerticalAlignment="Top" Fill="#00FFFFFF" Width="5" Height="5" cal:Message.Attach="[Event MouseLeftButtonDown] = [Action ResizeWindow(5)]" />
+
             </Grid>
         </Border>
         
@@ -66,24 +71,14 @@
             <TextBlock Text="Gadgets" Grid.Column="1"/>
             
         </Grid>
-        <Border Grid.Row="3" Background="{StaticResource InverseDarkGradient}" Cursor="SizeNWSE">
-            <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
-                <controlsLocal:Gears Margin="0,0,4,0"/>
-                <Grid VerticalAlignment="Bottom" Width="10" Height="10" cal:Message.Attach="[Event MouseLeftButtonDown] = [Action ResizeWindow]">
-                    <Rectangle Width="10" Height="10" Fill="#008080ff" />
-                    <Path Fill="{x:Null}"
-								Stretch="UniformToFill"
-								Stroke="{StaticResource ButtonForegroundBrush}"
-								Margin="0,0,2,0"
-								Data="M2,10 L 10,10" />
-                    <Path Fill="{x:Null}"
-								Stretch="UniformToFill"
-								Stroke="{StaticResource ButtonForegroundBrush}"
-								Margin="0,0,0,2"
-								Data="M 10,2 L 10,10" />
-                </Grid>
-            </StackPanel>
-            
+        <Border Grid.Row="3" Background="{StaticResource InverseDarkGradient}" >
+            <controlsToolkit:DockPanel>
+                <Rectangle controlsToolkit:DockPanel.Dock="Left" Cursor="SizeNESW"  VerticalAlignment="Bottom" Fill="#00FFFFFF" Width="5" Height="5" cal:Message.Attach="[Event MouseLeftButtonDown] = [Action ResizeWindow(7)]" />
+                <StackPanel HorizontalAlignment="Right" Orientation="Horizontal" controlsToolkit:DockPanel.Dock="Right">
+                    <controlsLocal:Gears Margin="0,0,4,0"/>
+                    <Rectangle Cursor="SizeNWSE" VerticalAlignment="Bottom" Fill="#00FFFFFF" Width="5" Height="5" cal:Message.Attach="[Event MouseLeftButtonDown] = [Action ResizeWindow(8)]" />
+                </StackPanel>
+            </controlsToolkit:DockPanel>
         </Border>
 
     </Grid>

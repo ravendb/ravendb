@@ -46,9 +46,11 @@
             Application.Current.MainWindow.DragMove();
         }
 
-        public void ResizeWindow()
+        public void ResizeWindow(string direction)
         {
-            Application.Current.MainWindow.DragResize(WindowResizeEdge.BottomRight);
+            WindowResizeEdge edge;
+            WindowResizeEdge.TryParse(direction, out edge);
+            Application.Current.MainWindow.DragResize(edge);
         }
 
         public void Handle(OpenNewScreen message)
