@@ -26,17 +26,24 @@
                     <Grid HorizontalAlignment="Center"
 							VerticalAlignment="Center"
 							Background="{x:Null}"
-							Width="6"
-							Height="6">
+							Width="10"
+							Height="10">
+                        <Rectangle Fill="{StaticResource DarkGradient}"
+								Stroke="{StaticResource ButtonForegroundBrush}"
+								RadiusX="1"
+								RadiusY="1"
+                                   Width="10"
+                                   Height="10"
+								StrokeThickness="1" />
                         <Path Fill="{x:Null}"
 								Stretch="Fill"
 								Stroke="{StaticResource ButtonForegroundBrush}"
-								Margin="0,0,0,0"
+								Margin="2,2,2,2"
 								Data="M4.75,4.8333333 L10.500167,10.5835" />
                         <Path Fill="{x:Null}"
 								Stretch="Fill"
 								Stroke="{StaticResource ButtonForegroundBrush}"
-								Margin="0,0,0,0"
+								Margin="2,2,2,2"
 								Data="M4.75,4.8333333 L10.500167,10.5835"
 								RenderTransformOrigin="0.5,0.5">
                             <Path.RenderTransform>
@@ -68,15 +75,20 @@
                     <Grid HorizontalAlignment="Center"
 							VerticalAlignment="Center"
 							Background="{x:Null}"
-							Width="6"
-							Height="6">
-                        <Rectangle Fill="{StaticResource ButtonForegroundBrush}"
-								Stroke="{x:Null}"
-								VerticalAlignment="Bottom"
-								Height="1.5"
+							Width="10"
+							Height="10">
+                        <Rectangle Fill="{StaticResource DarkGradient}"
+								Stroke="{StaticResource ButtonForegroundBrush}"
 								RadiusX="1"
 								RadiusY="1"
-								Margin="2,0,0,0" />
+                                   Width="10"
+                                   Height="10"
+								StrokeThickness="1" />
+                        <Path Fill="{x:Null}"
+								Stretch="Fill"
+								Stroke="{StaticResource ButtonForegroundBrush}"
+								Margin="2,4,2,1"
+								Data="M 0,10 L 10,10" />
                     </Grid>
                 </DataTemplate>
             </Setter.Value>

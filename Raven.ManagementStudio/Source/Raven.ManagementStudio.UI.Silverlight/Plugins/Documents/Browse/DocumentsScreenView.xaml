@@ -29,8 +29,7 @@
                 <ListBox x:Name="Documents">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <!--<TextBlock Text="{Binding Id}" />-->
-                            <ContentControl />
+                            <TextBlock Text="{Binding Id}" />
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
