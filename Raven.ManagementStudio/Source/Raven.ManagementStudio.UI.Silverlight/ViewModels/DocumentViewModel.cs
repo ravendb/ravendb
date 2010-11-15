@@ -27,6 +27,7 @@ namespace Raven.ManagementStudio.UI.Silverlight.ViewModels
             {
                 return this.document;
             }
+
             set
             {
                 NotifyOfPropertyChange(() => this.Document);
@@ -39,12 +40,20 @@ namespace Raven.ManagementStudio.UI.Silverlight.ViewModels
 
         public string JsonData
         {
-            get { return jsonData; }
+            get
+            {
+                return this.jsonData;
+            }
+
             set
             {
-                jsonData = value;
+                this.jsonData = value;
                 NotifyOfPropertyChange(() => this.JsonData);
             }
+        }
+
+        public void GoToDocument()
+        {
         }
 
         private static string PrepareRawJsonString(IEnumerable<KeyValuePair<string, JToken>> data)
@@ -59,10 +68,6 @@ namespace Raven.ManagementStudio.UI.Silverlight.ViewModels
             result.Append("}");
 
             return result.ToString();
-        }
-
-        public void GoToDocument()
-        {
         }
     }
 }

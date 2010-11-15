@@ -18,18 +18,6 @@
             this.metadata = ParseJsonToDictionary(jsonDocument.Metadata);
         }
 
-        private static IDictionary<string, JToken> ParseJsonToDictionary(JObject dataAsJson)
-        {
-            IDictionary<string, JToken> result = new Dictionary<string, JToken>();
-            
-            foreach (var d in dataAsJson)
-            {
-                result.Add(d.Key, d.Value);
-            }
-
-            return result;
-        }
-
         public string Id
         {
             get { return this.id; }
@@ -45,7 +33,22 @@
 
         public IDictionary<string, JToken> Metadata
         {
-            get { return metadata; }
+            get
+            {
+                return this.metadata;
+            }
+        }
+
+        private static IDictionary<string, JToken> ParseJsonToDictionary(JObject dataAsJson)
+        {
+            IDictionary<string, JToken> result = new Dictionary<string, JToken>();
+
+            foreach (var d in dataAsJson)
+            {
+                result.Add(d.Key, d.Value);
+            }
+
+            return result;
         }
     }
 }
