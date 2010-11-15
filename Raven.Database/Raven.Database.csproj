@@ -267,7 +267,7 @@
     <Compile Include="Indexing\RobustEnumerator.cs" />
     <Compile Include="Indexing\SpatialIndex.cs" />
     <Compile Include="Indexing\SimpleQueryParser.cs" />
-    <Compile Include="Config\InMemroyRavenConfiguration.cs" />
+    <Compile Include="Config\InMemoryRavenConfiguration.cs" />
     <Compile Include="Impl\IUuidGenerator.cs" />
     <Compile Include="Linq\CaptureSelectNewFieldNamesVisitor.cs" />
     <Compile Include="Plugins\AbstractAttachmentDeleteTrigger.cs" />

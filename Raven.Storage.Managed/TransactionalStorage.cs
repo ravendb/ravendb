@@ -20,7 +20,7 @@ namespace Raven.Storage.Managed
     {
         private readonly ThreadLocal<IStorageActionsAccessor> current = new ThreadLocal<IStorageActionsAccessor>();
 
-        private readonly InMemroyRavenConfiguration configuration;
+        private readonly InMemoryRavenConfiguration configuration;
         private readonly Action onCommit;
         private TableStorage tableStroage;
         private IPersistentSource persistenceSource;
@@ -33,7 +33,7 @@ namespace Raven.Storage.Managed
         [ImportMany]
         public IEnumerable<AbstractDocumentCodec> DocumentCodecs { get; set; }
 
-        public TransactionalStorage(InMemroyRavenConfiguration configuration, Action onCommit)
+        public TransactionalStorage(InMemoryRavenConfiguration configuration, Action onCommit)
         {
             this.configuration = configuration;
             this.onCommit = onCommit;

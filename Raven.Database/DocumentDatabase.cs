@@ -71,7 +71,7 @@ namespace Raven.Database
 
         private long currentEtagBase;
 
-        public DocumentDatabase(InMemroyRavenConfiguration configuration)
+        public DocumentDatabase(InMemoryRavenConfiguration configuration)
         {
             Configuration = configuration;
 
@@ -206,7 +206,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
             get { return Configuration;  }
         }
 
-        public InMemroyRavenConfiguration Configuration
+        public InMemoryRavenConfiguration Configuration
         {
             get;
             private set;

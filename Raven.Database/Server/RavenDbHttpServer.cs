@@ -69,7 +69,7 @@ namespace Raven.Database.Server
 
             database = ResourcesStoresCache.GetOrAdd(tenantId, s =>
             {
-                var config = new InMemroyRavenConfiguration
+                var config = new InMemoryRavenConfiguration
                 {
                     Settings = DefaultConfiguration.Settings,
                 };

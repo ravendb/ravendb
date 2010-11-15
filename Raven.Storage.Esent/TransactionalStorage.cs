@@ -24,7 +24,7 @@ namespace Raven.Storage.Esent
 	{
 		private readonly ThreadLocal<StorageActionsAccessor> current = new ThreadLocal<StorageActionsAccessor>();
 		private readonly string database;
-        private readonly InMemroyRavenConfiguration configuration;
+        private readonly InMemoryRavenConfiguration configuration;
 		private readonly Action onCommit;
 		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
 		private readonly string path;
@@ -40,7 +40,7 @@ namespace Raven.Storage.Esent
 		[ImportMany]
 		public IEnumerable<AbstractDocumentCodec> DocumentCodecs { get; set; }
 
-        public TransactionalStorage(InMemroyRavenConfiguration configuration, Action onCommit)
+        public TransactionalStorage(InMemoryRavenConfiguration configuration, Action onCommit)
 		{
 			database = configuration.DataDirectory;
 			this.configuration = configuration;

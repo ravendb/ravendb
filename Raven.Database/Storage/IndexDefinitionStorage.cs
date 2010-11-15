@@ -30,11 +30,11 @@ namespace Raven.Database.Storage
 
 		private readonly ILog logger = LogManager.GetLogger(typeof (IndexDefinitionStorage));
 		private readonly string path;
-        private readonly InMemroyRavenConfiguration configuration;
+        private readonly InMemoryRavenConfiguration configuration;
 	    private readonly AbstractDynamicCompilationExtension[] extensions;
 
 		public IndexDefinitionStorage(
-            InMemroyRavenConfiguration configuration,
+            InMemoryRavenConfiguration configuration,
 			ITransactionalStorage  transactionalStorage,
 			string path, 
 			IEnumerable<AbstractViewGenerator> compiledGenerators, 

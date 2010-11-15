@@ -25,12 +25,12 @@ namespace Raven.Database.Indexing
 	public class IndexStorage : CriticalFinalizerObject, IDisposable
 	{
 	    private readonly IndexDefinitionStorage indexDefinitionStorage;
-	    private readonly InMemroyRavenConfiguration configuration;
+	    private readonly InMemoryRavenConfiguration configuration;
 		private readonly string path;
 		private readonly ConcurrentDictionary<string, Index> indexes = new ConcurrentDictionary<string, Index>(StringComparer.InvariantCultureIgnoreCase);
 		private readonly ILog log = LogManager.GetLogger(typeof (IndexStorage));
 
-        public IndexStorage(IndexDefinitionStorage indexDefinitionStorage, InMemroyRavenConfiguration configuration)
+        public IndexStorage(IndexDefinitionStorage indexDefinitionStorage, InMemoryRavenConfiguration configuration)
 		{
             this.indexDefinitionStorage = indexDefinitionStorage;
             this.configuration = configuration;

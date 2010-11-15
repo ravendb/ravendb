@@ -3,7 +3,7 @@ using System.Configuration;
 
 namespace Raven.Database.Config
 {
-    public class RavenConfiguration : InMemroyRavenConfiguration
+    public class RavenConfiguration : InMemoryRavenConfiguration
     {
         public RavenConfiguration()
         {

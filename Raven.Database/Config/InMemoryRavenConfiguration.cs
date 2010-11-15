@@ -10,7 +10,7 @@ using Raven.Http;
 
 namespace Raven.Database.Config
 {
-    public class InMemroyRavenConfiguration : IRaveHttpnConfiguration
+    public class InMemoryRavenConfiguration : IRaveHttpnConfiguration
     {
         private CompositionContainer container;
         private bool containerExternallySet;
@@ -18,7 +18,7 @@ namespace Raven.Database.Config
         private string pluginsDirectory;
         private bool runInUnreliableYetFastModeThatIsNotSuitableForProduction;
 
-        public InMemroyRavenConfiguration()
+        public InMemoryRavenConfiguration()
         {
             Settings = new NameValueCollection(StringComparer.InvariantCultureIgnoreCase);
 
