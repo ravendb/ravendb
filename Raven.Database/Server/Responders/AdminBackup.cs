@@ -28,6 +28,7 @@ namespace Raven.Database.Server.Responders
 				{
 					Error = "Only administrators can initiate a backup procedure"
 				});
+			    return;
 			}
 
 			var backupRequest = context.ReadJsonObject<BackupRequest>();
