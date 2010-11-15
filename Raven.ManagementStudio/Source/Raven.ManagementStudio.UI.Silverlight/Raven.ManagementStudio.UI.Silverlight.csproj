@@ -96,6 +96,7 @@
       <DependentUpon>BrowseMenuIcon.xaml</DependentUpon>
     </Compile>
     <Compile Include="Plugins\Documents\Browse\DocumentsScreenViewModel.cs" />
+    <Compile Include="ViewModels\DocumentViewModel.cs" />
     <Compile Include="ViewModels\GadgetsViewModel.cs" />
     <Compile Include="ViewModels\Interfaces\INavigationBar.cs" />
     <Compile Include="ViewModels\Interfaces\IShell.cs" />

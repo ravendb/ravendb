@@ -3,11 +3,27 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <SolidColorBrush x:Key="ToolbarBackgroundBrush"
-			Color="#FF123C65" />
+			Color="White" />
 
     <SolidColorBrush x:Key="ButtonForegroundBrush"
 			Color="White" />
 
-    <SolidColorBrush x:Key="DarkGradient"
+    <SolidColorBrush x:Key="DarkBrush"
 			Color="#FF123C65" />
+
+    <LinearGradientBrush x:Key="DarkGradient" EndPoint="0.5,1" StartPoint="0.5,0">
+        <GradientStop Color="#FF17497A" Offset="0"/>
+        <GradientStop Color="#FF071B30" Offset="1"/>
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="InverseDarkGradient" EndPoint="0.5,1" StartPoint="0.5,0">
+        <GradientStop Color="#FF071B30" Offset="0"/>
+        <GradientStop Color="#FF17497A" Offset="1"/>
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="LightGradient" EndPoint="0.5,1" StartPoint="0.5,0">
+        <GradientStop Color="#FF96C3D9" Offset="0"/>
+        <GradientStop Color="#FF146189" Offset="1"/>
+    </LinearGradientBrush>
+
 </ResourceDictionary>

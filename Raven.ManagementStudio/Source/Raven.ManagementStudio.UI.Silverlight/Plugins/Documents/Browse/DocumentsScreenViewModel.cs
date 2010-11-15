@@ -7,10 +7,11 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Documents.Browse
     using Client.Silverlight.Data;
     using Models;
     using Plugin;
+    using ViewModels;
 
     public class DocumentsScreenViewModel : Screen, IRavenScreen
     {
-        private IList<Document> documents;
+        private IList<DocumentViewModel> documents;
         private bool isBusy;
         
         public DocumentsScreenViewModel(IDatabase database)
@@ -35,7 +36,7 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Documents.Browse
 
         public IDatabase Database { get; set; }
 
-        public IList<Document> Documents
+        public IList<DocumentViewModel> Documents
         {
             get
             {
@@ -62,7 +63,7 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Documents.Browse
         public void GetAll(LoadResponse<IList<JsonDocument>> response)
         {
             IList<Document> result = response.Data.Select(jsonDocument => new Document(jsonDocument)).ToList();
-            this.Documents = result;
+            this.Documents = result.Select((document, index) => new DocumentViewModel(document)).ToList();
             this.IsBusy = false;
         }
     }

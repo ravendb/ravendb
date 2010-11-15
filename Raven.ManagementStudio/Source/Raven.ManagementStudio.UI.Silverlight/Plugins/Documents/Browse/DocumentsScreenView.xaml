@@ -7,31 +7,45 @@
     xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity" 
     xmlns:local="clr-namespace:Raven.ManagementStudio.UI.Silverlight.Behaviors" 
     xmlns:localControls="clr-namespace:Raven.ManagementStudio.UI.Silverlight.Controls"
-    mc:Ignorable="d"
+    xmlns:controlsToolkit="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit" 
+    xmlns:views="clr-namespace:Raven.ManagementStudio.UI.Silverlight.Views" mc:Ignorable="d"
     Margin="20 0 10 0" Background="Red">
     
     <StackPanel Orientation="Vertical">
-        <StackPanel Orientation="Horizontal">
+        <StackPanel Orientation="Vertical">
             <TextBlock Text="Get by ID" />
-            <TextBox MinWidth="350">
-                <i:Interaction.Behaviors>
-                    <local:Watermark Text="Document ID" Foreground="LightGray" />
-                </i:Interaction.Behaviors>
-            </TextBox>
-            <Button Content="Go" />
+            <StackPanel Orientation="Horizontal">
+                <TextBox MinWidth="350">
+                    <i:Interaction.Behaviors>
+                        <local:Watermark Text="Document ID" Foreground="LightGray" />
+                    </i:Interaction.Behaviors>
+                </TextBox>
+                <Button Content="Go" />
+            </StackPanel>
         </StackPanel>  
         
         <StackPanel Orientation="Vertical" Width="Auto">
-            <Border Background="{StaticResource ToolbarBackgroundBrush}">
-                <TextBlock Text="{Binding Documents.Count, StringFormat=' {0} results', FallbackValue='No results'}" />
+            <Border Background="{StaticResource LightGradient}" Height="30" CornerRadius="4" Margin="0,0,0,20">
+                <TextBlock Text="{Binding Documents.Count, StringFormat=' {0} results', FallbackValue='No results'}" VerticalAlignment="Center" Foreground="{StaticResource ToolbarBackgroundBrush}"/>
             </Border>
             <toolkit:BusyIndicator IsBusy="{Binding IsBusy}">
                 <ListBox x:Name="Documents">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <TextBlock Text="{Binding Id}" />
+                    <!--<ListBox.ItemTemplate>
+                        <DataTemplate>-->
+                            <!--<TextBlock Text="{Binding Id}" />-->
+                            <!--<views:DocumentView />
                         </DataTemplate>
-                    </ListBox.ItemTemplate>
+                    </ListBox.ItemTemplate>-->
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <controlsToolkit:WrapPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.Template>
+                        <ControlTemplate TargetType="ListBox">
+                            <ItemsPresenter />
+                        </ControlTemplate>
+                    </ListBox.Template>
                 </ListBox>
             </toolkit:BusyIndicator>
         </StackPanel>

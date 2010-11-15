@@ -3,10 +3,11 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    mc:Ignorable="d"
-    d:DesignHeight="300" d:DesignWidth="400">
+    mc:Ignorable="d">
     
-    <Grid x:Name="LayoutRoot" Background="White">
-        <TextBlock Text="{Binding Id}" />
-    </Grid>
+    <StackPanel Orientation="Vertical">
+        <Border Height="100" Width="75" BorderBrush="Blue" BorderThickness="2"/>
+        <TextBlock Text="{Binding Document.Id}" TextTrimming="WordEllipsis" Width="70" HorizontalAlignment="Center">
+        </TextBlock>
+    </StackPanel>
 </UserControl>

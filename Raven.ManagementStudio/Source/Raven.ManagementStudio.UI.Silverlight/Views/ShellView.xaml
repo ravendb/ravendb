@@ -8,7 +8,8 @@
     xmlns:controlsToolkit="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit"
     xmlns:controls="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls"
     mc:Ignorable="d"
-    d:DesignHeight="480" d:DesignWidth="640">
+    d:DesignHeight="480" d:DesignWidth="640"
+    MinHeight="480" MinWidth="640">
     <Grid Background="White">
         <Grid.RowDefinitions>
             <RowDefinition Height="30" />
@@ -17,7 +18,7 @@
             <RowDefinition Height="20" />
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Background="{StaticResource ToolbarBackgroundBrush}" cal:Message.Attach="[Event MouseLeftButtonDown] = [Action DragWindow]">
+        <Border Grid.Row="0" Background="{StaticResource DarkGradient}" cal:Message.Attach="[Event MouseLeftButtonDown] = [Action DragWindow]">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
@@ -30,7 +31,7 @@
                     <TextBlock Text="Raven DB Management Studio" 
                                FontFamily="Georgia"
                                FontSize="16"
-                               Foreground="White"
+                               Foreground="{StaticResource ToolbarBackgroundBrush}"
                                VerticalAlignment="Center" Margin="5, 0, 0, 0" />
                 </StackPanel>    
 
@@ -65,9 +66,24 @@
             <TextBlock Text="Gadgets" Grid.Column="1"/>
             
         </Grid>
-
-        <Border Grid.Row="3" Background="{StaticResource ToolbarBackgroundBrush}">
-            <controlsLocal:Gears HorizontalAlignment="Right" Margin="0,0,4,0"/>
+        <Border Grid.Row="3" Background="{StaticResource InverseDarkGradient}" Cursor="SizeNWSE">
+            <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
+                <controlsLocal:Gears Margin="0,0,4,0"/>
+                <Grid VerticalAlignment="Bottom" Width="10" Height="10" cal:Message.Attach="[Event MouseLeftButtonDown] = [Action ResizeWindow]">
+                    <Rectangle Width="10" Height="10" Fill="#008080ff" />
+                    <Path Fill="{x:Null}"
+								Stretch="UniformToFill"
+								Stroke="{StaticResource ButtonForegroundBrush}"
+								Margin="0,0,2,0"
+								Data="M2,10 L 10,10" />
+                    <Path Fill="{x:Null}"
+								Stretch="UniformToFill"
+								Stroke="{StaticResource ButtonForegroundBrush}"
+								Margin="0,0,0,2"
+								Data="M 10,2 L 10,10" />
+                </Grid>
+            </StackPanel>
+            
         </Border>
 
     </Grid>

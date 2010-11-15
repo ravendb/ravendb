@@ -46,6 +46,11 @@
             Application.Current.MainWindow.DragMove();
         }
 
+        public void ResizeWindow()
+        {
+            Application.Current.MainWindow.DragResize(WindowResizeEdge.BottomRight);
+        }
+
         public void Handle(OpenNewScreen message)
         {
             this.ActiveItem.ActivateItem(message.NewScreen);
