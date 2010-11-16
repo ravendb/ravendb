@@ -20,7 +20,7 @@ namespace Raven.Client.Extensions
             {
                 Settings =
                     {
-                        {"Raven/DataDir", Path.Combine("~", "Tenants", name)}
+                        {"Raven/DataDir", Path.Combine("~", Path.Combine("Tenants", name))}
                     }
             });
             var docId = "Raven/Databases/" + name;
