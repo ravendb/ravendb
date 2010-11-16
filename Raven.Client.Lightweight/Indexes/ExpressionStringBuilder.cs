@@ -620,7 +620,7 @@ namespace Raven.Client.Indexes
 
             return node;
         }
-
+        
         /// <summary>
         /// Visits the <see cref="T:System.Linq.Expressions.ConstantExpression"/>.
         /// </summary>
@@ -1029,6 +1029,11 @@ namespace Raven.Client.Indexes
             }
             if (expression != null)
             {
+                if (node.Method.Name == "Hierarchy")
+                {
+                    VisitHierarchy(node, expression);
+                    return node;
+                }
                 if (expression.Type == typeof(IClientSideDatabase))
                 {
                     this.Out("Database");
@@ -1071,6 +1076,26 @@ namespace Raven.Client.Indexes
                 this.Out("]");
             }
             return node;
+        }
+
+        private void VisitHierarchy(MethodCallExpression node, Expression expression)
+        {
+            this.Out("Hierarchy(");
+            this.Visit(expression);
+            this.Out(", ");
+            var path = node.Arguments.Last();
+            if (path.NodeType == ExpressionType.Lambda)
+            {
+                var body = ((LambdaExpression)path).Body;
+                this.Out("\"");
+                this.Out(((MemberExpression)body).Member.Name);
+                this.Out("\"");
+            }
+            else
+            {
+                this.Visit(path);
+            }
+            this.Out(")");
         }
 
         /// <summary>
