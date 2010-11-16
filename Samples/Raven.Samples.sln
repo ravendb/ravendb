@@ -42,6 +42,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Sample.MultiTenancy",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Sample.Suggestions", "Raven.Sample.Suggestions\Raven.Sample.Suggestions.csproj", "{CF9AEB02-E984-4ECD-A1C7-08950DF717B4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Sample.LiveProjections", "Raven.Sample.LiveProjections\Raven.Sample.LiveProjections.csproj", "{6CA2CE14-F295-4D83-85EA-60FF09BAA99E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -252,6 +254,16 @@ Global
 		{CF9AEB02-E984-4ECD-A1C7-08950DF717B4}.Release|Mixed Platforms.Build.0 = Release|x86
 		{CF9AEB02-E984-4ECD-A1C7-08950DF717B4}.Release|x86.ActiveCfg = Release|x86
 		{CF9AEB02-E984-4ECD-A1C7-08950DF717B4}.Release|x86.Build.0 = Release|x86
+		{6CA2CE14-F295-4D83-85EA-60FF09BAA99E}.Debug|Any CPU.ActiveCfg = Debug|x86
+		{6CA2CE14-F295-4D83-85EA-60FF09BAA99E}.Debug|Mixed Platforms.ActiveCfg = Debug|x86
+		{6CA2CE14-F295-4D83-85EA-60FF09BAA99E}.Debug|Mixed Platforms.Build.0 = Debug|x86
+		{6CA2CE14-F295-4D83-85EA-60FF09BAA99E}.Debug|x86.ActiveCfg = Debug|x86
+		{6CA2CE14-F295-4D83-85EA-60FF09BAA99E}.Debug|x86.Build.0 = Debug|x86
+		{6CA2CE14-F295-4D83-85EA-60FF09BAA99E}.Release|Any CPU.ActiveCfg = Release|x86
+		{6CA2CE14-F295-4D83-85EA-60FF09BAA99E}.Release|Mixed Platforms.ActiveCfg = Release|x86
+		{6CA2CE14-F295-4D83-85EA-60FF09BAA99E}.Release|Mixed Platforms.Build.0 = Release|x86
+		{6CA2CE14-F295-4D83-85EA-60FF09BAA99E}.Release|x86.ActiveCfg = Release|x86
+		{6CA2CE14-F295-4D83-85EA-60FF09BAA99E}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

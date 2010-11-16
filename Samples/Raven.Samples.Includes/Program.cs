@@ -8,13 +8,26 @@ namespace Raven.Samples.Includes
 {
     internal class Program
     {
-        private static void Main(string[] args)
+        private static void Main()
         {
             using (var documentStore = new DocumentStore {Url = "http://localhost:8080"})
             {
                 documentStore.Initialize();
             
-                IndexCreation.CreateIndexes(typeof(Companies_ByRegion).Assembly, documentStore);
+                using (IDocumentSession session = documentStore.OpenSession())
+                {
+                    var company = new Company
+                    {
+                        Name = "Hibernating Rhinos",
+                    };
+                    session.Store(company);
+                    session.Store(new Company
+                    {
+                        Name = "Rampaging Rhinos",
+                        ParentCompanyId = company.Id
+                    });
+                    session.SaveChanges();
+                }
 
                 using (IDocumentSession session = documentStore.OpenSession())
                 {
