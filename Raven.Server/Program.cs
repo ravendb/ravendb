@@ -170,6 +170,14 @@ namespace Raven.Server
             NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Port);
             if (anonymousUserAccessMode.HasValue)
                 ravenConfiguration.AnonymousUserAccessMode = anonymousUserAccessMode.Value;
+            while (RunServer(ravenConfiguration))
+            {
+                
+            }
+        }
+
+        private static bool RunServer(RavenConfiguration ravenConfiguration)
+        {
             using (new RavenDbServer(ravenConfiguration))
             {
                 var path = Path.Combine(Environment.CurrentDirectory, "default.raven");
@@ -184,11 +192,20 @@ namespace Raven.Server
                 Console.WriteLine("Press the enter key to stop the server or enter 'cls' and then enter to clear the log");
                 while (true)
                 {
-                    var readLine = Console.ReadLine();
-                    if (!"CLS".Equals(readLine, StringComparison.InvariantCultureIgnoreCase))
-                        break;
-                    Console.Clear();
+                    var readLine = Console.ReadLine() ?? "";
+                    switch (readLine.ToLowerInvariant())
+                    {
+                        case "CLS":
+                            Console.Clear();
+                            break;
+                        case "reset":
+                            Console.Clear();
+                            return true;
+                        default:
+                            return false;
+                    }
                 }
+                return false;
             }
         }
 
