@@ -6,6 +6,7 @@ using Raven.Database.Extensions;
 using Raven.Http;
 using Raven.Server;
 using Xunit;
+using Raven.Client.Extensions;
 
 namespace Raven.Tests.Bugs
 {
@@ -21,6 +22,42 @@ namespace Raven.Tests.Bugs
                     DataDirectory = "Data",
                     AnonymousUserAccessMode = AnonymousUserAccessMode.All
                 });
+        }
+
+        [Fact]
+        public void CanCreateDatabaseUsingExtensionMethod()
+        {
+            using (GetNewServer(8080))
+            using (var store = new DocumentStore
+            {
+                Url = "http://localhost:8080"
+            }.Initialize())
+            {
+                store.DatabaseCommands.EnsureDatabaseExists("Northwind");
+                
+                string userId;
+
+                using (var s = store.OpenSession("Northwind"))
+                {
+                    var entity = new User
+                    {
+                        Name = "First Mutlti Tenant Bank",
+                    };
+                    s.Store(entity);
+                    userId = entity.Id;
+                    s.SaveChanges();
+                }
+
+                using (var s = store.OpenSession())
+                {
+                    Assert.Null(s.Load<User>(userId));
+                }
+
+                using (var s = store.OpenSession("Northwind"))
+                {
+                    Assert.NotNull(s.Load<User>(userId));
+                }
+            }
         }
 
         [Fact]

@@ -96,6 +96,7 @@
     <Compile Include="Exceptions\NonAuthoritiveInformationException.cs" />
     <Compile Include="Exceptions\NonUniqueObjectException.cs" />
     <Compile Include="Exceptions\ReadVetoException.cs" />
+    <Compile Include="Extensions\MultiTenancyExtensions.cs" />
     <Compile Include="IAdvancedDocumentSessionOperations.cs" />
     <Compile Include="IAsyncAdvancedSessionOperations.cs" />
     <Compile Include="IAsyncDocumentSession.cs" />
