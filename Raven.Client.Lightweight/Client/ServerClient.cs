@@ -961,7 +961,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 
             return new SuggestionQueryResult
             {
-                Suggestions = json["Suggestions"].Children().Cast<string>().ToArray(),
+                Suggestions = json["Suggestions"].Children().Select(x=>x.Value<string>()).ToArray(),
             };
         }
 

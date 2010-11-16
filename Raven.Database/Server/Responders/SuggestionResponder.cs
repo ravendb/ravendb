@@ -37,7 +37,7 @@ namespace Raven.Database.Server.Responders
             if (Enum.TryParse(context.Request.QueryString["distance"], true, out distanceTypes) == false)
                 distanceTypes =StringDistanceTypes.Default;
 
-            if (Enum.TryParse(context.Request.QueryString["max"], out numOfSuggestions) == false)
+            if (int.TryParse(context.Request.QueryString["max"], out numOfSuggestions) == false)
                 numOfSuggestions = 10;
 
             if(float.TryParse(context.Request.QueryString["accuracy"], out accuracy) == false)
