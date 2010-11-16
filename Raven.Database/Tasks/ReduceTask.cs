@@ -27,6 +27,9 @@ namespace Raven.Database.Tasks
 
 		public override void Execute(WorkContext context)
 		{
+            if (ReduceKeys.Length == 0)
+                return;
+
 			var viewGenerator = context.IndexDefinitionStorage.GetViewGenerator(Index);
 			if (viewGenerator == null)
 				return; // deleted view?

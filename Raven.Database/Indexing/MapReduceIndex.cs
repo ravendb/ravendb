@@ -77,11 +77,14 @@ namespace Raven.Database.Indexing
                 actions.Indexing.IncrementSuccessIndexing();
             }
 
-            actions.Tasks.AddTask(new ReduceTask
+            if (reduceKeys.Count > 0)
             {
-                Index = name,
-                ReduceKeys = reduceKeys.ToArray()
-            }, minimumTimestamp);
+                actions.Tasks.AddTask(new ReduceTask
+                {
+                    Index = name,
+                    ReduceKeys = reduceKeys.ToArray()
+                }, minimumTimestamp);
+            }
 
             logIndexing.DebugFormat("Mapped {0} documents for {1}", count, name);
         }
