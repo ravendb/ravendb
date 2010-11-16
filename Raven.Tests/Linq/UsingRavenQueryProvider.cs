@@ -350,7 +350,7 @@ namespace Raven.Tests.Linq
 
 		public void Can_Use_Static_Properties_In_Where_Clauses()
 		{
-			using (var db = new EmbeddablDocumentStore() { DataDirectory = directoryName })
+			using (var db = new EmbeddableDocumentStore() { DataDirectory = directoryName })
 			{
 				db.Initialize();
 
