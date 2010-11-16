@@ -56,24 +56,7 @@ namespace Raven.Client.Client
 		/// <returns></returns>
 		public bool ShouldExecuteUsing(string operationUrl, int currentRequest)
 		{
-#if !NET_3_5
-		    var value = failureCounts.GetOrAdd(operationUrl, new IntHolder());
-#else
-            // need to compensate for 3.5 not having concnurrent dic.
-
-            IntHolder value;
-            if(failureCounts.TryGetValue(operationUrl, out value) == false)
-            {
-                lock(replicationLock)
-                {
-                    if(failureCounts.TryGetValue(operationUrl, out value) == false)
-                    {
-                        failureCounts[operationUrl] = value = new IntHolder();
-                    }
-                }
-            }
-
-#endif
+		    IntHolder value = GetHolder(operationUrl);
             if (value.Value > 1000)
 			{
 				return currentRequest % 1000 == 0;
@@ -89,15 +72,36 @@ namespace Raven.Client.Client
 			return true;
 		}
 
-		/// <summary>
+	    private IntHolder GetHolder(string operationUrl)
+	    {
+#if !NET_3_5
+	        return failureCounts.GetOrAdd(operationUrl, new IntHolder());
+#else
+    // need to compensate for 3.5 not having concnurrent dic.
+
+            IntHolder value;
+            if(failureCounts.TryGetValue(operationUrl, out value) == false)
+            {
+                lock(replicationLock)
+                {
+                    if(failureCounts.TryGetValue(operationUrl, out value) == false)
+                    {
+                        failureCounts[operationUrl] = value = new IntHolder();
+                    }
+                }
+            }
+            return value;
+#endif
+
+	    }
+
+	    /// <summary>
 		/// Determines whether this is the first failure on the specified operation URL.
 		/// </summary>
 		/// <param name="operationUrl">The operation URL.</param>
 		public bool IsFirstFailure(string operationUrl)
 		{
-			IntHolder value;
-			if (failureCounts.TryGetValue(operationUrl, out value) == false)
-				throw new KeyNotFoundException("BUG: Could not find failure count for " + operationUrl);
+            IntHolder value = GetHolder(operationUrl);
 			return Thread.VolatileRead(ref value.Value) == 0;
 		}
 
@@ -107,9 +111,7 @@ namespace Raven.Client.Client
 		/// <param name="operationUrl">The operation URL.</param>
 		public void IncrementFailureCount(string operationUrl)
 		{
-			IntHolder value;
-			if (failureCounts.TryGetValue(operationUrl, out value) == false)
-				throw new KeyNotFoundException("BUG: Could not find failure count for " + operationUrl);
+            IntHolder value = GetHolder(operationUrl);
 			Interlocked.Increment(ref value.Value);
 		}
 
@@ -146,11 +148,8 @@ namespace Raven.Client.Client
 		/// <param name="operationUrl">The operation URL.</param>
 		public void ResetFailureCount(string operationUrl)
 		{
-			IntHolder value;
-			if (failureCounts.TryGetValue(operationUrl, out value) == false)
-				throw new KeyNotFoundException("BUG: Could not find failure count for " + operationUrl);
+		    IntHolder value = GetHolder(operationUrl);
 			Thread.VolatileWrite(ref value.Value, 0);
-
 		}
 	}
 }
