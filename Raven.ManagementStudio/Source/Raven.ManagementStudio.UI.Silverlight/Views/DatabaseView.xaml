@@ -7,7 +7,7 @@
     xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit" 
     xmlns:cal="http://www.caliburnproject.org" 
     mc:Ignorable="d"
-    Margin="5 10 5 10">
+    Margin="4 10 0 0">
     
     <Grid>
         <Grid.ColumnDefinitions>
@@ -23,6 +23,6 @@
                 </DataTemplate>
             </ListBox.ItemTemplate>
         </ListBox>
-        <ContentControl x:Name="ActiveItem" Grid.Column="1" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" Margin="10 0 10 0"/>
+        <ContentControl x:Name="ActiveItem" Grid.Column="1" VerticalContentAlignment="Stretch" HorizontalContentAlignment="Stretch" />
     </Grid>
 </UserControl>

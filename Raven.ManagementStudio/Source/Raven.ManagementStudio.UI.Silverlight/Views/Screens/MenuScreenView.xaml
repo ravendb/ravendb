@@ -3,21 +3,177 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:cal="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro" mc:Ignorable="d">
+    xmlns:cal="http://www.caliburnproject.org" 
+    xmlns:controlsToolkit="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit" 
+    mc:Ignorable="d"
+    d:DesignHeight="300" d:DesignWidth="400"
+    Margin="20 0 10 0">
 
-    <Grid x:Name="LayoutRoot" Background="White">
-        <StackPanel>
-            <ListBox x:Name="Plugins">
-                <ListBox.ItemTemplate>
-                    <DataTemplate>
-                        <Button cal:Message.Attach="GoToScreen" >
-                            <Button.Content>
-                                <ContentControl Content="{Binding MenuView}" />
-                            </Button.Content>
-                        </Button>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
-        </StackPanel>
-    </Grid>
+    <controlsToolkit:BusyIndicator IsBusy="{Binding IsBusy}" BusyContent="Downloading plugins...">
+        <Grid x:Name="LayoutRoot" Background="White">
+
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition />
+            </Grid.ColumnDefinitions>
+
+            <Grid.RowDefinitions>
+                <RowDefinition />
+                <RowDefinition />
+                <RowDefinition />
+                <RowDefinition />
+                <RowDefinition />
+                <RowDefinition />
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.Column="0" Grid.Row="0">
+                <TextBlock FontSize="16">Documents</TextBlock>
+                <ListBox x:Name="DocumentPlugins" Style="{StaticResource MenuListBox}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Button cal:Message.Attach="GoToScreen" Style="{StaticResource MenuItem}">
+                                <Button.Content>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Border Style="{StaticResource MenuItemIconBorder}">
+                                            <ContentControl Content="{Binding MenuView}" Style="{StaticResource MenuItemIcon}" />
+                                        </Border>
+                                        <TextBlock Text="{Binding Name}" Style="{StaticResource MenuItemName}"/>
+                                    </StackPanel>
+                                </Button.Content>
+                            </Button>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <controlsToolkit:WrapPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                </ListBox>
+            </StackPanel>
+
+            <StackPanel Grid.Column="0" Grid.Row="1">
+                <TextBlock FontSize="16">Collections</TextBlock>
+                <ListBox x:Name="CollectionPlugins" Style="{StaticResource MenuListBox}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Button cal:Message.Attach="GoToScreen" Style="{StaticResource MenuItem}">
+                                <Button.Content>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Border Style="{StaticResource MenuItemIconBorder}">
+                                            <ContentControl Content="{Binding MenuView}" Style="{StaticResource MenuItemIcon}" />
+                                        </Border>
+                                        <TextBlock Text="{Binding Name}" Style="{StaticResource MenuItemName}"/>
+                                    </StackPanel>
+                                </Button.Content>
+                            </Button>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <controlsToolkit:WrapPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                </ListBox>
+            </StackPanel>
+
+            <StackPanel Grid.Column="0" Grid.Row="2">
+                <TextBlock FontSize="16">Indexes</TextBlock>
+                <ListBox x:Name="IndexPlugins" Style="{StaticResource MenuListBox}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Button cal:Message.Attach="GoToScreen" Style="{StaticResource MenuItem}">
+                                <Button.Content>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Border Style="{StaticResource MenuItemIconBorder}">
+                                            <ContentControl Content="{Binding MenuView}" Style="{StaticResource MenuItemIcon}" />
+                                        </Border>
+                                        <TextBlock Text="{Binding Name}" Style="{StaticResource MenuItemName}"/>
+                                    </StackPanel>
+                                </Button.Content>
+                            </Button>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <controlsToolkit:WrapPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                </ListBox>
+            </StackPanel>
+
+            <StackPanel Grid.Column="0" Grid.Row="3">
+                <TextBlock FontSize="16">Statistics</TextBlock>
+                <ListBox x:Name="StatisticPlugins" Style="{StaticResource MenuListBox}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Button cal:Message.Attach="GoToScreen" Style="{StaticResource MenuItem}">
+                                <Button.Content>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Border Style="{StaticResource MenuItemIconBorder}">
+                                            <ContentControl Content="{Binding MenuView}" Style="{StaticResource MenuItemIcon}" />
+                                        </Border>
+                                        <TextBlock Text="{Binding Name}" Style="{StaticResource MenuItemName}"/>
+                                    </StackPanel>
+                                </Button.Content>
+                            </Button>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <controlsToolkit:WrapPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                </ListBox>
+            </StackPanel>
+
+            <StackPanel Grid.Column="0" Grid.Row="4">
+                <TextBlock FontSize="16">Administration</TextBlock>
+                <ListBox x:Name="AdministrationPlugins" Style="{StaticResource MenuListBox}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Button cal:Message.Attach="GoToScreen" Style="{StaticResource MenuItem}">
+                                <Button.Content>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Border Style="{StaticResource MenuItemIconBorder}">
+                                            <ContentControl Content="{Binding MenuView}" Style="{StaticResource MenuItemIcon}" />
+                                        </Border>
+                                        <TextBlock Text="{Binding Name}" Style="{StaticResource MenuItemName}"/>
+                                    </StackPanel>
+                                </Button.Content>
+                            </Button>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <controlsToolkit:WrapPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                </ListBox>
+            </StackPanel>
+
+            <StackPanel Grid.Column="0" Grid.Row="5">
+                <TextBlock FontSize="16">Other</TextBlock>
+                <ListBox x:Name="OtherPlugins" Style="{StaticResource MenuListBox}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Button cal:Message.Attach="GoToScreen" Style="{StaticResource MenuItem}">
+                                <Button.Content>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Border Style="{StaticResource MenuItemIconBorder}">
+                                            <ContentControl Content="{Binding MenuView}" Style="{StaticResource MenuItemIcon}" />
+                                        </Border>
+                                        <TextBlock Text="{Binding Name}" Style="{StaticResource MenuItemName}"/>
+                                    </StackPanel>
+                                </Button.Content>
+                            </Button>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <controlsToolkit:WrapPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                </ListBox>
+            </StackPanel>
+        </Grid>
+    </controlsToolkit:BusyIndicator>
 </UserControl>

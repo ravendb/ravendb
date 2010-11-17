@@ -8,7 +8,8 @@
     xmlns:controlsToolkit="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit"
     xmlns:controls="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls"
     mc:Ignorable="d"
-    d:DesignHeight="480" d:DesignWidth="640">
+    d:DesignHeight="480" d:DesignWidth="640"
+    MinHeight="480" MinWidth="640">
     <Grid Background="White">
         <Grid.RowDefinitions>
             <RowDefinition Height="30" />
@@ -56,17 +57,17 @@
                         </DataTemplate>
                     </ComboBox.ItemTemplate>
                 </ComboBox>
-                <ContentControl x:Name="NavigationBar" Grid.Row="1" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"/>
+                <ContentControl x:Name="NavigationBar" Grid.Row="1" />
             </StackPanel>      
         </Grid>
                
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="4*" />
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <ContentControl x:Name="ActiveItem" Grid.Column="0" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"/>
+            <ContentControl x:Name="ActiveItem" Grid.Column="0" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
             <TextBlock Text="Gadgets" Grid.Column="1"/>
             
         </Grid>
