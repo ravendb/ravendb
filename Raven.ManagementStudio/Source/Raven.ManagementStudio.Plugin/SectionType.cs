@@ -6,6 +6,7 @@ namespace Raven.ManagementStudio.Plugin
         Collections,
         Indexes,
         Statistics,
-        Administration
+        Administration,
+        Other
     } 
 }

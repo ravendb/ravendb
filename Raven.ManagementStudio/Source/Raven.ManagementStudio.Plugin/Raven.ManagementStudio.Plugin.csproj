@@ -62,8 +62,7 @@
     <Compile Include="IMenuItem.cs" />
     <Compile Include="IPlugin.cs" />
     <Compile Include="IRavenScreen.cs" />
-    <Compile Include="ISection.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="PluginExtensions.cs" />
     <Compile Include="SectionType.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -76,6 +75,9 @@
       <Project>{250E7A4E-D717-4C16-8048-B5BE99D77715}</Project>
       <Name>Raven.Client.Silverlight</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Properties\" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />
   <ProjectExtensions>

@@ -2,7 +2,7 @@
 {
     public interface IMenuItem
     {
-        ISection Section { get; }
+        SectionType Section { get; }
 
         IRavenScreen RelatedScreen { get; }
 

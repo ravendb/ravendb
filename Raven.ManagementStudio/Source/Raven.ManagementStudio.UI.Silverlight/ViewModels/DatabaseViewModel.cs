@@ -7,10 +7,11 @@ namespace Raven.ManagementStudio.UI.Silverlight.ViewModels
     using Models;
     using Plugin;
     using Screens;
+    using System.ComponentModel.Composition.Hosting;
 
     public class DatabaseViewModel : Conductor<IRavenScreen>.Collection.OneActive, IHandle<ReplaceActiveScreen>
     {
-        public DatabaseViewModel(Database database)
+        public DatabaseViewModel(IDatabase database)
         {
             this.Database = database;
             this.DisplayName = this.Database.Name;
@@ -22,7 +23,7 @@ namespace Raven.ManagementStudio.UI.Silverlight.ViewModels
         [Import]
         public IEventAggregator EventAggregator { get; set; }
 
-        public Database Database { get; set; }
+        public IDatabase Database { get; set; }
 
         public override sealed void ActivateItem(IRavenScreen item)
         {

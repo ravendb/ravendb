@@ -3,5 +3,6 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <ResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="ControlTemplates/Gears.xaml" />
+        <ResourceDictionary Source="ControlTemplates/Menu.xaml" />
     </ResourceDictionary.MergedDictionaries>
 </ResourceDictionary>

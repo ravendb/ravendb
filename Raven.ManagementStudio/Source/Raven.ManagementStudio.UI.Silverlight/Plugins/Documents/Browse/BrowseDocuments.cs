@@ -16,9 +16,9 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Documents.Browse
             get { return "Browse"; }
         }
 
-        public ISection Section
+        public SectionType Section
         {
-            get { return null; }
+            get { return SectionType.Documents; }
         }
 
         public IRavenScreen RelatedScreen
