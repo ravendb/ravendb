@@ -12,6 +12,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.ManagementStudio.UI.S
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.ManagementStudio.Plugin", "Raven.ManagementStudio.Plugin\Raven.ManagementStudio.Plugin.csproj", "{0BA36A77-F8CA-400C-8F89-3726143BFA96}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Management.Client.Silverlight", "Raven.Management.Client.Silverlight\Raven.Management.Client.Silverlight.csproj", "{1BE0A7B3-9DB3-49D0-B1DF-C8326D792424}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Management.Client.Silverlight.Tests", "Raven.Management.Client.Silverlight.Tests\Raven.Management.Client.Silverlight.Tests.csproj", "{AC7DFA81-9C14-4BF3-A1AD-4AB8DEF4616C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -34,6 +38,14 @@ Global
 		{0BA36A77-F8CA-400C-8F89-3726143BFA96}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0BA36A77-F8CA-400C-8F89-3726143BFA96}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0BA36A77-F8CA-400C-8F89-3726143BFA96}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1BE0A7B3-9DB3-49D0-B1DF-C8326D792424}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1BE0A7B3-9DB3-49D0-B1DF-C8326D792424}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1BE0A7B3-9DB3-49D0-B1DF-C8326D792424}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1BE0A7B3-9DB3-49D0-B1DF-C8326D792424}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AC7DFA81-9C14-4BF3-A1AD-4AB8DEF4616C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AC7DFA81-9C14-4BF3-A1AD-4AB8DEF4616C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AC7DFA81-9C14-4BF3-A1AD-4AB8DEF4616C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AC7DFA81-9C14-4BF3-A1AD-4AB8DEF4616C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -41,6 +53,8 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{250E7A4E-D717-4C16-8048-B5BE99D77715} = {992EF7C0-F1E1-4EA2-89E6-D68585ECD42E}
 		{B7D55E66-1D31-4E57-9948-4FB2D0354A24} = {992EF7C0-F1E1-4EA2-89E6-D68585ECD42E}
+		{1BE0A7B3-9DB3-49D0-B1DF-C8326D792424} = {992EF7C0-F1E1-4EA2-89E6-D68585ECD42E}
+		{AC7DFA81-9C14-4BF3-A1AD-4AB8DEF4616C} = {992EF7C0-F1E1-4EA2-89E6-D68585ECD42E}
 		{AB130CB7-E4D4-4496-BEE6-0538963475FC} = {840D08A3-7EF3-4E5D-9AC0-42BEFEE819FA}
 		{0BA36A77-F8CA-400C-8F89-3726143BFA96} = {840D08A3-7EF3-4E5D-9AC0-42BEFEE819FA}
 	EndGlobalSection

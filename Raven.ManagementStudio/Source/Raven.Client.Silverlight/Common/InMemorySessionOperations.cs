@@ -41,7 +41,7 @@
                 var storedDocument = new StoredEntity()
                                          {
                                              CurrentState = entity,
-                                             BaseState = (entity as Entity).ToJson(),
+                                             BaseState = entity.ToJson(),
                                              IsNew = generated
                                          };
 
