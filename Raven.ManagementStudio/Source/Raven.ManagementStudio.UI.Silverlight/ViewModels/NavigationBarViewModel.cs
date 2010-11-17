@@ -7,7 +7,7 @@
     using Plugin;
 
     [Export(typeof(INavigationBar))]
-    public class NavigationBarViewModel : Screen, INavigationBar, IHandle<ActiveScreenChanged>
+    public class NavigationBarViewModel : Screen, INavigationBar, IHandle<ChangeActiveScreen>
     {
         private IRavenScreen activeScreen;
 
@@ -31,7 +31,7 @@
             }
         }
 
-        public void Handle(ActiveScreenChanged message)
+        public void Handle(ChangeActiveScreen message)
         {
             this.ActiveScreen = message.ActiveScreen;
         }

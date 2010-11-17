@@ -87,16 +87,21 @@
     <Compile Include="AppBootstrapper.cs" />
     <Compile Include="Behaviors\Watermark.cs" />
     <Compile Include="Controls\Gears.cs" />
-    <Compile Include="Messages\ActiveScreenChanged.cs" />
+    <Compile Include="Converters\BooleanToVisibilityConverter.cs" />
+    <Compile Include="Messages\ChangeActiveScreen.cs" />
     <Compile Include="Messages\OpenNewScreen.cs" />
+    <Compile Include="Messages\ReplaceActiveScreen.cs" />
     <Compile Include="Models\Database.cs" />
     <Compile Include="Models\Document.cs" />
+    <Compile Include="Plugins\CommonViews\DocumentThumbnail.xaml.cs">
+      <DependentUpon>DocumentThumbnail.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Plugins\Documents\Browse\BrowseDocuments.cs" />
     <Compile Include="Plugins\Documents\Browse\BrowseMenuIcon.xaml.cs">
       <DependentUpon>BrowseMenuIcon.xaml</DependentUpon>
     </Compile>
     <Compile Include="Plugins\Documents\Browse\DocumentsScreenViewModel.cs" />
-    <Compile Include="ViewModels\DocumentViewModel.cs" />
+    <Compile Include="Plugins\CommonViewModels\DocumentViewModel.cs" />
     <Compile Include="ViewModels\GadgetsViewModel.cs" />
     <Compile Include="ViewModels\Interfaces\INavigationBar.cs" />
     <Compile Include="ViewModels\Interfaces\IShell.cs" />
@@ -106,7 +111,7 @@
     <Compile Include="Plugins\Documents\Browse\DocumentsScreenView.xaml.cs">
       <DependentUpon>DocumentsScreenView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Views\DocumentView.xaml.cs">
+    <Compile Include="Plugins\CommonViews\DocumentView.xaml.cs">
       <DependentUpon>DocumentView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\NavigationBarView.xaml.cs">
@@ -148,6 +153,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Resource>
+    <Page Include="Plugins\CommonViews\DocumentThumbnail.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Plugins\Documents\Browse\BrowseMenuIcon.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -156,7 +165,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Views\DocumentView.xaml">
+    <Page Include="Plugins\CommonViews\DocumentView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -183,9 +192,7 @@
     </None>
     <None Include="Properties\AppManifest.xml" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Converters\" />
-  </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
     <Resource Include="Resources\Images\logo.png" />
   </ItemGroup>

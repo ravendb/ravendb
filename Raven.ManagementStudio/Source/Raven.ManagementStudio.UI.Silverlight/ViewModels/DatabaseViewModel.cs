@@ -1,5 +1,6 @@
 namespace Raven.ManagementStudio.UI.Silverlight.ViewModels
 {
+    using System;
     using System.ComponentModel.Composition;
     using Caliburn.Micro;
     using Messages;
@@ -7,7 +8,7 @@ namespace Raven.ManagementStudio.UI.Silverlight.ViewModels
     using Plugin;
     using Screens;
 
-    public class DatabaseViewModel : Conductor<IRavenScreen>.Collection.OneActive
+    public class DatabaseViewModel : Conductor<IRavenScreen>.Collection.OneActive, IHandle<ReplaceActiveScreen>
     {
         public DatabaseViewModel(Database database)
         {
@@ -15,6 +16,7 @@ namespace Raven.ManagementStudio.UI.Silverlight.ViewModels
             this.DisplayName = this.Database.Name;
             this.ActivateItem(new MenuScreenViewModel(this.Database));
             CompositionInitializer.SatisfyImports(this);
+            this.EventAggregator.Subscribe(this);
         }
 
         [Import]
@@ -26,10 +28,21 @@ namespace Raven.ManagementStudio.UI.Silverlight.ViewModels
         {
             if (this.EventAggregator != null)
             {
-                this.EventAggregator.Publish(new ActiveScreenChanged(item));
+                this.EventAggregator.Publish(new ChangeActiveScreen(item));
             }
 
             base.ActivateItem(item);
+        }
+
+        public void Handle(ReplaceActiveScreen message)
+        {
+            if (message.NewScreen.ParentRavenScreen == this.ActiveItem)
+            {
+                var index = this.Items.IndexOf(this.ActiveItem);
+                this.CloseItem(this.ActiveItem);
+                this.Items.Insert(index, message.NewScreen);
+                this.ActiveItem = message.NewScreen;
+            }
         }
     }
 }

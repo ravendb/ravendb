@@ -12,7 +12,7 @@ namespace Raven.ManagementStudio.UI.Silverlight.ViewModels.Screens
         public MenuScreenViewModel(IDatabase database)
         {
             this.Database = database;
-            this.DisplayName = "Menu";
+            this.DisplayName = "Home";
             CompositionInitializer.SatisfyImports(this);
         }
 
@@ -41,5 +41,7 @@ namespace Raven.ManagementStudio.UI.Silverlight.ViewModels.Screens
         }
 
         public IDatabase Database { get; set; }
+
+        public IRavenScreen ParentRavenScreen { get; set; }
     }
 }

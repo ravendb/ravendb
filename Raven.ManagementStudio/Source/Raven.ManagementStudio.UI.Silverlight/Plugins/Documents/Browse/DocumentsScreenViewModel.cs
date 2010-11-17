@@ -2,18 +2,19 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Documents.Browse
 {
     using System.Collections.Generic;
     using System.Linq;
+    using System.Windows.Controls;
     using Caliburn.Micro;
     using Client.Silverlight.Common;
     using Client.Silverlight.Data;
+    using CommonViewModels;
     using Models;
     using Plugin;
-    using ViewModels;
 
     public class DocumentsScreenViewModel : Screen, IRavenScreen
     {
         private IList<DocumentViewModel> documents;
         private bool isBusy;
-        
+
         public DocumentsScreenViewModel(IDatabase database)
         {
             this.DisplayName = "Browse";
@@ -29,7 +30,7 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Documents.Browse
 
             set
             {
-                this.isBusy = value; 
+                this.isBusy = value;
                 NotifyOfPropertyChange(() => this.IsBusy);
             }
         }
@@ -56,11 +57,26 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Documents.Browse
             }
         }
 
+        public void DocumentsSelectionChanged(ListBox listBox)
+        {
+            foreach (var document in this.Documents)
+            {
+                document.IsSelected = false;
+            }
+
+            foreach (var document in listBox.SelectedItems.OfType<DocumentViewModel>())
+            {
+                document.IsSelected = true;
+            }
+        }
+
         public void GetAll(LoadResponse<IList<JsonDocument>> response)
         {
             IList<Document> result = response.Data.Select(jsonDocument => new Document(jsonDocument)).ToList();
-            this.Documents = result.Select((document, index) => new DocumentViewModel(document)).ToList();
+            this.Documents = result.Select((document, index) => new DocumentViewModel(document, this)).ToList();
             this.IsBusy = false;
         }
+
+        public IRavenScreen ParentRavenScreen { get; set; }
     }
 }
