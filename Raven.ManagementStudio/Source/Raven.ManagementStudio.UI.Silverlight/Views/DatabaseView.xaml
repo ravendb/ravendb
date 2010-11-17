@@ -23,6 +23,6 @@
                 </DataTemplate>
             </ListBox.ItemTemplate>
         </ListBox>
-        <ContentControl x:Name="ActiveItem" Grid.Column="1" />
+        <ContentControl x:Name="ActiveItem" Grid.Column="1" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"/>
     </Grid>
 </UserControl>

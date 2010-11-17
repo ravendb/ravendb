@@ -10,10 +10,16 @@
     xmlns:controlsToolkit="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit" 
     xmlns:views="clr-namespace:Raven.ManagementStudio.UI.Silverlight.Views" mc:Ignorable="d"
     Margin="20 0 10 0" Background="Red">
-    
-    <StackPanel Orientation="Vertical">
-        <StackPanel Orientation="Vertical">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <StackPanel Orientation="Vertical" Grid.Row="0">
             <TextBlock Text="Get by ID" />
+
             <StackPanel Orientation="Horizontal">
                 <TextBox MinWidth="350">
                     <i:Interaction.Behaviors>
@@ -22,30 +28,28 @@
                 </TextBox>
                 <Button Content="Go" />
             </StackPanel>
-        </StackPanel>  
-        
-        <StackPanel Orientation="Vertical" Width="Auto">
-            <Border Background="{StaticResource LightGradient}" Height="30" CornerRadius="4" Margin="0,0,0,20">
-                <TextBlock Text="{Binding Documents.Count, StringFormat=' {0} results', FallbackValue='No results'}" VerticalAlignment="Center" Foreground="{StaticResource ToolbarBackgroundBrush}"/>
-            </Border>
-            <toolkit:BusyIndicator IsBusy="{Binding IsBusy}">
-                <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-                    <ListBox x:Name="Documents">
-                        <ListBox.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <controlsToolkit:WrapPanel Orientation="Horizontal" />
-                            </ItemsPanelTemplate>
-                        </ListBox.ItemsPanel>
-                        <ListBox.Template>
-                            <ControlTemplate TargetType="ListBox">
-                                <ItemsPresenter />
-                            </ControlTemplate>
-                        </ListBox.Template>
-                    </ListBox>
-                </ScrollViewer>
-            </toolkit:BusyIndicator>
         </StackPanel>
 
-    </StackPanel>
+        <Border Grid.Row="1" Background="{StaticResource LightGradient}" Height="30" CornerRadius="4" Margin="0,0,0,0">
+            <TextBlock Text="{Binding Documents.Count, StringFormat=' {0} results', FallbackValue='No results'}" VerticalAlignment="Center" Foreground="{StaticResource ToolbarBackgroundBrush}"/>
+        </Border>
+
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" Grid.Row="2">
+            <toolkit:BusyIndicator IsBusy="{Binding IsBusy}">
+                <ListBox x:Name="Documents">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <controlsToolkit:WrapPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.Template>
+                        <ControlTemplate TargetType="ListBox">
+                            <ItemsPresenter />
+                        </ControlTemplate>
+                    </ListBox.Template>
+                </ListBox>
+            </toolkit:BusyIndicator>
+        </ScrollViewer>
+    </Grid>
 
 </UserControl>
