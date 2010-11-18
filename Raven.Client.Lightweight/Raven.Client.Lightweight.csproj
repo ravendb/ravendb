@@ -113,6 +113,7 @@
     <Compile Include="Indexes\IClientSideDatabase.cs" />
     <Compile Include="Indexes\IndexCreation.cs" />
     <Compile Include="Indexes\IndexDefinition.cs" />
+    <Compile Include="Indexes\SpatialIndex.cs" />
     <Compile Include="ISyncAdvancedSessionOperation.cs" />
     <Compile Include="ITransactionalDocumentSession.cs" />
     <Compile Include="Linq\DynamicQueryProviderProcessor.cs" />

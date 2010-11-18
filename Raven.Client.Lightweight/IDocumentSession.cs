@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq.Expressions;
 using Raven.Client.Client;
 using Raven.Client.Document;
@@ -34,12 +35,23 @@ namespace Raven.Client
 		/// <param name="id">The id.</param>
 		T Load<T>(string id);
 
+        /// <summary>
+        /// Returns whatever a document with the specified id is loaded in the 
+        /// current session
+        /// </summary>
+	    bool IsLoaded(string id);
+
 		/// <summary>
 		/// Loads the specified entities with the specified ids.
 		/// </summary>
 		/// <param name="ids">The ids.</param>
 		T[] Load<T>(params string[] ids);
 
+        /// <summary>
+        /// Loads the specified entities with the specified ids.
+        /// </summary>
+        /// <param name="ids">The ids.</param>
+        T[] Load<T>(IEnumerable<string> ids);
 		
 		/// <summary>
 		/// Queries the specified index using Linq.

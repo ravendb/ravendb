@@ -1,6 +1,8 @@
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Net;
+using System.Runtime.InteropServices.ComTypes;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Client;
 using Raven.Client.Document;
@@ -196,7 +198,6 @@ namespace Raven.Client.Shard
 		/// <returns></returns>
 		public T Load<T>(string id)
 		{
-
 			var shardsToUse = GetAppropriateShardedSessions<T>(id);
 
 			//if we can narrow down to single shard, explicitly call it
@@ -234,6 +235,26 @@ namespace Raven.Client.Shard
 		{
 			return shardStrategy.ShardAccessStrategy.Apply(GetAppropriateShardedSessions<T>(null), sessions => sessions.Load<T>(ids)).ToArray();
 		}
+
+	    /// <summary>
+	    /// Returns whatever a document with the specified id is loaded in the 
+	    /// current session
+	    /// </summary>
+	    public bool IsLoaded(string id)
+	    {
+	        return shardSessions.Any(s => s.IsLoaded(id));
+	    }
+
+	    /// <summary>
+        /// Loads the specified entities with the specified ids.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="ids">The ids.</param>
+        /// <returns></returns>
+        public T[] Load<T>(IEnumerable<string> ids)
+        {
+            return shardStrategy.ShardAccessStrategy.Apply(GetAppropriateShardedSessions<T>(null), sessions => sessions.Load<T>(ids)).ToArray();
+        }
 
 		/// <summary>
 		/// Begin a load while including the specified path

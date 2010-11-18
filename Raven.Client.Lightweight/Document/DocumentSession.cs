@@ -52,6 +52,16 @@ namespace Raven.Client.Document
         }
 
         /// <summary>
+        /// Returns whatever a document with the specified id is loaded in the 
+        /// current session
+        /// </summary>
+        public bool IsLoaded(string id)
+        {
+            object existingEntity;
+            return entitiesByKey.TryGetValue(id, out existingEntity);
+        }
+
+        /// <summary>
         /// Loads the specified entity with the specified id.
         /// </summary>
         /// <typeparam name="T"></typeparam>
@@ -106,9 +116,20 @@ namespace Raven.Client.Document
             return LoadInternal<T>(ids, null);
         }
 
+        /// <summary>
+        /// Loads the specified entities with the specified ids.
+        /// </summary>
+        /// <param name="ids">The ids.</param>
+        public T[] Load<T>(IEnumerable<string> ids)
+        {
+            return LoadInternal<T>(ids.ToArray(), null);
+        }
 
         internal T[] LoadInternal<T>(string[] ids, string[] includes)
         {
+            if(ids.Length == 0)
+                return new T[0];
+
             IncrementRequestCount();
             Trace.WriteLine(string.Format("Bulk loading ids [{0}] from {1}", string.Join(", ", ids), StoreIdentifier));
             MultiLoadResult multiLoadResult;
@@ -117,7 +138,8 @@ namespace Raven.Client.Document
             var sp = Stopwatch.StartNew();
             do
             {
-                multiLoadResult = documentStore.DatabaseCommands.Get(ids, includes);
+
+                multiLoadResult = DatabaseCommands.Get(ids, includes);
                 includeResults = SerializationHelper.JObjectsToJsonDocuments(multiLoadResult.Includes).ToArray();
                 results = SerializationHelper.JObjectsToJsonDocuments(multiLoadResult.Results).ToArray();
             } while (
@@ -170,7 +192,8 @@ namespace Raven.Client.Document
             DocumentMetadata value;
             if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
                 throw new InvalidOperationException("Cannot refresh a trasient instance");
-            var jsonDocument = documentStore.DatabaseCommands.Get(value.Key);
+            IncrementRequestCount();
+            var jsonDocument = DatabaseCommands.Get(value.Key);
             if (jsonDocument == null)
                 throw new InvalidOperationException("Document '" + value.Key + "' no longer exists and was probably deleted");
 
@@ -190,7 +213,7 @@ namespace Raven.Client.Document
         /// </summary>
         protected override JsonDocument GetJsonDocument(string documentKey)
         {
-             var jsonDocument = documentStore.DatabaseCommands.Get(documentKey);
+             var jsonDocument = DatabaseCommands.Get(documentKey);
             if (jsonDocument == null)
                 throw new InvalidOperationException("Document '" + documentKey + "' no longer exists and was probably deleted");
             return jsonDocument;
@@ -280,7 +303,7 @@ namespace Raven.Client.Document
         public override void Commit(Guid txId)
         {
             IncrementRequestCount();
-            documentStore.DatabaseCommands.Commit(txId);
+            DatabaseCommands.Commit(txId);
             ClearEnlistment();
         }
 
@@ -291,7 +314,7 @@ namespace Raven.Client.Document
         public override void Rollback(Guid txId)
         {
             IncrementRequestCount();
-            documentStore.DatabaseCommands.Rollback(txId);
+            DatabaseCommands.Rollback(txId);
             ClearEnlistment();
         }
 
@@ -302,7 +325,8 @@ namespace Raven.Client.Document
         /// <returns></returns>
         public override byte[] PromoteTransaction(Guid fromTxId)
         {
-            return documentStore.DatabaseCommands.PromoteTransaction(fromTxId);
+            IncrementRequestCount();
+            return DatabaseCommands.PromoteTransaction(fromTxId);
         }
 
         /// <summary>
@@ -313,7 +337,8 @@ namespace Raven.Client.Document
         /// <param name="recoveryInformation">The recovery information.</param>
         public void StoreRecoveryInformation(Guid resourceManagerId, Guid txId, byte[] recoveryInformation)
         {
-            documentStore.DatabaseCommands.StoreRecoveryInformation(resourceManagerId, txId, recoveryInformation);
+            IncrementRequestCount();
+            DatabaseCommands.StoreRecoveryInformation(resourceManagerId, txId, recoveryInformation);
         }
 
         /// <summary>

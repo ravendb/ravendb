@@ -29,6 +29,17 @@ namespace Raven.Samples.Includes
                     session.SaveChanges();
                 }
 
+
+                using (IDocumentSession session = documentStore.OpenSession())
+                {
+                    var company = session.Load<Company>("companies/2");
+
+                    var parent = session.Load<Company>(company.ParentCompanyId);
+
+                    Console.WriteLine(company.Name);
+                    Console.WriteLine(parent.Name);
+                }
+
                 using (IDocumentSession session = documentStore.OpenSession())
                 {
                     var company = session.Include<Company>(x => x.ParentCompanyId)

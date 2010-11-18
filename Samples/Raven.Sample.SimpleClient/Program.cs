@@ -15,28 +15,19 @@ namespace Raven.Sample.SimpleClient
             using (var documentStore = new DocumentStore { Url = "http://localhost:8080" })
             {
                 documentStore.Initialize();
-                documentStore.DatabaseCommands.PutIndex("regionIndex",
-                                                        new IndexDefinition
-                                                        {
-                                                            Map =
-                                                            "from company in docs.Companies select new{company.Region}"
-                                                        },
-                                                        overwrite: true);
+
                 using (var session = documentStore.OpenSession())
                 {
-
-
                     session.Store(new Company { Name = "Company 1", Region = "Asia" });
                     session.Store(new Company { Name = "Company 2", Region = "Africa" });
                     session.SaveChanges();
 
-                    var allCompanies = session
-                        .Advanced.LuceneQuery<Company>("regionIndex")
-                        .Where("Region:Africa")
-                        .WaitForNonStaleResults()
+                    var africanCompanies = session.Query<Company>()
+                        .Customize(x=>x.WaitForNonStaleResultsAsOfNow())
+                        .Where(x=>x.Region == "Africa")
                         .ToArray();
 
-                    foreach (var company in allCompanies)
+                    foreach (var company in africanCompanies)
                         Console.WriteLine(company.Name);
                 }
             }

@@ -195,7 +195,7 @@ namespace Raven.Server
                     var readLine = Console.ReadLine() ?? "";
                     switch (readLine.ToLowerInvariant())
                     {
-                        case "CLS":
+                        case "cls":
                             Console.Clear();
                             break;
                         case "reset":

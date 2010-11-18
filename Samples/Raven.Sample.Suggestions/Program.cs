@@ -40,6 +40,7 @@ namespace Raven.Sample.Suggestions
                     {
                         Console.Write("Enter user name: ");
                         var name = Console.ReadLine();
+
                         var q = from user in session.Query<User>("Users/ByName")
                                 where user.Name == name
                                 select user;
@@ -54,6 +55,7 @@ namespace Raven.Sample.Suggestions
                             {
                                 Console.WriteLine("\t{0}", suggestion);
                             }
+
                         }
                         else
                         {
