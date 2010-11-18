@@ -17,6 +17,13 @@ namespace Raven.Sample.MultiTenancy
             }.Initialize())
             {
                 store.DatabaseCommands.EnsureDatabaseExists("Northwind");
+
+
+                using(var documentSession = store.OpenSession("Northwind"))
+                {
+                    documentSession.Store(new { Name = "Ayende"});
+                    documentSession.SaveChanges();
+                }
             }
         }
     }
