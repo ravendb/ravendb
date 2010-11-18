@@ -7,38 +7,38 @@ using Raven.Client.Authorization;
 
 namespace Raven.Bundles.Tests.Authorization
 {
-	public class CanHandleAuthQuestions : AuthorizationTest
-	{
-		private readonly AuthorizationDecisions authorizationDecisions;
-		const string userId= "/Raven/Authorization/Users/Ayende";
-		private const string operation = "/Company/Solicit";
+    public class CanHandleAuthQuestions : AuthorizationTest
+    {
+        private readonly AuthorizationDecisions authorizationDecisions;
+        const string userId = "Raven/Authorization/Users/Ayende";
+        private const string operation = "/Company/Solicit";
 
-		public CanHandleAuthQuestions()
-		{
-			authorizationDecisions = new AuthorizationDecisions(server.Database, HttpRuntime.Cache);
-		}
+        public CanHandleAuthQuestions()
+        {
+            authorizationDecisions = new AuthorizationDecisions(server.Database, HttpRuntime.Cache);
+        }
 
-		[Fact]
-		public void WhenGivingPermissionOnDocumentRoleAndAssociatingUserWithRoleWillAllow()
-		{
-			var company = new Company
-			{
-				Name = "Hibernating Rhinos"
-			};
-			using (var s = store.OpenSession())
-			{
-				s.Store(new AuthorizationUser
-				{
-					Id = userId,
-					Name = "Ayende Rahien",
-					Roles = { "/Raven/Authorization/Roles/Managers" }
-				});
+        [Fact]
+        public void WhenGivingPermissionOnDocumentRoleAndAssociatingUserWithRoleWillAllow()
+        {
+            var company = new Company
+            {
+                Name = "Hibernating Rhinos"
+            };
+            using (var s = store.OpenSession())
+            {
+                s.Store(new AuthorizationUser
+                {
+                    Id = userId,
+                    Name = "Ayende Rahien",
+                    Roles = { "/Raven/Authorization/Roles/Managers" }
+                });
 
-				s.Store(company);
+                s.Store(company);
 
-				s.SetAuthorizationFor(company, new DocumentAuthorization
-				{
-					Permissions =
+                s.SetAuthorizationFor(company, new DocumentAuthorization
+                {
+                    Permissions =
 						{
 							new DocumentPermission
 							{
@@ -47,37 +47,36 @@ namespace Raven.Bundles.Tests.Authorization
 								Role = "/Raven/Authorization/Roles/Managers"
 							}
 						}
-				});
+                });
 
-				s.SaveChanges();
-			}
+                s.SaveChanges();
+            }
 
-			var jsonDocument = server.Database.Get(company.Id, null);
-			var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
-			Assert.True(isAllowed);
-		}
+            var jsonDocument = server.Database.Get(company.Id, null);
+            var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
+            Assert.True(isAllowed);
+        }
 
+        [Fact]
+        public void GivingPermissionToRoleOnTagAssociatedWithRoleWillAllow()
+        {
+            var company = new Company
+            {
+                Name = "Hibernating Rhinos"
+            };
+            using (var s = store.OpenSession())
+            {
+                s.Store(new AuthorizationUser
+                {
+                    Id = userId,
+                    Name = "Ayende Rahien",
+                    Roles = { "/Raven/Authorization/Roles/Managers" }
+                });
 
-		[Fact]
-		public void GivingPermissionToRoleOnTagAssociatedWithRoleWillAllow()
-		{
-			var company = new Company
-			{
-				Name = "Hibernating Rhinos"
-			};
-			using (var s = store.OpenSession())
-			{
-				s.Store(new AuthorizationUser
-				{
-					Id = userId,
-					Name = "Ayende Rahien",
-					Roles = { "/Raven/Authorization/Roles/Managers" }
-				});
-
-				s.Store(new AuthorizationRole
-				{
-					Id = "/Raven/Authorization/Roles/Managers",
-					Permissions =
+                s.Store(new AuthorizationRole
+                {
+                    Id = "/Raven/Authorization/Roles/Managers",
+                    Permissions =
 						{
 							new OperationPermission
 							{
@@ -86,39 +85,83 @@ namespace Raven.Bundles.Tests.Authorization
 								Tag = "Fortune 500"
 							}
 						}
-				});
+                });
 
-				s.Store(company);
+                s.Store(company);
 
-				s.SetAuthorizationFor(company, new DocumentAuthorization
-				{
-					Tags = { "Fortune 500"}
-				});
+                s.SetAuthorizationFor(company, new DocumentAuthorization
+                {
+                    Tags = { "Fortune 500" }
+                });
 
-				s.SaveChanges();
-			}
+                s.SaveChanges();
+            }
 
-			var jsonDocument = server.Database.Get(company.Id, null);
-			var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
-			Assert.True(isAllowed);
-		}
+            var jsonDocument = server.Database.Get(company.Id, null);
+            var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
+            Assert.True(isAllowed);
+        }
 
 
-		[Fact]
-		public void GivingPermissionForAllowAndDenyOnSameLevelWithReturnDeny()
-		{
-			var company = new Company
-			{
-				Name = "Hibernating Rhinos"
-			};
-			using (var s = store.OpenSession())
-			{
-				s.Store(new AuthorizationUser
-				{
-					Id = userId,
-					Name = "Ayende Rahien",
-					Roles = { "/Raven/Authorization/Roles/Managers" },
-					Permissions =
+        [Fact]
+        public void GivingPermissionToRoleOnTagAssociatedWithRoleWillAllow_OnClient()
+        {
+            var company = new Company
+            {
+                Name = "Hibernating Rhinos"
+            };
+            using (var s = store.OpenSession())
+            {
+                s.Store(new AuthorizationUser
+                {
+                    Id = userId,
+                    Name = "Ayende Rahien",
+                    Roles = { "/Raven/Authorization/Roles/Managers" }
+                });
+
+                s.Store(new AuthorizationRole
+                {
+                    Id = "/Raven/Authorization/Roles/Managers",
+                    Permissions =
+						{
+							new OperationPermission
+							{
+								Allow = true,
+								Operation = operation,
+								Tag = "Fortune 500"
+							}
+						}
+                });
+
+                s.Store(company);
+
+                s.SetAuthorizationFor(company, new DocumentAuthorization
+                {
+                    Tags = { "Fortune 500" }
+                });
+
+                s.SaveChanges();
+
+            }
+
+            using (var s = store.OpenSession())
+            {
+                var authorizationUser = s.Load<AuthorizationUser>(userId);
+                Assert.True(s.IsAllowed(authorizationUser, operation));
+            }
+        }
+
+        [Fact]
+        public void GivingDenyPermissionWillReturnFalse_OnClient()
+        {
+            using (var s = store.OpenSession())
+            {
+                s.Store(new AuthorizationUser
+                {
+                    Id = userId,
+                    Name = "Ayende Rahien",
+                    Roles = { "/Raven/Authorization/Roles/Managers" },
+                    Permissions =
 						{
 							new OperationPermission
 							{
@@ -127,14 +170,83 @@ namespace Raven.Bundles.Tests.Authorization
 								Tag = "/Important"
 							}
 						}
-				});
+                });
+                s.SaveChanges();
+            }
+            
+            using (var s = store.OpenSession())
+            {
+                var authorizationUser = s.Load<AuthorizationUser>(userId);
+                Assert.False(s.IsAllowed(authorizationUser, operation));
+            }
+        }
 
-				s.Store(company);
+        [Fact]
+        public void GivingPermissionOnRoleWorks_OnClient()
+        {
+            using (var s = store.OpenSession())
+            {
+                s.Store(new AuthorizationUser
+                {
+                    Id = userId,
+                    Name = "Ayende Rahien",
+                    Roles = { "Raven/Authorization/Roles/Managers" },
+                   
+                });
+                s.Store(new AuthorizationRole
+                {
+                    Id = "Raven/Authorization/Roles/Managers",
+                    Permissions =
+						{
+							new OperationPermission
+							{
+								Allow = true,
+								Operation = operation,
+								Tag = "/Important"
+							}
+						}
+                });
+                s.SaveChanges();
+            }
 
-				s.SetAuthorizationFor(company, new DocumentAuthorization
-				{
-					Tags = { "/Important"},
-					Permissions =
+            using (var s = store.OpenSession())
+            {
+                var authorizationUser = s.Load<AuthorizationUser>(userId);
+                Assert.True(s.IsAllowed(authorizationUser, operation));
+            }
+        }
+
+        [Fact]
+        public void GivingPermissionForAllowAndDenyOnSameLevelWithReturnDeny()
+        {
+            var company = new Company
+            {
+                Name = "Hibernating Rhinos"
+            };
+            using (var s = store.OpenSession())
+            {
+                s.Store(new AuthorizationUser
+                {
+                    Id = userId,
+                    Name = "Ayende Rahien",
+                    Roles = { "/Raven/Authorization/Roles/Managers" },
+                    Permissions =
+						{
+							new OperationPermission
+							{
+								Allow = false,
+								Operation = operation,
+								Tag = "/Important"
+							}
+						}
+                });
+
+                s.Store(company);
+
+                s.SetAuthorizationFor(company, new DocumentAuthorization
+                {
+                    Tags = { "/Important" },
+                    Permissions =
 						{
 							new DocumentPermission
 							{
@@ -143,37 +255,37 @@ namespace Raven.Bundles.Tests.Authorization
 								Role = "/Raven/Authorization/Roles/Managers"
 							}
 						}
-				});
+                });
 
-				s.SaveChanges();
-			}
+                s.SaveChanges();
+            }
 
-			var jsonDocument = server.Database.Get(company.Id, null);
-			var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
-			Assert.False(isAllowed);
-		}
+            var jsonDocument = server.Database.Get(company.Id, null);
+            var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
+            Assert.False(isAllowed);
+        }
 
-		[Fact]
-		public void WhenGivingPermissionOnDocumentRoleAndAssociatingUserWithChildRoleWillAllow()
-		{
-			var company = new Company
-			{
-				Name = "Hibernating Rhinos"
-			};
-			using (var s = store.OpenSession())
-			{
-				s.Store(new AuthorizationUser
-				{
-					Id = userId,
-					Name = "Ayende Rahien",
-					Roles = { "/Raven/Authorization/Roles/Managers/Supreme" }
-				});
+        [Fact]
+        public void WhenGivingPermissionOnDocumentRoleAndAssociatingUserWithChildRoleWillAllow()
+        {
+            var company = new Company
+            {
+                Name = "Hibernating Rhinos"
+            };
+            using (var s = store.OpenSession())
+            {
+                s.Store(new AuthorizationUser
+                {
+                    Id = userId,
+                    Name = "Ayende Rahien",
+                    Roles = { "/Raven/Authorization/Roles/Managers/Supreme" }
+                });
 
-				s.Store(company);
+                s.Store(company);
 
-				s.SetAuthorizationFor(company, new DocumentAuthorization
-				{
-					Permissions =
+                s.SetAuthorizationFor(company, new DocumentAuthorization
+                {
+                    Permissions =
 						{
 							new DocumentPermission
 							{
@@ -182,30 +294,30 @@ namespace Raven.Bundles.Tests.Authorization
 								Role = "/Raven/Authorization/Roles/Managers"
 							}
 						}
-				});
+                });
 
-				s.SaveChanges();
-			}
+                s.SaveChanges();
+            }
 
-			var jsonDocument = server.Database.Get(company.Id, null);
-			var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
-			Assert.True(isAllowed);
-		}
+            var jsonDocument = server.Database.Get(company.Id, null);
+            var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
+            Assert.True(isAllowed);
+        }
 
-		[Fact]
-		public void WhenGivingUserPermissionForTagAndTaggingDocumentWillAllow()
-		{
-			var company = new Company
-			{
-				Name = "Hibernating Rhinos"
-			};
-			using (var s = store.OpenSession())
-			{
-				s.Store(new AuthorizationUser
-				{
-					Id = userId,
-					Name = "Ayende Rahien",
-					Permissions =
+        [Fact]
+        public void WhenGivingUserPermissionForTagAndTaggingDocumentWillAllow()
+        {
+            var company = new Company
+            {
+                Name = "Hibernating Rhinos"
+            };
+            using (var s = store.OpenSession())
+            {
+                s.Store(new AuthorizationUser
+                {
+                    Id = userId,
+                    Name = "Ayende Rahien",
+                    Permissions =
 						{
 							new OperationPermission
 							{
@@ -214,37 +326,37 @@ namespace Raven.Bundles.Tests.Authorization
 								Tag = "/Companies/Important"
 							}
 						}
-				});
+                });
 
-				s.Store(company);
+                s.Store(company);
 
-				s.SetAuthorizationFor(company, new DocumentAuthorization
-				{
-					Tags = { "/Companies/Important" }
-				});
+                s.SetAuthorizationFor(company, new DocumentAuthorization
+                {
+                    Tags = { "/Companies/Important" }
+                });
 
-				s.SaveChanges();
-			}
+                s.SaveChanges();
+            }
 
-			var jsonDocument = server.Database.Get(company.Id, null);
-			var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
-			Assert.True(isAllowed);
-		}
+            var jsonDocument = server.Database.Get(company.Id, null);
+            var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
+            Assert.True(isAllowed);
+        }
 
-		[Fact]
-		public void WhenGivingUserPermissionForParentTagAndTaggingDocumentWillAllow()
-		{
-			var company = new Company
-			{
-				Name = "Hibernating Rhinos"
-			};
-			using (var s = store.OpenSession())
-			{
-				s.Store(new AuthorizationUser
-				{
-					Id = userId,
-					Name = "Ayende Rahien",
-					Permissions =
+        [Fact]
+        public void WhenGivingUserPermissionForParentTagAndTaggingDocumentWillAllow()
+        {
+            var company = new Company
+            {
+                Name = "Hibernating Rhinos"
+            };
+            using (var s = store.OpenSession())
+            {
+                s.Store(new AuthorizationUser
+                {
+                    Id = userId,
+                    Name = "Ayende Rahien",
+                    Permissions =
 						{
 							new OperationPermission
 							{
@@ -253,43 +365,43 @@ namespace Raven.Bundles.Tests.Authorization
 								Tag = "/Companies"
 							}
 						}
-				});
+                });
 
-				s.Store(company);
+                s.Store(company);
 
-				s.SetAuthorizationFor(company, new DocumentAuthorization
-				{
-					Tags = { "/Companies/Important" }
-				});
+                s.SetAuthorizationFor(company, new DocumentAuthorization
+                {
+                    Tags = { "/Companies/Important" }
+                });
 
-				s.SaveChanges();
-			}
+                s.SaveChanges();
+            }
 
-			var jsonDocument = server.Database.Get(company.Id, null);
-			var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
-			Assert.True(isAllowed);
-		}
+            var jsonDocument = server.Database.Get(company.Id, null);
+            var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
+            Assert.True(isAllowed);
+        }
 
-		[Fact]
-		public void CanGiveUserExplicitPermissionOnDoc()
-		{
-			var company = new Company
-			{
-				Name = "Hibernating Rhinos"
-			};
-			using (var s = store.OpenSession())
-			{
-				s.Store(new AuthorizationUser
-				{
-					Id = userId,
-					Name = "Ayende Rahien",
-				});
-				
-				s.Store(company);
+        [Fact]
+        public void CanGiveUserExplicitPermissionOnDoc()
+        {
+            var company = new Company
+            {
+                Name = "Hibernating Rhinos"
+            };
+            using (var s = store.OpenSession())
+            {
+                s.Store(new AuthorizationUser
+                {
+                    Id = userId,
+                    Name = "Ayende Rahien",
+                });
 
-				s.SetAuthorizationFor(company, new DocumentAuthorization
-				{
-					Permissions =
+                s.Store(company);
+
+                s.SetAuthorizationFor(company, new DocumentAuthorization
+                {
+                    Permissions =
 						{
 							new DocumentPermission
 							{
@@ -298,65 +410,65 @@ namespace Raven.Bundles.Tests.Authorization
 								User = userId
 							}
 						}
-				});
+                });
 
-				s.SaveChanges();
-			}
+                s.SaveChanges();
+            }
 
-			var jsonDocument = server.Database.Get(company.Id, null);
-			var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
-			Assert.True(isAllowed);
-		}
+            var jsonDocument = server.Database.Get(company.Id, null);
+            var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
+            Assert.True(isAllowed);
+        }
 
-		[Fact]
-		public void WhenThereIsNoPermissionButThereIsAuthorizationWillDeny()
-		{
-			var company = new Company
-			{
-				Name = "Hibernating Rhinos"
-			};
-			using (var s = store.OpenSession())
-			{
-				s.Store(new AuthorizationUser
-				{
-					Id = userId,
-					Name = "Ayende Rahien",
-				});
+        [Fact]
+        public void WhenThereIsNoPermissionButThereIsAuthorizationWillDeny()
+        {
+            var company = new Company
+            {
+                Name = "Hibernating Rhinos"
+            };
+            using (var s = store.OpenSession())
+            {
+                s.Store(new AuthorizationUser
+                {
+                    Id = userId,
+                    Name = "Ayende Rahien",
+                });
 
-				s.Store(company);
+                s.Store(company);
 
-				s.SetAuthorizationFor(company, new DocumentAuthorization());
+                s.SetAuthorizationFor(company, new DocumentAuthorization());
 
-				s.SaveChanges();
-			}
+                s.SaveChanges();
+            }
 
-			var jsonDocument = server.Database.Get(company.Id, null);
-			var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
-			Assert.False(isAllowed);
-		}
+            var jsonDocument = server.Database.Get(company.Id, null);
+            var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
+            Assert.False(isAllowed);
+        }
 
-		[Fact]
-		public void WhenThereIsNoAuthorizationWillAllow()
-		{
-			var company = new Company
-			{
-				Name = "Hibernating Rhinos"
-			};
-			using (var s = store.OpenSession())
-			{
-				s.Store(new AuthorizationUser
-				{
-					Id = userId,
-					Name = "Ayende Rahien",
-				});
+        [Fact]
+        public void WhenThereIsNoAuthorizationWillAllow()
+        {
+            var company = new Company
+            {
+                Name = "Hibernating Rhinos"
+            };
+            using (var s = store.OpenSession())
+            {
+                s.Store(new AuthorizationUser
+                {
+                    Id = userId,
+                    Name = "Ayende Rahien",
+                });
 
-				s.Store(company);
-				s.SaveChanges();
-			}
+                s.Store(company);
+                s.SaveChanges();
+            }
 
-			var jsonDocument = server.Database.Get(company.Id, null);
-			var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
-			Assert.True(isAllowed);
-		}
-	}
+            var jsonDocument = server.Database.Get(company.Id, null);
+            var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
+            Assert.True(isAllowed);
+        }
+    }
 }
