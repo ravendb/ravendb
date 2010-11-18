@@ -10,6 +10,8 @@
 
     <p>Select from <%: Model.NumberOfGenres %> genres:</p>
 
-    <%: Html.RenderPartial("GenreMenu", Model.Genres) %>
+    <%
+        Html.RenderPartial("GenreMenu", Model.Genres);
+    %>
 
 </asp:Content>

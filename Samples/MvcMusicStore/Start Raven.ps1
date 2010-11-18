@@ -18,5 +18,10 @@ cp $raven\Rhino.Licensing.dll .\Server
 cp $raven\Esent.Interop.dll .\Server
 cp $raven\Raven.Database.dll .\Server
 cp $raven\Raven.Storage.Esent.dll .\Server
+cp $raven\Raven.Http.dll .\Server
+cp $raven\Raven.Storage.Managed.dll .\Server
+cp $raven\Raven.Abstractions.dll .\Server
+cp $raven\Spatial.Net.dll .\Server
 
 start .\Server\Raven.Server.exe
+

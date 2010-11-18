@@ -1,5 +1,4 @@
 ﻿using System.Linq;
-using System.Linq;
 using System.Web.Mvc;
 using MvcMusicStore.Models;
 using MvcMusicStore.ViewModels;
@@ -20,7 +19,7 @@ namespace MvcMusicStore.Controllers
             var genres = GetGenres();
 
             // Set up our ViewModel
-            var viewModel = new StoreIndexViewModel()
+            var viewModel = new StoreIndexViewModel
             {
                 Genres = genres,
                 NumberOfGenres = genres.Length
@@ -40,7 +39,7 @@ namespace MvcMusicStore.Controllers
             var albums = session.Advanced.LuceneQuery<Album>("AlbumsByGenre")
                 .WhereEquals("Genre",id)
                 .ToArray();
-            var viewModel = new StoreBrowseViewModel()
+            var viewModel = new StoreBrowseViewModel
             {
                 Genre = genre,
                 Albums = albums
