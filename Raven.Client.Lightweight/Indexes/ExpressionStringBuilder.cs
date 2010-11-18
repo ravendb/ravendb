@@ -1047,6 +1047,12 @@ namespace Raven.Client.Indexes
                     this.Out(".");
                 }
             }
+            if(node.Method.IsStatic &&
+                Attribute.GetCustomAttribute(node.Method, typeof(ExtensionAttribute)) == null)
+            {
+                this.Out(node.Method.DeclaringType.Name);
+                this.Out(".");
+            }
             if (node.Method.Name != "get_Item") // VB indexer
             {
                 this.Out(node.Method.Name);
