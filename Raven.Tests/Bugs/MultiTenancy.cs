@@ -61,6 +61,38 @@ namespace Raven.Tests.Bugs
         }
 
         [Fact]
+        public void OpenSessionUsesSpecifiedDefaultDatabase()
+        {
+            using (GetNewServer(8080))
+            using (var store = new DocumentStore
+            {
+                Url = "http://localhost:8080",
+                DefaultDatabase = "Northwind"
+            }.Initialize())
+            {
+                store.DatabaseCommands.EnsureDatabaseExists("Northwind");
+
+                string userId;
+
+                using (var s = store.OpenSession("Northwind"))
+                {
+                    var entity = new User
+                    {
+                        Name = "First Mutlti Tenant Bank",
+                    };
+                    s.Store(entity);
+                    userId = entity.Id;
+                    s.SaveChanges();
+                }
+
+                using (var s = store.OpenSession())
+                {
+                    Assert.NotNull(s.Load<User>(userId));
+                }
+            }
+        }
+
+        [Fact]
         public void CanUseMultipleDatabases()
         {
             using(GetNewServer(8080))
