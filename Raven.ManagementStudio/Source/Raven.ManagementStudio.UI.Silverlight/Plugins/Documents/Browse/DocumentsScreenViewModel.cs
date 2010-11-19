@@ -2,7 +2,7 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Documents.Browse
 {
     using System.Collections.Generic;
     using System.Linq;
-    using System.Windows.Controls;
+    using System.Windows;
     using Caliburn.Micro;
     using CommonViewModels;
     using Models;
@@ -13,12 +13,15 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Documents.Browse
     public class DocumentsScreenViewModel : Screen, IRavenScreen
     {
         private IList<DocumentViewModel> documents;
+        private DocumentViewModel previewedDocument;
+        private Visibility documentPreview;
         private bool isBusy;
 
         public DocumentsScreenViewModel(IDatabase database)
         {
             this.DisplayName = "Browse";
             this.Database = database;
+            this.DocumentPreview = Visibility.Collapsed;
         }
 
         public bool IsBusy
@@ -36,6 +39,46 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Documents.Browse
         }
 
         public IDatabase Database { get; set; }
+
+        public IRavenScreen ParentRavenScreen { get; set; }
+
+        public DocumentViewModel PreviewedDocument
+        {
+            get
+            {
+                return this.previewedDocument;
+            }
+
+            set
+            {
+                this.previewedDocument = value;
+                
+                if (this.previewedDocument != null)
+                {
+                    this.DocumentPreview = Visibility.Visible;
+                }
+                else
+                {
+                    this.DocumentPreview = Visibility.Collapsed;
+                }
+
+                NotifyOfPropertyChange(() => this.PreviewedDocument);
+            }
+        }
+
+        public Visibility DocumentPreview
+        {
+            get
+            {
+                return this.documentPreview;
+            }
+
+            set
+            {
+                this.documentPreview = value;
+                NotifyOfPropertyChange(() => this.DocumentPreview);
+            }
+        }
 
         public IList<DocumentViewModel> Documents
         {
@@ -57,26 +100,11 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Documents.Browse
             }
         }
 
-        public void DocumentsSelectionChanged(ListBox listBox)
-        {
-            foreach (var document in this.Documents)
-            {
-                document.IsSelected = false;
-            }
-
-            foreach (var document in listBox.SelectedItems.OfType<DocumentViewModel>())
-            {
-                document.IsSelected = true;
-            }
-        }
-
         public void GetAll(LoadResponse<IList<JsonDocument>> response)
         {
             IList<Document> result = response.Data.Select(jsonDocument => new Document(jsonDocument)).ToList();
             this.Documents = result.Select((document, index) => new DocumentViewModel(document, this)).ToList();
             this.IsBusy = false;
         }
-
-        public IRavenScreen ParentRavenScreen { get; set; }
     }
 }

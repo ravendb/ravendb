@@ -111,7 +111,6 @@
     <Compile Include="EntityToDocument.cs" />
     <Compile Include="IAsyncDocumentSession.cs" />
     <Compile Include="IDocumentStore.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="StoredEntityEventArgs.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -119,6 +118,9 @@
       <Generator>PublicResXFileCodeGenerator</Generator>
       <LastGenOutput>DatabaseUrl.Designer.cs</LastGenOutput>
     </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Properties\" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />
   <ProjectExtensions>

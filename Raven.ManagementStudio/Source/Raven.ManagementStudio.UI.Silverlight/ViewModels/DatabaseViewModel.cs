@@ -1,13 +1,10 @@
 namespace Raven.ManagementStudio.UI.Silverlight.ViewModels
 {
-    using System;
     using System.ComponentModel.Composition;
     using Caliburn.Micro;
     using Messages;
-    using Models;
     using Plugin;
     using Screens;
-    using System.ComponentModel.Composition.Hosting;
 
     public class DatabaseViewModel : Conductor<IRavenScreen>.Collection.OneActive, IHandle<ReplaceActiveScreen>
     {

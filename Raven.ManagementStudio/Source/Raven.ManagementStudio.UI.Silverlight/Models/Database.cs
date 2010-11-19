@@ -1,21 +1,17 @@
 namespace Raven.ManagementStudio.UI.Silverlight.Models
 {
+    using System;
     using System.Collections.Generic;
     using System.ComponentModel;
-    using System.ComponentModel.Composition.Primitives;
-    using System.ComponentModel.Composition.ReflectionModel;
+    using System.ComponentModel.Composition;
+    using System.ComponentModel.Composition.Hosting;
     using System.Linq;
-    using Caliburn.Micro;
     using Client.Document;
     using Management.Client.Silverlight;
+    using Management.Client.Silverlight.Attachments;
     using Management.Client.Silverlight.Common;
     using Plugin;
     using Raven.Database.Data;
-    using Raven.Management.Client.Silverlight.Attachments;
-    using System.ComponentModel.Composition.Hosting;
-    using System;
-    using System.Reflection;
-    using System.ComponentModel.Composition;
 
     public class Database : IDatabase, INotifyPropertyChanged
     {
@@ -29,13 +25,10 @@ namespace Raven.ManagementStudio.UI.Silverlight.Models
 
             Plugins = new List<IPlugin>();
 
-            this.IsBusy = true;
-            this.AttachmentSession.LoadPlugins(DownloadPlugins);
+            IsBusy = true;
+            AttachmentSession.LoadPlugins(DownloadPlugins);
 
-            this.AttachmentSession.Load("Raven.ManagementStudio.UI.Silverlight.xap", (result) =>
-                                                                                         {
-                                                                                             var x = 2;
-                                                                                         });
+            AttachmentSession.Load("Raven.ManagementStudio.UI.Silverlight.xap", (result) => { int x = 2; });
         }
 
         [ImportMany(AllowRecomposition = true)]
@@ -51,6 +44,8 @@ namespace Raven.ManagementStudio.UI.Silverlight.Models
             }
         }
 
+        public IAsyncAttachmentSession AttachmentSession { get; set; }
+
         #region IDatabase Members
 
         public string Address { get; set; }
@@ -58,8 +53,6 @@ namespace Raven.ManagementStudio.UI.Silverlight.Models
         public string Name { get; set; }
 
         public IAsyncDocumentSession Session { get; set; }
-
-        public IAsyncAttachmentSession AttachmentSession { get; set; }
 
         #endregion
 
@@ -87,7 +80,7 @@ namespace Raven.ManagementStudio.UI.Silverlight.Models
             store.Initialize();
             Session = store.OpenAsyncSession();
 
-            this.AttachmentSession = new AsyncAttachmentSession(this.Address);
+            AttachmentSession = new AsyncAttachmentSession(Address);
         }
 
         private void DownloadPlugins(LoadResponse<IList<KeyValuePair<string, Attachment>>> response)
@@ -96,7 +89,7 @@ namespace Raven.ManagementStudio.UI.Silverlight.Models
             {
                 int count = 0;
 
-                foreach (var deploymentCatalog in response.Data.Select(plugin => new DeploymentCatalog(new Uri(string.Format(DatabaseUrl.Attachment, this.Address, plugin.Key)))))
+                foreach (DeploymentCatalog deploymentCatalog in response.Data.Select(plugin => new DeploymentCatalog(new Uri(string.Format(DatabaseUrl.Attachment, Address, plugin.Key)))))
                 {
                     deploymentCatalog.DownloadCompleted += (s, e) =>
                                                                {
@@ -108,7 +101,7 @@ namespace Raven.ManagementStudio.UI.Silverlight.Models
                                                                    count++;
                                                                    if (count == response.Data.Count)
                                                                    {
-                                                                       this.IsBusy = false;
+                                                                       IsBusy = false;
                                                                    }
                                                                };
 
@@ -117,7 +110,7 @@ namespace Raven.ManagementStudio.UI.Silverlight.Models
 
                 if (count == response.Data.Count)
                 {
-                    this.IsBusy = false;
+                    IsBusy = false;
                 }
             }
         }

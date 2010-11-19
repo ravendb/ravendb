@@ -8,8 +8,7 @@
     xmlns:controlsToolkit="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit"
     xmlns:controls="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls"
     mc:Ignorable="d"
-    d:DesignHeight="480" d:DesignWidth="640"
-    MinHeight="480" MinWidth="640">
+    d:DesignHeight="480" d:DesignWidth="640">
     <Grid Background="White">
         <Grid.RowDefinitions>
             <RowDefinition Height="30" />
