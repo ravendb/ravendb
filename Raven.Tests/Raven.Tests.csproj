@@ -106,6 +106,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Bugs\AccurateCount.cs" />
+    <Compile Include="Bugs\AfterDeletingTheIndexStopsBeingStale.cs" />
     <Compile Include="Bugs\AnalyzerPerField.cs" />
     <Compile Include="Bugs\AnyQueries.cs" />
     <Compile Include="Bugs\AsyncCommit.cs" />
