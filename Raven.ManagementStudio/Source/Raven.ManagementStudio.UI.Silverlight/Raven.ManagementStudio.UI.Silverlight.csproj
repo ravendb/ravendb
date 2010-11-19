@@ -86,6 +86,8 @@
     </Compile>
     <Compile Include="AppBootstrapper.cs" />
     <Compile Include="Behaviors\Watermark.cs" />
+    <Compile Include="Controls\DocumentsContainer.cs" />
+    <Compile Include="Controls\DocumentThumbnail.cs" />
     <Compile Include="Controls\Gears.cs" />
     <Compile Include="Converters\BooleanToVisibilityConverter.cs" />
     <Compile Include="Messages\ChangeActiveScreen.cs" />
@@ -93,9 +95,6 @@
     <Compile Include="Messages\ReplaceActiveScreen.cs" />
     <Compile Include="Models\Database.cs" />
     <Compile Include="Models\Document.cs" />
-    <Compile Include="Plugins\CommonViews\DocumentThumbnail.xaml.cs">
-      <DependentUpon>DocumentThumbnail.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Plugins\Documents\Browse\BrowseDocuments.cs" />
     <Compile Include="Plugins\Documents\Browse\BrowseMenuIcon.xaml.cs">
       <DependentUpon>BrowseMenuIcon.xaml</DependentUpon>
@@ -153,10 +152,6 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Resource>
-    <Page Include="Plugins\CommonViews\DocumentThumbnail.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
     <Page Include="Plugins\Documents\Browse\BrowseMenuIcon.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -166,6 +161,14 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Plugins\CommonViews\DocumentView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Resources\ControlTemplates\DocumentsContainer.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Resources\ControlTemplates\DocumentThumbnail.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

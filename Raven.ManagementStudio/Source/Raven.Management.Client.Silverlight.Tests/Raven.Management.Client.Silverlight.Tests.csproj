@@ -104,7 +104,6 @@
     <Compile Include="InBrowser.xaml.cs">
       <DependentUpon>InBrowser.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml">

@@ -34,39 +34,7 @@
             <TextBlock Text="{Binding Documents.Count, StringFormat=' {0} results', FallbackValue='No results'}" VerticalAlignment="Center" Foreground="{StaticResource ToolbarBackgroundBrush}"/>
         </Border>
 
-        <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" Grid.Row="2">
-            <toolkit:BusyIndicator IsBusy="{Binding IsBusy}">
-                <ListBox x:Name="Documents" SelectionMode="Extended" cal:Message.Attach="[SelectionChanged] = [DocumentsSelectionChanged($source)]">
-                    <ListBox.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <controlsToolkit:WrapPanel Orientation="Horizontal" />
-                        </ItemsPanelTemplate>
-                    </ListBox.ItemsPanel>
-                    <ListBox.Template>
-                        <ControlTemplate TargetType="ListBox">
-                            <ItemsPresenter />
-                        </ControlTemplate>
-                    </ListBox.Template>
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <ContentControl Content="{Binding Thumbnail}" cal:Message.Attach ="[Click]=[ActivateItem]" />
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-                <!--<ItemsControl x:Name="Documents">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <controlsToolkit:WrapPanel Orientation="Horizontal" />
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <ContentControl Content="{Binding Thumbnail}" />
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>-->
-            </toolkit:BusyIndicator>
-        </ScrollViewer>
+        <localControls:DocumentsContainer Grid.Row="2" x:Name="Documents" />
     </Grid>
 
 </UserControl>
