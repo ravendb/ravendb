@@ -7,6 +7,7 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.CommonViewModels
     using System.Windows.Markup;
     using Caliburn.Micro;
     using Controls;
+    using Documents.Browse;
     using Messages;
     using Models;
     using Newtonsoft.Json.Linq;
@@ -26,13 +27,7 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.CommonViewModels
             this.Thumbnail = new DocumentThumbnail();
             this.ParentRavenScreen = parent;
             CompositionInitializer.SatisfyImports(this);
-
-
-            this.CustomizedThumbnailTemplate = (FrameworkElement)XamlReader.Load(@"
-                <Border xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' 
-                        Height='150' Width='110' BorderBrush='LightGray' BorderThickness='1'>
-                    <TextBlock Text='{Binding JsonData}' TextWrapping='Wrap' />
-                </Border>");
+            this.CustomizedThumbnailTemplate = CreateThumbnailTemplate(document.Metadata);
         }
 
         public DocumentThumbnail Thumbnail { get; set; }
@@ -81,9 +76,19 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.CommonViewModels
 
             set
             {
-                this.isSelected = value;
+                this.isSelected = value; 
                 NotifyOfPropertyChange(() => this.IsSelected);
             }
+        }
+
+        public void SelectUnselect()
+        {
+            this.IsSelected = !this.IsSelected;
+        }
+
+        public void Preview()
+        {
+            ((DocumentsScreenViewModel)this.ParentRavenScreen).PreviewedDocument = this;
         }
 
         public void ShowDocument()
@@ -103,6 +108,30 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.CommonViewModels
             result.Append("}");
 
             return result.ToString();
+        }
+
+        private static FrameworkElement CreateThumbnailTemplate(IDictionary<string, JToken> metadata)
+        {
+            FrameworkElement thumbnailTemplate;
+
+            if (metadata.ContainsKey("Raven-View-Template"))
+            {
+                var data = metadata["Raven-View-Template"].ToString();
+
+                var xaml = data.Substring(data.IndexOf('"') + 1, data.LastIndexOf('"') - 1);
+
+                thumbnailTemplate = (FrameworkElement)XamlReader.Load(xaml);
+            }
+            else
+            {
+                thumbnailTemplate = (FrameworkElement)XamlReader.Load(@"
+                <Border xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' 
+                        Height='150' Width='110' BorderBrush='LightGray' BorderThickness='1'>
+                    <TextBlock Text='{Binding JsonData}' TextWrapping='Wrap' />
+                </Border>");
+            }
+
+            return thumbnailTemplate;
         }
     }
 }

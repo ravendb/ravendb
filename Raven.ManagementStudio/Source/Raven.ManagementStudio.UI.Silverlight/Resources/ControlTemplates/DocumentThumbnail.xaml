@@ -5,7 +5,7 @@
     xmlns:cal="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro">
 
     <ControlTemplate x:Key="DocumentThumbnailTemplate" TargetType="controls:DocumentThumbnail">
-        <StackPanel Margin="10" Orientation="Horizontal">
+        <Grid>
             <VisualStateManager.VisualStateGroups>
                 <VisualStateGroup x:Name="CommonStates">
                     <VisualState x:Name="Normal">
@@ -22,24 +22,39 @@
                     <VisualState x:Name="Disabled"/>
                 </VisualStateGroup>
             </VisualStateManager.VisualStateGroups>
-            <StackPanel Orientation="Vertical">
-                <ContentControl Content="{Binding CustomizedThumbnailTemplate}" />
-                <HyperlinkButton cal:Message.Attach="ShowDocument" HorizontalAlignment="Center">
-                    <HyperlinkButton.Template>
-                        <ControlTemplate>
-                            <TextBlock Text="{Binding Document.Id}" TextTrimming="WordEllipsis" Width="{Binding CustomizedThumbnailTemplate.Width}"
+            <StackPanel Margin="10" Orientation="Horizontal">
+                <StackPanel Orientation="Vertical">
+                    <Button cal:Message.Attach="Preview" Style="{StaticResource EmptyButton}">
+                        <ContentControl Content="{Binding CustomizedThumbnailTemplate}" />
+                    </Button>
+                    <HyperlinkButton cal:Message.Attach="ShowDocument" HorizontalAlignment="Center">
+                        <HyperlinkButton.Template>
+                            <ControlTemplate>
+                                <TextBlock Text="{Binding Document.Id}" TextTrimming="WordEllipsis" Width="{Binding CustomizedThumbnailTemplate.Width}"
 								ToolTipService.ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" Margin="0 5 0 0"/>
-                        </ControlTemplate>
-                    </HyperlinkButton.Template>
-                </HyperlinkButton>
+                            </ControlTemplate>
+                        </HyperlinkButton.Template>
+                    </HyperlinkButton>
+                </StackPanel>
+                <StackPanel x:Name="icons" Orientation="Vertical">
+                    <Button Content="a" />
+                    <Button Content="b" />
+                    <Button Content="c" />
+                    <Button Content="d" />
+                    <CheckBox cal:Message.Attach="SelectUnselect"/>
+                </StackPanel>
             </StackPanel>
-            <StackPanel x:Name="icons" Orientation="Vertical">
-                <Button Content="a" />
-                <Button Content="b" />
-                <Button Content="c" />
-                <Button Content="d" />
-            </StackPanel>
-        </StackPanel>
+            <!--<Canvas Canvas.ZIndex="20" Margin="0,-10,0,0" Visibility="{Binding IsSelected, Converter={StaticResource booleanToVisibility}}">-->
+            <!--<Border Background="LightGray" Visibility="{Binding IsSelected, Converter={StaticResource booleanToVisibility}}">
+                    <StackPanel Orientation="Vertical">
+                        <TextBlock Text="{Binding Document.Id}"/>
+                        <Border>
+                            <TextBlock Text='{Binding JsonData}' TextWrapping='Wrap' />
+                        </Border>
+                    </StackPanel>
+                </Border>-->
+            <!--</Canvas>-->
+        </Grid>
     </ControlTemplate>
 
     <Style TargetType="controls:DocumentThumbnail">
