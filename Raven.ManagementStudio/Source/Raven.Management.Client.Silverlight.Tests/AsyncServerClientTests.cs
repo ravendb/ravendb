@@ -1,7 +1,9 @@
 ﻿namespace Raven.Management.Client.Silverlight.Tests
 {
     using System;
+    using System.IO;
     using System.Linq;
+    using System.Windows.Controls;
     using Client;
     using Database;
     using Document;
@@ -15,8 +17,7 @@
     {
         private readonly DocumentTestClass DocumentWithId = new DocumentTestClass(new JsonDocument
                                                                                       {
-                                                                                          Key =
-                                                                                              Guid.NewGuid().ToString()
+                                                                                          Key = Guid.NewGuid().ToString()
                                                                                       });
 
         public AsyncServerClientTests()
@@ -34,7 +35,7 @@
 
         private DocumentStore Store { get; set; }
 
-        [TestMethod]
+        //[TestMethod]
         [Asynchronous]
         public void DocumentTest()
         {
@@ -48,7 +49,6 @@
                                             Assert.IsTrue(saveResult.First().IsSuccess);
 
                                             session.Load<DocumentTestClass>(DocumentWithId.Id, (loadResult) => Assert.IsTrue(loadResult.IsSuccess));
-
 
                                             session.Delete(saveResult.First().Data);
                                             session.SaveChanges((deleteResult) =>
@@ -64,7 +64,7 @@
             }
         }
 
-        [TestMethod]
+        //[TestMethod]
         [Asynchronous]
         public void AttachementTest()
         {
@@ -95,6 +95,77 @@
                                                                                EnqueueDelay(3000);
                                                                                EnqueueTestComplete();
                                                                            });
+            }
+        }
+
+        //[TestMethod]
+        [Asynchronous]
+        public void AttachmentGetAllTest()
+        {
+            var data = new byte[1000];
+            var random = new Random();
+            random.NextBytes(data);
+
+            var contiunueWithTest = false;
+
+            using (var client = new AsyncServerClient(DatabaseAddress, new DocumentConvention(), null))
+            {
+                client.AttachmentPut("key1", null, data, new JObject(), (putResult1) =>
+                                                                            {
+                                                                                Assert.IsNotNull(putResult1);
+                                                                                Assert.IsTrue(putResult1.Count == 1);
+                                                                                Assert.IsTrue(putResult1.First().IsSuccess);
+
+                                                                                client.AttachmentPut("key2", null, data, new JObject(), (putResult2) =>
+                                                                                                                                            {
+                                                                                                                                                Assert.IsNotNull(putResult2);
+                                                                                                                                                Assert.IsTrue(putResult2.Count == 1);
+                                                                                                                                                Assert.IsTrue(putResult2.First().IsSuccess);
+
+                                                                                                                                                EnqueueConditional(() => true);
+                                                                                                                                            });
+                                                                            });
+            }
+        }
+
+        //[TestMethod]
+        //[Asynchronous]
+        //public void AttachmentSaveTest()
+        //{
+        //    using (var client = new AsyncServerClient(DatabaseAddress, new DocumentConvention(), null))
+        //    {
+
+        //        var saveFileDialog = new OpenFileDialog();
+
+        //        if (saveFileDialog.ShowDialog() == true)
+        //        {
+        //            var stream = saveFileDialog.File.OpenRead();
+        //            byte[] b;
+        //            using (BinaryReader br = new BinaryReader(stream))
+        //            {
+        //                b = br.ReadBytes(Convert.ToInt32(stream.Length));
+        //            }
+
+        //            client.AttachmentPut("plugin1.xap", null, b, new JObject(), (result) =>
+        //                                                                                 {
+        //                                                                                     var x = 2;
+
+        //                                                                                 });
+        //        }
+        //    }
+        //}
+
+        [TestMethod]
+        [Asynchronous]
+        public void AttachmentTest2()
+        {
+            using (var client = new AsyncServerClient(DatabaseAddress, new DocumentConvention(), null))
+            {
+
+                client.AttachmentGet("plugin1.xap", (result) =>
+                                                        {
+                                                            var x = 2;
+                                                        });
             }
         }
 

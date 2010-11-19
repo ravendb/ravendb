@@ -1,6 +1,6 @@
 namespace Raven.ManagementStudio.Plugin
 {
-    using Client.Silverlight.Document;
+    using Management.Client.Silverlight;
 
     public interface IDatabase
     {

@@ -170,10 +170,10 @@ namespace Raven.Management.Client.Silverlight.Client
                 case HttpStatusCode.Conflict:
                     var errorResults = JsonConvert.DeserializeAnonymousType(json, new
                                                                                       {
-                                                                                          url = (string) null,
+                                                                                          url = (string)null,
                                                                                           actualETag = Guid.Empty,
                                                                                           expectedETag = Guid.Empty,
-                                                                                          error = (string) null
+                                                                                          error = (string)null
                                                                                       });
                     return new ConcurrencyException(errorResults.error)
                                {
@@ -278,19 +278,19 @@ namespace Raven.Management.Client.Silverlight.Client
 
                 request.HttpWebRequest.BeginGetRequestStream(
                     (requestResult) =>
-                        {
-                            var writer = new StreamWriter(request.HttpWebRequest.EndGetRequestStream(requestResult));
+                    {
+                        var writer = new StreamWriter(request.HttpWebRequest.EndGetRequestStream(requestResult));
 
-                            var array = new JArray(keys);
+                        var array = new JArray(keys);
 
-                            writer.Write(array.ToString());
-                            writer.Close();
+                        writer.Write(array.ToString());
+                        writer.Close();
 
-                            request.HttpWebRequest.BeginGetResponse(
-                                (responseResult) =>
-                                DocumentGetMany_Callback(request, responseResult, callback),
-                                request);
-                        },
+                        request.HttpWebRequest.BeginGetResponse(
+                            (responseResult) =>
+                            DocumentGetMany_Callback(request, responseResult, callback),
+                            request);
+                    },
                     request);
             }
         }
@@ -308,16 +308,16 @@ namespace Raven.Management.Client.Silverlight.Client
 
             request.HttpWebRequest.BeginGetRequestStream(
                 (requestResult) =>
-                    {
-                        var writer = new StreamWriter(request.HttpWebRequest.EndGetRequestStream(requestResult));
+                {
+                    var writer = new StreamWriter(request.HttpWebRequest.EndGetRequestStream(requestResult));
 
-                        writer.Write(entity.ToJson());
-                        writer.Close();
+                    writer.Write(entity.ToJson());
+                    writer.Close();
 
-                        request.HttpWebRequest.BeginGetResponse(
-                            (responseResult) => DocumentSave_Callback(entity, request, responseResult, callback),
-                            request);
-                    },
+                    request.HttpWebRequest.BeginGetResponse(
+                        (responseResult) => DocumentSave_Callback(entity, request, responseResult, callback),
+                        request);
+                },
                 request);
         }
 
@@ -334,16 +334,16 @@ namespace Raven.Management.Client.Silverlight.Client
 
             request.HttpWebRequest.BeginGetRequestStream(
                 (requestResult) =>
-                    {
-                        var writer = new StreamWriter(request.HttpWebRequest.EndGetRequestStream(requestResult));
+                {
+                    var writer = new StreamWriter(request.HttpWebRequest.EndGetRequestStream(requestResult));
 
-                        writer.Write(entity.ToJson());
-                        writer.Close();
+                    writer.Write(entity.ToJson());
+                    writer.Close();
 
-                        request.HttpWebRequest.BeginGetResponse(
-                            (responseResult) => DocumentSave_Callback(entity, request, responseResult, callback),
-                            request);
-                    },
+                    request.HttpWebRequest.BeginGetResponse(
+                        (responseResult) => DocumentSave_Callback(entity, request, responseResult, callback),
+                        request);
+                },
                 request);
         }
 
@@ -375,18 +375,18 @@ namespace Raven.Management.Client.Silverlight.Client
 
             request.HttpWebRequest.BeginGetRequestStream(
                 (requestResult) =>
-                    {
-                        var writer = new StreamWriter(request.HttpWebRequest.EndGetRequestStream(requestResult));
-                        var array = new JArray(batchCommands.Select(x => x.ToJson()));
+                {
+                    var writer = new StreamWriter(request.HttpWebRequest.EndGetRequestStream(requestResult));
+                    var array = new JArray(batchCommands.Select(x => x.ToJson()));
 
-                        writer.Write(array.ToString(Formatting.None));
-                        writer.Close();
+                    writer.Write(array.ToString(Formatting.None));
+                    writer.Close();
 
-                        request.HttpWebRequest.BeginGetResponse(
-                            (responseResult) =>
-                            DocumentBatch_Callback(batchCommands, request, responseResult, batchCallback),
-                            request);
-                    },
+                    request.HttpWebRequest.BeginGetResponse(
+                        (responseResult) =>
+                        DocumentBatch_Callback(batchCommands, request, responseResult, batchCallback),
+                        request);
+                },
                 request);
         }
 
@@ -518,7 +518,7 @@ namespace Raven.Management.Client.Silverlight.Client
                                    };
 
             context.Post(
-                delegate { callback.Invoke(new List<Response<JsonDocument>> {saveResponse}); },
+                delegate { callback.Invoke(new List<Response<JsonDocument>> { saveResponse }); },
                 null);
         }
 
@@ -541,7 +541,7 @@ namespace Raven.Management.Client.Silverlight.Client
                                      };
 
             context.Post(
-                delegate { callback.Invoke(new List<Response<string>> {deleteResponse}); },
+                delegate { callback.Invoke(new List<Response<string>> { deleteResponse }); },
                 null);
         }
 
@@ -622,16 +622,16 @@ namespace Raven.Management.Client.Silverlight.Client
 
             request.HttpWebRequest.BeginGetRequestStream(
                 (requestResult) =>
-                    {
-                        var writer = new StreamWriter(request.HttpWebRequest.EndGetRequestStream(requestResult));
+                {
+                    var writer = new StreamWriter(request.HttpWebRequest.EndGetRequestStream(requestResult));
 
-                        writer.Write(JsonConvert.SerializeObject(entity, new JsonEnumConverter()));
-                        writer.Close();
+                    writer.Write(JsonConvert.SerializeObject(entity, new JsonEnumConverter()));
+                    writer.Close();
 
-                        request.HttpWebRequest.BeginGetResponse(
-                            (responseResult) => IndexSave_Callback(name, entity, request, responseResult, callback),
-                            request);
-                    },
+                    request.HttpWebRequest.BeginGetResponse(
+                        (responseResult) => IndexSave_Callback(name, entity, request, responseResult, callback),
+                        request);
+                },
                 request);
         }
 
@@ -737,7 +737,7 @@ namespace Raven.Management.Client.Silverlight.Client
                                    };
 
             context.Post(
-                delegate { callback.Invoke(new List<Response<KeyValuePair<string, IndexDefinition>>> {loadResponse}); },
+                delegate { callback.Invoke(new List<Response<KeyValuePair<string, IndexDefinition>>> { loadResponse }); },
                 null);
         }
 
@@ -760,7 +760,7 @@ namespace Raven.Management.Client.Silverlight.Client
                                      };
 
             context.Post(
-                delegate { callback.Invoke(new List<Response<string>> {deleteResponse}); },
+                delegate { callback.Invoke(new List<Response<string>> { deleteResponse }); },
                 null);
         }
 
@@ -773,13 +773,23 @@ namespace Raven.Management.Client.Silverlight.Client
         /// </summary>
         /// <param name="key"></param>
         /// <param name="callback"></param>
-        public void AttachmentGet(string key, CallbackFunction.Load<Attachment> callback)
+        public void AttachmentGet(string key, CallbackFunction.Load<KeyValuePair<string, Attachment>> callback)
         {
             HttpJsonRequest request;
             CreateContext(new Uri(string.Format(DatabaseUrl.Attachment, DatabaseAddress, key)), RequestMethod.GET,
                           out request);
 
             request.HttpWebRequest.BeginGetResponse((result) => AttachmentGet_Callback(key, request, result, callback),
+                                                    request);
+        }
+
+        public void AttachmentGetAll(CallbackFunction.Load<IList<KeyValuePair<string, Attachment>>> callback)
+        {
+            HttpJsonRequest request;
+            CreateContext(new Uri(string.Format(DatabaseUrl.AttachmentGetAll, DatabaseAddress)), RequestMethod.GET,
+                          out request);
+
+            request.HttpWebRequest.BeginGetResponse((result) => AttachmentGetAll_Callback(request, result, callback),
                                                     request);
         }
 
@@ -841,10 +851,7 @@ namespace Raven.Management.Client.Silverlight.Client
 
             request.HttpWebRequest.BeginGetRequestStream((requestResult) =>
                                                              {
-                                                                 var writer =
-                                                                     new StreamWriter(
-                                                                         request.HttpWebRequest.EndGetRequestStream(
-                                                                             requestResult));
+                                                                 var writer = new BinaryWriter(request.HttpWebRequest.EndGetRequestStream(requestResult));
 
                                                                  writer.Write(data);
                                                                  writer.Close();
@@ -867,7 +874,7 @@ namespace Raven.Management.Client.Silverlight.Client
         }
 
         private void AttachmentGet_Callback(string key, HttpJsonRequest request, IAsyncResult result,
-                                            CallbackFunction.Load<Attachment> callback)
+                                            CallbackFunction.Load<KeyValuePair<string, Attachment>> callback)
         {
             SynchronizationContext context = GetContext(request);
             DeleteContext(request);
@@ -878,9 +885,42 @@ namespace Raven.Management.Client.Silverlight.Client
             Attachment attachment = AttachmentMapper.Map(key, request.HttpWebRequest, result, out statusCode,
                                                          out exception);
 
-            var loadResponse = new LoadResponse<Attachment>
+            var loadResponse = new LoadResponse<KeyValuePair<string, Attachment>>()
                                    {
-                                       Data = attachment,
+                                       Data = new KeyValuePair<string, Attachment>(key, attachment),
+                                       StatusCode = statusCode,
+                                       Exception = exception
+                                   };
+
+            context.Post(
+                delegate { callback.Invoke(loadResponse); },
+                null);
+        }
+
+        private void AttachmentGetAll_Callback(HttpJsonRequest request, IAsyncResult result, CallbackFunction.Load<IList<KeyValuePair<string, Attachment>>> callback)
+        {
+            SynchronizationContext context = GetContext(request);
+            DeleteContext(request);
+
+            HttpStatusCode statusCode;
+            Exception exception;
+            NameValueCollection headers;
+
+            string json = GetResponseStream(request.HttpWebRequest, result, out statusCode, out exception, out headers);
+
+            JArray array = JArray.Parse(json);
+
+            var attachments = new List<KeyValuePair<string, Attachment>>();
+            string key;
+
+            foreach (var attachment in array)
+            {
+                attachments.Add(AttachmentMapper.Map(attachment));
+            }
+
+            var loadResponse = new LoadResponse<IList<KeyValuePair<string, Attachment>>>
+                                   {
+                                       Data = attachments,
                                        StatusCode = statusCode,
                                        Exception = exception
                                    };
@@ -909,7 +949,7 @@ namespace Raven.Management.Client.Silverlight.Client
                                      };
 
             context.Post(
-                delegate { callback.Invoke(new List<Response<string>> {deleteResponse}); },
+                delegate { callback.Invoke(new List<Response<string>> { deleteResponse }); },
                 null);
         }
 
@@ -937,7 +977,7 @@ namespace Raven.Management.Client.Silverlight.Client
                                    };
 
             context.Post(
-                delegate { callback.Invoke(new List<Response<Attachment>> {saveResponse}); },
+                delegate { callback.Invoke(new List<Response<Attachment>> { saveResponse }); },
                 null);
         }
 

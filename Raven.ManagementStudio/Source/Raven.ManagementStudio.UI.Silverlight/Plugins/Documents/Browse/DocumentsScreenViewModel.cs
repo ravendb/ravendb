@@ -4,11 +4,11 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Documents.Browse
     using System.Linq;
     using System.Windows.Controls;
     using Caliburn.Micro;
-    using Client.Silverlight.Common;
-    using Client.Silverlight.Data;
     using CommonViewModels;
     using Models;
     using Plugin;
+    using Raven.Database;
+    using Raven.Management.Client.Silverlight.Common;
 
     public class DocumentsScreenViewModel : Screen, IRavenScreen
     {

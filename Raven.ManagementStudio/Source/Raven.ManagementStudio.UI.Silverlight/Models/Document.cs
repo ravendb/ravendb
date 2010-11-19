@@ -1,9 +1,8 @@
 ﻿namespace Raven.ManagementStudio.UI.Silverlight.Models
 {
-    using System;
     using System.Collections.Generic;
-    using Client.Silverlight.Data;
     using Newtonsoft.Json.Linq;
+    using Raven.Database;
 
     public class Document
     {
@@ -13,7 +12,7 @@
 
         public Document(JsonDocument jsonDocument)
         {
-            this.id = jsonDocument.Id;
+            this.id = jsonDocument.Key;
             this.data = ParseJsonToDictionary(jsonDocument.DataAsJson);
             this.metadata = ParseJsonToDictionary(jsonDocument.Metadata);
         }

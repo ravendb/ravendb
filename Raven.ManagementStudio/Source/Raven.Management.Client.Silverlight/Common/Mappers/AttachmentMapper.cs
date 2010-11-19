@@ -1,6 +1,7 @@
 ﻿namespace Raven.Management.Client.Silverlight.Common.Mappers
 {
     using System;
+    using System.Collections.Generic;
     using System.IO;
     using System.Linq;
     using System.Net;
@@ -81,6 +82,18 @@
 
                 throw;
             }
+        }
+
+        public KeyValuePair<string, Attachment> Map(JToken json)
+        {
+            var attachment = new Attachment();
+
+            attachment.Etag = new Guid(json.Value<string>("Etag"));
+            attachment.Metadata = json.Value<JObject>("Metadata");
+
+            var key = json.Value<string>("Key").Replace("\0", string.Empty);
+
+            return new KeyValuePair<string, Attachment>(key, attachment);
         }
     }
 }

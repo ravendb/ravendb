@@ -19,6 +19,22 @@ namespace Raven.Management.Client.Silverlight.Document
     /// </summary>
     public abstract class InMemoryDocumentSessionOperations : IDisposable
     {
+        protected T Convert<T>(object entity)
+        {
+            T result;
+
+            try
+            {
+                result = (T)entity;
+            }
+            catch (Exception)
+            {
+                throw new NotSupportedException("We do not support this type of casting");
+            }
+
+            return result;
+        }
+
         public object ConvertTo<T>(JsonDocument document)
         {
             T entity = default(T);
@@ -117,17 +133,6 @@ namespace Raven.Management.Client.Silverlight.Document
         public TimeSpan NonAuthoritiveInformationTimeout { get; set; }
 
         /// <summary>
-        /// Gets the store identifier for this session.
-        /// The store identifier is the identifier for the particular RavenDB instance.
-        /// This is mostly useful when using sharding.
-        /// </summary>
-        /// <value>The store identifier.</value>
-        public string StoreIdentifier
-        {
-            get { return documentStore.Identifier; }
-        }
-
-        /// <summary>
         /// Gets the conventions used by this session
         /// </summary>
         /// <value>The conventions.</value>
@@ -144,7 +149,6 @@ namespace Raven.Management.Client.Silverlight.Document
         /// The transaction resource manager identifier
         /// </summary>
         public Guid ResourceManagerId { get; private set; }
-
 
         /// <summary>
         /// Gets or sets the max number of requests per session.
@@ -414,7 +418,7 @@ namespace Raven.Management.Client.Silverlight.Document
         {
             Guard.Assert(() => entity != null);
 
-            string id = entity as JsonDocument == null ? GetOrGenerateDocumentKey(entity) : ((JsonDocument) entity).Key;
+            string id = entity as JsonDocument == null ? GetOrGenerateDocumentKey(entity) : ((JsonDocument)entity).Key;
 
             TrySetIdentity(entity, id);
 
@@ -428,12 +432,12 @@ namespace Raven.Management.Client.Silverlight.Document
                 if (ReferenceEquals(entitiesByKey[id], entity))
                     return; // calling Store twice on the same reference is a no-op
 
-                if (entity as JsonDocument == null)
-                {
-                    throw new NonUniqueObjectException("Attempted to associated a different object with id '" + id + "'.");
-                }
+                //if (entity as JsonDocument == null)
+                //{
+                //    throw new NonUniqueObjectException("Attempted to associated a different object with id '" + id + "'.");
+                //}
 
-                entitiesAndMetadata.Remove(entitiesByKey[id]);
+                //entitiesAndMetadata.Remove(entitiesByKey[id]);
             }
 
             string tag = documentStore.Conventions.GetTypeTagName(entity.GetType());

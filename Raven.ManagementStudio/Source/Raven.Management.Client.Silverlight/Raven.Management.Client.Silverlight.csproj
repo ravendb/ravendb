@@ -62,6 +62,8 @@
     <Reference Include="System.Windows.Browser" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Attachments\AsyncAttachmentSession.cs" />
+    <Compile Include="Attachments\IAsyncAttachmentSession.cs" />
     <Compile Include="Client\HttpJsonRequest.cs" />
     <Compile Include="Client\JsonExtensions.cs" />
     <Compile Include="Client\JsonLuceneDateTimeConverter.cs" />

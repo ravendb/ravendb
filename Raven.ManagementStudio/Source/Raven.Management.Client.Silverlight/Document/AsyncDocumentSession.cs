@@ -288,25 +288,5 @@ namespace Raven.Management.Client.Silverlight.Document
         }
 
         #endregion
-
-        private T Convert<T>(object entity)
-        {
-            T result;
-
-            if (typeof (T) == typeof (JsonDocument))
-            {
-                result = (T) ConvertToJsonDocument(entity);
-            }
-            else if (entity as JsonDocument != null)
-            {
-                result = (T) ConvertTo<T>(entity as JsonDocument);
-            }
-            else
-            {
-                result = (T) entity;
-            }
-
-            return result;
-        }
     }
 }

@@ -92,7 +92,13 @@ namespace Raven.Management.Client.Silverlight.Client
         /// </summary>
         /// <param name="key"></param>
         /// <param name="callback"></param>
-        void AttachmentGet(string key, CallbackFunction.Load<Attachment> callback);
+        void AttachmentGet(string key, CallbackFunction.Load<KeyValuePair<string, Attachment>> callback);
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="callback"></param>
+        void AttachmentGetAll(CallbackFunction.Load<IList<KeyValuePair<string, Attachment>>> callback);
 
         /// <summary>
         /// 
