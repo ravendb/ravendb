@@ -1,17 +1,15 @@
 namespace Raven.ManagementStudio.UI.Silverlight.Models
 {
-    using System;
     using System.Collections.Generic;
     using System.ComponentModel;
     using System.ComponentModel.Composition;
-    using System.ComponentModel.Composition.Hosting;
-    using System.Linq;
-    using Client.Document;
-    using Management.Client.Silverlight;
-    using Management.Client.Silverlight.Attachments;
-    using Management.Client.Silverlight.Common;
-    using Plugin;
-    using Raven.Database.Data;
+    using Raven.Client.Document;
+    using Raven.Management.Client.Silverlight;
+    using Raven.Management.Client.Silverlight.Attachments;
+    using Raven.Management.Client.Silverlight.Collections;
+    using Raven.Management.Client.Silverlight.Indexes;
+    using Raven.Management.Client.Silverlight.Statistics;
+    using Raven.ManagementStudio.Plugin;
 
     public class Database : IDatabase, INotifyPropertyChanged
     {
@@ -19,16 +17,9 @@ namespace Raven.ManagementStudio.UI.Silverlight.Models
 
         public Database(string databaseAdress, string databaseName = null)
         {
-            Address = databaseAdress;
-            Name = databaseName ?? databaseAdress;
-            InitializeSession();
-
-            Plugins = new List<IPlugin>();
-
-            IsBusy = true;
-            AttachmentSession.LoadPlugins(DownloadPlugins);
-
-            AttachmentSession.Load("Raven.ManagementStudio.UI.Silverlight.xap", (result) => { int x = 2; });
+            this.Address = databaseAdress;
+            this.Name = databaseName ?? databaseAdress;
+            this.InitializeSession();
         }
 
         [ImportMany(AllowRecomposition = true)]
@@ -36,15 +27,13 @@ namespace Raven.ManagementStudio.UI.Silverlight.Models
 
         public bool IsBusy
         {
-            get { return isBusy; }
+            get { return this.isBusy; }
             set
             {
-                isBusy = value;
-                NotifyPropertyChange("IsBusy");
+                this.isBusy = value;
+                this.NotifyPropertyChange("IsBusy");
             }
         }
-
-        public IAsyncAttachmentSession AttachmentSession { get; set; }
 
         #region IDatabase Members
 
@@ -53,6 +42,14 @@ namespace Raven.ManagementStudio.UI.Silverlight.Models
         public string Name { get; set; }
 
         public IAsyncDocumentSession Session { get; set; }
+
+        public IAsyncAttachmentSession AttachmentSession { get; set; }
+
+        public IAsyncCollectionSession CollectionSession { get; set; }
+
+        public IAsyncIndexSession IndexSession { get; set; }
+
+        public IAsyncStatisticsSession StatisticsSession { get; set; }
 
         #endregion
 
@@ -64,9 +61,9 @@ namespace Raven.ManagementStudio.UI.Silverlight.Models
 
         private void NotifyPropertyChange(string propertyName)
         {
-            if (PropertyChanged != null)
+            if (this.PropertyChanged != null)
             {
-                PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
+                this.PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
             }
         }
 
@@ -74,45 +71,18 @@ namespace Raven.ManagementStudio.UI.Silverlight.Models
         {
             var store = new DocumentStore
                             {
-                                Url = Address
+                                Url = this.Address
                             };
 
             store.Initialize();
-            Session = store.OpenAsyncSession();
 
-            AttachmentSession = new AsyncAttachmentSession(Address);
-        }
+            this.Session = store.OpenAsyncSession();
+            this.AttachmentSession = new AsyncAttachmentSession(this.Address);
+            this.CollectionSession = new AsyncCollectionSession(this.Address);
+            this.IndexSession = new AsyncIndexSession(this.Address);
+            this.StatisticsSession = new AsyncStatisticsSession(this.Address);
 
-        private void DownloadPlugins(LoadResponse<IList<KeyValuePair<string, Attachment>>> response)
-        {
-            if (response.IsSuccess)
-            {
-                int count = 0;
-
-                foreach (DeploymentCatalog deploymentCatalog in response.Data.Select(plugin => new DeploymentCatalog(new Uri(string.Format(DatabaseUrl.Attachment, Address, plugin.Key)))))
-                {
-                    deploymentCatalog.DownloadCompleted += (s, e) =>
-                                                               {
-                                                                   if (!e.Cancelled && e.Error == null)
-                                                                   {
-                                                                       var catalog = s as DeploymentCatalog;
-                                                                   }
-
-                                                                   count++;
-                                                                   if (count == response.Data.Count)
-                                                                   {
-                                                                       IsBusy = false;
-                                                                   }
-                                                               };
-
-                    deploymentCatalog.DownloadAsync();
-                }
-
-                if (count == response.Data.Count)
-                {
-                    IsBusy = false;
-                }
-            }
+            this.AttachmentSession = new AsyncAttachmentSession(this.Address);
         }
     }
 }
