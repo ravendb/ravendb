@@ -39,7 +39,7 @@
 
         public JsonDocument JsonDocument
         {
-            get { return jsonDocument; }
+            get { return this.jsonDocument; }
         }
 
         public void SetData(string json)

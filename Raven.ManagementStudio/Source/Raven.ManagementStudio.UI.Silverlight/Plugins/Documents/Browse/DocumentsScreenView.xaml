@@ -34,7 +34,9 @@
             <TextBlock Text="{Binding Documents.Count, StringFormat=' {0} results', FallbackValue='No results'}" VerticalAlignment="Center" Foreground="{StaticResource ToolbarBackgroundBrush}"/>
         </Border>
 
-        <localControls:DocumentsContainer Grid.Row="2" x:Name="Items" PreviewVisibility="Visible"/>
+        <toolkit:BusyIndicator IsBusy="{Binding IsBusy}" Grid.Row="2" >
+            <localControls:DocumentsContainer x:Name="Items" PreviewVisibility="Visible"/>
+        </toolkit:BusyIndicator>
     </Grid>
 
 </UserControl>

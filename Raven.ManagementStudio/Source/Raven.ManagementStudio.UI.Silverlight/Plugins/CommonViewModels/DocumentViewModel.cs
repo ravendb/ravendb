@@ -42,7 +42,10 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.CommonViewModels
 
         public string Id
         {
-            get { return this.document.Id; }
+            get
+            {
+                return this.document.Id;
+            }
 
             set
             {
