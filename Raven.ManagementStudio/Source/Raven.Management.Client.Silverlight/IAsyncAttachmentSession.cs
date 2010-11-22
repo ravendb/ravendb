@@ -1,8 +1,8 @@
-﻿namespace Raven.Management.Client.Silverlight.Attachments
+﻿namespace Raven.Management.Client.Silverlight
 {
     using System.Collections.Generic;
-    using Common;
-    using Database.Data;
+    using Raven.Database.Data;
+    using Raven.Management.Client.Silverlight.Common;
 
     public interface IAsyncAttachmentSession
     {

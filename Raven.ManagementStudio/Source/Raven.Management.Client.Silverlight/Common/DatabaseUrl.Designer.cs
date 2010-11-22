@@ -167,5 +167,14 @@ namespace Raven.Management.Client.Silverlight.Common {
                 return ResourceManager.GetString("IndexPut", resourceCulture);
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to {0}/stats?.
+        /// </summary>
+        public static string StatisticsGet {
+            get {
+                return ResourceManager.GetString("StatisticsGet", resourceCulture);
+            }
+        }
     }
 }

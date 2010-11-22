@@ -117,5 +117,20 @@ namespace Raven.Management.Client.Silverlight.Client
         /// <param name="callback"></param>
         void AttachmentPut(string key, Guid? etag, byte[] data, JObject metadata,
                            CallbackFunction.Save<Attachment> callback);
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="callback"></param>
+        void StatisticsGet(CallbackFunction.Load<DatabaseStatistics> callback);
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="index"></param>
+        /// <param name="query"></param>
+        /// <param name="includes"></param>
+        /// <param name="callback"></param>
+        void Query(string index, IndexQuery query, string[] includes, CallbackFunction.Load<QueryResult> callback);
     }
 }

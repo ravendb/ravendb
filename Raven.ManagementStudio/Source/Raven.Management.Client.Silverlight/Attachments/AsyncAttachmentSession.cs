@@ -2,13 +2,13 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Linq;
     using System.Net;
     using System.Threading;
     using Client;
     using Common;
     using Database.Data;
     using Document;
-    using System.Linq;
 
     public class AsyncAttachmentSession : IAsyncAttachmentSession
     {
