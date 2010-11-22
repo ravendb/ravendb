@@ -28,11 +28,11 @@
                     <DropShadowEffect/>
                 </ContentControl.Effect>
                 <ContentControl Visibility="{Binding IsDocumentPreviewed, Converter={StaticResource booleanToVisibility}}" Margin="20">
-                    <StackPanel Orientation="Horizontal">
-                        <Border Background="{StaticResource InverseLightGradient}" DataContext="{Binding ActiveItem}" Padding="20">
+                    <StackPanel Orientation="Horizontal" DataContext="{Binding ActiveItem}">
+                        <Border Background="{StaticResource InverseLightGradient}" Padding="20">
                             <StackPanel Orientation="Vertical">
                                 <Border Grid.Row="0" BorderThickness="1" BorderBrush="Black" Background="White" Margin="0, 2, 0, 2" HorizontalAlignment="Center">
-                                    <TextBlock Text="{Binding Document.Id}" Padding="10, 2, 10, 2" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="{Binding Id}" Padding="10, 2, 10, 2" HorizontalAlignment="Center"/>
                                 </Border>
                                 <Border Grid.Row="1"  BorderThickness="1" BorderBrush="Black" Background="White" Margin="0, 2, 0, 2">
                                     <ScrollViewer MaxWidth="300" MaxHeight="300" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
@@ -48,8 +48,8 @@
                         </Border>
                         <StackPanel x:Name="icons" Orientation="Vertical">
                             <Button Content="X" cal:Message.Attach="ClosePreview"/>
-                            <Button Content="a" />
-                            <Button Content="b" />
+                            <Button Content="a" cal:Message.Attach="ShowDocument"/>
+                            <Button Content="b" cal:Message.Attach="Edit"/>
                             <Button Content="c" />
                             <Button Content="d" />
                             <CheckBox cal:Message.Attach="SelectUnselect"/>

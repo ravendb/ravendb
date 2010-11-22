@@ -21,12 +21,12 @@
         <StackPanel Orientation="Vertical" Grid.Row="0">
             <TextBlock Text="Get by ID" />
             <StackPanel Orientation="Horizontal">
-                <TextBox MinWidth="350">
+                <TextBox MinWidth="350" x:Name="documentId">
                     <i:Interaction.Behaviors>
                         <local:Watermark Text="Document ID" Foreground="LightGray" />
                     </i:Interaction.Behaviors>
                 </TextBox>
-                <Button Content="Go" />
+                <Button Content="Go" cal:Message.Attach="ShowDocument(documentId)"/>
             </StackPanel>
         </StackPanel>
 

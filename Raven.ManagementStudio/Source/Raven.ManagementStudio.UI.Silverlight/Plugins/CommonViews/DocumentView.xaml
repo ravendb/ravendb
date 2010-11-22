@@ -4,34 +4,107 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
     xmlns:controlsToolkit="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit" 
-    xmlns:cal="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro" 
-    mc:Ignorable="d">
+    xmlns:cal="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro" xmlns:ic="clr-namespace:Microsoft.Expression.Interactivity.Core;assembly=Microsoft.Expression.Interactions" mc:Ignorable="d">
 
     <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
-        
-        <StackPanel Orientation="Horizontal" Grid.Row="0">
-            <TextBlock Text="ID" VerticalAlignment="Center" />
-            <TextBox Text="{Binding Document.Id}"/>
-        </StackPanel>
-        <Button Content="Save" Grid.Row="0" HorizontalAlignment="Right"/>
+        <VisualStateManager.VisualStateGroups>
+            <VisualStateGroup x:Name="ViewStates" ic:ExtendedVisualStateManager.UseFluidLayout="True">
+                <VisualState x:Name="NormalState">
+                    <Storyboard>
+                        <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="(UIElement.Visibility)" Storyboard.TargetName="editView">
+                            <DiscreteObjectKeyFrame>
+                                <DiscreteObjectKeyFrame.Value>
+                                    <Visibility>Collapsed</Visibility>
+                                </DiscreteObjectKeyFrame.Value>
+                            </DiscreteObjectKeyFrame>
+                        </ObjectAnimationUsingKeyFrames>
+                        <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="(UIElement.Visibility)" Storyboard.TargetName="normalView">
+                            <DiscreteObjectKeyFrame>
+                                <DiscreteObjectKeyFrame.Value>
+                                    <Visibility>Visible</Visibility>
+                                </DiscreteObjectKeyFrame.Value>
+                            </DiscreteObjectKeyFrame>
+                        </ObjectAnimationUsingKeyFrames>
+                    </Storyboard>
+                </VisualState> 
+                <VisualState x:Name="EditState">
+                    <Storyboard>
+                        <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="(UIElement.Visibility)" Storyboard.TargetName="editView">
+                            <DiscreteObjectKeyFrame>
+                                <DiscreteObjectKeyFrame.Value>
+                                    <Visibility>Visible</Visibility>
+                                </DiscreteObjectKeyFrame.Value>
+                            </DiscreteObjectKeyFrame>
+                        </ObjectAnimationUsingKeyFrames>
+                        <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="(UIElement.Visibility)" Storyboard.TargetName="normalView">
+                            <DiscreteObjectKeyFrame>
+                                <DiscreteObjectKeyFrame.Value>
+                                    <Visibility>Collapsed</Visibility>
+                                </DiscreteObjectKeyFrame.Value>
+                            </DiscreteObjectKeyFrame>
+                        </ObjectAnimationUsingKeyFrames>
+                    </Storyboard>
+                </VisualState>
+            </VisualStateGroup>
+        </VisualStateManager.VisualStateGroups>
+        <VisualStateManager.CustomVisualStateManager>
+            <ic:ExtendedVisualStateManager/>
+        </VisualStateManager.CustomVisualStateManager>
 
-        <TextBlock Text="Document" Grid.Row="1" HorizontalAlignment="Left"/>
-        <Button Content="Tree View"  Grid.Row="1" HorizontalAlignment="Right"/>
+        <Grid x:Name="normalView">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="30"/>
+                <RowDefinition Height="30"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="30"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
-        <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-            <TextBox Text="{Binding JsonData}" TextWrapping="Wrap" AcceptsReturn="True"/>
-        </ScrollViewer>
+            <StackPanel Orientation="Horizontal" Grid.Row="0">
+                <TextBlock Text="ID " VerticalAlignment="Center" />
+                <TextBlock Text="{Binding Id}" VerticalAlignment="Center" Foreground="{StaticResource DarkBrush}"/>
+            </StackPanel>
+            <Button Content="Edit" x:Name="Edit" Grid.Row="0" HorizontalAlignment="Right"/>
 
-        <TextBlock Text="Metadata" Grid.Row="3" HorizontalAlignment="Left"/>
-        <Button Content="Raw JSON"  Grid.Row="3" HorizontalAlignment="Right"/>
+            <TextBlock Text="Document" Grid.Row="1" HorizontalAlignment="Left"/>
+            <Button Content="Tree View"  Grid.Row="1" HorizontalAlignment="Right"/>
+
+            <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                <TextBlock Text="{Binding JsonData}" TextWrapping="Wrap"/>
+            </ScrollViewer>
+
+            <TextBlock Text="Metadata" Grid.Row="3" HorizontalAlignment="Left"/>
+            <Button Content="Raw JSON"  Grid.Row="3" HorizontalAlignment="Right"/>
+            
+        </Grid>
+
+        <Grid x:Name="editView">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="30"/>
+                <RowDefinition Height="30"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="30"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <StackPanel Orientation="Horizontal" Grid.Row="0">
+                <TextBlock Text="ID" VerticalAlignment="Center" />
+                <TextBox Text="{Binding Id}" VerticalContentAlignment="Center" VerticalAlignment="Center"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Grid.Row="0" HorizontalAlignment="Right">
+                <Button Content="Save" x:Name="Save"/>
+                <Button Content="Cancel" x:Name="Cancel"/>   
+            </StackPanel>
+
+            <TextBlock Text="Document" Grid.Row="1" HorizontalAlignment="Left"/>
+            <Button Content="Tree View"  Grid.Row="1" HorizontalAlignment="Right"/>
+
+            <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                <TextBox Text="{Binding JsonData, Mode=TwoWay}" TextWrapping="Wrap" AcceptsReturn="True"/>
+            </ScrollViewer>
+
+            <TextBlock Text="Metadata" Grid.Row="3" HorizontalAlignment="Left"/>
+            <Button Content="Raw JSON"  Grid.Row="3" HorizontalAlignment="Right"/>
+        </Grid>
     </Grid>
-
 
 </UserControl>

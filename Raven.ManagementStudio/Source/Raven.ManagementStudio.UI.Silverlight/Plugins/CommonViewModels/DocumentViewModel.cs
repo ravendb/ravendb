@@ -4,6 +4,7 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.CommonViewModels
     using System.ComponentModel.Composition;
     using System.Text;
     using System.Windows;
+    using System.Windows.Controls;
     using System.Windows.Markup;
     using Caliburn.Micro;
     using Controls;
@@ -15,19 +16,20 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.CommonViewModels
 
     public class DocumentViewModel : Screen, IRavenScreen
     {
-        private Document document;
+        private readonly Document document;
         private bool isSelected;
         private string jsonData;
         private string jsonMetadata;
 
-        public DocumentViewModel(Document document, IRavenScreen parent)
+        public DocumentViewModel(Document document, IDatabase database, IRavenScreen parent)
         {
             this.DisplayName = "Doc";
-            this.Document = document;
+            this.document = document;
             this.jsonData = PrepareRawJsonString(document.Data);
             this.jsonMetadata = PrepareRawJsonString(document.Metadata);
             this.Thumbnail = new DocumentThumbnail();
             this.ParentRavenScreen = parent;
+            this.Database = database;
             CompositionInitializer.SatisfyImports(this);
             this.CustomizedThumbnailTemplate = CreateThumbnailTemplate(document.Metadata);
         }
@@ -38,22 +40,21 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.CommonViewModels
 
         public IRavenScreen ParentRavenScreen { get; set; }
 
-        public Document Document
+        public string Id
         {
-            get
-            {
-                return this.document;
-            }
+            get { return this.document.Id; }
 
             set
             {
-                NotifyOfPropertyChange(() => this.Document);
-                this.document = value;
+                this.document.Id = value;
+                NotifyOfPropertyChange(() => this.Id);
             }
         }
 
         [Import]
         public IEventAggregator EventAggregator { get; set; }
+
+        public IDatabase Database { get; set; }
 
         public string JsonData
         {
@@ -65,6 +66,7 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.CommonViewModels
             set
             {
                 this.jsonData = value;
+                this.document.SetData(jsonData);
                 NotifyOfPropertyChange(() => this.JsonData);
             }
         }
@@ -109,6 +111,45 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.CommonViewModels
             documentScreen.IsDocumentPreviewed = true; 
         }
 
+        public void Edit()
+        {
+            var view = this.GetView(null) as Control;
+            if (view != null)
+            {
+                VisualStateManager.GoToState(view, "EditState", false);
+            }
+            else
+            {
+                this.EventAggregator.Publish(new ReplaceActiveScreen(this));
+                view = this.GetView(null) as Control;
+                if (view != null)
+                {
+                    VisualStateManager.GoToState(view, "EditState", false);
+                }
+            }
+        }
+
+        public void Save()
+        {
+            var view = this.GetView(null) as Control;
+            if (view != null)
+            {
+                //TO DO
+                this.document.SetData(this.JsonData);
+                this.document.Save(this.Database.Session);
+                VisualStateManager.GoToState(view, "NormalState", false);
+            }
+        }
+
+        public void Cancel()
+        {
+            var view = this.GetView(null) as Control;
+            if (view != null)
+            {
+                VisualStateManager.GoToState(view, "NormalState", false);
+            }
+        }
+
         public void ShowDocument()
         {
             this.EventAggregator.Publish(new ReplaceActiveScreen(this));
@@ -120,7 +161,7 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.CommonViewModels
 
             foreach (var item in data)
             {
-                result.Append(item.Key).Append(" : ").Append(item.Value).Append("\n");
+                result.Append("\"").Append(item.Key).Append("\" : ").Append(item.Value).Append(",\n");
             }
 
             result.Append("}");

@@ -30,15 +30,15 @@
                     <HyperlinkButton cal:Message.Attach="ShowDocument" HorizontalAlignment="Center">
                         <HyperlinkButton.Template>
                             <ControlTemplate>
-                                <TextBlock Text="{Binding Document.Id}" TextTrimming="WordEllipsis" Width="{Binding CustomizedThumbnailTemplate.Width}"
+                                <TextBlock Text="{Binding Id}" TextTrimming="WordEllipsis" Width="{Binding CustomizedThumbnailTemplate.Width}"
 								ToolTipService.ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" Margin="0 5 0 0"/>
                             </ControlTemplate>
                         </HyperlinkButton.Template>
                     </HyperlinkButton>
                 </StackPanel>
                 <StackPanel x:Name="icons" Orientation="Vertical">
-                    <Button Content="a" />
-                    <Button Content="b" />
+                    <Button Content="a" cal:Message.Attach="ShowDocument"/>
+                    <Button Content="b" cal:Message.Attach="Edit"/>
                     <Button Content="c" />
                     <Button Content="d" />
                     <CheckBox cal:Message.Attach="SelectUnselect"/>
