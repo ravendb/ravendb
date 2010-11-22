@@ -169,22 +169,31 @@ namespace Raven.Storage.Managed
 
             ms.Write(bytes, 0, bytes.Length);
 
-            var lastOrefaultKeyById = storage.Documents["ById"].LastOrDefault();
-            int id = 1;
-            if (lastOrefaultKeyById != null)
-                id = lastOrefaultKeyById.Value<int>("id") + 1;
-
             var newEtag = generator.CreateSequentialUuid();
             storage.Documents.Put(new JObject
             {
                 {"key", key},
                 {"etag", newEtag.ToByteArray()},
                 {"modified", DateTime.UtcNow},
-                {"id", id},
+                {"id", GetNextDocumentId()},
                 {"entityName", metadata.Value<string>("Raven-Entity-Name")}
             },ms.ToArray());
 
             return newEtag;
+        }
+
+        private int lastGeneratedId;
+        private int GetNextDocumentId()
+        {
+            if (lastGeneratedId > 0)
+                return ++lastGeneratedId;
+
+            var lastOrefaultKeyById = storage.Documents["ById"].LastOrDefault();
+            int id = 1;
+            if (lastOrefaultKeyById != null)
+                id = lastOrefaultKeyById.Value<int>("id") + 1;
+            lastGeneratedId = id;
+            return id;
         }
 
         private void AssertValidEtag(string key, Guid? etag, string op, TransactionInformation transactionInformation)
