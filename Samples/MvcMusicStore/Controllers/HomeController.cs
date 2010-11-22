@@ -1,10 +1,8 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web.Mvc;
 using MvcMusicStore.Models;
 using Raven.Client.Document;
-using Raven.Client;
 
 namespace MvcMusicStore.Controllers
 {
@@ -23,12 +21,12 @@ namespace MvcMusicStore.Controllers
 
         private IEnumerable<Album> GetTopSellingAlbums(int count)
         {
-           var session = MvcApplication.CurrentSession;
+            var session = MvcApplication.CurrentSession;
 
-           return session.Advanced.LuceneQuery<Album>("AlbumsByCountSold")
-                .Take(count)
-                .OrderBy("-Quantity")
-                .ToArray();
+            return session.Advanced.LuceneQuery<Album>("AlbumsByCountSold")
+                 .Take(count)
+                 .OrderBy("-Quantity")
+                 .ToArray();
         }
 
         private IEnumerable<Album> GetTopSellingAlbums_Map_Reduce(int count)
@@ -39,13 +37,13 @@ namespace MvcMusicStore.Controllers
             var topSoldAlbumIds = session.Advanced.LuceneQuery<SoldAlbum>("SoldAlbums")
                 .OrderBy("-Quantity")
                 .Take(count)
-                .Select(x=>x.Album)
+                .Select(x => x.Album)
                 .ToArray();
 
             // get the actual album documents
             var topSoldAlbums = session.Load<Album>(topSoldAlbumIds);
             // if we don't have enough sold albums
-            if(topSoldAlbums.Length < count)
+            if (topSoldAlbums.Length < count)
             {
                 // top it off from the unsold albums
                 var justRegularAlbums = session.Advanced.LuceneQuery<Album>()
@@ -60,37 +58,34 @@ namespace MvcMusicStore.Controllers
 
         public ActionResult AddCountSoldtoAlbum()
         {
-            using (var documentStore = new DocumentStore {  Url = "http://localhost:8080" })
+            var session = MvcApplication.CurrentSession;
+            int count = 0;
+            do
             {
-				documentStore.Initialize();
-                using (var session = documentStore.OpenSession())
+                var albums = session.Query<Album>()
+                    .Skip(count)
+                    .Take(128)
+                    .ToArray();
+
+                if (albums.Length == 0)
+                    break;
+
+                foreach (var album in albums)
                 {
-                    int count = 0;
-                    do
-                    {
-                        var albums = session.Advanced.LuceneQuery<Album>()
-                            .Skip(count)
-                            .Take(128)
-                            .ToArray();
-                        if (albums.Length == 0)
-                            break;
+                    var id = album.Id;
 
-                        foreach (var album in albums)
-                        {
-                            var result = session.Advanced.LuceneQuery<SoldAlbum>("SoldAlbums")
-                                .Where("Album:" + album.Id)
-                                .SingleOrDefault();
+                    var result = session.Query<SoldAlbum>("SoldAlbums")
+                        .Where(x => x.Album == id)
+                        .SingleOrDefault();
 
-                            album.CountSold = result == null ? 0 : result.Quantity;
-                        }
-
-                        count += albums.Length;
-
-                        session.SaveChanges();
-                        session.Advanced.Clear();
-                    } while (true); 
+                    album.CountSold = result == null ? 0 : result.Quantity;
                 }
-            }
+
+                count += albums.Length;
+
+                session.SaveChanges();
+            } while (true);
+
             return Content("OK");
         }
 
