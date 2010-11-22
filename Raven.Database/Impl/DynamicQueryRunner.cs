@@ -103,8 +103,13 @@ namespace Raven.Database.Impl
                 }
             }
 
-            var permanentIndexName = string.Format("Auto/{0}/By{1}", targetName, indexName);
-            var temporaryIndexName = string.Format("Temp/{0}/By{1}", targetName, indexName);
+            var permanentIndexName = indexName.Length == 0
+                    ? string.Format("Auto/{0}", targetName)
+                    : string.Format("Auto/{0}/By{1}", targetName, indexName);
+
+            var temporaryIndexName = indexName.Length == 0
+                    ? string.Format("Temp/{0}", targetName)
+                    : string.Format("Temp/{0}/By{1}", targetName, indexName);
 
             // If there is a permanent index, then use that without bothering anything else
             var permanentIndex = documentDatabase.GetIndexDefinition(permanentIndexName);
