@@ -22,13 +22,6 @@ namespace Raven.ManagementStudio.UI.Silverlight.Models
             Address = databaseAdress;
             Name = databaseName ?? databaseAdress;
             InitializeSession();
-
-            Plugins = new List<IPlugin>();
-
-            IsBusy = true;
-            AttachmentSession.LoadPlugins(DownloadPlugins);
-
-            AttachmentSession.Load("Raven.ManagementStudio.UI.Silverlight.xap", (result) => { int x = 2; });
         }
 
         [ImportMany(AllowRecomposition = true)]

@@ -18,12 +18,14 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.CommonViewModels
         private Document document;
         private bool isSelected;
         private string jsonData;
+        private string jsonMetadata;
 
         public DocumentViewModel(Document document, IRavenScreen parent)
         {
             this.DisplayName = "Doc";
             this.Document = document;
             this.jsonData = PrepareRawJsonString(document.Data);
+            this.jsonMetadata = PrepareRawJsonString(document.Metadata);
             this.Thumbnail = new DocumentThumbnail();
             this.ParentRavenScreen = parent;
             CompositionInitializer.SatisfyImports(this);
@@ -67,6 +69,20 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.CommonViewModels
             }
         }
 
+        public string JsonMetadata
+        {
+            get
+            {
+                return this.jsonMetadata;
+            }
+
+            set
+            {
+                this.jsonMetadata = value;
+                NotifyOfPropertyChange(() => this.JsonMetadata);
+            }
+        }
+
         public bool IsSelected
         {
             get 
@@ -88,7 +104,9 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.CommonViewModels
 
         public void Preview()
         {
-            ((DocumentsScreenViewModel)this.ParentRavenScreen).PreviewedDocument = this;
+            var documentScreen = (DocumentsScreenViewModel)this.ParentRavenScreen;
+            documentScreen.ActivateItem(this);
+            documentScreen.IsDocumentPreviewed = true; 
         }
 
         public void ShowDocument()

@@ -26,8 +26,14 @@
         <GradientStop Color="#FF96C3D9" Offset="0"/>
         <GradientStop Color="#FF146189" Offset="1"/>
     </LinearGradientBrush>
-    
+
+    <LinearGradientBrush x:Key="InverseLightGradient" EndPoint="0.5,1" StartPoint="0.5,0">
+        <GradientStop Color="#FF146189" Offset="1"/>
+        <GradientStop Color="#FF96C3D9" Offset="0"/>
+    </LinearGradientBrush>
+
     <!--Converters-->
     <converters:BooleanToVisibilityConverter x:Key="booleanToVisibility" />
+    <converters:NullToVisibilityConverter x:Key="nullToVisibility" />
 
 </ResourceDictionary>

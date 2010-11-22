@@ -91,8 +91,10 @@
     <Compile Include="Behaviors\Watermark.cs" />
     <Compile Include="Controls\DocumentsContainer.cs" />
     <Compile Include="Controls\DocumentThumbnail.cs" />
+    <Compile Include="Controls\DragDropPanel.cs" />
     <Compile Include="Controls\Gears.cs" />
     <Compile Include="Converters\BooleanToVisibilityConverter.cs" />
+    <Compile Include="Converters\NullToVisibilityConverter.cs" />
     <Compile Include="Messages\ChangeActiveScreen.cs" />
     <Compile Include="Messages\OpenNewScreen.cs" />
     <Compile Include="Messages\ReplaceActiveScreen.cs" />

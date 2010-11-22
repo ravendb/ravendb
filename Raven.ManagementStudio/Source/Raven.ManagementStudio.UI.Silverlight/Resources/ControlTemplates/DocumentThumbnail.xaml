@@ -44,16 +44,6 @@
                     <CheckBox cal:Message.Attach="SelectUnselect"/>
                 </StackPanel>
             </StackPanel>
-            <!--<Canvas Canvas.ZIndex="20" Margin="0,-10,0,0" Visibility="{Binding IsSelected, Converter={StaticResource booleanToVisibility}}">-->
-            <!--<Border Background="LightGray" Visibility="{Binding IsSelected, Converter={StaticResource booleanToVisibility}}">
-                    <StackPanel Orientation="Vertical">
-                        <TextBlock Text="{Binding Document.Id}"/>
-                        <Border>
-                            <TextBlock Text='{Binding JsonData}' TextWrapping='Wrap' />
-                        </Border>
-                    </StackPanel>
-                </Border>-->
-            <!--</Canvas>-->
         </Grid>
     </ControlTemplate>
 

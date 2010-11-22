@@ -2,26 +2,22 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Documents.Browse
 {
     using System.Collections.Generic;
     using System.Linq;
-    using System.Windows;
     using Caliburn.Micro;
     using CommonViewModels;
+    using Database;
+    using Management.Client.Silverlight.Common;
     using Models;
     using Plugin;
-    using Raven.Database;
-    using Raven.Management.Client.Silverlight.Common;
 
-    public class DocumentsScreenViewModel : Screen, IRavenScreen
+    public class DocumentsScreenViewModel : Conductor<DocumentViewModel>.Collection.OneActive, IRavenScreen
     {
-        private IList<DocumentViewModel> documents;
-        private DocumentViewModel previewedDocument;
-        private Visibility documentPreview;
         private bool isBusy;
+        private bool isDocumentPreviewed;
 
         public DocumentsScreenViewModel(IDatabase database)
         {
             this.DisplayName = "Browse";
             this.Database = database;
-            this.DocumentPreview = Visibility.Collapsed;
         }
 
         public bool IsBusy
@@ -42,69 +38,37 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Documents.Browse
 
         public IRavenScreen ParentRavenScreen { get; set; }
 
-        public DocumentViewModel PreviewedDocument
+        public bool IsDocumentPreviewed
         {
             get
             {
-                return this.previewedDocument;
+                return this.isDocumentPreviewed && this.ActiveItem != null;
             }
 
             set
             {
-                this.previewedDocument = value;
-                
-                if (this.previewedDocument != null)
-                {
-                    this.DocumentPreview = Visibility.Visible;
-                }
-                else
-                {
-                    this.DocumentPreview = Visibility.Collapsed;
-                }
-
-                NotifyOfPropertyChange(() => this.PreviewedDocument);
-            }
-        }
-
-        public Visibility DocumentPreview
-        {
-            get
-            {
-                return this.documentPreview;
-            }
-
-            set
-            {
-                this.documentPreview = value;
-                NotifyOfPropertyChange(() => this.DocumentPreview);
-            }
-        }
-
-        public IList<DocumentViewModel> Documents
-        {
-            get
-            {
-                if (this.documents == null)
-                {
-                    this.IsBusy = true;
-                    this.Database.Session.LoadMany<JsonDocument>(this.GetAll);
-                }
-
-                return this.documents;
-            }
-
-            set
-            {
-                this.documents = value;
-                NotifyOfPropertyChange(() => this.Documents);
+                this.isDocumentPreviewed = value;
+                this.NotifyOfPropertyChange(() => this.IsDocumentPreviewed);
             }
         }
 
         public void GetAll(LoadResponse<IList<JsonDocument>> response)
         {
-            IList<Document> result = response.Data.Select(jsonDocument => new Document(jsonDocument)).ToList();
-            this.Documents = result.Select((document, index) => new DocumentViewModel(document, this)).ToList();
+            IList<DocumentViewModel> result = response.Data.Select(jsonDocument => new DocumentViewModel(new Document(jsonDocument), this)).ToList();
+            this.Items.AddRange(result);
             this.IsBusy = false;
+        }
+
+        public void ClosePreview()
+        {
+            this.IsDocumentPreviewed = false;
+        }
+
+        protected override void OnInitialize()
+        {
+            base.OnInitialize();
+            this.IsBusy = true;
+            this.Database.Session.LoadMany<JsonDocument>(this.GetAll);
         }
     }
 }
