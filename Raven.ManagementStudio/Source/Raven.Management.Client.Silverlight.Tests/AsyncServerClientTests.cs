@@ -1,16 +1,18 @@
 ﻿namespace Raven.Management.Client.Silverlight.Tests
 {
     using System;
-    using System.IO;
     using System.Linq;
-    using System.Windows.Controls;
-    using Client;
-    using Database;
-    using Document;
     using Microsoft.Silverlight.Testing;
     using Microsoft.VisualStudio.TestTools.UnitTesting;
     using Newtonsoft.Json.Linq;
     using Raven.Client.Document;
+    using Raven.Database;
+    using Raven.Database.Data;
+    using Raven.Management.Client.Silverlight.Client;
+    using Raven.Management.Client.Silverlight.Collections;
+    using Raven.Management.Client.Silverlight.Document;
+    using Raven.Management.Client.Silverlight.Indexes;
+    using Raven.Management.Client.Silverlight.Statistics;
 
     [TestClass]
     public class AsyncServerClientTests : SilverlightTest
@@ -86,11 +88,11 @@
 
                                                                                client.AttachmentDelete("key",
                                                                                                        (deleteResult) =>
-                                                                                                       {
-                                                                                                           Assert.IsNotNull(deleteResult);
-                                                                                                           Assert.IsTrue(deleteResult.Count == 1);
-                                                                                                           Assert.IsTrue(deleteResult.First().IsSuccess);
-                                                                                                       });
+                                                                                                           {
+                                                                                                               Assert.IsNotNull(deleteResult);
+                                                                                                               Assert.IsTrue(deleteResult.Count == 1);
+                                                                                                               Assert.IsTrue(deleteResult.First().IsSuccess);
+                                                                                                           });
 
                                                                                EnqueueDelay(3000);
                                                                                EnqueueTestComplete();
@@ -106,7 +108,7 @@
             var random = new Random();
             random.NextBytes(data);
 
-            var contiunueWithTest = false;
+            bool contiunueWithTest = false;
 
             using (var client = new AsyncServerClient(DatabaseAddress, new DocumentConvention(), null))
             {
@@ -128,44 +130,50 @@
             }
         }
 
-        //[TestMethod]
-        //[Asynchronous]
-        //public void AttachmentSaveTest()
-        //{
-        //    using (var client = new AsyncServerClient(DatabaseAddress, new DocumentConvention(), null))
-        //    {
-
-        //        var saveFileDialog = new OpenFileDialog();
-
-        //        if (saveFileDialog.ShowDialog() == true)
-        //        {
-        //            var stream = saveFileDialog.File.OpenRead();
-        //            byte[] b;
-        //            using (BinaryReader br = new BinaryReader(stream))
-        //            {
-        //                b = br.ReadBytes(Convert.ToInt32(stream.Length));
-        //            }
-
-        //            client.AttachmentPut("plugin1.xap", null, b, new JObject(), (result) =>
-        //                                                                                 {
-        //                                                                                     var x = 2;
-
-        //                                                                                 });
-        //        }
-        //    }
-        //}
-
-        [TestMethod]
-        [Asynchronous]
-        public void AttachmentTest2()
+        [TestMethod, Asynchronous]
+        public void StatisticsGetTest()
         {
-            using (var client = new AsyncServerClient(DatabaseAddress, new DocumentConvention(), null))
+            using (var statisticsSession = new AsyncStatisticsSession(DatabaseAddress))
             {
+                statisticsSession.Load((result) =>
+                                           {
+                                               Assert.IsNotNull(result);
+                                               Assert.IsTrue(result.IsSuccess);
+                                               Assert.IsNotNull(result.Data.Errors);
+                                               Assert.IsNotNull(result.Data.Indexes);
+                                               Assert.IsNotNull(result.Data.StaleIndexes);
+                                               Assert.IsNotNull(result.Data.Triggers);
 
-                client.AttachmentGet("plugin1.xap", (result) =>
-                                                        {
-                                                            var x = 2;
-                                                        });
+                                               EnqueueTestComplete();
+                                           });
+            }
+        }
+
+        [TestMethod, Asynchronous]
+        public void QueryTest()
+        {
+            using (var indexSession = new AsyncIndexSession(DatabaseAddress))
+            {
+                indexSession.Query("Raven/DocumentsByEntityName", new IndexQuery(), null, (result) =>
+                                                                                              {
+                                                                                                  Assert.IsTrue(result.IsSuccess);
+
+                                                                                                  EnqueueTestComplete();
+                                                                                              });
+            }
+        }
+
+        [TestMethod, Asynchronous]
+        public void CollectionLoadTest()
+        {
+            using (var collectionSession = new AsyncCollectionSession(DatabaseAddress))
+            {
+                collectionSession.Load("Posts", (result) =>
+                                                    {
+                                                        Assert.IsTrue(result.IsSuccess);
+
+                                                        EnqueueTestComplete();
+                                                    });
             }
         }
 

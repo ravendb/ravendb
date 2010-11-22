@@ -7,18 +7,18 @@ namespace Raven.Management.Client.Silverlight.Client
     using System.Net;
     using System.Net.Browser;
     using System.Threading;
-    using Abstractions.Data;
-    using Common;
-    using Common.Converters;
-    using Common.Mappers;
-    using Database;
-    using Database.Data;
-    using Database.Indexing;
-    using Document;
-    using Http.Exceptions;
-    using Http.Json;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
+    using Raven.Abstractions.Data;
+    using Raven.Database;
+    using Raven.Database.Data;
+    using Raven.Database.Indexing;
+    using Raven.Http.Exceptions;
+    using Raven.Http.Json;
+    using Raven.Management.Client.Silverlight.Common;
+    using Raven.Management.Client.Silverlight.Common.Converters;
+    using Raven.Management.Client.Silverlight.Common.Mappers;
+    using Raven.Management.Client.Silverlight.Document;
 
     /// <summary>
     /// Access the database commands in async fashion
@@ -46,6 +46,8 @@ namespace Raven.Management.Client.Silverlight.Client
             DocumentMapper = new DocumentMapper();
             IndexMapper = new IndexMapper(Convention);
             AttachmentMapper = new AttachmentMapper();
+            StatisticsMapper = new StatisticsMapper();
+            QueryResultMapper = new QueryResultMapper();
         }
 
         private IDictionary<HttpJsonRequest, SynchronizationContext> ContextStorage { get; set; }
@@ -59,6 +61,10 @@ namespace Raven.Management.Client.Silverlight.Client
         private IMapper<JsonDocument> DocumentMapper { get; set; }
 
         private IMapper<KeyValuePair<string, IndexDefinition>> IndexMapper { get; set; }
+
+        private IMapper<DatabaseStatistics> StatisticsMapper { get; set; }
+
+        private IMapper<QueryResult> QueryResultMapper { get; set; }
 
         private AttachmentMapper AttachmentMapper { get; set; }
 
@@ -885,7 +891,7 @@ namespace Raven.Management.Client.Silverlight.Client
             Attachment attachment = AttachmentMapper.Map(key, request.HttpWebRequest, result, out statusCode,
                                                          out exception);
 
-            var loadResponse = new LoadResponse<KeyValuePair<string, Attachment>>()
+            var loadResponse = new LoadResponse<KeyValuePair<string, Attachment>>
                                    {
                                        Data = new KeyValuePair<string, Attachment>(key, attachment),
                                        StatusCode = statusCode,
@@ -913,7 +919,7 @@ namespace Raven.Management.Client.Silverlight.Client
             var attachments = new List<KeyValuePair<string, Attachment>>();
             string key;
 
-            foreach (var attachment in array)
+            foreach (JToken attachment in array)
             {
                 attachments.Add(AttachmentMapper.Map(attachment));
             }
@@ -979,6 +985,80 @@ namespace Raven.Management.Client.Silverlight.Client
             context.Post(
                 delegate { callback.Invoke(new List<Response<Attachment>> { saveResponse }); },
                 null);
+        }
+
+        #endregion
+
+        #region Statistics
+
+        public void StatisticsGet(CallbackFunction.Load<DatabaseStatistics> callback)
+        {
+            HttpJsonRequest request;
+            this.CreateContext(new Uri(string.Format(DatabaseUrl.StatisticsGet, this.DatabaseAddress)), RequestMethod.GET, out request);
+
+            request.HttpWebRequest.BeginGetResponse((result) => StatisticsGet_Callback(request, result, callback), request);
+        }
+
+        private void StatisticsGet_Callback(HttpJsonRequest request, IAsyncResult result, CallbackFunction.Load<DatabaseStatistics> callback)
+        {
+            SynchronizationContext context = GetContext(request);
+            DeleteContext(request);
+
+            HttpStatusCode statusCode;
+            Exception exception;
+            NameValueCollection headers;
+            string json = GetResponseStream(request.HttpWebRequest, result, out statusCode, out exception, out headers);
+
+            var statistics = this.StatisticsMapper.Map(json);
+
+            var loadResponse = new LoadResponse<DatabaseStatistics>()
+                                   {
+                                       Data = statistics,
+                                       Exception = exception,
+                                       StatusCode = statusCode
+                                   };
+
+            context.Post(delegate { callback.Invoke(loadResponse); }, null);
+        }
+
+        #endregion
+
+        #region Query
+
+        public void Query(string index, IndexQuery query, string[] includes, CallbackFunction.Load<QueryResult> callback)
+        {
+            string path = query.GetIndexQueryUrl(string.Empty, index, "indexes");
+            if (includes != null && includes.Length > 0)
+            {
+                path += "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray());
+            }
+
+            HttpJsonRequest request;
+            this.CreateContext(new Uri(string.Format("{0}/{1}?", this.DatabaseAddress, path)), RequestMethod.GET, out request);
+
+            request.HttpWebRequest.BeginGetResponse((result) => Query_Callback(request, result, callback), request);
+        }
+
+        private void Query_Callback(HttpJsonRequest request, IAsyncResult result, CallbackFunction.Load<QueryResult> callback)
+        {
+            SynchronizationContext context = GetContext(request);
+            DeleteContext(request);
+
+            HttpStatusCode statusCode;
+            Exception exception;
+            NameValueCollection headers;
+            string json = GetResponseStream(request.HttpWebRequest, result, out statusCode, out exception, out headers);
+
+            var queryResult = this.QueryResultMapper.Map(json);
+
+            var loadResponse = new LoadResponse<QueryResult>
+                                   {
+                                       Data = queryResult,
+                                       Exception = exception,
+                                       StatusCode = statusCode
+                                   };
+
+            context.Post(delegate { callback.Invoke(loadResponse); }, null);
         }
 
         #endregion

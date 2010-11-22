@@ -63,7 +63,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Attachments\AsyncAttachmentSession.cs" />
-    <Compile Include="Attachments\IAsyncAttachmentSession.cs" />
+    <Compile Include="Collections\AsyncCollectionSession.cs" />
+    <Compile Include="Common\Mappers\QueryResultMapper.cs" />
+    <Compile Include="Common\Mappers\StatisticsMapper.cs" />
+    <Compile Include="IAsyncAttachmentSession.cs" />
     <Compile Include="Client\HttpJsonRequest.cs" />
     <Compile Include="Client\JsonExtensions.cs" />
     <Compile Include="Client\JsonLuceneDateTimeConverter.cs" />
@@ -109,8 +112,13 @@
     <Compile Include="Document\SaveChangesData.cs" />
     <Compile Include="EntityStored.cs" />
     <Compile Include="EntityToDocument.cs" />
+    <Compile Include="IAsyncCollectionSession.cs" />
     <Compile Include="IAsyncDocumentSession.cs" />
+    <Compile Include="IAsyncIndexSession.cs" />
+    <Compile Include="IAsyncStatisticsSession.cs" />
     <Compile Include="IDocumentStore.cs" />
+    <Compile Include="Indexes\AsyncIndexSession.cs" />
+    <Compile Include="Statistics\AsyncStatisticsSession.cs" />
     <Compile Include="StoredEntityEventArgs.cs" />
   </ItemGroup>
   <ItemGroup>
