@@ -224,7 +224,9 @@ namespace Raven.Munin.Tree
                     IBinarySearchTree<TKey, TValue> successor = Right;
                     while (!successor.Left.IsEmpty)
                         successor = successor.Left;
-                    result = new AVLTree<TKey, TValue>(comparer, deepCopyKey, deepCopyValue, successor.Key, successor.Value, Left, Right.TryRemove(successor.Key, out removed, out value));
+                    bool ignoredBool;
+                    TValue ignoredValue;
+                    result = new AVLTree<TKey, TValue>(comparer, deepCopyKey, deepCopyValue, successor.Key, successor.Value, Left, Right.TryRemove(successor.Key, out ignoredBool, out ignoredValue));
                 }
             }
             else if (compare < 0)
