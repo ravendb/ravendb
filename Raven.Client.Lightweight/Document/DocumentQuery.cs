@@ -943,7 +943,9 @@ If you really want to do in memory filtering on the data returned from the query
                     // we need to make an addtional check, since it is possible that a value was explicitly stated
                     // for the identity property, in which case we don't want to override it.
                     var identityProperty = session.Conventions.GetIdentityProperty(typeof(T));
-                    if (identityProperty == null || result.Property(identityProperty.Name) == null)
+                    if (identityProperty == null || 
+                        (result.Property(identityProperty.Name) == null ||
+                        result.Property(identityProperty.Name).Value.Type == JTokenType.Null))
                     {
                         session.TrySetIdentity(deserializedResult, documentId);
                     }

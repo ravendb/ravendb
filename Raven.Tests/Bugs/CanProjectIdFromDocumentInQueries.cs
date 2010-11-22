@@ -82,17 +82,17 @@ namespace Raven.Tests.Bugs
                     session.Store(new Shipment()
                     {
                         Id = "shipment1",
-                         Name = "Some shipment"
+                        Name = "Some shipment"
                     });
                     session.SaveChanges();
-                    WaitForIndexing(store);
 
                     var shipment = session.Query<Shipment>()
-                        .Select(x => new
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Select(x => new Shipment()
                         {
                             Id = x.Id,
-                            Name =x.Name
-                        }).Take(1).SingleOrDefault();
+                            Name = x.Name
+                        }).SingleOrDefault();
 
                     Assert.NotNull(shipment.Id);
                 }
