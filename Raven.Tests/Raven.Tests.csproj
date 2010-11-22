@@ -115,6 +115,7 @@
     <Compile Include="Bugs\AutoDetectAnaylzersForQuery.cs" />
     <Compile Include="Bugs\CanDetectChanges.cs" />
     <Compile Include="Bugs\CanGetMetadataForTransient.cs" />
+    <Compile Include="Bugs\CanHandleDocumentRemoval.cs" />
     <Compile Include="Bugs\CanSelectFieldsFromIndex.cs" />
     <Compile Include="Bugs\CanUseNonStringsForId.cs" />
     <Compile Include="Bugs\CustomEntityName.cs" />
@@ -333,6 +334,10 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Modules\Munin\Raven.Munin\Raven.Munin.csproj">
+      <Project>{486537C2-EDF7-404F-9CFB-EEE25996DF5F}</Project>
+      <Name>Raven.Munin</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
       <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
       <Name>Raven.Abstractions</Name>
