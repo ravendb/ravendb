@@ -177,10 +177,15 @@ namespace Raven.Munin.Tree
         public IBinarySearchTree<TKey, TValue> Add(TKey key, TValue value)
         {
             AVLTree<TKey, TValue> result;
-            if (comparer.Compare(key, theKey) > 0)
+            var compare = comparer.Compare(key, theKey);
+            if(compare == 0)
+                return  new AVLTree<TKey, TValue>(comparer, deepCopyKey, deepCopyValue, key, value, Left, Right);
+            
+            if (compare > 0)
                 result = new AVLTree<TKey, TValue>(comparer, deepCopyKey, deepCopyValue, theKey, theValue, Left, Right.Add(key, value));
             else
                 result = new AVLTree<TKey, TValue>(comparer, deepCopyKey, deepCopyValue, theKey, theValue, Left.Add(key, value), Right);
+            
             return MakeBalanced(result);
         }
 
