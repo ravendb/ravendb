@@ -135,13 +135,13 @@ namespace Raven.Munin
             return Put(key, value, txId.Value);
         }
 
-        internal bool Put(JToken key, byte[] value, Guid txId)
+        public bool Put(JToken key, byte[] value, Guid transactionId)
         {
             Guid existing;
-            if (keysModifiedInTx.TryGetValue(key, out existing) && existing != txId)
+            if (keysModifiedInTx.TryGetValue(key, out existing) && existing != transactionId)
                 return false;
 
-            operationsInTransactions.GetOrAdd(txId, new List<Command>())
+            operationsInTransactions.GetOrAdd(transactionId, new List<Command>())
                 .Add(new Command
                 {
                     Key = key,
@@ -150,8 +150,8 @@ namespace Raven.Munin
                     Type = CommandType.Put
                 });
 
-            if (existing != txId) // otherwise we are already there
-                keysModifiedInTx.TryAdd(key, txId);
+            if (existing != transactionId) // otherwise we are already there
+                keysModifiedInTx.TryAdd(key, transactionId);
 
             return true;
         }
@@ -285,19 +285,19 @@ namespace Raven.Munin
             return data;
         }
 
-        internal List<Command> GetCommandsToCommit(Guid txId)
+        internal List<Command> GetCommandsToCommit(Guid transactionId)
         {
             List<Command> cmds;
-            if (operationsInTransactions.TryGetValue(txId, out cmds) == false)
+            if (operationsInTransactions.TryGetValue(transactionId, out cmds) == false)
                 return null;
 
             return cmds;
         }
 
-        internal bool CompleteCommit(Guid txId)
+        public bool CompleteCommit(Guid transactionId)
         {
             List<Command> cmds;
-            if (operationsInTransactions.TryRemove(txId, out cmds) == false || 
+            if (operationsInTransactions.TryRemove(transactionId, out cmds) == false || 
                 cmds.Count == 0)
                 return false;
 
@@ -305,10 +305,10 @@ namespace Raven.Munin
             return true;
         }
 
-        public void Rollback(Guid txId)
+        public void Rollback(Guid transactionId)
         {
             List<Command> commands;
-            if (operationsInTransactions.TryRemove(txId, out commands) == false)
+            if (operationsInTransactions.TryRemove(transactionId, out commands) == false)
                 return;
 
             foreach (Command command in commands)
@@ -318,13 +318,13 @@ namespace Raven.Munin
             }
         }
 
-        public bool Remove(JToken key, Guid txId)
+        public bool Remove(JToken key, Guid transactionId)
         {
             Guid existing;
-            if (keysModifiedInTx.TryGetValue(key, out existing) && existing != txId)
+            if (keysModifiedInTx.TryGetValue(key, out existing) && existing != transactionId)
                 return false;
 
-            operationsInTransactions.GetOrAdd(txId, new List<Command>())
+            operationsInTransactions.GetOrAdd(transactionId, new List<Command>())
                 .Add(new Command
                 {
                     Key = key,
@@ -332,8 +332,8 @@ namespace Raven.Munin
                     Type = CommandType.Delete
                 });
 
-            if (existing != txId) // otherwise we are already there
-                keysModifiedInTx.TryAdd(key, txId);
+            if (existing != transactionId) // otherwise we are already there
+                keysModifiedInTx.TryAdd(key, transactionId);
 
             return true;
         }
