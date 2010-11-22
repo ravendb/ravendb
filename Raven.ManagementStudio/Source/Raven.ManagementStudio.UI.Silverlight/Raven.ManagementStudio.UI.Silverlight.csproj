@@ -77,6 +77,7 @@
     <Reference Include="System.Core" />
     <Reference Include="System.Net" />
     <Reference Include="System.Windows.Controls, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
+    <Reference Include="System.Windows.Controls.Data.Input, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" />
     <Reference Include="System.Windows.Controls.Input.Toolkit, Version=4.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="System.Windows.Controls.Toolkit, Version=4.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="System.Windows.Interactivity, Version=4.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
@@ -104,6 +105,14 @@
     </Compile>
     <Compile Include="Plugins\Documents\Browse\DocumentsScreenViewModel.cs" />
     <Compile Include="Plugins\CommonViewModels\DocumentViewModel.cs" />
+    <Compile Include="Plugins\Statistics\Global\GlobalStatistics.cs" />
+    <Compile Include="Plugins\Statistics\Global\GlobalStatisticsMenuIcon.xaml.cs">
+      <DependentUpon>GlobalStatisticsMenuIcon.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Plugins\Statistics\Global\GlobalStatisticsScreenView.xaml.cs">
+      <DependentUpon>GlobalStatisticsScreenView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Plugins\Statistics\Global\GlobalStatisticsScreenViewModel.cs" />
     <Compile Include="ViewModels\GadgetsViewModel.cs" />
     <Compile Include="ViewModels\Interfaces\INavigationBar.cs" />
     <Compile Include="ViewModels\Interfaces\IShell.cs" />
@@ -167,6 +176,14 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Plugins\Statistics\Global\GlobalStatisticsMenuIcon.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Plugins\Statistics\Global\GlobalStatisticsScreenView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Resources\ControlTemplates\DocumentsContainer.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -224,6 +241,12 @@
       <Project>{0BA36A77-F8CA-400C-8F89-3726143BFA96}</Project>
       <Name>Raven.ManagementStudio.Plugin</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\Images\chart.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\Images\refresh.png" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
