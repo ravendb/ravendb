@@ -7,6 +7,7 @@ using Raven.Client.Client;
 using Raven.Client.Client.Async;
 using Raven.Client.Document.Async;
 using System.Linq;
+using Raven.Client.Extensions;
 
 namespace Raven.Client.Document
 {
@@ -163,7 +164,6 @@ namespace Raven.Client.Document
                 case "defaultdatabase":
 	                DefaultDatabase = value;
 	                break;
-
 	            case "user":
 	                neworkCredentials.UserName = value;
 	                break;
@@ -248,7 +248,7 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public IDocumentSession OpenSession()
         {
-            if (!String.IsNullOrEmpty(DefaultDatabase))
+            if (string.IsNullOrEmpty(DefaultDatabase) == false)
                 return OpenSession(DefaultDatabase);
 
             var session = new DocumentSession(this, storeListeners, deleteListeners, DatabaseCommands);
@@ -306,6 +306,11 @@ namespace Raven.Client.Document
 				Dispose();
 				throw;
 			}
+
+            if(string.IsNullOrEmpty(DefaultDatabase) == false)
+            {
+                DatabaseCommands.EnsureDatabaseExists(DefaultDatabase);
+            }
 
             return this;
 		}
