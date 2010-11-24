@@ -2,7 +2,9 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="clr-namespace:Raven.ManagementStudio.UI.Silverlight.Controls"
-    xmlns:controlsToolkit="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit" xmlns:cal="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro">
+    xmlns:controlsToolkit="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit" 
+    xmlns:cal="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
+    xmlns:jw="clr-namespace:Raven.ManagementStudio.UI.Silverlight.Controls.JeffWilcox.SyntaxHighlighting">
 
     <Style TargetType="ContentControl" x:Key="DraggableContent">
         <Setter Property="Template">
@@ -36,12 +38,12 @@
                                 </Border>
                                 <Border Grid.Row="1"  BorderThickness="1" BorderBrush="Black" Background="White" Margin="0, 2, 0, 2">
                                     <ScrollViewer MaxWidth="300" MaxHeight="300" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-                                        <TextBlock Text="{Binding JsonData}" TextWrapping='Wrap' Padding="10, 10, 10, 10" />
+                                        <jw:SyntaxHighlightingTextBlock FontFamily="Consolas, Courier New" SourceLanguage="Json" SourceCode="{Binding JsonData}" Padding="10, 10, 10, 10" />
                                     </ScrollViewer>
                                 </Border>
                                 <Border Grid.Row="2"  BorderThickness="1" BorderBrush="Black" Background="White" Margin="0, 2, 0, 2">
                                     <ScrollViewer MaxWidth="300"  MaxHeight="300" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-                                        <TextBlock Text="{Binding JsonMetadata}" TextWrapping='Wrap' Padding="10, 10, 10, 10" ScrollViewer.VerticalScrollBarVisibility="Auto"/>
+                                        <jw:SyntaxHighlightingTextBlock FontFamily="Consolas, Courier New" SourceLanguage="Json" SourceCode="{Binding JsonMetadata}" Padding="10, 10, 10, 10" />
                                     </ScrollViewer>
                                 </Border>
                             </StackPanel>

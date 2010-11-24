@@ -1,14 +1,17 @@
-namespace Raven.ManagementStudio.UI.Silverlight.Plugins.CommonViewModels
+namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Common
 {
     using System.Collections.Generic;
     using System.ComponentModel.Composition;
+    using System.Linq;
     using System.Text;
     using System.Windows;
     using System.Windows.Controls;
     using System.Windows.Markup;
     using Caliburn.Micro;
     using Controls;
+    using Dialogs;
     using Documents.Browse;
+    using Management.Client.Silverlight.Common;
     using Messages;
     using Models;
     using Newtonsoft.Json.Linq;
@@ -20,11 +23,13 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.CommonViewModels
         private bool isSelected;
         private string jsonData;
         private string jsonMetadata;
+        private string id;
 
         public DocumentViewModel(Document document, IDatabase database, IRavenScreen parent)
         {
             this.DisplayName = "Doc";
             this.document = document;
+            this.id = document.Id;
             this.jsonData = PrepareRawJsonString(document.Data);
             this.jsonMetadata = PrepareRawJsonString(document.Metadata);
             this.Thumbnail = new DocumentThumbnail();
@@ -44,18 +49,21 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.CommonViewModels
         {
             get
             {
-                return this.document.Id;
+                return this.id;
             }
 
             set
             {
-                this.document.Id = value;
+                this.id = value;
                 NotifyOfPropertyChange(() => this.Id);
             }
         }
 
         [Import]
         public IEventAggregator EventAggregator { get; set; }
+
+        [Import]
+        public IWindowManager WindowManager{ get; set; }
 
         public IDatabase Database { get; set; }
 
@@ -69,7 +77,6 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.CommonViewModels
             set
             {
                 this.jsonData = value;
-                this.document.SetData(jsonData);
                 NotifyOfPropertyChange(() => this.JsonData);
             }
         }
@@ -137,10 +144,44 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.CommonViewModels
             var view = this.GetView(null) as Control;
             if (view != null)
             {
-                //TO DO
-                this.document.SetData(this.JsonData);
-                this.document.Save(this.Database.Session);
-                VisualStateManager.GoToState(view, "NormalState", false);
+                if (Document.ValidateJson(this.JsonData))
+                {
+                    if (Document.ValidateJson(this.JsonMetadata))
+                    {
+                        this.document.SetData(this.JsonData);
+                        this.document.SetMetadata(this.JsonMetadata);
+
+                        this.document.SetId(this.Id);
+                        this.document.Save(this.Database.Session,
+                            saveResult =>
+                            {
+                                var success = false;
+
+                                foreach (var response in saveResult.GetSaveResponses())
+                                {
+                                    success = response.Data.Equals(this.document.JsonDocument);
+                                    if (success)
+                                    {
+                                        break;
+                                    }
+                                }
+                                //TO DO
+                                if (!success)
+                                {
+                                    this.WindowManager.ShowDialog(new InformationDialogViewModel("Error", "asd"), null);
+                                }
+                            });
+                        VisualStateManager.GoToState(view, "NormalState", false);
+                    }
+                    else
+                    {
+                        this.WindowManager.ShowDialog(new InformationDialogViewModel("Invalid JSON (Document Metadata)", Document.ParseExceptionMessage));
+                    }
+                }
+                else 
+                {
+                    this.WindowManager.ShowDialog(new InformationDialogViewModel("Invalid JSON (Document)", Document.ParseExceptionMessage));
+                }      
             }
         }
 

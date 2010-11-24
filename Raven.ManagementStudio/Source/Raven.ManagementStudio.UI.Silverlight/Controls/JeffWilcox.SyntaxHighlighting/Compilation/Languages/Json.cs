@@ -69,7 +69,7 @@ namespace Raven.ManagementStudio.UI.Silverlight.Controls.JeffWilcox.SyntaxHighli
                                            { 0, ScopeName.Colon }
                                        }),
                                new LanguageRule(
-                                   @"\b(null)\b",
+                                   @"\b(null|true|false)\b",
                                    new Dictionary<int, string>
                                        {
                                            {0, ScopeName.Keyword},

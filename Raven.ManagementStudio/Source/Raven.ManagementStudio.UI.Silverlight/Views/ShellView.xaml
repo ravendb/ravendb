@@ -59,17 +59,7 @@
                 <ContentControl x:Name="NavigationBar" Grid.Row="1" />
             </StackPanel>      
         </Grid>
-               
-        <Grid Grid.Row="2">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="4*" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
 
-            <ContentControl x:Name="ActiveItem" Grid.Column="0" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
-            <TextBlock Text="Gadgets" Grid.Column="1"/>
-            
-        </Grid>
         <Border Grid.Row="3" Background="{StaticResource InverseDarkGradient}" >
             <controlsToolkit:DockPanel>
                 <Rectangle controlsToolkit:DockPanel.Dock="Left" Cursor="SizeNESW"  VerticalAlignment="Bottom" Fill="#00FFFFFF" Width="5" Height="5" cal:Message.Attach="[Event MouseLeftButtonDown] = [Action ResizeWindow(7)]" />
@@ -79,6 +69,17 @@
                 </StackPanel>
             </controlsToolkit:DockPanel>
         </Border>
+
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="4*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <TextBlock Text="Gadgets" Grid.Column="1"/>
+            <ContentControl x:Name="ActiveItem" Grid.Column="0" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+        </Grid>
+        
 
     </Grid>
 </UserControl>
