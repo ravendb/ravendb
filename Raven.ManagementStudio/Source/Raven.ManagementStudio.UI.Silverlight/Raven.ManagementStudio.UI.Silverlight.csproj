@@ -100,6 +100,42 @@
     <Compile Include="Controls\DocumentThumbnail.cs" />
     <Compile Include="Controls\DragDropPanel.cs" />
     <Compile Include="Controls\Gears.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\CodeColorizer.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Common\ExtensionMethods.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Common\Guard.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Common\ILanguageRepository.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Common\LanguageId.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Common\LanguageRepository.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Common\ScopeName.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Compilation\CompiledLanguage.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Compilation\ILanguageCompiler.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Compilation\LanguageCompiler.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Compilation\Languages\Cpp.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Compilation\Languages\CSharp.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Compilation\Languages\JavaScript.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Compilation\Languages\Json.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Compilation\Languages\VbDotNet.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Compilation\Languages\Xml.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Formatters.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Formatting\TextInsertion.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Formatting\XamlFormatter.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Formatting\XamlInlineFormatter.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\ICodeColorizer.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\IFormatter.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\ILanguage.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\IStyleSheet.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\LanguageRule.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Languages.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Parsing\ILanguageParser.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Parsing\LanguageParser.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Parsing\Scope.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\SourceLanguageType.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Style.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\StyleDictionary.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\StyleSheets.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Styling\StyleSheets\DefaultStyleSheet.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\SyntaxHighlightingTextBlock.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\SyntaxHighlightingTextBox.cs" />
     <Compile Include="Converters\BooleanToVisibilityConverter.cs" />
     <Compile Include="Converters\NullToVisibilityConverter.cs" />
     <Compile Include="Messages\ChangeActiveScreen.cs" />
@@ -234,6 +270,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Resources\ControlTemplates\Indexes.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Resources\ControlTemplates\JeffWilcox.SyntaxHighlighting.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

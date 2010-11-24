@@ -4,7 +4,10 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
     xmlns:controlsToolkit="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit" 
-    xmlns:cal="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro" xmlns:ic="clr-namespace:Microsoft.Expression.Interactivity.Core;assembly=Microsoft.Expression.Interactions" mc:Ignorable="d">
+    xmlns:cal="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro" 
+    xmlns:ic="clr-namespace:Microsoft.Expression.Interactivity.Core;assembly=Microsoft.Expression.Interactions" 
+    xmlns:jw="clr-namespace:Raven.ManagementStudio.UI.Silverlight.Controls.JeffWilcox.SyntaxHighlighting" 
+    mc:Ignorable="d">
 
     <Grid>
         <VisualStateManager.VisualStateGroups>
@@ -69,8 +72,8 @@
             <TextBlock Text="Document" Grid.Row="1" HorizontalAlignment="Left"/>
             <Button Content="Tree View"  Grid.Row="1" HorizontalAlignment="Right"/>
 
-            <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-                <TextBlock Text="{Binding JsonData}" TextWrapping="Wrap"/>
+            <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                <jw:SyntaxHighlightingTextBlock FontFamily="Consolas, Courier New" SourceLanguage="Json" SourceCode="{Binding JsonData}" />
             </ScrollViewer>
 
             <TextBlock Text="Metadata" Grid.Row="3" HorizontalAlignment="Left"/>
@@ -98,8 +101,12 @@
             <TextBlock Text="Document" Grid.Row="1" HorizontalAlignment="Left"/>
             <Button Content="Tree View"  Grid.Row="1" HorizontalAlignment="Right"/>
 
-            <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-                <TextBox Text="{Binding JsonData, Mode=TwoWay}" TextWrapping="Wrap" AcceptsReturn="True"/>
+            <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                <jw:SyntaxHighlightingTextBox FontFamily="Consolas, Courier New"
+                                              SourceLanguage="Json"
+                                              SourceCode="{Binding JsonData}"
+                                              SelectionBackground="#560085FF"
+                                              SelectionForeground="Transparent"/>
             </ScrollViewer>
 
             <TextBlock Text="Metadata" Grid.Row="3" HorizontalAlignment="Left"/>
