@@ -1,4 +1,4 @@
-﻿namespace Raven.ManagementStudio.UI.Silverlight.Plugins.CommonViews
+﻿namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Common
 {
     using System.Windows;
     using System.Windows.Controls;

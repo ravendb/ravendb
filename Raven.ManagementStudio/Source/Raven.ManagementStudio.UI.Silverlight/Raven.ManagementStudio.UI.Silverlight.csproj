@@ -100,12 +100,52 @@
     <Compile Include="Controls\DocumentThumbnail.cs" />
     <Compile Include="Controls\DragDropPanel.cs" />
     <Compile Include="Controls\Gears.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\CodeColorizer.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Common\ExtensionMethods.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Common\Guard.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Common\ILanguageRepository.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Common\LanguageId.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Common\LanguageRepository.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Common\ScopeName.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Compilation\CompiledLanguage.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Compilation\ILanguageCompiler.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Compilation\LanguageCompiler.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Compilation\Languages\Cpp.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Compilation\Languages\CSharp.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Compilation\Languages\JavaScript.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Compilation\Languages\Json.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Compilation\Languages\VbDotNet.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Compilation\Languages\Xml.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Formatters.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Formatting\TextInsertion.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Formatting\XamlFormatter.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Formatting\XamlInlineFormatter.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\ICodeColorizer.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\IFormatter.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\ILanguage.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\IStyleSheet.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\LanguageRule.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Languages.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Parsing\ILanguageParser.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Parsing\LanguageParser.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Parsing\Scope.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\SourceLanguageType.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Style.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\StyleDictionary.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\StyleSheets.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Styling\StyleSheets\DefaultStyleSheet.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\SyntaxHighlightingTextBlock.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\SyntaxHighlightingTextBox.cs" />
     <Compile Include="Converters\BooleanToOppositeBooleanConverter.cs" />
     <Compile Include="Converters\BooleanToOppositeVisibilityConverter.cs" />
     <Compile Include="Converters\BooleanToVisibilityConverter.cs" />
     <Compile Include="Converters\EnumToEnumerableConverter.cs" />
     <Compile Include="Converters\EnumToIntConverter.cs" />
     <Compile Include="Converters\NullToVisibilityConverter.cs" />
+    <Compile Include="Dialogs\InformationDialogViewModel.cs" />
+    <Compile Include="Dialogs\InformationDialogView.xaml.cs">
+      <DependentUpon>InformationDialogView.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Messages\ChangeActiveScreen.cs" />
     <Compile Include="Messages\OpenNewScreen.cs" />
     <Compile Include="Messages\ReplaceActiveScreen.cs" />
@@ -117,7 +157,7 @@
       <DependentUpon>BrowseMenuIcon.xaml</DependentUpon>
     </Compile>
     <Compile Include="Plugins\Documents\Browse\DocumentsScreenViewModel.cs" />
-    <Compile Include="Plugins\CommonViewModels\DocumentViewModel.cs" />
+    <Compile Include="Plugins\Common\DocumentViewModel.cs" />
     <Compile Include="Plugins\Indexes\Browse\BrowseIndexes.cs" />
     <Compile Include="Plugins\Indexes\Browse\BrowseIndexesMenuIcon.xaml.cs">
       <DependentUpon>BrowseIndexesMenuIcon.xaml</DependentUpon>
@@ -126,10 +166,6 @@
       <DependentUpon>BrowseIndexesScreenView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Plugins\Indexes\Browse\BrowseIndexesScreenViewModel.cs" />
-    <Compile Include="Plugins\Indexes\Browse\IndexFormView.xaml.cs">
-      <DependentUpon>IndexFormView.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Plugins\Indexes\Browse\IndexFormViewModel.cs" />
     <Compile Include="Plugins\Statistics\Global\GlobalStatistics.cs" />
     <Compile Include="Plugins\Statistics\Global\GlobalStatisticsMenuIcon.xaml.cs">
       <DependentUpon>GlobalStatisticsMenuIcon.xaml</DependentUpon>
@@ -138,7 +174,6 @@
       <DependentUpon>GlobalStatisticsScreenView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Plugins\Statistics\Global\GlobalStatisticsScreenViewModel.cs" />
-    <Compile Include="ViewModels\ErrorViewModel.cs" />
     <Compile Include="ViewModels\GadgetsViewModel.cs" />
     <Compile Include="ViewModels\Interfaces\INavigationBar.cs" />
     <Compile Include="ViewModels\Interfaces\IShell.cs" />
@@ -148,11 +183,8 @@
     <Compile Include="Plugins\Documents\Browse\DocumentsScreenView.xaml.cs">
       <DependentUpon>DocumentsScreenView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Plugins\CommonViews\DocumentView.xaml.cs">
+    <Compile Include="Plugins\Common\DocumentView.xaml.cs">
       <DependentUpon>DocumentView.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Views\ErrorView.xaml.cs">
-      <DependentUpon>ErrorView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\NavigationBarView.xaml.cs">
       <DependentUpon>NavigationBarView.xaml</DependentUpon>
@@ -177,6 +209,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Resource>
+    <Resource Include="Resources\Images\chart.png" />
+    <Resource Include="Resources\Images\logo.png" />
+    <Resource Include="Resources\Images\refresh.png" />
+    <Resource Include="Resources\Images\search.png" />
     <Resource Include="Resources\Manifest.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -193,6 +229,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Resource>
+    <Page Include="Dialogs\InformationDialogView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Plugins\Documents\Browse\BrowseMenuIcon.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -201,7 +241,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Plugins\CommonViews\DocumentView.xaml">
+    <Page Include="Plugins\Common\DocumentView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -210,10 +250,6 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Plugins\Indexes\Browse\BrowseIndexesScreenView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Plugins\Indexes\Browse\IndexFormView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -241,13 +277,13 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Resources\ControlTemplates\JeffWilcox.SyntaxHighlighting.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Resources\ControlTemplates\Menu.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Views\ErrorView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\NavigationBarView.xaml">
       <SubType>Designer</SubType>
@@ -269,14 +305,9 @@
   <ItemGroup>
     <None Include="..\Settings.StyleCop">
       <Link>Settings.StyleCop</Link>
+      <SubType>Designer</SubType>
     </None>
     <None Include="Properties\AppManifest.xml" />
-  </ItemGroup>
-  <ItemGroup>
-    <Resource Include="Resources\Images\search.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <Resource Include="Resources\Images\logo.png" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Properties\OutOfBrowserSettings.xml" />
@@ -292,29 +323,13 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="Resources\Images\chart.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <Resource Include="Resources\Images\refresh.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <Resource Include="Resources\Images\delete-small.png" />
-    <Resource Include="Resources\Images\save-small.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <Resource Include="Resources\Images\undo-small.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <Resource Include="Resources\Images\edit-small.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <Resource Include="Resources\Images\edit-cancel-small.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <Resource Include="Resources\Images\save-cancel-small.png" />
-  </ItemGroup>
-  <ItemGroup>
     <Resource Include="Resources\Images\add-small.png" />
+    <Resource Include="Resources\Images\delete-small.png" />
+    <Resource Include="Resources\Images\edit-cancel-small.png" />
+    <Resource Include="Resources\Images\edit-small.png" />
+    <Resource Include="Resources\Images\save-cancel-small.png" />
+    <Resource Include="Resources\Images\save-small.png" />
+    <Resource Include="Resources\Images\undo-small.png" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

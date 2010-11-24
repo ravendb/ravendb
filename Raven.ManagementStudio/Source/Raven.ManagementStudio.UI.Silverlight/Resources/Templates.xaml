@@ -8,5 +8,6 @@
         <ResourceDictionary Source="ControlTemplates/DocumentsContainer.xaml" />
         <ResourceDictionary Source="ControlTemplates/DocumentThumbnail.xaml" />
         <ResourceDictionary Source="ControlTemplates/EmptyButton.xaml" />
+        <ResourceDictionary Source="ControlTemplates/JeffWilcox.SyntaxHighlighting.xaml" />
     </ResourceDictionary.MergedDictionaries>
 </ResourceDictionary>

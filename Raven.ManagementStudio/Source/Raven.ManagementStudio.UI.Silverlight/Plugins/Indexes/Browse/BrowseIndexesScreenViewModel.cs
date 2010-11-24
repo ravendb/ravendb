@@ -6,13 +6,12 @@
     using Caliburn.Micro;
     using Raven.Database.Indexing;
     using Raven.ManagementStudio.Plugin;
+    using Raven.ManagementStudio.UI.Silverlight.Dialogs;
     using Raven.ManagementStudio.UI.Silverlight.Models;
-    using Raven.ManagementStudio.UI.Silverlight.ViewModels;
 
     public class BrowseIndexesScreenViewModel : Conductor<Index>.Collection.OneActive, IRavenScreen
     {
         private bool isBusy;
-        //private Index selectedItem;
 
         public BrowseIndexesScreenViewModel(IDatabase database)
         {
@@ -68,16 +67,6 @@
                                                     });
         }
 
-        public void ToogleEdit(Index index)
-        {
-            index.IsEdited = !index.IsEdited;
-        }
-
-        public void Edit(Index index)
-        {
-            this.WindowManager.ShowDialog(new IndexFormViewModel(this.Database, index));
-        }
-
         public void Remove(Index index)
         {
             this.IsBusy = true;
@@ -89,7 +78,7 @@
                                                                   }
                                                                   else
                                                                   {
-                                                                      this.WindowManager.ShowDialog(new ErrorViewModel(result.Exception.Message));
+                                                                      this.WindowManager.ShowDialog(new InformationDialogViewModel("Error", result.Exception.Message));
                                                                   }
 
                                                                   this.IsBusy = false;
@@ -112,7 +101,7 @@
                                                                                                                              if (result.IsSuccess)
                                                                                                                              {
                                                                                                                                  index.IsEdited = false;
-                                                                                                                                 if(index.CurrentName != result.Data.Key)
+                                                                                                                                 if (index.CurrentName != result.Data.Key)
                                                                                                                                  {
                                                                                                                                      var newIndex = new Index(result.Data);
                                                                                                                                      this.AllItems.Add(newIndex);
@@ -123,7 +112,7 @@
                                                                                                                              }
                                                                                                                              else
                                                                                                                              {
-                                                                                                                                 this.WindowManager.ShowDialog(new ErrorViewModel(result.Exception.Message));
+                                                                                                                                 this.WindowManager.ShowDialog(new InformationDialogViewModel("Error", result.Exception.Message));
                                                                                                                              }
 
                                                                                                                              this.IsBusy = false;

@@ -3,9 +3,11 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Documents.Browse
     using System.Collections.Generic;
     using System.ComponentModel.Composition;
     using System.Linq;
+    using System.Net;
     using Caliburn.Micro;
-    using CommonViewModels;
+    using Common;
     using Database;
+    using Dialogs;
     using Management.Client.Silverlight.Common;
     using Messages;
     using Models;
@@ -15,6 +17,7 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Documents.Browse
     {
         private bool isBusy;
         private bool isDocumentPreviewed;
+        private string lastSearchDocumentId;
 
         public DocumentsScreenViewModel(IDatabase database)
         {
@@ -25,6 +28,9 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Documents.Browse
 
         [Import]
         public IEventAggregator EventAggregator { get; set; }
+
+        [Import]
+        public IWindowManager WindowManager { get; set; }
 
         public bool IsBusy
         {
@@ -72,6 +78,8 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Documents.Browse
 
         public void ShowDocument(string documentId)
         {
+            this.lastSearchDocumentId = documentId;
+
             if (!documentId.Equals("Document ID") && !documentId.Equals(string.Empty))
             {
                 this.IsBusy = true;
@@ -79,13 +87,23 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Documents.Browse
             }
         }
 
-        public void GetDocument(LoadResponse<JsonDocument> jsonDocument)
+        public void GetDocument(LoadResponse<JsonDocument> loadResponse)
         {
             this.IsBusy = false;
-            if (jsonDocument.IsSuccess)
+            if (loadResponse.IsSuccess)
             {
                 this.EventAggregator.Publish(
-                    new ReplaceActiveScreen(new DocumentViewModel(new Document(jsonDocument.Data), this.Database, this)));
+                    new ReplaceActiveScreen(new DocumentViewModel(new Document(loadResponse.Data), this.Database, this)));
+            }
+            else if (loadResponse.StatusCode == HttpStatusCode.NotFound)
+            {
+                this.WindowManager.ShowDialog(new InformationDialogViewModel("Document not found",
+                                                       string.Format("Document with key {0} doesn't exist in database.",
+                                                                     this.lastSearchDocumentId)));
+            }
+            else
+            {
+                
             }
         }
 
