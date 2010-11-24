@@ -32,21 +32,21 @@ namespace Raven.Management.Client.Silverlight.Client
         /// </summary>
         /// <param name="document"></param>
         /// <param name="callback"></param>
-        void DocumentPut(JsonDocument document, CallbackFunction.Save<JsonDocument> callback);
+        void DocumentPut(JsonDocument document, CallbackFunction.SaveMany<JsonDocument> callback);
 
         /// <summary>
         /// 
         /// </summary>
         /// <param name="document"></param>
         /// <param name="callback"></param>
-        void DocumentPost(JsonDocument document, CallbackFunction.Save<JsonDocument> callback);
+        void DocumentPost(JsonDocument document, CallbackFunction.SaveMany<JsonDocument> callback);
 
         /// <summary>
         /// 
         /// </summary>
         /// <param name="document"></param>
         /// <param name="callback"></param>
-        void DocumentDelete(JsonDocument document, CallbackFunction.Save<string> callback);
+        void DocumentDelete(JsonDocument document, CallbackFunction.SaveMany<string> callback);
 
         /// <summary>
         /// 
@@ -78,14 +78,14 @@ namespace Raven.Management.Client.Silverlight.Client
         /// <param name="entity"></param>
         /// <param name="callback"></param>
         void IndexPut(string name, IndexDefinition entity,
-                      CallbackFunction.Save<KeyValuePair<string, IndexDefinition>> callback);
+                      CallbackFunction.SaveOne<KeyValuePair<string, IndexDefinition>> callback);
 
         /// <summary>
         /// 
         /// </summary>
         /// <param name="name"></param>
         /// <param name="callback"></param>
-        void IndexDelete(string name, CallbackFunction.Save<string> callback);
+        void IndexDelete(string name, CallbackFunction.SaveOne<string> callback);
 
         /// <summary>
         /// 
@@ -105,7 +105,7 @@ namespace Raven.Management.Client.Silverlight.Client
         /// </summary>
         /// <param name="key"></param>
         /// <param name="callback"></param>
-        void AttachmentDelete(string key, CallbackFunction.Save<string> callback);
+        void AttachmentDelete(string key, CallbackFunction.SaveMany<string> callback);
 
         /// <summary>
         /// 
@@ -116,7 +116,7 @@ namespace Raven.Management.Client.Silverlight.Client
         /// <param name="metadata"></param>
         /// <param name="callback"></param>
         void AttachmentPut(string key, Guid? etag, byte[] data, JObject metadata,
-                           CallbackFunction.Save<Attachment> callback);
+                           CallbackFunction.SaveMany<Attachment> callback);
 
         /// <summary>
         /// 

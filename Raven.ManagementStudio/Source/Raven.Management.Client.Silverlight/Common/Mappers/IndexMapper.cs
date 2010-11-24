@@ -32,10 +32,11 @@
         /// <returns></returns>
         public KeyValuePair<string, IndexDefinition> Map(string json)
         {
-            JObject jsonIndex = JObject.Load(new JsonTextReader(new StringReader(json)));
+            JObject jObject = JObject.Parse(json);
+            var serializer = new JsonSerializer();
 
-            string name = jsonIndex["Name"].ToString();
-            var index = Convention.CreateSerializer().Deserialize<IndexDefinition>(new JTokenReader(jsonIndex["Index"]));
+            var index = (IndexDefinition) serializer.Deserialize(jObject["definition"].CreateReader(), typeof (IndexDefinition));
+            var name = jObject.Value<string>("name");
 
             return new KeyValuePair<string, IndexDefinition>(name, index);
         }

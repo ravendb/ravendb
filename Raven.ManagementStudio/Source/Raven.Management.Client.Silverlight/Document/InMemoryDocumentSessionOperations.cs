@@ -517,7 +517,7 @@ namespace Raven.Management.Client.Silverlight.Document
                 return new PutCommandData
                            {
                                Document = document.DataAsJson,
-                               Etag = document.Etag,
+                               Etag = UseOptimisticConcurrency ? documentMetadata.ETag : null,
                                Key = document.Key,
                                Metadata = document.Metadata,
                            };
@@ -566,7 +566,22 @@ namespace Raven.Management.Client.Silverlight.Document
                 documentMetadata.Key = batchResult.Key;
                 documentMetadata.OriginalMetadata = new JObject(batchResult.Metadata);
                 documentMetadata.Metadata = batchResult.Metadata;
-                documentMetadata.OriginalValue = ConvertEntityToJson(entity, documentMetadata.Metadata);
+
+                if(entity as JsonDocument != null)
+                {
+                    var document = (JsonDocument) entity;
+                    if (batchResult.Etag != null)
+                    {
+                        document.Etag = batchResult.Etag.Value;
+                    }
+
+                    documentMetadata.OriginalValue = document.ToJson();
+                }
+                else
+                {
+                    documentMetadata.OriginalValue = ConvertEntityToJson(entity, documentMetadata.Metadata);
+                }
+                
 
                 TrySetIdentity(entity, batchResult.Key);
 
@@ -634,8 +649,19 @@ namespace Raven.Management.Client.Silverlight.Document
         {
             if (documentMetadata == null)
                 return true;
-            JObject newObj = ConvertEntityToJson(entity, documentMetadata.Metadata);
+
             var equalityComparer = new JTokenEqualityComparer();
+
+            if(entity as JsonDocument != null)
+            {
+                var document = (JsonDocument) entity;
+
+                return equalityComparer.Equals(document.ToJson(), documentMetadata.OriginalValue) == false ||
+                       equalityComparer.Equals(documentMetadata.Metadata, documentMetadata.OriginalMetadata) == false;
+            }
+
+            JObject newObj = ConvertEntityToJson(entity, documentMetadata.Metadata);
+
             return equalityComparer.Equals(newObj, documentMetadata.OriginalValue) == false ||
                    equalityComparer.Equals(documentMetadata.Metadata, documentMetadata.OriginalMetadata) == false;
         }

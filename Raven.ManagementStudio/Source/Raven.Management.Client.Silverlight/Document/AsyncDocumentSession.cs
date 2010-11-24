@@ -177,7 +177,7 @@ namespace Raven.Management.Client.Silverlight.Document
         /// 
         /// </summary>
         /// <param name="callback"></param>
-        public void SaveChanges(CallbackFunction.Save<object> callback)
+        public void SaveChanges(CallbackFunction.SaveMany<object> callback)
         {
             SaveChangesData data = PrepareForSaveChanges();
             if (data.Commands.Count == 0)

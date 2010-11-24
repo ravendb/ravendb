@@ -28,7 +28,14 @@
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="response"></param>
-        public delegate void Save<T>(IList<Response<T>> response);
+        public delegate void SaveMany<T>(IList<Response<T>> response);
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="response"></param>
+        public delegate void SaveOne<T>(Response<T> response);
 
         /// <summary>
         /// 

@@ -45,7 +45,7 @@ namespace Raven.Management.Client.Silverlight
         /// 
         /// </summary>
         /// <param name="callback"></param>
-        void SaveChanges(CallbackFunction.Save<object> callback);
+        void SaveChanges(CallbackFunction.SaveMany<object> callback);
 
         /// <summary>
         /// 

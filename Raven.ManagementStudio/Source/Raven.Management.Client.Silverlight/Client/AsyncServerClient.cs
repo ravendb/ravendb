@@ -174,17 +174,20 @@ namespace Raven.Management.Client.Silverlight.Client
             switch (response.StatusCode)
             {
                 case HttpStatusCode.Conflict:
-                    var errorResults = JsonConvert.DeserializeAnonymousType(json, new
-                                                                                      {
-                                                                                          url = (string)null,
-                                                                                          actualETag = Guid.Empty,
-                                                                                          expectedETag = Guid.Empty,
-                                                                                          error = (string)null
-                                                                                      });
-                    return new ConcurrencyException(errorResults.error)
+                    //var errorResults = JsonConvert.DeserializeAnonymousType(json, new
+                    //                                                                  {
+                    //                                                                      url = string.Empty,
+                    //                                                                      actualETag = Guid.Empty,
+                    //                                                                      expectedETag = Guid.Empty,
+                    //                                                                      error = string.Empty
+                    //                                                                  });
+
+                    var jObject = JObject.Parse(json);
+
+                    return new ConcurrencyException(jObject["Error"].ToString(Formatting.None))
                                {
-                                   ActualETag = errorResults.actualETag,
-                                   ExpectedETag = errorResults.expectedETag
+                                   ActualETag = new Guid(jObject.Value<string>("ActualETag")),
+                                   ExpectedETag = new Guid(jObject.Value<string>("ExpectedETag")),
                                };
                 default:
                     return
@@ -306,7 +309,7 @@ namespace Raven.Management.Client.Silverlight.Client
         /// </summary>
         /// <param name="entity"></param>
         /// <param name="callback"></param>
-        public void DocumentPut(JsonDocument entity, CallbackFunction.Save<JsonDocument> callback)
+        public void DocumentPut(JsonDocument entity, CallbackFunction.SaveMany<JsonDocument> callback)
         {
             HttpJsonRequest request;
             CreateContext(new Uri(string.Format(DatabaseUrl.DocumentPut, DatabaseAddress, entity.Key)),
@@ -332,7 +335,7 @@ namespace Raven.Management.Client.Silverlight.Client
         /// </summary>
         /// <param name="entity"></param>
         /// <param name="callback"></param>
-        public void DocumentPost(JsonDocument entity, CallbackFunction.Save<JsonDocument> callback)
+        public void DocumentPost(JsonDocument entity, CallbackFunction.SaveMany<JsonDocument> callback)
         {
             HttpJsonRequest request;
             CreateContext(new Uri(string.Format(DatabaseUrl.DocumentPost, DatabaseAddress)), RequestMethod.POST,
@@ -358,7 +361,7 @@ namespace Raven.Management.Client.Silverlight.Client
         /// </summary>
         /// <param name="entity"></param>
         /// <param name="callback"></param>
-        public void DocumentDelete(JsonDocument entity, CallbackFunction.Save<string> callback)
+        public void DocumentDelete(JsonDocument entity, CallbackFunction.SaveMany<string> callback)
         {
             HttpJsonRequest request;
             CreateContext(new Uri(string.Format(DatabaseUrl.DocumentPut, DatabaseAddress, entity.Key)),
@@ -498,7 +501,7 @@ namespace Raven.Management.Client.Silverlight.Client
         }
 
         private void DocumentSave_Callback(JsonDocument document, HttpJsonRequest request, IAsyncResult result,
-                                           CallbackFunction.Save<JsonDocument> callback)
+                                           CallbackFunction.SaveMany<JsonDocument> callback)
         {
             SynchronizationContext context = GetContext(request);
             DeleteContext(request);
@@ -529,7 +532,7 @@ namespace Raven.Management.Client.Silverlight.Client
         }
 
         private void DocumentDelete_Callback(JsonDocument document, HttpJsonRequest request, IAsyncResult result,
-                                             CallbackFunction.Save<string> callback)
+                                             CallbackFunction.SaveMany<string> callback)
         {
             SynchronizationContext context = GetContext(request);
             DeleteContext(request);
@@ -620,7 +623,7 @@ namespace Raven.Management.Client.Silverlight.Client
         /// <param name="entity"></param>
         /// <param name="callback"></param>
         public void IndexPut(string name, IndexDefinition entity,
-                             CallbackFunction.Save<KeyValuePair<string, IndexDefinition>> callback)
+                             CallbackFunction.SaveOne<KeyValuePair<string, IndexDefinition>> callback)
         {
             HttpJsonRequest request;
             CreateContext(new Uri(string.Format(DatabaseUrl.IndexPut, DatabaseAddress, name)), RequestMethod.PUT,
@@ -646,7 +649,7 @@ namespace Raven.Management.Client.Silverlight.Client
         /// </summary>
         /// <param name="name"></param>
         /// <param name="callback"></param>
-        public void IndexDelete(string name, CallbackFunction.Save<string> callback)
+        public void IndexDelete(string name, CallbackFunction.SaveOne<string> callback)
         {
             HttpJsonRequest request;
             CreateContext(new Uri(string.Format(DatabaseUrl.IndexPut, DatabaseAddress, name)), RequestMethod.DELETE,
@@ -701,9 +704,9 @@ namespace Raven.Management.Client.Silverlight.Client
             var responseResult = new Dictionary<string, IndexDefinition>();
             if (exception == null)
             {
-                IEnumerable<KeyValuePair<string, IndexDefinition>> entities =
-                    array.Select(index => IndexMapper.Map(index.ToString()));
-                responseResult.Concat(entities);
+                var entities = array.Select(index => IndexMapper.Map(index.ToString()));
+
+                responseResult = responseResult.Concat(entities).ToDictionary(x => x.Key, y => y.Value);
 
                 if (existingEntities != null)
                 {
@@ -725,7 +728,7 @@ namespace Raven.Management.Client.Silverlight.Client
 
         private void IndexSave_Callback(string name, IndexDefinition entity, HttpJsonRequest request,
                                         IAsyncResult result,
-                                        CallbackFunction.Save<KeyValuePair<string, IndexDefinition>> callback)
+                                        CallbackFunction.SaveOne<KeyValuePair<string, IndexDefinition>> callback)
         {
             SynchronizationContext context = GetContext(request);
             DeleteContext(request);
@@ -735,7 +738,7 @@ namespace Raven.Management.Client.Silverlight.Client
             NameValueCollection headers;
             string json = GetResponseStream(request.HttpWebRequest, result, out statusCode, out exception, out headers);
 
-            var loadResponse = new LoadResponse<KeyValuePair<string, IndexDefinition>>
+            var saveResponse = new SaveResponse<KeyValuePair<string, IndexDefinition>>
                                    {
                                        Data = new KeyValuePair<string, IndexDefinition>(name, entity),
                                        StatusCode = statusCode,
@@ -743,12 +746,12 @@ namespace Raven.Management.Client.Silverlight.Client
                                    };
 
             context.Post(
-                delegate { callback.Invoke(new List<Response<KeyValuePair<string, IndexDefinition>>> { loadResponse }); },
+                delegate { callback.Invoke(saveResponse); },
                 null);
         }
 
         private void IndexDelete_Callback(string name, HttpJsonRequest request, IAsyncResult result,
-                                          CallbackFunction.Save<string> callback)
+                                          CallbackFunction.SaveOne<string> callback)
         {
             SynchronizationContext context = GetContext(request);
             DeleteContext(request);
@@ -766,7 +769,7 @@ namespace Raven.Management.Client.Silverlight.Client
                                      };
 
             context.Post(
-                delegate { callback.Invoke(new List<Response<string>> { deleteResponse }); },
+                delegate { callback.Invoke(deleteResponse); },
                 null);
         }
 
@@ -804,7 +807,7 @@ namespace Raven.Management.Client.Silverlight.Client
         /// </summary>
         /// <param name="key"></param>
         /// <param name="callback"></param>
-        public void AttachmentDelete(string key, CallbackFunction.Save<string> callback)
+        public void AttachmentDelete(string key, CallbackFunction.SaveMany<string> callback)
         {
             HttpJsonRequest request;
             CreateContext(new Uri(string.Format(DatabaseUrl.Attachment, DatabaseAddress, key)), RequestMethod.DELETE,
@@ -823,7 +826,7 @@ namespace Raven.Management.Client.Silverlight.Client
         /// <param name="metadata"></param>
         /// <param name="callback"></param>
         public void AttachmentPut(string key, Guid? etag, byte[] data, JObject metadata,
-                                  CallbackFunction.Save<Attachment> callback)
+                                  CallbackFunction.SaveMany<Attachment> callback)
         {
             HttpJsonRequest request;
             CreateContext(new Uri(string.Format(DatabaseUrl.Attachment, DatabaseAddress, key)), RequestMethod.PUT,
@@ -937,7 +940,7 @@ namespace Raven.Management.Client.Silverlight.Client
         }
 
         private void AttachmentDelete_Callback(string key, HttpJsonRequest request, IAsyncResult result,
-                                               CallbackFunction.Save<string> callback)
+                                               CallbackFunction.SaveMany<string> callback)
         {
             SynchronizationContext context = GetContext(request);
             DeleteContext(request);
@@ -961,7 +964,7 @@ namespace Raven.Management.Client.Silverlight.Client
 
         private void AttachmentPut_Callback(string key, Guid? etag, byte[] data, JObject metadata,
                                             HttpJsonRequest request, IAsyncResult result,
-                                            CallbackFunction.Save<Attachment> callback)
+                                            CallbackFunction.SaveMany<Attachment> callback)
         {
             SynchronizationContext context = GetContext(request);
             DeleteContext(request);
