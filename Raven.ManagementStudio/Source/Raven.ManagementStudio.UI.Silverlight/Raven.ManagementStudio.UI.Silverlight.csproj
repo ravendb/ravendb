@@ -73,14 +73,19 @@
     </Reference>
     <Reference Include="System.ComponentModel.Composition, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="System.ComponentModel.Composition.Initialization, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
+    <Reference Include="System.ComponentModel.DataAnnotations, Version=2.0.5.0, Culture=neutral, PublicKeyToken=ddd0da4d3e678217" />
     <Reference Include="System.Windows" />
     <Reference Include="system" />
     <Reference Include="System.Core" />
     <Reference Include="System.Net" />
     <Reference Include="System.Windows.Controls, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
+    <Reference Include="System.Windows.Controls.Data, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" />
+    <Reference Include="System.Windows.Controls.Data.DataForm.Toolkit, Version=4.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" />
     <Reference Include="System.Windows.Controls.Data.Input, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" />
     <Reference Include="System.Windows.Controls.Input.Toolkit, Version=4.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
+    <Reference Include="System.Windows.Controls.Layout.Toolkit, Version=4.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" />
     <Reference Include="System.Windows.Controls.Toolkit, Version=4.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
+    <Reference Include="System.Windows.Data, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" />
     <Reference Include="System.Windows.Interactivity, Version=4.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Windows.Browser" />
@@ -102,12 +107,25 @@
     <Compile Include="Messages\ReplaceActiveScreen.cs" />
     <Compile Include="Models\Database.cs" />
     <Compile Include="Models\Document.cs" />
+    <Compile Include="Models\Index.cs" />
     <Compile Include="Plugins\Documents\Browse\BrowseDocuments.cs" />
     <Compile Include="Plugins\Documents\Browse\BrowseMenuIcon.xaml.cs">
       <DependentUpon>BrowseMenuIcon.xaml</DependentUpon>
     </Compile>
     <Compile Include="Plugins\Documents\Browse\DocumentsScreenViewModel.cs" />
     <Compile Include="Plugins\CommonViewModels\DocumentViewModel.cs" />
+    <Compile Include="Plugins\Indexes\Browse\BrowseIndexes.cs" />
+    <Compile Include="Plugins\Indexes\Browse\BrowseIndexesMenuIcon.xaml.cs">
+      <DependentUpon>BrowseIndexesMenuIcon.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Plugins\Indexes\Browse\BrowseIndexesScreenView.xaml.cs">
+      <DependentUpon>BrowseIndexesScreenView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Plugins\Indexes\Browse\BrowseIndexesScreenViewModel.cs" />
+    <Compile Include="Plugins\Indexes\Browse\IndexFormView.xaml.cs">
+      <DependentUpon>IndexFormView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Plugins\Indexes\Browse\IndexFormViewModel.cs" />
     <Compile Include="Plugins\Statistics\Global\GlobalStatistics.cs" />
     <Compile Include="Plugins\Statistics\Global\GlobalStatisticsMenuIcon.xaml.cs">
       <DependentUpon>GlobalStatisticsMenuIcon.xaml</DependentUpon>
@@ -116,6 +134,7 @@
       <DependentUpon>GlobalStatisticsScreenView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Plugins\Statistics\Global\GlobalStatisticsScreenViewModel.cs" />
+    <Compile Include="ViewModels\ErrorViewModel.cs" />
     <Compile Include="ViewModels\GadgetsViewModel.cs" />
     <Compile Include="ViewModels\Interfaces\INavigationBar.cs" />
     <Compile Include="ViewModels\Interfaces\IShell.cs" />
@@ -127,6 +146,9 @@
     </Compile>
     <Compile Include="Plugins\CommonViews\DocumentView.xaml.cs">
       <DependentUpon>DocumentView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\ErrorView.xaml.cs">
+      <DependentUpon>ErrorView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\NavigationBarView.xaml.cs">
       <DependentUpon>NavigationBarView.xaml</DependentUpon>
@@ -179,6 +201,18 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Plugins\Indexes\Browse\BrowseIndexesMenuIcon.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Plugins\Indexes\Browse\BrowseIndexesScreenView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Plugins\Indexes\Browse\IndexFormView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Plugins\Statistics\Global\GlobalStatisticsMenuIcon.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -199,9 +233,17 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Resources\ControlTemplates\Indexes.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Resources\ControlTemplates\Menu.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\ErrorView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\NavigationBarView.xaml">
       <SubType>Designer</SubType>
@@ -251,6 +293,7 @@
   <ItemGroup>
     <Resource Include="Resources\Images\refresh.png" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

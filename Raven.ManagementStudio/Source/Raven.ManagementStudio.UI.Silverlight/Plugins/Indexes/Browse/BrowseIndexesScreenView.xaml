@@ -1,0 +1,148 @@
+﻿<UserControl x:Class="Raven.ManagementStudio.UI.Silverlight.Plugins.Indexes.Browse.BrowseIndexesScreenView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:cal="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
+    xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity" 
+    xmlns:toolkit="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit" 
+    mc:Ignorable="d">
+
+    <toolkit:BusyIndicator IsBusy="{Binding IsBusy}">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition />
+                <ColumnDefinition />
+                <ColumnDefinition />
+                <ColumnDefinition />
+            </Grid.ColumnDefinitions>
+
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <!--<toolkit:Accordion ItemsSource="{Binding Items}" Grid.Column="0" Grid.Row="1" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" SelectedItem="{Binding SelectedItem, Mode=TwoWay}" >
+            <toolkit:Accordion.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel>
+                        <TextBlock Text="{Binding Name, Mode=TwoWay}" />
+                    </StackPanel>
+                </DataTemplate>
+            </toolkit:Accordion.ItemTemplate>
+            <toolkit:Accordion.ContentTemplate>
+                <DataTemplate>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="3*" />
+                            <ColumnDefinition Width="3*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <ScrollViewer Grid.Row="0" Grid.RowSpan="2" Grid.Column="0" Grid.ColumnSpan="2" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                            <TextBlock Text="{Binding Definition.Map}" TextWrapping="Wrap"/>
+                        </ScrollViewer>
+
+                        <ScrollViewer Grid.Row="2" Grid.RowSpan="2" Grid.Column="0" Grid.ColumnSpan="2" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                            <TextBlock Text="{Binding Definition.Reduce}" TextWrapping="Wrap"/>
+                        </ScrollViewer>
+
+                        <Button Grid.Column="2" Grid.Row="0" Content="Edit">
+                            <i:Interaction.Triggers>
+                                <i:EventTrigger EventName="Click">
+                                    <cal:ActionMessage MethodName="ToogleEdit">
+                                        <cal:Parameter Value="{Binding}" />
+                                    </cal:ActionMessage>
+                                </i:EventTrigger>
+                            </i:Interaction.Triggers>
+                        </Button>
+
+                        <Button Grid.Column="2" Grid.Row="0" Content="Cancel" Visibility="{Binding IsEdited, Converter={StaticResource booleanToVisibility}}">
+                            <i:Interaction.Triggers>
+                                <i:EventTrigger EventName="Click">
+                                    <cal:ActionMessage MethodName="ToogleEdit">
+                                        <cal:Parameter Value="{Binding}" />
+                                    </cal:ActionMessage>
+                                </i:EventTrigger>
+                            </i:Interaction.Triggers>
+                        </Button>
+
+                        <Button Grid.Column="2" Grid.Row="1" Content="Save" Visibility="{Binding IsEdited, Converter={StaticResource booleanToVisibility}}" />
+                        <Button Grid.Column="2" Grid.Row="2" Content="Remove" Visibility="{Binding IsEdited, Converter={StaticResource booleanToVisibility}}" />
+                    </Grid>
+                </DataTemplate>
+            </toolkit:Accordion.ContentTemplate>
+        </toolkit:Accordion>-->
+
+            <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3" Text="{Binding Items.Count, StringFormat=Indexes (\{0\} results)}" />
+            <TextBox Grid.Row="0" Grid.Column="3" x:Name="SearchTextBox">
+                <i:Interaction.Triggers>
+                    <i:EventTrigger EventName="TextChanged">
+                        <cal:ActionMessage MethodName="Search">
+                            <cal:Parameter Value="{Binding Text, ElementName=SearchTextBox}" />
+                        </cal:ActionMessage>
+                    </i:EventTrigger>
+                </i:Interaction.Triggers>
+            </TextBox>
+
+            <ListBox Grid.Column="0" Grid.ColumnSpan="4" Grid.Row="1" ItemsSource="{Binding Items}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Grid>
+                            <VisualStateManager.VisualStateGroups>
+                                <VisualStateGroup x:Name="CommonStates">
+                                    <VisualState x:Name="Normal">
+                                        <Storyboard>
+                                            <DoubleAnimation Duration="0" To="0" Storyboard.TargetProperty="(UIElement.Opacity)" Storyboard.TargetName="Actions" />
+                                        </Storyboard>
+                                    </VisualState>
+                                    <VisualState x:Name="Selected">
+                                        <Storyboard>
+                                            <DoubleAnimation Duration="0" To="1" Storyboard.TargetProperty="(UIElement.Opacity)" Storyboard.TargetName="Actions" />
+                                        </Storyboard>
+                                    </VisualState>
+                                </VisualStateGroup>
+                            </VisualStateManager.VisualStateGroups>
+
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="100" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.Column="0" Text="{Binding Name}" TextTrimming="WordEllipsis" />
+                            <StackPanel x:Name="Actions" Grid.Column="1" Orientation="Horizontal">
+                                <Button Content="Edit">
+                                    <i:Interaction.Triggers>
+                                        <i:EventTrigger EventName="Click">
+                                            <cal:ActionMessage MethodName="Edit">
+                                                <cal:Parameter Value="{Binding}" />
+                                            </cal:ActionMessage>
+                                        </i:EventTrigger>
+                                    </i:Interaction.Triggers>
+                                </Button>
+
+                                <Button Content="Remove">
+                                    <i:Interaction.Triggers>
+                                        <i:EventTrigger EventName="Click">
+                                            <cal:ActionMessage MethodName="Remove">
+                                                <cal:Parameter Value="{Binding}" />
+                                            </cal:ActionMessage>
+                                        </i:EventTrigger>
+                                    </i:Interaction.Triggers>
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Grid>
+    </toolkit:BusyIndicator>
+</UserControl>

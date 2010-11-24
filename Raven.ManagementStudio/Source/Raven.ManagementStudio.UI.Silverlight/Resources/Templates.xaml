@@ -4,6 +4,7 @@
     <ResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="ControlTemplates/Gears.xaml" />
         <ResourceDictionary Source="ControlTemplates/Menu.xaml" />
+        <ResourceDictionary Source="ControlTemplates/Indexes.xaml" />
         <ResourceDictionary Source="ControlTemplates/DocumentsContainer.xaml" />
         <ResourceDictionary Source="ControlTemplates/DocumentThumbnail.xaml" />
         <ResourceDictionary Source="ControlTemplates/EmptyButton.xaml" />
