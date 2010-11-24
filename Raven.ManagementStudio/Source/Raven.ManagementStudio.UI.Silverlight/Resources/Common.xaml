@@ -35,5 +35,8 @@
     <!--Converters-->
     <converters:BooleanToVisibilityConverter x:Key="booleanToVisibility" />
     <converters:NullToVisibilityConverter x:Key="nullToVisibility" />
-
+    <converters:BooleanToOppositeBooleanConverter x:Key="booleanToOpposite" />
+    <converters:BooleanToOppositeVisibilityConverter x:Key="booleanToOppositeVisibility" />
+    <converters:EnumToIntConverter x:Key="enumToInt" />
+    <converters:EnumToEnumerableConverter x:Key="enumToEnumerable" />
 </ResourceDictionary>

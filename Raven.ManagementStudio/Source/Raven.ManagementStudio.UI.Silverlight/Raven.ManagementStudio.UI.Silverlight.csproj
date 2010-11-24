@@ -100,7 +100,11 @@
     <Compile Include="Controls\DocumentThumbnail.cs" />
     <Compile Include="Controls\DragDropPanel.cs" />
     <Compile Include="Controls\Gears.cs" />
+    <Compile Include="Converters\BooleanToOppositeBooleanConverter.cs" />
+    <Compile Include="Converters\BooleanToOppositeVisibilityConverter.cs" />
     <Compile Include="Converters\BooleanToVisibilityConverter.cs" />
+    <Compile Include="Converters\EnumToEnumerableConverter.cs" />
+    <Compile Include="Converters\EnumToIntConverter.cs" />
     <Compile Include="Converters\NullToVisibilityConverter.cs" />
     <Compile Include="Messages\ChangeActiveScreen.cs" />
     <Compile Include="Messages\OpenNewScreen.cs" />
@@ -293,7 +297,25 @@
   <ItemGroup>
     <Resource Include="Resources\Images\refresh.png" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Resource Include="Resources\Images\delete-small.png" />
+    <Resource Include="Resources\Images\save-small.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\Images\undo-small.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\Images\edit-small.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\Images\edit-cancel-small.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\Images\save-cancel-small.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\Images\add-small.png" />
+  </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

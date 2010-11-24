@@ -3,11 +3,9 @@
     using System.Collections.Generic;
     using System.ComponentModel.Composition;
     using System.Linq;
-    using System.Windows;
-    using System.Windows.Controls;
     using Caliburn.Micro;
+    using Raven.Database.Indexing;
     using Raven.ManagementStudio.Plugin;
-    using Raven.ManagementStudio.UI.Silverlight.Messages;
     using Raven.ManagementStudio.UI.Silverlight.Models;
     using Raven.ManagementStudio.UI.Silverlight.ViewModels;
 
@@ -44,16 +42,6 @@
         [Import]
         public IWindowManager WindowManager { get; set; }
 
-        //public Index SelectedItem
-        //{
-        //    get { return this.selectedItem; }
-        //    set
-        //    {
-        //        this.selectedItem = value;
-        //        this.NotifyOfPropertyChange(() => this.SelectedItem);
-        //    }
-        //}
-
         public IObservableCollection<Index> AllItems { get; set; }
 
         #region IRavenScreen Members
@@ -80,16 +68,10 @@
                                                     });
         }
 
-        //public void ToogleEdit(Index index)
-        //{         
-        //    index.IsEdited = !index.IsEdited;
-
-        //    var x = this.Items.IndexOf(index);
-        //    this.Items.Remove(index);
-        //    this.Items.Insert(x, index);
-
-        //    this.SelectedItem = index;
-        //}
+        public void ToogleEdit(Index index)
+        {
+            index.IsEdited = !index.IsEdited;
+        }
 
         public void Edit(Index index)
         {
@@ -122,22 +104,35 @@
             this.Items.AddRange(!string.IsNullOrEmpty(text) ? this.AllItems.Where(x => x.Name.ToLowerInvariant().Contains(text.ToLowerInvariant())) : this.AllItems);
         }
 
-        //public void Cancel()
-        //{
-        //    var view = this.GetView(null) as Control;
-        //    if (view != null)
-        //    {
-        //        VisualStateManager.GoToState(view, "NormalState", false);
-        //    }
-        //    else
-        //    {
-        //        this.EventAggregator.Publish(new ReplaceActiveScreen(this));
-        //        view = this.GetView(null) as Control;
-        //        if (view != null)
-        //        {
-        //            VisualStateManager.GoToState(view, "NormalState", false);
-        //        }
-        //    }
-        //}
+        public void Save(Index index)
+        {
+            this.IsBusy = true;
+            this.Database.IndexSession.Save(new KeyValuePair<string, IndexDefinition>(index.Name, index.Definition), (result) =>
+                                                                                                                         {
+                                                                                                                             if (result.IsSuccess)
+                                                                                                                             {
+                                                                                                                                 index.IsEdited = false;
+                                                                                                                                 if(index.CurrentName != result.Data.Key)
+                                                                                                                                 {
+                                                                                                                                     var newIndex = new Index(result.Data);
+                                                                                                                                     this.AllItems.Add(newIndex);
+                                                                                                                                     this.Items.Add(newIndex);
+
+                                                                                                                                     index.Name = index.CurrentName;
+                                                                                                                                 }
+                                                                                                                             }
+                                                                                                                             else
+                                                                                                                             {
+                                                                                                                                 this.WindowManager.ShowDialog(new ErrorViewModel(result.Exception.Message));
+                                                                                                                             }
+
+                                                                                                                             this.IsBusy = false;
+                                                                                                                         });
+        }
+
+        public void AddFieldStorageAndIndexing(Index index)
+        {
+            index.AddFieldStorageAndIndexing();
+        }
     }
 }
