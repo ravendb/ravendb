@@ -34,28 +34,16 @@ namespace Raven.Storage.Managed
 
         public Tuple<int, int> FirstAndLastDocumentIds()
         {
-            int last = GetLastDocumentId();
-
-            int first = GetFirstDocumentId();
-            return new Tuple<int, int>(first,last );
-        }
-
-        private int GetFirstDocumentId()
-        {
-            var firstOrDefault = storage.Documents["ById"].FirstOrDefault();
-            var first = 0;
-            if (firstOrDefault != null)
-                first= firstOrDefault.Value<int>("id");
-            return first;
-        }
-
-        private int GetLastDocumentId()
-        {
             var lastOrDefault = storage.Documents["ById"].LastOrDefault();
             var last = 0;
             if (lastOrDefault != null)
                 last = lastOrDefault.Value<int>("id");
-            return last;
+
+            var firstOrDefault = storage.Documents["ById"].FirstOrDefault();
+            var first = 0;
+            if (firstOrDefault != null)
+                first= firstOrDefault.Value<int>("id");
+            return new Tuple<int, int>(first,last );
         }
 
         public IEnumerable<Tuple<JsonDocument, int>> DocumentsById(int startId, int endId)
@@ -187,26 +175,24 @@ namespace Raven.Storage.Managed
                 {"key", key},
                 {"etag", newEtag.ToByteArray()},
                 {"modified", DateTime.UtcNow},
-                {"id", IncrementLastDocumentId()},
+                {"id", GetNextDocumentId()},
                 {"entityName", metadata.Value<string>("Raven-Entity-Name")}
             },ms.ToArray());
 
             return newEtag;
         }
 
-        private int? lastDocumentId;
-        private int IncrementLastDocumentId()
+        private int lastGeneratedId;
+        private int GetNextDocumentId()
         {
-            if(lastDocumentId != null)
-            {
-                lastDocumentId = lastDocumentId.Value + 1;
-                return lastDocumentId.Value;
-            }
+            if (lastGeneratedId > 0)
+                return ++lastGeneratedId;
+
             var lastOrefaultKeyById = storage.Documents["ById"].LastOrDefault();
             int id = 1;
             if (lastOrefaultKeyById != null)
                 id = lastOrefaultKeyById.Value<int>("id") + 1;
-            lastDocumentId = id;
+            lastGeneratedId = id;
             return id;
         }
 

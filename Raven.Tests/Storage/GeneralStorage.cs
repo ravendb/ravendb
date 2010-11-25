@@ -2,6 +2,9 @@ using System;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
+using Raven.Database.Tasks;
+using Raven.Munin;
+using Raven.Storage.Managed.Impl;
 using Xunit;
 using System.Linq;
 
@@ -24,6 +27,101 @@ namespace Raven.Tests.Storage
 			db.Dispose();
 			base.Dispose();
 		}
+
+        [Fact]
+        public void CanProperlyHandleDeletingThreeItemsBothFromPK_And_SecondaryIndexes()
+        {
+            var cmds = new[]
+            {
+                @"{""Cmd"":""Put"",""Key"":{""index"":""Raven/DocumentsByEntityName"",""id"":""AAAAAAAAAAEAAAAAAAAABQ=="",""time"":""\/Date(1290420997504)\/"",""type"":""Raven.Database.Tasks.RemoveFromIndexTask"",""mergable"":true},""TableId"":9,""TxId"":""NiAAMOT72EC/We7rnZS/Fw==""}"
+                ,
+                @"{""Cmd"":""Put"",""Key"":{""index"":""Raven/DocumentsByEntityName"",""id"":""AAAAAAAAAAEAAAAAAAAABg=="",""time"":""\/Date(1290420997509)\/"",""type"":""Raven.Database.Tasks.RemoveFromIndexTask"",""mergable"":true},""TableId"":9,""TxId"":""NiAAMOT72EC/We7rnZS/Fw==""}"
+                ,
+                @"{""Cmd"":""Put"",""Key"":{""index"":""Raven/DocumentsByEntityName"",""id"":""AAAAAAAAAAEAAAAAAAAABw=="",""time"":""\/Date(1290420997509)\/"",""type"":""Raven.Database.Tasks.RemoveFromIndexTask"",""mergable"":true},""TableId"":9,""TxId"":""NiAAMOT72EC/We7rnZS/Fw==""}"
+                ,
+                @"{""Cmd"":""Commit"",""TableId"":9,""TxId"":""NiAAMOT72EC/We7rnZS/Fw==""}",
+                @"{""Cmd"":""Del"",""Key"":{""index"":""Raven/DocumentsByEntityName"",""id"":""AAAAAAAAAAEAAAAAAAAABg=="",""time"":""\/Date(1290420997509)\/"",""type"":""Raven.Database.Tasks.RemoveFromIndexTask"",""mergable"":true},""TableId"":9,""TxId"":""wM3q3VA0XkWecl5WBr9Cfw==""}"
+                ,
+                @"{""Cmd"":""Del"",""Key"":{""index"":""Raven/DocumentsByEntityName"",""id"":""AAAAAAAAAAEAAAAAAAAABw=="",""time"":""\/Date(1290420997509)\/"",""type"":""Raven.Database.Tasks.RemoveFromIndexTask"",""mergable"":true},""TableId"":9,""TxId"":""wM3q3VA0XkWecl5WBr9Cfw==""}"
+                ,
+                @"{""Cmd"":""Del"",""Key"":{""index"":""Raven/DocumentsByEntityName"",""id"":""AAAAAAAAAAEAAAAAAAAABQ=="",""time"":""\/Date(1290420997504)\/"",""type"":""Raven.Database.Tasks.RemoveFromIndexTask"",""mergable"":true},""TableId"":9,""TxId"":""wM3q3VA0XkWecl5WBr9Cfw==""}"
+                ,
+                @"{""Cmd"":""Commit"",""TableId"":9,""TxId"":""wM3q3VA0XkWecl5WBr9Cfw==""}",
+            };
+
+            var tableStorage = new TableStorage(new MemoryPersistentSource());
+
+            foreach (var cmdText in cmds)
+            {
+                var command = JObject.Parse(cmdText);
+                var tblId = command.Value<int>("TableId");
+
+                var table = tableStorage.Tables[tblId];
+
+                var txId = new Guid(Convert.FromBase64String(command.Value<string>("TxId")));
+
+                var key = command["Key"] as JObject;
+                if (key != null)
+                {
+                    foreach (var property in key.Properties())
+                    {
+                        if(property.Value.Type != JTokenType.String)
+                            continue;
+                        var value = property.Value.Value<string>();
+                        if (value.EndsWith("==") == false)
+                            continue;
+
+                        key[property.Name] = Convert.FromBase64String(value);
+                    }
+                }
+
+                switch (command.Value<string>("Cmd"))
+                {
+                    case "Put":
+                        table.Put(command["Key"], new byte[] {1, 2, 3}, txId);
+                        break;
+                    case "Del":
+                        table.Remove(command["Key"], txId);
+                        break;
+                    case "Commit":
+                        table.CompleteCommit(txId);
+                        break;
+                }
+            }
+
+            Assert.Empty(tableStorage.Tasks);
+            Assert.Null(tableStorage.Tasks["ByIndexAndTime"].LastOrDefault());
+        }
+
+	    [Fact]
+        public void CanAddAndRemoveMultipleTasks_InSingleTx()
+        {
+            db.TransactionalStorage.Batch(actions=>
+            {
+                for (int i = 0; i < 3; i++)
+                {
+                    actions.Tasks.AddTask(new RemoveFromIndexTask
+                    {
+                        Index = "foo",
+                        Keys = new[] { "tasks/"+i },
+                    },DateTime.Now);
+                }
+            });
+
+            db.TransactionalStorage.Batch(actions =>
+            {
+                int tasks;
+                actions.Tasks.GetMergedTask(out tasks);
+                Assert.Equal(3, tasks);
+            });
+
+
+            db.TransactionalStorage.Batch(actions =>
+            {
+                var isIndexStale = actions.Staleness.IsIndexStale("foo", null, null);
+                Assert.False(isIndexStale);
+            });
+        }
 
 		[Fact]
 		public void CanGetDocumentCounts()

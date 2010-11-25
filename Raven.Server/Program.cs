@@ -205,7 +205,6 @@ namespace Raven.Server
                             return false;
                     }
                 }
-                return false;
             }
         }
 

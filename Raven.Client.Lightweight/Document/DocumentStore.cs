@@ -7,6 +7,7 @@ using Raven.Client.Client;
 using Raven.Client.Client.Async;
 using Raven.Client.Document.Async;
 using System.Linq;
+using Raven.Client.Extensions;
 
 namespace Raven.Client.Document
 {
@@ -160,7 +161,9 @@ namespace Raven.Client.Document
 	            case "url":
 	                Url = value;
 	                break;
-
+                case "defaultdatabase":
+	                DefaultDatabase = value;
+	                break;
 	            case "user":
 	                neworkCredentials.UserName = value;
 	                break;
@@ -179,6 +182,12 @@ namespace Raven.Client.Document
 		/// </summary>
 		/// <value>The URL.</value>
 		public string Url { get; set; }
+
+        /// <summary>
+        /// Gets or sets the default database name.
+        /// </summary>
+        /// <value>The default database name.</value>
+        public string DefaultDatabase { get; set; }
 
 		/// <summary>
 		/// Gets the conventions.
@@ -204,6 +213,9 @@ namespace Raven.Client.Document
 		/// <param name="credentialsForSession">The credentials for session.</param>
         public IDocumentSession OpenSession(ICredentials credentialsForSession)
         {
+            if (!String.IsNullOrEmpty(DefaultDatabase))
+                return OpenSession(DefaultDatabase, credentialsForSession);
+
             var session = new DocumentSession(this, storeListeners, deleteListeners, DatabaseCommands.With(credentialsForSession));
 			session.Stored += OnSessionStored;
             return session;
@@ -236,7 +248,10 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public IDocumentSession OpenSession()
         {
-             var session = new DocumentSession(this, storeListeners, deleteListeners, DatabaseCommands);
+            if (string.IsNullOrEmpty(DefaultDatabase) == false)
+                return OpenSession(DefaultDatabase);
+
+            var session = new DocumentSession(this, storeListeners, deleteListeners, DatabaseCommands);
 			session.Stored += OnSessionStored;
             return session;
         }
@@ -291,6 +306,11 @@ namespace Raven.Client.Document
 				Dispose();
 				throw;
 			}
+
+            if(string.IsNullOrEmpty(DefaultDatabase) == false)
+            {
+                DatabaseCommands.EnsureDatabaseExists(DefaultDatabase);
+            }
 
             return this;
 		}
