@@ -160,6 +160,7 @@
     <Compile Include="Bugs\NameAndId.cs" />
     <Compile Include="Bugs\OperationHeaders.cs" />
     <Compile Include="Bugs\OverwriteDocuments.cs" />
+    <Compile Include="Bugs\QueryingOnEqualToNull.cs" />
     <Compile Include="Bugs\QueryResultCountsWithProjections.cs" />
     <Compile Include="Bugs\OverwriteIndexLocally.cs" />
     <Compile Include="Bugs\OverwriteIndexRemotely.cs" />
