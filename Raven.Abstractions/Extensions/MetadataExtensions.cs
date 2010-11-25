@@ -102,11 +102,20 @@ namespace Raven.Database.Data
 					continue;
                 var values = self.GetValues(header);
                 if (values.Length == 1)
-                    metadata.Add(header, new JValue(values[0]));
+                    metadata.Add(header, GetValue(values[0]));
                 else
-                    metadata.Add(header, new JArray(values.Select(x => new JValue(x))));
+                    metadata.Add(header, new JArray(values.Select(GetValue)));
             }
             return metadata;
         }
+
+	    private static JToken GetValue(string val)
+	    {
+            if (val.StartsWith("{"))
+                return JObject.Parse(val);
+            if (val.StartsWith("["))
+                return JArray.Parse(val);
+	        return new JValue(val);
+	    }
     }
 }
