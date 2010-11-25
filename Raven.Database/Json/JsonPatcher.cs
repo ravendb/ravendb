@@ -136,7 +136,7 @@ namespace Raven.Database.Json
             if (array == null)
                 throw new InvalidOperationException("Cannot remove value from  '" + propName + "' because it is not an array");
 			var position = patchCmd.Position;
-            var value = patchCmd.Value as JValue;
+            var value = patchCmd.Value;
 			if (position == null && value == null)
                 throw new InvalidOperationException("Cannot remove value from  '" + propName + "' because position element does not exists or not an integer and no value was present");
             if (position != null && value != null)
@@ -147,14 +147,14 @@ namespace Raven.Database.Json
 
             if (value != null)
             {
-                var singleOrDefault = array.SingleOrDefault(t => t.Equals(value));
+                var equalityComparer = new JTokenEqualityComparer();
+                var singleOrDefault = array.FirstOrDefault(x => equalityComparer.Equals(x, value));
                 if (singleOrDefault == null)
-                    throw new ArgumentOutOfRangeException("Cannot remove value from '" + propName +
-                                                          "' because it wasn't in the array");
+                    return;
                 array.Remove(singleOrDefault);
+                return;
             }
-            else
-                array.RemoveAt(position.Value);
+            array.RemoveAt(position.Value);
            
         }
 

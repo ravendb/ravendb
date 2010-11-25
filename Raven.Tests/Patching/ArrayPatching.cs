@@ -12,9 +12,6 @@ namespace Raven.Tests.Patching
     {
         private readonly JObject doc = JObject.Parse(@"{ title: ""A Blog Post"", body: ""html markup"", comments: [{""author"":""ayende"",""text"":""good post 1""},{author: ""ayende"", text:""good post 2""}] }");
 
-      
-
-
         [Fact]
         public void AddingItemToArray()
         {
@@ -198,18 +195,21 @@ namespace Raven.Tests.Patching
         [Fact]
         public void RemoveItemFromArrayByNonExistingValue()
         {
-            var patchedDoc = new JsonPatcher(JObject.Parse(@"{ name: ""Joe Doe"", roles: [""first/role"", ""second/role"", ""third/role""] }"));
+            var value = @"{""name"":""Joe Doe"",""roles"":[""first/role"",""second/role"",""third/role""]}";
+            var patchedDoc = new JsonPatcher(JObject.Parse(value));
 
-            Assert.Throws<ArgumentOutOfRangeException>(() => patchedDoc.Apply(
+            var result = patchedDoc.Apply(
                 new[]
+                {
+                    new PatchRequest
                     {
-                        new PatchRequest
-                            {
-                                Type = PatchCommandType.Remove,
-                                Name = "roles",
-                                Value = "this/does/not/exist"
-                            },
-                    }));
+                        Type = PatchCommandType.Remove,
+                        Name = "roles",
+                        Value = "this/does/not/exist"
+                    },
+                });
+
+            Assert.Equal(value, result.ToString(Formatting.None));
         }
 
         [Fact]
