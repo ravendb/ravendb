@@ -143,6 +143,7 @@
     <Compile Include="Bugs\IndexingRavenDocuments.cs" />
     <Compile Include="Bugs\IndexNestedFields.cs" />
     <Compile Include="Bugs\IndexWithTwoProperties.cs" />
+    <Compile Include="Bugs\InvalidIds.cs" />
     <Compile Include="Bugs\Issue199.cs" />
     <Compile Include="Bugs\KeyGeneration.cs" />
     <Compile Include="Bugs\KeysAreCaseInsensitive.cs" />

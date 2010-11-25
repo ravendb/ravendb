@@ -474,6 +474,9 @@ more responsive application.
 				id = Conventions.GenerateDocumentKey(entity);
 
 			}
+
+            if(id != null && id.StartsWith("/"))
+                throw new InvalidOperationException("Cannot use value '"+id+"' as a document id because it begins with a '/'");
 			return id;
 		}
 
