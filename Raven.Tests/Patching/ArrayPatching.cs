@@ -1,3 +1,4 @@
+using System;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Exceptions;
@@ -10,6 +11,9 @@ namespace Raven.Tests.Patching
     public class ArrayPatching
     {
         private readonly JObject doc = JObject.Parse(@"{ title: ""A Blog Post"", body: ""html markup"", comments: [{""author"":""ayende"",""text"":""good post 1""},{author: ""ayende"", text:""good post 2""}] }");
+
+      
+
 
         [Fact]
         public void AddingItemToArray()
@@ -170,6 +174,42 @@ namespace Raven.Tests.Patching
 
             Assert.Equal(@"{""title"":""A Blog Post"",""body"":""html markup"",""comments"":[{""author"":""ayende"",""text"":""good post 2""}]}",
                 patchedDoc.ToString(Formatting.None));
+        }
+        
+        [Fact]
+        public void RemoveItemFromArrayByValue()
+        {
+            var patchedDoc = new JsonPatcher(JObject.Parse(@"{ name: ""Joe Doe"", roles: [""first/role"", ""second/role"", ""third/role""] }")).Apply(
+                new[]
+        		{
+        			new PatchRequest
+        			{
+        				Type = PatchCommandType.Remove,
+        				Name = "roles",
+						Value = "second/role"
+        			},
+        		});
+
+            Assert.Equal(@"{""name"":""Joe Doe"",""roles"":[""first/role"",""third/role""]}",
+                         patchedDoc.ToString(Formatting.None));
+
+        }
+        
+        [Fact]
+        public void RemoveItemFromArrayByNonExistingValue()
+        {
+            var patchedDoc = new JsonPatcher(JObject.Parse(@"{ name: ""Joe Doe"", roles: [""first/role"", ""second/role"", ""third/role""] }"));
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => patchedDoc.Apply(
+                new[]
+                    {
+                        new PatchRequest
+                            {
+                                Type = PatchCommandType.Remove,
+                                Name = "roles",
+                                Value = "this/does/not/exist"
+                            },
+                    }));
         }
 
         [Fact]
