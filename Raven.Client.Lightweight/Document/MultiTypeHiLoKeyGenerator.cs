@@ -31,7 +31,10 @@ namespace Raven.Client.Document
 		/// <returns></returns>
         public string GenerateDocumentKey(DocumentConvention conventions, object entity)
         {
-            var tag = conventions.GetTypeTagName(entity.GetType()).ToLowerInvariant();
+		    var typeTagName = conventions.GetTypeTagName(entity.GetType());
+            if (string.IsNullOrEmpty(typeTagName)) //ignore empty tags
+                return null; 
+		    var tag = typeTagName.ToLowerInvariant();
             HiLoKeyGenerator value;
             if (keyGeneratorsByTag.TryGetValue(tag, out value))
 				return value.GenerateDocumentKey(conventions, entity);

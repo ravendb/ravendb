@@ -83,6 +83,8 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public static string DefaultTypeTagName(Type t)
 		{
+            if (t.Name.Contains("<>"))
+                return null;
 			if(t.IsGenericType)
 			{
 				var name = t.GetGenericTypeDefinition().Name;

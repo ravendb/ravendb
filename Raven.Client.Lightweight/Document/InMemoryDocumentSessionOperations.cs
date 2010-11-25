@@ -443,10 +443,13 @@ more responsive application.
 			}
 
 			var tag = documentStore.Conventions.GetTypeTagName(entity.GetType());
-			entitiesAndMetadata.Add(entity, new DocumentSession.DocumentMetadata
+		    var metadata = new JObject();
+            if(tag != null)
+                metadata.Add(new JProperty(RavenEntityName, new JValue(tag)));
+		    entitiesAndMetadata.Add(entity, new DocumentSession.DocumentMetadata
 			{
 				Key = id,
-				Metadata = new JObject(new JProperty(RavenEntityName, new JValue(tag))),
+				Metadata = metadata,
 				OriginalMetadata = new JObject(),
 				ETag = UseOptimisticConcurrency ? (Guid?)Guid.Empty : null,
 				OriginalValue = new JObject()
