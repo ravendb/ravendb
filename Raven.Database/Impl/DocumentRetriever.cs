@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
@@ -17,6 +18,15 @@ namespace Raven.Database.Impl
         private readonly HashSet<string> loadedIdsForFilter = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
         private readonly IStorageActionsAccessor actions;
         private readonly IEnumerable<AbstractReadTrigger> triggers;
+
+        private static readonly ThreadLocal<bool> disableReadTriggers = new ThreadLocal<bool>(() => false);
+
+        public static IDisposable DisableReadTriggers()
+        {
+            var old = disableReadTriggers.Value;
+            disableReadTriggers.Value = true;
+            return new DisposableAction(() => disableReadTriggers.Value = old);
+        }
 
         public DocumentRetriever(IStorageActionsAccessor actions, IEnumerable<AbstractReadTrigger> triggers)
         {
@@ -101,6 +111,9 @@ namespace Raven.Database.Impl
 
         public JsonDocument ExecuteReadTriggers(JsonDocument document, TransactionInformation transactionInformation, ReadOperation operation)
         {
+            if(disableReadTriggers.Value)
+                return document;
+
             return ExecuteReadTriggersOnRead(ProcessReadVetoes(document, transactionInformation, operation),
                                              transactionInformation, operation);
         }
