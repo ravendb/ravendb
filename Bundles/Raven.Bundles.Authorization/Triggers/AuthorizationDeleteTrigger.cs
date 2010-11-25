@@ -1,5 +1,7 @@
+using System;
 using System.IO;
 using System.Web;
+using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Plugins;
 using Raven.Http;
@@ -14,6 +16,15 @@ namespace Raven.Bundles.Authorization.Triggers
 		{
 			AuthorizationDecisions = new AuthorizationDecisions(Database, HttpRuntime.Cache);
 		}
+
+        /// <summary>
+        /// Reset the cache for the newly put document if it is a raven authorization document
+        /// </summary>
+        public override void AfterDelete(string key, TransactionInformation transactionInformation)
+        {
+            if (key.StartsWith("Raven/Authorization", StringComparison.InvariantCultureIgnoreCase))
+                AuthorizationDecisions.RemoveDocumentFromCache(key);
+        }
 
 		public override VetoResult AllowDelete(string key, TransactionInformation transactionInformation)
 		{
