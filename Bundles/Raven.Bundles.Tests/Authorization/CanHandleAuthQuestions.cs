@@ -15,7 +15,7 @@ namespace Raven.Bundles.Tests.Authorization
 
         public CanHandleAuthQuestions()
         {
-            authorizationDecisions = new AuthorizationDecisions(server.Database, HttpRuntime.Cache);
+            authorizationDecisions = new AuthorizationDecisions(server.Database);
         }
 
         [Fact]

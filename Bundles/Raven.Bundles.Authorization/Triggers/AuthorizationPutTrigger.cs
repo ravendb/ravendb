@@ -15,7 +15,7 @@ namespace Raven.Bundles.Authorization.Triggers
 
 		public override void Initialize()
 		{
-			AuthorizationDecisions = new AuthorizationDecisions(Database, HttpRuntime.Cache);
+			AuthorizationDecisions = new AuthorizationDecisions(Database);
 		}
 
 		/// <summary>
