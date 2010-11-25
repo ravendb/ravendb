@@ -57,7 +57,6 @@
   <ItemGroup>
     <Compile Include="Client\Async\AsyncServerClient.cs" />
     <Compile Include="Client\Async\IAsyncDatabaseCommands.cs" />
-    <Compile Include="Client\Async\WrapperAsyncData.cs" />
     <Compile Include="Client\HttpJsonRequest.cs" />
     <Compile Include="Client\IDatabaseCommands.cs" />
     <Compile Include="Client\JsonExtensions.cs" />
@@ -74,7 +73,6 @@
     <Compile Include="Converters\Int64Converter.cs" />
     <Compile Include="Converters\ITypeConverter.cs" />
     <Compile Include="Document\Async\AsyncDocumentSession.cs" />
-    <Compile Include="Document\Async\SyncronousLoadResult.cs" />
     <Compile Include="Document\DefaultRavenContractResolver.cs" />
     <Compile Include="Document\DocumentConvention.cs" />
     <Compile Include="Document\DocumentQuery.cs" />
