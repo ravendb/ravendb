@@ -4,8 +4,11 @@ using System.Configuration;
 using System.Net;
 using System.Text.RegularExpressions;
 using Raven.Client.Client;
+
+#if !NET_3_5
 using Raven.Client.Client.Async;
 using Raven.Client.Document.Async;
+#endif
 using System.Linq;
 using Raven.Client.Extensions;
 
@@ -56,6 +59,7 @@ namespace Raven.Client.Document
 			}
 		}
 
+#if !NET_3_5
 		private Func<IAsyncDatabaseCommands> asyncDatabaseCommandsGenerator;
 		/// <summary>
 		/// Gets the async database commands.
@@ -70,8 +74,9 @@ namespace Raven.Client.Document
 				return asyncDatabaseCommandsGenerator();
 			}
 		}
+#endif
 
-		/// <summary>
+        /// <summary>
 		/// Occurs when an entity is stored inside any session opened from this instance
 		/// </summary>
 		public event EventHandler<StoredEntityEventArgs> Stored;
@@ -322,7 +327,9 @@ namespace Raven.Client.Document
 	    {
 	        var replicationInformer = new ReplicationInformer();
 	        databaseCommandsGenerator = () => new ServerClient(Url, Conventions, credentials, replicationInformer);
+#if !NET_3_5
 	        asyncDatabaseCommandsGenerator = () => new AsyncServerClient(Url, Conventions, credentials);
+#endif
 	    }
 
 	    /// <summary>
@@ -337,7 +344,6 @@ namespace Raven.Client.Document
 		}
 
 #if !NET_3_5
-
 		/// <summary>
 		/// Opens the async session.
 		/// </summary>

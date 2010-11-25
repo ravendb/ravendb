@@ -1,3 +1,5 @@
+#if !NET_3_5
+
 using System;
 using System.Threading.Tasks;
 
@@ -51,3 +53,4 @@ namespace Raven.Client
 		Task SaveChangesAsync();
 	}
 }
+#endif

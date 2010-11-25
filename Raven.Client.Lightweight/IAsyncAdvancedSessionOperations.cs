@@ -1,4 +1,6 @@
-﻿using Raven.Client.Client.Async;
+﻿#if !NET_3_5
+
+using Raven.Client.Client.Async;
 
 namespace Raven.Client
 {
@@ -14,3 +16,4 @@ namespace Raven.Client
         IAsyncDatabaseCommands AsyncDatabaseCommands { get; }
     }
 }
+#endif

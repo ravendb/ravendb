@@ -1,3 +1,5 @@
+#if !NET_3_5
+
 using System;
 using System.Linq;
 using System.Net;
@@ -143,3 +145,4 @@ namespace Raven.Client.Document.Async
 		}
 	}
 }
+#endif
