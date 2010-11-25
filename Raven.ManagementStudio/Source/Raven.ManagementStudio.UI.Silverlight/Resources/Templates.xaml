@@ -1,0 +1,13 @@
+﻿<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="ControlTemplates/Gears.xaml" />
+        <ResourceDictionary Source="ControlTemplates/Menu.xaml" />
+        <ResourceDictionary Source="ControlTemplates/Indexes.xaml" />
+        <ResourceDictionary Source="ControlTemplates/DocumentsContainer.xaml" />
+        <ResourceDictionary Source="ControlTemplates/DocumentThumbnail.xaml" />
+        <ResourceDictionary Source="ControlTemplates/EmptyButton.xaml" />
+        <ResourceDictionary Source="ControlTemplates/JeffWilcox.SyntaxHighlighting.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+</ResourceDictionary>

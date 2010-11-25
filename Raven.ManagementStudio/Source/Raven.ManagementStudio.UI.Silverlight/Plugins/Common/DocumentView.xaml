@@ -1,0 +1,129 @@
+﻿<UserControl x:Class="Raven.ManagementStudio.UI.Silverlight.Plugins.Common.DocumentView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+    xmlns:controlsToolkit="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit" 
+    xmlns:cal="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro" 
+    xmlns:ic="clr-namespace:Microsoft.Expression.Interactivity.Core;assembly=Microsoft.Expression.Interactions" 
+    xmlns:jw="clr-namespace:Raven.ManagementStudio.UI.Silverlight.Controls.JeffWilcox.SyntaxHighlighting" 
+    mc:Ignorable="d">
+
+    <Grid>
+        <VisualStateManager.VisualStateGroups>
+            <VisualStateGroup x:Name="ViewStates" ic:ExtendedVisualStateManager.UseFluidLayout="True">
+                <VisualState x:Name="NormalState">
+                    <Storyboard>
+                        <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="(UIElement.Visibility)" Storyboard.TargetName="editView">
+                            <DiscreteObjectKeyFrame>
+                                <DiscreteObjectKeyFrame.Value>
+                                    <Visibility>Collapsed</Visibility>
+                                </DiscreteObjectKeyFrame.Value>
+                            </DiscreteObjectKeyFrame>
+                        </ObjectAnimationUsingKeyFrames>
+                        <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="(UIElement.Visibility)" Storyboard.TargetName="normalView">
+                            <DiscreteObjectKeyFrame>
+                                <DiscreteObjectKeyFrame.Value>
+                                    <Visibility>Visible</Visibility>
+                                </DiscreteObjectKeyFrame.Value>
+                            </DiscreteObjectKeyFrame>
+                        </ObjectAnimationUsingKeyFrames>
+                    </Storyboard>
+                </VisualState> 
+                <VisualState x:Name="EditState">
+                    <Storyboard>
+                        <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="(UIElement.Visibility)" Storyboard.TargetName="editView">
+                            <DiscreteObjectKeyFrame>
+                                <DiscreteObjectKeyFrame.Value>
+                                    <Visibility>Visible</Visibility>
+                                </DiscreteObjectKeyFrame.Value>
+                            </DiscreteObjectKeyFrame>
+                        </ObjectAnimationUsingKeyFrames>
+                        <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="(UIElement.Visibility)" Storyboard.TargetName="normalView">
+                            <DiscreteObjectKeyFrame>
+                                <DiscreteObjectKeyFrame.Value>
+                                    <Visibility>Collapsed</Visibility>
+                                </DiscreteObjectKeyFrame.Value>
+                            </DiscreteObjectKeyFrame>
+                        </ObjectAnimationUsingKeyFrames>
+                    </Storyboard>
+                </VisualState>
+            </VisualStateGroup>
+        </VisualStateManager.VisualStateGroups>
+        <VisualStateManager.CustomVisualStateManager>
+            <ic:ExtendedVisualStateManager/>
+        </VisualStateManager.CustomVisualStateManager>
+
+        <Grid x:Name="normalView">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="30"/>
+                <RowDefinition Height="30"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="30"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <StackPanel Orientation="Horizontal" Grid.Row="0">
+                <TextBlock Text="ID " VerticalAlignment="Center" />
+                <TextBlock Text="{Binding Id}" VerticalAlignment="Center" Foreground="{StaticResource DarkBrush}"/>
+            </StackPanel>
+            <Button Content="Edit" x:Name="Edit" Grid.Row="0" HorizontalAlignment="Right"/>
+
+            <TextBlock Text="Document" Grid.Row="1" HorizontalAlignment="Left"/>
+            <Button Content="Tree View"  Grid.Row="1" HorizontalAlignment="Right"/>
+
+            <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                <jw:SyntaxHighlightingTextBlock FontFamily="Consolas, Courier New" SourceLanguage="Json" SourceCode="{Binding JsonData}" />
+            </ScrollViewer>
+
+            <TextBlock Text="Metadata" Grid.Row="3" HorizontalAlignment="Left"/>
+            <Button Content="Raw JSON"  Grid.Row="3" HorizontalAlignment="Right"/>
+
+            <ScrollViewer Grid.Row="4" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                <jw:SyntaxHighlightingTextBlock FontFamily="Consolas, Courier New" SourceLanguage="Json" SourceCode="{Binding JsonMetadata}" />
+            </ScrollViewer>
+
+        </Grid>
+
+        <Grid x:Name="editView">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="30"/>
+                <RowDefinition Height="30"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="30"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <StackPanel Orientation="Horizontal" Grid.Row="0">
+                <TextBlock Text="ID" VerticalAlignment="Center" />
+                <TextBox Text="{Binding Id, Mode=TwoWay}" VerticalContentAlignment="Center" VerticalAlignment="Center"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Grid.Row="0" HorizontalAlignment="Right">
+                <Button Content="Save" cal:Message.Attach="Save"/>
+                <Button Content="Cancel" x:Name="Cancel"/>   
+            </StackPanel>
+
+            <TextBlock Text="Document" Grid.Row="1" HorizontalAlignment="Left"/>
+            <Button Content="Tree View"  Grid.Row="1" HorizontalAlignment="Right"/>
+
+            <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                <jw:SyntaxHighlightingTextBox FontFamily="Consolas, Courier New"
+                                              SourceLanguage="Json"
+                                              SourceCode="{Binding JsonData, Mode=TwoWay}"
+                                              SelectionBackground="#560085FF"
+                                              SelectionForeground="Transparent"/>
+            </ScrollViewer>
+
+            <TextBlock Text="Metadata" Grid.Row="3" HorizontalAlignment="Left"/>
+            <Button Content="Raw JSON"  Grid.Row="3" HorizontalAlignment="Right"/>
+
+            <ScrollViewer Grid.Row="4" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                <jw:SyntaxHighlightingTextBox FontFamily="Consolas, Courier New"
+                                              SourceLanguage="Json"
+                                              SourceCode="{Binding JsonMetadata, Mode=TwoWay}"
+                                              SelectionBackground="#560085FF"
+                                              SelectionForeground="Transparent"/>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+
+</UserControl>

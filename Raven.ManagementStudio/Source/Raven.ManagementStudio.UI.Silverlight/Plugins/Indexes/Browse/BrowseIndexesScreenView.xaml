@@ -1,0 +1,258 @@
+﻿<UserControl x:Class="Raven.ManagementStudio.UI.Silverlight.Plugins.Indexes.Browse.BrowseIndexesScreenView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:cal="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
+    xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity" 
+    xmlns:toolkit="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit" xmlns:Controls="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Layout.Toolkit" mc:Ignorable="d">
+
+    <toolkit:BusyIndicator IsBusy="{Binding IsBusy}">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition />
+                <ColumnDefinition />
+                <ColumnDefinition />
+                <ColumnDefinition />
+            </Grid.ColumnDefinitions>
+
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3" Text="{Binding Items.Count, StringFormat=Indexes (\{0\} results)}" />
+            <TextBox Grid.Row="0" Grid.Column="3" x:Name="SearchTextBox">
+                <i:Interaction.Triggers>
+                    <i:EventTrigger EventName="TextChanged">
+                        <cal:ActionMessage MethodName="Search">
+                            <cal:Parameter Value="{Binding Text, ElementName=SearchTextBox, UpdateSourceTrigger=Default}" />
+                        </cal:ActionMessage>
+                    </i:EventTrigger>
+                </i:Interaction.Triggers>
+            </TextBox>
+
+            <Controls:Accordion x:Name="IndexAccordion" ItemsSource="{Binding Items}" Grid.Column="0" Grid.ColumnSpan="4" Grid.Row="1" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" VerticalAlignment="Stretch" VerticalContentAlignment="Stretch" SelectedItem="{Binding SelectedItem, Mode=TwoWay}" >
+                <Controls:Accordion.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel>
+                            <TextBlock Text="{Binding CurrentName}" />
+                        </StackPanel>
+                    </DataTemplate>
+                </Controls:Accordion.ItemTemplate>
+                <Controls:Accordion.ContentTemplate>
+                    <DataTemplate>
+                        <Grid Width="{Binding ActualWidth, ElementName=IndexAccordion}" Margin="0,5,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="50" />
+                            </Grid.ColumnDefinitions>
+
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="3*" />
+                                <RowDefinition Height="3*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <Grid Grid.Row="0" Grid.Column="0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="75" />
+                                    <ColumnDefinition Width="5*" />
+                                </Grid.ColumnDefinitions>
+
+
+                                <TextBlock Grid.Column="0" Text="Name" VerticalAlignment="Center" />
+                                <TextBox Grid.Column="1" Text="{Binding Name, Mode=TwoWay}" IsReadOnly="{Binding IsEdited, Converter={StaticResource booleanToOpposite}}" />
+                            </Grid>
+
+                            <Grid Grid.Row="1" Grid.Column="0">
+
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="75" />
+                                    <ColumnDefinition Width="5*" />
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Grid.Column="0" Text="Map" VerticalAlignment="Center" />
+                                <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                                    <TextBox Text="{Binding Definition.Map, Mode=TwoWay}" TextWrapping="Wrap" AcceptsReturn="True" IsReadOnly="{Binding IsEdited, Converter={StaticResource booleanToOpposite}}" />
+                                </ScrollViewer>
+                            </Grid>
+
+                            <Grid Grid.Row="2" Grid.Column="0">
+
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="75" />
+                                    <ColumnDefinition Width="5*" />
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Grid.Column="0" Text="Reduce" VerticalAlignment="Center" />
+                                <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                                    <TextBox Text="{Binding Definition.Reduce, Mode=TwoWay}" TextWrapping="Wrap" AcceptsReturn="True" IsReadOnly="{Binding IsEdited, Converter={StaticResource booleanToOpposite}}" />
+                                </ScrollViewer>
+                            </Grid>
+
+                            <Grid Grid.Row="3" Grid.Column="0">
+
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="75" />
+                                    <ColumnDefinition Width="5*" />
+                                </Grid.ColumnDefinitions>
+
+                                <Grid.RowDefinitions>
+                                    <RowDefinition />
+                                    <RowDefinition />
+                                </Grid.RowDefinitions>
+
+                                <TextBlock Grid.Column="0" Grid.Row="0" Text="Customize" VerticalAlignment="Center" />
+                                <ListBox Grid.Column="1" Grid.Row="0" ItemsSource="{Binding FieldStoresAndIndexes, Mode=TwoWay}" IsEnabled="{Binding IsEdited}" HorizontalContentAlignment="Stretch" HorizontalAlignment="Stretch">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                                    <TextBlock Text="Field" />
+                                                    <TextBox Text="{Binding FieldName, Mode=TwoWay}" />
+                                                </StackPanel>
+
+                                                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                                    <TextBlock Text="Store" />
+                                                    <ComboBox ItemsSource="{Binding FieldStorage, Mode=OneTime, Converter={StaticResource enumToEnumerable}}" 
+                                                          SelectedIndex="{Binding FieldStorage, Mode=TwoWay, Converter={StaticResource enumToInt}}" />
+                                                </StackPanel>
+
+                                                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                                                    <TextBlock Text="Index" />
+                                                    <ComboBox ItemsSource="{Binding FieldIndexing, Mode=OneTime, Converter={StaticResource enumToEnumerable}}" 
+                                                          SelectedIndex="{Binding FieldIndexing, Mode=TwoWay, Converter={StaticResource enumToInt}}" />
+                                                </StackPanel>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+
+                                <Button Height="25" Width="25" Grid.Column="1" Grid.Row="1" IsEnabled="{Binding IsEdited}" HorizontalAlignment="Left">
+                                    <i:Interaction.Triggers>
+                                        <i:EventTrigger EventName="Click">
+                                            <cal:ActionMessage MethodName="AddFieldStorageAndIndexing">
+                                                <cal:Parameter Value="{Binding}" />
+                                            </cal:ActionMessage>
+                                        </i:EventTrigger>
+                                    </i:Interaction.Triggers>
+                                    <Button.ContentTemplate>
+                                        <DataTemplate>
+                                            <StackPanel>
+                                                <Image Source="../../../Resources/Images/add-small.png" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </Button.ContentTemplate>
+                                </Button>
+                            </Grid>
+
+                            <StackPanel Grid.Column="1" Grid.Row="0" Grid.RowSpan="3" Margin="10,0,10,0">
+                                <ToggleButton IsChecked="{Binding IsEdited, Mode=TwoWay}">
+                                    <ToggleButton.Content>
+                                        <StackPanel>
+                                            <Image Source="../../../Resources/Images/edit-small.png" Stretch="None" Visibility="{Binding IsEdited, Converter={StaticResource booleanToOppositeVisibility}}" />
+                                            <Image Source="../../../Resources/Images/edit-cancel-small.png" Stretch="None" Visibility="{Binding IsEdited, Converter={StaticResource booleanToVisibility}}" />
+                                        </StackPanel>
+                                    </ToggleButton.Content>
+                                </ToggleButton>
+
+                                <Button IsEnabled="{Binding IsEdited}">
+                                    <i:Interaction.Triggers>
+                                        <i:EventTrigger EventName="Click">
+                                            <cal:ActionMessage MethodName="Save">
+                                                <cal:Parameter Value="{Binding}" />
+                                            </cal:ActionMessage>
+                                        </i:EventTrigger>
+                                    </i:Interaction.Triggers>
+                                    <Button.ContentTemplate>
+                                        <DataTemplate>
+                                            <StackPanel>
+                                                <Image Source="../../../Resources/Images/save-small.png" Stretch="None" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </Button.ContentTemplate>
+                                </Button>
+
+                                <Button IsEnabled="{Binding IsEdited}">
+                                    <i:Interaction.Triggers>
+                                        <i:EventTrigger EventName="Click">
+                                            <cal:ActionMessage MethodName="Remove">
+                                                <cal:Parameter Value="{Binding}" />
+                                            </cal:ActionMessage>
+                                        </i:EventTrigger>
+                                    </i:Interaction.Triggers>
+                                    <Button.ContentTemplate>
+                                        <DataTemplate>
+                                            <Image Source="../../../Resources/Images/delete-small.png" Stretch="None" />
+                                        </DataTemplate>
+                                    </Button.ContentTemplate>
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+                    </DataTemplate>
+                </Controls:Accordion.ContentTemplate>
+            </Controls:Accordion>
+
+
+
+            <!--<ListBox Grid.Column="0" Grid.ColumnSpan="4" Grid.Row="1" ItemsSource="{Binding Items}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Grid>
+                            <VisualStateManager.VisualStateGroups>
+                                <VisualStateGroup x:Name="CommonStates">
+                                    <VisualState x:Name="Normal">
+                                        <Storyboard>
+                                            <DoubleAnimation Duration="0" To="0" Storyboard.TargetProperty="(UIElement.Opacity)" Storyboard.TargetName="Actions" />
+                                        </Storyboard>
+                                    </VisualState>
+                                    <VisualState x:Name="Selected">
+                                        <Storyboard>
+                                            <DoubleAnimation Duration="0" To="1" Storyboard.TargetProperty="(UIElement.Opacity)" Storyboard.TargetName="Actions" />
+                                        </Storyboard>
+                                    </VisualState>
+                                </VisualStateGroup>
+                            </VisualStateManager.VisualStateGroups>
+
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="100" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.Column="0" Text="{Binding Name}" TextTrimming="WordEllipsis" />
+                            <StackPanel x:Name="Actions" Grid.Column="1" Orientation="Horizontal">
+                                <Button Content="Edit">
+                                    <i:Interaction.Triggers>
+                                        <i:EventTrigger EventName="Click">
+                                            <cal:ActionMessage MethodName="Edit">
+                                                <cal:Parameter Value="{Binding}" />
+                                            </cal:ActionMessage>
+                                        </i:EventTrigger>
+                                    </i:Interaction.Triggers>
+                                </Button>
+
+                                <Button Content="Remove">
+                                    <i:Interaction.Triggers>
+                                        <i:EventTrigger EventName="Click">
+                                            <cal:ActionMessage MethodName="Remove">
+                                                <cal:Parameter Value="{Binding}" />
+                                            </cal:ActionMessage>
+                                        </i:EventTrigger>
+                                    </i:Interaction.Triggers>
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>-->
+        </Grid>
+    </toolkit:BusyIndicator>
+</UserControl>

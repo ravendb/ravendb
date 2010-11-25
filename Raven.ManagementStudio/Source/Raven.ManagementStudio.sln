@@ -1,0 +1,61 @@
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Client", "Client", "{992EF7C0-F1E1-4EA2-89E6-D68585ECD42E}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ManagementStudio", "ManagementStudio", "{840D08A3-7EF3-4E5D-9AC0-42BEFEE819FA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Client.Silverlight", "Raven.Client.Silverlight\Raven.Client.Silverlight.csproj", "{250E7A4E-D717-4C16-8048-B5BE99D77715}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Client.Silverlight.Tests", "Raven.Client.Silverlight.Tests\Raven.Client.Silverlight.Tests.csproj", "{B7D55E66-1D31-4E57-9948-4FB2D0354A24}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.ManagementStudio.UI.Silverlight", "Raven.ManagementStudio.UI.Silverlight\Raven.ManagementStudio.UI.Silverlight.csproj", "{AB130CB7-E4D4-4496-BEE6-0538963475FC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.ManagementStudio.Plugin", "Raven.ManagementStudio.Plugin\Raven.ManagementStudio.Plugin.csproj", "{0BA36A77-F8CA-400C-8F89-3726143BFA96}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Management.Client.Silverlight", "Raven.Management.Client.Silverlight\Raven.Management.Client.Silverlight.csproj", "{1BE0A7B3-9DB3-49D0-B1DF-C8326D792424}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Management.Client.Silverlight.Tests", "Raven.Management.Client.Silverlight.Tests\Raven.Management.Client.Silverlight.Tests.csproj", "{AC7DFA81-9C14-4BF3-A1AD-4AB8DEF4616C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{250E7A4E-D717-4C16-8048-B5BE99D77715}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{250E7A4E-D717-4C16-8048-B5BE99D77715}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{250E7A4E-D717-4C16-8048-B5BE99D77715}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{250E7A4E-D717-4C16-8048-B5BE99D77715}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B7D55E66-1D31-4E57-9948-4FB2D0354A24}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B7D55E66-1D31-4E57-9948-4FB2D0354A24}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B7D55E66-1D31-4E57-9948-4FB2D0354A24}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B7D55E66-1D31-4E57-9948-4FB2D0354A24}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AB130CB7-E4D4-4496-BEE6-0538963475FC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AB130CB7-E4D4-4496-BEE6-0538963475FC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AB130CB7-E4D4-4496-BEE6-0538963475FC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AB130CB7-E4D4-4496-BEE6-0538963475FC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0BA36A77-F8CA-400C-8F89-3726143BFA96}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0BA36A77-F8CA-400C-8F89-3726143BFA96}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0BA36A77-F8CA-400C-8F89-3726143BFA96}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0BA36A77-F8CA-400C-8F89-3726143BFA96}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1BE0A7B3-9DB3-49D0-B1DF-C8326D792424}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1BE0A7B3-9DB3-49D0-B1DF-C8326D792424}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1BE0A7B3-9DB3-49D0-B1DF-C8326D792424}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1BE0A7B3-9DB3-49D0-B1DF-C8326D792424}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AC7DFA81-9C14-4BF3-A1AD-4AB8DEF4616C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AC7DFA81-9C14-4BF3-A1AD-4AB8DEF4616C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AC7DFA81-9C14-4BF3-A1AD-4AB8DEF4616C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AC7DFA81-9C14-4BF3-A1AD-4AB8DEF4616C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{250E7A4E-D717-4C16-8048-B5BE99D77715} = {992EF7C0-F1E1-4EA2-89E6-D68585ECD42E}
+		{B7D55E66-1D31-4E57-9948-4FB2D0354A24} = {992EF7C0-F1E1-4EA2-89E6-D68585ECD42E}
+		{1BE0A7B3-9DB3-49D0-B1DF-C8326D792424} = {992EF7C0-F1E1-4EA2-89E6-D68585ECD42E}
+		{AC7DFA81-9C14-4BF3-A1AD-4AB8DEF4616C} = {992EF7C0-F1E1-4EA2-89E6-D68585ECD42E}
+		{AB130CB7-E4D4-4496-BEE6-0538963475FC} = {840D08A3-7EF3-4E5D-9AC0-42BEFEE819FA}
+		{0BA36A77-F8CA-400C-8F89-3726143BFA96} = {840D08A3-7EF3-4E5D-9AC0-42BEFEE819FA}
+	EndGlobalSection
+EndGlobal
