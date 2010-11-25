@@ -11,7 +11,7 @@ namespace Raven.Bundles.Tests.Authorization
     {
         private readonly AuthorizationDecisions authorizationDecisions;
         const string userId = "Raven/Authorization/Users/Ayende";
-        private const string operation = "/Company/Solicit";
+        private const string operation = "Company/Solicit";
 
         public CanHandleAuthQuestions()
         {
@@ -31,7 +31,7 @@ namespace Raven.Bundles.Tests.Authorization
                 {
                     Id = userId,
                     Name = "Ayende Rahien",
-                    Roles = { "/Raven/Authorization/Roles/Managers" }
+                    Roles = { "Raven/Authorization/Roles/Managers" }
                 });
 
                 s.Store(company);
@@ -44,7 +44,7 @@ namespace Raven.Bundles.Tests.Authorization
 							{
 								Allow = true,
 								Operation = operation,
-								Role = "/Raven/Authorization/Roles/Managers"
+								Role = "Raven/Authorization/Roles/Managers"
 							}
 						}
                 });
@@ -70,12 +70,12 @@ namespace Raven.Bundles.Tests.Authorization
                 {
                     Id = userId,
                     Name = "Ayende Rahien",
-                    Roles = { "/Raven/Authorization/Roles/Managers" }
+                    Roles = { "Raven/Authorization/Roles/Managers" }
                 });
 
                 s.Store(new AuthorizationRole
                 {
-                    Id = "/Raven/Authorization/Roles/Managers",
+                    Id = "Raven/Authorization/Roles/Managers",
                     Permissions =
 						{
 							new OperationPermission
@@ -116,12 +116,12 @@ namespace Raven.Bundles.Tests.Authorization
                 {
                     Id = userId,
                     Name = "Ayende Rahien",
-                    Roles = { "/Raven/Authorization/Roles/Managers" }
+                    Roles = { "Raven/Authorization/Roles/Managers" }
                 });
 
                 s.Store(new AuthorizationRole
                 {
-                    Id = "/Raven/Authorization/Roles/Managers",
+                    Id = "Raven/Authorization/Roles/Managers",
                     Permissions =
 						{
 							new OperationPermission
@@ -160,14 +160,14 @@ namespace Raven.Bundles.Tests.Authorization
                 {
                     Id = userId,
                     Name = "Ayende Rahien",
-                    Roles = { "/Raven/Authorization/Roles/Managers" },
+                    Roles = { "Raven/Authorization/Roles/Managers" },
                     Permissions =
 						{
 							new OperationPermission
 							{
 								Allow = false,
 								Operation = operation,
-								Tag = "/Important"
+								Tag = "Important"
 							}
 						}
                 });
@@ -229,14 +229,14 @@ namespace Raven.Bundles.Tests.Authorization
                 {
                     Id = userId,
                     Name = "Ayende Rahien",
-                    Roles = { "/Raven/Authorization/Roles/Managers" },
+                    Roles = { "Raven/Authorization/Roles/Managers" },
                     Permissions =
 						{
 							new OperationPermission
 							{
 								Allow = false,
 								Operation = operation,
-								Tag = "/Important"
+								Tag = "Important"
 							}
 						}
                 });
@@ -245,14 +245,14 @@ namespace Raven.Bundles.Tests.Authorization
 
                 s.SetAuthorizationFor(company, new DocumentAuthorization
                 {
-                    Tags = { "/Important" },
+                    Tags = { "Important" },
                     Permissions =
 						{
 							new DocumentPermission
 							{
 								Allow = true,
 								Operation = operation,
-								Role = "/Raven/Authorization/Roles/Managers"
+								Role = "Raven/Authorization/Roles/Managers"
 							}
 						}
                 });
@@ -278,7 +278,7 @@ namespace Raven.Bundles.Tests.Authorization
                 {
                     Id = userId,
                     Name = "Ayende Rahien",
-                    Roles = { "/Raven/Authorization/Roles/Managers/Supreme" }
+                    Roles = { "Raven/Authorization/Roles/Managers/Supreme" }
                 });
 
                 s.Store(company);
@@ -291,7 +291,7 @@ namespace Raven.Bundles.Tests.Authorization
 							{
 								Allow = true,
 								Operation = operation,
-								Role = "/Raven/Authorization/Roles/Managers"
+								Role = "Raven/Authorization/Roles/Managers"
 							}
 						}
                 });
@@ -323,7 +323,7 @@ namespace Raven.Bundles.Tests.Authorization
 							{
 								Allow = true,
 								Operation = operation,
-								Tag = "/Companies/Important"
+								Tag = "Companies/Important"
 							}
 						}
                 });
@@ -332,7 +332,7 @@ namespace Raven.Bundles.Tests.Authorization
 
                 s.SetAuthorizationFor(company, new DocumentAuthorization
                 {
-                    Tags = { "/Companies/Important" }
+                    Tags = { "Companies/Important" }
                 });
 
                 s.SaveChanges();
@@ -362,7 +362,7 @@ namespace Raven.Bundles.Tests.Authorization
 							{
 								Allow = true,
 								Operation = operation,
-								Tag = "/Companies"
+								Tag = "Companies"
 							}
 						}
                 });
@@ -371,7 +371,7 @@ namespace Raven.Bundles.Tests.Authorization
 
                 s.SetAuthorizationFor(company, new DocumentAuthorization
                 {
-                    Tags = { "/Companies/Important" }
+                    Tags = { "Companies/Important" }
                 });
 
                 s.SaveChanges();
