@@ -10,7 +10,7 @@ namespace Raven.Bundles.Tests.Authorization
     public class CanHandleAuthQuestions : AuthorizationTest
     {
         private readonly AuthorizationDecisions authorizationDecisions;
-        const string userId = "Raven/Authorization/Users/Ayende";
+        const string userId = "Authorization/Users/Ayende";
         private const string operation = "Company/Solicit";
 
         public CanHandleAuthQuestions()
@@ -31,7 +31,7 @@ namespace Raven.Bundles.Tests.Authorization
                 {
                     Id = userId,
                     Name = "Ayende Rahien",
-                    Roles = { "Raven/Authorization/Roles/Managers" }
+                    Roles = { "Authorization/Roles/Managers" }
                 });
 
                 s.Store(company);
@@ -44,7 +44,7 @@ namespace Raven.Bundles.Tests.Authorization
 							{
 								Allow = true,
 								Operation = operation,
-								Role = "Raven/Authorization/Roles/Managers"
+								Role = "Authorization/Roles/Managers"
 							}
 						}
                 });
@@ -70,12 +70,12 @@ namespace Raven.Bundles.Tests.Authorization
                 {
                     Id = userId,
                     Name = "Ayende Rahien",
-                    Roles = { "Raven/Authorization/Roles/Managers" }
+                    Roles = { "Authorization/Roles/Managers" }
                 });
 
                 s.Store(new AuthorizationRole
                 {
-                    Id = "Raven/Authorization/Roles/Managers",
+                    Id = "Authorization/Roles/Managers",
                     Permissions =
 						{
 							new OperationPermission
@@ -116,12 +116,12 @@ namespace Raven.Bundles.Tests.Authorization
                 {
                     Id = userId,
                     Name = "Ayende Rahien",
-                    Roles = { "Raven/Authorization/Roles/Managers" }
+                    Roles = { "Authorization/Roles/Managers" }
                 });
 
                 s.Store(new AuthorizationRole
                 {
-                    Id = "Raven/Authorization/Roles/Managers",
+                    Id = "Authorization/Roles/Managers",
                     Permissions =
 						{
 							new OperationPermission
@@ -160,7 +160,7 @@ namespace Raven.Bundles.Tests.Authorization
                 {
                     Id = userId,
                     Name = "Ayende Rahien",
-                    Roles = { "Raven/Authorization/Roles/Managers" },
+                    Roles = { "Authorization/Roles/Managers" },
                     Permissions =
 						{
 							new OperationPermission
@@ -190,12 +190,12 @@ namespace Raven.Bundles.Tests.Authorization
                 {
                     Id = userId,
                     Name = "Ayende Rahien",
-                    Roles = { "Raven/Authorization/Roles/Managers" },
+                    Roles = { "Authorization/Roles/Managers" },
                    
                 });
                 s.Store(new AuthorizationRole
                 {
-                    Id = "Raven/Authorization/Roles/Managers",
+                    Id = "Authorization/Roles/Managers",
                     Permissions =
 						{
 							new OperationPermission
@@ -229,7 +229,7 @@ namespace Raven.Bundles.Tests.Authorization
                 {
                     Id = userId,
                     Name = "Ayende Rahien",
-                    Roles = { "Raven/Authorization/Roles/Managers" },
+                    Roles = { "Authorization/Roles/Managers" },
                     Permissions =
 						{
 							new OperationPermission
@@ -252,7 +252,7 @@ namespace Raven.Bundles.Tests.Authorization
 							{
 								Allow = true,
 								Operation = operation,
-								Role = "Raven/Authorization/Roles/Managers"
+								Role = "Authorization/Roles/Managers"
 							}
 						}
                 });
@@ -278,7 +278,7 @@ namespace Raven.Bundles.Tests.Authorization
                 {
                     Id = userId,
                     Name = "Ayende Rahien",
-                    Roles = { "Raven/Authorization/Roles/Managers/Supreme" }
+                    Roles = { "Authorization/Roles/Managers/Supreme" }
                 });
 
                 s.Store(company);
@@ -291,7 +291,7 @@ namespace Raven.Bundles.Tests.Authorization
 							{
 								Allow = true,
 								Operation = operation,
-								Role = "Raven/Authorization/Roles/Managers"
+								Role = "Authorization/Roles/Managers"
 							}
 						}
                 });

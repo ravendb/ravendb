@@ -22,7 +22,7 @@ namespace Raven.Bundles.Authorization.Triggers
         /// </summary>
         public override void AfterDelete(string key, TransactionInformation transactionInformation)
         {
-            if (key.StartsWith("Raven/Authorization", StringComparison.InvariantCultureIgnoreCase))
+            if (key.StartsWith("Authorization", StringComparison.InvariantCultureIgnoreCase))
                 AuthorizationDecisions.RemoveDocumentFromCache(key);
         }
 
