@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
+using Raven.Database.Impl;
 using Raven.Database.Json;
 using Raven.Http;
 using Raven.Http.Abstractions;
@@ -60,7 +61,10 @@ namespace Raven.Database.Server
             if (ResourcesStoresCache.TryGetValue(tenantId, out database))
                 return true;
 
-            var jsonDocument = DefaultDatabase.Get("Raven/Databases/" + tenantId, null);
+            JsonDocument jsonDocument;
+            
+            using (DocumentRetriever.DisableReadTriggers())
+                jsonDocument = DefaultDatabase.Get("Raven/Databases/" + tenantId, null);
 
             if (jsonDocument == null)
                 return false;

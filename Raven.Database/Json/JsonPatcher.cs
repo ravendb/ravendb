@@ -1,7 +1,9 @@
 using System;
+using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Exceptions;
 using Raven.Http.Exceptions;
+using System.Linq;
 
 namespace Raven.Database.Json
 {
@@ -134,12 +136,26 @@ namespace Raven.Database.Json
             if (array == null)
                 throw new InvalidOperationException("Cannot remove value from  '" + propName + "' because it is not an array");
 			var position = patchCmd.Position;
-			if (position == null)
-                throw new InvalidOperationException("Cannot remove value from  '" + propName + "' because position element does not exists or not an integer");
+            var value = patchCmd.Value;
+			if (position == null && value == null)
+                throw new InvalidOperationException("Cannot remove value from  '" + propName + "' because position element does not exists or not an integer and no value was present");
+            if (position != null && value != null)
+                throw new InvalidOperationException("Cannot remove value from  '" + propName + "' because both a position and a value are set");
             if (position < 0 || position >= array.Count)
                 throw new IndexOutOfRangeException("Cannot remove value from  '" + propName +
                                                    "' because position element is out of bound bounds");
+
+            if (value != null)
+            {
+                var equalityComparer = new JTokenEqualityComparer();
+                var singleOrDefault = array.FirstOrDefault(x => equalityComparer.Equals(x, value));
+                if (singleOrDefault == null)
+                    return;
+                array.Remove(singleOrDefault);
+                return;
+            }
             array.RemoveAt(position.Value);
+           
         }
 
 		private void InsertValue(PatchRequest patchCmd, string propName, JProperty property)

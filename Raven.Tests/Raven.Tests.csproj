@@ -108,6 +108,7 @@
     <Compile Include="Bugs\AccurateCount.cs" />
     <Compile Include="Bugs\AfterDeletingTheIndexStopsBeingStale.cs" />
     <Compile Include="Bugs\AnalyzerPerField.cs" />
+    <Compile Include="Bugs\AnonymousClasses.cs" />
     <Compile Include="Bugs\AnyQueries.cs" />
     <Compile Include="Bugs\AsyncCommit.cs" />
     <Compile Include="Bugs\AttachmentEndoding.cs" />
@@ -143,6 +144,8 @@
     <Compile Include="Bugs\IndexingRavenDocuments.cs" />
     <Compile Include="Bugs\IndexNestedFields.cs" />
     <Compile Include="Bugs\IndexWithTwoProperties.cs" />
+    <Compile Include="Bugs\InvalidIds.cs" />
+    <Compile Include="Bugs\Issue199.cs" />
     <Compile Include="Bugs\KeyGeneration.cs" />
     <Compile Include="Bugs\KeysAreCaseInsensitive.cs" />
     <Compile Include="Bugs\LinqGitHub147.cs" />
@@ -158,6 +161,7 @@
     <Compile Include="Bugs\NameAndId.cs" />
     <Compile Include="Bugs\OperationHeaders.cs" />
     <Compile Include="Bugs\OverwriteDocuments.cs" />
+    <Compile Include="Bugs\QueryingOnEqualToNull.cs" />
     <Compile Include="Bugs\QueryResultCountsWithProjections.cs" />
     <Compile Include="Bugs\OverwriteIndexLocally.cs" />
     <Compile Include="Bugs\OverwriteIndexRemotely.cs" />

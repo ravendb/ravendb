@@ -1,5 +1,7 @@
+#if !NET_3_5
+
 using System;
-using Raven.Client.Client.Async;
+using System.Threading.Tasks;
 
 namespace Raven.Client
 {
@@ -34,45 +36,21 @@ namespace Raven.Client
 		/// Begins the async load operation
 		/// </summary>
 		/// <param name="id">The id.</param>
-		/// <param name="asyncCallback">The async callback.</param>
-		/// <param name="state">The state.</param>
 		/// <returns></returns>
-		IAsyncResult BeginLoad(string id, AsyncCallback asyncCallback, object state);
-		/// <summary>
-		/// Ends the async load operation
-		/// </summary>
-		/// <typeparam name="T"></typeparam>
-		/// <param name="result">The result.</param>
-		/// <returns></returns>
-		T EndLoad<T>(IAsyncResult result);
+		Task<T> LoadAsync<T>(string id);
 
 		/// <summary>
 		/// Begins the async multi load operation
 		/// </summary>
 		/// <param name="ids">The ids.</param>
-		/// <param name="asyncCallback">The async callback.</param>
-		/// <param name="state">The state.</param>
 		/// <returns></returns>
-		IAsyncResult BeginMultiLoad(string[] ids, AsyncCallback asyncCallback, object state);
-		/// <summary>
-		/// Ends the async multi load operation
-		/// </summary>
-		/// <typeparam name="T"></typeparam>
-		/// <param name="result">The result.</param>
-		/// <returns></returns>
-		T[] EndMultiLoad<T>(IAsyncResult result);
-
-		/// <summary>
+		Task<T[]> MultiLoadAsync<T>(string[] ids);
+		
+        /// <summary>
 		/// Begins the async save changes operation
 		/// </summary>
-		/// <param name="asyncCallback">The async callback.</param>
-		/// <param name="state">The state.</param>
 		/// <returns></returns>
-		IAsyncResult BeginSaveChanges(AsyncCallback asyncCallback, object state);
-		/// <summary>
-		/// Ends the async save changes operation
-		/// </summary>
-		/// <param name="result">The result.</param>
-		void EndSaveChanges(IAsyncResult result);
+		Task SaveChangesAsync();
 	}
 }
+#endif

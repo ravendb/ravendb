@@ -1,6 +1,9 @@
+#if !NET_3_5
+
 using System;
 using System.Linq;
 using System.Net;
+using System.Threading.Tasks;
 using Raven.Client.Client;
 using Raven.Client.Client.Async;
 using Raven.Database;
@@ -46,99 +49,64 @@ namespace Raven.Client.Document.Async
 		/// Begins the async load operation
 		/// </summary>
 		/// <param name="id">The id.</param>
-		/// <param name="asyncCallback">The async callback.</param>
-		/// <param name="state">The state.</param>
 		/// <returns></returns>
-		public IAsyncResult BeginLoad(string id, AsyncCallback asyncCallback, object state)
+		public Task<T> LoadAsync<T>(string id)
 		{
 			object entity;
-			if (entitiesByKey.TryGetValue(id, out entity))
-				return new SyncronousLoadResult(state, entity);
+            if (entitiesByKey.TryGetValue(id, out entity))
+            {
+                var tcs = new TaskCompletionSource<T>();
+                tcs.SetResult((T)entity);
+                return tcs.Task;
+            }
 			
 			IncrementRequestCount();
 
-			return AsyncDatabaseCommands.BeginGet(id, asyncCallback, state);
+			return AsyncDatabaseCommands.GetAsync(id)
+                .ContinueWith(task =>
+                {
+                    JsonDocument documentFound;
+                    try
+                    {
+                        documentFound = task.Result;
+                    }
+                    catch (WebException ex)
+                    {
+                        var httpWebResponse = ex.Response as HttpWebResponse;
+                        if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.NotFound)
+                            return default(T);
+                        throw;
+                    }
+                    if (documentFound == null)
+                        return default(T);
+
+                    return TrackEntity<T>(documentFound);
+                });
 		}
 
-		/// <summary>
-		/// Ends the async load operation
-		/// </summary>
-		/// <typeparam name="T"></typeparam>
-		/// <param name="result">The result.</param>
-		/// <returns></returns>
-		public T EndLoad<T>(IAsyncResult result)
-		{
-			var syncronousLoadResult = result as SyncronousLoadResult;
-			if (syncronousLoadResult != null)
-				return (T) syncronousLoadResult.Entity;
-
-			JsonDocument documentFound;
-			try
-			{
-				documentFound = AsyncDatabaseCommands.EndGet(result);
-			}
-			catch (WebException ex)
-			{
-				var httpWebResponse = ex.Response as HttpWebResponse;
-				if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.NotFound)
-					return default(T);
-				throw;
-			}
-			if (documentFound == null)
-				return default(T);
-
-			return TrackEntity<T>(documentFound);
-		}
-
-		/// <summary>
+	    /// <summary>
 		/// Begins the async multi load operation
 		/// </summary>
 		/// <param name="ids">The ids.</param>
-		/// <param name="asyncCallback">The async callback.</param>
-		/// <param name="state">The state.</param>
 		/// <returns></returns>
-		public IAsyncResult BeginMultiLoad(string[] ids, AsyncCallback asyncCallback, object state)
+		public Task<T[]> MultiLoadAsync<T>(string[] ids)
 		{
 			IncrementRequestCount();
-			return AsyncDatabaseCommands.BeginMultiGet(ids, asyncCallback, state);
-		}
-
-		/// <summary>
-		/// Ends the async multi load operation
-		/// </summary>
-		/// <typeparam name="T"></typeparam>
-		/// <param name="result">The result.</param>
-		/// <returns></returns>
-		public T[] EndMultiLoad<T>(IAsyncResult result)
-		{
-			var documents = AsyncDatabaseCommands.EndMultiGet(result);
-			return documents.Select(TrackEntity<T>).ToArray();
+			return AsyncDatabaseCommands.MultiGetAsync(ids)
+                .ContinueWith(task => task.Result.Select(TrackEntity<T>).ToArray());
 		}
 
 		/// <summary>
 		/// Begins the async save changes operation
 		/// </summary>
-		/// <param name="asyncCallback">The async callback.</param>
-		/// <param name="state">The state.</param>
 		/// <returns></returns>
-		public IAsyncResult BeginSaveChanges(AsyncCallback asyncCallback, object state)
+		public Task SaveChangesAsync()
 		{
 			var data = PrepareForSaveChanges();
-			var asyncResult = AsyncDatabaseCommands.BeginBatch(data.Commands.ToArray(), asyncCallback, state);
-			return new WrapperAsyncData<DocumentSession.SaveChangesData>(asyncResult, data);
+			return AsyncDatabaseCommands.BatchAsync(data.Commands.ToArray())
+                .ContinueWith(task => UpdateBatchResults(task.Result, data.Entities));
 		}
 
-		/// <summary>
-		/// Ends the async save changes operation
-		/// </summary>
-		/// <param name="result">The result.</param>
-		public void EndSaveChanges(IAsyncResult result)
-		{
-			var wrapperAsyncData = ((WrapperAsyncData<DocumentSession.SaveChangesData>)result);
-
-			var batchResults = AsyncDatabaseCommands.EndBatch(wrapperAsyncData.Inner);
-			UpdateBatchResults(batchResults, wrapperAsyncData.Wrapped.Entities);
-		}
 
         /// <summary>
         /// Get the json document by key from the store
@@ -177,3 +145,4 @@ namespace Raven.Client.Document.Async
 		}
 	}
 }
+#endif

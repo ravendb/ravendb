@@ -53,6 +53,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Authorization\AuthorizationTest.cs" />
+    <Compile Include="Authorization\Bugs\Jalchr.cs" />
+    <Compile Include="Authorization\Bugs\LoadingSavedInfo.cs" />
+    <Compile Include="Authorization\Bugs\WhenUsingMultiTenancy.cs" />
     <Compile Include="Authorization\CanHandleAuthQuestions.cs" />
     <Compile Include="Authorization\Deleting.cs" />
     <Compile Include="Authorization\Reading.cs" />

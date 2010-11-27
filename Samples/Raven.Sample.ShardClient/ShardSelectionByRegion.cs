@@ -17,7 +17,7 @@ namespace Raven.Sample.ShardClient
 
         public string ShardIdForExistingObject(object obj)
         {
-            return ShardIdForExistingObject(obj);
+            return ShardIdForNewObject(obj);
         }
     }
 }

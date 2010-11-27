@@ -121,7 +121,8 @@ namespace Raven.Client.Client
         /// <param name="metadata">The metadata.</param>
         public void PutAttachment(string key, Guid? etag, byte[] data, JObject metadata)
 		{
-			// we filter out content length, because getting it wrong will cause errors 
+            CurrentOperationContext.Headers.Value = OperationsHeaders;
+            // we filter out content length, because getting it wrong will cause errors 
 			// in the server side when serving the wrong value for this header.
 			// worse, if we are using http compression, this value is known to be wrong
 			// instead, we rely on the actual size of the data provided for us
@@ -136,7 +137,8 @@ namespace Raven.Client.Client
         /// <returns></returns>
         public Attachment GetAttachment(string key)
 		{
-			return database.GetStatic(key);
+            CurrentOperationContext.Headers.Value = OperationsHeaders;
+            return database.GetStatic(key);
 		}
 
         /// <summary>
@@ -146,7 +148,8 @@ namespace Raven.Client.Client
         /// <param name="etag">The etag.</param>
         public void DeleteAttachment(string key, Guid? etag)
 		{
-			database.DeleteStatic(key, etag);
+            CurrentOperationContext.Headers.Value = OperationsHeaders;
+            database.DeleteStatic(key, etag);
 		}
 
         /// <summary>
@@ -157,7 +160,8 @@ namespace Raven.Client.Client
         /// <returns></returns>
         public string[] GetIndexNames(int start, int pageSize)
 		{
-			return database.GetIndexNames(start, pageSize)
+            CurrentOperationContext.Headers.Value = OperationsHeaders;
+            return database.GetIndexNames(start, pageSize)
 				.Select(x => x.Value<string>()).ToArray();
 		}
 
@@ -167,7 +171,8 @@ namespace Raven.Client.Client
         /// <param name="name">The name.</param>
         public void ResetIndex(string name)
 		{
-			database.ResetIndex(name);
+            CurrentOperationContext.Headers.Value = OperationsHeaders;
+            database.ResetIndex(name);
 		}
 
         /// <summary>
@@ -366,7 +371,8 @@ namespace Raven.Client.Client
         /// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
         public void DeleteByIndex(string indexName, IndexQuery queryToDelete, bool allowStale)
 		{
-			var databaseBulkOperations = new DatabaseBulkOperations(database, RavenTransactionAccessor.GetTransactionInformation());
+            CurrentOperationContext.Headers.Value = OperationsHeaders;
+            var databaseBulkOperations = new DatabaseBulkOperations(database, RavenTransactionAccessor.GetTransactionInformation());
 			databaseBulkOperations.DeleteByIndex(indexName, queryToDelete, allowStale);
 		}
 
@@ -379,7 +385,8 @@ namespace Raven.Client.Client
         /// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
         public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale)
 		{
-			var databaseBulkOperations = new DatabaseBulkOperations(database, RavenTransactionAccessor.GetTransactionInformation());
+            CurrentOperationContext.Headers.Value = OperationsHeaders;
+            var databaseBulkOperations = new DatabaseBulkOperations(database, RavenTransactionAccessor.GetTransactionInformation());
 			databaseBulkOperations.UpdateByIndex(indexName, queryToUpdate, patchRequests, allowStale);
 		}
 
@@ -401,6 +408,7 @@ namespace Raven.Client.Client
         /// <param name="suggestionQuery">The suggestion query.</param>
         public SuggestionQueryResult Suggest(string index, SuggestionQuery suggestionQuery)
         {
+            CurrentOperationContext.Headers.Value = OperationsHeaders;
             return database.ExecuteSuggestionQuery(index, suggestionQuery);
         }
 

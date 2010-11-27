@@ -384,11 +384,9 @@ more responsive application.
 
 		private static void EnsureNotReadVetoed(JObject metadata)
 		{
-			var readVetoAsString = metadata.Value<string>("Raven-Read-Veto");
-			if (readVetoAsString == null)
+            var readVeto = metadata.Value<JObject>("Raven-Read-Veto");
+            if (readVeto == null)
 				return;
-
-			var readVeto = JObject.Parse(readVetoAsString);
 
 			var s = readVeto.Value<string>("Reason");
 			throw new ReadVetoException(
@@ -443,10 +441,13 @@ more responsive application.
 			}
 
 			var tag = documentStore.Conventions.GetTypeTagName(entity.GetType());
-			entitiesAndMetadata.Add(entity, new DocumentSession.DocumentMetadata
+		    var metadata = new JObject();
+            if(tag != null)
+                metadata.Add(new JProperty(RavenEntityName, new JValue(tag)));
+		    entitiesAndMetadata.Add(entity, new DocumentSession.DocumentMetadata
 			{
 				Key = id,
-				Metadata = new JObject(new JProperty(RavenEntityName, new JValue(tag))),
+				Metadata = metadata,
 				OriginalMetadata = new JObject(),
 				ETag = UseOptimisticConcurrency ? (Guid?)Guid.Empty : null,
 				OriginalValue = new JObject()
@@ -471,6 +472,9 @@ more responsive application.
 				id = Conventions.GenerateDocumentKey(entity);
 
 			}
+
+            if(id != null && id.StartsWith("/"))
+                throw new InvalidOperationException("Cannot use value '"+id+"' as a document id because it begins with a '/'");
 			return id;
 		}
 
