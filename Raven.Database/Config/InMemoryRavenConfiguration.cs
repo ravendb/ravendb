@@ -245,8 +245,7 @@ namespace Raven.Database.Config
             if(RunInMemory)
                 return "Raven.Storage.Managed.TransactionalStorage, Raven.Storage.Managed";
 
-            if(String.IsNullOrEmpty(DataDirectory) == false && 
-                Directory.Exists(DataDirectory))
+            if(String.IsNullOrEmpty(DataDirectory) == false && Directory.Exists(DataDirectory))
             {
                 if (File.Exists(Path.Combine(DataDirectory, "Raven.ravendb")))
                 {
