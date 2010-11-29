@@ -84,16 +84,16 @@ namespace Raven.Database.Config
 
             AnonymousUserAccessMode = GetAnonymousUserAccessMode();
 
-            //StorageTypeName = Settings["Raven/StorageTypeName"] ??
+            //DefaultStorageTypeName = Settings["Raven/StorageTypeName"] ??
             //    "Raven.Storage.Esent.TransactionalStorage, Raven.Storage.Esent";
 
-            StorageTypeName = Settings["Raven/StorageTypeName"] ??
+            DefaultStorageTypeName = Settings["Raven/StorageTypeName"] ??
                 "Raven.Storage.Managed.TransactionalStorage, Raven.Storage.Managed";
         }
 
         public NameValueCollection Settings { get; set; }
 
-        public string StorageTypeName { get; set; }
+        public string DefaultStorageTypeName { get; set; }
 
         public string ServerUrl
         {
@@ -227,16 +227,35 @@ namespace Raven.Database.Config
 
         public ITransactionalStorage CreateTransactionalStorage(Action notifyAboutWork)
         {
+            var storageEngine = SelectStorageEngine();
             var type =
-                Type.GetType(StorageTypeName.Split(',').First()) ?? // first try to find the merged one
-                    Type.GetType(StorageTypeName); // then try full type name
+                Type.GetType(storageEngine.Split(',').First()) ?? // first try to find the merged one
+                    Type.GetType(storageEngine); // then try full type name
 
             if (type == null)
-                throw new InvalidOperationException("Could not find transactional storage type: " + StorageTypeName);
+                throw new InvalidOperationException("Could not find transactional storage type: " + storageEngine);
 
             Catalog.Catalogs.Add(new AssemblyCatalog(type.Assembly));
 
             return (ITransactionalStorage) Activator.CreateInstance(type, this, notifyAboutWork);
+        }
+
+        private string SelectStorageEngine()
+        {
+            if(RunInMemory)
+                return "Raven.Storage.Managed.TransactionalStorage, Raven.Storage.Managed";
+
+            if(String.IsNullOrEmpty(DataDirectory) == false && 
+                Directory.Exists(DataDirectory))
+            {
+                if (File.Exists(Path.Combine(DataDirectory, "Raven.ravendb")))
+                {
+                    return "Raven.Storage.Managed.TransactionalStorage, Raven.Storage.Managed";
+                }
+                if (File.Exists(Path.Combine(DataDirectory, "Data")))
+                    return "Raven.Storage.Esent.TransactionalStorage, Raven.Storage.Esent";
+            }
+            return DefaultStorageTypeName;
         }
     }
 }

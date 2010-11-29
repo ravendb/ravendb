@@ -85,7 +85,6 @@ namespace Raven.Server
                     RunInDebugMode(anonymousUserAccessMode: AnonymousUserAccessMode.All, ravenConfiguration: new RavenConfiguration
                     {
                         RunInMemory = true,
-                        StorageTypeName = typeof(Storage.Managed.TransactionalStorage).AssemblyQualifiedName
                     });
                     break;
 #if DEBUG

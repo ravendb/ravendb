@@ -52,8 +52,7 @@ namespace Raven.Client.Client
             get { return Configuration.RunInMemory; }
             set
             {
-                Configuration.RunInMemory = true;
-                Configuration.StorageTypeName = "Raven.Storage.Managed.TransactionalStorage, Raven.Storage.Managed";
+                Configuration.RunInMemory = value;
             }
         }
 
