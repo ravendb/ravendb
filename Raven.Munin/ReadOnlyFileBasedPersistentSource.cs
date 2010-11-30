@@ -42,7 +42,7 @@ namespace Raven.Munin
             get { return log; }
         }
 
-        public override void ReplaceAtomically(Stream newLog)
+        public override void ReplaceAtomically(Stream newNewLog)
         {
            throw new NotSupportedException();
         }

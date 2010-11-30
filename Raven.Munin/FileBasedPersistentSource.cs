@@ -44,14 +44,14 @@ namespace Raven.Munin
             return new FileStream(logPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
         }
 
-        public override void ReplaceAtomically(Stream newLog)
+        public override void ReplaceAtomically(Stream newNewLog)
         {
-            var newLogStream = ((FileStream) newLog);
+            var newLogStream = ((FileStream) newNewLog);
             string logTempName = newLogStream.Name;
             newLogStream.Flush();
             newLogStream.Dispose();
 
-            newLog.Dispose();
+            newNewLog.Dispose();
 
             log.Dispose();
 

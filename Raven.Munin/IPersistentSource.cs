@@ -17,7 +17,7 @@ namespace Raven.Munin
         bool CreatedNew { get; }
         IList<PersistentDictionaryState> DictionariesStates { get; }
 
-        void ReplaceAtomically(Stream log);
+        void ReplaceAtomically(Stream newLog);
 
         Stream CreateTemporaryStream();
 

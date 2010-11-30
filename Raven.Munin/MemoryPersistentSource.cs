@@ -18,7 +18,7 @@ namespace Raven.Munin
 
         protected override Stream CreateClonedStreamForReadOnlyPurposes()
         {
-            return new MemoryStream(log.GetBuffer(), 0, (int) Log.Length, false);
+            return new MemoryStream(log.GetBuffer(), 0, (int)Log.Length, false);
         }
 
         public MemoryPersistentSource(byte[] data)
@@ -31,9 +31,9 @@ namespace Raven.Munin
 
         #region IPersistentSource Members
 
-        public override void ReplaceAtomically(Stream log)
+        public override void ReplaceAtomically(Stream newLog)
         {
-            log = (MemoryStream)log;
+            this.log = (MemoryStream)newLog;
         }
 
         public override Stream CreateTemporaryStream()
@@ -49,7 +49,7 @@ namespace Raven.Munin
         {
             return new RemoteManagedStorageState
             {
-                Log = ((MemoryStream) Log).ToArray(),
+                Log = ((MemoryStream)Log).ToArray(),
             };
         }
 
