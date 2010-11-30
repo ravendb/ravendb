@@ -169,6 +169,7 @@ task CopyEmbeddedClient {
 	cp $build_dir\ICSharpCode.NRefactory.dll $build_dir\Output\EmbeddedClient
 	cp $build_dir\Lucene.Net.dll $build_dir\Output\EmbeddedClient
 	cp $build_dir\Spatial.Net.dll $build_dir\Output\EmbeddedClient
+	cp $build_dir\SpellChecker.Net.dll $build_dir\Output\EmbeddedClient
 	cp $build_dir\log4net.dll $build_dir\Output\EmbeddedClient
 	cp $build_dir\Newtonsoft.Json.dll $build_dir\Output\EmbeddedClient
   cp $build_dir\Raven.Storage.Esent.dll $build_dir\Output\EmbeddedClient
@@ -200,6 +201,7 @@ task CopyWeb {
 	cp $build_dir\Newtonsoft.Json.dll $build_dir\Output\Web\bin
 	cp $build_dir\Lucene.Net.dll $build_dir\Output\Web\bin
 	cp $build_dir\Spatial.Net.dll $build_dir\Output\Web\bin
+	cp $build_dir\SpellChecker.Net.dll $build_dir\Output\Web\bin
 	cp $build_dir\ICSharpCode.NRefactory.dll $build_dir\Output\Web\bin
 	cp $build_dir\Rhino.Licensing.dll $build_dir\Output\Web\bin
 	cp $build_dir\Esent.Interop.dll $build_dir\Output\Web\bin
@@ -224,6 +226,7 @@ task CopyServer {
 	cp $build_dir\Newtonsoft.Json.dll $build_dir\Output\Server
 	cp $build_dir\Lucene.Net.dll $build_dir\Output\Server
 	cp $build_dir\Spatial.Net.dll $build_dir\Output\Server
+	cp $build_dir\SpellChecker.Net.dll $build_dir\Output\Server
 	cp $build_dir\ICSharpCode.NRefactory.dll $build_dir\Output\Server
 	cp $build_dir\Rhino.Licensing.dll $build_dir\Output\Server
 	cp $build_dir\Esent.Interop.dll $build_dir\Output\Server
@@ -276,6 +279,7 @@ task CreateNupack {
 	cp $build_dir\Newtonsoft.Json.dll $build_dir\NuPack\Tools
 	cp $build_dir\Lucene.Net.dll $build_dir\NuPack\Tools
 	cp $build_dir\Spatial.Net.dll $build_dir\NuPack\Tools
+	cp $build_dir\SpellChecker.Net.dll $build_dir\NuPack\Tools
 	cp $build_dir\ICSharpCode.NRefactory.dll $build_dir\NuPack\Tools
 	cp $build_dir\Rhino.Licensing.dll $build_dir\NuPack\Toolsr
 	cp $build_dir\Esent.Interop.dll $build_dir\NuPack\Tools
