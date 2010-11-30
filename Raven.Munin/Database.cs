@@ -41,11 +41,7 @@ namespace Raven.Munin
             {
                 if (log.Length == 0) // new file
                 {
-                    new JObject
-                    {
-                        {"Version", version},
-                        {"Tables", new JArray(Tables.Select(x=>x.Name).ToArray())}
-                    }.WriteTo(new BsonWriter(log));
+                    WriteFileHeader(log);
                     log.Flush();
                 }
                 log.Position = 0;
@@ -75,6 +71,15 @@ namespace Raven.Munin
                     }
                 }
             });
+        }
+
+        private void WriteFileHeader(Stream log)
+        {
+            new JObject
+            {
+                {"Version", version},
+                {"Tables", new JArray(Tables.Select(x=>x.Name).ToArray())}
+            }.WriteTo(new BsonWriter(log));
         }
 
         private void AssertValidVersionAndTables(Stream log)
@@ -285,6 +290,8 @@ namespace Raven.Munin
             {
                 Stream tempLog = persistentSource.CreateTemporaryStream();
 
+                WriteFileHeader(tempLog);
+              
                 var cmds = new List<Command>();
                 foreach (var persistentDictionary in tables)
                 {
