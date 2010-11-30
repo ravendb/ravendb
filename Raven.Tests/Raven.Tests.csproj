@@ -235,6 +235,7 @@
     <Compile Include="ManagedStorage\Attachments.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="ManagedStorage\Bugs\OpenAfterCompaction.cs" />
     <Compile Include="ManagedStorage\DocEtag.cs">
       <SubType>Code</SubType>
     </Compile>
