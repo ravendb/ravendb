@@ -19,8 +19,8 @@ cp $raven\Lucene.Net.dll .\Servers\Shard1
 cp $raven\ICSharpCode.NRefactory.dll .\Servers\Shard1
 cp $raven\Rhino.Licensing.dll .\Servers\Shard1
 cp $raven\Esent.Interop.dll .\Servers\Shard1
-cp $raven\Raven.Database.dll .\Servers\Shard1
-cp $raven\Raven.Storage.Esent.dll .\Servers\Shard1
+cp $raven\Raven.*.dll .\Servers\Shard1
+cp $raven\Spatial.net.dll .\Servers\Shard1
 
 cp $raven\Raven.Server.exe .\Servers\Shard2
 cp $raven\log4net.dll .\Servers\Shard2
@@ -29,8 +29,8 @@ cp $raven\Lucene.Net.dll .\Servers\Shard2
 cp $raven\ICSharpCode.NRefactory.dll .\Servers\Shard2
 cp $raven\Rhino.Licensing.dll .\Servers\Shard2
 cp $raven\Esent.Interop.dll .\Servers\Shard2
-cp $raven\Raven.Database.dll .\Servers\Shard2
-cp $raven\Raven.Storage.Esent.dll .\Servers\Shard2
+cp $raven\Raven.*.dll .\Servers\Shard2
+cp $raven\Spatial.net.dll .\Servers\Shard2
 
 
 mkdir .\Servers\Shard1\Plugins  -erroraction silentlycontinue
