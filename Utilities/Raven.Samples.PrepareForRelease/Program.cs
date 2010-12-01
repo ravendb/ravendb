@@ -32,7 +32,7 @@ namespace Raven.Samples.PrepareForRelease
                         var guessFileName = GuessFileName(Path.GetFileName(hintPath.Value), libPath);
                         if(guessFileName == null)
                             continue;
-                        hintPath.Value = guessFileName;
+                        hintPath.Value = Path.Combine(@"..\..\EmbeddedClient", Path.GetFileName(hintPath.Value));
                     }
 
                     foreach (var prjRef in prj.Descendants(ns + "ProjectReference").ToArray())
