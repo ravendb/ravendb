@@ -32,7 +32,7 @@ namespace Raven.Samples.PrepareForRelease
                         var guessFileName = GuessFileName(Path.GetFileName(hintPath.Value), libPath);
                         if(guessFileName == null)
                             continue;
-                        hintPath.Value = Path.Combine(@"..\..\EmbeddedClient", Path.GetFileName(hintPath.Value));
+                        hintPath.Value = Path.Combine(@"..\..", guessFileName);
                     }
 
                     foreach (var prjRef in prj.Descendants(ns + "ProjectReference").ToArray())
@@ -43,7 +43,7 @@ namespace Raven.Samples.PrepareForRelease
                         prjRef.Parent.Add(
                             new XElement(ns + "Reference",
                                 new XAttribute("Include", refName),
-                                new XElement(ns+"HintPath", GuessFileName(refName, libPath))
+                                new XElement(ns+"HintPath", Path.Combine(@"..\..", GuessFileName(refName, libPath)))
                                 )
                             );
 
@@ -64,11 +64,13 @@ namespace Raven.Samples.PrepareForRelease
 
         private static string GuessFileName(string refName, string libPath)
         {
-            var searchPattern = Path.GetExtension(refName) == ".dll" ? refName : refName + "*.*";
-            var firstOrDefault = Directory.GetFiles(libPath, searchPattern, SearchOption.AllDirectories).FirstOrDefault();
-            if (firstOrDefault == null)
+            var fullPath = Path.GetFullPath(libPath);
+            var searchPattern = Path.GetExtension(refName) == ".dll" ? refName : refName + ".*";
+            var filePath = Directory.GetFiles(libPath, searchPattern, SearchOption.AllDirectories).FirstOrDefault();
+            if (filePath == null)
                 return null;
-            return firstOrDefault;
+            filePath = Path.GetFullPath(filePath);
+            return filePath.Substring(fullPath.Length + 1);
         }
 
         private static void RemoveProjectReferencesNotInSameDirectory(string path)
