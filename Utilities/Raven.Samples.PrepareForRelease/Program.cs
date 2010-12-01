@@ -58,15 +58,15 @@ namespace Raven.Samples.PrepareForRelease
                 Console.Error.WriteLine(e);
                 Environment.Exit(-1);
             }
-
-
         }
 
         private static string GuessFileName(string refName, string libPath)
         {
             var fullPath = Path.GetFullPath(libPath);
             var searchPattern = Path.GetExtension(refName) == ".dll" ? refName : refName + ".*";
-            var filePath = Directory.GetFiles(libPath, searchPattern, SearchOption.AllDirectories).FirstOrDefault();
+            var filePath = Directory.GetFiles(libPath, searchPattern, SearchOption.AllDirectories)
+                .Where(x=>x.ToUpperInvariant().Contains("SAMPLES") == false)
+                .FirstOrDefault();
             if (filePath == null)
                 return null;
             filePath = Path.GetFullPath(filePath);
