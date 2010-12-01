@@ -35,12 +35,6 @@ namespace Raven.Client
 		/// <param name="id">The id.</param>
 		T Load<T>(string id);
 
-        /// <summary>
-        /// Returns whatever a document with the specified id is loaded in the 
-        /// current session
-        /// </summary>
-	    bool IsLoaded(string id);
-
 		/// <summary>
 		/// Loads the specified entities with the specified ids.
 		/// </summary>

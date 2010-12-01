@@ -242,7 +242,7 @@ namespace Raven.Client.Shard
 	    /// </summary>
 	    public bool IsLoaded(string id)
 	    {
-	        return shardSessions.Any(s => s.IsLoaded(id));
+	        return shardSessions.Any(s => s.Advanced.IsLoaded(id));
 	    }
 
 	    /// <summary>

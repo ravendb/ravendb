@@ -51,16 +51,7 @@ namespace Raven.Client.Document
             get { return this; }
         }
 
-        /// <summary>
-        /// Returns whatever a document with the specified id is loaded in the 
-        /// current session
-        /// </summary>
-        public bool IsLoaded(string id)
-        {
-            object existingEntity;
-            return entitiesByKey.TryGetValue(id, out existingEntity);
-        }
-
+        
         /// <summary>
         /// Loads the specified entity with the specified id.
         /// </summary>

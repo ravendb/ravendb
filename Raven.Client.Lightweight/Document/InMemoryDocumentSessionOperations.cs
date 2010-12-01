@@ -175,6 +175,16 @@ namespace Raven.Client.Document
         /// </summary>
 	    protected abstract JsonDocument GetJsonDocument(string documentKey);
 
+        /// <summary>
+        /// Returns whatever a document with the specified id is loaded in the 
+        /// current session
+        /// </summary>
+        public bool IsLoaded(string id)
+        {
+            object existingEntity;
+            return entitiesByKey.TryGetValue(id, out existingEntity);
+        }
+
 		/// <summary>
 		/// Gets the document id.
 		/// </summary>

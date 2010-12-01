@@ -12,6 +12,12 @@ namespace Raven.Client
     public interface IAdvancedDocumentSessionOperations
     {
         /// <summary>
+        /// Returns whatever a document with the specified id is loaded in the 
+        /// current session
+        /// </summary>
+        bool IsLoaded(string id);
+
+        /// <summary>
         /// Gets the store identifier for this session.
         /// The store identifier is the identifier for the particular RavenDB instance. 
         /// This is mostly useful when using sharding.
