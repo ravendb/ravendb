@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 
 namespace Raven.Client.Converters
 {
@@ -30,6 +31,9 @@ namespace Raven.Client.Converters
         /// <exception cref="T:System.NotSupportedException">The conversion cannot be performed. </exception>
         public  string ConvertFrom(object value)
         {
+            var val = (int) value;
+            if (val == 0)
+                return null;
             return value.ToString();
         }
 
@@ -42,7 +46,8 @@ namespace Raven.Client.Converters
         /// <param name="value">The <see cref="T:System.Object"/> to convert. </param>
         public  object ConvertTo(string value)
         {
-            return int.Parse(value.ToString());
+            var val = value.Split(new[] { '/', '-' }, StringSplitOptions.RemoveEmptyEntries).Last();
+            return int.Parse(val);
         }
     }
 }

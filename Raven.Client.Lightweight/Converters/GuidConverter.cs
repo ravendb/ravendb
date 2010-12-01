@@ -30,6 +30,9 @@ namespace Raven.Client.Converters
         /// <exception cref="T:System.NotSupportedException">The conversion cannot be performed. </exception>
         public  string ConvertFrom(object value)
         {
+            var val = (Guid) value;
+            if (val == Guid.Empty)
+                return null;
             return value.ToString();
         }
 
