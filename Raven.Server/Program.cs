@@ -76,7 +76,7 @@ namespace Raven.Server
                         PrintUsage();
                         break;
                     }
-                    RunRestoreOperation(args[0], args[1]);
+                    RunRestoreOperation(args[1], args[2]);
                     break;
                 case "debug":
                     RunInDebugMode(anonymousUserAccessMode: null, ravenConfiguration: new RavenConfiguration());
@@ -105,7 +105,18 @@ namespace Raven.Server
         {
             try
             {
-                DocumentDatabase.Restore(new RavenConfiguration(), backupLocation, databaseLocation);
+                var ravenConfiguration = new RavenConfiguration();
+                if(File.Exists(Path.Combine(backupLocation, "Raven.ravendb")))
+                {
+                    ravenConfiguration.DefaultStorageTypeName =
+                        "Raven.Storage.Managed.TransactionalStorage, Raven.Storage.Managed";
+                }
+                else if(Directory.Exists(Path.Combine(backupLocation, "new")))
+                {
+                    ravenConfiguration.DefaultStorageTypeName = "Raven.Storage.Esent.TransactionalStorage, Raven.Storage.Esent";
+
+                }
+                DocumentDatabase.Restore(ravenConfiguration, backupLocation, databaseLocation);
             }
             catch (Exception e)
             {
