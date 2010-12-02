@@ -35,7 +35,7 @@ namespace Raven.Tests.Bugs
 		{
             using (var documentStore = new EmbeddableDocumentStore
 			{
-				Configuration = new RavenConfiguration
+				Configuration = 
 				{
 					Catalog =
 						{

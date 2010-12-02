@@ -21,7 +21,7 @@ namespace Raven.Tests
 
             var documentStore = new EmbeddableDocumentStore()
 			{
-				Configuration = new RavenConfiguration
+				Configuration = 
 				{
 					DataDirectory = path,
 					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true

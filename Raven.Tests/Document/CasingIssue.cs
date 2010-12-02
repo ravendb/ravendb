@@ -30,7 +30,7 @@ namespace Raven.Tests.Document
 			path = Path.Combine(path, "TestDb").Substring(6);
             var documentStore = new EmbeddableDocumentStore
 			{
-				Configuration = new RavenConfiguration
+				Configuration = 
 				{
 					DataDirectory = path,
 					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true

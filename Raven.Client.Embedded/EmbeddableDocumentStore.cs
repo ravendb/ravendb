@@ -33,13 +33,7 @@ namespace Raven.Client.Client
         ///</summary>
         public RavenConfiguration Configuration
         {
-            get
-            {
-                if (configuration == null)
-                    configuration = new RavenConfiguration();
-                return configuration;
-            }
-            set { configuration = value; }
+            get { return configuration ?? (configuration = new RavenConfiguration()); }
         }
 
 
