@@ -20,12 +20,22 @@ task Verify40 {
 	}
 }
 
+task EnsureMunin {
+  if (Test-Path ".\Modules\Munin")
+  {
+    return;
+  }
+  
+  exec { git submodule init }
+  exec { git submodule update }
+}
+
 task Clean {
   remove-item -force -recurse $buildartifacts_dir -ErrorAction SilentlyContinue
   remove-item -force -recurse $release_dir -ErrorAction SilentlyContinue
 }
 
-task Init -depends Verify40, Clean {
+task Init -depends EnsureMunin, Verify40, Clean {
 	
 	if($env:buildlabel -eq $null) {
 		$env:buildlabel = "13"
