@@ -21,14 +21,18 @@ task Verify40 {
 }
 
 task EnsureMunin {
-  if ((ls ".\Modules\Munin) -eq $null)
+  if ((Test-Path ".\Modules\Munin") -eq $false)
+  {
+    mkdir ".\Modules\Munin"
+  }
+  if (-not ((ls ".\Modules\Munin") -eq $null))
   {
     return;
   }
   
   Write-Host "Updating Required Submodules"
   
-  exec { git submodule init }cd
+  exec { git submodule init }
   exec { git submodule update }
 }
 
@@ -173,85 +177,84 @@ task CleanOutputDirectory {
 }
 
 task CopyEmbeddedClient { 
-	cp $build_dir\Raven.Client.Lightweight.dll $build_dir\Output\EmbeddedClient
+	cp $build_dir\Raven.Client.Lightweight.??? $build_dir\Output\EmbeddedClient
 	cp $build_dir\Raven.Client.Lightweight.xml $build_dir\Output\EmbeddedClient
-	cp $build_dir\Raven.Client.Embedded.dll $build_dir\Output\EmbeddedClient
+	cp $build_dir\Raven.Client.Embedded.??? $build_dir\Output\EmbeddedClient
 	cp $build_dir\Raven.Client.Embedded.xml $build_dir\Output\EmbeddedClient
-	cp $build_dir\Raven.Abstractions.dll $build_dir\Output\EmbeddedClient
-	cp $build_dir\Raven.Http.dll $build_dir\Output\EmbeddedClient
-	cp $build_dir\Raven.Database.dll $build_dir\Output\EmbeddedClient
-	cp $build_dir\Raven.Http.dll $build_dir\Output\EmbeddedClient
-	cp $build_dir\Esent.Interop.dll $build_dir\Output\EmbeddedClient
-	cp $build_dir\ICSharpCode.NRefactory.dll $build_dir\Output\EmbeddedClient
-	cp $build_dir\Lucene.Net.dll $build_dir\Output\EmbeddedClient
-	cp $build_dir\Spatial.Net.dll $build_dir\Output\EmbeddedClient
-	cp $build_dir\SpellChecker.Net.dll $build_dir\Output\EmbeddedClient
-	cp $build_dir\log4net.dll $build_dir\Output\EmbeddedClient
-	cp $build_dir\Newtonsoft.Json.dll $build_dir\Output\EmbeddedClient
-  cp $build_dir\Raven.Storage.Esent.dll $build_dir\Output\EmbeddedClient
-	cp $build_dir\Raven.Storage.Managed.dll $build_dir\Output\EmbeddedClient
-	cp $build_dir\Raven.Munin.dll $build_dir\Output\EmbeddedClient
+	cp $build_dir\Raven.Abstractions.??? $build_dir\Output\EmbeddedClient
+	cp $build_dir\Raven.Http.??? $build_dir\Output\EmbeddedClient
+	cp $build_dir\Raven.Database.??? $build_dir\Output\EmbeddedClient
+	cp $build_dir\Raven.Http.??? $build_dir\Output\EmbeddedClient
+	cp $build_dir\Esent.Interop.??? $build_dir\Output\EmbeddedClient
+	cp $build_dir\ICSharpCode.NRefactory.??? $build_dir\Output\EmbeddedClient
+	cp $build_dir\Lucene.Net.??? $build_dir\Output\EmbeddedClient
+	cp $build_dir\Spatial.Net.??? $build_dir\Output\EmbeddedClient
+	cp $build_dir\SpellChecker.Net.??? $build_dir\Output\EmbeddedClient
+	cp $build_dir\log4net.??? $build_dir\Output\EmbeddedClient
+	cp $build_dir\Newtonsoft.Json.??? $build_dir\Output\EmbeddedClient
+  cp $build_dir\Raven.Storage.Esent.??? $build_dir\Output\EmbeddedClient
+	cp $build_dir\Raven.Storage.Managed.??? $build_dir\Output\EmbeddedClient
+	cp $build_dir\Raven.Munin.??? $build_dir\Output\EmbeddedClient
 }
 
 task CopySmuggler { 
-	cp $build_dir\RavenSmuggler.exe $build_dir\Output
+	cp $build_dir\RavenSmuggler.??? $build_dir\Output
 }
 
 task CopyClient {
-	cp $build_dir\Newtonsoft.Json.dll $build_dir\Output\Client
-  cp $build_dir\Raven.Abstractions.dll $build_dir\Output\Client
-	cp $build_dir\Raven.Client.Lightweight.dll $build_dir\Output\Client
-	cp $build_dir\Raven.Client.Lightweight.xml $build_dir\Output\Client
+	cp $build_dir\Newtonsoft.Json.??? $build_dir\Output\Client
+  cp $build_dir\Raven.Abstractions.??? $build_dir\Output\Client
+	cp $build_dir\Raven.Client.Lightweight.??? $build_dir\Output\Client
 }
 
 task CopyClient35 {
-	cp $build_dir\Newtonsoft.Json.dll $build_dir\Output\Client-3.5
-	cp $build_dir\Raven.Abstractions-3.5.dll $build_dir\Output\Client-3.5
-	cp $build_dir\Raven.Client.Lightweight-3.5.dll $build_dir\Output\Client-3.5
+	cp $build_dir\Newtonsoft.Json.??? $build_dir\Output\Client-3.5
+	cp $build_dir\Raven.Abstractions-3.5.??? $build_dir\Output\Client-3.5
+	cp $build_dir\Raven.Client.Lightweight-3.5.??? $build_dir\Output\Client-3.5
 }
 
 task CopyWeb { 
-	cp $build_dir\Raven.Abstractions.dll $build_dir\Output\Web\bin
-	cp $build_dir\Raven.Web.dll $build_dir\Output\Web\bin
-	cp $build_dir\log4net.dll $build_dir\Output\Web\bin
-	cp $build_dir\Newtonsoft.Json.dll $build_dir\Output\Web\bin
-	cp $build_dir\Lucene.Net.dll $build_dir\Output\Web\bin
-	cp $build_dir\Spatial.Net.dll $build_dir\Output\Web\bin
-	cp $build_dir\SpellChecker.Net.dll $build_dir\Output\Web\bin
-	cp $build_dir\ICSharpCode.NRefactory.dll $build_dir\Output\Web\bin
-	cp $build_dir\Rhino.Licensing.dll $build_dir\Output\Web\bin
-	cp $build_dir\Esent.Interop.dll $build_dir\Output\Web\bin
-	cp $build_dir\Raven.Database.dll $build_dir\Output\Web\bin
-	cp $build_dir\Raven.Http.dll $build_dir\Output\Web\bin
-	cp $build_dir\Raven.Storage.Esent.dll $build_dir\Output\Web\bin
-	cp $build_dir\Raven.Storage.Managed.dll $build_dir\Output\Web\bin
-	cp $build_dir\Raven.Munin.dll $build_dir\Output\Web\bin	
+	cp $build_dir\Raven.Abstractions.??? $build_dir\Output\Web\bin
+	cp $build_dir\Raven.Web.??? $build_dir\Output\Web\bin
+	cp $build_dir\log4net.??? $build_dir\Output\Web\bin
+	cp $build_dir\Newtonsoft.Json.??? $build_dir\Output\Web\bin
+	cp $build_dir\Lucene.Net.??? $build_dir\Output\Web\bin
+	cp $build_dir\Spatial.Net.??? $build_dir\Output\Web\bin
+	cp $build_dir\SpellChecker.Net.??? $build_dir\Output\Web\bin
+	cp $build_dir\ICSharpCode.NRefactory.??? $build_dir\Output\Web\bin
+	cp $build_dir\Rhino.Licensing.??? $build_dir\Output\Web\bin
+	cp $build_dir\Esent.Interop.??? $build_dir\Output\Web\bin
+	cp $build_dir\Raven.Database.??? $build_dir\Output\Web\bin
+	cp $build_dir\Raven.Http.??? $build_dir\Output\Web\bin
+	cp $build_dir\Raven.Storage.Esent.??? $build_dir\Output\Web\bin
+	cp $build_dir\Raven.Storage.Managed.??? $build_dir\Output\Web\bin
+	cp $build_dir\Raven.Munin.??? $build_dir\Output\Web\bin	
 	cp $base_dir\DefaultConfigs\web.config $build_dir\Output\Web\web.config
 	
 }
 
 task CopyBundles {
-	cp $build_dir\Raven.Bundles.*.dll $build_dir\Output\Bundles
-	cp $build_dir\Raven.Client.*.dll $build_dir\Output\Bundles
-	del $build_dir\Output\Bundles\Raven.Bundles.Tests.dll
+	cp $build_dir\Raven.Bundles.*.??? $build_dir\Output\Bundles
+	cp $build_dir\Raven.Client.*.??? $build_dir\Output\Bundles
+	del $build_dir\Output\Bundles\Raven.Bundles.Tests.???
 }
 
 task CopyServer {
 	cp $build_dir\Raven.Server.exe $build_dir\Output\Server
-	cp $build_dir\log4net.dll $build_dir\Output\Server
-	cp $build_dir\Newtonsoft.Json.dll $build_dir\Output\Server
-	cp $build_dir\Lucene.Net.dll $build_dir\Output\Server
-	cp $build_dir\Spatial.Net.dll $build_dir\Output\Server
-	cp $build_dir\SpellChecker.Net.dll $build_dir\Output\Server
-	cp $build_dir\ICSharpCode.NRefactory.dll $build_dir\Output\Server
-	cp $build_dir\Rhino.Licensing.dll $build_dir\Output\Server
-	cp $build_dir\Esent.Interop.dll $build_dir\Output\Server
-	cp $build_dir\Raven.Abstractions.dll $build_dir\Output\Server
-	cp $build_dir\Raven.Database.dll $build_dir\Output\Server
-	cp $build_dir\Raven.Http.dll $build_dir\Output\Server
-	cp $build_dir\Raven.Storage.Esent.dll $build_dir\Output\Server
-	cp $build_dir\Raven.Storage.Managed.dll $build_dir\Output\Server
-	cp $build_dir\Raven.Munin.dll $build_dir\Output\Server
+	cp $build_dir\log4net.??? $build_dir\Output\Server
+	cp $build_dir\Newtonsoft.Json.??? $build_dir\Output\Server
+	cp $build_dir\Lucene.Net.??? $build_dir\Output\Server
+	cp $build_dir\Spatial.Net.??? $build_dir\Output\Server
+	cp $build_dir\SpellChecker.Net.??? $build_dir\Output\Server
+	cp $build_dir\ICSharpCode.NRefactory.??? $build_dir\Output\Server
+	cp $build_dir\Rhino.Licensing.??? $build_dir\Output\Server
+	cp $build_dir\Esent.Interop.??? $build_dir\Output\Server
+	cp $build_dir\Raven.Abstractions.??? $build_dir\Output\Server
+	cp $build_dir\Raven.Database.??? $build_dir\Output\Server
+	cp $build_dir\Raven.Http.??? $build_dir\Output\Server
+	cp $build_dir\Raven.Storage.Esent.??? $build_dir\Output\Server
+	cp $build_dir\Raven.Storage.Managed.??? $build_dir\Output\Server
+	cp $build_dir\Raven.Munin.??? $build_dir\Output\Server
 	cp $base_dir\DefaultConfigs\RavenDb.exe.config $build_dir\Output\Server\Raven.Server.exe.config
 }
 
@@ -279,31 +282,31 @@ task CreateNupack {
 	$writer.Flush()
 	$writer.Close()
 	
-	cp $build_dir\Newtonsoft.Json.dll $build_dir\NuPack\Lib\3.5
-	cp $build_dir\Raven.Client.Lightweight-3.5.dll $build_dir\NuPack\Lib\3.5
+	cp $build_dir\Newtonsoft.Json.??? $build_dir\NuPack\Lib\3.5
+	cp $build_dir\Raven.Client.Lightweight-3.5.??? $build_dir\NuPack\Lib\3.5
 	cp $build_dir\Raven.Client.Lightweight-3.5.xml $build_dir\NuPack\Lib\3.5
-	cp $build_dir\Raven.Abstractions-3.5.dll $build_dir\NuPack\Lib\3.5
+	cp $build_dir\Raven.Abstractions-3.5.??? $build_dir\NuPack\Lib\3.5
 	
-	cp $build_dir\Newtonsoft.Json.dll $build_dir\NuPack\Lib\4.0
-	cp $build_dir\Raven.Client.Lightweight.dll $build_dir\NuPack\Lib\4.0
-	cp $build_dir\Raven.Abstractions.dll $build_dir\NuPack\Lib\4.0
+	cp $build_dir\Newtonsoft.Json.??? $build_dir\NuPack\Lib\4.0
+	cp $build_dir\Raven.Client.Lightweight.??? $build_dir\NuPack\Lib\4.0
+	cp $build_dir\Raven.Abstractions.??? $build_dir\NuPack\Lib\4.0
 	cp $build_dir\Raven.Client.Lightweight.xml $build_dir\NuPack\Lib\4.0
 	
 	
-	cp $build_dir\Raven.Server.exe $build_dir\NuPack\Tools
-	cp $build_dir\log4net.dll $build_dir\NuPack\Tools
-	cp $build_dir\Newtonsoft.Json.dll $build_dir\NuPack\Tools
-	cp $build_dir\Lucene.Net.dll $build_dir\NuPack\Tools
-	cp $build_dir\Spatial.Net.dll $build_dir\NuPack\Tools
-	cp $build_dir\SpellChecker.Net.dll $build_dir\NuPack\Tools
-	cp $build_dir\ICSharpCode.NRefactory.dll $build_dir\NuPack\Tools
-	cp $build_dir\Rhino.Licensing.dll $build_dir\NuPack\Toolsr
-	cp $build_dir\Esent.Interop.dll $build_dir\NuPack\Tools
-	cp $build_dir\Raven.Database.dll $build_dir\NuPack\Tools
-	cp $build_dir\Raven.Http.dll $build_dir\NuPack\Tools
-	cp $build_dir\Raven.Storage.Esent.dll $build_dir\NuPack\Tools
-	cp $build_dir\Raven.Storage.Managed.dll $build_dir\NuPack\Tools
-	cp $build_dir\Raven.Munin.dll $build_dir\NuPack\Tools
+	cp $build_dir\Raven.Server.??? $build_dir\NuPack\Tools
+	cp $build_dir\log4net.??? $build_dir\NuPack\Tools
+	cp $build_dir\Newtonsoft.Json.??? $build_dir\NuPack\Tools
+	cp $build_dir\Lucene.Net.??? $build_dir\NuPack\Tools
+	cp $build_dir\Spatial.Net.??? $build_dir\NuPack\Tools
+	cp $build_dir\SpellChecker.Net.??? $build_dir\NuPack\Tools
+	cp $build_dir\ICSharpCode.NRefactory.??? $build_dir\NuPack\Tools
+	cp $build_dir\Rhino.Licensing.??? $build_dir\NuPack\Toolsr
+	cp $build_dir\Esent.Interop.??? $build_dir\NuPack\Tools
+	cp $build_dir\Raven.Database.??? $build_dir\NuPack\Tools
+	cp $build_dir\Raven.Http.??? $build_dir\NuPack\Tools
+	cp $build_dir\Raven.Storage.Esent.??? $build_dir\NuPack\Tools
+	cp $build_dir\Raven.Storage.Managed.??? $build_dir\NuPack\Tools
+	cp $build_dir\Raven.Munin.??? $build_dir\NuPack\Tools
 	cp $base_dir\DefaultConfigs\RavenDb.exe.config $build_dir\NuPack\Tools\Raven.Server.exe.config
 	
 	& $tools_dir\NuPack.exe $build_dir\NuPack\RavenDB.nuspec
