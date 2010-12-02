@@ -21,12 +21,14 @@ task Verify40 {
 }
 
 task EnsureMunin {
-  if (Test-Path ".\Modules\Munin")
+  if ((ls ".\Modules\Munin) -eq $null)
   {
     return;
   }
   
-  exec { git submodule init }
+  Write-Host "Updating Required Submodules"
+  
+  exec { git submodule init }cd
   exec { git submodule update }
 }
 
