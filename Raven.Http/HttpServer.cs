@@ -23,6 +23,7 @@ namespace Raven.Http
         protected readonly IResourceStore DefaultResourceStore;
         protected readonly IRaveHttpnConfiguration DefaultConfiguration;
 
+        private readonly ThreadLocal<string> currentTenantId = new ThreadLocal<string>();
         private readonly ThreadLocal<IResourceStore> currentDatabase = new ThreadLocal<IResourceStore>();
         private readonly ThreadLocal<IRaveHttpnConfiguration> currentConfiguration = new ThreadLocal<IRaveHttpnConfiguration>();
 
@@ -193,9 +194,10 @@ namespace Raven.Http
                 if (ravenUiRequest == false)
                 {
                     var curReq = Interlocked.Increment(ref reqNum);
-                    logger.DebugFormat("Request #{0,4:#,0}: {1,-7} - {2,5:#,0} ms - {3} - {4}",
+                    logger.DebugFormat("Request #{0,4:#,0}: {1,-7} - {2,5:#,0} ms - {5,-10} - {3} - {4}",
                                        curReq, ctx.Request.HttpMethod, sw.ElapsedMilliseconds, ctx.Response.StatusCode,
-                                       ctx.Request.Url.PathAndQuery);
+                                       ctx.Request.Url.PathAndQuery,
+                                       currentTenantId.Value);
                 }
             }
         }
@@ -334,19 +336,25 @@ namespace Raven.Http
             IResourceStore resourceStore;
             if (match.Success == false)
             {
+                currentTenantId.Value = "<default>";
                 currentDatabase.Value = DefaultResourceStore;
                 currentConfiguration.Value = DefaultConfiguration;
             } 
-            else if(TryGetOrCreateResourceStore(match.Groups[1].Value, out resourceStore))
-            {
-                databaseLastRecentlyUsed.AddOrUpdate(match.Groups[1].Value, DateTime.Now, (s, time) => DateTime.Now);
-                ctx.AdjustUrl(match.Value);
-                currentDatabase.Value = resourceStore;
-                currentConfiguration.Value = resourceStore.Configuration;
-            }
             else
             {
-                throw new BadRequestException("Could not find a database named: " + match.Groups[1].Value);
+                var tenantId = match.Groups[1].Value;
+                if(TryGetOrCreateResourceStore(tenantId, out resourceStore))
+                {
+                    databaseLastRecentlyUsed.AddOrUpdate(tenantId, DateTime.Now, (s, time) => DateTime.Now);
+                    ctx.AdjustUrl(match.Value);
+                    currentTenantId.Value = tenantId;
+                    currentDatabase.Value = resourceStore;
+                    currentConfiguration.Value = resourceStore.Configuration;
+                }
+                else
+                {
+                    throw new BadRequestException("Could not find a database named: " + tenantId);
+                }
             }
         }
 
