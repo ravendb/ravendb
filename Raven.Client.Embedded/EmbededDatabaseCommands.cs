@@ -160,7 +160,7 @@ namespace Raven.Client.Client
         /// <returns></returns>
         public string[] GetIndexNames(int start, int pageSize)
 		{
-            pageSize = Math.Max(pageSize, database.Configuration.MaxPageSize);
+            pageSize = Math.Min(pageSize, database.Configuration.MaxPageSize);
             CurrentOperationContext.Headers.Value = OperationsHeaders;
             return database.GetIndexNames(start, pageSize)
 				.Select(x => x.Value<string>()).ToArray();
@@ -245,7 +245,7 @@ namespace Raven.Client.Client
         /// <param name="includes">The includes are ignored for this implementation.</param>
         public QueryResult Query(string index, IndexQuery query, string[] includes)
 		{
-            query.PageSize = Math.Max(query.PageSize, database.Configuration.MaxPageSize);
+            query.PageSize = Math.Min(query.PageSize, database.Configuration.MaxPageSize);
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 
             if (index.StartsWith("dynamic", StringComparison.InvariantCultureIgnoreCase))
