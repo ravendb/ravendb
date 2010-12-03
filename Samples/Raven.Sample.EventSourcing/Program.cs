@@ -77,10 +77,10 @@ namespace Raven.Sample.EventSourcing
             using(var session = documentStore1.OpenSession())
             {
                 var aggregate = session.Advanced.LuceneQuery<AggregateHolder>("Aggregates/ShoppingCart")
-                    .Where("Id:shoppingcarts/12")
+                    .Where("ShoppingCartId:shoppingcarts/12")
                     .Single();
 
-                var cart = JsonConvert.DeserializeObject<ShoppingCart>(aggregate.Aggregate);
+                var cart = new JsonSerializer().Deserialize<ShoppingCart>(new JTokenReader(aggregate.Aggregate));
 
                 Console.WriteLine(cart.Total);
             }
@@ -89,7 +89,7 @@ namespace Raven.Sample.EventSourcing
 
     public class AggregateHolder
     {
-        public string Id { get; set; }
-        public string Aggregate { get; set; }
+        public string ShoppingCartId { get; set; }
+        public JObject Aggregate { get; set; }
     }
 }
