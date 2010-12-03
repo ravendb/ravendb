@@ -203,14 +203,9 @@ namespace Raven.Database.Indexing
                 {
                     count++;
                     var fields = GetFields(doc, ref properties);
-                	dynamic reduceKey = viewGenerator.GroupByExtraction(doc);
-					if (reduceKey == null)
-					{
-						throw new InvalidOperationException("Could not find reduce key for " + name + " in the result: " + doc);
-					}
-					string reduceKeyAsString = ReduceKeyToString(reduceKey);
+                	string reduceKeyAsString = ExtractReduceKey(viewGenerator, doc);
 
-                	var luceneDoc = new Document();
+                    var luceneDoc = new Document();
                     luceneDoc.Add(new Field("__reduce_key", reduceKeyAsString.ToLowerInvariant(), Field.Store.NO, Field.Index.NOT_ANALYZED));
                     foreach (var field in fields)
                     {
@@ -245,6 +240,23 @@ namespace Raven.Database.Indexing
 			{
 				logIndexing.DebugFormat("Reduce resulted in {0} entries for {1} for reduce keys: {2}", count, name, string.Join(", ", reduceKeys));
 			}
+        }
+
+        private string ExtractReduceKey(AbstractViewGenerator viewGenerator, object doc)
+        {
+            try
+            {
+                dynamic reduceKey = viewGenerator.GroupByExtraction(doc);
+                if (reduceKey == null)
+                {
+                    throw new InvalidOperationException("Could not find reduce key for " + name + " in the result: " + doc);
+                }
+                return ReduceKeyToString(reduceKey);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Could not extract reduce key from reduce result!", e);
+            }
         }
 
         private IEnumerable<AbstractField> GetFields(object doc, ref PropertyDescriptorCollection properties)
