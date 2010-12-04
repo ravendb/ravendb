@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using Raven.Client.Document;
 using Raven.Database.Config;
 using Raven.Database.Data;
@@ -7,6 +8,7 @@ using Raven.Http;
 using Raven.Server;
 using Xunit;
 using Raven.Client.Extensions;
+using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
@@ -59,6 +61,66 @@ namespace Raven.Tests.Bugs
                 }
             }
         }
+
+        [Fact]
+        public void CanQueryTenantDatabase()
+        {
+            using (GetNewServer(8080))
+            using (var store = new DocumentStore
+            {
+                Url = "http://localhost:8080"
+            }.Initialize())
+            {
+                store.DatabaseCommands.EnsureDatabaseExists("Northwind");
+
+                using (var s = store.OpenSession("Northwind"))
+                {
+                    var entity = new User
+                    {
+                        Name = "Hello",
+                    };
+                    s.Store(entity);
+                    s.SaveChanges();
+                }
+
+                using (var s = store.OpenSession("Northwind"))
+                {
+                    Assert.NotEmpty(s.Query<User>().Where(x => x.Name == "Hello"));
+                }
+            }
+        }
+
+
+        [Fact]
+        public void CanQueryDefaultDatabaseQuickly()
+        {
+            using (GetNewServer(8080))
+            using (var store = new DocumentStore
+            {
+                Url = "http://localhost:8080"
+            }.Initialize())
+            {
+                store.DatabaseCommands.EnsureDatabaseExists("Northwind");
+
+                using (var s = store.OpenSession("Northwind"))
+                {
+                    var entity = new User
+                    {
+                        Name = "Hello",
+                    };
+                    s.Store(entity);
+                    s.SaveChanges();
+                }
+
+                var sp = Stopwatch.StartNew();
+                using (var s = store.OpenSession())
+                {
+                    Assert.Empty(s.Query<User>().Where(x => x.Name == "Hello"));
+                }
+                Assert.True(TimeSpan.FromSeconds(5) > sp.Elapsed);
+            }
+        }
+
 
         [Fact]
         public void OpenSessionUsesSpecifiedDefaultDatabase()

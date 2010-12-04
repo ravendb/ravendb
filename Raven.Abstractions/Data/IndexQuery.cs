@@ -79,6 +79,8 @@ namespace Raven.Database.Data
 		/// <returns></returns>
         public string GetIndexQueryUrl(string operationUrl, string index, string operationName)
         {
+            if (operationUrl.EndsWith("/"))
+                operationUrl = operationUrl.Substring(0, operationUrl.Length - 1);
             var path = string.Format("{0}/{5}/{1}?query={2}&start={3}&pageSize={4}", operationUrl, index,
                                      Uri.EscapeUriString(Uri.EscapeDataString(Query ?? "")),
                                      Start, PageSize, operationName);

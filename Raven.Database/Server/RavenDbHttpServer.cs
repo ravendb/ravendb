@@ -83,7 +83,9 @@ namespace Raven.Database.Server
                     config.Settings[setting.Key] = setting.Value;
                 }
                 config.Initialize();
-                return new DocumentDatabase(config);
+                var documentDatabase = new DocumentDatabase(config);
+                documentDatabase.SpinBackgroundWorkers();
+                return documentDatabase;
             });
             return true;
 
