@@ -64,7 +64,7 @@ namespace Raven.Database.Impl
             foreach (var indexInfo in from index in temporaryIndexes
                                       let indexInfo = index.Value
                                       let timeSinceRun = DateTime.Now.Subtract(indexInfo.LastRun)
-                                      where timeSinceRun.TotalSeconds > documentDatabase.Configuration.TempIndexCleanupThreshold
+                                      where timeSinceRun > documentDatabase.Configuration.TempIndexCleanupThreshold
                                       select indexInfo)
             {
                 documentDatabase.DeleteIndex(indexInfo.Name);

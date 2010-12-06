@@ -10,5 +10,10 @@ namespace Raven.Database.Plugins.Builtins
             Database.DynamicQueryRunner.CleanupCache();
             return false;
         }
+
+        protected override TimeSpan TimeoutForNextWork()
+        {
+            return Database.Configuration.TempIndexCleanupPeriod;
+        }
     }
 }

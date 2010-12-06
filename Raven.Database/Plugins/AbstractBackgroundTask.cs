@@ -46,11 +46,16 @@ namespace Raven.Database.Plugins
 				}
 				if (foundWork == false)
 				{
-				    context.WaitForWork(TimeSpan.FromHours(1), ref workCounter);
+				    context.WaitForWork(TimeoutForNextWork(), ref workCounter);
 				}
 			}
 		}
 
-		protected abstract bool HandleWork();
+	    protected virtual TimeSpan TimeoutForNextWork()
+	    {
+	        return TimeSpan.FromHours(1);
+	    }
+
+	    protected abstract bool HandleWork();
 	}
 }

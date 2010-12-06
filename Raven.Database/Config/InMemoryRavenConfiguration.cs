@@ -48,8 +48,8 @@ namespace Raven.Database.Config
             MaxPageSize = maxPageSizeStr != null ? int.Parse(maxPageSizeStr) : 1024;
             TempIndexPromotionMinimumQueryCount = minimumQueryCount != null ? int.Parse(minimumQueryCount) : 100;
             TempIndexPromotionThreshold = queryThreshold != null ? int.Parse(queryThreshold) : 60000; // once a minute
-            TempIndexCleanupPeriod = cleanupPeriod != null ? int.Parse(cleanupPeriod) : 300; // every 5 minutes
-            TempIndexCleanupThreshold = cleanupThreshold != null ? int.Parse(cleanupThreshold) : 600; // 10 minutes inactivity
+            TempIndexCleanupPeriod = cleanupPeriod != null ? TimeSpan.FromSeconds(int.Parse(cleanupPeriod)) : TimeSpan.FromMinutes(10);
+            TempIndexCleanupThreshold = cleanupThreshold != null ? TimeSpan.FromSeconds(int.Parse(cleanupThreshold)) : TimeSpan.FromMinutes(20);
 
             RunInMemory = GetConfigurationValue<bool>("Raven/RunInMemory") ?? false;
 
@@ -175,8 +175,8 @@ namespace Raven.Database.Config
 
         public int TempIndexPromotionThreshold { get; set; }
         public int TempIndexPromotionMinimumQueryCount { get; set; }
-        public int TempIndexCleanupPeriod { get; set; }
-        public int TempIndexCleanupThreshold { get; set; }
+        public TimeSpan TempIndexCleanupPeriod { get; set; }
+        public TimeSpan TempIndexCleanupThreshold { get; set; }
 
         protected void ResetContainer()
         {
