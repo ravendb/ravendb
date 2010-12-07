@@ -5,5 +5,7 @@ namespace Raven.ManagementStudio.Plugin
     public interface IRavenScreen : IScreen
     {
         IRavenScreen ParentRavenScreen { get; }
+
+        SectionType Section { get; }
     }
 }

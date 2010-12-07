@@ -1,4 +1,6 @@
-﻿namespace Raven.ManagementStudio.UI.Silverlight.ViewModels
+﻿using System;
+
+namespace Raven.ManagementStudio.UI.Silverlight.ViewModels
 {
     using System.ComponentModel.Composition;
     using System.Windows;
@@ -6,56 +8,53 @@
     using Interfaces;
     using Messages;
     using Models;
+    using System.Windows.Threading;
 
     [Export(typeof(IShell))]
     public class ShellViewModel : Conductor<DatabaseViewModel>.Collection.OneActive, IShell, IHandle<OpenNewScreen>
     {
-        private readonly INavigationBar navigationBar;
-
         [ImportingConstructor]
-        public ShellViewModel(INavigationBar navigationBar, IEventAggregator eventAggregator)
+        public ShellViewModel(IEventAggregator eventAggregator)
         {
-            this.navigationBar = navigationBar;
             ActivateItem(new DatabaseViewModel(new Database("http://localhost:8080", "Local")));
-            ActivateItem(new DatabaseViewModel(new Database("http://localhost:8080", "Raven")));
             eventAggregator.Subscribe(this);
         }
-
-        public INavigationBar NavigationBar
+    
+        public Window Window
         {
-            get { return this.navigationBar; }
+            get { return Application.Current.MainWindow; }
         }
 
         public void CloseWindow()
         {
-            Application.Current.MainWindow.Close();
+            Window.Close();
         }
 
         public void ToogleWindow()
         {
-            Application.Current.MainWindow.WindowState = Application.Current.MainWindow.WindowState == WindowState.Normal ? WindowState.Maximized : WindowState.Normal;
+            Window.WindowState = Window.WindowState == WindowState.Normal ? WindowState.Maximized : WindowState.Normal;
         }
 
         public void MinimizeWindow()
         {
-            Application.Current.MainWindow.WindowState = WindowState.Minimized;
+            Window.WindowState = WindowState.Minimized;
         }
 
         public void DragWindow()
         {
-            Application.Current.MainWindow.DragMove();
+            Window.DragMove();
         }
 
         public void ResizeWindow(string direction)
         {
             WindowResizeEdge edge;
-            WindowResizeEdge.TryParse(direction, out edge);
-            Application.Current.MainWindow.DragResize(edge);
+            Enum.TryParse(direction, out edge);
+            Window.DragResize(edge);
         }
 
         public void Handle(OpenNewScreen message)
         {
-            this.ActiveItem.ActivateItem(message.NewScreen);
+            ActiveItem.ActivateItem(message.NewScreen);
         }
     }
 }

@@ -1,28 +1,28 @@
+using System.Collections.Generic;
+using System.ComponentModel.Composition;
+using System.Linq;
+using System.Net;
+using Caliburn.Micro;
+using Raven.Database;
+using Raven.Management.Client.Silverlight.Common;
+using Raven.ManagementStudio.Plugin;
+using Raven.ManagementStudio.UI.Silverlight.Dialogs;
+using Raven.ManagementStudio.UI.Silverlight.Messages;
+using Raven.ManagementStudio.UI.Silverlight.Models;
+using Raven.ManagementStudio.UI.Silverlight.Plugins.Common;
+
 namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Documents.Browse
 {
-    using System.Collections.Generic;
-    using System.ComponentModel.Composition;
-    using System.Linq;
-    using System.Net;
-    using Caliburn.Micro;
-    using Common;
-    using Database;
-    using Dialogs;
-    using Management.Client.Silverlight.Common;
-    using Messages;
-    using Models;
-    using Plugin;
-
     public class DocumentsScreenViewModel : Conductor<DocumentViewModel>.Collection.OneActive, IRavenScreen
     {
-        private bool isBusy;
-        private bool isDocumentPreviewed;
-        private string lastSearchDocumentId;
+        private bool _isBusy;
+        private bool _isDocumentPreviewed;
+        private string _lastSearchDocumentId;
 
         public DocumentsScreenViewModel(IDatabase database)
         {
-            this.DisplayName = "Browse";
-            this.Database = database;
+            DisplayName = "Browse Documents";
+            Database = database;
             CompositionInitializer.SatisfyImports(this);
         }
 
@@ -34,15 +34,11 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Documents.Browse
 
         public bool IsBusy
         {
-            get
-            {
-                return this.isBusy;
-            }
-
+            get { return _isBusy; }
             set
             {
-                this.isBusy = value;
-                NotifyOfPropertyChange(() => this.IsBusy);
+                _isBusy = value;
+                NotifyOfPropertyChange(() => IsBusy);
             }
         }
 
@@ -50,68 +46,76 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Documents.Browse
 
         public IRavenScreen ParentRavenScreen { get; set; }
 
+        public SectionType Section { get { return SectionType.Documents; } }
+
         public bool IsDocumentPreviewed
         {
-            get
-            {
-                return this.isDocumentPreviewed && this.ActiveItem != null;
-            }
-
+            get { return _isDocumentPreviewed && ActiveItem != null; }
             set
             {
-                this.isDocumentPreviewed = value;
-                this.NotifyOfPropertyChange(() => this.IsDocumentPreviewed);
+                _isDocumentPreviewed = value;
+                NotifyOfPropertyChange(() => IsDocumentPreviewed);
             }
         }
 
         public void GetAll(LoadResponse<IList<JsonDocument>> response)
         {
-            IList<DocumentViewModel> result = response.Data.Select(jsonDocument => new DocumentViewModel(new Document(jsonDocument), this.Database, this)).ToList();
-            this.Items.AddRange(result);
-            this.IsBusy = false;
+            IList<DocumentViewModel> result = response.Data.Select(jsonDocument => new DocumentViewModel(new Document(jsonDocument), Database, this)).ToList();
+            Items.AddRange(result);
+            IsBusy = false;
         }
 
         public void ClosePreview()
         {
-            this.IsDocumentPreviewed = false;
+            IsDocumentPreviewed = false;
         }
 
         public void ShowDocument(string documentId)
         {
-            this.lastSearchDocumentId = documentId;
+            _lastSearchDocumentId = documentId;
 
             if (!documentId.Equals("Document ID") && !documentId.Equals(string.Empty))
             {
-                this.IsBusy = true;
-                this.Database.Session.Load<JsonDocument>(documentId, this.GetDocument);
+                IsBusy = true;
+                Database.Session.Load<JsonDocument>(documentId, GetDocument);
             }
         }
 
         public void GetDocument(LoadResponse<JsonDocument> loadResponse)
         {
-            this.IsBusy = false;
+            IsBusy = false;
             if (loadResponse.IsSuccess)
             {
-                this.EventAggregator.Publish(
-                    new ReplaceActiveScreen(new DocumentViewModel(new Document(loadResponse.Data), this.Database, this)));
+                NavigateTo(new Document(loadResponse.Data));
             }
             else if (loadResponse.StatusCode == HttpStatusCode.NotFound)
             {
-                this.WindowManager.ShowDialog(new InformationDialogViewModel("Document not found",
+                WindowManager.ShowDialog(new InformationDialogViewModel("Document not found",
                                                        string.Format("Document with key {0} doesn't exist in database.",
-                                                                     this.lastSearchDocumentId)));
+                                                                     _lastSearchDocumentId)));
             }
-            else
-            {
-                
-            }
+        }
+
+        private void NavigateTo(Document document)
+        {
+            EventAggregator.Publish(
+                new ReplaceActiveScreen(new DocumentViewModel(document, Database, this)));
+        }
+
+        public void CreateDocument()
+        {
+            NavigateTo(new Document(new JsonDocument
+                                        {
+                                            DataAsJson = new Newtonsoft.Json.Linq.JObject(),
+                                            Metadata = new Newtonsoft.Json.Linq.JObject()
+                                        }));
         }
 
         protected override void OnInitialize()
         {
             base.OnInitialize();
-            this.IsBusy = true;
-            this.Database.Session.LoadMany<JsonDocument>(this.GetAll);
+            IsBusy = true;
+            Database.Session.LoadMany<JsonDocument>(GetAll);
         }
     }
 }

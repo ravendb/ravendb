@@ -30,14 +30,19 @@
             this.Client.Query(index, query, includes, callback);
         }
 
+        public void LinearQuery(string query, int start, int pageSize, CallbackFunction.Load<IList<Database.JsonDocument>> callback)
+        {
+            Client.LinearQuery(query, start, pageSize, callback);
+        }
+
         public void LoadMany(CallbackFunction.Load<IDictionary<string, IndexDefinition>> callback)
         {
             this.Client.IndexGetMany(null, null, callback);
         }
 
-        public void Save(KeyValuePair<string, IndexDefinition> index, CallbackFunction.SaveOne<KeyValuePair<string, IndexDefinition>> callback)
+        public void Save(string name, IndexDefinition definition, CallbackFunction.SaveOne<KeyValuePair<string, IndexDefinition>> callback)
         {
-            this.Client.IndexPut(index.Key, index.Value, callback);
+            this.Client.IndexPut(name, definition, callback);
         }
 
         public void Delete(string name, CallbackFunction.SaveOne<string> callback)

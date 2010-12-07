@@ -7,5 +7,9 @@
         IRavenScreen RelatedScreen { get; }
 
         object MenuView { get; }
+
+        int Ordinal { get; }
+
+        bool IsActive { get; set; }
     }
 }

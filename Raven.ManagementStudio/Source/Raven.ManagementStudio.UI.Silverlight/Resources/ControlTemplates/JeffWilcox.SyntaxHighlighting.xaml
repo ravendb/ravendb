@@ -18,13 +18,13 @@
                     <Grid  Margin="{TemplateBinding Padding}">
                         <TextBlock x:Name="TextBlock" />
                         <TextBox IsReadOnly="{TemplateBinding IsReadOnly}" Background="Transparent" Padding="0" Margin="0"
-								 SelectionForeground="{TemplateBinding SelectionForeground}"
-								 SelectionBackground="{TemplateBinding SelectionBackground}" AcceptsReturn="True"
-								 x:Name="TextBlockSelection" Foreground="Transparent" Text="{TemplateBinding SourceCode}" >
+                                 SelectionForeground="{TemplateBinding SelectionForeground}"
+                                 SelectionBackground="{TemplateBinding SelectionBackground}" AcceptsReturn="True"
+                                 x:Name="TextBlockSelection" Foreground="Transparent" Text="{TemplateBinding SourceCode}" >
                             <TextBox.Template>
                                 <ControlTemplate TargetType="TextBox">
                                     <ScrollViewer x:Name="ContentElement" BorderThickness="0" 
-												  IsTabStop="False" Padding="{TemplateBinding Padding}"/>
+                                                  IsTabStop="False" Padding="{TemplateBinding Padding}"/>
                                 </ControlTemplate>
                             </TextBox.Template>
                         </TextBox>

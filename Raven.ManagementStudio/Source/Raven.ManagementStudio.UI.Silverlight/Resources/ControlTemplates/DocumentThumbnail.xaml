@@ -31,7 +31,7 @@
                         <HyperlinkButton.Template>
                             <ControlTemplate>
                                 <TextBlock Text="{Binding Id}" TextTrimming="WordEllipsis" Width="{Binding CustomizedThumbnailTemplate.Width}"
-								ToolTipService.ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" Margin="0 5 0 0"/>
+                                ToolTipService.ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" Margin="0 5 0 0"/>
                             </ControlTemplate>
                         </HyperlinkButton.Template>
                     </HyperlinkButton>

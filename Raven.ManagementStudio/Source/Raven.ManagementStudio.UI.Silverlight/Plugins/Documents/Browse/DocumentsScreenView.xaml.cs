@@ -1,12 +1,18 @@
 ﻿namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Documents.Browse
 {
-    using System.Windows.Controls;
-
-    public partial class DocumentsScreenView : UserControl
+    public partial class DocumentsScreenView
     {
         public DocumentsScreenView()
         {
             InitializeComponent();
+        }
+
+        private void DocumentIdKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == System.Windows.Input.Key.Enter)
+            {
+                ((DocumentsScreenViewModel)DataContext).ShowDocument(documentId.Text);
+            }
         }
     }
 }

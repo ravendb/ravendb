@@ -1,28 +1,102 @@
 ﻿<UserControl x:Class="Raven.ManagementStudio.UI.Silverlight.Views.DatabaseView"
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:controls="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls"
-    xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit" 
-    xmlns:cal="http://www.caliburnproject.org" 
-    mc:Ignorable="d"
-    Margin="4 10 0 0">
-    
-    <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
-            <ListBox x:Name="Items" Grid.Column="0">
-            <ListBox.ItemTemplate>
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:localControls="clr-namespace:Raven.ManagementStudio.UI.Silverlight.Controls"
+             xmlns:conv="clr-namespace:Raven.ManagementStudio.UI.Silverlight.Converters"
+             xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
+             xmlns:cal="http://www.caliburnproject.org"
+             mc:Ignorable="d"
+             d:DesignWidth="400"
+             d:DesignHeight="400"
+             Name="This"
+             Margin="5">
+    <UserControl.Resources>
+        <conv:CategoryIsActiveConverter x:Key="CategoryIsActiveConverter" />
+    </UserControl.Resources>
+    <toolkit:DockPanel>
+
+        <StackPanel Orientation="Horizontal"
+                    toolkit:DockPanel.Dock="Top">
+
+            <Button Margin="5"
+                    cal:Message.Attach="GoBack"
+                    Style="{StaticResource BackButton}">
+                <toolkit:ContextMenuService.ContextMenu>
+                    <toolkit:ContextMenu ItemsSource="{Binding Items}"
+                                         HorizontalContentAlignment="Stretch">
+                        <toolkit:ContextMenu.ItemContainerStyle>
+                            <Style TargetType="toolkit:MenuItem">
+                                <Setter Property="toolkit:DockPanel.Dock"
+                                        Value="Bottom" />
+                            </Style>
+                        </toolkit:ContextMenu.ItemContainerStyle>
+                        <toolkit:ContextMenu.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding DisplayName}" />
+                            </DataTemplate>
+                        </toolkit:ContextMenu.ItemTemplate>
+                        <toolkit:ContextMenu.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <toolkit:DockPanel />
+                            </ItemsPanelTemplate>
+                        </toolkit:ContextMenu.ItemsPanel>
+                    </toolkit:ContextMenu>
+                </toolkit:ContextMenuService.ContextMenu>
+            </Button>
+
+            <HyperlinkButton Style="{StaticResource LinkStyle}"
+                             cal:Message.Attach="GoHome"
+                             Content="home"
+                             localControls:HyperlinkHelper.IsActive="{Binding ActiveItem, Converter={StaticResource CategoryIsActiveConverter}, ConverterParameter=None}" />
+
+            <HyperlinkButton Style="{StaticResource LinkStyle}"
+                             cal:Message.Attach="ViewPlugins('Documents')"
+                             Content="documents"
+                             localControls:HyperlinkHelper.IsActive="{Binding ActiveItem, Converter={StaticResource CategoryIsActiveConverter}, ConverterParameter=Documents}" />
+
+            <HyperlinkButton Style="{StaticResource LinkStyle}"
+                             cal:Message.Attach="ViewPlugins('Indexes')"
+                             Content="indexes"
+                             localControls:HyperlinkHelper.IsActive="{Binding ActiveItem, Converter={StaticResource CategoryIsActiveConverter}, ConverterParameter=Indexes}" />
+
+            <HyperlinkButton Style="{StaticResource LinkStyle}"
+                             cal:Message.Attach="ViewPlugins('Linq')"
+                             Content="linq"
+                             localControls:HyperlinkHelper.IsActive="{Binding ActiveItem, Converter={StaticResource CategoryIsActiveConverter}, ConverterParameter=Linq}" />
+
+            <HyperlinkButton Style="{StaticResource LinkStyle}"
+                             cal:Message.Attach="ViewPlugins('Statistics')"
+                             Content="stats"
+                             localControls:HyperlinkHelper.IsActive="{Binding ActiveItem, Converter={StaticResource CategoryIsActiveConverter}, ConverterParameter=Statistics}" />
+
+        </StackPanel>
+
+        <ItemsControl ItemsSource="{Binding Menu.CurrentPlugins}"
+                      toolkit:DockPanel.Dock="Top"
+                      Margin="40,-10,0,10">
+            <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="{Binding DisplayName}" cal:Message.Attach="ActivateItem" />
-                    </StackPanel>
+                    <HyperlinkButton Style="{StaticResource LinkStyle}"
+                                     cal:Message.Attach="GoToScreen"
+                                     FontSize="{StaticResource HyperlinkFontSize}"
+                                     Content="{Binding Name}"
+                                     localControls:HyperlinkHelper.IsActive="{Binding IsActive}" />
+
                 </DataTemplate>
-            </ListBox.ItemTemplate>
-        </ListBox>
-        <ContentControl x:Name="ActiveItem" Grid.Column="1" VerticalContentAlignment="Stretch" HorizontalContentAlignment="Stretch" />
-    </Grid>
+            </ItemsControl.ItemTemplate>
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <StackPanel Orientation="Horizontal" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+        </ItemsControl>
+
+        <toolkit:TransitioningContentControl x:Name="ActiveItem"
+                                             Margin="40,0,0,0"
+                                             Transition="LeftTransition"
+                                             VerticalContentAlignment="Stretch"
+                                             HorizontalContentAlignment="Stretch" />
+    </toolkit:DockPanel>
 </UserControl>

@@ -60,6 +60,15 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="ActiproSoftware.Shared.Silverlight, Version=10.2.105.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
+      <HintPath>..\..\Components\ActiproSoftware.Shared.Silverlight.dll</HintPath>
+    </Reference>
+    <Reference Include="ActiproSoftware.SyntaxEditor.Silverlight, Version=10.2.105.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
+      <HintPath>..\..\Components\ActiproSoftware.SyntaxEditor.Silverlight.dll</HintPath>
+    </Reference>
+    <Reference Include="ActiproSoftware.Text.Silverlight, Version=10.2.105.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
+      <HintPath>..\..\Components\ActiproSoftware.Text.Silverlight.dll</HintPath>
+    </Reference>
     <Reference Include="Caliburn.Micro">
       <HintPath>..\..\Components\Caliburn.Micro.dll</HintPath>
     </Reference>
@@ -82,8 +91,12 @@
     <Reference Include="System.Windows.Controls.Data, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" />
     <Reference Include="System.Windows.Controls.Data.DataForm.Toolkit, Version=4.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" />
     <Reference Include="System.Windows.Controls.Data.Input, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" />
+    <Reference Include="System.Windows.Controls.Data.Toolkit, Version=4.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
+    <Reference Include="System.Windows.Controls.DataVisualization.Toolkit, Version=4.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
+    <Reference Include="System.Windows.Controls.Input, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="System.Windows.Controls.Input.Toolkit, Version=4.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="System.Windows.Controls.Layout.Toolkit, Version=4.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" />
+    <Reference Include="System.Windows.Controls.Navigation, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="System.Windows.Controls.Toolkit, Version=4.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="System.Windows.Data, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" />
     <Reference Include="System.Windows.Interactivity, Version=4.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
@@ -99,7 +112,13 @@
     <Compile Include="Controls\DocumentsContainer.cs" />
     <Compile Include="Controls\DocumentThumbnail.cs" />
     <Compile Include="Controls\DragDropPanel.cs" />
+    <Compile Include="Controls\ErrorWindow.xaml.cs">
+      <DependentUpon>ErrorWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Controls\Gears.cs" />
+    <Compile Include="Controls\HyperlinkHelper.cs" />
+    <Compile Include="Controls\SyntaxEditor\Javascript\JavascriptOutliningSource.cs" />
+    <Compile Include="Controls\SyntaxEditor\Javascript\JavascriptSyntaxLanguage.cs" />
     <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\CodeColorizer.cs" />
     <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Common\ExtensionMethods.cs" />
     <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Common\Guard.cs" />
@@ -136,9 +155,12 @@
     <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Styling\StyleSheets\DefaultStyleSheet.cs" />
     <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\SyntaxHighlightingTextBlock.cs" />
     <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\SyntaxHighlightingTextBox.cs" />
+    <Compile Include="Controls\SyntaxEditor\MultiLineCommentNodeDefinition.cs" />
+    <Compile Include="Controls\SyntaxEditor\SyntaxEditorHelper.cs" />
     <Compile Include="Converters\BooleanToOppositeBooleanConverter.cs" />
     <Compile Include="Converters\BooleanToOppositeVisibilityConverter.cs" />
     <Compile Include="Converters\BooleanToVisibilityConverter.cs" />
+    <Compile Include="Converters\CategoryIsActiveConverter.cs" />
     <Compile Include="Converters\EnumToEnumerableConverter.cs" />
     <Compile Include="Converters\EnumToIntConverter.cs" />
     <Compile Include="Converters\NullToVisibilityConverter.cs" />
@@ -151,11 +173,13 @@
     <Compile Include="Messages\ReplaceActiveScreen.cs" />
     <Compile Include="Models\Database.cs" />
     <Compile Include="Models\Document.cs" />
+    <Compile Include="Models\FieldProperties.cs" />
     <Compile Include="Models\Index.cs" />
     <Compile Include="Plugins\Documents\Browse\BrowseDocuments.cs" />
     <Compile Include="Plugins\Documents\Browse\BrowseMenuIcon.xaml.cs">
       <DependentUpon>BrowseMenuIcon.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Plugins\Documents\Browse\CreateNewDocument.cs" />
     <Compile Include="Plugins\Documents\Browse\DocumentsScreenViewModel.cs" />
     <Compile Include="Plugins\Common\DocumentViewModel.cs" />
     <Compile Include="Plugins\Indexes\Browse\BrowseIndexes.cs" />
@@ -166,6 +190,18 @@
       <DependentUpon>BrowseIndexesScreenView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Plugins\Indexes\Browse\BrowseIndexesScreenViewModel.cs" />
+    <Compile Include="Plugins\Indexes\Browse\CreateNewIndex.cs" />
+    <Compile Include="Messages\IndexChangeMessage.cs" />
+    <Compile Include="Plugins\Indexes\Browse\IndexView.xaml.cs">
+      <DependentUpon>IndexView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Plugins\Indexes\Browse\IndexViewModel.cs" />
+    <Compile Include="Plugins\Linq\LinqEditor.cs" />
+    <Compile Include="Plugins\Linq\LinqEditorView.xaml.cs">
+      <DependentUpon>LinqEditorView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Plugins\Linq\LinqEditorViewModel.cs" />
+    <Compile Include="Plugins\PluginBase.cs" />
     <Compile Include="Plugins\Statistics\Global\GlobalStatistics.cs" />
     <Compile Include="Plugins\Statistics\Global\GlobalStatisticsMenuIcon.xaml.cs">
       <DependentUpon>GlobalStatisticsMenuIcon.xaml</DependentUpon>
@@ -175,10 +211,7 @@
     </Compile>
     <Compile Include="Plugins\Statistics\Global\GlobalStatisticsScreenViewModel.cs" />
     <Compile Include="ViewModels\GadgetsViewModel.cs" />
-    <Compile Include="ViewModels\Interfaces\INavigationBar.cs" />
     <Compile Include="ViewModels\Interfaces\IShell.cs" />
-    <Compile Include="ViewModels\Screens\MenuScreenViewModel.cs" />
-    <Compile Include="ViewModels\NavigationBarViewModel.cs" />
     <Compile Include="ViewModels\DatabaseViewModel.cs" />
     <Compile Include="Plugins\Documents\Browse\DocumentsScreenView.xaml.cs">
       <DependentUpon>DocumentsScreenView.xaml</DependentUpon>
@@ -186,11 +219,15 @@
     <Compile Include="Plugins\Common\DocumentView.xaml.cs">
       <DependentUpon>DocumentView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Views\NavigationBarView.xaml.cs">
-      <DependentUpon>NavigationBarView.xaml</DependentUpon>
+    <Compile Include="ViewModels\Screens\HomeScreenViewModel.cs" />
+    <Compile Include="ViewModels\Screens\MenuScreenViewModel.cs">
+      <SubType>Code</SubType>
     </Compile>
     <Compile Include="Views\DatabaseView.xaml.cs">
       <DependentUpon>DatabaseView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Screens\HomeScreenView.xaml.cs">
+      <DependentUpon>HomeScreenView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\Screens\MenuScreenView.xaml.cs">
       <DependentUpon>MenuScreenView.xaml</DependentUpon>
@@ -229,6 +266,42 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Resource>
+    <Page Include="Plugins\Indexes\Browse\IndexView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Plugins\Linq\LinqEditorView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Resources\Theme\Brushes.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Resources\Theme\CoreStyles.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Resources\Theme\Fonts.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Resources\Theme\SDKStyles.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Resources\Theme\Styles.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Resources\Theme\ToolkitStyles.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Controls\ErrorWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="Dialogs\InformationDialogView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -285,11 +358,11 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="Views\NavigationBarView.xaml">
+    <Page Include="Views\DatabaseView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Views\DatabaseView.xaml">
+    <Page Include="Views\Screens\HomeScreenView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -307,6 +380,9 @@
       <Link>Settings.StyleCop</Link>
       <SubType>Designer</SubType>
     </None>
+    <None Include="ClassDiagram.cd" />
+    <EmbeddedResource Include="Controls\SyntaxEditor\Definitions\JScript.langdef" />
+    <EmbeddedResource Include="Controls\SyntaxEditor\Definitions\CSharp.langdef" />
     <None Include="Properties\AppManifest.xml" />
   </ItemGroup>
   <ItemGroup>

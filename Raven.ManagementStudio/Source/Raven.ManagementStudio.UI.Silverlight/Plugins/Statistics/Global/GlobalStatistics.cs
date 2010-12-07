@@ -1,49 +1,29 @@
-﻿namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Statistics.Global
+﻿using System.ComponentModel.Composition;
+using Raven.ManagementStudio.Plugin;
+
+namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Statistics.Global
 {
-    using System.ComponentModel.Composition;
-    using Caliburn.Micro;
-    using Raven.ManagementStudio.Plugin;
-    using Raven.ManagementStudio.UI.Silverlight.Messages;
-    using Raven.ManagementStudio.UI.Silverlight.Plugins.Documents.Browse;
-
     [Export(typeof(IPlugin))]
-    public class GlobalStatistics : IPlugin
+    public class GlobalStatistics : PluginBase
     {
-        #region IPlugin Members
-
-        [Import]
-        public IEventAggregator EventAggregator { get; set; }
-
-        public string Name
+        public override string Name
         {
-            get { return "Global"; }
+            get { return "GLOBAL"; }
         }
 
-        public SectionType Section
+        public override SectionType Section
         {
             get { return SectionType.Statistics; }
         }
 
-        public IRavenScreen RelatedScreen
+        public override IRavenScreen RelatedScreen
         {
-            get
-            {
-                return new GlobalStatisticsScreenViewModel(this.Database);
-            }
+            get { return new GlobalStatisticsScreenViewModel(Database); }
         }
 
-        public IDatabase Database { get; set; }
-
-        public object MenuView
+        public override object MenuView
         {
             get { return new GlobalStatisticsMenuIcon(); }
         }
-
-        public void GoToScreen()
-        {
-            this.EventAggregator.Publish(new OpenNewScreen(this.RelatedScreen));
-        }
-
-        #endregion
     }
 }

@@ -1,7 +1,7 @@
 <OutOfBrowserSettings ShortName="RDBMS" EnableGPUAcceleration="False" ShowInstallMenuItem="True">
   <OutOfBrowserSettings.Blurb>RavenDB ManagementStudio</OutOfBrowserSettings.Blurb>
   <OutOfBrowserSettings.WindowSettings>
-    <WindowSettings Title="RavenDB ManagementStudio" WindowStyle="None" />
+    <WindowSettings Title="RavenDB ManagementStudio" Height="700" Width="1000" WindowStyle="None" />
   </OutOfBrowserSettings.WindowSettings>
   <OutOfBrowserSettings.SecuritySettings>
     <SecuritySettings ElevatedPermissions="Required" />

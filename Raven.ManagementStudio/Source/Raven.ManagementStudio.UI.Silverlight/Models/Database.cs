@@ -13,7 +13,7 @@ namespace Raven.ManagementStudio.UI.Silverlight.Models
 
     public class Database : IDatabase, INotifyPropertyChanged
     {
-        private bool isBusy;
+        private bool _isBusy;
 
         public Database(string databaseAdress, string databaseName = null)
         {
@@ -27,10 +27,10 @@ namespace Raven.ManagementStudio.UI.Silverlight.Models
 
         public bool IsBusy
         {
-            get { return this.isBusy; }
+            get { return this._isBusy; }
             set
             {
-                this.isBusy = value;
+                this._isBusy = value;
                 this.NotifyPropertyChange("IsBusy");
             }
         }

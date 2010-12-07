@@ -1,21 +1,20 @@
+using System;
+using System.Net;
+using Raven.Abstractions.Data;
+using Raven.Management.Client.Silverlight;
+using Raven.Management.Client.Silverlight.Client;
+using Raven.Management.Client.Silverlight.Document;
+
 namespace Raven.Client.Document
 {
-    using System;
-    using System.Net;
-    using Abstractions.Data;
-    using Management.Client.Silverlight;
-    using Management.Client.Silverlight.Client;
-    using Management.Client.Silverlight.Document;
-
     /// <summary>
     /// Manages access to RavenDB and open sessions to work with RavenDB.
     /// </summary>
     public class DocumentStore : IDocumentStore
     {
-        private Func<IAsyncDatabaseCommands> asyncDatabaseCommandsGenerator;
-
-        private ICredentials credentials;
-        private string identifier;
+        private Func<IAsyncDatabaseCommands> _asyncDatabaseCommandsGenerator;
+        private ICredentials _credentials;
+        private string _identifier;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DocumentStore"/> class.
@@ -40,7 +39,7 @@ namespace Raven.Client.Document
         /// <value>The async database commands.</value>
         public IAsyncDatabaseCommands AsyncDatabaseCommands
         {
-            get { return asyncDatabaseCommandsGenerator == null ? null : asyncDatabaseCommandsGenerator(); }
+            get { return _asyncDatabaseCommandsGenerator == null ? null : _asyncDatabaseCommandsGenerator(); }
         }
 
         /// <summary>
@@ -49,8 +48,8 @@ namespace Raven.Client.Document
         /// <value>The credentials.</value>
         public ICredentials Credentials
         {
-            get { return credentials; }
-            set { credentials = value; }
+            get { return _credentials; }
+            set { _credentials = value; }
         }
 
         /// <summary>
@@ -79,8 +78,8 @@ namespace Raven.Client.Document
         /// <value>The identifier.</value>
         public virtual string Identifier
         {
-            get { return identifier ?? Url; }
-            set { identifier = value; }
+            get { return _identifier ?? Url; }
+            set { _identifier = value; }
         }
 
         /// <summary>
@@ -139,7 +138,7 @@ namespace Raven.Client.Document
         /// </summary>
         protected virtual void InitializeInternal()
         {
-            asyncDatabaseCommandsGenerator = () => new AsyncServerClient(Url, Conventions, credentials);
+            _asyncDatabaseCommandsGenerator = () => new AsyncServerClient(Url, Conventions, _credentials);
         }
 
         /// <summary>

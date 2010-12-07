@@ -1,15 +1,15 @@
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Interactivity;
+using System.Windows.Media;
+
 namespace Raven.ManagementStudio.UI.Silverlight.Behaviors
 {
-    using System.Windows;
-    using System.Windows.Controls;
-    using System.Windows.Interactivity;
-    using System.Windows.Media;
-
     public class Watermark : Behavior<TextBox>
     {
-        private bool hasWatermark;
+        private bool _hasWatermark;
 
-        private Brush textBoxForeground;
+        private Brush _textBoxForeground;
 
         public string Text { get; set; }
 
@@ -17,56 +17,56 @@ namespace Raven.ManagementStudio.UI.Silverlight.Behaviors
 
         protected override void OnAttached()
         {
-            this.textBoxForeground = AssociatedObject.Foreground;
+            _textBoxForeground = AssociatedObject.Foreground;
 
             base.OnAttached();
-            if (this.Text != null)
+            if (Text != null)
             {
-                this.SetWatermarkText();
+                SetWatermarkText();
             }
 
-            AssociatedObject.GotFocus += this.GotFocus;
-            AssociatedObject.LostFocus += this.LostFocus;
+            AssociatedObject.GotFocus += GotFocus;
+            AssociatedObject.LostFocus += LostFocus;
         }
 
         protected override void OnDetaching()
         {
             base.OnDetaching();
-            AssociatedObject.GotFocus -= this.GotFocus;
-            AssociatedObject.LostFocus -= this.LostFocus;
+            AssociatedObject.GotFocus -= GotFocus;
+            AssociatedObject.LostFocus -= LostFocus;
         }
 
         private void LostFocus(object sender, RoutedEventArgs e)
         {
             if (AssociatedObject.Text.Length == 0)
             {
-                if (this.Text != null)
+                if (Text != null)
                 {
-                    this.SetWatermarkText();
+                    SetWatermarkText();
                 }
             }
         }
 
         private void GotFocus(object sender, RoutedEventArgs e)
         {
-            if (this.hasWatermark)
+            if (_hasWatermark)
             {
-                this.RemoveWatermarkText();
+                RemoveWatermarkText();
             }
         }
 
         private void RemoveWatermarkText()
         {
-            AssociatedObject.Foreground = this.textBoxForeground;
+            AssociatedObject.Foreground = _textBoxForeground;
             AssociatedObject.Text = string.Empty;
-            this.hasWatermark = false;
+            _hasWatermark = false;
         }
 
         private void SetWatermarkText()
         {
-            AssociatedObject.Foreground = this.Foreground;
-            AssociatedObject.Text = this.Text;
-            this.hasWatermark = true;
+            AssociatedObject.Foreground = Foreground;
+            AssociatedObject.Text = Text;
+            _hasWatermark = true;
         }
     }
 }

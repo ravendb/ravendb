@@ -170,31 +170,23 @@ namespace Raven.Management.Client.Silverlight.Client
             var reader = new StreamReader(stream);
 
             string json = reader.ReadToEnd();
-
-            switch (response.StatusCode)
+            string error = null;
+            try
             {
-                case HttpStatusCode.Conflict:
-                    //var errorResults = JsonConvert.DeserializeAnonymousType(json, new
-                    //                                                                  {
-                    //                                                                      url = string.Empty,
-                    //                                                                      actualETag = Guid.Empty,
-                    //                                                                      expectedETag = Guid.Empty,
-                    //                                                                      error = string.Empty
-                    //                                                                  });
+                var jObject = JObject.Parse(json);
+                error = jObject["Error"].ToString(Formatting.None);
 
-                    var jObject = JObject.Parse(json);
-
-                    return new ConcurrencyException(jObject["Error"].ToString(Formatting.None))
+                if (response.StatusCode == HttpStatusCode.Conflict)
+                {
+                    return new ConcurrencyException(error)
                                {
                                    ActualETag = new Guid(jObject.Value<string>("ActualETag")),
                                    ExpectedETag = new Guid(jObject.Value<string>("ExpectedETag")),
                                };
-                default:
-                    return
-                        new Exception(string.IsNullOrEmpty(json)
-                                          ? string.Empty
-                                          : JObject.Parse(json)["Error"].ToString());
+                }
             }
+            catch (JsonReaderException) { }
+            return new InvalidOperationException(error ?? json + string.Empty);
         }
 
         #region Old Code
@@ -366,7 +358,7 @@ namespace Raven.Management.Client.Silverlight.Client
             HttpJsonRequest request;
             CreateContext(new Uri(string.Format(DatabaseUrl.DocumentPut, DatabaseAddress, entity.Key)),
                           RequestMethod.DELETE, out request);
-
+            
             request.HttpWebRequest.BeginGetResponse(
                 (result) => DocumentDelete_Callback(entity, request, result, callback), request);
         }
@@ -1062,6 +1054,39 @@ namespace Raven.Management.Client.Silverlight.Client
                                    };
 
             context.Post(delegate { callback.Invoke(loadResponse); }, null);
+        }
+
+        public void LinearQuery(string query, int start, int pageSize, CallbackFunction.Load<IList<JsonDocument>> callback)
+        {
+            HttpJsonRequest request;
+            CreateContext(new Uri(string.Format(DatabaseUrl.LinearQuery, DatabaseAddress)), RequestMethod.POST, out request);
+
+            request.HttpWebRequest.BeginGetRequestStream(
+                    (requestResult) =>
+                    {
+                        var writer = new StreamWriter(request.HttpWebRequest.EndGetRequestStream(requestResult));
+
+                        var data = new JObject
+                                        {
+                                            { "Query", query },
+                                            { "Start", start },
+                                            { "PageSize", pageSize },
+                                        };
+
+                        writer.Write(data.ToString());
+                        writer.Close();
+
+                        request.HttpWebRequest.BeginGetResponse(
+                            (responseResult) =>
+                            LinearQuery_Callback(request, responseResult, callback),
+                            request);
+                    },
+                    request);
+        }
+
+        private void LinearQuery_Callback(HttpJsonRequest request, IAsyncResult responseResult, CallbackFunction.Load<IList<JsonDocument>> callback)
+        {
+            DocumentGetMany_Callback(request, responseResult, callback);
         }
 
         #endregion

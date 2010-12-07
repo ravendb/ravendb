@@ -132,5 +132,14 @@ namespace Raven.Management.Client.Silverlight.Client
         /// <param name="includes"></param>
         /// <param name="callback"></param>
         void Query(string index, IndexQuery query, string[] includes, CallbackFunction.Load<QueryResult> callback);
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="query"></param>
+        /// <param name="start"></param>
+        /// <param name="pageSize"></param>
+        /// <param name="callback"></param>
+        void LinearQuery(string query, int start, int pageSize, CallbackFunction.Load<IList<JsonDocument>> callback);
     }
 }

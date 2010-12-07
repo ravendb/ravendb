@@ -1,24 +1,25 @@
-﻿namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Indexes.Browse
-{
-    using System.Collections.Generic;
-    using System.ComponentModel.Composition;
-    using System.Linq;
-    using Caliburn.Micro;
-    using Raven.Database.Indexing;
-    using Raven.ManagementStudio.Plugin;
-    using Raven.ManagementStudio.UI.Silverlight.Dialogs;
-    using Raven.ManagementStudio.UI.Silverlight.Models;
+﻿using System;
+using System.ComponentModel.Composition;
+using System.Linq;
+using Caliburn.Micro;
+using Raven.ManagementStudio.Plugin;
+using Raven.ManagementStudio.UI.Silverlight.Messages;
+using Raven.ManagementStudio.UI.Silverlight.Models;
 
-    public class BrowseIndexesScreenViewModel : Conductor<Index>.Collection.OneActive, IRavenScreen
+namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Indexes.Browse
+{
+    public class BrowseIndexesScreenViewModel : Conductor<IndexViewModel>.Collection.OneActive, IRavenScreen, IHandle<IndexChangeMessage>
     {
-        private bool isBusy;
+        private const string WatermarkFilterString = "search by index name";
+
+        private bool _isBusy;
 
         public BrowseIndexesScreenViewModel(IDatabase database)
         {
-            this.DisplayName = "Browse Indexes";
-            this.Database = database;
+            DisplayName = "Browse Indexes";
+            Database = database;
 
-            this.AllItems = new BindableCollection<Index>();
+            AllItems = new BindableCollection<IndexViewModel>();
 
             CompositionInitializer.SatisfyImports(this);
         }
@@ -30,98 +31,85 @@
 
         public bool IsBusy
         {
-            get { return this.isBusy; }
+            get { return _isBusy; }
             set
             {
-                this.isBusy = value;
-                this.NotifyOfPropertyChange(() => this.IsBusy);
+                _isBusy = value;
+                NotifyOfPropertyChange(() => IsBusy);
             }
         }
 
         [Import]
         public IWindowManager WindowManager { get; set; }
 
-        public IObservableCollection<Index> AllItems { get; set; }
-
-        #region IRavenScreen Members
+        public IObservableCollection<IndexViewModel> AllItems { get; set; }
 
         public IRavenScreen ParentRavenScreen { get; set; }
 
-        #endregion
+        public SectionType Section { get { return SectionType.Indexes; } }
+
+        private string _filter;
+
+        public string Filter
+        {
+            get { return _filter; }
+            set
+            {
+                if (_filter != value)
+                {
+                    _filter = value;
+                    NotifyOfPropertyChange(() => Filter);
+                    Search(_filter);
+                }
+            }
+        }
+
 
         protected override void OnInitialize()
         {
             base.OnInitialize();
-            this.isBusy = true;
+            IsBusy = true;
 
-            this.Database.IndexSession.LoadMany((result) =>
-                                                    {
-                                                        if (result.IsSuccess)
-                                                        {
-                                                            List<Index> list = result.Data.Select(index => new Index(index)).ToList();
-                                                            this.AllItems.AddRange(list);
-                                                            this.Items.AddRange(list);
-                                                        }
+            Database.IndexSession.LoadMany(result =>
+                                               {
+                                                   if (result.IsSuccess)
+                                                   {
+                                                       var list =
+                                                           result.Data.Select(index => new IndexViewModel(new Index(index.Key, index.Value), Database, this))
+                                                               .ToList();
+                                                       AllItems.AddRange(list);
+                                                       Items.AddRange(list);
+                                                   }
 
-                                                        this.IsBusy = false;
-                                                    });
-        }
-
-        public void Remove(Index index)
-        {
-            this.IsBusy = true;
-            this.Database.IndexSession.Delete(index.Name, (result) =>
-                                                              {
-                                                                  if (result.IsSuccess)
-                                                                  {
-                                                                      this.Items.Remove(index);
-                                                                  }
-                                                                  else
-                                                                  {
-                                                                      this.WindowManager.ShowDialog(new InformationDialogViewModel("Error", result.Exception.Message));
-                                                                  }
-
-                                                                  this.IsBusy = false;
-                                                              });
+                                                   IsBusy = false;
+                                               });
         }
 
         public void Search(string text)
         {
             text = text.Trim();
-            this.Items.Clear();
+            Items.Clear();
 
-            this.Items.AddRange(!string.IsNullOrEmpty(text) ? this.AllItems.Where(x => x.Name.ToLowerInvariant().Contains(text.ToLowerInvariant())) : this.AllItems);
+            Items.AddRange(!string.IsNullOrEmpty(text) && text != WatermarkFilterString ? AllItems.Where(item => item.Name.IndexOf(text, StringComparison.InvariantCultureIgnoreCase) >= 0) : AllItems);
         }
 
-        public void Save(Index index)
+        public void Handle(IndexChangeMessage message)
         {
-            this.IsBusy = true;
-            this.Database.IndexSession.Save(new KeyValuePair<string, IndexDefinition>(index.Name, index.Definition), (result) =>
-                                                                                                                         {
-                                                                                                                             if (result.IsSuccess)
-                                                                                                                             {
-                                                                                                                                 index.IsEdited = false;
-                                                                                                                                 if (index.CurrentName != result.Data.Key)
-                                                                                                                                 {
-                                                                                                                                     var newIndex = new Index(result.Data);
-                                                                                                                                     this.AllItems.Add(newIndex);
-                                                                                                                                     this.Items.Add(newIndex);
+            IndexViewModel index = message.Index;
 
-                                                                                                                                     index.Name = index.CurrentName;
-                                                                                                                                 }
-                                                                                                                             }
-                                                                                                                             else
-                                                                                                                             {
-                                                                                                                                 this.WindowManager.ShowDialog(new InformationDialogViewModel("Error", result.Exception.Message));
-                                                                                                                             }
-
-                                                                                                                             this.IsBusy = false;
-                                                                                                                         });
-        }
-
-        public void AddFieldStorageAndIndexing(Index index)
-        {
-            index.AddFieldStorageAndIndexing();
+            if (index.Database == Database)
+            {
+                if (message.IsRemoved)
+                {
+                    AllItems.Remove(index);
+                    Items.Remove(index);
+                }
+                else
+                {
+                    AllItems.Add(index);
+                    Items.Add(index);
+                }
+            }
         }
     }
 }

@@ -60,10 +60,8 @@
             });
         }
 
-        #region IRavenScreen Members
-
         public IRavenScreen ParentRavenScreen { get; set; }
 
-        #endregion
+        public SectionType Section { get { return SectionType.Statistics; } }
     }
 }

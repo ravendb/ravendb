@@ -169,6 +169,15 @@ namespace Raven.Management.Client.Silverlight.Common {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to {0}/linearQuery?.
+        /// </summary>
+        public static string LinearQuery {
+            get {
+                return ResourceManager.GetString("LinearQuery", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to {0}/stats?.
         /// </summary>
         public static string StatisticsGet {

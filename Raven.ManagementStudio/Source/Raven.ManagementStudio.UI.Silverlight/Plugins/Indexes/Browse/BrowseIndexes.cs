@@ -1,48 +1,29 @@
-﻿namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Indexes.Browse
+﻿using System.ComponentModel.Composition;
+using Raven.ManagementStudio.Plugin;
+
+namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Indexes.Browse
 {
-    using System.ComponentModel.Composition;
-    using Caliburn.Micro;
-    using Raven.ManagementStudio.Plugin;
-    using Raven.ManagementStudio.UI.Silverlight.Messages;
-
     [Export(typeof(IPlugin))]
-    public class BrowseIndexes : IPlugin
+    public class BrowseIndexes : PluginBase
     {
-        #region IPlugin Members
-
-        [Import]
-        public IEventAggregator EventAggregator { get; set; }
-
-        public string Name
+        public override string Name
         {
-            get { return "Browse"; }
+            get { return "BROWSE"; }
         }
 
-        public SectionType Section
+        public override SectionType Section
         {
             get { return SectionType.Indexes; }
         }
 
-        public IRavenScreen RelatedScreen
+        public override IRavenScreen RelatedScreen
         {
-            get
-            {
-                return new BrowseIndexesScreenViewModel(this.Database);
-            }
+            get { return new BrowseIndexesScreenViewModel(Database); }
         }
 
-        public IDatabase Database { get; set; }
-
-        public object MenuView
+        public override object MenuView
         {
             get { return new BrowseIndexesMenuIcon(); }
         }
-
-        public void GoToScreen()
-        {
-            this.EventAggregator.Publish(new OpenNewScreen(this.RelatedScreen));
-        }
-
-        #endregion
     }
 }

@@ -1,44 +1,29 @@
+using System.ComponentModel.Composition;
+using Raven.ManagementStudio.Plugin;
+
 namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Documents.Browse
 {
-    using System.ComponentModel.Composition;
-    using Caliburn.Micro;
-    using Messages;
-    using Plugin;
-
     [Export(typeof(IPlugin))]
-    public class BrowseDocuments : IPlugin
+    public class BrowseDocuments : PluginBase
     {
-        [Import]
-        public IEventAggregator EventAggregator { get; set; }
-
-        public string Name
+        public override string Name
         {
-            get { return "Browse"; }
+            get { return "BROWSE"; }
         }
 
-        public SectionType Section
+        public override SectionType Section
         {
             get { return SectionType.Documents; }
         }
 
-        public IRavenScreen RelatedScreen
+        public override IRavenScreen RelatedScreen
         {
-            get
-            {
-                return new DocumentsScreenViewModel(this.Database);
-            }
+            get { return new DocumentsScreenViewModel(Database); }
         }
 
-        public IDatabase Database { get; set; }
-
-        public object MenuView
+        public override object MenuView
         {
             get { return new BrowseMenuIcon(); }
-        }
-
-        public void GoToScreen()
-        {
-            this.EventAggregator.Publish(new OpenNewScreen(this.RelatedScreen));
         }
     }
 }

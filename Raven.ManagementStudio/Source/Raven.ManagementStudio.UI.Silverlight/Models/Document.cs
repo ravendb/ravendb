@@ -10,16 +10,19 @@
 
     public class Document
     {
-        private readonly IDictionary<string, JToken> data = new Dictionary<string, JToken>();
-        private readonly IDictionary<string, JToken> metadata = new Dictionary<string, JToken>();
-        private readonly JsonDocument jsonDocument;
+        private readonly IDictionary<string, JToken> _data;
+        private readonly IDictionary<string, JToken> _metadata;
+        private readonly JsonDocument _jsonDocument;
 
         public Document(JsonDocument jsonDocument)
         {
-            this.jsonDocument = jsonDocument;
-            this.Id = jsonDocument.Key;
-            this.data = ParseJsonToDictionary(jsonDocument.DataAsJson);
-            this.metadata = ParseJsonToDictionary(jsonDocument.Metadata);
+            _data = new Dictionary<string, JToken>();
+            _metadata = new Dictionary<string, JToken>();
+            
+            _jsonDocument = jsonDocument;
+            Id = jsonDocument.Key;
+            _data = ParseJsonToDictionary(jsonDocument.DataAsJson);
+            _metadata = ParseJsonToDictionary(jsonDocument.Metadata);
         }
 
         public string Id { get; private set; }
@@ -28,7 +31,7 @@
         {
             get
             {
-                return this.data;
+                return _data;
             }
         }
 
@@ -36,7 +39,7 @@
         {
             get
             {
-                return this.metadata;
+                return _metadata;
             }
         }
 
@@ -44,28 +47,29 @@
 
         public JsonDocument JsonDocument
         {
-            get { return this.jsonDocument; }
+            get { return _jsonDocument; }
         }
 
         public void SetData(string json)
         {
-            this.jsonDocument.DataAsJson = JObject.Parse(json);     
+            _jsonDocument.DataAsJson = JObject.Parse(json);     
         }
 
         public void SetMetadata(string json)
         {
-            this.jsonDocument.Metadata = JObject.Parse(json);
+            _jsonDocument.Metadata = JObject.Parse(json);
         }
 
         public void SetId(string id)
         {
-            this.jsonDocument.Key = id;
+            _jsonDocument.Key = id;
         }
 
         public void Save(IAsyncDocumentSession session, CallbackFunction.SaveMany<object> callback)
         {
-            session.Store(this.jsonDocument);
+            session.Store(_jsonDocument);
             session.SaveChanges(callback);
+            Id = _jsonDocument.Key;
         }
 
         public static bool ValidateJson(string json)

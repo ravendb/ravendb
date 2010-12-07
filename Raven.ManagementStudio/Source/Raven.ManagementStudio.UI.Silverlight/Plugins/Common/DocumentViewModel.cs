@@ -1,42 +1,48 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.Composition;
+using System.Text;
+using System.Windows;
+using System.Windows.Markup;
+using Caliburn.Micro;
+using Newtonsoft.Json.Linq;
+using Raven.Management.Client.Silverlight.Common;
+using Raven.ManagementStudio.Plugin;
+using Raven.ManagementStudio.UI.Silverlight.Controls;
+using Raven.ManagementStudio.UI.Silverlight.Dialogs;
+using Raven.ManagementStudio.UI.Silverlight.Messages;
+using Raven.ManagementStudio.UI.Silverlight.Models;
+using Raven.ManagementStudio.UI.Silverlight.Plugins.Documents.Browse;
+
 namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Common
 {
-    using System.Collections.Generic;
-    using System.ComponentModel.Composition;
-    using System.Linq;
-    using System.Text;
-    using System.Windows;
-    using System.Windows.Controls;
-    using System.Windows.Markup;
-    using Caliburn.Micro;
-    using Controls;
-    using Dialogs;
-    using Documents.Browse;
-    using Management.Client.Silverlight.Common;
-    using Messages;
-    using Models;
-    using Newtonsoft.Json.Linq;
-    using Plugin;
-
     public class DocumentViewModel : Screen, IRavenScreen
     {
-        private readonly Document document;
-        private bool isSelected;
-        private string jsonData;
-        private string jsonMetadata;
-        private string id;
+        private static readonly HashSet<string> FilteredMetadataKeys = new HashSet<string>
+                                                                           {
+                                                                               "@id",
+                                                                               "@etag",
+                                                                               "Non-Authoritive-Information",
+                                                                               "Last-Modified"
+                                                                           };
+        private readonly Document _document;
+        private bool _isSelected;
+        private string _jsonData;
+        private string _jsonMetadata;
+        private string _id;
 
         public DocumentViewModel(Document document, IDatabase database, IRavenScreen parent)
         {
-            this.DisplayName = "Doc";
-            this.document = document;
-            this.id = document.Id;
-            this.jsonData = PrepareRawJsonString(document.Data);
-            this.jsonMetadata = PrepareRawJsonString(document.Metadata);
-            this.Thumbnail = new DocumentThumbnail();
-            this.ParentRavenScreen = parent;
-            this.Database = database;
+            DisplayName = "Edit Document";
+            _document = document;
+            _id = document.Id;
+            _jsonData = PrepareRawJsonString(document.Data, false);
+            _jsonMetadata = PrepareRawJsonString(document.Metadata, true);
+            Thumbnail = new DocumentThumbnail();
+            ParentRavenScreen = parent;
+            Database = database;
             CompositionInitializer.SatisfyImports(this);
-            this.CustomizedThumbnailTemplate = CreateThumbnailTemplate(document.Metadata);
+            CustomizedThumbnailTemplate = CreateThumbnailTemplate(document.Metadata);
         }
 
         public DocumentThumbnail Thumbnail { get; set; }
@@ -45,17 +51,18 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Common
 
         public IRavenScreen ParentRavenScreen { get; set; }
 
+        public SectionType Section
+        {
+            get { return SectionType.Documents; }
+        }
+
         public string Id
         {
-            get
-            {
-                return this.id;
-            }
-
+            get { return _id; }
             set
             {
-                this.id = value;
-                NotifyOfPropertyChange(() => this.Id);
+                _id = value;
+                NotifyOfPropertyChange(() => Id);
             }
         }
 
@@ -63,151 +70,129 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Common
         public IEventAggregator EventAggregator { get; set; }
 
         [Import]
-        public IWindowManager WindowManager{ get; set; }
+        public IWindowManager WindowManager { get; set; }
 
         public IDatabase Database { get; set; }
 
         public string JsonData
         {
-            get
-            {
-                return this.jsonData;
-            }
-
+            get { return _jsonData; }
             set
             {
-                this.jsonData = value;
-                NotifyOfPropertyChange(() => this.JsonData);
+                _jsonData = value;
+                NotifyOfPropertyChange(() => JsonData);
             }
         }
 
         public string JsonMetadata
         {
-            get
-            {
-                return this.jsonMetadata;
-            }
-
+            get { return _jsonMetadata; }
             set
             {
-                this.jsonMetadata = value;
-                NotifyOfPropertyChange(() => this.JsonMetadata);
+                _jsonMetadata = value;
+                NotifyOfPropertyChange(() => JsonMetadata);
+            }
+        }
+
+        public const int SummaryLength = 150;
+
+        public string Summary
+        {
+            get
+            {
+                if (JsonData.Length > SummaryLength)
+                {
+                    return JsonData.Substring(0, SummaryLength)
+                            .Replace("\r", "").Replace("\n", " ") + "...";
+                }
+                return JsonData.Replace("\r", "").Replace("\n", " ");
             }
         }
 
         public bool IsSelected
         {
-            get 
-            { 
-                return this.isSelected; 
+            get
+            {
+                return _isSelected;
             }
 
             set
             {
-                this.isSelected = value; 
-                NotifyOfPropertyChange(() => this.IsSelected);
+                _isSelected = value;
+                NotifyOfPropertyChange(() => IsSelected);
             }
         }
 
         public void SelectUnselect()
         {
-            this.IsSelected = !this.IsSelected;
+            IsSelected = !IsSelected;
         }
 
         public void Preview()
         {
-            var documentScreen = (DocumentsScreenViewModel)this.ParentRavenScreen;
+            var documentScreen = (DocumentsScreenViewModel)ParentRavenScreen;
             documentScreen.ActivateItem(this);
-            documentScreen.IsDocumentPreviewed = true; 
-        }
-
-        public void Edit()
-        {
-            var view = this.GetView(null) as Control;
-            if (view != null)
-            {
-                VisualStateManager.GoToState(view, "EditState", false);
-            }
-            else
-            {
-                this.EventAggregator.Publish(new ReplaceActiveScreen(this));
-                view = this.GetView(null) as Control;
-                if (view != null)
-                {
-                    VisualStateManager.GoToState(view, "EditState", false);
-                }
-            }
+            documentScreen.IsDocumentPreviewed = true;
         }
 
         public void Save()
         {
-            var view = this.GetView(null) as Control;
-            if (view != null)
+            if (Document.ValidateJson(JsonData))
             {
-                if (Document.ValidateJson(this.JsonData))
+                if (Document.ValidateJson(JsonMetadata))
                 {
-                    if (Document.ValidateJson(this.JsonMetadata))
-                    {
-                        this.document.SetData(this.JsonData);
-                        this.document.SetMetadata(this.JsonMetadata);
+                    _document.SetData(JsonData);
+                    _document.SetMetadata(JsonMetadata);
 
-                        this.document.SetId(this.Id);
-                        this.document.Save(this.Database.Session,
-                            saveResult =>
+                    _document.SetId(Id);
+                    _document.Save(Database.Session,
+                        saveResult =>
+                        {
+                            var success = false;
+
+                            foreach (var response in saveResult.GetSaveResponses())
                             {
-                                var success = false;
-
-                                foreach (var response in saveResult.GetSaveResponses())
+                                success = response.Data.Equals(_document.JsonDocument);
+                                if (success)
                                 {
-                                    success = response.Data.Equals(this.document.JsonDocument);
-                                    if (success)
-                                    {
-                                        break;
-                                    }
+                                    Id = _document.Id;
+                                    break;
                                 }
-                                //TO DO
-                                if (!success)
-                                {
-                                    this.WindowManager.ShowDialog(new InformationDialogViewModel("Error", "asd"), null);
-                                }
-                            });
-                        VisualStateManager.GoToState(view, "NormalState", false);
-                    }
-                    else
-                    {
-                        this.WindowManager.ShowDialog(new InformationDialogViewModel("Invalid JSON (Document Metadata)", Document.ParseExceptionMessage));
-                    }
+                            }
+                            //TO DO
+                            if (!success)
+                            {
+                                WindowManager.ShowDialog(new InformationDialogViewModel("Error", ""), null);
+                            }
+                        });
                 }
-                else 
+                else
                 {
-                    this.WindowManager.ShowDialog(new InformationDialogViewModel("Invalid JSON (Document)", Document.ParseExceptionMessage));
-                }      
+                    WindowManager.ShowDialog(new InformationDialogViewModel("Invalid JSON (Document Metadata)", Document.ParseExceptionMessage));
+                }
             }
-        }
-
-        public void Cancel()
-        {
-            var view = this.GetView(null) as Control;
-            if (view != null)
+            else
             {
-                VisualStateManager.GoToState(view, "NormalState", false);
+                WindowManager.ShowDialog(new InformationDialogViewModel("Invalid JSON (Document)", Document.ParseExceptionMessage));
             }
         }
 
         public void ShowDocument()
         {
-            this.EventAggregator.Publish(new ReplaceActiveScreen(this));
+            EventAggregator.Publish(new ReplaceActiveScreen(this));
         }
 
-        private static string PrepareRawJsonString(IEnumerable<KeyValuePair<string, JToken>> data)
+        private static string PrepareRawJsonString(IEnumerable<KeyValuePair<string, JToken>> data, bool withFilter)
         {
             var result = new StringBuilder("{\n");
 
             foreach (var item in data)
             {
-                result.Append("\"").Append(item.Key).Append("\" : ").Append(item.Value).Append(",\n");
+                if (!withFilter || !FilteredMetadataKeys.Contains(item.Key))
+                {
+                    result.AppendFormat("\"{0}\" : {1},\n", item.Key, item.Value);
+                }
             }
-
             result.Append("}");
 
             return result.ToString();

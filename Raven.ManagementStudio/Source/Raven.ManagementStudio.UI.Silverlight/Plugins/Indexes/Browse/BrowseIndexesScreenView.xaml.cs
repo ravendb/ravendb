@@ -1,12 +1,15 @@
 ﻿namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Indexes.Browse
 {
-    using System.Windows.Controls;
-
-    public partial class BrowseIndexesScreenView : UserControl
+    public partial class BrowseIndexesScreenView
     {
         public BrowseIndexesScreenView()
         {
-            this.InitializeComponent();
+            InitializeComponent();
+        }
+
+        private void SearchBoxTextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+        {
+            ((BrowseIndexesScreenViewModel)DataContext).Filter = searchBox.Text;
         }
     }
 }

@@ -11,11 +11,11 @@
 
     public class DocumentSession : InMemorySessionOperations<JsonDocument>, IAsyncDocumentSession
     {
-        private readonly IDocumentRepository documentRepository;
+        private readonly IDocumentRepository _documentRepository;
 
         public DocumentSession(Uri databaseAddress)
         {
-            this.documentRepository = new DocumentRepository(databaseAddress);
+            this._documentRepository = new DocumentRepository(databaseAddress);
         }
 
         public void Load<T>(string key, CallbackFunction.Load<T> callback) where T : JsonDocument
@@ -37,7 +37,7 @@
                 return;
             }
 
-            this.documentRepository.Get(key, callback, this.Store);
+            this._documentRepository.Get(key, callback, this.Store);
         }
 
         public void LoadMany<T>(string[] keys, CallbackFunction.Load<IList<T>> callback) where T : JsonDocument
@@ -75,12 +75,12 @@
                 return;
             }
 
-            this.documentRepository.GetMany(keys, existingEntities, callback, this.StoreMany);
+            this._documentRepository.GetMany(keys, existingEntities, callback, this.StoreMany);
         }
 
         public void LoadMany<T>(CallbackFunction.Load<IList<T>> callback) where T : JsonDocument
         {
-            this.documentRepository.GetMany(null, null, callback, this.StoreMany);
+            this._documentRepository.GetMany(null, null, callback, this.StoreMany);
         }
 
         public void StoreEntity<T>(T entity) where T : JsonDocument
@@ -97,12 +97,13 @@
         {
             foreach (var deletedEntity in DeletedEntities)
             {
-                if (StoredEntities.Any(x => x.Value.CurrentState == deletedEntity))
+                JsonDocument entity = deletedEntity;
+                if (StoredEntities.Any(x => x.Value.CurrentState == entity))
                 {
-                    StoredEntities.Remove(StoredEntities.Where(x => x.Value.CurrentState == deletedEntity).FirstOrDefault());
+                    StoredEntities.Remove(StoredEntities.Where(x => x.Value.CurrentState == entity).FirstOrDefault());
                 }
 
-                this.documentRepository.Delete(deletedEntity, callback);
+                this._documentRepository.Delete(entity, callback);
             }
 
             this.DeletedEntities.Clear();
@@ -115,12 +116,12 @@
                 {
                     if (storedDocument.Value.CurrentState.Key == "auto-generated")
                     {
-                        this.documentRepository.Post(storedDocument.Value.CurrentState, callback, this.Store);
+                        this._documentRepository.Post(storedDocument.Value.CurrentState, callback, this.Store);
                     }
                     else
                     {
                         //this.documentRepository.Put(storedDocument.Value.CurrentState, callback, this.Store);
-                        batchCommands.Add(new BatchCommand<JsonDocument>()
+                        batchCommands.Add(new BatchCommand<JsonDocument>
                                               {
                                                   Entity = storedDocument.Value.CurrentState,
                                                   Method = RequestMethod.PUT
@@ -135,7 +136,7 @@
                 this.StoredEntities.Remove(storedDocument);
             }
 
-            this.documentRepository.Batch(batchCommands, callback);
+            this._documentRepository.Batch(batchCommands, callback);
         }
 
         public void Refresh<T>(T entity, CallbackFunction.Load<T> callback) where T : JsonDocument
@@ -152,7 +153,7 @@
                 this.DeletedEntities.Remove(entity);
             }
 
-            this.documentRepository.Get(entity.Key, callback, this.Store);
+            this._documentRepository.Get(entity.Key, callback, this.Store);
         }
     }
 }

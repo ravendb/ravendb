@@ -153,6 +153,9 @@
   <data name="IndexPut" xml:space="preserve">
     <value>{0}/indexes/{1}?</value>
   </data>
+  <data name="LinearQuery" xml:space="preserve">
+    <value>{0}/linearQuery?</value>
+  </data>
   <data name="StatisticsGet" xml:space="preserve">
     <value>{0}/stats?</value>
   </data>

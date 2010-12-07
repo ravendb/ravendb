@@ -1,90 +1,110 @@
-﻿namespace Raven.ManagementStudio.UI.Silverlight.Models
-{
-    using System.Collections.Generic;
-    using System.Linq;
-    using Caliburn.Micro;
-    using Raven.Database.Indexing;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using Caliburn.Micro;
+using Raven.Database.Indexing;
 
+namespace Raven.ManagementStudio.UI.Silverlight.Models
+{
     public class Index : PropertyChangedBase
     {
-        private bool isEdited;
-        private string name;
-
-        public Index(KeyValuePair<string, IndexDefinition> index)
+        public Index(string name, IndexDefinition definition)
         {
-            this.Name = index.Key;
-            this.CurrentName = index.Key;
-            this.Definition = index.Value;
+            Name = name;
+            CurrentName = name;
+            Definition = definition;
 
-            this.PrepareFieldStoresAndIndexes();
+            LoadFields();
         }
 
+        private string _name;
         public string Name
         {
-            get { return this.name; }
+            get { return _name; }
             set
             {
-                this.name = value;
-                this.NotifyOfPropertyChange(() => this.Name);
+                _name = value;
+                NotifyOfPropertyChange(() => Name);
             }
         }
 
-        public IObservableCollection<FieldStorageAndIndexing> FieldStoresAndIndexes { get; set; }
+        public IObservableCollection<FieldProperties> Fields { get; private set; }
 
         public string CurrentName { get; set; }
 
         public string Map
         {
-            get { return this.Definition.Map; }
-            set { this.Definition.Map = value; }
+            get { return Definition.Map; }
+            set { Definition.Map = value; }
+        }
+
+        public string Reduce
+        {
+            get { return Definition.Reduce; }
+            set { Definition.Reduce = value; }
+        }
+
+        public string TransformResults
+        {
+            get { return Definition.TransformResults; }
+            set { Definition.TransformResults = value; }
         }
 
         public IndexDefinition Definition { get; set; }
 
-        public bool IsEdited
+        private void LoadFields()
         {
-            get { return this.isEdited; }
-            set
+            Fields = new BindableCollection<FieldProperties>();
+
+            CreateOrEditField(Definition.Indexes, (f, i) => f.Indexing = i);
+            CreateOrEditField(Definition.Stores, (f, i) => f.Storage = i);
+            CreateOrEditField(Definition.SortOptions, (f, i) => f.Sort = i);
+            CreateOrEditField(Definition.Analyzers, (f, i) => f.Analyzer = i);
+        }
+
+        private void CreateOrEditField<T>(IDictionary<string, T> dictionary, Action<FieldProperties, T> setter)
+        {
+            if (dictionary != null)
             {
-                this.isEdited = value;
-                this.NotifyOfPropertyChange(() => this.IsEdited);
+                foreach (var item in dictionary)
+                {
+                    var localItem = item;
+                    var field = Fields.FirstOrDefault(f => f.Name == localItem.Key);
+                    if (field == null)
+                    {
+                        field = new FieldProperties { Name = localItem.Key };
+                        Fields.Add(field);
+                    }
+                    setter(field, localItem.Value);
+                }
             }
         }
 
-        private void PrepareFieldStoresAndIndexes()
+        public void SaveFields()
         {
-            this.FieldStoresAndIndexes = new BindableCollection<FieldStorageAndIndexing>();
+            Definition.Indexes.Clear();
+            Definition.Stores.Clear();
+            Definition.SortOptions.Clear();
+            Definition.Analyzers.Clear();
 
-            foreach (string key in this.Definition.Stores.Keys)
+            foreach (FieldProperties item in Fields)
             {
-                this.FieldStoresAndIndexes.Add(new FieldStorageAndIndexing
-                                                   {
-                                                       FieldName = key,
-                                                       FieldIndexing = this.Definition.Indexes[key],
-                                                       FieldStorage = this.Definition.Stores[key]
-                                                   });
+                if (item.Name != null)
+                {
+                    Definition.Indexes[item.Name] = item.Indexing;
+                    Definition.Stores[item.Name] = item.Storage;
+                    Definition.SortOptions[item.Name] = item.Sort;
+                    Definition.Analyzers[item.Name] = item.Analyzer;
+                }
             }
         }
 
-        public void AddFieldStorageAndIndexing()
+        public void AddField()
         {
-            if (!this.FieldStoresAndIndexes.Any(x => string.IsNullOrEmpty(x.FieldName)))
+            if (!Fields.Any(field => string.IsNullOrEmpty(field.Name)))
             {
-                this.FieldStoresAndIndexes.Add(new FieldStorageAndIndexing());
+                Fields.Add(new FieldProperties());
             }
         }
-
-        #region Nested type: FieldStorageAndIndexing
-
-        public class FieldStorageAndIndexing
-        {
-            public string FieldName { get; set; }
-
-            public FieldStorage FieldStorage { get; set; }
-
-            public FieldIndexing FieldIndexing { get; set; }
-        }
-
-        #endregion
     }
 }

@@ -1,85 +1,153 @@
-﻿<UserControl x:Class="Raven.ManagementStudio.UI.Silverlight.Views.ShellView"
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-    xmlns:cal="http://www.caliburnproject.org" 
-    xmlns:controlsLocal="clr-namespace:Raven.ManagementStudio.UI.Silverlight.Controls"
-    xmlns:controlsToolkit="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit"
-    xmlns:controls="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls"
-    mc:Ignorable="d"
-    d:DesignHeight="480" d:DesignWidth="640">
-    <Grid Background="White">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="30" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="20" />
-        </Grid.RowDefinitions>
-
-        <Border Grid.Row="0" Background="{StaticResource DarkGradient}" cal:Message.Attach="[Event MouseLeftButtonDown] = [Action DragWindow]">
+﻿<UserControl xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:cal="http://www.caliburnproject.org"
+             xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
+             xmlns:controlsLocal="clr-namespace:Raven.ManagementStudio.UI.Silverlight.Controls"
+             x:Class="Raven.ManagementStudio.UI.Silverlight.Views.ShellView"
+             mc:Ignorable="d"
+             UseLayoutRounding="True"
+             d:DesignHeight="480"
+             d:DesignWidth="640">
+    <Border Background="White"
+            BorderBrush="#17497A"
+            BorderThickness="1">
+        <Border BorderBrush="#5D8491"
+                BorderThickness="1">
             <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                
-                <StackPanel Orientation="Horizontal" Grid.Column="0">
-                    <Rectangle Cursor="SizeNWSE"  VerticalAlignment="Top" Fill="#00FFFFFF" Width="5" Height="5" cal:Message.Attach="[Event MouseLeftButtonDown] = [Action ResizeWindow(4)]" />
-                    <Image Source="../Resources/Images/logo.png"  Grid.Column="0" />
-                    <TextBlock Text="Raven DB Management Studio" 
-                               FontFamily="Georgia"
-                               FontSize="16"
-                               Foreground="{StaticResource ToolbarBackgroundBrush}"
-                               VerticalAlignment="Center" Margin="5, 0, 0, 0" />
-                </StackPanel>    
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="30" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="20" />
+                    </Grid.RowDefinitions>
 
-                <StackPanel Orientation="Horizontal" Grid.Column="2">
-                    <Button x:Name="MinimizeWindow" Style="{StaticResource MinimizeWindowButton}" />
-                    <Button x:Name="ToogleWindow" Style="{StaticResource ToggleWindowButton}" />
-                    <Button x:Name="CloseWindow" Style="{StaticResource CloseWindowButton}" />
-                </StackPanel>
+                    <Border Grid.Row="0"
+                            x:Name="titleBorder"
+                            Background="{StaticResource DarkGradient}"
+                            cal:Message.Attach="[Event MouseLeftButtonDown] = [Action DragWindow]">
 
-                <Rectangle Cursor="SizeNESW" Grid.Column="3" VerticalAlignment="Top" Fill="#00FFFFFF" Width="5" Height="5" cal:Message.Attach="[Event MouseLeftButtonDown] = [Action ResizeWindow(5)]" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
 
-            </Grid>
+                            <StackPanel Orientation="Horizontal"
+                                        Grid.Column="0">
+                                <Image Source="../Resources/Images/logo.png"
+                                       Grid.Column="0" />
+                                <TextBlock Text="raven db management studio"
+                                           Style="{StaticResource ApplicationNameStyle}"
+                                           TextOptions.TextHintingMode="Fixed"
+                                           FontSize="20"
+                                           Foreground="{StaticResource ToolbarBackgroundBrush}"
+                                           VerticalAlignment="Center"
+                                           Margin="5, 0, 0, 0" />
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal"
+                                        Grid.Column="2"
+                                        Margin="0,0,10,0"
+                                        VerticalAlignment="Top">
+                                <Button x:Name="MinimizeWindow"
+                                        Style="{StaticResource MinimizeWindowButton}" />
+                                <Button x:Name="ToogleWindow"
+                                        Style="{StaticResource ToggleWindowButton}" />
+                                <Button x:Name="CloseWindow"
+                                        Style="{StaticResource CloseWindowButton}" />
+                            </StackPanel>
+
+                </Grid>
         </Border>
-        
+
+        <Border Grid.Row="2"
+                Background="{StaticResource InverseDarkGradient}">
+            <toolkit:DockPanel>
+
+                <StackPanel HorizontalAlignment="Right"
+                            Orientation="Horizontal"
+                            toolkit:DockPanel.Dock="Right">
+                    <controlsLocal:Gears Margin="0,0,4,0" />
+                </StackPanel>
+            </toolkit:DockPanel>
+        </Border>
+
         <Grid Grid.Row="1">
-            <StackPanel Orientation="Horizontal">
-                <ComboBox x:Name="Items">
-                    <ComboBox.ItemTemplate>
-                        <DataTemplate>
-                            <TextBlock Text="{Binding DisplayName}" cal:Message.Attach="ActivateItem" />
-                        </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
-                <ContentControl x:Name="NavigationBar" Grid.Row="1" />
-            </StackPanel>      
+
+
+            <ContentControl x:Name="ActiveItem"
+                            Grid.Column="0"
+                            HorizontalContentAlignment="Stretch"
+                            VerticalContentAlignment="Stretch" />
         </Grid>
 
-        <Border Grid.Row="3" Background="{StaticResource InverseDarkGradient}" >
-            <controlsToolkit:DockPanel>
-                <Rectangle controlsToolkit:DockPanel.Dock="Left" Cursor="SizeNESW"  VerticalAlignment="Bottom" Fill="#00FFFFFF" Width="5" Height="5" cal:Message.Attach="[Event MouseLeftButtonDown] = [Action ResizeWindow(7)]" />
-                <StackPanel HorizontalAlignment="Right" Orientation="Horizontal" controlsToolkit:DockPanel.Dock="Right">
-                    <controlsLocal:Gears Margin="0,0,4,0"/>
-                    <Rectangle Cursor="SizeNWSE" VerticalAlignment="Bottom" Fill="#00FFFFFF" Width="5" Height="5" cal:Message.Attach="[Event MouseLeftButtonDown] = [Action ResizeWindow(8)]" />
-                </StackPanel>
-            </controlsToolkit:DockPanel>
-        </Border>
 
-        <Grid Grid.Row="2">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="4*" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-
-            <TextBlock Text="Gadgets" Grid.Column="1"/>
-            <ContentControl x:Name="ActiveItem" Grid.Column="0" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
         </Grid>
-        
 
-    </Grid>
+                <Rectangle VerticalAlignment="Top"
+                   HorizontalAlignment="Stretch"
+                   Fill="Transparent"
+                   Height="5"
+                   Cursor="SizeNS"
+                   cal:Message.Attach="[Event MouseLeftButtonDown] = [Action ResizeWindow('Top')]" />
+
+        <Rectangle VerticalAlignment="Bottom"
+                   HorizontalAlignment="Stretch"
+                   Fill="Transparent"
+                   Height="5"
+                   Cursor="SizeNS"
+                   cal:Message.Attach="[Event MouseLeftButtonDown] = [Action ResizeWindow('Bottom')]" />
+
+        <Rectangle VerticalAlignment="Stretch"
+                   HorizontalAlignment="Left"
+                   Fill="Transparent"
+                   Width="5"
+                   Cursor="SizeWE"
+                   cal:Message.Attach="[Event MouseLeftButtonDown] = [Action ResizeWindow('Left')]" />
+
+        <Rectangle VerticalAlignment="Stretch"
+                   HorizontalAlignment="Right"
+                   Fill="Transparent"
+                   Width="5"
+                   Cursor="SizeWE"
+                   cal:Message.Attach="[Event MouseLeftButtonDown] = [Action ResizeWindow('Right')]" />
+
+        <Rectangle Cursor="SizeNWSE"
+                   VerticalAlignment="Top"
+                   HorizontalAlignment="Left"
+                   Fill="Transparent"
+                   Width="10"
+                   Height="10"
+                   cal:Message.Attach="[Event MouseLeftButtonDown] = [Action ResizeWindow('TopLeft')]" />
+
+        <Rectangle Cursor="SizeNWSE"
+                   VerticalAlignment="Bottom"
+                   HorizontalAlignment="Right"
+                   Fill="Transparent"
+                   Width="10"
+                   Height="10"
+                   cal:Message.Attach="[Event MouseLeftButtonDown] = [Action ResizeWindow('BottomRight')]" />
+
+        <Rectangle Cursor="SizeNESW"
+                   VerticalAlignment="Bottom"
+                   HorizontalAlignment="Left"
+                   Fill="Transparent"
+                   Width="10"
+                   Height="10"
+                   cal:Message.Attach="[Event MouseLeftButtonDown] = [Action ResizeWindow('BottomLeft')]" />
+
+        <Rectangle Cursor="SizeNESW"
+                   VerticalAlignment="Top"
+                   HorizontalAlignment="Right"
+                   Fill="Transparent"
+                   Width="10"
+                   Height="10"
+                   cal:Message.Attach="[Event MouseLeftButtonDown] = [Action ResizeWindow('TopRight')]" />
+        </Grid>
+    </Border>
+    </Border>
 </UserControl>
