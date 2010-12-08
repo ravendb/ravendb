@@ -149,7 +149,7 @@ namespace Raven.Client.Linq
 	    }
 
         /// <summary>
-        /// Grant access ot the query session
+        /// Grant access to the query session
         /// </summary>
 	    public IDocumentSession Session
 	    {

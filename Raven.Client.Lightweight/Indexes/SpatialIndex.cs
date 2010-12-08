@@ -8,7 +8,7 @@ namespace Raven.Client.Indexes
     public static class SpatialIndex
     {
         /// <summary>
-        /// Marker method for allowing generating sptial indexes on the client
+        /// Marker method for allowing generating spatial indexes on the client
         /// </summary>
         public static object Generate(double lat, double lng)
         {

@@ -7,7 +7,7 @@ using Raven.Database.Data;
 namespace Raven.Client.Extensions
 {
     ///<summary>
-    /// Extension methods to create mutli tenants databases
+    /// Extension methods to create multi tenants databases
     ///</summary>
     public static class MultiTenancyExtensions
     {
