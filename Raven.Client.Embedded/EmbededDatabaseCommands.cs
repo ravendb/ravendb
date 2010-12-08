@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Net;
@@ -294,7 +295,7 @@ namespace Raven.Client.Client
         /// Executed the specified commands as a single batch
         /// </summary>
         /// <param name="commandDatas">The command data.</param>
-        public BatchResult[] Batch(ICommandData[] commandDatas)
+        public BatchResult[] Batch(IEnumerable<ICommandData> commandDatas)
 		{
 			foreach (var commandData in commandDatas)
 			{

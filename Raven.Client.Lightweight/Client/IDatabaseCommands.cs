@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Net;
 using Newtonsoft.Json.Linq;
@@ -141,7 +142,7 @@ namespace Raven.Client.Client
 		/// Executed the specified commands as a single batch
 		/// </summary>
 		/// <param name="commandDatas">The command data.</param>
-		BatchResult[] Batch(ICommandData[] commandDatas);
+		BatchResult[] Batch(IEnumerable<ICommandData> commandDatas);
 
 		/// <summary>
 		/// Commits the specified tx id.
