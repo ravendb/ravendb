@@ -64,6 +64,11 @@ namespace Raven.Database.Indexing
 				yield break;
 			}
 
+            if(value is DynamicNullObject)
+            {
+                yield break;
+            }
+
 			var fields = value as IEnumerable<AbstractField>;
 			if(fields != null)
 			{

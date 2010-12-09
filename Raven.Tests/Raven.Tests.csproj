@@ -161,6 +161,7 @@
     <Compile Include="Bugs\MultiTenancy.cs" />
     <Compile Include="Bugs\NameAndId.cs" />
     <Compile Include="Bugs\OperationHeaders.cs" />
+    <Compile Include="Bugs\OrderOfInsertionDoesNotAffectQuerying.cs" />
     <Compile Include="Bugs\OverwriteDocuments.cs" />
     <Compile Include="Bugs\QueryAfterAdHocIndexIsReset.cs" />
     <Compile Include="Bugs\QueryingOnEqualToNull.cs" />
@@ -188,6 +189,7 @@
     <Compile Include="Bugs\SortingWithWildcardQuery.cs" />
     <Compile Include="Bugs\SpatialQueries.cs" />
     <Compile Include="Bugs\StalenessWontAffectUnrelatedIndexes.cs" />
+    <Compile Include="Bugs\TransitiveNull.cs" />
     <Compile Include="Bugs\TranslatingLinqQueryUsingNestedId.cs" />
     <Compile Include="Bugs\Translators.cs" />
     <Compile Include="Bugs\User.cs" />

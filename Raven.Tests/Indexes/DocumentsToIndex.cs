@@ -79,7 +79,7 @@ namespace Raven.Tests.Indexes
 						   Map = @"
                     from doc in docs
                     where doc.type == ""page""
-                    select new { doc.some };
+                    select new { doc.name };
                 "
 					   });
 			 db.Put("1", null,
