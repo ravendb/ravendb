@@ -14,7 +14,7 @@ $(document).ready(function () {
 		if (doc == null)
 			return;
 		$('#content').prepend("<div id='system_warning'/>")
-		$('#system_warning').setTemplateURL($.ravenDB.getServerUrl() + '/raven/JSONTemplates/warningMsgs.html');
+		$('#system_warning').setTemplateURL($.ravenDB.getServerUrl() + 'raven/JSONTemplates/warningMsgs.html');
 		$('#system_warning').processTemplate(doc);
 	});
 
@@ -39,7 +39,7 @@ function RavenUI() { }
 
 RavenUI.UpdateQuickStats = function (targetSelector) {
     if (!$(targetSelector).hasTemplate()) {
-    	$(targetSelector).setTemplateURL($.ravenDB.getServerUrl() + '/raven/JSONTemplates/quickStats.html');
+    	$(targetSelector).setTemplateURL($.ravenDB.getServerUrl() + 'raven/JSONTemplates/quickStats.html');
     }
 
     $.ravenDB.getStatistics(function (stats) {
@@ -51,7 +51,7 @@ RavenUI.UpdateQuickStats = function (targetSelector) {
 
 RavenUI.GetGlobalStatistics = function (targetSelector, afterTemplateRendered) {
     if (!$(targetSelector).hasTemplate()) {
-        $(targetSelector).setTemplateURL($.ravenDB.getServerUrl() + '/raven/JSONTemplates/globalStats.html');
+        $(targetSelector).setTemplateURL($.ravenDB.getServerUrl() + 'raven/JSONTemplates/globalStats.html');
     }
 
     $.ravenDB.getStatistics(function (stats) {
@@ -91,7 +91,7 @@ RavenUI.GetIndexCount = function (successCallback) {
 
 RavenUI.GetIndexPage = function (pageNum, pageSize, targetSelector, successCallback) {
     if (!$(targetSelector).hasTemplate()) {
-    	$(targetSelector).setTemplateURL($.ravenDB.getServerUrl() + '/raven/JSONTemplates/indexPage.html');
+    	$(targetSelector).setTemplateURL($.ravenDB.getServerUrl() + 'raven/JSONTemplates/indexPage.html');
     }
 
     $.ravenDB.getIndexPage(pageNum, pageSize, function (indexes) {
