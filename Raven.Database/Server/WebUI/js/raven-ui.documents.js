@@ -83,7 +83,7 @@ function ExecuteLinqQuery() {
             //this is only here because there's no way to get the total count on a query currently
             allDocsTotalCount = data.TotalResults;
             if (data.Errors.length > 0) {
-                $('#ajaxError').setTemplateURL($.ravenDB.getServerUrl() + '/raven/JSONTemplates/errorsMsgs.html');
+                $('#ajaxError').setTemplateURL($.ravenDB.getServerUrl() + 'raven/JSONTemplates/errorsMsgs.html');
                 $('#ajaxError').processTemplate(data);
                 $('#ajaxError').slideDown();
             }
