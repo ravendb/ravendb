@@ -18,7 +18,7 @@ namespace Raven.Storage.Managed
 {
     public class TransactionalStorage : ITransactionalStorage
     {
-        private readonly ThreadLocal<IStorageActionsAccessor> current = new ThreadLocal<IStorageActionsAccessor>();
+        private readonly ThreadLocal<IStorageActionsAccessor> current = new ThreadLocal<IStorageActionsAccessor>(() => null);
 
         private readonly InMemoryRavenConfiguration configuration;
         private readonly Action onCommit;

@@ -15,6 +15,8 @@ namespace Raven.Storage.Esent
 			this.inner = inner;
 		}
 
+        public StorageActionsAccessor() { } // For mono
+
 		public ITransactionStorageActions Transactions
 		{
 			get { return inner; }

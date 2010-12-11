@@ -24,8 +24,8 @@ namespace Raven.Http
         protected readonly IRaveHttpnConfiguration DefaultConfiguration;
 
         private readonly ThreadLocal<string> currentTenantId = new ThreadLocal<string>();
-        private readonly ThreadLocal<IResourceStore> currentDatabase = new ThreadLocal<IResourceStore>();
-        private readonly ThreadLocal<IRaveHttpnConfiguration> currentConfiguration = new ThreadLocal<IRaveHttpnConfiguration>();
+        private readonly ThreadLocal<IResourceStore> currentDatabase = new ThreadLocal<IResourceStore>(()=>null);
+        private readonly ThreadLocal<IRaveHttpnConfiguration> currentConfiguration = new ThreadLocal<IRaveHttpnConfiguration>(()=>null);
 
         protected readonly ConcurrentDictionary<string, IResourceStore> ResourcesStoresCache =
             new ConcurrentDictionary<string, IResourceStore>();

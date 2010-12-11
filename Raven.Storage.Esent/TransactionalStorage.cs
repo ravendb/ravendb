@@ -22,7 +22,7 @@ namespace Raven.Storage.Esent
 {
 	public class TransactionalStorage : CriticalFinalizerObject, ITransactionalStorage
 	{
-		private readonly ThreadLocal<StorageActionsAccessor> current = new ThreadLocal<StorageActionsAccessor>();
+		private readonly ThreadLocal<StorageActionsAccessor> current = new ThreadLocal<StorageActionsAccessor>(() => null);
 		private readonly string database;
         private readonly InMemoryRavenConfiguration configuration;
 		private readonly Action onCommit;
