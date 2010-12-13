@@ -82,7 +82,7 @@ Usage:
                         totalCount += array.Count;
                         Console.WriteLine("Reading batch of {0,3} indexes, read so far: {1,10:#,#}", array.Count,
                                           totalCount);
-                        foreach (JToken item in array)
+                        foreach (JToken item in (IEnumerable<JToken>)array)
                         {
                             item.WriteTo(jsonWriter);
                         }
@@ -111,7 +111,7 @@ Usage:
                             totalCount += array.Count;
                             Console.WriteLine("Reading batch of {0,3} documents, read so far: {1,10:#,#}", array.Count,
                                               totalCount);
-                            foreach (JToken item in array)
+                            foreach (JToken item in (IEnumerable<JToken>)array)
                             {
                                 item.WriteTo(jsonWriter);
                             }

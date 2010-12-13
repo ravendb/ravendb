@@ -17,8 +17,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Smuggler", "Raven.Smu
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Storage.Esent", "Raven.Storage.Esent\Raven.Storage.Esent.csproj", "{9DEE8674-D0CD-430D-BD9B-6CD95F3CAB22}"
 EndProject
-Project("{F184B08F-C81C-45F6-A57F-5ABD9991F28F}") = "Raven.Client.VisualBasic.Tests", "Raven.Client.VisualBasic.Tests\Raven.Client.VisualBasic.Tests.vbproj", "{F4D4FDE0-BE9B-4139-A76C-7848A641324A}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Storage.Managed", "Raven.Storage.Managed\Raven.Storage.Managed.csproj", "{DA99A419-E137-40DB-9495-0C363B479D4B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Http", "Raven.Http\Raven.Http.csproj", "{508E5F54-A8F3-47F4-9297-CB96F91D4DF8}"

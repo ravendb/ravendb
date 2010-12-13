@@ -32,7 +32,7 @@ namespace Raven.Database.Server.Responders
 			Database.TransactionalStorage.Batch(actions =>
 			{
 				var addIncludesCommand = new AddIncludesCommand(Database, transactionInformation, result.Includes.Add, includes, loadedIds);
-				foreach (JToken item in itemsToLoad)
+				foreach (JToken item in ((IEnumerable<JToken>)itemsToLoad))
 				{
 					var value = item.Value<string>();
 					if(loadedIds.Add(value)==false)
