@@ -22,7 +22,7 @@ namespace Raven.Server
     {
         private static void Main(string[] args)
         {
-            if (Environment.UserInteractive)
+            if (Environment.UserInteractive || Environment.OSVersion.Platform == PlatformID.Unix)
             {
                 try
                 {
