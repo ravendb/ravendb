@@ -65,15 +65,15 @@ namespace Raven.Database.Linq
             fields.Add(field);
         }
 
-        public bool ContainsField(string field)
+        public virtual bool ContainsField(string field)
         {
+            if (fields.Contains(field))
+                return true;
             if (containsProjection == null)
             {
-                containsProjection = ViewText.Contains("Project(");
+                containsProjection = ViewText != null && ViewText.Contains("Project(");
             }
-            if (containsProjection.Value)
-                return true; 
-            return fields.Contains(field);
+            return containsProjection.Value;
         }
 	}
 }

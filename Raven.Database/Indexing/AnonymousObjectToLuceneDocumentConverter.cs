@@ -73,7 +73,7 @@ namespace Raven.Database.Indexing
             }
 
 			var itemsToIndex = value as IEnumerable;
-			if(itemsToIndex != null && !(itemsToIndex is string))
+			if(itemsToIndex != null && ShouldTreatAsEnumerable(itemsToIndex))
 			{
                 yield return new Field(name + "_IsArray", "true", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
                 foreach (var itemToIndex in itemsToIndex)
@@ -166,5 +166,22 @@ namespace Raven.Database.Indexing
 					.SetDoubleValue((double)value);
             }
 		}
+
+	    private static bool ShouldTreatAsEnumerable(IEnumerable itemsToIndex)
+	    {
+            if (itemsToIndex == null)
+                return false;
+
+            if (itemsToIndex is string)
+                return false;
+
+            if (itemsToIndex is JObject)
+                return false;
+
+            if (itemsToIndex is IDictionary)
+                return false;
+
+	        return true;
+	    }
 	}
 }
