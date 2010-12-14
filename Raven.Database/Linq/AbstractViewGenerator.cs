@@ -10,8 +10,9 @@ namespace Raven.Database.Linq
 	public abstract class AbstractViewGenerator
 	{
         private readonly HashSet<string> fields = new HashSet<string>();
+        private bool? containsProjection;
 
-		public IndexingFunc MapDefinition { get; set; }
+        public IndexingFunc MapDefinition { get; set; }
 		
         public IndexingFunc ReduceDefinition { get; set; }
 
@@ -31,6 +32,19 @@ namespace Raven.Database.Linq
         {
             Stores = new Dictionary<string, FieldStorage>();
             Indexes = new Dictionary<string, FieldIndexing>();
+        }
+
+        protected IEnumerable<dynamic> Project(object self, Func<dynamic, dynamic> func)
+        {
+            if (self == null)
+                yield break;
+            if (self is IEnumerable == false || self is string)
+                throw new InvalidOperationException("Attempted to enumerate over " + self.GetType().Name);
+
+            foreach (var item in ((IEnumerable)self))
+            {
+                yield return func(item);
+            }
         }
 
 		protected IEnumerable<dynamic> Hierarchy(object source, string name)
@@ -53,6 +67,12 @@ namespace Raven.Database.Linq
 
         public bool ContainsField(string field)
         {
+            if (containsProjection == null)
+            {
+                containsProjection = ViewText.Contains("Project(");
+            }
+            if (containsProjection.Value)
+                return true; 
             return fields.Contains(field);
         }
 	}

@@ -9,6 +9,7 @@ using System.Text;
 using ICSharpCode.NRefactory;
 using ICSharpCode.NRefactory.Ast;
 using ICSharpCode.NRefactory.PrettyPrinter;
+using Lucene.Net.Documents;
 using Microsoft.CSharp;
 using Microsoft.CSharp.RuntimeBinder;
 using Raven.Database.Linq.PrivateExtensions;
@@ -36,7 +37,8 @@ namespace Raven.Database.Linq
 				typeof (IEnumerable<>).Namespace,
 				typeof (IEnumerable).Namespace,
 				typeof (int).Namespace,
-				typeof (LinqOnDynamic).Namespace
+				typeof (LinqOnDynamic).Namespace,
+                typeof(Field).Namespace,
 			};
 			foreach (var extension in extensions)
 			{
