@@ -37,6 +37,7 @@ namespace Raven.Client.Indexes
         /// <value>The document store.</value>
         public IDocumentStore DocumentStore { get; private set; }
 
+#if !NET_3_5
         /// <summary>
         /// Allows to use lambdas over dynamic
         /// </summary>
@@ -44,6 +45,7 @@ namespace Raven.Client.Indexes
         {
             throw new NotSupportedException("This can only be run on the server side");
         }
+#endif
 
         /// <summary>
         /// Executes the index creation against the specified document store.
