@@ -49,7 +49,7 @@ namespace Raven.Database.Server.Responders
 			switch (token.Type)
 			{
 				case JTokenType.Array:
-					foreach (var item in (JArray)token)
+					foreach (var item in (IEnumerable<JToken>)((JArray)token))
 					{
 						ExecuteInternal(item);
 					}

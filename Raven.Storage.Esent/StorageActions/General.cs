@@ -18,40 +18,38 @@ namespace Raven.Storage.Esent.StorageActions
 	[CLSCompliant(false)]
 	public partial class DocumentStorageActions : IDisposable, IGeneralStorageActions
 	{
-		public event Action OnCommit = delegate { }; 
 		private readonly TableColumnsCache tableColumnsCache;
 		private readonly IEnumerable<AbstractDocumentCodec> documentCodecs;
 	    private readonly IUuidGenerator uuidGenerator;
-	    protected readonly JET_DBID dbid;
+		protected readonly JET_DBID dbid;
 
 		protected readonly ILog logger = LogManager.GetLogger(typeof(DocumentStorageActions));
 		protected readonly Session session;
 		private readonly Transaction transaction;
 
-		public Session Session
-		{
-			get { return session; }
-		}
+		public event Action OnCommit;
 
-		[CLSCompliant(false)]
-		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
+		/*[CLSCompliant(false)]
+		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]*/
 		public DocumentStorageActions(
-            JET_INSTANCE instance, 
-            string database, 
-            TableColumnsCache tableColumnsCache, 
-            IEnumerable<AbstractDocumentCodec> documentCodecs,
-            IUuidGenerator uuidGenerator)
+            JET_INSTANCE _instance, 
+            string _database, 
+            TableColumnsCache _tableColumnsCache, 
+            IEnumerable<AbstractDocumentCodec> _documentCodecs,
+            IUuidGenerator _uuidGenerator)
 		{
-			this.tableColumnsCache = tableColumnsCache;
-			this.documentCodecs = documentCodecs;
-		    this.uuidGenerator = uuidGenerator;
+			this.tableColumnsCache = _tableColumnsCache;
+			this.documentCodecs = _documentCodecs;
+		    this.uuidGenerator = _uuidGenerator;
+		    OnCommit = delegate {};
+
 		    try
 			{
-				session = new Session(instance);
+				session = new Session(_instance);
 				transaction = new Transaction(session);
-				Api.JetOpenDatabase(session, database, null, out dbid, OpenDatabaseGrbit.None);
+				Api.JetOpenDatabase(session, _database, null, out dbid, OpenDatabaseGrbit.None);
 			}
-			catch (Exception)
+			catch
 			{
 				Dispose();
 				throw;
