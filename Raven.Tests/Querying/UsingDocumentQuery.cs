@@ -11,7 +11,7 @@ namespace Raven.Tests.Querying
 		public void CanUnderstandSimpleEquality()
 		{
 			var q = new DocumentQuery<IndexedUser>(null, null, "IndexName", null)
-				.WhereEquals("Name", "ayende");
+				.WhereEquals("Name", "ayende",false);
 
 			Assert.Equal("Name:[[ayende]]", q.ToString());
 		}
@@ -21,7 +21,7 @@ namespace Raven.Tests.Querying
 		{
 			var ayende = "ayende" + 1;
 			var q = new DocumentQuery<IndexedUser>(null, null, "IndexName", null)
-				.WhereEquals("Name", ayende);
+				.WhereEquals("Name", ayende, false);
 			Assert.Equal("Name:[[ayende1]]", q.ToString());
 		}
 
