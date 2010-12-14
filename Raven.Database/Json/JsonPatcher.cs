@@ -73,7 +73,7 @@ namespace Raven.Database.Json
 		{
 			EnsurePreviousValueMatchCurrentValue(patchCmd, property);
 			if (property == null)
-				throw new InvalidOperationException("Cannot copy value from  '" + propName + "' because it was not found");
+				return;
 
 			document[patchCmd.Value.Value<string>()] = property.Value;
 			document.Remove(propName);
@@ -83,7 +83,7 @@ namespace Raven.Database.Json
     	{
 			EnsurePreviousValueMatchCurrentValue(patchCmd, property);
 			if (property == null)
-				throw new InvalidOperationException("Cannot copy value from  '" + propName + "' because it was not found");
+                return;
 
 			document[patchCmd.Value.Value<string>()] = property.Value;
     	}
@@ -220,8 +220,9 @@ namespace Raven.Database.Json
         	EnsurePreviousValueMatchCurrentValue(patchCmd, property);
             if (property == null)
             {
-                property = new JProperty(propName);
+                property = new JProperty(propName, patchCmd.Value);
                 document.Add(property);
+                return;
             }
             if (property.Value == null || property.Value.Type == JTokenType.Null)
                 property.Value = patchCmd.Value;
