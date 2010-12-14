@@ -32,9 +32,10 @@ namespace Raven.Client.Shard.ShardStrategy.ShardAccess
 
 		private static Exception PreserveStackTrace(Exception exception)
 		{
-			typeof (Exception).InvokeMember("InternalPreserveStackTrace", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.InvokeMethod, null,
-			                                exception, null);
 			return exception;
+			/*			typeof (Exception).InvokeMember("InternalPreserveStackTrace", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.InvokeMethod, null,
+			                                exception, null);
+			return exception;*/
 		}
 	}
 }
