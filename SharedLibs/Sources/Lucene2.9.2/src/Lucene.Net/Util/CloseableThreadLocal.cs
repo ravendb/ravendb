@@ -16,6 +16,7 @@
  */
 
 using System;
+using System.Threading;
 
 namespace Lucene.Net.Util
 {
@@ -41,54 +42,36 @@ namespace Lucene.Net.Util
 	/// reclaim space by objects stored in it. 
 	/// </summary>
 	
+    ///<remarks>
+    /// .NET doesn't have this problem, this was adapted to use the .NET version
+    /// </remarks>
 	public class CloseableThreadLocal
 	{
-		
-		[ThreadStatic]
-		static System.Collections.Generic.Dictionary<object, object> slots;
-		
-		public /*protected internal*/ virtual System.Object InitialValue()
-		{
-			return null;
-		}
+        ThreadLocal<object> self ;
 
+	    public CloseableThreadLocal()
+	    {
+	        self = new ThreadLocal<object>(InitialValue);
+	    }
+
+
+        public  virtual System.Object InitialValue()
+        {
+            return null;
+        }
         public virtual System.Object Get()
         {
-            object value;
-
-            if (slots == null)
-            {
-                value = InitialValue();
-                if (value != null)
-                    Set(value);
-
-                return value;
-            }
-
-            if (slots.TryGetValue(this, out value))
-            {
-                return value;
-            }
-            else
-            {
-                value = InitialValue();
-                slots[this] = value;
-                return value;
-            }
+            return self.Value;
         }
 		
 		public virtual void  Set(System.Object object_Renamed)
 		{
-			if (slots == null)
-				slots = new System.Collections.Generic.Dictionary<object, object>();
-
-			slots[this] = object_Renamed;	
+		    self.Value = object_Renamed;
 		}
 		
 		public virtual void  Close()
 		{
-            if(slots != null)
-                slots.Remove(this);
+		    self.Value = null;
 		}
 	}
 }
