@@ -24,6 +24,7 @@ namespace Raven.Tests
 				Configuration = 
 				{
 					DataDirectory = path,
+                    RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true
 				}
 
 			};
