@@ -68,7 +68,7 @@ namespace Raven.Tests.Shard
         IShardResolutionStrategy shardResolution;
         IShardStrategy shardStrategy;
 
-        [WindowsExclusiveFact]
+        [Fact]
         public void Can_insert_into_two_sharded_servers()
         {
             var serverPortsStoredUpon = new List<string>();
@@ -91,7 +91,7 @@ namespace Raven.Tests.Shard
 			Assert.Contains("Shard2", serverPortsStoredUpon[1]);
         }
 
-        [WindowsExclusiveFact]
+        [Fact]
         public void Can_get_single_entity_from_correct_sharded_server()
         {
             using (var documentStore = new ShardedDocumentStore(shardStrategy, shards).Initialize())
@@ -110,7 +110,7 @@ namespace Raven.Tests.Shard
             }
         }
 
-        [WindowsExclusiveFact]
+        [Fact]
         public void Can_get_single_entity_from_correct_sharded_server_when_location_is_unknown()
         {
 			shardStrategy.Stub(x => x.ShardAccessStrategy).Return(new SequentialShardAccessStrategy());
@@ -132,7 +132,7 @@ namespace Raven.Tests.Shard
             }
         }
 
-        [WindowsExclusiveFact]
+        [Fact]
         public void Can_get_all_sharded_entities()
         {
 			//get them in simple single threaded sequence for this test
