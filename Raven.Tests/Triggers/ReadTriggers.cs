@@ -125,7 +125,7 @@ namespace Raven.Tests.Triggers
         {
             for (int i = 0; i < 15; i++)
             {
-                db.Put(i.ToString(), null, new JObject(
+                db.Put(i.ToString(), null, new JObject( new JProperty("name", "ayende"),
                                                new JProperty("hidden", i%2 == 0)), new JObject(), null);
             }
 
@@ -148,7 +148,8 @@ namespace Raven.Tests.Triggers
             for (int i = 0; i < 15; i++)
             {
                 db.Put(i.ToString(), null, new JObject(
-                                               new JProperty("hidden", i % 2 == 0)), new JObject(), null);
+                    new JProperty("name", "ayende")                           ,
+                    new JProperty("hidden", i % 2 == 0)), new JObject(), null);
             }
 
             QueryResult queryResult;
@@ -173,6 +174,7 @@ namespace Raven.Tests.Triggers
             for (int i = 0; i < 15; i++)
             {
                 db.Put(i.ToString(), null, new JObject(
+                                               new JProperty("name", "ayende"),
                                                new JProperty("hidden", i % 2 == 0)), new JObject(), null);
             }
 
