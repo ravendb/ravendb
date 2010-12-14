@@ -41,7 +41,8 @@ namespace Raven.Tests.Bugs
 
                 using (var wc = new WebClient())
                 {
-                    var staticJson = wc.DownloadString("http://localhost:8080/static");
+	                var data = wc.DownloadData ("http://localhost:8080/static");
+	                var staticJson = System.Text.Encoding.UTF8.GetString (data, 3, data.Length - 3);
                     var value = JArray.Parse(staticJson)[0].Value<string>("Key");
                     Assert.Equal("test/hello/world", value);
                 }
