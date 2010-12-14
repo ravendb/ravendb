@@ -214,11 +214,12 @@ namespace Raven.Database.Indexing
                 fieldsToFetch.Concat(new[] { "__document_id" }).Distinct()
                     .SelectMany(name => document.GetFields(name) ?? new Field[0])
                     .Where(x => x != null)
+                    .Where(x => x.Name().EndsWith("_IsArray") == false && x.Name().EndsWith("_Range") == false && x.Name().EndsWith("_ConvertToJson") == false)
                     .Select(fld => CreateProperty(fld, document))
                     .GroupBy(x => x.Name)
                     .Select(g =>
                     {
-                        if (g.Count() == 1)
+                        if (g.Count() == 1 && document.GetField(g.Key+"_IsArray") == null)
                             return g.First();
                         return new JProperty(g.Key,
                                              g.Select(x => x.Value)

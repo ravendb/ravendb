@@ -75,7 +75,8 @@ namespace Raven.Database.Indexing
 			var itemsToIndex = value as IEnumerable;
 			if(itemsToIndex != null && !(itemsToIndex is string))
 			{
-				foreach (var itemToIndex in itemsToIndex)
+                yield return new Field(name + "_IsArray", "true", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
+                foreach (var itemToIndex in itemsToIndex)
 				{
                     foreach (var field in CreateFields(name, itemToIndex, indexDefinition, defaultStorage))
                     {
