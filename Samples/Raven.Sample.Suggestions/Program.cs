@@ -22,18 +22,18 @@ namespace Raven.Sample.Suggestions
             {
                 IndexCreation.CreateIndexes(typeof(Users_ByName).Assembly, store);
 
-                //using(var session = store.OpenSession())
-                //{
-                //    foreach (var name in new []{"Oren Eini", "Ayende Rahien"})
-                //    {
-                //        session.Store(new User
-                //        {
-                //            Name = name
-                //        });
-                //    }
+                using (var session = store.OpenSession())
+                {
+                    foreach (var name in new[] { "Oren Eini", "Ayende Rahien" })
+                    {
+                        session.Store(new User
+                        {
+                            Name = name
+                        });
+                    }
 
-                //    session.SaveChanges();
-                //}
+                    session.SaveChanges();
+                }
 
                 while (true)
                 {

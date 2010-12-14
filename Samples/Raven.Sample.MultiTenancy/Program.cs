@@ -16,10 +16,12 @@ namespace Raven.Sample.MultiTenancy
                 Url = "http://localhost:8080"
             }.Initialize())
             {
-                store.DatabaseCommands.EnsureDatabaseExists("Northwind");
+                store.DatabaseCommands.EnsureDatabaseExists("Brisbane");
 
+                store.DatabaseCommands.EnsureDatabaseExists("Melbroune");
+                store.DatabaseCommands.EnsureDatabaseExists("Sidney");
 
-                using(var documentSession = store.OpenSession("Northwind"))
+                using (var documentSession = store.OpenSession("Brisbane"))
                 {
                     documentSession.Store(new { Name = "Ayende"});
                     documentSession.SaveChanges();

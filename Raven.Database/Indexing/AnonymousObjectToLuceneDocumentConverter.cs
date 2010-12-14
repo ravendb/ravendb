@@ -72,6 +72,11 @@ namespace Raven.Database.Indexing
                 yield break;
             }
 
+            if (value is DynamicNullObject)
+            {
+                yield break;
+            }
+
 			var itemsToIndex = value as IEnumerable;
 			if(itemsToIndex != null && ShouldTreatAsEnumerable(itemsToIndex))
 			{

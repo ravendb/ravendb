@@ -28,7 +28,7 @@ namespace Raven.Samples.Includes
                     });
                     session.SaveChanges();
                 }
-
+                Console.ReadLine();
 
                 using (IDocumentSession session = documentStore.OpenSession())
                 {
@@ -39,6 +39,8 @@ namespace Raven.Samples.Includes
                     Console.WriteLine(company.Name);
                     Console.WriteLine(parent.Name);
                 }
+
+                Console.ReadLine();
 
                 using (IDocumentSession session = documentStore.OpenSession())
                 {

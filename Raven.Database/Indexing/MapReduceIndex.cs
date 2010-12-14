@@ -202,7 +202,8 @@ namespace Raven.Database.Indexing
                 foreach (var doc in RobustEnumeration(mappedResults, viewGenerator.ReduceDefinition, actions, context))
                 {
                     count++;
-                    var fields = GetFields(doc, ref properties);
+                    var fields = GetFields(doc, ref properties).ToList();
+
                 	string reduceKeyAsString = ExtractReduceKey(viewGenerator, doc);
 
                     var luceneDoc = new Document();
