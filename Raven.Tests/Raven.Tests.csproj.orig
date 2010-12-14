@@ -1,271 +1,4 @@
-<<<<<<< HEAD
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>9.0.30729</ProductVersion>
-    <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{267AC60C-751E-42E9-AA18-66035DEFF63A}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Raven.Tests</RootNamespace>
-    <AssemblyName>Raven.Tests</AssemblyName>
-    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-    <FileUpgradeFlags>
-    </FileUpgradeFlags>
-    <OldToolsVersion>3.5</OldToolsVersion>
-    <UpgradeBackupLocation />
-    <PublishUrl>publish\</PublishUrl>
-    <Install>true</Install>
-    <InstallFrom>Disk</InstallFrom>
-    <UpdateEnabled>false</UpdateEnabled>
-    <UpdateMode>Foreground</UpdateMode>
-    <UpdateInterval>7</UpdateInterval>
-    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
-    <UpdatePeriodically>false</UpdatePeriodically>
-    <UpdateRequired>false</UpdateRequired>
-    <MapFileExtensions>true</MapFileExtensions>
-    <ApplicationRevision>0</ApplicationRevision>
-    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
-    <IsWebBootstrapper>false</IsWebBootstrapper>
-    <UseApplicationTrust>false</UseApplicationTrust>
-    <BootstrapperEnabled>true</BootstrapperEnabled>
-    <TargetFrameworkProfile />
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
-    <PlatformTarget>AnyCPU</PlatformTarget>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
-  </PropertyGroup>
-  <PropertyGroup>
-    <SignAssembly>true</SignAssembly>
-  </PropertyGroup>
-  <PropertyGroup>
-    <AssemblyOriginatorKeyFile>..\Raven.Database\RavenDB.snk</AssemblyOriginatorKeyFile>
-  </PropertyGroup>
-  <ItemGroup>
-    <Reference Include="Esent.Interop, Version=1.0.0.0, Culture=neutral, PublicKeyToken=b93b4ad6c4b80595, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\Esent.Interop.dll</HintPath>
-    </Reference>
-    <Reference Include="log4net, Version=1.2.10.0, Culture=neutral, PublicKeyToken=1b44e1d426115821, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\log4net.dll</HintPath>
-    </Reference>
-    <Reference Include="Lucene.Net, Version=2.9.1.2, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\Lucene.Net.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="Newtonsoft.Json, Version=3.5.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\Newtonsoft.Json.dll</HintPath>
-    </Reference>
-    <Reference Include="Spatial.Net">
-      <HintPath>..\SharedLibs\Spatial.Net.dll</HintPath>
-    </Reference>
-    <Reference Include="System" />
-    <Reference Include="System.ComponentModel.Composition" />
-    <Reference Include="System.Core">
-      <RequiredTargetFramework>3.5</RequiredTargetFramework>
-    </Reference>
-    <Reference Include="System.Xml.Linq">
-      <RequiredTargetFramework>3.5</RequiredTargetFramework>
-    </Reference>
-    <Reference Include="System.Data.DataSetExtensions">
-      <RequiredTargetFramework>3.5</RequiredTargetFramework>
-    </Reference>
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
-    <Reference Include="xunit, Version=1.1.0.1323, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\xunit.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="Bugs\HierarchicalData.cs" />
-    <Compile Include="Bugs\HiLoServerKeysNotExported.cs" />
-    <Compile Include="Bugs\IndexDefinitionEquality.cs" />
-    <Compile Include="Bugs\IndexingBehavior.cs" />
-    <Compile Include="Bugs\OverwriteDocuments.cs" />
-    <Compile Include="Bugs\QueryResultCountsWithProjections.cs" />
-    <Compile Include="Bugs\ReadDataFromServer.cs" />
-    <Compile Include="Indexes\CompiledIndex.cs" />
-    <Compile Include="Indexes\ComplexIndexOnNotAnalyzedField.cs" />
-    <Compile Include="Indexes\DynamicQueryMapping.cs" />
-    <Compile Include="Indexes\MapOnlyView.cs" />
-    <Compile Include="Indexes\QueryingOnDefaultIndex.cs" />
-    <Compile Include="Indexes\QueryingOnStaleIndexes.cs" />
-    <Compile Include="Indexes\ShoppingCartEventsToShopingCart.cs" />
-    <Compile Include="Linq\CommitInfo.cs" />
-    <Compile Include="Linq\SampleDynamicCompilationExtension.cs" />
-    <Compile Include="Linq\SampleGeoLocation.cs" />
-    <Compile Include="Linq\User.cs" />
-    <Compile Include="ManagedStorage\Attachments.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="ManagedStorage\DocEtag.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="ManagedStorage\DocumentKeys.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="ManagedStorage\Documents.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="ManagedStorage\General.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="ManagedStorage\Indexes.cs" />
-    <Compile Include="ManagedStorage\MappedResults.cs" />
-    <Compile Include="ManagedStorage\MyTask.cs" />
-    <Compile Include="ManagedStorage\Queues.cs" />
-    <Compile Include="ManagedStorage\Storage.cs" />
-    <Compile Include="ManagedStorage\Tasks.cs" />
-    <Compile Include="ManagedStorage\Transactions.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="ManagedStorage\TxStorageTest.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Queries\DyanmicQueries.cs" />
-    <Compile Include="Queries\ParameterisedDynamicQuery.cs" />
-    <Compile Include="Spatial\Event.cs" />
-    <Compile Include="Spatial\SpatialIndex.cs" />
-    <Compile Include="Indexes\Statistics.cs" />
-    <Compile Include="Indexes\UsingQueryBuilder.cs" />
-    <Compile Include="Linq\UsingRavenQueryProvider.cs" />
-    <Compile Include="Linq\LinqTransformerCompilationTests.cs" />
-    <Compile Include="Linq\PerformingQueries.cs" />
-    <Compile Include="Linq\UsingWhereConditions.cs" />
-    <Compile Include="Patching\ArrayPatching.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Patching\NestedPatching.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Patching\SimplePatchApplication.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Spatial\SpatialIndexTestHelper.cs" />
-    <Compile Include="Storage\AbstractDocumentStorageTest.cs" />
-    <Compile Include="Storage\BackupRestore.cs" />
-    <Compile Include="Storage\CreateUpdateDeleteDocuments.cs" />
-    <Compile Include="Storage\CreateIndexes.cs" />
-    <Compile Include="Storage\DeleteIndexes.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Indexes\DocumentsToIndex.cs" />
-    <Compile Include="Storage\GeneralStorage.cs" />
-    <Compile Include="Storage\IndexStaleViaEtags.cs" />
-    <Compile Include="Storage\WithDebugging.cs" />
-    <Compile Include="Transactions\Deletes.cs" />
-    <Compile Include="Transactions\Etags.cs" />
-    <Compile Include="Transactions\MuiltipleDocuments.cs" />
-    <Compile Include="Transactions\Simple.cs" />
-    <Compile Include="Transactions\WriteConflicts.cs" />
-    <Compile Include="Triggers\AttachmentDeleteTrigger.cs" />
-    <Compile Include="Triggers\AttachmentReadTrigger.cs" />
-    <Compile Include="Triggers\AttachmentPutTriggers.cs" />
-    <Compile Include="Triggers\AuditPutTrigger.cs" />
-    <Compile Include="Triggers\CascadeDeleteTrigger.cs" />
-    <Compile Include="Triggers\DeleteTriggers.cs" />
-    <Compile Include="Triggers\IndexToDataTable.cs" />
-    <Compile Include="Triggers\IndexTriggers.cs" />
-    <Compile Include="Triggers\PutTriggers.cs" />
-    <Compile Include="Triggers\ReadTriggers.cs" />
-    <Compile Include="Triggers\VetoCapitalNamesPutTrigger.cs" />
-    <Compile Include="Util\ReflectionUtilTest.cs" />
-    <Compile Include="Views\MapReduce.cs" />
-    <Compile Include="Views\MapReduce_IndependentSteps.cs" />
-    <Compile Include="Views\ViewCompilation.cs" />
-    <Compile Include="Views\ViewStorage.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
-      <Visible>False</Visible>
-      <ProductName>.NET Framework 3.5 SP1 Client Profile</ProductName>
-      <Install>false</Install>
-    </BootstrapperPackage>
-    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
-      <Visible>False</Visible>
-      <ProductName>.NET Framework 3.5 SP1</ProductName>
-      <Install>true</Install>
-    </BootstrapperPackage>
-    <BootstrapperPackage Include="Microsoft.Windows.Installer.3.1">
-      <Visible>False</Visible>
-      <ProductName>Windows Installer 3.1</ProductName>
-      <Install>true</Install>
-    </BootstrapperPackage>
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
-      <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
-      <Name>Raven.Abstractions</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Raven.Client.Embedded\Raven.Client.Embedded.csproj">
-      <Project>{0F5287AD-37B3-4375-BA3E-3CED64B1FC5B}</Project>
-      <Name>Raven.Client.Embedded</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj">
-      <Project>{4E087ECB-E7CA-4891-AC3C-3C76702715B6}</Project>
-      <Name>Raven.Client.Lightweight</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Raven.Database\Raven.Database.csproj">
-      <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
-      <Name>Raven.Database</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Raven.Http\Raven.Http.csproj">
-      <Project>{508E5F54-A8F3-47F4-9297-CB96F91D4DF8}</Project>
-      <Name>Raven.Http</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Raven.Server\Raven.Server.csproj">
-      <Project>{3B90EB20-AEA3-4972-8219-936F1A62768C}</Project>
-      <Name>Raven.Server</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Raven.Storage.Esent\Raven.Storage.Esent.csproj">
-      <Project>{9DEE8674-D0CD-430D-BD9B-6CD95F3CAB22}</Project>
-      <Name>Raven.Storage.Esent</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Raven.Storage.Managed\Raven.Storage.Managed.csproj">
-      <Project>{DA99A419-E137-40DB-9495-0C363B479D4B}</Project>
-      <Name>Raven.Storage.Managed</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\Raven.Database\RavenDB.snk">
-      <Link>RavenDB.snk</Link>
-    </None>
-  </ItemGroup>
-  <ItemGroup />
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
-=======
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -373,14 +106,19 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Bugs\AccurateCount.cs" />
+    <Compile Include="Bugs\AfterDeletingTheIndexStopsBeingStale.cs" />
     <Compile Include="Bugs\AnalyzerPerField.cs" />
+    <Compile Include="Bugs\AnonymousClasses.cs" />
     <Compile Include="Bugs\AnyQueries.cs" />
     <Compile Include="Bugs\AsyncCommit.cs" />
+    <Compile Include="Bugs\AttachmentEndoding.cs" />
     <Compile Include="Bugs\AttachmentsWithCredentials.cs" />
     <Compile Include="Bugs\AutoCreateIndexes.cs" />
     <Compile Include="Bugs\AutoDetectAnaylzersForQuery.cs" />
     <Compile Include="Bugs\CanDetectChanges.cs" />
     <Compile Include="Bugs\CanGetMetadataForTransient.cs" />
+    <Compile Include="Bugs\CanHandleDocumentRemoval.cs" />
+    <Compile Include="Bugs\CanProjectIdFromDocumentInQueries.cs" />
     <Compile Include="Bugs\CanSelectFieldsFromIndex.cs" />
     <Compile Include="Bugs\CanUseNonStringsForId.cs" />
     <Compile Include="Bugs\CustomEntityName.cs" />
@@ -396,7 +134,9 @@
     <Compile Include="Bugs\FailDelete.cs" />
     <Compile Include="Bugs\FailStore.cs" />
     <Compile Include="Bugs\HierarchicalData.cs" />
+    <Compile Include="Bugs\HierarchyFromClient.cs" />
     <Compile Include="Bugs\HiLoServerKeysNotExported.cs" />
+    <Compile Include="Bugs\IndexDefinitionEquality.cs" />
     <Compile Include="Bugs\Image.cs" />
     <Compile Include="Bugs\ImageByTagSearchModel.cs" />
     <Compile Include="Bugs\Includes.cs" />
@@ -404,11 +144,17 @@
     <Compile Include="Bugs\IndexingRavenDocuments.cs" />
     <Compile Include="Bugs\IndexNestedFields.cs" />
     <Compile Include="Bugs\IndexWithTwoProperties.cs" />
+    <Compile Include="Bugs\InMemoryOnly.cs" />
+    <Compile Include="Bugs\InvalidIds.cs" />
+    <Compile Include="Bugs\Issue199.cs" />
     <Compile Include="Bugs\KeyGeneration.cs" />
     <Compile Include="Bugs\KeysAreCaseInsensitive.cs" />
     <Compile Include="Bugs\LinqGitHub147.cs" />
     <Compile Include="Bugs\LinqOnUrls.cs" />
+    <Compile Include="Bugs\LiveProjection.cs" />
     <Compile Include="Bugs\LuceneQueryShouldWorkWithoutExtensionMethod.cs" />
+    <Compile Include="Bugs\LukeQuerying.cs" />
+    <Compile Include="Bugs\MapReduceThrowsNRE.cs" />
     <Compile Include="Bugs\MetadataUpdates.cs" />
     <Compile Include="Bugs\MultiEntityIndex.cs" />
     <Compile Include="Bugs\MultipleResultsPerDocumentAndPaging.cs" />
@@ -416,6 +162,9 @@
     <Compile Include="Bugs\NameAndId.cs" />
     <Compile Include="Bugs\OperationHeaders.cs" />
     <Compile Include="Bugs\OverwriteDocuments.cs" />
+    <Compile Include="Bugs\QueryAfterAdHocIndexIsReset.cs" />
+    <Compile Include="Bugs\QueryingOnEqualToNull.cs" />
+    <Compile Include="Bugs\QueryResultCountsWithProjections.cs" />
     <Compile Include="Bugs\OverwriteIndexLocally.cs" />
     <Compile Include="Bugs\OverwriteIndexRemotely.cs" />
     <Compile Include="Bugs\Patching.cs" />
@@ -437,12 +186,22 @@
     <Compile Include="Bugs\SinglePropertyDocument.cs" />
     <Compile Include="Bugs\SortingOnLong.cs" />
     <Compile Include="Bugs\SortingWithWildcardQuery.cs" />
+    <Compile Include="Bugs\SpatialQueries.cs" />
     <Compile Include="Bugs\StalenessWontAffectUnrelatedIndexes.cs" />
     <Compile Include="Bugs\TranslatingLinqQueryUsingNestedId.cs" />
     <Compile Include="Bugs\Translators.cs" />
     <Compile Include="Bugs\User.cs" />
     <Compile Include="Bugs\UsingEnumInLinq.cs" />
+    <Compile Include="Bugs\UsingLongAsId.cs" />
     <Compile Include="Bugs\UsingStartsWith.cs" />
+    <Compile Include="Bugs\UsingSwedishCollation.cs" />
+<<<<<<< HEAD
+=======
+<!--    <Compile Include="Bugs\WhenRavenClrTypeNotFound.cs" />-->
+>>>>>>> 7ce61b2b78a4ee6a951adbc31322fa6ca6f79264
+    <Compile Include="Bugs\WhereEntityIs.cs" />
+    <Compile Include="Bugs\WillNotFailSystemIfServerIsNotAvailableOnStartup.cs" />
+    <Compile Include="Bugs\WillThrowIfQueryingForUnindexedField.cs" />
     <Compile Include="Bugs\WithPrivateProtectedSetter.cs" />
     <Compile Include="Document\AsyncDocumentStoreServerTests.cs" />
     <Compile Include="Document\CasingIssue.cs" />
@@ -482,6 +241,7 @@
     <Compile Include="ManagedStorage\Attachments.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="ManagedStorage\Bugs\OpenAfterCompaction.cs" />
     <Compile Include="ManagedStorage\DocEtag.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -546,6 +306,8 @@
     <Compile Include="Storage\GeneralStorage.cs" />
     <Compile Include="Storage\IndexStaleViaEtags.cs" />
     <Compile Include="Storage\WithDebugging.cs" />
+    <Compile Include="Suggestions\Suggestions.cs" />
+    <Compile Include="Suggestions\SuggestionsHelper.cs" />
     <Compile Include="Transactions\Deletes.cs" />
     <Compile Include="Transactions\Etags.cs" />
     <Compile Include="Transactions\MuiltipleDocuments.cs" />
@@ -567,6 +329,7 @@
     <Compile Include="Views\MapReduce_IndependentSteps.cs" />
     <Compile Include="Views\ViewCompilation.cs" />
     <Compile Include="Views\ViewStorage.cs" />
+    <Compile Include="WindowsExclusiveFactAttribute.cs" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
@@ -586,6 +349,10 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Modules\Munin\Raven.Munin\Raven.Munin.csproj">
+      <Project>{486537C2-EDF7-404F-9CFB-EEE25996DF5F}</Project>
+      <Name>Raven.Munin</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
       <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
       <Name>Raven.Abstractions</Name>
@@ -634,5 +401,4 @@
   <Target Name="AfterBuild">
   </Target>
   -->
->>>>>>> 4c5a96334b5e1494d3534d3eaacc86de8a65c3da
 </Project>

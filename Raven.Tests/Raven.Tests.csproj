@@ -195,10 +195,7 @@
     <Compile Include="Bugs\UsingLongAsId.cs" />
     <Compile Include="Bugs\UsingStartsWith.cs" />
     <Compile Include="Bugs\UsingSwedishCollation.cs" />
-<<<<<<< HEAD
-=======
 <!--    <Compile Include="Bugs\WhenRavenClrTypeNotFound.cs" />-->
->>>>>>> 7ce61b2b78a4ee6a951adbc31322fa6ca6f79264
     <Compile Include="Bugs\WhereEntityIs.cs" />
     <Compile Include="Bugs\WillNotFailSystemIfServerIsNotAvailableOnStartup.cs" />
     <Compile Include="Bugs\WillThrowIfQueryingForUnindexedField.cs" />
