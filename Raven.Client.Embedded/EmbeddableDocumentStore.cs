@@ -17,6 +17,7 @@ namespace Raven.Client.Client
     {
         private RavenConfiguration configuration;
         private RavenDbHttpServer HttpServer;
+        private bool disposed;
 
         /// <summary>
         /// Gets or sets the identifier for this store.
@@ -94,11 +95,16 @@ namespace Raven.Client.Client
         /// </summary>
         public override void Dispose()
         {
+            if (disposed)
+                return;
+            disposed = true;
             base.Dispose();
             if (DocumentDatabase != null)
                 DocumentDatabase.Dispose();
             if (HttpServer != null)
                 HttpServer.Dispose();
+
+
         }
 
         /// <summary>
