@@ -1,0 +1,76 @@
+converting method System.OutOfMemoryException:.ctor (string)
+Method System.OutOfMemoryException:.ctor (string) emitted at 0xb690fc28 to 0xb690fc4b (code length 35) [Raven.Server.exe]
+converting method (wrapper runtime-invoke) <Module>:runtime_invoke_void__this___object (object,intptr,intptr,intptr)
+Method (wrapper runtime-invoke) <Module>:runtime_invoke_void__this___object (object,intptr,intptr,intptr) emitted at 0xb690fc68 to 0xb690fcf1 (code length 137) [Raven.Server.exe]
+converting method System.SystemException:.ctor (string)
+Method System.SystemException:.ctor (string) emitted at 0xb690fcf8 to 0xb690fd1b (code length 35) [Raven.Server.exe]
+converting method System.Exception:.ctor (string)
+Method System.Exception:.ctor (string) emitted at 0xb690fd28 to 0xb690fd40 (code length 24) [Raven.Server.exe]
+converting method System.NullReferenceException:.ctor (string)
+Method System.NullReferenceException:.ctor (string) emitted at 0xb690fd40 to 0xb690fd63 (code length 35) [Raven.Server.exe]
+converting method System.StackOverflowException:.ctor (string)
+Method System.StackOverflowException:.ctor (string) emitted at 0xb690fd68 to 0xb690fd81 (code length 25) [Raven.Server.exe]
+converting method Raven.Server.Program:Main (string[])
+Method Raven.Server.Program:Main (string[]) emitted at 0xb690fda0 to 0xb690ff2c (code length 396) [Raven.Server.exe]
+converting method (wrapper runtime-invoke) <Module>:runtime_invoke_void_object (object,intptr,intptr,intptr)
+Method (wrapper runtime-invoke) <Module>:runtime_invoke_void_object (object,intptr,intptr,intptr) emitted at 0xb690ff78 to 0xb690fffb (code length 131) [Raven.Server.exe]
+converting method (wrapper managed-to-native) object:__icall_wrapper_mono_object_new_specific (intptr)
+Method (wrapper managed-to-native) object:__icall_wrapper_mono_object_new_specific (intptr) emitted at 0xb6910008 to 0xb691006f (code length 103) [Raven.Server.exe]
+converting method (wrapper remoting-invoke-with-check) Raven.Server.RavenService:.ctor ()
+Method (wrapper remoting-invoke-with-check) Raven.Server.RavenService:.ctor () emitted at 0xb6910070 to 0xb69100a5 (code length 53) [Raven.Server.exe]
+converting method Raven.Server.RavenService:.ctor ()
+Method Raven.Server.RavenService:.ctor () emitted at 0xb69100c0 to 0xb69100ec (code length 44) [Raven.Server.exe]
+converting method System.ServiceProcess.ServiceBase:.ctor ()
+Method System.ServiceProcess.ServiceBase:.ctor () emitted at 0xb6910108 to 0xb6910127 (code length 31) [Raven.Server.exe]
+converting method System.ComponentModel.Component:.ctor ()
+Method System.ComponentModel.Component:.ctor () emitted at 0xb6910138 to 0xb691016e (code length 54) [Raven.Server.exe]
+converting method (wrapper alloc) object:Alloc (intptr)
+Method (wrapper alloc) object:Alloc (intptr) emitted at 0xb6910188 to 0xb6910212 (code length 138) [Raven.Server.exe]
+converting method System.MarshalByRefObject:.ctor ()
+Method System.MarshalByRefObject:.ctor () emitted at 0xb6910218 to 0xb6910220 (code length 8) [Raven.Server.exe]
+converting method Raven.Server.RavenService:InitializeComponent ()
+Method Raven.Server.RavenService:InitializeComponent () emitted at 0xb6910230 to 0xb6910271 (code length 65) [Raven.Server.exe]
+converting method System.ComponentModel.Container:.ctor ()
+Method System.ComponentModel.Container:.ctor () emitted at 0xb6910290 to 0xb69102c0 (code length 48) [Raven.Server.exe]
+converting method (wrapper managed-to-native) object:__icall_wrapper_mono_object_new_fast (intptr)
+Method (wrapper managed-to-native) object:__icall_wrapper_mono_object_new_fast (intptr) emitted at 0xb69102d0 to 0xb6910337 (code length 103) [Raven.Server.exe]
+converting shared method System.Collections.Generic.List`1:.ctor ()
+Method System.Collections.Generic.List`1:.ctor () emitted at 0xb6910338 to 0xb6910376 (code length 62) [Raven.Server.exe]
+converting shared method System.Collections.Generic.List`1:.cctor ()
+Method System.Collections.Generic.List`1:.cctor () emitted at 0xb69103a0 to 0xb69103f5 (code length 85) [Raven.Server.exe]
+converting method (wrapper runtime-invoke) object:runtime_invoke_void (object,intptr,intptr,intptr)
+Method (wrapper runtime-invoke) object:runtime_invoke_void (object,intptr,intptr,intptr) emitted at 0xb6910418 to 0xb691047f (code length 103) [Raven.Server.exe]
+converting method (wrapper managed-to-native) object:__icall_wrapper_mono_array_new_specific (intptr,int)
+Method (wrapper managed-to-native) object:__icall_wrapper_mono_array_new_specific (intptr,int) emitted at 0xb6910480 to 0xb69104ea (code length 106) [Raven.Server.exe]
+converting method System.ServiceProcess.ServiceBase:set_ServiceName (string)
+Method System.ServiceProcess.ServiceBase:set_ServiceName (string) emitted at 0xb69104f8 to 0xb6910543 (code length 75) [Raven.Server.exe]
+converting method System.ServiceProcess.ServiceBase:Run (System.ServiceProcess.ServiceBase)
+Method System.ServiceProcess.ServiceBase:Run (System.ServiceProcess.ServiceBase) emitted at 0xb6910548 to 0xb691058f (code length 71) [Raven.Server.exe]
+converting method (wrapper stelemref) object:virt_stelemref_complex (intptr,object)
+Method (wrapper stelemref) object:virt_stelemref_complex (intptr,object) emitted at 0xb69105a8 to 0xb6910619 (code length 113) [Raven.Server.exe]
+converting method (wrapper managed-to-native) object:__icall_wrapper_mono_object_isinst (object,intptr)
+Method (wrapper managed-to-native) object:__icall_wrapper_mono_object_isinst (object,intptr) emitted at 0xb6910620 to 0xb691068a (code length 106) [Raven.Server.exe]
+converting method System.ServiceProcess.ServiceBase:Run (System.ServiceProcess.ServiceBase[])
+Method System.ServiceProcess.ServiceBase:Run (System.ServiceProcess.ServiceBase[]) emitted at 0xb6910690 to 0xb69106b5 (code length 37) [Raven.Server.exe]
+converting method (wrapper runtime-invoke) object:runtime_invoke_virtual_void__this__ (object,intptr,intptr,intptr)
+Method (wrapper runtime-invoke) object:runtime_invoke_virtual_void__this__ (object,intptr,intptr,intptr) emitted at 0xb69106b8 to 0xb6910739 (code length 129) [Raven.Server.exe]
+converting method System.ComponentModel.Container:Finalize ()
+Method System.ComponentModel.Container:Finalize () emitted at 0xb6910740 to 0xb6910773 (code length 51) [Raven.Server.exe]
+converting method System.ComponentModel.Container:Dispose (bool)
+Method System.ComponentModel.Container:Dispose (bool) emitted at 0xb6910778 to 0xb69107f4 (code length 124) [Raven.Server.exe]
+converting method System.Runtime.Remoting.Contexts.Context:Finalize ()
+Method System.Runtime.Remoting.Contexts.Context:Finalize () emitted at 0xb6910800 to 0xb6910822 (code length 34) [Raven.Server.exe]
+converting method System.Threading.Thread:.cctor ()
+Method System.Threading.Thread:.cctor () emitted at 0xb6910828 to 0xb6910849 (code length 33) [Raven.Server.exe]
+converting method System.Runtime.ConstrainedExecution.CriticalFinalizerObject:Finalize ()
+Method System.Runtime.ConstrainedExecution.CriticalFinalizerObject:Finalize () emitted at 0xb6910850 to 0xb6910872 (code length 34) [Raven.Server.exe]
+converting method System.Threading.InternalThread:Finalize ()
+Method System.Threading.InternalThread:Finalize () emitted at 0xb6910878 to 0xb69108b8 (code length 64) [Raven.Server.exe]
+converting method (wrapper managed-to-native) System.Threading.InternalThread:Thread_free_internal (System.Threading.InternalThread*,intptr)
+Method (wrapper managed-to-native) System.Threading.InternalThread:Thread_free_internal (System.Threading.InternalThread*,intptr) emitted at 0xb69108d0 to 0xb6910951 (code length 129) [Raven.Server.exe]
+converting method System.ComponentModel.Component:Finalize ()
+Method System.ComponentModel.Component:Finalize () emitted at 0xb6910958 to 0xb691098b (code length 51) [Raven.Server.exe]
+converting method Raven.Server.RavenService:Dispose (bool)
+Method Raven.Server.RavenService:Dispose (bool) emitted at 0xb6910990 to 0xb69109ef (code length 95) [Raven.Server.exe]
+converting method System.ServiceProcess.ServiceBase:Dispose (bool)
+Method System.ServiceProcess.ServiceBase:Dispose (bool) emitted at 0xb6910a00 to 0xb6910a08 (code length 8) [Raven.Server.exe]

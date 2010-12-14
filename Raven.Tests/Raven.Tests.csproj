@@ -195,7 +195,6 @@
     <Compile Include="Bugs\UsingLongAsId.cs" />
     <Compile Include="Bugs\UsingStartsWith.cs" />
     <Compile Include="Bugs\UsingSwedishCollation.cs" />
-    <Compile Include="Bugs\WhenRavenClrTypeNotFound.cs" />
     <Compile Include="Bugs\WhereEntityIs.cs" />
     <Compile Include="Bugs\WillNotFailSystemIfServerIsNotAvailableOnStartup.cs" />
     <Compile Include="Bugs\WillThrowIfQueryingForUnindexedField.cs" />
@@ -326,6 +325,7 @@
     <Compile Include="Views\MapReduce_IndependentSteps.cs" />
     <Compile Include="Views\ViewCompilation.cs" />
     <Compile Include="Views\ViewStorage.cs" />
+    <Compile Include="WindowsExclusiveFactAttribute.cs" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include="Microsoft.Net.Client.3.5">

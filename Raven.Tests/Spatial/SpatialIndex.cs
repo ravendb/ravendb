@@ -44,7 +44,7 @@ namespace Raven.Tests.Spatial
 		#endregion
 
 		// same test as in Spatial.Net test cartisian
-		[Fact]
+        [Fact]
 		public void CanPerformSpatialSearch()
 		{
 			var indexDefinition = new IndexDefinition 
