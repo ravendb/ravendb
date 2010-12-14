@@ -33,7 +33,9 @@ namespace Raven.Tests.Document
 
 		public void Dispose()
 		{
-            IOExtensions.DeleteDirectory(path);
+			try {
+				IOExtensions.DeleteDirectory(path);
+			} catch {}
 		}
 
 		#endregion

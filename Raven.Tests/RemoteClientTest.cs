@@ -11,8 +11,10 @@ namespace Raven.Tests
 {
 	public class RemoteClientTest
 	{
-		protected const string DbDirectory = @".\TestDb\";
-		protected const string DbName = DbDirectory + @"DocDb.esb";
+		/*protected const string DbDirectory = @"./TestDb";
+		protected const string DbName = DbDirectory + @"DocDb.esb";*/
+		protected readonly static string DbDirectory = Path.Combine (".", "TestDb");
+		protected readonly static string DbName = Path.Combine (DbDirectory, "DocDb.esb");
 
         protected RavenDbServer GetNewServer(int port, string path)
         {
@@ -26,8 +28,7 @@ namespace Raven.Tests
 
         protected string GetPath(string subFolderName)
         {
-            string retPath = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
-            return Path.Combine(retPath, subFolderName).Substring(6); //remove leading file://
+	        return Path.Combine(".", subFolderName);
         }
         
 		public RemoteClientTest()

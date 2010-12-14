@@ -14,8 +14,9 @@ namespace Raven.Tests
 
         public EmbeddableDocumentStore NewDocumentStore()
 		{
-			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
-			path = Path.Combine(path, "TestDb").Substring(6);
+			/*path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
+			path = Path.Combine(path, "TestDb").Substring(6);*/
+			path = Path.Combine(".", "TestDb");
 
             IOExtensions.DeleteDirectory(path);
 
