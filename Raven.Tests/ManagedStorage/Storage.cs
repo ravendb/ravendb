@@ -31,7 +31,7 @@ namespace Raven.Tests.ManagedStorage
 		[Fact]
 		public void CanHandleTruncatedFile()
 		{
-			var fileName = Path.Combine("test", "raven.ravendb");
+			var fileName = Path.Combine("test", "Raven.ravendb");
 			long lengthAfterFirstTransaction;
 			using (var tx = NewTransactionalStorage())
 			{

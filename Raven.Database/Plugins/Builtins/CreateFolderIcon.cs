@@ -36,8 +36,8 @@ FolderType=Generic
                                   icon));
 
 
-            File.SetAttributes(desktopIni, FileAttributes.Hidden | FileAttributes.System | FileAttributes.Archive);
-            File.SetAttributes(dataDirectory, FileAttributes.ReadOnly);
+            /*File.SetAttributes(desktopIni, FileAttributes.Hidden | FileAttributes.System | FileAttributes.Archive);
+            File.SetAttributes(dataDirectory, FileAttributes.ReadOnly);*/
 
         }
     }
