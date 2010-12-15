@@ -112,7 +112,12 @@ namespace Raven.Client.Shard
 		/// </summary>
 	    public event EntityToDocument OnEntityConverted;
 
-		/// <summary>
+        /// <summary>
+        /// Occurs when a document and metadata are converted to an entity
+        /// </summary>
+	    public event DocumentToEntity OnDocumentConverted;
+
+	    /// <summary>
 		/// Gets the metadata for the specified entity.
 		/// </summary>
 		/// <typeparam name="T"></typeparam>
@@ -175,6 +180,7 @@ namespace Raven.Client.Shard
 			{
                 shardSession.Advanced.Stored += Stored;
                 shardSession.Advanced.OnEntityConverted += OnEntityConverted;
+			    shardSession.Advanced.OnDocumentConverted += OnDocumentConverted;
 			}
 		}
 
@@ -476,6 +482,7 @@ namespace Raven.Client.Shard
 			//dereference all event listeners
 			Stored = null;
 		    OnEntityConverted = null;
+		    OnDocumentConverted = null;
 		}
 
 		#endregion

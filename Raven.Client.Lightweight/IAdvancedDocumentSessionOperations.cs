@@ -96,6 +96,11 @@ namespace Raven.Client
         /// Changes made to the document / metadata instances passed to this event will be persisted.
         /// </summary>
         event EntityToDocument OnEntityConverted;
+        
+        /// <summary>
+        /// Occurs when a document and metadata are converted to an entity
+        /// </summary>
+        event DocumentToEntity OnDocumentConverted;
 
         /// <summary>
         /// Gets the metadata for the specified entity.

@@ -332,6 +332,8 @@
     <Compile Include="Queries\LinearQueryExtensions.cs" />
     <Compile Include="Queries\LinearQueryRunner.cs" />
     <Compile Include="Queries\SuggestionQueryExtensions.cs" />
+    <Compile Include="Queries\TermsQueryRunner.cs" />
+    <Compile Include="Queries\TermsQueryRunnerExtensions.cs" />
     <Compile Include="Server\RavenDbHttpServer.cs" />
     <Compile Include="Server\Responders\AddIncludesCommand.cs" />
     <Compile Include="Server\Responders\AdminBackup.cs" />
@@ -348,6 +350,7 @@
     <Compile Include="Server\Responders\Statics.cs" />
     <Compile Include="Server\Responders\Statistics.cs" />
     <Compile Include="Server\Responders\SuggestionResponder.cs" />
+    <Compile Include="Server\Responders\Terms.cs" />
     <Compile Include="Server\Responders\TransactionCommit.cs" />
     <Compile Include="Server\Responders\TransactionPromote.cs" />
     <Compile Include="Server\Responders\TransactionRollback.cs" />

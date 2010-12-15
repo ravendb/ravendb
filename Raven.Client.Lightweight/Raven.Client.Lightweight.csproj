@@ -98,6 +98,7 @@
     <Compile Include="IAdvancedDocumentSessionOperations.cs" />
     <Compile Include="IAsyncAdvancedSessionOperations.cs" />
     <Compile Include="IAsyncDocumentSession.cs" />
+    <Compile Include="IDocumentConversionListener.cs" />
     <Compile Include="IDocumentDeleteListener.cs" />
     <Compile Include="IDocumentQuery.cs" />
     <Compile Include="IDocumentQueryCustomization.cs" />
