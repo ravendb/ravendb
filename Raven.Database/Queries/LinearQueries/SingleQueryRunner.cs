@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,7 +9,7 @@ using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
 
-namespace Raven.Database.LinearQueries
+namespace Raven.Database.Queries.LinearQueries
 {
     public class SingleQueryRunner : MarshalByRefObject,IRemoteSingleQueryRunner
     {

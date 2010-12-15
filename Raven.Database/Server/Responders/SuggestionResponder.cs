@@ -1,5 +1,6 @@
 ﻿using System;
 using Raven.Abstractions.Data;
+using Raven.Database.Queries;
 using Raven.Http.Abstractions;
 using Raven.Http.Extensions;
 

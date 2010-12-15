@@ -1,7 +1,9 @@
 using System;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
+using Raven.Database.Queries;
 using Xunit;
+using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
@@ -27,7 +29,7 @@ namespace Raven.Tests.Bugs
 
                 store.Configuration.TempIndexCleanupThreshold = TimeSpan.Zero;
 
-                store.DocumentDatabase.DynamicQueryRunner.CleanupCache();
+                store.DocumentDatabase.ExtensionsState.Values.OfType<DynamicQueryRunner>().First().CleanupCache();
 
                 Assert.Equal(1, store.DocumentDatabase.GetIndexNames(0, int.MaxValue).Count);
 

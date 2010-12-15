@@ -8,7 +8,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Security.Cryptography;
 
-namespace Raven.Database.Impl
+namespace Raven.Database.Queries
 {
     public class DynamicQueryRunner
     {
