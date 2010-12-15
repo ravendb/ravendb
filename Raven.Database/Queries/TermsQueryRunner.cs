@@ -36,12 +36,6 @@ namespace Raven.Database.Queries
                 }
                 while (field.Equals(termEnum.Term().Field()))
                 {
-                    while(termEnum.Term().Field().StartsWith("__")) // reserved, usually a unique item that we have N off
-                    {
-                        if (termEnum.Next() == false)
-                            return result;
-                    }
-
                     result.Add(termEnum.Term().Text());
 
                     if (result.Count >= pageSize)

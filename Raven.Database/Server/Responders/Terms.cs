@@ -22,7 +22,7 @@ namespace Raven.Database.Server.Responders
             var match = urlMatcher.Match(context.GetRequestUrl());
             var index = match.Groups[1].Value;
 
-            context.WriteJson(Database.GetTerms(index, 
+            context.WriteJson(Database.ExecuteGetTermsQuery(index, 
                 context.Request.QueryString["field"],
                 context.Request.QueryString["fromValue"],
                 context.GetPageSize(Database.Configuration.MaxPageSize)

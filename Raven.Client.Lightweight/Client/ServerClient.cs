@@ -981,6 +981,40 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
             };
         }
 
-		#endregion
+	    ///<summary>
+	    /// Get the possible terms for the specified field in the index 
+	    /// You can page through the results by use fromValue parameter as the 
+	    /// starting point for the next query
+	    ///</summary>
+	    ///<returns></returns>
+	    public IEnumerable<string> GetTerms(string index, string field, string fromValue, int pageSize)
+	    {
+            var requestUri = url + string.Format("/terms/{0}?field={1}&pageSize={2}&fromValue={3}",
+                Uri.EscapeUriString(index),
+                Uri.EscapeDataString(field),
+                pageSize,
+                Uri.EscapeDataString(fromValue ?? ""));
+
+            var request = HttpJsonRequest.CreateHttpJsonRequest(this, requestUri, "GET", credentials);
+            request.AddOperationHeaders(OperationsHeaders);
+            var serializer = convention.CreateSerializer();
+            JToken json;
+            try
+            {
+                using (var reader = new JsonTextReader(new StringReader(request.ReadResponseString())))
+                    json = (JToken)serializer.Deserialize(reader);
+            }
+            catch (WebException e)
+            {
+                var httpWebResponse = e.Response as HttpWebResponse;
+                if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.InternalServerError)
+                    throw new InvalidOperationException("could not execute suggestions at this time");
+                throw;
+            }
+
+	        return json.Values<string>();
+	    }
+
+	    #endregion
 	}
 }
