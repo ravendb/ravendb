@@ -1,12 +1,13 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Raven.Database.Queries
 {
     public static class TermsQueryRunnerExtensions
     {
-        public static IDictionary<string, HashSet<string>> GetTerms(this DocumentDatabase self, string index, string field)
+        public static ISet<string> GetTerms(this DocumentDatabase self, string index, string field, string fromValue, int pageSize)
         {
-            return new TermsQueryRunner(self).GetTerms(index, field);
+            return new TermsQueryRunner(self).GetTerms(index, field, fromValue, Math.Min(pageSize, self.Configuration.MaxPageSize));
         }
     }
 }

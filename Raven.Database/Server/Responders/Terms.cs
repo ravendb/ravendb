@@ -22,11 +22,11 @@ namespace Raven.Database.Server.Responders
             var match = urlMatcher.Match(context.GetRequestUrl());
             var index = match.Groups[1].Value;
 
-            var field = context.Request.QueryString["field"];
-            if(string.IsNullOrEmpty(field))
-                field = null;
-
-            context.WriteJson(Database.GetTerms(index, field));
+            context.WriteJson(Database.GetTerms(index, 
+                context.Request.QueryString["field"],
+                context.Request.QueryString["fromValue"],
+                context.GetPageSize(Database.Configuration.MaxPageSize)
+                ));
         }
     }
 }

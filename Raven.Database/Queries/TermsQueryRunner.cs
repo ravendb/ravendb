@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Diagnostics.Contracts;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 
@@ -13,49 +15,40 @@ namespace Raven.Database.Queries
             this.database = database;
         }
 
-        public IDictionary<string, HashSet<string>> GetTerms(string index, string field)
+        public ISet<string> GetTerms(string index, string field, string fromValue, int pageSize)
         {
-            var result = new Dictionary<string, HashSet<string>>();
+            if(field == null) throw new ArgumentNullException("field");
+            if(index == null) throw new ArgumentNullException("index");
+            
+            var result = new HashSet<string>();
             var currentIndexSearcher = database.IndexStorage.GetCurrentIndexSearcher(index);
             IndexSearcher searcher;
             using(currentIndexSearcher.Use(out searcher))
             {
-                TermEnum termEnum;
-                if(field != null)
+                var termEnum = searcher.GetIndexReader().Terms(new Term(field, fromValue ?? string.Empty));
+                if (string.IsNullOrEmpty(fromValue) == false)// need to skip this value
                 {
-                    termEnum = searcher.GetIndexReader().Terms(new Term(field));
-                }
-                else
-                {
-                    termEnum = searcher.GetIndexReader().Terms();
-                    if (termEnum.Next() == false)
-                        return result;
-                }
-                var term = termEnum.Term();
-                while (field == null || field.Equals(term.Field()))
-                {
-                    bool breakOuterLoop = false;
-                    while(term.Field().StartsWith("__")) // reserved, usually a unique item that we have N off
+                    while(fromValue.Equals(termEnum.Term().Text()))
                     {
                         if (termEnum.Next() == false)
-                        {
-                            breakOuterLoop = true;
-                            break;
-                        }
-                        term = termEnum.Term();
+                            return result;
                     }
-                    if (breakOuterLoop)
+                }
+                while (field.Equals(termEnum.Term().Field()))
+                {
+                    while(termEnum.Term().Field().StartsWith("__")) // reserved, usually a unique item that we have N off
+                    {
+                        if (termEnum.Next() == false)
+                            return result;
+                    }
+
+                    result.Add(termEnum.Term().Text());
+
+                    if (result.Count >= pageSize)
                         break;
-
-                    HashSet<string> set;
-                    if (result.TryGetValue(term.Field(), out set) == false)
-                        result[term.Field()] = set = new HashSet<string>();
-
-                    set.Add(term.Text());
 
                     if (termEnum.Next() == false)
                         break;
-                    term = termEnum.Term();
                 }
             }
 
