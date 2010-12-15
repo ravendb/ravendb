@@ -157,6 +157,8 @@
     <Compile Include="Bugs\LukeQuerying.cs" />
     <Compile Include="Bugs\MapReduceThrowsNRE.cs" />
     <Compile Include="Bugs\MetadataUpdates.cs" />
+    <Compile Include="Bugs\Metadata\LastModifiedLocal.cs" />
+    <Compile Include="Bugs\Metadata\LastModifiedRemote.cs" />
     <Compile Include="Bugs\Metadata\MetadataPropertyInEntity.cs" />
     <Compile Include="Bugs\MultiEntityIndex.cs" />
     <Compile Include="Bugs\MultipleResultsPerDocumentAndPaging.cs" />

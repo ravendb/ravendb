@@ -263,6 +263,10 @@ more responsive application.
 			{
 				documentFound.Metadata.Add("@etag", new JValue(documentFound.Etag.ToString()));
 			}
+            if(documentFound.Metadata.Property("Last-Modified") == null)
+            {
+                documentFound.Metadata.Add("Last-Modified", documentFound.LastModified);
+            }
 			if(documentFound.NonAuthoritiveInformation && AllowNonAuthoritiveInformation == false)
 			{
 				throw new NonAuthoritiveInformationException("Document " + documentFound.Key +
