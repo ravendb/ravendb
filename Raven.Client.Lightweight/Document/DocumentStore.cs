@@ -218,9 +218,6 @@ namespace Raven.Client.Document
 		/// <param name="credentialsForSession">The credentials for session.</param>
         public IDocumentSession OpenSession(ICredentials credentialsForSession)
         {
-            if (!String.IsNullOrEmpty(DefaultDatabase))
-                return OpenSession(DefaultDatabase, credentialsForSession);
-
             var session = new DocumentSession(this, storeListeners, deleteListeners, DatabaseCommands.With(credentialsForSession));
 			session.Stored += OnSessionStored;
             return session;
@@ -253,9 +250,6 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public IDocumentSession OpenSession()
         {
-            if (string.IsNullOrEmpty(DefaultDatabase) == false)
-                return OpenSession(DefaultDatabase);
-
             var session = new DocumentSession(this, storeListeners, deleteListeners, DatabaseCommands);
 			session.Stored += OnSessionStored;
             return session;
@@ -314,7 +308,7 @@ namespace Raven.Client.Document
 
             if(string.IsNullOrEmpty(DefaultDatabase) == false)
             {
-                DatabaseCommands.EnsureDatabaseExists(DefaultDatabase);
+                DatabaseCommands.GetRootDatabase().EnsureDatabaseExists(DefaultDatabase);
             }
 
             return this;
@@ -326,9 +320,21 @@ namespace Raven.Client.Document
 	    protected virtual void InitializeInternal()
 	    {
 	        var replicationInformer = new ReplicationInformer();
-	        databaseCommandsGenerator = () => new ServerClient(Url, Conventions, credentials, replicationInformer);
+	        databaseCommandsGenerator = () =>
+	        {
+	            var serverClient = new ServerClient(Url, Conventions, credentials, replicationInformer);
+                if (string.IsNullOrEmpty(DefaultDatabase))
+                    return serverClient;
+	            return serverClient.ForDatabase(DefaultDatabase);
+	        };
 #if !NET_3_5
-	        asyncDatabaseCommandsGenerator = () => new AsyncServerClient(Url, Conventions, credentials);
+	        asyncDatabaseCommandsGenerator = () =>
+	        {
+	            var asyncServerClient = new AsyncServerClient(Url, Conventions, credentials);
+                if (string.IsNullOrEmpty(DefaultDatabase))
+                    return asyncServerClient;
+                return asyncServerClient.ForDatabase(DefaultDatabase);
+	        };
 #endif
 	    }
 

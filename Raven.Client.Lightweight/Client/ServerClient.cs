@@ -835,11 +835,27 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 	    public IDatabaseCommands ForDatabase(string database)
 	    {
 	        var databaseUrl = url;
+            var indexOfDatabases = databaseUrl.IndexOf("/databases/");
+            if (indexOfDatabases != -1)
+                databaseUrl = databaseUrl.Substring(0, indexOfDatabases);
             if (databaseUrl.EndsWith("/") == false)
                 databaseUrl += "/";
 	        databaseUrl = databaseUrl + "databases/" + database + "/";
             return new ServerClient(databaseUrl, convention, credentials, replicationInformer);
         }
+
+	    /// <summary>
+	    /// Create a new instance of <see cref="IDatabaseCommands"/> that will interact
+	    /// with the root database. Useful if the database has works against a tenant database.
+	    /// </summary>
+	    public IDatabaseCommands GetRootDatabase()
+	    {
+	        var indexOfDatabases = url.IndexOf("/databases/");
+	        if (indexOfDatabases == -1)
+                return this;
+
+            return new ServerClient(url.Substring(0, indexOfDatabases), convention, credentials, replicationInformer);
+	    }
 
 	    /// <summary>
 		/// Gets a value indicating whether [supports promotable transactions].

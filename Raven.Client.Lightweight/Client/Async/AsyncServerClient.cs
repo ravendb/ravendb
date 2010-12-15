@@ -47,6 +47,35 @@ namespace Raven.Client.Client.Async
 		{
 		}
 
+        /// <summary>
+        /// Create a new instance of <see cref="IDatabaseCommands"/> that will interacts
+        /// with the specified database
+        /// </summary>
+        public IAsyncDatabaseCommands ForDatabase(string database)
+        {
+            var databaseUrl = url;
+            var indexOfDatabases = databaseUrl.IndexOf("/databases/");
+            if (indexOfDatabases != -1)
+                databaseUrl = databaseUrl.Substring(0, indexOfDatabases);
+            if (databaseUrl.EndsWith("/") == false)
+                databaseUrl += "/";
+            databaseUrl = databaseUrl + "databases/" + database + "/";
+            return new AsyncServerClient(databaseUrl, convention, credentials);
+        }
+
+        /// <summary>
+        /// Create a new instance of <see cref="IDatabaseCommands"/> that will interact
+        /// with the root database. Useful if the database has works against a tenant database.
+        /// </summary>
+        public IAsyncDatabaseCommands GetRootDatabase()
+        {
+            var indexOfDatabases = url.IndexOf("/databases/");
+            if (indexOfDatabases == -1)
+                return this;
+
+            return new AsyncServerClient(url.Substring(0, indexOfDatabases), convention, credentials);
+        }
+
 		/// <summary>
 		/// Begins an async get operation
 		/// </summary>

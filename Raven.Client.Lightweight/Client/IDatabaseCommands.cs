@@ -204,6 +204,12 @@ namespace Raven.Client.Client
         IDatabaseCommands ForDatabase(string database);
 
         /// <summary>
+        /// Create a new instance of <see cref="IDatabaseCommands"/> that will interact
+        /// with the root database. Useful if the database has works against a tenant database.
+        /// </summary>
+        IDatabaseCommands GetRootDatabase();
+
+        /// <summary>
         /// Returns a list of suggestions based on the specified suggestion query.
         /// </summary>
         /// <param name="index">The index to query for suggestions</param>
