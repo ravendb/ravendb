@@ -23,45 +23,43 @@ namespace Raven.Database.Queries
 
 		public QueryResult ExecuteDynamicQuery(string entityName, IndexQuery query)
 		{
-			// Create the map
-			var map = DynamicQueryMapping.Create(documentDatabase,query.Query, entityName);
+		    // Create the map
+		    var map = DynamicQueryMapping.Create(documentDatabase, query.Query, entityName);
+		    
+            map.IndexName = TouchTemporaryIndex(map, map.TemporaryIndexName, map.PermanentIndexName);
 
-            if (map.IndexName.StartsWith("Temp"))
-            {
-                TouchTemporaryIndex(map, map.TemporaryIndexName, map.PermanentIndexName);
-            }
+		    // Re-write the query
+		    string realQuery = map.Items.Aggregate(query.Query,
+		                                           (current, mapItem) => current.Replace(mapItem.From, mapItem.To));
 
-			// Re-write the query
-			string realQuery = map.Items.Aggregate(query.Query, (current, mapItem) => current.Replace(mapItem.From, mapItem.To));
+		    // Perform the query until we have some results at least
+		    QueryResult result;
+		    var sp = Stopwatch.StartNew();
+		    while (true)
+		    {
+		        result = documentDatabase.Query(map.IndexName,
+		                                        new IndexQuery
+		                                        {
+		                                            Cutoff = query.Cutoff,
+		                                            PageSize = query.PageSize,
+		                                            Query = realQuery,
+		                                            Start = query.Start,
+		                                            FieldsToFetch = query.FieldsToFetch,
+		                                            SortedFields = query.SortedFields,
+		                                        });
 
-			// Perform the query until we have some results at least
-			QueryResult result;
-			var sp = Stopwatch.StartNew();
-			while (true)
-			{
-				result = documentDatabase.Query(map.IndexName,
-				   new IndexQuery
-				   {
-					   Cutoff = query.Cutoff,
-					   PageSize = query.PageSize,
-					   Query = realQuery,
-					   Start = query.Start,
-					   FieldsToFetch = query.FieldsToFetch,
-					   SortedFields = query.SortedFields,
-				   });
+		        if (!result.IsStale ||
+		            result.Results.Count >= query.PageSize ||
+		            sp.Elapsed.TotalSeconds > 15)
+		        {
+		            return result;
+		        }
 
-				if (!result.IsStale || 
-					result.Results.Count >= query.PageSize || 
-					sp.Elapsed.TotalSeconds > 15)
-				{
-					return result;
-				}
-
-				Thread.Sleep(100);
-			}
+		        Thread.Sleep(100);
+		    }
 		}
 
-		public void CleanupCache()
+	    public void CleanupCache()
 		{
 			foreach (var indexInfo in from index in temporaryIndexes
 									  let indexInfo = index.Value
