@@ -14,7 +14,7 @@ namespace Raven.Scenarios
 		}
 	}
 
-    public class WhenDeletingDocsWillUpdateMapReduceIndex : AbstractScenario
-    {
-    }
+	public class AddDocument_AddIndex_QueryIndexForDoc : AbstractScenario
+	{
+	}
 }

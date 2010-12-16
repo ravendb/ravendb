@@ -43,7 +43,7 @@ namespace Raven.Scenarios
 			,
 			new Regex(@"Timestamp"": ?""\\/Date(\(\d\d\d\d\d\d\d\d\d\d\d\d\d[+|-]\d\d\d\d\))\\/"""),
 
-            new Regex(@"Last-Modified"": ?""(\w{3}.+?GMT)"""),
+			new Regex(@"Last-Modified"": ?""(\w{3}.+?GMT)"""),
 		};
 
 		private string lastEtag;
@@ -95,7 +95,7 @@ namespace Raven.Scenarios
 			}
 			finally
 			{
-                IOExtensions.DeleteDirectory(tempFileName);
+				IOExtensions.DeleteDirectory(tempFileName);
 			}
 		}
 
@@ -248,7 +248,7 @@ namespace Raven.Scenarios
 			var rr = new StringReader(actual.Item1);
 			var actualResponse = JToken.ReadFrom(new JsonTextReader(rr));
 			var remainingText = sr.ReadToEnd();
-            var expectedResponse = JToken.ReadFrom(new JsonTextReader(new StringReader(remainingText)));
+			var expectedResponse = JToken.ReadFrom(new JsonTextReader(new StringReader(remainingText)));
 			if (AreEquals(expectedResponse, actualResponse) == false)
 			{
 				var outputName = Path.GetFileNameWithoutExtension(file) + " request #" + responseNumber + ".txt";
@@ -321,7 +321,7 @@ namespace Raven.Scenarios
 			while (string.IsNullOrEmpty((header = sr.ReadLine())) == false)
 			{
 				var parts = header.Split(new[] { ": " }, 2, StringSplitOptions.None);
-                if (parts[0] == "Content-Length" || parts[0] == "Connection")
+				if (parts[0] == "Content-Length" || parts[0] == "Connection")
 					continue;
 				if (parts[0] == "Date" || parts[0] == "ETag" || parts[0] == "Location" || parts[0] == "Last-Modified")
 				{
@@ -354,10 +354,8 @@ namespace Raven.Scenarios
 			{
 				var actuals = finder.Matches(actual.Item1);
 				var expected = finder.Matches(responseAsString);
-				if (actuals.Count != expected.Count)
-					continue;
 
-				for (var i = 0; i < actuals.Count; i++)
+				for (var i = 0; i < Math.Min(actuals.Count, expected.Count); i++)
 				{
 					var actualMatch = actuals[i];
 					var expectedMatch = expected[i];
@@ -419,29 +417,29 @@ namespace Raven.Scenarios
 			byte cur = 0;
 			while(true)
 			{
-                do
-                {
-                    var readByte = memoryStream.Read();
-                    if (readByte == -1)
-                        return null;
-                    prev = cur;
-                    cur = (byte)readByte;
-                    chunkSizeBytes.Add(cur);
-                } while (!(prev == '\r' && cur == '\n')); // (cur != '\n' && chunkSizeBytes.LastOrDefault() != '\r');
+				do
+				{
+					var readByte = memoryStream.Read();
+					if (readByte == -1)
+						return null;
+					prev = cur;
+					cur = (byte)readByte;
+					chunkSizeBytes.Add(cur);
+				} while (!(prev == '\r' && cur == '\n')); // (cur != '\n' && chunkSizeBytes.LastOrDefault() != '\r');
 
-                chunkSizeBytes.RemoveAt(chunkSizeBytes.Count - 1);
-                chunkSizeBytes.RemoveAt(chunkSizeBytes.Count - 1);
+				chunkSizeBytes.RemoveAt(chunkSizeBytes.Count - 1);
+				chunkSizeBytes.RemoveAt(chunkSizeBytes.Count - 1);
 
-			    if (chunkSizeBytes.Count != 0) // has data
-			        break;
+				if (chunkSizeBytes.Count != 0) // has data
+					break;
 			}
 
 			var size = Convert.ToInt32(Encoding.UTF8.GetString(chunkSizeBytes.ToArray()), 16);
 
 			var buffer = new char[size];
 			memoryStream.Read(buffer, 0, size); //not doing repeated read because it is all in mem
-            if (buffer.Length > 0 && buffer[0] == 65279)
-                buffer = buffer.Skip(1).ToArray();
+			if (buffer.Length > 0 && buffer[0] == 65279)
+				buffer = buffer.Skip(1).ToArray();
 			return new string(buffer);
 		}
 	}
