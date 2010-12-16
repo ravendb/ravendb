@@ -42,7 +42,13 @@ namespace Raven.Database.Data
 		/// <value>The skipped results.</value>
         public int SkippedResults { get; set; }
 
-		/// <summary>
+        /// <summary>
+        /// The last etag indexed by the index.
+        /// This can be used to determine whatever the results can be cached.
+        /// </summary>
+        public Guid IndexEtag { get; set; }
+
+	    /// <summary>
 		/// Initializes a new instance of the <see cref="QueryResult"/> class.
 		/// </summary>
 		public QueryResult()

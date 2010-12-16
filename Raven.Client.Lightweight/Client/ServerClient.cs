@@ -629,7 +629,8 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			{
 				IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
                 IndexTimestamp = json.Value<DateTime>("IndexTimestamp"),
-				Results = json["Results"].Children().Cast<JObject>().ToList(),
+				IndexEtag = new Guid(request.ResponseHeaders["ETag"]),
+                Results = json["Results"].Children().Cast<JObject>().ToList(),
 				Includes = json["Includes"].Children().Cast<JObject>().ToList(),
 				TotalResults = Convert.ToInt32(json["TotalResults"].ToString()),
                 SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString()),
