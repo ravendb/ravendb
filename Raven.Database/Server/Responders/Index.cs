@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
 using System.Linq;
@@ -30,10 +29,10 @@ namespace Raven.Database.Server.Responders
 
 			switch (context.Request.HttpMethod)
 			{
-                case "HEAD":
-			        if(Database.IndexDefinitionStorage.IndexNames.Contains(index, StringComparer.InvariantCultureIgnoreCase) == false)
-                        context.SetStatusToNotFound();
-			        break;
+				case "HEAD":
+					if(Database.IndexDefinitionStorage.IndexNames.Contains(index, StringComparer.InvariantCultureIgnoreCase) == false)
+						context.SetStatusToNotFound();
+					break;
 				case "GET":
 					OnGet(context, index);
 					break;
@@ -93,50 +92,87 @@ namespace Raven.Database.Server.Responders
 		private void OnGet(IHttpContext context, string index)
 		{
 			var definition = context.Request.QueryString["definition"];
-		    if ("yes".Equals(definition, StringComparison.InvariantCultureIgnoreCase))
-		    {
-		    	var indexDefinition = Database.GetIndexDefinition(index);
+			if ("yes".Equals(definition, StringComparison.InvariantCultureIgnoreCase))
+			{
+				var indexDefinition = Database.GetIndexDefinition(index);
 				if(indexDefinition == null)
 				{
 					context.SetStatusToNotFound();
 					return;
 				}
-		    	context.WriteJson(new {Index = indexDefinition});
-		    }
-		    else
-            {                
-				var indexQuery = context.GetIndexQueryFromHttpContext(Database.Configuration.MaxPageSize);
-                
-                QueryResult queryResult = null;
-                if (index.StartsWith("dynamic", StringComparison.InvariantCultureIgnoreCase))
-                {
-                    string entityName = null;
-                    if (index.StartsWith("dynamic/"))
-                        entityName = index.Substring("dynamic/".Length);           
+				context.WriteJson(new {Index = indexDefinition});
+			}
+			else
+			{
+				var queryResult = ExecuteQuery(context, index);
 
-                    queryResult = Database.ExecuteDynamicQuery(entityName, indexQuery);
-                }
-                else
-                {
-                    queryResult = Database.Query(index, indexQuery);
-                    Database.Query(index, indexQuery);
-                }                
-                
-            	var includes = context.Request.QueryString.GetValues("include") ?? new string[0];
-            	var loadedIds = new HashSet<string>(
-            		queryResult.Results
-            			.Where(x => x["@metadata"] != null)
-            			.Select(x => x["@metadata"].Value<string>("@id"))
-            			.Where(x => x != null)
-            		);
-            	var command = new AddIncludesCommand(Database, GetRequestTransaction(context), queryResult.Includes.Add,includes, loadedIds);
-            	foreach (var result in queryResult.Results)
-            	{
-            		command.Execute(result);
-            	}
-            	context.WriteJson(queryResult);
+				if (queryResult == null)
+					return;
+
+				var includes = context.Request.QueryString.GetValues("include") ?? new string[0];
+				var loadedIds = new HashSet<string>(
+					queryResult.Results
+						.Where(x => x["@metadata"] != null)
+						.Select(x => x["@metadata"].Value<string>("@id"))
+						.Where(x => x != null)
+					);
+				var command = new AddIncludesCommand(Database, GetRequestTransaction(context), queryResult.Includes.Add, includes, loadedIds);
+				foreach (var result in queryResult.Results)
+				{
+					command.Execute(result);
+				}
+				context.Response.Headers["ETag"] = queryResult.IndexEtag.ToString();
+				context.WriteJson(queryResult);
 			}
 		}
 
+		private QueryResult ExecuteQuery(IHttpContext context, string index)
+		{
+			var indexQuery = context.GetIndexQueryFromHttpContext(Database.Configuration.MaxPageSize);
+
+			return index.StartsWith("dynamic", StringComparison.InvariantCultureIgnoreCase) ? 
+				PerformQueryAgainstDynamicIndex(context, index, indexQuery) : 
+				PerformQueryAgainstExistingIndex(context, index, indexQuery);
+		}
+
+		private QueryResult PerformQueryAgainstExistingIndex(IHttpContext context, string index, IndexQuery indexQuery)
+		{
+			Tuple<DateTime, Guid> indexLastUpdatedAt = null;
+			Database.TransactionalStorage.Batch(accessor =>
+			{
+				indexLastUpdatedAt = accessor.Staleness.IndexLastUpdatedAt(index);
+			});
+
+			if (context.MatchEtag(indexLastUpdatedAt.Item2))
+			{
+				context.SetStatusToNotModified();
+				return null;
+			}
+
+			return Database.Query(index, indexQuery);
+		}
+
+		private QueryResult PerformQueryAgainstDynamicIndex(IHttpContext context, string index, IndexQuery indexQuery)
+		{
+			string entityName = null;
+			if (index.StartsWith("dynamic/"))
+				entityName = index.Substring("dynamic/".Length);
+
+			var dynamicIndexName = Database.FindDynamicIndexName(entityName, indexQuery.Query);
+			if (Database.IndexStorage.HasIndex(dynamicIndexName))
+			{
+				Tuple<DateTime, Guid> indexLastUpdatedAt = null;
+				Database.TransactionalStorage.Batch(accessor =>
+				{
+					indexLastUpdatedAt = accessor.Staleness.IndexLastUpdatedAt(dynamicIndexName);
+				});
+				if (context.MatchEtag(indexLastUpdatedAt.Item2))
+				{
+					context.SetStatusToNotModified();
+					return null;
+				}
+			}
+			return Database.ExecuteDynamicQuery(entityName, indexQuery);
+		}
 	}
 }
