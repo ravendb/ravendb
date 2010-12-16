@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using Raven.Database.Indexing;
 using System.Text.RegularExpressions;
@@ -10,6 +11,7 @@ namespace Raven.Database.Data
 {
     public class DynamicQueryMapping
     {
+        public string IndexName { get; set; }
         public string ForEntityName { get; set; }
 
         public DynamicQueryMapping()
@@ -113,7 +115,7 @@ namespace Raven.Database.Data
            return index;
         }
 
-        public static DynamicQueryMapping Create(string query, string entityName)
+        public static DynamicQueryMapping Create(DocumentDatabase database, string query, string entityName)
         {
             var fields = SimpleQueryParser.GetFields(query);
 
@@ -136,8 +138,8 @@ namespace Raven.Database.Data
 
                 fields.Add(fieldName);
             }
-            
-            return new DynamicQueryMapping()
+
+            var dynamicQueryMapping = new DynamicQueryMapping()
             {
                 ForEntityName = entityName,
                 SortDescriptors = sortInfo.ToArray(),
@@ -146,10 +148,60 @@ namespace Raven.Database.Data
                     From = x,
                     To = x.Replace(".", "").Replace(",", "")
                 }).ToArray()
-            };                      
+            };
+            FindIndexName(database, dynamicQueryMapping);
+            return dynamicQueryMapping;                      
         }
 
-        
+        private static void FindIndexName(DocumentDatabase database, DynamicQueryMapping map)
+        {
+            var targetName = map.ForEntityName ?? "AllDocs";
+
+            var combinedFields = String.Join("And",
+                map.Items
+                .OrderBy(x => x.To)
+                .Select(x => x.To));
+            var indexName = combinedFields;
+
+            if (map.SortDescriptors != null && map.SortDescriptors.Length > 0)
+            {
+                indexName = string.Format("{0}SortBy{1}", indexName,
+                                          String.Join("",
+                                                      map.SortDescriptors
+                                                          .Select(x => x.Field)
+                                                          .OrderBy(x => x)));
+            }
+
+
+            // Hash the name if it's too long
+            if (indexName.Length > 230)
+            {
+                using (var sha256 = SHA256.Create())
+                {
+                    var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(indexName));
+                    indexName = Encoding.UTF8.GetString(bytes);
+                }
+            }
+
+            var permanentIndexName = indexName.Length == 0
+                    ? string.Format("Auto/{0}", targetName)
+                    : string.Format("Auto/{0}/By{1}", targetName, indexName);
+
+            var temporaryIndexName = indexName.Length == 0
+                    ? string.Format("Temp/{0}", targetName)
+                    : string.Format("Temp/{0}/By{1}", targetName, indexName);
+
+            // If there is a permanent index, then use that without bothering anything else
+            var permanentIndex = database.GetIndexDefinition(permanentIndexName);
+            map.PermanentIndexName = permanentIndexName;
+            map.TemporaryIndexName = temporaryIndexName;
+            map.IndexName = permanentIndex != null ? permanentIndexName : temporaryIndexName;
+        }
+
+        public string TemporaryIndexName { get; set; }
+
+        public string PermanentIndexName { get; set; }
+
 
         public class DynamicSortInfo
         {

@@ -10,169 +10,125 @@ using System.Security.Cryptography;
 
 namespace Raven.Database.Queries
 {
-    public class DynamicQueryRunner
-    {
-        private readonly DocumentDatabase documentDatabase;
-        private readonly ConcurrentDictionary<string, TemporaryIndexInfo> temporaryIndexes;
+	public class DynamicQueryRunner
+	{
+		private readonly DocumentDatabase documentDatabase;
+		private readonly ConcurrentDictionary<string, TemporaryIndexInfo> temporaryIndexes;
 
-        public DynamicQueryRunner(DocumentDatabase database)
-        {
-            documentDatabase = database;
-            temporaryIndexes = new ConcurrentDictionary<string, TemporaryIndexInfo>();
-        }
+		public DynamicQueryRunner(DocumentDatabase database)
+		{
+			documentDatabase = database;
+			temporaryIndexes = new ConcurrentDictionary<string, TemporaryIndexInfo>();
+		}
 
-        public QueryResult ExecuteDynamicQuery(string entityName, IndexQuery query)
-        {
-            // Create the map
-            var map = DynamicQueryMapping.Create(query.Query, entityName);
+		public QueryResult ExecuteDynamicQuery(string entityName, IndexQuery query)
+		{
+			// Create the map
+			var map = DynamicQueryMapping.Create(documentDatabase,query.Query, entityName);
 
-            // Get the index name
-            string indexName = FindDynamicIndexName(map);
-
-            // Re-write the query
-            string realQuery = map.Items.Aggregate(query.Query, (current, mapItem) => current.Replace(mapItem.From, mapItem.To));
-
-            // Perform the query until we have some results at least
-            QueryResult result;
-            var sp = Stopwatch.StartNew();
-            while (true)
+            if (map.IndexName.StartsWith("Temp"))
             {
-                result = documentDatabase.Query(indexName,
-                   new IndexQuery
-                   {
-                       Cutoff = query.Cutoff,
-                       PageSize = query.PageSize,
-                       Query = realQuery,
-                       Start = query.Start,
-                       FieldsToFetch = query.FieldsToFetch,
-                       SortedFields = query.SortedFields,
-                   });
-
-                if (!result.IsStale || 
-                    result.Results.Count >= query.PageSize || 
-                    sp.Elapsed.TotalSeconds > 15)
-                {
-                    return result;
-                }
-
-                Thread.Sleep(100);
-            }
-        }
-
-        public void CleanupCache()
-        {
-            foreach (var indexInfo in from index in temporaryIndexes
-                                      let indexInfo = index.Value
-                                      let timeSinceRun = DateTime.Now.Subtract(indexInfo.LastRun)
-                                      where timeSinceRun > documentDatabase.Configuration.TempIndexCleanupThreshold
-                                      select indexInfo)
-            {
-                documentDatabase.DeleteIndex(indexInfo.Name);
-                TemporaryIndexInfo ignored;
-                temporaryIndexes.TryRemove(indexInfo.Name, out ignored);
-            }
-        }
-
-        private string FindDynamicIndexName(DynamicQueryMapping map)
-        {
-            var targetName = map.ForEntityName ?? "AllDocs";
-
-            var combinedFields = String.Join("And",
-                map.Items
-                .OrderBy(x => x.To)
-                .Select(x => x.To));
-            var indexName = combinedFields;
-
-            if (map.SortDescriptors != null && map.SortDescriptors.Length > 0)
-            {
-                indexName = string.Format("{0}SortBy{1}", indexName,
-                                          String.Join("",
-                                                      map.SortDescriptors
-                                                          .Select(x => x.Field)
-                                                          .OrderBy(x => x)));
+                TouchTemporaryIndex(map, map.TemporaryIndexName, map.PermanentIndexName);
             }
 
+			// Re-write the query
+			string realQuery = map.Items.Aggregate(query.Query, (current, mapItem) => current.Replace(mapItem.From, mapItem.To));
 
-            // Hash the name if it's too long
-            if (indexName.Length > 230)
-            {
-                using (var sha256 = SHA256.Create())
-                {
-                    var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(indexName));
-                    indexName = Encoding.UTF8.GetString(bytes);
-                }
-            }
+			// Perform the query until we have some results at least
+			QueryResult result;
+			var sp = Stopwatch.StartNew();
+			while (true)
+			{
+				result = documentDatabase.Query(map.IndexName,
+				   new IndexQuery
+				   {
+					   Cutoff = query.Cutoff,
+					   PageSize = query.PageSize,
+					   Query = realQuery,
+					   Start = query.Start,
+					   FieldsToFetch = query.FieldsToFetch,
+					   SortedFields = query.SortedFields,
+				   });
 
-            var permanentIndexName = indexName.Length == 0
-                    ? string.Format("Auto/{0}", targetName)
-                    : string.Format("Auto/{0}/By{1}", targetName, indexName);
+				if (!result.IsStale || 
+					result.Results.Count >= query.PageSize || 
+					sp.Elapsed.TotalSeconds > 15)
+				{
+					return result;
+				}
 
-            var temporaryIndexName = indexName.Length == 0
-                    ? string.Format("Temp/{0}", targetName)
-                    : string.Format("Temp/{0}/By{1}", targetName, indexName);
+				Thread.Sleep(100);
+			}
+		}
 
-            // If there is a permanent index, then use that without bothering anything else
-            var permanentIndex = documentDatabase.GetIndexDefinition(permanentIndexName);
-            if (permanentIndex != null) { return permanentIndexName; }
+		public void CleanupCache()
+		{
+			foreach (var indexInfo in from index in temporaryIndexes
+									  let indexInfo = index.Value
+									  let timeSinceRun = DateTime.Now.Subtract(indexInfo.LastRun)
+									  where timeSinceRun > documentDatabase.Configuration.TempIndexCleanupThreshold
+									  select indexInfo)
+			{
+				documentDatabase.DeleteIndex(indexInfo.Name);
+				TemporaryIndexInfo ignored;
+				temporaryIndexes.TryRemove(indexInfo.Name, out ignored);
+			}
+		}
 
-            // Else head down the temporary route
-            return TouchTemporaryIndex(map, temporaryIndexName, permanentIndexName);           
-        }
+		private string TouchTemporaryIndex(DynamicQueryMapping map, string temporaryIndexName, string permanentIndexName)
+		{
+			var indexInfo = temporaryIndexes.GetOrAdd(temporaryIndexName, s => new TemporaryIndexInfo
+			{
+				Created = DateTime.Now,
+				RunCount = 0,
+				Name = temporaryIndexName
+			});
+			indexInfo.LastRun = DateTime.Now;
+			indexInfo.RunCount++;
+			
+			if (TemporaryIndexShouldBeMadePermanent(indexInfo))
+			{
+				documentDatabase.DeleteIndex(temporaryIndexName);
+				CreateIndex(map, permanentIndexName);
+				TemporaryIndexInfo ignored;
+				temporaryIndexes.TryRemove(temporaryIndexName, out ignored);
+				return permanentIndexName;
+			}
+			var temporaryIndex = documentDatabase.GetIndexDefinition(temporaryIndexName);
+			if (temporaryIndex != null)
+				return temporaryIndexName;
+			CreateIndex(map, temporaryIndexName);
+			return temporaryIndexName;
+		}
 
-        private string TouchTemporaryIndex(DynamicQueryMapping map, string temporaryIndexName, string permanentIndexName)
-        {
-            var indexInfo = temporaryIndexes.GetOrAdd(temporaryIndexName, s => new TemporaryIndexInfo
-            {
-                Created = DateTime.Now,
-                RunCount = 0,
-                Name = temporaryIndexName
-            });
-            indexInfo.LastRun = DateTime.Now;
-            indexInfo.RunCount++;
-            
-            if (TemporaryIndexShouldBeMadePermanent(indexInfo))
-            {
-                documentDatabase.DeleteIndex(temporaryIndexName);
-                CreateIndex(map, permanentIndexName);
-                TemporaryIndexInfo ignored;
-                temporaryIndexes.TryRemove(temporaryIndexName, out ignored);
-                return permanentIndexName;
-            }
-            var temporaryIndex = documentDatabase.GetIndexDefinition(temporaryIndexName);
-            if (temporaryIndex != null)
-                return temporaryIndexName;
-            CreateIndex(map, temporaryIndexName);
-            return temporaryIndexName;
-        }
+		private bool TemporaryIndexShouldBeMadePermanent(TemporaryIndexInfo indexInfo)
+		{
+			if (indexInfo.RunCount < documentDatabase.Configuration.TempIndexPromotionMinimumQueryCount)
+				return false;
 
-        private bool TemporaryIndexShouldBeMadePermanent(TemporaryIndexInfo indexInfo)
-        {
-            if (indexInfo.RunCount < documentDatabase.Configuration.TempIndexPromotionMinimumQueryCount)
-                return false;
+			var timeSinceCreation = DateTime.Now.Subtract(indexInfo.Created);
+			var score = timeSinceCreation.TotalMilliseconds / indexInfo.RunCount;
 
-            var timeSinceCreation = DateTime.Now.Subtract(indexInfo.Created);
-            var score = timeSinceCreation.TotalMilliseconds / indexInfo.RunCount;
+			return score < documentDatabase.Configuration.TempIndexPromotionThreshold;
+		}
 
-            return score < documentDatabase.Configuration.TempIndexPromotionThreshold;
-        }
+		[MethodImpl(MethodImplOptions.Synchronized)]
+		private void CreateIndex(DynamicQueryMapping map, string indexName)
+		{
+			if (documentDatabase.GetIndexDefinition(indexName) != null) // avoid race condition when creating the index
+				return;
 
-        [MethodImpl(MethodImplOptions.Synchronized)]
-        private void CreateIndex(DynamicQueryMapping map, string indexName)
-        {
-            if (documentDatabase.GetIndexDefinition(indexName) != null) // avoid race condition when creating the index
-                return;
+			var definition = map.CreateIndexDefinition();
 
-            var definition = map.CreateIndexDefinition();
+			documentDatabase.PutIndex(indexName, definition);
+		}
 
-            documentDatabase.PutIndex(indexName, definition);
-        }
-
-        private class TemporaryIndexInfo
-        {
-            public string Name { get; set;}
-            public DateTime LastRun { get; set;}
-            public DateTime Created { get; set;}
-            public int RunCount { get; set;}
-        }
-    }
+		private class TemporaryIndexInfo
+		{
+			public string Name { get; set;}
+			public DateTime LastRun { get; set;}
+			public DateTime Created { get; set;}
+			public int RunCount { get; set;}
+		}
+	}
 }
