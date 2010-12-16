@@ -504,7 +504,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
         {
             var list = new List<JObject>();
             var stale = false;
-            DateTime indexTimestamp = DateTime.MinValue;
+            Tuple<DateTime,Guid> indexTimestamp = null;
             TransactionalStorage.Batch(
                 actions =>
                 {
@@ -565,7 +565,8 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
                 IsStale = stale,
                 SkippedResults = query.SkippedResults.Value,
                 TotalResults = query.TotalSize.Value,
-                IndexTimestamp = indexTimestamp
+                IndexTimestamp = indexTimestamp.Item1,
+                IndexEtag = indexTimestamp.Item2
             };
         }
 

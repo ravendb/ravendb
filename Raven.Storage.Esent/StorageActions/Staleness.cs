@@ -4,6 +4,7 @@ using Microsoft.Isam.Esent.Interop;
 using Raven.Database.Exceptions;
 using Raven.Database.Json;
 using Raven.Database.Storage;
+using Raven.Database.Extensions;
 
 namespace Raven.Storage.Esent.StorageActions
 {
@@ -47,7 +48,7 @@ namespace Raven.Storage.Esent.StorageActions
             return cutOff.Value >= addedAt;
         }
 
-        public DateTime IndexLastUpdatedAt(string name)
+        public Tuple<DateTime, Guid> IndexLastUpdatedAt(string name)
         {
             Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
             Api.MakeKey(session, IndexesStats, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -55,9 +56,12 @@ namespace Raven.Storage.Esent.StorageActions
             {
                 throw new IndexDoesNotExistsException("Could not find index named: " + name);
             }
-            return Api.RetrieveColumnAsDateTime(session, IndexesStats,
-                                                tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"])
+            var lastIndexedTimestamp = Api.RetrieveColumnAsDateTime(session, IndexesStats,
+                                                                  tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"])
                 .Value;
+            var lastIndexedEtag = Api.RetrieveColumn(session, IndexesStats,
+                                                                      tableColumnsCache.IndexesStatsColumns["last_indexed_etag"]).TransfromToGuidWithProperSorting();
+            return Tuple.Create(lastIndexedTimestamp, lastIndexedEtag);
         }
 
         private bool IsStaleByEtag(string entityName)

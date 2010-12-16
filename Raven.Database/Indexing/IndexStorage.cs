@@ -87,6 +87,11 @@ namespace Raven.Database.Indexing
 			get { return indexes.Keys.ToArray(); }
 		}
 
+        public bool HasIndex(string index)
+        {
+            return indexes.ContainsKey(index);
+        }
+
 		#region IDisposable Members
 
 		public void Dispose()

@@ -49,7 +49,7 @@ namespace Raven.Storage.Managed
             return tasksAfterCutoffPoint.Any();
         }
 
-        public DateTime IndexLastUpdatedAt(string name)
+        public Tuple<DateTime,Guid> IndexLastUpdatedAt(string name)
         {
             var readResult = storage.IndexingStats.Read(new JObject
             {
@@ -58,8 +58,11 @@ namespace Raven.Storage.Managed
 
             if (readResult == null)
                 throw new IndexDoesNotExistsException("Could not find index named: " + name);
-            
-            return readResult.Key.Value<DateTime>("lastTimestamp");
+
+            return Tuple.Create(
+                readResult.Key.Value<DateTime>("lastTimestamp"),
+                new Guid(readResult.Key.Value<byte[]>("lastEtag"))
+                );
         }
 
         private bool IsStaleByEtag(string entityName, byte [] lastIndexedEtag)
