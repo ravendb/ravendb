@@ -385,7 +385,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// </remarks>
         public IDocumentQuery<T> WhereEquals(string fieldName, object value)
         {
-            return this.WhereEquals(fieldName, value, false, false);
+            return this.WhereEquals(fieldName, value, true, false);
         }
 
         /// <summary>

@@ -131,6 +131,11 @@ namespace Raven.Client.Document
 		/// Changes made to the document / metadata instances passed to this event will be persisted.
 		/// </summary>
 		public virtual event EntityToDocument OnEntityConverted;
+        
+        /// <summary>
+        /// Occurs when a document and metadata are converted to an entity
+        /// </summary>
+        public event DocumentToEntity OnDocumentConverted;
 
 		/// <summary>
 		/// Gets the metadata for the specified entity.
@@ -258,6 +263,10 @@ more responsive application.
 			{
 				documentFound.Metadata.Add("@etag", new JValue(documentFound.Etag.ToString()));
 			}
+            if(documentFound.Metadata.Property("Last-Modified") == null)
+            {
+                documentFound.Metadata.Add("Last-Modified", documentFound.LastModified);
+            }
 			if(documentFound.NonAuthoritiveInformation && AllowNonAuthoritiveInformation == false)
 			{
 				throw new NonAuthoritiveInformationException("Document " + documentFound.Key +
@@ -363,7 +372,10 @@ more responsive application.
 #endif
 			}
 			TrySetIdentity(entity, id);
-			return entity;
+		    var documentToEntity = OnDocumentConverted;
+            if (documentToEntity != null)
+                documentToEntity(entity, documentFound, metadata);
+		    return entity;
 		}
 
 		/// <summary>

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Net;
@@ -11,6 +12,7 @@ using Raven.Database.Data;
 using Raven.Database.Impl;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
+using Raven.Database.Queries;
 using Raven.Database.Storage;
 using Raven.Database.Extensions;
 using Raven.Http;
@@ -404,6 +406,15 @@ namespace Raven.Client.Client
 
 
         /// <summary>
+        /// Create a new instance of <see cref="IDatabaseCommands"/> that will interact
+        /// with the root database. Useful if the database has works against a tenant database.
+        /// </summary>
+        public IDatabaseCommands GetRootDatabase()
+        {
+            return this;
+        }
+
+        /// <summary>
         /// Returns a list of suggestions based on the specified suggestion query.
         /// </summary>
         /// <param name="index">The index to query for suggestions</param>
@@ -414,7 +425,20 @@ namespace Raven.Client.Client
             return database.ExecuteSuggestionQuery(index, suggestionQuery);
         }
 
-	    #endregion
+        ///<summary>
+        /// Get the possible terms for the specified field in the index 
+        /// You can page through the results by use fromValue parameter as the 
+        /// starting point for the next query
+        ///</summary>
+        ///<returns></returns>
+        public IEnumerable<string> GetTerms(string index, string field, string fromValue, int pageSize)
+        {
+            CurrentOperationContext.Headers.Value = OperationsHeaders;
+            return database.ExecuteGetTermsQuery(index, field, fromValue, pageSize);
+     
+        }
+
+        #endregion
 
         /// <summary>
         /// Spin the background worker for indexing

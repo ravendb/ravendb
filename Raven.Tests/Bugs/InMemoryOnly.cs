@@ -20,7 +20,7 @@ namespace Raven.Tests.Bugs
                 UseEmbeddedHttpServer = true,
                 Configuration = 
                 {
-                    Port = 8000,
+                    Port = 8080,
                     RunInMemory = true
                 }
             })

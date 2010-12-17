@@ -5,6 +5,7 @@ using Raven.Database.Data;
 using Raven.Database.Indexing;
 using System.Linq;
 using Raven.Database.Extensions;
+using Raven.Database.Queries;
 using Raven.Http.Abstractions;
 using Raven.Http.Extensions;
 

@@ -46,7 +46,7 @@ namespace Raven.Tests.Bugs
 		{
 			db.PutIndex("test", new IndexDefinition
 			{
-				Map = "from doc in docs select new { doc.User.Name }"
+				Map = "from doc in docs select new { User = doc.Name() }"
 			});
 
 			for (int i = 0; i < 15; i++)
@@ -78,7 +78,7 @@ namespace Raven.Tests.Bugs
 		{
 			db.PutIndex("test", new IndexDefinition
 			{
-				Map = "from doc in docs select new { doc.User.Name }"
+				Map = "from doc in docs select new { User = doc.User() }"
 			});
 
 			for (int i = 0; i < 15; i++)

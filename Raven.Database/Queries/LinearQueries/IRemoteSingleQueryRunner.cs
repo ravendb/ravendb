@@ -1,8 +1,7 @@
 ﻿using System;
 using Raven.Database.Data;
-using Raven.Database.Storage;
 
-namespace Raven.Database.LinearQueries
+namespace Raven.Database.Queries.LinearQueries
 {
     public interface IRemoteSingleQueryRunner : IDisposable
     {

@@ -218,6 +218,15 @@ namespace Raven.Client.Indexes
             }
             else
             {
+                var parentType = member.DeclaringType;
+                while (parentType.IsNested)
+                {
+                    parentType = parentType.DeclaringType;
+                    if (parentType == null)
+                        break;
+                    this.Out(parentType.Name + ".");
+                }
+
                 this.Out(member.DeclaringType.Name + "." + name);
             }
         }
@@ -1038,6 +1047,12 @@ namespace Raven.Client.Indexes
                 {
                     this.Out("Database");
                 }
+                else if (typeof(AbstractIndexCreationTask).IsAssignableFrom(expression.Type))
+                {
+                    // this is a method that
+                    // exists on both the server side and the client side
+                    this.Out("this");
+                }
                 else
                 {
                     this.Visit(expression);
@@ -1070,7 +1085,16 @@ namespace Raven.Client.Indexes
                 {
                     this.Out(", ");
                 }
+                var lambdaExpression = node.Arguments[num2] as LambdaExpression;
+                if (lambdaExpression != null && typeof(AbstractIndexCreationTask).IsAssignableFrom(node.Method.DeclaringType))
+                {
+                    this.Out("(Func<dynamic, dynamic>)(");
+                }
                 this.Visit(node.Arguments[num2]);
+                if (lambdaExpression != null && typeof(AbstractIndexCreationTask).IsAssignableFrom(node.Method.DeclaringType))
+                {
+                    this.Out(")");
+                }
                 num2++;
             }
             if (node.Method.Name != "get_Item")// VB indexer

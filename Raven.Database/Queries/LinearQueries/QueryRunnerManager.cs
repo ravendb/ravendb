@@ -3,7 +3,7 @@ using System.Collections.Concurrent;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
 
-namespace Raven.Database.LinearQueries
+namespace Raven.Database.Queries.LinearQueries
 {
     public class QueryRunnerManager : MarshalByRefObject
     {

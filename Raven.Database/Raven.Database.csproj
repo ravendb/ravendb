@@ -120,7 +120,8 @@
     <Compile Include="Data\DynamicQueryMapping.cs" />
     <Compile Include="Data\DynamicQueryMappingItem.cs" />
     <Compile Include="Impl\DocumentRetriever.cs" />
-    <Compile Include="Impl\DynamicQueryRunner.cs" />
+    <Compile Include="Queries\DynamicQueryExtensions.cs" />
+    <Compile Include="Queries\DynamicQueryRunner.cs" />
     <Compile Include="Exceptions\IndexDoesNotExistsException.cs" />
     <Compile Include="Extensions\CommandExtensions.cs" />
     <Compile Include="Extensions\GuidExtensions.cs" />
@@ -274,8 +275,8 @@
     <Compile Include="Plugins\AbstractAttachmentReadTrigger.cs" />
     <Compile Include="Plugins\IStartupTask.cs" />
     <Compile Include="Data\LinearQuery.cs" />
-    <Compile Include="LinearQueries\IRemoteSingleQueryRunner.cs" />
-    <Compile Include="LinearQueries\SingleQueryRunner.cs" />
+    <Compile Include="Queries\LinearQueries\IRemoteSingleQueryRunner.cs" />
+    <Compile Include="Queries\LinearQueries\SingleQueryRunner.cs" />
     <Compile Include="Linq\GroupByKeyFunc.cs" />
     <Compile Include="Linq\ITranslatorDatabaseAccessor.cs" />
     <Compile Include="Linq\PrivateExtensions\MetadataExtensions.cs" />
@@ -296,8 +297,8 @@
     <Compile Include="Plugins\ReadOperation.cs" />
     <Compile Include="Plugins\ReadVetoResult.cs" />
     <Compile Include="Data\QueryResults.cs" />
-    <Compile Include="LinearQueries\QueryRunnerManager.cs" />
-    <Compile Include="LinearQueries\RemoteQueryResults.cs" />
+    <Compile Include="Queries\LinearQueries\QueryRunnerManager.cs" />
+    <Compile Include="Queries\LinearQueries\RemoteQueryResults.cs" />
     <Compile Include="Data\CommandDataFactory.cs" />
     <Compile Include="Data\IndexFailureInformation.cs" />
     <Compile Include="Data\IndexQueryResult.cs" />
@@ -328,6 +329,11 @@
     <Compile Include="Plugins\VetoResult.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Config\RavenConfiguration.cs" />
+    <Compile Include="Queries\LinearQueryExtensions.cs" />
+    <Compile Include="Queries\LinearQueryRunner.cs" />
+    <Compile Include="Queries\SuggestionQueryExtensions.cs" />
+    <Compile Include="Queries\TermsQueryRunner.cs" />
+    <Compile Include="Queries\TermsQueryRunnerExtensions.cs" />
     <Compile Include="Server\RavenDbHttpServer.cs" />
     <Compile Include="Server\Responders\AddIncludesCommand.cs" />
     <Compile Include="Server\Responders\AdminBackup.cs" />
@@ -344,6 +350,7 @@
     <Compile Include="Server\Responders\Statics.cs" />
     <Compile Include="Server\Responders\Statistics.cs" />
     <Compile Include="Server\Responders\SuggestionResponder.cs" />
+    <Compile Include="Server\Responders\Terms.cs" />
     <Compile Include="Server\Responders\TransactionCommit.cs" />
     <Compile Include="Server\Responders\TransactionPromote.cs" />
     <Compile Include="Server\Responders\TransactionRollback.cs" />
@@ -362,7 +369,7 @@
     <Compile Include="Storage\ITasksStorageActions.cs" />
     <Compile Include="Storage\ITransactionalStorage.cs" />
     <Compile Include="Storage\ITransactionStorageActions.cs" />
-    <Compile Include="Impl\SuggestionQueryRunner.cs" />
+    <Compile Include="Queries\SuggestionQueryRunner.cs" />
     <Compile Include="Tasks\ReduceTask.cs" />
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
     <Compile Include="Tasks\Task.cs" />

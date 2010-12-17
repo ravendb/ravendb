@@ -16,6 +16,18 @@ namespace Raven.Tests
 		protected readonly static string DbDirectory = Path.Combine (".", "TestDb");
 		protected readonly static string DbName = Path.Combine (DbDirectory, "DocDb.esb");
 
+        protected RavenDbServer GetNewServer()
+        {
+            return
+                new RavenDbServer(new RavenConfiguration
+                {
+                    Port = 8080,
+                    RunInMemory = true,
+                    DataDirectory = "Data",
+                    AnonymousUserAccessMode = AnonymousUserAccessMode.All
+                });
+        }
+
         protected RavenDbServer GetNewServer(int port, string path)
         {
             return new RavenDbServer(new RavenConfiguration { Port = port, DataDirectory = path, AnonymousUserAccessMode = AnonymousUserAccessMode.All });

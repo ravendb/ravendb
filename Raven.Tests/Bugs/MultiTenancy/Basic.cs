@@ -10,9 +10,9 @@ using Xunit;
 using Raven.Client.Extensions;
 using System.Linq;
 
-namespace Raven.Tests.Bugs
+namespace Raven.Tests.Bugs.MultiTenancy
 {
-    public class MultiTenancy : RemoteClientTest, IDisposable
+    public class Basic : RemoteClientTest, IDisposable
     {
         protected RavenDbServer GetNewServer(int port)
         {

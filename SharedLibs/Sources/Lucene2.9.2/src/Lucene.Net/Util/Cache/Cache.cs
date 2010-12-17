@@ -16,6 +16,7 @@
  */
 
 using System;
+using System.Runtime.Caching;
 
 namespace Lucene.Net.Util.Cache
 {

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Net;
 using Newtonsoft.Json.Linq;
@@ -204,10 +205,24 @@ namespace Raven.Client.Client
         IDatabaseCommands ForDatabase(string database);
 
         /// <summary>
+        /// Create a new instance of <see cref="IDatabaseCommands"/> that will interact
+        /// with the root database. Useful if the database has works against a tenant database.
+        /// </summary>
+        IDatabaseCommands GetRootDatabase();
+
+        /// <summary>
         /// Returns a list of suggestions based on the specified suggestion query.
         /// </summary>
         /// <param name="index">The index to query for suggestions</param>
         /// <param name="suggestionQuery">The suggestion query.</param>
         SuggestionQueryResult Suggest(string index, SuggestionQuery suggestionQuery);
+
+        ///<summary>
+        /// Get the possible terms for the specified field in the index 
+        /// You can page through the results by use fromValue parameter as the 
+        /// starting point for the next query
+        ///</summary>
+        ///<returns></returns>
+        IEnumerable<string> GetTerms(string index, string field, string fromValue, int pageSize);
 	}
 }

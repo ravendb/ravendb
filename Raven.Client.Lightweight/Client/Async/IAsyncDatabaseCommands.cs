@@ -36,6 +36,12 @@ namespace Raven.Client.Client.Async
 		/// </summary>
 		/// <param name="commandDatas">The command data.</param>
 		Task<BatchResult[]> BatchAsync(ICommandData[] commandDatas);
+
+        /// <summary>
+        /// Create a new instance of <see cref="IDatabaseCommands"/> that will interacts
+        /// with the specified database
+        /// </summary>
+        IAsyncDatabaseCommands ForDatabase(string database);
 	}
 }
 #endif

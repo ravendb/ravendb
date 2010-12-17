@@ -95,7 +95,9 @@ namespace Raven.Client.Document
 		private string identifier;
 		private IDocumentDeleteListener[] deleteListeners = new IDocumentDeleteListener[0];
 		private IDocumentStoreListener[] storeListeners = new IDocumentStoreListener[0];
-		private ICredentials credentials = CredentialCache.DefaultNetworkCredentials;
+	    private IDocumentConversionListener[] conversionListeners = new IDocumentConversionListener[0];
+
+        private ICredentials credentials = CredentialCache.DefaultNetworkCredentials;
 
 		/// <summary>
 		/// Gets or sets the credentials.
@@ -218,11 +220,8 @@ namespace Raven.Client.Document
 		/// <param name="credentialsForSession">The credentials for session.</param>
         public IDocumentSession OpenSession(ICredentials credentialsForSession)
         {
-            if (!String.IsNullOrEmpty(DefaultDatabase))
-                return OpenSession(DefaultDatabase, credentialsForSession);
-
             var session = new DocumentSession(this, storeListeners, deleteListeners, DatabaseCommands.With(credentialsForSession));
-			session.Stored += OnSessionStored;
+            AfterSessionCreated(session);
             return session;
         }
 
@@ -253,11 +252,8 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public IDocumentSession OpenSession()
         {
-            if (string.IsNullOrEmpty(DefaultDatabase) == false)
-                return OpenSession(DefaultDatabase);
-
             var session = new DocumentSession(this, storeListeners, deleteListeners, DatabaseCommands);
-			session.Stored += OnSessionStored;
+            AfterSessionCreated(session);
             return session;
         }
 
@@ -267,11 +263,21 @@ namespace Raven.Client.Document
 	    public IDocumentSession OpenSession(string database)
 	    {
             var session = new DocumentSession(this, storeListeners, deleteListeners, DatabaseCommands.ForDatabase(database));
-            session.Stored += OnSessionStored;
+            AfterSessionCreated(session);
             return session;
 	    }
 
-        /// <summary>
+	    private void AfterSessionCreated(DocumentSession session)
+	    {
+	        session.Stored += OnSessionStored;
+	        foreach (var documentConvertionListener in conversionListeners)
+	        {
+	            session.Advanced.OnDocumentConverted += documentConvertionListener.DocumentToEntity;
+	            session.Advanced.OnEntityConverted += documentConvertionListener.EntityToDocument;
+	        }
+	    }
+
+	    /// <summary>
         /// Opens the session for a particular database with the specified credentials
         /// </summary>
 	    public IDocumentSession OpenSession(string database, ICredentials credentialsForSession)
@@ -279,7 +285,7 @@ namespace Raven.Client.Document
             var session = new DocumentSession(this, storeListeners, deleteListeners, DatabaseCommands
                 .ForDatabase(database)
                 .With(credentialsForSession));
-            session.Stored += OnSessionStored;
+            AfterSessionCreated(session); 
             return session;
 	    }
 
@@ -314,7 +320,7 @@ namespace Raven.Client.Document
 
             if(string.IsNullOrEmpty(DefaultDatabase) == false)
             {
-                DatabaseCommands.EnsureDatabaseExists(DefaultDatabase);
+                DatabaseCommands.GetRootDatabase().EnsureDatabaseExists(DefaultDatabase);
             }
 
             return this;
@@ -326,9 +332,21 @@ namespace Raven.Client.Document
 	    protected virtual void InitializeInternal()
 	    {
 	        var replicationInformer = new ReplicationInformer();
-	        databaseCommandsGenerator = () => new ServerClient(Url, Conventions, credentials, replicationInformer);
+	        databaseCommandsGenerator = () =>
+	        {
+	            var serverClient = new ServerClient(Url, Conventions, credentials, replicationInformer);
+                if (string.IsNullOrEmpty(DefaultDatabase))
+                    return serverClient;
+	            return serverClient.ForDatabase(DefaultDatabase);
+	        };
 #if !NET_3_5
-	        asyncDatabaseCommandsGenerator = () => new AsyncServerClient(Url, Conventions, credentials);
+	        asyncDatabaseCommandsGenerator = () =>
+	        {
+	            var asyncServerClient = new AsyncServerClient(Url, Conventions, credentials);
+                if (string.IsNullOrEmpty(DefaultDatabase))
+                    return asyncServerClient;
+                return asyncServerClient.ForDatabase(DefaultDatabase);
+	        };
 #endif
 	    }
 
@@ -342,6 +360,15 @@ namespace Raven.Client.Document
 			deleteListeners = deleteListeners.Concat(new[] {deleteListener}).ToArray();
 			return this;
 		}
+
+	    /// <summary>
+	    /// Registers the convertion listener.
+	    /// </summary>
+	    public IDocumentStore RegisterListener(IDocumentConversionListener conversionListener)
+        {
+            conversionListeners = conversionListeners.Concat(new[] {conversionListener,}).ToArray();
+            return this;
+        }
 
 #if !NET_3_5
 		/// <summary>

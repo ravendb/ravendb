@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Linq;
@@ -7,7 +8,6 @@ using System.Threading.Tasks;
 using System.Transactions;
 using log4net;
 using Newtonsoft.Json.Linq;
-using Raven.Abstractions.Data;
 using Raven.Database.Backup;
 using Raven.Database.Config;
 using Raven.Database.Data;
@@ -16,7 +16,6 @@ using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
-using Raven.Database.LinearQueries;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
@@ -55,15 +54,12 @@ namespace Raven.Database
         [ImportMany]
         public AbstractDynamicCompilationExtension[] Extensions { get; set; }
 
-        public DynamicQueryRunner DynamicQueryRunner
-        {
-            get { return dynamicQueryRunner; }
-        }
-
-        private AppDomain queriesAppDomain;
         private readonly WorkContext workContext;
-        private readonly DynamicQueryRunner dynamicQueryRunner;
-        private readonly SuggestionQueryRunner suggestionQueryRunner;
+
+        /// <summary>
+        /// This is used to hold state associated with this instance by external extensions
+        /// </summary>
+        public ConcurrentDictionary<object, object> ExtensionsState { get; private set; }
 
         private System.Threading.Tasks.Task backgroundWorkerTask;
 
@@ -73,6 +69,7 @@ namespace Raven.Database
 
         public DocumentDatabase(InMemoryRavenConfiguration configuration)
         {
+            ExtensionsState = new ConcurrentDictionary<object, object>();
             Configuration = configuration;
 
             configuration.Container.SatisfyImportsOnce(this);
@@ -82,8 +79,6 @@ namespace Raven.Database
             	IndexUpdateTriggers = IndexUpdateTriggers,
 				ReadTriggers = ReadTriggers
             };
-            dynamicQueryRunner = new DynamicQueryRunner(this);
-            suggestionQueryRunner = new SuggestionQueryRunner(this);
 
             TransactionalStorage = configuration.CreateTransactionalStorage(workContext.HandleWorkNotifications);
             configuration.Container.SatisfyImportsOnce(TransactionalStorage);
@@ -223,7 +218,10 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
         public void Dispose()
         {
             workContext.StopWork();
-            UnloadQueriesAppDomain();
+            foreach (var value in ExtensionsState.Values.OfType<IDisposable>())
+            {
+                value.Dispose();
+            }
             TransactionalStorage.Dispose();
             IndexStorage.Dispose();
             if (backgroundWorkerTask != null)
@@ -253,7 +251,6 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
         }
 
 		private static long sequentialUuidCounter;
-        private QueryRunnerManager queryRunnerManager;
 
         public Guid CreateSequentialUuid()
 		{
@@ -925,69 +922,5 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
         {
             return IndexDefinitionStorage.GetIndexDefinition(index);
         }
-
-        public QueryResults ExecuteQueryUsingLinearSearch(LinearQuery query)
-        {
-            if(queriesAppDomain == null)
-            {
-                lock(this)
-                {
-                    if (queriesAppDomain == null)
-                        InitailizeQueriesAppDomain();
-                }
-            }
-
-            query.PageSize = Math.Min(query.PageSize, Configuration.MaxPageSize);
-
-            RemoteQueryResults result;
-            using (var remoteSingleQueryRunner = queryRunnerManager.CreateSingleQueryRunner(
-                TransactionalStorage.TypeForRunningQueriesInRemoteAppDomain, 
-                TransactionalStorage.StateForRunningQueriesInRemoteAppDomain))
-            {
-                result = remoteSingleQueryRunner.Query(query);
-            }
-
-
-            if(result.QueryCacheSize > 1024)
-            {
-                lock(this)
-                {
-                    if(queryRunnerManager.QueryCacheSize > 1024)
-                        UnloadQueriesAppDomain();
-                }
-            }
-            return new QueryResults
-            {
-                LastScannedResult = result.LastScannedResult,
-                TotalResults = result.TotalResults,
-                Errors = result.Errors,
-                Results = result.Results.Select(JObject.Parse).ToArray()
-            };
-
-        }
-        
-        public QueryResult ExecuteDynamicQuery(string entityName, IndexQuery indexQuery)
-        {
-            return dynamicQueryRunner.ExecuteDynamicQuery(entityName, indexQuery);
-        }
-
-        public SuggestionQueryResult ExecuteSuggestionQuery(string index, SuggestionQuery suggestionQuery)
-        {
-            return suggestionQueryRunner.ExecuteSuggestionQuery(index, suggestionQuery);
-        }
-
-        private void UnloadQueriesAppDomain()
-        {
-            queryRunnerManager = null;
-            if (queriesAppDomain != null)
-                AppDomain.Unload(queriesAppDomain);
-        }
-
-        private void InitailizeQueriesAppDomain()
-        {
-            queriesAppDomain = AppDomain.CreateDomain("Queries", null, AppDomain.CurrentDomain.SetupInformation);
-            queryRunnerManager = (QueryRunnerManager)queriesAppDomain.CreateInstanceAndUnwrap(typeof(QueryRunnerManager).Assembly.FullName, typeof(QueryRunnerManager).FullName);
-        }
-
     }
 }

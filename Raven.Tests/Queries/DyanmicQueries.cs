@@ -3,6 +3,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Data;
+using Raven.Database.Queries;
 using Raven.Tests.Storage;
 using Xunit;
 
@@ -62,16 +63,17 @@ namespace Raven.Tests.Queries
         {
             db.Put("ayende", null, JObject.FromObject(new { Name = "Ayende" }), new JObject(), null);
             db.Put("rahien", null, JObject.FromObject(new { Username = "Ayende" }), new JObject(), null);
-            
+            db.Put("oren", null, JObject.FromObject(new { Name = "Ayende" }), new JObject(), null);
+           
 
             var result = db.ExecuteQueryUsingLinearSearch(new LinearQuery
             {
-                Query = "from doc in docs select new { doc.Name.Length } "
+                Query = "from doc in docs select new { L = 1/doc.Name.Length } "
             });
 
-            Assert.Equal("Doc 'rahien', Error: Cannot perform runtime binding on a null reference", result.Errors[0]);
-            var jObject = result.Results[0];
-            Assert.Equal(@"{""Length"":6,""__document_id"":""ayende""}", jObject.ToString(Formatting.None));
+            Assert.Equal("Doc 'rahien', Error: Operator '/' cannot be applied to operands of type 'int' and 'Raven.Database.Linq.DynamicNullObject'", result.Errors[0]);
+            Assert.Equal(@"{""L"":0,""__document_id"":""ayende""}", result.Results[0].ToString(Formatting.None));
+            Assert.Equal(@"{""L"":0,""__document_id"":""oren""}", result.Results[1].ToString(Formatting.None));
         }
 	}
 }

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Raven.Database.LinearQueries
+namespace Raven.Database.Queries.LinearQueries
 {
     [Serializable]
     public class RemoteQueryResults

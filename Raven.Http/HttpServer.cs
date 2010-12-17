@@ -76,7 +76,7 @@ namespace Raven.Http
         public void Dispose()
         {
             databasesCleanupTimer.Dispose();
-            if (listener != null)
+            if (listener != null && listener.IsListening)
                 listener.Stop();
             foreach (var documentDatabase in ResourcesStoresCache)
             {

@@ -142,6 +142,7 @@
     <Compile Include="Bugs\Includes.cs" />
     <Compile Include="Bugs\IndexingBehavior.cs" />
     <Compile Include="Bugs\IndexingRavenDocuments.cs" />
+    <Compile Include="Bugs\Indexing\DynamicFields.cs" />
     <Compile Include="Bugs\IndexNestedFields.cs" />
     <Compile Include="Bugs\IndexWithTwoProperties.cs" />
     <Compile Include="Bugs\InMemoryOnly.cs" />
@@ -156,12 +157,19 @@
     <Compile Include="Bugs\LukeQuerying.cs" />
     <Compile Include="Bugs\MapReduceThrowsNRE.cs" />
     <Compile Include="Bugs\MetadataUpdates.cs" />
+    <Compile Include="Bugs\Metadata\LastModifiedLocal.cs" />
+    <Compile Include="Bugs\Metadata\LastModifiedRemote.cs" />
+    <Compile Include="Bugs\Metadata\MetadataPropertyInEntity.cs" />
     <Compile Include="Bugs\MultiEntityIndex.cs" />
     <Compile Include="Bugs\MultipleResultsPerDocumentAndPaging.cs" />
-    <Compile Include="Bugs\MultiTenancy.cs" />
+    <Compile Include="Bugs\MultiTenancy\Basic.cs" />
+    <Compile Include="Bugs\MultiTenancy\CreatingIndexes.cs" />
     <Compile Include="Bugs\NameAndId.cs" />
     <Compile Include="Bugs\OperationHeaders.cs" />
+    <Compile Include="Bugs\OrderOfInsertionDoesNotAffectQuerying.cs" />
     <Compile Include="Bugs\OverwriteDocuments.cs" />
+    <Compile Include="Bugs\Queries\TermsLocal.cs" />
+    <Compile Include="Bugs\Queries\TermsRemote.cs" />
     <Compile Include="Bugs\QueryAfterAdHocIndexIsReset.cs" />
     <Compile Include="Bugs\QueryingOnEqualToNull.cs" />
     <Compile Include="Bugs\QueryResultCountsWithProjections.cs" />
@@ -188,6 +196,7 @@
     <Compile Include="Bugs\SortingWithWildcardQuery.cs" />
     <Compile Include="Bugs\SpatialQueries.cs" />
     <Compile Include="Bugs\StalenessWontAffectUnrelatedIndexes.cs" />
+    <Compile Include="Bugs\TransitiveNull.cs" />
     <Compile Include="Bugs\TranslatingLinqQueryUsingNestedId.cs" />
     <Compile Include="Bugs\Translators.cs" />
     <Compile Include="Bugs\User.cs" />

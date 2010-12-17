@@ -4,7 +4,7 @@ using Lucene.Net.Store;
 using Raven.Abstractions.Data;
 using SpellChecker.Net.Search.Spell;
 
-namespace Raven.Database.Impl
+namespace Raven.Database.Queries
 {
     public class SuggestionQueryRunner
     {

@@ -1,5 +1,7 @@
 using System;
 using System.Threading;
+using System.Linq;
+using Raven.Database.Queries;
 
 namespace Raven.Database.Plugins.Builtins
 {
@@ -7,7 +9,11 @@ namespace Raven.Database.Plugins.Builtins
     {
         protected override bool HandleWork()
         {
-            Database.DynamicQueryRunner.CleanupCache();
+            var dynamicQueryRunner = Database.ExtensionsState.Values.OfType<DynamicQueryRunner>().FirstOrDefault();
+            if (dynamicQueryRunner == null)
+                return false;
+
+            dynamicQueryRunner.CleanupCache();
             return false;
         }
 
