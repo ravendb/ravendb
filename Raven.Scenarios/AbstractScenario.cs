@@ -13,8 +13,4 @@ namespace Raven.Scenarios
 				).Execute();
 		}
 	}
-
-	public class AddDocument_AddIndex_QueryIndexForDoc : AbstractScenario
-	{
-	}
 }

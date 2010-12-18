@@ -48,9 +48,6 @@
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Runtime.Caching">
-      <HintPath>..\..\..\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.0\System.Runtime.Caching.dll</HintPath>
-    </Reference>
     <Reference Include="System.Transactions" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -98,6 +95,7 @@
     <Compile Include="Exceptions\NonUniqueObjectException.cs" />
     <Compile Include="Exceptions\ReadVetoException.cs" />
     <Compile Include="Extensions\MultiTenancyExtensions.cs" />
+    <Compile Include="FromMono\System.Configuration\NullableStringValidator.cs" />
     <Compile Include="FromMono\System.Runtime.Caching.Configuration\CachingSectionGroup.cs" />
     <Compile Include="FromMono\System.Runtime.Caching.Configuration\MemoryCacheElement.cs" />
     <Compile Include="FromMono\System.Runtime.Caching.Configuration\MemoryCacheSection.cs" />
@@ -130,7 +128,6 @@
     <Compile Include="FromMono\System.Runtime.Caching\MemoryCachePerformanceCounters.cs" />
     <Compile Include="FromMono\System.Runtime.Caching\ObjectCache.cs" />
     <Compile Include="FromMono\System.Runtime.Caching\OnChangedCallback.cs" />
-    <Compile Include="FromMono\System.Runtime.Caching\SqlChangeMonitor.cs" />
     <Compile Include="IAdvancedDocumentSessionOperations.cs" />
     <Compile Include="IAsyncAdvancedSessionOperations.cs" />
     <Compile Include="IAsyncDocumentSession.cs" />
