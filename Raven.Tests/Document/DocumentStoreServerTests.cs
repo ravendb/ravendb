@@ -20,12 +20,12 @@ namespace Raven.Tests.Document
 	public class DocumentStoreServerTests : RemoteClientTest, IDisposable
 	{
 		private readonly string path;
-        private readonly int port;
+		private readonly int port;
 
 		public DocumentStoreServerTests()
 		{
-            port = 8080;
-            path = GetPath("TestDb");
+			port = 8080;
+			path = GetPath("TestDb");
 			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8080);
 		}
 
@@ -33,11 +33,11 @@ namespace Raven.Tests.Document
 
 		public void Dispose()
 		{
-            IOExtensions.DeleteDirectory(path);
+			IOExtensions.DeleteDirectory(path);
 		}
 
 		#endregion
-            
+			
 		[Fact]
 		public void Should_insert_into_db_and_set_id()
 		{
@@ -81,7 +81,7 @@ namespace Raven.Tests.Document
 					Indexes = { { x => x.Name, FieldIndexing.NotAnalyzed } }
 				});
 				var indexDefinition = documentStore.DatabaseCommands.GetIndex("Companies/Name");
-                Assert.Equal(@"docs.Companies
+				Assert.Equal(@"docs.Companies
 	.Select(c => new {Name = c.Name})", indexDefinition.Map);
 				Assert.Equal(FieldIndexing.NotAnalyzed, indexDefinition.Indexes["Name"]);
 			}
@@ -101,7 +101,7 @@ namespace Raven.Tests.Document
 					session.Store(entity);
 					session.SaveChanges();
 
-                    session.Advanced.LuceneQuery<Company>().WaitForNonStaleResults().ToArray();// wait for the index to settle down
+					session.Advanced.LuceneQuery<Company>().WaitForNonStaleResults().ToArray();// wait for the index to settle down
 				}
 
 				documentStore.DatabaseCommands.DeleteByIndex("Raven/DocumentsByEntityName", new IndexQuery
@@ -111,7 +111,7 @@ namespace Raven.Tests.Document
 
 				using (var session = documentStore.OpenSession())
 				{
-                    Assert.Empty(session.Advanced.LuceneQuery<Company>().WaitForNonStaleResults().ToArray());
+					Assert.Empty(session.Advanced.LuceneQuery<Company>().WaitForNonStaleResults().ToArray());
 				}
 			}
 		}
@@ -137,14 +137,14 @@ namespace Raven.Tests.Document
 					session.Store(new Company { Name = "B", Phone = 4 });
 					session.SaveChanges();
 
-                    session.Advanced.LuceneQuery<Company>("CompaniesByName").WaitForNonStaleResults().ToArray();// wait for the index to settle down
+					session.Advanced.LuceneQuery<Company>("CompaniesByName").WaitForNonStaleResults().ToArray();// wait for the index to settle down
 				}
 
 				using (var session = documentStore.OpenSession())
 				{
 					var q = from company in session.Query<Company>("CompaniesByName")
-					        orderby company.Name descending 
-					        select company;
+							orderby company.Name descending 
+							select company;
 
 					var companies = q.ToArray();
 					Assert.Equal("B", companies[0].Name);
@@ -186,89 +186,89 @@ namespace Raven.Tests.Document
 		}
 
 		
-       [Fact]
-       public void Can_create_index_with_decimal_as_firstfield()
-       {
-           using (var server = GetNewServer(port, path))
-           {
-               var documentStore = new DocumentStore { Url = "http://localhost:" + port };
-               documentStore.Initialize();
-               var session = documentStore.OpenSession();
-               var company = new Company { Name = "Company 1", Phone= 5, AccountsReceivable = (decimal)3904.39 };
-               session.Store(company);
-               session.SaveChanges();
+	   [Fact]
+	   public void Can_create_index_with_decimal_as_firstfield()
+	   {
+		   using (var server = GetNewServer(port, path))
+		   {
+			   var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+			   documentStore.Initialize();
+			   var session = documentStore.OpenSession();
+			   var company = new Company { Name = "Company 1", Phone= 5, AccountsReceivable = (decimal)3904.39 };
+			   session.Store(company);
+			   session.SaveChanges();
 
 			   documentStore.DatabaseCommands.PutIndex("company_by_name",
-                                                       new IndexDefinition
-                                                       {
-                                                           Map = "from doc in docs where doc.Name != null select new { doc.AccountsReceivable, doc.Name}",
-                                                           Stores = { { "Name", FieldStorage.Yes }, { "AccountsReceivable", FieldStorage.Yes } }
-                                                       });
+													   new IndexDefinition
+													   {
+														   Map = "from doc in docs where doc.Name != null select new { doc.AccountsReceivable, doc.Name}",
+														   Stores = { { "Name", FieldStorage.Yes }, { "AccountsReceivable", FieldStorage.Yes } }
+													   });
 
-               var q = session.Query<Company>("company_by_name")
-                   .Customize(query => query.WaitForNonStaleResults(TimeSpan.FromHours(1)));
-               var single = q.ToList().SingleOrDefault();
+			   var q = session.Query<Company>("company_by_name")
+				   .Customize(query => query.WaitForNonStaleResults(TimeSpan.FromHours(1)));
+			   var single = q.ToList().SingleOrDefault();
 
-               Assert.NotNull(single);
-               Assert.Equal("Company 1", single.Name);
-               Assert.Equal((decimal)3904.39, single.AccountsReceivable);
-           }
-       }
+			   Assert.NotNull(single);
+			   Assert.Equal("Company 1", single.Name);
+			   Assert.Equal((decimal)3904.39, single.AccountsReceivable);
+		   }
+	   }
 
 		[Fact] 
-        public void  Can_select_from_index_using_linq_method_chain_using_decimal_and_greater_than_or_equal() 
-        { 
-            using (var server = GetNewServer(port, path)) 
-            { 
-                var documentStore = new DocumentStore { Url = "http://localhost:" + port }; 
-                documentStore.Initialize(); 
-                var session = documentStore.OpenSession(); 
-                var company = new Company { Name = "Company 1", Phone = 5, AccountsReceivable = (decimal)3904.39 }; 
-                session.Store(company); 
-                session.SaveChanges(); 
+		public void  Can_select_from_index_using_linq_method_chain_using_decimal_and_greater_than_or_equal() 
+		{ 
+			using (var server = GetNewServer(port, path)) 
+			{ 
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port }; 
+				documentStore.Initialize(); 
+				var session = documentStore.OpenSession(); 
+				var company = new Company { Name = "Company 1", Phone = 5, AccountsReceivable = (decimal)3904.39 }; 
+				session.Store(company); 
+				session.SaveChanges(); 
 				documentStore.DatabaseCommands.PutIndex("company_by_name", new 
 														IndexDefinition 
-                                                        { 
-                                                            Map = "from doc in docs where doc.Name != null select new { doc.Name, doc.AccountsReceivable}", 
-                                                            Stores = { { "Name", FieldStorage.Yes }, { "AccountsReceivable", FieldStorage.Yes } } 
-                                                        }); 
-                var q = session.Query<Company>("company_by_name") 
-                    .Customize(query => query.WaitForNonStaleResults(TimeSpan.FromHours(1))) 
-                    .Where(x => x.AccountsReceivable > 1); 
-                var single = q.ToList().SingleOrDefault(); 
-                Assert.NotNull(single); 
-                Assert.Equal("Company 1", single.Name); 
-                Assert.Equal((decimal)3904.39, single.AccountsReceivable); 
-            } 
-        } 
+														{ 
+															Map = "from doc in docs where doc.Name != null select new { doc.Name, doc.AccountsReceivable}", 
+															Stores = { { "Name", FieldStorage.Yes }, { "AccountsReceivable", FieldStorage.Yes } } 
+														}); 
+				var q = session.Query<Company>("company_by_name") 
+					.Customize(query => query.WaitForNonStaleResults(TimeSpan.FromHours(1))) 
+					.Where(x => x.AccountsReceivable > 1); 
+				var single = q.ToList().SingleOrDefault(); 
+				Assert.NotNull(single); 
+				Assert.Equal("Company 1", single.Name); 
+				Assert.Equal((decimal)3904.39, single.AccountsReceivable); 
+			} 
+		} 
 
-       [Fact]
-       public void Can_create_index_with_decimal_as_lastfield()
-       {
-           using (var server = GetNewServer(port, path))
-           {
-               var documentStore = new DocumentStore { Url = "http://localhost:" + port };
-               documentStore.Initialize();
-               var session = documentStore.OpenSession();
-               var company = new Company { Name = "Company 1", Phone= 5, AccountsReceivable = (decimal)3904.39 };
-               session.Store(company);
-               session.SaveChanges();
+	   [Fact]
+	   public void Can_create_index_with_decimal_as_lastfield()
+	   {
+		   using (var server = GetNewServer(port, path))
+		   {
+			   var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+			   documentStore.Initialize();
+			   var session = documentStore.OpenSession();
+			   var company = new Company { Name = "Company 1", Phone= 5, AccountsReceivable = (decimal)3904.39 };
+			   session.Store(company);
+			   session.SaveChanges();
 			   
 			   documentStore.DatabaseCommands.PutIndex("company_by_name",new IndexDefinition
-                                                       {
-                                                           Map = "from doc in docs where doc.Name != null select new {  doc.Name, doc.AccountsReceivable }",
-                                                           Stores = { { "Name", FieldStorage.Yes }, { "AccountsReceivable", FieldStorage.Yes } }
-                                                       });
+													   {
+														   Map = "from doc in docs where doc.Name != null select new {  doc.Name, doc.AccountsReceivable }",
+														   Stores = { { "Name", FieldStorage.Yes }, { "AccountsReceivable", FieldStorage.Yes } }
+													   });
 
-               var q = session.Query<Company>("company_by_name")
-                   .Customize(query => query.WaitForNonStaleResults(TimeSpan.FromHours(1)));
-               var single = q.ToList().SingleOrDefault();
+			   var q = session.Query<Company>("company_by_name")
+				   .Customize(query => query.WaitForNonStaleResults(TimeSpan.FromHours(1)));
+			   var single = q.ToList().SingleOrDefault();
 
-               Assert.NotNull(single);
-               Assert.Equal("Company 1", single.Name);
-               Assert.Equal((decimal)3904.39, single.AccountsReceivable);
-           }
-       }
+			   Assert.NotNull(single);
+			   Assert.Equal("Company 1", single.Name);
+			   Assert.Equal((decimal)3904.39, single.AccountsReceivable);
+		   }
+	   }
 
 		[Fact]
 		public void Can_update_by_index()
@@ -284,7 +284,7 @@ namespace Raven.Tests.Document
 					session.Store(entity);
 					session.SaveChanges();
 
-                    session.Advanced.LuceneQuery<Company>().WaitForNonStaleResults().ToArray();// wait for the index to settle down
+					session.Advanced.LuceneQuery<Company>().WaitForNonStaleResults().ToArray();// wait for the index to settle down
 				}
 
 				documentStore.DatabaseCommands.UpdateByIndex("Raven/DocumentsByEntityName", new IndexQuery
@@ -308,21 +308,21 @@ namespace Raven.Tests.Document
 		}
 
 
-        [Fact]
-        public void Can_specify_cutoff_using_server()
-        {
-            using (var server = GetNewServer(port, path))
-            {
-                var documentStore = new DocumentStore { Url = "http://localhost:" + port };
-                documentStore.Initialize();
+		[Fact]
+		public void Can_specify_cutoff_using_server()
+		{
+			using (var server = GetNewServer(port, path))
+			{
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+				documentStore.Initialize();
 
-                documentStore.DatabaseCommands.Query("Raven/DocumentsByEntityName", new IndexQuery
-                {
-                    PageSize = 10,
-                    Cutoff = DateTime.Now.AddHours(-1)
-                }, null);
-            }
-        }
+				documentStore.DatabaseCommands.Query("Raven/DocumentsByEntityName", new IndexQuery
+				{
+					PageSize = 10,
+					Cutoff = DateTime.Now.AddHours(-1)
+				}, null);
+			}
+		}
 
 		[Fact]
 		public void Can_read_projected_dates()
@@ -351,7 +351,7 @@ namespace Raven.Tests.Document
 
 				using (var s = documentStore.OpenSession())
 				{
-                    var query = s.Advanced.LuceneQuery<object>("my_index")
+					var query = s.Advanced.LuceneQuery<object>("my_index")
 						.SelectFields<DateHolder>("Date")
 						.WaitForNonStaleResults();
 					var dateHolder = query.ToArray().First();
@@ -366,7 +366,7 @@ namespace Raven.Tests.Document
 			public DateTime Date { get; set; }
 		}
 
-        [Fact]
+		[Fact]
 		public void Can_query_using_special_characters()
 		{
 			using (var server = GetNewServer(port, path))
@@ -394,7 +394,7 @@ namespace Raven.Tests.Document
 
 				using (var s = documentStore.OpenSession())
 				{
-                    var query = s.Advanced.LuceneQuery<object>("my_index")
+					var query = s.Advanced.LuceneQuery<object>("my_index")
 						.Where("Type:Feats AND Language:Français")
 						.WaitForNonStaleResults();
 					query.ToArray();
@@ -432,7 +432,7 @@ namespace Raven.Tests.Document
 
 				using (var s = documentStore.OpenSession())
 				{
-                    var query = s.Advanced.LuceneQuery<object>("my_index")
+					var query = s.Advanced.LuceneQuery<object>("my_index")
 						.Where("Type:Feats AND Language:Français")
 						.SelectFields<object>("Value")
 						.WaitForNonStaleResults();
@@ -481,29 +481,29 @@ namespace Raven.Tests.Document
 			}
 		}
 
-        [Fact]
-        public void Can_store_and_get_array_metadata()
-        {
-            using (var server = GetNewServer(port, path))
-            {
-                var documentStore = new DocumentStore { Url = "http://localhost:" + port };
-                documentStore.Initialize();
+		[Fact]
+		public void Can_store_and_get_array_metadata()
+		{
+			using (var server = GetNewServer(port, path))
+			{
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+				documentStore.Initialize();
 
-                var session = documentStore.OpenSession();
-                session.Advanced.OnEntityConverted += (entity, document, metadata) =>
-                {
+				var session = documentStore.OpenSession();
+				session.Advanced.OnEntityConverted += (entity, document, metadata) =>
+				{
 					metadata["Raven-Allowed-Users"] = new JArray("ayende", "oren", "rob");
-                };
+				};
 
-                var company = new Company { Name = "Company" };
-                session.Store(company);
-                session.SaveChanges();
+				var company = new Company { Name = "Company" };
+				session.Store(company);
+				session.SaveChanges();
 
-                var metadataFromServer = session.Advanced.GetMetadataFor(session.Load<Company>(company.Id));
+				var metadataFromServer = session.Advanced.GetMetadataFor(session.Load<Company>(company.Id));
 				var users = metadataFromServer["Raven-Allowed-Users"].OfType<JValue>().Select(x => (string)x.Value).ToArray();
-                Assert.Equal(new[]{"ayende","oren","rob"}, users);
-            }
-        }
+				Assert.Equal(new[]{"ayende","oren","rob"}, users);
+			}
+		}
 
 		[Fact]
 		public void Can_store_using_batch()
@@ -546,111 +546,111 @@ namespace Raven.Tests.Document
 		}
 
 
-        [Fact]
-        public void Can_get_two_documents_in_one_call()
-        {
-            using (var server = GetNewServer(port, path))
-            {
+		[Fact]
+		public void Can_get_two_documents_in_one_call()
+		{
+			using (var server = GetNewServer(port, path))
+			{
 				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
 				documentStore.Initialize();
 
-                var session = documentStore.OpenSession();
-                session.Store(new Company { Name = "Company A", Id = "1"});
-                session.Store(new Company { Name = "Company B", Id = "2" });
-                session.SaveChanges();
+				var session = documentStore.OpenSession();
+				session.Store(new Company { Name = "Company A", Id = "1"});
+				session.Store(new Company { Name = "Company B", Id = "2" });
+				session.SaveChanges();
 
 
-                var session2 = documentStore.OpenSession();
+				var session2 = documentStore.OpenSession();
 
-                var companies = session2.Load<Company>("1","2");
-                Assert.Equal(2, companies.Length);
-                Assert.Equal("Company A", companies[0].Name);
-                Assert.Equal("Company B", companies[1].Name);
-            }
-        }
+				var companies = session2.Load<Company>("1","2");
+				Assert.Equal(2, companies.Length);
+				Assert.Equal("Company A", companies[0].Name);
+				Assert.Equal("Company B", companies[1].Name);
+			}
+		}
 
 
-        [Fact]
-        public void Can_delete_document()
-        {
-            using (var server = GetNewServer(port, path))
-            {
+		[Fact]
+		public void Can_delete_document()
+		{
+			using (var server = GetNewServer(port, path))
+			{
 				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
 				documentStore.Initialize();
 
-                var session = documentStore.OpenSession();
-                var entity = new Company { Name = "Company" };
-                session.Store(entity);
-                session.SaveChanges();
+				var session = documentStore.OpenSession();
+				var entity = new Company { Name = "Company" };
+				session.Store(entity);
+				session.SaveChanges();
 
-                using(var session2 = documentStore.OpenSession())
-                    Assert.NotNull(session2.Load<Company>(entity.Id));
+				using(var session2 = documentStore.OpenSession())
+					Assert.NotNull(session2.Load<Company>(entity.Id));
 
-                session.Delete(entity);
-                session.SaveChanges();
+				session.Delete(entity);
+				session.SaveChanges();
 
-                using (var session3 = documentStore.OpenSession())
-                    Assert.Null(session3.Load<Company>(entity.Id));
-            }
-        }
+				using (var session3 = documentStore.OpenSession())
+					Assert.Null(session3.Load<Company>(entity.Id));
+			}
+		}
 
-        [Fact]
-        public void Can_project_from_index()
-        {
-            using (var server = GetNewServer(port, path))
-            {
+		[Fact]
+		public void Can_project_from_index()
+		{
+			using (var server = GetNewServer(port, path))
+			{
 				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
 				documentStore.Initialize();
-                var session = documentStore.OpenSession();
-                var company = new Company { Name = "Company 1", Phone = 5 };
-                session.Store(company);
-                session.SaveChanges();
+				var session = documentStore.OpenSession();
+				var company = new Company { Name = "Company 1", Phone = 5 };
+				session.Store(company);
+				session.SaveChanges();
 
-                documentStore.DatabaseCommands.PutIndex("company_by_name",
-                                                        new IndexDefinition
-                                                        {
-                                                            Map = "from doc in docs where doc.Name != null select new { doc.Name, doc.Phone}",
+				documentStore.DatabaseCommands.PutIndex("company_by_name",
+														new IndexDefinition
+														{
+															Map = "from doc in docs where doc.Name != null select new { doc.Name, doc.Phone}",
 															Stores = { { "Name", FieldStorage.Yes }, { "Phone", FieldStorage.Yes } },
-                                                            Indexes = {{"Name", FieldIndexing.NotAnalyzed}}
-                                                        });
+															Indexes = {{"Name", FieldIndexing.NotAnalyzed}}
+														});
 
-            	var q = session
-                    .Advanced.LuceneQuery<Company>("company_by_name")
+				var q = session
+					.Advanced.LuceneQuery<Company>("company_by_name")
 					.SelectFields<Company>("Name","Phone")
-            		.WaitForNonStaleResults();
-                var single = q.Single();
-                Assert.Equal("Company 1", single.Name);
-                Assert.Equal(5, single.Phone);
-            }
-        }
+					.WaitForNonStaleResults();
+				var single = q.Single();
+				Assert.Equal("Company 1", single.Name);
+				Assert.Equal(5, single.Phone);
+			}
+		}
 
-        [Fact]
-        public void Can_select_from_index_using_linq_method_chain()
-        {
-            using (var server = GetNewServer(port, path))
-            {
-                var documentStore = new DocumentStore { Url = "http://localhost:" + port };
-                documentStore.Initialize();
-                var session = documentStore.OpenSession();
-                var company = new Company { Name = "Company 1", Phone = 5 };
-                session.Store(company);
-                session.SaveChanges();
+		[Fact]
+		public void Can_select_from_index_using_linq_method_chain()
+		{
+			using (var server = GetNewServer(port, path))
+			{
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+				documentStore.Initialize();
+				var session = documentStore.OpenSession();
+				var company = new Company { Name = "Company 1", Phone = 5 };
+				session.Store(company);
+				session.SaveChanges();
 
-                documentStore.DatabaseCommands.PutIndex("company_by_name",
-                                                        new IndexDefinition
-                                                        {
-                                                            Map = "from doc in docs where doc.Name != null select new { doc.Name, doc.Phone}",
-                                                            Stores = { { "Name", FieldStorage.Yes }, { "Phone", FieldStorage.Yes } }
-                                                        });
+				documentStore.DatabaseCommands.PutIndex("company_by_name",
+														new IndexDefinition
+														{
+															Map = "from doc in docs where doc.Name != null select new { doc.Name, doc.Phone}",
+															Stores = { { "Name", FieldStorage.Yes }, { "Phone", FieldStorage.Yes } }
+														});
 
-                var q = session.Query<Company>("company_by_name")
-                    .Customize(query => query.WaitForNonStaleResults())
-                    .Where(x => x.Name.Contains(company.Name));
-                var single = q.ToArray()[0];
-                Assert.Equal("Company 1", single.Name);
-                Assert.Equal(5, single.Phone);
-            }
-        }
+				var q = session.Query<Company>("company_by_name")
+					.Customize(query => query.WaitForNonStaleResults())
+					.Where(x => x.Name.Contains(company.Name));
+				var single = q.ToArray()[0];
+				Assert.Equal("Company 1", single.Name);
+				Assert.Equal(5, single.Phone);
+			}
+		}
 
 		[Fact]
 		public void Can_select_from_index_using_linq_method_chain_with_variable()
@@ -765,87 +765,87 @@ namespace Raven.Tests.Document
 			}
 		}
 
-        [Fact]
-        public void Optimistic_concurrency()
-        {
-            using (var server = GetNewServer(port, path))
-            {
+		[Fact]
+		public void Optimistic_concurrency()
+		{
+			using (var server = GetNewServer(port, path))
+			{
 				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
 				documentStore.Initialize();
 
-                var session = documentStore.OpenSession();
-                session.Advanced.UseOptimisticConcurrency = true;
-                var company = new Company { Name = "Company 1" };
-                session.Store(company);
-                session.SaveChanges();
+				var session = documentStore.OpenSession();
+				session.Advanced.UseOptimisticConcurrency = true;
+				var company = new Company { Name = "Company 1" };
+				session.Store(company);
+				session.SaveChanges();
 
-                using (var session2 = documentStore.OpenSession())
-                {
-                    var company2 = session2.Load<Company>(company.Id);
-                    company2.Name = "foo";
-                    session2.SaveChanges();
-                }
+				using (var session2 = documentStore.OpenSession())
+				{
+					var company2 = session2.Load<Company>(company.Id);
+					company2.Name = "foo";
+					session2.SaveChanges();
+				}
 
-                company.Name = "Company 2";
-                Assert.Throws<ConcurrencyException>(() => session.SaveChanges());
-            }
-        }
+				company.Name = "Company 2";
+				Assert.Throws<ConcurrencyException>(() => session.SaveChanges());
+			}
+		}
 
-        [Fact]
-        public void Can_insert_with_transaction()
-        {
-            using (var server = GetNewServer(port, path))
-            {
-                const string id = "Company/id";
-                var documentStore = new DocumentStore { Url = "http://localhost:" + port };
-                documentStore.Initialize();
+		[Fact]
+		public void Can_insert_with_transaction()
+		{
+			using (var server = GetNewServer(port, path))
+			{
+				const string id = "Company/id";
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+				documentStore.Initialize();
 
-                using (var session = documentStore.OpenSession())
-                {
-                    Assert.Null(session.Load<Company>(id));
-                    using (var tx = new TransactionScope())
-                    {
-                        var company = new Company { Id = id, Name = "Company 1" };
-                        session.Store(company);
+				using (var session = documentStore.OpenSession())
+				{
+					Assert.Null(session.Load<Company>(id));
+					using (var tx = new TransactionScope())
+					{
+						var company = new Company { Id = id, Name = "Company 1" };
+						session.Store(company);
 
-                        session.SaveChanges();
+						session.SaveChanges();
 
-                        tx.Complete();
-                    }
-                    Assert.NotNull(session.Load<Company>(id));
+						tx.Complete();
+					}
+					Assert.NotNull(session.Load<Company>(id));
 
-                }
-            }
-        }
+				}
+			}
+		}
 
-        [Fact]
-        public void Can_rollback_transaction_on_insert()
-        {
-            using (var server = GetNewServer(port, path))
-            {
-                string id;
-                var documentStore = new DocumentStore { Url = "http://localhost:" + port };
-                documentStore.Initialize();
+		[Fact]
+		public void Can_rollback_transaction_on_insert()
+		{
+			using (var server = GetNewServer(port, path))
+			{
+				string id;
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+				documentStore.Initialize();
 
-                using (var session = documentStore.OpenSession())
-                {
-                    using (var tx = new TransactionScope())
-                    {
-                        var company = new Company { Name = "Company 1" };
-                        session.Store(company);
+				using (var session = documentStore.OpenSession())
+				{
+					using (var tx = new TransactionScope())
+					{
+						var company = new Company { Name = "Company 1" };
+						session.Store(company);
 
-                        session.SaveChanges();
+						session.SaveChanges();
 
-                        id = company.Id;
-                    }
-                }
-                using (var session2 = documentStore.OpenSession())
-                {
+						id = company.Id;
+					}
+				}
+				using (var session2 = documentStore.OpenSession())
+				{
 
-                    Assert.Null(session2.Load<Company>(id));
-                }
-            }
-        }
+					Assert.Null(session2.Load<Company>(id));
+				}
+			}
+		}
 
 		[Fact]
 		public void Should_update_stored_entity()
@@ -909,7 +909,7 @@ namespace Raven.Tests.Document
 				session1.SaveChanges();
 
 				var session2 = documentStore.OpenSession();
-                var companyFound = session2.Advanced.LuceneQuery<Company>()
+				var companyFound = session2.Advanced.LuceneQuery<Company>()
 					.WaitForNonStaleResults()
 					.ToArray();
 
@@ -932,7 +932,7 @@ namespace Raven.Tests.Document
 				session1.SaveChanges();
 
 				var session2 = documentStore.OpenSession();
-                var companyFound = session2.Advanced.LuceneQuery<Company>()
+				var companyFound = session2.Advanced.LuceneQuery<Company>()
 					.WaitForNonStaleResults()
 					.ToArray();
 
@@ -967,16 +967,16 @@ namespace Raven.Tests.Document
 				documentStore.DatabaseCommands.PutIndex("company_by_name",
 														new IndexDefinition
 														{
-                                                            Map = "from doc in docs where doc.Name != null select new { doc.Name, doc.Phone}",
+															Map = "from doc in docs where doc.Name != null select new { doc.Name, doc.Phone}",
 															Indexes = { { "Phone", FieldIndexing.Analyzed } }
 														});
 
 				// Wait until the index is built
-                session.Advanced.LuceneQuery<Company>("company_by_name")
+				session.Advanced.LuceneQuery<Company>("company_by_name")
 					.WaitForNonStaleResults()
 					.ToArray();
 
-                var companies = session.Advanced.LuceneQuery<Company>("company_by_name")
+				var companies = session.Advanced.LuceneQuery<Company>("company_by_name")
 					.OrderBy("Phone")
 					.WaitForNonStaleResults()
 					.ToArray();
@@ -1014,14 +1014,14 @@ namespace Raven.Tests.Document
 				documentStore.DatabaseCommands.PutIndex("eventsByLatLng", indexDefinition);
 
 				// Wait until the index is built
-                session.Advanced.LuceneQuery<Event>("eventsByLatLng")
+				session.Advanced.LuceneQuery<Event>("eventsByLatLng")
 					.WaitForNonStaleResults()
 					.ToArray();
 
 				const double lat = 38.96939, lng = -77.386398;
 				const double radius = 6.0;
 
-                var events = session.Advanced.LuceneQuery<Event>("eventsByLatLng")
+				var events = session.Advanced.LuceneQuery<Event>("eventsByLatLng")
 					.WhereEquals("Tag", "Event")
 					.WithinRadiusOf(radius, lat, lng)
 					.SortByDistance()
@@ -1066,7 +1066,7 @@ namespace Raven.Tests.Document
 
 					session.SaveChanges();
 
-                    LinqIndexesFromClient.User single = session.Advanced.LuceneQuery<LinqIndexesFromClient.User>("UsersByLocation")
+					LinqIndexesFromClient.User single = session.Advanced.LuceneQuery<LinqIndexesFromClient.User>("UsersByLocation")
 						.Where("Name:Yael")
 						.WaitForNonStaleResults()
 						.Single();
@@ -1091,7 +1091,7 @@ namespace Raven.Tests.Document
 					Reduce = results => from loc in results 
 										group loc by loc.Location into g
 										select new { Location = g.Key, Count =  g.Sum(x=>x.Count)},
-                    Indexes = {{x=>x.Location, FieldIndexing.NotAnalyzed}}
+					Indexes = {{x=>x.Location, FieldIndexing.NotAnalyzed}}
 				});
 
 				using (var session = documentStore.OpenSession())
@@ -1104,7 +1104,7 @@ namespace Raven.Tests.Document
 
 					session.SaveChanges();
 
-                    LinqIndexesFromClient.LocationCount single = session.Advanced.LuceneQuery<LinqIndexesFromClient.LocationCount>("UsersCountByLocation")
+					LinqIndexesFromClient.LocationCount single = session.Advanced.LuceneQuery<LinqIndexesFromClient.LocationCount>("UsersCountByLocation")
 						.Where("Location:\"Tel Aviv\"")
 						.WaitForNonStaleResults()
 						.Single();
@@ -1128,8 +1128,8 @@ namespace Raven.Tests.Document
 								   select new { user.Location, user.Age },
 					Reduce = results => from loc in results
 										group loc by loc.Location into g
-                                        select new { Location = g.Key, Age = g.Average(x => x.Age) },
-                    Indexes = { { x => x.Location, FieldIndexing.NotAnalyzed } }
+										select new { Location = g.Key, Age = g.Average(x => x.Age) },
+					Indexes = { { x => x.Location, FieldIndexing.NotAnalyzed } }
 				});
 
 				using (var session = documentStore.OpenSession())
@@ -1150,7 +1150,7 @@ namespace Raven.Tests.Document
 
 					session.SaveChanges();
 
-                    LinqIndexesFromClient.LocationAge single = session.Advanced.LuceneQuery<LinqIndexesFromClient.LocationAge>("AvgAgeByLocation")
+					LinqIndexesFromClient.LocationAge single = session.Advanced.LuceneQuery<LinqIndexesFromClient.LocationAge>("AvgAgeByLocation")
 						.Where("Location:\"Tel Aviv\"")
 						.WaitForNonStaleResults()
 						.Single();
@@ -1161,49 +1161,49 @@ namespace Raven.Tests.Document
 			}
 		}
 
-        [Fact]
-        public void Can_get_correct_maximum_from_map_reduce_index() {
-            using (var server = GetNewServer(port, path))
+		[Fact]
+		public void Can_get_correct_maximum_from_map_reduce_index() {
+			using (var server = GetNewServer(port, path))
 			{
-                var documentStore = new DocumentStore { Url = "http://localhost:" + port };
-                documentStore.Initialize();
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+				documentStore.Initialize();
 
-                documentStore.DatabaseCommands.PutIndex("MaxAge", new IndexDefinition<LinqIndexesFromClient.User, LinqIndexesFromClient.LocationAge> {
-                    Map = users => from user in users
-                                   select new { user.Age },
+				documentStore.DatabaseCommands.PutIndex("MaxAge", new IndexDefinition<LinqIndexesFromClient.User, LinqIndexesFromClient.LocationAge> {
+					Map = users => from user in users
+								   select new { user.Age },
 					Indexes = {{x=>x.Age, FieldIndexing.Analyzed}},
 					Stores = {{x=>x.Age, FieldStorage.Yes}}
-                });
+				});
 
-                using (var session = documentStore.OpenSession()) {
+				using (var session = documentStore.OpenSession()) {
 
-                    session.Store(new LinqIndexesFromClient.User {
-                        Age = 27,
-                        Name = "Foo"
-                    });
+					session.Store(new LinqIndexesFromClient.User {
+						Age = 27,
+						Name = "Foo"
+					});
 
-                    session.Store(new LinqIndexesFromClient.User {
-                        Age = 33,
-                        Name = "Bar"
-                    });
+					session.Store(new LinqIndexesFromClient.User {
+						Age = 33,
+						Name = "Bar"
+					});
 
-                    session.Store(new LinqIndexesFromClient.User {
-                        Age = 29,
-                        Name = "Bar"
-                    });
+					session.Store(new LinqIndexesFromClient.User {
+						Age = 29,
+						Name = "Bar"
+					});
 
-                    session.SaveChanges();
+					session.SaveChanges();
 
-                    var user = session.Advanced.LuceneQuery<LinqIndexesFromClient.User>("MaxAge")
+					var user = session.Advanced.LuceneQuery<LinqIndexesFromClient.User>("MaxAge")
 						.OrderBy("-Age")
 						.Take(1)
-                        .WaitForNonStaleResults()
-                        .Single();
+						.WaitForNonStaleResults()
+						.Single();
 
-                    Assert.Equal(33, user.Age);
-                }
-            }
-        }
+					Assert.Equal(33, user.Age);
+				}
+			}
+		}
 
 		[Fact]
 		public void Using_attachments()
@@ -1232,25 +1232,25 @@ namespace Raven.Tests.Document
 			}
 		}
 
-        [Fact]
-        //Fix for issue at http://groups.google.com/group/ravendb/browse_thread/thread/78f1ca6dbdd07e2b
-        //The issue only shows up in Server/Client mode, not in Embedded mode!!!
-        public void Using_attachments_can_properly_set_WebRequest_Headers()
-        {
-            using (var server = GetNewServer(port, path) )
-            {
-                var documentStore = new DocumentStore { Url = "http://localhost:" + port };
-                documentStore.Initialize();
+		[Fact]
+		//Fix for issue at http://groups.google.com/group/ravendb/browse_thread/thread/78f1ca6dbdd07e2b
+		//The issue only shows up in Server/Client mode, not in Embedded mode!!!
+		public void Using_attachments_can_properly_set_WebRequest_Headers()
+		{
+			using (var server = GetNewServer(port, path) )
+			{
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+				documentStore.Initialize();
 
-                var key = string.Format("{0}-{1}", "test", DateTime.Now.ToFileTimeUtc());
-                var metadata = new JObject {
-                                    { "owner", 5 },
-                                    { "Content-Type", "text/plain" },
-                                    { "filename", "test.txt" },
-                                    { "Content-Length", 100 },
-                                };                
-                Assert.DoesNotThrow(() => documentStore.DatabaseCommands.PutAttachment(key, null, new byte[] { 0, 1, 2 }, metadata));
-            }
-        }
+				var key = string.Format("{0}-{1}", "test", DateTime.Now.ToFileTimeUtc());
+				var metadata = new JObject {
+									{ "owner", 5 },
+									{ "Content-Type", "text/plain" },
+									{ "filename", "test.txt" },
+									{ "Content-Length", 100 },
+								};                
+				Assert.DoesNotThrow(() => documentStore.DatabaseCommands.PutAttachment(key, null, new byte[] { 0, 1, 2 }, metadata));
+			}
+		}
 	}    
 }

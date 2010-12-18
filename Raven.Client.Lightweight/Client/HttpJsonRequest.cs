@@ -11,25 +11,26 @@ namespace Raven.Client.Client
 	/// <summary>
 	/// A representation of an HTTP json request to the RavenDB server
 	/// </summary>
-    public class HttpJsonRequest
-    {
-	    private readonly string url;
-	    private readonly string method;
+	public class HttpJsonRequest
+	{
+		private readonly string url;
+		private readonly string method;
 
-	    /// <summary>
+		/// <summary>
 		/// Occurs when a json request is created
 		/// </summary>
-        public static event EventHandler<WebRequestEventArgs> ConfigureRequest = delegate {  };
+		public static event EventHandler<WebRequestEventArgs> ConfigureRequest = delegate {  };
 
-        private static readonly ObjectCache cache = new MemoryCache(typeof(HttpJsonRequest).FullName);
+		private static readonly ObjectCache cache = new MemoryCache(typeof(HttpJsonRequest).FullName + ".Cache");
 
-        private class CachedRequest
-        {
-            public string Etag;
-            public string Data;
-        }
+		private class CachedRequest
+		{
+			public string Etag;
+			public string Data;
+			public string LastModified;
+		}
 
-    	private byte[] bytesForNextWrite;
+		private byte[] bytesForNextWrite;
 		/// <summary>
 		/// Creates the HTTP json request.
 		/// </summary>
@@ -38,12 +39,12 @@ namespace Raven.Client.Client
 		/// <param name="method">The method.</param>
 		/// <param name="credentials">The credentials.</param>
 		/// <returns></returns>
-        public static HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, ICredentials credentials)
-        {
-            var request = new HttpJsonRequest(url, method, credentials);
-            ConfigureRequest(self, new WebRequestEventArgs { Request = request.webRequest });
-            return request;
-        }
+		public static HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, ICredentials credentials)
+		{
+			var request = new HttpJsonRequest(url, method, credentials);
+			ConfigureRequest(self, new WebRequestEventArgs { Request = request.webRequest });
+			return request;
+		}
 
 		/// <summary>
 		/// Creates the HTTP json request.
@@ -54,50 +55,49 @@ namespace Raven.Client.Client
 		/// <param name="metadata">The metadata.</param>
 		/// <param name="credentials">The credentials.</param>
 		/// <returns></returns>
-        public static HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, JObject metadata, ICredentials credentials)
-        {
-            var request = new HttpJsonRequest(url, method, metadata, credentials);
-            ConfigureRequest(self, new WebRequestEventArgs { Request = request.webRequest });
-            return request;
-        }
+		public static HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, JObject metadata, ICredentials credentials)
+		{
+			var request = new HttpJsonRequest(url, method, metadata, credentials);
+			ConfigureRequest(self, new WebRequestEventArgs { Request = request.webRequest });
+			return request;
+		}
 
-        private readonly WebRequest webRequest;
-        // temporary create a strong reference to the cached data for this request
-        // avoid the potential for clearing the cache from a cached item
-	    private string cachedData;
+		private readonly WebRequest webRequest;
+		// temporary create a strong reference to the cached data for this request
+		// avoid the potential for clearing the cache from a cached item
+		private readonly CachedRequest cachedRequest;
 
-	    /// <summary>
+		/// <summary>
 		/// Gets or sets the response headers.
 		/// </summary>
 		/// <value>The response headers.</value>
-        public NameValueCollection ResponseHeaders { get; set; }
+		public NameValueCollection ResponseHeaders { get; set; }
 
-        private HttpJsonRequest(string url, string method, ICredentials credentials)
-            : this(url, method, new JObject(), credentials)
-        {
-        }
+		private HttpJsonRequest(string url, string method, ICredentials credentials)
+			: this(url, method, new JObject(), credentials)
+		{
+		}
 
-        private HttpJsonRequest(string url, string method, JObject metadata, ICredentials credentials)
-        {
-            this.url = url;
-            this.method = method;
-            webRequest = WebRequest.Create(url);
-            webRequest.Credentials = credentials;
-            WriteMetadata(metadata);
-            webRequest.Method = method;
-        	webRequest.Headers["Accept-Encoding"] = "deflate,gzip";
-            webRequest.ContentType = "application/json; charset=utf-8";
+		private HttpJsonRequest(string url, string method, JObject metadata, ICredentials credentials)
+		{
+			this.url = url;
+			this.method = method;
+			webRequest = WebRequest.Create(url);
+			webRequest.Credentials = credentials;
+			WriteMetadata(metadata);
+			webRequest.Method = method;
+			webRequest.Headers["Accept-Encoding"] = "deflate,gzip";
+			webRequest.ContentType = "application/json; charset=utf-8";
 
-            if (method != "GET")
-                return;
+			if (method != "GET")
+				return;
 
-            var cachedRequest = (CachedRequest)cache.Get(url);
-            if (cachedRequest == null)
-                return;
+			cachedRequest = (CachedRequest)cache.Get(url);
+			if (cachedRequest == null)
+				return;
 
-            cachedData = cachedRequest.Data;
-            webRequest.Headers["If-Modified-Since"] = cachedRequest.Etag;
-        }
+			webRequest.Headers["If-None-Match"] = cachedRequest.Etag;
+		}
 
 		/// <summary>
 		/// Begins the read response string.
@@ -124,124 +124,131 @@ namespace Raven.Client.Client
 		/// Reads the response string.
 		/// </summary>
 		/// <returns></returns>
-    	public string ReadResponseString()
-    	{
-    		return ReadStringInternal(webRequest.GetResponse);
-    	}
+		public string ReadResponseString()
+		{
+			return ReadStringInternal(webRequest.GetResponse);
+		}
 
-    	private string ReadStringInternal(Func<WebResponse> getResponse)
-    	{
-    		WebResponse response;
-    		try
-    		{
+		private string ReadStringInternal(Func<WebResponse> getResponse)
+		{
+			WebResponse response;
+			try
+			{
 				response = getResponse();
-    		}
-    		catch (WebException e)
-    		{
-    			var httpWebResponse = e.Response as HttpWebResponse;
-    			if (httpWebResponse == null || 
-    				httpWebResponse.StatusCode == HttpStatusCode.NotFound ||
-    					httpWebResponse.StatusCode == HttpStatusCode.Conflict)
-    				throw;
+			}
+			catch (WebException e)
+			{
+				var httpWebResponse = e.Response as HttpWebResponse;
+				if (httpWebResponse == null || 
+					httpWebResponse.StatusCode == HttpStatusCode.NotFound ||
+						httpWebResponse.StatusCode == HttpStatusCode.Conflict)
+					throw;
 
-                ResponseStatusCode = HttpStatusCode.NotModified;
-                if (httpWebResponse.StatusCode == HttpStatusCode.NotModified && cachedData != null)
-                {
-                    return cachedData;
-                }
+				if (httpWebResponse.StatusCode == HttpStatusCode.NotModified 
+					&& cachedRequest != null)
+				{
+					ResponseStatusCode = HttpStatusCode.NotModified;
+					ResponseHeaders = new NameValueCollection
+					{
+						{"ETag", cachedRequest.Etag},
+						{"Last-Modified", cachedRequest.LastModified}
+					};
+					return cachedRequest.Data;
+				}
 
 				using (var sr = new StreamReader(e.Response.GetResponseStreamWithHttpDecompression()))
-    			{
-    				throw new InvalidOperationException(sr.ReadToEnd(), e);
-    			}
-    		}
-            
-    		ResponseHeaders = response.Headers;
-    		ResponseStatusCode = ((HttpWebResponse) response).StatusCode;
+				{
+					throw new InvalidOperationException(sr.ReadToEnd(), e);
+				}
+			}
+			
+			ResponseHeaders = response.Headers;
+			ResponseStatusCode = ((HttpWebResponse) response).StatusCode;
 			using (var responseStream = response.GetResponseStreamWithHttpDecompression())
-    		{
+			{
 				var reader = new StreamReader(responseStream);
-    			var text = reader.ReadToEnd();
-    			reader.Close();
-                if (method == "GET")
-                {
-                    cache.Add(url, new CachedRequest
-                    {
-                        Data = text,
-                        Etag = response.Headers["ETag"]
-                    }, DateTimeOffset.Now.Add(TimeSpan.FromHours(1)));
-                }
-    			return text;
-    		}
-    	}
+				var text = reader.ReadToEnd();
+				reader.Close();
+				if (method == "GET")
+				{
+					cache.Add(url, new CachedRequest
+					{
+						Data = text,
+						LastModified = response.Headers["Last-Modified"],
+						Etag = response.Headers["ETag"]
+					}, new CacheItemPolicy() );// cache as much as possible, for as long as possible, using the default cache limits
+				}
+				return text;
+			}
+		}
 
 
 		/// <summary>
 		/// Gets or sets the response status code.
 		/// </summary>
 		/// <value>The response status code.</value>
-    	public HttpStatusCode ResponseStatusCode { get; set; }
+		public HttpStatusCode ResponseStatusCode { get; set; }
 
-    	private void WriteMetadata(JObject metadata)
-        {
-            if (metadata == null || metadata.Count == 0)
-            {
-                webRequest.ContentLength = 0;
-                return;
-            }
+		private void WriteMetadata(JObject metadata)
+		{
+			if (metadata == null || metadata.Count == 0)
+			{
+				webRequest.ContentLength = 0;
+				return;
+			}
 
-            foreach (var prop in metadata)
-            {
-                if (prop.Value == null)
-                    continue;
+			foreach (var prop in metadata)
+			{
+				if (prop.Value == null)
+					continue;
 
-                if (prop.Value.Type == JTokenType.Object ||
-                    prop.Value.Type == JTokenType.Array)
-                    continue;
+				if (prop.Value.Type == JTokenType.Object ||
+					prop.Value.Type == JTokenType.Array)
+					continue;
 
-                var headerName = prop.Key;
-                if (headerName == "ETag")
-                    headerName = "If-Match";
-                var value = prop.Value.Value<object>().ToString();
-                switch (headerName)
-                {
-                    case "Content-Length":
-                        break;
-                    case "Content-Type":
-                        webRequest.ContentType = value;
-                        break;
-                    default:
-                        webRequest.Headers[headerName] = value;
-                        break;
-                }
-            }
-        }
+				var headerName = prop.Key;
+				if (headerName == "ETag")
+					headerName = "If-Match";
+				var value = prop.Value.Value<object>().ToString();
+				switch (headerName)
+				{
+					case "Content-Length":
+						break;
+					case "Content-Type":
+						webRequest.ContentType = value;
+						break;
+					default:
+						webRequest.Headers[headerName] = value;
+						break;
+				}
+			}
+		}
 
 		/// <summary>
 		/// Writes the specified data.
 		/// </summary>
 		/// <param name="data">The data.</param>
-        public void Write(string data)
-        {
-            var byteArray = Encoding.UTF8.GetBytes(data);
+		public void Write(string data)
+		{
+			var byteArray = Encoding.UTF8.GetBytes(data);
 
-            Write(byteArray);
-        }
+			Write(byteArray);
+		}
 
 		/// <summary>
 		/// Writes the specified byte array.
 		/// </summary>
 		/// <param name="byteArray">The byte array.</param>
-        public void Write(byte[] byteArray)
-        {
-            webRequest.ContentLength = byteArray.Length;
+		public void Write(byte[] byteArray)
+		{
+			webRequest.ContentLength = byteArray.Length;
 
-            using (var dataStream = webRequest.GetRequestStream())
-            {
-                dataStream.Write(byteArray, 0, byteArray.Length);
-                dataStream.Close();
-            }
-        }
+			using (var dataStream = webRequest.GetRequestStream())
+			{
+				dataStream.Write(byteArray, 0, byteArray.Length);
+				dataStream.Close();
+			}
+		}
 
 		/// <summary>
 		/// Begins the write operation
@@ -275,12 +282,12 @@ namespace Raven.Client.Client
 		/// Adds the operation headers.
 		/// </summary>
 		/// <param name="operationsHeaders">The operations headers.</param>
-    	public void AddOperationHeaders(NameValueCollection operationsHeaders)
-    	{
+		public void AddOperationHeaders(NameValueCollection operationsHeaders)
+		{
 			foreach (string header in operationsHeaders)
 			{
 				webRequest.Headers[header] = operationsHeaders[header];
 			}
-    	}
-    }
+		}
+	}
 }

@@ -41,6 +41,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
+    <Reference Include="Microsoft.VisualBasic" />
     <Reference Include="Newtonsoft.Json">
       <HintPath>..\SharedLibs\Newtonsoft.Json.dll</HintPath>
     </Reference>
@@ -194,6 +195,14 @@
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
       <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
       <Name>Raven.Abstractions</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Storage.Esent\Raven.Storage.Esent.csproj">
+      <Project>{9DEE8674-D0CD-430D-BD9B-6CD95F3CAB22}</Project>
+      <Name>Raven.Storage.Esent</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Storage.Managed\Raven.Storage.Managed.csproj">
+      <Project>{DA99A419-E137-40DB-9495-0C363B479D4B}</Project>
+      <Name>Raven.Storage.Managed</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

@@ -37,7 +37,7 @@ using System.Threading;
 
 namespace System.Runtime.Caching
 {
-    internal class MemoryCache : ObjectCache, IEnumerable, IDisposable
+	internal class MemoryCache : ObjectCache, IEnumerable, IDisposable
 	{
 		const long DEFAULT_TIMER_PERIOD = 20000; // .NET's default, ms
 
@@ -48,7 +48,9 @@ namespace System.Runtime.Caching
 		MemoryCacheContainer[] containers;
 		DefaultCacheCapabilities defaultCaps;
 		MemoryCachePerformanceCounters perfCounters;
-		bool noPerformanceCounters;
+
+		// RavenDB: We don't want perf counters, since this is purely internal
+		private bool noPerformanceCounters = true;
 		bool emulateOneCPU;
 		
 		static ulong TotalPhysicalMemory {
@@ -128,13 +130,11 @@ namespace System.Runtime.Caching
 		
 		static void DetermineTotalPhysicalMemory ()
 		{
-			var pc = new PerformanceCounter ("Mono Memory", "Total Physical Memory");
-			long memBytes = pc.RawValue;
-
-			if (memBytes == 0)
+			var memBytes = (long)new Microsoft.VisualBasic.Devices.ComputerInfo().TotalPhysicalMemory;
+			if(memBytes == 0)
 				memBytes = 134217728L; // 128MB, the runtime default when it's
-						       // impossible to determine the physical
-						       // memory size
+									   // impossible to determine the physical
+							           // memory size
 
 			Interlocked.CompareExchange (ref totalPhysicalMemory, memBytes, 0);
 		}
@@ -573,7 +573,7 @@ namespace System.Runtime.Caching
 			TimeSpan slidingExpiration = policy.SlidingExpiration;
 				
 			if (absoluteExpiration != ObjectCache.InfiniteAbsoluteExpiration &&
-			    slidingExpiration != TimeSpan.Zero)
+				slidingExpiration != TimeSpan.Zero)
 				throw new ArgumentException (
 					"policy",
 					"'AbsoluteExpiration' must be ObjectCache.InfiniteAbsoluteExpiration or 'SlidingExpiration' must be TimeSpan.Zero"
