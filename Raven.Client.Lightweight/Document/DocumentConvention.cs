@@ -25,12 +25,12 @@ namespace Raven.Client.Document
 		/// </summary>
 		public DocumentConvention()
 		{
-            IdentityTypeConvertors = new List<ITypeConverter>
-            {
-                new Converters.GuidConverter(),
-                new Converters.Int32Converter(),
-                new Converters.Int64Converter(),
-            };
+			IdentityTypeConvertors = new List<ITypeConverter>
+			{
+				new Converters.GuidConverter(),
+				new Converters.Int32Converter(),
+				new Converters.Int64Converter(),
+			};
 			FindIdentityProperty = q => q.Name == "Id";
 			FindTypeTagName = t => DefaultTypeTagName(t);
 			IdentityPartsSeparator = "/";
@@ -38,7 +38,7 @@ namespace Raven.Client.Document
 			{
 				DefaultMembersSearchFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance
 			};
-		    MaxNumberOfRequestsPerSession = 30;
+			MaxNumberOfRequestsPerSession = 30;
 			CustomizeJsonSerializer = serializer => { };
 		}
 
@@ -47,11 +47,11 @@ namespace Raven.Client.Document
 		/// </summary>
 		public Action<JsonSerializer> CustomizeJsonSerializer { get; set; }
 
-        ///<summary>
-        /// A list of type converters that can be used to translate the document key (string)
-        /// to whatever type it is that is used on the entity, if the type isn't already a string
-        ///</summary>
-        public List<ITypeConverter> IdentityTypeConvertors { get; set; }
+		///<summary>
+		/// A list of type converters that can be used to translate the document key (string)
+		/// to whatever type it is that is used on the entity, if the type isn't already a string
+		///</summary>
+		public List<ITypeConverter> IdentityTypeConvertors { get; set; }
 
 		/// <summary>
 		/// Gets or sets the identity parts separator used by the hilo generators
@@ -83,8 +83,8 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public static string DefaultTypeTagName(Type t)
 		{
-            if (t.Name.Contains("<>"))
-                return null;
+			if (t.Name.Contains("<>"))
+				return null;
 			if(t.IsGenericType)
 			{
 				var name = t.GetGenericTypeDefinition().Name;
@@ -137,7 +137,7 @@ namespace Raven.Client.Document
 		/// Gets or sets the json contract resolver.
 		/// </summary>
 		/// <value>The json contract resolver.</value>
-        public IContractResolver JsonContractResolver { get; set; }
+		public IContractResolver JsonContractResolver { get; set; }
 
 		/// <summary>
 		/// Gets or sets the function to find the type tag.
