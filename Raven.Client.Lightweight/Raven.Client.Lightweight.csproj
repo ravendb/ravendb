@@ -48,6 +48,9 @@
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Runtime.Caching">
+      <HintPath>..\..\..\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.0\System.Runtime.Caching.dll</HintPath>
+    </Reference>
     <Reference Include="System.Transactions" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -95,6 +98,39 @@
     <Compile Include="Exceptions\NonUniqueObjectException.cs" />
     <Compile Include="Exceptions\ReadVetoException.cs" />
     <Compile Include="Extensions\MultiTenancyExtensions.cs" />
+    <Compile Include="FromMono\System.Runtime.Caching.Configuration\CachingSectionGroup.cs" />
+    <Compile Include="FromMono\System.Runtime.Caching.Configuration\MemoryCacheElement.cs" />
+    <Compile Include="FromMono\System.Runtime.Caching.Configuration\MemoryCacheSection.cs" />
+    <Compile Include="FromMono\System.Runtime.Caching.Configuration\MemoryCacheSettingsCollection.cs" />
+    <Compile Include="FromMono\System.Runtime.Caching.Hosting\IApplicationIdentifier.cs" />
+    <Compile Include="FromMono\System.Runtime.Caching.Hosting\IFileChangeNotificationSystem.cs" />
+    <Compile Include="FromMono\System.Runtime.Caching.Hosting\IMemoryCacheManager.cs" />
+    <Compile Include="FromMono\System.Runtime.Caching\CacheEntryChangeMonitor.cs" />
+    <Compile Include="FromMono\System.Runtime.Caching\CacheEntryRemovedArguments.cs" />
+    <Compile Include="FromMono\System.Runtime.Caching\CacheEntryRemovedCallback.cs" />
+    <Compile Include="FromMono\System.Runtime.Caching\CacheEntryRemovedReason.cs" />
+    <Compile Include="FromMono\System.Runtime.Caching\CacheEntryUpdateArguments.cs" />
+    <Compile Include="FromMono\System.Runtime.Caching\CacheEntryUpdateCallback.cs" />
+    <Compile Include="FromMono\System.Runtime.Caching\CacheItem.cs" />
+    <Compile Include="FromMono\System.Runtime.Caching\CacheItemPolicy.cs" />
+    <Compile Include="FromMono\System.Runtime.Caching\CacheItemPriority.cs" />
+    <Compile Include="FromMono\System.Runtime.Caching\ChangeMonitor.cs" />
+    <Compile Include="FromMono\System.Runtime.Caching\DefaultCacheCapabilities.cs" />
+    <Compile Include="FromMono\System.Runtime.Caching\FileChangeMonitor.cs" />
+    <Compile Include="FromMono\System.Runtime.Caching\FileChangeNotificationSystem.cs" />
+    <Compile Include="FromMono\System.Runtime.Caching\FileChangeNotificationSystemEntry.cs" />
+    <Compile Include="FromMono\System.Runtime.Caching\Helpers.cs" />
+    <Compile Include="FromMono\System.Runtime.Caching\HostFileChangeMonitor.cs" />
+    <Compile Include="FromMono\System.Runtime.Caching\MemoryCache.cs" />
+    <Compile Include="FromMono\System.Runtime.Caching\MemoryCacheContainer.cs" />
+    <Compile Include="FromMono\System.Runtime.Caching\MemoryCacheEntry.cs" />
+    <Compile Include="FromMono\System.Runtime.Caching\MemoryCacheEntryChangeMonitor.cs" />
+    <Compile Include="FromMono\System.Runtime.Caching\MemoryCacheEntryPriorityQueue.cs" />
+    <Compile Include="FromMono\System.Runtime.Caching\MemoryCacheLRU.cs" />
+    <Compile Include="FromMono\System.Runtime.Caching\MemoryCachePerformanceCounters.cs" />
+    <Compile Include="FromMono\System.Runtime.Caching\ObjectCache.cs" />
+    <Compile Include="FromMono\System.Runtime.Caching\OnChangedCallback.cs" />
+    <Compile Include="FromMono\System.Runtime.Caching\SqlChangeMonitor.cs" />
     <Compile Include="IAdvancedDocumentSessionOperations.cs" />
     <Compile Include="IAsyncAdvancedSessionOperations.cs" />
     <Compile Include="IAsyncDocumentSession.cs" />
@@ -151,6 +187,8 @@
     <None Include="..\Raven.Database\RavenDB.snk">
       <Link>RavenDB.snk</Link>
     </None>
+    <None Include="FromMono\System.Runtime.Caching.Configuration\ChangeLog" />
+    <None Include="FromMono\System.Runtime.Caching.Hosting\ChangeLog" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Data\" />

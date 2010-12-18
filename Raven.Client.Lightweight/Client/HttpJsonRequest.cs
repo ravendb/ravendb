@@ -2,6 +2,7 @@ using System;
 using System.Collections.Specialized;
 using System.IO;
 using System.Net;
+using System.Runtime.Caching;
 using System.Text;
 using Newtonsoft.Json.Linq;
 
@@ -12,10 +13,21 @@ namespace Raven.Client.Client
 	/// </summary>
     public class HttpJsonRequest
     {
-		/// <summary>
+	    private readonly string url;
+	    private readonly string method;
+
+	    /// <summary>
 		/// Occurs when a json request is created
 		/// </summary>
         public static event EventHandler<WebRequestEventArgs> ConfigureRequest = delegate {  };
+
+        private static readonly ObjectCache cache = new MemoryCache(typeof(HttpJsonRequest).FullName);
+
+        private class CachedRequest
+        {
+            public string Etag;
+            public string Data;
+        }
 
     	private byte[] bytesForNextWrite;
 		/// <summary>
@@ -50,8 +62,11 @@ namespace Raven.Client.Client
         }
 
         private readonly WebRequest webRequest;
+        // temporary create a strong reference to the cached data for this request
+        // avoid the potential for clearing the cache from a cached item
+	    private string cachedData;
 
-		/// <summary>
+	    /// <summary>
 		/// Gets or sets the response headers.
 		/// </summary>
 		/// <value>The response headers.</value>
@@ -64,12 +79,24 @@ namespace Raven.Client.Client
 
         private HttpJsonRequest(string url, string method, JObject metadata, ICredentials credentials)
         {
+            this.url = url;
+            this.method = method;
             webRequest = WebRequest.Create(url);
             webRequest.Credentials = credentials;
             WriteMetadata(metadata);
             webRequest.Method = method;
         	webRequest.Headers["Accept-Encoding"] = "deflate,gzip";
             webRequest.ContentType = "application/json; charset=utf-8";
+
+            if (method != "GET")
+                return;
+
+            var cachedRequest = (CachedRequest)cache.Get(url);
+            if (cachedRequest == null)
+                return;
+
+            cachedData = cachedRequest.Data;
+            webRequest.Headers["If-Modified-Since"] = cachedRequest.Etag;
         }
 
 		/// <summary>
@@ -116,11 +143,19 @@ namespace Raven.Client.Client
     				httpWebResponse.StatusCode == HttpStatusCode.NotFound ||
     					httpWebResponse.StatusCode == HttpStatusCode.Conflict)
     				throw;
+
+                ResponseStatusCode = HttpStatusCode.NotModified;
+                if (httpWebResponse.StatusCode == HttpStatusCode.NotModified && cachedData != null)
+                {
+                    return cachedData;
+                }
+
 				using (var sr = new StreamReader(e.Response.GetResponseStreamWithHttpDecompression()))
     			{
     				throw new InvalidOperationException(sr.ReadToEnd(), e);
     			}
     		}
+            
     		ResponseHeaders = response.Headers;
     		ResponseStatusCode = ((HttpWebResponse) response).StatusCode;
 			using (var responseStream = response.GetResponseStreamWithHttpDecompression())
@@ -128,6 +163,14 @@ namespace Raven.Client.Client
 				var reader = new StreamReader(responseStream);
     			var text = reader.ReadToEnd();
     			reader.Close();
+                if (method == "GET")
+                {
+                    cache.Add(url, new CachedRequest
+                    {
+                        Data = text,
+                        Etag = response.Headers["ETag"]
+                    }, DateTimeOffset.Now.Add(TimeSpan.FromHours(1)));
+                }
     			return text;
     		}
     	}
