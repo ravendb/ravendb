@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Threading;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
@@ -64,12 +66,19 @@ namespace Raven.Tests.Queries
             db.Put("ayende", null, JObject.FromObject(new { Name = "Ayende" }), new JObject(), null);
             db.Put("rahien", null, JObject.FromObject(new { Username = "Ayende" }), new JObject(), null);
             db.Put("oren", null, JObject.FromObject(new { Name = "Ayende" }), new JObject(), null);
-           
 
+            var oldCulture = Thread.CurrentThread.CurrentCulture;
+            var oldUiCulture = Thread.CurrentThread.CurrentUICulture;
+            Thread.CurrentThread.CurrentUICulture = CultureInfo.InvariantCulture;
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
             var result = db.ExecuteQueryUsingLinearSearch(new LinearQuery
             {
                 Query = "from doc in docs select new { L = 1/doc.Name.Length } "
             });
+
+            Thread.CurrentThread.CurrentUICulture = oldUiCulture;
+            Thread.CurrentThread.CurrentCulture = oldCulture;
+
 
             Assert.Equal("Doc 'rahien', Error: Operator '/' cannot be applied to operands of type 'int' and 'Raven.Database.Linq.DynamicNullObject'", result.Errors[0]);
             Assert.Equal(@"{""L"":0,""__document_id"":""ayende""}", result.Results[0].ToString(Formatting.None));
