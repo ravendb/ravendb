@@ -31,6 +31,7 @@ namespace Raven.Client.Document
 				new Converters.Int32Converter(),
 				new Converters.Int64Converter(),
 			};
+		    ShouldCacheRequest = url => true;
 			FindIdentityProperty = q => q.Name == "Id";
 			FindTypeTagName = t => DefaultTypeTagName(t);
 			IdentityPartsSeparator = "/";
@@ -144,6 +145,12 @@ namespace Raven.Client.Document
 		/// </summary>
 		/// <value>The name of the find type tag.</value>
 		public Func<Type, string> FindTypeTagName { get; set; }
+
+        /// <summary>
+        /// Whatever or not RavenDB should cache the request to the specified url.
+        /// </summary>
+        public Func<string, bool> ShouldCacheRequest { get; set; }
+
 		/// <summary>
 		/// Gets or sets the function to find the identity property.
 		/// </summary>

@@ -5,6 +5,7 @@ using System.Net;
 using System.Runtime.Caching;
 using System.Text;
 using Newtonsoft.Json.Linq;
+using Raven.Client.Document;
 
 namespace Raven.Client.Client
 {
@@ -15,8 +16,9 @@ namespace Raven.Client.Client
 	{
 		private readonly string url;
 		private readonly string method;
+	    private readonly bool cacheRequest;
 
-		/// <summary>
+	    /// <summary>
 		/// Occurs when a json request is created
 		/// </summary>
 		public static event EventHandler<WebRequestEventArgs> ConfigureRequest = delegate {  };
@@ -31,17 +33,19 @@ namespace Raven.Client.Client
 		}
 
 		private byte[] bytesForNextWrite;
-		/// <summary>
-		/// Creates the HTTP json request.
-		/// </summary>
-		/// <param name="self">The self.</param>
-		/// <param name="url">The URL.</param>
-		/// <param name="method">The method.</param>
-		/// <param name="credentials">The credentials.</param>
-		/// <returns></returns>
-		public static HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, ICredentials credentials)
+
+	    /// <summary>
+	    /// Creates the HTTP json request.
+	    /// </summary>
+	    /// <param name="self">The self.</param>
+	    /// <param name="url">The URL.</param>
+	    /// <param name="method">The method.</param>
+	    /// <param name="credentials">The credentials.</param>
+	    /// <param name="convention">The document conventions governing this request</param>
+	    /// <returns></returns>
+	    public static HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, ICredentials credentials, DocumentConvention convention)
 		{
-			var request = new HttpJsonRequest(url, method, credentials);
+			var request = new HttpJsonRequest(url, method, credentials, convention.ShouldCacheRequest(url));
 			ConfigureRequest(self, new WebRequestEventArgs { Request = request.webRequest });
 			return request;
 		}
@@ -54,10 +58,11 @@ namespace Raven.Client.Client
 		/// <param name="method">The method.</param>
 		/// <param name="metadata">The metadata.</param>
 		/// <param name="credentials">The credentials.</param>
-		/// <returns></returns>
-		public static HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, JObject metadata, ICredentials credentials)
+        /// <param name="convention">The document conventions governing this request</param>
+        /// <returns></returns>
+		public static HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, JObject metadata, ICredentials credentials, DocumentConvention convention)
 		{
-			var request = new HttpJsonRequest(url, method, metadata, credentials);
+			var request = new HttpJsonRequest(url, method, metadata, credentials, convention.ShouldCacheRequest(url));
 			ConfigureRequest(self, new WebRequestEventArgs { Request = request.webRequest });
 			return request;
 		}
@@ -73,23 +78,25 @@ namespace Raven.Client.Client
 		/// <value>The response headers.</value>
 		public NameValueCollection ResponseHeaders { get; set; }
 
-		private HttpJsonRequest(string url, string method, ICredentials credentials)
-			: this(url, method, new JObject(), credentials)
+		private HttpJsonRequest(string url, string method, ICredentials credentials, bool cacheRequest)
+			: this(url, method, new JObject(), credentials,cacheRequest)
 		{
 		}
 
-		private HttpJsonRequest(string url, string method, JObject metadata, ICredentials credentials)
+		private HttpJsonRequest(string url, string method, JObject metadata, ICredentials credentials, bool cacheRequest)
 		{
 			this.url = url;
 			this.method = method;
-			webRequest = WebRequest.Create(url);
+		    this.cacheRequest = cacheRequest;
+		    webRequest = WebRequest.Create(url);
 			webRequest.Credentials = credentials;
 			WriteMetadata(metadata);
 			webRequest.Method = method;
 			webRequest.Headers["Accept-Encoding"] = "deflate,gzip";
 			webRequest.ContentType = "application/json; charset=utf-8";
 
-			if (method != "GET")
+			if (cacheRequest == false ||
+                method != "GET")
 				return;
 
 			cachedRequest = (CachedRequest)cache.Get(url);
@@ -169,7 +176,7 @@ namespace Raven.Client.Client
 				var reader = new StreamReader(responseStream);
 				var text = reader.ReadToEnd();
 				reader.Close();
-				if (method == "GET")
+				if (method == "GET" && cacheRequest)
 				{
 					cache.Add(url, new CachedRequest
 					{
