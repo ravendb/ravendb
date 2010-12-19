@@ -145,6 +145,8 @@
     <Compile Include="Bugs\IndexingBehavior.cs" />
     <Compile Include="Bugs\IndexingRavenDocuments.cs" />
     <Compile Include="Bugs\Indexing\DynamicFields.cs" />
+    <Compile Include="Bugs\Indexing\MissingAnalyzer.cs" />
+    <Compile Include="Bugs\Indexing\ThrowingAnalyzer.cs" />
     <Compile Include="Bugs\IndexNestedFields.cs" />
     <Compile Include="Bugs\IndexWithTwoProperties.cs" />
     <Compile Include="Bugs\InMemoryOnly.cs" />

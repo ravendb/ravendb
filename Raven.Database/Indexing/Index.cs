@@ -249,7 +249,15 @@ namespace Raven.Database.Indexing
                 Analyzer analyzer = null;
                 try
                 {
-                    analyzer = CreateAnalyzer(toDispose);
+                    try
+                    {
+                        analyzer = CreateAnalyzer(toDispose);
+                    }
+                    catch (Exception e)
+                    {
+                        context.AddError(name, "Creating Analyzer", e.ToString());
+                        throw;
+                    }
                     var indexWriter = new IndexWriter(directory, analyzer, IndexWriter.MaxFieldLength.UNLIMITED);
                     try
                     {

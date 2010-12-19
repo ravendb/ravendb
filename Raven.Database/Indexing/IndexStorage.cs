@@ -127,14 +127,28 @@ namespace Raven.Database.Indexing
 		{
 			log.InfoFormat("Creating index {0}", name);
 
-			indexes.AddOrUpdate(name, n =>
+		    AssertAnalyzersValid(indexDefinition);
+
+		    indexes.AddOrUpdate(name, n =>
 			{
 				var directory = OpenOrCreateLuceneDirectory(name);
 				return CreateIndexImplementation(name, indexDefinition, directory);
 			}, (s, index) => index);
 		}
 
-		public IEnumerable<IndexQueryResult> Query(
+	    private static void AssertAnalyzersValid(IndexDefinition indexDefinition)
+	    {
+	        foreach (var analyzer in from analyzer in indexDefinition.Analyzers
+	                                 let analyzerType = typeof (StandardAnalyzer).Assembly.GetType(analyzer.Value) ?? Type.GetType(analyzer.Value, throwOnError: false)
+	                                 where analyzerType == null
+	                                 select analyzer)
+	        {
+	            throw new ArgumentException("Could not create analyzer for field: " + analyzer.Key +
+	                "' because the type was not found: " + analyzer.Value);
+	        }
+	    }
+
+	    public IEnumerable<IndexQueryResult> Query(
             string index, 
             IndexQuery query, 
             Func<IndexQueryResult, bool> shouldIncludeInResults)
