@@ -331,20 +331,13 @@ task CopyDocFiles -depends CreateDocs {
 	cp $base_dir\acknowledgements.txt $build_dir\Output\acknowledgements.txt
 }
 
-task DoRelease -depends Compile, `
-	CleanOutputDirectory,`
-	CreateOutpuDirectories, `
-	CopyEmbeddedClient, `
-	CopySmuggler, `
-	CopyClient, `
-	CopyClient35, `
-	CopyWeb, `
-	CopyBundles, `
-	CopyServer, `
-	CopyDocFiles, `
-	CopySamples, `
-	CreateNupack {
+task ZipOutput {
 	
+	if($env:buildlabel -eq 13)
+	{
+      return 
+	}
+
 	$old = pwd
 	
 	cd $build_dir\Output
@@ -367,12 +360,32 @@ task DoRelease -depends Compile, `
 	}
 	
     cd $old
-    ExecuteTask("ResetBuildArtifcats")
+
 }
 
 task ResetBuildArtifcats {
     git checkout "Raven.Database\RavenDB.snk"
 }
+
+
+task DoRelease -depends Compile, `
+	CleanOutputDirectory,`
+	CreateOutpuDirectories, `
+	CopyEmbeddedClient, `
+	CopySmuggler, `
+	CopyClient, `
+	CopyClient35, `
+	CopyWeb, `
+	CopyBundles, `
+	CopyServer, `
+	CopyDocFiles, `
+	CopySamples, `
+	CreateNupack, `
+	ZipOutput, `
+	ResetBuildArtifcats {	
+	Write-Host "Done building RavenDB"
+}
+
 
 task Upload -depends DoRelease {
 	Write-Host "Starting upload"
