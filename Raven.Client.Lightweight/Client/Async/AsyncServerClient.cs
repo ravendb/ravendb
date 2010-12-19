@@ -87,7 +87,7 @@ namespace Raven.Client.Client.Async
 
 			var metadata = new JObject();
 			AddTransactionInformation(metadata);
-			var request = HttpJsonRequest.CreateHttpJsonRequest(this, url + "/docs/" + key, "GET", metadata, credentials);
+			var request = HttpJsonRequest.CreateHttpJsonRequest(this, url + "/docs/" + key, "GET", metadata, credentials, convention);
 
 		    return Task.Factory.FromAsync<string>(request.BeginReadResponseString, request.EndReadResponseString, null)
                 .ContinueWith(task =>
@@ -136,7 +136,7 @@ namespace Raven.Client.Client.Async
 		/// <returns></returns>
         public Task<JsonDocument[]> MultiGetAsync(string[] keys)
 		{
-			var request = HttpJsonRequest.CreateHttpJsonRequest(this, url + "/queries/", "POST", credentials);
+            var request = HttpJsonRequest.CreateHttpJsonRequest(this, url + "/queries/", "POST", credentials, convention);
 			var array = Encoding.UTF8.GetBytes(new JArray(keys).ToString(Formatting.None));
             return Task.Factory.FromAsync(request.BeginWrite, request.EndWrite, array, null)
                 .ContinueWith(writeTask => Task.Factory.FromAsync<string>(request.BeginReadResponseString, request.EndReadResponseString, null))
@@ -173,7 +173,7 @@ namespace Raven.Client.Client.Async
 		{
 			EnsureIsNotNullOrEmpty(index, "index");
 			var path = query.GetIndexQueryUrl(url, index, "indexes");
-			var request = HttpJsonRequest.CreateHttpJsonRequest(this, path, "GET", credentials);
+            var request = HttpJsonRequest.CreateHttpJsonRequest(this, path, "GET", credentials, convention);
 
 		    return Task.Factory.FromAsync<string>(request.BeginReadResponseString, request.EndReadResponseString, null)
 		        .ContinueWith(task =>
@@ -204,7 +204,7 @@ namespace Raven.Client.Client.Async
 		{
 			var metadata = new JObject();
 			AddTransactionInformation(metadata);
-			var req = HttpJsonRequest.CreateHttpJsonRequest(this, url + "/bulk_docs", "POST", metadata, credentials);
+            var req = HttpJsonRequest.CreateHttpJsonRequest(this, url + "/bulk_docs", "POST", metadata, credentials, convention);
 			var jArray = new JArray(commandDatas.Select(x => x.ToJson()));
 			var data = Encoding.UTF8.GetBytes(jArray.ToString(Formatting.None));
 

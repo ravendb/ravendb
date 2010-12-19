@@ -64,6 +64,17 @@ namespace Raven.Storage.Esent.StorageActions
             return Tuple.Create(lastIndexedTimestamp, lastIndexedEtag);
         }
 
+        public Guid GetMostRecentDocumentEtag()
+        {
+            Api.JetSetCurrentIndex(session, Documents, "by_etag");
+            if (!Api.TryMoveLast(session, Documents))
+            {
+                return Guid.Empty;
+            }
+            var lastEtag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]);
+            return new Guid(lastEtag);
+        }
+
         private bool IsStaleByEtag(string entityName)
         {
             var lastIndexedEtag = Api.RetrieveColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"]);

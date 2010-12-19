@@ -11,8 +11,8 @@ namespace Raven.Database.Server.Responders
 		public AddIncludesCommand(
 			DocumentDatabase database, 
 			TransactionInformation transactionInformation, 
-			Action<JObject> add, 
-				string[] includes,
+			Action<Guid, JObject> add, 
+            string[] includes,
 			HashSet<string> loadedIds)
 		{
 			Add = add;
@@ -24,7 +24,7 @@ namespace Raven.Database.Server.Responders
 
 		private string[] Includes { get; set; }
 
-		private Action<JObject> Add { get; set; }
+		private Action<Guid,JObject> Add { get; set; }
 
 		private DocumentDatabase Database { get; set; }
 
@@ -60,7 +60,7 @@ namespace Raven.Database.Server.Responders
 						return;
 					var includedDoc = Database.Get(value, TransactionInformation);
 					if (includedDoc != null)
-						Add(includedDoc.ToJson());
+						Add(includedDoc.Etag,includedDoc.ToJson());
 					break;
 				default:
 					// here we ignore everything else

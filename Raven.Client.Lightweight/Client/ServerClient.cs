@@ -145,7 +145,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		{
 			var metadata = new JObject();
 			AddTransactionInformation(metadata);
-			var request = HttpJsonRequest.CreateHttpJsonRequest(this, serverUrl + "/docs/" + key, "GET", metadata, credentials);
+            var request = HttpJsonRequest.CreateHttpJsonRequest(this, serverUrl + "/docs/" + key, "GET", metadata, credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
 			try
 			{
@@ -209,7 +209,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			AddTransactionInformation(metadata);
 			if (etag != null)
 				metadata["ETag"] = new JValue(etag.Value.ToString());
-			var request = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/docs/" + key, method, metadata, credentials);
+            var request = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/docs/" + key, method, metadata, credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
 			request.Write(document.ToString());
 
@@ -413,7 +413,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 
 		private object DirectResetIndex(string name, string operationUrl)
 		{
-			var httpJsonRequest = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/indexes/" + name, "RESET", credentials);
+            var httpJsonRequest = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/indexes/" + name, "RESET", credentials, convention);
 			httpJsonRequest.AddOperationHeaders(OperationsHeaders);
 			httpJsonRequest.ReadResponseString();
 			return null;
@@ -421,7 +421,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 
 		private string[] DirectGetIndexNames(int start, int pageSize, string operationUrl)
 		{
-			var httpJsonRequest = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/indexes/?namesOnly=true&start="+start+"&pageSize="+pageSize, "GET", credentials);
+            var httpJsonRequest = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/indexes/?namesOnly=true&start=" + start + "&pageSize=" + pageSize, "GET", credentials, convention);
 			httpJsonRequest.AddOperationHeaders(OperationsHeaders);
 			var responseString = httpJsonRequest.ReadResponseString();
 			return JArray.Parse(responseString).Select(x => x.Value<string>()).ToArray();
@@ -440,7 +440,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 
 		private IndexDefinition DirectGetIndex(string indexName, string operationUrl)
 		{
-			var httpJsonRequest = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/indexes/" + indexName + "?definition=yes", "GET", credentials);
+            var httpJsonRequest = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/indexes/" + indexName + "?definition=yes", "GET", credentials, convention);
 			httpJsonRequest.AddOperationHeaders(OperationsHeaders);
 			string indexDefAsString;
 			try
@@ -467,7 +467,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			if (etag != null)
 				metadata.Add("ETag", new JValue(etag.Value.ToString()));
 			AddTransactionInformation(metadata);
-			var httpJsonRequest = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/docs/" + key, "DELETE", metadata, credentials);
+            var httpJsonRequest = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/docs/" + key, "DELETE", metadata, credentials, convention);
 			httpJsonRequest.AddOperationHeaders(OperationsHeaders);
 			try
 			{
@@ -544,7 +544,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 					throw;
 			}
 
-			var request = HttpJsonRequest.CreateHttpJsonRequest(this, requestUri, "PUT", credentials);
+            var request = HttpJsonRequest.CreateHttpJsonRequest(this, requestUri, "PUT", credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
 			request.Write(JsonConvert.SerializeObject(definition, new JsonEnumConverter()));
 
@@ -609,7 +609,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			{
 				path += "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray());
 			}
-			var request = HttpJsonRequest.CreateHttpJsonRequest(this, path, "GET", credentials);
+            var request = HttpJsonRequest.CreateHttpJsonRequest(this, path, "GET", credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
 			var serializer = convention.CreateSerializer();
 			JToken json;
@@ -644,7 +644,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		public void DeleteIndex(string name)
 		{
 			EnsureIsNotNullOrEmpty(name, "name");
-			var request = HttpJsonRequest.CreateHttpJsonRequest(this, url + "/indexes/" + name, "DELETE", credentials);
+            var request = HttpJsonRequest.CreateHttpJsonRequest(this, url + "/indexes/" + name, "DELETE", credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
 			request.ReadResponseString();
 		}
@@ -674,7 +674,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			{
 				path += "?" + string.Join("&", includes.Select(x => "include=" + x).ToArray());
 			}
-			var request = HttpJsonRequest.CreateHttpJsonRequest(this, path, "POST", credentials);
+            var request = HttpJsonRequest.CreateHttpJsonRequest(this, path, "POST", credentials, convention);
 			
 			request.AddOperationHeaders(OperationsHeaders);
 			request.Write(new JArray(ids).ToString(Formatting.None));
@@ -701,7 +701,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		{
 			var metadata = new JObject();
 			AddTransactionInformation(metadata);
-			var req = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/bulk_docs", "POST", metadata, credentials);
+            var req = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/bulk_docs", "POST", metadata, credentials, convention);
 			req.AddOperationHeaders(OperationsHeaders);
 			var jArray = new JArray(commandDatas.Select(x => x.ToJson()));
 			req.Write(jArray.ToString(Formatting.None));
@@ -737,7 +737,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 
 		private void DirectCommit(Guid txId, string operationUrl)
 		{
-			var httpJsonRequest = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/transaction/commit?tx=" + txId, "POST", credentials);
+            var httpJsonRequest = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/transaction/commit?tx=" + txId, "POST", credentials, convention);
 			httpJsonRequest.AddOperationHeaders(OperationsHeaders);
 			httpJsonRequest.ReadResponseString();
 		}
@@ -814,7 +814,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 
 		private void DirectRollback(Guid txId, string operationUrl)
 		{
-			var httpJsonRequest = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/transaction/rollback?tx=" + txId, "POST", credentials);
+            var httpJsonRequest = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/transaction/rollback?tx=" + txId, "POST", credentials, convention);
 			httpJsonRequest.AddOperationHeaders(OperationsHeaders);
 			httpJsonRequest.ReadResponseString();
 		}
@@ -892,7 +892,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			ExecuteWithReplication<object>(operationUrl =>
 			{
 				string path = queryToDelete.GetIndexQueryUrl(operationUrl, indexName, "bulk_docs") + "&allowStale=" + allowStale;
-				var request = HttpJsonRequest.CreateHttpJsonRequest(this, path, "DELETE", credentials);
+                var request = HttpJsonRequest.CreateHttpJsonRequest(this, path, "DELETE", credentials, convention);
 				request.AddOperationHeaders(OperationsHeaders);
 				try
 				{
@@ -922,7 +922,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			ExecuteWithReplication<object>(operationUrl =>
 			{
 				string path = queryToUpdate.GetIndexQueryUrl(operationUrl, indexName, "bulk_docs") + "&allowStale=" + allowStale;
-				var request = HttpJsonRequest.CreateHttpJsonRequest(this, path, "PATCH", credentials);
+                var request = HttpJsonRequest.CreateHttpJsonRequest(this, path, "PATCH", credentials, convention);
 				request.AddOperationHeaders(OperationsHeaders);
 				request.Write(new JArray(patchRequests.Select(x => x.ToJson())).ToString(Formatting.Indented));
 				try
@@ -959,7 +959,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
                 Uri.EscapeDataString(suggestionQuery.Distance.ToString()),
                 Uri.EscapeDataString(suggestionQuery.Accuracy.ToString()));
 
-            var request = HttpJsonRequest.CreateHttpJsonRequest(this, requestUri, "GET", credentials);
+            var request = HttpJsonRequest.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention);
             request.AddOperationHeaders(OperationsHeaders);
             var serializer = convention.CreateSerializer();
             JToken json;
@@ -996,7 +996,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
                 pageSize,
                 Uri.EscapeDataString(fromValue ?? ""));
 
-            var request = HttpJsonRequest.CreateHttpJsonRequest(this, requestUri, "GET", credentials);
+            var request = HttpJsonRequest.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention);
             request.AddOperationHeaders(OperationsHeaders);
             var serializer = convention.CreateSerializer();
             JToken json;

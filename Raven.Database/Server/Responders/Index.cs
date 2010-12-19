@@ -116,7 +116,7 @@ namespace Raven.Database.Server.Responders
 						.Select(x => x["@metadata"].Value<string>("@id"))
 						.Where(x => x != null)
 					);
-				var command = new AddIncludesCommand(Database, GetRequestTransaction(context), queryResult.Includes.Add, includes, loadedIds);
+                var command = new AddIncludesCommand(Database, GetRequestTransaction(context), (etag, doc) => queryResult.Includes.Add(doc), includes, loadedIds);
 				foreach (var result in queryResult.Results)
 				{
 					command.Execute(result);
@@ -137,13 +137,7 @@ namespace Raven.Database.Server.Responders
 
 		private QueryResult PerformQueryAgainstExistingIndex(IHttpContext context, string index, IndexQuery indexQuery)
 		{
-			Tuple<DateTime, Guid> indexLastUpdatedAt = null;
-			Database.TransactionalStorage.Batch(accessor =>
-			{
-				indexLastUpdatedAt = accessor.Staleness.IndexLastUpdatedAt(index);
-			});
-
-			if (context.MatchEtag(indexLastUpdatedAt.Item2))
+			if (context.MatchEtag(GetIndexEtag(index)))
 			{
 				context.SetStatusToNotModified();
 				return null;
@@ -161,18 +155,32 @@ namespace Raven.Database.Server.Responders
 			var dynamicIndexName = Database.FindDynamicIndexName(entityName, indexQuery.Query);
 			if (Database.IndexStorage.HasIndex(dynamicIndexName))
 			{
-				Tuple<DateTime, Guid> indexLastUpdatedAt = null;
-				Database.TransactionalStorage.Batch(accessor =>
-				{
-					indexLastUpdatedAt = accessor.Staleness.IndexLastUpdatedAt(dynamicIndexName);
-				});
-				if (context.MatchEtag(indexLastUpdatedAt.Item2))
+			    if (context.MatchEtag(GetIndexEtag(dynamicIndexName)))
 				{
 					context.SetStatusToNotModified();
 					return null;
 				}
 			}
-			return Database.ExecuteDynamicQuery(entityName, indexQuery);
+		    return Database.ExecuteDynamicQuery(entityName, indexQuery);
 		}
+
+	    private Guid GetIndexEtag(string indexName)
+	    {
+	        Guid lastDocEtag = Guid.Empty;
+	        Tuple<DateTime, Guid> indexLastUpdatedAt = null;
+	        Database.TransactionalStorage.Batch(accessor =>
+	        {
+	            lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
+	            indexLastUpdatedAt = accessor.Staleness.IndexLastUpdatedAt(indexName);
+	        });
+	        var etagBytes = lastDocEtag.ToByteArray();
+	        var lastIndexedEtagBytes = indexLastUpdatedAt.Item2.ToByteArray();
+	        for (int i = 0; i < 16; i++)
+	        {
+	            etagBytes[i] ^= lastIndexedEtagBytes[i];
+	        }
+
+	        return new Guid(etagBytes);
+	    }
 	}
 }

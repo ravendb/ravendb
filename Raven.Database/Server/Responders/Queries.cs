@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
@@ -29,9 +30,15 @@ namespace Raven.Database.Server.Responders
 			var loadedIds = new HashSet<string>();
 			var includes = context.Request.QueryString.GetValues("include") ?? new string[0];
 			var transactionInformation = GetRequestTransaction(context);
-			Database.TransactionalStorage.Batch(actions =>
+            var computedEtagBytes = new byte[16];
+		    var includedEtags = new List<Guid>();
+            Database.TransactionalStorage.Batch(actions =>
 			{
-				var addIncludesCommand = new AddIncludesCommand(Database, transactionInformation, result.Includes.Add, includes, loadedIds);
+				var addIncludesCommand = new AddIncludesCommand(Database, transactionInformation, (etag, includedDoc) =>
+				{
+                    includedEtags.Add(etag);
+				    result.Includes.Add(includedDoc);
+				}, includes, loadedIds);
 				foreach (JToken item in itemsToLoad)
 				{
 					var value = item.Value<string>();
@@ -43,9 +50,31 @@ namespace Raven.Database.Server.Responders
 						continue;
 					result.Results.Add(documentByKey.ToJson());
 
-					addIncludesCommand.Execute(documentByKey.DataAsJson);
+				    var etagBytes = documentByKey.Etag.ToByteArray();
+				    for (int i = 0; i < 16; i++)
+				    {
+				        computedEtagBytes[i] ^= etagBytes[i];
+				    }
+
+				    addIncludesCommand.Execute(documentByKey.DataAsJson);
 				}
             });
+
+		    foreach (var includedGuid in includedEtags)
+		    {
+                var etagBytes = includedGuid.ToByteArray();
+                for (int i = 0; i < 16; i++)
+                {
+                    computedEtagBytes[i] ^= etagBytes[i];
+                }
+		    }
+		    var computedEtag = new Guid(computedEtagBytes);
+            if(context.MatchEtag(computedEtag))
+            {
+                context.SetStatusToNotModified();
+                return;
+            }
+		    context.Response.Headers["ETag"] = computedEtag.ToString();
 			context.WriteJson(result);
 		}
 	}
