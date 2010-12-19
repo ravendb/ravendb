@@ -669,15 +669,26 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		/// <returns></returns>
 		public MultiLoadResult DirectGet(string[] ids, string operationUrl, string[] includes)
 		{
-			var path = operationUrl + "/queries/";
+			var path = operationUrl + "/queries/?";
 			if (includes != null && includes.Length > 0)
 			{
-				path += "?" + string.Join("&", includes.Select(x => "include=" + x).ToArray());
+				path += string.Join("&", includes.Select(x => "include=" + x).ToArray());
 			}
-            var request = HttpJsonRequest.CreateHttpJsonRequest(this, path, "POST", credentials, convention);
-			
-			request.AddOperationHeaders(OperationsHeaders);
-			request.Write(new JArray(ids).ToString(Formatting.None));
+            // if it is too big, we drop to POST (note that means that we can't use the HTTP cache any longer)
+            // we are fine with that, requests to load > 128 items are going to be rare
+            HttpJsonRequest request;
+            if (ids.Length < 128)
+            {
+                path += "&" + string.Join("&", ids.Select(x => "id=" + x).ToArray());
+                request = HttpJsonRequest.CreateHttpJsonRequest(this, path, "GET", credentials, convention);
+            }
+		    else
+            {
+                request = HttpJsonRequest.CreateHttpJsonRequest(this, path, "POST", credentials, convention);
+                request.Write(new JArray(ids).ToString(Formatting.None));
+            }
+
+		    request.AddOperationHeaders(OperationsHeaders);
 			var result = JObject.Parse(request.ReadResponseString());
 
 			return new MultiLoadResult
