@@ -935,5 +935,16 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
                 return buildVersion;
             }
         }
+
+        static string productVersion;
+        public static string ProductVersion
+        {
+            get
+            {
+                if (productVersion == null)
+                    productVersion = FileVersionInfo.GetVersionInfo(typeof(DocumentDatabase).Assembly.Location).ProductVersion.ToString();
+                return productVersion;
+            }
+        }
     }
 }

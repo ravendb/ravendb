@@ -4,33 +4,45 @@ String.prototype.trim = function () {
 }
 
 $(document).ready(function () {
-	$.ravenDB.init();
+    $.ravenDB.init();
 
-	var windowSize = $(window).height();
-	var minBodySize = Math.floor(windowSize * .75);
-	$('#body').css('min-height', minBodySize + 'px');
+    var windowSize = $(window).height();
+    var minBodySize = Math.floor(windowSize * .75);
+    $('#body').css('min-height', minBodySize + 'px');
 
-	RavenUI.GetDocument("Raven/WarningMessages", function (doc, etag, metadata) {
-		if (doc == null)
-			return;
-		$('#content').prepend("<div id='system_warning'/>")
-		$('#system_warning').setTemplateURL($.ravenDB.getServerUrl() + '/raven/JSONTemplates/warningMsgs.html');
-		$('#system_warning').processTemplate(doc);
-	});
+    $.ajax({
+        url: settings.server + '/build/version',
+        dataType: 'json',
+        cache: false,
+        success: function (data) {
+            $('#build_version').html('<a href="#">Build# ' + data.BuildVersion + '</a>')
+                .click(function () {
+                    alert('Build #' + data.BuildVersion + ', Version : ' + data.ProductVersion);
+                });
+        }
+    });
 
-	$(window).resize(function () {
-		var windowSize = $(window).height();
-		var minBodySize = Math.floor(windowSize * .75);
-		$('#body').css('min-height', minBodySize + 'px');
-	});
+    RavenUI.GetDocument("Raven/WarningMessages", function (doc, etag, metadata) {
+        if (doc == null)
+            return;
+        $('#content').prepend("<div id='system_warning'/>")
+        $('#system_warning').setTemplateURL($.ravenDB.getServerUrl() + '/raven/JSONTemplates/warningMsgs.html');
+        $('#system_warning').processTemplate(doc);
+    });
 
-	$('#nav a:not(.nav_active)').hover(function () {
-		$(this).stop(true, true).animate({ backgroundColor: '#444751', color: '#fff' }, 500);
-	}, function () {
-		$(this).stop(true, true).animate({ backgroundColor: '#E8E9ED', color: '#000' }, 500);
-	}).click(function () {
-		$(this).stop(true, true).css('background-color', '#E8E9ED').css('color', '#000');
-	});
+    $(window).resize(function () {
+        var windowSize = $(window).height();
+        var minBodySize = Math.floor(windowSize * .75);
+        $('#body').css('min-height', minBodySize + 'px');
+    });
+
+    $('#nav a:not(.nav_active)').hover(function () {
+        $(this).stop(true, true).animate({ backgroundColor: '#444751', color: '#fff' }, 500);
+    }, function () {
+        $(this).stop(true, true).animate({ backgroundColor: '#E8E9ED', color: '#000' }, 500);
+    }).click(function () {
+        $(this).stop(true, true).css('background-color', '#E8E9ED').css('color', '#000');
+    });
 });
 
 function RavenUI() { }
