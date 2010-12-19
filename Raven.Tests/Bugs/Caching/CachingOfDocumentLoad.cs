@@ -6,15 +6,20 @@ namespace Raven.Tests.Bugs.Caching
 {
     public class CachingOfDocumentLoad : RemoteClientTest
     {
+        public CachingOfDocumentLoad()
+        {
+            HttpJsonRequest.ResetCache();
+        }
+
         [Fact]
         public void Can_cache_document_load()
         {
-            using(GetNewServer())
-            using(var store = new DocumentStore{Url = "http://localhost:8080"}.Initialize())
+            using (GetNewServer())
+            using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
             {
-                using(var s = store.OpenSession())
+                using (var s = store.OpenSession())
                 {
-                    s.Store(new User{Name = "Ayende"});
+                    s.Store(new User { Name = "Ayende" });
                     s.SaveChanges();
                 }
 

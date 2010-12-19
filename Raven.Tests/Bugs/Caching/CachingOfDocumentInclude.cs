@@ -8,7 +8,7 @@ namespace Raven.Tests.Bugs.Caching
     {
         public CachingOfDocumentInclude()
         {
-            HttpJsonRequest.ResetNumberOfCachedRequests();
+            HttpJsonRequest.ResetCache();
         }
 
         [Fact]

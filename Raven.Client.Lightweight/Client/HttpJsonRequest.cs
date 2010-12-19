@@ -24,7 +24,7 @@ namespace Raven.Client.Client
 		/// </summary>
 		public static event EventHandler<WebRequestEventArgs> ConfigureRequest = delegate {  };
 
-		private static readonly ObjectCache cache = new MemoryCache(typeof(HttpJsonRequest).FullName + ".Cache");
+		private static ObjectCache cache = new MemoryCache(typeof(HttpJsonRequest).FullName + ".Cache");
 
 	    private static int numOfCachedRequests;
 
@@ -311,11 +311,12 @@ namespace Raven.Client.Client
 		}
 
         /// <summary>
-        /// Reset the number of cached requests
+        /// Reset the number of cached requests and clear the entire cache
         /// Mostly used for testing
         /// </summary>
-	    public static void ResetNumberOfCachedRequests()
+	    public static void ResetCache()
 	    {
+            cache = new MemoryCache(typeof(HttpJsonRequest).FullName + ".Cache");
 	        numOfCachedRequests = 0;
 	    }
 	}
