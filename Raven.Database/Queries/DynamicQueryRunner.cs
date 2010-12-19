@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
+using Raven.Abstractions.Data;
 using Raven.Database.Data;
 using System.Diagnostics;
 using System.Threading;
@@ -21,10 +22,10 @@ namespace Raven.Database.Queries
 			temporaryIndexes = new ConcurrentDictionary<string, TemporaryIndexInfo>();
 		}
 
-		public QueryResult ExecuteDynamicQuery(string entityName, IndexQuery query)
+		public QueryResult ExecuteDynamicQuery(string entityName, IndexQuery query, AggregationOperation aggregationOperation)
 		{
 		    // Create the map
-		    var map = DynamicQueryMapping.Create(documentDatabase, query.Query, entityName);
+		    var map = DynamicQueryMapping.Create(documentDatabase, query, entityName, aggregationOperation);
 		    
             map.IndexName = TouchTemporaryIndex(map, map.TemporaryIndexName, map.PermanentIndexName);
 
@@ -44,7 +45,7 @@ namespace Raven.Database.Queries
 		                                            PageSize = query.PageSize,
 		                                            Query = realQuery,
 		                                            Start = query.Start,
-		                                            FieldsToFetch = query.FieldsToFetch,
+                                                    FieldsToFetch = GetFieldsToFetch(query, aggregationOperation),
 		                                            SortedFields = query.SortedFields,
 		                                        });
 
@@ -58,6 +59,18 @@ namespace Raven.Database.Queries
 		        Thread.Sleep(100);
 		    }
 		}
+
+	    private string[] GetFieldsToFetch(IndexQuery query, AggregationOperation aggregationOperation)
+	    {
+	        var fieldsToFetch = query.FieldsToFetch;
+	        if(aggregationOperation != AggregationOperation.None)
+	        {
+	            fieldsToFetch =
+	                new[] {aggregationOperation.ToString()}.Concat(fieldsToFetch ?? Enumerable.Empty<string>()).
+	                    ToArray();
+	        }
+	        return fieldsToFetch;
+	    }
 
 	    public void CleanupCache()
 		{

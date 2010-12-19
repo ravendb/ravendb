@@ -166,7 +166,8 @@ namespace Raven.Database.Server.Responders
 					return null;
 				}
 			}
-		    var queryResult = Database.ExecuteDynamicQuery(entityName, indexQuery);
+
+            var queryResult = Database.ExecuteDynamicQuery(entityName, indexQuery, context.GetAggregationOperation());
             if(indexEtag != Guid.Empty)
 		        queryResult.IndexEtag = indexEtag;
 		    return queryResult;

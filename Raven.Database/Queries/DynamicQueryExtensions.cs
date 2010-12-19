@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using Raven.Abstractions.Data;
 using Raven.Database.Data;
 
 namespace Raven.Database.Queries
@@ -10,8 +11,13 @@ namespace Raven.Database.Queries
     {
         public static QueryResult ExecuteDynamicQuery(this DocumentDatabase self, string entityName, IndexQuery indexQuery)
         {
-            var dynamicQueryRunner = (DynamicQueryRunner)self.ExtensionsState.GetOrAdd(typeof (DynamicQueryExtensions), o => new DynamicQueryRunner(self));
-            return dynamicQueryRunner.ExecuteDynamicQuery(entityName, indexQuery);
+            return ExecuteDynamicQuery(self, entityName, indexQuery, AggregationOperation.None);
+        }
+
+        public static QueryResult ExecuteDynamicQuery(this DocumentDatabase self, string entityName, IndexQuery indexQuery, AggregationOperation aggregationOperation)
+        {
+            var dynamicQueryRunner = (DynamicQueryRunner)self.ExtensionsState.GetOrAdd(typeof(DynamicQueryExtensions), o => new DynamicQueryRunner(self));
+            return dynamicQueryRunner.ExecuteDynamicQuery(entityName, indexQuery, aggregationOperation);
         }
 
         public static string FindDynamicIndexName(this DocumentDatabase self, string entityName, string query)

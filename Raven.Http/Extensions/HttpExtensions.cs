@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
 using Raven.Database.Linq;
 using Raven.Http.Abstractions;
 using Raven.Http.Exceptions;
@@ -243,6 +244,17 @@ namespace Raven.Http.Extensions
                 pageSize = maxPageSize;
 			return pageSize;
 		}
+
+        public static AggregationOperation GetAggregationOperation(this IHttpContext context)
+        {
+            var aggAsString = context.Request.QueryString["aggregation"];
+            if (aggAsString == null)
+            {
+                return AggregationOperation.None;
+            }
+
+            return (AggregationOperation)Enum.Parse(typeof (AggregationOperation), aggAsString, true);
+        }
 
         public static DateTime? GetCutOff(this IHttpContext context)
         {
