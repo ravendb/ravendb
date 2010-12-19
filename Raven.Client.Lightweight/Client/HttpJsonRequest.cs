@@ -309,5 +309,14 @@ namespace Raven.Client.Client
 				webRequest.Headers[header] = operationsHeaders[header];
 			}
 		}
+
+        /// <summary>
+        /// Reset the number of cached requests
+        /// Mostly used for testing
+        /// </summary>
+	    public static void ResetNumberOfCachedRequests()
+	    {
+	        numOfCachedRequests = 0;
+	    }
 	}
 }
