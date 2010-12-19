@@ -8,6 +8,8 @@ using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Http;
+using Raven.Abstractions.Json;
+using System.Linq;
 
 namespace Raven.Database.Impl
 {
@@ -76,8 +78,11 @@ namespace Raven.Database.Impl
                         continue;
 
                     var doc = GetDocumentWithCaching(queryResult.Key);
-                    var token = doc.DataAsJson.SelectToken(fieldToFetch);
-                    queryResult.Projection[fieldToFetch] = token;
+                    var token = doc.DataAsJson.SelectTokenWithRavenSyntax(fieldToFetch).ToArray();
+                    if (token.Length == 1)
+                        queryResult.Projection[fieldToFetch] = token[0];
+                    else
+                        queryResult.Projection[fieldToFetch] = new JArray(token);
                 }
             }
 

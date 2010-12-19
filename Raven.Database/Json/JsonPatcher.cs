@@ -1,9 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Exceptions;
 using Raven.Http.Exceptions;
 using System.Linq;
+using Raven.Abstractions.Json;
 
 namespace Raven.Database.Json
 {
@@ -31,41 +33,43 @@ namespace Raven.Database.Json
         {
             if (patchCmd.Name == null)
                 throw new InvalidOperationException("Patch property must have a name property");
-        	var token = document.SelectToken(patchCmd.Name);
-        	JProperty property = null;
-			if (token != null)
-				property = token.Parent as JProperty;
-        	switch (patchCmd.Type)
+            foreach (var token in document.SelectTokenWithRavenSyntax(patchCmd.Name))
             {
-                case PatchCommandType.Set:
-					AddProperty(patchCmd, patchCmd.Name, property);
-                    break;
-                case PatchCommandType.Unset:
-					RemoveProperty(patchCmd, patchCmd.Name, property);
-                    break;
-                case PatchCommandType.Add:
-					AddValue(patchCmd, patchCmd.Name, property);
-                    break;
-                case PatchCommandType.Insert:
-					InsertValue(patchCmd, patchCmd.Name, property);
-                    break;
-                case PatchCommandType.Remove:
-					RemoveValue(patchCmd, patchCmd.Name, property);
-                    break;
-                case PatchCommandType.Modify:
-					ModifyValue(patchCmd, patchCmd.Name, property);
-                    break;
-                case PatchCommandType.Inc:
-					IncrementProperty(patchCmd, patchCmd.Name, property);
-                    break;
-				case PatchCommandType.Copy:
-					CopyProperty(patchCmd, patchCmd.Name, property);
-            		break;
-				case PatchCommandType.Rename:
-					RenameProperty(patchCmd, patchCmd.Name, property);
-					break;
-                default:
-					throw new ArgumentException("Cannot understand command: " + patchCmd.Type);
+                JProperty property = null;
+                if (token != null)
+                    property = token.Parent as JProperty;
+                switch (patchCmd.Type)
+                {
+                    case PatchCommandType.Set:
+                        AddProperty(patchCmd, patchCmd.Name, property);
+                        break;
+                    case PatchCommandType.Unset:
+                        RemoveProperty(patchCmd, patchCmd.Name, property);
+                        break;
+                    case PatchCommandType.Add:
+                        AddValue(patchCmd, patchCmd.Name, property);
+                        break;
+                    case PatchCommandType.Insert:
+                        InsertValue(patchCmd, patchCmd.Name, property);
+                        break;
+                    case PatchCommandType.Remove:
+                        RemoveValue(patchCmd, patchCmd.Name, property);
+                        break;
+                    case PatchCommandType.Modify:
+                        ModifyValue(patchCmd, patchCmd.Name, property);
+                        break;
+                    case PatchCommandType.Inc:
+                        IncrementProperty(patchCmd, patchCmd.Name, property);
+                        break;
+                    case PatchCommandType.Copy:
+                        CopyProperty(patchCmd, patchCmd.Name, property);
+                        break;
+                    case PatchCommandType.Rename:
+                        RenameProperty(patchCmd, patchCmd.Name, property);
+                        break;
+                    default:
+                        throw new ArgumentException("Cannot understand command: " + patchCmd.Type);
+                }
             }
         }
 

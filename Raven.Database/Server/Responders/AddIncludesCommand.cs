@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Json;
 using Raven.Http;
 
 namespace Raven.Database.Server.Responders
@@ -36,11 +37,10 @@ namespace Raven.Database.Server.Responders
 		{
 			foreach (var include in Includes)
 			{
-				var token = document.SelectToken(include);
-				if (token == null)
-					continue;
-
-				ExecuteInternal(token);
+			    foreach (var token in document.SelectTokenWithRavenSyntax(include))
+			    {
+			        ExecuteInternal(token);
+			    }
 			}
 		}
 
