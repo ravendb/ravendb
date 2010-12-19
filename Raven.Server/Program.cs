@@ -197,7 +197,7 @@ namespace Raven.Server
                     Smuggler.Smuggler.ImportData(ravenConfiguration.ServerUrl, path);
                 }
 
-                Console.WriteLine("Raven is ready to process requests.");
+                Console.WriteLine("Raven is ready to process requests. Build {0}", DocumentDatabase.BuildVersion);
                 Console.WriteLine("Data directory: {0}, HostName: {1} Port: {2}", ravenConfiguration.DataDirectory, ravenConfiguration.HostName ?? "<any>", ravenConfiguration.Port);
                 Console.WriteLine("Press the enter key to stop the server or enter 'cls' and then enter to clear the log");
                 while (true)
