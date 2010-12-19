@@ -9,11 +9,11 @@ using Xunit;
 
 namespace Raven.Tests.Queries
 {
-    public class DyanmicQueries : AbstractDocumentStorageTest
+    public class DynamicQueries : AbstractDocumentStorageTest
 	{
 		private readonly DocumentDatabase db;
 
-		public DyanmicQueries()
+		public DynamicQueries()
 		{
 			db = new DocumentDatabase(new RavenConfiguration
 				{

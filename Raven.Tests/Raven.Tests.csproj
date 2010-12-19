@@ -272,7 +272,7 @@
     <Compile Include="ManagedStorage\TxStorageTest.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Queries\DyanmicQueries.cs" />
+    <Compile Include="Queries\DynamicQueries.cs" />
     <Compile Include="Queries\ParameterisedDynamicQuery.cs" />
     <Compile Include="Querying\IndexedUser.cs" />
     <Compile Include="Querying\UsingDocumentQuery.cs" />
