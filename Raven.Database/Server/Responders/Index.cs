@@ -137,13 +137,16 @@ namespace Raven.Database.Server.Responders
 
 		private QueryResult PerformQueryAgainstExistingIndex(IHttpContext context, string index, IndexQuery indexQuery)
 		{
-			if (context.MatchEtag(GetIndexEtag(index)))
+		    var indexEtag = GetIndexEtag(index);
+		    if (context.MatchEtag(indexEtag))
 			{
 				context.SetStatusToNotModified();
 				return null;
 			}
 
-			return Database.Query(index, indexQuery);
+		    var queryResult = Database.Query(index, indexQuery);
+            queryResult.IndexEtag = indexEtag;
+		    return queryResult;
 		}
 
 		private QueryResult PerformQueryAgainstDynamicIndex(IHttpContext context, string index, IndexQuery indexQuery)
@@ -153,15 +156,20 @@ namespace Raven.Database.Server.Responders
 				entityName = index.Substring("dynamic/".Length);
 
 			var dynamicIndexName = Database.FindDynamicIndexName(entityName, indexQuery.Query);
-			if (Database.IndexStorage.HasIndex(dynamicIndexName))
+		    var indexEtag = Guid.Empty;
+            if (Database.IndexStorage.HasIndex(dynamicIndexName))
 			{
-			    if (context.MatchEtag(GetIndexEtag(dynamicIndexName)))
+			    indexEtag = GetIndexEtag(dynamicIndexName);
+			    if (context.MatchEtag(indexEtag))
 				{
 					context.SetStatusToNotModified();
 					return null;
 				}
 			}
-		    return Database.ExecuteDynamicQuery(entityName, indexQuery);
+		    var queryResult = Database.ExecuteDynamicQuery(entityName, indexQuery);
+            if(indexEtag != Guid.Empty)
+		        queryResult.IndexEtag = indexEtag;
+		    return queryResult;
 		}
 
 	    private Guid GetIndexEtag(string indexName)
