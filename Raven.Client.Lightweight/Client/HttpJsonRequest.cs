@@ -4,6 +4,7 @@ using System.IO;
 using System.Net;
 using System.Runtime.Caching;
 using System.Text;
+using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Document;
 
@@ -25,7 +26,18 @@ namespace Raven.Client.Client
 
 		private static readonly ObjectCache cache = new MemoryCache(typeof(HttpJsonRequest).FullName + ".Cache");
 
-		private class CachedRequest
+	    private static int numOfCachedRequests;
+
+        /// <summary>
+        /// The number of requests that we got 304 for 
+        /// and were able to handle purely from the cache
+        /// </summary>
+	    public static int NumberOfCachedRequests
+	    {
+	        get { return numOfCachedRequests; }
+	    }
+
+	    private class CachedRequest
 		{
 			public string Etag;
 			public string Data;
@@ -160,6 +172,7 @@ namespace Raven.Client.Client
 						{"ETag", cachedRequest.Etag},
 						{"Last-Modified", cachedRequest.LastModified}
 					};
+				    Interlocked.Increment(ref numOfCachedRequests);
 					return cachedRequest.Data;
 				}
 

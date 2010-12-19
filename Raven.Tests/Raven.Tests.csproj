@@ -115,6 +115,8 @@
     <Compile Include="Bugs\AttachmentsWithCredentials.cs" />
     <Compile Include="Bugs\AutoCreateIndexes.cs" />
     <Compile Include="Bugs\AutoDetectAnaylzersForQuery.cs" />
+    <Compile Include="Bugs\Caching\CachingOfDocumentInclude.cs" />
+    <Compile Include="Bugs\Caching\CachingOfDocumentLoad.cs" />
     <Compile Include="Bugs\CanDetectChanges.cs" />
     <Compile Include="Bugs\CanGetMetadataForTransient.cs" />
     <Compile Include="Bugs\CanHandleDocumentRemoval.cs" />
