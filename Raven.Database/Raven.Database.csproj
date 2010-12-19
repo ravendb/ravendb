@@ -345,6 +345,7 @@
     <Compile Include="Server\Responders\Indexes.cs" />
     <Compile Include="Server\Responders\LinearQueryResponder.cs" />
     <Compile Include="Server\Responders\Queries.cs" />
+    <Compile Include="Server\Responders\RequestResponder.cs" />
     <Compile Include="Server\Responders\Root.cs" />
     <Compile Include="Server\Responders\Static.cs" />
     <Compile Include="Server\Responders\Statics.cs" />

@@ -45,7 +45,7 @@ namespace Raven.Database
 
         [ImportMany]
         public IEnumerable<AbstractDeleteTrigger> DeleteTriggers { get; set; }
-        
+
         [ImportMany]
         public IEnumerable<AbstractIndexUpdateTrigger> IndexUpdateTriggers { get; set; }
 
@@ -77,8 +77,8 @@ namespace Raven.Database
 
             workContext = new WorkContext
             {
-            	IndexUpdateTriggers = IndexUpdateTriggers,
-				ReadTriggers = ReadTriggers
+                IndexUpdateTriggers = IndexUpdateTriggers,
+                ReadTriggers = ReadTriggers
             };
 
             TransactionalStorage = configuration.CreateTransactionalStorage(workContext.HandleWorkNotifications);
@@ -135,7 +135,7 @@ namespace Raven.Database
             AttachmentPutTriggers.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
             AttachmentDeleteTriggers.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
             AttachmentReadTriggers.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
-            
+
             IndexUpdateTriggers.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
         }
 
@@ -199,7 +199,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 
         IRaveHttpnConfiguration IResourceStore.Configuration
         {
-            get { return Configuration;  }
+            get { return Configuration; }
         }
 
         public InMemoryRavenConfiguration Configuration
@@ -251,23 +251,23 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
             backgroundWorkerTask.Start();
         }
 
-		private static long sequentialUuidCounter;
+        private static long sequentialUuidCounter;
 
         public Guid CreateSequentialUuid()
-		{
-			var ticksAsBytes = BitConverter.GetBytes(currentEtagBase);
-			Array.Reverse(ticksAsBytes);
-			var increment = Interlocked.Increment(ref sequentialUuidCounter);
-			var currentAsBytes = BitConverter.GetBytes(increment);
-			Array.Reverse(currentAsBytes);
-			var bytes = new byte[16];
-			Array.Copy(ticksAsBytes, 0, bytes, 0, ticksAsBytes.Length);
-			Array.Copy(currentAsBytes, 0, bytes, 8, currentAsBytes.Length);
-			return bytes.TransfromToGuidWithProperSorting();
-		}
+        {
+            var ticksAsBytes = BitConverter.GetBytes(currentEtagBase);
+            Array.Reverse(ticksAsBytes);
+            var increment = Interlocked.Increment(ref sequentialUuidCounter);
+            var currentAsBytes = BitConverter.GetBytes(increment);
+            Array.Reverse(currentAsBytes);
+            var bytes = new byte[16];
+            Array.Copy(ticksAsBytes, 0, bytes, 0, ticksAsBytes.Length);
+            Array.Copy(currentAsBytes, 0, bytes, 8, currentAsBytes.Length);
+            return bytes.TransfromToGuidWithProperSorting();
+        }
 
 
-    	public JsonDocument Get(string key, TransactionInformation transactionInformation)
+        public JsonDocument Get(string key, TransactionInformation transactionInformation)
         {
             JsonDocument document = null;
             TransactionalStorage.Batch(actions =>
@@ -285,9 +285,9 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
         {
             if (string.IsNullOrEmpty(key))
             {
-				// we no longer sort by the key, so it doesn't matter
-				// that the key is no longer sequential
-            	key = Guid.NewGuid().ToString();
+                // we no longer sort by the key, so it doesn't matter
+                // that the key is no longer sequential
+                key = Guid.NewGuid().ToString();
             }
             RemoveReservedProperties(document);
             RemoveReservedProperties(metadata);
@@ -505,7 +505,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
         {
             var list = new List<JObject>();
             var stale = false;
-            Tuple<DateTime,Guid> indexTimestamp = null;
+            Tuple<DateTime, Guid> indexTimestamp = null;
             TransactionalStorage.Batch(
                 actions =>
                 {
@@ -531,7 +531,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 
                     var transformerErrors = new List<string>();
                     IEnumerable<JObject> results;
-                    if (viewGenerator != null && 
+                    if (viewGenerator != null &&
                         viewGenerator.TransformResultsDefinition != null)
                     {
                         var robustEnumerator = new RobustEnumerator
@@ -554,7 +554,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 
                     list.AddRange(results);
 
-                    if(transformerErrors.Count>0)
+                    if (transformerErrors.Count > 0)
                     {
                         throw new InvalidOperationException("The transform results function failed.\r\n" + string.Join("\r\n", transformerErrors));
                     }
@@ -591,7 +591,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
             stale = isStale;
             return loadedIds;
         }
-        
+
         public void DeleteIndex(string name)
         {
             IndexDefinitionStorage.RemoveIndex(name);
@@ -670,12 +670,12 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 
         private void ExecuteAttachmentReadTriggers(string name, Attachment attachment)
         {
-            if(attachment == null)
+            if (attachment == null)
                 return;
 
             foreach (var attachmentReadTrigger in AttachmentReadTriggers)
             {
-                attachment.Data = attachmentReadTrigger.OnRead(name, attachment.Data,attachment.Metadata, ReadOperation.Load);
+                attachment.Data = attachmentReadTrigger.OnRead(name, attachment.Data, attachment.Metadata, ReadOperation.Load);
             }
         }
 
@@ -691,7 +691,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
                 newEtag = actions.Attachments.AddAttachment(name, etag, data, metadata);
 
                 AttachmentPutTriggers.Apply(trigger => trigger.AfterPut(name, data, metadata, newEtag));
-            
+
                 workContext.ShouldNotifyAboutWork();
             });
 
@@ -735,9 +735,9 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
                 foreach (var doc in documents.Take(pageSize))
                 {
                     var document = documentRetriever.ExecuteReadTriggers(doc, null,
-						// here we want to have the Load semantic, not Query, because we need this to be
-						// as close as possible to the full database contents
-						ReadOperation.Load); 
+                        // here we want to have the Load semantic, not Query, because we need this to be
+                        // as close as possible to the full database contents
+                        ReadOperation.Load);
                     if (document == null)
                         continue;
                     if (document.Metadata.Property("@id") == null)
@@ -749,20 +749,20 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
             return list;
         }
 
-		public AttachmentInformation[] GetAttachments(int start, int pageSize, Guid? etag)
-		{
-			AttachmentInformation[] documents = null;
+        public AttachmentInformation[] GetAttachments(int start, int pageSize, Guid? etag)
+        {
+            AttachmentInformation[] documents = null;
 
-			TransactionalStorage.Batch(actions =>
-			{
-				if (etag == null)
-					documents = actions.Attachments.GetAttachmentsByReverseUpdateOrder(start).Take(pageSize).ToArray();
-				else
-					documents = actions.Attachments.GetAttachmentsAfter(etag.Value).Take(pageSize).ToArray();
-				
-			});
-			return documents;
-		}
+            TransactionalStorage.Batch(actions =>
+            {
+                if (etag == null)
+                    documents = actions.Attachments.GetAttachmentsByReverseUpdateOrder(start).Take(pageSize).ToArray();
+                else
+                    documents = actions.Attachments.GetAttachmentsAfter(etag.Value).Take(pageSize).ToArray();
+
+            });
+            return documents;
+        }
 
         public JArray GetIndexNames(int start, int pageSize)
         {
@@ -925,14 +925,14 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
             return IndexDefinitionStorage.GetIndexDefinition(index);
         }
 
-        static FileVersionInfo fileVersionInfo;
-        public static int BuildVersion
+        static string buildVersion;
+        public static string BuildVersion
         {
             get
             {
-                if (fileVersionInfo == null)
-                    fileVersionInfo = FileVersionInfo.GetVersionInfo(typeof (DocumentDatabase).Assembly.Location);
-                return fileVersionInfo.FilePrivatePart;
+                if (buildVersion == null)
+                    buildVersion = FileVersionInfo.GetVersionInfo(typeof(DocumentDatabase).Assembly.Location).FilePrivatePart.ToString();
+                return buildVersion;
             }
         }
     }

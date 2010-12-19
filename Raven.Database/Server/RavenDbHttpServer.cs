@@ -25,6 +25,11 @@ namespace Raven.Database.Server
         {
         }
 
+        protected override void OnDispatchingRequest(IHttpContext ctx)
+        {
+            ctx.Response.Headers["Raven-Server-Build"] = DocumentDatabase.BuildVersion;
+        }
+
         protected override bool TryHandleException(IHttpContext ctx, Exception e)
         {
             if (e is IndexDisabledException)

@@ -287,11 +287,10 @@ namespace Raven.Http
                 return false;
 
             SetupRequestToProperDatabase(ctx);
-
             CurrentOperationContext.Headers.Value = ctx.Request.Headers;
             try
             {
-
+                OnDispatchingRequest(ctx);
 
                 if (DefaultConfiguration.HttpCompression)
                     AddHttpCompressionIfClientCanAcceptIt(ctx);
@@ -327,6 +326,8 @@ namespace Raven.Http
             }
             return true;
         }
+
+        protected virtual void OnDispatchingRequest(IHttpContext ctx){}
 
         private void SetupRequestToProperDatabase(IHttpContext ctx)
         {
