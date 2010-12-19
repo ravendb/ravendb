@@ -260,7 +260,7 @@ namespace Raven.Client.Document
                 return; // nothing to do here
             IncrementRequestCount();
             Trace.WriteLine(string.Format("Saving {0} changes to {1}", data.Commands.Count, StoreIdentifier));
-            UpdateBatchResults(DatabaseCommands.Batch(data.Commands.ToArray()), data.Entities);
+            UpdateBatchResults(DatabaseCommands.Batch(data.Commands), data.Entities);
         }
 
 

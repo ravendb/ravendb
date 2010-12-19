@@ -14,7 +14,7 @@ namespace Raven.Client.Client
         /// </summary>
         string IndexQueried { get; }
         /// <summary>
-        /// Grant access ot the query session
+        /// Grant access to the query session
         /// </summary>
         IDocumentSession Session { get; }
         /// <summary>

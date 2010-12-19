@@ -68,7 +68,7 @@ namespace Raven.Database.Server.Responders
 
     		var transactionInformation = GetRequestTransaction(context);
     		var commands = (from JObject jsonCommand in jsonCommandArray
-    		                select CommandDataFactory.CreateCommand(jsonCommand, transactionInformation)).ToList();
+    		                select CommandDataFactory.CreateCommand(jsonCommand, transactionInformation));
 
     		var batchResult = Database.Batch(commands);
             context.WriteJson(batchResult);

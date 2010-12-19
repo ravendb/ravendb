@@ -4,7 +4,7 @@ using System.Runtime.Serialization;
 namespace Raven.Client.Exceptions
 {
 	/// <summary>
-	/// This exception is raised whenever a trigger vetos the read by the session
+	/// This exception is raised whenever a trigger vetoes the read by the session
 	/// </summary>
 	[Serializable]
 	public class ReadVetoException : Exception

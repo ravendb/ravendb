@@ -703,7 +703,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		/// </summary>
 		/// <param name="commandDatas">The command data.</param>
 		/// <returns></returns>
-		public BatchResult[] Batch(ICommandData[] commandDatas)
+		public BatchResult[] Batch(IEnumerable<ICommandData> commandDatas)
 		{
 			return ExecuteWithReplication(u => DirectBatch(commandDatas, u));
 		}

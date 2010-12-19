@@ -817,11 +817,11 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
             return result;
         }
 
-        public BatchResult[] Batch(ICollection<ICommandData> commands)
+        public BatchResult[] Batch(IEnumerable<ICommandData> commands)
         {
             var results = new List<BatchResult>();
 
-            log.DebugFormat("Executing {0} batched commands in a single transaction", commands.Count);
+            log.DebugFormat("Executing batched commands in a single transaction");
             TransactionalStorage.Batch(actions =>
             {
                 foreach (var command in commands)
@@ -837,7 +837,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
                 }
                 workContext.ShouldNotifyAboutWork();
             });
-            log.DebugFormat("Successfully executed {0} commands", commands.Count);
+            log.DebugFormat("Successfully executed {0} commands", results.Count);
             return results.ToArray();
         }
 
