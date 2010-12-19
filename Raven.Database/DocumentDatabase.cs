@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -922,6 +923,17 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
         public IndexDefinition GetIndexDefinition(string index)
         {
             return IndexDefinitionStorage.GetIndexDefinition(index);
+        }
+
+        static FileVersionInfo fileVersionInfo;
+        public static int BuildVersion
+        {
+            get
+            {
+                if (fileVersionInfo == null)
+                    fileVersionInfo = FileVersionInfo.GetVersionInfo(typeof (DocumentDatabase).Assembly.Location);
+                return fileVersionInfo.FilePrivatePart;
+            }
         }
     }
 }
