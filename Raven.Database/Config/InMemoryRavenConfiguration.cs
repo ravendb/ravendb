@@ -27,7 +27,7 @@ namespace Raven.Database.Config
 		{
 			Settings = new NameValueCollection(StringComparer.InvariantCultureIgnoreCase);
 
-			MaxNumberOfItemsToIndexInSignleBatch = 500;
+			MaxNumberOfItemsToIndexInSingleBatch = 500;
 
 			Catalog = new AggregateCatalog(
 				new AssemblyCatalog(typeof(HttpServer).Assembly),
@@ -184,7 +184,7 @@ namespace Raven.Database.Config
 		public TimeSpan TempIndexCleanupPeriod { get; set; }
 		public TimeSpan TempIndexCleanupThreshold { get; set; }
 
-		public int MaxNumberOfItemsToIndexInSignleBatch { get; set; }
+		public int MaxNumberOfItemsToIndexInSingleBatch { get; set; }
 
 		public bool IndexSingleThreaded { get; set; }
 

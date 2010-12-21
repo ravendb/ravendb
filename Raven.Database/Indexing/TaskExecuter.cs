@@ -93,8 +93,14 @@ namespace Raven.Database.Indexing
 
 		private void ExecuteIndexingWorkOnMultipleThreads(IEnumerable<IndexToWorkOn> indexesToWorkOn)
 		{
-			Parallel.ForEach(indexesToWorkOn, indexToWorkOn => 
-				transactionalStorage.Batch(actions => 
+			Parallel.ForEach(indexesToWorkOn, new ParallelOptions
+			{
+				// allow a maximum of 8 indexes to run at a given time, this avoids a potential error
+				// where you have N indexes all trying to read MaxNumberOfItemsToIndexInSignleBatch at the same time
+				// which might lead to an OutOfMemoryException
+				MaxDegreeOfParallelism = 8 
+			}
+				, indexToWorkOn => transactionalStorage.Batch(actions =>
 					IndexDocuments(actions, indexToWorkOn.IndexName, indexToWorkOn.LastIndexedEtag)));
 		}
 
@@ -153,7 +159,7 @@ namespace Raven.Database.Indexing
 
 			var jsonDocs = actions.Documents.GetDocumentsAfter(etagToIndexFrom)
 				.Where(x => x != null)
-				.Take(context.Configuration.MaxNumberOfItemsToIndexInSignleBatch) // ensure that we won't go overboard with reading and blow up with OOM
+				.Take(context.Configuration.MaxNumberOfItemsToIndexInSingleBatch) // ensure that we won't go overboard with reading and blow up with OOM
 				.ToArray();
 
 			if(jsonDocs.Length == 0)

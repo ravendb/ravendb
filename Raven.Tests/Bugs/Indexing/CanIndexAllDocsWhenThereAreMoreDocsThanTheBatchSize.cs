@@ -11,7 +11,7 @@ namespace Raven.Tests.Bugs.Indexing
 		{
 			using (var store = NewDocumentStore())
 			{
-				store.DocumentDatabase.Configuration.MaxNumberOfItemsToIndexInSignleBatch = 3;
+				store.DocumentDatabase.Configuration.MaxNumberOfItemsToIndexInSingleBatch = 3;
 
 				using (var session = store.OpenSession())
 				{
@@ -42,7 +42,7 @@ namespace Raven.Tests.Bugs.Indexing
 		{
 			using (var store = NewDocumentStore())
 			{
-				store.DocumentDatabase.Configuration.MaxNumberOfItemsToIndexInSignleBatch = 3;
+				store.DocumentDatabase.Configuration.MaxNumberOfItemsToIndexInSingleBatch = 3;
 
 			
 				store.DatabaseCommands.PutIndex("test",
