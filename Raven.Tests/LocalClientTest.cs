@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="LocalClientTest.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System.IO;
 using System.Reflection;
 using System.Threading;

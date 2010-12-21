@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="AuthorizationTest.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 extern alias database;
 
 using System;

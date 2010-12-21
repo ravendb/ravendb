@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="ReplicationDestination.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 namespace Raven.Bundles.Replication.Data
 {
 	/// <summary>

@@ -1,4 +1,9 @@
-﻿using Raven.Client.Document;
+//-----------------------------------------------------------------------
+// <copyright file="LastModifiedRemote.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
+using Raven.Client.Document;
 using Xunit;
 
 namespace Raven.Tests.Bugs.Metadata

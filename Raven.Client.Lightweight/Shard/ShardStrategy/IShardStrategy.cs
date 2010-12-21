@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="IShardStrategy.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using Raven.Client.Shard.ShardStrategy.ShardAccess;
 using Raven.Client.Shard.ShardStrategy.ShardResolution;
 using Raven.Client.Shard.ShardStrategy.ShardSelection;

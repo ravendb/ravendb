@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="ProjectInstaller.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System.ComponentModel;
 using System.Configuration.Install;
 using System.Diagnostics;

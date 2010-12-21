@@ -1,4 +1,9 @@
-﻿using Raven.Client.Client;
+//-----------------------------------------------------------------------
+// <copyright file="ISyncAdvancedSessionOperation.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
+using Raven.Client.Client;
 using Raven.Client.Indexes;
 
 namespace Raven.Client

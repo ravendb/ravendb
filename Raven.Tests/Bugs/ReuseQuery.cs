@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="ReuseQuery.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using Raven.Client;
 using Xunit;
 using System.Linq;

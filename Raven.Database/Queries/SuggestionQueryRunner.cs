@@ -1,4 +1,9 @@
-﻿using System;
+//-----------------------------------------------------------------------
+// <copyright file="SuggestionQueryRunner.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
+using System;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Raven.Abstractions.Data;

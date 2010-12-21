@@ -1,4 +1,9 @@
-﻿using System;
+//-----------------------------------------------------------------------
+// <copyright file="DocEtag.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
+using System;
 using System.Linq;
 using Newtonsoft.Json.Linq;
 using Xunit;

@@ -1,10 +1,12 @@
+//-----------------------------------------------------------------------
+// <copyright file="UsingSwedishCollation.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System;
-using System.Globalization;
-using Lucene.Net.Util;
 using Raven.Database.Indexing;
-using Raven.Database.Indexing.Collation;
 using Raven.Database.Indexing.Collation.Cultures;
-using Raven.Tests.Linq;
 using Xunit;
 using System.Linq;
 

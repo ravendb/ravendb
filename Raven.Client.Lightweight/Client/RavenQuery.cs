@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="RavenQuery.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System.Text;
 
 namespace Raven.Client.Client

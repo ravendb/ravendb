@@ -1,4 +1,9 @@
-﻿using System;
+//-----------------------------------------------------------------------
+// <copyright file="InMemoryRavenConfiguration.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
+using System;
 using System.Collections.Specialized;
 using System.ComponentModel.Composition.Hosting;
 using System.IO;

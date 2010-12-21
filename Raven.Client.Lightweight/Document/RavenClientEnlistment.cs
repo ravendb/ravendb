@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="RavenClientEnlistment.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System.Transactions;
 
 namespace Raven.Client.Document

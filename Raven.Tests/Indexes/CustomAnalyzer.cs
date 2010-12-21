@@ -1,4 +1,9 @@
-﻿using System;
+//-----------------------------------------------------------------------
+// <copyright file="CustomAnalyzer.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
+using System;
 using System.IO;
 using Lucene.Net.Analysis;
 

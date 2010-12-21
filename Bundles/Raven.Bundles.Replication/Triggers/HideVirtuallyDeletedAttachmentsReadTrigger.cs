@@ -1,4 +1,9 @@
-﻿using Newtonsoft.Json.Linq;
+//-----------------------------------------------------------------------
+// <copyright file="HideVirtuallyDeletedAttachmentsReadTrigger.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
+using Newtonsoft.Json.Linq;
 using Raven.Database.Plugins;
 
 namespace Raven.Bundles.Replication.Triggers

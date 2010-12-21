@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="AuthorizationReadTrigger.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System.IO;
 using System.Web;
 using Newtonsoft.Json.Linq;

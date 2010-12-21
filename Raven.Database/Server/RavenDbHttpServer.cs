@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="RavenDbHttpServer.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using System.Text.RegularExpressions;
 using Raven.Database.Config;

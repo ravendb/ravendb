@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="RemoveFromIndexTask.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using Raven.Database.Indexing;
 using System.Linq;

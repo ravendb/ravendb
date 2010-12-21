@@ -1,4 +1,9 @@
-﻿using System;
+//-----------------------------------------------------------------------
+// <copyright file="ITasksStorageActions.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
+using System;
 using Raven.Database.Tasks;
 
 namespace Raven.Database.Storage

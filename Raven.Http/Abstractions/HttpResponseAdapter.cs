@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="HttpResponseAdapter.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System.Collections.Specialized;
 using System.IO;
 using System.Web;

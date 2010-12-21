@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="IndexStaleViaEtags.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Database;

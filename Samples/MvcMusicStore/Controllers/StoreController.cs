@@ -1,4 +1,9 @@
-﻿using System.Linq;
+//-----------------------------------------------------------------------
+// <copyright file="StoreController.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
+using System.Linq;
 using System.Web.Mvc;
 using MvcMusicStore.Models;
 using MvcMusicStore.ViewModels;

@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="LinearQueryResponder.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using Raven.Database.Data;
 using Raven.Database.Json;
 using Raven.Database.Queries;

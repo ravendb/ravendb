@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="MultiEntityIndex.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using Raven.Database.Indexing;
 using Raven.Tests.Document;
 using Xunit;

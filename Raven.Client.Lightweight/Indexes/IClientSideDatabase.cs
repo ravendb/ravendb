@@ -1,4 +1,9 @@
-﻿namespace Raven.Client.Indexes
+//-----------------------------------------------------------------------
+// <copyright file="IClientSideDatabase.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
+namespace Raven.Client.Indexes
 {
     /// <summary>
     /// DatabaseAccessor for loading documents in the translator

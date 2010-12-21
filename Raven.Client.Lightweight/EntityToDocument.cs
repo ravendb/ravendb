@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="EntityToDocument.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using Newtonsoft.Json.Linq;
 
 namespace Raven.Client

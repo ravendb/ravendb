@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="Reading.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System.Linq;
 using Raven.Bundles.Authorization.Model;
 using Raven.Bundles.Tests.Versioning;

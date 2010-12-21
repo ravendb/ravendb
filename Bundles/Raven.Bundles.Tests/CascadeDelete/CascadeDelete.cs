@@ -1,4 +1,9 @@
-﻿extern alias database;
+//-----------------------------------------------------------------------
+// <copyright file="CascadeDelete.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
+extern alias database;
 using System;
 using System.ComponentModel.Composition.Hosting;
 using System.IO;

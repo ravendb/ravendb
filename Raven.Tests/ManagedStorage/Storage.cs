@@ -1,4 +1,9 @@
-﻿using System.IO;
+//-----------------------------------------------------------------------
+// <copyright file="Storage.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
+using System.IO;
 using Newtonsoft.Json.Linq;
 using Xunit;
 

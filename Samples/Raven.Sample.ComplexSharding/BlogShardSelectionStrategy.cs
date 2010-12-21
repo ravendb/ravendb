@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="BlogShardSelectionStrategy.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using System.Threading;
 using Raven.Client.Shard.ShardStrategy.ShardSelection;
