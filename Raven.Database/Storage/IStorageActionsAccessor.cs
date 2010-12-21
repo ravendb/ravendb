@@ -19,5 +19,6 @@ namespace Raven.Database.Storage
         IGeneralStorageActions General { get; }
         IMappedResultsStorageAction MappedResults { get; }
         event Action OnCommit;
+    	bool IsWriteConflict(Exception exception);
     }
 }
