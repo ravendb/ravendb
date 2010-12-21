@@ -1,4 +1,9 @@
-﻿using System.IO;
+//-----------------------------------------------------------------------
+// <copyright file="FileBasedPersistentSource.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
+using System.IO;
 
 namespace Raven.Munin
 {
