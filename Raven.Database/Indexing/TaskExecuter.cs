@@ -30,11 +30,11 @@ namespace Raven.Database.Indexing
 			this.context = context;
 		}
 
-        int workCounter;
-        
-        public void Execute()
+		int workCounter;
+		
+		public void Execute()
 		{
-		    while (context.DoWork)
+			while (context.DoWork)
 			{
 				var foundWork = false;
 				try
@@ -49,7 +49,7 @@ namespace Raven.Database.Indexing
 				}
 				if (foundWork == false)
 				{
-				    context.WaitForWork(TimeSpan.FromHours(1), ref workCounter);
+					context.WaitForWork(TimeSpan.FromHours(1), ref workCounter);
 				}
 			}
 		}
@@ -66,8 +66,8 @@ namespace Raven.Database.Indexing
 					if (failureRate.IsInvalidIndex)
 					{
 						log.InfoFormat("Skipped indexing documents for index: {0} because failure rate is too high: {1}",
-						               indexesStat.Name,
-						               failureRate.FailureRate);
+									   indexesStat.Name,
+									   failureRate.FailureRate);
 						continue;
 					}
 					if (!actions.Staleness.IsIndexStale(indexesStat.Name, null, null)) 
@@ -90,9 +90,9 @@ namespace Raven.Database.Indexing
 
 		private void ExecuteIndexingWorkOnMultipleThreads(IEnumerable<IndexToWorkOn> indexesToWorkOn)
 		{
-            Parallel.ForEach(indexesToWorkOn, indexToWorkOn => 
-                transactionalStorage.Batch(actions => 
-                    IndexDocuments(actions, indexToWorkOn.IndexName, indexToWorkOn.LastIndexedEtag)));
+			Parallel.ForEach(indexesToWorkOn, indexToWorkOn => 
+				transactionalStorage.Batch(actions => 
+					IndexDocuments(actions, indexToWorkOn.IndexName, indexToWorkOn.LastIndexedEtag)));
 		}
 
 		private bool ExecuteTasks()
@@ -125,10 +125,10 @@ namespace Raven.Database.Indexing
 			public string IndexName { get; set; }
 			public Guid LastIndexedEtag { get; set; }
 
-		    public override string ToString()
-		    {
-		        return string.Format("IndexName: {0}, LastIndexedEtag: {1}", IndexName, LastIndexedEtag);
-		    }
+			public override string ToString()
+			{
+				return string.Format("IndexName: {0}, LastIndexedEtag: {1}", IndexName, LastIndexedEtag);
+			}
 		}
 
 		public bool IndexDocuments(IStorageActionsAccessor actions, string index, Guid etagToIndexFrom)
@@ -140,7 +140,7 @@ namespace Raven.Database.Indexing
 
 			var jsonDocs = actions.Documents.GetDocumentsAfter(etagToIndexFrom)
 				.Where(x => x != null)
-				.Take(10000) // ensure that we won't go overboard with reading and blow up with OOM
+				.Take(context.Configuration.MaxNumberOfItemsToIndexInSignleBatch) // ensure that we won't go overboard with reading and blow up with OOM
 				.ToArray();
 
 			if(jsonDocs.Length == 0)

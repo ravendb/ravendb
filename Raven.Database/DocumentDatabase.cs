@@ -110,6 +110,7 @@ namespace Raven.Database
                 Extensions);
             IndexStorage = new IndexStorage(IndexDefinitionStorage, configuration);
 
+			workContext.Configuration = configuration;
             workContext.IndexStorage = IndexStorage;
             workContext.TransactionaStorage = TransactionalStorage;
             workContext.IndexDefinitionStorage = IndexDefinitionStorage;

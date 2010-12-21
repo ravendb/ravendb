@@ -144,6 +144,7 @@
     <Compile Include="Bugs\Includes.cs" />
     <Compile Include="Bugs\IndexingBehavior.cs" />
     <Compile Include="Bugs\IndexingRavenDocuments.cs" />
+    <Compile Include="Bugs\Indexing\CanIndexAllDocsWhenThereAreMoreDocsThanTheBatchSize.cs" />
     <Compile Include="Bugs\Indexing\DynamicFields.cs" />
     <Compile Include="Bugs\Indexing\MissingAnalyzer.cs" />
     <Compile Include="Bugs\Indexing\ThrowingAnalyzer.cs" />
