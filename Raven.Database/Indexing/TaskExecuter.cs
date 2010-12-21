@@ -83,7 +83,10 @@ namespace Raven.Database.Indexing
 			if (indexesToWorkOn.Count == 0)
 				return false;
 			
-			ExecuteIndexingWorkOnMultipleThreads(indexesToWorkOn);
+			if(context.Configuration.IndexSingleThreaded == false)
+				ExecuteIndexingWorkOnMultipleThreads(indexesToWorkOn);
+			else
+				ExecuteIndexingWorkOnSingleThread(indexesToWorkOn);
 
 			return true;
 		}
@@ -93,6 +96,16 @@ namespace Raven.Database.Indexing
 			Parallel.ForEach(indexesToWorkOn, indexToWorkOn => 
 				transactionalStorage.Batch(actions => 
 					IndexDocuments(actions, indexToWorkOn.IndexName, indexToWorkOn.LastIndexedEtag)));
+		}
+
+		private void ExecuteIndexingWorkOnSingleThread(IEnumerable<IndexToWorkOn> indexesToWorkOn)
+		{
+			foreach (var indexToWorkOn in indexesToWorkOn)
+			{
+				var copy = indexToWorkOn;
+				transactionalStorage.Batch(
+					actions => IndexDocuments(actions, copy.IndexName, copy.LastIndexedEtag));
+			}
 		}
 
 		private bool ExecuteTasks()
@@ -162,6 +175,8 @@ namespace Raven.Database.Indexing
 			}
 			catch (Exception e)
 			{
+				if (actions.IsWriteConflict(e))
+					return true;
 				log.WarnFormat(e, "Failed to index documents for index: {0}", index);
 				return false;
 			}
