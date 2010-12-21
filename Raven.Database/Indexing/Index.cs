@@ -341,14 +341,14 @@ namespace Raven.Database.Indexing
                 CancelMoveNext = actions.Indexing.DecrementIndexingAttempt,
                 OnError = (exception, o) =>
                 {
-                    actions.Indexing.IncrementIndexingFailure();
                     context.AddError(name,
                                      TryGetDocKey(o),
                                      exception.Message
                         );
                     logIndexing.WarnFormat(exception, "Failed to execute indexing function on {0} on {1}", name,
                                            TryGetDocKey(o));
-                }
+					actions.Indexing.IncrementIndexingFailure();
+				}
             }.RobustEnumeration(input, func);
         }
 
