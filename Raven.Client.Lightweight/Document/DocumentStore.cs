@@ -48,7 +48,7 @@ namespace Raven.Client.Document
 			get
 			{
 				if (databaseCommandsGenerator == null)
-                    throw new InvalidOperationException("You cannot open a session or access the database commands before initialising the document store. Did you forgot calling Initialise?");
+                    throw new InvalidOperationException("You cannot open a session or access the database commands before initialising the document store. Did you forgot calling Initialize()?");
 				var commands = databaseCommandsGenerator();
 				foreach (string key in SharedOperationsHeaders)
 				{
@@ -383,7 +383,7 @@ namespace Raven.Client.Document
 		public IAsyncDocumentSession OpenAsyncSession()
 		{
 			if (DatabaseCommands == null)
-				throw new InvalidOperationException("You cannot open a session before initialising the document store. Did you forgot calling Initialise?");
+				throw new InvalidOperationException("You cannot open a session before initialising the document store. Did you forgot calling Initialize()?");
 			if (AsyncDatabaseCommands == null)
 				throw new InvalidOperationException("You cannot open an async session because it is not supported on embedded mode");
 
