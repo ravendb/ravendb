@@ -61,7 +61,7 @@ namespace Raven.Client.Document.Async
             if (entitiesByKey.TryGetValue(id, out entity))
             {
                 var tcs = new TaskCompletionSource<T>();
-                tcs.SetResult((T)entity);
+                tcs.TrySetResult((T)entity);
                 return tcs.Task;
             }
 			

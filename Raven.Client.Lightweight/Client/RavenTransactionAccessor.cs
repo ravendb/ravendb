@@ -19,7 +19,18 @@ namespace Raven.Client.Client
 	public static class RavenTransactionAccessor
 	{
 #if !NET_3_5
-		private static readonly ThreadLocal<Stack<TransactionInformation>> currentRavenTransactions = new ThreadLocal<Stack<TransactionInformation>>(() => new Stack<TransactionInformation>());
+		[ThreadStatic]
+		private static readonly Stack<TransactionInformation> currentRavenTransactions;
+
+		private static Stack<TransactionInformation> CurrentRavenTransactions
+		{
+			get
+			{
+				if(currentRavenTransactions == null)
+					return new Stack<TransactionInformation>();
+				return currentRavenTransactions;
+			}
+		}
 
 		/// <summary>
 		/// Starts a transaction
@@ -37,12 +48,12 @@ namespace Raven.Client.Client
 		/// <returns></returns>
 		public static IDisposable StartTransaction(TimeSpan timeout)
 		{
-			currentRavenTransactions.Value.Push(new TransactionInformation
+			CurrentRavenTransactions.Push(new TransactionInformation
 			{
 				Id = Guid.NewGuid(),
 				Timeout = timeout
 			});
-			return new DisposableAction(() => currentRavenTransactions.Value.Pop());
+			return new DisposableAction(() => CurrentRavenTransactions.Pop());
 		}
 #endif
 		/// <summary>
@@ -52,8 +63,8 @@ namespace Raven.Client.Client
 		public static TransactionInformation GetTransactionInformation()
 		{
 			#if !NET_3_5
-			if (currentRavenTransactions.Value.Count >0)
-				return currentRavenTransactions.Value.Peek();
+			if (CurrentRavenTransactions.Count >0)
+				return CurrentRavenTransactions.Peek();
 			#endif
 			if (Transaction.Current == null)
 				return null;

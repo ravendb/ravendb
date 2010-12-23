@@ -104,7 +104,7 @@ namespace Raven.Client.Client
 									buffer = new StringBuilder(length * 2);
 								}
 
-								buffer.Insert(0, '"');
+								buffer.Insert(0, "\"");
 								isPhrase = true;
 							}
 							break;

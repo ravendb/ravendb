@@ -17,6 +17,7 @@ using System.Linq;
 using Raven.Database.Json;
 using Raven.Http.Json;
 
+
 namespace Raven.Client.Document
 {
 	/// <summary>
@@ -79,7 +80,7 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public static string GenerateDocumentKeyUsingIdentity(DocumentConvention conventions, object entity)
 		{
-			return conventions.FindTypeTagName(entity.GetType()).ToLowerInvariant() + "/";
+			return conventions.FindTypeTagName(entity.GetType()).ToLower() + "/";
 		}
 
 		/// <summary>
@@ -184,7 +185,7 @@ namespace Raven.Client.Document
 					{
 						new JsonEnumConverter(),
 						new JsonLuceneDateTimeConverter(),
-#if !NET_3_5
+#if !NET_3_5 && !SILVERLIGHT
 						new JsonDynamicConverter()
 #endif
 					}
