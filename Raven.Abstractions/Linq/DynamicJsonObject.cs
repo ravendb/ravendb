@@ -20,7 +20,19 @@ namespace Raven.Database.Linq
     /// </summary>
     public class DynamicJsonObject : DynamicObject
     {
-        private readonly JObject obj;
+    	/// <summary>
+    	/// Returns a <see cref="T:System.String"/> that represents the current <see cref="T:System.Object"/>.
+    	/// </summary>
+    	/// <returns>
+    	/// A <see cref="T:System.String"/> that represents the current <see cref="T:System.Object"/>.
+    	/// </returns>
+    	/// <filterpriority>2</filterpriority>
+    	public override string ToString()
+    	{
+    		return obj.ToString();
+    	}
+
+    	private readonly JObject obj;
 
         /// <summary>
         /// Gets the inner json object

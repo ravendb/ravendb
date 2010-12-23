@@ -175,6 +175,8 @@ namespace Raven.Client.Document
 				waitForNonStaleResults = waitForNonStaleResults,
 				orderByTypes = orderByTypes,
 				orderByFields = orderByFields,
+				groupByFields = groupByFields,
+				aggregationOp = aggregationOp
 			};
 		}
 
@@ -959,14 +961,18 @@ If you really want to do in memory filtering on the data returned from the query
 			if (projectionFields != null && projectionFields.Length > 0 // we asked for a projection directly from the index
 				|| metadata == null) // we aren't querying a document, we are probably querying a map reduce index result
 			{
-				var deserializedResult = (T)session.Conventions.CreateSerializer().Deserialize(new JTokenReader(result), typeof(T));
+
+				if (typeof(T) == typeof(JObject))
+					return (T)(object)result;
+
 #if !NET_3_5
-				var jObject = deserializedResult as JObject;
-				if (jObject != null && typeof(T) == typeof(object))
+				if (typeof(T) == typeof(object))
 				{
-					deserializedResult = (T)(object)new Database.Linq.DynamicJsonObject(jObject);
+					return (T)(object)new Database.Linq.DynamicJsonObject(result);
 				}
 #endif
+				var deserializedResult = (T)session.Conventions.CreateSerializer().Deserialize(new JTokenReader(result), typeof(T));
+
 				var documentId = result.Value<string>("__document_id");//check if the result contain the reserved name
 				if (string.IsNullOrEmpty(documentId) == false)
 				{

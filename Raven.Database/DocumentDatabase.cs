@@ -547,9 +547,10 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 								transformerErrors.Add(string.Format("Doc '{0}', Error: {1}", Index.TryGetDocKey(o),
 														 exception.Message))
 						};
+						var dynamicJsonObjects = collection.Select(x => new DynamicJsonObject(x.ToJson())).ToArray();
 						results =
 							robustEnumerator.RobustEnumeration(
-								collection.Select(x => new DynamicJsonObject(x.ToJson())),
+								dynamicJsonObjects,
 								source => viewGenerator.TransformResultsDefinition(docRetriever, source))
 								.Select(JsonExtensions.ToJObject);
 					}

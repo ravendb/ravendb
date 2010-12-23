@@ -1,3 +1,4 @@
+using System;
 using Raven.Abstractions.Data;
 using Xunit;
 using System.Linq;
@@ -58,6 +59,37 @@ namespace Raven.Tests.Bugs.Queries
 					Assert.Equal("5", objects[0].Count);
 					Assert.Equal("Ayende", objects[0].Name);
 					Assert.Equal("5", objects[1].Count);
+					Assert.Equal("Rahien", objects[1].Name);
+				}
+			}
+		}
+
+		[Fact]
+		public void CanDynamicallyQueryOverItemCountByNameWhileQueryingOnActive()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var s = store.OpenSession())
+				{
+					for (int i = 0; i < 10; i++)
+					{
+						s.Store(new { Name = i % 2 == 0 ? "Ayende" : "Rahien", Active = i % 3 == 0 });
+					}
+					s.SaveChanges();
+				}
+				using (var s = store.OpenSession())
+				{
+					var objects = s.Advanced.LuceneQuery<dynamic>()
+						.WhereEquals("Active",true)
+						.GroupBy(AggregationOperation.Count | AggregationOperation.Dynamic, "Name")
+						.WaitForNonStaleResults(TimeSpan.FromMinutes(3))
+						.ToArray();
+
+
+					Assert.Equal(2, objects.Length);
+					Assert.Equal(2, objects[0].Count);
+					Assert.Equal("Ayende", objects[0].Name);
+					Assert.Equal(2, objects[1].Count);
 					Assert.Equal("Rahien", objects[1].Name);
 				}
 			}

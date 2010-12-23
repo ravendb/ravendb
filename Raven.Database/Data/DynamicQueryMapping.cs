@@ -16,6 +16,7 @@ namespace Raven.Database.Data
 {
 	public class DynamicQueryMapping
 	{
+		public bool DynamicAggregation { get; set; }
 		public string IndexName { get; set; }
 		public string ForEntityName { get; set; }
 
@@ -44,9 +45,9 @@ namespace Raven.Database.Data
 			var fromClauses = new HashSet<string>();
 			var realMappings = new List<string>();
 
-			if (!string.IsNullOrEmpty(this.ForEntityName))
+			if (!string.IsNullOrEmpty(ForEntityName))
 			{
-				fromClauses.Add("from doc in docs." + this.ForEntityName);
+				fromClauses.Add("from doc in docs." + ForEntityName);
 			}
 			else
 			{
@@ -55,8 +56,8 @@ namespace Raven.Database.Data
 
 			foreach (var map in Items)
 			{
-				String currentDoc = "doc";
-				StringBuilder currentExpression = new StringBuilder();
+				var currentDoc = "doc";
+				var currentExpression = new StringBuilder();
 
 				int currentIndex = 0;
 				while (currentIndex < map.From.Length)
@@ -67,7 +68,7 @@ namespace Raven.Database.Data
 						case ',':
 
 							// doc.NewDoc.Items
-							String newDocumentSource = string.Format("{0}.{1}", currentDoc, currentExpression.ToString());
+							String newDocumentSource = string.Format("{0}.{1}", currentDoc, currentExpression);
 
 							// docNewDocItemsItem
 							String newDoc = string.Format("{0}Item", newDocumentSource.Replace(".", ""));
@@ -108,17 +109,18 @@ namespace Raven.Database.Data
 				}
 			}
 
-			var index = new IndexDefinition()
+			var index = new IndexDefinition
 			{
 				Map = string.Format("{0}\r\nselect new {{ {1} }}",
 									string.Join("\r\n", fromClauses.ToArray()),
 									string.Join(", ",
 												realMappings.Concat(new[] { AggregationMapPart() }).Where(x => x != null))),
-				Reduce = AggregationReducePart()
+				Reduce = DynamicAggregation ? null : AggregationReducePart(),
+				TransformResults = DynamicAggregation ? AggregationReducePart() : null,
 			};
 
 
-			foreach (var descriptor in this.SortDescriptors)
+			foreach (var descriptor in SortDescriptors)
 			{
 				index.SortOptions.Add(descriptor.Field, (SortOptions)Enum.Parse(typeof(SortOptions), descriptor.FieldType));
 			}
@@ -137,36 +139,20 @@ namespace Raven.Database.Data
 							.AppendLine("from result in results")
 							.Append("group result by ");
 
-						if (Items.Length == 1)
-						{
-							sb.Append("result.").Append(Items[0].To);
-						}
-						else
-						{
-							sb.AppendFormat("new {{ {0} }}", string.Join(", ", Items.Select(x => "result." + x.To)));
-						}
-						sb.AppendLine();
+						AppendGroupByClauseForReduce(sb);
 
 						sb.AppendLine("into g");
 
 						sb.AppendLine("select new")
 							.AppendLine("{");
 
-						if (Items.Length == 1)
-						{
-							sb.Append("\t").Append(Items[0].To).AppendLine(" = g.Key,");
-						}
+						AppendSelectClauseForReduce(sb);
+
+
+						if(DynamicAggregation == false)
+							sb.AppendLine("\tCount = g.Sum(x=>x.Count)");
 						else
-						{
-							foreach (var item in Items)
-							{
-								sb.Append("\t").Append(item.To).Append(" = ").Append(" g.Key.").Append(item.To).
-									AppendLine(",");
-							}
-						}
-
-
-						sb.AppendLine("\tCount = g.Sum(x=>x.Count)");
+							sb.AppendLine("\tCount = g.Count()");
 
 						sb.AppendLine("}");
 
@@ -177,8 +163,41 @@ namespace Raven.Database.Data
 			}
 		}
 
+		private void AppendSelectClauseForReduce(StringBuilder sb)
+		{
+			var groupByItemsSource = DynamicAggregation ? GroupByItems : Items;
+			if (groupByItemsSource.Length == 1)
+			{
+				sb.Append("\t").Append(groupByItemsSource[0].To).AppendLine(" = g.Key,");
+			}
+			else
+			{
+				foreach (var item in groupByItemsSource)
+				{
+					sb.Append("\t").Append(item.To).Append(" = ").Append(" g.Key.").Append(item.To).
+						AppendLine(",");
+				}
+			}
+		}
+
+		private void AppendGroupByClauseForReduce(StringBuilder sb)
+		{
+			var groupBySourceItems = DynamicAggregation ? GroupByItems : Items;
+			if (groupBySourceItems.Length == 1)
+			{
+				sb.Append("result.").Append(groupBySourceItems[0].To);
+			}
+			else
+			{
+				sb.AppendFormat("new {{ {0} }}", string.Join(", ", groupBySourceItems.Select(x => "result." + x.To)));
+			}
+			sb.AppendLine();
+		}
+
 		private string AggregationMapPart()
 		{
+			if (DynamicAggregation)
+				return null;
 			switch (AggregationOperation)
 			{
 				case AggregationOperation.None:
@@ -202,9 +221,10 @@ namespace Raven.Database.Data
 		{
 			var fields = SimpleQueryParser.GetFields(query.Query);
 
-			var dynamicQueryMapping = new DynamicQueryMapping()
+			var dynamicQueryMapping = new DynamicQueryMapping
 			{
-				AggregationOperation = query.AggregationOperation,
+				AggregationOperation = query.AggregationOperation & ~AggregationOperation.Dynamic,
+				DynamicAggregation = (query.AggregationOperation & AggregationOperation.Dynamic) == AggregationOperation.Dynamic,
 				ForEntityName = entityName,
 				SortDescriptors = GetSortInfo(fields)
 			};
@@ -215,23 +235,33 @@ namespace Raven.Database.Data
 
 		private void SetupFieldsToIndex(IndexQuery query, IEnumerable<string> fields)
 		{
-			if (AggregationOperation != AggregationOperation.None && query.GroupBy != null && query.GroupBy.Length > 0)
+			if (query.GroupBy != null && query.GroupBy.Length > 0)
 			{
-				Items = query.GroupBy.Select(x => new DynamicQueryMappingItem()
+				GroupByItems = query.GroupBy.Select(x => new DynamicQueryMappingItem
 				{
 					From = x,
 					To = x.Replace(".", "").Replace(",", "")
 				}).ToArray();
+			}
+			if (DynamicAggregation == false && 
+				AggregationOperation != AggregationOperation.None && 
+				query.GroupBy != null && query.GroupBy.Length > 0)
+			{
+				Items = GroupByItems;
 			}
 			else
 			{
-				Items = fields.Select(x => new DynamicQueryMappingItem()
+				Items = fields.Select(x => new DynamicQueryMappingItem
 				{
 					From = x,
 					To = x.Replace(".", "").Replace(",", "")
 				}).ToArray();
 			}
+
+			
 		}
+
+		protected DynamicQueryMappingItem[] GroupByItems { get; set; }
 
 		private static DynamicSortInfo[] GetSortInfo(HashSet<string> fields)
 		{
@@ -245,7 +275,7 @@ namespace Raven.Database.Data
 				String fieldName = split[1];
 				string fieldType = headers[sortHintHeader];
 
-				sortInfo.Add(new DynamicSortInfo()
+				sortInfo.Add(new DynamicSortInfo
 				{
 					Field = fieldName,
 					FieldType = fieldType
@@ -279,7 +309,7 @@ namespace Raven.Database.Data
 			{
 				if (query.GroupBy != null && query.GroupBy.Length > 0)
 				{
-					groupBy += "/"+AggregationOperation + "By" + string.Join("And", query.GroupBy);
+					groupBy += "/" + AggregationOperation + "By" + string.Join("And", query.GroupBy);
 				}
 				else
 				{
