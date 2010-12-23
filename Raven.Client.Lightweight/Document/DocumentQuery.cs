@@ -962,7 +962,7 @@ If you really want to do in memory filtering on the data returned from the query
 				var deserializedResult = (T)session.Conventions.CreateSerializer().Deserialize(new JTokenReader(result), typeof(T));
 #if !NET_3_5
 				var jObject = deserializedResult as JObject;
-				if (jObject != null)
+				if (jObject != null && typeof(T) == typeof(object))
 				{
 					deserializedResult = (T)(object)new Database.Linq.DynamicJsonObject(jObject);
 				}
