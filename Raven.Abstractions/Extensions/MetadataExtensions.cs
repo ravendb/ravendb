@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Collections.Generic;
+using System.Linq;
 using Newtonsoft.Json.Linq;
 using System;
 
@@ -88,33 +89,30 @@ namespace Raven.Database.Data
 			"Warning",
 		};
 
-#if !SILVERLIGHT
 		/// <summary>
 		/// Filters the headers from unwanted headers
 		/// </summary>
 		/// <param name="self">The self.</param>
 		/// <param name="isServerDocument">if set to <c>true</c> [is server document].</param>
 		/// <returns></returns>public static JObject FilterHeaders(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
-        {
+      public static JObject FilterHeaders(this IDictionary<string,IList<string>> self, bool isServerDocument)
+          {
             var metadata = new JObject();
-            foreach (var header in self.AllKeys)
+            foreach (var header in self)
             {
-                if (HeadersToIgnoreClient.Contains(header))
+                if (HeadersToIgnoreClient.Contains(header.Key))
                     continue;
-				if(isServerDocument && HeadersToIgnoreServerDocument.Contains(header))
+				if(isServerDocument && HeadersToIgnoreServerDocument.Contains(header.Key))
 					continue;
-                var values = self.GetValues(header);
-                if (values.Length == 1)
-                    metadata.Add(header, GetValue(values[0]));
+            	var values = header.Value;
+                if (values.Count == 1)
+                    metadata.Add(header.Key, GetValue(values[0]));
                 else
-                    metadata.Add(header, new JArray(values.Select(GetValue)));
+                    metadata.Add(header.Key, new JArray(values.Select(GetValue)));
             }
             return metadata;
         }
-#else
-
-#endif
-
+	
 		private static JToken GetValue(string val)
 	    {
             if (val.StartsWith("{"))
