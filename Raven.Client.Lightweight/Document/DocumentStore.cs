@@ -43,7 +43,11 @@ namespace Raven.Client.Document
 		/// Gets the shared operations headers.
 		/// </summary>
 		/// <value>The shared operations headers.</value>
-		public NameValueCollection SharedOperationsHeaders { get; private set; }
+#if !SILVERLIGHT
+		public System.Collections.Specialized.NameValueCollection SharedOperationsHeaders { get; private set; }
+#else
+		public System.Collections.Generic.IDictionary<string,string> SharedOperationsHeaders { get; private set; }
+#endif
 
 		/// <summary>
 		/// Gets the database commands.
@@ -99,7 +103,11 @@ namespace Raven.Client.Document
 		{
             ResourceManagerId = new Guid("E749BAA6-6F76-4EEF-A069-40A4378954F8");
 
-			SharedOperationsHeaders = new NameValueCollection();
+#if !SILVERLIGHT
+			SharedOperationsHeaders = new System.Collections.Specialized.NameValueCollection();
+#else
+			SharedOperationsHeaders = new System.Collections.Generic.Dictionary<string,string>();
+#endif
 			Conventions = new DocumentConvention();
 		}
 

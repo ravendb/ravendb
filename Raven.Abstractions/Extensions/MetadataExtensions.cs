@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using Newtonsoft.Json.Linq;
 using System;
@@ -13,16 +14,16 @@ namespace Raven.Database.Data
 	/// <summary>
 	/// Extensions for handling metadata
 	/// </summary>
-    public static class MetadataExtensions
-    {
-    	private static readonly HashSet<string> HeadersToIgnoreServerDocument =
-    		new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+	public static class MetadataExtensions
+	{
+		private static readonly HashSet<string> HeadersToIgnoreServerDocument =
+			new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     		{
 				"Non-Authoritive-Information",
 				"Content-Type"
     		};
 
-        private static readonly HashSet<string> HeadersToIgnoreClient = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+		private static readonly HashSet<string> HeadersToIgnoreClient = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 		{
 			// Entity headers - those are NOT ignored
 			/*
@@ -89,6 +90,7 @@ namespace Raven.Database.Data
 			"Warning",
 		};
 
+#if SILVERLIGHT
 		/// <summary>
 		/// Filters the headers from unwanted headers
 		/// </summary>
@@ -112,14 +114,39 @@ namespace Raven.Database.Data
             }
             return metadata;
         }
-	
+#else
+		/// <summary>
+		/// Filters the headers from unwanted headers
+		/// </summary>
+		/// <param name="self">The self.</param>
+		/// <param name="isServerDocument">if set to <c>true</c> [is server document].</param>
+		/// <returns></returns>public static JObject FilterHeaders(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
+		public static JObject FilterHeaders(this NameValueCollection self, bool isServerDocument)
+		{
+			var metadata = new JObject();
+			foreach (string header in self)
+			{
+				if (HeadersToIgnoreClient.Contains(header))
+					continue;
+				if (isServerDocument && HeadersToIgnoreServerDocument.Contains(header))
+					continue;
+				var values = self.GetValues(header);
+				if (values.Length == 1)
+					metadata.Add(header, GetValue(values[0]));
+				else
+					metadata.Add(header, new JArray(values.Select(GetValue)));
+			}
+			return metadata;
+		}
+#endif
+
 		private static JToken GetValue(string val)
-	    {
-            if (val.StartsWith("{"))
-                return JObject.Parse(val);
-            if (val.StartsWith("["))
-                return JArray.Parse(val);
-	        return new JValue(val);
-	    }
-    }
+		{
+			if (val.StartsWith("{"))
+				return JObject.Parse(val);
+			if (val.StartsWith("["))
+				return JArray.Parse(val);
+			return new JValue(val);
+		}
+	}
 }

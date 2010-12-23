@@ -26,14 +26,14 @@ namespace Raven.Database.Json
 		/// <returns></returns>
 		public static object GetValueDynamically(object entity, string dynamicMemberName)
 		{
-			var generateCallSite = s => CallSite<Func<CallSite, object, object>>.Create(
+			Func<string, CallSite<Func<CallSite, object, object>>> valueFactory = s => CallSite<Func<CallSite, object, object>>.Create(
 				Binder.GetMember(
 					CSharpBinderFlags.None,
 					dynamicMemberName,
 					null,
-					new[] { CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null) }
+					new[] {CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null)}
 					));
-			var callsite = callsitesCache.GetOrAdd(dynamicMemberName, generateCallSite);
+			var callsite = callsitesCache.GetOrAdd(dynamicMemberName, valueFactory);
 
 			return callsite.Target(callsite, entity);
 		}
