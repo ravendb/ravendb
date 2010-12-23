@@ -21,6 +21,7 @@ using Raven.Database.Linq;
 using Raven.Database.Storage;
 using Directory = System.IO.Directory;
 using Version = Lucene.Net.Util.Version;
+using System.ComponentModel.Composition;
 
 namespace Raven.Database.Indexing
 {
@@ -82,9 +83,13 @@ namespace Raven.Database.Indexing
 		private Index CreateIndexImplementation(string name, IndexDefinition indexDefinition, Lucene.Net.Store.Directory directory)
 		{
 		    var viewGenerator = indexDefinitionStorage.GetViewGenerator(name);
-		    return indexDefinition.IsMapReduce
-                ? (Index)new MapReduceIndex(directory, name, indexDefinition, viewGenerator)
-                : new SimpleIndex(directory, name, indexDefinition, viewGenerator);
+			var indexImplementation = indexDefinition.IsMapReduce
+			                          	? (Index)new MapReduceIndex(directory, name, indexDefinition, viewGenerator)
+			                          	: new SimpleIndex(directory, name, indexDefinition, viewGenerator);
+			
+			configuration.Container.SatisfyImportsOnce(indexImplementation);
+
+			return indexImplementation;
 		}
 
 		public string[] Indexes

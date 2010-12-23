@@ -6,9 +6,11 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.ComponentModel.Composition;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using Lucene.Net.Analysis;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
@@ -17,6 +19,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
+using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
 
@@ -162,7 +165,7 @@ namespace Raven.Database.Indexing
             	}, DateTime.UtcNow);
 
             });
-            Write(context, writer =>
+            Write(context, (writer, analyzer) =>
             {
 				if (logIndexing.IsDebugEnabled)
                 {
@@ -181,7 +184,7 @@ namespace Raven.Database.Indexing
         {
             actions.Indexing.SetCurrentIndexStatsTo(name);
             var count = 0;
-            Write(context, indexWriter =>
+            Write(context, (indexWriter,analyzer) =>
             {
                 var batchers = context.IndexUpdateTriggers.Select(x=>x.CreateBatcher(name))
                     .Where(x=>x!=null)
@@ -230,7 +233,7 @@ namespace Raven.Database.Indexing
                         },
                         trigger => trigger.OnIndexEntryCreated(name, reduceKeyAsString, luceneDoc));
 					logIndexing.DebugFormat("Reduce key {0} result in index {1} gave document: {2}", reduceKeyAsString, name, luceneDoc);
-                    indexWriter.AddDocument(luceneDoc);
+                    AddDocumentToIndex(indexWriter, luceneDoc, analyzer);
                     actions.Indexing.IncrementSuccessIndexing();
                 }
                 batchers.ApplyAndIgnoreAllErrors(
@@ -248,7 +251,7 @@ namespace Raven.Database.Indexing
 			}
         }
 
-        private string ExtractReduceKey(AbstractViewGenerator viewGenerator, object doc)
+    	private string ExtractReduceKey(AbstractViewGenerator viewGenerator, object doc)
         {
             try
             {

@@ -120,6 +120,7 @@
     <Compile Include="Data\DynamicQueryMapping.cs" />
     <Compile Include="Data\DynamicQueryMappingItem.cs" />
     <Compile Include="Impl\DocumentRetriever.cs" />
+    <Compile Include="Plugins\AbstractAnalyzerGenerator.cs" />
     <Compile Include="Queries\DynamicQueryExtensions.cs" />
     <Compile Include="Queries\DynamicQueryRunner.cs" />
     <Compile Include="Exceptions\IndexDoesNotExistsException.cs" />

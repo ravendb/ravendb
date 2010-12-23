@@ -4,8 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.Linq;
 using System.Threading;
 using log4net;
@@ -20,6 +20,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
+using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Version = Lucene.Net.Util.Version;
 
@@ -30,6 +31,9 @@ namespace Raven.Database.Indexing
 	/// </summary>
 	public abstract class Index : IDisposable
 	{
+		[ImportMany]
+		public IEnumerable<AbstractAnalyzerGenerator> AnalyzerGenerators { get; set; }
+
 		private readonly Directory directory;
 		protected readonly ILog logIndexing = LogManager.GetLogger(typeof(Index) + ".Indexing");
 		protected readonly ILog logQuerying = LogManager.GetLogger(typeof(Index) + ".Querying");
@@ -184,7 +188,13 @@ namespace Raven.Database.Indexing
 				try
 				{
 					analyzer = CreateAnalyzer(toDispose);
-
+					analyzer = AnalyzerGenerators.Aggregate(analyzer, (currentAnalyzer, generator) =>
+					{
+						var newAnalyzer = generator.GenerateAnalzyerForQuerying(name, indexQuery.Query, currentAnalyzer);
+						if (newAnalyzer != currentAnalyzer && currentAnalyzer != analyzer)
+							currentAnalyzer.Close();
+						return currentAnalyzer;
+					});
 					luceneQuery = QueryBuilder.BuildQuery(query, analyzer);
 				}
 				finally
@@ -243,7 +253,7 @@ namespace Raven.Database.Indexing
 			return new JProperty(fld.Name(), fld.StringValue());
 		}
 
-		protected void Write(WorkContext context, Func<IndexWriter, bool> action)
+		protected void Write(WorkContext context, Func<IndexWriter, Analyzer, bool> action)
 		{
 			if (disposed)
 				throw new ObjectDisposedException("Index " + name + " has been disposed");
@@ -266,7 +276,7 @@ namespace Raven.Database.Indexing
 					var indexWriter = new IndexWriter(directory, analyzer, IndexWriter.MaxFieldLength.UNLIMITED);
 					try
 					{
-						shouldRecreateSearcher = action(indexWriter);
+						shouldRecreateSearcher = action(indexWriter, analyzer);
 					}
 					catch (Exception e)
 					{
@@ -429,5 +439,31 @@ namespace Raven.Database.Indexing
 
 			#endregion
 		}
+
+		protected void AddDocumentToIndex(IndexWriter indexWriter, Document luceneDoc, Analyzer analyzer)
+		{
+			var newAnalyzer = AnalyzerGenerators.Aggregate(analyzer,
+				(currentAnalyzer, generator) =>
+				{
+					var generateAnalyzer = generator.GenerateAnalyzerForIndexing(name, luceneDoc, currentAnalyzer);
+					if(generateAnalyzer != currentAnalyzer && currentAnalyzer != analyzer)
+						currentAnalyzer.Close();
+					return generateAnalyzer;
+				});
+
+			try
+			{
+				if (newAnalyzer != analyzer)
+					indexWriter.AddDocument(luceneDoc, newAnalyzer);
+				else
+					indexWriter.AddDocument(luceneDoc);
+			}
+			finally
+			{
+				if (newAnalyzer != analyzer)
+					newAnalyzer.Close();
+			}
+		}
+
 	}
 }

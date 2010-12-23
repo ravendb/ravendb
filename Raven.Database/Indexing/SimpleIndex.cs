@@ -30,7 +30,7 @@ namespace Raven.Database.Indexing
         {
             actions.Indexing.SetCurrentIndexStatsTo(name);
             var count = 0;
-            Write(context, indexWriter =>
+            Write(context, (indexWriter, analyzer) =>
             {
                 bool madeChanges = false;
                 PropertyDescriptorCollection properties = null;
@@ -90,7 +90,7 @@ namespace Raven.Database.Indexing
                             },
                             trigger => trigger.OnIndexEntryCreated(name, indexingResult.NewDocId, luceneDoc));
                         logIndexing.DebugFormat("Index '{0}' resulted in: {1}", name, luceneDoc);
-                        indexWriter.AddDocument(luceneDoc);
+                        AddDocumentToIndex(indexWriter, luceneDoc, analyzer);
                     }
 
                     actions.Indexing.IncrementSuccessIndexing();
@@ -152,7 +152,7 @@ namespace Raven.Database.Indexing
 
         public override void Remove(string[] keys, WorkContext context)
         {
-            Write(context, writer =>
+            Write(context, (writer, analyzer) =>
             {
                 if (logIndexing.IsDebugEnabled)
                 {
