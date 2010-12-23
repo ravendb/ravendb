@@ -34,7 +34,7 @@ namespace Raven.Http.Json
 		/// <returns>The object value.</returns>
 		public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
 		{
-			return Enum.Parse(objectType, reader.Value.ToString());
+			return Enum.Parse(objectType, reader.Value.ToString(), true);
 		}
 
 		/// <summary>

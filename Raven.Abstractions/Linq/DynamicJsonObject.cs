@@ -180,7 +180,7 @@ namespace Raven.Database.Linq
                             result = Count;
                             return true;
                         }
-                        result = this.Count((Func<dynamic, bool>)args[0]);
+                        result = Enumerable.Count<dynamic>(this, (Func<dynamic, bool>)args[0]);
                         return true;
                     case "DefaultIfEmpty":
                         if (inner.Length > 0)

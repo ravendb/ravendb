@@ -4,8 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.Linq;
 using Newtonsoft.Json.Linq;
 using System;
 
@@ -90,13 +88,13 @@ namespace Raven.Database.Data
 			"Warning",
 		};
 
+#if !SILVERLIGHT
 		/// <summary>
 		/// Filters the headers from unwanted headers
 		/// </summary>
 		/// <param name="self">The self.</param>
 		/// <param name="isServerDocument">if set to <c>true</c> [is server document].</param>
-		/// <returns></returns>
-        public static JObject FilterHeaders(this NameValueCollection self, bool isServerDocument)
+		/// <returns></returns>public static JObject FilterHeaders(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
         {
             var metadata = new JObject();
             foreach (var header in self.AllKeys)
@@ -113,8 +111,11 @@ namespace Raven.Database.Data
             }
             return metadata;
         }
+#else
 
-	    private static JToken GetValue(string val)
+#endif
+
+		private static JToken GetValue(string val)
 	    {
             if (val.StartsWith("{"))
                 return JObject.Parse(val);

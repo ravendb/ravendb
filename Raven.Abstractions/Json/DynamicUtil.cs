@@ -3,7 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !NET_3_5
+#if !SILVERLIGHT  && !NET_3_5
 using System;
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
@@ -26,13 +26,14 @@ namespace Raven.Database.Json
 		/// <returns></returns>
 		public static object GetValueDynamically(object entity, string dynamicMemberName)
 		{
-			var callsite = callsitesCache.GetOrAdd(dynamicMemberName, s => CallSite<Func<CallSite, object, object>>.Create(
+			var generateCallSite = s => CallSite<Func<CallSite, object, object>>.Create(
 				Binder.GetMember(
 					CSharpBinderFlags.None,
 					dynamicMemberName,
 					null,
 					new[] { CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null) }
-					)));
+					));
+			var callsite = callsitesCache.GetOrAdd(dynamicMemberName, generateCallSite);
 
 			return callsite.Target(callsite, entity);
 		}
