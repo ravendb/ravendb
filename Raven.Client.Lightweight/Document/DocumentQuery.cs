@@ -20,7 +20,6 @@ using Raven.Client.Linq;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
 using Raven.Database.Extensions;
-using Raven.Database.Linq;
 
 namespace Raven.Client.Document
 {
@@ -961,11 +960,13 @@ If you really want to do in memory filtering on the data returned from the query
 				|| metadata == null) // we aren't querying a document, we are probably querying a map reduce index result
 			{
 				var deserializedResult = (T)session.Conventions.CreateSerializer().Deserialize(new JTokenReader(result), typeof(T));
+#if !NET_3_5
 				var jObject = deserializedResult as JObject;
 				if (jObject != null)
 				{
-					deserializedResult = (T)(object)new DynamicJsonObject(jObject);
+					deserializedResult = (T)(object)new Database.Linq.DynamicJsonObject(jObject);
 				}
+#endif
 				var documentId = result.Value<string>("__document_id");//check if the result contain the reserved name
 				if (string.IsNullOrEmpty(documentId) == false)
 				{
