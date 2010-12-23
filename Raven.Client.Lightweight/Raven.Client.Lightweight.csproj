@@ -180,6 +180,7 @@
     <Compile Include="Shard\ShardStrategy\ShardStrategy.cs" />
     <Compile Include="StoredEntityEventArgs.cs" />
     <Compile Include="Util\Inflector.cs" />
+    <Compile Include="Util\ObjectReferenceEqualityComparerer.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Raven.Database\RavenDB.snk">

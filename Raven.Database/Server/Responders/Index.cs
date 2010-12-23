@@ -121,7 +121,7 @@ namespace Raven.Database.Server.Responders
 						.Select(x => x["@metadata"].Value<string>("@id"))
 						.Where(x => x != null)
 					);
-                var command = new AddIncludesCommand(Database, GetRequestTransaction(context), (etag, doc) => queryResult.Includes.Add(doc), includes, loadedIds);
+				var command = new AddIncludesCommand(Database, GetRequestTransaction(context), (etag, doc) => queryResult.Includes.Add(doc), includes, loadedIds);
 				foreach (var result in queryResult.Results)
 				{
 					command.Execute(result);
@@ -142,16 +142,16 @@ namespace Raven.Database.Server.Responders
 
 		private QueryResult PerformQueryAgainstExistingIndex(IHttpContext context, string index, IndexQuery indexQuery)
 		{
-		    var indexEtag = GetIndexEtag(index);
-		    if (context.MatchEtag(indexEtag))
+			var indexEtag = GetIndexEtag(index);
+			if (context.MatchEtag(indexEtag))
 			{
 				context.SetStatusToNotModified();
 				return null;
 			}
 
-		    var queryResult = Database.Query(index, indexQuery);
-            queryResult.IndexEtag = indexEtag;
-		    return queryResult;
+			var queryResult = Database.Query(index, indexQuery);
+			queryResult.IndexEtag = indexEtag;
+			return queryResult;
 		}
 
 		private QueryResult PerformQueryAgainstDynamicIndex(IHttpContext context, string index, IndexQuery indexQuery)
@@ -161,40 +161,40 @@ namespace Raven.Database.Server.Responders
 				entityName = index.Substring("dynamic/".Length);
 
 			var dynamicIndexName = Database.FindDynamicIndexName(entityName, indexQuery.Query);
-		    var indexEtag = Guid.Empty;
-            if (Database.IndexStorage.HasIndex(dynamicIndexName))
+			var indexEtag = Guid.Empty;
+			if (Database.IndexStorage.HasIndex(dynamicIndexName))
 			{
-			    indexEtag = GetIndexEtag(dynamicIndexName);
-			    if (context.MatchEtag(indexEtag))
+				indexEtag = GetIndexEtag(dynamicIndexName);
+				if (context.MatchEtag(indexEtag))
 				{
 					context.SetStatusToNotModified();
 					return null;
 				}
 			}
 
-            var queryResult = Database.ExecuteDynamicQuery(entityName, indexQuery, context.GetAggregationOperation());
-            if(indexEtag != Guid.Empty)
-		        queryResult.IndexEtag = indexEtag;
-		    return queryResult;
+			var queryResult = Database.ExecuteDynamicQuery(entityName, indexQuery);
+			if(indexEtag != Guid.Empty)
+				queryResult.IndexEtag = indexEtag;
+			return queryResult;
 		}
 
-	    private Guid GetIndexEtag(string indexName)
-	    {
-	        Guid lastDocEtag = Guid.Empty;
-	        Tuple<DateTime, Guid> indexLastUpdatedAt = null;
-	        Database.TransactionalStorage.Batch(accessor =>
-	        {
-	            lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
-	            indexLastUpdatedAt = accessor.Staleness.IndexLastUpdatedAt(indexName);
-	        });
-	        var etagBytes = lastDocEtag.ToByteArray();
-	        var lastIndexedEtagBytes = indexLastUpdatedAt.Item2.ToByteArray();
-	        for (int i = 0; i < 16; i++)
-	        {
-	            etagBytes[i] ^= lastIndexedEtagBytes[i];
-	        }
+		private Guid GetIndexEtag(string indexName)
+		{
+			Guid lastDocEtag = Guid.Empty;
+			Tuple<DateTime, Guid> indexLastUpdatedAt = null;
+			Database.TransactionalStorage.Batch(accessor =>
+			{
+				lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
+				indexLastUpdatedAt = accessor.Staleness.IndexLastUpdatedAt(indexName);
+			});
+			var etagBytes = lastDocEtag.ToByteArray();
+			var lastIndexedEtagBytes = indexLastUpdatedAt.Item2.ToByteArray();
+			for (int i = 0; i < 16; i++)
+			{
+				etagBytes[i] ^= lastIndexedEtagBytes[i];
+			}
 
-	        return new Guid(etagBytes);
-	    }
+			return new Guid(etagBytes);
+		}
 	}
 }

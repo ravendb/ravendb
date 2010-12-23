@@ -62,14 +62,14 @@ namespace Raven.Http.Extensions
 				return JArray.Load(jsonReader);
 		}
 
-        public static JArray ReadBsonArray(this IHttpContext context)
-        {
-            using (var jsonReader = new BsonReader(context.Request.InputStream))
-            {
-                var jObject = JObject.Load(jsonReader);
-                return new JArray(jObject.Values());
-            }
-        }
+		public static JArray ReadBsonArray(this IHttpContext context)
+		{
+			using (var jsonReader = new BsonReader(context.Request.InputStream))
+			{
+				var jObject = JObject.Load(jsonReader);
+				return new JArray(jObject.Values());
+			}
+		}
 
 		public static string ReadString(this IHttpContext context)
 		{
@@ -117,11 +117,11 @@ namespace Raven.Http.Extensions
 					continue;
 				context.Response.Headers[header.Name] = StripQuotesIfNeeded(header.Value.ToString(Formatting.None));
 			}
-            if (headers["@Http-Status-Code"] != null)
-            {
-                context.Response.StatusCode = headers.Value<int>("@Http-Status-Code");
-                context.Response.StatusDescription = headers.Value<string>("@Http-Status-Description");
-            }
+			if (headers["@Http-Status-Code"] != null)
+			{
+				context.Response.StatusCode = headers.Value<int>("@Http-Status-Code");
+				context.Response.StatusDescription = headers.Value<string>("@Http-Status-Description");
+			}
 			context.Response.Headers["ETag"] = etag.ToString();
 			context.Response.OutputStream.Write(data, 0, data.Length);
 		}
@@ -217,27 +217,27 @@ namespace Raven.Http.Extensions
 			return stale;
 		}
 
-        public static void AdjustUrl(this IHttpContext self, string token)
-        {
-            self.Request.RemoveFromRequestUrl(token);
-            self.Response.RedirectionPrefix = token;
-            
-        }
+		public static void AdjustUrl(this IHttpContext self, string token)
+		{
+			self.Request.RemoveFromRequestUrl(token);
+			self.Response.RedirectionPrefix = token;
+			
+		}
 
-	    public static void RemoveFromRequestUrl(this IHttpRequest self, string token)
-        {
-            if (self.Url.LocalPath.StartsWith(token))
-            {
-                self.Url = new UriBuilder(self.Url)
-                {
-                    Path = self.Url.LocalPath.Substring(token.Length)
-                }.Uri;
-            }
-            if (self.RawUrl.StartsWith(token))
-            {
-                self.RawUrl = self.RawUrl.Substring(token.Length);
-            }
-        }
+		public static void RemoveFromRequestUrl(this IHttpRequest self, string token)
+		{
+			if (self.Url.LocalPath.StartsWith(token))
+			{
+				self.Url = new UriBuilder(self.Url)
+				{
+					Path = self.Url.LocalPath.Substring(token.Length)
+				}.Uri;
+			}
+			if (self.RawUrl.StartsWith(token))
+			{
+				self.RawUrl = self.RawUrl.Substring(token.Length);
+			}
+		}
 
 		public static int GetPageSize(this IHttpContext context, int maxPageSize)
 		{
@@ -246,47 +246,47 @@ namespace Raven.Http.Extensions
 			if (pageSize == 0)
 				pageSize = 25;
 			if (pageSize > maxPageSize)
-                pageSize = maxPageSize;
+				pageSize = maxPageSize;
 			return pageSize;
 		}
 
-        public static AggregationOperation GetAggregationOperation(this IHttpContext context)
-        {
-            var aggAsString = context.Request.QueryString["aggregation"];
-            if (aggAsString == null)
-            {
-                return AggregationOperation.None;
-            }
+		public static AggregationOperation GetAggregationOperation(this IHttpContext context)
+		{
+			var aggAsString = context.Request.QueryString["aggregation"];
+			if (aggAsString == null)
+			{
+				return AggregationOperation.None;
+			}
 
-            return (AggregationOperation)Enum.Parse(typeof (AggregationOperation), aggAsString, true);
-        }
+			return (AggregationOperation)Enum.Parse(typeof (AggregationOperation), aggAsString, true);
+		}
 
-        public static DateTime? GetCutOff(this IHttpContext context)
-        {
-            var etagAsString = context.Request.QueryString["cutOff"];
-            if (etagAsString != null)
-            {
-                etagAsString = Uri.UnescapeDataString(etagAsString);
+		public static DateTime? GetCutOff(this IHttpContext context)
+		{
+			var etagAsString = context.Request.QueryString["cutOff"];
+			if (etagAsString != null)
+			{
+				etagAsString = Uri.UnescapeDataString(etagAsString);
 
-                DateTime result;
-                if (DateTime.TryParseExact(etagAsString, "o", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out result))
-                    return result;
-                throw new BadRequestException("Could not parse cut off query parameter as date");
-            }
-            return null;
-        }
+				DateTime result;
+				if (DateTime.TryParseExact(etagAsString, "o", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out result))
+					return result;
+				throw new BadRequestException("Could not parse cut off query parameter as date");
+			}
+			return null;
+		}
 
 		public static Guid? GetEtag(this IHttpContext context)
 		{
 			var etagAsString = context.Request.Headers["If-Match"];
 			if (etagAsString != null)
 			{
-			    Guid result;
-			    if (Guid.TryParse(etagAsString, out result))
-			        return result;
-			    throw new BadRequestException("Could not parse If-Match header as Guid");
+				Guid result;
+				if (Guid.TryParse(etagAsString, out result))
+					return result;
+				throw new BadRequestException("Could not parse If-Match header as Guid");
 			}
-		    return null;
+			return null;
 		}
 
 		public static double GetLat(this IHttpContext context)
@@ -319,17 +319,17 @@ namespace Raven.Http.Extensions
 		}
 
 		public static Guid? GetEtagFromQueryString(this IHttpContext context)
-        {
-            var etagAsString = context.Request.QueryString["etag"];
-            if (etagAsString != null)
-            {
-                Guid result;
-                if (Guid.TryParse(etagAsString, out result))
-                    return result;
-                throw new BadRequestException("Could not parse etag query parameter as Guid");
-            }
-            return null;
-        }
+		{
+			var etagAsString = context.Request.QueryString["etag"];
+			if (etagAsString != null)
+			{
+				Guid result;
+				if (Guid.TryParse(etagAsString, out result))
+					return result;
+				throw new BadRequestException("Could not parse etag query parameter as Guid");
+			}
+			return null;
+		}
 
 		public static bool MatchEtag(this IHttpContext context, Guid etag)
 		{
@@ -405,14 +405,14 @@ namespace Raven.Http.Extensions
 		{
 			public override void WriteJson (JsonWriter writer, object value, JsonSerializer serializer)
 			{
-                if (value is JObject)
-                    ((JObject)value).WriteTo(writer);
-                else
-                    ((DynamicJsonObject) value).Inner.WriteTo(writer);
+				if (value is JObject)
+					((JObject)value).WriteTo(writer);
+				else
+					((DynamicJsonObject) value).Inner.WriteTo(writer);
 			}
 
-            public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
-            {
+			public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+			{
 				throw new NotImplementedException();
 			}
 

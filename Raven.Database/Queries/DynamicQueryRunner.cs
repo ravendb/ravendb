@@ -27,10 +27,10 @@ namespace Raven.Database.Queries
 			temporaryIndexes = new ConcurrentDictionary<string, TemporaryIndexInfo>();
 		}
 
-		public QueryResult ExecuteDynamicQuery(string entityName, IndexQuery query, AggregationOperation aggregationOperation)
+		public QueryResult ExecuteDynamicQuery(string entityName, IndexQuery query)
 		{
 		    // Create the map
-		    var map = DynamicQueryMapping.Create(documentDatabase, query, entityName, aggregationOperation);
+		    var map = DynamicQueryMapping.Create(documentDatabase, query, entityName);
 		    
             map.IndexName = TouchTemporaryIndex(map, map.TemporaryIndexName, map.PermanentIndexName);
 
@@ -50,7 +50,9 @@ namespace Raven.Database.Queries
 		                                            PageSize = query.PageSize,
 		                                            Query = realQuery,
 		                                            Start = query.Start,
-                                                    FieldsToFetch = GetFieldsToFetch(query, aggregationOperation),
+                                                    FieldsToFetch = query.FieldsToFetch,
+													GroupBy = query.GroupBy,
+													AggregationOperation = query.AggregationOperation,
 		                                            SortedFields = query.SortedFields,
 		                                        });
 
@@ -64,18 +66,6 @@ namespace Raven.Database.Queries
 		        Thread.Sleep(100);
 		    }
 		}
-
-	    private string[] GetFieldsToFetch(IndexQuery query, AggregationOperation aggregationOperation)
-	    {
-	        var fieldsToFetch = query.FieldsToFetch;
-	        if(aggregationOperation != AggregationOperation.None)
-	        {
-	            fieldsToFetch =
-	                new[] {aggregationOperation.ToString()}.Concat(fieldsToFetch ?? Enumerable.Empty<string>()).
-	                    ToArray();
-	        }
-	        return fieldsToFetch;
-	    }
 
 	    public void CleanupCache()
 		{

@@ -16,13 +16,8 @@ namespace Raven.Database.Queries
     {
         public static QueryResult ExecuteDynamicQuery(this DocumentDatabase self, string entityName, IndexQuery indexQuery)
         {
-            return ExecuteDynamicQuery(self, entityName, indexQuery, AggregationOperation.None);
-        }
-
-        public static QueryResult ExecuteDynamicQuery(this DocumentDatabase self, string entityName, IndexQuery indexQuery, AggregationOperation aggregationOperation)
-        {
             var dynamicQueryRunner = (DynamicQueryRunner)self.ExtensionsState.GetOrAdd(typeof(DynamicQueryExtensions), o => new DynamicQueryRunner(self));
-            return dynamicQueryRunner.ExecuteDynamicQuery(entityName, indexQuery, aggregationOperation);
+            return dynamicQueryRunner.ExecuteDynamicQuery(entityName, indexQuery);
         }
 
         public static string FindDynamicIndexName(this DocumentDatabase self, string entityName, string query)

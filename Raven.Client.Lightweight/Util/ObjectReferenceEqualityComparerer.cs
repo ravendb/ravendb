@@ -18,7 +18,7 @@ namespace Raven.Client.Util
 		public new static readonly IEqualityComparer<T> Default = new ObjectReferenceEqualityComparerer<T>();
 
 		/// <summary>
-		/// When overridden in a derived class, determines whether two objects of type <paramref name="T"/> are equal.
+		/// When overridden in a derived class, determines whether two objects of type <typeparamref name="T"/> are equal.
 		/// </summary>
 		/// <returns>
 		/// true if the specified objects are equal; otherwise, false.

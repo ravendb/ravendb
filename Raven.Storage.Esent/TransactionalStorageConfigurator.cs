@@ -14,9 +14,9 @@ namespace Raven.Storage.Esent
 	{
 		public const int MaxSessions = 256;
 
-        private readonly InMemoryRavenConfiguration configuration;
+		private readonly InMemoryRavenConfiguration configuration;
 
-        public TransactionalStorageConfigurator(InMemoryRavenConfiguration configuration)
+		public TransactionalStorageConfigurator(InMemoryRavenConfiguration configuration)
 		{
 			this.configuration = configuration;
 		}
@@ -64,7 +64,7 @@ namespace Raven.Storage.Esent
 		{
 			int value;
 			if (string.IsNullOrEmpty(configuration.Settings[name]) == false &&
-                int.TryParse(configuration.Settings[name], out value))
+				int.TryParse(configuration.Settings[name], out value))
 			{
 				return value;
 			}

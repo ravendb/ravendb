@@ -22,6 +22,8 @@ namespace Raven.Database.Extensions
                 Cutoff = context.GetCutOff(),
                 PageSize = context.GetPageSize(maxPageSize),
                 FieldsToFetch = context.Request.QueryString.GetValues("fetch"),
+				GroupBy = context.Request.QueryString.GetValues("groupBy"),
+				AggregationOperation = context.GetAggregationOperation(),
                 SortedFields = context.Request.QueryString.GetValues("sort")
                     .EmptyIfNull()
                     .Select(x => new SortedField(x))
