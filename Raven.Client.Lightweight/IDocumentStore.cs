@@ -4,7 +4,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+#if !SILVERLIGHT
 using System.Collections.Specialized;
+#endif
+using System.Collections.Generic;
 using System.Net;
 using Raven.Client.Client;
 using Raven.Client.Document;
@@ -20,7 +23,11 @@ namespace Raven.Client
 		/// Gets the shared operations headers.
 		/// </summary>
 		/// <value>The shared operations headers.</value>
+#if !SILVERLIGHT
 		NameValueCollection SharedOperationsHeaders { get; }
+#else
+		IDictionary<string,string> SharedOperationsHeaders { get; }
+#endif
 
 		/// <summary>
 		/// Occurs when an entity is stored inside any session opened from this instance

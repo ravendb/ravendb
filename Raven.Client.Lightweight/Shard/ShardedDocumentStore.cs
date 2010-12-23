@@ -4,7 +4,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
+#if !SILVERLIGHT
 using System.Collections.Specialized;
+#endif
 using System.Linq;
 using System.Net;
 using Raven.Client.Client;
@@ -24,7 +27,11 @@ namespace Raven.Client.Shard
 		/// Gets the shared operations headers.
 		/// </summary>
 		/// <value>The shared operations headers.</value>
-		public NameValueCollection SharedOperationsHeaders
+#if !SILVERLIGHT
+		public NameValueCollection SharedOperationsHeaders 
+#else
+		public IDictionary<string,string> SharedOperationsHeaders 
+#endif
 		{
 			get { throw new NotSupportedException("Sharded document store doesn't have a SharedOperationsHeaders. you need to explicitly use the shard instances to get access to the SharedOperationsHeaders"); }
 		}

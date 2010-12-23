@@ -18,6 +18,7 @@
 // limitations under the License.
 
 using System.Collections;
+using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
 namespace Raven.Client.Util
@@ -28,9 +29,9 @@ namespace Raven.Client.Util
 	/// </summary>
 	public class Inflector
 	{
-		private static readonly ArrayList plurals = new ArrayList();
-		private static readonly ArrayList singulars = new ArrayList();
-		private static readonly ArrayList uncountables = new ArrayList();
+		private static readonly List<Rule> plurals = new List<Rule>();
+		private static readonly List<Rule> singulars = new List<Rule>();
+		private static readonly List<string> uncountables = new List<string>();
 
 		private Inflector()
 		{
@@ -186,7 +187,7 @@ namespace Raven.Client.Util
 			{
 				for (int i = rules.Count - 1; i >= 0; i--)
 				{
-					Rule rule = (Rule)rules[i];
+					var rule = (Rule)rules[i];
 
 					if ((result = rule.Apply(word)) != null)
 					{
