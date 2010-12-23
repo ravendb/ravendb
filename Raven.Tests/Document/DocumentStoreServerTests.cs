@@ -437,11 +437,11 @@ namespace Raven.Tests.Document
 
 				using (var s = documentStore.OpenSession())
 				{
-					var query = s.Advanced.LuceneQuery<object>("my_index")
+					var query = s.Advanced.LuceneQuery<JObject>("my_index")
 						.Where("Type:Feats AND Language:Fran�ais")
-						.SelectFields<object>("Value")
+						.SelectFields<JObject>("Value")
 						.WaitForNonStaleResults();
-					var first = (JObject)query.First();
+					var first = query.First();
 
 					Assert.Equal(42, first.Value<JObject>("Value").Value<int>("Answers"));
 					Assert.Equal(7, first.Value<JObject>("Value").Value<int>("Paths"));
