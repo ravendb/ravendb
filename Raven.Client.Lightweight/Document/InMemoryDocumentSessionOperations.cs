@@ -11,6 +11,7 @@ using System.Transactions;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Client;
 using Raven.Client.Exceptions;
+using Raven.Client.Util;
 using Raven.Database;
 using Raven.Database.Data;
 
@@ -39,7 +40,7 @@ namespace Raven.Client.Document
 		/// hold the data required to manage the data for RavenDB's Unit of Work
 		/// </summary>
 		protected readonly Dictionary<object, DocumentSession.DocumentMetadata> entitiesAndMetadata =
-			new Dictionary<object, DocumentSession.DocumentMetadata>();
+			new Dictionary<object, DocumentSession.DocumentMetadata>(ObjectReferenceEqualityComparerer<object>.Default);
 
 		/// <summary>
 		/// Translate between a key and its associated entity
