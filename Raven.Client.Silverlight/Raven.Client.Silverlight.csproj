@@ -1,0 +1,216 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.50727</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{8A1DB308-D56B-49BC-A421-A2AB32617215}</ProjectGuid>
+    <ProjectTypeGuids>{A1591282-1198-4647-A2B1-27E5FF5F6F3B};{fae04ec0-301f-11d3-bf4b-00c04f79efbc}</ProjectTypeGuids>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Raven.Client.Silverlight</RootNamespace>
+    <AssemblyName>Raven.Client.Silverlight</AssemblyName>
+    <TargetFrameworkIdentifier>Silverlight</TargetFrameworkIdentifier>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <SilverlightVersion>$(TargetFrameworkVersion)</SilverlightVersion>
+    <SilverlightApplication>false</SilverlightApplication>
+    <ValidateXaml>true</ValidateXaml>
+    <ThrowErrorsInValidation>true</ThrowErrorsInValidation>
+  </PropertyGroup>
+  <!-- This property group is only here to support building this project using the 
+       MSBuild 3.5 toolset. In order to work correctly with this older toolset, it needs 
+       to set the TargetFrameworkVersion to v3.5 -->
+  <PropertyGroup Condition="'$(MSBuildToolsVersion)' == '3.5'">
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>Bin\Debug</OutputPath>
+    <DefineConstants>DEBUG;TRACE;SILVERLIGHT</DefineConstants>
+    <NoStdLib>true</NoStdLib>
+    <NoConfig>true</NoConfig>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>Bin\Release</OutputPath>
+    <DefineConstants>TRACE;SILVERLIGHT</DefineConstants>
+    <NoStdLib>true</NoStdLib>
+    <NoConfig>true</NoConfig>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="AsyncCtpLibrary_Silverlight">
+      <HintPath>..\SharedLibs\AsyncCtpLibrary_Silverlight.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.CSharp, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
+    <Reference Include="mscorlib" />
+    <Reference Include="Newtonsoft.Json.Silverlight">
+      <HintPath>..\SharedLibs\Newtonsoft.Json.Silverlight.dll</HintPath>
+    </Reference>
+    <Reference Include="System.ComponentModel.Composition, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
+    <Reference Include="System.Windows" />
+    <Reference Include="system" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Net" />
+    <Reference Include="System.Windows.Browser" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Client\Async\IAsyncDatabaseCommands.cs" />
+    <Compile Include="Client\IDatabaseCommands.cs" />
+    <Compile Include="Client\IRavenQueryInspector.cs" />
+    <Compile Include="Client\JsonExtensions.cs" />
+    <Compile Include="Client\JsonLuceneDateTimeConverter.cs" />
+    <Compile Include="Client\RavenQuery.cs" />
+    <Compile Include="Client\RavenTransactionAccessor.cs" />
+    <Compile Include="Client\SerializationHelper.cs" />
+    <Compile Include="Client\WebRequestEventArgs.cs" />
+    <Compile Include="Client\WebResponseExtensions.cs" />
+    <Compile Include="Commands\DeleteCommandData.cs" />
+    <Compile Include="Commands\ICommandData.cs" />
+    <Compile Include="Commands\PatchCommandData.cs" />
+    <Compile Include="Commands\PutCommandData.cs" />
+    <Compile Include="Converters\GuidConverter.cs" />
+    <Compile Include="Converters\Int32Converter.cs" />
+    <Compile Include="Converters\Int64Converter.cs" />
+    <Compile Include="Converters\ITypeConverter.cs" />
+    <Compile Include="Data\AggregationOperation.cs" />
+    <Compile Include="Data\Attachment.cs" />
+    <Compile Include="Data\BatchResult.cs" />
+    <Compile Include="Data\DatabaseDocument.cs" />
+    <Compile Include="Data\DatabaseStatistics.cs" />
+    <Compile Include="Data\IndexQuery.cs" />
+    <Compile Include="Data\IndexStats.cs" />
+    <Compile Include="Data\JsonDocument.cs" />
+    <Compile Include="Data\MultiLoadResult.cs" />
+    <Compile Include="Data\PatchCommandType.cs" />
+    <Compile Include="Data\PatchRequest.cs" />
+    <Compile Include="Data\PatchResult.cs" />
+    <Compile Include="Data\PutResult.cs" />
+    <Compile Include="Data\QueryResult.cs" />
+    <Compile Include="Data\ServerError.cs" />
+    <Compile Include="Data\SortedField.cs" />
+    <Compile Include="Data\SpatialIndexQuery.cs" />
+    <Compile Include="Data\StringDistanceTypes.cs" />
+    <Compile Include="Data\SuggestionQuery.cs" />
+    <Compile Include="Data\SuggestionQueryResult.cs" />
+    <Compile Include="Data\TransactionInformation.cs" />
+    <Compile Include="Data\TransactionMode.cs" />
+    <Compile Include="Document\Async\AsyncDocumentSession.cs" />
+    <Compile Include="Document\DefaultRavenContractResolver.cs" />
+    <Compile Include="Document\DocumentConvention.cs" />
+    <Compile Include="Document\DocumentQuery.cs" />
+    <Compile Include="Document\DocumentSession.cs" />
+    <Compile Include="Document\DocumentStore.cs" />
+    <Compile Include="Document\HiLoKeyGenerator.cs" />
+    <Compile Include="Document\ILoaderWithInclude.cs" />
+    <Compile Include="Document\InMemoryDocumentSessionOperations.cs" />
+    <Compile Include="Document\MultiLoaderWithInclude.cs" />
+    <Compile Include="Document\MultiTypeHiLoKeyGenerator.cs" />
+    <Compile Include="Document\PromotableRavenClientEnlistment.cs" />
+    <Compile Include="Document\RavenClientEnlistment.cs" />
+    <Compile Include="Document\ReflectionUtil.cs" />
+    <Compile Include="Document\ShardedDocumentQuery.cs" />
+    <Compile Include="Document\SpatialDocumentQuery.cs" />
+    <Compile Include="EntityStored.cs" />
+    <Compile Include="EntityToDocument.cs" />
+    <Compile Include="Exceptions\ConcurrencyException.cs" />
+    <Compile Include="Exceptions\ConflictException.cs" />
+    <Compile Include="Exceptions\NonAuthoritiveInformationException.cs" />
+    <Compile Include="Exceptions\NonUniqueObjectException.cs" />
+    <Compile Include="Exceptions\ReadVetoException.cs" />
+    <Compile Include="Extensions\DisposableAction.cs" />
+    <Compile Include="Extensions\ExpressionExtensions.cs" />
+    <Compile Include="Extensions\JsonExtensions.cs" />
+    <Compile Include="Extensions\MetadataExtensions.cs" />
+    <Compile Include="Extensions\MultiTenancyExtensions.cs" />
+    <Compile Include="Extensions\Reference.cs" />
+    <Compile Include="Extensions\StreamExtension.cs" />
+    <Compile Include="IAdvancedDocumentSessionOperations.cs" />
+    <Compile Include="IAsyncAdvancedSessionOperations.cs" />
+    <Compile Include="IAsyncDocumentSession.cs" />
+    <Compile Include="IDocumentConversionListener.cs" />
+    <Compile Include="IDocumentDeleteListener.cs" />
+    <Compile Include="IDocumentQuery.cs" />
+    <Compile Include="IDocumentQueryCustomization.cs" />
+    <Compile Include="IDocumentSession.cs" />
+    <Compile Include="IDocumentStore.cs" />
+    <Compile Include="IDocumentStoreListener.cs" />
+    <Compile Include="Indexes\AbstractIndexCreationTask.cs" />
+    <Compile Include="Indexes\ExpressionOperatorPrecedence.cs" />
+    <Compile Include="Indexes\ExpressionOperatorPrecedenceExtension.cs" />
+    <Compile Include="Indexes\ExpressionStringBuilder.cs" />
+    <Compile Include="Indexes\IClientSideDatabase.cs" />
+    <Compile Include="Indexes\IndexCreation.cs" />
+    <Compile Include="Indexes\IndexDefinition.cs" />
+    <Compile Include="Indexes\SpatialIndex.cs" />
+    <Compile Include="Indexing\FieldIndexing.cs" />
+    <Compile Include="Indexing\FieldStorage.cs" />
+    <Compile Include="Indexing\IndexDefinition.cs" />
+    <Compile Include="Indexing\NumberUtil.cs" />
+    <Compile Include="Indexing\SortOptions.cs" />
+    <Compile Include="ISyncAdvancedSessionOperation.cs" />
+    <Compile Include="ITransactionalDocumentSession.cs" />
+    <Compile Include="Json\DynamicUtil.cs" />
+    <Compile Include="Json\JsonDynamicConverter.cs" />
+    <Compile Include="Json\JsonEnumConverter.cs" />
+    <Compile Include="Json\JTokenExtensions.cs" />
+    <Compile Include="Linq\DateTools.cs" />
+    <Compile Include="Linq\DynamicJsonObject.cs" />
+    <Compile Include="Linq\DynamicQueryProviderProcessor.cs" />
+    <Compile Include="Linq\DynamicRavenQueryInspector.cs" />
+    <Compile Include="Linq\DynamicRavenQueryProvider.cs" />
+    <Compile Include="Linq\ExpressionInfo.cs" />
+    <Compile Include="Linq\IRavenQueryable.cs" />
+    <Compile Include="Linq\IRavenQueryProvider.cs" />
+    <Compile Include="Linq\LinqExtensions.cs" />
+    <Compile Include="Linq\RavenQueryInspector.cs" />
+    <Compile Include="Linq\RavenQueryProvider.cs" />
+    <Compile Include="Linq\RavenQueryProviderProcessor.cs" />
+    <Compile Include="Linq\RavenQueryStatistics.cs" />
+    <Compile Include="Linq\ReflectionExtensions.cs" />
+    <Compile Include="Linq\TypeSystem.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RavenExtensions.cs" />
+    <Compile Include="Replication\ReplicationDestination.cs" />
+    <Compile Include="Replication\ReplicationDocument.cs" />
+    <Compile Include="Shard\ShardedDocumentSession.cs" />
+    <Compile Include="Shard\ShardedDocumentStore.cs" />
+    <Compile Include="Shard\Shards.cs" />
+    <Compile Include="Shard\ShardStrategy\IShardStrategy.cs" />
+    <Compile Include="Shard\ShardStrategy\ShardAccess\IShardAccessStrategy.cs" />
+    <Compile Include="Shard\ShardStrategy\ShardAccess\ParallelExtensions.cs" />
+    <Compile Include="Shard\ShardStrategy\ShardAccess\ParallelShardAccessStrategy.cs" />
+    <Compile Include="Shard\ShardStrategy\ShardAccess\SequentialShardAccessStrategy.cs" />
+    <Compile Include="Shard\ShardStrategy\ShardResolution\AllShardsResolutionStrategy.cs" />
+    <Compile Include="Shard\ShardStrategy\ShardResolution\IShardResolutionStrategy.cs" />
+    <Compile Include="Shard\ShardStrategy\ShardResolution\ShardResolutionStrategyData.cs" />
+    <Compile Include="Shard\ShardStrategy\ShardSelection\IShardSelectionStrategy.cs" />
+    <Compile Include="Shard\ShardStrategy\ShardStrategy.cs" />
+    <Compile Include="StoredEntityEventArgs.cs" />
+    <Compile Include="Util\Inflector.cs" />
+    <Compile Include="Util\ObjectReferenceEqualityComparerer.cs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />
+  <ProjectExtensions>
+    <VisualStudio>
+      <FlavorProperties GUID="{A1591282-1198-4647-A2B1-27E5FF5F6F3B}">
+        <SilverlightProjectProperties />
+      </FlavorProperties>
+    </VisualStudio>
+  </ProjectExtensions>
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>
