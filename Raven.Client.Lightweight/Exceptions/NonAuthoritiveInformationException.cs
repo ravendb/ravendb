@@ -11,7 +11,9 @@ namespace Raven.Client.Exceptions
 	/// <summary>
 	/// This exception is raised when a non authoritive information is encountered
 	/// </summary>
+#if !SILVERLIGHT
 	[Serializable]
+#endif
 	public class NonAuthoritiveInformationException : Exception
 	{
 		/// <summary>
@@ -38,6 +40,7 @@ namespace Raven.Client.Exceptions
 		{
 		}
 
+#if !SILVERLIGHT
 		/// <summary>
 		/// Initializes a new instance of the <see cref="NonAuthoritiveInformationException"/> class.
 		/// </summary>
@@ -50,5 +53,6 @@ namespace Raven.Client.Exceptions
 			StreamingContext context) : base(info, context)
 		{
 		}
+#endif
 	}
 }

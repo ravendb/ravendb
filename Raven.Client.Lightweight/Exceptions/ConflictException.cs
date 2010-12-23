@@ -12,8 +12,10 @@ namespace Raven.Client.Exceptions
 	/// This exception occurs when a (replication) conflict is encountered.
 	/// Usually this required a user to manually resolve the conflict.
 	/// </summary>
+#if !SILVERLIGHT
     [Serializable]
-    public class ConflictException : Exception
+#endif
+	public class ConflictException : Exception
     {
 		/// <summary>
 		/// Gets or sets the conflicted version ids.
@@ -45,6 +47,7 @@ namespace Raven.Client.Exceptions
         {
         }
 
+#if !SILVERLIGHT
 		/// <summary>
 		/// Initializes a new instance of the <see cref="ConflictException"/> class.
 		/// </summary>
@@ -57,5 +60,6 @@ namespace Raven.Client.Exceptions
             StreamingContext context) : base(info, context)
         {
         }
-    }
+#endif
+	}
 }

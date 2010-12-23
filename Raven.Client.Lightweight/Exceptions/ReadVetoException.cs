@@ -11,7 +11,9 @@ namespace Raven.Client.Exceptions
 	/// <summary>
 	/// This exception is raised whenever a trigger vetoes the read by the session
 	/// </summary>
+#if !SILVERLIGHT
 	[Serializable]
+#endif
 	public class ReadVetoException : Exception
 	{
 		/// <summary>
@@ -37,7 +39,7 @@ namespace Raven.Client.Exceptions
 		public ReadVetoException(string message, Exception inner) : base(message, inner)
 		{
 		}
-
+#if !SILVERLIGHT
 		/// <summary>
 		/// Initializes a new instance of the <see cref="ReadVetoException"/> class.
 		/// </summary>
@@ -50,5 +52,6 @@ namespace Raven.Client.Exceptions
 			StreamingContext context) : base(info, context)
 		{
 		}
+#endif
 	}
 }
