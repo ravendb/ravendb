@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using Raven.Abstractions.Data;
 using Raven.Database.Data;
 
 namespace Raven.Client
@@ -277,5 +278,13 @@ If you really want to do in memory filtering on the data returned from the query
         /// </summary>
         /// <returns></returns>
         IDocumentQuery<T> CloseSubclause();
+
+		///<summary>
+		/// Instruct the index to group by the specified fields using the specified aggregation operation
+		///</summary>
+		/// <remarks>
+		/// This is only valid on dynamic indexes queries
+		/// </remarks>
+		IDocumentQuery<T> GroupBy(AggregationOperation aggregationOperation, params string[] fieldsToGroupBy);
 	}
 }
