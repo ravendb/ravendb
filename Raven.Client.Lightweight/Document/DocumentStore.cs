@@ -4,7 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections.Specialized;
+using System.Collections.Generic;
 using System.Configuration;
 using System.Net;
 using System.Text.RegularExpressions;
@@ -25,9 +25,15 @@ namespace Raven.Client.Document
 	public class DocumentStore : IDocumentStore
 	{
 		private static readonly Regex connectionStringRegex = new Regex(@"(\w+) \s* = \s* (.*)", 
-			RegexOptions.Compiled|RegexOptions.IgnorePatternWhitespace);
+#if !SILVERLIGHT
+			RegexOptions.Compiled|
+#endif
+			 RegexOptions.IgnorePatternWhitespace);
 		private static readonly Regex connectionStringArgumentsSplitterRegex = new Regex(@"; (?=\s* \w+ \s* =)",
-			RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
+#if !SILVERLIGHT
+			RegexOptions.Compiled|
+#endif
+					RegexOptions.IgnorePatternWhitespace);
 
         /// <summary>
         /// Generate new instance of database commands
@@ -102,7 +108,11 @@ namespace Raven.Client.Document
 		private IDocumentStoreListener[] storeListeners = new IDocumentStoreListener[0];
 	    private IDocumentConversionListener[] conversionListeners = new IDocumentConversionListener[0];
 
+#if !SILVERLIGHT
         private ICredentials credentials = CredentialCache.DefaultNetworkCredentials;
+#else
+		private ICredentials credentials = new NetworkCredential();
+#endif
 
 		/// <summary>
 		/// Gets or sets the credentials.

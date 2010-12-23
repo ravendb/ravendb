@@ -61,7 +61,11 @@ namespace Raven.Client.Document
             {
                 lock (generatorLock)
                 {
+#if !SILVERLIGHT
                     if (Thread.VolatileRead(ref currentLo) > capacity)
+#else
+					if (currentLo > capacity)
+#endif
                     {
                         currentHi = GetNextHi();
                         currentLo = 1;

@@ -262,7 +262,11 @@ namespace Raven.Client.Document
 		/// </summary>
 		public IEnumerator<T> GetEnumerator()
 		{
+#if !SILVERLIGHT
 			var sp = Stopwatch.StartNew();
+#else
+			var startTime = DateTime.Now;
+#endif
 			do
 			{
 				try
@@ -282,8 +286,14 @@ namespace Raven.Client.Document
 				}
 				catch (NonAuthoritiveInformationException)
 				{
+#if !SILVERLIGHT
 					if (sp.Elapsed > session.NonAuthoritiveInformationTimeout)
 						throw;
+#else
+					if ((DateTime.Now - startTime) > session.NonAuthoritiveInformationTimeout)
+						throw;
+
+#endif
 					queryResult = null;
 					// we explicitly do NOT want to consider retries for non authoritive information as 
 					// additional request counted against the session quota
@@ -880,12 +890,16 @@ If you really want to do in memory filtering on the data returned from the query
 		protected virtual QueryResult GetQueryResult()
 		{
 			session.IncrementRequestCount();
+#if !SILVERLIGHT
 			var sp = Stopwatch.StartNew();
+#else
+			var startTime = DateTime.Now;
+#endif
 			while (true)
 			{
 				var query = queryText.ToString();
 
-				Trace.WriteLine(string.Format("Executing query '{0}' on index '{1}' in '{2}'",
+				Debug.WriteLine(string.Format("Executing query '{0}' on index '{1}' in '{2}'",
 											  query, indexName, session.StoreIdentifier));
 
 				IndexQuery indexQuery = GenerateIndexQuery(query);
@@ -904,19 +918,28 @@ If you really want to do in memory filtering on the data returned from the query
 				var result = databaseCommands.Query(indexName, indexQuery, includes.ToArray());
 				if (waitForNonStaleResults && result.IsStale)
 				{
+#if !SILVERLIGHT
 					if (sp.Elapsed > timeout)
 					{
 						sp.Stop();
 						throw new TimeoutException(string.Format("Waited for {0:#,#}ms for the query to return non stale result.",
 																 sp.ElapsedMilliseconds));
 					}
-					Trace.WriteLine(
+#else
+					var elapsed = DateTime.Now - startTime;
+					if (elapsed > timeout)
+					{
+						throw new TimeoutException(string.Format("Waited for {0:#,#}ms for the query to return non stale result.",
+																 elapsed.TotalMilliseconds));
+					}
+#endif
+					Debug.WriteLine(
 						string.Format("Stale query results on non stable query '{0}' on index '{1}' in '{2}', query will be retried",
 									  query, indexName, session.StoreIdentifier));
 					Thread.Sleep(100);
 					continue;
 				}
-				Trace.WriteLine(string.Format("Query returned {0}/{1} results", result.Results.Count, result.TotalResults));
+				Debug.WriteLine(string.Format("Query returned {0}/{1} results", result.Results.Count, result.TotalResults));
 				return result;
 			}
 		}
@@ -979,7 +1002,7 @@ If you really want to do in memory filtering on the data returned from the query
 					// we need to make an addtional check, since it is possible that a value was explicitly stated
 					// for the identity property, in which case we don't want to override it.
 					var identityProperty = session.Conventions.GetIdentityProperty(typeof(T));
-					if (identityProperty == null || 
+					if (identityProperty == null ||
 						(result.Property(identityProperty.Name) == null ||
 						result.Property(identityProperty.Name).Value.Type == JTokenType.Null))
 					{
