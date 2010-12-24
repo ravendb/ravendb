@@ -29,45 +29,47 @@ namespace Raven.Database.Queries
 
 		public QueryResult ExecuteDynamicQuery(string entityName, IndexQuery query)
 		{
-		    // Create the map
-		    var map = DynamicQueryMapping.Create(documentDatabase, query, entityName);
-		    
-            map.IndexName = TouchTemporaryIndex(map, map.TemporaryIndexName, map.PermanentIndexName);
+			// Create the map
+			var map = DynamicQueryMapping.Create(documentDatabase, query, entityName);
 
-		    // Re-write the query
-		    string realQuery = map.Items.Aggregate(query.Query,
-		                                           (current, mapItem) => current.Replace(mapItem.From, mapItem.To));
+			var touchTemporaryIndexResult = TouchTemporaryIndex(map, map.TemporaryIndexName, map.PermanentIndexName);
+			map.IndexName = touchTemporaryIndexResult.Item1;
 
-		    // Perform the query until we have some results at least
-		    QueryResult result;
-		    var sp = Stopwatch.StartNew();
-		    while (true)
-		    {
-		        result = documentDatabase.Query(map.IndexName,
-		                                        new IndexQuery
-		                                        {
-		                                            Cutoff = query.Cutoff,
-		                                            PageSize = query.PageSize,
-		                                            Query = realQuery,
-		                                            Start = query.Start,
-                                                    FieldsToFetch = query.FieldsToFetch,
+			// Re-write the query
+			string realQuery = map.Items.Aggregate(query.Query,
+												   (current, mapItem) => current.Replace(mapItem.From, mapItem.To));
+
+			// Perform the query until we have some results at least
+			QueryResult result;
+			var sp = Stopwatch.StartNew();
+			while (true)
+			{
+				result = documentDatabase.Query(map.IndexName,
+												new IndexQuery
+												{
+													Cutoff = query.Cutoff,
+													PageSize = query.PageSize,
+													Query = realQuery,
+													Start = query.Start,
+													FieldsToFetch = query.FieldsToFetch,
 													GroupBy = query.GroupBy,
 													AggregationOperation = query.AggregationOperation,
-		                                            SortedFields = query.SortedFields,
-		                                        });
+													SortedFields = query.SortedFields,
+												});
 
-		        if (!result.IsStale ||
-		            result.Results.Count >= query.PageSize ||
-		            sp.Elapsed.TotalSeconds > 15)
-		        {
-		            return result;
-		        }
+				if (!touchTemporaryIndexResult.Item2 ||
+					!result.IsStale ||
+					result.Results.Count >= query.PageSize ||
+					sp.Elapsed.TotalSeconds > 15)
+				{
+					return result;
+				}
 
-		        Thread.Sleep(100);
-		    }
+				Thread.Sleep(100);
+			}
 		}
 
-	    public void CleanupCache()
+		public void CleanupCache()
 		{
 			foreach (var indexInfo in from index in temporaryIndexes
 									  let indexInfo = index.Value
@@ -81,7 +83,7 @@ namespace Raven.Database.Queries
 			}
 		}
 
-		private string TouchTemporaryIndex(DynamicQueryMapping map, string temporaryIndexName, string permanentIndexName)
+		private Tuple<string,bool> TouchTemporaryIndex(DynamicQueryMapping map, string temporaryIndexName, string permanentIndexName)
 		{
 			var indexInfo = temporaryIndexes.GetOrAdd(temporaryIndexName, s => new TemporaryIndexInfo
 			{
@@ -98,13 +100,13 @@ namespace Raven.Database.Queries
 				CreateIndex(map, permanentIndexName);
 				TemporaryIndexInfo ignored;
 				temporaryIndexes.TryRemove(temporaryIndexName, out ignored);
-				return permanentIndexName;
+				return Tuple.Create(permanentIndexName, false);
 			}
 			var temporaryIndex = documentDatabase.GetIndexDefinition(temporaryIndexName);
 			if (temporaryIndex != null)
-				return temporaryIndexName;
+				return Tuple.Create(temporaryIndexName, false);
 			CreateIndex(map, temporaryIndexName);
-			return temporaryIndexName;
+			return Tuple.Create(temporaryIndexName, true);
 		}
 
 		private bool TemporaryIndexShouldBeMadePermanent(TemporaryIndexInfo indexInfo)
