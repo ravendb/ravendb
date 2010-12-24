@@ -769,7 +769,11 @@ namespace Raven.Client.Linq
 			if (session == null)
 			{
 				// this is to support unit testing
+#if !NET_3_5
 				luceneQuery = new DocumentQuery<T>(null, null, null, indexName, null);
+#else
+				luceneQuery = new DocumentQuery<T>(null, null, indexName, null);
+#endif
 			}
 			else
 			{

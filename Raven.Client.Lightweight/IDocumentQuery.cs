@@ -6,7 +6,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+#if !NET_3_5
 using System.Threading.Tasks;
+#endif
 using Raven.Abstractions.Data;
 using Raven.Database.Data;
 
@@ -254,13 +256,14 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <value>The query result.</value>
 		QueryResult QueryResult { get; }
 #endif
-
+#if !NET_3_5
 		/// <summary>
 		/// Gets the query result
 		/// Execute the query the first time that this is called.
 		/// </summary>
 		/// <value>The query result.</value>
 		Task<QueryResult> QueryResultAsync { get; }
+#endif
 
 		/// <summary>
 		/// Adds an ordering for a specific field to the query

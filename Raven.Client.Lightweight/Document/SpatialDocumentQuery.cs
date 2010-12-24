@@ -5,7 +5,9 @@
 //-----------------------------------------------------------------------
 using System.Linq;
 using Raven.Client.Client;
+#if !NET_3_5
 using Raven.Client.Client.Async;
+#endif
 using Raven.Database.Data;
 
 namespace Raven.Client.Document
@@ -23,7 +25,6 @@ namespace Raven.Client.Document
 		/// </summary>
 		/// <param name="session">The session.</param>
 		/// <param name="databaseCommands">The database commands.</param>
-		/// <param name="asyncDatabaseCommands">The async database commands</param>
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="projectionFields">The projection fields.</param>
 		public SpatialDocumentQuery(
@@ -31,14 +32,18 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 			IDatabaseCommands databaseCommands, 
 #endif
+#if !NET_3_5
 			IAsyncDatabaseCommands asyncDatabaseCommands,
+#endif
 			string indexName, 
 			string[] projectionFields)
 			: base(session, 
 #if !SILVERLIGHT
 			databaseCommands, 
 #endif
+#if !NET_3_5
 			asyncDatabaseCommands,
+#endif
 			indexName, 
 			projectionFields)
 		{

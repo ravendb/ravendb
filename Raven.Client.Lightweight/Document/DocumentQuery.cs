@@ -11,12 +11,13 @@ using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
-using System.Threading;
+using Raven.Client.Client;
+#if !NET_3_5
 using System.Threading.Tasks;
+using Raven.Client.Client.Async;
+#endif
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
-using Raven.Client.Client;
-using Raven.Client.Client.Async;
 using Raven.Client.Exceptions;
 using Raven.Client.Linq;
 using Raven.Database.Data;
@@ -37,7 +38,9 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 		private readonly IDatabaseCommands databaseCommands;
 #endif
+#if !NET_3_5
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
+#endif
 		private readonly string indexName;
 		private int currentClauseDepth;
 
@@ -75,7 +78,9 @@ namespace Raven.Client.Document
 		private readonly HashSet<string> includes = new HashSet<string>();
 		private AggregationOperation aggregationOp;
 		private string[] groupByFields;
+#if !NET_3_5
 		private Task<QueryResult> queryResultTask;
+#endif
 
 		/// <summary>
 		/// Gets the current includes on this query
@@ -122,7 +127,7 @@ namespace Raven.Client.Document
 		}
 
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NET_3_5
 		/// <summary>
 		/// Initializes a new instance of the <see cref="DocumentQuery&lt;T&gt;"/> class.
 		/// </summary>
@@ -143,16 +148,21 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Initializes a new instance of the <see cref="DocumentQuery&lt;T&gt;"/> class.
 		/// </summary>
-		/// <param name="session">The session.</param>
 		/// <param name="databaseCommands">The database commands.</param>
+#if !NET_3_5
 		/// <param name="asyncDatabaseCommands">The async database commands</param>
+#endif
+
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="projectionFields">The projection fields.</param>
+		/// <param name="session">The session.</param>
 		public DocumentQuery(InMemoryDocumentSessionOperations session, 
 #if !SILVERLIGHT
 			IDatabaseCommands databaseCommands, 
 #endif
+#if !NET_3_5
 			IAsyncDatabaseCommands asyncDatabaseCommands,
+#endif
 			string indexName,
 			string[] projectionFields)
 		{
@@ -162,7 +172,9 @@ namespace Raven.Client.Document
 			this.projectionFields = projectionFields;
 			this.indexName = indexName;
 			this.session = session;
+#if !NET_3_5
 			this.asyncDatabaseCommands = asyncDatabaseCommands;
+#endif
 		}
 
 		/// <summary>
@@ -173,6 +185,9 @@ namespace Raven.Client.Document
 		{
 #if !SILVERLIGHT
 			databaseCommands = other.databaseCommands;
+#endif
+#if !NET_3_5
+			asyncDatabaseCommands = other.asyncDatabaseCommands;
 #endif
 			indexName = other.indexName;
 			projectionFields = other.projectionFields;
@@ -212,7 +227,9 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 				databaseCommands,
 #endif
+#if !NET_3_5
 				asyncDatabaseCommands,
+#endif
 				indexName, fields)
 			{
 				pageSize = pageSize,
@@ -274,6 +291,7 @@ namespace Raven.Client.Document
 		}
 #endif
 
+#if !NET_3_5
 		/// <summary>
 		/// Gets the query result
 		/// Execute the query the first time that this is called.
@@ -283,6 +301,7 @@ namespace Raven.Client.Document
 		{
 			get { return queryResultTask ?? (queryResultTask = GetQueryResultAsync()); }
 		}
+#endif
 
 		/// <summary>
 		/// Gets the fields for projection 
@@ -948,6 +967,7 @@ If you really want to do in memory filtering on the data returned from the query
 
 		#endregion
 
+#if !NET_3_5
 		private Task<QueryResult> GetQueryResultAsync()
 		{
 			session.IncrementRequestCount();
@@ -992,6 +1012,7 @@ If you really want to do in memory filtering on the data returned from the query
 					return task;
 				}).Unwrap();
 		}
+#endif
 
 #if !SILVERLIGHT
 		/// <summary>
@@ -1025,7 +1046,7 @@ If you really want to do in memory filtering on the data returned from the query
 					Debug.WriteLine(
 						string.Format("Stale query results on non stable query '{0}' on index '{1}' in '{2}', query will be retried",
 									  query, indexName, session.StoreIdentifier));
-					Thread.Sleep(100);
+					System.Threading.Thread.Sleep(100);
 					continue;
 				}
 				Debug.WriteLine(string.Format("Query returned {0}/{1} results", result.Results.Count, result.TotalResults));
