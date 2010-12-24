@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+#if !SILVERLIGHT
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -20,14 +21,14 @@ namespace Raven.Client.Client
 	{
 #if !NET_3_5
 		[ThreadStatic]
-		private static Stack<TransactionInformation> currentRavenTransactions;
+		private static readonly Stack<TransactionInformation> currentRavenTransactions;
 
 		private static Stack<TransactionInformation> CurrentRavenTransactions
 		{
 			get
 			{
 				if(currentRavenTransactions == null)
-					currentRavenTransactions = new Stack<TransactionInformation>();
+					return new Stack<TransactionInformation>();
 				return currentRavenTransactions;
 			}
 		}
@@ -76,3 +77,4 @@ namespace Raven.Client.Client
 		}
 	}
 }
+#endif
