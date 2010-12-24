@@ -8,6 +8,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Database.Data;
@@ -486,7 +487,17 @@ namespace Raven.Client.Document
             get { return queryResult ?? (queryResult = GetQueryResult()); }
         }
 
-        /// <summary>
+    	/// <summary>
+    	/// Gets the query result
+    	/// Execute the query the first time that this is called.
+    	/// </summary>
+    	/// <value>The query result.</value>
+    	public Task<QueryResult> QueryResultAsync
+    	{
+    		get { throw new NotImplementedException(); }
+    	}
+
+    	/// <summary>
         /// Adds an ordering for a specific field to the query
         /// </summary>
         /// <param name="fieldName">Name of the field.</param>

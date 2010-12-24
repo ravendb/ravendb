@@ -21,6 +21,7 @@ using Raven.Database.Data;
 
 namespace Raven.Client.Document
 {
+#if !SILVERLIGHT
 	/// <summary>
 	/// Implements Unit of Work for accessing the RavenDB server
 	/// </summary>
@@ -308,7 +309,7 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public IDocumentQuery<T> LuceneQuery<T>(string indexName)
 		{
-			return new DocumentQuery<T>(this, DatabaseCommands, indexName, null);
+			return new DocumentQuery<T>(this, DatabaseCommands, null, indexName, null);
 		}
 
 		/// <summary>
@@ -383,54 +384,6 @@ namespace Raven.Client.Document
 			}
 			return LuceneQuery<T>(indexName);
 		}
-
-		/// <summary>
-		/// Metadata held about an entity by the session
-		/// </summary>
-		public class DocumentMetadata
-		{
-			/// <summary>
-			/// Gets or sets the original value.
-			/// </summary>
-			/// <value>The original value.</value>
-			public JObject OriginalValue { get; set; }
-			/// <summary>
-			/// Gets or sets the metadata.
-			/// </summary>
-			/// <value>The metadata.</value>
-			public JObject Metadata { get; set; }
-			/// <summary>
-			/// Gets or sets the ETag.
-			/// </summary>
-			/// <value>The ETag.</value>
-			public Guid? ETag { get; set; }
-			/// <summary>
-			/// Gets or sets the key.
-			/// </summary>
-			/// <value>The key.</value>
-			public string Key { get; set; }
-			/// <summary>
-			/// Gets or sets the original metadata.
-			/// </summary>
-			/// <value>The original metadata.</value>
-			public JObject OriginalMetadata { get; set; }
-		}
-
-		/// <summary>
-		/// Data for a batch command to the server
-		/// </summary>
-		public class SaveChangesData
-		{
-			/// <summary>
-			/// Gets or sets the commands.
-			/// </summary>
-			/// <value>The commands.</value>
-			public IList<ICommandData> Commands { get; set; }
-			/// <summary>
-			/// Gets or sets the entities.
-			/// </summary>
-			/// <value>The entities.</value>
-			public IList<object> Entities { get; set; }
-		}
 	}
+#endif
 }

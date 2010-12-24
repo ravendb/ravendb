@@ -6,6 +6,7 @@
 #if !NET_3_5
 
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Database;
 using Raven.Database.Data;
@@ -17,6 +18,12 @@ namespace Raven.Client.Client.Async
 	/// </summary>
 	public interface IAsyncDatabaseCommands : IDisposable
 	{
+		/// <summary>
+		/// Gets or sets the operations headers.
+		/// </summary>
+		/// <value>The operations headers.</value>
+		IDictionary<string,string> OperationsHeaders { get;  }
+
 		/// <summary>
 		/// Begins an async get operation
 		/// </summary>
@@ -34,7 +41,8 @@ namespace Raven.Client.Client.Async
 		/// </summary>
 		/// <param name="index">The index.</param>
 		/// <param name="query">The query.</param>
-		Task<QueryResult> QueryAsync(string index, IndexQuery query);
+		/// <param name="includes">The include paths</param>
+		Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes);
 
 		/// <summary>
 		/// Begins the async batch operation
@@ -42,11 +50,11 @@ namespace Raven.Client.Client.Async
 		/// <param name="commandDatas">The command data.</param>
 		Task<BatchResult[]> BatchAsync(ICommandData[] commandDatas);
 
-        /// <summary>
-        /// Create a new instance of <see cref="IDatabaseCommands"/> that will interacts
-        /// with the specified database
-        /// </summary>
-        IAsyncDatabaseCommands ForDatabase(string database);
+		/// <summary>
+		/// Create a new instance of <see cref="IAsyncDatabaseCommands"/> that will interacts
+		/// with the specified database
+		/// </summary>
+		IAsyncDatabaseCommands ForDatabase(string database);
 	}
 }
 #endif

@@ -74,8 +74,8 @@ task Init -depends EnsureMunin, Verify40, Clean {
 	
 	copy $tools_dir\xUnit\*.* $build_dir
 	
-	exec { .\Utilities\Binaries\Raven.Silverlighter.exe .\Raven.Abstractions\Raven.Abstractions.csproj .\Raven.Abstractions\Raven.Abstractions.Silverlight.g.csproj }
-	exec { .\Utilities\Binaries\Raven.Silverlighter.exe .\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj .\Raven.Client.Lightweight\Raven.Client.Lightweight.Silverlight.g.csproj }
+	# exec { .\Utilities\Binaries\Raven.Silverlighter.exe .\Raven.Abstractions\Raven.Abstractions.csproj .\Raven.Abstractions\Raven.Abstractions.Silverlight.g.csproj }
+	# exec { .\Utilities\Binaries\Raven.Silverlighter.exe .\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj .\Raven.Client.Lightweight\Raven.Client.Lightweight.Silverlight.g.csproj }
 
 	if($global:commercial) {
 		exec { .\Utilities\Binaries\Raven.ProjectRewriter.exe commercial }

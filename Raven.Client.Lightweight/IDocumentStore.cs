@@ -17,8 +17,8 @@ namespace Raven.Client
 	/// <summary>
 	/// Interface for managing access to RavenDB and open sessions.
 	/// </summary>
-    public interface IDocumentStore : IDisposable
-    {
+	public interface IDocumentStore : IDisposable
+	{
 		/// <summary>
 		/// Gets the shared operations headers.
 		/// </summary>
@@ -44,14 +44,14 @@ namespace Raven.Client
 		/// Initializes this instance.
 		/// </summary>
 		/// <returns></returns>
-        IDocumentStore Initialize();
+		IDocumentStore Initialize();
 
 		/// <summary>
 		/// Registers the delete listener.
 		/// </summary>
 		/// <param name="deleteListener">The delete listener.</param>
 		/// <returns></returns>
-    	IDocumentStore RegisterListener(IDocumentDeleteListener deleteListener);
+		IDocumentStore RegisterListener(IDocumentDeleteListener deleteListener);
 
 		/// <summary>
 		/// Registers the store listener.
@@ -60,38 +60,40 @@ namespace Raven.Client
 		/// <returns></returns>
 		IDocumentStore RegisterListener(IDocumentStoreListener documentStoreListener);
 
+#if !SILVERLIGHT
 		/// <summary>
 		/// Opens the session.
 		/// </summary>
 		/// <returns></returns>
-        IDocumentSession OpenSession();
+		IDocumentSession OpenSession();
 
-        /// <summary>
-        /// Opens the session for a particular database
-        /// </summary>
-        IDocumentSession OpenSession(string database);
+		/// <summary>
+		/// Opens the session for a particular database
+		/// </summary>
+		IDocumentSession OpenSession(string database);
 
-        /// <summary>
-        /// Opens the session for a particular database with the specified credentials
-        /// </summary>
-        IDocumentSession OpenSession(string database, ICredentials credentialsForSession);
+		/// <summary>
+		/// Opens the session for a particular database with the specified credentials
+		/// </summary>
+		IDocumentSession OpenSession(string database, ICredentials credentialsForSession);
 
-        /// <summary>
-        /// Opens the session with the specified credentials.
-        /// </summary>
-        /// <param name="credentialsForSession">The credentials for session.</param>
-        IDocumentSession OpenSession(ICredentials credentialsForSession);
+		/// <summary>
+		/// Opens the session with the specified credentials.
+		/// </summary>
+		/// <param name="credentialsForSession">The credentials for session.</param>
+		IDocumentSession OpenSession(ICredentials credentialsForSession);
 
 		/// <summary>
 		/// Gets the database commands.
 		/// </summary>
 		/// <value>The database commands.</value>
-        IDatabaseCommands DatabaseCommands { get; }
+		IDatabaseCommands DatabaseCommands { get; }
+#endif
 
 		/// <summary>
 		/// Gets the conventions.
 		/// </summary>
 		/// <value>The conventions.</value>
-    	DocumentConvention Conventions { get; }
-    }
+		DocumentConvention Conventions { get; }
+	}
 }

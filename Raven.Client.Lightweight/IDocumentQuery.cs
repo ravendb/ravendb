@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Database.Data;
 
@@ -23,23 +24,23 @@ namespace Raven.Client
 		/// <param name="path">The path.</param>
 		IDocumentQuery<T> Include(string path);
 
-        /// <summary>
-        /// This function exists solely to forbid in memory where clause on IDocumentQuery, because
-        /// that is nearly always a mistake.
-        /// </summary>
-        [Obsolete(@"
+		/// <summary>
+		/// This function exists solely to forbid in memory where clause on IDocumentQuery, because
+		/// that is nearly always a mistake.
+		/// </summary>
+		[Obsolete(@"
 You cannot issue an in memory filter - such as Where(x=>x.Name == ""Ayende"") - on IDocumentQuery. 
 This is likely a bug, because this will execute the filter in memory, rather than in RavenDB.
 Consider using session.Query<T>() instead of session.LuceneQuery<T>. The session.Query<T>() method fully supports Linq queries, while session.LuceneQuery<T>() is intended for lower level API access.
 If you really want to do in memory filtering on the data returned from the query, you can use: session.LuceneQuery<T>().ToList().Where(x=>x.Name == ""Ayende"")
 ", true)]
-	    IEnumerable<T> Where(Func<T, bool> predicate);
+		IEnumerable<T> Where(Func<T, bool> predicate);
 
-        /// <summary>
-        /// Includes the specified path in the query, loading the document specified in that path
-        /// </summary>
-        /// <param name="path">The path.</param>
-        IDocumentQuery<T> Include(Expression<Func<T, object>> path);
+		/// <summary>
+		/// Includes the specified path in the query, loading the document specified in that path
+		/// </summary>
+		/// <param name="path">The path.</param>
+		IDocumentQuery<T> Include(Expression<Func<T, object>> path);
 
 		/// <summary>
 		/// Negate the next operation
@@ -187,9 +188,9 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <param name="longitude">The longitude.</param>
 		IDocumentQuery<T> WithinRadiusOf(double radius, double latitude, double longitude);
 
-        /// <summary>
-        /// Sorts the query results by distance.
-        /// </summary>
+		/// <summary>
+		/// Sorts the query results by distance.
+		/// </summary>
 		IDocumentQuery<T> SortByDistance();
 
 		/// <summary>
@@ -206,26 +207,26 @@ If you really want to do in memory filtering on the data returned from the query
 		/// Instructs the query to wait for non stale results as of now.
 		/// </summary>
 		/// <returns></returns>
-        IDocumentQuery<T> WaitForNonStaleResultsAsOfNow();
+		IDocumentQuery<T> WaitForNonStaleResultsAsOfNow();
 		/// <summary>
 		/// Instructs the query to wait for non stale results as of now for the specified timeout.
 		/// </summary>
 		/// <param name="waitTimeout">The wait timeout.</param>
 		/// <returns></returns>
-        IDocumentQuery<T> WaitForNonStaleResultsAsOfNow(TimeSpan waitTimeout);
+		IDocumentQuery<T> WaitForNonStaleResultsAsOfNow(TimeSpan waitTimeout);
 
 		/// <summary>
 		/// Instructs the query to wait for non stale results as of the cutoff date.
 		/// </summary>
 		/// <param name="cutOff">The cut off.</param>
 		/// <returns></returns>
-        IDocumentQuery<T> WaitForNonStaleResultsAsOf(DateTime cutOff);
+		IDocumentQuery<T> WaitForNonStaleResultsAsOf(DateTime cutOff);
 		/// <summary>
 		/// Instructs the query to wait for non stale results as of the cutoff date for the specified timeout
 		/// </summary>
 		/// <param name="cutOff">The cut off.</param>
 		/// <param name="waitTimeout">The wait timeout.</param>
-        IDocumentQuery<T> WaitForNonStaleResultsAsOf(DateTime cutOff, TimeSpan waitTimeout);
+		IDocumentQuery<T> WaitForNonStaleResultsAsOf(DateTime cutOff, TimeSpan waitTimeout);
 
 		/// <summary>
 		/// EXPERT ONLY: Instructs the query to wait for non stale results.
@@ -237,7 +238,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// This shouldn't be used outside of unit tests unless you are well aware of the implications
 		/// </summary>
 		/// <param name="waitTimeout">The wait timeout.</param>
-        IDocumentQuery<T> WaitForNonStaleResults(TimeSpan waitTimeout);
+		IDocumentQuery<T> WaitForNonStaleResults(TimeSpan waitTimeout);
 		/// <summary>
 		/// Selects the specified fields directly from the index
 		/// </summary>
@@ -245,12 +246,21 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <param name="fields">The fields.</param>
 		IDocumentQuery<TProjection> SelectFields<TProjection>(params string[] fields);
 
+#if !SILVERLIGHT
 		/// <summary>
 		/// Gets the query result
 		/// Execute the query the first time that this is called.
 		/// </summary>
 		/// <value>The query result.</value>
 		QueryResult QueryResult { get; }
+#endif
+
+		/// <summary>
+		/// Gets the query result
+		/// Execute the query the first time that this is called.
+		/// </summary>
+		/// <value>The query result.</value>
+		Task<QueryResult> QueryResultAsync { get; }
 
 		/// <summary>
 		/// Adds an ordering for a specific field to the query
@@ -259,25 +269,25 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <param name="descending">if set to <c>true</c> [descending].</param>
 		IDocumentQuery<T> AddOrder(string fieldName, bool descending);
 
-        /// <summary>
-        /// Adds an ordering for a specific field to the query and specifies the type of field for sorting purposes
-        /// </summary>
-        /// <param name="fieldName">Name of the field.</param>
-        /// <param name="descending">if set to <c>true</c> [descending].</param>
-        /// <param name="fieldType">the type of the field to be sorted.</param>
-        IDocumentQuery<T> AddOrder(string fieldName, bool descending, Type fieldType);
+		/// <summary>
+		/// Adds an ordering for a specific field to the query and specifies the type of field for sorting purposes
+		/// </summary>
+		/// <param name="fieldName">Name of the field.</param>
+		/// <param name="descending">if set to <c>true</c> [descending].</param>
+		/// <param name="fieldType">the type of the field to be sorted.</param>
+		IDocumentQuery<T> AddOrder(string fieldName, bool descending, Type fieldType);
 
-        /// <summary>
-        /// Simplified method for opening a new clause within the query
-        /// </summary>
-        /// <returns></returns>
-        IDocumentQuery<T> OpenSubclause();
+		/// <summary>
+		/// Simplified method for opening a new clause within the query
+		/// </summary>
+		/// <returns></returns>
+		IDocumentQuery<T> OpenSubclause();
 
-        /// <summary>
-        /// Simplified method for closing a clause within the query
-        /// </summary>
-        /// <returns></returns>
-        IDocumentQuery<T> CloseSubclause();
+		/// <summary>
+		/// Simplified method for closing a clause within the query
+		/// </summary>
+		/// <returns></returns>
+		IDocumentQuery<T> CloseSubclause();
 
 		///<summary>
 		/// Instruct the index to group by the specified fields using the specified aggregation operation

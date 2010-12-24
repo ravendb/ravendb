@@ -12,9 +12,11 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client.Client;
+using Raven.Client.Client.Async;
 using Raven.Client.Exceptions;
 using Raven.Client.Linq;
 using Raven.Database.Data;
@@ -26,10 +28,16 @@ namespace Raven.Client.Document
 	/// <summary>
 	/// A query against a Raven index
 	/// </summary>
-	public class DocumentQuery<T> : IDocumentQuery<T>, IDocumentQueryCustomization, IRavenQueryInspector
+	public class DocumentQuery<T> : IDocumentQuery<T>, IDocumentQueryCustomization
+#if !SILVERLIGHT
+		, IRavenQueryInspector
+#endif
 	{
 		private bool negate;
+#if !SILVERLIGHT
 		private readonly IDatabaseCommands databaseCommands;
+#endif
+		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
 		private readonly string indexName;
 		private int currentClauseDepth;
 
@@ -39,7 +47,7 @@ namespace Raven.Client.Document
 		/// The list of fields to project directly from the index
 		/// </summary>
 		protected readonly string[] projectionFields;
-		private readonly DocumentSession session;
+		private readonly InMemoryDocumentSessionOperations session;
 		/// <summary>
 		/// The cutoff date to use for detecting staleness in the index
 		/// </summary>
@@ -67,6 +75,7 @@ namespace Raven.Client.Document
 		private readonly HashSet<string> includes = new HashSet<string>();
 		private AggregationOperation aggregationOp;
 		private string[] groupByFields;
+		private Task<QueryResult> queryResultTask;
 
 		/// <summary>
 		/// Gets the current includes on this query
@@ -76,6 +85,7 @@ namespace Raven.Client.Document
 			get { return includes; }
 		}
 
+#if !SILVERLIGHT
 		/// <summary>
 		/// Gets the database commands associated with this document query
 		/// </summary>
@@ -83,6 +93,7 @@ namespace Raven.Client.Document
 		{
 			get { return databaseCommands; }
 		}
+#endif
 
 		/// <summary>
 		/// Get the name of the index being queried
@@ -92,13 +103,15 @@ namespace Raven.Client.Document
 			get { return indexName; }
 		}
 
+#if !SILVERLIGHT
 		/// <summary>
 		/// Gets the session associated with this document query
 		/// </summary>
 		public IDocumentSession Session
 		{
-			get { return this.session; }
+			get { return (IDocumentSession)this.session; }
 		}
+#endif
 
 		/// <summary>
 		/// Gets the query text built so far
@@ -108,6 +121,8 @@ namespace Raven.Client.Document
 			get { return this.queryText; }
 		}
 
+
+#if !SILVERLIGHT
 		/// <summary>
 		/// Initializes a new instance of the <see cref="DocumentQuery&lt;T&gt;"/> class.
 		/// </summary>
@@ -115,13 +130,39 @@ namespace Raven.Client.Document
 		/// <param name="databaseCommands">The database commands.</param>
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="projectionFields">The projection fields.</param>
-		public DocumentQuery(DocumentSession session, IDatabaseCommands databaseCommands, string indexName,
-							 string[] projectionFields)
+		public DocumentQuery(InMemoryDocumentSessionOperations session, 
+			IDatabaseCommands databaseCommands, 
+			string indexName,
+			string[] projectionFields)
+			:this(session,databaseCommands, null, indexName, projectionFields)
 		{
+			
+		}
+#endif
+
+		/// <summary>
+		/// Initializes a new instance of the <see cref="DocumentQuery&lt;T&gt;"/> class.
+		/// </summary>
+		/// <param name="session">The session.</param>
+		/// <param name="databaseCommands">The database commands.</param>
+		/// <param name="asyncDatabaseCommands">The async database commands</param>
+		/// <param name="indexName">Name of the index.</param>
+		/// <param name="projectionFields">The projection fields.</param>
+		public DocumentQuery(InMemoryDocumentSessionOperations session, 
+#if !SILVERLIGHT
+			IDatabaseCommands databaseCommands, 
+#endif
+			IAsyncDatabaseCommands asyncDatabaseCommands,
+			string indexName,
+			string[] projectionFields)
+		{
+#if !SILVERLIGHT
 			this.databaseCommands = databaseCommands;
+#endif
 			this.projectionFields = projectionFields;
 			this.indexName = indexName;
 			this.session = session;
+			this.asyncDatabaseCommands = asyncDatabaseCommands;
 		}
 
 		/// <summary>
@@ -130,7 +171,9 @@ namespace Raven.Client.Document
 		/// <param name="other">The other.</param>
 		protected DocumentQuery(DocumentQuery<T> other)
 		{
+#if !SILVERLIGHT
 			databaseCommands = other.databaseCommands;
+#endif
 			indexName = other.indexName;
 			projectionFields = other.projectionFields;
 			session = other.session;
@@ -165,7 +208,12 @@ namespace Raven.Client.Document
 		/// <param name="fields">The fields.</param>
 		public IDocumentQuery<TProjection> SelectFields<TProjection>(string[] fields)
 		{
-			return new DocumentQuery<TProjection>(session, databaseCommands, indexName, fields)
+			return new DocumentQuery<TProjection>(session, 
+#if !SILVERLIGHT
+				databaseCommands,
+#endif
+				asyncDatabaseCommands,
+				indexName, fields)
 			{
 				pageSize = pageSize,
 				queryText = new StringBuilder(queryText.ToString()),
@@ -214,6 +262,7 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+#if !SILVERLIGHT
 		/// <summary>
 		/// Gets the query result
 		/// Execute the query the first time that this is called.
@@ -222,6 +271,17 @@ namespace Raven.Client.Document
 		public QueryResult QueryResult
 		{
 			get { return queryResult ?? (queryResult = GetQueryResult()); }
+		}
+#endif
+
+		/// <summary>
+		/// Gets the query result
+		/// Execute the query the first time that this is called.
+		/// </summary>
+		/// <value>The query result.</value>
+		public Task<QueryResult> QueryResultAsync
+		{
+			get { return queryResultTask ?? (queryResultTask = GetQueryResultAsync()); }
 		}
 
 		/// <summary>
@@ -271,7 +331,12 @@ namespace Raven.Client.Document
 			{
 				try
 				{
-					foreach (var include in QueryResult.Includes)
+#if !SILVERLIGHT
+					var theQueryResult = QueryResult;
+#else
+					var theQueryResult = QueryResultAsync.Result;
+#endif
+					foreach (var include in theQueryResult.Includes)
 					{
 						var metadata = include.Value<JObject>("@metadata");
 
@@ -279,7 +344,7 @@ namespace Raven.Client.Document
 													include,
 													metadata);
 					}
-					var list = QueryResult.Results
+					var list = theQueryResult.Results
 						.Select(Deserialize)
 						.ToList();
 					return list.GetEnumerator();
@@ -883,6 +948,52 @@ If you really want to do in memory filtering on the data returned from the query
 
 		#endregion
 
+		private Task<QueryResult> GetQueryResultAsync()
+		{
+			session.IncrementRequestCount();
+			var startTime = DateTime.Now;
+
+			var query = queryText.ToString();
+
+			Debug.WriteLine(string.Format("Executing query '{0}' on index '{1}' in '{2}'",
+			                              query, indexName, session.StoreIdentifier));
+
+			IndexQuery indexQuery = GenerateIndexQuery(query);
+
+			AddOperationHeaders(asyncDatabaseCommands.OperationsHeaders.Add);
+
+			return GetQueryResultTaskResult(query, indexQuery, startTime);
+		}
+
+		private Task<QueryResult> GetQueryResultTaskResult(string query, IndexQuery indexQuery, DateTime startTime)
+		{
+			return asyncDatabaseCommands.QueryAsync(indexName, indexQuery, includes.ToArray())
+				.ContinueWith(task =>
+				{
+					if (waitForNonStaleResults && task.Result.IsStale)
+					{
+						TimeSpan elapsed1 = DateTime.Now - startTime;
+						if (elapsed1 > timeout)
+						{
+							throw new TimeoutException(string.Format("Waited for {0:#,#}ms for the query to return non stale result.",
+							                                         elapsed1.TotalMilliseconds));
+						}
+						Debug.WriteLine(
+							string.Format("Stale query results on non stable query '{0}' on index '{1}' in '{2}', query will be retried",
+							              query, indexName, session.StoreIdentifier));
+
+						
+						return TaskEx.Delay(100)
+							.ContinueWith(_ => GetQueryResultTaskResult(query, indexQuery, startTime))
+							.Unwrap();
+					}
+
+					Debug.WriteLine(string.Format("Query returned {0}/{1} results", task.Result.Results.Count, task.Result.TotalResults));
+					return task;
+				}).Unwrap();
+		}
+
+#if !SILVERLIGHT
 		/// <summary>
 		/// Gets the query result.
 		/// </summary>
@@ -890,11 +1001,7 @@ If you really want to do in memory filtering on the data returned from the query
 		protected virtual QueryResult GetQueryResult()
 		{
 			session.IncrementRequestCount();
-#if !SILVERLIGHT
 			var sp = Stopwatch.StartNew();
-#else
-			var startTime = DateTime.Now;
-#endif
 			while (true)
 			{
 				var query = queryText.ToString();
@@ -904,35 +1011,17 @@ If you really want to do in memory filtering on the data returned from the query
 
 				IndexQuery indexQuery = GenerateIndexQuery(query);
 
-				for (int x = 0; x < this.orderByFields.Length; x++)
-				{
-					String field = this.orderByFields[x];
-					Type fieldType = this.orderByTypes[x];
-					if (fieldType == null) { continue; }
-
-					databaseCommands.OperationsHeaders.Add(
-						string.Format("SortHint_{0}", field.Trim('-')), FromPrimitiveTypestring(fieldType.Name).ToString());
-				}
-
+				AddOperationHeaders(databaseCommands.OperationsHeaders.Add);
 
 				var result = databaseCommands.Query(indexName, indexQuery, includes.ToArray());
 				if (waitForNonStaleResults && result.IsStale)
 				{
-#if !SILVERLIGHT
 					if (sp.Elapsed > timeout)
 					{
 						sp.Stop();
 						throw new TimeoutException(string.Format("Waited for {0:#,#}ms for the query to return non stale result.",
 																 sp.ElapsedMilliseconds));
 					}
-#else
-					var elapsed = DateTime.Now - startTime;
-					if (elapsed > timeout)
-					{
-						throw new TimeoutException(string.Format("Waited for {0:#,#}ms for the query to return non stale result.",
-																 elapsed.TotalMilliseconds));
-					}
-#endif
 					Debug.WriteLine(
 						string.Format("Stale query results on non stable query '{0}' on index '{1}' in '{2}', query will be retried",
 									  query, indexName, session.StoreIdentifier));
@@ -943,6 +1032,7 @@ If you really want to do in memory filtering on the data returned from the query
 				return result;
 			}
 		}
+#endif
 
 		private SortOptions FromPrimitiveTypestring(string type)
 		{
@@ -976,6 +1066,22 @@ If you really want to do in memory filtering on the data returned from the query
 				SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
 				FieldsToFetch = projectionFields
 			};
+		}
+
+		private void AddOperationHeaders(Action<string, string> addOperationHeader)
+		{
+			for (int x = 0; x < this.orderByFields.Length; x++)
+			{
+				String field = orderByFields[x];
+				Type fieldType = orderByTypes[x];
+				if (fieldType == null)
+				{
+					continue;
+				}
+
+				addOperationHeader(
+					string.Format("SortHint_{0}", field.Trim('-')), FromPrimitiveTypestring(fieldType.Name).ToString());
+			}
 		}
 
 		private T Deserialize(JObject result)

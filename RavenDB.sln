@@ -31,6 +31,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Munin", "Modules\Muni
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Munin.Tests", "Modules\Munin\Raven.Munin.Tests\Raven.Munin.Tests.csproj", "{08BE1CAB-13B1-4707-A0A3-6A2FDC1F916D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Client.Silverlight", "Raven.Client.Silverlight\Raven.Client.Silverlight.csproj", "{8A1DB308-D56B-49BC-A421-A2AB32617215}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -191,6 +193,16 @@ Global
 		{08BE1CAB-13B1-4707-A0A3-6A2FDC1F916D}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{08BE1CAB-13B1-4707-A0A3-6A2FDC1F916D}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{08BE1CAB-13B1-4707-A0A3-6A2FDC1F916D}.Release|x86.ActiveCfg = Release|Any CPU
+		{8A1DB308-D56B-49BC-A421-A2AB32617215}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8A1DB308-D56B-49BC-A421-A2AB32617215}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8A1DB308-D56B-49BC-A421-A2AB32617215}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{8A1DB308-D56B-49BC-A421-A2AB32617215}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{8A1DB308-D56B-49BC-A421-A2AB32617215}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{8A1DB308-D56B-49BC-A421-A2AB32617215}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8A1DB308-D56B-49BC-A421-A2AB32617215}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8A1DB308-D56B-49BC-A421-A2AB32617215}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{8A1DB308-D56B-49BC-A421-A2AB32617215}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{8A1DB308-D56B-49BC-A421-A2AB32617215}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

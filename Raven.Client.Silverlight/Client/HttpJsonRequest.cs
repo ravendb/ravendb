@@ -21,27 +21,23 @@ namespace Raven.Client.Client
 	/// </summary>
 	public class HttpJsonRequest
 	{
-		private readonly string url;
-		private readonly string method;
-	    private readonly bool cacheRequest;
-
-	    /// <summary>
+		/// <summary>
 		/// Occurs when a json request is created
 		/// </summary>
 		public static event EventHandler<WebRequestEventArgs> ConfigureRequest = delegate {  };
 
-	    private static int numOfCachedRequests;
+		private static int numOfCachedRequests;
 
-        /// <summary>
-        /// The number of requests that we got 304 for 
-        /// and were able to handle purely from the cache
-        /// </summary>
-	    public static int NumberOfCachedRequests
-	    {
-	        get { return numOfCachedRequests; }
-	    }
+		/// <summary>
+		/// The number of requests that we got 304 for 
+		/// and were able to handle purely from the cache
+		/// </summary>
+		public static int NumberOfCachedRequests
+		{
+			get { return numOfCachedRequests; }
+		}
 
-	    private class CachedRequest
+		private class CachedRequest
 		{
 			public string Etag;
 			public string Data;
@@ -50,16 +46,16 @@ namespace Raven.Client.Client
 
 		private byte[] bytesForNextWrite;
 
-	    /// <summary>
-	    /// Creates the HTTP json request.
-	    /// </summary>
-	    /// <param name="self">The self.</param>
-	    /// <param name="url">The URL.</param>
-	    /// <param name="method">The method.</param>
-	    /// <param name="credentials">The credentials.</param>
-	    /// <param name="convention">The document conventions governing this request</param>
-	    /// <returns></returns>
-	    public static HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, ICredentials credentials, DocumentConvention convention)
+		/// <summary>
+		/// Creates the HTTP json request.
+		/// </summary>
+		/// <param name="self">The self.</param>
+		/// <param name="url">The URL.</param>
+		/// <param name="method">The method.</param>
+		/// <param name="credentials">The credentials.</param>
+		/// <param name="convention">The document conventions governing this request</param>
+		/// <returns></returns>
+		public static HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, ICredentials credentials, DocumentConvention convention)
 		{
 			var request = new HttpJsonRequest(url, method, credentials, convention.ShouldCacheRequest(url));
 			ConfigureRequest(self, new WebRequestEventArgs { Request = request.webRequest });
@@ -74,8 +70,8 @@ namespace Raven.Client.Client
 		/// <param name="method">The method.</param>
 		/// <param name="metadata">The metadata.</param>
 		/// <param name="credentials">The credentials.</param>
-        /// <param name="convention">The document conventions governing this request</param>
-        /// <returns></returns>
+		/// <param name="convention">The document conventions governing this request</param>
+		/// <returns></returns>
 		public static HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, JObject metadata, ICredentials credentials, DocumentConvention convention)
 		{
 			var request = new HttpJsonRequest(url, method, metadata, credentials, convention.ShouldCacheRequest(url));
@@ -101,24 +97,15 @@ namespace Raven.Client.Client
 
 		private HttpJsonRequest(string url, string method, JObject metadata, ICredentials credentials, bool cacheRequest)
 		{
-			this.url = url;
-			this.method = method;
-		    this.cacheRequest = cacheRequest;
-		    webRequest = WebRequest.Create(url);
-            if (credentials != null)
-            {
-                webRequest.Credentials = credentials;
-            }
-		    WriteMetadata(metadata);
+			webRequest = WebRequest.Create(url);
+			if (credentials != null)
+			{
+				webRequest.Credentials = credentials;
+			}
+			WriteMetadata(metadata);
 			webRequest.Method = method;
-			//webRequest.Headers["Accept-Encoding"] = "deflate,gzip";
-			webRequest.ContentType = "application/json; charset=utf-8";
-
-            if (cacheRequest == false || method != "GET")
-            {
-                return;
-            }
-		    //webRequest.Headers["If-None-Match"] = cachedRequest.Etag;
+			if(method != "GET")
+				webRequest.ContentType = "application/json; charset=utf-8";
 		}
 
 		/// <summary>
@@ -129,7 +116,7 @@ namespace Raven.Client.Client
 		/// <returns></returns>
 		public Task<string> ReadResponseStringAsync()
 		{
-		    return webRequest.GetResponseAsync().ContinueWith(t => ReadStringInternal(() => t.Result));
+			return webRequest.GetResponseAsync().ContinueWith(t => ReadStringInternal(() => t.Result));
 		}
 
 		/// <summary>
@@ -141,7 +128,7 @@ namespace Raven.Client.Client
 		{
 			return ReadStringInternal(() => webRequest.EndGetResponse(result));
 		}
-        
+		
 		private string ReadStringInternal(Func<WebResponse> getResponse)
 		{
 			WebResponse response;
@@ -166,7 +153,7 @@ namespace Raven.Client.Client
 						{"ETag", new List<string> { cachedRequest.Etag}},
 						{"Last-Modified", new List<string>{ cachedRequest.LastModified}}
 					};
-				    Interlocked.Increment(ref numOfCachedRequests);
+					Interlocked.Increment(ref numOfCachedRequests);
 					return cachedRequest.Data;
 				}
 
@@ -179,12 +166,12 @@ namespace Raven.Client.Client
 			ResponseHeaders = response.Headers.AllKeys.ToDictionary(key => key, key => (IList<string>)new List<string> { response.Headers[key] });
 			ResponseStatusCode = ((HttpWebResponse) response).StatusCode;
 
-            using (var responseStream = response.GetResponseStream())
-            {
-                var reader = new StreamReader(responseStream);
-                var text = reader.ReadToEnd();
-                return text;
-            }
+			using (var responseStream = response.GetResponseStream())
+			{
+				var reader = new StreamReader(responseStream);
+				var text = reader.ReadToEnd();
+				return text;
+			}
 		}
 
 
@@ -239,14 +226,14 @@ namespace Raven.Client.Client
 		public Task WriteAsync(byte[] byteArray)
 		{
 			return webRequest.GetRequestStreamAsync().ContinueWith(t =>
-			                                                           {
-                                                                           var dataStream = t.Result;
-			                                                               using (dataStream)
-			                                                               {
-                                                                               dataStream.Write(bytesForNextWrite, 0, bytesForNextWrite.Length);
-                                                                               dataStream.Close();
-			                                                               }
-			                                                           });
+																	   {
+																		   var dataStream = t.Result;
+																		   using (dataStream)
+																		   {
+																			   dataStream.Write(bytesForNextWrite, 0, bytesForNextWrite.Length);
+																			   dataStream.Close();
+																		   }
+																	   });
 		}
 
 		/// <summary>

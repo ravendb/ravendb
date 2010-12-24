@@ -5,7 +5,9 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Threading;
+#if !SILVERLIGHT
 using System.Transactions;
+#endif
 using Newtonsoft.Json.Linq;
 using Raven.Database.Json;
 using Raven.Http.Exceptions;
@@ -82,8 +84,10 @@ namespace Raven.Client.Document
 
         private long GetNextHi()
         {
+#if !SILVERLIGHT
 			using(new TransactionScope(TransactionScopeOption.Suppress))
-            while (true)
+#endif
+			while (true)
             {
                 try
                 {

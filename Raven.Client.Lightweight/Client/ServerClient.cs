@@ -150,7 +150,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		{
 			var metadata = new JObject();
 			AddTransactionInformation(metadata);
-            var request = HttpJsonRequest.CreateHttpJsonRequest(this, serverUrl + "/docs/" + key, "GET", metadata, credentials, convention);
+			var request = HttpJsonRequest.CreateHttpJsonRequest(this, serverUrl + "/docs/" + key, "GET", metadata, credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
 			try
 			{
@@ -214,7 +214,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			AddTransactionInformation(metadata);
 			if (etag != null)
 				metadata["ETag"] = new JValue(etag.Value.ToString());
-            var request = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/docs/" + key, method, metadata, credentials, convention);
+			var request = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/docs/" + key, method, metadata, credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
 			request.Write(document.ToString());
 
@@ -270,29 +270,29 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		{
 			var webRequest = WebRequest.Create(url + "/static/" + key);
 			webRequest.Method = "PUT";
-            webRequest.Credentials = credentials;
+			webRequest.Credentials = credentials;
 			foreach (var header in metadata.Properties())
 			{
 				if (header.Name.StartsWith("@"))
 					continue;
 
-                //need to handle some headers differently, see http://msdn.microsoft.com/en-us/library/system.net.webheadercollection.aspx
-                string matchString = header.Name;
-                string formattedHeaderValue = StripQuotesIfNeeded(header.Value.ToString(Formatting.None));
+				//need to handle some headers differently, see http://msdn.microsoft.com/en-us/library/system.net.webheadercollection.aspx
+				string matchString = header.Name;
+				string formattedHeaderValue = StripQuotesIfNeeded(header.Value.ToString(Formatting.None));
 
-                //Just let an exceptions (from Parse(..) functions) bubble-up, so that the user can see they've provided an invalid value
-                if (matchString == "Content-Length")
-                {
+				//Just let an exceptions (from Parse(..) functions) bubble-up, so that the user can see they've provided an invalid value
+				if (matchString == "Content-Length")
+				{
 					// we filter out content length, because getting it wrong will cause errors 
 					// in the server side when serving the wrong value for this header.
 					// worse, if we are using http compression, this value is known to be wrong
 					// instead, we rely on the actual size of the data provided for us
 					//webRequest.ContentLength = long.Parse(formattedHeaderValue); 	
-                }
-                else if (matchString == "Content-Type")
-                    webRequest.ContentType = formattedHeaderValue;                
-                else
-                    webRequest.Headers[header.Name] = formattedHeaderValue;
+				}
+				else if (matchString == "Content-Type")
+					webRequest.ContentType = formattedHeaderValue;                
+				else
+					webRequest.Headers[header.Name] = formattedHeaderValue;
 			}
 			if (etag != null)
 			{
@@ -303,25 +303,25 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 				stream.Write(data, 0, data.Length);
 				stream.Flush();
 			}
-		    try
-		    {
-		        using (webRequest.GetResponse())
-		        {
+			try
+			{
+				using (webRequest.GetResponse())
+				{
 
-		        }
-		    }
-		    catch (WebException e)
-		    {
-		        var httpWebResponse = e.Response as HttpWebResponse;
-                if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.InternalServerError)
-                    throw;
+				}
+			}
+			catch (WebException e)
+			{
+				var httpWebResponse = e.Response as HttpWebResponse;
+				if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.InternalServerError)
+					throw;
 
-                using(var stream = httpWebResponse.GetResponseStream())
-                using(var reader = new StreamReader(stream))
-                {
-                    throw new InvalidOperationException("Internal Server Error: " + Environment.NewLine + reader.ReadToEnd());
-                }
-		    }
+				using(var stream = httpWebResponse.GetResponseStream())
+				using(var reader = new StreamReader(stream))
+				{
+					throw new InvalidOperationException("Internal Server Error: " + Environment.NewLine + reader.ReadToEnd());
+				}
+			}
 		}
 
 		private static string StripQuotesIfNeeded(string str)
@@ -339,7 +339,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		public Attachment GetAttachment(string key)
 		{
 			var webRequest = WebRequest.Create(url + "/static/" + key);
-		    webRequest.Credentials = credentials;
+			webRequest.Credentials = credentials;
 			try
 			{
 				using (var response = webRequest.GetResponse())
@@ -358,17 +358,17 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 				var httpWebResponse = e.Response as HttpWebResponse;
 				if (httpWebResponse == null)
 					throw;
-                if (httpWebResponse.StatusCode == HttpStatusCode.Conflict)
-                {
-                    var conflictsDoc = JObject.Load(new BsonReader(httpWebResponse.GetResponseStreamWithHttpDecompression()));
-                    var conflictIds = conflictsDoc.Value<JArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
+				if (httpWebResponse.StatusCode == HttpStatusCode.Conflict)
+				{
+					var conflictsDoc = JObject.Load(new BsonReader(httpWebResponse.GetResponseStreamWithHttpDecompression()));
+					var conflictIds = conflictsDoc.Value<JArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
 
-                    throw new ConflictException("Conflict detected on " + key +
-                                                ", conflict must be resolved before the attachment will be accessible")
-                    {
-                        ConflictedVersionIds = conflictIds
-                    };
-                }
+					throw new ConflictException("Conflict detected on " + key +
+												", conflict must be resolved before the attachment will be accessible")
+					{
+						ConflictedVersionIds = conflictIds
+					};
+				}
 				if (httpWebResponse.StatusCode == HttpStatusCode.NotFound)
 					return null;
 				throw;
@@ -384,7 +384,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		{
 			var webRequest = WebRequest.Create(url + "/static/" + key);
 			webRequest.Method = "DELETE";
-		    webRequest.Credentials = credentials;
+			webRequest.Credentials = credentials;
 			if (etag != null)
 			{
 				webRequest.Headers[" If-None-Match"] = etag.Value.ToString();
@@ -418,7 +418,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 
 		private object DirectResetIndex(string name, string operationUrl)
 		{
-            var httpJsonRequest = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/indexes/" + name, "RESET", credentials, convention);
+			var httpJsonRequest = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/indexes/" + name, "RESET", credentials, convention);
 			httpJsonRequest.AddOperationHeaders(OperationsHeaders);
 			httpJsonRequest.ReadResponseString();
 			return null;
@@ -426,7 +426,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 
 		private string[] DirectGetIndexNames(int start, int pageSize, string operationUrl)
 		{
-            var httpJsonRequest = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/indexes/?namesOnly=true&start=" + start + "&pageSize=" + pageSize, "GET", credentials, convention);
+			var httpJsonRequest = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/indexes/?namesOnly=true&start=" + start + "&pageSize=" + pageSize, "GET", credentials, convention);
 			httpJsonRequest.AddOperationHeaders(OperationsHeaders);
 			var responseString = httpJsonRequest.ReadResponseString();
 			return JArray.Parse(responseString).Select(x => x.Value<string>()).ToArray();
@@ -445,7 +445,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 
 		private IndexDefinition DirectGetIndex(string indexName, string operationUrl)
 		{
-            var httpJsonRequest = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/indexes/" + indexName + "?definition=yes", "GET", credentials, convention);
+			var httpJsonRequest = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/indexes/" + indexName + "?definition=yes", "GET", credentials, convention);
 			httpJsonRequest.AddOperationHeaders(OperationsHeaders);
 			string indexDefAsString;
 			try
@@ -472,7 +472,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			if (etag != null)
 				metadata.Add("ETag", new JValue(etag.Value.ToString()));
 			AddTransactionInformation(metadata);
-            var httpJsonRequest = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/docs/" + key, "DELETE", metadata, credentials, convention);
+			var httpJsonRequest = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/docs/" + key, "DELETE", metadata, credentials, convention);
 			httpJsonRequest.AddOperationHeaders(OperationsHeaders);
 			try
 			{
@@ -549,7 +549,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 					throw;
 			}
 
-            var request = HttpJsonRequest.CreateHttpJsonRequest(this, requestUri, "PUT", credentials, convention);
+			var request = HttpJsonRequest.CreateHttpJsonRequest(this, requestUri, "PUT", credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
 			request.Write(JsonConvert.SerializeObject(definition, new JsonEnumConverter()));
 
@@ -614,7 +614,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			{
 				path += "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray());
 			}
-            var request = HttpJsonRequest.CreateHttpJsonRequest(this, path, "GET", credentials, convention);
+			var request = HttpJsonRequest.CreateHttpJsonRequest(this, path, "GET", credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
 			var serializer = convention.CreateSerializer();
 			JToken json;
@@ -633,12 +633,12 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			return new QueryResult
 			{
 				IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
-                IndexTimestamp = json.Value<DateTime>("IndexTimestamp"),
+				IndexTimestamp = json.Value<DateTime>("IndexTimestamp"),
 				IndexEtag = new Guid(request.ResponseHeaders["ETag"]),
-                Results = json["Results"].Children().Cast<JObject>().ToList(),
+				Results = json["Results"].Children().Cast<JObject>().ToList(),
 				Includes = json["Includes"].Children().Cast<JObject>().ToList(),
 				TotalResults = Convert.ToInt32(json["TotalResults"].ToString()),
-                SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString()),
+				SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString()),
 			};
 		}
 
@@ -649,7 +649,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		public void DeleteIndex(string name)
 		{
 			EnsureIsNotNullOrEmpty(name, "name");
-            var request = HttpJsonRequest.CreateHttpJsonRequest(this, url + "/indexes/" + name, "DELETE", credentials, convention);
+			var request = HttpJsonRequest.CreateHttpJsonRequest(this, url + "/indexes/" + name, "DELETE", credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
 			request.ReadResponseString();
 		}
@@ -679,21 +679,21 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			{
 				path += string.Join("&", includes.Select(x => "include=" + x).ToArray());
 			}
-            // if it is too big, we drop to POST (note that means that we can't use the HTTP cache any longer)
-            // we are fine with that, requests to load > 128 items are going to be rare
-            HttpJsonRequest request;
-            if (ids.Length < 128)
-            {
-                path += "&" + string.Join("&", ids.Select(x => "id=" + x).ToArray());
-                request = HttpJsonRequest.CreateHttpJsonRequest(this, path, "GET", credentials, convention);
-            }
-		    else
-            {
-                request = HttpJsonRequest.CreateHttpJsonRequest(this, path, "POST", credentials, convention);
-                request.Write(new JArray(ids).ToString(Formatting.None));
-            }
+			// if it is too big, we drop to POST (note that means that we can't use the HTTP cache any longer)
+			// we are fine with that, requests to load > 128 items are going to be rare
+			HttpJsonRequest request;
+			if (ids.Length < 128)
+			{
+				path += "&" + string.Join("&", ids.Select(x => "id=" + x).ToArray());
+				request = HttpJsonRequest.CreateHttpJsonRequest(this, path, "GET", credentials, convention);
+			}
+			else
+			{
+				request = HttpJsonRequest.CreateHttpJsonRequest(this, path, "POST", credentials, convention);
+				request.Write(new JArray(ids).ToString(Formatting.None));
+			}
 
-		    request.AddOperationHeaders(OperationsHeaders);
+			request.AddOperationHeaders(OperationsHeaders);
 			var result = JObject.Parse(request.ReadResponseString());
 
 			return new MultiLoadResult
@@ -717,7 +717,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		{
 			var metadata = new JObject();
 			AddTransactionInformation(metadata);
-            var req = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/bulk_docs", "POST", metadata, credentials, convention);
+			var req = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/bulk_docs", "POST", metadata, credentials, convention);
 			req.AddOperationHeaders(OperationsHeaders);
 			var jArray = new JArray(commandDatas.Select(x => x.ToJson()));
 			req.Write(jArray.ToString(Formatting.None));
@@ -753,7 +753,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 
 		private void DirectCommit(Guid txId, string operationUrl)
 		{
-            var httpJsonRequest = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/transaction/commit?tx=" + txId, "POST", credentials, convention);
+			var httpJsonRequest = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/transaction/commit?tx=" + txId, "POST", credentials, convention);
 			httpJsonRequest.AddOperationHeaders(OperationsHeaders);
 			httpJsonRequest.ReadResponseString();
 		}
@@ -781,20 +781,20 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			return ExecuteWithReplication(u => DirectPromoteTransaction(fromTxId, u));
 		}
 
-	    /// <summary>
-	    /// Stores the recovery information.
-	    /// </summary>
-        /// <param name="resourceManagerId">The resource manager Id for this transaction</param>
-	    /// <param name="txId">The tx id.</param>
-	    /// <param name="recoveryInformation">The recovery information.</param>
-	    public void StoreRecoveryInformation(Guid resourceManagerId, Guid txId, byte[] recoveryInformation)
+		/// <summary>
+		/// Stores the recovery information.
+		/// </summary>
+		/// <param name="resourceManagerId">The resource manager Id for this transaction</param>
+		/// <param name="txId">The tx id.</param>
+		/// <param name="recoveryInformation">The recovery information.</param>
+		public void StoreRecoveryInformation(Guid resourceManagerId, Guid txId, byte[] recoveryInformation)
 		{
 			ExecuteWithReplication<object>(u =>
 			{
 				var webRequest = (HttpWebRequest)WebRequest.Create(u + "/static/transactions/recoveryInformation/" + txId);
 				AddOperationHeaders(webRequest);
 				webRequest.Method = "PUT";
-			    webRequest.Headers["Resource-Manager-Id"] = resourceManagerId.ToString();
+				webRequest.Headers["Resource-Manager-Id"] = resourceManagerId.ToString();
 				webRequest.Credentials = credentials;
 				webRequest.UseDefaultCredentials = true;
 
@@ -830,7 +830,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 
 		private void DirectRollback(Guid txId, string operationUrl)
 		{
-            var httpJsonRequest = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/transaction/rollback?tx=" + txId, "POST", credentials, convention);
+			var httpJsonRequest = HttpJsonRequest.CreateHttpJsonRequest(this, operationUrl + "/transaction/rollback?tx=" + txId, "POST", credentials, convention);
 			httpJsonRequest.AddOperationHeaders(OperationsHeaders);
 			httpJsonRequest.ReadResponseString();
 		}
@@ -845,36 +845,36 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			return new ServerClient(url, convention, credentialsForSession, replicationInformer);
 		}
 
-        /// <summary>
-        /// Create a new instance of <see cref="IDatabaseCommands"/> that will interacts
-        /// with the specified database
-        /// </summary>
-	    public IDatabaseCommands ForDatabase(string database)
-	    {
-	        var databaseUrl = url;
-            var indexOfDatabases = databaseUrl.IndexOf("/databases/");
-            if (indexOfDatabases != -1)
-                databaseUrl = databaseUrl.Substring(0, indexOfDatabases);
-            if (databaseUrl.EndsWith("/") == false)
-                databaseUrl += "/";
-	        databaseUrl = databaseUrl + "databases/" + database + "/";
-            return new ServerClient(databaseUrl, convention, credentials, replicationInformer);
-        }
+		/// <summary>
+		/// Create a new instance of <see cref="IDatabaseCommands"/> that will interacts
+		/// with the specified database
+		/// </summary>
+		public IDatabaseCommands ForDatabase(string database)
+		{
+			var databaseUrl = url;
+			var indexOfDatabases = databaseUrl.IndexOf("/databases/");
+			if (indexOfDatabases != -1)
+				databaseUrl = databaseUrl.Substring(0, indexOfDatabases);
+			if (databaseUrl.EndsWith("/") == false)
+				databaseUrl += "/";
+			databaseUrl = databaseUrl + "databases/" + database + "/";
+			return new ServerClient(databaseUrl, convention, credentials, replicationInformer);
+		}
 
-	    /// <summary>
-	    /// Create a new instance of <see cref="IDatabaseCommands"/> that will interact
-	    /// with the root database. Useful if the database has works against a tenant database.
-	    /// </summary>
-	    public IDatabaseCommands GetRootDatabase()
-	    {
-	        var indexOfDatabases = url.IndexOf("/databases/");
-	        if (indexOfDatabases == -1)
-                return this;
+		/// <summary>
+		/// Create a new instance of <see cref="IDatabaseCommands"/> that will interact
+		/// with the root database. Useful if the database has works against a tenant database.
+		/// </summary>
+		public IDatabaseCommands GetRootDatabase()
+		{
+			var indexOfDatabases = url.IndexOf("/databases/");
+			if (indexOfDatabases == -1)
+				return this;
 
-            return new ServerClient(url.Substring(0, indexOfDatabases), convention, credentials, replicationInformer);
-	    }
+			return new ServerClient(url.Substring(0, indexOfDatabases), convention, credentials, replicationInformer);
+		}
 
-	    /// <summary>
+		/// <summary>
 		/// Gets a value indicating whether [supports promotable transactions].
 		/// </summary>
 		/// <value>
@@ -908,7 +908,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			ExecuteWithReplication<object>(operationUrl =>
 			{
 				string path = queryToDelete.GetIndexQueryUrl(operationUrl, indexName, "bulk_docs") + "&allowStale=" + allowStale;
-                var request = HttpJsonRequest.CreateHttpJsonRequest(this, path, "DELETE", credentials, convention);
+				var request = HttpJsonRequest.CreateHttpJsonRequest(this, path, "DELETE", credentials, convention);
 				request.AddOperationHeaders(OperationsHeaders);
 				try
 				{
@@ -938,7 +938,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			ExecuteWithReplication<object>(operationUrl =>
 			{
 				string path = queryToUpdate.GetIndexQueryUrl(operationUrl, indexName, "bulk_docs") + "&allowStale=" + allowStale;
-                var request = HttpJsonRequest.CreateHttpJsonRequest(this, path, "PATCH", credentials, convention);
+				var request = HttpJsonRequest.CreateHttpJsonRequest(this, path, "PATCH", credentials, convention);
 				request.AddOperationHeaders(OperationsHeaders);
 				request.Write(new JArray(patchRequests.Select(x => x.ToJson())).ToString(Formatting.Indented));
 				try
@@ -957,81 +957,81 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		}
 
 
-        /// <summary>
-        /// Returns a list of suggestions based on the specified suggestion query.
-        /// </summary>
-        /// <param name="index">The index to query for suggestions</param>
-        /// <param name="suggestionQuery">The suggestion query.</param>
-        /// <returns></returns>
-        public SuggestionQueryResult Suggest(string index, SuggestionQuery suggestionQuery)
-        {
-            if (suggestionQuery == null) throw new ArgumentNullException("suggestionQuery");
+		/// <summary>
+		/// Returns a list of suggestions based on the specified suggestion query.
+		/// </summary>
+		/// <param name="index">The index to query for suggestions</param>
+		/// <param name="suggestionQuery">The suggestion query.</param>
+		/// <returns></returns>
+		public SuggestionQueryResult Suggest(string index, SuggestionQuery suggestionQuery)
+		{
+			if (suggestionQuery == null) throw new ArgumentNullException("suggestionQuery");
 
-            var requestUri = url + string.Format("/suggest/{0}?term={1}&field={2}&max={3}&distance={4}&accuracy={5}",
-                Uri.EscapeUriString(index),
-                Uri.EscapeDataString(suggestionQuery.Term),
-                Uri.EscapeDataString(suggestionQuery.Field),
-                Uri.EscapeDataString(suggestionQuery.MaxSuggestions.ToString()),
-                Uri.EscapeDataString(suggestionQuery.Distance.ToString()),
-                Uri.EscapeDataString(suggestionQuery.Accuracy.ToString()));
+			var requestUri = url + string.Format("/suggest/{0}?term={1}&field={2}&max={3}&distance={4}&accuracy={5}",
+				Uri.EscapeUriString(index),
+				Uri.EscapeDataString(suggestionQuery.Term),
+				Uri.EscapeDataString(suggestionQuery.Field),
+				Uri.EscapeDataString(suggestionQuery.MaxSuggestions.ToString()),
+				Uri.EscapeDataString(suggestionQuery.Distance.ToString()),
+				Uri.EscapeDataString(suggestionQuery.Accuracy.ToString()));
 
-            var request = HttpJsonRequest.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention);
-            request.AddOperationHeaders(OperationsHeaders);
-            var serializer = convention.CreateSerializer();
-            JToken json;
-            try
-            {
-                using (var reader = new JsonTextReader(new StringReader(request.ReadResponseString())))
-                    json = (JToken)serializer.Deserialize(reader);
-            }
-            catch (WebException e)
-            {
-                var httpWebResponse = e.Response as HttpWebResponse;
-                if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.InternalServerError)
-                    throw new InvalidOperationException("could not execute suggestions at this time");
-                throw;
-            }
+			var request = HttpJsonRequest.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention);
+			request.AddOperationHeaders(OperationsHeaders);
+			var serializer = convention.CreateSerializer();
+			JToken json;
+			try
+			{
+				using (var reader = new JsonTextReader(new StringReader(request.ReadResponseString())))
+					json = (JToken)serializer.Deserialize(reader);
+			}
+			catch (WebException e)
+			{
+				var httpWebResponse = e.Response as HttpWebResponse;
+				if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.InternalServerError)
+					throw new InvalidOperationException("could not execute suggestions at this time");
+				throw;
+			}
 
-            return new SuggestionQueryResult
-            {
-                Suggestions = json["Suggestions"].Children().Select(x=>x.Value<string>()).ToArray(),
-            };
-        }
+			return new SuggestionQueryResult
+			{
+				Suggestions = json["Suggestions"].Children().Select(x=>x.Value<string>()).ToArray(),
+			};
+		}
 
-	    ///<summary>
-	    /// Get the possible terms for the specified field in the index 
-	    /// You can page through the results by use fromValue parameter as the 
-	    /// starting point for the next query
-	    ///</summary>
-	    ///<returns></returns>
-	    public IEnumerable<string> GetTerms(string index, string field, string fromValue, int pageSize)
-	    {
-            var requestUri = url + string.Format("/terms/{0}?field={1}&pageSize={2}&fromValue={3}",
-                Uri.EscapeUriString(index),
-                Uri.EscapeDataString(field),
-                pageSize,
-                Uri.EscapeDataString(fromValue ?? ""));
+		///<summary>
+		/// Get the possible terms for the specified field in the index 
+		/// You can page through the results by use fromValue parameter as the 
+		/// starting point for the next query
+		///</summary>
+		///<returns></returns>
+		public IEnumerable<string> GetTerms(string index, string field, string fromValue, int pageSize)
+		{
+			var requestUri = url + string.Format("/terms/{0}?field={1}&pageSize={2}&fromValue={3}",
+				Uri.EscapeUriString(index),
+				Uri.EscapeDataString(field),
+				pageSize,
+				Uri.EscapeDataString(fromValue ?? ""));
 
-            var request = HttpJsonRequest.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention);
-            request.AddOperationHeaders(OperationsHeaders);
-            var serializer = convention.CreateSerializer();
-            JToken json;
-            try
-            {
-                using (var reader = new JsonTextReader(new StringReader(request.ReadResponseString())))
-                    json = (JToken)serializer.Deserialize(reader);
-            }
-            catch (WebException e)
-            {
-                var httpWebResponse = e.Response as HttpWebResponse;
-                if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.InternalServerError)
-                    throw new InvalidOperationException("could not execute suggestions at this time");
-                throw;
-            }
+			var request = HttpJsonRequest.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention);
+			request.AddOperationHeaders(OperationsHeaders);
+			var serializer = convention.CreateSerializer();
+			JToken json;
+			try
+			{
+				using (var reader = new JsonTextReader(new StringReader(request.ReadResponseString())))
+					json = (JToken)serializer.Deserialize(reader);
+			}
+			catch (WebException e)
+			{
+				var httpWebResponse = e.Response as HttpWebResponse;
+				if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.InternalServerError)
+					throw new InvalidOperationException("could not execute suggestions at this time");
+				throw;
+			}
 
-	        return json.Values<string>();
-	    }
+			return json.Values<string>();
+		}
 
-	    #endregion
+		#endregion
 	}
 }

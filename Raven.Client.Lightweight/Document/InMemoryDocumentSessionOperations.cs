@@ -7,7 +7,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+#if !SILVERLIGHT
 using System.Transactions;
+#endif
 using Newtonsoft.Json.Linq;
 using Raven.Client.Client;
 using Raven.Client.Exceptions;
@@ -39,8 +41,8 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// hold the data required to manage the data for RavenDB's Unit of Work
 		/// </summary>
-		protected readonly Dictionary<object, DocumentSession.DocumentMetadata> entitiesAndMetadata =
-			new Dictionary<object, DocumentSession.DocumentMetadata>(ObjectReferenceEqualityComparerer<object>.Default);
+		protected readonly Dictionary<object, DocumentMetadata> entitiesAndMetadata =
+			new Dictionary<object, DocumentMetadata>(ObjectReferenceEqualityComparerer<object>.Default);
 
 		/// <summary>
 		/// Translate between a key and its associated entity
@@ -151,7 +153,7 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public JObject GetMetadataFor<T>(T instance)
 		{
-			DocumentSession.DocumentMetadata value;
+			DocumentMetadata value;
 			if (entitiesAndMetadata.TryGetValue(instance, out value) == false)
 			{
 			    string id;
@@ -164,7 +166,7 @@ namespace Raven.Client.Document
 			    {
 			        var jsonDocument = GetJsonDocument(id);
 			        entitiesByKey[id] = instance;
-                    entitiesAndMetadata[instance] = value = new DocumentSession.DocumentMetadata
+                    entitiesAndMetadata[instance] = value = new DocumentMetadata
                     {
                         ETag = UseOptimisticConcurrency ? (Guid?)Guid.Empty : null,
                         Key = id,
@@ -203,7 +205,7 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public string GetDocumentId(object instance)
 		{
-			DocumentSession.DocumentMetadata value;
+			DocumentMetadata value;
 			if (entitiesAndMetadata.TryGetValue(instance, out value) == false)
 				return null;
 			return value.Key;
@@ -231,7 +233,7 @@ namespace Raven.Client.Document
 		/// </returns>
 		public bool HasChanged(object entity)
 		{
-			DocumentSession.DocumentMetadata value;
+			DocumentMetadata value;
 			if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
 				return false;
 			return EntityChanged(entity, value);
@@ -250,7 +252,7 @@ namespace Raven.Client.Document
 						@"The maximum number of requests ({0}) allowed for this session has been reached.
 Raven limits the number of remote calls that a session is allowed to make as an early warning system. Sessions are expected to be short lived, and 
 Raven provides facilities like Load(string[] keys) to load multiple documents at once and batch saves.
-You can increase the limit by setting DocumentConvention.MaxNumberOfRequestsPerSession or DocumentSession.MaxNumberOfRequestsPerSession, but it is
+You can increase the limit by setting DocumentConvention.MaxNumberOfRequestsPerSession or MaxNumberOfRequestsPerSession, but it is
 advisable that you'll look into reducing the number of remote calls first, since that will speed up your application signficantly and result in a 
 more responsive application.
 ",
@@ -310,7 +312,7 @@ more responsive application.
 				throw new NonAuthoritiveInformationException("Document " + key +
 					" returned Non Authoritive Information (probably modified by a transaction in progress) and AllowNonAuthoritiveInformation  is set to false");
 			}
-			entitiesAndMetadata[entity] = new DocumentSession.DocumentMetadata
+			entitiesAndMetadata[entity] = new DocumentMetadata
 			{
 				OriginalValue = document,
 				Metadata = metadata,
@@ -336,7 +338,7 @@ more responsive application.
 		public bool AllowNonAuthoritiveInformation { get; set; }
 
 		/// <summary>
-		/// Marks the specified entity for deletion. The entity will be deleted when <see cref="IDocumentSession.SaveChanges"/> is called.
+		/// Marks the specified entity for deletion. The entity will be deleted when SaveChanges is called.
 		/// </summary>
 		/// <typeparam name="T"></typeparam>
 		/// <param name="entity">The entity.</param>
@@ -425,7 +427,7 @@ more responsive application.
 		}
 
 		/// <summary>
-		/// Stores the specified entity in the session. The entity will be saved when <see cref="IDocumentSession.SaveChanges"/> is called.
+		/// Stores the specified entity in the session. The entity will be saved when SaveChanges is called.
 		/// </summary>
 		/// <param name="entity">The entity.</param>
 		public void Store(object entity)
@@ -472,7 +474,7 @@ more responsive application.
 		    var metadata = new JObject();
             if(tag != null)
                 metadata.Add(new JProperty(RavenEntityName, new JValue(tag)));
-		    entitiesAndMetadata.Add(entity, new DocumentSession.DocumentMetadata
+		    entitiesAndMetadata.Add(entity, new DocumentMetadata
 			{
 				Key = id,
 				Metadata = metadata,
@@ -548,7 +550,7 @@ more responsive application.
 		/// <param name="entity">The entity.</param>
 		/// <param name="documentMetadata">The document metadata.</param>
 		/// <returns></returns>
-		protected ICommandData CreatePutEntityCommand(object entity, DocumentSession.DocumentMetadata documentMetadata)
+		protected ICommandData CreatePutEntityCommand(object entity, DocumentMetadata documentMetadata)
 		{
 			var json = ConvertEntityToJson(entity, documentMetadata.Metadata);
 
@@ -583,7 +585,7 @@ more responsive application.
 					continue;
 
 				var entity = entities[i];
-				DocumentSession.DocumentMetadata documentMetadata;
+				DocumentMetadata documentMetadata;
 				if (entitiesAndMetadata.TryGetValue(entity, out documentMetadata) == false)
 					continue;
 
@@ -611,22 +613,22 @@ more responsive application.
 		/// Prepares for save changes.
 		/// </summary>
 		/// <returns></returns>
-		protected DocumentSession.SaveChangesData PrepareForSaveChanges()
+		protected SaveChangesData PrepareForSaveChanges()
 		{
-			var result = new DocumentSession.SaveChangesData
+			var result = new SaveChangesData
 			{
 				Entities = new List<object>(),
 				Commands = new List<ICommandData>()
 			};
 			TryEnlistInAmbientTransaction();
-			DocumentSession.DocumentMetadata value = null;
+			DocumentMetadata value = null;
 			foreach (var key in (from deletedEntity in deletedEntities
 								 where entitiesAndMetadata.TryGetValue(deletedEntity, out value)
 								 select value.Key))
 			{
 				Guid? etag = null;
 				object existingEntity;
-				DocumentSession.DocumentMetadata metadata = null;
+				DocumentMetadata metadata = null;
 				if (entitiesByKey.TryGetValue(key, out existingEntity))
 				{
 					if (entitiesAndMetadata.TryGetValue(existingEntity, out metadata))
@@ -667,6 +669,7 @@ more responsive application.
 
 		private void TryEnlistInAmbientTransaction()
 		{
+#if !SILVERLIGHT
 			if (hasEnlisted || Transaction.Current == null) 
 				return;
 
@@ -681,6 +684,7 @@ more responsive application.
 					EnlistmentOptions.None);
 			}
 			hasEnlisted = true;
+#endif
 		}
 
 		/// <summary>
@@ -689,7 +693,7 @@ more responsive application.
 		/// <param name="entity">The entity.</param>
 		/// <param name="documentMetadata">The document metadata.</param>
 		/// <returns></returns>
-		protected bool EntityChanged(object entity, DocumentSession.DocumentMetadata documentMetadata)
+		protected bool EntityChanged(object entity, DocumentMetadata documentMetadata)
 		{
 			if (documentMetadata == null)
 				return true; 
@@ -734,7 +738,7 @@ more responsive application.
 		/// <param name="entity">The entity.</param>
 		public void Evict<T>(T entity)
 		{
-			DocumentSession.DocumentMetadata value;
+			DocumentMetadata value;
 			if (entitiesAndMetadata.TryGetValue(entity, out value))
 			{
 				entitiesAndMetadata.Remove(entity);
@@ -785,6 +789,55 @@ more responsive application.
 		protected void ClearEnlistment()
 		{
 			hasEnlisted = false;
+		}
+
+		/// <summary>
+		/// Metadata held about an entity by the session
+		/// </summary>
+		public class DocumentMetadata
+		{
+			/// <summary>
+			/// Gets or sets the original value.
+			/// </summary>
+			/// <value>The original value.</value>
+			public JObject OriginalValue { get; set; }
+			/// <summary>
+			/// Gets or sets the metadata.
+			/// </summary>
+			/// <value>The metadata.</value>
+			public JObject Metadata { get; set; }
+			/// <summary>
+			/// Gets or sets the ETag.
+			/// </summary>
+			/// <value>The ETag.</value>
+			public Guid? ETag { get; set; }
+			/// <summary>
+			/// Gets or sets the key.
+			/// </summary>
+			/// <value>The key.</value>
+			public string Key { get; set; }
+			/// <summary>
+			/// Gets or sets the original metadata.
+			/// </summary>
+			/// <value>The original metadata.</value>
+			public JObject OriginalMetadata { get; set; }
+		}
+
+		/// <summary>
+		/// Data for a batch command to the server
+		/// </summary>
+		public class SaveChangesData
+		{
+			/// <summary>
+			/// Gets or sets the commands.
+			/// </summary>
+			/// <value>The commands.</value>
+			public IList<ICommandData> Commands { get; set; }
+			/// <summary>
+			/// Gets or sets the entities.
+			/// </summary>
+			/// <value>The entities.</value>
+			public IList<object> Entities { get; set; }
 		}
 	}
 }

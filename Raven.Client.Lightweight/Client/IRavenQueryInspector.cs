@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using Raven.Client.Document;
 
 namespace Raven.Client.Client
 {
@@ -18,6 +19,7 @@ namespace Raven.Client.Client
         /// Get the name of the index being queried
         /// </summary>
         string IndexQueried { get; }
+
         /// <summary>
         /// Grant access to the query session
         /// </summary>

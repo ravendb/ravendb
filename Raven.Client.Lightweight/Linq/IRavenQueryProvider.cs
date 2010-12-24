@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Linq;
+using Raven.Client.Document;
 using Raven.Database.Data;
 
 namespace Raven.Client.Linq

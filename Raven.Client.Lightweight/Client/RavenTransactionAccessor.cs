@@ -21,14 +21,14 @@ namespace Raven.Client.Client
 	{
 #if !NET_3_5
 		[ThreadStatic]
-		private static readonly Stack<TransactionInformation> currentRavenTransactions;
+		private static Stack<TransactionInformation> currentRavenTransactions;
 
 		private static Stack<TransactionInformation> CurrentRavenTransactions
 		{
 			get
 			{
 				if(currentRavenTransactions == null)
-					return new Stack<TransactionInformation>();
+					currentRavenTransactions =  new Stack<TransactionInformation>();
 				return currentRavenTransactions;
 			}
 		}

@@ -6,6 +6,7 @@
 #if !NET_3_5
 
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -31,6 +32,7 @@ namespace Raven.Client.Client.Async
 		private readonly string url;
 		private readonly ICredentials credentials;
 		private readonly DocumentConvention convention;
+		private IDictionary<string, string> operationsHeaders = new Dictionary<string, string>();
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="AsyncServerClient"/> class.
@@ -52,34 +54,43 @@ namespace Raven.Client.Client.Async
 		{
 		}
 
-        /// <summary>
-        /// Create a new instance of <see cref="IDatabaseCommands"/> that will interacts
-        /// with the specified database
-        /// </summary>
-        public IAsyncDatabaseCommands ForDatabase(string database)
-        {
-            var databaseUrl = url;
-            var indexOfDatabases = databaseUrl.IndexOf("/databases/");
-            if (indexOfDatabases != -1)
-                databaseUrl = databaseUrl.Substring(0, indexOfDatabases);
-            if (databaseUrl.EndsWith("/") == false)
-                databaseUrl += "/";
-            databaseUrl = databaseUrl + "databases/" + database + "/";
-            return new AsyncServerClient(databaseUrl, convention, credentials);
-        }
+		/// <summary>
+		/// Create a new instance of <see cref="IDatabaseCommands"/> that will interacts
+		/// with the specified database
+		/// </summary>
+		public IAsyncDatabaseCommands ForDatabase(string database)
+		{
+			var databaseUrl = url;
+			var indexOfDatabases = databaseUrl.IndexOf("/databases/");
+			if (indexOfDatabases != -1)
+				databaseUrl = databaseUrl.Substring(0, indexOfDatabases);
+			if (databaseUrl.EndsWith("/") == false)
+				databaseUrl += "/";
+			databaseUrl = databaseUrl + "databases/" + database + "/";
+			return new AsyncServerClient(databaseUrl, convention, credentials);
+		}
 
-        /// <summary>
-        /// Create a new instance of <see cref="IDatabaseCommands"/> that will interact
-        /// with the root database. Useful if the database has works against a tenant database.
-        /// </summary>
-        public IAsyncDatabaseCommands GetRootDatabase()
-        {
-            var indexOfDatabases = url.IndexOf("/databases/");
-            if (indexOfDatabases == -1)
-                return this;
+		/// <summary>
+		/// Create a new instance of <see cref="IDatabaseCommands"/> that will interact
+		/// with the root database. Useful if the database has works against a tenant database.
+		/// </summary>
+		public IAsyncDatabaseCommands GetRootDatabase()
+		{
+			var indexOfDatabases = url.IndexOf("/databases/");
+			if (indexOfDatabases == -1)
+				return this;
 
-            return new AsyncServerClient(url.Substring(0, indexOfDatabases), convention, credentials);
-        }
+			return new AsyncServerClient(url.Substring(0, indexOfDatabases), convention, credentials);
+		}
+
+		/// <summary>
+		/// Gets or sets the operations headers.
+		/// </summary>
+		/// <value>The operations headers.</value>
+		public IDictionary<string, string> OperationsHeaders
+		{
+			get { return operationsHeaders; }
+		}
 
 		/// <summary>
 		/// Begins an async get operation
@@ -94,44 +105,44 @@ namespace Raven.Client.Client.Async
 			AddTransactionInformation(metadata);
 			var request = HttpJsonRequest.CreateHttpJsonRequest(this, url + "/docs/" + key, "GET", metadata, credentials, convention);
 
-		    return Task.Factory.FromAsync<string>(request.BeginReadResponseString, request.EndReadResponseString, null)
-                .ContinueWith(task =>
-		        {
-                    try
-                    {
-                        var responseString = task.Result;
-                        return new JsonDocument
-                        {
-                            DataAsJson = JObject.Parse(responseString),
-                            NonAuthoritiveInformation = request.ResponseStatusCode == HttpStatusCode.NonAuthoritativeInformation,
-                            Key = key,
-                            LastModified = DateTime.ParseExact(request.ResponseHeaders["Last-Modified"], "r", CultureInfo.InvariantCulture),
-                            Etag = new Guid(request.ResponseHeaders["ETag"]),
-                            Metadata = request.ResponseHeaders.FilterHeaders(isServerDocument: false)
-                        };
-                    }
-                    catch (WebException e)
-                    {
-                        var httpWebResponse = e.Response as HttpWebResponse;
-                        if (httpWebResponse == null)
-                            throw;
-                        if (httpWebResponse.StatusCode == HttpStatusCode.NotFound)
-                            return null;
-                        if (httpWebResponse.StatusCode == HttpStatusCode.Conflict)
-                        {
-                            var conflicts = new StreamReader(httpWebResponse.GetResponseStreamWithHttpDecompression());
-                            var conflictsDoc = JObject.Load(new JsonTextReader(conflicts));
-                            var conflictIds = conflictsDoc.Value<JArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
+			return Task.Factory.FromAsync<string>(request.BeginReadResponseString, request.EndReadResponseString, null)
+				.ContinueWith(task =>
+				{
+					try
+					{
+						var responseString = task.Result;
+						return new JsonDocument
+						{
+							DataAsJson = JObject.Parse(responseString),
+							NonAuthoritiveInformation = request.ResponseStatusCode == HttpStatusCode.NonAuthoritativeInformation,
+							Key = key,
+							LastModified = DateTime.ParseExact(request.ResponseHeaders["Last-Modified"], "r", CultureInfo.InvariantCulture),
+							Etag = new Guid(request.ResponseHeaders["ETag"]),
+							Metadata = request.ResponseHeaders.FilterHeaders(isServerDocument: false)
+						};
+					}
+					catch (WebException e)
+					{
+						var httpWebResponse = e.Response as HttpWebResponse;
+						if (httpWebResponse == null)
+							throw;
+						if (httpWebResponse.StatusCode == HttpStatusCode.NotFound)
+							return null;
+						if (httpWebResponse.StatusCode == HttpStatusCode.Conflict)
+						{
+							var conflicts = new StreamReader(httpWebResponse.GetResponseStreamWithHttpDecompression());
+							var conflictsDoc = JObject.Load(new JsonTextReader(conflicts));
+							var conflictIds = conflictsDoc.Value<JArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
 
-                            throw new ConflictException("Conflict detected on " + key +
-                                                        ", conflict must be resolved before the document will be accessible")
-                            {
-                                ConflictedVersionIds = conflictIds
-                            };
-                        }
-                        throw;
-                    }
-		        });
+							throw new ConflictException("Conflict detected on " + key +
+														", conflict must be resolved before the document will be accessible")
+							{
+								ConflictedVersionIds = conflictIds
+							};
+						}
+						throw;
+					}
+				});
 		}
 
 		/// <summary>
@@ -139,64 +150,67 @@ namespace Raven.Client.Client.Async
 		/// </summary>
 		/// <param name="keys">The keys.</param>
 		/// <returns></returns>
-        public Task<JsonDocument[]> MultiGetAsync(string[] keys)
+		public Task<JsonDocument[]> MultiGetAsync(string[] keys)
 		{
-            var request = HttpJsonRequest.CreateHttpJsonRequest(this, url + "/queries/", "POST", credentials, convention);
+			var request = HttpJsonRequest.CreateHttpJsonRequest(this, url + "/queries/", "POST", credentials, convention);
 			var array = Encoding.UTF8.GetBytes(new JArray(keys).ToString(Formatting.None));
-            return Task.Factory.FromAsync(request.BeginWrite, request.EndWrite, array, null)
-                .ContinueWith(writeTask => Task.Factory.FromAsync<string>(request.BeginReadResponseString, request.EndReadResponseString, null))
-                .Unwrap()
-		        .ContinueWith(task =>
-		        {
-                    JArray responses;
-                    try
-                    {
-                        responses = JObject.Parse(task.Result).Value<JArray>("Results");
-                    }
-                    catch (WebException e)
-                    {
-                        var httpWebResponse = e.Response as HttpWebResponse;
-                        if (httpWebResponse == null ||
-                            httpWebResponse.StatusCode != HttpStatusCode.Conflict)
-                            throw;
-                        throw ThrowConcurrencyException(e);
-                    }
+			return Task.Factory.FromAsync(request.BeginWrite, request.EndWrite, array, null)
+				.ContinueWith(writeTask => Task.Factory.FromAsync<string>(request.BeginReadResponseString, request.EndReadResponseString, null))
+				.Unwrap()
+				.ContinueWith(task =>
+				{
+					JArray responses;
+					try
+					{
+						responses = JObject.Parse(task.Result).Value<JArray>("Results");
+					}
+					catch (WebException e)
+					{
+						var httpWebResponse = e.Response as HttpWebResponse;
+						if (httpWebResponse == null ||
+							httpWebResponse.StatusCode != HttpStatusCode.Conflict)
+							throw;
+						throw ThrowConcurrencyException(e);
+					}
 
-                    return SerializationHelper.JObjectsToJsonDocuments(responses.Cast<JObject>())
-                        .ToArray();
-		        });
+					return SerializationHelper.JObjectsToJsonDocuments(responses.Cast<JObject>())
+						.ToArray();
+				});
 		}
-
 
 		/// <summary>
 		/// Begins the async query.
 		/// </summary>
 		/// <param name="index">The index.</param>
 		/// <param name="query">The query.</param>
-		/// <returns></returns>
-        public Task<QueryResult> QueryAsync(string index, IndexQuery query)
+		/// <param name="includes">The include paths</param>
+		public Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes)
 		{
 			EnsureIsNotNullOrEmpty(index, "index");
 			var path = query.GetIndexQueryUrl(url, index, "indexes");
-            var request = HttpJsonRequest.CreateHttpJsonRequest(this, path, "GET", credentials, convention);
+			if (includes != null && includes.Length > 0)
+			{
+				path += "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray());
+			}
+			var request = HttpJsonRequest.CreateHttpJsonRequest(this, path, "GET", credentials, convention);
 
-		    return Task.Factory.FromAsync<string>(request.BeginReadResponseString, request.EndReadResponseString, null)
-		        .ContinueWith(task =>
-		        {
-		            JToken json;
-		            using (var reader = new JsonTextReader(new StringReader(task.Result)))
-		                json = (JToken) convention.CreateSerializer().Deserialize(reader);
+			return Task.Factory.FromAsync<string>(request.BeginReadResponseString, request.EndReadResponseString, null)
+				.ContinueWith(task =>
+				{
+					JToken json;
+					using (var reader = new JsonTextReader(new StringReader(task.Result)))
+						json = (JToken) convention.CreateSerializer().Deserialize(reader);
 
-		            return new QueryResult
-		            {
-		                IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
-		                IndexTimestamp = json.Value<DateTime>("IndexTimestamp"),
-                        IndexEtag = new Guid(request.ResponseHeaders["ETag"]),
-		                Results = json["Results"].Children().Cast<JObject>().ToList(),
-		                TotalResults = Convert.ToInt32(json["TotalResults"].ToString()),
-		                SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString())
-		            };
-		        });
+					return new QueryResult
+					{
+						IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
+						IndexTimestamp = json.Value<DateTime>("IndexTimestamp"),
+						IndexEtag = new Guid(request.ResponseHeaders["ETag"]),
+						Results = json["Results"].Children().Cast<JObject>().ToList(),
+						TotalResults = Convert.ToInt32(json["TotalResults"].ToString()),
+						SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString())
+					};
+				});
 
 		}
 
@@ -209,30 +223,30 @@ namespace Raven.Client.Client.Async
 		{
 			var metadata = new JObject();
 			AddTransactionInformation(metadata);
-            var req = HttpJsonRequest.CreateHttpJsonRequest(this, url + "/bulk_docs", "POST", metadata, credentials, convention);
+			var req = HttpJsonRequest.CreateHttpJsonRequest(this, url + "/bulk_docs", "POST", metadata, credentials, convention);
 			var jArray = new JArray(commandDatas.Select(x => x.ToJson()));
 			var data = Encoding.UTF8.GetBytes(jArray.ToString(Formatting.None));
 
-		    return Task.Factory.FromAsync(req.BeginWrite, req.EndWrite, data, null)
-                .ContinueWith(writeTask => Task.Factory.FromAsync<string>(req.BeginReadResponseString, req.EndReadResponseString,null))
-                .Unwrap()
-		        .ContinueWith(task =>
-		        {
-		            string response;
-		            try
-		            {
-		                response = task.Result;
-		            }
-		            catch (WebException e)
-		            {
-		                var httpWebResponse = e.Response as HttpWebResponse;
-		                if (httpWebResponse == null ||
-		                    httpWebResponse.StatusCode != HttpStatusCode.Conflict)
-		                    throw;
-		                throw ThrowConcurrencyException(e);
-		            }
-		            return JsonConvert.DeserializeObject<BatchResult[]>(response);
-		        });
+			return Task.Factory.FromAsync(req.BeginWrite, req.EndWrite, data, null)
+				.ContinueWith(writeTask => Task.Factory.FromAsync<string>(req.BeginReadResponseString, req.EndReadResponseString,null))
+				.Unwrap()
+				.ContinueWith(task =>
+				{
+					string response;
+					try
+					{
+						response = task.Result;
+					}
+					catch (WebException e)
+					{
+						var httpWebResponse = e.Response as HttpWebResponse;
+						if (httpWebResponse == null ||
+							httpWebResponse.StatusCode != HttpStatusCode.Conflict)
+							throw;
+						throw ThrowConcurrencyException(e);
+					}
+					return JsonConvert.DeserializeObject<BatchResult[]>(response);
+				});
 
 		}
 

@@ -13,6 +13,7 @@ using Raven.Client.Linq;
 
 namespace Raven.Client
 {
+#if !SILVERLIGHT
 	/// <summary>
 	/// Interface for document session
 	/// </summary>
@@ -106,4 +107,5 @@ namespace Raven.Client
         void Store(object entity);
 #endif
     }
+#endif
 }

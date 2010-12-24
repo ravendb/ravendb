@@ -20,6 +20,7 @@ using Raven.Http.Exceptions;
 
 namespace Raven.Client.Shard
 {
+#if !SILVERLIGHT
 	/// <summary>
 	/// Implements Unit of Work for accessing a set of sharded RavenDB servers
 	/// </summary>
@@ -542,4 +543,5 @@ namespace Raven.Client.Shard
 											   GetAppropriateShardedSessions<T>(null));		
 		}
 	}
+#endif
 }

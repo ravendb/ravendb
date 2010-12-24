@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Linq.Expressions;
 using System.Reflection;
+using Raven.Client.Document;
 using Raven.Database.Data;
 
 namespace Raven.Client.Linq
