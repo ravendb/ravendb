@@ -116,12 +116,12 @@ namespace Raven.Client.Linq
 		/// </returns>
 		public virtual object Execute(Expression expression)
 		{
-			return new DynamicQueryProviderProcessor<T>(queryGenerator, customizeQuery, afterQueryExecuted).Execute(expression);
+			return new DynamicQueryProviderProcessor<T>(queryGenerator, customizeQuery, afterQueryExecuted, indexName).Execute(expression);
 		}
 
 		IQueryable<S> IQueryProvider.CreateQuery<S>(Expression expression)
 		{
-			return new DynamicRavenQueryInspector<S>(this, ravenQueryStatistics, expression
+			return new DynamicRavenQueryInspector<S>(this, ravenQueryStatistics, indexName, expression
 #if !SILVERLIGHT
 				, databaseCommands
 #endif

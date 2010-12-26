@@ -27,6 +27,7 @@ namespace Raven.Client.Linq
 		private Type newExpressionType;
 		private string currentPath = string.Empty;
 		private int subClauseDepth;
+		private string indexName;
 
 		/// <summary>
 		/// Gets the current path in the case of expressions within collections
@@ -42,11 +43,13 @@ namespace Raven.Client.Linq
 		public RavenQueryProviderProcessor(
 			IDocumentQueryGenerator queryGenerator,
 			Action<IDocumentQueryCustomization> customizeQuery,
-			Action<QueryResult> afterQueryExecuted)
+			Action<QueryResult> afterQueryExecuted, 
+			string indexName)
 		{
 			FieldsToFetch = new List<string>();
 			newExpressionType = typeof (T);
 			this.queryGenerator = queryGenerator;
+			this.indexName = indexName;
 			this.afterQueryExecuted = afterQueryExecuted;
 			this.customizeQuery = customizeQuery;
 		}
@@ -745,7 +748,7 @@ namespace Raven.Client.Linq
 		/// <param name="expression">The expression.</param>
 		public void ProcessExpression(Expression expression)
 		{
-			luceneQuery = queryGenerator.Query<T>();
+			luceneQuery = queryGenerator.Query<T>(indexName);
 			VisitExpression(expression);
 		}
 		

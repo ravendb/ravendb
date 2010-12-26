@@ -13,7 +13,6 @@ namespace Raven.Client.Linq
 	/// <summary>
 	/// A specialized query provider processor for querying dynamic types
 	/// </summary>
-	/// <typeparam name="T"></typeparam>
 	public class DynamicQueryProviderProcessor<T> : RavenQueryProviderProcessor<T>
 	{
 		/// <summary>
@@ -22,8 +21,9 @@ namespace Raven.Client.Linq
 		public DynamicQueryProviderProcessor(
 			IDocumentQueryGenerator queryGenerator,
 			Action<IDocumentQueryCustomization> customizeQuery, 
-			Action<QueryResult> afterQueryExecuted) 
-			: base(queryGenerator, customizeQuery, afterQueryExecuted)
+			Action<QueryResult> afterQueryExecuted,
+			string indexName) 
+			: base(queryGenerator, customizeQuery, afterQueryExecuted, indexName)
 		{
 
 		}

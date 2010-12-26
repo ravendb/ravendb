@@ -12,7 +12,6 @@ using Raven.Client.Client;
 #if !NET_3_5
 using Raven.Client.Client.Async;
 #endif
-using Raven.Client.Document;
 using Raven.Database.Data;
 
 namespace Raven.Client.Linq
@@ -25,6 +24,7 @@ namespace Raven.Client.Linq
 		private readonly Expression expression;
 		private readonly IRavenQueryProvider provider;
 		private readonly RavenQueryStatistics queryStats;
+		private readonly string indexName;
 #if !SILVERLIGHT
 		private readonly IDatabaseCommands databaseCommands;
 #endif
@@ -38,12 +38,13 @@ namespace Raven.Client.Linq
 		public RavenQueryInspector(
 			IRavenQueryProvider provider, 
 			RavenQueryStatistics queryStats,
+			string indexName,
 			Expression expression
 #if !SILVERLIGHT
-				,IDatabaseCommands databaseCommands
+			, IDatabaseCommands databaseCommands
 #endif
 #if !NET_3_5
-				,IAsyncDatabaseCommands asyncDatabaseCommands
+			, IAsyncDatabaseCommands asyncDatabaseCommands
 #endif
 			)
 		{
@@ -51,8 +52,9 @@ namespace Raven.Client.Linq
 			{
 				throw new ArgumentNullException("provider");
 			}
-			this.provider = provider;
+			this.provider = provider.For<T>();
 			this.queryStats = queryStats;
+			this.indexName = indexName;
 #if !SILVERLIGHT
 			this.databaseCommands = databaseCommands;
 #endif
@@ -94,7 +96,8 @@ namespace Raven.Client.Linq
 		/// <returns></returns>
 		public IEnumerator<T> GetEnumerator()
 		{
-			return ((IEnumerable<T>)provider.Execute(expression)).GetEnumerator();
+			var execute = provider.Execute(expression);
+			return ((IEnumerable<T>)execute).GetEnumerator();
 		}
 
 		IEnumerator IEnumerable.GetEnumerator()
@@ -132,7 +135,7 @@ namespace Raven.Client.Linq
 		/// </returns>
 		public override string ToString()
 		{
-			var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null);
+			var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, null);
 			ravenQueryProvider.ProcessExpression(expression);
 			string fields = "";
 			if (ravenQueryProvider.FieldsToFetch.Count > 0)
@@ -149,7 +152,7 @@ namespace Raven.Client.Linq
 		{
 			get
 			{
-				var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null);
+				var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName);
 				ravenQueryProvider.ProcessExpression(expression);
 				return ((IRavenQueryInspector)ravenQueryProvider.LuceneQuery).IndexQueried;
 			}
@@ -179,7 +182,7 @@ namespace Raven.Client.Linq
 		///</summary>
 		public KeyValuePair<string, string> GetLastEqualityTerm()
 		{
-			var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null);
+			var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, null);
 			ravenQueryProvider.ProcessExpression(expression);
 			return ((IRavenQueryInspector)ravenQueryProvider.LuceneQuery).GetLastEqualityTerm();
 		}

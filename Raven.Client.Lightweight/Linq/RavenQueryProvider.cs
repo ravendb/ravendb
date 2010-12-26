@@ -89,7 +89,7 @@ namespace Raven.Client.Linq
 			,IDatabaseCommands databaseCommands
 #endif
 #if !NET_3_5
-, IAsyncDatabaseCommands asyncDatabaseCommands
+			, IAsyncDatabaseCommands asyncDatabaseCommands
 #endif
 		)
 		{
@@ -113,12 +113,12 @@ namespace Raven.Client.Linq
 		/// </returns>
 		public virtual object Execute(Expression expression)
 		{
-			return new RavenQueryProviderProcessor<T>(queryGenerator, customizeQuery, afterQueryExecuted).Execute(expression);
+			return new RavenQueryProviderProcessor<T>(queryGenerator, customizeQuery, afterQueryExecuted, indexName).Execute(expression);
 		}
 
 		IQueryable<S> IQueryProvider.CreateQuery<S>(Expression expression)
 		{
-			return new RavenQueryInspector<S>(this, ravenQueryStatistics, expression
+			return new RavenQueryInspector<S>(this, ravenQueryStatistics, indexName, expression
 #if !SILVERLIGHT
 				, databaseCommands
 #endif

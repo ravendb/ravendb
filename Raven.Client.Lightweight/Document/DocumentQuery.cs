@@ -213,6 +213,16 @@ namespace Raven.Client.Document
 		#region IDocumentQuery<T> Members
 
 		/// <summary>
+		/// Includes the specified path in the query, loading the document specified in that path
+		/// </summary>
+		/// <param name="path">The path.</param>
+		IDocumentQueryCustomization IDocumentQueryCustomization.Include(string path)
+		{
+			Include(path);
+			return this;
+		}
+
+		/// <summary>
 		/// EXPERT ONLY: Instructs the query to wait for non stale results for the specified wait timeout.
 		/// This shouldn't be used outside of unit tests unless you are well aware of the implications
 		/// </summary>
@@ -271,6 +281,16 @@ namespace Raven.Client.Document
 		IDocumentQueryCustomization IDocumentQueryCustomization.WaitForNonStaleResults()
 		{
 			WaitForNonStaleResults();
+			return this;
+		}
+
+		/// <summary>
+		/// Includes the specified path in the query, loading the document specified in that path
+		/// </summary>
+		/// <param name="path">The path.</param>
+		IDocumentQueryCustomization IDocumentQueryCustomization.Include<TResult>(Expression<Func<TResult, object>> path)
+		{
+			Include(path.ToPropertyPath());
 			return this;
 		}
 

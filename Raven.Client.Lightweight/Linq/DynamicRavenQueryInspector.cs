@@ -24,7 +24,7 @@ namespace Raven.Client.Linq
 		/// <summary>
 		/// Creates a dynamic raven queryable around the provided query provider
 		/// </summary>
-		public DynamicRavenQueryInspector(IRavenQueryProvider queryProvider, RavenQueryStatistics queryStatistics, Expression expression
+		public DynamicRavenQueryInspector(IRavenQueryProvider queryProvider, RavenQueryStatistics queryStatistics, string indexName, Expression expression
 #if !SILVERLIGHT
 			,IDatabaseCommands databaseCommands
 #endif
@@ -32,7 +32,7 @@ namespace Raven.Client.Linq
 			,IAsyncDatabaseCommands asyncDatabaseCommands
 #endif
 			)
-			: base(queryProvider, queryStatistics, expression
+			: base(queryProvider, queryStatistics, indexName, expression
 #if !SILVERLIGHT
 				,databaseCommands 
 #endif

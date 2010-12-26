@@ -21,7 +21,7 @@ namespace Raven.Tests.Linq
 			/// <summary>
 			/// Create a new query for <typeparam name="T"/>
 			/// </summary>
-			public IDocumentQuery<T> Query<T>()
+			public IDocumentQuery<T> Query<T>(string indexName)
 			{
 				return new DocumentQuery<T>(null, null, null, null, null);
 			}
@@ -40,7 +40,7 @@ namespace Raven.Tests.Linq
 		private RavenQueryInspector<IndexedUser> GetRavenQueryInspector()
 		{
 			return new RavenQueryInspector<IndexedUser>(
-				new RavenQueryProvider<IndexedUser>(new FakeDocumentQueryGenerator(), null, ravenQueryStatistics, null, null), ravenQueryStatistics, null, null, null);
+				new RavenQueryProvider<IndexedUser>(new FakeDocumentQueryGenerator(), null, ravenQueryStatistics, null, null), ravenQueryStatistics, null, null, null, null);
 		}
 
 		[Fact]

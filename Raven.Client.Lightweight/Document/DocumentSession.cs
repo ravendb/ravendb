@@ -206,7 +206,7 @@ namespace Raven.Client.Document
 #if !NET_3_5
 				, AsyncDatabaseCommands
 #endif
-				),ravenQueryStatistics, null,  DatabaseCommands
+				),ravenQueryStatistics, indexName, null,  DatabaseCommands
 #if !NET_3_5
 				, AsyncDatabaseCommands
 #endif
@@ -409,6 +409,7 @@ namespace Raven.Client.Document
 #endif
 				), 
 				ravenQueryStatistics,
+				indexName,
 				null,
 				Advanced.DatabaseCommands
 #if !NET_3_5
@@ -433,9 +434,9 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Create a new query for <typeparam name="T"/>
 		/// </summary>
-		IDocumentQuery<T> IDocumentQueryGenerator.Query<T>()
+		IDocumentQuery<T> IDocumentQueryGenerator.Query<T>(string indexName)
 		{
-			return Advanced.LuceneQuery<T>();
+			return Advanced.LuceneQuery<T>(indexName);
 		}
 	}
 #endif

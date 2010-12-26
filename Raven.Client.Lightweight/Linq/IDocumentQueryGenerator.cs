@@ -8,6 +8,6 @@ namespace Raven.Client.Linq
 		/// <summary>
 		/// Create a new query for <typeparam name="T"/>
 		/// </summary>
-		IDocumentQuery<T> Query<T>();
+		IDocumentQuery<T> Query<T>(string indexName);
 	}
 }
