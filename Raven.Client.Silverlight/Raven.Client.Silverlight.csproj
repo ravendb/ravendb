@@ -358,7 +358,242 @@
       <Link>RavenDB.snk</Link>
     </None>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Compile Include="..\Raven.Abstractions\Properties\AssemblyInfo.cs">
+      <Link>Properties\AssemblyInfo.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Client\Async\AsyncServerClient.cs">
+      <Link>Client\Async\AsyncServerClient.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Client\HttpJsonRequest.cs">
+      <Link>Client\HttpJsonRequest.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Client\IDatabaseCommands.cs">
+      <Link>Client\IDatabaseCommands.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Client\ReplicationInformer.cs">
+      <Link>Client\ReplicationInformer.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Client\ServerClient.cs">
+      <Link>Client\ServerClient.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\HiLoKeyGenerator.cs">
+      <Link>Document\HiLoKeyGenerator.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\ILoaderWithInclude.cs">
+      <Link>Document\ILoaderWithInclude.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\MultiLoaderWithInclude.cs">
+      <Link>Document\MultiLoaderWithInclude.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\MultiTypeHiLoKeyGenerator.cs">
+      <Link>Document\MultiTypeHiLoKeyGenerator.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\PromotableRavenClientEnlistment.cs">
+      <Link>Document\PromotableRavenClientEnlistment.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\RavenClientEnlistment.cs">
+      <Link>Document\RavenClientEnlistment.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\ShardedDocumentQuery.cs">
+      <Link>Document\ShardedDocumentQuery.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Extensions\MultiTenancyExtensions.cs">
+      <Link>Extensions\MultiTenancyExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\FromMono\System.Configuration\NullableStringValidator.cs">
+      <Link>FromMono\System.Configuration\NullableStringValidator.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\FromMono\System.Runtime.Caching.Configuration\CachingSectionGroup.cs">
+      <Link>FromMono\System.Runtime.Caching.Configuration\CachingSectionGroup.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\FromMono\System.Runtime.Caching.Configuration\MemoryCacheElement.cs">
+      <Link>FromMono\System.Runtime.Caching.Configuration\MemoryCacheElement.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\FromMono\System.Runtime.Caching.Configuration\MemoryCacheSection.cs">
+      <Link>FromMono\System.Runtime.Caching.Configuration\MemoryCacheSection.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\FromMono\System.Runtime.Caching.Configuration\MemoryCacheSettingsCollection.cs">
+      <Link>FromMono\System.Runtime.Caching.Configuration\MemoryCacheSettingsCollection.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\FromMono\System.Runtime.Caching.Hosting\IApplicationIdentifier.cs">
+      <Link>FromMono\System.Runtime.Caching.Hosting\IApplicationIdentifier.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\FromMono\System.Runtime.Caching.Hosting\IFileChangeNotificationSystem.cs">
+      <Link>FromMono\System.Runtime.Caching.Hosting\IFileChangeNotificationSystem.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\FromMono\System.Runtime.Caching.Hosting\IMemoryCacheManager.cs">
+      <Link>FromMono\System.Runtime.Caching.Hosting\IMemoryCacheManager.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\FromMono\System.Runtime.Caching\CacheEntryChangeMonitor.cs">
+      <Link>FromMono\System.Runtime.Caching\CacheEntryChangeMonitor.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\FromMono\System.Runtime.Caching\CacheEntryRemovedArguments.cs">
+      <Link>FromMono\System.Runtime.Caching\CacheEntryRemovedArguments.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\FromMono\System.Runtime.Caching\CacheEntryRemovedCallback.cs">
+      <Link>FromMono\System.Runtime.Caching\CacheEntryRemovedCallback.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\FromMono\System.Runtime.Caching\CacheEntryRemovedReason.cs">
+      <Link>FromMono\System.Runtime.Caching\CacheEntryRemovedReason.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\FromMono\System.Runtime.Caching\CacheEntryUpdateArguments.cs">
+      <Link>FromMono\System.Runtime.Caching\CacheEntryUpdateArguments.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\FromMono\System.Runtime.Caching\CacheEntryUpdateCallback.cs">
+      <Link>FromMono\System.Runtime.Caching\CacheEntryUpdateCallback.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\FromMono\System.Runtime.Caching\CacheItem.cs">
+      <Link>FromMono\System.Runtime.Caching\CacheItem.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\FromMono\System.Runtime.Caching\CacheItemPolicy.cs">
+      <Link>FromMono\System.Runtime.Caching\CacheItemPolicy.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\FromMono\System.Runtime.Caching\CacheItemPriority.cs">
+      <Link>FromMono\System.Runtime.Caching\CacheItemPriority.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\FromMono\System.Runtime.Caching\ChangeMonitor.cs">
+      <Link>FromMono\System.Runtime.Caching\ChangeMonitor.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\FromMono\System.Runtime.Caching\DefaultCacheCapabilities.cs">
+      <Link>FromMono\System.Runtime.Caching\DefaultCacheCapabilities.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\FromMono\System.Runtime.Caching\FileChangeMonitor.cs">
+      <Link>FromMono\System.Runtime.Caching\FileChangeMonitor.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\FromMono\System.Runtime.Caching\FileChangeNotificationSystem.cs">
+      <Link>FromMono\System.Runtime.Caching\FileChangeNotificationSystem.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\FromMono\System.Runtime.Caching\FileChangeNotificationSystemEntry.cs">
+      <Link>FromMono\System.Runtime.Caching\FileChangeNotificationSystemEntry.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\FromMono\System.Runtime.Caching\Helpers.cs">
+      <Link>FromMono\System.Runtime.Caching\Helpers.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\FromMono\System.Runtime.Caching\HostFileChangeMonitor.cs">
+      <Link>FromMono\System.Runtime.Caching\HostFileChangeMonitor.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\FromMono\System.Runtime.Caching\MemoryCache.cs">
+      <Link>FromMono\System.Runtime.Caching\MemoryCache.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\FromMono\System.Runtime.Caching\MemoryCacheContainer.cs">
+      <Link>FromMono\System.Runtime.Caching\MemoryCacheContainer.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\FromMono\System.Runtime.Caching\MemoryCacheEntry.cs">
+      <Link>FromMono\System.Runtime.Caching\MemoryCacheEntry.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\FromMono\System.Runtime.Caching\MemoryCacheEntryChangeMonitor.cs">
+      <Link>FromMono\System.Runtime.Caching\MemoryCacheEntryChangeMonitor.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\FromMono\System.Runtime.Caching\MemoryCacheEntryPriorityQueue.cs">
+      <Link>FromMono\System.Runtime.Caching\MemoryCacheEntryPriorityQueue.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\FromMono\System.Runtime.Caching\MemoryCacheLRU.cs">
+      <Link>FromMono\System.Runtime.Caching\MemoryCacheLRU.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\FromMono\System.Runtime.Caching\MemoryCachePerformanceCounters.cs">
+      <Link>FromMono\System.Runtime.Caching\MemoryCachePerformanceCounters.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\FromMono\System.Runtime.Caching\ObjectCache.cs">
+      <Link>FromMono\System.Runtime.Caching\ObjectCache.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\FromMono\System.Runtime.Caching\OnChangedCallback.cs">
+      <Link>FromMono\System.Runtime.Caching\OnChangedCallback.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Indexes\AbstractIndexCreationTask.cs">
+      <Link>Indexes\AbstractIndexCreationTask.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Indexes\IndexCreation.cs">
+      <Link>Indexes\IndexCreation.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\ISyncAdvancedSessionOperation.cs">
+      <Link>ISyncAdvancedSessionOperation.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Linq\DynamicQueryProviderProcessor.cs">
+      <Link>Linq\DynamicQueryProviderProcessor.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Linq\DynamicRavenQueryInspector.cs">
+      <Link>Linq\DynamicRavenQueryInspector.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Linq\DynamicRavenQueryProvider.cs">
+      <Link>Linq\DynamicRavenQueryProvider.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Linq\ExpressionInfo.cs">
+      <Link>Linq\ExpressionInfo.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Linq\IRavenQueryable.cs">
+      <Link>Linq\IRavenQueryable.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Client\IRavenQueryInspector.cs">
+      <Link>Client\IRavenQueryInspector.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Linq\IRavenQueryProvider.cs">
+      <Link>Linq\IRavenQueryProvider.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Linq\LinqExtensions.cs">
+      <Link>Linq\LinqExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Linq\RavenQueryInspector.cs">
+      <Link>Linq\RavenQueryInspector.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Linq\RavenQueryProvider.cs">
+      <Link>Linq\RavenQueryProvider.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Linq\RavenQueryProviderProcessor.cs">
+      <Link>Linq\RavenQueryProviderProcessor.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Linq\RavenQueryStatistics.cs">
+      <Link>Linq\RavenQueryStatistics.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Linq\ReflectionExtensions.cs">
+      <Link>Linq\ReflectionExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Linq\TypeSystem.cs">
+      <Link>Linq\TypeSystem.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\RavenExtensions.cs">
+      <Link>RavenExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardedDocumentSession.cs">
+      <Link>Shard\ShardedDocumentSession.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardedDocumentStore.cs">
+      <Link>Shard\ShardedDocumentStore.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\Shards.cs">
+      <Link>Shard\Shards.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardStrategy\IShardStrategy.cs">
+      <Link>Shard\ShardStrategy\IShardStrategy.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardStrategy\ShardAccess\IShardAccessStrategy.cs">
+      <Link>Shard\ShardStrategy\ShardAccess\IShardAccessStrategy.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardStrategy\ShardAccess\ParallelExtensions.cs">
+      <Link>Shard\ShardStrategy\ShardAccess\ParallelExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardStrategy\ShardAccess\ParallelShardAccessStrategy.cs">
+      <Link>Shard\ShardStrategy\ShardAccess\ParallelShardAccessStrategy.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardStrategy\ShardAccess\SequentialShardAccessStrategy.cs">
+      <Link>Shard\ShardStrategy\ShardAccess\SequentialShardAccessStrategy.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardStrategy\ShardResolution\AllShardsResolutionStrategy.cs">
+      <Link>Shard\ShardStrategy\ShardResolution\AllShardsResolutionStrategy.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardStrategy\ShardResolution\IShardResolutionStrategy.cs">
+      <Link>Shard\ShardStrategy\ShardResolution\IShardResolutionStrategy.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardStrategy\ShardResolution\ShardResolutionStrategyData.cs">
+      <Link>Shard\ShardStrategy\ShardResolution\ShardResolutionStrategyData.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardStrategy\ShardSelection\IShardSelectionStrategy.cs">
+      <Link>Shard\ShardStrategy\ShardSelection\IShardSelectionStrategy.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardStrategy\ShardStrategy.cs">
+      <Link>Shard\ShardStrategy\ShardStrategy.cs</Link>
+    </Compile>
+  </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />
   <ProjectExtensions>
     <VisualStudio>

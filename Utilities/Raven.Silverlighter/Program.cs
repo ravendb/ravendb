@@ -11,42 +11,30 @@ namespace Raven.Silverlighter
 		{
 			var ns = XNamespace.Get("http://schemas.microsoft.com/developer/msbuild/2003");
 			var srcPrj = XDocument.Load(args[0]);
-			var propGroup = srcPrj.Element(ns + "Project").Element(ns + "PropertyGroup");
-			propGroup.Element(ns + "AssemblyName").Value += ".Silverlight";
-			propGroup.Add(
-				new XElement(ns + "ProjectTypeGuids", "{A1591282-1198-4647-A2B1-27E5FF5F6F3B};{fae04ec0-301f-11d3-bf4b-00c04f79efbc}"),
-				new XElement(ns + "TargetFrameworkVersion", "v4.0"),
-				new XElement(ns + "SilverlightVersion", "$(TargetFrameworkVersion)")
-				);
+			var slPrj = XDocument.Load(args[1]);
 
-			foreach (var s in srcPrj.Descendants(ns + "Reference").ToArray())
+			foreach (var file in srcPrj.Descendants(ns+"Compile"))
 			{
-				var xElement = s.Element(ns + "HintPath");
-				if (xElement == null)
+				string filePath = file.Attribute("Include").Value;
+
+				if(slPrj.Descendants(ns + "Compile")
+					.Any(x => x.Element(ns + "Link") != null && x.Element(ns + "Link").Value == filePath))
 					continue;
-				if (File.Exists(Path.GetFileNameWithoutExtension(xElement.Value) + ".Silverlight.dll") == false)
-					continue;
-				var filePath = Path.GetFileName(Path.GetFileNameWithoutExtension(xElement.Value)) + ".Silverlight.dll";
-				xElement.Parent.Add(
-					new XElement(ns + "Reference",
-						new XAttribute("Include", Path.GetFileName(Path.GetFileNameWithoutExtension(xElement.Value)) + ".Silverlight"),
-						new XElement("HintPath",filePath)
+
+				string newFilePath = Path.Combine(@"..", Path.GetFileName(Path.GetDirectoryName(args[0])), filePath);
+				slPrj.Descendants(ns+"ItemGroup").Last().Add(
+					new XElement(ns+"Compile",
+						new XAttribute("Include",newFilePath),
+						new XElement(ns+"Link", filePath)
 						)
 					);
-				s.Remove();
 			}
 
-			foreach (var s in srcPrj.Descendants(ns + "ProjectReference").ToArray())
+			XmlWriter xmlWriter = XmlWriter.Create(args[1], new XmlWriterSettings
 			{
-				s.Attribute("Include").Value = s.Attribute("Include").Value.Replace(".csproj", ".Silverlight.g.csproj");
-				s.Element(ns + "Name").Value += ".Silverlight";
-			}
-
-			var xmlWriter = XmlWriter.Create(args[1], new XmlWriterSettings
-			{
-				Indent = true,
+				Indent = true
 			});
-			srcPrj.WriteTo(xmlWriter);
+			slPrj.WriteTo(xmlWriter);
 			xmlWriter.Flush();
 		}
 	}
