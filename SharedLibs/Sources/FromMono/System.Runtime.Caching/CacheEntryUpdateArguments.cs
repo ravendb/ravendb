@@ -29,7 +29,7 @@ using System;
 
 namespace System.Runtime.Caching
 {
-    internal class CacheEntryUpdateArguments
+	public class CacheEntryUpdateArguments
 	{
 		public string Key { get; private set; }
 		public string RegionName { get; private set; }

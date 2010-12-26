@@ -30,7 +30,7 @@ using System.Collections.ObjectModel;
 
 namespace System.Runtime.Caching
 {
-	internal abstract class CacheEntryChangeMonitor : ChangeMonitor
+	public abstract class CacheEntryChangeMonitor : ChangeMonitor
 	{
 		public abstract ReadOnlyCollection<string> CacheKeys { get; }
 		public abstract DateTimeOffset LastModified { get; }

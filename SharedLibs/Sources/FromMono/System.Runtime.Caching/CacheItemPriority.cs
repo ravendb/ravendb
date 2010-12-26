@@ -29,7 +29,7 @@ using System;
 
 namespace System.Runtime.Caching
 {
-    internal enum CacheItemPriority
+	public enum CacheItemPriority
 	{
 		Default,
 		NotRemovable

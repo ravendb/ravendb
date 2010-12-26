@@ -37,7 +37,7 @@ using System.Threading;
 
 namespace System.Runtime.Caching
 {
-	internal class MemoryCache : ObjectCache, IEnumerable, IDisposable
+	public class MemoryCache : ObjectCache, IEnumerable, IDisposable
 	{
 		const long DEFAULT_TIMER_PERIOD = 20000; // .NET's default, ms
 

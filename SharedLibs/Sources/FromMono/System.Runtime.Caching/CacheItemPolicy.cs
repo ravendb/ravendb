@@ -30,7 +30,7 @@ using System.Collections.ObjectModel;
 
 namespace System.Runtime.Caching
 {
-    internal class CacheItemPolicy
+	public class CacheItemPolicy
 	{
 		Collection<ChangeMonitor> changeMonitors;
 		

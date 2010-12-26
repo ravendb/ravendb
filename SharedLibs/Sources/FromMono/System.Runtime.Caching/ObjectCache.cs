@@ -34,7 +34,7 @@ using System.Runtime;
 
 namespace System.Runtime.Caching
 {
-	internal abstract class ObjectCache : IEnumerable<KeyValuePair<string, object>>, IEnumerable
+	public abstract class ObjectCache : IEnumerable<KeyValuePair<string, object>>, IEnumerable
 	{
 		static IServiceProvider host;
 		

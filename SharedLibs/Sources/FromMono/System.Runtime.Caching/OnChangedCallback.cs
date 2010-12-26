@@ -29,5 +29,5 @@ using System;
 
 namespace System.Runtime.Caching
 {
-    internal delegate void OnChangedCallback (object state);
+	public delegate void OnChangedCallback (object state);
 }

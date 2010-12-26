@@ -29,7 +29,7 @@ using System;
 
 namespace System.Runtime.Caching
 {
-	internal class CacheEntryRemovedArguments
+	public class CacheEntryRemovedArguments
 	{
 		public CacheItem CacheItem { get; private set; }
 		public CacheEntryRemovedReason RemovedReason { get; private set; }

@@ -30,7 +30,7 @@ using System;
 namespace System.Runtime.Caching
 {
 	[Flags]
-	internal enum DefaultCacheCapabilities
+	public enum DefaultCacheCapabilities
 	{
 		None = 0x00,
 		InMemoryProvider = 0x01,

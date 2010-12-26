@@ -29,7 +29,7 @@ using System;
 
 namespace System.Runtime.Caching
 {
-    internal enum CacheEntryRemovedReason
+	public enum CacheEntryRemovedReason
 	{
 		Removed,
 		Expired,

@@ -29,5 +29,5 @@ using System;
 
 namespace System.Runtime.Caching
 {
-    internal delegate void CacheEntryRemovedCallback (CacheEntryRemovedArguments arguments);
+	public delegate void CacheEntryRemovedCallback (CacheEntryRemovedArguments arguments);
 }

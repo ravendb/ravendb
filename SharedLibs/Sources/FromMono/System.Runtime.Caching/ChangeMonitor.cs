@@ -29,7 +29,7 @@ using System;
 
 namespace System.Runtime.Caching
 {
-    internal abstract class ChangeMonitor : IDisposable
+	public abstract class ChangeMonitor : IDisposable
 	{
 		bool initializationComplete;
 		bool notifyOnChangedCalled;
