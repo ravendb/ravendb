@@ -22,27 +22,27 @@ namespace Raven.Client.Client
 	{
 		private readonly string url;
 		private readonly string method;
-	    private readonly bool cacheRequest;
+		private readonly bool cacheRequest;
 
-	    /// <summary>
+		/// <summary>
 		/// Occurs when a json request is created
 		/// </summary>
 		public static event EventHandler<WebRequestEventArgs> ConfigureRequest = delegate {  };
 
 		private static ObjectCache cache = new MemoryCache(typeof(HttpJsonRequest).FullName + ".Cache");
 
-	    private static int numOfCachedRequests;
+		private static int numOfCachedRequests;
 
-        /// <summary>
-        /// The number of requests that we got 304 for 
-        /// and were able to handle purely from the cache
-        /// </summary>
-	    public static int NumberOfCachedRequests
-	    {
-	        get { return numOfCachedRequests; }
-	    }
+		/// <summary>
+		/// The number of requests that we got 304 for 
+		/// and were able to handle purely from the cache
+		/// </summary>
+		public static int NumberOfCachedRequests
+		{
+			get { return numOfCachedRequests; }
+		}
 
-	    private class CachedRequest
+		private class CachedRequest
 		{
 			public string Etag;
 			public string Data;
@@ -51,16 +51,16 @@ namespace Raven.Client.Client
 
 		private byte[] bytesForNextWrite;
 
-	    /// <summary>
-	    /// Creates the HTTP json request.
-	    /// </summary>
-	    /// <param name="self">The self.</param>
-	    /// <param name="url">The URL.</param>
-	    /// <param name="method">The method.</param>
-	    /// <param name="credentials">The credentials.</param>
-	    /// <param name="convention">The document conventions governing this request</param>
-	    /// <returns></returns>
-	    public static HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, ICredentials credentials, DocumentConvention convention)
+		/// <summary>
+		/// Creates the HTTP json request.
+		/// </summary>
+		/// <param name="self">The self.</param>
+		/// <param name="url">The URL.</param>
+		/// <param name="method">The method.</param>
+		/// <param name="credentials">The credentials.</param>
+		/// <param name="convention">The document conventions governing this request</param>
+		/// <returns></returns>
+		public static HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, ICredentials credentials, DocumentConvention convention)
 		{
 			var request = new HttpJsonRequest(url, method, credentials, convention.ShouldCacheRequest(url));
 			ConfigureRequest(self, new WebRequestEventArgs { Request = request.webRequest });
@@ -75,8 +75,8 @@ namespace Raven.Client.Client
 		/// <param name="method">The method.</param>
 		/// <param name="metadata">The metadata.</param>
 		/// <param name="credentials">The credentials.</param>
-        /// <param name="convention">The document conventions governing this request</param>
-        /// <returns></returns>
+		/// <param name="convention">The document conventions governing this request</param>
+		/// <returns></returns>
 		public static HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, JObject metadata, ICredentials credentials, DocumentConvention convention)
 		{
 			var request = new HttpJsonRequest(url, method, metadata, credentials, convention.ShouldCacheRequest(url));
@@ -104,8 +104,8 @@ namespace Raven.Client.Client
 		{
 			this.url = url;
 			this.method = method;
-		    this.cacheRequest = cacheRequest;
-		    webRequest = WebRequest.Create(url);
+			this.cacheRequest = cacheRequest;
+			webRequest = WebRequest.Create(url);
 			webRequest.Credentials = credentials;
 			WriteMetadata(metadata);
 			webRequest.Method = method;
@@ -113,7 +113,7 @@ namespace Raven.Client.Client
 			webRequest.ContentType = "application/json; charset=utf-8";
 
 			if (cacheRequest == false ||
-                method != "GET")
+				method != "GET")
 				return;
 
 			cachedRequest = (CachedRequest)cache.Get(url);
@@ -177,7 +177,7 @@ namespace Raven.Client.Client
 						{"ETag", cachedRequest.Etag},
 						{"Last-Modified", cachedRequest.LastModified}
 					};
-				    Interlocked.Increment(ref numOfCachedRequests);
+					Interlocked.Increment(ref numOfCachedRequests);
 					return cachedRequest.Data;
 				}
 
@@ -315,14 +315,14 @@ namespace Raven.Client.Client
 			}
 		}
 
-        /// <summary>
-        /// Reset the number of cached requests and clear the entire cache
-        /// Mostly used for testing
-        /// </summary>
-	    public static void ResetCache()
-	    {
-            cache = new MemoryCache(typeof(HttpJsonRequest).FullName + ".Cache");
-	        numOfCachedRequests = 0;
-	    }
+		/// <summary>
+		/// Reset the number of cached requests and clear the entire cache
+		/// Mostly used for testing
+		/// </summary>
+		public static void ResetCache()
+		{
+			cache = new MemoryCache(typeof(HttpJsonRequest).FullName + ".Cache");
+			numOfCachedRequests = 0;
+		}
 	}
 }
