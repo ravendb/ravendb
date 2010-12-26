@@ -10,7 +10,9 @@ using System.Text;
 using System.Linq.Expressions;
 using System.Reflection;
 using Raven.Client.Client;
+#if !NET_3_5
 using Raven.Client.Client.Async;
+#endif
 using Raven.Client.Document;
 using Raven.Database.Data;
 
@@ -29,7 +31,9 @@ namespace Raven.Client.Linq
 #if !SILVERLIGHT
 		private readonly IDatabaseCommands databaseCommands;
 #endif
+#if !NET_3_5
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
+#endif
 		private readonly string indexName;
 
 		/// <summary>
@@ -46,11 +50,14 @@ namespace Raven.Client.Linq
 		public DynamicRavenQueryProvider(
 			IDocumentQueryGenerator queryGenerator, 
 			string indexName, 
-			RavenQueryStatistics ravenQueryStatistics, 
+			RavenQueryStatistics ravenQueryStatistics
 #if !SILVERLIGHT
-			IDatabaseCommands databaseCommands, 
+			,IDatabaseCommands databaseCommands
 #endif
- IAsyncDatabaseCommands asyncDatabaseCommands)
+#if !NET_3_5
+			,IAsyncDatabaseCommands asyncDatabaseCommands
+#endif
+			)
 		{
 			this.queryGenerator = queryGenerator;
 			this.indexName = indexName;
@@ -58,7 +65,9 @@ namespace Raven.Client.Linq
 #if !SILVERLIGHT
 			this.databaseCommands = databaseCommands;
 #endif
+#if !NET_3_5
 			this.asyncDatabaseCommands = asyncDatabaseCommands;
+#endif
 		}
 
 		/// <summary>
@@ -78,11 +87,14 @@ namespace Raven.Client.Linq
 			if (typeof(T) == typeof(S))
 				return this;
 
-			var ravenQueryProvider = new DynamicRavenQueryProvider<S>(queryGenerator, indexName, ravenQueryStatistics, 
+			var ravenQueryProvider = new DynamicRavenQueryProvider<S>(queryGenerator, indexName, ravenQueryStatistics 
 #if !SILVERLIGHT
-				databaseCommands, 
+				,databaseCommands
 #endif
- asyncDatabaseCommands);
+#if !NET_3_5
+				,asyncDatabaseCommands
+#endif
+			);
 			ravenQueryProvider.Customize(customizeQuery);
 			return ravenQueryProvider;
 		}
@@ -112,11 +124,14 @@ namespace Raven.Client.Linq
 				return
 					(IQueryable)
 					Activator.CreateInstance(typeof(DynamicRavenQueryInspector<>).MakeGenericType(elementType),
-											 new object[] { this, expression, 
+											 new object[] { this, expression
 #if !SILVERLIGHT
-												 databaseCommands, 
+												 ,databaseCommands
 #endif
-												 asyncDatabaseCommands});
+#if !NET_3_5
+												 ,asyncDatabaseCommands
+#endif
+												 });
 			}
 			catch (TargetInvocationException tie)
 			{

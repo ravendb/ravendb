@@ -8,7 +8,9 @@ using System.Threading;
 #if !SILVERLIGHT
 using System.Transactions;
 #endif
+#if !NET_3_5
 using System.Threading.Tasks;
+#endif
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Json;

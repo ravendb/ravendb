@@ -9,7 +9,9 @@ using System.Linq;
 using System.Text;
 using System.Linq.Expressions;
 using Raven.Client.Client;
+#if !NET_3_5
 using Raven.Client.Client.Async;
+#endif
 
 namespace Raven.Client.Linq
 {
@@ -22,16 +24,22 @@ namespace Raven.Client.Linq
 		/// <summary>
 		/// Creates a dynamic raven queryable around the provided query provider
 		/// </summary>
-		public DynamicRavenQueryInspector(IRavenQueryProvider queryProvider, RavenQueryStatistics queryStatistics,
+		public DynamicRavenQueryInspector(IRavenQueryProvider queryProvider, RavenQueryStatistics queryStatistics
 #if !SILVERLIGHT
-			IDatabaseCommands databaseCommands,
+			,IDatabaseCommands databaseCommands
 #endif
-			IAsyncDatabaseCommands asyncDatabaseCommands)
-			: base(queryProvider, queryStatistics, 
+#if !NET_3_5
+			,IAsyncDatabaseCommands asyncDatabaseCommands
+#endif
+			)
+			: base(queryProvider, queryStatistics
 #if !SILVERLIGHT
-				databaseCommands, 
+				,databaseCommands 
 #endif
-				asyncDatabaseCommands)
+#if !NET_3_5
+				,asyncDatabaseCommands
+#endif
+			)
 		{
 
 		}

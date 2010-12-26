@@ -7,7 +7,9 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+#if !NET_3_5
 using System.Threading.Tasks;
+#endif
 using Raven.Database.Indexing;
 
 namespace Raven.Client.Indexes
@@ -69,6 +71,7 @@ namespace Raven.Client.Indexes
 		}
 #endif
 
+#if !NET_3_5
 		/// <summary>
 		/// Executes the index creation against the specified document store.
 		/// </summary>
@@ -82,6 +85,7 @@ namespace Raven.Client.Indexes
 			// the new defintion.
 			return documentStore.AsyncDatabaseCommands.PutIndexAsync(IndexName, indexDefinition, true);
 		}
+#endif
 	}
 
 	/// <summary>

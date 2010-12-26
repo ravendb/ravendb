@@ -769,7 +769,24 @@ namespace Raven.Client.Linq
 			var executeQueryWithProjectionType = genericExecuteQuery.MakeGenericMethod(newExpressionType);
 			return executeQueryWithProjectionType.Invoke(this, new object[0]);
 		}
+#if !SILVERLIGHT
+		private object ExecuteQuery<TProjection>()
+		{
+			var finalQuery = luceneQuery.SelectFields<TProjection>(FieldsToFetch.ToArray());
 
+			var executeQuery = GetQueryResult(finalQuery);
+
+			var queryResult = finalQuery.QueryResult;
+			if (afterQueryExecuted != null)
+			{
+				afterQueryExecuted(queryResult);
+			}
+
+			return executeQuery;
+		}
+#endif
+
+#if SILVERLIGHT
 		private object ExecuteQuery<TProjection>()
 		{
 			var finalQuery = luceneQuery.SelectFields<TProjection>(FieldsToFetch.ToArray());
@@ -785,6 +802,7 @@ namespace Raven.Client.Linq
 
 			return executeQuery;
 		}
+#endif
 
 		private object GetQueryResult<TProjection>(IDocumentQuery<TProjection> finalQuery)
 		{
@@ -815,12 +833,20 @@ namespace Raven.Client.Linq
 				{
 					return finalQuery.Any();
 				}
+#if !SILVERLIGHT
 				case SpecialQueryType.Count:
+				{
+					var queryResultAsync = finalQuery.QueryResult;
+					return queryResultAsync.TotalResults;
+				}
+#else
+					case SpecialQueryType.Count:
 					{
 						var queryResultAsync = finalQuery.QueryResultAsync;
 						queryResultAsync.Wait();
 						return queryResultAsync.Result.TotalResults;
 					}
+#endif
 				default:
 				{
 					return finalQuery;

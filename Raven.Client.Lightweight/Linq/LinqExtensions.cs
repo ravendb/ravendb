@@ -7,7 +7,9 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+#if !NET_3_5
 using System.Threading.Tasks;
+#endif
 using Raven.Abstractions.Data;
 using Raven.Client.Client;
 
@@ -58,7 +60,7 @@ namespace Raven.Client.Linq
 			query.Field = lastEqualityTerm.Key;
 			query.Term = lastEqualityTerm.Value;
 		}
-
+#if !NET_3_5
 		/// <summary>
 		/// Suggest alternative values for the queried term
 		/// </summary>
@@ -77,6 +79,7 @@ namespace Raven.Client.Linq
 		{
 			return SuggestAsync(queryable, new SuggestionQuery());
 		}
+#endif
 
 
 		/// <summary>

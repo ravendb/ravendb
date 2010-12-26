@@ -12,7 +12,9 @@ using System.Collections.Specialized;
 using System.Linq;
 using System.Net;
 using Raven.Client.Client;
+#if !NET_3_5
 using Raven.Client.Client.Async;
+#endif
 using Raven.Client.Document;
 using Raven.Client.Shard.ShardStrategy;
 
@@ -97,6 +99,7 @@ namespace Raven.Client.Shard
 			return this;
 		}
 
+#if !NET_3_5
 		/// <summary>
 		/// Gets the async database commands.
 		/// </summary>
@@ -105,6 +108,7 @@ namespace Raven.Client.Shard
 		{
 			get { throw new NotSupportedException("Sharded document store doesn't have a database commands. you need to explicitly use the shard instances to get access to the database commands"); }
 		}
+#endif
 
 #if !SILVERLIGHT
 		/// <summary>

@@ -14,7 +14,9 @@ using System.Reflection;
 using Newtonsoft.Json.Linq;
 using System;
 using Raven.Client.Client;
+#if !NET_3_5
 using Raven.Client.Client.Async;
+#endif
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Raven.Database;
@@ -28,7 +30,9 @@ namespace Raven.Client.Document
 	/// </summary>
 	public class DocumentSession : InMemoryDocumentSessionOperations, IDocumentSession, ITransactionalDocumentSession, ISyncAdvancedSessionOperation, IDocumentQueryGenerator
 	{
+#if !NET_3_5
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
+#endif
 
 		/// <summary>
 		/// Gets the database commands.
@@ -36,6 +40,7 @@ namespace Raven.Client.Document
 		/// <value>The database commands.</value>
 		public IDatabaseCommands DatabaseCommands { get; private set; }
 
+#if !NET_3_5
 		/// <summary>
 		/// Gets the async database commands.
 		/// </summary>
@@ -44,19 +49,21 @@ namespace Raven.Client.Document
 		{
 			get { return asyncDatabaseCommands; }
 		}
+#endif
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="DocumentSession"/> class.
 		/// </summary>
-		/// <param name="documentStore">The document store.</param>
-		/// <param name="storeListeners">The store listeners.</param>
-		/// <param name="deleteListeners">The delete listeners.</param>
-		/// <param name="databaseCommands"></param>
-		/// <param name="asyncDatabaseCommands"></param>
-		public DocumentSession(DocumentStore documentStore, IDocumentStoreListener[] storeListeners, IDocumentDeleteListener[] deleteListeners, IDatabaseCommands databaseCommands, IAsyncDatabaseCommands asyncDatabaseCommands)
+		public DocumentSession(DocumentStore documentStore, IDocumentStoreListener[] storeListeners, IDocumentDeleteListener[] deleteListeners, IDatabaseCommands databaseCommands
+#if !NET_3_5
+			, IAsyncDatabaseCommands asyncDatabaseCommands
+#endif
+			)
 			: base(documentStore, storeListeners, deleteListeners)
 		{
+#if !NET_3_5
 			this.asyncDatabaseCommands = asyncDatabaseCommands;
+#endif
 			DatabaseCommands = databaseCommands;
 		}
 
@@ -195,7 +202,11 @@ namespace Raven.Client.Document
 		public IRavenQueryable<T> Query<T>(string indexName)
 		{
 			var ravenQueryStatistics = new RavenQueryStatistics();
-			return new RavenQueryInspector<T>(new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics),ravenQueryStatistics, DatabaseCommands, asyncDatabaseCommands);
+			return new RavenQueryInspector<T>(new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics),ravenQueryStatistics, DatabaseCommands
+#if !NET_3_5
+				, asyncDatabaseCommands
+#endif
+					);
 		}
 
 		/// <summary>
@@ -388,10 +399,17 @@ namespace Raven.Client.Document
 			}
 			var ravenQueryStatistics = new RavenQueryStatistics();
 			return new RavenQueryInspector<T>(
-				new DynamicRavenQueryProvider<T>(this, indexName, ravenQueryStatistics, Advanced.DatabaseCommands, Advanced.AsyncDatabaseCommands), 
+				new DynamicRavenQueryProvider<T>(this, indexName, ravenQueryStatistics, Advanced.DatabaseCommands
+#if !NET_3_5
+					, Advanced.AsyncDatabaseCommands
+#endif
+				), 
 				ravenQueryStatistics,
-				Advanced.DatabaseCommands, 
-				Advanced.AsyncDatabaseCommands);
+				Advanced.DatabaseCommands
+#if !NET_3_5
+				, Advanced.AsyncDatabaseCommands
+#endif
+			);
 		}
 
 		/// <summary>

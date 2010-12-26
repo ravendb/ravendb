@@ -10,7 +10,9 @@ using System.Collections.Specialized;
 using System.Collections.Generic;
 using System.Net;
 using Raven.Client.Client;
+#if !NET_3_5
 using Raven.Client.Client.Async;
+#endif
 using Raven.Client.Document;
 
 namespace Raven.Client
@@ -61,11 +63,13 @@ namespace Raven.Client
 		/// <returns></returns>
 		IDocumentStore RegisterListener(IDocumentStoreListener documentStoreListener);
 
+#if !NET_3_5
 		/// <summary>
 		/// Gets the async database commands.
 		/// </summary>
 		/// <value>The async database commands.</value>
 		IAsyncDatabaseCommands AsyncDatabaseCommands { get; }
+#endif
 
 #if !SILVERLIGHT
 		/// <summary>

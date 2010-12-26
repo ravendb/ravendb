@@ -9,7 +9,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using Raven.Client.Client;
+#if !NET_3_5
 using Raven.Client.Client.Async;
+#endif
 using Raven.Client.Document;
 using Raven.Database.Data;
 
@@ -26,20 +28,21 @@ namespace Raven.Client.Linq
 #if !SILVERLIGHT
 		private readonly IDatabaseCommands databaseCommands;
 #endif
+#if !NET_3_5
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
+#endif
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="RavenQueryInspector{T}"/> class.
 		/// </summary>
-		/// <param name="provider">The provider.</param>
-		/// <param name="queryStats">The query stats to fill</param>
-		/// <param name="databaseCommands">Database commands to use</param>
-		/// <param name="asyncDatabaseCommands">Async database commands to use</param>
-		public RavenQueryInspector(IRavenQueryProvider provider, RavenQueryStatistics queryStats,
+		public RavenQueryInspector(IRavenQueryProvider provider, RavenQueryStatistics queryStats
 #if !SILVERLIGHT
-				IDatabaseCommands databaseCommands,
+				,IDatabaseCommands databaseCommands
 #endif
- IAsyncDatabaseCommands asyncDatabaseCommands)
+#if !NET_3_5
+				,IAsyncDatabaseCommands asyncDatabaseCommands
+#endif
+			)
 		{
 			if (provider == null)
 			{
@@ -50,7 +53,9 @@ namespace Raven.Client.Linq
 #if !SILVERLIGHT
 			this.databaseCommands = databaseCommands;
 #endif
+#if !NET_3_5
 			this.asyncDatabaseCommands = asyncDatabaseCommands;
+#endif
 			this.provider.AfterQueryExecuted(UpdateQueryStats);
 			expression = Expression.Constant(this);
 		}
@@ -179,6 +184,7 @@ namespace Raven.Client.Linq
 		}
 #endif
 
+#if !NET_3_5
 		/// <summary>
 		/// Grant access to the async database commands
 		/// </summary>
@@ -186,6 +192,7 @@ namespace Raven.Client.Linq
 		{
 			get { return asyncDatabaseCommands; }
 		}
+#endif
 
 		///<summary>
 		///</summary>

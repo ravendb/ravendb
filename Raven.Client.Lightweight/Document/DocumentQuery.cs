@@ -105,6 +105,7 @@ namespace Raven.Client.Document
 		}
 #endif
 
+#if !NET_3_5
 		/// <summary>
 		/// Grant access to the async database commands
 		/// </summary>
@@ -112,6 +113,7 @@ namespace Raven.Client.Document
 		{
 			get { return asyncDatabaseCommands; }
 		}
+#endif
 
 #if !SILVERLIGHT
 		/// <summary>

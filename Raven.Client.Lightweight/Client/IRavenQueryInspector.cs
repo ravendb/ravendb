@@ -5,7 +5,9 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+#if !NET_3_5
 using Raven.Client.Client.Async;
+#endif
 using Raven.Client.Document;
 
 namespace Raven.Client.Client
@@ -28,10 +30,12 @@ namespace Raven.Client.Client
 		IDatabaseCommands DatabaseCommands { get; }
 #endif
 
+#if !NET_3_5
 		/// <summary>
 		/// Grant access to the async database commands
 		/// </summary>
 		IAsyncDatabaseCommands AsyncDatabaseCommands { get; }
+#endif
 
 		/// <summary>
 		/// The last term that we asked the query to use equals on

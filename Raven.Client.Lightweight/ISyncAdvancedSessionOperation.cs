@@ -5,7 +5,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using Raven.Client.Client;
+#if !NET_3_5
 using Raven.Client.Client.Async;
+#endif
 using Raven.Client.Indexes;
 
 namespace Raven.Client
@@ -27,11 +29,13 @@ namespace Raven.Client
 		/// <value>The database commands.</value>
 		IDatabaseCommands DatabaseCommands { get; }
 
+#if !NET_3_5
 		/// <summary>
 		/// Gets the async database commands.
 		/// </summary>
 		/// <value>The async database commands.</value>
 		IAsyncDatabaseCommands AsyncDatabaseCommands { get; }
+#endif
 
 		/// <summary>
 		/// Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.

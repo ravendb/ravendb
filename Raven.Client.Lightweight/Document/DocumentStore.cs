@@ -253,7 +253,11 @@ namespace Raven.Client.Document
 		/// <param name="credentialsForSession">The credentials for session.</param>
 		public IDocumentSession OpenSession(ICredentials credentialsForSession)
 		{
-			var session = new DocumentSession(this, storeListeners, deleteListeners, DatabaseCommands.With(credentialsForSession), AsyncDatabaseCommands.With(credentialsForSession));
+			var session = new DocumentSession(this, storeListeners, deleteListeners, DatabaseCommands.With(credentialsForSession)
+#if !NET_3_5
+				, AsyncDatabaseCommands.With(credentialsForSession)
+#endif
+			);
 			AfterSessionCreated(session);
 			return session;
 		}
@@ -264,7 +268,11 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public IDocumentSession OpenSession()
 		{
-			var session = new DocumentSession(this, storeListeners, deleteListeners, DatabaseCommands, AsyncDatabaseCommands);
+			var session = new DocumentSession(this, storeListeners, deleteListeners, DatabaseCommands
+#if !NET_3_5
+				, AsyncDatabaseCommands
+#endif
+);
 			AfterSessionCreated(session);
 			return session;
 		}
@@ -274,7 +282,11 @@ namespace Raven.Client.Document
 		/// </summary>
 		public IDocumentSession OpenSession(string database)
 		{
-			var session = new DocumentSession(this, storeListeners, deleteListeners, DatabaseCommands.ForDatabase(database), AsyncDatabaseCommands.ForDatabase(database));
+			var session = new DocumentSession(this, storeListeners, deleteListeners, DatabaseCommands.ForDatabase(database)
+#if !NET_3_5
+				, AsyncDatabaseCommands.ForDatabase(database)
+#endif
+			);
 			AfterSessionCreated(session);
 			return session;
 		}
@@ -286,10 +298,13 @@ namespace Raven.Client.Document
 		{
 			var session = new DocumentSession(this, storeListeners, deleteListeners, DatabaseCommands
 					.ForDatabase(database)
-					.With(credentialsForSession),
-				AsyncDatabaseCommands
+					.With(credentialsForSession)
+#if !NET_3_5
+				,AsyncDatabaseCommands
 					.ForDatabase(database)
-					.With(credentialsForSession));
+					.With(credentialsForSession)
+#endif
+			);
 			AfterSessionCreated(session); 
 			return session;
 		}
