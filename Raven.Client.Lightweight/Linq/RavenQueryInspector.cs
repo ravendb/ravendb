@@ -151,7 +151,7 @@ namespace Raven.Client.Linq
 		/// </returns>
 		public override string ToString()
 		{
-			var ravenQueryProvider = new RavenQueryProviderProcessor<T>(null, null, null);
+			var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null);
 			ravenQueryProvider.ProcessExpression(expression);
 			string fields = "";
 			if (ravenQueryProvider.FieldsToFetch.Count > 0)
@@ -168,7 +168,7 @@ namespace Raven.Client.Linq
 		{
 			get
 			{
-				var ravenQueryProvider = new RavenQueryProviderProcessor<T>(null, null, null);
+				var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null);
 				ravenQueryProvider.ProcessExpression(expression);
 				return ((IRavenQueryInspector)ravenQueryProvider.LuceneQuery).IndexQueried;
 			}
@@ -198,7 +198,7 @@ namespace Raven.Client.Linq
 		///</summary>
 		public KeyValuePair<string, string> GetLastEqualityTerm()
 		{
-			var ravenQueryProvider = new RavenQueryProviderProcessor<T>(null, null, null);
+			var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null);
 			ravenQueryProvider.ProcessExpression(expression);
 			return ((IRavenQueryInspector)ravenQueryProvider.LuceneQuery).GetLastEqualityTerm();
 		}

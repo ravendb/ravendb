@@ -32,6 +32,11 @@ namespace Raven.Client.Linq
 		string IndexName { get; }
 
 		/// <summary>
+		/// Get the query generator
+		/// </summary>
+		IDocumentQueryGenerator QueryGenerator { get; }
+
+		/// <summary>
 		/// Change the result type for the query provider
 		/// </summary>
 		IRavenQueryProvider For<S>();

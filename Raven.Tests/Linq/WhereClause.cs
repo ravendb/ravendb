@@ -5,6 +5,8 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Linq;
+using Raven.Client;
+using Raven.Client.Document;
 using Raven.Client.Linq;
 using Xunit;
 
@@ -13,6 +15,17 @@ namespace Raven.Tests.Linq
 	public class WhereClause
 	{
 		private readonly RavenQueryStatistics ravenQueryStatistics = new RavenQueryStatistics();
+
+		private class FakeDocumentQueryGenerator : IDocumentQueryGenerator
+		{
+			/// <summary>
+			/// Create a new query for <typeparam name="T"/>
+			/// </summary>
+			public IDocumentQuery<T> Query<T>()
+			{
+				return new DocumentQuery<T>(null, null, null, null, null);
+			}
+		}
 
 		[Fact]
 		public void CanUnderstandSimpleEquality()
@@ -27,7 +40,7 @@ namespace Raven.Tests.Linq
 		private RavenQueryInspector<IndexedUser> GetRavenQueryInspector()
 		{
 			return new RavenQueryInspector<IndexedUser>(
-				new RavenQueryProvider<IndexedUser>(null, null, ravenQueryStatistics), ravenQueryStatistics, null, null);
+				new RavenQueryProvider<IndexedUser>(new FakeDocumentQueryGenerator(), null, ravenQueryStatistics), ravenQueryStatistics, null, null);
 		}
 
 		[Fact]

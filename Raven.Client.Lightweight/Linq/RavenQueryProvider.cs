@@ -41,6 +41,14 @@ namespace Raven.Client.Linq
 		}
 
 		/// <summary>
+		/// Get the query generator
+		/// </summary>
+		public IDocumentQueryGenerator QueryGenerator
+		{
+			get { return queryGenerator; }
+		}
+
+		/// <summary>
 		/// Change the result type for the query provider
 		/// </summary>
 		public IRavenQueryProvider For<S>()
