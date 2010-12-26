@@ -1,3 +1,4 @@
+#if !SILVERLIGHT
 //-----------------------------------------------------------------------
 // <copyright file="ShardStrategy.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
@@ -31,3 +32,4 @@ namespace Raven.Client.Shard.ShardStrategy
 		public IShardAccessStrategy ShardAccessStrategy { get; set; }
 	}
 }
+#endif

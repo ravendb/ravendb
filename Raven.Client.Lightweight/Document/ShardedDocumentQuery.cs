@@ -1,3 +1,4 @@
+#if !SILVERLIGHT
 //-----------------------------------------------------------------------
 // <copyright file="ShardedDocumentQuery.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
@@ -573,3 +574,4 @@ If you really want to do in memory filtering on the data returned from the query
 		}
 	}
 }
+#endif

@@ -10,6 +10,7 @@ using System.Collections.Specialized;
 using System.Collections.Generic;
 using System.Net;
 using Raven.Client.Client;
+using Raven.Client.Client.Async;
 using Raven.Client.Document;
 
 namespace Raven.Client
@@ -59,6 +60,12 @@ namespace Raven.Client
 		/// <param name="documentStoreListener">The document store listener.</param>
 		/// <returns></returns>
 		IDocumentStore RegisterListener(IDocumentStoreListener documentStoreListener);
+
+		/// <summary>
+		/// Gets the async database commands.
+		/// </summary>
+		/// <value>The async database commands.</value>
+		IAsyncDatabaseCommands AsyncDatabaseCommands { get; }
 
 #if !SILVERLIGHT
 		/// <summary>

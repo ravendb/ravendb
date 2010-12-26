@@ -1,3 +1,4 @@
+#if !SILVERLIGHT
 //-----------------------------------------------------------------------
 // <copyright file="ServerClient.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
@@ -1035,3 +1036,4 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 		#endregion
 	}
 }
+#endif

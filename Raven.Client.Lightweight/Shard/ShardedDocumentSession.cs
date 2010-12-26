@@ -9,6 +9,7 @@ using System.Linq.Expressions;
 using System.Net;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Client;
+using Raven.Client.Client.Async;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
 using Raven.Client.Indexes;
@@ -199,6 +200,15 @@ namespace Raven.Client.Shard
 		public IDatabaseCommands DatabaseCommands
 		{
 			get { throw new NotSupportedException("You cannot ask a sharded session for its DatabaseCommands, internal sharded session each have diffeernt DatabaseCommands"); }
+		}
+
+		/// <summary>
+		/// Gets the async database commands.
+		/// </summary>
+		/// <value>The async database commands.</value>
+		public IAsyncDatabaseCommands AsyncDatabaseCommands
+		{
+			get { throw new NotSupportedException("You cannot ask a sharded session for its AsyncDatabaseCommands, internal sharded session each have diffeernt AsyncDatabaseCommands"); }
 		}
 
 		/// <summary>

@@ -1,3 +1,4 @@
+#if !SILVERLIGHT
 //-----------------------------------------------------------------------
 // <copyright file="ReplicationInformer.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
@@ -32,12 +33,12 @@ namespace Raven.Client.Client
 		}
 
 #if !NET_3_5
-        private readonly System.Collections.Concurrent.ConcurrentDictionary<string, IntHolder> failureCounts = new System.Collections.Concurrent.ConcurrentDictionary<string, IntHolder>();
+		private readonly System.Collections.Concurrent.ConcurrentDictionary<string, IntHolder> failureCounts = new System.Collections.Concurrent.ConcurrentDictionary<string, IntHolder>();
 #else
-        private readonly Dictionary<string, IntHolder> failureCounts = new Dictionary<string, IntHolder>();
+		private readonly Dictionary<string, IntHolder> failureCounts = new Dictionary<string, IntHolder>();
 #endif
 
-        /// <summary>
+		/// <summary>
 		/// Updates the replication information if needed.
 		/// </summary>
 		/// <param name="serverClient">The server client.</param>
@@ -61,8 +62,8 @@ namespace Raven.Client.Client
 		/// <returns></returns>
 		public bool ShouldExecuteUsing(string operationUrl, int currentRequest)
 		{
-		    IntHolder value = GetHolder(operationUrl);
-            if (value.Value > 1000)
+			IntHolder value = GetHolder(operationUrl);
+			if (value.Value > 1000)
 			{
 				return currentRequest % 1000 == 0;
 			}
@@ -77,36 +78,36 @@ namespace Raven.Client.Client
 			return true;
 		}
 
-	    private IntHolder GetHolder(string operationUrl)
-	    {
+		private IntHolder GetHolder(string operationUrl)
+		{
 #if !NET_3_5
-	        return failureCounts.GetOrAdd(operationUrl, new IntHolder());
+			return failureCounts.GetOrAdd(operationUrl, new IntHolder());
 #else
-    // need to compensate for 3.5 not having concnurrent dic.
+	// need to compensate for 3.5 not having concnurrent dic.
 
-            IntHolder value;
-            if(failureCounts.TryGetValue(operationUrl, out value) == false)
-            {
-                lock(replicationLock)
-                {
-                    if(failureCounts.TryGetValue(operationUrl, out value) == false)
-                    {
-                        failureCounts[operationUrl] = value = new IntHolder();
-                    }
-                }
-            }
-            return value;
+			IntHolder value;
+			if(failureCounts.TryGetValue(operationUrl, out value) == false)
+			{
+				lock(replicationLock)
+				{
+					if(failureCounts.TryGetValue(operationUrl, out value) == false)
+					{
+						failureCounts[operationUrl] = value = new IntHolder();
+					}
+				}
+			}
+			return value;
 #endif
 
-	    }
+		}
 
-	    /// <summary>
+		/// <summary>
 		/// Determines whether this is the first failure on the specified operation URL.
 		/// </summary>
 		/// <param name="operationUrl">The operation URL.</param>
 		public bool IsFirstFailure(string operationUrl)
 		{
-            IntHolder value = GetHolder(operationUrl);
+			IntHolder value = GetHolder(operationUrl);
 			return Thread.VolatileRead(ref value.Value) == 0;
 		}
 
@@ -116,7 +117,7 @@ namespace Raven.Client.Client
 		/// <param name="operationUrl">The operation URL.</param>
 		public void IncrementFailureCount(string operationUrl)
 		{
-            IntHolder value = GetHolder(operationUrl);
+			IntHolder value = GetHolder(operationUrl);
 			Interlocked.Increment(ref value.Value);
 		}
 
@@ -153,8 +154,9 @@ namespace Raven.Client.Client
 		/// <param name="operationUrl">The operation URL.</param>
 		public void ResetFailureCount(string operationUrl)
 		{
-		    IntHolder value = GetHolder(operationUrl);
+			IntHolder value = GetHolder(operationUrl);
 			Thread.VolatileWrite(ref value.Value, 0);
 		}
 	}
 }
+#endif

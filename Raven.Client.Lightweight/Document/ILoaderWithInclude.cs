@@ -1,3 +1,4 @@
+#if !SILVERLIGHT
 //-----------------------------------------------------------------------
 // <copyright file="ILoaderWithInclude.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
@@ -58,3 +59,4 @@ namespace Raven.Client.Document
         TResult Load<TResult>(string id);
     }
 }
+#endif

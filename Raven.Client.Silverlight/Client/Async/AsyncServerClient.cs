@@ -15,11 +15,14 @@ using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
 using Raven.Database;
 using Raven.Database.Data;
+using Raven.Database.Indexing;
 using Raven.Http.Exceptions;
+using Raven.Http.Json;
 
 namespace Raven.Client.Client.Async
 {
@@ -72,7 +75,16 @@ namespace Raven.Client.Client.Async
 		}
 
 		/// <summary>
-		/// Create a new instance of <see cref="IDatabaseCommands"/> that will interact
+		/// Returns a new <see cref="IAsyncDatabaseCommands "/> using the specified credentials
+		/// </summary>
+		/// <param name="credentialsForSession">The credentials for session.</param>
+		public IAsyncDatabaseCommands With(ICredentials credentialsForSession)
+		{
+			return new AsyncServerClient(url, convention, credentialsForSession);
+		}
+
+		/// <summary>
+		/// Create a new instance of <see cref="IAsyncDatabaseCommands"/> that will interact
 		/// with the root database. Useful if the database has works against a tenant database.
 		/// </summary>
 		public IAsyncDatabaseCommands GetRootDatabase()
@@ -214,8 +226,140 @@ namespace Raven.Client.Client.Async
 						SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString())
 					};
 				});
-
 		}
+
+		/// <summary>
+		/// Puts the document with the specified key in the database
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <param name="etag">The etag.</param>
+		/// <param name="document">The document.</param>
+		/// <param name="metadata">The metadata.</param>
+		public Task<PutResult> PutAsync(string key, Guid? etag, JObject document, JObject metadata)
+		{
+			if (metadata == null)
+				metadata = new JObject();
+			var method = String.IsNullOrEmpty(key) ? "POST" : "PUT";
+			if (etag != null)
+				metadata["ETag"] = new JValue(etag.Value.ToString());
+			var request = HttpJsonRequest.CreateHttpJsonRequest(this, url + "/docs/" + key, method, metadata, credentials, convention);
+			request.AddOperationHeaders(OperationsHeaders);
+
+			return request.WriteAsync(Encoding.UTF8.GetBytes(document.ToString()))
+				.ContinueWith(task =>
+				{
+					if (task.Exception != null)
+						throw new InvalidOperationException("Unable to write to server");
+
+					return request.ReadResponseStringAsync()
+						.ContinueWith(task1 =>
+						{
+							try
+							{
+								return JsonConvert.DeserializeObject<PutResult>(task1.Result, new JsonEnumConverter());
+							}
+							catch (WebException e)
+							{
+								var httpWebResponse = e.Response as HttpWebResponse;
+								if (httpWebResponse == null ||
+								    httpWebResponse.StatusCode != HttpStatusCode.Conflict)
+									throw;
+								throw ThrowConcurrencyException(e);
+							}
+						});
+				})
+				.Unwrap();
+		}
+
+
+		/// <summary>
+		/// Puts the index definition for the specified name asyncronously
+		/// </summary>
+		/// <param name="name">The name.</param>
+		/// <param name="indexDef">The index def.</param>
+		/// <param name="overwrite">Should overwrite index</param>
+		public Task<string> PutIndexAsync(string name, IndexDefinition indexDef, bool overwrite)
+		{
+			string requestUri = url + "/indexes/" + name;
+			var webRequest = (HttpWebRequest)WebRequest.Create(requestUri);
+			AddOperationHeaders(webRequest);
+			webRequest.Method = "HEAD";
+			webRequest.Credentials = credentials;
+
+			return webRequest.GetResponseAsync()
+				.ContinueWith(task =>
+				{
+					try
+					{
+						task.Result.Close();
+						if (overwrite == false)
+							throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
+
+					}
+					catch (WebException e)
+					{
+						var response = e.Response as HttpWebResponse;
+						if (response == null || response.StatusCode != HttpStatusCode.NotFound)
+							throw;
+					}
+
+					var request = HttpJsonRequest.CreateHttpJsonRequest(this, requestUri, "PUT", credentials, convention);
+					request.AddOperationHeaders(OperationsHeaders);
+					var serializeObject = JsonConvert.SerializeObject(indexDef, new JsonEnumConverter());
+					return request.WriteAsync(Encoding.UTF8.GetBytes(serializeObject))
+						.ContinueWith(writeTask => request.ReadResponseStringAsync()
+						                           	.ContinueWith(readStrTask =>
+						                           	{
+						                           		var obj = new { index = "" };
+						                           		obj = JsonConvert.DeserializeAnonymousType(readStrTask.Result, obj);
+						                           		return obj.index;
+						                           	})).Unwrap();
+				}).Unwrap();
+		}
+
+		private void AddOperationHeaders(HttpWebRequest webRequest)
+		{
+			foreach (var header in OperationsHeaders)
+			{
+				webRequest.Headers[header.Key] = header.Value;
+			}
+		}
+
+		/// <summary>
+		/// Returns a list of suggestions based on the specified suggestion query.
+		/// </summary>
+		/// <param name="index">The index to query for suggestions</param>
+		/// <param name="suggestionQuery">The suggestion query.</param>
+		public Task<SuggestionQueryResult> SuggestAsync(string index, SuggestionQuery suggestionQuery)
+		{
+			if (suggestionQuery == null) throw new ArgumentNullException("suggestionQuery");
+
+			var requestUri = url + string.Format("/suggest/{0}?term={1}&field={2}&max={3}&distance={4}&accuracy={5}",
+				Uri.EscapeUriString(index),
+				Uri.EscapeDataString(suggestionQuery.Term),
+				Uri.EscapeDataString(suggestionQuery.Field),
+				Uri.EscapeDataString(suggestionQuery.MaxSuggestions.ToString()),
+				Uri.EscapeDataString(suggestionQuery.Distance.ToString()),
+				Uri.EscapeDataString(suggestionQuery.Accuracy.ToString()));
+
+			var request = HttpJsonRequest.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention);
+			request.AddOperationHeaders(OperationsHeaders);
+			var serializer = convention.CreateSerializer();
+
+			return request.ReadResponseStringAsync()
+				.ContinueWith(task =>
+				{
+					using (var reader = new JsonTextReader(new StringReader(task.Result)))
+					{
+						var json = (JToken)serializer.Deserialize(reader);
+						return new SuggestionQueryResult
+						{
+							Suggestions = json["Suggestions"].Children().Select(x => x.Value<string>()).ToArray(),
+						};
+					}
+				});
+		}
+
 
 		/// <summary>
 		/// Begins the async batch operation

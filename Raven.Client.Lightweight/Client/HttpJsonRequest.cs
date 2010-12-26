@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
 using System.Net;
@@ -323,6 +324,18 @@ namespace Raven.Client.Client
 		{
 			cache = new MemoryCache(typeof(HttpJsonRequest).FullName + ".Cache");
 			numOfCachedRequests = 0;
+		}
+
+		/// <summary>
+		/// Adds the operation headers.
+		/// </summary>
+		/// <param name="operationsHeaders">The operations headers.</param>
+		public void AddOperationHeaders(IDictionary<string, string> operationsHeaders)
+		{
+			foreach (var kvp in operationsHeaders)
+			{
+				webRequest.Headers[kvp.Key] = operationsHeaders[kvp.Value];
+			}
 		}
 	}
 }

@@ -29,10 +29,7 @@ namespace Raven.Client.Document
 	/// <summary>
 	/// A query against a Raven index
 	/// </summary>
-	public class DocumentQuery<T> : IDocumentQuery<T>, IDocumentQueryCustomization
-#if !SILVERLIGHT
-		, IRavenQueryInspector
-#endif
+	public class DocumentQuery<T> : IDocumentQuery<T>, IDocumentQueryCustomization, IRavenQueryInspector
 	{
 		private bool negate;
 #if !SILVERLIGHT
@@ -90,22 +87,30 @@ namespace Raven.Client.Document
 			get { return includes; }
 		}
 
-#if !SILVERLIGHT
-		/// <summary>
-		/// Gets the database commands associated with this document query
-		/// </summary>
-		public IDatabaseCommands Commands
-		{
-			get { return databaseCommands; }
-		}
-#endif
-
 		/// <summary>
 		/// Get the name of the index being queried
 		/// </summary>
 		public string IndexQueried
 		{
 			get { return indexName; }
+		}
+
+#if !SILVERLIGHT
+		/// <summary>
+		/// Grant access to the database commands
+		/// </summary>
+		public IDatabaseCommands DatabaseCommands
+		{
+			get { return databaseCommands; }
+		}
+#endif
+
+		/// <summary>
+		/// Grant access to the async database commands
+		/// </summary>
+		public IAsyncDatabaseCommands AsyncDatabaseCommands
+		{
+			get { return asyncDatabaseCommands; }
 		}
 
 #if !SILVERLIGHT

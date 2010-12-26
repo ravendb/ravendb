@@ -5,7 +5,9 @@
 //-----------------------------------------------------------------------
 using System.Collections.Generic;
 using System.IO;
+#if !SILVERLIGHT
 using System.Transactions;
+#endif
 using Newtonsoft.Json.Linq;
 using Raven.Client.Client;
 using Raven.Database.Data;
@@ -17,6 +19,7 @@ namespace Raven.Client.Extensions
 	///</summary>
 	public static class MultiTenancyExtensions
 	{
+#if !SILVERLIGHT
 		///<summary>
 		/// Ensures that the database exists, creating it if needed
 		///</summary>
@@ -35,9 +38,11 @@ namespace Raven.Client.Extensions
 			var docId = "Raven/Databases/" + name;
 			if (self.Get(docId) != null)
 				return;
-
+#if !SILVERLIGHT
 			using (new TransactionScope(TransactionScopeOption.Suppress))
+#endif
 				self.Put(docId, null, doc, new JObject());
 		}
+#endif
 	}
 }

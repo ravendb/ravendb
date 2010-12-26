@@ -74,9 +74,8 @@ task Init -depends EnsureMunin, Verify40, Clean {
 	
 	copy $tools_dir\xUnit\*.* $build_dir
 	
-	exec { .\Utilities\Binaries\Raven.Silverlighter.exe .\Raven.Client.Lightweight\Raven.Client.Abstractions.csproj .\Raven.Client.Silverlight\Raven.Client.Silverlight.csproj }
-	exec { .\Utilities\Binaries\Raven.Silverlighter.exe .\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj .\Raven.Client.Silverlight\Raven.Client.Silverlight.csproj }
-
+	exec { .\Utilities\Binaries\Raven.Silverlighter.exe .\Raven.Client.Silverlight\Raven.Client.Silverlight.csproj .\Raven.Abstractions\Raven.Abstractions.csproj .\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj}
+	
 	if($global:commercial) {
 		exec { .\Utilities\Binaries\Raven.ProjectRewriter.exe commercial }
 		cp "..\RavenDB_Commercial.snk" "Raven.Database\RavenDB.snk"
@@ -208,9 +207,11 @@ task CopyClient {
 	cp $build_dir\Newtonsoft.Json.??? $build_dir\Output\Client
   cp $build_dir\Raven.Abstractions.??? $build_dir\Output\Client
 	cp $build_dir\Raven.Client.Lightweight.??? $build_dir\Output\Client
+	cp $build_dir\MissingBitsFromClientProfile.??? $build_dir\Output\Client
 }
 
 task CopyClient35 {
+  cp $build_dir\MissingBitsFromClientProfile.??? $build_dir\Output\Client-3.5
 	cp $build_dir\Newtonsoft.Json.??? $build_dir\Output\Client-3.5
 	cp $build_dir\Raven.Abstractions-3.5.??? $build_dir\Output\Client-3.5
 	cp $build_dir\Raven.Client.Lightweight-3.5.??? $build_dir\Output\Client-3.5
@@ -289,12 +290,13 @@ task CreateNupack {
 	cp $build_dir\Raven.Client.Lightweight-3.5.??? $build_dir\NuPack\Lib\3.5
 	cp $build_dir\Raven.Client.Lightweight-3.5.xml $build_dir\NuPack\Lib\3.5
 	cp $build_dir\Raven.Abstractions-3.5.??? $build_dir\NuPack\Lib\3.5
+	cp $build_dir\MissingBitsFromClientProfile.??? $build_dir\NuPack\Lib\3.5
 	
 	cp $build_dir\Newtonsoft.Json.??? $build_dir\NuPack\Lib\4.0
 	cp $build_dir\Raven.Client.Lightweight.??? $build_dir\NuPack\Lib\4.0
 	cp $build_dir\Raven.Abstractions.??? $build_dir\NuPack\Lib\4.0
 	cp $build_dir\Raven.Client.Lightweight.xml $build_dir\NuPack\Lib\4.0
-	
+	cp $build_dir\MissingBitsFromClientProfile.??? $build_dir\NuPack\Lib\4.0
 	
 	cp $build_dir\Raven.Server.??? $build_dir\NuPack\Tools
 	cp $build_dir\log4net.??? $build_dir\NuPack\Tools

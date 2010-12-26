@@ -9,73 +9,83 @@ using System.Linq;
 using System.Text;
 using System.Linq.Expressions;
 using System.Reflection;
+using Raven.Client.Client;
+using Raven.Client.Client.Async;
 using Raven.Client.Document;
 using Raven.Database.Data;
 
 namespace Raven.Client.Linq
 {
-    /// <summary>
-    /// This is a specialized query provider for querying dynamic indexes
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    public class DynamicRavenQueryProvider<T> : IRavenQueryProvider
-    {        
-        private Action<IDocumentQueryCustomization> customizeQuery;
-        private Action<QueryResult> afterQueryExecuted;
-		private readonly IDocumentSession session;
-        private readonly RavenQueryStatistics ravenQueryStatistics;
-        private string indexName;
-
-        /// <summary>
-        /// Gets the IndexName for this dynamic query provider
-        /// </summary>
-        public string IndexName
-        {
-            get { return indexName; }
-        }
-
-        /// <summary>
-        /// Creates a dynamic query provider around the provided document session
-        /// </summary>
-        /// <param name="session"></param>
-        /// <param name="ravenQueryStatistics"></param>
-        /// <param name="indexName"></param>
-        public DynamicRavenQueryProvider(IDocumentSession session, string indexName, RavenQueryStatistics ravenQueryStatistics)
-        {
-            this.session = session;
-            this.indexName = indexName;
-            this.ravenQueryStatistics = ravenQueryStatistics;
-        }
-
-        /// <summary>
-        /// Gets the actions for customizing the generated lucene query
-        /// </summary>
-        public Action<IDocumentQueryCustomization> CustomizedQuery
-        {
-            get { return customizeQuery; }
-        }
+	/// <summary>
+	/// This is a specialized query provider for querying dynamic indexes
+	/// </summary>
+	/// <typeparam name="T"></typeparam>
+	public class DynamicRavenQueryProvider<T> : IRavenQueryProvider
+	{
+		private Action<IDocumentQueryCustomization> customizeQuery;
+		private Action<QueryResult> afterQueryExecuted;
+		private readonly IDocumentQueryGenerator queryGenerator;
+		private readonly RavenQueryStatistics ravenQueryStatistics;
+#if !SILVERLIGHT
+		private readonly IDatabaseCommands databaseCommands;
+#endif
+		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
+		private readonly string indexName;
 
 		/// <summary>
-		/// Gets the session.
+		/// Gets the IndexName for this dynamic query provider
 		/// </summary>
-		/// <value>The session.</value>
-		public IDocumentSession Session
-        {
-            get { return session; }
-        }
+		public string IndexName
+		{
+			get { return indexName; }
+		}
 
-	    /// <summary>
-	    /// Change the result type for the query provider
-	    /// </summary>
-	    public IRavenQueryProvider For<S>()
-	    {
-            if (typeof(T) == typeof(S))
-                return this;
+		/// <summary>
+		/// Creates a dynamic query provider around the provided document session
+		/// </summary>
+		public DynamicRavenQueryProvider(
+			IDocumentQueryGenerator queryGenerator, 
+			string indexName, 
+			RavenQueryStatistics ravenQueryStatistics, 
+#if !SILVERLIGHT
+			IDatabaseCommands databaseCommands, 
+#endif
+ IAsyncDatabaseCommands asyncDatabaseCommands)
+		{
+			this.queryGenerator = queryGenerator;
+			this.indexName = indexName;
+			this.ravenQueryStatistics = ravenQueryStatistics;
+#if !SILVERLIGHT
+			this.databaseCommands = databaseCommands;
+#endif
+			this.asyncDatabaseCommands = asyncDatabaseCommands;
+		}
 
-	        var ravenQueryProvider = new DynamicRavenQueryProvider<S>(session, this.indexName, ravenQueryStatistics);
-	        ravenQueryProvider.Customize(customizeQuery);
-	        return ravenQueryProvider;
-	    }
+		/// <summary>
+		/// Gets the actions for customizing the generated lucene query
+		/// </summary>
+		public Action<IDocumentQueryCustomization> CustomizedQuery
+		{
+			get { return customizeQuery; }
+		}
+
+
+		/// <summary>
+		/// Change the result type for the query provider
+		/// </summary>
+		public IRavenQueryProvider For<S>()
+		{
+			if (typeof(T) == typeof(S))
+				return this;
+
+			var ravenQueryProvider = new DynamicRavenQueryProvider<S>(queryGenerator, indexName, ravenQueryStatistics, 
+#if !SILVERLIGHT
+				databaseCommands, 
+#endif
+ asyncDatabaseCommands);
+			ravenQueryProvider.Customize(customizeQuery);
+			return ravenQueryProvider;
+		}
 
 		/// <summary>
 		/// Executes the query represented by a specified expression tree.
@@ -86,29 +96,33 @@ namespace Raven.Client.Linq
 		/// </returns>
 		public virtual object Execute(Expression expression)
 		{
-			return new DynamicQueryProviderProcessor<T>(session, customizeQuery, afterQueryExecuted, this.IndexName).Execute(expression);
+			return new DynamicQueryProviderProcessor<T>(queryGenerator, customizeQuery, afterQueryExecuted).Execute(expression);
 		}
 
 		IQueryable<S> IQueryProvider.CreateQuery<S>(Expression expression)
-        {
-            return new DynamicRavenQueryInspector<S>(this, expression, ravenQueryStatistics);
-        }
+		{
+			return new DynamicRavenQueryInspector<S>(this, expression, ravenQueryStatistics);
+		}
 
-        IQueryable IQueryProvider.CreateQuery(Expression expression)
-        {
-            Type elementType = TypeSystem.GetElementType(expression.Type);
-            try
-            {
-                return
-                    (IQueryable)
-                    Activator.CreateInstance(typeof(DynamicRavenQueryInspector<>).MakeGenericType(elementType),
-                                             new object[] { this, expression });
-            }
-            catch (TargetInvocationException tie)
-            {
-                throw tie.InnerException;
-            }
-        }
+		IQueryable IQueryProvider.CreateQuery(Expression expression)
+		{
+			Type elementType = TypeSystem.GetElementType(expression.Type);
+			try
+			{
+				return
+					(IQueryable)
+					Activator.CreateInstance(typeof(DynamicRavenQueryInspector<>).MakeGenericType(elementType),
+											 new object[] { this, expression, 
+#if !SILVERLIGHT
+												 databaseCommands, 
+#endif
+												 asyncDatabaseCommands});
+			}
+			catch (TargetInvocationException tie)
+			{
+				throw tie.InnerException;
+			}
+		}
 
 		/// <summary>
 		/// Executes the specified expression.
@@ -116,10 +130,10 @@ namespace Raven.Client.Linq
 		/// <typeparam name="S"></typeparam>
 		/// <param name="expression">The expression.</param>
 		/// <returns></returns>
-        S IQueryProvider.Execute<S>(Expression expression)
-        {
-            return (S)Execute(expression);
-        }
+		S IQueryProvider.Execute<S>(Expression expression)
+		{
+			return (S)Execute(expression);
+		}
 
 		/// <summary>
 		/// Executes the query represented by a specified expression tree.
@@ -128,28 +142,28 @@ namespace Raven.Client.Linq
 		/// <returns>
 		/// The value that results from executing the specified query.
 		/// </returns>
-        object IQueryProvider.Execute(Expression expression)
-        {
-            return Execute(expression);
-        }
+		object IQueryProvider.Execute(Expression expression)
+		{
+			return Execute(expression);
+		}
 
-        /// <summary>
-        /// Callback to get the results of the query
-        /// </summary>
-        public void AfterQueryExecuted(Action<QueryResult> afterQueryExecutedCallback)
-        {
-            this.afterQueryExecuted = afterQueryExecutedCallback;
-        }
+		/// <summary>
+		/// Callback to get the results of the query
+		/// </summary>
+		public void AfterQueryExecuted(Action<QueryResult> afterQueryExecutedCallback)
+		{
+			this.afterQueryExecuted = afterQueryExecutedCallback;
+		}
 
-        /// <summary>
+		/// <summary>
 		/// Customizes the query using the specified action
 		/// </summary>
 		/// <param name="action">The action.</param>
-        public virtual void Customize(Action<IDocumentQueryCustomization> action)
-        {
-            if (action == null)
-                return;
-            customizeQuery += action;
-        }
-    }
+		public virtual void Customize(Action<IDocumentQueryCustomization> action)
+		{
+			if (action == null)
+				return;
+			customizeQuery += action;
+		}
+	}
 }
