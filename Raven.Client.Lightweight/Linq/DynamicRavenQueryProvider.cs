@@ -121,7 +121,14 @@ namespace Raven.Client.Linq
 
 		IQueryable<S> IQueryProvider.CreateQuery<S>(Expression expression)
 		{
-			return new DynamicRavenQueryInspector<S>(this, expression, ravenQueryStatistics);
+			return new DynamicRavenQueryInspector<S>(this, ravenQueryStatistics, expression
+#if !SILVERLIGHT
+				, databaseCommands
+#endif
+#if !NET_3_5
+				, asyncDatabaseCommands
+#endif
+			);
 		}
 
 		IQueryable IQueryProvider.CreateQuery(Expression expression)

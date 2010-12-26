@@ -35,7 +35,10 @@ namespace Raven.Client.Linq
 		/// <summary>
 		/// Initializes a new instance of the <see cref="RavenQueryInspector{T}"/> class.
 		/// </summary>
-		public RavenQueryInspector(IRavenQueryProvider provider, RavenQueryStatistics queryStats
+		public RavenQueryInspector(
+			IRavenQueryProvider provider, 
+			RavenQueryStatistics queryStats,
+			Expression expression
 #if !SILVERLIGHT
 				,IDatabaseCommands databaseCommands
 #endif
@@ -57,29 +60,7 @@ namespace Raven.Client.Linq
 			this.asyncDatabaseCommands = asyncDatabaseCommands;
 #endif
 			this.provider.AfterQueryExecuted(UpdateQueryStats);
-			expression = Expression.Constant(this);
-		}
-
-		/// <summary>
-		/// Initializes a new instance of the <see cref="RavenQueryInspector{T}"/> class.
-		/// </summary>
-		/// <param name="provider">The provider.</param>
-		/// <param name="expression">The expression.</param>
-		/// <param name="queryStats">The query stats to fill</param>
-		public RavenQueryInspector(IRavenQueryProvider provider, Expression expression, RavenQueryStatistics queryStats)
-		{
-			if (provider == null)
-			{
-				throw new ArgumentNullException("provider");
-			}
-			if (expression == null)
-			{
-				throw new ArgumentNullException("expression");
-			}
-			this.provider = provider.For<T>();
-			this.provider.AfterQueryExecuted(UpdateQueryStats);
-			this.expression = expression;
-			this.queryStats = queryStats;
+			this.expression = expression ?? Expression.Constant(this);
 		}
 
 		private void UpdateQueryStats(QueryResult obj)

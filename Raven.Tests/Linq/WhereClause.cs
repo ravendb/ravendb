@@ -40,7 +40,7 @@ namespace Raven.Tests.Linq
 		private RavenQueryInspector<IndexedUser> GetRavenQueryInspector()
 		{
 			return new RavenQueryInspector<IndexedUser>(
-				new RavenQueryProvider<IndexedUser>(new FakeDocumentQueryGenerator(), null, ravenQueryStatistics), ravenQueryStatistics, null, null);
+				new RavenQueryProvider<IndexedUser>(new FakeDocumentQueryGenerator(), null, ravenQueryStatistics, null, null), ravenQueryStatistics, null, null, null);
 		}
 
 		[Fact]

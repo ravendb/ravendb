@@ -7,6 +7,10 @@ using System;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using Raven.Client.Client;
+#if !NET_3_5
+using Raven.Client.Client.Async;
+#endif
 using Raven.Client.Document;
 using Raven.Database.Data;
 
@@ -20,6 +24,12 @@ namespace Raven.Client.Linq
 		private readonly IDocumentQueryGenerator queryGenerator;
 		private readonly string indexName;
 		private readonly RavenQueryStatistics ravenQueryStatistics;
+#if !SILVERLIGHT
+		private readonly IDatabaseCommands databaseCommands;
+#endif
+#if !NET_3_5
+		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
+#endif
 		private Action<IDocumentQueryCustomization> customizeQuery;
 		private Action<QueryResult> afterQueryExecuted;
 
@@ -56,7 +66,14 @@ namespace Raven.Client.Linq
 			if (typeof(T) == typeof(S))
 				return this;
 
-			var ravenQueryProvider = new RavenQueryProvider<S>(queryGenerator, indexName, ravenQueryStatistics);
+			var ravenQueryProvider = new RavenQueryProvider<S>(queryGenerator, indexName, ravenQueryStatistics
+#if !SILVERLIGHT
+				, databaseCommands
+#endif
+#if !NET_3_5
+				, asyncDatabaseCommands
+#endif
+			);
 			ravenQueryProvider.Customize(customizeQuery);
 			return ravenQueryProvider;
 		}
@@ -64,14 +81,27 @@ namespace Raven.Client.Linq
 		/// <summary>
 		/// Initializes a new instance of the <see cref="RavenQueryProvider&lt;T&gt;"/> class.
 		/// </summary>
-		/// <param name="queryGenerator">The query generator.</param>
-		/// <param name="indexName">Name of the index.</param>
-		/// <param name="ravenQueryStatistics"></param>
-		public RavenQueryProvider(IDocumentQueryGenerator queryGenerator,string indexName, RavenQueryStatistics ravenQueryStatistics)
+		public RavenQueryProvider(
+			IDocumentQueryGenerator queryGenerator,
+			string indexName, 
+			RavenQueryStatistics ravenQueryStatistics
+#if !SILVERLIGHT
+			,IDatabaseCommands databaseCommands
+#endif
+#if !NET_3_5
+, IAsyncDatabaseCommands asyncDatabaseCommands
+#endif
+		)
 		{
 			this.queryGenerator = queryGenerator;
 			this.indexName = indexName;
 			this.ravenQueryStatistics = ravenQueryStatistics;
+#if !SILVERLIGHT
+			this.databaseCommands = databaseCommands;
+#endif
+#if !NET_3_5
+			this.asyncDatabaseCommands = asyncDatabaseCommands;
+#endif
 		}
 
 		/// <summary>
@@ -88,7 +118,14 @@ namespace Raven.Client.Linq
 
 		IQueryable<S> IQueryProvider.CreateQuery<S>(Expression expression)
 		{
-			return new RavenQueryInspector<S>(this, expression, ravenQueryStatistics);
+			return new RavenQueryInspector<S>(this, ravenQueryStatistics, expression
+#if !SILVERLIGHT
+				, databaseCommands
+#endif
+#if !NET_3_5
+				, asyncDatabaseCommands
+#endif
+			);
 		}
 
 		IQueryable IQueryProvider.CreateQuery(Expression expression)

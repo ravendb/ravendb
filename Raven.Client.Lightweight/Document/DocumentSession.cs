@@ -202,9 +202,13 @@ namespace Raven.Client.Document
 		public IRavenQueryable<T> Query<T>(string indexName)
 		{
 			var ravenQueryStatistics = new RavenQueryStatistics();
-			return new RavenQueryInspector<T>(new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics),ravenQueryStatistics, DatabaseCommands
+			return new RavenQueryInspector<T>(new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, DatabaseCommands
 #if !NET_3_5
-				, asyncDatabaseCommands
+				, AsyncDatabaseCommands
+#endif
+				),ravenQueryStatistics, null,  DatabaseCommands
+#if !NET_3_5
+				, AsyncDatabaseCommands
 #endif
 					);
 		}
@@ -405,6 +409,7 @@ namespace Raven.Client.Document
 #endif
 				), 
 				ravenQueryStatistics,
+				null,
 				Advanced.DatabaseCommands
 #if !NET_3_5
 				, Advanced.AsyncDatabaseCommands
