@@ -10,6 +10,79 @@ properties {
   $uploader = "..\Uploader\S3Uploader.exe"
 }
 
+$web_dlls = @(   "Raven.Abstractions.???",
+  "Raven.Web.???",
+  "log4net.???",
+  "Newtonsoft.Json.???",
+  "Lucene.Net.???",
+  "Spatial.Net.???",
+  "SpellChecker.Net.???",
+  "ICSharpCode.NRefactory.???",
+  "Rhino.Licensing.???",
+  "Esent.Interop.???",
+  "Raven.Database.???",
+  "Raven.Http.???",
+  "Raven.Storage.Esent.???",
+  "Raven.Storage.Managed.???",
+  "Raven.Munin.???"
+  );
+  
+$server_files = @(   "Raven.Server.exe",
+  "log4net.???",
+  "Newtonsoft.Json.???",
+  "Lucene.Net.???",
+  "Spatial.Net.???",
+  "SpellChecker.Net.???",
+  "ICSharpCode.NRefactory.???",
+  "Rhino.Licensing.???",
+  "Esent.Interop.???",
+  "Raven.Abstractions.???",
+  "Raven.Database.???",
+  "Raven.Http.???",
+  "Raven.Storage.Esent.???",
+  "Raven.Storage.Managed.???",
+  "Raven.Munin.???"
+  );
+  
+$client_dlls_3_5 = @(   "Newtonsoft.Json.???",
+  "Raven.Abstractions-3.5.???",
+	"Raven.Client.Lightweight-3.5.???",
+  "MissingBitsFromClientProfile.???"
+   );
+   
+$client_dlls = @(   "Newtonsoft.Json.???",
+  "Raven.Abstractions.???",
+	"Raven.Client.Lightweight.???",
+  "MissingBitsFromClientProfile.???",
+  "AsyncCtpLibrary.???"
+   );
+   
+$all_client_dlls = @(      "Raven.Client.Lightweight.???",
+    "Raven.Client.Embedded.???",
+    "Raven.Abstractions.???",
+    "Raven.Http.???",
+    "Raven.Database.???",
+    "Raven.Http.???",
+    "Esent.Interop.???",
+    "ICSharpCode.NRefactory.???",
+    "Lucene.Net.???",
+    "Spatial.Net.???",
+    "SpellChecker.Net.???",
+    "log4net.???",
+    "Newtonsoft.Json.???",
+    "Raven.Storage.Esent.???",
+    "Raven.Storage.Managed.???",
+    "Raven.Munin.???",
+    "AsyncCtpLibrary.???"
+    );
+    
+$test_prjs = @(   "Raven.Munin.Tests.dll",
+  "Raven.Tests.dll",
+  "Raven.Scenarios.dll",
+  "Raven.Client.VisualBasic.Tests.dll",
+  "Raven.Bundles.Tests.dll"
+  );
+
 include .\psake_ext.ps1
 
 task default -depends OpenSource,Release
@@ -74,7 +147,7 @@ task Init -depends EnsureMunin, Verify40, Clean {
 	
 	copy $tools_dir\xUnit\*.* $build_dir
 	
-	exec { .\Utilities\Binaries\Raven.Silverlighter.exe .\Raven.Client.Silverlight\Raven.Client.Silverlight.csproj .\Raven.Abstractions\Raven.Abstractions.csproj .\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj}
+	# exec { .\Utilities\Binaries\Raven.Silverlighter.exe .\Raven.Client.Silverlight\Raven.Client.Silverlight.csproj .\Raven.Abstractions\Raven.Abstractions.csproj .\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj}
 	
 	if($global:commercial) {
 		exec { .\Utilities\Binaries\Raven.ProjectRewriter.exe commercial }
@@ -108,11 +181,9 @@ task Compile -depends Init {
 task Test -depends Compile {
   $old = pwd
   cd $build_dir
-  exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\Raven.Munin.Tests.dll" } 
-  exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\Raven.Tests.dll" } 
-  exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\Raven.Scenarios.dll" }
-  exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\Raven.Client.VisualBasic.Tests.dll" }
-  exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\Raven.Bundles.Tests.dll" }
+  foreach($tstPrj in $test_prjs) {
+    exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\$tstPrj" } 
+  }
   cd $old
 }
 
@@ -179,24 +250,10 @@ task CleanOutputDirectory {
 }
 
 task CopyEmbeddedClient { 
-	cp $build_dir\Raven.Client.Lightweight.??? $build_dir\Output\EmbeddedClient
-	cp $build_dir\Raven.Client.Lightweight.xml $build_dir\Output\EmbeddedClient
-	cp $build_dir\Raven.Client.Embedded.??? $build_dir\Output\EmbeddedClient
-	cp $build_dir\Raven.Client.Embedded.xml $build_dir\Output\EmbeddedClient
-	cp $build_dir\Raven.Abstractions.??? $build_dir\Output\EmbeddedClient
-	cp $build_dir\Raven.Http.??? $build_dir\Output\EmbeddedClient
-	cp $build_dir\Raven.Database.??? $build_dir\Output\EmbeddedClient
-	cp $build_dir\Raven.Http.??? $build_dir\Output\EmbeddedClient
-	cp $build_dir\Esent.Interop.??? $build_dir\Output\EmbeddedClient
-	cp $build_dir\ICSharpCode.NRefactory.??? $build_dir\Output\EmbeddedClient
-	cp $build_dir\Lucene.Net.??? $build_dir\Output\EmbeddedClient
-	cp $build_dir\Spatial.Net.??? $build_dir\Output\EmbeddedClient
-	cp $build_dir\SpellChecker.Net.??? $build_dir\Output\EmbeddedClient
-	cp $build_dir\log4net.??? $build_dir\Output\EmbeddedClient
-	cp $build_dir\Newtonsoft.Json.??? $build_dir\Output\EmbeddedClient
-  cp $build_dir\Raven.Storage.Esent.??? $build_dir\Output\EmbeddedClient
-	cp $build_dir\Raven.Storage.Managed.??? $build_dir\Output\EmbeddedClient
-	cp $build_dir\Raven.Munin.??? $build_dir\Output\EmbeddedClient
+
+  foreach($client_dll in $all_client_dlls) {
+    cp "$build_dir\$client_dll" $build_dir\Output\EmbeddedClient
+  }
 }
 
 task CopySmuggler { 
@@ -204,37 +261,22 @@ task CopySmuggler {
 }
 
 task CopyClient {
-	cp $build_dir\Newtonsoft.Json.??? $build_dir\Output\Client
-  cp $build_dir\Raven.Abstractions.??? $build_dir\Output\Client
-	cp $build_dir\Raven.Client.Lightweight.??? $build_dir\Output\Client
-	cp $build_dir\MissingBitsFromClientProfile.??? $build_dir\Output\Client
+  foreach($client_dll in $client_dlls) {
+    cp "$build_dir\$client_dll" $build_dir\Output\Client
+  }
 }
 
 task CopyClient35 {
-  cp $build_dir\MissingBitsFromClientProfile.??? $build_dir\Output\Client-3.5
-	cp $build_dir\Newtonsoft.Json.??? $build_dir\Output\Client-3.5
-	cp $build_dir\Raven.Abstractions-3.5.??? $build_dir\Output\Client-3.5
-	cp $build_dir\Raven.Client.Lightweight-3.5.??? $build_dir\Output\Client-3.5
+  foreach($client_dll in $client_dlls_3_5) {
+    cp "$build_dir\$client_dll" $build_dir\Output\Client-3.5
+  }
 }
 
 task CopyWeb { 
-	cp $build_dir\Raven.Abstractions.??? $build_dir\Output\Web\bin
-	cp $build_dir\Raven.Web.??? $build_dir\Output\Web\bin
-	cp $build_dir\log4net.??? $build_dir\Output\Web\bin
-	cp $build_dir\Newtonsoft.Json.??? $build_dir\Output\Web\bin
-	cp $build_dir\Lucene.Net.??? $build_dir\Output\Web\bin
-	cp $build_dir\Spatial.Net.??? $build_dir\Output\Web\bin
-	cp $build_dir\SpellChecker.Net.??? $build_dir\Output\Web\bin
-	cp $build_dir\ICSharpCode.NRefactory.??? $build_dir\Output\Web\bin
-	cp $build_dir\Rhino.Licensing.??? $build_dir\Output\Web\bin
-	cp $build_dir\Esent.Interop.??? $build_dir\Output\Web\bin
-	cp $build_dir\Raven.Database.??? $build_dir\Output\Web\bin
-	cp $build_dir\Raven.Http.??? $build_dir\Output\Web\bin
-	cp $build_dir\Raven.Storage.Esent.??? $build_dir\Output\Web\bin
-	cp $build_dir\Raven.Storage.Managed.??? $build_dir\Output\Web\bin
-	cp $build_dir\Raven.Munin.??? $build_dir\Output\Web\bin	
+  foreach($web_dll in $web_dlls) {
+    cp "$build_dir\$web_dll" $build_dir\Output\Web\bin
+  }
 	cp $base_dir\DefaultConfigs\web.config $build_dir\Output\Web\web.config
-	
 }
 
 task CopyBundles {
@@ -244,78 +286,13 @@ task CopyBundles {
 }
 
 task CopyServer {
-	cp $build_dir\Raven.Server.exe $build_dir\Output\Server
-	cp $build_dir\log4net.??? $build_dir\Output\Server
-	cp $build_dir\Newtonsoft.Json.??? $build_dir\Output\Server
-	cp $build_dir\Lucene.Net.??? $build_dir\Output\Server
-	cp $build_dir\Spatial.Net.??? $build_dir\Output\Server
-	cp $build_dir\SpellChecker.Net.??? $build_dir\Output\Server
-	cp $build_dir\ICSharpCode.NRefactory.??? $build_dir\Output\Server
-	cp $build_dir\Rhino.Licensing.??? $build_dir\Output\Server
-	cp $build_dir\Esent.Interop.??? $build_dir\Output\Server
-	cp $build_dir\Raven.Abstractions.??? $build_dir\Output\Server
-	cp $build_dir\Raven.Database.??? $build_dir\Output\Server
-	cp $build_dir\Raven.Http.??? $build_dir\Output\Server
-	cp $build_dir\Raven.Storage.Esent.??? $build_dir\Output\Server
-	cp $build_dir\Raven.Storage.Managed.??? $build_dir\Output\Server
-	cp $build_dir\Raven.Munin.??? $build_dir\Output\Server
+   foreach($server_file in $server_files) {
+    cp "$build_dir\$server_file" $build_dir\Output\Server
+  }
+	
 	cp $base_dir\DefaultConfigs\RavenDb.exe.config $build_dir\Output\Server\Raven.Server.exe.config
 }
 
-task CreateNupack {
-	del $base_dir\*.nupkg
-	remove-item $build_dir\NuPack -force -recurse -erroraction silentlycontinue
-	mkdir $build_dir\NuPack
-	mkdir $build_dir\NuPack\Lib
-	mkdir $build_dir\NuPack\Lib\3.5
-	mkdir $build_dir\NuPack\Lib\4.0
-	mkdir $build_dir\NuPack\Tools
-	
-	$nupack = [xml](get-content $base_dir\RavenDB.nuspec)
-	
-	$nupack.package.metadata.version = "$version.$env:buildlabel"
-
-	$writerSettings = new-object System.Xml.XmlWriterSettings
-	$writerSettings.OmitXmlDeclaration = $true
-	$writerSettings.NewLineOnAttributes = $true
-	$writerSettings.Indent = $true
-	
-	$writer = [System.Xml.XmlWriter]::Create("$build_dir\Nupack\RavenDB.nuspec", $writerSettings)
-	
-	$nupack.WriteTo($writer)
-	$writer.Flush()
-	$writer.Close()
-	
-	cp $build_dir\Newtonsoft.Json.??? $build_dir\NuPack\Lib\3.5
-	cp $build_dir\Raven.Client.Lightweight-3.5.??? $build_dir\NuPack\Lib\3.5
-	cp $build_dir\Raven.Client.Lightweight-3.5.xml $build_dir\NuPack\Lib\3.5
-	cp $build_dir\Raven.Abstractions-3.5.??? $build_dir\NuPack\Lib\3.5
-	cp $build_dir\MissingBitsFromClientProfile.??? $build_dir\NuPack\Lib\3.5
-	
-	cp $build_dir\Newtonsoft.Json.??? $build_dir\NuPack\Lib\4.0
-	cp $build_dir\Raven.Client.Lightweight.??? $build_dir\NuPack\Lib\4.0
-	cp $build_dir\Raven.Abstractions.??? $build_dir\NuPack\Lib\4.0
-	cp $build_dir\Raven.Client.Lightweight.xml $build_dir\NuPack\Lib\4.0
-	cp $build_dir\MissingBitsFromClientProfile.??? $build_dir\NuPack\Lib\4.0
-	
-	cp $build_dir\Raven.Server.??? $build_dir\NuPack\Tools
-	cp $build_dir\log4net.??? $build_dir\NuPack\Tools
-	cp $build_dir\Newtonsoft.Json.??? $build_dir\NuPack\Tools
-	cp $build_dir\Lucene.Net.??? $build_dir\NuPack\Tools
-	cp $build_dir\Spatial.Net.??? $build_dir\NuPack\Tools
-	cp $build_dir\SpellChecker.Net.??? $build_dir\NuPack\Tools
-	cp $build_dir\ICSharpCode.NRefactory.??? $build_dir\NuPack\Tools
-	cp $build_dir\Rhino.Licensing.??? $build_dir\NuPack\Toolsr
-	cp $build_dir\Esent.Interop.??? $build_dir\NuPack\Tools
-	cp $build_dir\Raven.Database.??? $build_dir\NuPack\Tools
-	cp $build_dir\Raven.Http.??? $build_dir\NuPack\Tools
-	cp $build_dir\Raven.Storage.Esent.??? $build_dir\NuPack\Tools
-	cp $build_dir\Raven.Storage.Managed.??? $build_dir\NuPack\Tools
-	cp $build_dir\Raven.Munin.??? $build_dir\NuPack\Tools
-	cp $base_dir\DefaultConfigs\RavenDb.exe.config $build_dir\NuPack\Tools\Raven.Server.exe.config
-	
-	& $tools_dir\NuPack.exe $build_dir\NuPack\RavenDB.nuspec
-}
 
 task CreateDocs {
 	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
@@ -385,7 +362,6 @@ task DoRelease -depends Compile, `
 	CopyServer, `
 	CopyDocFiles, `
 	CopySamples, `
-	CreateNupack, `
 	ZipOutput, `
 	ResetBuildArtifcats {	
 	Write-Host "Done building RavenDB"
