@@ -179,6 +179,7 @@
     <Compile Include="Bugs\Queries\DynamicMapReduce.cs" />
     <Compile Include="Bugs\Queries\Includes.cs" />
     <Compile Include="Bugs\Queries\Projections.cs" />
+    <Compile Include="Bugs\Queries\RangeQueries.cs" />
     <Compile Include="Bugs\Queries\TermsLocal.cs" />
     <Compile Include="Bugs\Queries\TermsRemote.cs" />
     <Compile Include="Bugs\QueryAfterAdHocIndexIsReset.cs" />

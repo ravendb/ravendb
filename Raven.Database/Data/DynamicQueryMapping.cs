@@ -289,7 +289,8 @@ namespace Raven.Database.Data
 					FieldType = fieldType
 				});
 
-				fields.Add(fieldName);
+				if (fields.Contains(fieldName + "_Range") == false)
+					fields.Add(fieldName);
 			}
 			return sortInfo.ToArray();
 		}

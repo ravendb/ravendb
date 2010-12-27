@@ -56,10 +56,13 @@ namespace Raven.Client.Document
 		/// The fields to order the results by
 		/// </summary>
 		protected string[] orderByFields = new string[0];
+
+
 		/// <summary>
 		/// The types to sort the fields by (NULL if not specified)
 		/// </summary>
-		protected Type[] orderByTypes = new Type[0];
+		protected HashSet<KeyValuePair<string, Type>> sortByHints = new HashSet<KeyValuePair<string, Type>>();
+
 		/// <summary>
 		/// The page size to use when querying the index
 		/// </summary>
@@ -201,7 +204,7 @@ namespace Raven.Client.Document
 			session = other.session;
 			cutoff = other.cutoff;
 			orderByFields = other.orderByFields;
-			orderByTypes = other.orderByTypes;
+			sortByHints = other.sortByHints;
 			pageSize = other.pageSize;
 			queryText = other.queryText;
 			start = other.start;
@@ -255,7 +258,7 @@ namespace Raven.Client.Document
 				timeout = timeout,
 				cutoff = cutoff,
 				waitForNonStaleResults = waitForNonStaleResults,
-				orderByTypes = orderByTypes,
+				sortByHints = sortByHints,
 				orderByFields = orderByFields,
 				groupByFields = groupByFields,
 				aggregationOp = aggregationOp
@@ -359,7 +362,7 @@ namespace Raven.Client.Document
 		{
 			fieldName = descending ? "-" + fieldName : fieldName;
 			orderByFields = orderByFields.Concat(new[] { fieldName }).ToArray();
-			orderByTypes = orderByTypes.Concat(new[] { fieldType }).ToArray();
+			sortByHints.Add(new KeyValuePair<string, Type>(fieldName, fieldType));
 			return this;
 		}
 
@@ -646,6 +649,9 @@ If you really want to do in memory filtering on the data returned from the query
 				queryText.Append(" ");
 			}
 
+			if ((start ?? end) != null)
+				sortByHints.Add(new KeyValuePair<string, Type>(fieldName, (start ?? end).GetType()));
+
 			NegateIfNeeded();
 
 			queryText.Append(fieldName).Append(":{");
@@ -670,6 +676,8 @@ If you really want to do in memory filtering on the data returned from the query
 			{
 				queryText.Append(" ");
 			}
+			if ((start ?? end) != null)
+				sortByHints.Add(new KeyValuePair<string, Type>(fieldName, (start ?? end).GetType()));
 
 			NegateIfNeeded();
 
@@ -884,7 +892,6 @@ If you really want to do in memory filtering on the data returned from the query
 		public IDocumentQuery<T> OrderBy(params string[] fields)
 		{
 			orderByFields = orderByFields.Concat(fields).ToArray();
-			orderByTypes = new Type[orderByFields.Length];
 			return this;
 		}
 
@@ -1118,17 +1125,10 @@ If you really want to do in memory filtering on the data returned from the query
 
 		private void AddOperationHeaders(Action<string, string> addOperationHeader)
 		{
-			for (int x = 0; x < this.orderByFields.Length; x++)
+			foreach (var sortByHint in sortByHints)
 			{
-				String field = orderByFields[x];
-				Type fieldType = orderByTypes[x];
-				if (fieldType == null)
-				{
-					continue;
-				}
-
 				addOperationHeader(
-					string.Format("SortHint_{0}", field.Trim('-')), FromPrimitiveTypestring(fieldType.Name).ToString());
+					string.Format("SortHint_{0}", sortByHint.Key.Trim('-')), FromPrimitiveTypestring(sortByHint.Value.Name).ToString());
 			}
 		}
 
