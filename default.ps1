@@ -10,78 +10,21 @@ properties {
   $uploader = "..\Uploader\S3Uploader.exe"
 }
 
-$web_dlls = @(   "Raven.Abstractions.???",
-  "Raven.Web.???",
-  "log4net.???",
-  "Newtonsoft.Json.???",
-  "Lucene.Net.???",
-  "Spatial.Net.???",
-  "SpellChecker.Net.???",
-  "ICSharpCode.NRefactory.???",
-  "Rhino.Licensing.???",
-  "Esent.Interop.???",
-  "Raven.Database.???",
-  "Raven.Http.???",
-  "Raven.Storage.Esent.???",
-  "Raven.Storage.Managed.???",
-  "Raven.Munin.???"
-  );
+$web_dlls = @( "Raven.Abstractions.???", "Raven.Web.???", "log4net.???", "Newtonsoft.Json.???", "Lucene.Net.???", "Spatial.Net.???", "SpellChecker.Net.???", "ICSharpCode.NRefactory.???", `
+  "Rhino.Licensing.???", "Esent.Interop.???", "Raven.Database.???", "Raven.Http.???", "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???" );
   
-$server_files = @(   "Raven.Server.exe",
-  "log4net.???",
-  "Newtonsoft.Json.???",
-  "Lucene.Net.???",
-  "Spatial.Net.???",
-  "SpellChecker.Net.???",
-  "ICSharpCode.NRefactory.???",
-  "Rhino.Licensing.???",
-  "Esent.Interop.???",
-  "Raven.Abstractions.???",
-  "Raven.Database.???",
-  "Raven.Http.???",
-  "Raven.Storage.Esent.???",
-  "Raven.Storage.Managed.???",
-  "Raven.Munin.???"
-  );
+$server_files = @( "Raven.Server.exe", "log4net.???", "Newtonsoft.Json.???", "Lucene.Net.???", "Spatial.Net.???", "SpellChecker.Net.???", "ICSharpCode.NRefactory.???", "Rhino.Licensing.???", `
+  "Esent.Interop.???", "Raven.Abstractions.???", "Raven.Database.???", "Raven.Http.???", "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???" );
   
-$client_dlls_3_5 = @(   "Newtonsoft.Json.???",
-  "Raven.Abstractions-3.5.???",
-	"Raven.Client.Lightweight-3.5.???",
-  "MissingBitsFromClientProfile.???"
-   );
+$client_dlls_3_5 = @( "Newtonsoft.Json.???", "Raven.Abstractions-3.5.???", "Raven.Client.Lightweight-3.5.???", "MissingBitsFromClientProfile.???" );
    
-$client_dlls = @(   "Newtonsoft.Json.???",
-  "Raven.Abstractions.???",
-	"Raven.Client.Lightweight.???",
-  "MissingBitsFromClientProfile.???",
-  "AsyncCtpLibrary.???"
-   );
+$client_dlls = @( "Newtonsoft.Json.???", "Raven.Abstractions.???", "Raven.Client.Lightweight.???", "MissingBitsFromClientProfile.???", "AsyncCtpLibrary.???" );
    
-$all_client_dlls = @(      "Raven.Client.Lightweight.???",
-    "Raven.Client.Embedded.???",
-    "Raven.Abstractions.???",
-    "Raven.Http.???",
-    "Raven.Database.???",
-    "Raven.Http.???",
-    "Esent.Interop.???",
-    "ICSharpCode.NRefactory.???",
-    "Lucene.Net.???",
-    "Spatial.Net.???",
-    "SpellChecker.Net.???",
-    "log4net.???",
-    "Newtonsoft.Json.???",
-    "Raven.Storage.Esent.???",
-    "Raven.Storage.Managed.???",
-    "Raven.Munin.???",
-    "AsyncCtpLibrary.???"
-    );
+$all_client_dlls = @( "Raven.Client.Lightweight.???", "Raven.Client.Embedded.???", "Raven.Abstractions.???", "Raven.Http.???", "Raven.Database.???", "Raven.Http.???", `
+    "Esent.Interop.???", "ICSharpCode.NRefactory.???", "Lucene.Net.???", "Spatial.Net.???", "SpellChecker.Net.???", "log4net.???", "Newtonsoft.Json.???", `
+    "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???", "AsyncCtpLibrary.???" );
     
-$test_prjs = @(   "Raven.Munin.Tests.dll",
-  "Raven.Tests.dll",
-  "Raven.Scenarios.dll",
-  "Raven.Client.VisualBasic.Tests.dll",
-  "Raven.Bundles.Tests.dll"
-  );
+$test_prjs = @("Raven.Munin.Tests.dll", "Raven.Tests.dll", "Raven.Scenarios.dll", "Raven.Client.VisualBasic.Tests.dll", "Raven.Bundles.Tests.dll"  );
 
 include .\psake_ext.ps1
 
@@ -142,8 +85,8 @@ task Init -depends EnsureMunin, Verify40, Clean {
 			-clsCompliant "true"
 	}
 		
-	new-item $release_dir -itemType directory
-	new-item $buildartifacts_dir -itemType directory
+	new-item $release_dir -itemType directory -ErrorAction SilentlyContinue
+	new-item $buildartifacts_dir -itemType directory -ErrorAction SilentlyContinue
 	
 	copy $tools_dir\xUnit\*.* $build_dir
 	
@@ -178,14 +121,17 @@ task Compile -depends Init {
     
 }
 
-task Test -depends Compile {
+task Test -depends Compile{
   $old = pwd
   cd $build_dir
-  foreach($tstPrj in $test_prjs) {
-    exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\$tstPrj" } 
+  Write-Host $test_prjs
+  foreach($test_prj in $test_prjs) {
+    Write-Host "Testing $build_dir\$test_prj"
+    exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\$test_prj" } 
   }
   cd $old
 }
+
 
 task ReleaseNoTests -depends OpenSource,DoRelease {
 

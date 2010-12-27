@@ -108,9 +108,7 @@ namespace Raven.Client.Shard
 		{
 			get { throw new NotSupportedException("Sharded document store doesn't have a database commands. you need to explicitly use the shard instances to get access to the database commands"); }
 		}
-#endif
-
-#if !SILVERLIGHT
+		
 		/// <summary>
 		/// Opens the async session.
 		/// </summary>
@@ -120,6 +118,10 @@ namespace Raven.Client.Shard
 			throw new NotSupportedException("Shared document store doesn't support async operations");
 		}
 
+#endif
+
+#if !SILVERLIGHT
+		
 		/// <summary>
 		/// Opens the session.
 		/// </summary>
