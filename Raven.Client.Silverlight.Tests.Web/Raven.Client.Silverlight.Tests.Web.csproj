@@ -13,7 +13,8 @@
     <RootNamespace>Raven.Client.Silverlight.Tests.Web</RootNamespace>
     <AssemblyName>Raven.Client.Silverlight.Tests.Web</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
-    <SilverlightApplicationList>{85051094-F993-4ED2-8FD1-731ED17817FC}|..\Raven.Client.Silverlight.Tests\Raven.Client.Silverlight.Tests.csproj|ClientBin|False</SilverlightApplicationList>
+    <SilverlightApplicationList>
+    </SilverlightApplicationList>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
