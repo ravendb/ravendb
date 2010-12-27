@@ -8,12 +8,12 @@ using System;
 namespace Raven.Abstractions.Data
 {
 	[Flags]
-    public enum AggregationOperation
-    {
-        None = 0,
-        Count = 1,
+	public enum AggregationOperation
+	{
+		None = 0,
+		Count = 1,
 
 
 		Dynamic = 0x8000000
-    }
+	}
 }
