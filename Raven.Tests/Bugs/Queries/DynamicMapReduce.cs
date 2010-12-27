@@ -34,6 +34,126 @@ namespace Raven.Tests.Bugs.Queries
 		}
 
 		[Fact]
+		public void CanGroupByNestedProperty_Dynamic()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var s = store.OpenSession())
+				{
+					for (int i = 0; i < 10; i++)
+					{
+						s.Store(new { Name = new { First = i % 2 == 0 ? "Ayende" : "Oren" } });
+					}
+					s.SaveChanges();
+				}
+				using (var s = store.OpenSession())
+				{
+					var objects = s.Advanced.LuceneQuery<dynamic>()
+						.GroupBy(AggregationOperation.Count | AggregationOperation.Dynamic, "Name.First")
+						.WaitForNonStaleResults()
+						.ToArray();
+
+					Assert.Equal(2, objects.Length);
+
+					Assert.Equal(5, objects[0].Count);
+					Assert.Equal(5, objects[1].Count);
+					Assert.Equal("Ayende", objects[0].NameFirst);
+					Assert.Equal("Oren", objects[1].NameFirst);
+				}
+			}
+		}
+
+		[Fact]
+		public void CanGroupByCollectionProperty_Dymamic()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var s = store.OpenSession())
+				{
+					for (int i = 0; i < 10; i++)
+					{
+						s.Store(new { Tags = new[] { new { Id = i % 2 } } });
+					}
+					s.SaveChanges();
+				}
+				using (var s = store.OpenSession())
+				{
+					var objects = s.Advanced.LuceneQuery<dynamic>()
+						.GroupBy(AggregationOperation.Count | AggregationOperation.Dynamic, "Tags,Id")
+						.WaitForNonStaleResults()
+						.ToArray();
+
+					Assert.Equal(2, objects.Length);
+
+					Assert.Equal(5, objects[0].Count);
+					Assert.Equal(5, objects[1].Count);
+					Assert.Equal("0", objects[0].TagsId);
+					Assert.Equal("1", objects[1].TagsId);
+				}
+			}
+		}
+
+		[Fact]
+		public void CanGroupByNestedProperty()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var s = store.OpenSession())
+				{
+					for (int i = 0; i < 10; i++)
+					{
+						s.Store(new {Name = new {First = i%2 == 0 ? "Ayende" : "Oren"}});
+					}
+					s.SaveChanges();
+				}
+				using (var s = store.OpenSession())
+				{
+					var objects = s.Advanced.LuceneQuery<dynamic>()
+						.GroupBy(AggregationOperation.Count, "Name.First")
+						.WaitForNonStaleResults()
+						.ToArray();
+
+					Assert.Equal(2, objects.Length);
+
+					Assert.Equal("5", objects[0].Count);
+					Assert.Equal("5", objects[1].Count);
+					Assert.Equal("Ayende", objects[0].NameFirst);
+					Assert.Equal("Oren", objects[1].NameFirst);
+				}
+			}
+		}
+
+		[Fact]
+		public void CanGroupByCollectionProperty()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var s = store.OpenSession())
+				{
+					for (int i = 0; i < 10; i++)
+					{
+						s.Store(new {Tags = new[] {new {Id = i%2}}});
+					}
+					s.SaveChanges();
+				}
+				using (var s = store.OpenSession())
+				{
+					var objects = s.Advanced.LuceneQuery<dynamic>()
+						.GroupBy(AggregationOperation.Count, "Tags,Id")
+						.WaitForNonStaleResults()
+						.ToArray();
+
+					Assert.Equal(2, objects.Length);
+
+					Assert.Equal("5", objects[0].Count);
+					Assert.Equal("5", objects[1].Count);
+					Assert.Equal("0", objects[0].TagsId);
+					Assert.Equal("1", objects[1].TagsId);
+				}
+			}
+		}
+
+		[Fact]
 		public void CanDynamicallyQueryOverItemCountByName()
 		{
 			using (var store = NewDocumentStore())

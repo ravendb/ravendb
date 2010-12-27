@@ -256,6 +256,14 @@ namespace Raven.Database.Data
 					From = x,
 					To = x.Replace(".", "").Replace(",", "")
 				}).ToArray();
+				if (GroupByItems != null && DynamicAggregation)
+				{
+					Items = Items.Concat(GroupByItems).ToArray();
+					var groupBys = GroupByItems.Select(x=>x.To).ToArray();
+					query.FieldsToFetch = query.FieldsToFetch == null ?
+						groupBys :
+						query.FieldsToFetch.Concat(groupBys).ToArray();
+				}
 			}
 
 			
