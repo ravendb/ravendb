@@ -30,8 +30,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Client.Lightweight.g.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Abstractions.g.3.5", "Raven.Abstractions\Raven.Abstractions.g.3.5.csproj", "{4C18FC25-0B1E-42E3-A423-3A99F1AC57EE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Client.Silverlight", "Raven.Client.Silverlight\Raven.Client.Silverlight.csproj", "{8A1DB308-D56B-49BC-A421-A2AB32617215}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
