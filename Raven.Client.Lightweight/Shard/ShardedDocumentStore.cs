@@ -112,6 +112,15 @@ namespace Raven.Client.Shard
 
 #if !SILVERLIGHT
 		/// <summary>
+		/// Opens the async session.
+		/// </summary>
+		/// <returns></returns>
+		public IAsyncDocumentSession OpenAsyncSession()
+		{
+			throw new NotSupportedException("Shared document store doesn't support async operations");
+		}
+
+		/// <summary>
 		/// Opens the session.
 		/// </summary>
 		/// <returns></returns>

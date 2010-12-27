@@ -69,6 +69,12 @@ namespace Raven.Client
 		/// </summary>
 		/// <value>The async database commands.</value>
 		IAsyncDatabaseCommands AsyncDatabaseCommands { get; }
+
+		/// <summary>
+		/// Opens the async session.
+		/// </summary>
+		/// <returns></returns>
+		IAsyncDocumentSession OpenAsyncSession();
 #endif
 
 #if !SILVERLIGHT

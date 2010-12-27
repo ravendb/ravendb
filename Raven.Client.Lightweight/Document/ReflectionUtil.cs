@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Text;
+using System.Linq;
 
 namespace Raven.Client.Document
 {
@@ -20,7 +21,8 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public static string GetFullNameWithoutVersionInformation(Type entityType)
 		{
-			var asmName = entityType.Assembly.GetName().Name;
+			var fullName = entityType.Assembly.FullName ?? "";
+			var asmName = fullName.Split(new[] {", Version"}, StringSplitOptions.RemoveEmptyEntries).First();
 			if (entityType.IsGenericType)
 			{
 				var genericTypeDefinition = entityType.GetGenericTypeDefinition();
