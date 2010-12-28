@@ -77,11 +77,12 @@ namespace Raven.Samples.PrepareForRelease
 		{
 			var fullPath = Path.GetFullPath(libPath);
 			var searchPattern = Path.GetExtension(refName) == ".dll" ? refName : refName + ".*";
-			var filePath = Directory.GetFiles(libPath, searchPattern, SearchOption.AllDirectories)
+			var filePath = Directory.GetFiles(fullPath, searchPattern, SearchOption.AllDirectories)
 				.Where(x=>x.ToUpperInvariant().Contains("SAMPLES") == false)
 				.FirstOrDefault();
-			if (filePath == null)
-				return null;
+            if (filePath == null)
+                throw new InvalidOperationException("Could not file a file matching '" + searchPattern + "' in: " +
+                    libPath);
 			filePath = Path.GetFullPath(filePath);
 			return filePath.Substring(fullPath.Length + 1);
 		}
