@@ -25,6 +25,7 @@ namespace Raven.Samples.PrepareForRelease
 				var ns = XNamespace.Get("http://schemas.microsoft.com/developer/msbuild/2003");
 				foreach (var projectFile in Directory.GetFiles(Path.GetDirectoryName(slnPath), "*.csproj", SearchOption.AllDirectories))
 				{
+				    Console.WriteLine("Preparing project file: " +projectFile);
 					var prj = XDocument.Load(projectFile);
 
 					foreach (var reference in prj.Descendants(ns + "Reference").ToArray())
