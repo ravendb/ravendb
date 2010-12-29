@@ -538,6 +538,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 					var transformerErrors = new List<string>();
 					IEnumerable<JObject> results;
 					if (viewGenerator != null &&
+						query.SkipTransformResults == false &&
 						viewGenerator.TransformResultsDefinition != null)
 					{
 						var robustEnumerator = new RobustEnumerator

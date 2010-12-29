@@ -239,6 +239,13 @@ namespace Raven.Http.Extensions
 			}
 		}
 
+        public static bool GetSkipTransformResults(this IHttpContext context)
+        {
+            bool result;
+            bool.TryParse(context.Request.QueryString["skipTransformResults"], out result);
+            return result;
+        }
+
 		public static int GetPageSize(this IHttpContext context, int maxPageSize)
 		{
 			int pageSize;
