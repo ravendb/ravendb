@@ -85,7 +85,8 @@ namespace Raven.Database.Impl
 				}
 				if (aggregationOperation != AggregationOperation.None)
 				{
-					fieldsToFetch = fieldsToFetch.Concat(new[] {aggregationOperation.ToString()});
+					var aggOpr = aggregationOperation & ~AggregationOperation.Dynamic;
+					fieldsToFetch = fieldsToFetch.Concat(new[] {aggOpr.ToString()});
 				}
 				foreach (var fieldToFetch in fieldsToFetch)
 				{
@@ -93,6 +94,8 @@ namespace Raven.Database.Impl
 						continue;
 
 					var doc = GetDocumentWithCaching(queryResult.Key);
+					if(doc == null)
+						continue;
 					var token = doc.DataAsJson.SelectTokenWithRavenSyntax(fieldToFetch).ToArray();
 					if (token.Length == 1)
 						queryResult.Projection[fieldToFetch] = token[0];
