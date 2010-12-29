@@ -187,30 +187,36 @@ namespace Raven.Database.Indexing
 				PerFieldAnalyzerWrapper analyzer = null;
 				try
 				{
-					analyzer = CreateAnalyzer(toDispose);
+					analyzer = CreateAnalyzer(new LowerCaseAnalyzer(), toDispose);
 					analyzer = AnalyzerGenerators.Aggregate(analyzer, (currentAnalyzer, generator) =>
 					{
 						var newAnalyzer = generator.GenerateAnalzyerForQuerying(name, indexQuery.Query, currentAnalyzer);
-						if (newAnalyzer != currentAnalyzer && currentAnalyzer != analyzer)
+						if (newAnalyzer != currentAnalyzer)
 							currentAnalyzer.Close();
-						return currentAnalyzer;
+                        DisposeAnalyzerAndFriends(toDispose, currentAnalyzer);
+                        return CreateAnalyzer(newAnalyzer, toDispose); ;
 					});
 					luceneQuery = QueryBuilder.BuildQuery(query, analyzer);
 				}
 				finally
 				{
-					if (analyzer != null)
-						analyzer.Close();
-					foreach (var dispose in toDispose)
-					{
-						dispose();
-					}
+					DisposeAnalyzerAndFriends(toDispose, analyzer);
 				}
 			}
 			return luceneQuery;
 		}
 
-		public abstract void IndexDocuments(AbstractViewGenerator viewGenerator, IEnumerable<object> documents, WorkContext context, IStorageActionsAccessor actions, DateTime minimumTimestamp);
+	    private void DisposeAnalyzerAndFriends(List<Action> toDispose, PerFieldAnalyzerWrapper analyzer)
+	    {
+	        if (analyzer != null)
+	            analyzer.Close();
+	        foreach (var dispose in toDispose)
+	        {
+	            dispose();
+	        }
+	    }
+
+	    public abstract void IndexDocuments(AbstractViewGenerator viewGenerator, IEnumerable<object> documents, WorkContext context, IStorageActionsAccessor actions, DateTime minimumTimestamp);
 
 		
 		protected virtual IndexQueryResult RetrieveDocument(Document document, string[] fieldsToFetch)
@@ -266,7 +272,7 @@ namespace Raven.Database.Indexing
 				{
 					try
 					{
-						analyzer = CreateAnalyzer(toDispose);
+						analyzer = CreateAnalyzer(new LowerCaseAnalyzer(), toDispose);
 					}
 					catch (Exception e)
 					{
@@ -302,10 +308,9 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private PerFieldAnalyzerWrapper CreateAnalyzer(ICollection<Action> toDispose)
+		private PerFieldAnalyzerWrapper CreateAnalyzer(Analyzer defaultAnalyzer, ICollection<Action> toDispose)
 		{
-			var defaultAnalyzer = new LowerCaseAnalyzer();
-			toDispose.Add(defaultAnalyzer.Close);
+		    toDispose.Add(defaultAnalyzer.Close);
 			var perFieldAnalyzerWrapper = new PerFieldAnalyzerWrapper(defaultAnalyzer);
 			foreach (var analyzer in indexDefinition.Analyzers)
 			{
