@@ -324,6 +324,8 @@ namespace Raven.Database.Data
 				{
 					groupBy += "/" + AggregationOperation;
 				}
+				if (DynamicAggregation)
+					groupBy += "Dynamically";
 			}
 
 
