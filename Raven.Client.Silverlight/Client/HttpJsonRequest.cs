@@ -8,6 +8,7 @@ using System.Linq;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using System.Net.Browser;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -97,7 +98,7 @@ namespace Raven.Client.Client
 
 		private HttpJsonRequest(string url, string method, JObject metadata, ICredentials credentials, bool cacheRequest)
 		{
-			webRequest = WebRequest.Create(url);
+			webRequest = WebRequestCreator.ClientHttp.Create(new Uri(url));
 			WriteMetadata(metadata);
 			webRequest.Method = method;
 			if(method != "GET")

@@ -11,6 +11,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Browser;
 using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -281,7 +282,7 @@ namespace Raven.Client.Client.Async
 		public Task<string> PutIndexAsync(string name, IndexDefinition indexDef, bool overwrite)
 		{
 			string requestUri = url + "/indexes/" + name;
-			var webRequest = (HttpWebRequest)WebRequest.Create(requestUri);
+			var webRequest = (HttpWebRequest)WebRequestCreator.ClientHttp.Create(new Uri(requestUri));
 			AddOperationHeaders(webRequest);
 			webRequest.Method = "HEAD";
 			webRequest.Credentials = credentials;
