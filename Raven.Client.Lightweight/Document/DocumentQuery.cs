@@ -545,6 +545,7 @@ If you really want to do in memory filtering on the data returned from the query
 			{
 				queryText.Append(" ");
 			}
+		    NegateIfNeeded();
 			this.queryText.Append("(");
 			return this;
 		}

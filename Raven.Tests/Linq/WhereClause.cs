@@ -136,6 +136,18 @@ namespace Raven.Tests.Linq
 			Assert.Equal("Birthday:{* TO 20100515000000000}", q.ToString());
 		}
 
+        [Fact]
+        public void NegatingSubClauses()
+        {
+            var query = new DocumentQuery<object>(null,null, null,null).Not
+                .OpenSubclause()
+                .WhereEquals("IsPublished", true)
+                .AndAlso()
+                .WhereEquals("Tags.Length", 0)
+                .CloseSubclause();
+            Assert.Equal("-(IsPublished:true AND Tags.Length:0)", query.ToString());
+        }
+
 		[Fact]
 		public void CanUnderstandEqualOnDate()
 		{
