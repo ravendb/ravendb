@@ -53,8 +53,12 @@ namespace Raven.Client.Indexes
 		/// </summary>
 		/// <value>The sort options.</value>
 		public IDictionary<Expression<Func<TReduceResult, object>>, SortOptions> SortOptions { get; set; }
+        /// <summary>
+        /// Get os set the analyzers
+        /// </summary>
+        public IDictionary<Expression<Func<TReduceResult, object>>, string> Analyzers { get; set; }
 
-		/// <summary>
+	    /// <summary>
 		/// Initializes a new instance of the <see cref="IndexDefinition&lt;TDocument, TReduceResult&gt;"/> class.
 		/// </summary>
 		public IndexDefinition()
@@ -62,6 +66,7 @@ namespace Raven.Client.Indexes
 			Stores = new Dictionary<Expression<Func<TReduceResult, object>>, FieldStorage>();
 			Indexes = new Dictionary<Expression<Func<TReduceResult, object>>, FieldIndexing>();
 			SortOptions = new Dictionary<Expression<Func<TReduceResult, object>>, SortOptions>();
+            Analyzers = new Dictionary<Expression<Func<TReduceResult, object>>, string>();
 		}
 
 		/// <summary>
@@ -79,7 +84,8 @@ namespace Raven.Client.Indexes
                 TransformResults = PruneToFailureLinqQueryAsStringToWorkableCode(TransformResults, convention, "results"),
 				Indexes = ConvertToStringDictionary(Indexes),
 				Stores = ConvertToStringDictionary(Stores),
-				SortOptions = ConvertToStringDictionary(SortOptions)
+				SortOptions = ConvertToStringDictionary(SortOptions),
+                Analyzers = ConvertToStringDictionary(Analyzers)
 			};
 		}
 
