@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.Collections.Specialized;
 using System.IO;
 using System.Web;
@@ -56,6 +57,11 @@ namespace Raven.Http.Abstractions
 		public void Close()
 		{
 			response.Close();
+		}
+
+		public void SetPublicCachability()
+		{
+			response.Cache.SetCacheability(HttpCacheability.Public);
 		}
 
 		public string ContentType

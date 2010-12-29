@@ -19,5 +19,6 @@ namespace Raven.Http.Abstractions
 		string ContentType { get; set; }
 		void Redirect(string url);
 		void Close();
+		void SetPublicCachability();
 	}
 }
