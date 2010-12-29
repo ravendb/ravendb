@@ -8,24 +8,23 @@ properties {
   $tools_dir = "$base_dir\Tools"
   $release_dir = "$base_dir\Release"
   $uploader = "..\Uploader\S3Uploader.exe"
-}
-
-$web_dlls = @( "Raven.Abstractions.???", "Raven.Web.???", "log4net.???", "Newtonsoft.Json.???", "Lucene.Net.???", "Spatial.Net.???", "SpellChecker.Net.???", "ICSharpCode.NRefactory.???", `
-  "Rhino.Licensing.???", "Esent.Interop.???", "Raven.Database.???", "Raven.Http.???", "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???" );
   
-$server_files = @( "Raven.Server.exe", "log4net.???", "Newtonsoft.Json.???", "Lucene.Net.???", "Spatial.Net.???", "SpellChecker.Net.???", "ICSharpCode.NRefactory.???", "Rhino.Licensing.???", `
-  "Esent.Interop.???", "Raven.Abstractions.???", "Raven.Database.???", "Raven.Http.???", "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???" );
-  
-$client_dlls_3_5 = @( "Newtonsoft.Json.???", "Raven.Abstractions-3.5.???", "Raven.Client.Lightweight-3.5.???", "MissingBitsFromClientProfile.???" );
-   
-$client_dlls = @( "Newtonsoft.Json.???", "Raven.Abstractions.???", "Raven.Client.Lightweight.???", "MissingBitsFromClientProfile.???", "AsyncCtpLibrary.???" );
-   
-$all_client_dlls = @( "Raven.Client.Lightweight.???", "Raven.Client.Embedded.???", "Raven.Abstractions.???", "Raven.Http.???", "Raven.Database.???", "Raven.Http.???", `
-    "Esent.Interop.???", "ICSharpCode.NRefactory.???", "Lucene.Net.???", "Spatial.Net.???", "SpellChecker.Net.???", "log4net.???", "Newtonsoft.Json.???", `
-    "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???", "AsyncCtpLibrary.???" );
+  $web_dlls = @( "Raven.Abstractions.???", "Raven.Web.???", "log4net.???", "Newtonsoft.Json.???", "Lucene.Net.???", "Spatial.Net.???", "SpellChecker.Net.???", "ICSharpCode.NRefactory.???", `
+    "Rhino.Licensing.???", "Esent.Interop.???", "Raven.Database.???", "Raven.Http.???", "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???" );
     
-$test_prjs = @("Raven.Munin.Tests.dll", "Raven.Tests.dll", "Raven.Scenarios.dll", "Raven.Client.VisualBasic.Tests.dll", "Raven.Bundles.Tests.dll"  );
-
+  $server_files = @( "Raven.Server.exe", "log4net.???", "Newtonsoft.Json.???", "Lucene.Net.???", "Spatial.Net.???", "SpellChecker.Net.???", "ICSharpCode.NRefactory.???", "Rhino.Licensing.???", `
+    "Esent.Interop.???", "Raven.Abstractions.???", "Raven.Database.???", "Raven.Http.???", "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???" );
+    
+  $client_dlls_3_5 = @( "Newtonsoft.Json.???", "Raven.Abstractions-3.5.???", "Raven.Client.Lightweight-3.5.???", "MissingBitsFromClientProfile.???" );
+     
+  $client_dlls = @( "Newtonsoft.Json.???", "Raven.Abstractions.???", "Raven.Client.Lightweight.???", "MissingBitsFromClientProfile.???", "AsyncCtpLibrary.???" );
+     
+  $all_client_dlls = @( "Raven.Client.Lightweight.???", "Raven.Client.Embedded.???", "Raven.Abstractions.???", "Raven.Http.???", "Raven.Database.???", "Raven.Http.???", `
+      "Esent.Interop.???", "ICSharpCode.NRefactory.???", "Lucene.Net.???", "Spatial.Net.???", "SpellChecker.Net.???", "log4net.???", "Newtonsoft.Json.???", `
+      "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???", "AsyncCtpLibrary.???" );
+      
+  $test_prjs = @("Raven.Munin.Tests.dll", "Raven.Tests.dll", "Raven.Scenarios.dll", "Raven.Client.VisualBasic.Tests.dll", "Raven.Bundles.Tests.dll"  );
+}
 include .\psake_ext.ps1
 
 task default -depends OpenSource,Release
