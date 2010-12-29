@@ -192,6 +192,7 @@ namespace Raven.Client.Indexes
 			Stores = new Dictionary<Expression<Func<TReduceResult, object>>, FieldStorage>();
 			Indexes = new Dictionary<Expression<Func<TReduceResult, object>>, FieldIndexing>();
 			SortOptions = new Dictionary<Expression<Func<TReduceResult, object>>, SortOptions>();
+            Analyzers = new Dictionary<Expression<Func<TReduceResult, object>>, string>();
 		}
 
 

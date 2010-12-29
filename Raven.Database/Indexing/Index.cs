@@ -191,10 +191,11 @@ namespace Raven.Database.Indexing
 					analyzer = AnalyzerGenerators.Aggregate(analyzer, (currentAnalyzer, generator) =>
 					{
 						var newAnalyzer = generator.GenerateAnalzyerForQuerying(name, indexQuery.Query, currentAnalyzer);
-						if (newAnalyzer != currentAnalyzer)
-							currentAnalyzer.Close();
-                        DisposeAnalyzerAndFriends(toDispose, currentAnalyzer);
-                        return CreateAnalyzer(newAnalyzer, toDispose); ;
+                        if (newAnalyzer != currentAnalyzer)
+                        {
+                            DisposeAnalyzerAndFriends(toDispose, currentAnalyzer);
+                        }
+					    return CreateAnalyzer(newAnalyzer, toDispose); ;
 					});
 					luceneQuery = QueryBuilder.BuildQuery(query, analyzer);
 				}
@@ -214,6 +215,7 @@ namespace Raven.Database.Indexing
 	        {
 	            dispose();
 	        }
+            toDispose.Clear();
 	    }
 
 	    public abstract void IndexDocuments(AbstractViewGenerator viewGenerator, IEnumerable<object> documents, WorkContext context, IStorageActionsAccessor actions, DateTime minimumTimestamp);
