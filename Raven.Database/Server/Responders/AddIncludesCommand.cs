@@ -41,9 +41,12 @@ namespace Raven.Database.Server.Responders
 
 		public void Execute(JObject document)
 		{
-			foreach (var token in document.SelectTokenWithRavenSyntax(Includes).Properties().SelectMany(x=>x.Value))
+			foreach (var include in Includes)
 			{
-				ExecuteInternal(token);
+				foreach (var token in document.SelectTokenWithRavenSyntaxReturningFlatStructure(include))
+				{
+					ExecuteInternal(token);
+				}
 			}
 		}
 
