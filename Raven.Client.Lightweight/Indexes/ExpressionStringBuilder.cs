@@ -28,11 +28,13 @@ namespace Raven.Client.Indexes
 		private StringBuilder _out = new StringBuilder();
 		ExpressionOperatorPrecedence _currentPrecedence;
 		private DocumentConvention convention;
+		private bool translateIdentityProperty;
 
 		// Methods
-		private ExpressionStringBuilder(DocumentConvention convention)
+		private ExpressionStringBuilder(DocumentConvention convention, bool translateIdentityProperty)
 		{
 			this.convention = convention;
+			this.translateIdentityProperty = translateIdentityProperty;
 		}
 
 		private void AddLabel(LabelTarget label)
@@ -63,7 +65,7 @@ namespace Raven.Client.Indexes
 
 		internal string CatchBlockToString(CatchBlock node)
 		{
-			ExpressionStringBuilder builder = new ExpressionStringBuilder(convention);
+			ExpressionStringBuilder builder = new ExpressionStringBuilder(convention, translateIdentityProperty);
 			builder.VisitCatchBlock(node);
 			return builder.ToString();
 		}
@@ -82,7 +84,7 @@ namespace Raven.Client.Indexes
 
 		internal string ElementInitBindingToString(ElementInit node)
 		{
-			ExpressionStringBuilder builder = new ExpressionStringBuilder(convention);
+			ExpressionStringBuilder builder = new ExpressionStringBuilder(convention, translateIdentityProperty);
 			builder.VisitElementInit(node);
 			return builder.ToString();
 		}
@@ -92,9 +94,9 @@ namespace Raven.Client.Indexes
 		/// </summary>
 		/// <param name="convention">The convention.</param>
 		/// <param name="node">The node.</param>
-		public static string ExpressionToString(DocumentConvention convention, Expression node)
+		public static string ExpressionToString(DocumentConvention convention, bool translateIdentityProperty, Expression node)
 		{
-			ExpressionStringBuilder builder = new ExpressionStringBuilder(convention);
+			ExpressionStringBuilder builder = new ExpressionStringBuilder(convention, translateIdentityProperty);
 			builder.Visit(node, ExpressionOperatorPrecedence.ParenthesisNotNeeded);
 			return builder.ToString();
 		}
@@ -195,7 +197,7 @@ namespace Raven.Client.Indexes
 
 		internal string MemberBindingToString(MemberBinding node)
 		{
-			ExpressionStringBuilder builder = new ExpressionStringBuilder(convention);
+			ExpressionStringBuilder builder = new ExpressionStringBuilder(convention, translateIdentityProperty);
 			builder.VisitMemberBinding(node);
 			return builder.ToString();
 		}
@@ -214,7 +216,7 @@ namespace Raven.Client.Indexes
 		{
 			var name = member.Name;
 			var identityProperty = convention.GetIdentityProperty(member.DeclaringType);
-			if (identityProperty == member && instance.NodeType == ExpressionType.Parameter)
+			if (identityProperty == member && instance.NodeType == ExpressionType.Parameter && translateIdentityProperty)
 				name = "__document_id";
 			if (instance != null)
 			{
@@ -238,7 +240,7 @@ namespace Raven.Client.Indexes
 
 		internal string SwitchCaseToString(SwitchCase node)
 		{
-			ExpressionStringBuilder builder = new ExpressionStringBuilder(convention);
+			ExpressionStringBuilder builder = new ExpressionStringBuilder(convention, translateIdentityProperty);
 			builder.VisitSwitchCase(node);
 			return builder.ToString();
 		}

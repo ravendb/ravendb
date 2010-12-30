@@ -19,24 +19,24 @@ namespace Raven.Tests.Bugs
         {
             using (var store = NewDocumentStore())
             {
-
-                store.DatabaseCommands.PutIndex(
-                    "AmazingIndex",
-                    new IndexDefinition<Shipment, Shipment>()
-                    {
-                        Map = docs => from doc in docs
-                                      select new
-                                      {
-                                          doc.Id
-                                      },
-                        TransformResults = (database, results)  => from doc in results
-                                                                   select new 
-                                                                    {
-                                                                        Id = doc.Id,
-                                                                        Name = doc.Name
-                                                                    }
+            	var indexDefinition = new IndexDefinition<Shipment, Shipment>()
+            	                      	{
+            	                      		Map = docs => from doc in docs
+            	                      		              select new
+            	                      		                     	{
+            	                      		                     		doc.Id
+            	                      		                     	},
+            	                      		TransformResults = (database, results)  => from doc in results
+            	                      		                                           select new 
+            	                      		                                                  	{
+            	                      		                                                  		Id = doc.Id,
+            	                      		                                                  		Name = doc.Name
+            	                      		                                                  	}
                                                    
-                    }.ToIndexDefinition(store.Conventions));
+            	                      	}.ToIndexDefinition(store.Conventions);
+            	store.DatabaseCommands.PutIndex(
+                    "AmazingIndex",
+                    indexDefinition);
 
 
                 using (var session = store.OpenSession())

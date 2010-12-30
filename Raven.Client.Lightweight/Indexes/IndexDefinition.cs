@@ -79,9 +79,9 @@ namespace Raven.Client.Indexes
 		    string querySource = (typeof(TDocument) == typeof(object) || ContainsWhereEntityIs(Map.Body)) ? "docs" : "docs." + convention.GetTypeTagName(typeof(TDocument));
 		    return new IndexDefinition
 			{
-				Map = PruneToFailureLinqQueryAsStringToWorkableCode(Map, convention, querySource),
-				Reduce = PruneToFailureLinqQueryAsStringToWorkableCode(Reduce, convention, "results"),
-                TransformResults = PruneToFailureLinqQueryAsStringToWorkableCode(TransformResults, convention, "results"),
+				Map = PruneToFailureLinqQueryAsStringToWorkableCode(Map, convention, querySource, translateIdentityProperty:true),
+				Reduce = PruneToFailureLinqQueryAsStringToWorkableCode(Reduce, convention, "results", translateIdentityProperty: false),
+                TransformResults = PruneToFailureLinqQueryAsStringToWorkableCode(TransformResults, convention, "results", translateIdentityProperty:false),
 				Indexes = ConvertToStringDictionary(Indexes),
 				Stores = ConvertToStringDictionary(Stores),
 				SortOptions = ConvertToStringDictionary(SortOptions),
@@ -136,7 +136,7 @@ namespace Raven.Client.Indexes
 		private static string PruneToFailureLinqQueryAsStringToWorkableCode(
 			LambdaExpression expr, 
 			DocumentConvention convention,
-			string querySource)
+			string querySource, bool translateIdentityProperty)
 		{
 			if (expr == null)
 				return null;
@@ -151,7 +151,7 @@ namespace Raven.Client.Indexes
 			}
 
 #if !NET_3_5
-			var linqQuery = ExpressionStringBuilder.ExpressionToString(convention, expression);
+			var linqQuery = ExpressionStringBuilder.ExpressionToString(convention,  translateIdentityProperty, expression);
 #else
             var linqQuery =expression.ToString();
 #endif
