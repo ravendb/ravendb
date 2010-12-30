@@ -64,6 +64,15 @@ namespace Raven.Database.Indexing
 		/// </summary>
 		private static IEnumerable<AbstractField> CreateFields(string name, object value, IndexDefinition indexDefinition, Field.Store defaultStorage)
 		{
+            if(string.IsNullOrWhiteSpace(name))
+                throw new ArgumentException("Field must be not null, not empty and cannot contain whitespace", "name");
+
+            if (char.IsLetter(name[0]) == false &&
+                name[0] != '_')
+            {
+                name = "_" + name;
+            }
+
 			if (value == null)
 			{
 				yield return new Field(name, "NULL_VALUE", indexDefinition.GetStorage(name, defaultStorage),

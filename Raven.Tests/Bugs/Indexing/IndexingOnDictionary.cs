@@ -39,5 +39,34 @@ namespace Raven.Tests.Bugs.Indexing
 				}
 			}
 		}
+
+        [Fact]
+        public void CanIndexValuesForDictionaryWithNumberForIndex()
+        {
+            using (var store = NewDocumentStore())
+            {
+                using (var s = store.OpenSession())
+                {
+                    s.Store(new User
+                    {
+                        Items = new Dictionary<string, string>
+			        		        	{
+			        		        		{"3", "Red"}
+			        		        	}
+                    });
+
+                    s.SaveChanges();
+                }
+
+                using (var s = store.OpenSession())
+                {
+                    var users = s.Advanced.LuceneQuery<User>()
+                        .WhereEquals("Items._3", "Red")
+                        .ToArray();
+                    Assert.NotEmpty(users);
+                }
+            }
+        }
+
 	}
 }

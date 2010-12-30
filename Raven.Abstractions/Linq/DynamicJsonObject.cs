@@ -154,6 +154,13 @@ namespace Raven.Database.Linq
 			{
 				return TransformToValue(value);
 			}
+            if(name.StartsWith("_"))
+            {
+                if (inner.TryGetValue(name.Substring(1), out value))
+                {
+                    return TransformToValue(value);
+                } 
+            }
 			return new DynamicNullObject();
 		}
 
