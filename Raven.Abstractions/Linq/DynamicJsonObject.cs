@@ -370,6 +370,12 @@ namespace Raven.Database.Linq
 		{
 			return GetEnumerator();
 		}
+
+		// null is false by default
+		public static implicit operator bool (DynamicNullObject o)
+		{
+			return false;
+		}
 	}
 }
 #endif
