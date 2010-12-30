@@ -1128,6 +1128,9 @@ If you really want to do in memory filtering on the data returned from the query
 		{
 			foreach (var sortByHint in sortByHints)
 			{
+				if (sortByHint.Value == null)
+					continue;
+				
 				addOperationHeader(
 					string.Format("SortHint_{0}", sortByHint.Key.Trim('-')), FromPrimitiveTypestring(sortByHint.Value.Name).ToString());
 			}
