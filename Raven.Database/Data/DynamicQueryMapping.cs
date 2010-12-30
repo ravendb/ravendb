@@ -221,6 +221,14 @@ namespace Raven.Database.Data
 		{
 			var fields = SimpleQueryParser.GetFields(query.Query);
 
+			if(query.SortedFields != null)
+			{
+				foreach (var sortedField in query.SortedFields)
+				{
+					fields.Add(sortedField.Field);
+				}
+			}
+
 			var dynamicQueryMapping = new DynamicQueryMapping
 			{
 				AggregationOperation = query.AggregationOperation & ~AggregationOperation.Dynamic,
