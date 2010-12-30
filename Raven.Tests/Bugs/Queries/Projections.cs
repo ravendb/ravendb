@@ -43,7 +43,9 @@ namespace Raven.Tests.Bugs.Queries
                                                                }, 
                                                                new string[0]);
 
-                Assert.Equal(2, queryResult.Results[0]["Addresses,Name"].Count());
+                Assert.Equal(2, queryResult.Results[0]["Addresses"].Count());
+				Assert.Equal("Hadera", queryResult.Results[0]["Addresses"][0].Value<string>("Name"));
+				Assert.Equal("Tel Aviv", queryResult.Results[0]["Addresses"][1].Value<string>("Name"));
             }
         }
 
