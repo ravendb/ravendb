@@ -88,19 +88,15 @@ namespace Raven.Database.Impl
 					var aggOpr = aggregationOperation & ~AggregationOperation.Dynamic;
 					fieldsToFetch = fieldsToFetch.Concat(new[] {aggOpr.ToString()});
 				}
-				foreach (var fieldToFetch in fieldsToFetch)
+				var fieldsToFetchFromDocument = fieldsToFetch.Where(fieldToFetch => queryResult.Projection.Property(fieldToFetch) == null);
+				var doc = GetDocumentWithCaching(queryResult.Key);
+				if (doc != null)
 				{
-					if (queryResult.Projection.Property(fieldToFetch) != null)
-						continue;
-
-					var doc = GetDocumentWithCaching(queryResult.Key);
-					if(doc == null)
-						continue;
-					var token = doc.DataAsJson.SelectTokenWithRavenSyntax(fieldToFetch).ToArray();
-					if (token.Length == 1)
-						queryResult.Projection[fieldToFetch] = token[0];
-					else
-						queryResult.Projection[fieldToFetch] = new JArray(token);
+					var result = doc.DataAsJson.SelectTokenWithRavenSyntax(fieldsToFetchFromDocument.ToArray());
+					foreach (var property in result.Properties())
+					{
+						queryResult.Projection[property.Name] = property.Value;
+					}
 				}
 			}
 
