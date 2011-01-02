@@ -180,6 +180,7 @@
     <Compile Include="Bugs\OrderOfInsertionDoesNotAffectQuerying.cs" />
     <Compile Include="Bugs\OverwriteDocuments.cs" />
     <Compile Include="Bugs\Queries\DynamicMapReduce.cs" />
+    <Compile Include="Bugs\Queries\DynamicQueriesOnMetadata.cs" />
     <Compile Include="Bugs\Queries\Fetching.cs" />
     <Compile Include="Bugs\Queries\Includes.cs" />
     <Compile Include="Bugs\Queries\Projections.cs" />

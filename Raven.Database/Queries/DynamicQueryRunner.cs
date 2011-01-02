@@ -37,7 +37,7 @@ namespace Raven.Database.Queries
 
 			// Re-write the query
 			string realQuery = map.Items.Aggregate(query.Query,
-												   (current, mapItem) => current.Replace(mapItem.From, mapItem.To));
+												   (current, mapItem) => current.Replace(mapItem.QueryFrom, mapItem.To));
 
 			// Perform the query until we have some results at least
 			QueryResult result;
