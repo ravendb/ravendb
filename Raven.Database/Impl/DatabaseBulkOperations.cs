@@ -58,13 +58,10 @@ namespace Raven.Database.Impl
 			bool stale;
 			var queryResults = database.QueryDocumentIds(index, bulkIndexQuery, out stale);
 
-			if (stale)
+			if (stale && allowStale == false)
 			{
-				if (allowStale == false)
-				{
-					throw new InvalidOperationException(
+				throw new InvalidOperationException(
 						"Bulk operation cancelled because the index is stale and allowStale is false");
-				}
 			}
 
 			var enumerator = queryResults.GetEnumerator();
