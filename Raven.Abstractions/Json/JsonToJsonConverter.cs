@@ -1,11 +1,11 @@
-﻿using System;
+﻿#if !NET_3_5
+using System;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Linq;
 
 namespace Raven.Database.Json
 {
-#if !NET_3_5
 	public class JsonToJsonConverter : JsonConverter
 	{
 		public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
@@ -26,5 +26,5 @@ namespace Raven.Database.Json
 			return objectType == typeof(JObject) || objectType == typeof(DynamicJsonObject);
 		}
 	}
-#endif
 }
+#endif
