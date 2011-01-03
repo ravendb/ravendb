@@ -11,10 +11,12 @@ using System.Linq;
 using System.Reflection;
 using System.Security.Principal;
 using System.ServiceProcess;
+using log4net;
 using log4net.Appender;
 using log4net.Config;
 using log4net.Filter;
 using log4net.Layout;
+using log4net.Repository.Hierarchy;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
@@ -171,18 +173,9 @@ namespace Raven.Server
 
         private static void RunInDebugMode(AnonymousUserAccessMode? anonymousUserAccessMode, RavenConfiguration ravenConfiguration)
         {
-			var consoleAppender = new ConsoleAppender
-			{
-				Layout = new PatternLayout(PatternLayout.DefaultConversionPattern),
-			};
-			consoleAppender.AddFilter(new LoggerMatchFilter
-			{
-				AcceptOnMatch = true,
-				LoggerToMatch = typeof(HttpServer).FullName
-			});
-			consoleAppender.AddFilter(new DenyAllFilter());
-			BasicConfigurator.Configure(consoleAppender);
-            NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Port);
+        	ConfigureDebugLogging();
+
+        	NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Port);
             if (anonymousUserAccessMode.HasValue)
                 ravenConfiguration.AnonymousUserAccessMode = anonymousUserAccessMode.Value;
             while (RunServer(ravenConfiguration))
@@ -191,7 +184,33 @@ namespace Raven.Server
             }
         }
 
-        private static bool RunServer(RavenConfiguration ravenConfiguration)
+    	private static void ConfigureDebugLogging()
+    	{
+			var loggerRepository = LogManager.GetRepository(typeof(HttpServer).Assembly);
+			
+			var patternLayout = new PatternLayout(PatternLayout.DefaultConversionPattern);
+    		var consoleAppender = new ConsoleAppender
+    		                      	{
+    		                      		Layout = patternLayout,
+    		                      	};
+    		consoleAppender.ActivateOptions();
+    		((Logger)loggerRepository.GetLogger(typeof(HttpServer).FullName)).AddAppender(consoleAppender);
+    		var fileAppender = new RollingFileAppender
+    		                   	{
+    		                   		AppendToFile = false,
+    		                   		File = "Raven.Server.log",
+    		                   		Layout = patternLayout,
+    		                   		MaxSizeRollBackups = 3,
+    		                   		MaximumFileSize = "1024KB",
+    		                   		StaticLogFileName = true,
+									LockingModel = new FileAppender.MinimalLock()
+    		                   	};
+    		fileAppender.ActivateOptions();
+    		((Hierarchy) loggerRepository).Root.AddAppender(fileAppender);
+    		loggerRepository.Configured = true;
+    	}
+
+    	private static bool RunServer(RavenConfiguration ravenConfiguration)
         {
             using (new RavenDbServer(ravenConfiguration))
             {
