@@ -128,6 +128,8 @@
     <Compile Include="Bugs\DecimalPrecision.cs" />
     <Compile Include="Bugs\DocumentToJsonAndBackTest.cs" />
     <Compile Include="Bugs\DocumentUrl.cs" />
+    <Compile Include="Bugs\Entities\CanSaveUpdateAndRead_Local.cs" />
+    <Compile Include="Bugs\Entities\CanSaveUpdateAndRead_Remote.cs" />
     <Compile Include="Bugs\EntityWithDate.cs" />
     <Compile Include="Bugs\EntityWithoutId.cs" />
     <Compile Include="Bugs\Etag.cs" />
