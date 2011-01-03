@@ -334,14 +334,17 @@ namespace Raven.Database.Data
 					groupBy += "Dynamically";
 			}
 
-
-			// Hash the name if it's too long
-			if (indexName.Length > 230)
+			if (database.Configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction == false &&
+				database.Configuration.RunInMemory == false)
 			{
-				using (var sha256 = SHA256.Create())
+				// Hash the name if it's too long (as a path)
+				if ((database.Configuration.DataDirectory.Length + indexName.Length) > 230)
 				{
-					var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(indexName));
-					indexName = Encoding.UTF8.GetString(bytes);
+					using (var sha256 = SHA256.Create())
+					{
+						var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(indexName));
+						indexName = Encoding.UTF8.GetString(bytes);
+					}
 				}
 			}
 
