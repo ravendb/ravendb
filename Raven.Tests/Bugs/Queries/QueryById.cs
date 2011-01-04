@@ -49,3 +49,4 @@ namespace Raven.Tests.Bugs.Queries
 			}
 		}
 	}
+}

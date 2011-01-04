@@ -18,8 +18,16 @@ namespace Raven.Database.Linq
 	/// <summary>
 	/// A dynamic implementation on top of <see cref="JObject"/>
 	/// </summary>
-	public class DynamicJsonObject : DynamicObject
+	public class DynamicJsonObject : DynamicObject, IEnumerable<object>
 	{
+		public IEnumerator<dynamic> GetEnumerator()
+		{
+			foreach (var item in Inner)
+			{
+				yield return new KeyValuePair<string,object>(item.Key, TransformToValue(item.Value));
+			}
+		}
+
 		/// <summary>
 		/// Returns a <see cref="T:System.String"/> that represents the current <see cref="T:System.Object"/>.
 		/// </summary>
@@ -57,6 +65,11 @@ namespace Raven.Database.Linq
 		public override int GetHashCode()
 		{
 			return new JTokenEqualityComparer().GetHashCode(inner);
+		}
+
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return GetEnumerator();
 		}
 
 		private readonly JObject inner;
