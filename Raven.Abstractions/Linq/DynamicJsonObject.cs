@@ -363,6 +363,11 @@ namespace Raven.Database.Linq
 			{
 				get { return inner.Length; }
 			}
+
+			public IEnumerable<dynamic> Select(Func<dynamic,dynamic > func)
+			{
+				return inner.Select(item => func(item));
+			}
 		}
 	}
 
