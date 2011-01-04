@@ -383,6 +383,46 @@ namespace Raven.Database.Linq
 		{
 			return false;
 		}
+
+		public override bool Equals(object obj)
+		{
+			return obj is DynamicNullObject;
+		}
+
+		public override int GetHashCode()
+		{
+			return 0;
+		}
+
+		public static bool operator ==(DynamicNullObject left, object right)
+		{
+			return right is DynamicNullObject;
+		}
+
+		public static bool operator !=(DynamicNullObject left, object right)
+		{
+			return (right is DynamicNullObject) == false;
+		}
+
+		public static bool operator >(DynamicNullObject left, object right)
+		{
+			return false;
+		}
+
+		public static bool operator <(DynamicNullObject left, object right)
+		{
+			return false;
+		}
+
+		public static bool operator >=(DynamicNullObject left, object right)
+		{
+			return false;
+		}
+
+		public static bool operator <=(DynamicNullObject left, object right)
+		{
+			return false;
+		}
 	}
 }
 #endif
