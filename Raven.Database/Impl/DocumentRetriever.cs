@@ -187,5 +187,15 @@ namespace Raven.Database.Impl
 				return null;
 			return new DynamicJsonObject(document.DataAsJson);
 		}
+
+		public dynamic[] Load(IEnumerable<string> ids)
+		{
+			var items = new List<dynamic>();
+			foreach (var id in ids)
+			{
+				items.Add(Load(id));
+			}
+			return items.ToArray();
+		}
 	}
 }

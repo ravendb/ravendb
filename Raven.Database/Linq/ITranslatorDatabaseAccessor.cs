@@ -3,6 +3,8 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System.Collections.Generic;
+
 namespace Raven.Database.Linq
 {
     /// <summary>
@@ -15,5 +17,10 @@ namespace Raven.Database.Linq
         /// Returns the document matching this id, if exists, or null if it doesn't
         /// </summary>
         dynamic Load(string id);
+
+		/// <summary>
+		/// Returns the documents matching these ids, if exists, or null if it doesn't
+		/// </summary>
+    	dynamic[] Load(IEnumerable<string> ids);
     }
 }

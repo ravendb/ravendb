@@ -166,6 +166,7 @@
     <Compile Include="Bugs\LinqGitHub147.cs" />
     <Compile Include="Bugs\LinqOnUrls.cs" />
     <Compile Include="Bugs\LiveProjection.cs" />
+    <Compile Include="Bugs\LiveProjections\CanLoadMultipleItems.cs" />
     <Compile Include="Bugs\LuceneQueryShouldWorkWithoutExtensionMethod.cs" />
     <Compile Include="Bugs\LukeQuerying.cs" />
     <Compile Include="Bugs\MapReduceThrowsNRE.cs" />
