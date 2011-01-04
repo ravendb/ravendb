@@ -186,6 +186,7 @@
     <Compile Include="Bugs\Queries\Fetching.cs" />
     <Compile Include="Bugs\Queries\Includes.cs" />
     <Compile Include="Bugs\Queries\Projections.cs" />
+    <Compile Include="Bugs\Queries\QueryById.cs" />
     <Compile Include="Bugs\Queries\RangeQueries.cs" />
     <Compile Include="Bugs\Queries\TermsLocal.cs" />
     <Compile Include="Bugs\Queries\TermsRemote.cs" />
