@@ -1094,20 +1094,9 @@ namespace Raven.Client.Indexes
 				{
 					this.Out(", ");
 				}
-				var lambdaExpression = node.Arguments[num2] as LambdaExpression;
-#if !SILVERLIGHT
-				if (lambdaExpression != null && typeof(AbstractIndexCreationTask).IsAssignableFrom(node.Method.DeclaringType))
-				{
-					this.Out("(Func<dynamic, dynamic>)(");
-				}
-#endif
+				MaybeAddCastingToLambdaExpression(node, num2);
 				this.Visit(node.Arguments[num2]);
-#if !SILVERLIGHT
-				if (lambdaExpression != null && typeof(AbstractIndexCreationTask).IsAssignableFrom(node.Method.DeclaringType))
-				{
-					this.Out(")");
-				}
-#endif
+				MaybeCloseCastingForLambdaExpression(node,num2);
 				num2++;
 			}
 			if (node.Method.Name != "get_Item")// VB indexer
@@ -1119,6 +1108,54 @@ namespace Raven.Client.Indexes
 				this.Out("]");
 			}
 			return node;
+		}
+
+		private void MaybeCloseCastingForLambdaExpression(MethodCallExpression node, int argPos)
+		{
+			var lambdaExpression = node.Arguments[argPos] as LambdaExpression;	
+#if !SILVERLIGHT
+			if (lambdaExpression != null && typeof(AbstractIndexCreationTask).IsAssignableFrom(node.Method.DeclaringType))
+			{
+				this.Out(")");
+			}
+			if (lambdaExpression != null && node.Method.DeclaringType == typeof(Enumerable))
+			{
+				var expression = node.Arguments[argPos - 1]; // heuroistic only, might be a source of bugs, need to rethink this
+				if (expression.NodeType != ExpressionType.MemberAccess)
+					return;
+				switch (node.Method.Name)
+				{
+					case "Select":
+						this.Out(")");
+						break;
+				}
+			}
+#endif
+		}
+
+		private void MaybeAddCastingToLambdaExpression(MethodCallExpression node, int argPos)
+		{
+#if !SILVERLIGHT
+			var lambdaExpression = node.Arguments[argPos] as LambdaExpression; 
+			if (lambdaExpression != null && typeof(AbstractIndexCreationTask).IsAssignableFrom(node.Method.DeclaringType))
+			{
+				this.Out("(Func<dynamic, dynamic>)(");
+			}
+			if (lambdaExpression != null && node.Method.DeclaringType == typeof(Enumerable))
+			{
+				if (argPos == 0)
+					return;
+				var expression = node.Arguments[argPos - 1]; // heuroistic only, might be a source of bugs, need to rethink this
+				if (expression.NodeType != ExpressionType.MemberAccess)
+					return;
+				switch (node.Method.Name)
+				{
+					case "Select":
+						this.Out("(Func<dynamic, dynamic>)(");
+						break;
+				}
+			}
+#endif
 		}
 
 		private void VisitHierarchy(MethodCallExpression node, Expression expression)
@@ -1381,6 +1418,7 @@ namespace Raven.Client.Indexes
 					break;
 				case ExpressionType.Convert:
 				case ExpressionType.ConvertChecked:
+				case ExpressionType.ArrayLength:
 					// we don't want to do nothing for those
 					this.Out("(");
 					break;
@@ -1401,6 +1439,10 @@ namespace Raven.Client.Indexes
 				case ExpressionType.TypeAs:
 					this.Out(" As ");
 					this.Out(node.Type.Name);
+					break;
+
+				case ExpressionType.ArrayLength:
+					this.Out(".Length)");
 					break;
 
 				case ExpressionType.Decrement:
