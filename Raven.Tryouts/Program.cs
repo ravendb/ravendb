@@ -1,23 +1,26 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using Raven.Client.Client;
-using Raven.Client.Indexes;
+using Raven.Database;
+using Raven.Database.Config;
+using Raven.Database.Indexing;
+using Raven.Database.Server;
+using Raven.Http;
 
-namespace LiveProjectionsBug
+namespace Raven.Tryouts
 {
     class Program
     {
-        static void Main(string[] args)
+        static void Main()
         {
-            Console.WriteLine("Working ...");
-
-
-            Console.WriteLine("Finished !");
-            Console.ReadLine();
-
+        	var db = new DocumentDatabase(new RavenConfiguration
+        	                              	{
+        	                              		DataDirectory = @"C:\Users\Ayende\Downloads\Data",
+												IndexSingleThreaded = true
+        	                              	});
+        	var ravenDbHttpServer = new RavenDbHttpServer (db.Configuration, db);
+			ravenDbHttpServer.Start();
+        	Console.WriteLine("Started...");
+        	new TaskExecuter(db.TransactionalStorage, db.WorkContext).Execute();
+        	Console.WriteLine("Done");
         }
     }
 }
