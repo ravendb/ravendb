@@ -72,6 +72,9 @@
     <Compile Include="..\Raven.Abstractions\Json\JsonToJsonConverter.cs">
       <Link>Json\JsonToJsonConverter.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\IDocumentQueryListener.cs">
+      <Link>IDocumentQueryListener.cs</Link>
+    </Compile>
     <Compile Include="Client\Async\AsyncServerClient.cs" />
     <Compile Include="Client\HttpJsonRequest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
