@@ -71,8 +71,12 @@ namespace Raven.Database.Indexing
 
 		public void Flush()
 		{
+			if (disposed)
+				return;
 			if(indexWriter!=null)
+			{
 				indexWriter.Commit();
+			}
 		}
 
 		#region IDisposable Members
@@ -86,7 +90,11 @@ namespace Raven.Database.Indexing
 				using (searcher.Use(out _))
 					searcher.MarkForDispoal();
 				if (indexWriter != null)
-					indexWriter.Close();
+				{
+					var writer = indexWriter;
+					indexWriter = null;
+					writer.Close();
+				}
 				directory.Close();
 			}
 		}
