@@ -20,6 +20,7 @@ using log4net.Repository.Hierarchy;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
+using Raven.Database.Impl.Logging;
 using Raven.Database.Server;
 using Raven.Http;
 
@@ -206,7 +207,11 @@ namespace Raven.Server
 									LockingModel = new FileAppender.MinimalLock()
     		                   	};
     		fileAppender.ActivateOptions();
-    		((Hierarchy) loggerRepository).Root.AddAppender(fileAppender);
+
+    		var asyncBufferingAppender = new AsyncBufferingAppender();
+    		asyncBufferingAppender.AddAppender(fileAppender);
+
+    		((Hierarchy) loggerRepository).Root.AddAppender(asyncBufferingAppender);
     		loggerRepository.Configured = true;
     	}
 
