@@ -216,6 +216,7 @@ namespace Raven.Client.Document
 			timeout = other.timeout;
 			waitForNonStaleResults = other.waitForNonStaleResults;
 			includes = other.includes;
+			queryListeners = other.queryListeners;
 		}
 
 		#region IDocumentQuery<T> Members
