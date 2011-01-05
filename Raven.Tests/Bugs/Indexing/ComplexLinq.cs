@@ -7,7 +7,30 @@ namespace Raven.Tests.Bugs.Indexing
 	public class ComplexLinq : LocalClientTest
 	{
 		[Fact]
-		public void Abc()
+		public void QueryOnNegation()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					string first = "Ayende";
+					string last = "Rahien";
+					DateTime birthDate = new DateTime(2001, 1, 1);
+					string country = "Israel";
+					var queryable = session.Query<Client>().Where(x =>
+																  x.FirstName != first &&
+																  x.LastName == last &&
+																  x.BirthDate == birthDate &&
+																  x.Country == country);
+					Assert.Equal("((-FirstName:Ayende AND FirstName:* AND LastName:Rahien) AND BirthDate:20010101000000000) AND Country:Israel", queryable.ToString());
+					queryable.Any();
+
+				}
+			}
+		}
+
+		[Fact]
+		public void QueryOnMultipleItems()
 		{
 			using(var store = NewDocumentStore())
 			{
