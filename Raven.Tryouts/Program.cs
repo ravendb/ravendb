@@ -14,7 +14,8 @@ namespace Raven.Tryouts
         	var db = new DocumentDatabase(new RavenConfiguration
         	                              	{
         	                              		DataDirectory = @"C:\Users\Ayende\Downloads\Data",
-												IndexSingleThreaded = true
+												IndexSingleThreaded = true,
+												AnonymousUserAccessMode = AnonymousUserAccessMode.All
         	                              	});
         	var ravenDbHttpServer = new RavenDbHttpServer (db.Configuration, db);
 			ravenDbHttpServer.Start();
