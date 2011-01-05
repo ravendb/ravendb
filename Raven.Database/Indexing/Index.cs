@@ -47,6 +47,11 @@ namespace Raven.Database.Indexing
 		
 		protected Index(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator)
 		{
+			if (directory == null) throw new ArgumentNullException("directory");
+			if (name == null) throw new ArgumentNullException("name");
+			if (indexDefinition == null) throw new ArgumentNullException("indexDefinition");
+			if (viewGenerator == null) throw new ArgumentNullException("viewGenerator");
+
 			this.name = name;
 			this.indexDefinition = indexDefinition;
 			this.viewGenerator = viewGenerator;
