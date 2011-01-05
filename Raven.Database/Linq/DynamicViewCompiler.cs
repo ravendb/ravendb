@@ -299,6 +299,10 @@ namespace Raven.Database.Linq
 			var objectInitializer = ((ObjectCreateExpression)lambdaExpression.ExpressionBody).ObjectInitializer;
 
 			var identifierExpression = new IdentifierExpression(lambdaExpression.Parameters[0].ParameterName);
+
+			if (objectInitializer.CreateExpressions.OfType<NamedArgumentExpression>().Any(x => x.Name == "__document_id"))
+				return;
+
 			objectInitializer.CreateExpressions.Add(
 				new NamedArgumentExpression
 				{
@@ -342,6 +346,10 @@ namespace Raven.Database.Linq
 			var objectInitializer = ((ObjectCreateExpression) projection).ObjectInitializer;
 
 			var identifierExpression = new IdentifierExpression(queryExpression.FromClause.Identifier);
+
+			if (objectInitializer.CreateExpressions.OfType<NamedArgumentExpression>().Any(x => x.Name == "__document_id"))
+				return variableDeclaration;
+
 			objectInitializer.CreateExpressions.Add(
 				new NamedArgumentExpression
 				{
