@@ -57,10 +57,15 @@ namespace Raven.Tests
 			{
 			}
 
-            IOExtensions.DeleteDirectory(DbName);
-            IOExtensions.DeleteDirectory(DbDirectory);
-			
-            Directory.CreateDirectory(DbDirectory);
+            ClearDatabaseDirectory();
+
+			Directory.CreateDirectory(DbDirectory);
+		}
+
+		protected void ClearDatabaseDirectory()
+		{
+			IOExtensions.DeleteDirectory(DbName);
+			IOExtensions.DeleteDirectory(DbDirectory);
 		}
 
 		public double Timer(Action action)

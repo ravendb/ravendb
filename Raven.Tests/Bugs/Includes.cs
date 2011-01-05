@@ -175,6 +175,7 @@ namespace Raven.Tests.Bugs
 		{
 			store.Dispose();
 			server.Dispose();
+			ClearDatabaseDirectory();
 		}
 
 		public class Order

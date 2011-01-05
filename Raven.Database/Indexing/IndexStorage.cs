@@ -227,5 +227,13 @@ namespace Raven.Database.Indexing
 
             return result.Searcher;
         }
+
+		public void FlushAllIndexes()
+		{
+			foreach (var value in indexes.Values)
+			{
+				value.Flush();
+			}
+		}
 	}
 }

@@ -892,7 +892,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				Started = DateTime.UtcNow,
 				IsRunning = true,
 			}), new JObject(), null);
-
+			IndexStorage.FlushAllIndexes();
 			TransactionalStorage.StartBackupOperation(this, backupDestinationDirectory);
 		}
 
