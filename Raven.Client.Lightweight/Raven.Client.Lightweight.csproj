@@ -113,6 +113,7 @@
     <Compile Include="IDocumentDeleteListener.cs" />
     <Compile Include="IDocumentQuery.cs" />
     <Compile Include="IDocumentQueryCustomization.cs" />
+    <Compile Include="IDocumentQueryListener.cs" />
     <Compile Include="IDocumentSession.cs" />
     <Compile Include="IDocumentStore.cs" />
     <Compile Include="IDocumentStoreListener.cs" />

@@ -36,7 +36,8 @@ namespace Raven.Client.Document
 			IAsyncDatabaseCommands asyncDatabaseCommands,
 #endif
 			string indexName, 
-			string[] projectionFields)
+			string[] projectionFields,
+			IDocumentQueryListener[] queryListeners)
 			: base(session, 
 #if !SILVERLIGHT
 			databaseCommands, 
@@ -45,7 +46,8 @@ namespace Raven.Client.Document
 			asyncDatabaseCommands,
 #endif
 			indexName, 
-			projectionFields)
+			projectionFields,
+			queryListeners)
 		{
 		}
 

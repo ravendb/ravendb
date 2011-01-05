@@ -47,6 +47,8 @@ namespace Raven.Client.Document
 		/// The list of fields to project directly from the index
 		/// </summary>
 		protected readonly string[] projectionFields;
+
+		private readonly IDocumentQueryListener[] queryListeners;
 		private readonly InMemoryDocumentSessionOperations session;
 		/// <summary>
 		/// The cutoff date to use for detecting staleness in the index
@@ -148,8 +150,9 @@ namespace Raven.Client.Document
 		public DocumentQuery(InMemoryDocumentSessionOperations session, 
 			IDatabaseCommands databaseCommands, 
 			string indexName,
-			string[] projectionFields)
-			:this(session,databaseCommands, null, indexName, projectionFields)
+			string[] projectionFields,
+			IDocumentQueryListener[] queryListeners)
+			:this(session,databaseCommands, null, indexName, projectionFields, queryListeners)
 		{
 			
 		}
@@ -174,12 +177,14 @@ namespace Raven.Client.Document
 			IAsyncDatabaseCommands asyncDatabaseCommands,
 #endif
 			string indexName,
-			string[] projectionFields)
+			string[] projectionFields, 
+			IDocumentQueryListener[] queryListeners)
 		{
 #if !SILVERLIGHT
 			this.databaseCommands = databaseCommands;
 #endif
 			this.projectionFields = projectionFields;
+			this.queryListeners = queryListeners;
 			this.indexName = indexName;
 			this.session = session;
 #if !NET_3_5
@@ -250,7 +255,8 @@ namespace Raven.Client.Document
 #if !NET_3_5
 				asyncDatabaseCommands,
 #endif
-				indexName, fields)
+				indexName, fields,
+				queryListeners)
 			{
 				pageSize = pageSize,
 				queryText = new StringBuilder(queryText.ToString()),
@@ -1075,6 +1081,10 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <returns></returns>
 		protected virtual QueryResult GetQueryResult()
 		{
+			foreach (var documentQueryListener in queryListeners)
+			{
+				documentQueryListener.BeforeQueryExecuted(this);
+			}
 			session.IncrementRequestCount();
 			var sp = Stopwatch.StartNew();
 			while (true)
