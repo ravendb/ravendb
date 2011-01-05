@@ -485,7 +485,8 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 
 		public string PutIndex(string name, IndexDefinition definition)
 		{
-			switch (IndexDefinitionStorage.FindIndexCreationOptionsOptions(name, definition))
+			definition.Name = name;
+			switch (IndexDefinitionStorage.FindIndexCreationOptionsOptions(definition))
 			{
 				case IndexCreationOptions.Noop:
 					return name;
@@ -495,8 +496,8 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 					DeleteIndex(name);
 					break;
 			}
-			IndexDefinitionStorage.AddIndex(name, definition);
-			IndexStorage.CreateIndexImplementation(name, definition);
+			IndexDefinitionStorage.AddIndex(definition);
+			IndexStorage.CreateIndexImplementation(definition);
 			TransactionalStorage.Batch(actions => AddIndexAndEnqueueIndexingTasks(actions, name));
 			return name;
 		}
@@ -920,7 +921,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 			if (indexDefinition == null)
 				throw new InvalidOperationException("There is no index named: " + index);
 			IndexStorage.DeleteIndex(index);
-			IndexStorage.CreateIndexImplementation(index, indexDefinition);
+			IndexStorage.CreateIndexImplementation(indexDefinition);
 			TransactionalStorage.Batch(actions =>
 			{
 				actions.Indexing.DeleteIndex(index);
