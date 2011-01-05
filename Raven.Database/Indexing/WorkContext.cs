@@ -46,6 +46,11 @@ namespace Raven.Database.Indexing
 
 		public void WaitForWork(TimeSpan timeout, ref int workerWorkCounter)
 		{
+			WaitForWork(timeout, ref workerWorkCounter, null);
+		}
+
+		public void WaitForWork(TimeSpan timeout, ref int workerWorkCounter, Action beforeWait)
+		{
 			if (!doWork)
 				return;
 			var currentWorkCounter = Thread.VolatileRead(ref workCounter);
@@ -54,8 +59,12 @@ namespace Raven.Database.Indexing
 				workerWorkCounter = currentWorkCounter;
 				return;
 			}
+			if (beforeWait != null)
+				beforeWait();
 			lock (waitForWork)
 			{
+				if (!doWork)
+					return;
 				currentWorkCounter = Thread.VolatileRead(ref workCounter);
 				if (currentWorkCounter != workerWorkCounter)
 				{

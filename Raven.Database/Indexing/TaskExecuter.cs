@@ -31,6 +31,7 @@ namespace Raven.Database.Indexing
 		}
 
 		int workCounter;
+		private int lastFlushedWorkCounter;
 		
 		public void Execute()
 		{
@@ -49,9 +50,17 @@ namespace Raven.Database.Indexing
 				}
 				if (foundWork == false)
 				{
-					context.WaitForWork(TimeSpan.FromHours(1), ref workCounter);
+					context.WaitForWork(TimeSpan.FromHours(1), ref workCounter, FlushIndexes);
 				}
 			}
+		}
+
+		private void FlushIndexes()
+		{
+			if (lastFlushedWorkCounter == workCounter) 
+				return;
+			lastFlushedWorkCounter = workCounter;
+			context.IndexStorage.FlushAllIndexes();
 		}
 
 
