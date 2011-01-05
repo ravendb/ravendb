@@ -15,7 +15,7 @@ namespace Raven.Database.Indexing
     {
 		static readonly Regex QueryTerms = new Regex(@"([^\s\(\+\-][\w._,]+)\:", RegexOptions.Compiled);
 
-		static readonly Regex DynamicQueryTerms = new Regex(@"[-+]?[(]?([^\s]*[^\\\s])\:", RegexOptions.Compiled);
+		static readonly Regex DynamicQueryTerms = new Regex(@"[-+]?[(]?([^\(\)\s]*[^\\\s])\:", RegexOptions.Compiled);
 
         public static HashSet<string> GetFields(string query)
         {

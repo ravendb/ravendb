@@ -148,6 +148,7 @@
     <Compile Include="Bugs\IndexingBehavior.cs" />
     <Compile Include="Bugs\IndexingRavenDocuments.cs" />
     <Compile Include="Bugs\Indexing\CanIndexAllDocsWhenThereAreMoreDocsThanTheBatchSize.cs" />
+    <Compile Include="Bugs\Indexing\ComplexLinq.cs" />
     <Compile Include="Bugs\Indexing\DynamicFields.cs" />
     <Compile Include="Bugs\Indexing\DynamicQueriesCanSort.cs" />
     <Compile Include="Bugs\Indexing\FilterOnMissingProperty.cs" />
