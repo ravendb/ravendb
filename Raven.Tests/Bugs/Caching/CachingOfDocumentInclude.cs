@@ -90,7 +90,7 @@ namespace Raven.Tests.Bugs.Caching
         public void New_query_returns_correct_value_when_cache_is_enabled_and_data_changes ()
         {
             using (GetNewServer())
-            using (var store = new DocumentStore { Url = "http://2finn:8080" }.Initialize())
+            using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
             {
                 using (var s = store.OpenSession())
                 {
