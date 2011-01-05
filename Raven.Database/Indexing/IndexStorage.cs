@@ -51,9 +51,9 @@ namespace Raven.Database.Indexing
 		        var indexDefinition = indexDefinitionStorage.GetIndexDefinition(indexDirectory);
 		        if (indexDefinition == null)
 		            continue;
-		        indexes.TryAdd(indexDirectory,
-		                       CreateIndexImplementation(indexDirectory, indexDefinition,
-		                                                 OpenOrCreateLuceneDirectory(indexDirectory)));
+		    	var luceneDirectory = OpenOrCreateLuceneDirectory(indexDefinition.EncodeIndexNameIfNeeded(path));
+		    	var indexImplementation = CreateIndexImplementation(indexDirectory, indexDefinition, luceneDirectory);
+		    	indexes.TryAdd(indexDirectory, indexImplementation);
 		    }
 		}
 
