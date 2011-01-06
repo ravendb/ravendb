@@ -10,7 +10,9 @@ namespace Raven.Database.Json
 	{
 		public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
 		{
-			if (value is JObject)
+			if(value is DynamicNullObject)
+				writer.WriteNull();
+			else if (value is JObject)
 				((JObject)value).WriteTo(writer);
 			else
 				((DynamicJsonObject)value).Inner.WriteTo(writer);
@@ -23,7 +25,7 @@ namespace Raven.Database.Json
 
 		public override bool CanConvert(Type objectType)
 		{
-			return objectType == typeof(JObject) || objectType == typeof(DynamicJsonObject);
+			return objectType == typeof(JObject) || objectType == typeof(DynamicJsonObject) || objectType == typeof(DynamicNullObject);
 		}
 	}
 }
