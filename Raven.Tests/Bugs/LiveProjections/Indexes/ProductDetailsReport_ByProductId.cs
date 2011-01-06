@@ -18,11 +18,11 @@
 
 			TransformResults = (database, results) =>
 			                   from result in results
-			                   let product = database.Load<Product>(result.ProductId)
+			                   let product = database.Load<Product>(result.Id)
 			                   let variants = product.Variants
 			                   select new
 			                   	{
-			                   		ProductId = result.ProductId,
+			                   		result.Id,
 			                   		Name = product.Name,
 			                   		Variants = variants.Select(x => new
 			                   			{

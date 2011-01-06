@@ -17,22 +17,22 @@
 			Map = products => from product in products
 			                  select new
 			                  	{
-			                  		ProductId = product.Id,
+			                  		Id = product.Id,
 			                  		ArticleNumber = product.ArticleNumber,
 			                  		Name = product.Name
 			                  	};
 
 			TransformResults = (database, results) =>
 			                   from result in results
-			                   let product = database.Load<ProductSku>(result.ProductId)
-			                   let stock = database.Load<ProductSku>(result.ProductId)
+			                   let product = database.Load<ProductSku>(result.Id)
+			                   let stock = database.Load<ProductSku>(result.Id)
 			                   select new
 			                   	{
-			                   		ProductId = result.ProductId,
+			                   		result.Id,
 			                   		result.ArticleNumber,
 			                   		result.Name,
 			                   		product.Packing,
-			                   		QuantityInWarehouse = stock.QuantityInWarehouse
+			                   		stock.QuantityInWarehouse
 			                   	};
 
 			Indexes = new Dictionary<Expression<Func<ProductSkuListViewModelReport, object>>, FieldIndexing>()

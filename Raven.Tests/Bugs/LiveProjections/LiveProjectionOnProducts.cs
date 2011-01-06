@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace Raven.Tests.Bugs.LiveProjections
 {
 	using System.Collections.Generic;
@@ -26,7 +28,7 @@ namespace Raven.Tests.Bugs.LiveProjections
 							{
 								ArticleNumber = "v1",
 								Name = "variant 1",
-								Packing = "packing"
+								Packing = "packing",
 							});
 					session.Store(
 						new ProductSku()
@@ -47,17 +49,8 @@ namespace Raven.Tests.Bugs.LiveProjections
 
 					var first = rep.FirstOrDefault();
 
-					Assert.Equal(first.ProductId, "products/1");
+					Assert.Equal(first.Id, "productskus/1");
 					Assert.Equal(first.Name, "variant 1");
-
-					//var report = session.Advanced.LuceneQuery<Product>("ProductSkuListViewModelReport/ByArticleNumberAndName")
-					//    .Where("ProductId:products/1")
-					//    .WaitForNonStaleResultsAsOfNow()
-					//    .SelectFields<ProductSkuListViewModelReport>()
-					//    .FirstOrDefault();
-
-					//Assert.Equal(report.ProductId, "products/1");
-					//Assert.Equal(report.Name, "product 1");
 				}
 			}
 		}
@@ -105,17 +98,8 @@ namespace Raven.Tests.Bugs.LiveProjections
 					var first = rep.FirstOrDefault();
 
 					Assert.Equal(first.Name, "product 1");
-					Assert.Equal(first.ProductId, "products/1");
+					Assert.Equal(first.Id, "products/1");
 					Assert.Equal(first.Variants[0].Name, "variant 1");
-
-					//var report = session.Advanced.LuceneQuery<Product>("ProductSkuListViewModelReport/ByArticleNumberAndName")
-					//    .Where("ProductId:products/1")
-					//    .WaitForNonStaleResultsAsOfNow()
-					//    .SelectFields<ProductSkuListViewModelReport>()
-					//    .FirstOrDefault();
-
-					//Assert.Equal(report.ProductId, "products/1");
-					//Assert.Equal(report.Name, "product 1");
 				}
 			}
 		}

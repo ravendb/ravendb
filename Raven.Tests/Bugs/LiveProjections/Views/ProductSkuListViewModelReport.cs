@@ -2,7 +2,7 @@
 {
 	public class ProductSkuListViewModelReport
 	{
-		public string ProductId { get; set; }
+		public string Id { get; set; }
 
 		public string ArticleNumber { get; set; }
 
