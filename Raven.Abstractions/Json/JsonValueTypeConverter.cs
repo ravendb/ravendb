@@ -26,6 +26,8 @@ namespace Raven.Abstractions.Json
             T val;
             if (s != null && tryParse(s, NumberStyles.AllowDecimalPoint | NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out val))
                 return val;
+			if (reader.Value == null)
+				return default(T);
             return Convert.ChangeType(reader.Value, typeof(T), CultureInfo.InvariantCulture);
         }
 
