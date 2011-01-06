@@ -55,11 +55,11 @@ namespace Raven.Tests.Indexes
         [Fact]
         public void CanPageOverDefaultIndex()
         {
-            db.Put("users/ayende", null, JObject.Parse("{'email':'ayende@ayende.com'"),
+            db.Put("users/ayende", null, JObject.Parse("{'email':'ayende@ayende.com'}"),
                    JObject.Parse("{'Raven-Entity-Name': 'Users'}"), null);
-            db.Put("users/rob", null, JObject.Parse("{'email':'robashton@codeofrob.com'"),
+            db.Put("users/rob", null, JObject.Parse("{'email':'robashton@codeofrob.com'}"),
                    JObject.Parse("{'Raven-Entity-Name': 'Users'}"), null);
-            db.Put("users/joe", null, JObject.Parse("{'email':'joe@bloggs.com'"),
+            db.Put("users/joe", null, JObject.Parse("{'email':'joe@bloggs.com'}"),
                    JObject.Parse("{'Raven-Entity-Name': 'Users'}"), null);
 
             QueryResult queryResultPageOne;
