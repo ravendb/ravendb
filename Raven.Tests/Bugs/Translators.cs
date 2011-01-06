@@ -5,10 +5,12 @@
 //-----------------------------------------------------------------------
 using System;
 using System.ComponentModel.Composition.Hosting;
+using Microsoft.CSharp.RuntimeBinder;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Indexes;
 using Raven.Database.Indexing;
+using Raven.Database.Linq;
 using Xunit;
 using System.Linq;
 using Raven.Client.Linq;
@@ -89,8 +91,11 @@ namespace Raven.Tests.Bugs
                                                                                                  .As<UserWithPartner>()
                                                                                                  .First());
 
-                    Assert.Equal(@"The transform results function failed.
-Doc 'users/1', Error: Operator '/' cannot be applied to operands of type 'Raven.Database.Linq.DynamicNullObject' and 'int'", exception.Message);
+                	dynamic dynamicNullObject = new DynamicNullObject();
+					var expectedError = Assert.Throws<RuntimeBinderException>(() => dynamicNullObject / 1);
+
+                	Assert.Equal(@"The transform results function failed.
+Doc 'users/1', Error: " + expectedError.Message, exception.Message);
                 }
             }
         }
