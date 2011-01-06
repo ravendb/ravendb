@@ -47,6 +47,8 @@ namespace Raven.Client.Document
 		/// The list of fields to project directly from the index
 		/// </summary>
 		protected readonly string[] projectionFields;
+
+		private readonly IDocumentQueryListener[] queryListeners;
 		private readonly InMemoryDocumentSessionOperations session;
 		/// <summary>
 		/// The cutoff date to use for detecting staleness in the index
@@ -148,8 +150,9 @@ namespace Raven.Client.Document
 		public DocumentQuery(InMemoryDocumentSessionOperations session, 
 			IDatabaseCommands databaseCommands, 
 			string indexName,
-			string[] projectionFields)
-			:this(session,databaseCommands, null, indexName, projectionFields)
+			string[] projectionFields,
+			IDocumentQueryListener[] queryListeners)
+			:this(session,databaseCommands, null, indexName, projectionFields, queryListeners)
 		{
 			
 		}
@@ -174,12 +177,14 @@ namespace Raven.Client.Document
 			IAsyncDatabaseCommands asyncDatabaseCommands,
 #endif
 			string indexName,
-			string[] projectionFields)
+			string[] projectionFields, 
+			IDocumentQueryListener[] queryListeners)
 		{
 #if !SILVERLIGHT
 			this.databaseCommands = databaseCommands;
 #endif
 			this.projectionFields = projectionFields;
+			this.queryListeners = queryListeners;
 			this.indexName = indexName;
 			this.session = session;
 #if !NET_3_5
@@ -211,6 +216,7 @@ namespace Raven.Client.Document
 			timeout = other.timeout;
 			waitForNonStaleResults = other.waitForNonStaleResults;
 			includes = other.includes;
+			queryListeners = other.queryListeners;
 		}
 
 		#region IDocumentQuery<T> Members
@@ -250,7 +256,8 @@ namespace Raven.Client.Document
 #if !NET_3_5
 				asyncDatabaseCommands,
 #endif
-				indexName, fields)
+				indexName, fields,
+				queryListeners)
 			{
 				pageSize = pageSize,
 				queryText = new StringBuilder(queryText.ToString()),
@@ -360,6 +367,7 @@ namespace Raven.Client.Document
 		/// <param name="fieldType">the type of the field to be sorted.</param>
 		public IDocumentQuery<T> AddOrder(string fieldName, bool descending, Type fieldType)
 		{
+			fieldName = EnsureValidFieldName(fieldName);
 			fieldName = descending ? "-" + fieldName : fieldName;
 			orderByFields = orderByFields.Concat(new[] { fieldName }).ToArray();
 			sortByHints.Add(new KeyValuePair<string, Type>(fieldName, fieldType));
@@ -579,6 +587,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		public IDocumentQuery<T> WhereEquals(string fieldName, object value, bool isAnalyzed, bool allowWildcards)
 		{
+			fieldName = EnsureValidFieldName(fieldName);
 			var transformToEqualValue = TransformToEqualValue(value, isAnalyzed, allowWildcards);
 			lastEquality = new KeyValuePair<string, string>(fieldName, transformToEqualValue);
 			if (queryText.Length > 0 && queryText[queryText.Length - 1] != '(')
@@ -593,6 +602,20 @@ If you really want to do in memory filtering on the data returned from the query
 			queryText.Append(transformToEqualValue);
 
 			return this;
+		}
+
+		private string EnsureValidFieldName(string fieldName)
+		{
+			if (session == null)
+				return fieldName;
+			if (session.Conventions == null)
+				return fieldName;
+			var identityProperty = session.Conventions.GetIdentityProperty(typeof(T));
+			if(identityProperty != null && identityProperty.Name == fieldName)
+			{
+				fieldName = "__document_id";
+			}
+			return fieldName;
 		}
 
 		private void NegateIfNeeded()
@@ -654,7 +677,9 @@ If you really want to do in memory filtering on the data returned from the query
 				sortByHints.Add(new KeyValuePair<string, Type>(fieldName, (start ?? end).GetType()));
 
 			NegateIfNeeded();
-
+			
+			fieldName = EnsureValidFieldName(fieldName);
+			
 			queryText.Append(fieldName).Append(":{");
 			queryText.Append(start == null ? "*" : TransformToRangeValue(start));
 			queryText.Append(" TO ");
@@ -682,6 +707,7 @@ If you really want to do in memory filtering on the data returned from the query
 
 			NegateIfNeeded();
 
+			fieldName = EnsureValidFieldName(fieldName);
 			queryText.Append(fieldName).Append(":[");
 			queryText.Append(start == null ? "*" : TransformToRangeValue(start));
 			queryText.Append(" TO ");
@@ -1056,6 +1082,10 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <returns></returns>
 		protected virtual QueryResult GetQueryResult()
 		{
+			foreach (var documentQueryListener in queryListeners)
+			{
+				documentQueryListener.BeforeQueryExecuted(this);
+			}
 			session.IncrementRequestCount();
 			var sp = Stopwatch.StartNew();
 			while (true)

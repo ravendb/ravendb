@@ -18,8 +18,16 @@ namespace Raven.Database.Linq
 	/// <summary>
 	/// A dynamic implementation on top of <see cref="JObject"/>
 	/// </summary>
-	public class DynamicJsonObject : DynamicObject
+	public class DynamicJsonObject : DynamicObject, IEnumerable<object>
 	{
+		public IEnumerator<dynamic> GetEnumerator()
+		{
+			foreach (var item in Inner)
+			{
+				yield return new KeyValuePair<string,object>(item.Key, TransformToValue(item.Value));
+			}
+		}
+
 		/// <summary>
 		/// Returns a <see cref="T:System.String"/> that represents the current <see cref="T:System.Object"/>.
 		/// </summary>
@@ -57,6 +65,11 @@ namespace Raven.Database.Linq
 		public override int GetHashCode()
 		{
 			return new JTokenEqualityComparer().GetHashCode(inner);
+		}
+
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return GetEnumerator();
 		}
 
 		private readonly JObject inner;
@@ -350,6 +363,11 @@ namespace Raven.Database.Linq
 			{
 				get { return inner.Length; }
 			}
+
+			public IEnumerable<dynamic> Select(Func<dynamic,dynamic > func)
+			{
+				return inner.Select(item => func(item));
+			}
 		}
 	}
 
@@ -380,6 +398,46 @@ namespace Raven.Database.Linq
 
 		// null is false by default
 		public static implicit operator bool (DynamicNullObject o)
+		{
+			return false;
+		}
+
+		public override bool Equals(object obj)
+		{
+			return obj is DynamicNullObject;
+		}
+
+		public override int GetHashCode()
+		{
+			return 0;
+		}
+
+		public static bool operator ==(DynamicNullObject left, object right)
+		{
+			return right is DynamicNullObject;
+		}
+
+		public static bool operator !=(DynamicNullObject left, object right)
+		{
+			return (right is DynamicNullObject) == false;
+		}
+
+		public static bool operator >(DynamicNullObject left, object right)
+		{
+			return false;
+		}
+
+		public static bool operator <(DynamicNullObject left, object right)
+		{
+			return false;
+		}
+
+		public static bool operator >=(DynamicNullObject left, object right)
+		{
+			return false;
+		}
+
+		public static bool operator <=(DynamicNullObject left, object right)
 		{
 			return false;
 		}

@@ -9,7 +9,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.ConstrainedExecution;
-using System.Threading;
 using log4net;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Index;
@@ -52,9 +51,9 @@ namespace Raven.Database.Indexing
 		        var indexDefinition = indexDefinitionStorage.GetIndexDefinition(indexDirectory);
 		        if (indexDefinition == null)
 		            continue;
-		        indexes.TryAdd(indexDirectory,
-		                       CreateIndexImplementation(indexDirectory, indexDefinition,
-		                                                 OpenOrCreateLuceneDirectory(indexDirectory)));
+		    	var luceneDirectory = OpenOrCreateLuceneDirectory(indexDefinition.EncodeIndexNameIfNeeded(path));
+		    	var indexImplementation = CreateIndexImplementation(indexDirectory, indexDefinition, luceneDirectory);
+		    	indexes.TryAdd(indexDirectory, indexImplementation);
 		    }
 		}
 
@@ -80,12 +79,12 @@ namespace Raven.Database.Indexing
             return directory;
 		}
 
-		private Index CreateIndexImplementation(string name, IndexDefinition indexDefinition, Lucene.Net.Store.Directory directory)
+		private Index CreateIndexImplementation(string directoryPath, IndexDefinition indexDefinition, Lucene.Net.Store.Directory directory)
 		{
-		    var viewGenerator = indexDefinitionStorage.GetViewGenerator(name);
+		    var viewGenerator = indexDefinitionStorage.GetViewGenerator(indexDefinition.Name);
 			var indexImplementation = indexDefinition.IsMapReduce
-			                          	? (Index)new MapReduceIndex(directory, name, indexDefinition, viewGenerator)
-			                          	: new SimpleIndex(directory, name, indexDefinition, viewGenerator);
+			                          	? (Index)new MapReduceIndex(directory, directoryPath, indexDefinition, viewGenerator)
+			                          	: new SimpleIndex(directory, directoryPath, indexDefinition, viewGenerator);
 			
 			configuration.Container.SatisfyImportsOnce(indexImplementation);
 
@@ -133,16 +132,17 @@ namespace Raven.Database.Indexing
 			IOExtensions.DeleteDirectory(dirOnDisk);
 		}
 
-		public void CreateIndexImplementation(string name, IndexDefinition indexDefinition)
+		public void CreateIndexImplementation(IndexDefinition indexDefinition)
 		{
-			log.InfoFormat("Creating index {0}", name);
+			var encodedName = indexDefinition.EncodeIndexNameIfNeeded(path);
+			log.InfoFormat("Creating index {0} with encoded name {1}", indexDefinition.Name, encodedName);
 
 		    AssertAnalyzersValid(indexDefinition);
 
-		    indexes.AddOrUpdate(name, n =>
+		    indexes.AddOrUpdate(indexDefinition.Name, n =>
 			{
-				var directory = OpenOrCreateLuceneDirectory(name);
-				return CreateIndexImplementation(name, indexDefinition, directory);
+				var directory = OpenOrCreateLuceneDirectory(encodedName);
+				return CreateIndexImplementation(encodedName, indexDefinition, directory);
 			}, (s, index) => index);
 		}
 
@@ -227,5 +227,13 @@ namespace Raven.Database.Indexing
 
             return result.Searcher;
         }
+
+		public void FlushAllIndexes()
+		{
+			foreach (var value in indexes.Values)
+			{
+				value.Flush();
+			}
+		}
 	}
 }

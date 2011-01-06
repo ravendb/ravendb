@@ -92,7 +92,7 @@ namespace Raven.Database.Indexing
             }
 
 			var itemsToIndex = value as IEnumerable;
-			if(itemsToIndex != null && ShouldTreatAsEnumerable(itemsToIndex))
+			if( itemsToIndex != null && ShouldTreatAsEnumerable(itemsToIndex))
 			{
                 yield return new Field(name + "_IsArray", "true", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
                 foreach (var itemToIndex in itemsToIndex)
@@ -190,6 +190,9 @@ namespace Raven.Database.Indexing
 	    {
             if (itemsToIndex == null)
                 return false;
+
+			if (itemsToIndex is DynamicJsonObject)
+				return false;
 
             if (itemsToIndex is string)
                 return false;

@@ -45,9 +45,8 @@ namespace Raven.Client.Client
 
 		private class CachedRequest
 		{
-			public string Etag;
 			public string Data;
-			public string LastModified;
+			public NameValueCollection Headers;
 		}
 
 		private byte[] bytesForNextWrite;
@@ -121,7 +120,7 @@ namespace Raven.Client.Client
 			if (cachedRequest == null)
 				return;
 
-			webRequest.Headers["If-None-Match"] = cachedRequest.Etag;
+			webRequest.Headers["If-None-Match"] = cachedRequest.Headers["ETag"];
 		}
 
 		/// <summary>
@@ -173,11 +172,7 @@ namespace Raven.Client.Client
 					&& cachedRequest != null)
 				{
 					ResponseStatusCode = HttpStatusCode.NotModified;
-					ResponseHeaders = new NameValueCollection
-					{
-						{"ETag", cachedRequest.Etag},
-						{"Last-Modified", cachedRequest.LastModified}
-					};
+					ResponseHeaders = new NameValueCollection(cachedRequest.Headers);
 					Interlocked.Increment(ref numOfCachedRequests);
 					return cachedRequest.Data;
 				}
@@ -200,8 +195,7 @@ namespace Raven.Client.Client
 					cache.Add(url, new CachedRequest
 					{
 						Data = text,
-						LastModified = response.Headers["Last-Modified"],
-						Etag = response.Headers["ETag"]
+						Headers = response.Headers
 					}, new CacheItemPolicy() );// cache as much as possible, for as long as possible, using the default cache limits
 				}
 				return text;

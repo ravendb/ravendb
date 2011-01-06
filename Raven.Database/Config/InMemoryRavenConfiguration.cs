@@ -27,7 +27,7 @@ namespace Raven.Database.Config
 		{
 			Settings = new NameValueCollection(StringComparer.InvariantCultureIgnoreCase);
 
-			MaxNumberOfItemsToIndexInSingleBatch = 500;
+			MaxNumberOfItemsToIndexInSingleBatch = 2500;
 
 			Catalog = new AggregateCatalog(
 				new AssemblyCatalog(typeof(HttpServer).Assembly),
@@ -50,8 +50,10 @@ namespace Raven.Database.Config
 			var queryThreshold = Settings["Raven/TempIndexPromotionThreshold"];
 			var cleanupPeriod = Settings["Raven/TempIndexCleanupPeriod"];
 			var cleanupThreshold = Settings["Raven/TempIndexCleanupThreshold"];
+			var maxNumberOfItemsToIndexInSingleBatch = Settings["Raven/MaxNumberOfItemsToIndexInSingleBatch"];
 
 			MaxPageSize = maxPageSizeStr != null ? int.Parse(maxPageSizeStr) : 1024;
+			MaxNumberOfItemsToIndexInSingleBatch = maxNumberOfItemsToIndexInSingleBatch != null ? int.Parse(maxNumberOfItemsToIndexInSingleBatch) : 2500;
 			TempIndexPromotionMinimumQueryCount = minimumQueryCount != null ? int.Parse(minimumQueryCount) : 100;
 			TempIndexPromotionThreshold = queryThreshold != null ? int.Parse(queryThreshold) : 60000; // once a minute
 			TempIndexCleanupPeriod = cleanupPeriod != null ? TimeSpan.FromSeconds(int.Parse(cleanupPeriod)) : TimeSpan.FromMinutes(10);

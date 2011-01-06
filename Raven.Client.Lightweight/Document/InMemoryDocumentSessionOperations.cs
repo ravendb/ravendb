@@ -54,6 +54,11 @@ namespace Raven.Client.Document
 		protected DocumentStore documentStore;
 
 		/// <summary>
+		/// The query listeners allow to modify queries before it is executed
+		/// </summary>
+		protected readonly IDocumentQueryListener[] queryListeners;
+
+		/// <summary>
 		/// Gets the number of requests for this session
 		/// </summary>
 		/// <value></value>
@@ -68,9 +73,14 @@ namespace Raven.Client.Document
 		/// <param name="documentStore">The document store.</param>
 		/// <param name="storeListeners">The store listeners.</param>
 		/// <param name="deleteListeners">The delete listeners.</param>
-		protected InMemoryDocumentSessionOperations(DocumentStore documentStore, IDocumentStoreListener[] storeListeners, IDocumentDeleteListener[] deleteListeners)
+		protected InMemoryDocumentSessionOperations(
+			DocumentStore documentStore, 
+			IDocumentQueryListener[] queryListeners,
+			IDocumentStoreListener[] storeListeners, 
+			IDocumentDeleteListener[] deleteListeners)
 		{
 			this.documentStore = documentStore;
+			this.queryListeners = queryListeners;
 			this.deleteListeners = deleteListeners;
 			this.storeListeners = storeListeners;
 			ResourceManagerId = documentStore.ResourceManagerId;

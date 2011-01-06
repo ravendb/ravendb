@@ -18,11 +18,13 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
+using Raven.Database.Json;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
 using Raven.Http.Extensions;
+using Raven.Http.Json;
 
 namespace Raven.Database.Indexing
 {
@@ -106,7 +108,8 @@ namespace Raven.Database.Indexing
 			{
 				Converters =
 			                               	{
-			                               		new HttpExtensions.JsonToJsonConverter()
+			                               		new JsonToJsonConverter(),
+												new JsonEnumConverter()
 			                               	}
 			});
 		}

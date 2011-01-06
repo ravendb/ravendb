@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
 using Newtonsoft.Json.Linq;
@@ -186,6 +187,20 @@ namespace Raven.Database.Impl
 			if(document == null)
 				return null;
 			return new DynamicJsonObject(document.DataAsJson);
+		}
+
+		public dynamic Load(object maybeId)
+		{
+			var id = maybeId as string;
+			if (id != null)
+				return Load(id);
+
+			var items = new List<dynamic>();
+			foreach (var itemId in (IEnumerable)maybeId)
+			{
+				items.Add(Load(itemId));
+			}
+			return new DynamicJsonObject.DynamicList(items.ToArray());
 		}
 	}
 }

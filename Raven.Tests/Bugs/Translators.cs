@@ -89,7 +89,7 @@ namespace Raven.Tests.Bugs
                                                                                                  .First());
 
                     Assert.Equal(@"The transform results function failed.
-Doc 'users/1', Error: Cannot perform runtime binding on a null reference", exception.Message);
+Doc 'users/1', Error: Object reference not set to an instance of an object.", exception.Message);
                 }
             }
         }

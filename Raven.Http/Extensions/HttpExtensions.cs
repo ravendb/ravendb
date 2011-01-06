@@ -13,6 +13,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
+using Raven.Database.Json;
 using Raven.Database.Linq;
 using Raven.Http.Abstractions;
 using Raven.Http.Exceptions;
@@ -405,30 +406,5 @@ namespace Raven.Http.Extensions
 					return "text/plain";
 			}
 		}
-
-		#region Nested type: JsonToJsonConverter
-
-		public class JsonToJsonConverter : JsonConverter
-		{
-			public override void WriteJson (JsonWriter writer, object value, JsonSerializer serializer)
-			{
-				if (value is JObject)
-					((JObject)value).WriteTo(writer);
-				else
-					((DynamicJsonObject) value).Inner.WriteTo(writer);
-			}
-
-			public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
-			{
-				throw new NotImplementedException();
-			}
-
-			public override bool CanConvert (Type objectType)
-			{
-				return objectType == typeof(JObject) || objectType == typeof(DynamicJsonObject);
-			}
-		}
-
-		#endregion
 	}
 }

@@ -122,6 +122,7 @@ namespace Raven.Client.Document
 		private IDocumentDeleteListener[] deleteListeners = new IDocumentDeleteListener[0];
 		private IDocumentStoreListener[] storeListeners = new IDocumentStoreListener[0];
 		private IDocumentConversionListener[] conversionListeners = new IDocumentConversionListener[0];
+		private IDocumentQueryListener[] queryListeners = new IDocumentQueryListener[0];
 
 #if !SILVERLIGHT
 		private ICredentials credentials = CredentialCache.DefaultNetworkCredentials;
@@ -253,7 +254,7 @@ namespace Raven.Client.Document
 		/// <param name="credentialsForSession">The credentials for session.</param>
 		public IDocumentSession OpenSession(ICredentials credentialsForSession)
 		{
-			var session = new DocumentSession(this, storeListeners, deleteListeners, DatabaseCommands.With(credentialsForSession)
+			var session = new DocumentSession(this, queryListeners, storeListeners, deleteListeners, DatabaseCommands.With(credentialsForSession)
 #if !NET_3_5
 				, AsyncDatabaseCommands.With(credentialsForSession)
 #endif
@@ -268,7 +269,7 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public IDocumentSession OpenSession()
 		{
-			var session = new DocumentSession(this, storeListeners, deleteListeners, DatabaseCommands
+			var session = new DocumentSession(this, queryListeners, storeListeners, deleteListeners, DatabaseCommands
 #if !NET_3_5
 				, AsyncDatabaseCommands
 #endif
@@ -282,7 +283,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		public IDocumentSession OpenSession(string database)
 		{
-			var session = new DocumentSession(this, storeListeners, deleteListeners, DatabaseCommands.ForDatabase(database)
+			var session = new DocumentSession(this, queryListeners, storeListeners, deleteListeners, DatabaseCommands.ForDatabase(database)
 #if !NET_3_5
 				, AsyncDatabaseCommands.ForDatabase(database)
 #endif
@@ -296,7 +297,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		public IDocumentSession OpenSession(string database, ICredentials credentialsForSession)
 		{
-			var session = new DocumentSession(this, storeListeners, deleteListeners, DatabaseCommands
+			var session = new DocumentSession(this, queryListeners, storeListeners, deleteListeners, DatabaseCommands
 					.ForDatabase(database)
 					.With(credentialsForSession)
 #if !NET_3_5
@@ -424,6 +425,14 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
+		/// Registers the query listener.
+		/// </summary>
+		public IDocumentStore RegisterListener(IDocumentQueryListener queryListener)
+		{
+			queryListeners = queryListeners.Concat(new[] { queryListener }).ToArray();
+			return this;
+		}
+		/// <summary>
 		/// Registers the convertion listener.
 		/// </summary>
 		public IDocumentStore RegisterListener(IDocumentConversionListener conversionListener)
@@ -442,7 +451,7 @@ namespace Raven.Client.Document
 			if (AsyncDatabaseCommands == null)
 				throw new InvalidOperationException("You cannot open an async session because it is not supported on embedded mode");
 
-			var session = new AsyncDocumentSession(this, storeListeners, deleteListeners);
+			var session = new AsyncDocumentSession(this, queryListeners, storeListeners, deleteListeners);
 			session.Stored += OnSessionStored;
 			return session;
 		}

@@ -77,6 +77,7 @@
     <Compile Include="Extensions\DisposableAction.cs" />
     <Compile Include="Extensions\ExpressionExtensions.cs" />
     <Compile Include="Extensions\JsonExtensions.cs" />
+    <Compile Include="Json\JsonToJsonConverter.cs" />
     <Compile Include="Extensions\MetadataExtensions.cs" />
     <Compile Include="Extensions\Reference.cs" />
     <Compile Include="Extensions\StreamExtension.cs" />

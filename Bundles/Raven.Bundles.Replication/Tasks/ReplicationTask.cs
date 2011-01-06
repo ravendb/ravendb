@@ -8,6 +8,7 @@ using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using log4net;
@@ -301,10 +302,11 @@ namespace Raven.Bundles.Replication.Tasks
             {
                 var request = (HttpWebRequest)WebRequest.Create(destination + "/replication/replicateDocs?from=" + docDb.Configuration.ServerUrl);
                 request.UseDefaultCredentials = true;
+            	request.ContentType = "application/json; charset=utf-8";
                 request.Credentials = CredentialCache.DefaultNetworkCredentials;
                 request.Method = "POST";
                 using (var stream = request.GetRequestStream())
-                using (var streamWriter = new StreamWriter(stream))
+                using (var streamWriter = new StreamWriter(stream, Encoding.UTF8))
                 {
                     jsonDocuments.WriteTo(new JsonTextWriter(streamWriter));
                     streamWriter.Flush();
