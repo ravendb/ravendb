@@ -116,17 +116,17 @@ namespace Raven.Database.Indexing
 
         private IndexingResult ExtractIndexDataFromDocument(DynamicJsonObject dynamicJsonObject)
         {
-            
-            return new IndexingResult
+        	var newDocId = dynamicJsonObject.GetDocumentId();
+        	return new IndexingResult
             {
                 Fields = AnonymousObjectToLuceneDocumentConverter.Index(dynamicJsonObject.Inner, indexDefinition,
                                                                   Field.Store.NO),
-                NewDocId = dynamicJsonObject.GetDocumentId(),
+                NewDocId = newDocId is DynamicNullObject ? null : (string)newDocId,
                 ShouldSkip = false
             };
         }
 
-        private IndexingResult ExtractIndexDataFromDocument(PropertyDescriptorCollection properties, object doc)
+    	private IndexingResult ExtractIndexDataFromDocument(PropertyDescriptorCollection properties, object doc)
         {
             if (properties == null)
             {
