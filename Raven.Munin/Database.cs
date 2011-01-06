@@ -244,7 +244,7 @@ namespace Raven.Munin
 			{
 				WriteTo(log, new JArray(new JObject
 				{
-					{"type", (byte) CommandType.Skip},
+					{"type", (short) CommandType.Skip},
 					{"size", dataSizeInBytes}
 				}));
 			}
@@ -254,7 +254,7 @@ namespace Raven.Munin
 			{
 				var cmd = new JObject
 				{
-					{"type", (byte) command.Type},
+					{"type", (short) command.Type},
 					{"key", command.Key},
 					{"dicId", command.DictionaryId}
 				};

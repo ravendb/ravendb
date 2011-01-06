@@ -109,7 +109,7 @@ namespace Raven.Munin
                 case JTokenType.Null:
                     return 0;
                 case JTokenType.Bytes:
-                    return obj.Value<byte[]>().Aggregate(0, (current, val) => (current * 397) ^ GetHashCode(val));
+                    return obj.Value<byte[]>().Aggregate(0, (current, val) => (current * 397) ^ val);
                 case JTokenType.Array:
                 case JTokenType.Object:
                     return obj.Aggregate(0, (current, val) => (current * 397) ^ GetHashCode(val));
