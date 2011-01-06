@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using log4net;
@@ -264,15 +265,32 @@ namespace Raven.Database.Indexing
 					.Select(g =>
 					{
 						if (g.Count() == 1 && document.GetField(g.Key + "_IsArray") == null)
-							return g.First();
-						return new JProperty(g.Key,
-											 g.Select(x => x.Value)
+						{
+						    var first = g.First();
+						    first.Value = EnsureNumberValuesAreNumeric(first.Value);
+						    return first;
+						}
+					    return new JProperty(g.Key,
+                                             g.Select(x => EnsureNumberValuesAreNumeric(x.Value))
 							);
 					})
 				);
 		}
 
-		private static JProperty CreateProperty(Field fld, Document document)
+	    private static JToken EnsureNumberValuesAreNumeric(JToken originalValue)
+	    {
+            var val = originalValue as JValue;
+            if(val == null)
+                return originalValue;
+            if (originalValue.Type != JTokenType.String)
+                return originalValue;
+	        double result;
+            if (double.TryParse((string)val.Value, NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out result))
+                return new JValue(result);
+	        return originalValue;
+	    }
+
+	    private static JProperty CreateProperty(Field fld, Document document)
 		{
 			if (document.GetField(fld.Name() + "_ConvertToJson") != null)
 			{
