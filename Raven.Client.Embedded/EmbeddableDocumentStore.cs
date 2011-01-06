@@ -22,7 +22,12 @@ namespace Raven.Client.Client
     {
         private RavenConfiguration configuration;
         private RavenDbHttpServer HttpServer;
-        private bool disposed;
+        private bool wasDisposed;
+
+		/// <summary>
+		/// Raised after this instance has been disposed
+		/// </summary>
+    	public event Action Disposed = delegate { };
 
         /// <summary>
         /// Gets or sets the identifier for this store.
@@ -100,9 +105,9 @@ namespace Raven.Client.Client
         /// </summary>
         public override void Dispose()
         {
-            if (disposed)
+            if (wasDisposed)
                 return;
-            disposed = true;
+            wasDisposed = true;
             base.Dispose();
             if (DocumentDatabase != null)
                 DocumentDatabase.Dispose();
@@ -110,6 +115,9 @@ namespace Raven.Client.Client
                 HttpServer.Dispose();
 
 
+        	var onDisposed = Disposed;
+			if (onDisposed != null)
+				onDisposed();
         }
 
         /// <summary>
