@@ -191,6 +191,8 @@ namespace Raven.Database.Impl
 
 		public dynamic Load(object maybeId)
 		{
+			if (maybeId == null || maybeId is DynamicNullObject)
+				return new DynamicNullObject();
 			var id = maybeId as string;
 			if (id != null)
 				return Load(id);
