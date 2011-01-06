@@ -116,13 +116,13 @@ namespace Raven.Tests.Bugs
 				Map = @"from doc in docs select new{ doc.Something}"
 			});
 
-			db.Put("foos/1", null, JObject.Parse("{'Something':'something'"),
+			db.Put("foos/1", null, JObject.Parse("{'Something':'something'}"),
 			  JObject.Parse("{'Raven-Entity-Name': 'Foos'}"), null);
 
 			var document = db.Get("foos/1", null);
 			db.Delete("foos/1", document.Etag, null);
 
-			db.Put("foos/1", null, JObject.Parse("{'Something':'something'"),
+			db.Put("foos/1", null, JObject.Parse("{'Something':'something'}"),
 			JObject.Parse("{'Raven-Entity-Name': 'Foos'}"), null);
 
 			db.SpinBackgroundWorkers();

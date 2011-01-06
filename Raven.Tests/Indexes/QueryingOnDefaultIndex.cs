@@ -35,7 +35,7 @@ namespace Raven.Tests.Indexes
 		[Fact]
 		public void CanQueryOverDefaultIndex()
 		{
-			db.Put("users/ayende", null, JObject.Parse("{'email':'ayende@ayende.com'"),
+			db.Put("users/ayende", null, JObject.Parse("{'email':'ayende@ayende.com'}"),
 			       JObject.Parse("{'Raven-Entity-Name': 'Users'}"), null);
 
 			QueryResult queryResult;
