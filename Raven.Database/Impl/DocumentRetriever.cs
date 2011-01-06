@@ -185,7 +185,7 @@ namespace Raven.Database.Impl
 		{
 			var document = GetDocumentWithCaching(id);
 			if(document == null)
-				return null;
+				return new DynamicNullObject();
 			return new DynamicJsonObject(document.DataAsJson);
 		}
 
