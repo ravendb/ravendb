@@ -72,6 +72,9 @@
     <Compile Include="..\Raven.Abstractions\Json\JsonToJsonConverter.cs">
       <Link>Json\JsonToJsonConverter.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Json\JsonValueTypeConverter.cs">
+      <Link>Json\JsonValueTypeConverter.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\IDocumentQueryListener.cs">
       <Link>IDocumentQueryListener.cs</Link>
     </Compile>

@@ -89,6 +89,7 @@
     <Compile Include="Json\DynamicUtil.cs" />
     <Compile Include="Json\JsonDynamicConverter.cs" />
     <Compile Include="Json\JsonEnumConverter.cs" />
+    <Compile Include="Json\JsonValueTypeConverter.cs" />
     <Compile Include="Json\JTokenExtensions.cs" />
     <Compile Include="Linq\DateTools.cs" />
     <Compile Include="Linq\DynamicJsonObject.cs" />

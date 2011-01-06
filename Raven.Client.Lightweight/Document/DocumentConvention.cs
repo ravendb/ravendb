@@ -10,6 +10,7 @@ using System.Runtime.Serialization.Formatters;
 using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
+using Raven.Abstractions.Json;
 using Raven.Client.Converters;
 using Raven.Client.Util;
 using System.Linq;
@@ -184,6 +185,12 @@ namespace Raven.Client.Document
 					{
 						new JsonEnumConverter(),
 						new JsonLuceneDateTimeConverter(),
+                        new JsonValueTypeConverter<int>(int.TryParse),
+                        new JsonValueTypeConverter<long>(long.TryParse),
+                        new JsonValueTypeConverter<decimal>(decimal.TryParse),
+                        new JsonValueTypeConverter<double>(double.TryParse),
+                        new JsonValueTypeConverter<float>(float.TryParse),
+                        new JsonValueTypeConverter<short>(short.TryParse),
 #if !NET_3_5 && !SILVERLIGHT
 						new JsonDynamicConverter()
 #endif
