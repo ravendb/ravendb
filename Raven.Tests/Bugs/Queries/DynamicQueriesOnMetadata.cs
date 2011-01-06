@@ -45,7 +45,7 @@ namespace Raven.Tests.Bugs.Queries
 			var indexDefinition = mapping.CreateIndexDefinition();
 
 			Assert.Equal(@"from doc in docs
-select new { metadataRavenGraphType = doc[""@metadata""][""Raven-Graph-Type""] }", indexDefinition.Map);
+    select new { metadataRavenGraphType = doc[""@metadata""][""Raven-Graph-Type""] }", indexDefinition.Map);
 		}
 	}
 }

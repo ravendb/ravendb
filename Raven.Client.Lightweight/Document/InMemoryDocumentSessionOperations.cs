@@ -36,7 +36,9 @@ namespace Raven.Client.Document
 		/// </summary>
 		protected readonly HashSet<object> deletedEntities = new HashSet<object>();
 
+#if !SILVERLIGHT
 		private bool hasEnlisted;
+#endif 
 
 		/// <summary>
 		/// hold the data required to manage the data for RavenDB's Unit of Work
@@ -793,6 +795,7 @@ more responsive application.
 		/// <returns></returns>
 		public abstract byte[] PromoteTransaction(Guid fromTxId);
 
+#if !SILVERLIGHT
 		/// <summary>
 		/// Clears the enlistment.
 		/// </summary>
@@ -800,7 +803,7 @@ more responsive application.
 		{
 			hasEnlisted = false;
 		}
-
+#endif 
 		/// <summary>
 		/// Metadata held about an entity by the session
 		/// </summary>

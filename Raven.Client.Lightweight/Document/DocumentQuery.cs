@@ -389,11 +389,11 @@ namespace Raven.Client.Document
 				try
 				{
 #if !SILVERLIGHT
-					var theQueryResult = QueryResult;
+					queryResult = QueryResult;
 #else
-					var theQueryResult = QueryResultAsync.Result;
+                    queryResult = QueryResultAsync.Result;
 #endif
-					foreach (var include in theQueryResult.Includes)
+                    foreach (var include in queryResult.Includes)
 					{
 						var metadata = include.Value<JObject>("@metadata");
 
@@ -401,7 +401,7 @@ namespace Raven.Client.Document
 													include,
 													metadata);
 					}
-					var list = theQueryResult.Results
+                    var list = queryResult.Results
 						.Select(Deserialize)
 						.ToList();
 					return list.GetEnumerator();

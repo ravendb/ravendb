@@ -27,26 +27,6 @@ namespace Raven.Client.Client
 		/// </summary>
 		public static event EventHandler<WebRequestEventArgs> ConfigureRequest = delegate {  };
 
-		private static int numOfCachedRequests;
-
-		/// <summary>
-		/// The number of requests that we got 304 for 
-		/// and were able to handle purely from the cache
-		/// </summary>
-		public static int NumberOfCachedRequests
-		{
-			get { return numOfCachedRequests; }
-		}
-
-		private class CachedRequest
-		{
-			public string Etag;
-			public string Data;
-			public string LastModified;
-		}
-
-		private byte[] bytesForNextWrite;
-
 		/// <summary>
 		/// Creates the HTTP json request.
 		/// </summary>
@@ -81,10 +61,6 @@ namespace Raven.Client.Client
 		}
 
 		private readonly WebRequest webRequest;
-		// temporary create a strong reference to the cached data for this request
-		// avoid the potential for clearing the cache from a cached item
-		private readonly CachedRequest cachedRequest;
-
 		/// <summary>
 		/// Gets or sets the response headers.
 		/// </summary>
@@ -140,19 +116,6 @@ namespace Raven.Client.Client
 					httpWebResponse.StatusCode == HttpStatusCode.NotFound ||
 						httpWebResponse.StatusCode == HttpStatusCode.Conflict)
 					throw;
-
-				if (httpWebResponse.StatusCode == HttpStatusCode.NotModified 
-					&& cachedRequest != null)
-				{
-					ResponseStatusCode = HttpStatusCode.NotModified;
-					ResponseHeaders = new Dictionary<string,IList<string>>
-					{
-						{"ETag", new List<string> { cachedRequest.Etag}},
-						{"Last-Modified", new List<string>{ cachedRequest.LastModified}}
-					};
-					Interlocked.Increment(ref numOfCachedRequests);
-					return cachedRequest.Data;
-				}
 
 				using (var sr = new StreamReader(e.Response.GetResponseStream()))
 				{
@@ -227,7 +190,7 @@ namespace Raven.Client.Client
 																		   var dataStream = t.Result;
 																		   using (dataStream)
 																		   {
-																			   dataStream.Write(bytesForNextWrite, 0, bytesForNextWrite.Length);
+                                                                               dataStream.Write(byteArray, 0, byteArray.Length);
 																			   dataStream.Close();
 																		   }
 																	   });

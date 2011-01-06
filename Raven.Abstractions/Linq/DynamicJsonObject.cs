@@ -24,6 +24,9 @@ namespace Raven.Database.Linq
 		{
 			foreach (var item in Inner)
 			{
+                if(item.Key[0] == '$')
+                    continue;
+
 				yield return new KeyValuePair<string,object>(item.Key, TransformToValue(item.Value));
 			}
 		}
