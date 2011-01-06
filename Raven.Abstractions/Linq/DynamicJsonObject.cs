@@ -177,6 +177,10 @@ namespace Raven.Database.Linq
                     return TransformToValue(value);
                 } 
             }
+			if(name == "Id")
+			{
+				return GetDocumentId();
+			}
 			return new DynamicNullObject();
 		}
 
@@ -184,7 +188,7 @@ namespace Raven.Database.Linq
 		/// Gets the document id.
 		/// </summary>
 		/// <returns></returns>
-		public string GetDocumentId()
+		public object GetDocumentId()
 		{
 			var metadata = inner["@metadata"];
 			if (metadata != null)
@@ -195,7 +199,7 @@ namespace Raven.Database.Linq
 					return id.Value<string>();
 				}
 			}
-			return null;
+			return new DynamicNullObject();
 		}
 
 		/// <summary>
@@ -376,6 +380,10 @@ namespace Raven.Database.Linq
 
 	public class DynamicNullObject : DynamicObject, IEnumerable<object>
 	{
+		public override string ToString()
+		{
+			return String.Empty;
+		}
 		public override bool TryGetIndex(GetIndexBinder binder, object[] indexes, out object result)
 		{
 			result = this;
@@ -393,6 +401,11 @@ namespace Raven.Database.Linq
 			yield break;
 		}
 
+		public override bool TryInvoke(InvokeBinder binder, object[] args, out object result)
+		{
+			result = this;
+			return true;
+		}
 
 		IEnumerator IEnumerable.GetEnumerator()
 		{
@@ -417,7 +430,7 @@ namespace Raven.Database.Linq
 
 		public static bool operator ==(DynamicNullObject left, object right)
 		{
-			return right is DynamicNullObject;
+			return right is DynamicNullObject || right == null;
 		}
 
 		public static bool operator !=(DynamicNullObject left, object right)
