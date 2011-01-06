@@ -266,29 +266,12 @@ namespace Raven.Database.Indexing
 					{
 						if (g.Count() == 1 && document.GetField(g.Key + "_IsArray") == null)
 						{
-						    var first = g.First();
-						    first.Value = EnsureNumberValuesAreNumeric(first.Value);
-						    return first;
+						    return g.First();
 						}
-					    return new JProperty(g.Key,
-                                             g.Select(x => EnsureNumberValuesAreNumeric(x.Value))
-							);
+					    return new JProperty(g.Key, g.Select(x => x.Value));
 					})
 				);
 		}
-
-	    private static JToken EnsureNumberValuesAreNumeric(JToken originalValue)
-	    {
-            var val = originalValue as JValue;
-            if(val == null)
-                return originalValue;
-            if (originalValue.Type != JTokenType.String)
-                return originalValue;
-	        double result;
-            if (double.TryParse((string)val.Value, NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out result))
-                return new JValue(result);
-	        return originalValue;
-	    }
 
 	    private static JProperty CreateProperty(Field fld, Document document)
 		{
