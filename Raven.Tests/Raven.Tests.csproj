@@ -168,6 +168,14 @@
     <Compile Include="Bugs\LinqOnUrls.cs" />
     <Compile Include="Bugs\LiveProjection.cs" />
     <Compile Include="Bugs\LiveProjections\CanLoadMultipleItems.cs" />
+    <Compile Include="Bugs\LiveProjections\Entities\Product.cs" />
+    <Compile Include="Bugs\LiveProjections\Indexes\ProductDetailsReport_ByProductId.cs" />
+    <Compile Include="Bugs\LiveProjections\Indexes\ProductSkuListViewModelReport_ByArticleNumberAndName.cs" />
+    <Compile Include="Bugs\LiveProjections\Views\ProductDetailsReport.cs" />
+    <Compile Include="Bugs\LiveProjections\Views\ProductSkuListViewModelReport.cs" />
+    <Compile Include="Bugs\LiveProjections\Entities\ProductSku.cs" />
+    <Compile Include="Bugs\LiveProjections\Views\ProductVariant.cs" />
+    <Compile Include="Bugs\LiveProjections\LiveProjectionOnProducts.cs" />
     <Compile Include="Bugs\LuceneQueryShouldWorkWithoutExtensionMethod.cs" />
     <Compile Include="Bugs\LukeQuerying.cs" />
     <Compile Include="Bugs\MapReduceThrowsNRE.cs" />
