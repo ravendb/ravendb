@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <doc>
     <assembly>
-        <name>Newtonsoft.Json</name>
+        <name>Newtonsoft.Json.Net35</name>
     </assembly>
     <members>
         <member name="T:Newtonsoft.Json.Bson.BsonReader">
@@ -1761,24 +1761,6 @@
             <param name="errorWhenNoMatch">A flag to indicate whether an error should be thrown if no token is found.</param>
             <returns>The <see cref="T:Newtonsoft.Json.Linq.JToken"/> that matches the object path.</returns>
         </member>
-        <member name="M:Newtonsoft.Json.Linq.JToken.GetMetaObject(System.Linq.Expressions.Expression)">
-            <summary>
-            Returns the <see cref="T:System.Dynamic.DynamicMetaObject"/> responsible for binding operations performed on this object.
-            </summary>
-            <param name="parameter">The expression tree representation of the runtime value.</param>
-            <returns>
-            The <see cref="T:System.Dynamic.DynamicMetaObject"/> to bind this object.
-            </returns>
-        </member>
-        <member name="M:Newtonsoft.Json.Linq.JToken.System#Dynamic#IDynamicMetaObjectProvider#GetMetaObject(System.Linq.Expressions.Expression)">
-            <summary>
-            Returns the <see cref="T:System.Dynamic.DynamicMetaObject"/> responsible for binding operations performed on this object.
-            </summary>
-            <param name="parameter">The expression tree representation of the runtime value.</param>
-            <returns>
-            The <see cref="T:System.Dynamic.DynamicMetaObject"/> to bind this object.
-            </returns>
-        </member>
         <member name="M:Newtonsoft.Json.Linq.JToken.DeepClone">
             <summary>
             Creates a new instance of the <see cref="T:Newtonsoft.Json.Linq.JToken"/>. All child tokens are recursively cloned.
@@ -1945,15 +1927,6 @@
             A hash code for the current <see cref="T:System.Object"/>.
             </returns>
         </member>
-        <member name="M:Newtonsoft.Json.Linq.JValue.GetMetaObject(System.Linq.Expressions.Expression)">
-            <summary>
-            Returns the <see cref="T:System.Dynamic.DynamicMetaObject"/> responsible for binding operations performed on this object.
-            </summary>
-            <param name="parameter">The expression tree representation of the runtime value.</param>
-            <returns>
-            The <see cref="T:System.Dynamic.DynamicMetaObject"/> to bind this object.
-            </returns>
-        </member>
         <member name="P:Newtonsoft.Json.Linq.JValue.HasValues">
             <summary>
             Gets a value indicating whether this token has childen tokens.
@@ -2013,7 +1986,7 @@
             The property must be defined in JSON and cannot be a null value.
             </summary>
         </member>
-        <member name="T:Newtonsoft.Json.Serialization.JsonDynamicContract">
+        <member name="T:Newtonsoft.Json.Serialization.JsonISerializableContract">
             <summary>
             Contract details for a <see cref="T:System.Type"/> used by the <see cref="T:Newtonsoft.Json.JsonSerializer"/>.
             </summary>
@@ -2088,23 +2061,6 @@
             Gets or sets the method called when an error is thrown during the serialization of the object.
             </summary>
             <value>The method called when an error is thrown during the serialization of the object.</value>
-        </member>
-        <member name="M:Newtonsoft.Json.Serialization.JsonDynamicContract.#ctor(System.Type)">
-            <summary>
-            Initializes a new instance of the <see cref="T:Newtonsoft.Json.Serialization.JsonDynamicContract"/> class.
-            </summary>
-            <param name="underlyingType">The underlying type for the contract.</param>
-        </member>
-        <member name="P:Newtonsoft.Json.Serialization.JsonDynamicContract.Properties">
-            <summary>
-            Gets the object's properties.
-            </summary>
-            <value>The object's properties.</value>
-        </member>
-        <member name="T:Newtonsoft.Json.Serialization.JsonISerializableContract">
-            <summary>
-            Contract details for a <see cref="T:System.Type"/> used by the <see cref="T:Newtonsoft.Json.JsonSerializer"/>.
-            </summary>
         </member>
         <member name="M:Newtonsoft.Json.Serialization.JsonISerializableContract.#ctor(System.Type)">
             <summary>
@@ -4057,12 +4013,6 @@
             </summary>
             <param name="e">The <see cref="T:System.ComponentModel.ListChangedEventArgs"/> instance containing the event data.</param>
         </member>
-        <member name="M:Newtonsoft.Json.Linq.JContainer.OnCollectionChanged(System.Collections.Specialized.NotifyCollectionChangedEventArgs)">
-            <summary>
-            Raises the <see cref="E:Newtonsoft.Json.Linq.JContainer.CollectionChanged"/> event.
-            </summary>
-            <param name="e">The <see cref="T:System.Collections.Specialized.NotifyCollectionChangedEventArgs"/> instance containing the event data.</param>
-        </member>
         <member name="M:Newtonsoft.Json.Linq.JContainer.Children">
             <summary>
             Returns a collection of the child tokens of this token, in document order.
@@ -4123,11 +4073,6 @@
         <member name="E:Newtonsoft.Json.Linq.JContainer.AddingNew">
             <summary>
             Occurs before an item is added to the collection.
-            </summary>
-        </member>
-        <member name="E:Newtonsoft.Json.Linq.JContainer.CollectionChanged">
-            <summary>
-            Occurs when the items list of the collection has changed, or the collection is reset.
             </summary>
         </member>
         <member name="P:Newtonsoft.Json.Linq.JContainer.HasValues">
@@ -4496,15 +4441,6 @@
             <param name="pd">A <see cref="T:System.ComponentModel.PropertyDescriptor"/> that represents the property whose owner is to be found.</param>
             <returns>
             An <see cref="T:System.Object"/> that represents the owner of the specified property.
-            </returns>
-        </member>
-        <member name="M:Newtonsoft.Json.Linq.JObject.GetMetaObject(System.Linq.Expressions.Expression)">
-            <summary>
-            Returns the <see cref="T:System.Dynamic.DynamicMetaObject"/> responsible for binding operations performed on this object.
-            </summary>
-            <param name="parameter">The expression tree representation of the runtime value.</param>
-            <returns>
-            The <see cref="T:System.Dynamic.DynamicMetaObject"/> to bind this object.
             </returns>
         </member>
         <member name="E:Newtonsoft.Json.Linq.JObject.PropertyChanged">
@@ -5292,13 +5228,6 @@
             <param name="objectType">Type of the object.</param>
             <returns>A <see cref="T:Newtonsoft.Json.Serialization.JsonISerializableContract"/> for the given type.</returns>
         </member>
-        <member name="M:Newtonsoft.Json.Serialization.DefaultContractResolver.CreateDynamicContract(System.Type)">
-            <summary>
-            Creates a <see cref="T:Newtonsoft.Json.Serialization.JsonDynamicContract"/> for the given type.
-            </summary>
-            <param name="objectType">Type of the object.</param>
-            <returns>A <see cref="T:Newtonsoft.Json.Serialization.JsonDynamicContract"/> for the given type.</returns>
-        </member>
         <member name="M:Newtonsoft.Json.Serialization.DefaultContractResolver.CreateStringContract(System.Type)">
             <summary>
             Creates a <see cref="T:Newtonsoft.Json.Serialization.JsonStringContract"/> for the given type.
@@ -6073,32 +6002,6 @@
         <member name="T:Newtonsoft.Json.Serialization.OnErrorAttribute">
             <summary>
             When applied to a method, specifies that the method is called when an error occurs serializing an object.
-            </summary>
-        </member>
-        <member name="M:Newtonsoft.Json.Utilities.DynamicProxyMetaObject`1.CallMethodWithResult(System.String,System.Dynamic.DynamicMetaObjectBinder,System.Linq.Expressions.Expression[],Newtonsoft.Json.Utilities.DynamicProxyMetaObject{`0}.Fallback,Newtonsoft.Json.Utilities.DynamicProxyMetaObject{`0}.Fallback)">
-            <summary>
-            Helper method for generating a MetaObject which calls a
-            specific method on Dynamic that returns a result
-            </summary>
-        </member>
-        <member name="M:Newtonsoft.Json.Utilities.DynamicProxyMetaObject`1.CallMethodReturnLast(System.String,System.Dynamic.DynamicMetaObjectBinder,System.Linq.Expressions.Expression[],Newtonsoft.Json.Utilities.DynamicProxyMetaObject{`0}.Fallback)">
-            <summary>
-            Helper method for generating a MetaObject which calls a
-            specific method on Dynamic, but uses one of the arguments for
-            the result.
-            </summary>
-        </member>
-        <member name="M:Newtonsoft.Json.Utilities.DynamicProxyMetaObject`1.CallMethodNoResult(System.String,System.Dynamic.DynamicMetaObjectBinder,System.Linq.Expressions.Expression[],Newtonsoft.Json.Utilities.DynamicProxyMetaObject{`0}.Fallback)">
-            <summary>
-            Helper method for generating a MetaObject which calls a
-            specific method on Dynamic, but uses one of the arguments for
-            the result.
-            </summary>
-        </member>
-        <member name="M:Newtonsoft.Json.Utilities.DynamicProxyMetaObject`1.GetRestrictions">
-            <summary>
-            Returns a Restrictions object which includes our current restrictions merged
-            with a restriction limiting our type
             </summary>
         </member>
         <member name="T:Newtonsoft.Json.Serialization.ObjectConstructor`1">
