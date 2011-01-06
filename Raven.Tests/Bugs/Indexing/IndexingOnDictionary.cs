@@ -73,6 +73,93 @@ namespace Raven.Tests.Bugs.Indexing
 		}
 
 		[Fact]
+		public void CanIndexNestedValuesForDictionaryAsPartOfDictionary()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var s = store.OpenSession())
+				{
+					s.Store(new User
+					        	{
+						NestedItems = new Dictionary<string, NestedItem>
+					    {
+					        { "Color", new NestedItem{ Name="Red" } }
+					    }
+					});
+					s.SaveChanges();
+				}
+
+				using (var s = store.OpenSession())
+				{
+					var users = s.Advanced.LuceneQuery<User>()
+						.WhereEquals("NestedItems,Key", "Color")
+						.AndAlso()
+						.WhereEquals("NestedItems,Value.Name", "Red")
+						.ToArray();
+					Assert.NotEmpty(users);
+				}
+			}
+		}
+
+		[Fact]
+		public void CanIndexValuesForIDictionaryAsPartOfIDictionary()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var s = store.OpenSession())
+				{
+					s.Store(new UserWithIDictionary
+					{
+						Items = new Dictionary<string, string>
+					        {
+					            { "Color", "Red" }
+					        }
+					});
+					s.SaveChanges();
+				}
+
+				using (var s = store.OpenSession())
+				{
+					var users = s.Advanced.LuceneQuery<UserWithIDictionary>()
+						.WhereEquals("Items,Key", "Color")
+						.AndAlso()
+						.WhereEquals("Items,Value", "Red")
+						.ToArray();
+					Assert.NotEmpty(users);
+				}
+			}
+		}
+
+		[Fact]
+		public void CanIndexNestedValuesForIDictionaryAsPartOfIDictionary()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var s = store.OpenSession())
+				{
+					s.Store(new UserWithIDictionary
+					{
+						NestedItems = new Dictionary<string, NestedItem>
+					    {
+					        { "Color", new NestedItem{ Name="Red" } }
+					    }
+					});
+					s.SaveChanges();
+				}
+
+				using (var s = store.OpenSession())
+				{
+					var users = s.Advanced.LuceneQuery<UserWithIDictionary>()
+						.WhereEquals("NestedItems,Key", "Color")
+						.AndAlso()
+						.WhereEquals("NestedItems,Value.Name", "Red")
+						.ToArray();
+					Assert.NotEmpty(users);
+				}
+			}
+		}
+
+		[Fact]
 		public void CanIndexValuesForDictionaryWithNumberForIndex()
 		{
 			using (var store = NewDocumentStore())
@@ -100,13 +187,23 @@ namespace Raven.Tests.Bugs.Indexing
 			}
 		}
 
-		#region Nested type: User
+		#region Nested type: User / UserWithIDictionary / NestedItem
 
 		public class User
 		{
 			public string Id { get; set; }
 			public Dictionary<string, string> Items { get; set; }
+			public Dictionary<string, NestedItem> NestedItems { get; set; }
 		}
+
+		public class UserWithIDictionary
+		{
+			public string Id { get; set; }
+			public IDictionary<string, string> Items { get; set; }
+			public IDictionary<string, NestedItem> NestedItems { get; set; }
+		}
+
+		public class NestedItem { public string Name { get; set; } }
 
 		#endregion
 	}
