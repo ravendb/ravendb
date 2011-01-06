@@ -35,7 +35,7 @@ namespace Raven.Merger
 				Merge("RavenSmuggler.exe", new[]
 				{
 					@"Raven.Smuggler.exe",
-					@"Newtonsoft.Json.dll",
+					@"Newtonsoft.Json.Net35.dll",
 				});
 				
 				//Merge("RavenWeb.dll", new[]
