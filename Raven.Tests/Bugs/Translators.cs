@@ -28,6 +28,7 @@ namespace Raven.Tests.Bugs
                 TransformResults =
                     (database, users) => from user in users
                                          let partner = database.Load<User>(user.PartnerId)
+										 let x = partner == null ? partner.Age/2 : 1
                                          select new {User = user.Name, Partner = partner.Name};
             }
         }
@@ -89,7 +90,7 @@ namespace Raven.Tests.Bugs
                                                                                                  .First());
 
                     Assert.Equal(@"The transform results function failed.
-Doc 'users/1', Error: Object reference not set to an instance of an object.", exception.Message);
+Doc 'users/1', Error: Operator '/' cannot be applied to operands of type 'Raven.Database.Linq.DynamicNullObject' and 'int'", exception.Message);
                 }
             }
         }
