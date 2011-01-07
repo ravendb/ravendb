@@ -1,4 +1,9 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="JTokenComparer.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json.Linq;
@@ -104,7 +109,7 @@ namespace Raven.Munin
                 case JTokenType.Null:
                     return 0;
                 case JTokenType.Bytes:
-                    return obj.Value<byte[]>().Aggregate(0, (current, val) => (current * 397) ^ val.GetHashCode());
+                    return obj.Value<byte[]>().Aggregate(0, (current, val) => (current * 397) ^ val);
                 case JTokenType.Array:
                 case JTokenType.Object:
                     return obj.Aggregate(0, (current, val) => (current * 397) ^ GetHashCode(val));
