@@ -30,16 +30,17 @@ namespace Raven.Tests.Bugs.Indexing
 
 				using (var s = store.OpenSession())
 				{
-					var users = s.Advanced.LuceneQuery<UserWithIDictionary>()
-						.WhereEquals("NestedItems,Key", "Color")
-						.AndAlso()
-						.WhereGreaterThan("NestedItems,Value.Value", 10)
-						.ToArray();
-
-					Assert.NotEmpty(users);
+					Assert.DoesNotThrow(() =>
+						{
+							s.Advanced.LuceneQuery<UserWithIDictionary>()
+								.WhereEquals("NestedItems,Key", "Color")
+								.AndAlso()
+								.WhereGreaterThan("NestedItems,Value.Value", 10)
+								.ToArray();
+						});
 				}
 			}
-		}	
+		}
 
 		#region Nested type: UserWithIDictionary / NestedItem
 		public class UserWithIDictionary
