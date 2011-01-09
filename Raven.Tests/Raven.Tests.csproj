@@ -150,6 +150,7 @@
     <Compile Include="Bugs\Indexing\IndexingEachFieldInEachDocumentSeparetedly.cs" />
     <Compile Include="Bugs\Indexing\MissingAnalyzer.cs" />
     <Compile Include="Bugs\Indexing\ThrowingAnalyzer.cs" />
+    <Compile Include="Bugs\Indexing\TransactionIndexByMrn.cs" />
     <Compile Include="Bugs\Indexing\WillGroupValuesUsingComplexValues.cs" />
     <Compile Include="Bugs\IndexNestedFields.cs" />
     <Compile Include="Bugs\IndexWithTwoProperties.cs" />
