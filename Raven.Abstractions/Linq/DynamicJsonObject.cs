@@ -181,6 +181,10 @@ namespace Raven.Database.Linq
 			{
 				return GetDocumentId();
 			}
+			if(name == "Inner")
+			{
+				return Inner;
+			}
 			return new DynamicNullObject();
 		}
 
