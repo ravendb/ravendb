@@ -187,6 +187,9 @@ namespace Raven.Server
 
     	private static void ConfigureDebugLogging()
     	{
+			if (File.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "log4net.config")))
+				return;// that overrides the default config
+
 			var loggerRepository = LogManager.GetRepository(typeof(HttpServer).Assembly);
 			
 			var patternLayout = new PatternLayout(PatternLayout.DefaultConversionPattern);
