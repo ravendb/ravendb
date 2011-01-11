@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using Raven.Abstractions.Data;
 using Xunit;
 using System.Linq;
@@ -31,6 +32,7 @@ namespace Raven.Tests.Bugs.Indexing
 				{
 					var objects = session.Advanced.LuceneQuery<dynamic>()
 						.GroupBy(AggregationOperation.Count, "Address")
+						.WaitForNonStaleResults(TimeSpan.FromMinutes(1))
 						.ToArray();
 
 					Assert.Equal(2, objects.Length);

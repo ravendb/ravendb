@@ -49,6 +49,10 @@ namespace Raven.Database.Indexing
 				{
 					context.WaitForWork(TimeSpan.FromHours(1), ref workCounter, FlushIndexes);
 				}
+				else // notify the tasks executer that it has work to do
+				{
+					context.NotifyAboutWork();
+				}
 			}
 		}
 
