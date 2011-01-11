@@ -286,7 +286,7 @@ namespace Raven.Database.Data
 			foreach (string sortHintHeader in sortHintHeaders)
 			{
 				String[] split = sortHintHeader.Split('_');
-				String fieldName = split[1];
+				String fieldName = Uri.UnescapeDataString(split[1]);
 				string fieldType = headers[sortHintHeader];
 
 				sortInfo.Add(new DynamicSortInfo

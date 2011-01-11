@@ -30,14 +30,11 @@ namespace Raven.Tests.Bugs.Indexing
 
 				using (var s = store.OpenSession())
 				{
-					Assert.DoesNotThrow(() =>
-						{
-							s.Advanced.LuceneQuery<UserWithIDictionary>()
-								.WhereEquals("NestedItems,Key", "Color")
-								.AndAlso()
-								.WhereGreaterThan("NestedItems,Value.Value", 10)
-								.ToArray();
-						});
+					Assert.DoesNotThrow(() => s.Advanced.LuceneQuery<UserWithIDictionary>()
+					                          	.WhereEquals("NestedItems,Key", "Color")
+					                          	.AndAlso()
+					                          	.WhereGreaterThan("NestedItems,Value.Value", 10)
+					                          	.ToArray());
 				}
 			}
 		}

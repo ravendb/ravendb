@@ -1162,7 +1162,7 @@ If you really want to do in memory filtering on the data returned from the query
 					continue;
 				
 				addOperationHeader(
-					string.Format("SortHint_{0}", sortByHint.Key.Trim('-')), FromPrimitiveTypestring(sortByHint.Value.Name).ToString());
+					string.Format("SortHint_{0}", Uri.EscapeDataString(sortByHint.Key.Trim('-'))), FromPrimitiveTypestring(sortByHint.Value.Name).ToString());
 			}
 		}
 
