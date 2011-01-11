@@ -76,6 +76,10 @@ namespace Raven.Client.Indexes
 		/// <returns></returns>
 		public IndexDefinition ToIndexDefinition(DocumentConvention convention)
 		{
+			if (Map == null)
+				throw new InvalidOperationException(
+					"Map is required to generate an index, you cannot create an index without a valid Map property (in index " +
+					this.GetType().Name + ").");
 		    string querySource = (typeof(TDocument) == typeof(object) || ContainsWhereEntityIs(Map.Body)) ? "docs" : "docs." + convention.GetTypeTagName(typeof(TDocument));
 		    return new IndexDefinition
 			{
