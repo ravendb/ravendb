@@ -121,6 +121,7 @@
     <Compile Include="Data\DynamicQueryMappingItem.cs" />
     <Compile Include="Impl\DocumentRetriever.cs" />
     <Compile Include="Impl\Logging\AsyncBufferingAppender.cs" />
+    <Compile Include="Indexing\TasksExecuter.cs" />
     <Compile Include="Plugins\AbstractAnalyzerGenerator.cs" />
     <Compile Include="Queries\DynamicQueryExtensions.cs" />
     <Compile Include="Queries\DynamicQueryRunner.cs" />
@@ -318,7 +319,7 @@
     <Compile Include="Indexing\Index.cs" />
     <Compile Include="Indexing\AnonymousObjectToLuceneDocumentConverter.cs" />
     <Compile Include="Indexing\StatefulEnumerableWrapper.cs" />
-    <Compile Include="Indexing\TaskExecuter.cs" />
+    <Compile Include="Indexing\IndexingExecuter.cs" />
     <Compile Include="Indexing\WorkContext.cs" />
     <Compile Include="Json\DynamicObjectExtensions.cs" />
     <Compile Include="Json\JsonPatcher.cs" />

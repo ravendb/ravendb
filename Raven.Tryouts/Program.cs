@@ -20,7 +20,7 @@ namespace Raven.Tryouts
         	var ravenDbHttpServer = new RavenDbHttpServer (db.Configuration, db);
 			ravenDbHttpServer.Start();
         	Console.WriteLine("Started...");
-        	new TaskExecuter(db.TransactionalStorage, db.WorkContext).Execute();
+        	new IndexingExecuter(db.TransactionalStorage, db.WorkContext).Execute();
         	Console.WriteLine("Done");
         }
     }
