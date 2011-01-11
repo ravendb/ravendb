@@ -50,8 +50,6 @@ namespace Raven.Storage.Esent.StorageActions
 
             Api.MakeKey(session, MappedResults, viewAndReduceKeyHashed, MakeKeyGrbit.NewKey);
             Api.JetSetIndexRange(session, MappedResults, SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive);
-            if (Api.TryMoveFirst(session, MappedResults) == false)
-                yield break;
 			do
 			{
 				// we need to check that we don't have hash collisions
