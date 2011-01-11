@@ -139,7 +139,7 @@ namespace Raven.Database.Linq
                 throw new InvalidOperationException("Variable initializer select must have a lambda expression with an object create expression");
 
             if (objectCreateExpression.IsAnonymousType == false && objectCreateExpression.CreateType.Type.Contains("Anonymous") == false)
-                throw new InvalidOperationException("Variable initializer select must have a lambda expression creating an anoynmous type");
+                throw new InvalidOperationException("Variable initializer select must have a lambda expression creating an anonymous type");
 
             return variable;
         }
