@@ -67,7 +67,8 @@ namespace Raven.Database
 		/// </summary>
 		public ConcurrentDictionary<object, object> ExtensionsState { get; private set; }
 
-		private System.Threading.Tasks.Task backgroundWorkerTask;
+		private System.Threading.Tasks.Task indexingBackgroundTask;
+		private System.Threading.Tasks.Task tasksBackgroundTask;
 
 		private readonly ILog log = LogManager.GetLogger(typeof(DocumentDatabase));
 
@@ -231,14 +232,17 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 			}
 			TransactionalStorage.Dispose();
 			IndexStorage.Dispose();
-			if (backgroundWorkerTask != null)
-				backgroundWorkerTask.Wait();
+			if (tasksBackgroundTask != null)
+				tasksBackgroundTask.Wait(); 
+			if (indexingBackgroundTask != null)
+				indexingBackgroundTask.Wait();
 		}
 
 		public void StopBackgroundWokers()
 		{
 			workContext.StopWork();
-			backgroundWorkerTask.Wait();
+			tasksBackgroundTask.Wait();
+			indexingBackgroundTask.Wait();
 		}
 
 		public WorkContext WorkContext
@@ -251,10 +255,15 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 		public void SpinBackgroundWorkers()
 		{
 			workContext.StartWork();
-			backgroundWorkerTask = new System.Threading.Tasks.Task(
-				new TaskExecuter(TransactionalStorage, workContext).Execute,
+			indexingBackgroundTask = new System.Threading.Tasks.Task(
+				new IndexingExecuter(TransactionalStorage, workContext).Execute,
 				TaskCreationOptions.LongRunning);
-			backgroundWorkerTask.Start();
+			tasksBackgroundTask = new System.Threading.Tasks.Task(
+				new TasksExecuter(TransactionalStorage, workContext).Execute,
+				TaskCreationOptions.LongRunning
+				);
+			indexingBackgroundTask.Start();
+			tasksBackgroundTask.Start();
 		}
 
 		private static long sequentialUuidCounter;
@@ -946,6 +955,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 		}
 
 		static string productVersion;
+
 		public static string ProductVersion
 		{
 			get
