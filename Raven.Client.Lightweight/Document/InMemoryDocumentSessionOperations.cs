@@ -725,9 +725,11 @@ more responsive application.
 			{
 				objectAsJson.Remove(identityProperty.Name);
 			}
-
+#if !SILVERLIGHT
 			metadata["Raven-Clr-Type"] = JToken.FromObject(ReflectionUtil.GetFullNameWithoutVersionInformation(entityType));
-
+#else
+			metadata["Raven-Clr-Type"] = JToken.FromObject(entityType.AssemblyQualifiedName);
+#endif
 			var entityConverted = OnEntityConverted;
 			if (entityConverted != null)
 				entityConverted(entity, objectAsJson, metadata);
