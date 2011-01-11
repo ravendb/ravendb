@@ -13,14 +13,14 @@ namespace Raven.Tryouts
         {
         	var db = new DocumentDatabase(new RavenConfiguration
         	                              	{
-        	                              		DataDirectory = @"C:\Users\Ayende\Downloads\Data",
+        	                              		DataDirectory = @"C:\Users\Ayende\Downloads\Nick.Data",
 												IndexSingleThreaded = true,
 												AnonymousUserAccessMode = AnonymousUserAccessMode.All
         	                              	});
         	var ravenDbHttpServer = new RavenDbHttpServer (db.Configuration, db);
 			ravenDbHttpServer.Start();
         	Console.WriteLine("Started...");
-        	new IndexingExecuter(db.TransactionalStorage, db.WorkContext).Execute();
+        	new TasksExecuter(db.TransactionalStorage, db.WorkContext).Execute();
         	Console.WriteLine("Done");
         }
     }
