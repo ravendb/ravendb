@@ -113,5 +113,17 @@
 				});
 			}
 		}
+
+		[Asynchronous]
+		[TestMethod]
+		public void Can_get_index_names_async()
+		{
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+				documentStore.Initialize();
+
+				var task = documentStore.AsyncDatabaseCommands.GetIndexNamesAsync(0,25);
+				EnqueueConditional(() => task.IsCompleted || task.IsFaulted);
+				EnqueueCallback(()=> Assert.Equal(new[] { "Raven/DocumentsByEntityName" },task.Result));
+		}
 	}
 }

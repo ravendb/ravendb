@@ -318,6 +318,23 @@ namespace Raven.Client.Client.Async
 				}).Unwrap();
 		}
 
+		/// <summary>
+		/// Gets the index names from the server asyncronously
+		/// </summary>
+		/// <param name="start">Paging start</param>
+		/// <param name="pageSize">Size of the page.</param>
+		public Task<string[]> GetIndexNamesAsync(int start, int pageSize)
+		{
+			var request = HttpJsonRequest.CreateHttpJsonRequest(this, url + "/indexes/?namesOnly=true&start=" + start + "&pageSize=" + pageSize, "GET", credentials, convention);
+			
+			return request.ReadResponseStringAsync()
+				.ContinueWith(task =>
+				{
+					var r = task.Result;
+					return new string[]{};
+				});
+		}
+
 		private void AddOperationHeaders(HttpWebRequest webRequest)
 		{
 			foreach (var header in OperationsHeaders)
