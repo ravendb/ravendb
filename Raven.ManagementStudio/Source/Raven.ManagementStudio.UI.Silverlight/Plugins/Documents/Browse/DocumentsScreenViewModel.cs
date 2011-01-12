@@ -4,7 +4,6 @@ using System.Linq;
 using System.Net;
 using Caliburn.Micro;
 using Raven.Database;
-using Raven.Management.Client.Silverlight.Common;
 using Raven.ManagementStudio.Plugin;
 using Raven.ManagementStudio.UI.Silverlight.Dialogs;
 using Raven.ManagementStudio.UI.Silverlight.Messages;
@@ -13,11 +12,13 @@ using Raven.ManagementStudio.UI.Silverlight.Plugins.Common;
 
 namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Documents.Browse
 {
-    public class DocumentsScreenViewModel : Conductor<DocumentViewModel>.Collection.OneActive, IRavenScreen
+	using System;
+
+	public class DocumentsScreenViewModel : Conductor<DocumentViewModel>.Collection.OneActive, IRavenScreen
     {
-        private bool _isBusy;
-        private bool _isDocumentPreviewed;
-        private string _lastSearchDocumentId;
+        private bool isBusy;
+        private bool isDocumentPreviewed;
+        private string lastSearchDocumentId;
 
         public DocumentsScreenViewModel(IDatabase database)
         {
@@ -34,10 +35,10 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Documents.Browse
 
         public bool IsBusy
         {
-            get { return _isBusy; }
+            get { return isBusy; }
             set
             {
-                _isBusy = value;
+                isBusy = value;
                 NotifyOfPropertyChange(() => IsBusy);
             }
         }
@@ -50,19 +51,20 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Documents.Browse
 
         public bool IsDocumentPreviewed
         {
-            get { return _isDocumentPreviewed && ActiveItem != null; }
+            get { return isDocumentPreviewed && ActiveItem != null; }
             set
             {
-                _isDocumentPreviewed = value;
+                isDocumentPreviewed = value;
                 NotifyOfPropertyChange(() => IsDocumentPreviewed);
             }
         }
 
         public void GetAll(LoadResponse<IList<JsonDocument>> response)
         {
-            IList<DocumentViewModel> result = response.Data.Select(jsonDocument => new DocumentViewModel(new Document(jsonDocument), Database, this)).ToList();
-            Items.AddRange(result);
-            IsBusy = false;
+			throw new NotImplementedException();
+			//IList<DocumentViewModel> result = response.Data.Select(jsonDocument => new DocumentViewModel(new Document(jsonDocument), Database, this)).ToList();
+			//Items.AddRange(result);
+			//IsBusy = false;
         }
 
         public void ClosePreview()
@@ -72,12 +74,13 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Documents.Browse
 
         public void ShowDocument(string documentId)
         {
-            _lastSearchDocumentId = documentId;
+            lastSearchDocumentId = documentId;
 
             if (!documentId.Equals("Document ID") && !documentId.Equals(string.Empty))
             {
                 IsBusy = true;
-                Database.Session.Load<JsonDocument>(documentId, GetDocument);
+				throw new NotImplementedException();
+				//Database.Session.Load<JsonDocument>(documentId, GetDocument);
             }
         }
 
@@ -92,7 +95,7 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Documents.Browse
             {
                 WindowManager.ShowDialog(new InformationDialogViewModel("Document not found",
                                                        string.Format("Document with key {0} doesn't exist in database.",
-                                                                     _lastSearchDocumentId)));
+                                                                     lastSearchDocumentId)));
             }
         }
 
@@ -115,7 +118,16 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Documents.Browse
         {
             base.OnInitialize();
             IsBusy = true;
-            Database.Session.LoadMany<JsonDocument>(GetAll);
+			throw new NotImplementedException();
+			//Database.Session.LoadMany<JsonDocument>(GetAll);
         }
     }
+
+	public class LoadResponse<T>
+	{
+		public HttpStatusCode StatusCode;
+		public bool IsSuccess { get; set; }
+
+		public JsonDocument Data { get; set; }
+	}
 }
