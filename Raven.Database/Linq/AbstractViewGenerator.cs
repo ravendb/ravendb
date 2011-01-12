@@ -17,7 +17,9 @@ namespace Raven.Database.Linq
         private readonly HashSet<string> fields = new HashSet<string>();
         private bool? containsProjection;
 
-        public IndexingFunc MapDefinition { get; set; }
+		public int CountOfFields { get { return fields.Count;  } }
+
+    	public IndexingFunc MapDefinition { get; set; }
 		
         public IndexingFunc ReduceDefinition { get; set; }
 
@@ -69,6 +71,11 @@ namespace Raven.Database.Linq
         {
             fields.Add(field);
         }
+
+		public virtual bool ContainsFieldDirectly(string field)
+		{
+			return fields.Contains(field);
+		}
 
         public virtual bool ContainsField(string field)
         {
