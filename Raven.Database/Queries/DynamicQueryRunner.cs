@@ -30,7 +30,7 @@ namespace Raven.Database.Queries
 			// Create the map
 			var map = DynamicQueryMapping.Create(documentDatabase, query, entityName);
 			
-			var touchTemporaryIndexResult = GetAppropriateIndexToQuery(map);
+			var touchTemporaryIndexResult = GetAppropriateIndexToQuery(entityName, query, map);
 
 			map.IndexName = touchTemporaryIndexResult.Item1;
 			// Re-write the query
@@ -72,9 +72,9 @@ namespace Raven.Database.Queries
 			}
 		}
 
-		private Tuple<string, bool> GetAppropriateIndexToQuery(DynamicQueryMapping map)
+		private Tuple<string, bool> GetAppropriateIndexToQuery(string entityName, IndexQuery query, DynamicQueryMapping map)
 		{
-			var appropriateIndex = new DynamicQueryOptimizer(documentDatabase).SelectAppropriateIndex(map);
+			var appropriateIndex = new DynamicQueryOptimizer(documentDatabase).SelectAppropriateIndex(entityName, query);
 			if (appropriateIndex != null)
 			{
 				if (appropriateIndex.StartsWith("Temp/"))// temporary index, we need to increase its usage

@@ -15,57 +15,55 @@ namespace Raven.Database.Queries
 			this.database = database;
 		}
 
-		public string SelectAppropriateIndex(DynamicQueryMapping mapping)
+		public string SelectAppropriateIndex(string entityName, IndexQuery indexQuery)
 		{
-			if(mapping.AggregationOperation != AggregationOperation.None)
+			// There isn't much point for query optimizer of aggregation indexes
+			// the main reason is that we must always aggregate on the same items, and using the same 
+			// aggregation. Therefor we can't reuse one aggregate index for another query.
+			// We decline to suggest an index here and choose to use the default index created for this
+			// sort of query, which is what we would have to choose anyway.
+			if(indexQuery.AggregationOperation != AggregationOperation.None)
 				return null;
-
-			return 
-				database.IndexDefinitionStorage.IndexNames
+			
+			return database.IndexDefinitionStorage.IndexNames
 					.Where(indexName =>
 					{
 						var abstractViewGenerator = database.IndexDefinitionStorage.GetViewGenerator(indexName);
-						if(abstractViewGenerator == null) // there is a matching view generator
+						if (abstractViewGenerator == null) // there is a matching view generator
 							return false;
 
-						if (abstractViewGenerator.ForEntityName != mapping.ForEntityName) // for the specified entity name
+						if (abstractViewGenerator.ViewText.Contains("where")) // without a where clause
 							return false;
 
-						// TODO: This isn't very well done, we need to have better analysis of the actual query to generate better
-						// TODO: field names for the abstractViewGenerator
-						foreach (var queryMappingItem in mapping.Items)
-						{
-							if (abstractViewGenerator.ContainsFieldDirectly(queryMappingItem.To) == false)
-								return false;
-						}
+						if (abstractViewGenerator.ForEntityName != entityName) // for the specified entity name
+							return false;
+						var items = SimpleQueryParser.GetFieldsForDynamicQuery(indexQuery.Query).Select(x => x.Item2);
 
-						return abstractViewGenerator.ViewText.Contains("where") == false; // without a where clause
+						return items.All(abstractViewGenerator.ContainsFieldOnMap);
 					})
 					.Where(indexName =>
 					{
 						var indexDefinition = database.IndexDefinitionStorage.GetIndexDefinition(indexName);
 						if (indexDefinition == null)
 							return false;
-
-						foreach (var sortDescriptor in mapping.SortDescriptors) // with matching sort options
+						
+						if (indexQuery.SortedFields != null)
 						{
-							SortOptions value;
-							if (indexDefinition.SortOptions.TryGetValue(sortDescriptor.Field, out value) == false)
-								return false;
-
-							SortOptions result;
-							if (Enum.TryParse(sortDescriptor.FieldType, true, out result) == false)
-								return false;
-
-							if (result != value)
-								return false;
+							foreach (var sortedField in indexQuery.SortedFields) // with matching sort options
+							{
+								SortOptions value;
+								if (indexDefinition.SortOptions.TryGetValue(sortedField.Field, out value) == false)
+									return false;
+							}
 						}
 
 						return true;
 					})
 					.OrderByDescending(indexName =>
 					{
-						// we select the widest index
+						// We select the widest index, because we want to encourage bigger indexes
+						// Over time, it means that we smaller indexes would wither away and die, while
+						// bigger indexes will be selected more often and then upgrade to permanent indexes
 						var abstractViewGenerator = database.IndexDefinitionStorage.GetViewGenerator(indexName);
 						if (abstractViewGenerator == null) // there is a matching view generator
 							return -1;
