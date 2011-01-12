@@ -147,7 +147,7 @@ namespace Raven.Tests.Bugs.Queries
 					var users = s.Advanced.LuceneQuery<UserWithIDictionary>("SimpleIndex")
 						.WhereEquals("Key", "Color")
 						.AndAlso()
-						.WhereEquals("Value", 20)
+						.WhereGreaterThan("Value", 20)
 						.WaitForNonStaleResults()
 						.ToArray();
 
