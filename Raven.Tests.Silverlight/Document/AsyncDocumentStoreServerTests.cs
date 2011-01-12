@@ -43,5 +43,32 @@
 				});
 			}
 		}
+
+		[Asynchronous]
+		[TestMethod]
+		public void Can_insert_async_and_load_async()
+		{
+			var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+			documentStore.Initialize();
+
+			var entity = new Company { Name = "Async Company #1" };
+			using (var session1 = documentStore.OpenAsyncSession())
+			{
+				session1.Store(entity);
+				var result = session1.SaveChangesAsync();
+				EnqueueConditional(() => result.IsCompleted || result.IsFaulted);
+
+				EnqueueCallback(() =>
+				{
+					using (var session = documentStore.OpenAsyncSession())
+					{
+						var task = session.LoadAsync<Company>(entity.Id);
+						EnqueueConditional(() => task.IsCompleted || task.IsFaulted);
+						EnqueueCallback(() => Assert.Equal(entity.Name, task.Result.Name));
+					}
+					EnqueueTestComplete();
+				});
+			}
+		}
 	}
 }
