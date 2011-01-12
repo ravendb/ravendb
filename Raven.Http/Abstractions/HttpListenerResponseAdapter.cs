@@ -26,12 +26,12 @@ namespace Raven.Http.Abstractions
             set;
         }
 
-        public NameValueCollection Headers
-        {
-            get { return response.Headers; }
-        }
+    	public void AddHeader(string name, string value)
+    	{
+    		response.AddHeader(name, value);
+    	}
 
-        public Stream OutputStream { get; set; }
+    	public Stream OutputStream { get; set; }
 
         public long ContentLength64
         {
