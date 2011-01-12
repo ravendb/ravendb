@@ -361,6 +361,7 @@
     <Compile Include="Server\Responders\TransactionPromote.cs" />
     <Compile Include="Server\Responders\TransactionRollback.cs" />
     <Compile Include="Storage\DocumentInTransactionData.cs" />
+    <Compile Include="Storage\GetMappedResultsParams.cs" />
     <Compile Include="Storage\IAttachmentsStorageActions.cs" />
     <Compile Include="Storage\IDocumentStorageActions.cs" />
     <Compile Include="Storage\IGeneralStorageActions.cs" />

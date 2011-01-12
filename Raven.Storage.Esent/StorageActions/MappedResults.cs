@@ -40,27 +40,31 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-        public IEnumerable<JObject> GetMappedResults(string view, string reduceKey, byte[] viewAndReduceKeyHashed)
+        public IEnumerable<JObject> GetMappedResults(params GetMappedResultsParams[] getMappedResultsParams)
 		{
             Api.JetSetCurrentIndex(session, MappedResults, "by_reduce_key_and_view_hashed");
-            Api.MakeKey(session, MappedResults, viewAndReduceKeyHashed, MakeKeyGrbit.NewKey);
-            if (Api.TrySeek(session, MappedResults, SeekGrbit.SeekEQ) == false)
-                yield break;
-
-
-            Api.MakeKey(session, MappedResults, viewAndReduceKeyHashed, MakeKeyGrbit.NewKey);
-            Api.JetSetIndexRange(session, MappedResults, SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive);
-			do
-			{
-				// we need to check that we don't have hash collisions
-			    var currentReduceKey = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"]);
-                if (currentReduceKey != reduceKey)
+        	foreach (var item in getMappedResultsParams)
+        	{
+				Api.MakeKey(session, MappedResults, item.ViewAndReduceKeyHashed, MakeKeyGrbit.NewKey);
+				if (Api.TrySeek(session, MappedResults, SeekGrbit.SeekEQ) == false)
 					continue;
-			    var currentView = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"]);
-			    if (currentView != view)
-					continue;
-				yield return Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["data"]).ToJObject();
-			} while (Api.TryMoveNext(session, MappedResults));
+
+				Api.MakeKey(session, MappedResults, item.ViewAndReduceKeyHashed, MakeKeyGrbit.NewKey);
+				Api.JetSetIndexRange(session, MappedResults, SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive);
+				do
+				{
+					// we need to check that we don't have hash collisions
+					var currentReduceKey = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"]);
+					if (currentReduceKey != item.ReduceKey)
+						continue;
+			
+					var currentView = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"]);
+					if (currentView != item.View)
+						continue;
+					
+					yield return Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["data"]).ToJObject();
+				} while (Api.TryMoveNext(session, MappedResults));
+        	}
 		}
 
 		public IEnumerable<string> DeleteMappedResultsForDocumentId(string documentId, string view)
