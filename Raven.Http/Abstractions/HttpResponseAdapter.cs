@@ -21,9 +21,9 @@ namespace Raven.Http.Abstractions
 
         public string RedirectionPrefix { get; set; }
 
-	    public NameValueCollection Headers
+		public void AddHeader(string name, string value)
 		{
-			get { return response.Headers; }
+			response.AddHeader(name, value);
 		}
 
 		public Stream OutputStream

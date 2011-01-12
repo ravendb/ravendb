@@ -11,6 +11,7 @@ using System.Linq;
 using log4net;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
+using Raven.Database.Storage;
 
 namespace Raven.Database.Tasks
 {
@@ -46,14 +47,13 @@ namespace Raven.Database.Tasks
 			
 			context.TransactionaStorage.Batch(actions =>
 			{
-				IEnumerable<object> mappedResults = new object[0];
-				foreach (var reduceKey in ReduceKeys)
-				{
-					IEnumerable<object> enumerable = actions.MappedResults.GetMappedResults(Index, reduceKey, MapReduceIndex.ComputeHash(Index, reduceKey))
-						.Select(JsonToExpando.Convert);
-
-					mappedResults = mappedResults.Concat(enumerable);
-				}
+				var itemsToFind = ReduceKeys
+					.Select(reduceKey => new GetMappedResultsParams(Index, reduceKey, MapReduceIndex.ComputeHash(Index, reduceKey)))
+					.OrderBy(x=>x.ViewAndReduceKeyHashed, new ByteComparer())
+					.ToArray();
+				var mappedResults = actions.MappedResults.GetMappedResults(itemsToFind)
+					.Select(JsonToExpando.Convert);
+				
 				var sp = Stopwatch.StartNew();
 				log.DebugFormat("Starting to read {0} reduce keys for index {1}", ReduceKeys.Length, Index);
 
@@ -66,6 +66,22 @@ namespace Raven.Database.Tasks
 				                results.Length, Index);
 
 			});
+		}
+
+		public class ByteComparer : IComparer<byte[]>
+		{
+			public int Compare(byte[] x, byte[] y)
+			{
+				if (x.Length != y.Length)
+					return x.Length.CompareTo(y.Length);
+
+				for (int i = 0; i < x.Length; i++)
+				{
+					if (x[i] != y[i])
+						return x[i].CompareTo(y[i]);
+				}
+				return 0;
+			}
 		}
 
 		public override Task Clone()

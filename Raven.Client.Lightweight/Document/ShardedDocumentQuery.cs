@@ -67,7 +67,8 @@ namespace Raven.Client.Document
 				TotalResults = queryResults.Sum(x => x.TotalResults),
 				SkippedResults = queryResults.Sum(x => x.SkippedResults),
 				IndexTimestamp = queryResults.Min(x => x.IndexTimestamp),
-				IndexEtag = queryResults.Min(x => x.IndexEtag)
+				IndexEtag = queryResults.Min(x => x.IndexEtag),
+				IndexName = queryResults.Select(x => x.IndexName).FirstOrDefault()
 			};
 		}
 

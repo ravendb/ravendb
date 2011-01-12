@@ -122,8 +122,10 @@
     <Compile Include="Impl\DocumentRetriever.cs" />
     <Compile Include="Impl\Logging\AsyncBufferingAppender.cs" />
     <Compile Include="Indexing\TasksExecuter.cs" />
+    <Compile Include="Linq\CaptureQueryParameterNamesVisitor.cs" />
     <Compile Include="Plugins\AbstractAnalyzerGenerator.cs" />
     <Compile Include="Queries\DynamicQueryExtensions.cs" />
+    <Compile Include="Queries\DynamicQueryOptimizer.cs" />
     <Compile Include="Queries\DynamicQueryRunner.cs" />
     <Compile Include="Exceptions\IndexDoesNotExistsException.cs" />
     <Compile Include="Extensions\CommandExtensions.cs" />
@@ -361,6 +363,7 @@
     <Compile Include="Server\Responders\TransactionPromote.cs" />
     <Compile Include="Server\Responders\TransactionRollback.cs" />
     <Compile Include="Storage\DocumentInTransactionData.cs" />
+    <Compile Include="Storage\GetMappedResultsParams.cs" />
     <Compile Include="Storage\IAttachmentsStorageActions.cs" />
     <Compile Include="Storage\IDocumentStorageActions.cs" />
     <Compile Include="Storage\IGeneralStorageActions.cs" />

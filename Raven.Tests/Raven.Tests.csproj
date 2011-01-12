@@ -64,6 +64,7 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Esent.Interop.dll</HintPath>
     </Reference>
+    <Reference Include="ICSharpCode.NRefactory, Version=3.0.0.3800, Culture=neutral, PublicKeyToken=efe927acf176eea2, processorArchitecture=MSIL" />
     <Reference Include="log4net, Version=1.2.10.0, Culture=neutral, PublicKeyToken=1b44e1d426115821, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\log4net.dll</HintPath>
@@ -203,6 +204,8 @@
     <Compile Include="Bugs\Queries\TermsRemote.cs" />
     <Compile Include="Bugs\QueryAfterAdHocIndexIsReset.cs" />
     <Compile Include="Bugs\QueryingOnEqualToNull.cs" />
+    <Compile Include="Bugs\QueryOptimizer\LinqToQueryParameters.cs" />
+    <Compile Include="Bugs\QueryOptimizer\QueryOptimizeTests.cs" />
     <Compile Include="Bugs\QueryResultCountsWithProjections.cs" />
     <Compile Include="Bugs\OverwriteIndexLocally.cs" />
     <Compile Include="Bugs\OverwriteIndexRemotely.cs" />

@@ -32,7 +32,7 @@ namespace Raven.Database.Server.Responders
 			switch (context.Request.HttpMethod)
 			{
 				case "GET":
-					context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
+					context.Response.AddHeader("Content-Type", "application/json; charset=utf-8");
 					var doc = Database.Get(docId,GetRequestTransaction(context));
 					if (doc == null)
 					{
@@ -68,7 +68,7 @@ namespace Raven.Database.Server.Responders
 							context.SetStatusToNotFound();
 							break;
 						case PatchResult.Patched:
-							context.Response.Headers["Location"] = Database.Configuration.GetFullUrl("/docs/" + docId);
+							context.Response.AddHeader("Location", Database.Configuration.GetFullUrl("/docs/" + docId));
 							context.WriteJson(new {Patched = true});
 							break;
 						default:

@@ -11,7 +11,7 @@ namespace Raven.Http.Abstractions
 	public interface IHttpResponse
 	{
         string RedirectionPrefix { get; set; }
-		NameValueCollection Headers { get; }
+		void AddHeader(string name, string value);
 		Stream OutputStream { get; }
 		long ContentLength64 { get; set; }
 		int StatusCode { get; set; }
