@@ -124,6 +124,7 @@
 				var task = documentStore.AsyncDatabaseCommands.GetIndexNamesAsync(0,25);
 				EnqueueConditional(() => task.IsCompleted || task.IsFaulted);
 				EnqueueCallback(()=> Assert.Equal(new[] { "Raven/DocumentsByEntityName" },task.Result));
+				EnqueueTestComplete();
 		}
 	}
 }

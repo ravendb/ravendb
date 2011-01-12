@@ -330,8 +330,13 @@ namespace Raven.Client.Client.Async
 			return request.ReadResponseStringAsync()
 				.ContinueWith(task =>
 				{
-					var r = task.Result;
-					return new string[]{};
+					var serializer = convention.CreateSerializer();
+					using (var reader = new JsonTextReader(new StringReader(task.Result)))
+					{
+						var json = (JToken)serializer.Deserialize(reader);
+						return json.Select(x => x.Value<string>()).ToArray();
+
+					}
 				});
 		}
 
