@@ -73,8 +73,8 @@ namespace Raven.Database.Server.Responders
 				context.SetStatusToNotModified();
 				return;
 			}
-			
-		    context.Response.Headers["ETag"] = computedEtag.ToString();
+
+			context.Response.AddHeader("ETag", computedEtag.ToString());
 			context.WriteJson(result);
 		}
 	}

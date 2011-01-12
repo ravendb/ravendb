@@ -127,7 +127,7 @@ namespace Raven.Database.Server.Responders
 				{
 					command.Execute(result);
 				}
-				context.Response.Headers["ETag"] = queryResult.IndexEtag.ToString();
+				context.Response.AddHeader("ETag", queryResult.IndexEtag.ToString());
 				context.WriteJson(queryResult);
 			}
 		}

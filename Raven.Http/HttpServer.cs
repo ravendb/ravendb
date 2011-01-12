@@ -371,7 +371,7 @@ namespace Raven.Http
         {
             if (string.IsNullOrEmpty(DefaultConfiguration.AccessControlAllowOrigin))
                 return;
-            ctx.Response.Headers["Access-Control-Allow-Origin"] = DefaultConfiguration.AccessControlAllowOrigin;
+        	ctx.Response.AddHeader("Access-Control-Allow-Origin", DefaultConfiguration.AccessControlAllowOrigin);
         }
 
         private static void AddHttpCompressionIfClientCanAcceptIt(IHttpContext ctx)
@@ -386,12 +386,12 @@ namespace Raven.Http
             if ((acceptEncoding.IndexOf("gzip", StringComparison.InvariantCultureIgnoreCase) != -1))
             {
                 ctx.SetResponseFilter(s => new GZipStream(s, CompressionMode.Compress, true));
-                ctx.Response.Headers["Content-Encoding"] = "gzip";
+                ctx.Response.AddHeader("Content-Encoding","gzip");
             }
             else if (acceptEncoding.IndexOf("deflate", StringComparison.InvariantCultureIgnoreCase) != -1)
             {
                 ctx.SetResponseFilter(s => new DeflateStream(s, CompressionMode.Compress, true));
-                ctx.Response.Headers["Content-Encoding"] = "deflate";
+            	ctx.Response.AddHeader("Content-Encoding", "deflate");
             }
 
         }

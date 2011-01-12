@@ -80,7 +80,7 @@ namespace Raven.Http.Extensions
 
 		public static void WriteJson(this IHttpContext context, object obj)
 		{
-			context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
+			context.Response.AddHeader("Content-Type", "application/json; charset=utf-8");
 			var streamWriter = new StreamWriter(context.Response.OutputStream, Encoding.UTF8);
 			new JsonSerializer
 			{
@@ -94,7 +94,7 @@ namespace Raven.Http.Extensions
 
 		public static void WriteJson(this IHttpContext context, JToken obj)
 		{
-			context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
+			context.Response.AddHeader("Content-Type", "application/json; charset=utf-8");
 			var streamWriter = new StreamWriter(context.Response.OutputStream, Encoding.UTF8);
 			var jsonTextWriter = new JsonTextWriter(streamWriter)
 			{
@@ -116,14 +116,14 @@ namespace Raven.Http.Extensions
 			{
 				if (header.Name.StartsWith("@"))
 					continue;
-				context.Response.Headers[header.Name] = StripQuotesIfNeeded(header.Value.ToString(Formatting.None));
+				context.Response.AddHeader(header.Name, StripQuotesIfNeeded(header.Value.ToString(Formatting.None)));
 			}
 			if (headers["@Http-Status-Code"] != null)
 			{
 				context.Response.StatusCode = headers.Value<int>("@Http-Status-Code");
 				context.Response.StatusDescription = headers.Value<string>("@Http-Status-Description");
 			}
-			context.Response.Headers["ETag"] = etag.ToString();
+			context.Response.AddHeader("ETag", etag.ToString());
 			context.Response.OutputStream.Write(data, 0, data.Length);
 		}
 
@@ -144,7 +144,7 @@ namespace Raven.Http.Extensions
 		{
 			context.Response.StatusCode = 201;
 			context.Response.StatusDescription = "Created";
-			context.Response.Headers["Location"] = context.Configuration.GetFullUrl(location);
+			context.Response.AddHeader("Location", context.Configuration.GetFullUrl(location));
 		}
 
 
@@ -367,7 +367,7 @@ namespace Raven.Http.Extensions
 					}
 					bytes = resource.ReadData();
 				}
-				context.Response.Headers["ETag"] = EmbeddedLastChangedDate;
+				context.Response.AddHeader("ETag", EmbeddedLastChangedDate);
 			}
 			else
 			{
@@ -378,7 +378,7 @@ namespace Raven.Http.Extensions
 					return;
 				}
 				bytes = File.ReadAllBytes(filePath);
-				context.Response.Headers["ETag"] = fileEtag;
+				context.Response.AddHeader("ETag", fileEtag);
 			}
 			context.Response.OutputStream.Write(bytes, 0, bytes.Length);
 		}
