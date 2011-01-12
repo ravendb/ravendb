@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using Caliburn.Micro;
 using Raven.Database.Indexing;
-using Raven.Management.Client.Silverlight.Common;
 using Raven.ManagementStudio.Plugin;
 using Raven.ManagementStudio.UI.Silverlight.Dialogs;
 using Raven.ManagementStudio.UI.Silverlight.Messages;

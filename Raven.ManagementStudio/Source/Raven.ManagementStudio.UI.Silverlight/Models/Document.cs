@@ -2,8 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
-    using Management.Client.Silverlight;
-    using Management.Client.Silverlight.Common;
+    using Client;
     using Newtonsoft.Json.Linq;
     using Raven.Database;
     using Newtonsoft.Json;
@@ -68,7 +67,7 @@
         public void Save(IAsyncDocumentSession session, CallbackFunction.SaveMany<object> callback)
         {
             session.Store(_jsonDocument);
-            session.SaveChanges(callback);
+            session.SaveChangesAsync();
             Id = _jsonDocument.Key;
         }
 

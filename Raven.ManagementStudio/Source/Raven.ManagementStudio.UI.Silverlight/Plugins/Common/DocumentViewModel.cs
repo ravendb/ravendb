@@ -6,7 +6,6 @@ using System.Windows;
 using System.Windows.Markup;
 using Caliburn.Micro;
 using Newtonsoft.Json.Linq;
-using Raven.Management.Client.Silverlight.Common;
 using Raven.ManagementStudio.Plugin;
 using Raven.ManagementStudio.UI.Silverlight.Controls;
 using Raven.ManagementStudio.UI.Silverlight.Dialogs;

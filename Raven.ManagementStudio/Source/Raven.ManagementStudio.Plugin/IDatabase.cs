@@ -1,6 +1,6 @@
 namespace Raven.ManagementStudio.Plugin
 {
-    using Management.Client.Silverlight;
+	using Client;
 
     public interface IDatabase
     {
@@ -10,12 +10,12 @@ namespace Raven.ManagementStudio.Plugin
 
         IAsyncDocumentSession Session { get; set; }
 
-        IAsyncAttachmentSession AttachmentSession { get; set; }
+		//IAsyncAttachmentSession AttachmentSession { get; set; }
 
-        IAsyncCollectionSession CollectionSession { get; set; }
+		//IAsyncCollectionSession CollectionSession { get; set; }
 
-        IAsyncIndexSession IndexSession { get; set; }
+		//IAsyncIndexSession IndexSession { get; set; }
 
-        IAsyncStatisticsSession StatisticsSession { get; set; }
+		//IAsyncStatisticsSession StatisticsSession { get; set; }
     }
 }

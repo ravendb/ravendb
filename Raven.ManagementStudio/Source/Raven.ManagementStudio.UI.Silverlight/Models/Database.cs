@@ -1,88 +1,68 @@
 namespace Raven.ManagementStudio.UI.Silverlight.Models
 {
-    using System.Collections.Generic;
-    using System.ComponentModel;
-    using System.ComponentModel.Composition;
-    using Raven.Client.Document;
-    using Raven.Management.Client.Silverlight;
-    using Raven.Management.Client.Silverlight.Attachments;
-    using Raven.Management.Client.Silverlight.Collections;
-    using Raven.Management.Client.Silverlight.Indexes;
-    using Raven.Management.Client.Silverlight.Statistics;
-    using Raven.ManagementStudio.Plugin;
+	using System.Collections.Generic;
+	using System.ComponentModel.Composition;
+	using Caliburn.Micro;
+	using Client;
+	using Client.Document;
+	using Plugin;
 
-    public class Database : IDatabase, INotifyPropertyChanged
-    {
-        private bool _isBusy;
+	public class Database : PropertyChangedBase, IDatabase
+	{
+		bool _isBusy;
 
-        public Database(string databaseAdress, string databaseName = null)
-        {
-            this.Address = databaseAdress;
-            this.Name = databaseName ?? databaseAdress;
-            this.InitializeSession();
-        }
+		public Database(string databaseAdress, string databaseName = null)
+		{
+			this.Address = databaseAdress;
+			this.Name = databaseName ?? databaseAdress;
+			this.InitializeSession();
+		}
 
-        [ImportMany(AllowRecomposition = true)]
-        public IList<IPlugin> Plugins { get; set; }
+		[ImportMany(AllowRecomposition = true)]
+		public IList<IPlugin> Plugins { get; set; }
 
-        public bool IsBusy
-        {
-            get { return this._isBusy; }
-            set
-            {
-                this._isBusy = value;
-                this.NotifyPropertyChange("IsBusy");
-            }
-        }
+		public bool IsBusy
+		{
+			get { return _isBusy; }
+			set
+			{
+				_isBusy = value;
+				NotifyOfPropertyChange(() => IsBusy);
+			}
+		}
 
-        #region IDatabase Members
+		#region IDatabase Members
 
-        public string Address { get; set; }
+		public IAsyncAttachmentSession AttachmentSession { get; set; }
 
-        public string Name { get; set; }
+		public IAsyncCollectionSession CollectionSession { get; set; }
 
-        public IAsyncDocumentSession Session { get; set; }
+		public IAsyncIndexSession IndexSession { get; set; }
 
-        public IAsyncAttachmentSession AttachmentSession { get; set; }
+		public IAsyncStatisticsSession StatisticsSession { get; set; }
+		public IAsyncDocumentSession Session { get; set; }
+		public string Address { get; set; }
 
-        public IAsyncCollectionSession CollectionSession { get; set; }
+		public string Name { get; set; }
 
-        public IAsyncIndexSession IndexSession { get; set; }
+		#endregion
 
-        public IAsyncStatisticsSession StatisticsSession { get; set; }
+		void InitializeSession()
+		{
+			var store = new DocumentStore
+			            	{
+			            		Url = this.Address
+			            	};
 
-        #endregion
+			store.Initialize();
 
-        #region INotifyPropertyChanged Members
+			this.Session = store.OpenAsyncSession();
+			this.AttachmentSession = new AsyncAttachmentSession(this.Address);
+			this.CollectionSession = new AsyncCollectionSession(this.Address);
+			this.IndexSession = new AsyncIndexSession(this.Address);
+			this.StatisticsSession = new AsyncStatisticsSession(this.Address);
 
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        #endregion
-
-        private void NotifyPropertyChange(string propertyName)
-        {
-            if (this.PropertyChanged != null)
-            {
-                this.PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
-            }
-        }
-
-        private void InitializeSession()
-        {
-            var store = new DocumentStore
-                            {
-                                Url = this.Address
-                            };
-
-            store.Initialize();
-
-            this.Session = store.OpenAsyncSession();
-            this.AttachmentSession = new AsyncAttachmentSession(this.Address);
-            this.CollectionSession = new AsyncCollectionSession(this.Address);
-            this.IndexSession = new AsyncIndexSession(this.Address);
-            this.StatisticsSession = new AsyncStatisticsSession(this.Address);
-
-            this.AttachmentSession = new AsyncAttachmentSession(this.Address);
-        }
-    }
+			this.AttachmentSession = new AsyncAttachmentSession(this.Address);
+		}
+	}
 }
