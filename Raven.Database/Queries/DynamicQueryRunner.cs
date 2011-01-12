@@ -32,6 +32,8 @@ namespace Raven.Database.Queries
 			// Create the map
 			var map = DynamicQueryMapping.Create(documentDatabase, query, entityName);
 
+			
+
 			var touchTemporaryIndexResult = TouchTemporaryIndex(map, map.TemporaryIndexName, map.PermanentIndexName);
 			map.IndexName = touchTemporaryIndexResult.Item1;
 

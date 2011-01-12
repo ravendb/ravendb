@@ -580,6 +580,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				});
 			return new QueryResult
 			{
+				IndexName = index,
 				Results = list,
 				IsStale = stale,
 				SkippedResults = query.SkippedResults.Value,
