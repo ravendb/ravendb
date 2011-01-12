@@ -20,28 +20,28 @@
 
 			var entity1 = new Company {Name = "Async Company #1"};
 			var entity2 = new Company {Name = "Async Company #2"};
-			using (var session1 = documentStore.OpenAsyncSession())
+			using (var session_for_storing = documentStore.OpenAsyncSession())
 			{
-				session1.Store(entity1);
-				session1.Store(entity2);
-				var result = session1.SaveChangesAsync();
+				session_for_storing.Store(entity1);
+				session_for_storing.Store(entity2);
+				var result = session_for_storing.SaveChangesAsync();
 				EnqueueConditional(() => result.IsCompleted || result.IsFaulted);
-
-				EnqueueCallback(() =>
-				{
-				    using (var session = documentStore.OpenAsyncSession())
-				    {
-				        var task = session.MultiLoadAsync<Company>(new[] {entity1.Id, entity2.Id});
-				        EnqueueConditional(() => task.IsCompleted || task.IsFaulted);
-				        EnqueueCallback(() =>
-				                			{
-				                			    Assert.Equal(entity1.Name, task.Result[0].Name);
-				                			    Assert.Equal(entity2.Name, task.Result[1].Name);
-				                			});
-				    }
-				    EnqueueTestComplete();
-				});
 			}
+
+			EnqueueCallback(() =>
+			{
+				using (var session_for_loading = documentStore.OpenAsyncSession())
+				{
+					var task = session_for_loading.MultiLoadAsync<Company>(new[] { entity1.Id, entity2.Id });
+					EnqueueConditional(() => task.IsCompleted || task.IsFaulted);
+					EnqueueCallback(() =>
+					{
+						Assert.Equal(entity1.Name, task.Result[0].Name);
+						Assert.Equal(entity2.Name, task.Result[1].Name);
+					});
+				}
+				EnqueueTestComplete();
+			});
 		}
 
 		[Asynchronous]
@@ -52,21 +52,64 @@
 			documentStore.Initialize();
 
 			var entity = new Company { Name = "Async Company #1" };
-			using (var session1 = documentStore.OpenAsyncSession())
+			using (var session_for_storing = documentStore.OpenAsyncSession())
 			{
-				session1.Store(entity);
-				var result = session1.SaveChangesAsync();
+				session_for_storing.Store(entity);
+				var result = session_for_storing.SaveChangesAsync();
 				EnqueueConditional(() => result.IsCompleted || result.IsFaulted);
+			}
+
+			EnqueueCallback(() =>
+			{
+				using (var session_for_loading = documentStore.OpenAsyncSession())
+				{
+					var task = session_for_loading.LoadAsync<Company>(entity.Id);
+					EnqueueConditional(() => task.IsCompleted || task.IsFaulted);
+					EnqueueCallback(() => Assert.Equal(entity.Name, task.Result.Name));
+				}
+				EnqueueTestComplete();
+			});
+		}
+
+		[Asynchronous]
+		[TestMethod]
+		public void Can_insert_async_and_delete_async()
+		{
+			var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+			documentStore.Initialize();
+
+			var entity = new Company { Name = "Async Company #1" };
+			using (var session = documentStore.OpenAsyncSession())
+			{
+				session.Store(entity);
+				var storing = session.SaveChangesAsync();
+				EnqueueConditional(() => storing.IsCompleted || storing.IsFaulted);
+
+				EnqueueCallback(()=>
+				                	{
+										using (var for_loading = documentStore.OpenAsyncSession())
+										{
+											var loading =for_loading.LoadAsync<Company>(entity.Id);
+											EnqueueConditional(() => loading.IsCompleted || loading.IsFaulted);
+											EnqueueCallback(() => Assert.NotNull(loading.Result));
+										}
+				                	});
 
 				EnqueueCallback(() =>
 				{
-					using (var session = documentStore.OpenAsyncSession())
-					{
-						var task = session.LoadAsync<Company>(entity.Id);
-						EnqueueConditional(() => task.IsCompleted || task.IsFaulted);
-						EnqueueCallback(() => Assert.Equal(entity.Name, task.Result.Name));
-					}
-					EnqueueTestComplete();
+				    session.Delete(entity);
+				    var deleting = session.SaveChangesAsync();
+					EnqueueConditional(() => deleting.IsCompleted || deleting.IsFaulted);
+					EnqueueCallback(() =>
+					                	{
+					                		using (var for_verifying = documentStore.OpenAsyncSession())
+					                		{
+					                			var verification = for_verifying.LoadAsync<Company>(entity.Id);
+					                			EnqueueConditional(() => verification.IsCompleted || verification.IsFaulted);
+					                			EnqueueCallback(() => Assert.Null(verification.Result));
+					                			EnqueueTestComplete();
+					                		}
+					                	});
 				});
 			}
 		}
