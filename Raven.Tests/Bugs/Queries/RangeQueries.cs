@@ -1,5 +1,7 @@
 using System.Linq;
 using Xunit;
+using System.Collections.Generic;
+using Raven.Database.Indexing;
 
 namespace Raven.Tests.Bugs.Queries
 {
@@ -91,6 +93,69 @@ namespace Raven.Tests.Bugs.Queries
 			}
 		}
 
+		[Fact]
+		public void CanQueryOnRangeDoubleAsPartOfIDictionary()
+		{
+			using (var store = NewDocumentStore())
+			{
+				store.DatabaseCommands.PutIndex("SimpleIndex", new IndexDefinition
+				{
+					Map = @"from doc in docs.UserWithIDictionaries
+								from nestedValue in doc.NestedItems
+								select new {Key=nestedValue.Key, Value=nestedValue.Value.Value}"
+				});
+
+				using (var s = store.OpenSession())
+				{
+					s.Store(new UserWithIDictionary
+					{
+						NestedItems = new Dictionary<string, NestedItem> 
+								{
+									{ "Color", new NestedItem { Value = 10 } }
+								}
+					});
+
+					s.Store(new UserWithIDictionary
+					{
+						NestedItems = new Dictionary<string, NestedItem> 
+								{
+									{ "Color", new NestedItem { Value = 20 } }
+								}
+					});
+
+					s.Store(new UserWithIDictionary
+					{
+						NestedItems = new Dictionary<string, NestedItem> 
+								{
+									{ "Color", new NestedItem { Value = 30 } }
+								}
+					});
+
+					s.Store(new UserWithIDictionary
+					{
+						NestedItems = new Dictionary<string, NestedItem>
+								{
+									{ "Color", new NestedItem { Value = 150 } }
+								}
+					});
+
+					s.SaveChanges();
+				}
+
+				using (var s = store.OpenSession())
+				{
+					var users = s.Advanced.LuceneQuery<UserWithIDictionary>("SimpleIndex")
+						.WhereEquals("Key", "Color")
+						.AndAlso()
+						.WhereEquals("Value", 20)
+						.WaitForNonStaleResults()
+						.ToArray();
+
+					Assert.Equal(2, users.Count());
+				}
+			}
+		}
+
 		public class WithInteger
 		{
 			public int Sequence { get; set; }
@@ -98,6 +163,19 @@ namespace Raven.Tests.Bugs.Queries
 		public class WithLong
 		{
 			public long Sequence { get; set; }
+		}
+
+		public class UserWithIDictionary
+		{
+			public string Id { get; set; }
+			public IDictionary<string, string> Items { get; set; }
+			public IDictionary<string, NestedItem> NestedItems { get; set; }
+		}
+
+		public class NestedItem
+		{
+			public string Name { get; set; }
+			public double Value { get; set; }
 		}
 	}
 }
