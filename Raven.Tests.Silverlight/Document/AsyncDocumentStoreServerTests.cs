@@ -2,11 +2,15 @@
 
 namespace Raven.Tests.Silverlight.Document
 {
+	using System;
 	using Client.Document;
+	using Database.Data;
+	using Database.Indexing;
 	using Microsoft.Silverlight.Testing;
 	using Microsoft.VisualStudio.TestTools.UnitTesting;
 	using Tests.Document;
 	using Assert = Xunit.Assert;
+	using Client.Extensions;
 
 	[TestClass]
 	public class AsyncDocumentStoreServerTests : SilverlightTest
@@ -40,9 +44,9 @@ namespace Raven.Tests.Silverlight.Document
 					{
 						Assert.Equal(entity1.Name, task.Result[0].Name);
 						Assert.Equal(entity2.Name, task.Result[1].Name);
+						EnqueueTestComplete();
 					});
 				}
-				EnqueueTestComplete();
 			});
 		}
 
@@ -66,9 +70,13 @@ namespace Raven.Tests.Silverlight.Document
 				{
 					var task = session_for_loading.LoadAsync<Company>(entity.Id);
 					EnqueueTaskCompleted(task);
-					EnqueueCallback(() => Assert.Equal(entity.Name, task.Result.Name));
+					EnqueueCallback(() =>
+					                	{
+					                		Assert.Equal(entity.Name, task.Result.Name);
+											EnqueueTestComplete();
+					                	});
 				}
-				EnqueueTestComplete();
+				
 			});
 		}
 
@@ -79,26 +87,26 @@ namespace Raven.Tests.Silverlight.Document
 			var documentStore = new DocumentStore { Url = url + port };
 			documentStore.Initialize();
 
-			var entity = new Company { Name = "Async Company #1", Id = "companies/1"};
+			var entity = new Company { Name = "Async Company #1", Id = "companies/1" };
 			using (var session = documentStore.OpenAsyncSession())
 			{
 				session.Store(entity);
 				EnqueueTaskCompleted(session.SaveChangesAsync());
 
-				EnqueueCallback(()=>
-				                	{
+				EnqueueCallback(() =>
+									{
 										using (var for_loading = documentStore.OpenAsyncSession())
 										{
-											var loading =for_loading.LoadAsync<Company>(entity.Id);
+											var loading = for_loading.LoadAsync<Company>(entity.Id);
 											EnqueueTaskCompleted(loading);
 											EnqueueCallback(() => Assert.NotNull(loading.Result));
 										}
-				                	});
+									});
 
 				EnqueueCallback(() =>
 				{
-				    using(var for_deleting = documentStore.OpenAsyncSession())
-				    {
+					using (var for_deleting = documentStore.OpenAsyncSession())
+					{
 						var loading = for_deleting.LoadAsync<Company>(entity.Id);
 						EnqueueTaskCompleted(loading);
 						EnqueueCallback(() =>
@@ -107,32 +115,102 @@ namespace Raven.Tests.Silverlight.Document
 							EnqueueTaskCompleted(for_deleting.SaveChangesAsync());
 
 							EnqueueCallback(() =>
-					                	{
-					                		using (var for_verifying = documentStore.OpenAsyncSession())
-					                		{
-					                			var verification = for_verifying.LoadAsync<Company>(entity.Id);
-					                			EnqueueTaskCompleted(verification);
-					                			EnqueueCallback(() => Assert.Null(verification.Result));
-					                			EnqueueTestComplete();
-					                		}
-					                	});
+										{
+											using (var for_verifying = documentStore.OpenAsyncSession())
+											{
+												var verification = for_verifying.LoadAsync<Company>(entity.Id);
+												EnqueueTaskCompleted(verification);
+												EnqueueCallback(() => Assert.Null(verification.Result));
+												EnqueueTestComplete();
+											}
+										});
 						});
-				    }
+					}
 				});
 			}
 		}
 
 		[Asynchronous]
-		[TestMethod]
+		//[TestMethod]
 		public void Can_get_index_names_async()
 		{
-				var documentStore = new DocumentStore { Url = url + port };
-				documentStore.Initialize();
+			var dbname = Guid.NewGuid().ToString();
+			var documentStore = new DocumentStore { Url = url + port };
+			documentStore.Initialize();
 
-				var task = documentStore.AsyncDatabaseCommands.GetIndexNamesAsync(0,25);
+			EnqueueTaskCompleted( documentStore.AsyncDatabaseCommands.EnsureDatabaseExists(dbname) );
+			EnqueueCallback(()=> { 
+				var task = documentStore.AsyncDatabaseCommands.ForDatabase(dbname).GetIndexNamesAsync(0, 25);
 				EnqueueTaskCompleted(task);
-				EnqueueCallback(()=> Assert.Equal(new[] { "Raven/DocumentsByEntityName" },task.Result));
-				EnqueueTestComplete();
+				EnqueueCallback(() =>
+				                	{
+				                		Assert.Equal(new[] { "Raven/DocumentsByEntityName" }, task.Result);
+										EnqueueTestComplete();
+				                	});
+			});
+		}
+
+		[Asynchronous]
+		//[TestMethod]
+		public void Can_put_an_index_async()
+		{
+			var documentStore = new DocumentStore { Url = url + port };
+			documentStore.Initialize();
+
+			var task = documentStore.AsyncDatabaseCommands.ForDatabase(Guid.NewGuid().ToString()).PutIndexAsync("Test", new IndexDefinition
+			{
+				Map = "from doc in docs.Companies select new { doc.Name }"
+			}, true);
+			EnqueueTaskCompleted(task);
+
+			EnqueueCallback(()=>
+			                	{
+									var verification = documentStore.AsyncDatabaseCommands.GetIndexNamesAsync(0, 25);
+									EnqueueTaskCompleted(verification);
+									EnqueueCallback(() =>
+									                	{
+									                		Assert.Contains(task.Result, "Test");
+															EnqueueTestComplete();
+									                	});
+			                	});
+		}
+
+		[Asynchronous]
+		//[TestMethod]
+		public void Can_query_by_index()
+		{
+			var documentStore = new DocumentStore {Url = url + port};
+			documentStore.AsyncDatabaseCommands.ForDatabase(Guid.NewGuid().ToString());
+			documentStore.Initialize();
+
+			var entity = new Company {Name = "Async Company #1", Id = "companies/1"};
+			using (var session = documentStore.OpenAsyncSession())
+			{
+				session.Store(entity);
+				EnqueueTaskCompleted(session.SaveChangesAsync());
+			}
+
+			EnqueueCallback(() =>
+			{
+			    var task = documentStore.AsyncDatabaseCommands.PutIndexAsync("Test", new IndexDefinition
+			                		                                                    {
+			                		                                                        Map =
+			                		                                                            "from doc in docs.Companies select new { doc.Name }"
+			                		                                                    }, true);
+			    EnqueueTaskCompleted(task);
+
+			    EnqueueCallback(() =>
+			                    	{
+			                    		var query = documentStore.AsyncDatabaseCommands.QueryAsync("Test", new IndexQuery(), null);
+			                    		EnqueueTaskCompleted(query);
+			                    		EnqueueCallback(() =>
+			                    		                	{
+																var r = query.Result;
+			                    		                	});
+			                    	});
+
+
+			});
 		}
 
 		void EnqueueTaskCompleted(Task task)
