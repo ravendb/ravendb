@@ -27,6 +27,8 @@ using Raven.Http.Json;
 
 namespace Raven.Client.Client.Async
 {
+	using Extensions;
+
 	/// <summary>
 	/// Access the database commands in async fashion
 	/// </summary>
@@ -138,7 +140,7 @@ namespace Raven.Client.Client.Async
 					}
 					catch (AggregateException e)
 					{
-						var webException = ExtractSingleInnerException(e) as WebException;
+						var webException = e.ExtractSingleInnerException() as WebException;
 						if (webException != null)
 						{
 							if (HandleWebExceptionForGetAsync(key, webException))
@@ -280,17 +282,28 @@ namespace Raven.Client.Client.Async
 							{
 								return JsonConvert.DeserializeObject<PutResult>(task1.Result, new JsonEnumConverter());
 							}
+							catch(AggregateException e)
+							{
+								var webexception = e.ExtractSingleInnerException() as WebException;
+								if(ShouldThrowForPutAsync(webexception)) throw;
+								throw ThrowConcurrencyException(webexception);
+							}
 							catch (WebException e)
 							{
-								var httpWebResponse = e.Response as HttpWebResponse;
-								if (httpWebResponse == null ||
-									httpWebResponse.StatusCode != HttpStatusCode.Conflict)
-									throw;
+								if (ShouldThrowForPutAsync(e)) throw;
 								throw ThrowConcurrencyException(e);
 							}
 						});
 				})
 				.Unwrap();
+		}
+
+		static bool ShouldThrowForPutAsync(WebException e)
+		{
+			if(e == null) return true;
+			var httpWebResponse = e.Response as HttpWebResponse;
+			return (httpWebResponse == null ||
+				httpWebResponse.StatusCode != HttpStatusCode.Conflict);
 		}
 
 
@@ -320,7 +333,7 @@ namespace Raven.Client.Client.Async
 					}
 					catch (AggregateException e)
 					{
-						var webException = ExtractSingleInnerException(e) as WebException;
+						var webException = e.ExtractSingleInnerException() as WebException;
 						if (ShouldThrowForPutIndexAsync(webException))
 							throw;
 					}
@@ -359,21 +372,6 @@ namespace Raven.Client.Client.Async
 			return (response == null || response.StatusCode != HttpStatusCode.NotFound);
 		}
 
-		private static Exception ExtractSingleInnerException(AggregateException e)
-		{
-			while (true)
-			{
-				if (e.InnerExceptions.Count != 1)
-					return null;
-
-				var aggregateException = e.InnerExceptions[0] as AggregateException;
-				if (aggregateException == null)
-					break;
-				e = aggregateException;
-			}
-
-			return e.InnerExceptions[0];
-		}
 
 		/// <summary>
 		/// Gets the index names from the server asyncronously
