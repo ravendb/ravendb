@@ -181,40 +181,52 @@ namespace Raven.Tests.Silverlight.Document
 		}
 
 		[Asynchronous]
-		//[TestMethod]
+		[TestMethod]
 		public void Can_query_by_index()
 		{
-			var documentStore = new DocumentStore {Url = url + port};
-			documentStore.AsyncDatabaseCommands.ForDatabase(Guid.NewGuid().ToString());
+            var dbname = Guid.NewGuid().ToString();
+            var documentStore = new DocumentStore { Url = url + port };
 			documentStore.Initialize();
-
-			var entity = new Company {Name = "Async Company #1", Id = "companies/1"};
-			using (var session = documentStore.OpenAsyncSession())
-			{
-				session.Store(entity);
-				EnqueueTaskCompleted(session.SaveChangesAsync());
-			}
+            var ensure = documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+            EnqueueTaskCompleted(ensure);
 
 			EnqueueCallback(() =>
 			{
-			    var task = documentStore.AsyncDatabaseCommands.PutIndexAsync("Test", new IndexDefinition
-			                		                                                    {
-			                		                                                        Map =
-			                		                                                            "from doc in docs.Companies select new { doc.Name }"
-			                		                                                    }, true);
-			    EnqueueTaskCompleted(task);
+                var entity = new Company { Name = "Async Company #1", Id = "companies/1" };
+                using (var session = documentStore.OpenAsyncSession(dbname))
+                {
+                    session.Store(entity);
+                    EnqueueTaskCompleted(session.SaveChangesAsync());
+                }
 
-			    EnqueueCallback(() =>
-			                    	{
-			                    		var query = documentStore.AsyncDatabaseCommands.QueryAsync("Test", new IndexQuery(), null);
-			                    		EnqueueTaskCompleted(query);
-			                    		EnqueueCallback(() =>
-			                    		                	{
-																var r = query.Result;
-			                    		                	});
-			                    	});
+                EnqueueCallback(() =>
+                {
+                    var task = documentStore.AsyncDatabaseCommands.ForDatabase(dbname).PutIndexAsync("Test", new IndexDefinition
+                    {
+                        Map =
+                            "from doc in docs.Companies select new { doc.Name }"
+                    }, true);
+                    EnqueueTaskCompleted(task);
+
+                    EnqueueCallback(() =>
+                    {
+                        //TODO: need to wait until the indexing is done. BAD CODE!!!!
+                        EnqueueTaskCompleted(TaskEx.Delay(TimeSpan.FromMilliseconds(200)));
+
+                        EnqueueCallback(() =>
+                        {
+                            var query = documentStore.AsyncDatabaseCommands.ForDatabase(dbname).QueryAsync("Test", new IndexQuery(), null);
+                            EnqueueTaskCompleted(query);
+                            EnqueueCallback(() =>
+                            {
+                                var r = query.Result;
+                                Assert.NotEqual(0, r.TotalResults);
+                            });
+                        });
+                    });
 
 
+                });
 			});
 		}
 
