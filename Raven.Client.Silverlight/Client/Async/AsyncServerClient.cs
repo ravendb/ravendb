@@ -138,36 +138,25 @@ namespace Raven.Client.Client.Async
 					}
 					catch (AggregateException e)
 					{
-						while (true)
-						{
-							if (e.InnerExceptions.Count != 1)
-								throw;
-							var aggregateException = e.InnerExceptions[0] as AggregateException;
-							if (aggregateException == null)
-								break;
-							e = aggregateException;
-						}
-						
-						var webException = e.InnerExceptions[0] as WebException;
+						var webException = ExtractSingleInnerException(e) as WebException;
 						if (webException != null)
 						{
-							if (HandleWebException(key, webException))
+							if (HandleWebExceptionForGetAsync(key, webException))
 								return null;
 						}
 						throw;
 					}
 					catch (WebException e)
 					{
-						if (HandleWebException(key, e))
+						if (HandleWebExceptionForGetAsync(key, e))
 							return null;
 						throw;
 					}
 				});
 		}
 
-		private bool HandleWebException(string key, WebException e)
+		private static bool HandleWebExceptionForGetAsync(string key, WebException e)
 		{
-
 			var httpWebResponse = e.Response as HttpWebResponse;
 			if (httpWebResponse == null)
 			{
@@ -329,10 +318,15 @@ namespace Raven.Client.Client.Async
 							throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
 
 					}
+					catch (AggregateException e)
+					{
+						var webException = ExtractSingleInnerException(e) as WebException;
+						if (ShouldThrowForPutIndexAsync(webException))
+							throw;
+					}
 					catch (WebException e)
 					{
-						var response = e.Response as HttpWebResponse;
-						if (response == null || response.StatusCode != HttpStatusCode.NotFound)
+						if (ShouldThrowForPutIndexAsync(e))
 							throw;
 					}
 
@@ -348,6 +342,29 @@ namespace Raven.Client.Client.Async
 														return obj.index;
 													})).Unwrap();
 				}).Unwrap();
+		}
+
+		static bool ShouldThrowForPutIndexAsync(WebException e)
+		{
+			if(e == null) return true;
+			var response = e.Response as HttpWebResponse;
+			return (response == null || response.StatusCode != HttpStatusCode.NotFound);
+		}
+
+		static Exception ExtractSingleInnerException(AggregateException e)
+		{
+			while (true)
+			{
+				if (e.InnerExceptions.Count != 1)
+					return null;
+
+				var aggregateException = e.InnerExceptions[0] as AggregateException;
+				if (aggregateException == null)
+					break;
+				e = aggregateException;
+			}
+
+			return e.InnerExceptions[0];
 		}
 
 		/// <summary>
