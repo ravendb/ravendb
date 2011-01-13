@@ -24,12 +24,13 @@ namespace Raven.Client.Document.Async
 		/// Initializes a new instance of the <see cref="AsyncDocumentSession"/> class.
 		/// </summary>
 		public AsyncDocumentSession(DocumentStore documentStore, 
-			IDocumentQueryListener[] queryListeners,
-			IDocumentStoreListener[] storeListeners, 
-			IDocumentDeleteListener[] deleteListeners)
+            IAsyncDatabaseCommands asyncDatabaseCommands, 
+            IDocumentQueryListener[] queryListeners, 
+            IDocumentStoreListener[] storeListeners, 
+            IDocumentDeleteListener[] deleteListeners)
 			: base(documentStore, queryListeners, storeListeners, deleteListeners)
 		{
-			AsyncDatabaseCommands = documentStore.AsyncDatabaseCommands;
+			AsyncDatabaseCommands = asyncDatabaseCommands;
 		}
 
 		/// <summary>
