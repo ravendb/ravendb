@@ -1,11 +1,12 @@
 using System;
+using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Exceptions;
 using Raven.Http.Exceptions;
 
 namespace Raven.Database.Json
 {
-	
+
 
     public class JsonPatcher
     {
@@ -16,7 +17,7 @@ namespace Raven.Database.Json
             this.document = document;
         }
 
-		public JObject Apply(PatchRequest[] patch)
+        public JObject Apply(PatchRequest[] patch)
         {
             foreach (var patchCmd in patch)
             {
@@ -29,66 +30,66 @@ namespace Raven.Database.Json
         {
             if (patchCmd.Name == null)
                 throw new InvalidOperationException("Patch property must have a name property");
-        	var token = document.SelectToken(patchCmd.Name);
-        	JProperty property = null;
-			if (token != null)
-				property = token.Parent as JProperty;
-        	switch (patchCmd.Type)
+            var token = document.SelectToken(patchCmd.Name);
+            JProperty property = null;
+            if (token != null)
+                property = token.Parent as JProperty;
+            switch (patchCmd.Type)
             {
                 case PatchCommandType.Set:
-					AddProperty(patchCmd, patchCmd.Name, property);
+                    AddProperty(patchCmd, patchCmd.Name, property);
                     break;
                 case PatchCommandType.Unset:
-					RemoveProperty(patchCmd, patchCmd.Name, property);
+                    RemoveProperty(patchCmd, patchCmd.Name, property);
                     break;
                 case PatchCommandType.Add:
-					AddValue(patchCmd, patchCmd.Name, property);
+                    AddValue(patchCmd, patchCmd.Name, property);
                     break;
                 case PatchCommandType.Insert:
-					InsertValue(patchCmd, patchCmd.Name, property);
+                    InsertValue(patchCmd, patchCmd.Name, property);
                     break;
                 case PatchCommandType.Remove:
-					RemoveValue(patchCmd, patchCmd.Name, property);
+                    RemoveValue(patchCmd, patchCmd.Name, property);
                     break;
                 case PatchCommandType.Modify:
-					ModifyValue(patchCmd, patchCmd.Name, property);
+                    ModifyValue(patchCmd, patchCmd.Name, property);
                     break;
                 case PatchCommandType.Inc:
-					IncrementProperty(patchCmd, patchCmd.Name, property);
+                    IncrementProperty(patchCmd, patchCmd.Name, property);
                     break;
-				case PatchCommandType.Copy:
-					CopyProperty(patchCmd, patchCmd.Name, property);
-            		break;
-				case PatchCommandType.Rename:
-					RenameProperty(patchCmd, patchCmd.Name, property);
-					break;
+                case PatchCommandType.Copy:
+                    CopyProperty(patchCmd, patchCmd.Name, property);
+                    break;
+                case PatchCommandType.Rename:
+                    RenameProperty(patchCmd, patchCmd.Name, property);
+                    break;
                 default:
-					throw new ArgumentException("Cannot understand command: " + patchCmd.Type);
+                    throw new ArgumentException("Cannot understand command: " + patchCmd.Type);
             }
         }
 
-		private void RenameProperty(PatchRequest patchCmd, string propName, JProperty property)
-		{
-			EnsurePreviousValueMatchCurrentValue(patchCmd, property);
-			if (property == null)
-				throw new InvalidOperationException("Cannot copy value from  '" + propName + "' because it was not found");
-
-			document[patchCmd.Value.Value<string>()] = property.Value;
-			document.Remove(propName);
-		}
-
-		private void CopyProperty(PatchRequest patchCmd, string propName, JProperty property)
-    	{
-			EnsurePreviousValueMatchCurrentValue(patchCmd, property);
-			if (property == null)
-				throw new InvalidOperationException("Cannot copy value from  '" + propName + "' because it was not found");
-
-			document[patchCmd.Value.Value<string>()] = property.Value;
-    	}
-
-    	private void ModifyValue(PatchRequest patchCmd, string propName, JProperty property)
+        private void RenameProperty(PatchRequest patchCmd, string propName, JProperty property)
         {
-			EnsurePreviousValueMatchCurrentValue(patchCmd, property);
+            EnsurePreviousValueMatchCurrentValue(patchCmd, property);
+            if (property == null)
+                throw new InvalidOperationException("Cannot copy value from  '" + propName + "' because it was not found");
+
+            document[patchCmd.Value.Value<string>()] = property.Value;
+            document.Remove(propName);
+        }
+
+        private void CopyProperty(PatchRequest patchCmd, string propName, JProperty property)
+        {
+            EnsurePreviousValueMatchCurrentValue(patchCmd, property);
+            if (property == null)
+                throw new InvalidOperationException("Cannot copy value from  '" + propName + "' because it was not found");
+
+            document[patchCmd.Value.Value<string>()] = property.Value;
+        }
+
+        private void ModifyValue(PatchRequest patchCmd, string propName, JProperty property)
+        {
+            EnsurePreviousValueMatchCurrentValue(patchCmd, property);
             if (property == null)
                 throw new InvalidOperationException("Cannot modify value from  '" + propName + "' because it was not found");
 
@@ -96,27 +97,40 @@ namespace Raven.Database.Json
             if (nestedCommands == null)
                 throw new InvalidOperationException("Cannot understand modified value from  '" + propName +
                                                     "' because could not find nested array of commands");
-            
+
             switch (property.Value.Type)
             {
                 case JTokenType.Object:
                     foreach (var cmd in nestedCommands)
                     {
                         var nestedDoc = property.Value.Value<JObject>();
-						new JsonPatcher(nestedDoc).Apply(cmd);
+                        new JsonPatcher(nestedDoc).Apply(cmd);
                     }
                     break;
                 case JTokenType.Array:
-					var position = patchCmd.Position;
-					if (position == null)
-                         throw new InvalidOperationException("Cannot modify value from  '" + propName +
-                                                             "' because position element does not exists or not an integer");
-                    var value = property.Value.Value<JArray>()[position];
-					foreach (var cmd in nestedCommands)
-					{
-                    	new JsonPatcher(value.Value<JObject>()).Apply(cmd);
+                    var position = patchCmd.Position;
+                    var allPositionsIsSelected = patchCmd.AllPositions.HasValue ? patchCmd.AllPositions.Value : false;
+                    if (position == null && !allPositionsIsSelected)
+                        throw new InvalidOperationException("Cannot modify value from  '" + propName +
+                                                            "' because position element does not exists or not an integer and allPositions is not set");
+                    var valueList = new List<JToken>();
+                    if (allPositionsIsSelected)
+                    {
+                        valueList.AddRange(property.Value.Value<JArray>());
                     }
-            		break;
+                    else
+                    {
+                        valueList.Add(property.Value.Value<JArray>()[position]);
+                    }
+
+                    foreach (var value in valueList)
+                    {
+                        foreach (var cmd in nestedCommands)
+                        {
+                            new JsonPatcher(value.Value<JObject>()).Apply(cmd);
+                        }
+                    }
+                    break;
                 default:
                     throw new InvalidOperationException("Can't understand how to deal with: " + property.Value.Type);
             }
@@ -124,7 +138,7 @@ namespace Raven.Database.Json
 
         private void RemoveValue(PatchRequest patchCmd, string propName, JProperty property)
         {
-        	EnsurePreviousValueMatchCurrentValue(patchCmd, property);
+            EnsurePreviousValueMatchCurrentValue(patchCmd, property);
             if (property == null)
             {
                 property = new JProperty(propName, new JArray());
@@ -133,8 +147,8 @@ namespace Raven.Database.Json
             var array = property.Value as JArray;
             if (array == null)
                 throw new InvalidOperationException("Cannot remove value from  '" + propName + "' because it is not an array");
-			var position = patchCmd.Position;
-			if (position == null)
+            var position = patchCmd.Position;
+            if (position == null)
                 throw new InvalidOperationException("Cannot remove value from  '" + propName + "' because position element does not exists or not an integer");
             if (position < 0 || position >= array.Count)
                 throw new IndexOutOfRangeException("Cannot remove value from  '" + propName +
@@ -142,9 +156,9 @@ namespace Raven.Database.Json
             array.RemoveAt(position.Value);
         }
 
-		private void InsertValue(PatchRequest patchCmd, string propName, JProperty property)
+        private void InsertValue(PatchRequest patchCmd, string propName, JProperty property)
         {
-			EnsurePreviousValueMatchCurrentValue(patchCmd, property);
+            EnsurePreviousValueMatchCurrentValue(patchCmd, property);
             if (property == null)
             {
                 property = new JProperty(propName, new JArray());
@@ -153,8 +167,8 @@ namespace Raven.Database.Json
             var array = property.Value as JArray;
             if (array == null)
                 throw new InvalidOperationException("Cannot remove value from  '" + propName + "' because it is not an array");
-			var position = patchCmd.Position;
-			if (position == null)
+            var position = patchCmd.Position;
+            if (position == null)
                 throw new InvalidOperationException("Cannot remove value from  '" + propName + "' because position element does not exists or not an integer");
             if (position < 0 || position >= array.Count)
                 throw new IndexOutOfRangeException("Cannot remove value from  '" + propName +
@@ -162,9 +176,9 @@ namespace Raven.Database.Json
             array.Insert(position.Value, patchCmd.Value);
         }
 
-		private void AddValue(PatchRequest patchCmd, string propName, JProperty property)
+        private void AddValue(PatchRequest patchCmd, string propName, JProperty property)
         {
-			EnsurePreviousValueMatchCurrentValue(patchCmd, property);
+            EnsurePreviousValueMatchCurrentValue(patchCmd, property);
             if (property == null)
             {
                 property = new JProperty(propName, new JArray());
@@ -177,9 +191,9 @@ namespace Raven.Database.Json
             array.Add(patchCmd.Value);
         }
 
-		private void RemoveProperty(PatchRequest patchCmd, string propName, JProperty property)
+        private void RemoveProperty(PatchRequest patchCmd, string propName, JProperty property)
         {
-			EnsurePreviousValueMatchCurrentValue(patchCmd, property);
+            EnsurePreviousValueMatchCurrentValue(patchCmd, property);
             EnsurePreviousValueMatchCurrentValue(patchCmd, property);
             if (property != null)
                 property.Remove();
@@ -187,21 +201,21 @@ namespace Raven.Database.Json
 
         private void AddProperty(PatchRequest patchCmd, string propName, JProperty property)
         {
-        	EnsurePreviousValueMatchCurrentValue(patchCmd, property);
+            EnsurePreviousValueMatchCurrentValue(patchCmd, property);
             if (property == null)
             {
                 property = new JProperty(propName);
                 document.Add(property);
             }
-        	property.Value = patchCmd.Value;
+            property.Value = patchCmd.Value;
         }
 
 
         private void IncrementProperty(PatchRequest patchCmd, string propName, JProperty property)
         {
-            if(patchCmd.Value.Type != JTokenType.Integer)
+            if (patchCmd.Value.Type != JTokenType.Integer)
                 throw new InvalidOperationException("Cannot increment when value is not an integer");
-        	EnsurePreviousValueMatchCurrentValue(patchCmd, property);
+            EnsurePreviousValueMatchCurrentValue(patchCmd, property);
             if (property == null)
             {
                 property = new JProperty(propName);
@@ -212,7 +226,7 @@ namespace Raven.Database.Json
             else
                 property.Value = JToken.FromObject(property.Value.Value<int>() + patchCmd.Value.Value<int>());
         }
-		private static void EnsurePreviousValueMatchCurrentValue(PatchRequest patchCmd, JProperty property)
+        private static void EnsurePreviousValueMatchCurrentValue(PatchRequest patchCmd, JProperty property)
         {
             var prevVal = patchCmd.PrevVal;
             if (prevVal == null)
@@ -224,7 +238,7 @@ namespace Raven.Database.Json
                         throw new ConcurrencyException();
                     break;
                 default:
-                    if(property == null)
+                    if (property == null)
                         throw new ConcurrencyException();
                     var equalityComparer = new JTokenEqualityComparer();
                     if (equalityComparer.Equals(property.Value, prevVal) == false)

@@ -12,10 +12,54 @@ namespace Raven.Tests.Patching
         private readonly JObject doc = JObject.Parse(@"{ title: ""A Blog Post"", body: ""html markup"", comments: [{""author"":""ayende"",""text"":""good post 1""},{author: ""ayende"", text:""good post 2""}], ""user"": { ""name"": ""ayende"", ""id"": 13} }");
 
         [Fact]
+        public void RenameSecondItemInArray()
+        {
+            var patchedDoc = new JsonPatcher(doc).Apply(
+                new[]
+        		{
+        			new PatchRequest
+        			{
+        				Type = PatchCommandType.Modify,
+        				Name = "comments",
+						Position = 1,
+        				Nested = new[]
+        				{
+        					new PatchRequest {Type = PatchCommandType.Rename, Name = "author", Value = "authorname"},
+        				}
+        			},
+        		});
+
+            Assert.Equal(@"{""title"":""A Blog Post"",""body"":""html markup"",""comments"":[{""author"":""ayende"",""text"":""good post 1""},{""text"":""good post 2"",""authorname"":""ayende""}],""user"":{""name"":""ayende"",""id"":13}}",
+                patchedDoc.ToString(Formatting.None));
+        }
+        [Fact]
+        public void RenameAllItemsInArray()
+        {
+            var patchedDoc = new JsonPatcher(doc).Apply(
+                new[]
+                    {
+                        new PatchRequest
+                            {
+                                Type = PatchCommandType.Modify,
+                                Name = "comments",
+                                AllPositions = true,
+        				Nested = new[]
+        				{
+        					new PatchRequest {Type = PatchCommandType.Rename, Name = "author", Value = "authorname"},
+        				}
+        			},
+        		});
+
+            Assert.Equal(@"{""title"":""A Blog Post"",""body"":""html markup"",""comments"":[{""text"":""good post 1"",""authorname"":""ayende""},{""text"":""good post 2"",""authorname"":""ayende""}],""user"":{""name"":""ayende"",""id"":13}}",
+                patchedDoc.ToString(Formatting.None));
+        }
+
+
+        [Fact]
         public void SetValueInNestedElement()
         {
-        	var patchedDoc = new JsonPatcher(doc).Apply(
-        		new[]
+            var patchedDoc = new JsonPatcher(doc).Apply(
+                new[]
         		{
         			new PatchRequest
         			{
@@ -36,7 +80,7 @@ namespace Raven.Tests.Patching
         public void SetValueInNestedElement_WithConcurrency_Ok()
         {
             var patchedDoc = new JsonPatcher(doc).Apply(
-				new[]
+                new[]
         		{
         			new PatchRequest
         			{
@@ -57,8 +101,8 @@ namespace Raven.Tests.Patching
         [Fact]
         public void SetValueInNestedElement_WithConcurrency_Error()
         {
-        	Assert.Throws<ConcurrencyException>(() => new JsonPatcher(doc).Apply(
-        		new[]
+            Assert.Throws<ConcurrencyException>(() => new JsonPatcher(doc).Apply(
+                new[]
         		{
         			new PatchRequest
         			{
@@ -78,7 +122,7 @@ namespace Raven.Tests.Patching
         public void RemoveValueInNestedElement()
         {
             var patchedDoc = new JsonPatcher(doc).Apply(
-				new[]
+                new[]
         		{
         			new PatchRequest
         			{
@@ -100,7 +144,7 @@ namespace Raven.Tests.Patching
         public void SetValueNestedInArray()
         {
             var patchedDoc = new JsonPatcher(doc).Apply(
-				new[]
+                new[]
         		{
         			new PatchRequest
         			{
