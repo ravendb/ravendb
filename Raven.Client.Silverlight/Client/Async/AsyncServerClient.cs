@@ -136,28 +136,60 @@ namespace Raven.Client.Client.Async
 							Metadata = request.ResponseHeaders.FilterHeaders(isServerDocument: false)
 						};
 					}
-					catch (WebException e)
+					catch (AggregateException e)
 					{
-						var httpWebResponse = e.Response as HttpWebResponse;
-						if (httpWebResponse == null)
-							throw;
-						if (httpWebResponse.StatusCode == HttpStatusCode.NotFound)
-							return null;
-						if (httpWebResponse.StatusCode == HttpStatusCode.Conflict)
+						while (true)
 						{
-							var conflicts = new StreamReader(httpWebResponse.GetResponseStream());
-							var conflictsDoc = JObject.Load(new JsonTextReader(conflicts));
-							var conflictIds = conflictsDoc.Value<JArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
-
-							throw new ConflictException("Conflict detected on " + key +
-														", conflict must be resolved before the document will be accessible")
-							{
-								ConflictedVersionIds = conflictIds
-							};
+							if (e.InnerExceptions.Count != 1)
+								throw;
+							var aggregateException = e.InnerExceptions[0] as AggregateException;
+							if (aggregateException == null)
+								break;
+							e = aggregateException;
+						}
+						
+						var webException = e.InnerExceptions[0] as WebException;
+						if (webException != null)
+						{
+							if (HandleWebException(key, webException))
+								return null;
 						}
 						throw;
 					}
+					catch (WebException e)
+					{
+						if (HandleWebException(key, e))
+							return null;
+						throw;
+					}
 				});
+		}
+
+		private bool HandleWebException(string key, WebException e)
+		{
+
+			var httpWebResponse = e.Response as HttpWebResponse;
+			if (httpWebResponse == null)
+			{
+				return false;
+			}
+			if (httpWebResponse.StatusCode == HttpStatusCode.NotFound)
+			{
+				return true;
+			}
+			if (httpWebResponse.StatusCode == HttpStatusCode.Conflict)
+			{
+				var conflicts = new StreamReader(httpWebResponse.GetResponseStream());
+				var conflictsDoc = JObject.Load(new JsonTextReader(conflicts));
+				var conflictIds = conflictsDoc.Value<JArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
+
+				throw new ConflictException("Conflict detected on " + key +
+				                            ", conflict must be resolved before the document will be accessible")
+				{
+					ConflictedVersionIds = conflictIds
+				};
+			}
+			return false;
 		}
 
 		/// <summary>
@@ -263,7 +295,7 @@ namespace Raven.Client.Client.Async
 							{
 								var httpWebResponse = e.Response as HttpWebResponse;
 								if (httpWebResponse == null ||
-								    httpWebResponse.StatusCode != HttpStatusCode.Conflict)
+									httpWebResponse.StatusCode != HttpStatusCode.Conflict)
 									throw;
 								throw ThrowConcurrencyException(e);
 							}
@@ -309,12 +341,12 @@ namespace Raven.Client.Client.Async
 					var serializeObject = JsonConvert.SerializeObject(indexDef, new JsonEnumConverter());
 					return request.WriteAsync(Encoding.UTF8.GetBytes(serializeObject))
 						.ContinueWith(writeTask => request.ReadResponseStringAsync()
-						                           	.ContinueWith(readStrTask =>
-						                           	{
-						                           		var obj = new { index = "" };
-						                           		obj = JsonConvert.DeserializeAnonymousType(readStrTask.Result, obj);
-						                           		return obj.index;
-						                           	})).Unwrap();
+													.ContinueWith(readStrTask =>
+													{
+														var obj = new { index = "" };
+														obj = JsonConvert.DeserializeAnonymousType(readStrTask.Result, obj);
+														return obj.index;
+													})).Unwrap();
 				}).Unwrap();
 		}
 
@@ -415,7 +447,7 @@ namespace Raven.Client.Client.Async
 				};
 			}
 		}
-		
+
 		private static void EnsureIsNotNullOrEmpty(string key, string argName)
 		{
 			if (string.IsNullOrEmpty(key))
