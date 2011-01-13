@@ -137,7 +137,7 @@ namespace Raven.Tests.Silverlight.Document
 			var dbname = Guid.NewGuid().ToString();
 			var documentStore = new DocumentStore { Url = url + port };
 			documentStore.Initialize();
-			var ensure = documentStore.AsyncDatabaseCommands.EnsureDatabaseExists(dbname);
+			var ensure = documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
 			EnqueueTaskCompleted(ensure);
 			EnqueueCallback(()=> { 
 				var task = documentStore.AsyncDatabaseCommands.ForDatabase(dbname).GetIndexNamesAsync(0, 25);
@@ -151,28 +151,33 @@ namespace Raven.Tests.Silverlight.Document
 		}
 
 		[Asynchronous]
-		//[TestMethod]
+		[TestMethod]
 		public void Can_put_an_index_async()
 		{
-			var documentStore = new DocumentStore { Url = url + port };
-			documentStore.Initialize();
+            var dbname = Guid.NewGuid().ToString();
+            var documentStore = new DocumentStore { Url = url + port };
+            documentStore.Initialize();
+            var ensure = documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+            EnqueueTaskCompleted(ensure);
+            EnqueueCallback(() =>
+            {
+                var task = documentStore.AsyncDatabaseCommands.ForDatabase(dbname).PutIndexAsync("Test", new IndexDefinition
+                {
+                    Map = "from doc in docs.Companies select new { doc.Name }"
+                }, true);
+                EnqueueTaskCompleted(task);
 
-			var task = documentStore.AsyncDatabaseCommands.ForDatabase(Guid.NewGuid().ToString()).PutIndexAsync("Test", new IndexDefinition
-			{
-				Map = "from doc in docs.Companies select new { doc.Name }"
-			}, true);
-			EnqueueTaskCompleted(task);
-
-			EnqueueCallback(()=>
-			                	{
-									var verification = documentStore.AsyncDatabaseCommands.GetIndexNamesAsync(0, 25);
-									EnqueueTaskCompleted(verification);
-									EnqueueCallback(() =>
-									                	{
-									                		Assert.Contains(task.Result, "Test");
-															EnqueueTestComplete();
-									                	});
-			                	});
+                EnqueueCallback(() =>
+                {
+                    var verification = documentStore.AsyncDatabaseCommands.ForDatabase(dbname).GetIndexNamesAsync(0, 25);
+                    EnqueueTaskCompleted(verification);
+                    EnqueueCallback(() =>
+                    {
+                        Assert.Contains(task.Result, "Test");
+                        EnqueueTestComplete();
+                    });
+                });
+            });
 		}
 
 		[Asynchronous]
