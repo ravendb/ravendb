@@ -46,7 +46,7 @@ namespace Raven.Client.Client.Async
 		/// <param name="credentials">The credentials.</param>
 		public AsyncServerClient(string url, DocumentConvention convention, ICredentials credentials)
 		{
-			this.url = url;
+		    this.url = url.EndsWith("/") ? url.Substring(0, url.Length - 1) : url;
 			this.convention = convention;
 			this.credentials = credentials;
 		}
