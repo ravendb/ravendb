@@ -337,21 +337,29 @@ namespace Raven.Client.Client.Async
 						.ContinueWith(writeTask => request.ReadResponseStringAsync()
 													.ContinueWith(readStrTask =>
 													{
-														var obj = new { index = "" };
-														obj = JsonConvert.DeserializeAnonymousType(readStrTask.Result, obj);
-														return obj.index;
+														//NOTE: JsonConvert.DeserializeAnonymousType() doesn't work in Silverlight because the ctr is private!
+														var obj = JsonConvert.DeserializeObject<IndexContainer>(readStrTask.Result);
+														return obj.Index;
 													})).Unwrap();
 				}).Unwrap();
 		}
 
-		static bool ShouldThrowForPutIndexAsync(WebException e)
+		/// <summary>
+		/// Used for deserialization only :-P
+		/// </summary>
+		public class IndexContainer
+		{
+			public string Index {get;set;}
+		}
+
+		private static bool ShouldThrowForPutIndexAsync(WebException e)
 		{
 			if(e == null) return true;
 			var response = e.Response as HttpWebResponse;
 			return (response == null || response.StatusCode != HttpStatusCode.NotFound);
 		}
 
-		static Exception ExtractSingleInnerException(AggregateException e)
+		private static Exception ExtractSingleInnerException(AggregateException e)
 		{
 			while (true)
 			{
