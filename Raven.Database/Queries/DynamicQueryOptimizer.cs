@@ -32,6 +32,12 @@ namespace Raven.Database.Queries
 						if (abstractViewGenerator == null) // there is a matching view generator
 							return false;
 
+						if (abstractViewGenerator.ReduceDefinition != null) // we can't choose a map/reduce index
+							return false;
+
+						if (abstractViewGenerator.TransformResultsDefinition != null)// we can't choose an index with transform results
+							return false;
+
 						if (abstractViewGenerator.ViewText.Contains("where")) // without a where clause
 							return false;
 
