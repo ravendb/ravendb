@@ -78,7 +78,7 @@ namespace Raven.Client.Client
 			{
 				url += "?";
 			}
-			webRequest = WebRequestCreator.ClientHttp.Create(new Uri(url + Guid.NewGuid()));
+			webRequest = WebRequestCreator.ClientHttp.Create(new Uri(url + "&" +Guid.NewGuid()));
 
 			WriteMetadata(metadata);
 			webRequest.Method = method;
