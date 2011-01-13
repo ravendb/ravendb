@@ -131,14 +131,14 @@ namespace Raven.Tests.Silverlight.Document
 		}
 
 		[Asynchronous]
-		//[TestMethod]
+		[TestMethod]
 		public void Can_get_index_names_async()
 		{
 			var dbname = Guid.NewGuid().ToString();
 			var documentStore = new DocumentStore { Url = url + port };
 			documentStore.Initialize();
-
-			EnqueueTaskCompleted( documentStore.AsyncDatabaseCommands.EnsureDatabaseExists(dbname) );
+			var ensure = documentStore.AsyncDatabaseCommands.EnsureDatabaseExists(dbname);
+			EnqueueTaskCompleted(ensure);
 			EnqueueCallback(()=> { 
 				var task = documentStore.AsyncDatabaseCommands.ForDatabase(dbname).GetIndexNamesAsync(0, 25);
 				EnqueueTaskCompleted(task);
