@@ -74,7 +74,12 @@ namespace Raven.Client.Client
 
 		private HttpJsonRequest(string url, string method, JObject metadata, ICredentials credentials, bool cacheRequest)
 		{
-			webRequest = WebRequestCreator.ClientHttp.Create(new Uri(url));
+			if (url.Contains("?") == false)
+			{
+				url += "?";
+			}
+			webRequest = WebRequestCreator.ClientHttp.Create(new Uri(url + Guid.NewGuid()));
+
 			WriteMetadata(metadata);
 			webRequest.Method = method;
 			if(method != "GET")
