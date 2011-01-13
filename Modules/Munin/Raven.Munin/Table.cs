@@ -13,6 +13,7 @@ using System.Linq.Expressions;
 using System.Runtime.Caching;
 using System.Security.Cryptography;
 using System.Threading;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Munin.Tree;
 
@@ -229,7 +230,7 @@ namespace Raven.Munin
                 {
                     Position = pos.Position,
                     Size = pos.Size,
-                    Data = () => readData ?? (readData = ReadData(pos.Position, pos.Size)),
+                    Data = () => readData ?? (readData = ReadData(pos.Position, pos.Size, pos.Key)),
                     Key = pos.Key
                 };
             });
@@ -240,10 +241,10 @@ namespace Raven.Munin
             if (command.Payload != null)
                 return command.Payload;
 
-            return ReadData(command.Position, command.Size);
+            return ReadData(command.Position, command.Size, command.Key);
         }
 
-        private byte[] ReadData(long pos, int size)
+        private byte[] ReadData(long pos, int size, JToken key)
         {
             if (pos == -1)
                 return null;
@@ -260,30 +261,30 @@ namespace Raven.Munin
                 if (cached != null)
                     return (byte[]) cached;
 
-                buf = ReadDataNoCaching(log, pos, size);
+                buf = ReadDataNoCaching(log, pos, size, key);
                 cache[cacheKey] = buf;
                 return buf;
             });
         }
 
-        private static byte[] ReadDataNoCaching(Stream log, long pos, int size)
+        private byte[] ReadDataNoCaching(Stream log, long pos, int size, JToken key)
         {
             log.Position = pos;
             var binaryReader = new BinaryReader(log);
             var data = binaryReader.ReadBytes(size);
             if(data.Length != size)
-                throw new InvalidDataException("Could not read complete data, the file is probably corrupt");
+                throw new InvalidDataException("Could not read complete data, the file is probably corrupt when reading: " + key.ToString(Formatting.None) + " on table " + Name);
 
             using(var sha256 = SHA256.Create())
             {
                 var hash = sha256.ComputeHash(data);
                 var hashFromFile = binaryReader.ReadBytes(hash.Length);
                 if(hashFromFile.Length != hash.Length)
-                    throw new InvalidDataException("Could not read complete SHA data, the file is probably corrupt");
+					throw new InvalidDataException("Could not read complete SHA data, the file is probably corrupt when reading: " + key.ToString(Formatting.None) + " on table " + Name);
 
                 if (hashFromFile.Where((t, i) => hash[i] != t).Any())
                 {
-                    throw new InvalidDataException("Invalid SHA signature, the file is probably corrupt");
+					throw new InvalidDataException("Invalid SHA signature, the file is probably corrupt when reading: " + key.ToString(Formatting.None) + " on table " + Name);
                 }
             }
 
@@ -381,7 +382,7 @@ namespace Raven.Munin
                    select new Command
                    {
                        Key = kvp.Key,
-                       Payload = ReadData(kvp.Value.Position, kvp.Value.Size),
+                       Payload = ReadData(kvp.Value.Position, kvp.Value.Size, kvp.Key),
                        DictionaryId = TableId,
                        Size = kvp.Value.Size,
                        Type = CommandType.Put
@@ -414,7 +415,7 @@ namespace Raven.Munin
                     Key = positionInFile.Key,
                     Position = positionInFile.Position,
                     Size = positionInFile.Size,
-                    Data = () => readData ?? (readData = ReadData(pos.Position, pos.Size)),
+                    Data = () => readData ?? (readData = ReadData(pos.Position, pos.Size, pos.Key)),
                
                 };
             }
