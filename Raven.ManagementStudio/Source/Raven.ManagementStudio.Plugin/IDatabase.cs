@@ -5,9 +5,7 @@ namespace Raven.ManagementStudio.Plugin
     public interface IDatabase
     {
         string Address { get; set; }
-
         string Name { get; set; }
-
         IAsyncDocumentSession Session { get; set; }
     }
 }
