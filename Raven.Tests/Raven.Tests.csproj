@@ -190,6 +190,7 @@
     <Compile Include="Bugs\MultipleResultsPerDocumentAndPaging.cs" />
     <Compile Include="Bugs\MultiTenancy\Basic.cs" />
     <Compile Include="Bugs\MultiTenancy\CreatingIndexes.cs" />
+    <Compile Include="Bugs\MultiTenancy\NoCaseSensitive.cs" />
     <Compile Include="Bugs\NameAndId.cs" />
     <Compile Include="Bugs\OperationHeaders.cs" />
     <Compile Include="Bugs\OrderOfInsertionDoesNotAffectQuerying.cs" />
