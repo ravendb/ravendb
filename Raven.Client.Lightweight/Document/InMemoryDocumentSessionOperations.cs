@@ -371,6 +371,9 @@ more responsive application.
 		/// <returns></returns>
 		protected object ConvertToEntity<T>(string id, JObject documentFound, JObject metadata)
 		{
+			if(typeof(T) == typeof(JObject))
+				return (T) (object) documentFound;
+
 			var entity = default(T);
 			EnsureNotReadVetoed(metadata);
 			var documentType = metadata.Value<string>("Raven-Clr-Type");
@@ -737,6 +740,9 @@ more responsive application.
 
 		private JObject GetObjectAsJson(object entity)
 		{
+			var jObject = entity as JObject;
+			if (jObject != null)
+				return jObject;
 			return JObject.FromObject(entity, Conventions.CreateSerializer());
 		}
 
