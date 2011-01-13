@@ -52,7 +52,7 @@ namespace Raven.Client.Extensions
 		///<summary>
 		/// Ensures that the database exists, creating it if needed
 		///</summary>
-		public static Task EnsureDatabaseExists(this IAsyncDatabaseCommands self, string name)
+		public static Task EnsureDatabaseExistsAsync(this IAsyncDatabaseCommands self, string name)
 		{
 			var doc = JObject.FromObject(new DatabaseDocument
 			{
@@ -64,7 +64,14 @@ namespace Raven.Client.Extensions
 			var docId = "Raven/Databases/" + name;
 
 			return self.GetAsync(docId)
-				.ContinueWith(get => (get.Result == null) ? self.PutAsync(docId, null, doc, new JObject()) : null);
+				.ContinueWith(get =>
+				{
+                    if (get.Result != null)
+                        return get;
+
+                    return (Task)self.PutAsync(docId, null, doc, new JObject());
+				})
+                .Unwrap();
 		}
 	}
 }
