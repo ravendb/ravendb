@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using Xunit;
 using System.Collections.Generic;
@@ -145,10 +146,10 @@ namespace Raven.Tests.Bugs.Queries
 				using (var s = store.OpenSession())
 				{
 					var users = s.Advanced.LuceneQuery<UserWithIDictionary>("SimpleIndex")
+						.WaitForNonStaleResults(TimeSpan.FromMinutes(5))
 						.WhereEquals("Key", "Color")
 						.AndAlso()
-						.WhereGreaterThan("Value", 20)
-						.WaitForNonStaleResults()
+						.WhereGreaterThan("Value_Range", 20.0d)
 						.ToArray();
 
 					Assert.Equal(2, users.Count());
