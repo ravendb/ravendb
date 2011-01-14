@@ -214,7 +214,7 @@ namespace Raven.Tests.Silverlight.Document
 					EnqueueCallback(() =>
 					{
 						//TODO: need to wait until the indexing is done. BAD CODE!!!!
-						EnqueueTaskCompleted(TaskEx.Delay(TimeSpan.FromMilliseconds(200)));
+						EnqueueDelay(300);
 
 						EnqueueCallback(() =>
 						{
@@ -224,6 +224,7 @@ namespace Raven.Tests.Silverlight.Document
 							{
 								var r = query.Result;
 								Assert.NotEqual(0, r.TotalResults);
+								EnqueueTestComplete();
 							});
 						});
 					});
