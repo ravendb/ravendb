@@ -3,6 +3,8 @@
 namespace Raven.Tests.Silverlight.Document
 {
 	using System;
+	using System.Collections.Generic;
+	using System.Linq;
 	using Client.Document;
 	using Database.Data;
 	using Database.Indexing;
@@ -214,7 +216,7 @@ namespace Raven.Tests.Silverlight.Document
 					EnqueueCallback(() =>
 					{
 						//TODO: need to wait until the indexing is done. BAD CODE!!!!
-						EnqueueDelay(300);
+						EnqueueDelay(500);
 
 						EnqueueCallback(() =>
 						{
@@ -232,6 +234,54 @@ namespace Raven.Tests.Silverlight.Document
 
 				});
 			});
+		}
+
+		[Asynchronous]
+		[TestMethod]
+		public void Can_project_value_from_collection()
+		{
+			var dbname = GenerateNewDatabaseName();
+			var store = EnqueueEnsuringNewDatabase(dbname);
+
+			EnqueueCallback(()=>
+			{
+				using (var session = store.OpenAsyncSession(dbname))
+			    {
+					session.Store(new Company
+					{
+						Name = "Project Value Company",
+						Contacts = new List<Contact>
+                        {
+                            new Contact { Surname = "Abbot" },
+                            new Contact { Surname = "Costello" }
+                        }
+					});
+					EnqueueTaskCompleted(session.SaveChangesAsync());
+
+					//TODO: need to wait until the indexing is done. BAD CODE!!!!
+					EnqueueDelay(500);
+
+					EnqueueCallback(()=>
+					{
+						var query = store.AsyncDatabaseCommands.ForDatabase(dbname).QueryAsync("dynamic",
+														   new IndexQuery
+														   {
+															   FieldsToFetch = new[] { "Contacts,Surname" }
+														   },
+														   new string[0]);   
+						EnqueueTaskCompleted(query);
+						EnqueueCallback(()=>
+						{
+							Assert.Equal(2, query.Result.Results[0]["Contacts"].Count());
+							Assert.Equal("Abbot", query.Result.Results[0]["Contacts"][0].Value<string>("Surname"));
+							Assert.Equal("Costello", query.Result.Results[0]["Contacts"][1].Value<string>("Surname"));
+							EnqueueTestComplete();
+						});
+					});		
+						
+			    }
+			});
+		
 		}
 
 		static string GenerateNewDatabaseName()
