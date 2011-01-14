@@ -203,6 +203,9 @@ namespace Raven.Http
                                        curReq, ctx.Request.HttpMethod, sw.ElapsedMilliseconds, ctx.Response.StatusCode,
                                        ctx.Request.Url.PathAndQuery,
                                        currentTenantId.Value);
+
+					ctx.OutputSavedLogItems(logger);
+
                 }
             }
         }

@@ -15,27 +15,16 @@ namespace Raven.Tryouts
     {
         static void Main()
         {
-			var json = JObject.Parse(File.ReadAllText(@"C:\Users\Ayende\Downloads\RavenBugRepro\before.txt"));
-
 			DocumentStore store = new DocumentStore { Url = "http://localhost:8080" };
 			store.Initialize();
 
 			using (var session = store.OpenSession())
 			{
-				session.Store(json);
+				session.Store(new{Name = "Ayende"});
 				session.SaveChanges();
 
-				// Here you can see that the document was saved successfully
-				var loadedDoc = session.Advanced.LuceneQuery<dynamic>().Last();
-				Console.WriteLine(loadedDoc);
 			}
 
-			using (var session = store.OpenSession())
-			{
-				// Here you will see all-empty values
-				var loadedDoc = session.Advanced.LuceneQuery<dynamic>().Last();
-				Console.WriteLine(loadedDoc);
-			}
         }
     }
 }
