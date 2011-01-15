@@ -3,6 +3,7 @@
 	using System;
 	using System.Collections.Generic;
 	using System.Reflection;
+	using System.Threading.Tasks;
 	using Microsoft.Silverlight.Testing.Harness;
 	using Microsoft.Silverlight.Testing.UnitTesting.Metadata;
 	using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -158,9 +159,15 @@
 
         public virtual void Invoke(object instance)
         {
-			//if((typeof(IEnumerable<>).IsAssignableFrom(_methodInfo.ReturnType))
-            methodInfo.Invoke(instance, None);
-
+            var type = typeof (IEnumerable<>).MakeGenericType(new[] {typeof(Task)});
+			if(type.IsAssignableFrom(methodInfo.ReturnType))
+			{
+			    var executor = instance.GetType().GetMethod("ExecuteTest");
+			    executor.Invoke(instance, new[] {methodInfo});
+			} else
+			{
+			    methodInfo.Invoke(instance, None);
+			}
         }
 
         public override string ToString()
