@@ -5,9 +5,6 @@
 
 	static class ProviderAttributes
 	{
-		/// <summary>
-		/// Initializes the VSTT metadata provider.
-		/// </summary>
 		static ProviderAttributes()
 		{
 			TestClass = typeof (TestClassAttribute);

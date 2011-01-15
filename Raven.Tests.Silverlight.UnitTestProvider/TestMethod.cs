@@ -14,9 +14,6 @@
         private static readonly object[] None = { };
         private readonly MethodInfo methodInfo;
 
-        /// <summary>
-        /// Private constructor, the constructor requires the method reflection object.
-        /// </summary>
         private TestMethod() { }
 
         public TestMethod(MethodInfo methodInfo) : this()
@@ -71,10 +68,7 @@
         {
             get
             {
-                var description = ReflectionUtility.GetAttribute(
-                    this,
-                    ProviderAttributes.DescriptionAttribute,
-                    true) as DescriptionAttribute;
+                var description = this.GetAttribute<DescriptionAttribute>();
                 return description != null ? description.Description : null;
             }
         }
@@ -93,10 +87,7 @@
         {
             get
             {
-                var owner = ReflectionUtility.GetAttribute(
-                    this,
-                    ProviderAttributes.OwnerAttribute) as
-                    OwnerAttribute;
+                var owner = this.GetAttribute<OwnerAttribute>();
                 return owner == null ? null : owner.Owner;
             }
         }
@@ -106,10 +97,7 @@
         {
             get
             {
-                var exp = ReflectionUtility.GetAttribute(
-                    this,
-                    ProviderAttributes.ExpectedExceptionAttribute) as
-                    ExpectedExceptionAttribute;
+                var exp = this.GetAttribute<ExpectedExceptionAttribute>();
                 return exp != null ? new ExpectedException(exp) : null;
             }
         }
@@ -118,10 +106,7 @@
         {
             get
             {
-                var timeout = ReflectionUtility.GetAttribute(
-                    this,
-                    ProviderAttributes.TimeoutAttribute,
-                    true) as TimeoutAttribute;
+                var timeout = this.GetAttribute<TimeoutAttribute>();
                 return timeout != null ? (int?)timeout.Timeout : null;
             }
         }
@@ -158,9 +143,9 @@
 
         public IPriority Priority
         {
-            get 
+            get
             {
-                var pri = ReflectionUtility.GetAttribute(this, ProviderAttributes.Priority, true) as PriorityAttribute;
+                var pri = this.GetAttribute<PriorityAttribute>();
                 return new Priority(pri == null ? DefaultPriority : pri.Priority);
             }
         }
@@ -182,5 +167,13 @@
         {
             return Name;
         }
+    }
+
+    public static class TestMethodExtensions
+    {
+        public static T GetAttribute<T>(this TestMethod testMethod) where T : Attribute
+        {
+            return ReflectionUtility.GetAttribute(testMethod, typeof(T), true) as T;
+        } 
     }
 }

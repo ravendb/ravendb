@@ -51,7 +51,7 @@
 		}
 	}
 
-	//[TestClass]
+	[TestClass]
 	public class MyTestBase : SilverlightTest
 	{
 		const int Port = 8080;
@@ -99,8 +99,8 @@
 			else EnqueueTestComplete(); ;
 		}
 
-		//[TestMethod]
-		//[Asynchronous]
+        [TestMethod]
+        [Asynchronous]
 		public IEnumerable<Task> TestStuff()
 		{
 			var dbname = GenerateNewDatabaseName();

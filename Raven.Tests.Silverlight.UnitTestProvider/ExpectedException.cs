@@ -24,12 +24,10 @@
 			}
 		}
 
-
 		public Type ExceptionType
 		{
 			get { return exp.ExceptionType; }
 		}
-
 
 		public string Message
 		{
