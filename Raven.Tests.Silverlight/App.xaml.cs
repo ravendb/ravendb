@@ -7,8 +7,9 @@ namespace Raven.Tests.Silverlight
 	using System.Text;
 	using Client.Client;
 	using Client.Document;
-	using Document;
+	using Microsoft.Silverlight.Testing.UnitTesting.Metadata;
 	using Microsoft.Silverlight.Testing.UnitTesting.Metadata.XunitLight;
+	using UnitTestProvider;
 
 	public partial class App : Application
 	{
@@ -24,10 +25,9 @@ namespace Raven.Tests.Silverlight
 
 		private void Application_Startup(object sender, StartupEventArgs e)
 		{	
-			/*
-			 * Wire the XunitLight test harness provider into the silverlight testing framework
-			 */
-			//UnitTestSystem.RegisterUnitTestProvider(new XUnitTestProvider());
+	
+			UnitTestProviders.Providers.Clear();
+			UnitTestSystem.RegisterUnitTestProvider(new RavenCustomProvider());
 
 			RootVisual = UnitTestSystem.CreateTestPage();
 

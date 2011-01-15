@@ -1,25 +1,17 @@
-﻿using System.Threading.Tasks;
-
-namespace Raven.Tests.Silverlight.Document
+﻿namespace Raven.Tests.Silverlight
 {
-	using System;
 	using System.Collections.Generic;
 	using System.Linq;
-	using Client.Document;
 	using Database.Data;
 	using Database.Indexing;
 	using Microsoft.Silverlight.Testing;
 	using Microsoft.VisualStudio.TestTools.UnitTesting;
-	using Tests.Document;
+	using Document;
 	using Assert = Xunit.Assert;
-	using Client.Extensions;
 
 	[TestClass]
-	public class AsyncDocumentStoreServerTests : SilverlightTest
+	public class AsyncDocumentStoreServerTests : AsyncTestsBase
 	{
-		readonly int port = 8080;
-		readonly string url = "http://localhost:";
-
 		[Asynchronous]
 		[TestMethod]
 		public void Can_insert_async_and_multi_get_async()
@@ -282,26 +274,6 @@ namespace Raven.Tests.Silverlight.Document
 			    }
 			});
 		
-		}
-
-		static string GenerateNewDatabaseName()
-		{
-			return Guid.NewGuid().ToString();
-		}
-
-		DocumentStore EnqueueEnsuringNewDatabase(string dbname)
-		{
-			var documentStore = new DocumentStore { Url = url + port };
-			documentStore.Initialize();
-			var ensure = documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
-			EnqueueTaskCompleted(ensure);
-
-			return documentStore;
-		}
-
-		void EnqueueTaskCompleted(Task task)
-		{
-			EnqueueConditional(() => task.IsCompleted || task.IsFaulted);
 		}
 	}
 }
