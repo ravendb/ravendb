@@ -26,7 +26,7 @@ namespace Raven.Client.Linq
 		public static IEnumerable<TResult> As<TResult>(this IQueryable queryable)
 		{
 			var results = queryable.Provider.CreateQuery<TResult>(queryable.Expression);
-			((RavenQueryInspector<TResult>)results).Customize(x => x.SelectFields<TResult>(null));
+			((RavenQueryInspector<TResult>)results).Customize(x => x.CreateQueryForSelectedFields<TResult>(null));
 			return results;
 		}
 
