@@ -116,11 +116,26 @@ namespace Raven.Database.Impl
 			if (cache.TryGetValue(key, out doc))
 				return doc;
 			doc = actions.Documents.DocumentByKey(key, null);
+            EnsureIdInMetadata(doc);
 			cache[key] = doc;
 			return doc;
 		}
 
-		public bool ShouldIncludeResultInQuery(IndexQueryResult arg, IndexDefinition indexDefinition, string[] fieldsToFetch, AggregationOperation aggregationOperation)
+	    public DocumentRetriever EnsureIdInMetadata(JsonDocument doc)
+	    {
+            if (doc == null)
+                return this;
+
+            if (doc.Metadata == null)
+                return this;
+
+            if (doc.Metadata.Property("@id") != null)
+                doc.Metadata.Remove("@id");
+            doc.Metadata.Add("@id", new JValue(doc.Key));
+	        return this;
+	    }
+
+	    public bool ShouldIncludeResultInQuery(IndexQueryResult arg, IndexDefinition indexDefinition, string[] fieldsToFetch, AggregationOperation aggregationOperation)
 		{
 			var doc = RetrieveDocumentInternal(arg, loadedIdsForFilter, fieldsToFetch, indexDefinition, aggregationOperation);
 			if (doc == null)
