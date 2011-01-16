@@ -787,23 +787,10 @@ namespace Raven.Client.Linq
 
 			return executeQuery;
 		}
-#endif
-
-#if SILVERLIGHT
+#else
 		private object ExecuteQuery<TProjection>()
 		{
-			var finalQuery = luceneQuery.SelectFields<TProjection>(FieldsToFetch.ToArray());
-
-			var executeQuery = GetQueryResult(finalQuery);
-
-			var queryResultAsync = finalQuery.QueryResultAsync;
-			queryResultAsync.Wait();
-			if (afterQueryExecuted != null)
-			{
-				afterQueryExecuted(queryResultAsync.Result);
-			}
-
-			return executeQuery;
+			throw new NotImplementedException("Not done yet");
 		}
 #endif
 
@@ -844,11 +831,9 @@ namespace Raven.Client.Linq
 				}
 #else
 					case SpecialQueryType.Count:
-					{
-						var queryResultAsync = finalQuery.QueryResultAsync;
-						queryResultAsync.Wait();
-						return queryResultAsync.Result.TotalResults;
-					}
+			    {
+			        throw new NotImplementedException("not done yet");
+			    }
 #endif
 				default:
 				{
