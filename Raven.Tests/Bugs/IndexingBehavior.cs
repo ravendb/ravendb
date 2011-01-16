@@ -86,7 +86,7 @@ namespace Raven.Tests.Bugs
 				Map = "from doc in docs select new { User = doc.User/1 }"
 			});
 
-			for (int i = 0; i < 15; i++)
+			for (int i = 0; i < 150; i++)
 			{
 				db.Put("a"+i, null, new JObject(), new JObject(),null);
 			}

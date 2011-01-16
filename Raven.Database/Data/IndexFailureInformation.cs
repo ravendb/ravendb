@@ -23,7 +23,7 @@ namespace Raven.Database.Data
 				if (Attempts == 0 || Errors == 0)
 					return false;
 				// we don't have enough attempts to make a useful determination
-				if (Attempts < 10)
+				if (Attempts < 100)
 					return false;
 				return (Errors/(float) Attempts) > 0.15;
 			}
