@@ -507,7 +507,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 			}
 			IndexDefinitionStorage.AddIndex(definition);
 			IndexStorage.CreateIndexImplementation(definition);
-			TransactionalStorage.Batch(actions => AddIndexAndEnqueueIndexingTasks(actions, name));
+			TransactionalStorage.Batch(actions => AddIndexAndEnqueueIndexingTasks(actions, definition.EncodeIndexNameIfNeeded(IndexDefinitionStorage.IndexingDefinitionPath)));
 			return name;
 		}
 
