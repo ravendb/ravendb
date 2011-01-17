@@ -1,4 +1,5 @@
-﻿namespace Raven.Client.Extensions
+﻿#if !NET_3_5
+namespace Raven.Client.Extensions
 {
 	using System;
 
@@ -30,3 +31,4 @@
 		}
 	}
 }
+#endif
