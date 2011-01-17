@@ -74,7 +74,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="AsyncCtpLibrary_Silverlight">
-      <HintPath>..\SharedLibs\Silverlight\AsyncCtpLibrary_Silverlight.dll</HintPath>
+      <HintPath>..\SharedLibs\AsyncCtpLibrary_Silverlight.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Silverlight.Testing">
       <HintPath>..\SharedLibs\Silverlight\Microsoft.Silverlight.Testing.dll</HintPath>
