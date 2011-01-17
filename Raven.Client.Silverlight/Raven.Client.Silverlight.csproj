@@ -75,8 +75,6 @@
     <Compile Include="..\Raven.Abstractions\Json\JsonValueTypeConverter.cs">
       <Link>Json\JsonValueTypeConverter.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Extensions\ExceptionExtensions.cs">
-      <Link>Extensions\ExceptionExtensions.cs</Link>
     <Compile Include="..\Raven.Client.Lightweight\Document\AbstractDocumentQuery.cs">
       <Link>Document\AbstractDocumentQuery.cs</Link>
     </Compile>
@@ -91,6 +89,9 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\IDocumentQueryBase.cs">
       <Link>IDocumentQueryBase.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Extensions\ExceptionExtensions.cs">
+      <Link>Extensions\ExceptionExtensions.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\IDocumentQueryListener.cs">
       <Link>IDocumentQueryListener.cs</Link>

@@ -14,8 +14,10 @@ using Raven.Database.Data;
 
 namespace Raven.Client.Extensions
 {
+#if !NET_3_5
 	using System.Threading.Tasks;
 	using Client.Async;
+#endif
 	using Database;
 
 	///<summary>
@@ -49,6 +51,7 @@ namespace Raven.Client.Extensions
 		}
 #endif
 
+#if !NET_3_5
 		///<summary>
 		/// Ensures that the database exists, creating it if needed
 		///</summary>
@@ -73,5 +76,6 @@ namespace Raven.Client.Extensions
 				})
                 .Unwrap();
 		}
+#endif
 	}
 }

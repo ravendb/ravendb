@@ -19,6 +19,10 @@ namespace Raven.Client.Client
 {
 	/// <summary>
 	/// A representation of an HTTP json request to the RavenDB server
+	/// Since we are using the ClientHttp stack for Silverlight, we don't need to implement
+	/// caching, it is already implemented for us.
+	/// Note: that the RavenDB server generate both an ETag and an Expires header to ensure proper
+	/// Note: behavior from the silverlight http stack
 	/// </summary>
 	public class HttpJsonRequest
 	{
@@ -38,7 +42,7 @@ namespace Raven.Client.Client
 		/// <returns></returns>
 		public static HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, ICredentials credentials, DocumentConvention convention)
 		{
-			var request = new HttpJsonRequest(url, method, credentials, convention.ShouldCacheRequest(url));
+			var request = new HttpJsonRequest(url, method, new JObject());
 			ConfigureRequest(self, new WebRequestEventArgs { Request = request.webRequest });
 			return request;
 		}
@@ -55,7 +59,7 @@ namespace Raven.Client.Client
 		/// <returns></returns>
 		public static HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, JObject metadata, ICredentials credentials, DocumentConvention convention)
 		{
-			var request = new HttpJsonRequest(url, method, metadata, credentials, convention.ShouldCacheRequest(url));
+			var request = new HttpJsonRequest(url, method, metadata);
 			ConfigureRequest(self, new WebRequestEventArgs { Request = request.webRequest });
 			return request;
 		}
@@ -67,18 +71,11 @@ namespace Raven.Client.Client
 		/// <value>The response headers.</value>
 		public IDictionary<string, IList<string>> ResponseHeaders { get; set; }
 
-		private HttpJsonRequest(string url, string method, ICredentials credentials, bool cacheRequest)
-			: this(url, method, new JObject(), credentials,cacheRequest)
-		{
-		}
+	
 
-		private HttpJsonRequest(string url, string method, JObject metadata, ICredentials credentials, bool cacheRequest)
+		private HttpJsonRequest(string url, string method, JObject metadata)
 		{
-			if (url.Contains("?") == false)
-			{
-				url += "?";
-			}
-			webRequest = WebRequestCreator.ClientHttp.Create(new Uri(url + "&" +Guid.NewGuid()));
+			webRequest = WebRequestCreator.ClientHttp.Create(new Uri(url));
 
 			WriteMetadata(metadata);
 			webRequest.Method = method;
