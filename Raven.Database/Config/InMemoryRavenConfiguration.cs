@@ -8,6 +8,7 @@ using System.Collections.Specialized;
 using System.ComponentModel.Composition.Hosting;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using log4net.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Storage;
@@ -27,6 +28,7 @@ namespace Raven.Database.Config
 		{
 			Settings = new NameValueCollection(StringComparer.InvariantCultureIgnoreCase);
 
+			IndexingPriority = ThreadPriority.Normal;
 			MaxNumberOfItemsToIndexInSingleBatch = 2500;
 
 			Catalog = new AggregateCatalog(
@@ -51,6 +53,11 @@ namespace Raven.Database.Config
 			var cleanupPeriod = Settings["Raven/TempIndexCleanupPeriod"];
 			var cleanupThreshold = Settings["Raven/TempIndexCleanupThreshold"];
 			var maxNumberOfItemsToIndexInSingleBatch = Settings["Raven/MaxNumberOfItemsToIndexInSingleBatch"];
+			var indexingPriority = Settings["Raven/IndexingPriority"];
+
+			IndexingPriority = indexingPriority == null
+			                   	? ThreadPriority.Normal
+			                   	: (ThreadPriority) Enum.Parse(typeof (ThreadPriority), indexingPriority);
 
 			MaxPageSize = maxPageSizeStr != null ? int.Parse(maxPageSizeStr) : 1024;
 			MaxNumberOfItemsToIndexInSingleBatch = maxNumberOfItemsToIndexInSingleBatch != null ? int.Parse(maxNumberOfItemsToIndexInSingleBatch) : 2500;
@@ -189,6 +196,8 @@ namespace Raven.Database.Config
 		public int MaxNumberOfItemsToIndexInSingleBatch { get; set; }
 
 		public bool IndexSingleThreaded { get; set; }
+
+		public ThreadPriority IndexingPriority { get; set; }
 
 		protected void ResetContainer()
 		{
