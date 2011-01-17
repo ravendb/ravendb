@@ -67,8 +67,8 @@ namespace Raven.Database
 		/// </summary>
 		public ConcurrentDictionary<object, object> ExtensionsState { get; private set; }
 
-		private System.Threading.Tasks.Task indexingBackgroundTask;
-		private System.Threading.Tasks.Task tasksBackgroundTask;
+		private System.Threading.Thread indexingBackgroundTask;
+		private System.Threading.Thread tasksBackgroundTask;
 
 		private readonly ILog log = LogManager.GetLogger(typeof(DocumentDatabase));
 
@@ -233,16 +233,16 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 			TransactionalStorage.Dispose();
 			IndexStorage.Dispose();
 			if (tasksBackgroundTask != null)
-				tasksBackgroundTask.Wait(); 
+				tasksBackgroundTask.Join(); 
 			if (indexingBackgroundTask != null)
-				indexingBackgroundTask.Wait();
+				indexingBackgroundTask.Join();
 		}
 
 		public void StopBackgroundWokers()
 		{
 			workContext.StopWork();
-			tasksBackgroundTask.Wait();
-			indexingBackgroundTask.Wait();
+			tasksBackgroundTask.Join();
+			indexingBackgroundTask.Join();
 		}
 
 		public WorkContext WorkContext
@@ -255,13 +255,17 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 		public void SpinBackgroundWorkers()
 		{
 			workContext.StartWork();
-			indexingBackgroundTask = new System.Threading.Tasks.Task(
-				new IndexingExecuter(TransactionalStorage, workContext).Execute,
-				TaskCreationOptions.LongRunning);
-			tasksBackgroundTask = new System.Threading.Tasks.Task(
-				new TasksExecuter(TransactionalStorage, workContext).Execute,
-				TaskCreationOptions.LongRunning
-				);
+			indexingBackgroundTask = new System.Threading.Thread(
+				new IndexingExecuter(TransactionalStorage, workContext).Execute)
+			{
+				Priority = Configuration.IndexingPriority
+			};
+			tasksBackgroundTask = new System.Threading.Thread(
+				new TasksExecuter(TransactionalStorage, workContext).Execute
+				)
+			{
+				Priority = Configuration.IndexingPriority
+			};
 			indexingBackgroundTask.Start();
 			tasksBackgroundTask.Start();
 		}
@@ -494,7 +498,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 
 		public string PutIndex(string name, IndexDefinition definition)
 		{
-			definition.Name = name;
+			definition.Name = name = IndexDefinitionStorage.FixupIndexName(name);
 			switch (IndexDefinitionStorage.FindIndexCreationOptionsOptions(definition))
 			{
 				case IndexCreationOptions.Noop:
@@ -507,7 +511,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 			}
 			IndexDefinitionStorage.AddIndex(definition);
 			IndexStorage.CreateIndexImplementation(definition);
-			TransactionalStorage.Batch(actions => AddIndexAndEnqueueIndexingTasks(actions, definition.EncodeIndexNameIfNeeded(IndexDefinitionStorage.IndexingDefinitionPath)));
+			TransactionalStorage.Batch(actions => AddIndexAndEnqueueIndexingTasks(actions, name));
 			return name;
 		}
 
@@ -519,6 +523,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 
 		public QueryResult Query(string index, IndexQuery query)
 		{
+			index = IndexDefinitionStorage.FixupIndexName(index);
 			var list = new List<JObject>();
 			var stale = false;
 			Tuple<DateTime, Guid> indexTimestamp = null;
@@ -526,6 +531,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				actions =>
 				{
 					string entityName = null;
+
 
 					var viewGenerator = IndexDefinitionStorage.GetViewGenerator(index);
 					if (viewGenerator != null)
@@ -592,6 +598,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 
 		public IEnumerable<string> QueryDocumentIds(string index, IndexQuery query, out bool stale)
 		{
+			index = IndexDefinitionStorage.FixupIndexName(index);
 			bool isStale = false;
 			HashSet<string> loadedIds = null;
 			TransactionalStorage.Batch(
@@ -613,6 +620,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 
 		public void DeleteIndex(string name)
 		{
+			name = IndexDefinitionStorage.FixupIndexName(name);
 			IndexDefinitionStorage.RemoveIndex(name);
 			IndexStorage.DeleteIndex(name);
 			//we may run into a conflict when trying to delete if the index is currently
@@ -927,6 +935,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 
 		public void ResetIndex(string index)
 		{
+			index = IndexDefinitionStorage.FixupIndexName(index);
 			var indexDefinition = IndexDefinitionStorage.GetIndexDefinition(index);
 			if (indexDefinition == null)
 				throw new InvalidOperationException("There is no index named: " + index);
@@ -941,6 +950,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 
 		public IndexDefinition GetIndexDefinition(string index)
 		{
+			index = IndexDefinitionStorage.FixupIndexName(index);
 			return IndexDefinitionStorage.GetIndexDefinition(index);
 		}
 

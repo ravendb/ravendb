@@ -9,6 +9,8 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using log4net;
 using Newtonsoft.Json;
 using Raven.Database.Config;
@@ -114,19 +116,12 @@ namespace Raven.Database.Storage
 			get { return indexCache.Keys.ToArray(); }
 		}
 
-	    public string IndexingDefinitionPath
-	    {
-	        get {
-	            return path;
-	        }
-	    }
-
 	    public string AddIndex(IndexDefinition indexDefinition)
 		{
 			DynamicViewCompiler transformer = AddAndCompileIndex(indexDefinition);
             if(configuration.RunInMemory == false)
             {
-            	var encodeIndexNameIfNeeded = indexDefinition.EncodeIndexNameIfNeeded(path);
+            	var encodeIndexNameIfNeeded = FixupIndexName(indexDefinition.Name, path);
             	var indexName = Path.Combine(path, MonoHttpUtility.UrlEncode(encodeIndexNameIfNeeded) + ".index");
             	// Hash the name if it's too long (as a path)
             	File.WriteAllText(indexName, JsonConvert.SerializeObject(indexDefinition, Formatting.Indented, new JsonEnumConverter()));
@@ -136,13 +131,14 @@ namespace Raven.Database.Storage
 
 		private DynamicViewCompiler AddAndCompileIndex(IndexDefinition indexDefinition)
 		{
-			var transformer = new DynamicViewCompiler(indexDefinition.Name, indexDefinition, extensions);
+			var name = FixupIndexName(indexDefinition.Name, path);
+			var transformer = new DynamicViewCompiler(name, indexDefinition, extensions);
 			var generator = transformer.GenerateInstance();
-			indexCache.AddOrUpdate(indexDefinition.Name, generator, (s, viewGenerator) => generator);
-			indexDefinitions.AddOrUpdate(indexDefinition.Name, indexDefinition, (s1, definition) =>
+			indexCache.AddOrUpdate(name, generator, (s, viewGenerator) => generator);
+			indexDefinitions.AddOrUpdate(name, indexDefinition, (s1, definition) =>
 		    {
                 if (definition.IsCompiled)
-					throw new InvalidOperationException("Index " + indexDefinition.Name + " is a compiled index, and cannot be replaced");
+					throw new InvalidOperationException("Index " + name + " is a compiled index, and cannot be replaced");
 		        return indexDefinition;   
 		    });
 			logger.InfoFormat("New index {0}:\r\n{1}\r\nCompiled to:\r\n{2}", transformer.Name, transformer.CompiledQueryText,
@@ -164,15 +160,17 @@ namespace Raven.Database.Storage
 
 		private string GetIndexSourcePath(string name)
 		{
-			var encodeIndexNameIfNeeded = new IndexDefinition { Name = name }.EncodeIndexNameIfNeeded(path);
+			var encodeIndexNameIfNeeded = FixupIndexName(name, path);
 			return Path.Combine(path, MonoHttpUtility.UrlEncode(encodeIndexNameIfNeeded) + ".index.cs");
 		}
 
 		private string GetIndexPath(string name)
 		{
-			var encodeIndexNameIfNeeded = new IndexDefinition{Name = name}.EncodeIndexNameIfNeeded(path);
+			var encodeIndexNameIfNeeded = FixupIndexName(name, path);
 			return Path.Combine(path, MonoHttpUtility.UrlEncode(encodeIndexNameIfNeeded) + ".index");
 		}
+
+
 
 		public IndexDefinition GetIndexDefinition(string name)
 		{
@@ -206,5 +204,23 @@ namespace Raven.Database.Storage
 	    {
             return indexDefinitions.ContainsKey(indexName);
 	    }
+
+		public string FixupIndexName(string index)
+		{
+			return FixupIndexName(index, path);
+		}
+
+		public static string FixupIndexName(string index, string path)
+		{
+			if (path.Length + index.Length > 230)
+			{
+				using (var md5 = MD5.Create())
+				{
+					var bytes = md5.ComputeHash(Encoding.UTF8.GetBytes(index));
+					return Convert.ToBase64String(bytes);
+				}
+			}
+			return index;
+		}
 	}
 }

@@ -21,24 +21,6 @@ namespace Raven.Database.Indexing
 		/// </summary>
 		public string Name { get; set; }
 
-#if !SILVERLIGHT
-		/// <summary>
-		/// Encode the name if needed
-		/// </summary>
-		public string EncodeIndexNameIfNeeded(string basePath)
-		{
-			if (basePath.Length + Name.Length > 230)
-			{
-				using (var md5 = MD5.Create())
-				{
-					var bytes = md5.ComputeHash(Encoding.UTF8.GetBytes(Name));
-					return Convert.ToBase64String(bytes);
-				}
-			}
-			return Name;
-		}
-#endif
-
 		/// <summary>
 		/// Gets or sets the map function
 		/// </summary>

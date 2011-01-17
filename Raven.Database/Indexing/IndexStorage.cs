@@ -51,7 +51,7 @@ namespace Raven.Database.Indexing
 		        var indexDefinition = indexDefinitionStorage.GetIndexDefinition(indexDirectory);
 		        if (indexDefinition == null)
 		            continue;
-		    	var luceneDirectory = OpenOrCreateLuceneDirectory(indexDefinition.EncodeIndexNameIfNeeded(path));
+				var luceneDirectory = OpenOrCreateLuceneDirectory(IndexDefinitionStorage.FixupIndexName(indexDefinition.Name, path));
 		    	var indexImplementation = CreateIndexImplementation(indexDirectory, indexDefinition, luceneDirectory);
 		    	indexes.TryAdd(indexDirectory, indexImplementation);
 		    }
@@ -134,7 +134,7 @@ namespace Raven.Database.Indexing
 
 		public void CreateIndexImplementation(IndexDefinition indexDefinition)
 		{
-			var encodedName = indexDefinition.EncodeIndexNameIfNeeded(path);
+			var encodedName = IndexDefinitionStorage.FixupIndexName(indexDefinition.Name,path);
 			log.InfoFormat("Creating index {0} with encoded name {1}", indexDefinition.Name, encodedName);
 
 		    AssertAnalyzersValid(indexDefinition);
