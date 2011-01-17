@@ -12,10 +12,8 @@
     using Microsoft.VisualStudio.TestTools.UnitTesting;
     using Assert = Xunit.Assert;
 
-    [TestClass]
     public class AsyncDocumentStoreServerTests : RavenTestBase
     {
-        [TestMethod]
         [Asynchronous]
         public IEnumerable<Task> Can_insert_async_and_multi_get_async()
         {
@@ -44,7 +42,6 @@
         }
 
         [Asynchronous]
-        [TestMethod]
         public IEnumerable<Task> Can_insert_async_and_load_async()
         {
             var dbname = GenerateNewDatabaseName();
@@ -69,7 +66,6 @@
         }
 
         [Asynchronous]
-        [TestMethod]
         public IEnumerable<Task> Can_insert_async_and_delete_async()
         {
             var dbname = GenerateNewDatabaseName();
@@ -110,7 +106,6 @@
         }
 
         [Asynchronous]
-        [TestMethod]
         public IEnumerable<Task> Can_get_index_names_async()
         {
             var dbname = GenerateNewDatabaseName();
@@ -125,7 +120,6 @@
         }
 
         [Asynchronous]
-        [TestMethod]
         public IEnumerable<Task> Can_put_an_index_async()
         {
             var dbname = GenerateNewDatabaseName();
@@ -149,7 +143,6 @@
         }
 
         [Asynchronous]
-        [TestMethod]
         public IEnumerable<Task> Can_query_by_index()
         {
             var dbname = GenerateNewDatabaseName();
@@ -185,7 +178,6 @@
         }
 
         [Asynchronous]
-        [TestMethod]
         public IEnumerable<Task> Can_project_value_from_collection()
         {
             var dbname = GenerateNewDatabaseName();
