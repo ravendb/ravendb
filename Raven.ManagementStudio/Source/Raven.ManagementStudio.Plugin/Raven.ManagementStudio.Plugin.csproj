@@ -66,17 +66,12 @@
     <Compile Include="SectionType.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\Settings.StyleCop">
-      <Link>Settings.StyleCop</Link>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
     <Folder Include="Properties\" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Raven.Management.Client.Silverlight\Raven.Management.Client.Silverlight.csproj">
-      <Project>{1BE0A7B3-9DB3-49D0-B1DF-C8326D792424}</Project>
-      <Name>Raven.Management.Client.Silverlight</Name>
+    <ProjectReference Include="..\..\..\Raven.Client.Silverlight\Raven.Client.Silverlight.csproj">
+      <Project>{8A1DB308-D56B-49BC-A421-A2AB32617215}</Project>
+      <Name>Raven.Client.Silverlight</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />

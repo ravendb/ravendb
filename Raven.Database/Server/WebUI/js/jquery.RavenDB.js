@@ -34,7 +34,7 @@ var indexSearchCache = null;
           "authorization",
           "cookie",
 		  "x-aspnet-version",
-		  "x-powered-By",
+		  "x-powered-by",
           "expect",
           "from",
           "host",

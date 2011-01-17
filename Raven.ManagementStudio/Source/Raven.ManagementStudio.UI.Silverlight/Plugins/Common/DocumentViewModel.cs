@@ -6,7 +6,6 @@ using System.Windows;
 using System.Windows.Markup;
 using Caliburn.Micro;
 using Newtonsoft.Json.Linq;
-using Raven.Management.Client.Silverlight.Common;
 using Raven.ManagementStudio.Plugin;
 using Raven.ManagementStudio.UI.Silverlight.Controls;
 using Raven.ManagementStudio.UI.Silverlight.Dialogs;
@@ -148,22 +147,23 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Common
                     _document.Save(Database.Session,
                         saveResult =>
                         {
-                            var success = false;
+							throw new NotImplementedException();
+							//var success = false;
 
-                            foreach (var response in saveResult.GetSaveResponses())
-                            {
-                                success = response.Data.Equals(_document.JsonDocument);
-                                if (success)
-                                {
-                                    Id = _document.Id;
-                                    break;
-                                }
-                            }
-                            //TO DO
-                            if (!success)
-                            {
-                                WindowManager.ShowDialog(new InformationDialogViewModel("Error", ""), null);
-                            }
+							//foreach (var response in saveResult.GetSaveResponses())
+							//{
+							//    success = response.Data.Equals(_document.JsonDocument);
+							//    if (success)
+							//    {
+							//        Id = _document.Id;
+							//        break;
+							//    }
+							//}
+							////TO DO
+							//if (!success)
+							//{
+							//    WindowManager.ShowDialog(new InformationDialogViewModel("Error", ""), null);
+							//}
                         });
                 }
                 else

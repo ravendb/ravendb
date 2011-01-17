@@ -2,74 +2,67 @@
 {
     using System;
     using System.Collections.Generic;
-    using Management.Client.Silverlight;
-    using Management.Client.Silverlight.Common;
+    using Client;
     using Newtonsoft.Json.Linq;
     using Raven.Database;
     using Newtonsoft.Json;
 
     public class Document
     {
-        private readonly IDictionary<string, JToken> _data;
-        private readonly IDictionary<string, JToken> _metadata;
-        private readonly JsonDocument _jsonDocument;
+        private readonly IDictionary<string, JToken> data;
+        private readonly IDictionary<string, JToken> metadata;
+        private readonly JsonDocument jsonDocument;
 
         public Document(JsonDocument jsonDocument)
         {
-            _data = new Dictionary<string, JToken>();
-            _metadata = new Dictionary<string, JToken>();
+            data = new Dictionary<string, JToken>();
+            metadata = new Dictionary<string, JToken>();
             
-            _jsonDocument = jsonDocument;
+            this.jsonDocument = jsonDocument;
             Id = jsonDocument.Key;
-            _data = ParseJsonToDictionary(jsonDocument.DataAsJson);
-            _metadata = ParseJsonToDictionary(jsonDocument.Metadata);
+            data = ParseJsonToDictionary(jsonDocument.DataAsJson);
+            metadata = ParseJsonToDictionary(jsonDocument.Metadata);
         }
 
         public string Id { get; private set; }
 
         public IDictionary<string, JToken> Data
         {
-            get
-            {
-                return _data;
-            }
+            get { return data; }
         }
 
         public IDictionary<string, JToken> Metadata
         {
-            get
-            {
-                return _metadata;
-            }
+            get { return metadata; }
         }
 
         public static string ParseExceptionMessage { get; set; }
 
         public JsonDocument JsonDocument
         {
-            get { return _jsonDocument; }
+            get { return jsonDocument; }
         }
 
         public void SetData(string json)
         {
-            _jsonDocument.DataAsJson = JObject.Parse(json);     
+            jsonDocument.DataAsJson = JObject.Parse(json);     
         }
 
         public void SetMetadata(string json)
         {
-            _jsonDocument.Metadata = JObject.Parse(json);
+            jsonDocument.Metadata = JObject.Parse(json);
         }
 
         public void SetId(string id)
         {
-            _jsonDocument.Key = id;
+            jsonDocument.Key = id;
         }
 
-        public void Save(IAsyncDocumentSession session, CallbackFunction.SaveMany<object> callback)
+        public void Save(IAsyncDocumentSession session, Action<object> callback)
         {
-            session.Store(_jsonDocument);
-            session.SaveChanges(callback);
-            Id = _jsonDocument.Key;
+            session.Store(jsonDocument);
+            session.SaveChangesAsync();
+            Id = jsonDocument.Key;
         }
 
         public static bool ValidateJson(string json)

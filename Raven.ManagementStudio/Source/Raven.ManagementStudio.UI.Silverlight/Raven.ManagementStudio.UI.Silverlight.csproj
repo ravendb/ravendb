@@ -69,16 +69,16 @@
     <Reference Include="ActiproSoftware.Text.Silverlight, Version=10.2.105.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
       <HintPath>..\..\Components\ActiproSoftware.Text.Silverlight.dll</HintPath>
     </Reference>
+    <Reference Include="AsyncCtpLibrary_Silverlight">
+      <HintPath>..\..\..\SharedLibs\AsyncCtpLibrary_Silverlight.dll</HintPath>
+    </Reference>
     <Reference Include="Caliburn.Micro">
       <HintPath>..\..\Components\Caliburn.Micro.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Expression.Interactions, Version=4.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="mscorlib" />
     <Reference Include="Newtonsoft.Json.Silverlight">
-      <HintPath>..\..\Components\Newtonsoft.Json.Silverlight.dll</HintPath>
-    </Reference>
-    <Reference Include="Raven.Abstractions.Silverlight">
-      <HintPath>..\..\Components\Raven.Abstractions.Silverlight.dll</HintPath>
+      <HintPath>..\..\..\SharedLibs\Newtonsoft.Json.Silverlight.dll</HintPath>
     </Reference>
     <Reference Include="System.ComponentModel.Composition, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="System.ComponentModel.Composition.Initialization, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
@@ -376,10 +376,6 @@
     </Page>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\Settings.StyleCop">
-      <Link>Settings.StyleCop</Link>
-      <SubType>Designer</SubType>
-    </None>
     <None Include="ClassDiagram.cd" />
     <EmbeddedResource Include="Controls\SyntaxEditor\Definitions\JScript.langdef" />
     <EmbeddedResource Include="Controls\SyntaxEditor\Definitions\CSharp.langdef" />
@@ -389,9 +385,9 @@
     <None Include="Properties\OutOfBrowserSettings.xml" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Raven.Management.Client.Silverlight\Raven.Management.Client.Silverlight.csproj">
-      <Project>{1BE0A7B3-9DB3-49D0-B1DF-C8326D792424}</Project>
-      <Name>Raven.Management.Client.Silverlight</Name>
+    <ProjectReference Include="..\..\..\Raven.Client.Silverlight\Raven.Client.Silverlight.csproj">
+      <Project>{8A1DB308-D56B-49BC-A421-A2AB32617215}</Project>
+      <Name>Raven.Client.Silverlight</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.ManagementStudio.Plugin\Raven.ManagementStudio.Plugin.csproj">
       <Project>{0BA36A77-F8CA-400C-8F89-3726143BFA96}</Project>

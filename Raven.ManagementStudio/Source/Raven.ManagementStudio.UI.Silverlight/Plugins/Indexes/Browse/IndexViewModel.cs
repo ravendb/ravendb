@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using Caliburn.Micro;
 using Raven.Database.Indexing;
-using Raven.Management.Client.Silverlight.Common;
 using Raven.ManagementStudio.Plugin;
 using Raven.ManagementStudio.UI.Silverlight.Dialogs;
 using Raven.ManagementStudio.UI.Silverlight.Messages;
@@ -74,50 +73,50 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Indexes.Browse
         {
             IsBusy = true;
             _index.SaveFields();
-            Database.IndexSession.Save(Name, Definition, HandleSaveResult);
+           // Database.IndexSession.Save(Name, Definition, HandleSaveResult);
         }
 
-        private void HandleSaveResult(Response<KeyValuePair<string, IndexDefinition>> result)
-        {
-            if (result.IsSuccess)
-            {
-                if (CurrentName != result.Data.Key)
-                {
-                    var newIndex = new IndexViewModel(new Index(result.Data.Key, result.Data.Value), Database, this);
+		//private void HandleSaveResult(Response<KeyValuePair<string, IndexDefinition>> result)
+		//{
+		//    if (result.IsSuccess)
+		//    {
+		//        if (CurrentName != result.Data.Key)
+		//        {
+		//            var newIndex = new IndexViewModel(new Index(result.Data.Key, result.Data.Value), Database, this);
 
-                    EventAggregator.Publish(new IndexChangeMessage { Index = newIndex });
-                    Name = CurrentName;
-                }
-            }
-            else
-            {
-                WindowManager.ShowDialog(
-                    new InformationDialogViewModel("Error", result.Exception.Message));
-            }
+		//            EventAggregator.Publish(new IndexChangeMessage { Index = newIndex });
+		//            Name = CurrentName;
+		//        }
+		//    }
+		//    else
+		//    {
+		//        WindowManager.ShowDialog(
+		//            new InformationDialogViewModel("Error", result.Exception.Message));
+		//    }
 
-            IsBusy = false;
-        }
+		//    IsBusy = false;
+		//}
 
         public void Remove()
         {
             IsBusy = true;
-            Database.IndexSession.Delete(Name, HandleRemoveResult);
+			//Database.IndexSession.Delete(Name, HandleRemoveResult);
         }
 
-        private void HandleRemoveResult(Response<string> result)
-        {
-            if (result.IsSuccess)
-            {
-                EventAggregator.Publish(new IndexChangeMessage { Index = this, IsRemoved = true });
-            }
-            else
-            {
-                WindowManager.ShowDialog(
-                    new InformationDialogViewModel("Error", result.Exception.Message));
-            }
+		//private void HandleRemoveResult(Response<string> result)
+		//{
+		//    if (result.IsSuccess)
+		//    {
+		//        EventAggregator.Publish(new IndexChangeMessage { Index = this, IsRemoved = true });
+		//    }
+		//    else
+		//    {
+		//        WindowManager.ShowDialog(
+		//            new InformationDialogViewModel("Error", result.Exception.Message));
+		//    }
 
-            IsBusy = false;
-        }
+		//    IsBusy = false;
+		//}
 
         public IObservableCollection<FieldProperties> Fields
         {

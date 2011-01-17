@@ -329,3 +329,4 @@ VERSION
 /Samples/Raven.Samples.IndexReplication/Server/Tenants/Sidney/Raven.ravendb
 /Samples/Raven.Samples.IndexReplication/Server/Tenants/Sidney/desktop.ini
 /Samples/Raven.Samples.IndexReplication/Server/Tenants/Sidney/raven-data.ico
+ClientBin/

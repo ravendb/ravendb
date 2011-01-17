@@ -8,7 +8,9 @@ using Raven.ManagementStudio.UI.Silverlight.Models;
 
 namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Linq
 {
-    public class LinqEditorViewModel : Screen, IRavenScreen
+	using System;
+
+	public class LinqEditorViewModel : Screen, IRavenScreen
     {
         public LinqEditorViewModel(IDatabase database)
         {
@@ -41,15 +43,16 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Linq
 
         public void Execute()
         {
-            if (!string.IsNullOrWhiteSpace(Query))
-            {
-                Database.IndexSession.LinearQuery(Query, 0, 25,
-                                                  o =>
-                                                      {
-                                                          Results =
-                                                              o.Data.Select(x => new DocumentViewModel(new Document(x), Database, this)).ToArray();
-                                                      });
-            }
+			throw new NotImplementedException();
+			//if (!string.IsNullOrWhiteSpace(Query))
+			//{
+			//    Database.IndexSession.LinearQuery(Query, 0, 25,
+			//                                      o =>
+			//                                          {
+			//                                              Results =
+			//                                                  o.Data.Select(x => new DocumentViewModel(new Document(x), Database, this)).ToArray();
+			//                                          });
+			//}
         }
 
         private string _query;

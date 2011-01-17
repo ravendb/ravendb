@@ -1,6 +1,7 @@
 ﻿namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Statistics.Global
 {
-    using Caliburn.Micro;
+	using System;
+	using Caliburn.Micro;
     using Raven.Database.Data;
     using Raven.ManagementStudio.Plugin;
 
@@ -31,17 +32,18 @@
         {
             get
             {
-                if (this.statistics == null)
-                {
-                    this.IsBusy = true;
-                    this.Database.StatisticsSession.Load((result) =>
-                    {
-                        this.Statistics = result.Data;
-                        this.IsBusy = false;
-                    });
-                }
+				throw new NotImplementedException();
+				//if (this.statistics == null)
+				//{
+				//    this.IsBusy = true;
+				//    this.Database.StatisticsSession.Load((result) =>
+				//    {
+				//        this.Statistics = result.Data;
+				//        this.IsBusy = false;
+				//    });
+				//}
 
-                return this.statistics;
+				//return this.statistics;
             }
             set
             {
@@ -52,12 +54,13 @@
 
         public void RefreshStatistics()
         {
-            this.IsBusy = true;
-            this.Database.StatisticsSession.Load((result) =>
-            {
-                this.Statistics = result.Data;
-                this.IsBusy = false;
-            });
+			throw new NotImplementedException();
+			//this.IsBusy = true;
+			//this.Database.StatisticsSession.Load((result) =>
+			//{
+			//    this.Statistics = result.Data;
+			//    this.IsBusy = false;
+			//});
         }
 
         public IRavenScreen ParentRavenScreen { get; set; }
