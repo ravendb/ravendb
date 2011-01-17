@@ -116,13 +116,6 @@ namespace Raven.Database.Storage
 			get { return indexCache.Keys.ToArray(); }
 		}
 
-	    public string IndexingDefinitionPath
-	    {
-	        get {
-	            return path;
-	        }
-	    }
-
 	    public string AddIndex(IndexDefinition indexDefinition)
 		{
 			DynamicViewCompiler transformer = AddAndCompileIndex(indexDefinition);
