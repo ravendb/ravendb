@@ -8,6 +8,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Database.Data;
+using Raven.Database.Impl;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Database.Linq;
@@ -56,7 +57,13 @@ namespace Raven.Database.Queries.LinearQueries
                         matchingDocs.Where(x => x.Item1.Metadata.Value<string>("Raven-Entity-Name") == viewGenerator.ForEntityName);
                 }
 
+                var documentRetriever = new DocumentRetriever(actions, new AbstractReadTrigger[0]);
                 var docs = matchingDocs
+                    .Select(x=>
+                    {
+                        documentRetriever.EnsureIdInMetadata(x.Item1);
+                        return x;
+                    })
                     .Select(x =>
                     {
                         lastResult = x.Item2;

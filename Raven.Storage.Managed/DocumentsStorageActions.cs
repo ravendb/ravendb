@@ -105,7 +105,7 @@ namespace Raven.Storage.Managed
                     }
                     return new JsonDocument
                     {
-                        Key = resultInTx.Key.Value<string>("key"),
+                        Key = key,
                         Etag = new Guid(resultInTx.Key.Value<byte[]>("etag")),
                         Metadata = metadata,
                         DataAsJson = dataAsJson,
@@ -123,7 +123,7 @@ namespace Raven.Storage.Managed
             ReadMetadataAndData(key, memoryStream, out metadata, out dataAsJson);
             return new JsonDocument
             {
-                Key = readResult.Key.Value<string>("key"),
+                Key = key,
                 Etag = new Guid(readResult.Key.Value<byte[]>("etag")),
                 Metadata = metadata,
                 DataAsJson = dataAsJson,

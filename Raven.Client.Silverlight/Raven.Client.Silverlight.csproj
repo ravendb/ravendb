@@ -77,6 +77,20 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Extensions\ExceptionExtensions.cs">
       <Link>Extensions\ExceptionExtensions.cs</Link>
+    <Compile Include="..\Raven.Client.Lightweight\Document\AbstractDocumentQuery.cs">
+      <Link>Document\AbstractDocumentQuery.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\AsyncDocumentQuery.cs">
+      <Link>Document\AsyncDocumentQuery.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\AsyncSpatialDocumentQuery.cs">
+      <Link>Document\AsyncSpatialDocumentQuery.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\IAsyncDocumentQuery.cs">
+      <Link>IAsyncDocumentQuery.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\IDocumentQueryBase.cs">
+      <Link>IDocumentQueryBase.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\IDocumentQueryListener.cs">
       <Link>IDocumentQueryListener.cs</Link>

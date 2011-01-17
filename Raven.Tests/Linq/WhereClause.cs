@@ -23,7 +23,7 @@ namespace Raven.Tests.Linq
 			/// </summary>
 			public IDocumentQuery<T> Query<T>(string indexName)
 			{
-				return new DocumentQuery<T>(null, null, null, null, null);
+                return new DocumentQuery<T>(null, null, null, null, null, null);
 			}
 		}
 
@@ -139,7 +139,7 @@ namespace Raven.Tests.Linq
         [Fact]
         public void NegatingSubClauses()
         {
-			var query = new DocumentQuery<object>(null, null, null, null, null).Not
+            var query = ((IDocumentQuery<object>)new DocumentQuery<object>(null, null, null, null, null, null)).Not
                 .OpenSubclause()
                 .WhereEquals("IsPublished", true)
                 .AndAlso()

@@ -33,7 +33,7 @@ namespace Raven.Http
         private readonly ThreadLocal<IRaveHttpnConfiguration> currentConfiguration = new ThreadLocal<IRaveHttpnConfiguration>();
 
         protected readonly ConcurrentDictionary<string, IResourceStore> ResourcesStoresCache =
-            new ConcurrentDictionary<string, IResourceStore>();
+            new ConcurrentDictionary<string, IResourceStore>(StringComparer.InvariantCultureIgnoreCase);
 
         private readonly ConcurrentDictionary<string, DateTime> databaseLastRecentlyUsed = new ConcurrentDictionary<string, DateTime>();
 
