@@ -28,6 +28,8 @@ namespace Raven.Http.Abstractions
 
     	public void AddHeader(string name, string value)
     	{
+			if(name == "ETag")
+				response.AddHeader("Expires", "Sat, 01 Jan 2000 00:00:00 GMT");
     		response.AddHeader(name, value);
     	}
 
