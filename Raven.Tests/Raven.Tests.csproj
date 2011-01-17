@@ -112,6 +112,7 @@
     <Compile Include="Bugs\AnonymousClasses.cs" />
     <Compile Include="Bugs\AnyQueries.cs" />
     <Compile Include="Bugs\AsyncCommit.cs" />
+    <Compile Include="Bugs\Async\Querying.cs" />
     <Compile Include="Bugs\AttachmentEndoding.cs" />
     <Compile Include="Bugs\AttachmentsWithCredentials.cs" />
     <Compile Include="Bugs\AutoCreateIndexes.cs" />
@@ -249,6 +250,8 @@
     <Compile Include="Bugs\WillNotFailSystemIfServerIsNotAvailableOnStartup.cs" />
     <Compile Include="Bugs\WillThrowIfQueryingForUnindexedField.cs" />
     <Compile Include="Bugs\WithPrivateProtectedSetter.cs" />
+    <Compile Include="Bugs\Zhang\UseMaxForDateTimeTypeInReduce.cs" />
+    <Compile Include="Bugs\Zhang\UseMaxForLongTypeInReduce.cs" />
     <Compile Include="Document\AsyncDocumentStoreServerTests.cs" />
     <Compile Include="Document\CasingIssue.cs" />
     <Compile Include="Document\ClientKeyGeneratorTests.cs" />

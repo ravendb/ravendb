@@ -99,11 +99,10 @@ namespace Raven.Database.Config
 
 			AnonymousUserAccessMode = GetAnonymousUserAccessMode();
 
-			//DefaultStorageTypeName = Settings["Raven/StorageTypeName"] ??
-			//    "Raven.Storage.Esent.TransactionalStorage, Raven.Storage.Esent";
-
+			
 			DefaultStorageTypeName = Settings["Raven/StorageTypeName"] ??
-				"Raven.Storage.Managed.TransactionalStorage, Raven.Storage.Managed";
+             // "esent"
+				"munin";
 		}
 
 		public NameValueCollection Settings { get; set; }
@@ -249,9 +248,16 @@ namespace Raven.Database.Config
 		public ITransactionalStorage CreateTransactionalStorage(Action notifyAboutWork)
 		{
 			var storageEngine = SelectStorageEngine();
-			var type =
-				Type.GetType(storageEngine.Split(',').First()) ?? // first try to find the merged one
-					Type.GetType(storageEngine); // then try full type name
+		    switch (storageEngine.ToLowerInvariant())
+		    {
+                case "esent":
+		            storageEngine = "Raven.Storage.Esent.TransactionalStorage, Raven.Storage.Esent";
+		            break;
+                case "munin":
+		            storageEngine = "Raven.Storage.Managed.TransactionalStorage, Raven.Storage.Managed";
+		            break;
+		    }
+			var type = Type.GetType(storageEngine);
 
 			if (type == null)
 				throw new InvalidOperationException("Could not find transactional storage type: " + storageEngine);

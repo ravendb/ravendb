@@ -33,8 +33,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Munin.Tests", "Module
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Client.Silverlight", "Raven.Client.Silverlight\Raven.Client.Silverlight.csproj", "{8A1DB308-D56B-49BC-A421-A2AB32617215}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "etobi.BulkImportTest", "..\..\Users\Ayende\Downloads\etobi.BulkImportTest\etobi.BulkImportTest.csproj", "{6FD78B71-4BF2-4A0A-92BF-6AA0F227738D}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -205,16 +203,6 @@ Global
 		{8A1DB308-D56B-49BC-A421-A2AB32617215}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{8A1DB308-D56B-49BC-A421-A2AB32617215}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{8A1DB308-D56B-49BC-A421-A2AB32617215}.Release|x86.ActiveCfg = Release|Any CPU
-		{6FD78B71-4BF2-4A0A-92BF-6AA0F227738D}.Debug|Any CPU.ActiveCfg = Debug|x86
-		{6FD78B71-4BF2-4A0A-92BF-6AA0F227738D}.Debug|Mixed Platforms.ActiveCfg = Debug|x86
-		{6FD78B71-4BF2-4A0A-92BF-6AA0F227738D}.Debug|Mixed Platforms.Build.0 = Debug|x86
-		{6FD78B71-4BF2-4A0A-92BF-6AA0F227738D}.Debug|x86.ActiveCfg = Debug|x86
-		{6FD78B71-4BF2-4A0A-92BF-6AA0F227738D}.Debug|x86.Build.0 = Debug|x86
-		{6FD78B71-4BF2-4A0A-92BF-6AA0F227738D}.Release|Any CPU.ActiveCfg = Release|x86
-		{6FD78B71-4BF2-4A0A-92BF-6AA0F227738D}.Release|Mixed Platforms.ActiveCfg = Release|x86
-		{6FD78B71-4BF2-4A0A-92BF-6AA0F227738D}.Release|Mixed Platforms.Build.0 = Release|x86
-		{6FD78B71-4BF2-4A0A-92BF-6AA0F227738D}.Release|x86.ActiveCfg = Release|x86
-		{6FD78B71-4BF2-4A0A-92BF-6AA0F227738D}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

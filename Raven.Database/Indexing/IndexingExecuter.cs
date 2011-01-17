@@ -158,7 +158,9 @@ namespace Raven.Database.Indexing
 				log.DebugFormat("Indexing {0} documents for index: {1}", jsonDocs.Length, index);
 				context.IndexStorage.Index(index, viewGenerator, 
 					jsonDocs
-					.Select(doc => documentRetriever.ProcessReadVetoes(doc, null, ReadOperation.Index))
+					.Select(doc => documentRetriever
+                        .EnsureIdInMetadata(doc)
+                        .ProcessReadVetoes(doc, null, ReadOperation.Index))
 					.Where(doc => doc != null)
 					.Select(x => JsonToExpando.Convert(x.ToJson())), context, actions, dateTime);
 

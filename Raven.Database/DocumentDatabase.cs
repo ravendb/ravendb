@@ -294,8 +294,9 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				document = actions.Documents.DocumentByKey(key, transactionInformation);
 			});
 
-			return new DocumentRetriever(null, ReadTriggers).ExecuteReadTriggers(document, transactionInformation,
-																				 ReadOperation.Load);
+			return new DocumentRetriever(null, ReadTriggers)
+                .EnsureIdInMetadata(document)
+                .ExecuteReadTriggers(document, transactionInformation,ReadOperation.Load);
 		}
 
 
@@ -317,7 +318,6 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				{
 					key += actions.General.GetNextIdentityValue(key);
 				}
-				metadata.Add("@id", new JValue(key));
 				if (transactionInformation == null)
 				{
 					AssertPutOperationNotVetoed(key, metadata, document, transactionInformation);
@@ -511,7 +511,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 			}
 			IndexDefinitionStorage.AddIndex(definition);
 			IndexStorage.CreateIndexImplementation(definition);
-			TransactionalStorage.Batch(actions => AddIndexAndEnqueueIndexingTasks(actions, name));
+			TransactionalStorage.Batch(actions => AddIndexAndEnqueueIndexingTasks(actions, definition.EncodeIndexNameIfNeeded(IndexDefinitionStorage.IndexingDefinitionPath)));
 			return name;
 		}
 
@@ -761,14 +761,14 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				var documentRetriever = new DocumentRetriever(actions, ReadTriggers);
 				foreach (var doc in documents.Take(pageSize))
 				{
-					var document = documentRetriever.ExecuteReadTriggers(doc, null,
+                    var document = documentRetriever
+                        .EnsureIdInMetadata(doc)
+                        .ExecuteReadTriggers(doc, null,
 						// here we want to have the Load semantic, not Query, because we need this to be
 						// as close as possible to the full database contents
 						ReadOperation.Load);
 					if (document == null)
 						continue;
-					if (document.Metadata.Property("@id") == null)
-						document.Metadata.Add("@id", new JValue(doc.Key));
 
 					list.Add(document.ToJson());
 				}

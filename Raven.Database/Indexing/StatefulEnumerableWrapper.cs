@@ -12,6 +12,7 @@ namespace Raven.Database.Indexing
 	{
 		private readonly IEnumerator<T> inner;
 		private bool calledMoveNext;
+	    private bool enumerationCompleted;
 		public StatefulEnumerableWrapper(IEnumerator<T> inner)
 		{
 			this.inner = inner;
@@ -21,7 +22,7 @@ namespace Raven.Database.Indexing
 		{
 			get
 			{
-				if (calledMoveNext == false)
+                if (calledMoveNext == false || enumerationCompleted)
 					return default(T);
 				return inner.Current;
 			}
@@ -64,11 +65,15 @@ namespace Raven.Database.Indexing
 			public bool MoveNext()
 			{
 				statefulEnumerableWrapper.calledMoveNext = true;
-				return inner.MoveNext();
+			    var moveNext = inner.MoveNext();
+                if (moveNext == false)
+                    statefulEnumerableWrapper.enumerationCompleted = true;
+			    return moveNext;
 			}
 
 			public void Reset()
 			{
+			    statefulEnumerableWrapper.enumerationCompleted = false;
 				statefulEnumerableWrapper.calledMoveNext = false; 
 				inner.Reset();
 			}

@@ -38,7 +38,31 @@ namespace Raven.Client.Document.Async
 		/// <value>The async database commands.</value>
 		public IAsyncDatabaseCommands AsyncDatabaseCommands { get; private set; }
 
-        /// <summary>
+	    /// <summary>
+	    /// Query the specified index using Lucene syntax
+	    /// </summary>
+	    public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>(string index)
+	    {
+	        return new AsyncDocumentQuery<T>(this, 
+#if !SILVERLIGHT
+                null, 
+#endif
+                AsyncDatabaseCommands, index, new string[0], queryListeners);
+	    }
+
+	    /// <summary>
+	    /// Dynamically query RavenDB using Lucene syntax
+	    /// </summary>
+	    public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>()
+	    {
+            return new AsyncDocumentQuery<T>(this,
+#if !SILVERLIGHT
+ null,
+#endif
+    AsyncDatabaseCommands, "dynamic", new string[0], queryListeners);
+	    }
+
+	    /// <summary>
         /// Get the accessor for advanced operations
         /// </summary>
         /// <remarks>

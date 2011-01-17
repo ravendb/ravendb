@@ -49,8 +49,7 @@ namespace Raven.Database.Server.Responders
 					var value = item.Value<string>();
 					if(loadedIds.Add(value)==false)
 						continue;
-					var documentByKey = actions.Documents.DocumentByKey(value,
-                        transactionInformation);
+					var documentByKey = Database.Get(value, transactionInformation);
 					if (documentByKey == null)
 						continue;
 					result.Results.Add(documentByKey.ToJson());
