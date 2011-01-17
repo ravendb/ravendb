@@ -105,5 +105,15 @@ namespace Raven.Client.Linq
 		{
 			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
 		}
+
+#if !NET_3_5
+		/// <summary>
+		/// Returns a list of results for a query asynchronously. 
+		/// </summary>
+		public static Task<IList<T>> ToListAsync<T>(this IQueryable<T> queryable)
+		{
+			throw new NotImplementedException();
+		} 
+#endif
 	}
 }
