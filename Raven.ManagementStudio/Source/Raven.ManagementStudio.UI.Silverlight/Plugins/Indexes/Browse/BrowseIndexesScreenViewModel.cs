@@ -69,20 +69,20 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Indexes.Browse
         {
             base.OnInitialize();
             IsBusy = true;
+			throw new NotImplementedException();
+			//Database.IndexSession.LoadMany(result =>
+			//                                   {
+			//                                       if (result.IsSuccess)
+			//                                       {
+			//                                           var list =
+			//                                               result.Data.Select(index => new IndexViewModel(new Index(index.Key, index.Value), Database, this))
+			//                                                   .ToList();
+			//                                           AllItems.AddRange(list);
+			//                                           Items.AddRange(list);
+			//                                       }
 
-            Database.IndexSession.LoadMany(result =>
-                                               {
-                                                   if (result.IsSuccess)
-                                                   {
-                                                       var list =
-                                                           result.Data.Select(index => new IndexViewModel(new Index(index.Key, index.Value), Database, this))
-                                                               .ToList();
-                                                       AllItems.AddRange(list);
-                                                       Items.AddRange(list);
-                                                   }
-
-                                                   IsBusy = false;
-                                               });
+			//                                       IsBusy = false;
+			//                                   });
         }
 
         public void Search(string text)

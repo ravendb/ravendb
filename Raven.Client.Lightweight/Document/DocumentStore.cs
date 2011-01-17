@@ -451,10 +451,24 @@ namespace Raven.Client.Document
 			if (AsyncDatabaseCommands == null)
 				throw new InvalidOperationException("You cannot open an async session because it is not supported on embedded mode");
 
-			var session = new AsyncDocumentSession(this, queryListeners, storeListeners, deleteListeners);
+			var session = new AsyncDocumentSession(this, AsyncDatabaseCommands, queryListeners, storeListeners, deleteListeners);
 			session.Stored += OnSessionStored;
 			return session;
 		}
+
+        /// <summary>
+        /// Opens the async session.
+        /// </summary>
+        /// <returns></returns>
+        public IAsyncDocumentSession OpenAsyncSession(string databaseName)
+        {
+            if (AsyncDatabaseCommands == null)
+                throw new InvalidOperationException("You cannot open an async session because it is not supported on embedded mode");
+
+            var session = new AsyncDocumentSession(this, AsyncDatabaseCommands.ForDatabase(databaseName), queryListeners, storeListeners, deleteListeners);
+            session.Stored += OnSessionStored;
+            return session;
+        }
 #endif
 	}
 }

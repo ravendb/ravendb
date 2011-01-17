@@ -1,88 +1,51 @@
 namespace Raven.ManagementStudio.UI.Silverlight.Models
 {
-    using System.Collections.Generic;
-    using System.ComponentModel;
-    using System.ComponentModel.Composition;
-    using Raven.Client.Document;
-    using Raven.Management.Client.Silverlight;
-    using Raven.Management.Client.Silverlight.Attachments;
-    using Raven.Management.Client.Silverlight.Collections;
-    using Raven.Management.Client.Silverlight.Indexes;
-    using Raven.Management.Client.Silverlight.Statistics;
-    using Raven.ManagementStudio.Plugin;
+	using System.Collections.Generic;
+	using System.ComponentModel.Composition;
+	using Caliburn.Micro;
+	using Client;
+	using Client.Document;
+	using Plugin;
 
-    public class Database : IDatabase, INotifyPropertyChanged
-    {
-        private bool _isBusy;
+	public class Database : PropertyChangedBase, IDatabase
+	{
+		bool isBusy;
 
-        public Database(string databaseAdress, string databaseName = null)
-        {
-            this.Address = databaseAdress;
-            this.Name = databaseName ?? databaseAdress;
-            this.InitializeSession();
-        }
+		public Database(string databaseAdress, string databaseName = null)
+		{
+			Address = databaseAdress;
+			Name = databaseName ?? databaseAdress;
+			InitializeSession();
+		}
 
-        [ImportMany(AllowRecomposition = true)]
-        public IList<IPlugin> Plugins { get; set; }
+		[ImportMany(AllowRecomposition = true)]
+		public IList<IPlugin> Plugins { get; set; }
 
-        public bool IsBusy
-        {
-            get { return this._isBusy; }
-            set
-            {
-                this._isBusy = value;
-                this.NotifyPropertyChange("IsBusy");
-            }
-        }
+		public bool IsBusy
+		{
+			get { return isBusy; }
+			set
+			{
+				isBusy = value;
+				NotifyOfPropertyChange(() => IsBusy);
+			}
+		}
 
-        #region IDatabase Members
+		#region IDatabase Members
 
-        public string Address { get; set; }
+		public IAsyncDocumentSession Session { get; set; }
+		public string Address { get; set; }
+		public string Name { get; set; }
 
-        public string Name { get; set; }
+		#endregion
 
-        public IAsyncDocumentSession Session { get; set; }
+		void InitializeSession()
+		{
+			var store = new DocumentStore { Url = Address };
 
-        public IAsyncAttachmentSession AttachmentSession { get; set; }
+			store.Initialize();
 
-        public IAsyncCollectionSession CollectionSession { get; set; }
-
-        public IAsyncIndexSession IndexSession { get; set; }
-
-        public IAsyncStatisticsSession StatisticsSession { get; set; }
-
-        #endregion
-
-        #region INotifyPropertyChanged Members
-
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        #endregion
-
-        private void NotifyPropertyChange(string propertyName)
-        {
-            if (this.PropertyChanged != null)
-            {
-                this.PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
-            }
-        }
-
-        private void InitializeSession()
-        {
-            var store = new DocumentStore
-                            {
-                                Url = this.Address
-                            };
-
-            store.Initialize();
-
-            this.Session = store.OpenAsyncSession();
-            this.AttachmentSession = new AsyncAttachmentSession(this.Address);
-            this.CollectionSession = new AsyncCollectionSession(this.Address);
-            this.IndexSession = new AsyncIndexSession(this.Address);
-            this.StatisticsSession = new AsyncStatisticsSession(this.Address);
-
-            this.AttachmentSession = new AsyncAttachmentSession(this.Address);
-        }
-    }
+			Session = store.OpenAsyncSession();
+		}
+	}
 }
