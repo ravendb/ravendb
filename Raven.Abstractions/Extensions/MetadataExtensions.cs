@@ -46,6 +46,8 @@ namespace Raven.Database.Data
 			"Content-Length",
 			// Special things to ignore
 			"Keep-Alive",
+			"X-Powered-By",
+			"X-AspNet-Version",
 			"X-Requested-With",
 			// Request headers
 			"Accept-Charset",
