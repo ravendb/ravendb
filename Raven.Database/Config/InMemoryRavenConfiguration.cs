@@ -28,7 +28,7 @@ namespace Raven.Database.Config
 		{
 			Settings = new NameValueCollection(StringComparer.InvariantCultureIgnoreCase);
 
-			IndexingPriority = ThreadPriority.Normal;
+			BackgroundTasksPriority = ThreadPriority.Normal;
 			MaxNumberOfItemsToIndexInSingleBatch = 2500;
 
 			Catalog = new AggregateCatalog(
@@ -55,7 +55,7 @@ namespace Raven.Database.Config
 			var maxNumberOfItemsToIndexInSingleBatch = Settings["Raven/MaxNumberOfItemsToIndexInSingleBatch"];
 			var indexingPriority = Settings["Raven/IndexingPriority"];
 
-			IndexingPriority = indexingPriority == null
+			BackgroundTasksPriority = indexingPriority == null
 			                   	? ThreadPriority.Normal
 			                   	: (ThreadPriority) Enum.Parse(typeof (ThreadPriority), indexingPriority);
 
@@ -196,7 +196,7 @@ namespace Raven.Database.Config
 
 		public bool IndexSingleThreaded { get; set; }
 
-		public ThreadPriority IndexingPriority { get; set; }
+		public ThreadPriority BackgroundTasksPriority { get; set; }
 
 		protected void ResetContainer()
 		{

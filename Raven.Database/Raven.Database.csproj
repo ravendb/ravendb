@@ -121,6 +121,7 @@
     <Compile Include="Data\DynamicQueryMappingItem.cs" />
     <Compile Include="Impl\DocumentRetriever.cs" />
     <Compile Include="Impl\Logging\AsyncBufferingAppender.cs" />
+    <Compile Include="Indexing\TaskSchedulerWithCustomPriority.cs" />
     <Compile Include="Indexing\TasksExecuter.cs" />
     <Compile Include="Linq\CaptureQueryParameterNamesVisitor.cs" />
     <Compile Include="Plugins\AbstractAnalyzerGenerator.cs" />
