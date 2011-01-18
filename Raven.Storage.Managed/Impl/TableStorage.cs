@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Runtime.Caching;
 using Newtonsoft.Json.Linq;
 using Raven.Munin;
 
@@ -11,7 +12,22 @@ namespace Raven.Storage.Managed.Impl
 {
     public class TableStorage : Munin.Database
     {
-        public TableStorage(IPersistentSource persistentSource)
+    	private readonly ObjectCache cachedSerializedDocuments = new MemoryCache(typeof (TableStorage).FullName + ".Cache");
+
+		public Tuple<JObject, JObject> GetCachedDocument(string key, Guid etag)
+		{
+			var cachedDocument = (Tuple<JObject, JObject>)cachedSerializedDocuments.Get("Doc/" + key + "/" + etag);
+			if (cachedDocument != null)
+				return Tuple.Create(new JObject(cachedDocument.Item1), new JObject(cachedDocument.Item2));
+			return null;
+		}
+
+    	public void SetCachedDocument(string key, Guid etag, Tuple<JObject,JObject> doc)
+		{
+			cachedSerializedDocuments["Doc/" + key + "/" + etag] = doc;
+		}
+
+    	public TableStorage(IPersistentSource persistentSource)
             : base(persistentSource)
         {
             Details = Add(new Table("Details"));
