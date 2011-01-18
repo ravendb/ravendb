@@ -67,8 +67,10 @@ namespace Raven.Database
 		/// </summary>
 		public ConcurrentDictionary<object, object> ExtensionsState { get; private set; }
 
-		private System.Threading.Thread indexingBackgroundTask;
-		private System.Threading.Thread tasksBackgroundTask;
+
+        private System.Threading.Tasks.Task indexingBackgroundTask;
+		private System.Threading.Tasks.Task tasksBackgroundTask;
+	    private TaskSchedulerWithCustomPriority backgroundTaskScheduler;
 
 		private readonly ILog log = LogManager.GetLogger(typeof(DocumentDatabase));
 
@@ -76,6 +78,7 @@ namespace Raven.Database
 
 		public DocumentDatabase(InMemoryRavenConfiguration configuration)
 		{
+            backgroundTaskScheduler = new TaskSchedulerWithCustomPriority(15, configuration.BackgroundTasksPriority);
 			ExtensionsState = new ConcurrentDictionary<object, object>();
 			Configuration = configuration;
 
@@ -233,16 +236,17 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 			TransactionalStorage.Dispose();
 			IndexStorage.Dispose();
 			if (tasksBackgroundTask != null)
-				tasksBackgroundTask.Join(); 
+				tasksBackgroundTask.Wait(); 
 			if (indexingBackgroundTask != null)
-				indexingBackgroundTask.Join();
+				indexingBackgroundTask.Wait();
+            backgroundTaskScheduler.Dispose();
 		}
 
 		public void StopBackgroundWokers()
 		{
 			workContext.StopWork();
-			tasksBackgroundTask.Join();
-			indexingBackgroundTask.Join();
+			tasksBackgroundTask.Wait();
+			indexingBackgroundTask.Wait();
 		}
 
 		public WorkContext WorkContext
@@ -255,19 +259,12 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 		public void SpinBackgroundWorkers()
 		{
 			workContext.StartWork();
-			indexingBackgroundTask = new System.Threading.Thread(
-				new IndexingExecuter(TransactionalStorage, workContext).Execute)
-			{
-				Priority = Configuration.IndexingPriority
-			};
-			tasksBackgroundTask = new System.Threading.Thread(
-				new TasksExecuter(TransactionalStorage, workContext).Execute
-				)
-			{
-				Priority = Configuration.IndexingPriority
-			};
-			indexingBackgroundTask.Start();
-			tasksBackgroundTask.Start();
+            indexingBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
+		        new IndexingExecuter(TransactionalStorage, workContext, backgroundTaskScheduler).Execute,
+                CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
+            tasksBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
+                new TasksExecuter(TransactionalStorage, workContext).Execute,
+                CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
 		}
 
 		private static long sequentialUuidCounter;
@@ -295,8 +292,8 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 			});
 
 			return new DocumentRetriever(null, ReadTriggers)
-                .EnsureIdInMetadata(document)
-                .ExecuteReadTriggers(document, transactionInformation,ReadOperation.Load);
+				.EnsureIdInMetadata(document)
+				.ExecuteReadTriggers(document, transactionInformation,ReadOperation.Load);
 		}
 
 
@@ -761,9 +758,9 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				var documentRetriever = new DocumentRetriever(actions, ReadTriggers);
 				foreach (var doc in documents.Take(pageSize))
 				{
-                    var document = documentRetriever
-                        .EnsureIdInMetadata(doc)
-                        .ExecuteReadTriggers(doc, null,
+					var document = documentRetriever
+						.EnsureIdInMetadata(doc)
+						.ExecuteReadTriggers(doc, null,
 						// here we want to have the Load semantic, not Query, because we need this to be
 						// as close as possible to the full database contents
 						ReadOperation.Load);
