@@ -124,6 +124,11 @@ namespace Raven.Storage.Esent
 			}
 		}
 
+		public string FriendlyName
+		{
+			get { return "Esent"; }
+		}
+
 		public bool HandleException(Exception exception)
 		{
 			var e = exception as EsentErrorException;
