@@ -220,7 +220,7 @@ namespace Raven.Server
 
     	private static bool RunServer(RavenConfiguration ravenConfiguration)
         {
-            using (new RavenDbServer(ravenConfiguration))
+            using (var server = new RavenDbServer(ravenConfiguration))
             {
                 var path = Path.Combine(Environment.CurrentDirectory, "default.raven");
                 if (File.Exists(path))
@@ -230,7 +230,7 @@ namespace Raven.Server
                 }
 
                 Console.WriteLine("Raven is ready to process requests. Build {0}, Version {1}", DocumentDatabase.BuildVersion, DocumentDatabase.ProductVersion);
-                Console.WriteLine("Data directory: {0}, HostName: {1} Port: {2}", ravenConfiguration.DataDirectory, ravenConfiguration.HostName ?? "<any>", ravenConfiguration.Port);
+                Console.WriteLine("Data directory: {0}, HostName: {1} Port: {2}, Storage: {3}", ravenConfiguration.DataDirectory, ravenConfiguration.HostName ?? "<any>", ravenConfiguration.Port, server.Database.TransactionalStorage);
                 Console.WriteLine("Press the enter key to stop the server or enter 'cls' and then enter to clear the log");
                 while (true)
                 {
