@@ -314,6 +314,11 @@ namespace Raven.Munin
 				persistentSource.ClearPool();
 
 				persistentSource.ReplaceAtomically(tempLog);
+
+				foreach (var command in cmds)
+				{
+					tables[command.DictionaryId].UpdateKey(command.Key, command.Position, command.Size);
+				}
 			});
 		}
 
