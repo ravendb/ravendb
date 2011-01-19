@@ -34,5 +34,40 @@
 				Assert.Equal("Ayende", queryResultAsync.Result.Results[0].Value<string>("Name"));
 			}
 		}
+
+		[Asynchronous]
+		public IEnumerable<Task> Including_a_related_entity_should_avoid_hitting_the_server_twice()
+		{
+			var dbname = GenerateNewDatabaseName();
+			var documentStore = new DocumentStore { Url = Url + Port };
+			documentStore.Initialize();
+			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+
+			var customer = new Customer { Name = "Customer #1", Id = "customer/1", Email = "someone@customer.com" };
+			var order = new Order { Id = "orders/1", Note = "Hello", Customer = new DenormalizedReference { Id = customer.Id, Name = customer.Name } };
+			using (var session = documentStore.OpenAsyncSession(dbname))
+			{
+				session.Store(customer);
+				session.Store(order);
+				yield return session.SaveChangesAsync();
+			}
+
+			using (var session = documentStore.OpenAsyncSession(dbname))
+			{
+				var query = session.Advanced.AsyncLuceneQuery<Order>()
+					.Include(x => x.Customer.Id)
+					.WhereEquals("Id", "orders/1")
+					.QueryResultAsync;
+				yield return query;
+
+				Assert.Equal("Hello", query.Result.Results[0].Value<string>("Note"));
+
+				// NOTE: this call should not hit the server 
+				var load = session.LoadAsync<Customer>(customer.Id);
+				yield return load;
+
+				Assert.False(true, "Not sure how to test this yet. When I manually check the server, I see an additional request for loading the customer.");
+			}
+		}
 	}
 }
