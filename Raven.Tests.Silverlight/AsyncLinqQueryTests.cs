@@ -1,5 +1,6 @@
 ﻿namespace Raven.Tests.Silverlight
 {
+	using System;
 	using System.Collections.Generic;
 	using System.Linq;
 	using System.Threading.Tasks;
@@ -10,10 +11,27 @@
 	using Database.Indexing;
 	using Document;
 	using Microsoft.Silverlight.Testing;
-	using Xunit;
+	using Microsoft.VisualStudio.TestTools.UnitTesting;
+	using Assert = Xunit.Assert;
 
 	public class AsyncLinqQueryTests : RavenTestBase
 	{
+		[Asynchronous][ExpectedException(typeof(NotSupportedException))]
+		public IEnumerable<Task> Calling_ToList_raises_an_exception()
+		{
+			var dbname = GenerateNewDatabaseName();
+			var documentStore = new DocumentStore { Url = Url + Port };
+			documentStore.Initialize();
+			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+
+			using (var session = documentStore.OpenAsyncSession(dbname))
+			{
+				var query = session.Query<Company>()
+							.Where(x => x.Name == "Doesn't Really Matter")
+							.ToList();
+			}
+		}
+
 		[Asynchronous]
 		public IEnumerable<Task> Can_perform_a_simple_where()
 		{

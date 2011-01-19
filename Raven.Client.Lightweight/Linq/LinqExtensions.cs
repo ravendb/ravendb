@@ -117,8 +117,10 @@ namespace Raven.Client.Linq
 		public static Task<IList<T>> ToListAsync<T>(this IQueryable<T> queryable)
 		{
 			var inspector = queryable as IRavenQueryInspector;
-			if(inspector == null) throw new InvalidOperationException("");
+			//TODO: what exception message to use here?
+			if (inspector == null) throw new InvalidOperationException("ToListAsync is only applicable for implementations of IRavenQueryInspector");
 
+			//TODO: is this the appropriate code for transforming the linq? it feels wrong to me...
 			var provider = (IRavenQueryProvider)queryable.Provider;
 			var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, inspector.IndexQueried);
 			ravenQueryProvider.ProcessExpression(queryable.Expression);
@@ -137,6 +139,13 @@ namespace Raven.Client.Linq
 
 			return tcs.Task;
 		} 
+#endif
+
+#if SILVERLIGHT
+public static IList<T> ToList<T>(this IQueryable<T> queryable)
+{
+	throw new NotSupportedException();
+}
 #endif
 	}
 }
