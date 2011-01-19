@@ -127,6 +127,7 @@ namespace Raven.Client.Linq
 				.QueryAsync(inspector.IndexQueried, new IndexQuery {Query = query}, null)
 				.ContinueWith(r=>
 			              		{
+									// TODO: I want someone more familiar with Json.NET to review this bit. CB.
 									var serializer = new JsonSerializer();
 									var list = r.Result.Results.Select(x => (T)serializer.Deserialize(new JTokenReader(x), typeof(T))).ToList();
 									tcs.TrySetResult(list);
