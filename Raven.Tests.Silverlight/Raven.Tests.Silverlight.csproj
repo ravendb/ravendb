@@ -110,6 +110,7 @@
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
     <Compile Include="AsyncLinqQueryTests.cs" />
+    <Compile Include="AsyncLuceneQueryTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="AsyncDocumentStoreServerTests.cs" />
     <Compile Include="RavenTestBase.cs" />
