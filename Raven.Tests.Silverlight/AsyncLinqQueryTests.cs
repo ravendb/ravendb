@@ -16,7 +16,8 @@
 
 	public class AsyncLinqQueryTests : RavenTestBase
 	{
-		[Asynchronous][ExpectedException(typeof(NotSupportedException))]
+		[Asynchronous][Ignore]
+		//[ExpectedException(typeof(NotSupportedException))]
 		public IEnumerable<Task> Calling_ToList_raises_an_exception()
 		{
 			var dbname = GenerateNewDatabaseName();
@@ -26,9 +27,13 @@
 
 			using (var session = documentStore.OpenAsyncSession(dbname))
 			{
-				var query = session.Query<Company>()
-							.Where(x => x.Name == "Doesn't Really Matter")
-							.ToList();
+				//NOTE: shouldn't compile
+				//var query = session.Query<Company>()
+				//            .Where(x => x.Name == "Doesn't Really Matter")
+				//            .ToList();
+
+				// should compile
+				var list = new List<string>().ToList();
 			}
 		}
 
@@ -49,9 +54,9 @@
 
 			using (var session = documentStore.OpenAsyncSession(dbname))
 			{
-				var query = session.Query<Company>()
-							.Where(x => x.Name == "Async Company #1")
-							.ToListAsync();
+			var query = session.Query<Company>()
+						.Where(x => x.Name == "Async Company #1")
+						.ToListAsync();
 				yield return query;
 
 				Assert.Equal(1, query.Result.Count);
@@ -173,6 +178,7 @@
 		//    }
 		//}
 	}
+
 
 	public class Order
 	{
