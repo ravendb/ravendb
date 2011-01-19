@@ -68,6 +68,7 @@ namespace Raven.Tests.Bugs.Queries
 				using (var session = store.OpenSession())
 				{
 					var results = session.Query<Company>()
+						.Customize(x => x.WaitForNonStaleResults())
 						.Where(x => x.Name == "Simple Company")
 						.Select(x => new { CompanyName = x.Name })
 						.ToList();

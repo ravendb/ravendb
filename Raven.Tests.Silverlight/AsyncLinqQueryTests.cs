@@ -12,10 +12,10 @@
 	using Microsoft.Silverlight.Testing;
 	using Xunit;
 
-	public class LinqQueryTests : RavenTestBase
+	public class AsyncLinqQueryTests : RavenTestBase
 	{
 		[Asynchronous]
-		public IEnumerable<Task> Can_perform_a_simple_linq_query_asychronously()
+		public IEnumerable<Task> Can_perform_a_simple_where()
 		{
 			var dbname = GenerateNewDatabaseName();
 			var documentStore = new DocumentStore { Url = Url + Port };
@@ -42,7 +42,33 @@
 		}
 
 		[Asynchronous]
-		public IEnumerable<Task> Can_perform_an_order_by_linq_query_asychronously()
+		public IEnumerable<Task> Can_query_on_not_equal()
+		{
+			var dbname = GenerateNewDatabaseName();
+			var documentStore = new DocumentStore { Url = Url + Port };
+			documentStore.Initialize();
+			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+
+			using (var s = documentStore.OpenAsyncSession(dbname))
+			{
+				s.Store(new Company { Name = "Ayende" });
+				s.Store(new Company { Name = "Oren" });
+				yield return s.SaveChangesAsync();
+			}
+
+			using (var s = documentStore.OpenAsyncSession(dbname))
+			{
+				var query = s.Query<Company>()
+					.Where(x => x.Name != "Oren")
+					.ToListAsync();
+				yield return query;
+
+				Assert.Equal(1, query.Result.Count);
+			}
+		}
+
+		[Asynchronous]
+		public IEnumerable<Task> Can_perform_an_order_by()
 		{
 			var dbname = GenerateNewDatabaseName();
 			var documentStore = new DocumentStore { Url = Url + Port };
@@ -73,6 +99,35 @@
 		}
 
 		//[Asynchronous]
+		//public IEnumerable<Task> Can_perform_an_include_in_a_linq_query_asychronously()
+		//{
+		//    var dbname = GenerateNewDatabaseName();
+		//    var documentStore = new DocumentStore { Url = Url + Port };
+		//    documentStore.Initialize();
+		//    yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+
+		//    var customer = new Customer { Name = "Customer #1", Id = "customer/1",Email = "someone@customer.com"};
+		//    var order = new Order{BillingAddress = new Address(),ShippingAddress = new Address(),Customer = new DenormalizedReference{Id = customer.Id,Name = customer.Name}};
+		//    using (var session = documentStore.OpenAsyncSession(dbname))
+		//    {
+		//        session.Store(customer);
+		//        session.Store(order);
+		//        yield return session.SaveChangesAsync();
+		//    }
+
+		//    using (var session = documentStore.OpenAsyncSession(dbname))
+		//    {
+		//        var query = session.Query<Order>()
+		//                    .Where(x => x.Customer.Name == "Customer #1")
+		//                    .ToListAsync();
+		//        yield return query;
+
+		//        Assert.Equal(1, query.Result.Count);
+		//        //Assert.Equal("Async Company #1", query.Result[0].Name);
+		//    }
+		//}
+
+		//[Asynchronous]
 		//public IEnumerable<Task> Can_perform_a_projection_in_a_linq_query()
 		//{
 		//    var dbname = GenerateNewDatabaseName();
@@ -99,5 +154,33 @@
 		//        Assert.Equal("Async Company #1", query.Result[0]);
 		//    }
 		//}
+	}
+
+	public class Order
+	{
+		public string Id { get; set; }
+		public Address ShippingAddress { get; set; }
+		public Address BillingAddress { get; set; }
+		public DenormalizedReference Customer { get; set; }
+	}
+
+	public class DenormalizedReference
+	{
+		public string Id { get; set; }
+		public string Name { get; set; }
+	}
+
+	public class Customer
+	{
+		public string Id { get; set; }
+		public string Name { get; set; }
+		public string Email { get; set; }
+	}
+
+	public class Address
+	{
+		public string Line1 {get;set;}
+		public string City {get;set;}
+		public string State {get;set;}
 	}
 }
