@@ -166,15 +166,33 @@ namespace Raven.Client.Linq
 			return (IRavenQueryable<T>)Queryable.Where(source, prediate);
 		}
 
+		public static IRavenQueryable<T> Where<T>(this IRavenQueryable<T> source, Expression<Func<T, int, bool>> prediate)
+		{
+			return (IRavenQueryable<T>)Queryable.Where(source, prediate);
+		}
+
 		public static IRavenQueryable<T> OrderBy<T, TK>(this IRavenQueryable<T> source, Expression<Func<T, TK>> keySelector)
 		{
 			return (IRavenQueryable<T>)Queryable.OrderBy(source, keySelector);
+		}
+
+		public static IRavenQueryable<T> OrderBy<T, TK>(this IRavenQueryable<T> source, Expression<Func<T, TK>> keySelector, IComparer<TK> comparer)
+		{
+			return (IRavenQueryable<T>)Queryable.OrderBy(source, keySelector, comparer);
 		}
 
 		public static IRavenQueryable<T> OrderByDescending<T, TK>(this IRavenQueryable<T> source, Expression<Func<T, TK>> keySelector)
 		{
 			return (IRavenQueryable<T>)Queryable.OrderByDescending(source, keySelector);
 		}
+
+		public static IRavenQueryable<T> OrderByDescending<T, TK>(this IRavenQueryable<T> source, Expression<Func<T, TK>> keySelector, IComparer<TK> comparer)
+		{
+			return (IRavenQueryable<T>)Queryable.OrderByDescending(source, keySelector, comparer);
+		}
+
+		//TODO: implement the thousand natural shocks that linq is heir to
+
 #endif
 	}
 }
