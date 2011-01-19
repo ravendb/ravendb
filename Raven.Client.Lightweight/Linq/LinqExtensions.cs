@@ -117,21 +117,24 @@ namespace Raven.Client.Linq
 		public static Task<IList<T>> ToListAsync<T>(this IQueryable<T> queryable)
 		{
 			var inspector = queryable as IRavenQueryInspector;
-			var provider = queryable.Provider;
-			var query = inspector.ToString();
+			if(inspector == null) throw new InvalidOperationException("");
+
+			var provider = (IRavenQueryProvider)queryable.Provider;
+			var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, inspector.IndexQueried);
+			ravenQueryProvider.ProcessExpression(queryable.Expression);
+			var luceneQuery = ravenQueryProvider.LuceneQuery;
 			
 			var tcs = new TaskCompletionSource<IList<T>>();
 
-			inspector
-			.AsyncDatabaseCommands
-				.QueryAsync(inspector.IndexQueried, new IndexQuery {Query = query}, null)
-				.ContinueWith(r=>
-			              		{
-									// TODO: I want someone more familiar with Json.NET to review this bit. CB.
-									var serializer = new JsonSerializer();
-									var list = r.Result.Results.Select(x => (T)serializer.Deserialize(new JTokenReader(x), typeof(T))).ToList();
-									tcs.TrySetResult(list);
-			              		});
+			luceneQuery.QueryResultAsync
+			.ContinueWith(r=>
+			            {
+							// TODO: I want someone more familiar with Json.NET to review this bit. CB.
+							var serializer = new JsonSerializer();
+							var list = r.Result.Results.Select(x => (T)serializer.Deserialize(new JTokenReader(x), typeof(T))).ToList();
+							tcs.TrySetResult(list);
+			            });
+
 			return tcs.Task;
 		} 
 #endif
