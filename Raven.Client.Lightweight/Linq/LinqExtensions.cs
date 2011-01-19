@@ -15,6 +15,10 @@ using Raven.Client.Client;
 
 namespace Raven.Client.Linq
 {
+	using Database.Data;
+	using Newtonsoft.Json;
+	using Newtonsoft.Json.Linq;
+
 	///<summary>
 	/// Extensions to the linq syntax
 	///</summary>
@@ -112,7 +116,22 @@ namespace Raven.Client.Linq
 		/// </summary>
 		public static Task<IList<T>> ToListAsync<T>(this IQueryable<T> queryable)
 		{
-			throw new NotImplementedException();
+			var inspector = queryable as IRavenQueryInspector;
+			var provider = queryable.Provider;
+			var query = inspector.ToString();
+			
+			var tcs = new TaskCompletionSource<IList<T>>();
+
+			inspector
+			.AsyncDatabaseCommands
+				.QueryAsync(inspector.IndexQueried, new IndexQuery {Query = query}, null)
+				.ContinueWith(r=>
+			              		{
+									var serializer = new JsonSerializer();
+									var list = r.Result.Results.Select(x => (T)serializer.Deserialize(new JTokenReader(x), typeof(T))).ToList();
+									tcs.TrySetResult(list);
+			              		});
+			return tcs.Task;
 		} 
 #endif
 	}
