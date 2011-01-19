@@ -15,14 +15,14 @@
 	public class LinqQueryTests : RavenTestBase
 	{
 		[Asynchronous]
-		public IEnumerable<Task> Can_query_by_index()
+		public IEnumerable<Task> Can_perform_a_simple_linq_query_asychronously()
 		{
 			var dbname = GenerateNewDatabaseName();
-			var documentStore = new DocumentStore {Url = Url + Port};
+			var documentStore = new DocumentStore { Url = Url + Port };
 			documentStore.Initialize();
 			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
 
-			var entity = new Company {Name = "Async Company #1", Id = "companies/1"};
+			var entity = new Company { Name = "Async Company #1", Id = "companies/1" };
 			using (var session = documentStore.OpenAsyncSession(dbname))
 			{
 				session.Store(entity);
@@ -36,7 +36,36 @@
 							.ToListAsync();
 				yield return query;
 
-				Assert.NotEqual(0, query.Result.Count);
+				Assert.Equal(1, query.Result.Count);
+				Assert.Equal("Async Company #1", query.Result[0].Name);
+			}
+		}
+
+		[Asynchronous]
+		public IEnumerable<Task> Can_perform_a_projection_in_a_linq_query()
+		{
+			var dbname = GenerateNewDatabaseName();
+			var documentStore = new DocumentStore { Url = Url + Port };
+			documentStore.Initialize();
+			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+
+			var entity = new Company { Name = "Async Company #1", Id = "companies/1" };
+			using (var session = documentStore.OpenAsyncSession(dbname))
+			{
+				session.Store(entity);
+				yield return session.SaveChangesAsync();
+			}
+
+			using (var session = documentStore.OpenAsyncSession(dbname))
+			{
+				var query = session.Query<Company>()
+							.Where(x => x.Name == "Async Company #1")
+							.Select(x => x.Name)
+							.ToListAsync();
+				yield return query;
+
+				Assert.Equal(1, query.Result.Count);
+				Assert.Equal("Async Company #1", query.Result[0]);
 			}
 		}
 	}
