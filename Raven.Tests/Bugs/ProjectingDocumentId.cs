@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="ProjectingDocumentId.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using Raven.Database.Indexing;
 using Xunit;
 using System.Linq;

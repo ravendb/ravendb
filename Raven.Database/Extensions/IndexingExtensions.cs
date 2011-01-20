@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="IndexingExtensions.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using System.Globalization;
 using System.Linq;
@@ -17,8 +22,17 @@ namespace Raven.Database.Extensions
             var analyzerType = typeof(StandardAnalyzer).Assembly.GetType(analyzerTypeAsString) ??
                 Type.GetType(analyzerTypeAsString);
             if (analyzerType == null)
-                throw new InvalidOperationException("Cannot find type '" + analyzerTypeAsString + "' for field: " + name);
-            return (Analyzer)Activator.CreateInstance(analyzerType);
+                throw new InvalidOperationException("Cannot find analzyer type '" + analyzerTypeAsString + "' for field: " + name);
+            try
+            {
+                return (Analyzer)Activator.CreateInstance(analyzerType);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException(
+                    "Could not create new analyzer instance '" + name + "' for field: " +
+                        name, e);
+            }
         }
 
         public static Filter GetFilter(this IndexQuery self)

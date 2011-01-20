@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="QueryResult.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
@@ -43,6 +48,17 @@ namespace Raven.Database.Data
         public int SkippedResults { get; set; }
 
 		/// <summary>
+		/// The index used to answer this query
+		/// </summary>
+		public string IndexName { get; set; }
+
+        /// <summary>
+        /// The last etag indexed by the index.
+        /// This can be used to determine whatever the results can be cached.
+        /// </summary>
+        public Guid IndexEtag { get; set; }
+
+	    /// <summary>
 		/// Initializes a new instance of the <see cref="QueryResult"/> class.
 		/// </summary>
 		public QueryResult()

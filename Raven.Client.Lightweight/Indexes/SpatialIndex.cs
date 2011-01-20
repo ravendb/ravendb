@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="SpatialIndex.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 
 namespace Raven.Client.Indexes
@@ -8,7 +13,7 @@ namespace Raven.Client.Indexes
     public static class SpatialIndex
     {
         /// <summary>
-        /// Marker method for allowing generating sptial indexes on the client
+        /// Marker method for allowing generating spatial indexes on the client
         /// </summary>
         public static object Generate(double lat, double lng)
         {

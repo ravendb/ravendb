@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="Program.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -30,7 +35,7 @@ namespace Raven.Merger
 				Merge("RavenSmuggler.exe", new[]
 				{
 					@"Raven.Smuggler.exe",
-					@"Newtonsoft.Json.dll",
+					@"Newtonsoft.Json.Net35.dll",
 				});
 				
 				//Merge("RavenWeb.dll", new[]

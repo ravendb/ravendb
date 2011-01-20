@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="RavenQuery.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System.Text;
 
 namespace Raven.Client.Client
@@ -99,7 +104,7 @@ namespace Raven.Client.Client
 									buffer = new StringBuilder(length * 2);
 								}
 
-								buffer.Insert(0, '"');
+								buffer.Insert(0, "\"");
 								isPhrase = true;
 							}
 							break;

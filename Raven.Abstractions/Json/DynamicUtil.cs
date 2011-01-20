@@ -1,4 +1,9 @@
-#if !NET_3_5
+//-----------------------------------------------------------------------
+// <copyright file="DynamicUtil.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
+#if !SILVERLIGHT  && !NET_3_5
 using System;
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
@@ -21,13 +26,14 @@ namespace Raven.Database.Json
 		/// <returns></returns>
 		public static object GetValueDynamically(object entity, string dynamicMemberName)
 		{
-			var callsite = callsitesCache.GetOrAdd(dynamicMemberName, s => CallSite<Func<CallSite, object, object>>.Create(
+			Func<string, CallSite<Func<CallSite, object, object>>> valueFactory = s => CallSite<Func<CallSite, object, object>>.Create(
 				Binder.GetMember(
 					CSharpBinderFlags.None,
 					dynamicMemberName,
 					null,
-					new[] { CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null) }
-					)));
+					new[] {CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null)}
+					));
+			var callsite = callsitesCache.GetOrAdd(dynamicMemberName, valueFactory);
 
 			return callsite.Target(callsite, entity);
 		}

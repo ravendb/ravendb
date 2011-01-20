@@ -1,8 +1,14 @@
+//-----------------------------------------------------------------------
+// <copyright file="JsonExtensions.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using System.IO;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
+using Raven.Http.Json;
 
 namespace Raven.Database.Json
 {
@@ -22,7 +28,16 @@ namespace Raven.Database.Json
             {
                 return new JObject(new JProperty("Value", new JValue(result)));
             }
-            return JObject.FromObject(result);
+            return JObject.FromObject(result, new JsonSerializer
+                                              	{
+                                              		Converters =
+                                              			{
+#if !NET_3_5
+                                              				new JsonToJsonConverter(),
+#endif
+															new JsonEnumConverter()
+                                              			}
+                                              	});
         }
 
 		/// <summary>

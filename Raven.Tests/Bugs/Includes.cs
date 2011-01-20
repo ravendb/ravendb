@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="Includes.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using System.Linq;
 using Raven.Client;
@@ -170,6 +175,7 @@ namespace Raven.Tests.Bugs
 		{
 			store.Dispose();
 			server.Dispose();
+			ClearDatabaseDirectory();
 		}
 
 		public class Order

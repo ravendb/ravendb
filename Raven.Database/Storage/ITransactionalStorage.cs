@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="ITransactionalStorage.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using Raven.Database.Impl;
 
@@ -17,6 +22,7 @@ namespace Raven.Database.Storage
 
 	    Type TypeForRunningQueriesInRemoteAppDomain { get;}
         object StateForRunningQueriesInRemoteAppDomain { get; }
-        bool HandleException(Exception exception);
+    	string FriendlyName { get; }
+    	bool HandleException(Exception exception);
 	}
 }

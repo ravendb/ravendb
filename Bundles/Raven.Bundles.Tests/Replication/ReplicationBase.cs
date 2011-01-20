@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="ReplicationBase.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 extern alias replication;
 extern alias database;
 

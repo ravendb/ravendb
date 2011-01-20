@@ -1,11 +1,19 @@
+//-----------------------------------------------------------------------
+// <copyright file="InMemoryDocumentSessionOperations.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+#if !SILVERLIGHT
 using System.Transactions;
+#endif
 using Newtonsoft.Json.Linq;
 using Raven.Client.Client;
 using Raven.Client.Exceptions;
+using Raven.Client.Util;
 using Raven.Database;
 using Raven.Database.Data;
 
@@ -28,22 +36,29 @@ namespace Raven.Client.Document
 		/// </summary>
 		protected readonly HashSet<object> deletedEntities = new HashSet<object>();
 
+#if !SILVERLIGHT
 		private bool hasEnlisted;
+#endif 
 
 		/// <summary>
 		/// hold the data required to manage the data for RavenDB's Unit of Work
 		/// </summary>
-		protected readonly Dictionary<object, DocumentSession.DocumentMetadata> entitiesAndMetadata =
-			new Dictionary<object, DocumentSession.DocumentMetadata>();
+		protected readonly Dictionary<object, DocumentMetadata> entitiesAndMetadata =
+			new Dictionary<object, DocumentMetadata>(ObjectReferenceEqualityComparerer<object>.Default);
 
 		/// <summary>
 		/// Translate between a key and its associated entity
 		/// </summary>
-        protected readonly Dictionary<string, object> entitiesByKey = new Dictionary<string, object>(StringComparer.InvariantCultureIgnoreCase);
+		protected readonly Dictionary<string, object> entitiesByKey = new Dictionary<string, object>(StringComparer.InvariantCultureIgnoreCase);
 		/// <summary>
 		/// The document store associated with this session
 		/// </summary>
 		protected DocumentStore documentStore;
+
+		/// <summary>
+		/// The query listeners allow to modify queries before it is executed
+		/// </summary>
+		protected readonly IDocumentQueryListener[] queryListeners;
 
 		/// <summary>
 		/// Gets the number of requests for this session
@@ -60,16 +75,21 @@ namespace Raven.Client.Document
 		/// <param name="documentStore">The document store.</param>
 		/// <param name="storeListeners">The store listeners.</param>
 		/// <param name="deleteListeners">The delete listeners.</param>
-		protected InMemoryDocumentSessionOperations(DocumentStore documentStore, IDocumentStoreListener[] storeListeners, IDocumentDeleteListener[] deleteListeners)
+		protected InMemoryDocumentSessionOperations(
+			DocumentStore documentStore, 
+			IDocumentQueryListener[] queryListeners,
+			IDocumentStoreListener[] storeListeners, 
+			IDocumentDeleteListener[] deleteListeners)
 		{
 			this.documentStore = documentStore;
+			this.queryListeners = queryListeners;
 			this.deleteListeners = deleteListeners;
 			this.storeListeners = storeListeners;
-		    ResourceManagerId = documentStore.ResourceManagerId;
-            UseOptimisticConcurrency = false;
+			ResourceManagerId = documentStore.ResourceManagerId;
+			UseOptimisticConcurrency = false;
 			AllowNonAuthoritiveInformation = true;
 			NonAuthoritiveInformationTimeout = TimeSpan.FromSeconds(15);
-		    MaxNumberOfRequestsPerSession = documentStore.Conventions.MaxNumberOfRequestsPerSession;
+			MaxNumberOfRequestsPerSession = documentStore.Conventions.MaxNumberOfRequestsPerSession;
 		}
 
 		/// <summary>
@@ -102,10 +122,10 @@ namespace Raven.Client.Document
 			get { return documentStore.Conventions; }
 		}
 
-        /// <summary>
-        /// The transaction resource manager identifier
-        /// </summary>
-        public Guid ResourceManagerId { get; private set; }
+		/// <summary>
+		/// The transaction resource manager identifier
+		/// </summary>
+		public Guid ResourceManagerId { get; private set; }
 
 
 		/// <summary>
@@ -131,11 +151,11 @@ namespace Raven.Client.Document
 		/// Changes made to the document / metadata instances passed to this event will be persisted.
 		/// </summary>
 		public virtual event EntityToDocument OnEntityConverted;
-        
-        /// <summary>
-        /// Occurs when a document and metadata are converted to an entity
-        /// </summary>
-        public event DocumentToEntity OnDocumentConverted;
+		
+		/// <summary>
+		/// Occurs when a document and metadata are converted to an entity
+		/// </summary>
+		public event DocumentToEntity OnDocumentConverted;
 
 		/// <summary>
 		/// Gets the metadata for the specified entity.
@@ -145,50 +165,50 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public JObject GetMetadataFor<T>(T instance)
 		{
-			DocumentSession.DocumentMetadata value;
+			DocumentMetadata value;
 			if (entitiesAndMetadata.TryGetValue(instance, out value) == false)
 			{
-			    string id;
-			    if(TryGetIdFromInstance(instance, out id)
+				string id;
+				if(TryGetIdFromInstance(instance, out id)
 #if !NET_3_5
-                    || (instance is IDynamicMetaObjectProvider && 
-                    TryGetIdFromDynamic(instance, out id) )
+					|| (instance is IDynamicMetaObjectProvider && 
+					TryGetIdFromDynamic(instance, out id) )
 #endif 
-                    )
-			    {
-			        var jsonDocument = GetJsonDocument(id);
-			        entitiesByKey[id] = instance;
-                    entitiesAndMetadata[instance] = value = new DocumentSession.DocumentMetadata
-                    {
-                        ETag = UseOptimisticConcurrency ? (Guid?)Guid.Empty : null,
-                        Key = id,
-                        OriginalMetadata = jsonDocument.Metadata,
-                        Metadata = new JObject(jsonDocument.Metadata),
-                        OriginalValue = new JObject()
-                    };
-			    }
-                else
-			    {
-			        throw new InvalidOperationException("Could not find the document key for " + instance);
-			    }
+					)
+				{
+					var jsonDocument = GetJsonDocument(id);
+					entitiesByKey[id] = instance;
+					entitiesAndMetadata[instance] = value = new DocumentMetadata
+					{
+						ETag = UseOptimisticConcurrency ? (Guid?)Guid.Empty : null,
+						Key = id,
+						OriginalMetadata = jsonDocument.Metadata,
+						Metadata = new JObject(jsonDocument.Metadata),
+						OriginalValue = new JObject()
+					};
+				}
+				else
+				{
+					throw new InvalidOperationException("Could not find the document key for " + instance);
+				}
 			}
 			return value.Metadata;
 		}
 
-        /// <summary>
-        /// Get the json document by key from the store
-        /// </summary>
-	    protected abstract JsonDocument GetJsonDocument(string documentKey);
+		/// <summary>
+		/// Get the json document by key from the store
+		/// </summary>
+		protected abstract JsonDocument GetJsonDocument(string documentKey);
 
-        /// <summary>
-        /// Returns whatever a document with the specified id is loaded in the 
-        /// current session
-        /// </summary>
-        public bool IsLoaded(string id)
-        {
-            object existingEntity;
-            return entitiesByKey.TryGetValue(id, out existingEntity);
-        }
+		/// <summary>
+		/// Returns whatever a document with the specified id is loaded in the 
+		/// current session
+		/// </summary>
+		public bool IsLoaded(string id)
+		{
+			object existingEntity;
+			return entitiesByKey.TryGetValue(id, out existingEntity);
+		}
 
 		/// <summary>
 		/// Gets the document id.
@@ -197,7 +217,7 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public string GetDocumentId(object instance)
 		{
-			DocumentSession.DocumentMetadata value;
+			DocumentMetadata value;
 			if (entitiesAndMetadata.TryGetValue(instance, out value) == false)
 				return null;
 			return value.Key;
@@ -225,18 +245,18 @@ namespace Raven.Client.Document
 		/// </returns>
 		public bool HasChanged(object entity)
 		{
-			DocumentSession.DocumentMetadata value;
+			DocumentMetadata value;
 			if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
 				return false;
 			return EntityChanged(entity, value);
 		}
 
-        internal void DecrementRequestCount()
-        {
-            --NumberOfRequests;
-        }
+		internal void DecrementRequestCount()
+		{
+			--NumberOfRequests;
+		}
 
-	    internal void IncrementRequestCount()
+		internal void IncrementRequestCount()
 		{
 			if (++NumberOfRequests > MaxNumberOfRequestsPerSession)
 				throw new InvalidOperationException(
@@ -244,7 +264,7 @@ namespace Raven.Client.Document
 						@"The maximum number of requests ({0}) allowed for this session has been reached.
 Raven limits the number of remote calls that a session is allowed to make as an early warning system. Sessions are expected to be short lived, and 
 Raven provides facilities like Load(string[] keys) to load multiple documents at once and batch saves.
-You can increase the limit by setting DocumentConvention.MaxNumberOfRequestsPerSession or DocumentSession.MaxNumberOfRequestsPerSession, but it is
+You can increase the limit by setting DocumentConvention.MaxNumberOfRequestsPerSession or MaxNumberOfRequestsPerSession, but it is
 advisable that you'll look into reducing the number of remote calls first, since that will speed up your application signficantly and result in a 
 more responsive application.
 ",
@@ -263,10 +283,10 @@ more responsive application.
 			{
 				documentFound.Metadata.Add("@etag", new JValue(documentFound.Etag.ToString()));
 			}
-            if(documentFound.Metadata.Property("Last-Modified") == null)
-            {
-                documentFound.Metadata.Add("Last-Modified", documentFound.LastModified);
-            }
+			if(documentFound.Metadata.Property("Last-Modified") == null)
+			{
+				documentFound.Metadata.Add("Last-Modified", documentFound.LastModified);
+			}
 			if(documentFound.NonAuthoritiveInformation && AllowNonAuthoritiveInformation == false)
 			{
 				throw new NonAuthoritiveInformationException("Document " + documentFound.Key +
@@ -304,7 +324,7 @@ more responsive application.
 				throw new NonAuthoritiveInformationException("Document " + key +
 					" returned Non Authoritive Information (probably modified by a transaction in progress) and AllowNonAuthoritiveInformation  is set to false");
 			}
-			entitiesAndMetadata[entity] = new DocumentSession.DocumentMetadata
+			entitiesAndMetadata[entity] = new DocumentMetadata
 			{
 				OriginalValue = document,
 				Metadata = metadata,
@@ -330,7 +350,7 @@ more responsive application.
 		public bool AllowNonAuthoritiveInformation { get; set; }
 
 		/// <summary>
-		/// Marks the specified entity for deletion. The entity will be deleted when <see cref="IDocumentSession.SaveChanges"/> is called.
+		/// Marks the specified entity for deletion. The entity will be deleted when SaveChanges is called.
 		/// </summary>
 		/// <typeparam name="T"></typeparam>
 		/// <param name="entity">The entity.</param>
@@ -351,6 +371,9 @@ more responsive application.
 		/// <returns></returns>
 		protected object ConvertToEntity<T>(string id, JObject documentFound, JObject metadata)
 		{
+			if(typeof(T) == typeof(JObject))
+				return (T) (object) documentFound;
+
 			var entity = default(T);
 			EnsureNotReadVetoed(metadata);
 			var documentType = metadata.Value<string>("Raven-Clr-Type");
@@ -372,10 +395,10 @@ more responsive application.
 #endif
 			}
 			TrySetIdentity(entity, id);
-		    var documentToEntity = OnDocumentConverted;
-            if (documentToEntity != null)
-                documentToEntity(entity, documentFound, metadata);
-		    return entity;
+			var documentToEntity = OnDocumentConverted;
+			if (documentToEntity != null)
+				documentToEntity(entity, documentFound, metadata);
+			return entity;
 		}
 
 		/// <summary>
@@ -389,25 +412,25 @@ more responsive application.
 			var identityProperty = documentStore.Conventions.GetIdentityProperty(entity.GetType());
 			if (identityProperty != null && identityProperty.CanWrite)
 			{
-                if (identityProperty.PropertyType == typeof(string))
-                {
-                    identityProperty.SetValue(entity, id, null);
-                }
-                else // need converting
-                {
-                    var converter = Conventions.IdentityTypeConvertors.FirstOrDefault(x=>x.CanConvertFrom(identityProperty.PropertyType));
-                    if(converter == null)
-                        throw new ArgumentException("Could not convert identity to type " + identityProperty.PropertyType + " because there is not matching type converter registered in the conventions' IdentityTypeConvertors");
+				if (identityProperty.PropertyType == typeof(string))
+				{
+					identityProperty.SetValue(entity, id, null);
+				}
+				else // need converting
+				{
+					var converter = Conventions.IdentityTypeConvertors.FirstOrDefault(x=>x.CanConvertFrom(identityProperty.PropertyType));
+					if(converter == null)
+						throw new ArgumentException("Could not convert identity to type " + identityProperty.PropertyType + " because there is not matching type converter registered in the conventions' IdentityTypeConvertors");
 
-                    identityProperty.SetValue(entity, converter.ConvertTo(id), null);
-                }
+					identityProperty.SetValue(entity, converter.ConvertTo(id), null);
+				}
 			}
 		}
 
 		private static void EnsureNotReadVetoed(JObject metadata)
 		{
-            var readVeto = metadata.Value<JObject>("Raven-Read-Veto");
-            if (readVeto == null)
+			var readVeto = metadata.Value<JObject>("Raven-Read-Veto");
+			if (readVeto == null)
 				return;
 
 			var s = readVeto.Value<string>("Reason");
@@ -419,7 +442,7 @@ more responsive application.
 		}
 
 		/// <summary>
-		/// Stores the specified entity in the session. The entity will be saved when <see cref="IDocumentSession.SaveChanges"/> is called.
+		/// Stores the specified entity in the session. The entity will be saved when SaveChanges is called.
 		/// </summary>
 		/// <param name="entity">The entity.</param>
 		public void Store(object entity)
@@ -429,9 +452,9 @@ more responsive application.
 			
 			string id = null;
 #if !NET_3_5
-            if (entity is IDynamicMetaObjectProvider)
-            {
-            	if(TryGetIdFromDynamic(entity,out id) == false)
+			if (entity is IDynamicMetaObjectProvider)
+			{
+				if(TryGetIdFromDynamic(entity,out id) == false)
 				{
 					id = Conventions.DocumentKeyGenerator(entity);
 
@@ -441,8 +464,8 @@ more responsive application.
 						((dynamic) entity).Id = id;
 					}
 				}
-            }
-            else
+			}
+			else
 #endif
 			{
 				id = GetOrGenerateDocumentKey(entity);
@@ -463,10 +486,10 @@ more responsive application.
 			}
 
 			var tag = documentStore.Conventions.GetTypeTagName(entity.GetType());
-		    var metadata = new JObject();
-            if(tag != null)
-                metadata.Add(new JProperty(RavenEntityName, new JValue(tag)));
-		    entitiesAndMetadata.Add(entity, new DocumentSession.DocumentMetadata
+			var metadata = new JObject();
+			if(tag != null)
+				metadata.Add(new JProperty(RavenEntityName, new JValue(tag)));
+			entitiesAndMetadata.Add(entity, new DocumentMetadata
 			{
 				Key = id,
 				Metadata = metadata,
@@ -485,8 +508,8 @@ more responsive application.
 		/// <returns></returns>
 		protected string GetOrGenerateDocumentKey(object entity)
 		{
-		    string id;
-		    TryGetIdFromInstance(entity, out id);
+			string id;
+			TryGetIdFromInstance(entity, out id);
 
 			if (id == null)
 			{
@@ -495,30 +518,30 @@ more responsive application.
 
 			}
 
-            if(id != null && id.StartsWith("/"))
-                throw new InvalidOperationException("Cannot use value '"+id+"' as a document id because it begins with a '/'");
+			if(id != null && id.StartsWith("/"))
+				throw new InvalidOperationException("Cannot use value '"+id+"' as a document id because it begins with a '/'");
 			return id;
 		}
 
-	    private bool TryGetIdFromInstance(object entity, out string id)
-        {
-            var identityProperty = GetIdentityProperty(entity.GetType());
+		private bool TryGetIdFromInstance(object entity, out string id)
+		{
+			var identityProperty = GetIdentityProperty(entity.GetType());
 			if (identityProperty != null)
 			{
-			    var value = identityProperty.GetValue(entity, null);
-			    id = value as string;
-			    if(id == null && value != null) // need convertion
-			    {
-                    var converter = Conventions.IdentityTypeConvertors.FirstOrDefault(x => x.CanConvertFrom(value.GetType()));
-                    if(converter == null)
-                        throw new ArgumentException("Cannot use type " + value.GetType() + " as an identity without having a type converter registered for it in the conventions' IdentityTypeConvertors");
-			        id = converter.ConvertFrom(value);
-			    }
-			    return true;
+				var value = identityProperty.GetValue(entity, new object[0]);
+				id = value as string;
+				if(id == null && value != null) // need convertion
+				{
+					var converter = Conventions.IdentityTypeConvertors.FirstOrDefault(x => x.CanConvertFrom(value.GetType()));
+					if(converter == null)
+						throw new ArgumentException("Cannot use type " + value.GetType() + " as an identity without having a type converter registered for it in the conventions' IdentityTypeConvertors");
+					id = converter.ConvertFrom(value);
+				}
+				return true;
 			}
-            id = null;
-            return false;
-        }
+			id = null;
+			return false;
+		}
 
 #if !NET_3_5
 		private static bool TryGetIdFromDynamic(dynamic entity, out string id)
@@ -542,7 +565,7 @@ more responsive application.
 		/// <param name="entity">The entity.</param>
 		/// <param name="documentMetadata">The document metadata.</param>
 		/// <returns></returns>
-		protected ICommandData CreatePutEntityCommand(object entity, DocumentSession.DocumentMetadata documentMetadata)
+		protected ICommandData CreatePutEntityCommand(object entity, DocumentMetadata documentMetadata)
 		{
 			var json = ConvertEntityToJson(entity, documentMetadata.Metadata);
 
@@ -577,7 +600,7 @@ more responsive application.
 					continue;
 
 				var entity = entities[i];
-				DocumentSession.DocumentMetadata documentMetadata;
+				DocumentMetadata documentMetadata;
 				if (entitiesAndMetadata.TryGetValue(entity, out documentMetadata) == false)
 					continue;
 
@@ -589,7 +612,7 @@ more responsive application.
 				documentMetadata.Metadata = batchResult.Metadata;
 				documentMetadata.OriginalValue = ConvertEntityToJson(entity, documentMetadata.Metadata);
 
-                TrySetIdentity(entity, batchResult.Key);
+				TrySetIdentity(entity, batchResult.Key);
 
 				if (stored != null)
 					stored(entity);
@@ -598,29 +621,29 @@ more responsive application.
 				{
 					documentStoreListener.AfterStore(batchResult.Key, entity, batchResult.Metadata);
 				}
-            }
+			}
 		}
 
 		/// <summary>
 		/// Prepares for save changes.
 		/// </summary>
 		/// <returns></returns>
-		protected DocumentSession.SaveChangesData PrepareForSaveChanges()
+		protected SaveChangesData PrepareForSaveChanges()
 		{
-			var result = new DocumentSession.SaveChangesData
+			var result = new SaveChangesData
 			{
 				Entities = new List<object>(),
 				Commands = new List<ICommandData>()
 			};
 			TryEnlistInAmbientTransaction();
-			DocumentSession.DocumentMetadata value = null;
+			DocumentMetadata value = null;
 			foreach (var key in (from deletedEntity in deletedEntities
 								 where entitiesAndMetadata.TryGetValue(deletedEntity, out value)
 								 select value.Key))
 			{
 				Guid? etag = null;
 				object existingEntity;
-				DocumentSession.DocumentMetadata metadata = null;
+				DocumentMetadata metadata = null;
 				if (entitiesByKey.TryGetValue(key, out existingEntity))
 				{
 					if (entitiesAndMetadata.TryGetValue(existingEntity, out metadata))
@@ -661,6 +684,7 @@ more responsive application.
 
 		private void TryEnlistInAmbientTransaction()
 		{
+#if !SILVERLIGHT
 			if (hasEnlisted || Transaction.Current == null) 
 				return;
 
@@ -675,6 +699,7 @@ more responsive application.
 					EnlistmentOptions.None);
 			}
 			hasEnlisted = true;
+#endif
 		}
 
 		/// <summary>
@@ -683,7 +708,7 @@ more responsive application.
 		/// <param name="entity">The entity.</param>
 		/// <param name="documentMetadata">The document metadata.</param>
 		/// <returns></returns>
-		protected bool EntityChanged(object entity, DocumentSession.DocumentMetadata documentMetadata)
+		protected bool EntityChanged(object entity, DocumentMetadata documentMetadata)
 		{
 			if (documentMetadata == null)
 				return true; 
@@ -703,9 +728,11 @@ more responsive application.
 			{
 				objectAsJson.Remove(identityProperty.Name);
 			}
-
+#if !SILVERLIGHT
 			metadata["Raven-Clr-Type"] = JToken.FromObject(ReflectionUtil.GetFullNameWithoutVersionInformation(entityType));
-
+#else
+			metadata["Raven-Clr-Type"] = JToken.FromObject(entityType.AssemblyQualifiedName);
+#endif
 			var entityConverted = OnEntityConverted;
 			if (entityConverted != null)
 				entityConverted(entity, objectAsJson, metadata);
@@ -715,6 +742,9 @@ more responsive application.
 
 		private JObject GetObjectAsJson(object entity)
 		{
+			var jObject = entity as JObject;
+			if (jObject != null)
+				return jObject;
 			return JObject.FromObject(entity, Conventions.CreateSerializer());
 		}
 
@@ -728,7 +758,7 @@ more responsive application.
 		/// <param name="entity">The entity.</param>
 		public void Evict<T>(T entity)
 		{
-			DocumentSession.DocumentMetadata value;
+			DocumentMetadata value;
 			if (entitiesAndMetadata.TryGetValue(entity, out value))
 			{
 				entitiesAndMetadata.Remove(entity);
@@ -773,12 +803,62 @@ more responsive application.
 		/// <returns></returns>
 		public abstract byte[] PromoteTransaction(Guid fromTxId);
 
+#if !SILVERLIGHT
 		/// <summary>
 		/// Clears the enlistment.
 		/// </summary>
 		protected void ClearEnlistment()
 		{
 			hasEnlisted = false;
+		}
+#endif 
+		/// <summary>
+		/// Metadata held about an entity by the session
+		/// </summary>
+		public class DocumentMetadata
+		{
+			/// <summary>
+			/// Gets or sets the original value.
+			/// </summary>
+			/// <value>The original value.</value>
+			public JObject OriginalValue { get; set; }
+			/// <summary>
+			/// Gets or sets the metadata.
+			/// </summary>
+			/// <value>The metadata.</value>
+			public JObject Metadata { get; set; }
+			/// <summary>
+			/// Gets or sets the ETag.
+			/// </summary>
+			/// <value>The ETag.</value>
+			public Guid? ETag { get; set; }
+			/// <summary>
+			/// Gets or sets the key.
+			/// </summary>
+			/// <value>The key.</value>
+			public string Key { get; set; }
+			/// <summary>
+			/// Gets or sets the original metadata.
+			/// </summary>
+			/// <value>The original metadata.</value>
+			public JObject OriginalMetadata { get; set; }
+		}
+
+		/// <summary>
+		/// Data for a batch command to the server
+		/// </summary>
+		public class SaveChangesData
+		{
+			/// <summary>
+			/// Gets or sets the commands.
+			/// </summary>
+			/// <value>The commands.</value>
+			public IList<ICommandData> Commands { get; set; }
+			/// <summary>
+			/// Gets or sets the entities.
+			/// </summary>
+			/// <value>The entities.</value>
+			public IList<object> Entities { get; set; }
 		}
 	}
 }

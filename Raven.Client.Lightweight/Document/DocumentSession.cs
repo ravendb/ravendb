@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="DocumentSession.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -5,9 +10,13 @@ using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Net;
+using System.Reflection;
 using Newtonsoft.Json.Linq;
 using System;
 using Raven.Client.Client;
+#if !NET_3_5
+using Raven.Client.Client.Async;
+#endif
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Raven.Database;
@@ -15,398 +24,424 @@ using Raven.Database.Data;
 
 namespace Raven.Client.Document
 {
-    /// <summary>
-    /// Implements Unit of Work for accessing the RavenDB server
-    /// </summary>
-    public class DocumentSession : InMemoryDocumentSessionOperations, IDocumentSession, ITransactionalDocumentSession, ISyncAdvancedSessionOperation
-    {
-        /// <summary>
-        /// Gets the database commands.
-        /// </summary>
-        /// <value>The database commands.</value>
-        public IDatabaseCommands DatabaseCommands { get; private set; }
+#if !SILVERLIGHT
+	/// <summary>
+	/// Implements Unit of Work for accessing the RavenDB server
+	/// </summary>
+	public class DocumentSession : InMemoryDocumentSessionOperations, IDocumentSession, ITransactionalDocumentSession, ISyncAdvancedSessionOperation, IDocumentQueryGenerator
+	{
+#if !NET_3_5
+		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
+#endif
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="DocumentSession"/> class.
-        /// </summary>
-        /// <param name="documentStore">The document store.</param>
-        /// <param name="storeListeners">The store listeners.</param>
-        /// <param name="deleteListeners">The delete listeners.</param>
-        /// <param name="databaseCommands"></param>
-        public DocumentSession(DocumentStore documentStore, IDocumentStoreListener[] storeListeners, IDocumentDeleteListener[] deleteListeners, IDatabaseCommands databaseCommands)
-            : base(documentStore, storeListeners, deleteListeners)
-        {
-            DatabaseCommands = databaseCommands;
-        }
+		/// <summary>
+		/// Gets the database commands.
+		/// </summary>
+		/// <value>The database commands.</value>
+		public IDatabaseCommands DatabaseCommands { get; private set; }
 
-        /// <summary>
-        /// Get the accessor for advanced operations
-        /// </summary>
-        /// <remarks>
-        /// Those operations are rarely needed, and have been moved to a separate 
-        /// property to avoid cluttering the API
-        /// </remarks>
-        public ISyncAdvancedSessionOperation Advanced
-        {
-            get { return this; }
-        }
+#if !NET_3_5
+		/// <summary>
+		/// Gets the async database commands.
+		/// </summary>
+		/// <value>The async database commands.</value>
+		public IAsyncDatabaseCommands AsyncDatabaseCommands
+		{
+			get { return asyncDatabaseCommands; }
+		}
+#endif
 
-        
-        /// <summary>
-        /// Loads the specified entity with the specified id.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="id">The id.</param>
-        /// <returns></returns>
-        public T Load<T>(string id)
-        {
-            object existingEntity;
-            if (entitiesByKey.TryGetValue(id, out existingEntity))
-            {
-                return (T)existingEntity;
-            }
+		/// <summary>
+		/// Initializes a new instance of the <see cref="DocumentSession"/> class.
+		/// </summary>
+		public DocumentSession(DocumentStore documentStore, 
+			IDocumentQueryListener[] queryListeners,
+			IDocumentStoreListener[] storeListeners, 
+			IDocumentDeleteListener[] deleteListeners, 
+			IDatabaseCommands databaseCommands
+#if !NET_3_5
+			, IAsyncDatabaseCommands asyncDatabaseCommands
+#endif
+			)
+			: base(documentStore, queryListeners, storeListeners, deleteListeners)
+		{
+#if !NET_3_5
+			this.asyncDatabaseCommands = asyncDatabaseCommands;
+#endif
+			DatabaseCommands = databaseCommands;
+		}
 
-            IncrementRequestCount();
-            var sp = Stopwatch.StartNew();
-            JsonDocument documentFound;
-            do
-            {
-                try
-                {
-                    Trace.WriteLine(string.Format("Loading document [{0}] from {1}", id, StoreIdentifier));
-                    documentFound = DatabaseCommands.Get(id);
-                }
-                catch (WebException ex)
-                {
-                    var httpWebResponse = ex.Response as HttpWebResponse;
-                    if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.NotFound)
-                        return default(T);
-                    throw;
-                }
-                if (documentFound == null)
-                    return default(T);
+		/// <summary>
+		/// Get the accessor for advanced operations
+		/// </summary>
+		/// <remarks>
+		/// Those operations are rarely needed, and have been moved to a separate 
+		/// property to avoid cluttering the API
+		/// </remarks>
+		public ISyncAdvancedSessionOperation Advanced
+		{
+			get { return this; }
+		}
 
-            } while (
-                documentFound.NonAuthoritiveInformation &&
-                AllowNonAuthoritiveInformation == false &&
-                sp.Elapsed < NonAuthoritiveInformationTimeout
-                );
+		
+		/// <summary>
+		/// Loads the specified entity with the specified id.
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="id">The id.</param>
+		/// <returns></returns>
+		public T Load<T>(string id)
+		{
+			object existingEntity;
+			if (entitiesByKey.TryGetValue(id, out existingEntity))
+			{
+				return (T)existingEntity;
+			}
 
+			IncrementRequestCount();
+#if !SILVERLIGHT
+			var sp = Stopwatch.StartNew();
+#else
+			var startTime = DateTime.Now;
+#endif
+			JsonDocument documentFound;
+			do
+			{
+				try
+				{
+					Debug.WriteLine(string.Format("Loading document [{0}] from {1}", id, StoreIdentifier));
+					documentFound = DatabaseCommands.Get(id);
+				}
+				catch (WebException ex)
+				{
+					var httpWebResponse = ex.Response as HttpWebResponse;
+					if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.NotFound)
+						return default(T);
+					throw;
+				}
+				if (documentFound == null)
+					return default(T);
 
-            return TrackEntity<T>(documentFound);
-        }
-
-        /// <summary>
-        /// Loads the specified entities with the specified ids.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="ids">The ids.</param>
-        /// <returns></returns>
-        public T[] Load<T>(params string[] ids)
-        {
-            return LoadInternal<T>(ids, null);
-        }
-
-        /// <summary>
-        /// Loads the specified entities with the specified ids.
-        /// </summary>
-        /// <param name="ids">The ids.</param>
-        public T[] Load<T>(IEnumerable<string> ids)
-        {
-            return LoadInternal<T>(ids.ToArray(), null);
-        }
-
-        internal T[] LoadInternal<T>(string[] ids, string[] includes)
-        {
-            if(ids.Length == 0)
-                return new T[0];
-
-            IncrementRequestCount();
-            Trace.WriteLine(string.Format("Bulk loading ids [{0}] from {1}", string.Join(", ", ids), StoreIdentifier));
-            MultiLoadResult multiLoadResult;
-            JsonDocument[] includeResults;
-            JsonDocument[] results;
-            var sp = Stopwatch.StartNew();
-            do
-            {
-
-                multiLoadResult = DatabaseCommands.Get(ids, includes);
-                includeResults = SerializationHelper.JObjectsToJsonDocuments(multiLoadResult.Includes).ToArray();
-                results = SerializationHelper.JObjectsToJsonDocuments(multiLoadResult.Results).ToArray();
-            } while (
-                AllowNonAuthoritiveInformation == false &&
-                results.Any(x => x.NonAuthoritiveInformation) &&
-                sp.Elapsed < NonAuthoritiveInformationTimeout
-                );
-
-            foreach (var include in includeResults)
-            {
-                TrackEntity<object>(include);
-            }
-
-            return results
-                .Select(TrackEntity<T>)
-                .ToArray();
-        }
-
-        /// <summary>
-        /// Queries the specified index using Linq.
-        /// </summary>
-        /// <typeparam name="T">The result of the query</typeparam>
-        /// <param name="indexName">Name of the index.</param>
-        /// <returns></returns>
-        public IRavenQueryable<T> Query<T>(string indexName)
-        {
-            var ravenQueryStatistics = new RavenQueryStatistics();
-            return new RavenQueryInspector<T>(new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics),ravenQueryStatistics);
-        }
-
-        /// <summary>
-        /// Queries the index specified by <typeparamref name="TIndexCreator"/> using Linq.
-        /// </summary>
-        /// <typeparam name="T">The result of the query</typeparam>
-        /// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
-        /// <returns></returns>
-        public IRavenQueryable<T> Query<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
-        {
-            var indexCreator = new TIndexCreator();
-            return Query<T>(indexCreator.IndexName);
-        }
-
-        /// <summary>
-        /// Refreshes the specified entity from Raven server.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="entity">The entity.</param>
-        public void Refresh<T>(T entity)
-        {
-            DocumentMetadata value;
-            if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
-                throw new InvalidOperationException("Cannot refresh a trasient instance");
-            IncrementRequestCount();
-            var jsonDocument = DatabaseCommands.Get(value.Key);
-            if (jsonDocument == null)
-                throw new InvalidOperationException("Document '" + value.Key + "' no longer exists and was probably deleted");
-
-            value.Metadata = jsonDocument.Metadata;
-            value.OriginalMetadata = new JObject(jsonDocument.Metadata);
-            value.ETag = jsonDocument.Etag;
-            value.OriginalValue = jsonDocument.DataAsJson;
-            var newEntity = ConvertToEntity<T>(value.Key, jsonDocument.DataAsJson, jsonDocument.Metadata);
-            foreach (PropertyDescriptor property in TypeDescriptor.GetProperties(entity))
-            {
-                property.SetValue(entity, property.GetValue(newEntity));
-            }
-        }
-
-        /// <summary>
-        /// Get the json document by key from the store
-        /// </summary>
-        protected override JsonDocument GetJsonDocument(string documentKey)
-        {
-             var jsonDocument = DatabaseCommands.Get(documentKey);
-            if (jsonDocument == null)
-                throw new InvalidOperationException("Document '" + documentKey + "' no longer exists and was probably deleted");
-            return jsonDocument;
-        }
-
-        /// <summary>
-        /// Begin a load while including the specified path
-        /// </summary>
-        /// <param name="path">The path.</param>
-        /// <returns></returns>
-        public ILoaderWithInclude<object> Include(string path)
-        {
-            return new MultiLoaderWithInclude<object>(this).Include(path);
-        }
-
-        /// <summary>
-        /// Begin a load while including the specified path
-        /// </summary>
-        /// <param name="path">The path.</param>
-        /// <returns></returns>
-        public ILoaderWithInclude<T> Include<T>(Expression<Func<T, object>> path)
-        {
-            return new MultiLoaderWithInclude<T>(this).Include(path);
-        }
-
-        /// <summary>
-        /// Gets the document URL for the specified entity.
-        /// </summary>
-        /// <param name="entity">The entity.</param>
-        /// <returns></returns>
-        public string GetDocumentUrl(object entity)
-        {
-            if (string.IsNullOrEmpty(documentStore.Url))
-                throw new InvalidOperationException("Could not provide document url for embedded instance");
-
-            DocumentMetadata value;
-            string baseUrl = documentStore.Url.EndsWith("/") ? documentStore.Url + "docs/" : documentStore.Url + "/docs/";
-            if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
-            {
-                return baseUrl + GetOrGenerateDocumentKey(entity);
-            }
-
-            return baseUrl + value.Key;
-        }
-
-        /// <summary>
-        /// Saves all the changes to the Raven server.
-        /// </summary>
-        public void SaveChanges()
-        {
-            var data = PrepareForSaveChanges();
-            if (data.Commands.Count == 0)
-                return; // nothing to do here
-            IncrementRequestCount();
-            Trace.WriteLine(string.Format("Saving {0} changes to {1}", data.Commands.Count, StoreIdentifier));
-            UpdateBatchResults(DatabaseCommands.Batch(data.Commands.ToArray()), data.Entities);
-        }
+			} while (
+				documentFound.NonAuthoritiveInformation &&
+				AllowNonAuthoritiveInformation == false &&
+#if !SILVERLIGHT
+				sp.Elapsed < NonAuthoritiveInformationTimeout
+#else
+				(DateTime.Now - startTime) < NonAuthoritiveInformationTimeout
+#endif
+				);
 
 
-        /// <summary>
-        /// Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.
-        /// </summary>
-        /// <typeparam name="T">The result of the query</typeparam>
-        /// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
-        /// <returns></returns>
-        public IDocumentQuery<T> LuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
-        {
-            var index = new TIndexCreator();
-            return LuceneQuery<T>(index.IndexName);
-        }
+			return TrackEntity<T>(documentFound);
+		}
 
-        /// <summary>
-        /// Query the specified index using Lucene syntax
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="indexName">Name of the index.</param>
-        /// <returns></returns>
-        public IDocumentQuery<T> LuceneQuery<T>(string indexName)
-        {
-            return new DocumentQuery<T>(this, DatabaseCommands, indexName, null);
-        }
+		/// <summary>
+		/// Loads the specified entities with the specified ids.
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="ids">The ids.</param>
+		/// <returns></returns>
+		public T[] Load<T>(params string[] ids)
+		{
+			return LoadInternal<T>(ids, null);
+		}
 
-        /// <summary>
-        /// Commits the specified tx id.
-        /// </summary>
-        /// <param name="txId">The tx id.</param>
-        public override void Commit(Guid txId)
-        {
-            IncrementRequestCount();
-            DatabaseCommands.Commit(txId);
-            ClearEnlistment();
-        }
+		/// <summary>
+		/// Loads the specified entities with the specified ids.
+		/// </summary>
+		/// <param name="ids">The ids.</param>
+		public T[] Load<T>(IEnumerable<string> ids)
+		{
+			return LoadInternal<T>(ids.ToArray(), null);
+		}
 
-        /// <summary>
-        /// Rollbacks the specified tx id.
-        /// </summary>
-        /// <param name="txId">The tx id.</param>
-        public override void Rollback(Guid txId)
-        {
-            IncrementRequestCount();
-            DatabaseCommands.Rollback(txId);
-            ClearEnlistment();
-        }
+		internal T[] LoadInternal<T>(string[] ids, string[] includes)
+		{
+			if(ids.Length == 0)
+				return new T[0];
 
-        /// <summary>
-        /// Promotes the transaction.
-        /// </summary>
-        /// <param name="fromTxId">From tx id.</param>
-        /// <returns></returns>
-        public override byte[] PromoteTransaction(Guid fromTxId)
-        {
-            IncrementRequestCount();
-            return DatabaseCommands.PromoteTransaction(fromTxId);
-        }
+			IncrementRequestCount();
+			Debug.WriteLine(string.Format("Bulk loading ids [{0}] from {1}", string.Join(", ", ids), StoreIdentifier));
+			MultiLoadResult multiLoadResult;
+			JsonDocument[] includeResults;
+			JsonDocument[] results;
+#if !SILVERLIGHT
+			var sp = Stopwatch.StartNew();
+#else
+			var startTime = DateTime.Now;
+#endif
+			do
+			{
 
-        /// <summary>
-        /// Stores the recovery information for the specified transaction
-        /// </summary>
-        /// <param name="resourceManagerId"></param>
-        /// <param name="txId">The tx id.</param>
-        /// <param name="recoveryInformation">The recovery information.</param>
-        public void StoreRecoveryInformation(Guid resourceManagerId, Guid txId, byte[] recoveryInformation)
-        {
-            IncrementRequestCount();
-            DatabaseCommands.StoreRecoveryInformation(resourceManagerId, txId, recoveryInformation);
-        }
+				multiLoadResult = DatabaseCommands.Get(ids, includes);
+				includeResults = SerializationHelper.JObjectsToJsonDocuments(multiLoadResult.Includes).ToArray();
+				results = SerializationHelper.JObjectsToJsonDocuments(multiLoadResult.Results).ToArray();
+			} while (
+				AllowNonAuthoritiveInformation == false &&
+				results.Any(x => x.NonAuthoritiveInformation) &&
+#if !SILVERLIGHT
+				sp.Elapsed < NonAuthoritiveInformationTimeout
+#else 
+				(DateTime.Now - startTime) < NonAuthoritiveInformationTimeout
+#endif
+				);
 
-        /// <summary>
-        /// Dynamically queries RavenDB using LINQ
-        /// </summary>
-        /// <typeparam name="T">The result of the query</typeparam>
-        public IRavenQueryable<T> Query<T>()
-        {
-            string indexName = "dynamic";
-            if (typeof(T) != typeof(object))
-            {
-                indexName += "/" + Conventions.GetTypeTagName(typeof(T));
-            }
-            var ravenQueryStatistics = new RavenQueryStatistics();
-            return new RavenQueryInspector<T>(new DynamicRavenQueryProvider<T>(this, indexName, ravenQueryStatistics), ravenQueryStatistics);
-        }
+			foreach (var include in includeResults)
+			{
+				TrackEntity<object>(include);
+			}
 
-        /// <summary>
-        /// Dynamically query RavenDB using Lucene syntax
-        /// </summary>
-        public IDocumentQuery<T> LuceneQuery<T>()
-        {
-            string indexName = "dynamic";
-            if (typeof(T) != typeof(object))
-            {
-                indexName += "/" + Conventions.GetTypeTagName(typeof(T));
-            }
-            return LuceneQuery<T>(indexName);
-        }
+			return results
+				.Select(TrackEntity<T>)
+				.ToArray();
+		}
 
-        /// <summary>
-        /// Metadata held about an entity by the session
-        /// </summary>
-        public class DocumentMetadata
-        {
-            /// <summary>
-            /// Gets or sets the original value.
-            /// </summary>
-            /// <value>The original value.</value>
-            public JObject OriginalValue { get; set; }
-            /// <summary>
-            /// Gets or sets the metadata.
-            /// </summary>
-            /// <value>The metadata.</value>
-            public JObject Metadata { get; set; }
-            /// <summary>
-            /// Gets or sets the ETag.
-            /// </summary>
-            /// <value>The ETag.</value>
-            public Guid? ETag { get; set; }
-            /// <summary>
-            /// Gets or sets the key.
-            /// </summary>
-            /// <value>The key.</value>
-            public string Key { get; set; }
-            /// <summary>
-            /// Gets or sets the original metadata.
-            /// </summary>
-            /// <value>The original metadata.</value>
-            public JObject OriginalMetadata { get; set; }
-        }
+		/// <summary>
+		/// Queries the specified index using Linq.
+		/// </summary>
+		/// <typeparam name="T">The result of the query</typeparam>
+		/// <param name="indexName">Name of the index.</param>
+		/// <returns></returns>
+		public IRavenQueryable<T> Query<T>(string indexName)
+		{
+			var ravenQueryStatistics = new RavenQueryStatistics();
+			return new RavenQueryInspector<T>(new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, DatabaseCommands
+#if !NET_3_5
+				, AsyncDatabaseCommands
+#endif
+				),ravenQueryStatistics, indexName, null,  DatabaseCommands
+#if !NET_3_5
+				, AsyncDatabaseCommands
+#endif
+					);
+		}
 
-        /// <summary>
-        /// Data for a batch command to the server
-        /// </summary>
-        public class SaveChangesData
-        {
-            /// <summary>
-            /// Gets or sets the commands.
-            /// </summary>
-            /// <value>The commands.</value>
-            public IList<ICommandData> Commands { get; set; }
-            /// <summary>
-            /// Gets or sets the entities.
-            /// </summary>
-            /// <value>The entities.</value>
-            public IList<object> Entities { get; set; }
-        }
-    }
+		/// <summary>
+		/// Queries the index specified by <typeparamref name="TIndexCreator"/> using Linq.
+		/// </summary>
+		/// <typeparam name="T">The result of the query</typeparam>
+		/// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
+		/// <returns></returns>
+		public IRavenQueryable<T> Query<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
+		{
+			var indexCreator = new TIndexCreator();
+			return Query<T>(indexCreator.IndexName);
+		}
+
+		/// <summary>
+		/// Refreshes the specified entity from Raven server.
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="entity">The entity.</param>
+		public void Refresh<T>(T entity)
+		{
+			DocumentMetadata value;
+			if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
+				throw new InvalidOperationException("Cannot refresh a trasient instance");
+			IncrementRequestCount();
+			var jsonDocument = DatabaseCommands.Get(value.Key);
+			if (jsonDocument == null)
+				throw new InvalidOperationException("Document '" + value.Key + "' no longer exists and was probably deleted");
+
+			value.Metadata = jsonDocument.Metadata;
+			value.OriginalMetadata = new JObject(jsonDocument.Metadata);
+			value.ETag = jsonDocument.Etag;
+			value.OriginalValue = jsonDocument.DataAsJson;
+			var newEntity = ConvertToEntity<T>(value.Key, jsonDocument.DataAsJson, jsonDocument.Metadata);
+			foreach (PropertyInfo property in entity.GetType().GetProperties())
+			{
+				if (!property.CanWrite || !property.CanRead || property.GetIndexParameters().Length != 0) 
+					continue;
+				property.SetValue(entity, property.GetValue(newEntity, null), null);
+			}
+		}
+
+		/// <summary>
+		/// Get the json document by key from the store
+		/// </summary>
+		protected override JsonDocument GetJsonDocument(string documentKey)
+		{
+			 var jsonDocument = DatabaseCommands.Get(documentKey);
+			if (jsonDocument == null)
+				throw new InvalidOperationException("Document '" + documentKey + "' no longer exists and was probably deleted");
+			return jsonDocument;
+		}
+
+		/// <summary>
+		/// Begin a load while including the specified path
+		/// </summary>
+		/// <param name="path">The path.</param>
+		/// <returns></returns>
+		public ILoaderWithInclude<object> Include(string path)
+		{
+			return new MultiLoaderWithInclude<object>(this).Include(path);
+		}
+
+		/// <summary>
+		/// Begin a load while including the specified path
+		/// </summary>
+		/// <param name="path">The path.</param>
+		/// <returns></returns>
+		public ILoaderWithInclude<T> Include<T>(Expression<Func<T, object>> path)
+		{
+			return new MultiLoaderWithInclude<T>(this).Include(path);
+		}
+
+		/// <summary>
+		/// Gets the document URL for the specified entity.
+		/// </summary>
+		/// <param name="entity">The entity.</param>
+		/// <returns></returns>
+		public string GetDocumentUrl(object entity)
+		{
+			if (string.IsNullOrEmpty(documentStore.Url))
+				throw new InvalidOperationException("Could not provide document url for embedded instance");
+
+			DocumentMetadata value;
+			string baseUrl = documentStore.Url.EndsWith("/") ? documentStore.Url + "docs/" : documentStore.Url + "/docs/";
+			if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
+			{
+				return baseUrl + GetOrGenerateDocumentKey(entity);
+			}
+
+			return baseUrl + value.Key;
+		}
+
+		/// <summary>
+		/// Saves all the changes to the Raven server.
+		/// </summary>
+		public void SaveChanges()
+		{
+			var data = PrepareForSaveChanges();
+			if (data.Commands.Count == 0)
+				return; // nothing to do here
+			IncrementRequestCount();
+			Debug.WriteLine(string.Format("Saving {0} changes to {1}", data.Commands.Count, StoreIdentifier));
+			UpdateBatchResults(DatabaseCommands.Batch(data.Commands), data.Entities);
+		}
+
+
+		/// <summary>
+		/// Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.
+		/// </summary>
+		/// <typeparam name="T">The result of the query</typeparam>
+		/// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
+		/// <returns></returns>
+		public IDocumentQuery<T> LuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
+		{
+			var index = new TIndexCreator();
+			return LuceneQuery<T>(index.IndexName);
+		}
+
+		/// <summary>
+		/// Query the specified index using Lucene syntax
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="indexName">Name of the index.</param>
+		/// <returns></returns>
+		public IDocumentQuery<T> LuceneQuery<T>(string indexName)
+		{
+#if !NET_3_5
+			return new DocumentQuery<T>(this, DatabaseCommands, null, indexName, null, queryListeners);
+#else
+			return new DocumentQuery<T>(this, DatabaseCommands, indexName, null, queryListeners);
+#endif
+		}
+
+		/// <summary>
+		/// Commits the specified tx id.
+		/// </summary>
+		/// <param name="txId">The tx id.</param>
+		public override void Commit(Guid txId)
+		{
+			IncrementRequestCount();
+			DatabaseCommands.Commit(txId);
+			ClearEnlistment();
+		}
+
+		/// <summary>
+		/// Rollbacks the specified tx id.
+		/// </summary>
+		/// <param name="txId">The tx id.</param>
+		public override void Rollback(Guid txId)
+		{
+			IncrementRequestCount();
+			DatabaseCommands.Rollback(txId);
+			ClearEnlistment();
+		}
+
+		/// <summary>
+		/// Promotes the transaction.
+		/// </summary>
+		/// <param name="fromTxId">From tx id.</param>
+		/// <returns></returns>
+		public override byte[] PromoteTransaction(Guid fromTxId)
+		{
+			IncrementRequestCount();
+			return DatabaseCommands.PromoteTransaction(fromTxId);
+		}
+
+		/// <summary>
+		/// Stores the recovery information for the specified transaction
+		/// </summary>
+		/// <param name="resourceManagerId"></param>
+		/// <param name="txId">The tx id.</param>
+		/// <param name="recoveryInformation">The recovery information.</param>
+		public void StoreRecoveryInformation(Guid resourceManagerId, Guid txId, byte[] recoveryInformation)
+		{
+			IncrementRequestCount();
+			DatabaseCommands.StoreRecoveryInformation(resourceManagerId, txId, recoveryInformation);
+		}
+
+		/// <summary>
+		/// Dynamically queries RavenDB using LINQ
+		/// </summary>
+		/// <typeparam name="T">The result of the query</typeparam>
+		public IRavenQueryable<T> Query<T>()
+		{
+			string indexName = "dynamic";
+			if (typeof(T) != typeof(object))
+			{
+				indexName += "/" + Conventions.GetTypeTagName(typeof(T));
+			}
+			var ravenQueryStatistics = new RavenQueryStatistics();
+			return new RavenQueryInspector<T>(
+				new DynamicRavenQueryProvider<T>(this, indexName, ravenQueryStatistics, Advanced.DatabaseCommands
+#if !NET_3_5
+					, Advanced.AsyncDatabaseCommands
+#endif
+				), 
+				ravenQueryStatistics,
+				indexName,
+				null,
+				Advanced.DatabaseCommands
+#if !NET_3_5
+				, Advanced.AsyncDatabaseCommands
+#endif
+			);
+		}
+
+		/// <summary>
+		/// Dynamically query RavenDB using Lucene syntax
+		/// </summary>
+		public IDocumentQuery<T> LuceneQuery<T>()
+		{
+			string indexName = "dynamic";
+			if (typeof(T) != typeof(object))
+			{
+				indexName += "/" + Conventions.GetTypeTagName(typeof(T));
+			}
+			return LuceneQuery<T>(indexName);
+		}
+
+		/// <summary>
+		/// Create a new query for <typeparam name="T"/>
+		/// </summary>
+		IDocumentQuery<T> IDocumentQueryGenerator.Query<T>(string indexName)
+		{
+			return Advanced.LuceneQuery<T>(indexName);
+		}
+	}
+#endif
 }

@@ -1,9 +1,15 @@
+//-----------------------------------------------------------------------
+// <copyright file="Staleness.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Database.Exceptions;
 using Raven.Database.Json;
 using Raven.Database.Storage;
+using Raven.Database.Extensions;
 
 namespace Raven.Storage.Esent.StorageActions
 {
@@ -47,7 +53,7 @@ namespace Raven.Storage.Esent.StorageActions
             return cutOff.Value >= addedAt;
         }
 
-        public DateTime IndexLastUpdatedAt(string name)
+        public Tuple<DateTime, Guid> IndexLastUpdatedAt(string name)
         {
             Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
             Api.MakeKey(session, IndexesStats, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -55,9 +61,23 @@ namespace Raven.Storage.Esent.StorageActions
             {
                 throw new IndexDoesNotExistsException("Could not find index named: " + name);
             }
-            return Api.RetrieveColumnAsDateTime(session, IndexesStats,
-                                                tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"])
+            var lastIndexedTimestamp = Api.RetrieveColumnAsDateTime(session, IndexesStats,
+                                                                  tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"])
                 .Value;
+            var lastIndexedEtag = Api.RetrieveColumn(session, IndexesStats,
+                                                                      tableColumnsCache.IndexesStatsColumns["last_indexed_etag"]).TransfromToGuidWithProperSorting();
+            return Tuple.Create(lastIndexedTimestamp, lastIndexedEtag);
+        }
+
+        public Guid GetMostRecentDocumentEtag()
+        {
+            Api.JetSetCurrentIndex(session, Documents, "by_etag");
+            if (!Api.TryMoveLast(session, Documents))
+            {
+                return Guid.Empty;
+            }
+            var lastEtag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]);
+            return new Guid(lastEtag);
         }
 
         private bool IsStaleByEtag(string entityName)

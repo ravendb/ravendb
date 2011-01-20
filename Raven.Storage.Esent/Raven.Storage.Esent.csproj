@@ -49,6 +49,7 @@
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Runtime.Caching" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -60,6 +61,7 @@
     <Compile Include="Backup\EsentBackup.cs" />
     <Compile Include="Backup\RestoreOperation.cs" />
     <Compile Include="EsentExtension.cs" />
+    <Compile Include="IDocumentCacher.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RemoteEsentStorage.cs" />
     <Compile Include="RemoteEsentStorageState.cs" />

@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="CanHandleAuthQuestions.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System.Web;
 using Raven.Bundles.Authorization;
 using Raven.Bundles.Authorization.Model;

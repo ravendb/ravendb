@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="ConcurrencyException.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using System.Runtime.Serialization;
 
@@ -6,7 +11,9 @@ namespace Raven.Http.Exceptions
 	/// <summary>
 	/// This exception is raised when a concurrency conflict is encountered
 	/// </summary>
+#if SILVERILGHT
 	[Serializable]
+#endif
 	public class ConcurrencyException : Exception
 	{
 		/// <summary>
@@ -33,6 +40,7 @@ namespace Raven.Http.Exceptions
 		{
 		}
 
+#if SILERLIGHT
 		/// <summary>
 		/// Initializes a new instance of the <see cref="ConcurrencyException"/> class.
 		/// </summary>
@@ -45,6 +53,7 @@ namespace Raven.Http.Exceptions
 			StreamingContext context) : base(info, context)
 		{
 		}
+#endif
 
 		/// <summary>
 		/// Gets or sets the expected E tag.

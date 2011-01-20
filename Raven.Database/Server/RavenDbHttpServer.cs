@@ -1,4 +1,10 @@
+//-----------------------------------------------------------------------
+// <copyright file="RavenDbHttpServer.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
+using System.IO;
 using System.Text.RegularExpressions;
 using Raven.Database.Config;
 using Raven.Database.Data;
@@ -23,6 +29,11 @@ namespace Raven.Database.Server
         public RavenDbHttpServer(IRaveHttpnConfiguration configuration, IResourceStore database)
             : base(configuration, database)
         {
+        }
+
+        protected override void OnDispatchingRequest(IHttpContext ctx)
+        {
+        	ctx.Response.AddHeader("Raven-Server-Build", DocumentDatabase.BuildVersion);
         }
 
         protected override bool TryHandleException(IHttpContext ctx, Exception e)
@@ -77,11 +88,22 @@ namespace Raven.Database.Server
                 {
                     Settings = DefaultConfiguration.Settings,
                 };
-                config.Settings["Raven/VirtualDir"] = config.Settings["Raven/VirtualDir"] + "/" + tenantId;
-                foreach (var setting in document.Settings)
-                {
-                    config.Settings[setting.Key] = setting.Value;
-                }
+				foreach (var setting in document.Settings)
+				{
+					config.Settings[setting.Key] = setting.Value;
+				}
+            	var dataDir = config.Settings["Raven/DataDir"];
+				if(dataDir == null)
+					throw new InvalidOperationException("Could not find Raven/DataDir");
+				if(dataDir.StartsWith("~/") || dataDir.StartsWith(@"~\"))
+				{
+					var baseDataPath = Path.GetDirectoryName(DefaultDatabase.Configuration.DataDirectory);
+					if(baseDataPath == null)
+						throw new InvalidOperationException("Could not find root data path");
+					config.Settings["Raven/DataDir"] = Path.Combine(baseDataPath, dataDir.Substring(2));
+				}
+            	config.Settings["Raven/VirtualDir"] = config.Settings["Raven/VirtualDir"] + "/" + tenantId;
+             
                 config.Initialize();
                 var documentDatabase = new DocumentDatabase(config);
                 documentDatabase.SpinBackgroundWorkers();

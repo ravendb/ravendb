@@ -1,16 +1,22 @@
+//-----------------------------------------------------------------------
+// <copyright file="DocumentConvention.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Reflection;
 using System.Runtime.Serialization.Formatters;
 using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
+using Raven.Abstractions.Json;
 using Raven.Client.Converters;
 using Raven.Client.Util;
 using System.Linq;
 using Raven.Database.Json;
 using Raven.Http.Json;
+
 
 namespace Raven.Client.Document
 {
@@ -25,12 +31,13 @@ namespace Raven.Client.Document
 		/// </summary>
 		public DocumentConvention()
 		{
-            IdentityTypeConvertors = new List<ITypeConverter>
-            {
-                new Converters.GuidConverter(),
-                new Converters.Int32Converter(),
-                new Converters.Int64Converter(),
-            };
+			IdentityTypeConvertors = new List<ITypeConverter>
+			{
+				new Converters.GuidConverter(),
+				new Converters.Int32Converter(),
+				new Converters.Int64Converter(),
+			};
+			ShouldCacheRequest = url => true;
 			FindIdentityProperty = q => q.Name == "Id";
 			FindTypeTagName = t => DefaultTypeTagName(t);
 			IdentityPartsSeparator = "/";
@@ -38,7 +45,7 @@ namespace Raven.Client.Document
 			{
 				DefaultMembersSearchFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance
 			};
-		    MaxNumberOfRequestsPerSession = 30;
+			MaxNumberOfRequestsPerSession = 30;
 			CustomizeJsonSerializer = serializer => { };
 		}
 
@@ -47,11 +54,11 @@ namespace Raven.Client.Document
 		/// </summary>
 		public Action<JsonSerializer> CustomizeJsonSerializer { get; set; }
 
-        ///<summary>
-        /// A list of type converters that can be used to translate the document key (string)
-        /// to whatever type it is that is used on the entity, if the type isn't already a string
-        ///</summary>
-        public List<ITypeConverter> IdentityTypeConvertors { get; set; }
+		///<summary>
+		/// A list of type converters that can be used to translate the document key (string)
+		/// to whatever type it is that is used on the entity, if the type isn't already a string
+		///</summary>
+		public List<ITypeConverter> IdentityTypeConvertors { get; set; }
 
 		/// <summary>
 		/// Gets or sets the identity parts separator used by the hilo generators
@@ -73,7 +80,7 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public static string GenerateDocumentKeyUsingIdentity(DocumentConvention conventions, object entity)
 		{
-			return conventions.FindTypeTagName(entity.GetType()).ToLowerInvariant() + "/";
+			return conventions.FindTypeTagName(entity.GetType()).ToLower() + "/";
 		}
 
 		/// <summary>
@@ -83,8 +90,8 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public static string DefaultTypeTagName(Type t)
 		{
-            if (t.Name.Contains("<>"))
-                return null;
+			if (t.Name.Contains("<>"))
+				return null;
 			if(t.IsGenericType)
 			{
 				var name = t.GetGenericTypeDefinition().Name;
@@ -137,13 +144,19 @@ namespace Raven.Client.Document
 		/// Gets or sets the json contract resolver.
 		/// </summary>
 		/// <value>The json contract resolver.</value>
-        public IContractResolver JsonContractResolver { get; set; }
+		public IContractResolver JsonContractResolver { get; set; }
 
 		/// <summary>
 		/// Gets or sets the function to find the type tag.
 		/// </summary>
 		/// <value>The name of the find type tag.</value>
 		public Func<Type, string> FindTypeTagName { get; set; }
+
+		/// <summary>
+		/// Whatever or not RavenDB should cache the request to the specified url.
+		/// </summary>
+		public Func<string, bool> ShouldCacheRequest { get; set; }
+
 		/// <summary>
 		/// Gets or sets the function to find the identity property.
 		/// </summary>
@@ -164,6 +177,7 @@ namespace Raven.Client.Document
 		{
 			var jsonSerializer = new JsonSerializer
 			{
+				ObjectCreationHandling = ObjectCreationHandling.Replace,
 				ContractResolver = JsonContractResolver,
 				TypeNameHandling = TypeNameHandling.Auto,
 				TypeNameAssemblyFormat = FormatterAssemblyStyle.Simple,
@@ -172,7 +186,13 @@ namespace Raven.Client.Document
 					{
 						new JsonEnumConverter(),
 						new JsonLuceneDateTimeConverter(),
-#if !NET_3_5
+                        new JsonValueTypeConverter<int>(int.TryParse),
+                        new JsonValueTypeConverter<long>(long.TryParse),
+                        new JsonValueTypeConverter<decimal>(decimal.TryParse),
+                        new JsonValueTypeConverter<double>(double.TryParse),
+                        new JsonValueTypeConverter<float>(float.TryParse),
+                        new JsonValueTypeConverter<short>(short.TryParse),
+#if !NET_3_5 && !SILVERLIGHT
 						new JsonDynamicConverter()
 #endif
 					}

@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="ForwardToRavenRespondersFactory.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System.Web;
 using Raven.Database;
 using Raven.Database.Config;

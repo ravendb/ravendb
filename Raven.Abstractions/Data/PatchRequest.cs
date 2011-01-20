@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="PatchRequest.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using Newtonsoft.Json.Linq;
 using System.Linq;
@@ -41,8 +46,13 @@ namespace Raven.Database.Json
 		/// </summary>
 		/// <value>The position.</value>
 		public int? Position { get; set; }
+        /// <summary>
+        /// Get or sets AllPositions. Set this property to true if you want to modify all items in an collection.
+        /// </summary>
+        /// <value>AllPositions true/false</value>
+        public bool? AllPositions { get; set; }
 
-		/// <summary>
+        /// <summary>
 		/// Translate this instance to json
 		/// </summary>
 		public JObject ToJson()
@@ -52,7 +62,8 @@ namespace Raven.Database.Json
 				new JProperty("Value", Value),
 				new JProperty("Name", new JValue(Name)),
 				new JProperty("Position", Position == null ? null : new JValue(Position.Value)),
-				new JProperty("Nested", Nested == null ? null : new JArray(Nested.Select(x => x.ToJson())))
+				new JProperty("Nested", Nested == null ? null : new JArray(Nested.Select(x => x.ToJson()))),
+                new JProperty("AllPositions", AllPositions == null ? null : new JValue(AllPositions.Value))
 				);
 			if (PrevVal != null)
 				jObject.Add(new JProperty("PrevVal", PrevVal));
@@ -76,6 +87,7 @@ namespace Raven.Database.Json
 				Name = patchRequestJson.Value<string>("Name"),
 				Nested = nested,
 				Position = patchRequestJson.Value<int?>("Position"),
+                AllPositions = patchRequestJson.Value<bool?>("AllPositions"),
 				PrevVal = patchRequestJson.Property("PrevVal") == null ? null : patchRequestJson.Property("PrevVal").Value,
 				Value = patchRequestJson.Property("Value") == null ? null : patchRequestJson.Property("Value").Value,
 			};

@@ -1,11 +1,18 @@
+//-----------------------------------------------------------------------
+// <copyright file="TransactionalStorage.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.Caching;
 using System.Runtime.ConstrainedExecution;
 using System.Threading;
 using Microsoft.Isam.Esent.Interop;
+using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Exceptions;
@@ -20,11 +27,11 @@ using Raven.Storage.Esent.StorageActions;
 
 namespace Raven.Storage.Esent
 {
-	public class TransactionalStorage : CriticalFinalizerObject, ITransactionalStorage
+	public class TransactionalStorage : CriticalFinalizerObject, ITransactionalStorage, IDocumentCacher
 	{
 		private readonly ThreadLocal<StorageActionsAccessor> current = new ThreadLocal<StorageActionsAccessor>(() => null);
 		private readonly string database;
-        private readonly InMemoryRavenConfiguration configuration;
+		private readonly InMemoryRavenConfiguration configuration;
 		private readonly Action onCommit;
 		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
 		private readonly string path;
@@ -32,15 +39,30 @@ namespace Raven.Storage.Esent
 
 		private JET_INSTANCE instance;
 		private readonly TableColumnsCache tableColumnsCache = new TableColumnsCache();
-	    private IUuidGenerator generator;
+		private IUuidGenerator generator;
 
-	    [ImportMany]
+		private readonly ObjectCache cachedSerializedDocuments = new MemoryCache(typeof(TransactionalStorage).FullName + ".Cache");
+
+		public Tuple<JObject, JObject> GetCachedDocument(string key, Guid etag)
+		{
+			var cachedDocument = (Tuple<JObject, JObject>)cachedSerializedDocuments.Get("Doc/" + key + "/" + etag);
+			if (cachedDocument != null)
+				return Tuple.Create(new JObject(cachedDocument.Item1), new JObject(cachedDocument.Item2));
+			return null;
+		}
+
+		public void SetCachedDocument(string key, Guid etag, Tuple<JObject, JObject> doc)
+		{
+			cachedSerializedDocuments["Doc/" + key + "/" + etag] = doc;
+		}
+
+		[ImportMany]
 		public IEnumerable<ISchemaUpdate> Updaters { get; set; }
 
 		[ImportMany]
 		public IEnumerable<AbstractDocumentCodec> DocumentCodecs { get; set; }
 
-        public TransactionalStorage(InMemoryRavenConfiguration configuration, Action onCommit)
+		public TransactionalStorage(InMemoryRavenConfiguration configuration, Action onCommit)
 		{
 			database = configuration.DataDirectory;
 			this.configuration = configuration;
@@ -102,40 +124,45 @@ namespace Raven.Storage.Esent
 			new RestoreOperation(backupLocation, databaseLocation).Execute();
 		}
 
-	    public Type TypeForRunningQueriesInRemoteAppDomain
-	    {
-	        get { return typeof(RemoteEsentStorage); }
-	    }
+		public Type TypeForRunningQueriesInRemoteAppDomain
+		{
+			get { return typeof(RemoteEsentStorage); }
+		}
 
-	    public object StateForRunningQueriesInRemoteAppDomain
-	    {
-            get
-            {
-                return new RemoteEsentStorageState
-                {
-                    Database = database,
-                    Instance = instance
-                };
-            }
-	    }
+		public object StateForRunningQueriesInRemoteAppDomain
+		{
+			get
+			{
+				return new RemoteEsentStorageState
+				{
+					Database = database,
+					Instance = instance
+				};
+			}
+		}
 
-	    public bool HandleException(Exception exception)
-	    {
-	        var e = exception as EsentErrorException;
-            if (e == null)
-                return false;
-            // we need to protect ourselve from rollbacks happening in an async manner
-            // after the database was already shut down.
-	        return e.Error == JET_err.InvalidInstance;
-	    }
+		public string FriendlyName
+		{
+			get { return "Esent"; }
+		}
 
-	    #endregion
+		public bool HandleException(Exception exception)
+		{
+			var e = exception as EsentErrorException;
+			if (e == null)
+				return false;
+			// we need to protect ourselve from rollbacks happening in an async manner
+			// after the database was already shut down.
+			return e.Error == JET_err.InvalidInstance;
+		}
 
-        public bool Initialize(IUuidGenerator uuidGenerator)
+		#endregion
+
+		public bool Initialize(IUuidGenerator uuidGenerator)
 		{
 			try
 			{
-			    generator = uuidGenerator;
+				generator = uuidGenerator;
 				new TransactionalStorageConfigurator(configuration).ConfigureInstance(instance, path);
 
 				if (configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction)
@@ -198,7 +225,7 @@ namespace Raven.Storage.Esent
 							var updater = Updaters.FirstOrDefault(update => update.FromSchemaVersion == schemaVersion);
 							if (updater == null)
 								throw new InvalidOperationException(string.Format("The version on disk ({0}) is different that the version supported by this library: {1}{2}You need to migrate the disk version to the library version, alternatively, if the data isn't important, you can delete the file and it will be re-created (with no data) with the library version.", schemaVersion, SchemaCreator.SchemaVersion, Environment.NewLine));
-                            updater.Init(generator);
+							updater.Init(generator);
 							updater.Update(session, dbid);
 							schemaVersion = Api.RetrieveColumnAsString(session, details, columnids["schema_version"]);
 						} while (schemaVersion != SchemaCreator.SchemaVersion);
@@ -317,13 +344,13 @@ namespace Raven.Storage.Esent
 			}
 		}
 
-        [DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
-        private void ExecuteBatch(Action<IStorageActionsAccessor> action)
+		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
+		private void ExecuteBatch(Action<IStorageActionsAccessor> action)
 		{
 			var txMode = configuration.TransactionMode == TransactionMode.Lazy
 				? CommitTransactionGrbit.LazyFlush
 				: CommitTransactionGrbit.None;
-			using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator))
+			using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator, this))
 			{
 				current.Value = new StorageActionsAccessor(pht);
 				action(current.Value);

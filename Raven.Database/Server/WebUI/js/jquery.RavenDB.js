@@ -33,6 +33,8 @@ var indexSearchCache = null;
           "accept-language",
           "authorization",
           "cookie",
+		  "x-aspnet-version",
+		  "x-powered-by",
           "expect",
           "from",
           "host",

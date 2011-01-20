@@ -54,6 +54,7 @@
   <ItemGroup>
     <Compile Include="Authorization\AuthorizationTest.cs" />
     <Compile Include="Authorization\Bugs\Jalchr.cs" />
+    <Compile Include="Authorization\Bugs\Kwal.cs" />
     <Compile Include="Authorization\Bugs\LoadingSavedInfo.cs" />
     <Compile Include="Authorization\Bugs\WhenUsingMultiTenancy.cs" />
     <Compile Include="Authorization\CanHandleAuthQuestions.cs" />
@@ -64,6 +65,7 @@
     <Compile Include="Expiration\Expiration.cs" />
     <Compile Include="IndexReplication\ReplicateToSql.cs" />
     <Compile Include="Replication\AttachmentReplication.cs" />
+    <Compile Include="Replication\Bugs\ReplicatingDanish.cs" />
     <Compile Include="Replication\ConflictWhenReplicating.cs" />
     <Compile Include="Replication\FailureHandling.cs" />
     <Compile Include="Replication\ReplicationBase.cs" />
@@ -96,6 +98,10 @@
     <ProjectReference Include="..\..\Raven.Storage.Esent\Raven.Storage.Esent.csproj">
       <Project>{9DEE8674-D0CD-430D-BD9B-6CD95F3CAB22}</Project>
       <Name>Raven.Storage.Esent</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Raven.Storage.Managed\Raven.Storage.Managed.csproj">
+      <Project>{DA99A419-E137-40DB-9495-0C363B479D4B}</Project>
+      <Name>Raven.Storage.Managed</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Bundles.Authorization\Raven.Bundles.Authorization.csproj">
       <Project>{034FFD8F-F917-4A45-B920-9C460CD66BAF}</Project>

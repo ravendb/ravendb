@@ -1,9 +1,13 @@
-﻿using System;
+//-----------------------------------------------------------------------
+// <copyright file="RavenQueryProviderProcessor.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using Raven.Client.Document;
 using Raven.Database.Data;
 
 namespace Raven.Client.Linq
@@ -13,41 +17,40 @@ namespace Raven.Client.Linq
 	/// </summary>
 	public class RavenQueryProviderProcessor<T>
 	{
-        private readonly Action<IDocumentQueryCustomization> customizeQuery;
-        private readonly Action<QueryResult> afterQueryExecuted;
-		private readonly string indexName;
-		private readonly IDocumentSession session;
+		private readonly Action<IDocumentQueryCustomization> customizeQuery;
+		private readonly IDocumentQueryGenerator queryGenerator;
+		private readonly Action<QueryResult> afterQueryExecuted;
 		private bool chainedWhere;
 		private IDocumentQuery<T> luceneQuery;
 		private Expression<Func<T, bool>> predicate;
 		private SpecialQueryType queryType = SpecialQueryType.None;
 		private Type newExpressionType;
-        private string currentPath = string.Empty;
-        private int subClauseDepth = 0;
+		private string currentPath = string.Empty;
+		private int subClauseDepth;
+		private string indexName;
 
-        /// <summary>
-        /// Gets the current path in the case of expressions within collections
-        /// </summary>
-        public string CurrentPath { get { return currentPath; } }
+		/// <summary>
+		/// Gets the current path in the case of expressions within collections
+		/// </summary>
+		public string CurrentPath { get { return currentPath; } }
 
-	    /// <summary>
-	    /// Initializes a new instance of the <see cref="RavenQueryProviderProcessor&lt;T&gt;"/> class.
-	    /// </summary>
-	    /// <param name="session">The session.</param>
-	    /// <param name="customizeQuery">The customize query.</param>
-	    /// <param name="afterQueryExecuted">Executed after the query run, allow access to the query results</param>
-	    /// <param name="indexName">Name of the index.</param>
-	    public RavenQueryProviderProcessor(
-			IDocumentSession session,
-            Action<IDocumentQueryCustomization> customizeQuery,
-            Action<QueryResult> afterQueryExecuted,
+		/// <summary>
+		/// Initializes a new instance of the <see cref="RavenQueryProviderProcessor&lt;T&gt;"/> class.
+		/// </summary>
+		/// <param name="queryGenerator">The document query generator.</param>
+		/// <param name="customizeQuery">The customize query.</param>
+		/// <param name="afterQueryExecuted">Executed after the query run, allow access to the query results</param>
+		public RavenQueryProviderProcessor(
+			IDocumentQueryGenerator queryGenerator,
+			Action<IDocumentQueryCustomization> customizeQuery,
+			Action<QueryResult> afterQueryExecuted, 
 			string indexName)
 		{
 			FieldsToFetch = new List<string>();
 			newExpressionType = typeof (T);
-			this.session = session;
-		    this.afterQueryExecuted = afterQueryExecuted;
-		    this.indexName = indexName;
+			this.queryGenerator = queryGenerator;
+			this.indexName = indexName;
+			this.afterQueryExecuted = afterQueryExecuted;
 			this.customizeQuery = customizeQuery;
 		}
 
@@ -59,17 +62,6 @@ namespace Raven.Client.Linq
 		{
 			get { return luceneQuery; }
 		}
-
-        /// <summary>
-        /// Gets the document session this processor is associated with
-        /// </summary>
-        public IDocumentSession Session
-        {
-            get
-            {
-                return session;
-            }
-        }
 
 		/// <summary>
 		/// Gets or sets the fields to fetch.
@@ -83,112 +75,112 @@ namespace Raven.Client.Linq
 		/// <param name="expression">The expression.</param>
 		protected void VisitExpression(Expression expression)
 		{
-            if (expression is BinaryExpression)
-            {
-                VisitBinaryExpression((BinaryExpression)expression);
-            }
-            else
-            {
-                switch (expression.NodeType)
-                {
-                    case ExpressionType.MemberAccess:
-                        VisitMemberAccess((MemberExpression)expression, true);
-                        break;
-                    case ExpressionType.Not:
-                        var unaryExpressionOp = ((UnaryExpression)expression).Operand;
-                        VisitMemberAccess((MemberExpression)unaryExpressionOp, false);
-                        break;
-                    default:
-                        if (expression is MethodCallExpression)
-                        {
-                            VisitMethodCall((MethodCallExpression)expression);
-                        }
-                        else if (expression is LambdaExpression)
-                        {
-                            VisitExpression(((LambdaExpression)expression).Body);
-                        }
-                        break;
-                }
-            }
-       
+			if (expression is BinaryExpression)
+			{
+				VisitBinaryExpression((BinaryExpression)expression);
+			}
+			else
+			{
+				switch (expression.NodeType)
+				{
+					case ExpressionType.MemberAccess:
+						VisitMemberAccess((MemberExpression)expression, true);
+						break;
+					case ExpressionType.Not:
+						var unaryExpressionOp = ((UnaryExpression)expression).Operand;
+						VisitMemberAccess((MemberExpression)unaryExpressionOp, false);
+						break;
+					default:
+						if (expression is MethodCallExpression)
+						{
+							VisitMethodCall((MethodCallExpression)expression);
+						}
+						else if (expression is LambdaExpression)
+						{
+							VisitExpression(((LambdaExpression)expression).Body);
+						}
+						break;
+				}
+			}
+	   
 		}
 
-        private void VisitBinaryExpression(BinaryExpression expression)
-        {        
-            switch (expression.NodeType)
-            {
-                case ExpressionType.OrElse:
-                    VisitOrElse(expression);
-                    break;
-                case ExpressionType.AndAlso:
-                    VisitAndAlso(expression);
-                    break;
-                case ExpressionType.NotEqual:
-                    VisitNotEquals(expression);
-                    break;
-                case ExpressionType.Equal:
-                    VisitEquals(expression);
-                    break;
-                case ExpressionType.GreaterThan:
-                    VisitGreaterThan(expression);
-                    break;
-                case ExpressionType.GreaterThanOrEqual:
-                    VisitGreaterThanOrEqual(expression);
-                    break;
-                case ExpressionType.LessThan:
-                    VisitLessThan(expression);
-                    break;
-                case ExpressionType.LessThanOrEqual:
-                    VisitLessThanOrEqual(expression);
-                    break;
-            }
-    
-        }
+		private void VisitBinaryExpression(BinaryExpression expression)
+		{        
+			switch (expression.NodeType)
+			{
+				case ExpressionType.OrElse:
+					VisitOrElse(expression);
+					break;
+				case ExpressionType.AndAlso:
+					VisitAndAlso(expression);
+					break;
+				case ExpressionType.NotEqual:
+					VisitNotEquals(expression);
+					break;
+				case ExpressionType.Equal:
+					VisitEquals(expression);
+					break;
+				case ExpressionType.GreaterThan:
+					VisitGreaterThan(expression);
+					break;
+				case ExpressionType.GreaterThanOrEqual:
+					VisitGreaterThanOrEqual(expression);
+					break;
+				case ExpressionType.LessThan:
+					VisitLessThan(expression);
+					break;
+				case ExpressionType.LessThanOrEqual:
+					VisitLessThanOrEqual(expression);
+					break;
+			}
+	
+		}
 
 		private void VisitAndAlso(BinaryExpression andAlso)
 		{
-            if (subClauseDepth > 0) luceneQuery.OpenSubclause();
-            subClauseDepth++;
+			if (subClauseDepth > 0) luceneQuery.OpenSubclause();
+			subClauseDepth++;
 
 			VisitExpression(andAlso.Left);
 			luceneQuery.AndAlso();
-            VisitExpression(andAlso.Right);
+			VisitExpression(andAlso.Right);
 
-            subClauseDepth--;
-            if (subClauseDepth > 0) luceneQuery.CloseSubclause();
+			subClauseDepth--;
+			if (subClauseDepth > 0) luceneQuery.CloseSubclause();
 		}
 
 		private void VisitOrElse(BinaryExpression orElse)
 		{
-            if (subClauseDepth > 0) luceneQuery.OpenSubclause();
-            subClauseDepth++;
+			if (subClauseDepth > 0) luceneQuery.OpenSubclause();
+			subClauseDepth++;
 
 			VisitExpression(orElse.Left);
 			luceneQuery.OrElse();              
-            VisitExpression(orElse.Right);
+			VisitExpression(orElse.Right);
 
-            subClauseDepth--;
-            if (subClauseDepth > 0) luceneQuery.CloseSubclause();
+			subClauseDepth--;
+			if (subClauseDepth > 0) luceneQuery.CloseSubclause();
 		}
 
 		private void VisitEquals(BinaryExpression expression)
 		{
-            var methodCallExpression = expression.Left as MethodCallExpression;
-            // checking for VB.NET string equality
-            if (methodCallExpression != null && methodCallExpression.Method.Name == "CompareString" &&
-                expression.Right.NodeType == ExpressionType.Constant &&
-                    Equals(((ConstantExpression)expression.Right).Value, 0))
-            {
-                var expressionMemberInfo = GetMember(methodCallExpression.Arguments[0]);
-                luceneQuery.WhereEquals(
-                    expressionMemberInfo.Path,
-                    GetValueFromExpression(methodCallExpression.Arguments[1], GetMemberType(expressionMemberInfo)),
-                    true,
-                    false
-                    );
+			var methodCallExpression = expression.Left as MethodCallExpression;
+			// checking for VB.NET string equality
+			if (methodCallExpression != null && methodCallExpression.Method.Name == "CompareString" &&
+				expression.Right.NodeType == ExpressionType.Constant &&
+					Equals(((ConstantExpression)expression.Right).Value, 0))
+			{
+				var expressionMemberInfo = GetMember(methodCallExpression.Arguments[0]);
+				luceneQuery.WhereEquals(
+					expressionMemberInfo.Path,
+					GetValueFromExpression(methodCallExpression.Arguments[1], GetMemberType(expressionMemberInfo)),
+					true,
+					false
+					);
 
-                return;
-            }
+				return;
+			}
 
 			var memberInfo = GetMember(expression.Left);
 
@@ -201,76 +193,76 @@ namespace Raven.Client.Linq
 
 		private void VisitNotEquals(BinaryExpression expression)
 		{
-		    var methodCallExpression = expression.Left as MethodCallExpression;
-            // checking for VB.NET string equality
-		    if(methodCallExpression != null && methodCallExpression.Method.Name == "CompareString" && 
-                expression.Right.NodeType==ExpressionType.Constant &&
-                    Equals(((ConstantExpression) expression.Right).Value, 0))
-		    {
-		        var expressionMemberInfo = GetMember(methodCallExpression.Arguments[0]);
-		        luceneQuery.Not.WhereEquals(
-		            expressionMemberInfo.Path,
-		            GetValueFromExpression(methodCallExpression.Arguments[0], GetMemberType(expressionMemberInfo)),
-		            true,
-		            false
-		            )
-		            .AndAlso()
-		            .WhereEquals(expressionMemberInfo.Path, "*", true, true);
+			var methodCallExpression = expression.Left as MethodCallExpression;
+			// checking for VB.NET string equality
+			if(methodCallExpression != null && methodCallExpression.Method.Name == "CompareString" && 
+				expression.Right.NodeType==ExpressionType.Constant &&
+					Equals(((ConstantExpression) expression.Right).Value, 0))
+			{
+				var expressionMemberInfo = GetMember(methodCallExpression.Arguments[0]);
+				luceneQuery.Not.WhereEquals(
+					expressionMemberInfo.Path,
+					GetValueFromExpression(methodCallExpression.Arguments[0], GetMemberType(expressionMemberInfo)),
+					true,
+					false
+					)
+					.AndAlso()
+					.WhereEquals(expressionMemberInfo.Path, "*", true, true);
 
-		        return;
-		    }
+				return;
+			}
 
-		    var memberInfo = GetMember(expression.Left);
+			var memberInfo = GetMember(expression.Left);
 
-		    luceneQuery.Not.WhereEquals(
-		        memberInfo.Path,
-		        GetValueFromExpression(expression.Right, GetMemberType(memberInfo)),
-		        true,
-		        false)
-		        .AndAlso()
-		        .WhereEquals(memberInfo.Path, "*", true, true);
+			luceneQuery.Not.WhereEquals(
+				memberInfo.Path,
+				GetValueFromExpression(expression.Right, GetMemberType(memberInfo)),
+				true,
+				false)
+				.AndAlso()
+				.WhereEquals(memberInfo.Path, "*", true, true);
 		}
 
-        private static Type GetMemberType(ExpressionInfo info)
-        {
-            return info.Type;
-		}
-
-        /// <summary>
-        /// Gets member info for the specified expression and the path to that expression
-        /// </summary>
-        /// <param name="expression"></param>
-        /// <returns></returns>
-        protected virtual ExpressionInfo GetMember(Expression expression)
+		private static Type GetMemberType(ExpressionInfo info)
 		{
-            var parameterExpression = expression as ParameterExpression;
-            if(parameterExpression != null)
-            {
-                return new ExpressionInfo(CurrentPath, parameterExpression.Type);
-            }
-            
+			return info.Type;
+		}
+
+		/// <summary>
+		/// Gets member info for the specified expression and the path to that expression
+		/// </summary>
+		/// <param name="expression"></param>
+		/// <returns></returns>
+		protected virtual ExpressionInfo GetMember(Expression expression)
+		{
+			var parameterExpression = expression as ParameterExpression;
+			if(parameterExpression != null)
+			{
+				return new ExpressionInfo(CurrentPath, parameterExpression.Type);
+			}
+			
 			MemberExpression memberExpression = GetMemberExpression(expression);
 
-            //for stnadard queries, we take just the last part. But for dynamic queries, we take the whole part
-            var path = memberExpression.ToString();
-            path = path.Substring(path.LastIndexOf('.') + 1);
+			//for stnadard queries, we take just the last part. But for dynamic queries, we take the whole part
+			var path = memberExpression.ToString();
+			path = path.Substring(path.LastIndexOf('.') + 1);
 
-            return new ExpressionInfo(path, memberExpression.Member.GetMemberType());
+			return new ExpressionInfo(path, memberExpression.Member.GetMemberType());
 		}
 
-        /// <summary>
-        /// Get the member expression from the expression
-        /// </summary>
-	    protected MemberExpression GetMemberExpression(Expression expression)
-	    {
-	        var unaryExpression = expression as UnaryExpression;
-	        if(unaryExpression != null)
-	            expression = unaryExpression.Operand;
+		/// <summary>
+		/// Get the member expression from the expression
+		/// </summary>
+		protected MemberExpression GetMemberExpression(Expression expression)
+		{
+			var unaryExpression = expression as UnaryExpression;
+			if(unaryExpression != null)
+				expression = unaryExpression.Operand;
 
-	        return (MemberExpression)expression;
-	    }
+			return (MemberExpression)expression;
+		}
 
-	    private void VisitEquals(MethodCallExpression expression)
+		private void VisitEquals(MethodCallExpression expression)
 		{
 			var memberInfo = GetMember(expression.Object);
 
@@ -314,7 +306,7 @@ namespace Raven.Client.Linq
 			var value = GetValueFromExpression(expression.Right, GetMemberType(memberInfo));
 
 			luceneQuery.WhereGreaterThan(
-                GetFieldNameForRangeQuery(memberInfo, value),
+				GetFieldNameForRangeQuery(memberInfo, value),
 				value);
 		}
 
@@ -324,7 +316,7 @@ namespace Raven.Client.Linq
 			var value = GetValueFromExpression(expression.Right, GetMemberType(memberInfo));
 
 			luceneQuery.WhereGreaterThanOrEqual(
-                GetFieldNameForRangeQuery(memberInfo, value),
+				GetFieldNameForRangeQuery(memberInfo, value),
 				value);
 		}
 
@@ -334,7 +326,7 @@ namespace Raven.Client.Linq
 			var value = GetValueFromExpression(expression.Right, GetMemberType(memberInfo));
 
 			luceneQuery.WhereLessThan(
-                GetFieldNameForRangeQuery(memberInfo, value),
+				GetFieldNameForRangeQuery(memberInfo, value),
 				value);
 		}
 
@@ -344,18 +336,18 @@ namespace Raven.Client.Linq
 			var value = GetValueFromExpression(expression.Right, GetMemberType(memberInfo));
 
 			luceneQuery.WhereLessThanOrEqual(
-                GetFieldNameForRangeQuery(memberInfo, value),
+				GetFieldNameForRangeQuery(memberInfo, value),
 				value);
 		}
 
-        private void VisitAny(MethodCallExpression expression)
-        {
-            var memberInfo = GetMember(expression.Arguments[0]);
-            String oldPath = currentPath;
-            currentPath = memberInfo.Path + ",";
-            VisitExpression(expression.Arguments[1]);
-            currentPath = oldPath;
-        }
+		private void VisitAny(MethodCallExpression expression)
+		{
+			var memberInfo = GetMember(expression.Arguments[0]);
+			String oldPath = currentPath;
+			currentPath = memberInfo.Path + ",";
+			VisitExpression(expression.Arguments[1]);
+			currentPath = oldPath;
+		}
 
 		private void VisitMemberAccess(MemberExpression memberExpression, bool boolValue)
 		{
@@ -387,31 +379,31 @@ namespace Raven.Client.Linq
 				return;
 			}
 
-            if (expression.Method.DeclaringType == typeof(Enumerable))
-            {
-                VisitEnumerableMethodCall(expression);
-                return;
-            }
+			if (expression.Method.DeclaringType == typeof(Enumerable))
+			{
+				VisitEnumerableMethodCall(expression);
+				return;
+			}
 
 			throw new NotSupportedException("Method not supported: " + expression.Method.DeclaringType.Name + "." +
 				expression.Method.Name);
 		}
 
-        private void VisitEnumerableMethodCall(MethodCallExpression expression)
-        {
-            switch (expression.Method.Name)
-            {
-                case "Any":
-                {
-                    VisitAny(expression);
-                    break;
-                }                   
-                default:
-                {
-                    throw new NotSupportedException("Method not supported: " + expression.Method.Name);
-                }
-            }
-        }
+		private void VisitEnumerableMethodCall(MethodCallExpression expression)
+		{
+			switch (expression.Method.Name)
+			{
+				case "Any":
+				{
+					VisitAny(expression);
+					break;
+				}                   
+				default:
+				{
+					throw new NotSupportedException("Method not supported: " + expression.Method.Name);
+				}
+			}
+		}
 
 		private void VisitStringMethodCall(MethodCallExpression expression)
 		{
@@ -546,7 +538,7 @@ namespace Raven.Client.Linq
 				case "OrderByDescending":
 					VisitExpression(expression.Arguments[0]);
 					VisitOrderBy((LambdaExpression) ((UnaryExpression) expression.Arguments[1]).Operand,
-					             expression.Method.Name.EndsWith("Descending"));
+								 expression.Method.Name.EndsWith("Descending"));
 					break;
 				default:
 				{
@@ -557,12 +549,14 @@ namespace Raven.Client.Linq
 
 		private void VisitOrderBy(LambdaExpression expression, bool descending)
 		{
-            var member = ((MemberExpression) expression.Body).Member;
-            var propertyInfo = ((MemberExpression)expression.Body).Member as PropertyInfo;
-            var fieldInfo = ((MemberExpression)expression.Body).Member as FieldInfo;
-            var name = member.Name;
-            var type = propertyInfo != null ? propertyInfo.PropertyType : fieldInfo.FieldType;
-            luceneQuery.AddOrder(name, descending, type);
+			var member = ((MemberExpression) expression.Body).Member;
+			var propertyInfo = ((MemberExpression)expression.Body).Member as PropertyInfo;
+			var fieldInfo = ((MemberExpression)expression.Body).Member as FieldInfo;
+			var name = member.Name;
+			var type = propertyInfo != null
+			           	? propertyInfo.PropertyType
+			           	: (fieldInfo != null ? fieldInfo.FieldType : typeof(object));
+			luceneQuery.AddOrder(name, descending, type);
 		}
 
 		private void VisitSelect(Expression operand)
@@ -573,22 +567,22 @@ namespace Raven.Client.Linq
 				case ExpressionType.MemberAccess:
 					FieldsToFetch.Add(((MemberExpression) body).Member.Name);
 					break;
-                //Anonomyous types come through here .Select(x => new { x.Cost } ) doesn't use a member initializer, even though it looks like it does
-                //See http://blogs.msdn.com/b/sreekarc/archive/2007/04/03/immutable-the-new-anonymous-type.aspx
+				//Anonomyous types come through here .Select(x => new { x.Cost } ) doesn't use a member initializer, even though it looks like it does
+				//See http://blogs.msdn.com/b/sreekarc/archive/2007/04/03/immutable-the-new-anonymous-type.aspx
 				case ExpressionType.New:                
 					var newExpression = ((NewExpression) body);
 					newExpressionType = newExpression.Type;
 					FieldsToFetch.AddRange(newExpression.Arguments.Cast<MemberExpression>().Select(x => x.Member.Name));
 					break;
-                //for example .Select(x => new SomeType { x.Cost } ), it's member init because it's using the object initializer
-                case ExpressionType.MemberInit:
-                    var memberInitExpression = ((MemberInitExpression)body);
-                    newExpressionType = memberInitExpression.NewExpression.Type;
-                    FieldsToFetch.AddRange(memberInitExpression.Bindings.Cast<MemberAssignment>().Select(x => x.Member.Name));
-                    break;
+				//for example .Select(x => new SomeType { x.Cost } ), it's member init because it's using the object initializer
+				case ExpressionType.MemberInit:
+					var memberInitExpression = ((MemberInitExpression)body);
+					newExpressionType = memberInitExpression.NewExpression.Type;
+					FieldsToFetch.AddRange(memberInitExpression.Bindings.Cast<MemberAssignment>().Select(x => x.Member.Name));
+					break;
 				case ExpressionType.Parameter: // want the full thing, so just pass it on.
 					break;
-                
+				
 				default:
 					throw new NotSupportedException("Node not supported: " + body.NodeType);
 			}
@@ -647,20 +641,13 @@ namespace Raven.Client.Linq
 			luceneQuery.Take(1);
 			queryType = SpecialQueryType.FirstOrDefault;
 		}
-        
-		private static string GetFieldNameForRangeQuery(Expression expression, object value)
+		
+		private static string GetFieldNameForRangeQuery(ExpressionInfo expression, object value)
 		{
 			if (value is int || value is long || value is double || value is float || value is decimal)
-				return ((MemberExpression) expression).Member.Name + "_Range";
-			return ((MemberExpression) expression).Member.Name;
+				return expression.Path + "_Range";
+			return expression.Path;
 		}
-
-        private static string GetFieldNameForRangeQuery(ExpressionInfo expression, object value)
-        {
-            if (value is int || value is long || value is double || value is float || value is decimal)
-                return expression.Path + "_Range";
-            return expression.Path;
-        }
 
 		private static object GetValueFromExpression(Expression expression, Type type)
 		{
@@ -761,27 +748,10 @@ namespace Raven.Client.Linq
 		/// <param name="expression">The expression.</param>
 		public void ProcessExpression(Expression expression)
 		{
-			if (session == null)
-			{
-				// this is to support unit testing
-				luceneQuery = new DocumentQuery<T>(null, null, indexName, null);
-			}
-			else
-			{
-                luceneQuery = CreateDocumentQuery();
-			}
+			luceneQuery = queryGenerator.Query<T>(indexName);
 			VisitExpression(expression);
 		}
-
-        /// <summary>
-        /// Creates the underlying document query for be populated by the linq provider
-        /// </summary>
-        /// <returns></returns>
-        protected virtual IDocumentQuery<T> CreateDocumentQuery()
-        {
-            return session.Advanced.LuceneQuery<T>(indexName);
-        }
-        
+		
 		/// <summary>
 		/// Executes the specified expression.
 		/// </summary>
@@ -800,62 +770,79 @@ namespace Raven.Client.Linq
 
 			var genericExecuteQuery = typeof(RavenQueryProviderProcessor<T>).GetMethod("ExecuteQuery", BindingFlags.Instance|BindingFlags.NonPublic);
 			var executeQueryWithProjectionType = genericExecuteQuery.MakeGenericMethod(newExpressionType);
-		    return executeQueryWithProjectionType.Invoke(this, new object[0]);
+			return executeQueryWithProjectionType.Invoke(this, new object[0]);
 		}
-
+#if !SILVERLIGHT
 		private object ExecuteQuery<TProjection>()
 		{
-		    var finalQuery = luceneQuery.SelectFields<TProjection>(FieldsToFetch.ToArray());
+			var finalQuery = luceneQuery.SelectFields<TProjection>(FieldsToFetch.ToArray());
 
-		    var executeQuery = GetQueryResult(finalQuery);
-          
-            if (afterQueryExecuted != null)
-                afterQueryExecuted(finalQuery.QueryResult);
-		  
-		    return executeQuery;
+			var executeQuery = GetQueryResult(finalQuery);
+
+			var queryResult = finalQuery.QueryResult;
+			if (afterQueryExecuted != null)
+			{
+				afterQueryExecuted(queryResult);
+			}
+
+			return executeQuery;
+		}
+#else
+		private object ExecuteQuery<TProjection>()
+		{
+			throw new NotImplementedException("Not done yet");
+		}
+#endif
+
+		private object GetQueryResult<TProjection>(IDocumentQuery<TProjection> finalQuery)
+		{
+			switch (queryType)
+			{
+				case SpecialQueryType.First:
+				{
+					return finalQuery.First();
+				}
+				case SpecialQueryType.FirstOrDefault:
+				{
+					return finalQuery.FirstOrDefault();
+				}
+				case SpecialQueryType.Single:
+				{
+					return finalQuery.Single();
+				}
+				case SpecialQueryType.SingleOrDefault:
+				{
+					return finalQuery.SingleOrDefault();
+				}
+				case SpecialQueryType.All:
+				{
+					var pred = predicate.Compile();
+					return finalQuery.AsQueryable().All(projection => pred((T)(object)projection));
+				}
+				case SpecialQueryType.Any:
+				{
+					return finalQuery.Any();
+				}
+#if !SILVERLIGHT
+				case SpecialQueryType.Count:
+				{
+					var queryResultAsync = finalQuery.QueryResult;
+					return queryResultAsync.TotalResults;
+				}
+#else
+					case SpecialQueryType.Count:
+			    {
+			        throw new NotImplementedException("not done yet");
+			    }
+#endif
+				default:
+				{
+					return finalQuery;
+				}
+			}
 		}
 
-	    private object GetQueryResult<TProjection>(IDocumentQuery<TProjection> finalQuery)
-	    {
-	        switch (queryType)
-	        {
-	            case SpecialQueryType.First:
-	            {
-	                return finalQuery.First();
-	            }
-	            case SpecialQueryType.FirstOrDefault:
-	            {
-	                return finalQuery.FirstOrDefault();
-	            }
-	            case SpecialQueryType.Single:
-	            {
-	                return finalQuery.Single();
-	            }
-	            case SpecialQueryType.SingleOrDefault:
-	            {
-	                return finalQuery.SingleOrDefault();
-	            }
-	            case SpecialQueryType.All:
-	            {
-	                var pred = predicate.Compile();
-	                return finalQuery.AsQueryable().All(projection => pred((T)(object)projection));
-	            }
-	            case SpecialQueryType.Any:
-	            {
-	                return finalQuery.Any();
-	            }
-	            case SpecialQueryType.Count:
-	            {
-	                return finalQuery.QueryResult.TotalResults;
-	            }
-	            default:
-	            {
-	                return finalQuery;
-	            }
-	        }
-	    }
-
-	    #region Nested type: SpecialQueryType
+		#region Nested type: SpecialQueryType
 
 		/// <summary>
 		/// Different query types 

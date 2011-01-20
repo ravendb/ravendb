@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="ExplicitTransaction.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System.Threading;
 using Raven.Client.Client;
 using Raven.Tests.Document;

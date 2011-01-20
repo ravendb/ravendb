@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="InMemoryOnly.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System.IO;
 using Raven.Client.Client;
 using Raven.Http;

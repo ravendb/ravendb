@@ -1,5 +1,12 @@
+//-----------------------------------------------------------------------
+// <copyright file="ReflectionUtil.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
+using System.Reflection;
 using System.Text;
+using System.Linq;
 
 namespace Raven.Client.Document
 {
@@ -15,7 +22,7 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public static string GetFullNameWithoutVersionInformation(Type entityType)
 		{
-			var asmName = entityType.Assembly.GetName().Name;
+			var asmName = new AssemblyName(entityType.Assembly.FullName).Name;
 			if (entityType.IsGenericType)
 			{
 				var genericTypeDefinition = entityType.GetGenericTypeDefinition();

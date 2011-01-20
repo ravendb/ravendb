@@ -24,6 +24,7 @@
     <WarningLevel>4</WarningLevel>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <DocumentationFile>bin\Debug\Raven.Client.Lightweight.XML</DocumentationFile>
+    <NoWarn>1573, 1587</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -40,7 +41,17 @@
     <AssemblyOriginatorKeyFile>..\Raven.Database\RavenDB.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Accessibility">
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="AsyncCtpLibrary">
+      <HintPath>..\SharedLibs\AsyncCtpLibrary.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.CSharp" />
+    <Reference Include="Microsoft.VisualBasic" />
+    <Reference Include="MissingBitsFromClientProfile">
+      <HintPath>..\SharedLibs\MissingBitsFromClientProfile.dll</HintPath>
+    </Reference>
     <Reference Include="Newtonsoft.Json">
       <HintPath>..\SharedLibs\Newtonsoft.Json.dll</HintPath>
     </Reference>
@@ -72,9 +83,12 @@
     <Compile Include="Converters\Int32Converter.cs" />
     <Compile Include="Converters\Int64Converter.cs" />
     <Compile Include="Converters\ITypeConverter.cs" />
+    <Compile Include="Document\AsyncDocumentQuery.cs" />
+    <Compile Include="Document\AsyncSpatialDocumentQuery.cs" />
     <Compile Include="Document\Async\AsyncDocumentSession.cs" />
     <Compile Include="Document\DefaultRavenContractResolver.cs" />
     <Compile Include="Document\DocumentConvention.cs" />
+    <Compile Include="Document\AbstractDocumentQuery.cs" />
     <Compile Include="Document\DocumentQuery.cs" />
     <Compile Include="Document\DocumentSession.cs" />
     <Compile Include="Document\DocumentStore.cs" />
@@ -94,14 +108,18 @@
     <Compile Include="Exceptions\NonAuthoritiveInformationException.cs" />
     <Compile Include="Exceptions\NonUniqueObjectException.cs" />
     <Compile Include="Exceptions\ReadVetoException.cs" />
+    <Compile Include="Extensions\ExceptionExtensions.cs" />
     <Compile Include="Extensions\MultiTenancyExtensions.cs" />
     <Compile Include="IAdvancedDocumentSessionOperations.cs" />
     <Compile Include="IAsyncAdvancedSessionOperations.cs" />
+    <Compile Include="IAsyncDocumentQuery.cs" />
     <Compile Include="IAsyncDocumentSession.cs" />
     <Compile Include="IDocumentConversionListener.cs" />
     <Compile Include="IDocumentDeleteListener.cs" />
     <Compile Include="IDocumentQuery.cs" />
+    <Compile Include="IDocumentQueryBase.cs" />
     <Compile Include="IDocumentQueryCustomization.cs" />
+    <Compile Include="IDocumentQueryListener.cs" />
     <Compile Include="IDocumentSession.cs" />
     <Compile Include="IDocumentStore.cs" />
     <Compile Include="IDocumentStoreListener.cs" />
@@ -119,6 +137,7 @@
     <Compile Include="Linq\DynamicRavenQueryInspector.cs" />
     <Compile Include="Linq\DynamicRavenQueryProvider.cs" />
     <Compile Include="Linq\ExpressionInfo.cs" />
+    <Compile Include="Linq\IDocumentQueryGenerator.cs" />
     <Compile Include="Linq\IRavenQueryable.cs" />
     <Compile Include="Client\IRavenQueryInspector.cs" />
     <Compile Include="Linq\IRavenQueryProvider.cs" />
@@ -146,6 +165,7 @@
     <Compile Include="Shard\ShardStrategy\ShardStrategy.cs" />
     <Compile Include="StoredEntityEventArgs.cs" />
     <Compile Include="Util\Inflector.cs" />
+    <Compile Include="Util\ObjectReferenceEqualityComparerer.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Raven.Database\RavenDB.snk">

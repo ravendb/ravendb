@@ -1,4 +1,13 @@
+//-----------------------------------------------------------------------
+// <copyright file="IndexDefinition.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace Raven.Database.Indexing
 {
@@ -7,6 +16,11 @@ namespace Raven.Database.Indexing
 	/// </summary>
 	public class IndexDefinition
 	{
+		/// <summary>
+		/// Get or set the name of the index
+		/// </summary>
+		public string Name { get; set; }
+
 		/// <summary>
 		/// Gets or sets the map function
 		/// </summary>
@@ -19,10 +33,10 @@ namespace Raven.Database.Indexing
 		/// <value>The reduce.</value>
 		public string Reduce { get; set; }
 
-        /// <summary>
-        /// Gets or sets the translator function
-        /// </summary>
-        public string TransformResults { get; set; }
+		/// <summary>
+		/// Gets or sets the translator function
+		/// </summary>
+		public string TransformResults { get; set; }
 
 		/// <summary>
 		/// Gets a value indicating whether this instance is map reduce index definition
@@ -35,7 +49,7 @@ namespace Raven.Database.Indexing
 			get { return Reduce != null; }
 		}
 
-	    public bool IsCompiled { get; set; }
+		public bool IsCompiled { get; set; }
 
 		/// <summary>
 		/// Gets or sets the stores options
@@ -81,8 +95,14 @@ namespace Raven.Database.Indexing
 		{
 			if (ReferenceEquals(null, other)) return false;
 			if (ReferenceEquals(this, other)) return true;
-			return Equals(other.Map, Map) && Equals(other.Reduce, Reduce) && Equals(other.TransformResults, TransformResults) && DictionaryEquals(other.Stores, Stores) &&
-				DictionaryEquals(other.Indexes, Indexes);
+			return Equals(other.Map, Map) && 
+				Equals(other.Name, Name) &&
+				Equals(other.Reduce, Reduce) && 
+				Equals(other.TransformResults, TransformResults) && 
+				DictionaryEquals(other.Stores, Stores) &&
+				DictionaryEquals(other.Indexes, Indexes) &&
+				DictionaryEquals(other.Analyzers, Analyzers) &&
+				DictionaryEquals(other.SortOptions, SortOptions);
 		}
 
 		private static bool DictionaryEquals<TKey,TValue>(IDictionary<TKey, TValue> x, IDictionary<TKey, TValue> y)
@@ -98,6 +118,17 @@ namespace Raven.Database.Indexing
 					return false;
 			}
 			return true;
+		}
+
+		private static int DictionaryHashCode<TKey, TValue>(IEnumerable<KeyValuePair<TKey, TValue>> x)
+		{
+			int result = 0;
+			foreach (var kvp in x)
+			{
+				result = (result * 397) ^ kvp.Key.GetHashCode();
+				result = (result*397) ^ (!Equals(kvp.Value, default(TValue)) ? kvp.Value.GetHashCode() : 0);
+			}
+			return result;
 		}
 
 		/// <summary>
@@ -126,8 +157,10 @@ namespace Raven.Database.Indexing
 			{
 				int result = (Map != null ? Map.GetHashCode() : 0);
 				result = (result*397) ^ (Reduce != null ? Reduce.GetHashCode() : 0);
-				result = (result*397) ^ (Stores != null ? Stores.GetHashCode() : 0);
-				result = (result*397) ^ (Indexes != null ? Indexes.GetHashCode() : 0);
+				result = (result*397) ^ DictionaryHashCode(Stores);
+				result = (result*397) ^ DictionaryHashCode(Indexes);
+				result = (result*397) ^ DictionaryHashCode(Analyzers);
+				result = (result*397) ^ DictionaryHashCode(SortOptions);
 				return result;
 			}
 		}

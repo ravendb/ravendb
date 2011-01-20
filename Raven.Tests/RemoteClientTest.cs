@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="RemoteClientTest.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using System.IO;
 using Raven.Database.Config;
@@ -53,10 +58,15 @@ namespace Raven.Tests
 			{
 			}
 
-            IOExtensions.DeleteDirectory(DbName);
-            IOExtensions.DeleteDirectory(DbDirectory);
-			
-            Directory.CreateDirectory(DbDirectory);
+            ClearDatabaseDirectory();
+
+			Directory.CreateDirectory(DbDirectory);
+		}
+
+		protected void ClearDatabaseDirectory()
+		{
+			IOExtensions.DeleteDirectory(DbName);
+			IOExtensions.DeleteDirectory(DbDirectory);
 		}
 
 		public double Timer(Action action)

@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="QueryingOnEqualToNull.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using Raven.Tests.Document;
 using Xunit;
 using System.Linq;

@@ -1,4 +1,10 @@
+//-----------------------------------------------------------------------
+// <copyright file="RemoveFromIndexTask.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using Raven.Database.Indexing;
 using System.Linq;
 
@@ -22,10 +28,21 @@ namespace Raven.Database.Tasks
 
 		public override void Execute(WorkContext context)
 		{
-		    context.IndexStorage.RemoveFromIndex(Index, Keys, context);
+			var keysToRemove = new HashSet<string>();
+			context.TransactionaStorage.Batch(accessor =>
+			{
+				foreach (var key in Keys)
+				{
+					var documentByKey = accessor.Documents.DocumentByKey(key, null);
+					if (documentByKey != null)  // if the document exists, it was added since we removed the document
+						continue;
+					keysToRemove.Add(key);
+				}
+			});
+			context.IndexStorage.RemoveFromIndex(Index, keysToRemove.ToArray(), context);
 		}
 
-	    public override Task Clone()
+		public override Task Clone()
 		{
 			return new RemoveFromIndexTask
 			{

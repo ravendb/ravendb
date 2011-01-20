@@ -6,6 +6,7 @@ var indexName;
 var indexValues;
 var linqQuery;
 var queryMode = 'allDocs';
+var isInQueryMode = false;
 
 $(document).ready(function () {
     RavenUI.GetDocumentCount(function (count) {

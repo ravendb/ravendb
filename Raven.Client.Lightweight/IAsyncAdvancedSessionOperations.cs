@@ -1,4 +1,9 @@
-﻿#if !NET_3_5
+//-----------------------------------------------------------------------
+// <copyright file="IAsyncAdvancedSessionOperations.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
+#if !NET_3_5
 
 using Raven.Client.Client.Async;
 
@@ -14,6 +19,16 @@ namespace Raven.Client
         /// </summary>
         /// <value>The async database commands.</value>
         IAsyncDatabaseCommands AsyncDatabaseCommands { get; }
+
+        /// <summary>
+        /// Query the specified index using Lucene syntax
+        /// </summary>
+        IAsyncDocumentQuery<T> AsyncLuceneQuery<T>(string index);
+
+        /// <summary>
+        /// Dynamically query RavenDB using Lucene syntax
+        /// </summary>
+        IAsyncDocumentQuery<T> AsyncLuceneQuery<T>();
     }
 }
 #endif

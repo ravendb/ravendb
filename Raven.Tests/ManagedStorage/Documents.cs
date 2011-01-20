@@ -1,4 +1,9 @@
-﻿using Newtonsoft.Json.Linq;
+//-----------------------------------------------------------------------
+// <copyright file="Documents.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
+using Newtonsoft.Json.Linq;
 using Xunit;
 
 namespace Raven.Tests.ManagedStorage

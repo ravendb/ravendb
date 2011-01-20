@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="AsyncDocumentSession.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 #if !NET_3_5
 
 using System;
@@ -18,13 +23,14 @@ namespace Raven.Client.Document.Async
 		/// <summary>
 		/// Initializes a new instance of the <see cref="AsyncDocumentSession"/> class.
 		/// </summary>
-		/// <param name="documentStore">The document store.</param>
-		/// <param name="storeListeners">The store listeners.</param>
-		/// <param name="deleteListeners">The delete listeners.</param>
-		public AsyncDocumentSession(DocumentStore documentStore, IDocumentStoreListener[] storeListeners, IDocumentDeleteListener[] deleteListeners)
-			: base(documentStore, storeListeners, deleteListeners)
+		public AsyncDocumentSession(DocumentStore documentStore, 
+            IAsyncDatabaseCommands asyncDatabaseCommands, 
+            IDocumentQueryListener[] queryListeners, 
+            IDocumentStoreListener[] storeListeners, 
+            IDocumentDeleteListener[] deleteListeners)
+			: base(documentStore, queryListeners, storeListeners, deleteListeners)
 		{
-			AsyncDatabaseCommands = documentStore.AsyncDatabaseCommands;
+			AsyncDatabaseCommands = asyncDatabaseCommands;
 		}
 
 		/// <summary>
@@ -33,7 +39,31 @@ namespace Raven.Client.Document.Async
 		/// <value>The async database commands.</value>
 		public IAsyncDatabaseCommands AsyncDatabaseCommands { get; private set; }
 
-        /// <summary>
+	    /// <summary>
+	    /// Query the specified index using Lucene syntax
+	    /// </summary>
+	    public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>(string index)
+	    {
+	        return new AsyncDocumentQuery<T>(this, 
+#if !SILVERLIGHT
+                null, 
+#endif
+                AsyncDatabaseCommands, index, new string[0], queryListeners);
+	    }
+
+	    /// <summary>
+	    /// Dynamically query RavenDB using Lucene syntax
+	    /// </summary>
+	    public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>()
+	    {
+            return new AsyncDocumentQuery<T>(this,
+#if !SILVERLIGHT
+ null,
+#endif
+    AsyncDatabaseCommands, "dynamic", new string[0], queryListeners);
+	    }
+
+	    /// <summary>
         /// Get the accessor for advanced operations
         /// </summary>
         /// <remarks>
@@ -56,7 +86,7 @@ namespace Raven.Client.Document.Async
             if (entitiesByKey.TryGetValue(id, out entity))
             {
                 var tcs = new TaskCompletionSource<T>();
-                tcs.SetResult((T)entity);
+                tcs.TrySetResult((T)entity);
                 return tcs.Task;
             }
 			

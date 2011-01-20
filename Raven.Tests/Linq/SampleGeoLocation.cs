@@ -1,4 +1,9 @@
-﻿namespace Raven.Tests.Linq
+//-----------------------------------------------------------------------
+// <copyright file="SampleGeoLocation.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
+namespace Raven.Tests.Linq
 {
     public static class SampleGeoLocation
     {

@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="ConflictWhenReplicating.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System.Net;
 using System.Threading;
 using Raven.Bundles.Tests.Versioning;

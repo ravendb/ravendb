@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="Program.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using System.Linq;
 using System.Reflection;
@@ -32,6 +37,11 @@ namespace Raven.ProjectRewriter
                     element.Remove();
                 if (element.Attribute("Include").Value == "System.ComponentModel.Composition")
                     element.Remove();
+                if (element.Attribute("Include").Value == "Newtonsoft.Json")
+                {
+                    element.Attribute("Include").Value = "Newtonsoft.Json.Net35";
+                    element.Element(xmlns+"HintPath").Value = @"..\SharedLibs\Newtonsoft.Json.Net35.dll";
+                }
             }
             foreach (var element in database.Root.Descendants(xmlns + "DocumentationFile").ToArray())
             {
@@ -79,6 +89,11 @@ namespace Raven.ProjectRewriter
                     element.Remove();
                 if (element.Attribute("Include").Value == "System.ComponentModel.Composition")
                     element.Remove();
+                if (element.Attribute("Include").Value == "Newtonsoft.Json")
+                {
+                    element.Attribute("Include").Value = "Newtonsoft.Json.Net35";
+                    element.Element(xmlns + "HintPath").Value = @"..\SharedLibs\Newtonsoft.Json.Net35.dll";
+                }
             }
 
             foreach (var element in database.Root.Descendants(xmlns + "DocumentationFile").ToArray())

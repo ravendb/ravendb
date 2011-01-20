@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="SimpleIndex.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -25,7 +30,7 @@ namespace Raven.Database.Indexing
         {
             actions.Indexing.SetCurrentIndexStatsTo(name);
             var count = 0;
-            Write(context, indexWriter =>
+            Write(context, (indexWriter, analyzer) =>
             {
                 bool madeChanges = false;
                 PropertyDescriptorCollection properties = null;
@@ -85,7 +90,7 @@ namespace Raven.Database.Indexing
                             },
                             trigger => trigger.OnIndexEntryCreated(name, indexingResult.NewDocId, luceneDoc));
                         logIndexing.DebugFormat("Index '{0}' resulted in: {1}", name, luceneDoc);
-                        indexWriter.AddDocument(luceneDoc);
+                        AddDocumentToIndex(indexWriter, luceneDoc, analyzer);
                     }
 
                     actions.Indexing.IncrementSuccessIndexing();
@@ -111,17 +116,17 @@ namespace Raven.Database.Indexing
 
         private IndexingResult ExtractIndexDataFromDocument(DynamicJsonObject dynamicJsonObject)
         {
-            
-            return new IndexingResult
+        	var newDocId = dynamicJsonObject.GetDocumentId();
+        	return new IndexingResult
             {
                 Fields = AnonymousObjectToLuceneDocumentConverter.Index(dynamicJsonObject.Inner, indexDefinition,
                                                                   Field.Store.NO),
-                NewDocId = dynamicJsonObject.GetDocumentId(),
+                NewDocId = newDocId is DynamicNullObject ? null : (string)newDocId,
                 ShouldSkip = false
             };
         }
 
-        private IndexingResult ExtractIndexDataFromDocument(PropertyDescriptorCollection properties, object doc)
+    	private IndexingResult ExtractIndexDataFromDocument(PropertyDescriptorCollection properties, object doc)
         {
             if (properties == null)
             {
@@ -147,7 +152,7 @@ namespace Raven.Database.Indexing
 
         public override void Remove(string[] keys, WorkContext context)
         {
-            Write(context, writer =>
+            Write(context, (writer, analyzer) =>
             {
                 if (logIndexing.IsDebugEnabled)
                 {

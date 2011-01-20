@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="Issue199.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using Lucene.Net.Analysis;
 using Raven.Database.Indexing;
 using Xunit;

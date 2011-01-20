@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="ViewStorage.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using System.Linq;
 using System.Threading;
@@ -70,7 +75,7 @@ namespace Raven.Tests.Views
 
 			transactionalStorage.Batch(actions =>
 			{
-				var vals = actions.MappedResults.GetMappedResults("CommentCountsByBlog", "1", MapReduceIndex.ComputeHash("CommentCountsByBlog", "1")).ToArray();
+				var vals = actions.MappedResults.GetMappedResults(new GetMappedResultsParams("CommentCountsByBlog", "1", MapReduceIndex.ComputeHash("CommentCountsByBlog", "1"))).ToArray();
 				Assert.Equal(2, vals.Length);
 				Assert.Contains("abc", vals[0].ToString());
 				Assert.Contains("ijg", vals[1].ToString());
@@ -94,7 +99,7 @@ namespace Raven.Tests.Views
 
 			transactionalStorage.Batch(actions =>
 			{
-				var strings = actions.MappedResults.GetMappedResults("CommentCountsByBlog", "1", MapReduceIndex.ComputeHash("CommentCountsByBlog", "1")).Select(x => x.ToString()).ToArray();
+				var strings = actions.MappedResults.GetMappedResults(new GetMappedResultsParams("CommentCountsByBlog", "1", MapReduceIndex.ComputeHash("CommentCountsByBlog", "1"))).Select(x => x.ToString()).ToArray();
 				Assert.Contains("def", strings[0]);
 			});
 		}
@@ -116,8 +121,8 @@ namespace Raven.Tests.Views
 
 			transactionalStorage.Batch(actions =>
 			{
-				Assert.Empty(actions.MappedResults.GetMappedResults("CommentCountsByBlog1", "1", MapReduceIndex.ComputeHash("CommentCountsByBlog1", "1")));
-				Assert.Empty(actions.MappedResults.GetMappedResults("CommentCountsByBlog2", "1", MapReduceIndex.ComputeHash("CommentCountsByBlog2", "1")));
+				Assert.Empty(actions.MappedResults.GetMappedResults(new GetMappedResultsParams("CommentCountsByBlog1", "1", MapReduceIndex.ComputeHash("CommentCountsByBlog1", "1"))));
+				Assert.Empty(actions.MappedResults.GetMappedResults(new GetMappedResultsParams("CommentCountsByBlog2", "1", MapReduceIndex.ComputeHash("CommentCountsByBlog2", "1"))));
 			});
 		}
 
@@ -138,8 +143,8 @@ namespace Raven.Tests.Views
 
 			transactionalStorage.Batch(actions =>
 			{
-				Assert.NotEmpty(actions.MappedResults.GetMappedResults("CommentCountsByBlog1", "1", MapReduceIndex.ComputeHash("CommentCountsByBlog1", "1")));
-				Assert.Empty(actions.MappedResults.GetMappedResults("CommentCountsByBlog2", "1", MapReduceIndex.ComputeHash("CommentCountsByBlog2", "1")));
+				Assert.NotEmpty(actions.MappedResults.GetMappedResults(new GetMappedResultsParams("CommentCountsByBlog1", "1", MapReduceIndex.ComputeHash("CommentCountsByBlog1", "1"))));
+				Assert.Empty(actions.MappedResults.GetMappedResults(new GetMappedResultsParams("CommentCountsByBlog2", "1", MapReduceIndex.ComputeHash("CommentCountsByBlog2", "1"))));
 			});
 		}
 	}

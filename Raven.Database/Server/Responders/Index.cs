@@ -1,6 +1,11 @@
+//-----------------------------------------------------------------------
+// <copyright file="Index.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using Newtonsoft.Json.Linq;
+using System.Security.Cryptography;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
 using System.Linq;
@@ -30,10 +35,10 @@ namespace Raven.Database.Server.Responders
 
 			switch (context.Request.HttpMethod)
 			{
-                case "HEAD":
-			        if(Database.IndexDefinitionStorage.IndexNames.Contains(index, StringComparer.InvariantCultureIgnoreCase) == false)
-                        context.SetStatusToNotFound();
-			        break;
+				case "HEAD":
+					if(Database.IndexDefinitionStorage.IndexNames.Contains(index, StringComparer.InvariantCultureIgnoreCase) == false)
+						context.SetStatusToNotFound();
+					break;
 				case "GET":
 					OnGet(context, index);
 					break;
@@ -93,50 +98,103 @@ namespace Raven.Database.Server.Responders
 		private void OnGet(IHttpContext context, string index)
 		{
 			var definition = context.Request.QueryString["definition"];
-		    if ("yes".Equals(definition, StringComparison.InvariantCultureIgnoreCase))
-		    {
-		    	var indexDefinition = Database.GetIndexDefinition(index);
+			if ("yes".Equals(definition, StringComparison.InvariantCultureIgnoreCase))
+			{
+				var indexDefinition = Database.GetIndexDefinition(index);
 				if(indexDefinition == null)
 				{
 					context.SetStatusToNotFound();
 					return;
 				}
-		    	context.WriteJson(new {Index = indexDefinition});
-		    }
-		    else
-            {                
-				var indexQuery = context.GetIndexQueryFromHttpContext(Database.Configuration.MaxPageSize);
-                
-                QueryResult queryResult = null;
-                if (index.StartsWith("dynamic", StringComparison.InvariantCultureIgnoreCase))
-                {
-                    string entityName = null;
-                    if (index.StartsWith("dynamic/"))
-                        entityName = index.Substring("dynamic/".Length);           
+				context.WriteJson(new {Index = indexDefinition});
+			}
+			else
+			{
+				var queryResult = ExecuteQuery(context, index);
 
-                    queryResult = Database.ExecuteDynamicQuery(entityName, indexQuery);
-                }
-                else
-                {
-                    queryResult = Database.Query(index, indexQuery);
-                    Database.Query(index, indexQuery);
-                }                
-                
-            	var includes = context.Request.QueryString.GetValues("include") ?? new string[0];
-            	var loadedIds = new HashSet<string>(
-            		queryResult.Results
-            			.Where(x => x["@metadata"] != null)
-            			.Select(x => x["@metadata"].Value<string>("@id"))
-            			.Where(x => x != null)
-            		);
-            	var command = new AddIncludesCommand(Database, GetRequestTransaction(context), queryResult.Includes.Add,includes, loadedIds);
-            	foreach (var result in queryResult.Results)
-            	{
-            		command.Execute(result);
-            	}
-            	context.WriteJson(queryResult);
+				if (queryResult == null)
+					return;
+
+				var includes = context.Request.QueryString.GetValues("include") ?? new string[0];
+				var loadedIds = new HashSet<string>(
+					queryResult.Results
+						.Where(x => x["@metadata"] != null)
+						.Select(x => x["@metadata"].Value<string>("@id"))
+						.Where(x => x != null)
+					);
+				var command = new AddIncludesCommand(Database, GetRequestTransaction(context), (etag, doc) => queryResult.Includes.Add(doc), includes, loadedIds);
+				foreach (var result in queryResult.Results)
+				{
+					command.Execute(result);
+				}
+				context.Response.AddHeader("ETag", queryResult.IndexEtag.ToString());
+				context.WriteJson(queryResult);
 			}
 		}
 
+		private QueryResult ExecuteQuery(IHttpContext context, string index)
+		{
+			var indexQuery = context.GetIndexQueryFromHttpContext(Database.Configuration.MaxPageSize);
+
+			return index.StartsWith("dynamic", StringComparison.InvariantCultureIgnoreCase) ? 
+				PerformQueryAgainstDynamicIndex(context, index, indexQuery) : 
+				PerformQueryAgainstExistingIndex(context, index, indexQuery);
+		}
+
+		private QueryResult PerformQueryAgainstExistingIndex(IHttpContext context, string index, IndexQuery indexQuery)
+		{
+			var indexEtag = GetIndexEtag(index);
+			if (context.MatchEtag(indexEtag))
+			{
+				context.SetStatusToNotModified();
+				return null;
+			}
+
+			var queryResult = Database.Query(index, indexQuery);
+			queryResult.IndexEtag = indexEtag;
+			return queryResult;
+		}
+
+		private QueryResult PerformQueryAgainstDynamicIndex(IHttpContext context, string index, IndexQuery indexQuery)
+		{
+			string entityName = null;
+			if (index.StartsWith("dynamic/"))
+				entityName = index.Substring("dynamic/".Length);
+
+			var dynamicIndexName = Database.FindDynamicIndexName(entityName, indexQuery.Query);
+			var indexEtag = Guid.Empty;
+			if (Database.IndexStorage.HasIndex(dynamicIndexName))
+			{
+				indexEtag = GetIndexEtag(dynamicIndexName);
+				if (context.MatchEtag(indexEtag))
+				{
+					context.SetStatusToNotModified();
+					return null;
+				}
+			}
+
+			var queryResult = Database.ExecuteDynamicQuery(entityName, indexQuery);
+			if(indexEtag != Guid.Empty)
+				queryResult.IndexEtag = indexEtag;
+			return queryResult;
+		}
+
+		private Guid GetIndexEtag(string indexName)
+		{
+			Guid lastDocEtag = Guid.Empty;
+			Tuple<DateTime, Guid> indexLastUpdatedAt = null;
+			Database.TransactionalStorage.Batch(accessor =>
+			{
+				lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
+				indexLastUpdatedAt = accessor.Staleness.IndexLastUpdatedAt(indexName);
+			});
+			using(var md5 = MD5.Create())
+			{
+				var list = new List<byte>(32);
+				list.AddRange(lastDocEtag.ToByteArray());
+				list.AddRange(indexLastUpdatedAt.Item2.ToByteArray());
+				return new Guid(md5.ComputeHash(list.ToArray()));
+			}
+		}
 	}
 }

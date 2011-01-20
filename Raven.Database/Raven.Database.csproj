@@ -120,7 +120,12 @@
     <Compile Include="Data\DynamicQueryMapping.cs" />
     <Compile Include="Data\DynamicQueryMappingItem.cs" />
     <Compile Include="Impl\DocumentRetriever.cs" />
+    <Compile Include="Impl\Logging\AsyncBufferingAppender.cs" />
+    <Compile Include="Indexing\TasksExecuter.cs" />
+    <Compile Include="Linq\CaptureQueryParameterNamesVisitor.cs" />
+    <Compile Include="Plugins\AbstractAnalyzerGenerator.cs" />
     <Compile Include="Queries\DynamicQueryExtensions.cs" />
+    <Compile Include="Queries\DynamicQueryOptimizer.cs" />
     <Compile Include="Queries\DynamicQueryRunner.cs" />
     <Compile Include="Exceptions\IndexDoesNotExistsException.cs" />
     <Compile Include="Extensions\CommandExtensions.cs" />
@@ -316,7 +321,7 @@
     <Compile Include="Indexing\Index.cs" />
     <Compile Include="Indexing\AnonymousObjectToLuceneDocumentConverter.cs" />
     <Compile Include="Indexing\StatefulEnumerableWrapper.cs" />
-    <Compile Include="Indexing\TaskExecuter.cs" />
+    <Compile Include="Indexing\IndexingExecuter.cs" />
     <Compile Include="Indexing\WorkContext.cs" />
     <Compile Include="Json\DynamicObjectExtensions.cs" />
     <Compile Include="Json\JsonPatcher.cs" />
@@ -337,6 +342,8 @@
     <Compile Include="Server\RavenDbHttpServer.cs" />
     <Compile Include="Server\Responders\AddIncludesCommand.cs" />
     <Compile Include="Server\Responders\AdminBackup.cs" />
+    <Compile Include="Server\Responders\BuildVersion.cs" />
+    <Compile Include="Server\Responders\ClientAccessPolicy.cs" />
     <Compile Include="Server\Responders\Docs.cs" />
     <Compile Include="Server\Responders\Document.cs" />
     <Compile Include="Server\Responders\DocumentBatch.cs" />
@@ -345,6 +352,7 @@
     <Compile Include="Server\Responders\Indexes.cs" />
     <Compile Include="Server\Responders\LinearQueryResponder.cs" />
     <Compile Include="Server\Responders\Queries.cs" />
+    <Compile Include="Server\Responders\RequestResponder.cs" />
     <Compile Include="Server\Responders\Root.cs" />
     <Compile Include="Server\Responders\Static.cs" />
     <Compile Include="Server\Responders\Statics.cs" />
@@ -355,6 +363,7 @@
     <Compile Include="Server\Responders\TransactionPromote.cs" />
     <Compile Include="Server\Responders\TransactionRollback.cs" />
     <Compile Include="Storage\DocumentInTransactionData.cs" />
+    <Compile Include="Storage\GetMappedResultsParams.cs" />
     <Compile Include="Storage\IAttachmentsStorageActions.cs" />
     <Compile Include="Storage\IDocumentStorageActions.cs" />
     <Compile Include="Storage\IGeneralStorageActions.cs" />
@@ -493,6 +502,7 @@
       <Name>Raven.Http</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
