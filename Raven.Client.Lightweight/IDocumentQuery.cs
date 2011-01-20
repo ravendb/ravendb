@@ -43,6 +43,6 @@ namespace Raven.Client
 		/// </summary>
 		/// <value>The query result.</value>
 		Task<QueryResult> QueryResultAsync { get; }
-	}
 #endif
+	}
 }
