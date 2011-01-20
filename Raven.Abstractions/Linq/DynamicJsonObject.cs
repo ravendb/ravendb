@@ -203,7 +203,7 @@ namespace Raven.Database.Linq
 					return id.Value<string>();
 				}
 			}
-			return new DynamicNullObject();
+			return  inner["__document_id"] ?? (object)new DynamicNullObject();
 		}
 
 		/// <summary>

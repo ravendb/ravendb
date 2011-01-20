@@ -33,7 +33,7 @@ namespace Raven.Tests.Bugs.Indexing
 		public void Isolated()
 		{
 			var ramDirectory = new RAMDirectory();
-			new IndexWriter(ramDirectory, new StandardAnalyzer(), IndexWriter.MaxFieldLength.UNLIMITED).Close();
+			new IndexWriter(ramDirectory, new StandardAnalyzer(Version.LUCENE_29), IndexWriter.MaxFieldLength.UNLIMITED).Close();
 			var simpleIndex = new SimpleIndex(ramDirectory, "test", new IndexDefinition
 			{
 				Map =
