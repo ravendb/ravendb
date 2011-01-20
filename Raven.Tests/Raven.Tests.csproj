@@ -248,6 +248,7 @@
     <Compile Include="Bugs\UsingLongAsId.cs" />
     <Compile Include="Bugs\UsingStartsWith.cs" />
     <Compile Include="Bugs\UsingSwedishCollation.cs" />
+    <Compile Include="Bugs\Vlko\QueryWithMultipleWhere.cs" />
     <Compile Include="Bugs\WhenRavenClrTypeNotFound.cs" />
     <Compile Include="Bugs\WhereEntityIs.cs" />
     <Compile Include="Bugs\WillNotFailSystemIfServerIsNotAvailableOnStartup.cs" />

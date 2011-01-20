@@ -258,7 +258,7 @@ namespace Raven.Tests.Linq
 			var q = indexedUsers
 				.Where(x => x.Age == 3)
 				.Where(x => x.Name == "ayende");
-			Assert.Equal("Age:3 AND Name:ayende", q.ToString());
+			Assert.Equal("(Age:3) AND Name:ayende", q.ToString());
 		}
 
 		[Fact]
