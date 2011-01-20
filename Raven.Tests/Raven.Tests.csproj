@@ -163,6 +163,7 @@
     <Compile Include="Bugs\Indexing\RemoteIndexingOnDictionary.cs" />
     <Compile Include="Bugs\Indexing\ThrowingAnalyzer.cs" />
     <Compile Include="Bugs\Indexing\WillGroupValuesUsingComplexValues.cs" />
+    <Compile Include="Bugs\Indexing\WiseShrek.cs" />
     <Compile Include="Bugs\IndexNestedFields.cs" />
     <Compile Include="Bugs\IndexWithTwoProperties.cs" />
     <Compile Include="Bugs\InMemoryOnly.cs" />
