@@ -132,7 +132,7 @@ namespace Raven.Database.Indexing
             {
                 properties = TypeDescriptor.GetProperties(doc);
             }
-            var abstractFields = AnonymousObjectToLuceneDocumentConverter.Index(doc, properties, indexDefinition, Field.Store.YES).ToList();
+            var abstractFields = AnonymousObjectToLuceneDocumentConverter.Index(doc, properties, indexDefinition, Field.Store.NO).ToList();
             return new IndexingResult()
             {
                 Fields = abstractFields,
