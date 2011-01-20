@@ -367,7 +367,13 @@ namespace Raven.Client.Document
 					var generator = new MultiTypeHiLoKeyGenerator(this, 1024);
 					Conventions.DocumentKeyGenerator = entity => generator.GenerateDocumentKey(Conventions, entity);
 #else
-					Conventions.DocumentKeyGenerator = entity => Conventions.GetTypeTagName(entity.GetType()) + "/" + Guid.NewGuid();
+					Conventions.DocumentKeyGenerator = entity =>
+					{
+						var typeTagName = Conventions.GetTypeTagName(entity.GetType());
+						if (typeTagName == null)
+							return Guid.NewGuid().ToString();
+						return typeTagName + "/" + Guid.NewGuid();
+					};
 #endif
 				}
 			}
