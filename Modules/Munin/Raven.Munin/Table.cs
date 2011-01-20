@@ -442,5 +442,27 @@ namespace Raven.Munin
                 secondaryIndex.Initialize(persistentSource, TableId, index++);
             }
         }
+
+    	public bool UpdateKey(JToken key, long position, int size)
+    	{
+			Guid existing;
+			if (keysModifiedInTx.TryGetValue(key, out existing) && existing != txId.Value)
+				return false;
+
+			operationsInTransactions.GetOrAdd(txId.Value, new List<Command>())
+				.Add(new Command
+				{
+					Key = key,
+					Position = position,
+					Size = size,
+					DictionaryId = TableId,
+					Type = CommandType.Put
+				});
+
+			if (existing != txId.Value) // otherwise we are already there
+				keysModifiedInTx.TryAdd(key, txId.Value);
+
+			return true;
+    	}
     }
 }

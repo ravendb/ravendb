@@ -21,6 +21,7 @@ namespace Raven.Client.Linq
 		private readonly IDocumentQueryGenerator queryGenerator;
 		private readonly Action<QueryResult> afterQueryExecuted;
 		private bool chainedWhere;
+		private int insideWhere;
 		private IDocumentQuery<T> luceneQuery;
 		private Expression<Func<T, bool>> predicate;
 		private SpecialQueryType queryType = SpecialQueryType.None;
@@ -442,10 +443,16 @@ namespace Raven.Client.Linq
 			{
 				case "Where":
 				{
+					insideWhere++;
 					VisitExpression(expression.Arguments[0]);
 					if (chainedWhere) luceneQuery.AndAlso();
-					VisitExpression(((UnaryExpression) expression.Arguments[1]).Operand);
+					if(insideWhere > 1)
+						luceneQuery.OpenSubclause();
+					VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
+					if (insideWhere > 1)
+						luceneQuery.CloseSubclause();
 					chainedWhere = true;
+					insideWhere--;
 					break;
 				}
 				case "Select":

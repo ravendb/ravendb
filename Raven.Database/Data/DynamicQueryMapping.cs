@@ -36,7 +36,7 @@ namespace Raven.Database.Data
 		public IndexDefinition CreateIndexDefinition()
 		{
 			var fromClauses = new HashSet<string>();
-			var realMappings = new List<string>();
+			var realMappings = new HashSet<string>();
 
 			if (!string.IsNullOrEmpty(ForEntityName))
 			{
@@ -67,7 +67,7 @@ namespace Raven.Database.Data
 							String newDoc = string.Format("{0}Item", newDocumentSource.Replace(".", ""));
 
 							// from docNewDocItemsItem in doc.NewDoc.Items
-							String docInclude = string.Format("from {0} in {1}", newDoc, newDocumentSource);
+							String docInclude = string.Format("from {0} in (IEnumerable<dynamic>){1}", newDoc, newDocumentSource);
 							fromClauses.Add(docInclude);
 
 							// Start building the property again

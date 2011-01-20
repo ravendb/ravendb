@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using log4net;
 using Raven.Database.Extensions;
@@ -20,18 +21,20 @@ namespace Raven.Database.Indexing
 	public class IndexingExecuter
 	{
 		private readonly WorkContext context;
-		private readonly ILog log = LogManager.GetLogger(typeof (IndexingExecuter));
+	    private readonly TaskScheduler scheduler;
+	    private readonly ILog log = LogManager.GetLogger(typeof (IndexingExecuter));
 		private readonly ITransactionalStorage transactionalStorage;
 
-		public IndexingExecuter(ITransactionalStorage transactionalStorage, WorkContext context)
+		public IndexingExecuter(ITransactionalStorage transactionalStorage, WorkContext context, TaskScheduler scheduler)
 		{
 			this.transactionalStorage = transactionalStorage;
 			this.context = context;
+		    this.scheduler = scheduler;
 		}
 
 		int workCounter;
 		private int lastFlushedWorkCounter;
-		
+
 		public void Execute()
 		{
 			while (context.DoWork)
@@ -63,7 +66,6 @@ namespace Raven.Database.Indexing
 			lastFlushedWorkCounter = workCounter;
 			context.IndexStorage.FlushAllIndexes();
 		}
-
 
 		private bool ExecuteIndexing()
 		{
@@ -108,7 +110,8 @@ namespace Raven.Database.Indexing
 				// allow a maximum of 8 indexes to run at a given time, this avoids a potential error
 				// where you have N indexes all trying to read MaxNumberOfItemsToIndexInSignleBatch at the same time
 				// which might lead to an OutOfMemoryException
-				MaxDegreeOfParallelism = 8 
+				MaxDegreeOfParallelism = 8,
+				TaskScheduler = scheduler
 			}
 				, indexToWorkOn => transactionalStorage.Batch(actions =>
 					IndexDocuments(actions, indexToWorkOn.IndexName, indexToWorkOn.LastIndexedEtag)));
@@ -159,8 +162,8 @@ namespace Raven.Database.Indexing
 				context.IndexStorage.Index(index, viewGenerator, 
 					jsonDocs
 					.Select(doc => documentRetriever
-                        .EnsureIdInMetadata(doc)
-                        .ProcessReadVetoes(doc, null, ReadOperation.Index))
+						.EnsureIdInMetadata(doc)
+						.ProcessReadVetoes(doc, null, ReadOperation.Index))
 					.Where(doc => doc != null)
 					.Select(x => JsonToExpando.Convert(x.ToJson())), context, actions, dateTime);
 
