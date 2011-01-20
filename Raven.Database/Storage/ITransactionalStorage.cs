@@ -22,6 +22,7 @@ namespace Raven.Database.Storage
 
 	    Type TypeForRunningQueriesInRemoteAppDomain { get;}
         object StateForRunningQueriesInRemoteAppDomain { get; }
-        bool HandleException(Exception exception);
+    	string FriendlyName { get; }
+    	bool HandleException(Exception exception);
 	}
 }

@@ -1,21 +1,14 @@
-﻿using Raven.Client.Document;
+﻿using System;
 
 namespace Raven.Tryouts
 {
-    class Program
-    {
-        static void Main()
-        {
-			DocumentStore store = new DocumentStore { Url = "http://localhost:8080" };
-			store.Initialize();
+	class Program
+	{
+		static void Main()
+		{
+			Double x = 205.4f;
 
-			using (var session = store.OpenSession())
-			{
-				session.Store(new{Name = "Ayende"});
-				session.SaveChanges();
-
-			}
-
-        }
-    }
+			Console.WriteLine(x);
+		}
+	}
 }

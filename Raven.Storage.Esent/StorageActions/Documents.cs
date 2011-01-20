@@ -29,7 +29,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 		public JsonDocument DocumentByKey(string key, TransactionInformation transactionInformation)
 		{
-			byte[] data;
+			JObject data;
 			JObject metadata;
 			if (transactionInformation != null)
 			{
@@ -45,17 +45,30 @@ namespace Raven.Storage.Esent.StorageActions
 							logger.DebugFormat("Document with key '{0}' was deleted in transaction: {1}", key, transactionInformation.Id);
 							return null;
 						}
-						data = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"]);
+						var etag = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["etag"]).TransfromToGuidWithProperSorting();
 
-						metadata = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["metadata"]).ToJObject();
+						var cachedDocument = cacher.GetCachedDocument(key, etag);
+						if(cachedDocument != null)
+						{
+							metadata = cachedDocument.Item1;
+							data = cachedDocument.Item2;
+						}
+						else
+						{
+							var dataBuffer = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"]);
 
-						data = documentCodecs.Aggregate(data, (bytes, codec) => codec.Decode(key, metadata, bytes));
+							metadata = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["metadata"]).ToJObject();
+
+							data = documentCodecs.Aggregate(dataBuffer, (bytes, codec) => codec.Decode(key, metadata, bytes)).ToJObject();
+
+							cacher.SetCachedDocument(key, etag, Tuple.Create(metadata, data));
+						}
+						
 
 						logger.DebugFormat("Document with key '{0}' was found in transaction: {1}", key, transactionInformation.Id);
-						var etag = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["etag"]).TransfromToGuidWithProperSorting();
 						return new JsonDocument
 						{
-							DataAsJson = data.ToJObject(),
+							DataAsJson = data,
 							NonAuthoritiveInformation = false,// we are the transaction, therefor we are Authoritive
 							Etag = etag,
 							LastModified = Api.RetrieveColumnAsDateTime(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["last_modified"]).Value,
@@ -73,16 +86,26 @@ namespace Raven.Storage.Esent.StorageActions
 				logger.DebugFormat("Document with key '{0}' was not found", key);
 				return null;
 			}
-			data = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["data"]);
-			metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
-
-			data = documentCodecs.Aggregate(data, (bytes, codec) => codec.Decode(key, metadata, bytes));
-
-			logger.DebugFormat("Document with key '{0}' was found", key);
 			var existingEtag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]).TransfromToGuidWithProperSorting();
+			var existingCachedDocument = cacher.GetCachedDocument(key, existingEtag);
+			if(	existingCachedDocument != null)
+			{
+				metadata = existingCachedDocument.Item1;
+				data = existingCachedDocument.Item2;
+			}
+			else
+			{
+				var dataBuffer  = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["data"]);
+				metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
+
+				data = documentCodecs.Aggregate(dataBuffer, (bytes, codec) => codec.Decode(key, metadata, bytes)).ToJObject();
+
+				cacher.SetCachedDocument(key, existingEtag, Tuple.Create(metadata, data));
+			}
+			logger.DebugFormat("Document with key '{0}' was found", key);
 			return new JsonDocument
 			{
-				DataAsJson = data.ToJObject(),
+				DataAsJson = data,
 				Etag = existingEtag,
 				NonAuthoritiveInformation = IsDocumentModifiedInsideTransaction(key),
 				LastModified = Api.RetrieveColumnAsDateTime(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"]).Value,
