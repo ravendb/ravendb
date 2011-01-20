@@ -116,6 +116,13 @@ namespace Raven.Database.Data
 				TransformResults = DynamicAggregation ? AggregationReducePart() : null,
 			};
 
+			if(DynamicAggregation)
+			{
+				foreach (var item in GroupByItems)
+				{
+					index.Stores[item.To] = FieldStorage.Yes;
+				}
+			}
 
 			foreach (var descriptor in SortDescriptors)
 			{
