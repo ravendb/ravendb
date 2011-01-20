@@ -36,7 +36,7 @@ namespace Raven.Database.Data
 		public IndexDefinition CreateIndexDefinition()
 		{
 			var fromClauses = new HashSet<string>();
-			var realMappings = new List<string>();
+			var realMappings = new HashSet<string>();
 
 			if (!string.IsNullOrEmpty(ForEntityName))
 			{

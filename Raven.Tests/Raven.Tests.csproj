@@ -156,6 +156,7 @@
     <Compile Include="Bugs\Indexing\DynamicFields.cs" />
     <Compile Include="Bugs\Indexing\DynamicQueriesCanSort.cs" />
     <Compile Include="Bugs\Indexing\FilterOnMissingProperty.cs" />
+    <Compile Include="Bugs\Indexing\GroupingAndFiltering.cs" />
     <Compile Include="Bugs\Indexing\IndexingEachFieldInEachDocumentSeparetedly.cs" />
     <Compile Include="Bugs\Indexing\IndexingOnDictionary.cs" />
     <Compile Include="Bugs\Indexing\MissingAnalyzer.cs" />
