@@ -10,6 +10,8 @@ using System.Threading.Tasks;
 
 namespace Raven.Client
 {
+	using Linq;
+
 	/// <summary>
 	/// Interface for document session using async approaches
 	/// </summary>
@@ -56,6 +58,19 @@ namespace Raven.Client
 		/// </summary>
 		/// <returns></returns>
 		Task SaveChangesAsync();
+
+		/// <summary>
+		/// Queries the specified index using Linq.
+		/// </summary>
+		/// <typeparam name="T">The result of the query</typeparam>
+		/// <param name="indexName">Name of the index.</param>
+		IRavenQueryable<T> Query<T>(string indexName);
+
+		/// <summary>
+		/// Dynamically queries RavenDB using LINQ
+		/// </summary>
+		/// <typeparam name="T">The result of the query</typeparam>
+		IRavenQueryable<T> Query<T>();
 	}
 }
 #endif

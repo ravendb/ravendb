@@ -9,7 +9,9 @@ using Xunit;
 
 namespace Raven.Tests.Bugs.Queries
 {
-    public class Projections : LocalClientTest
+	using Document;
+
+	public class Projections : LocalClientTest
     {
         [Fact]
         public void Can_project_value_from_collection()
@@ -49,9 +51,44 @@ namespace Raven.Tests.Bugs.Queries
             }
         }
 
+
+		[Fact]
+		public void Can_perform_a_simple_projection_in_a_linq_query()
+		{
+			using (var store = NewDocumentStore())
+			{
+
+				var entity = new Company { Name = "Simple Company", Id = "companies/1" };
+				using (var session = store.OpenSession())
+				{
+					session.Store(entity);
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession())
+				{
+					var results = session.Query<Company>()
+						.Customize(x => x.WaitForNonStaleResults())
+						.Where(x => x.Name == "Simple Company")
+						.Select(x => new TheCompanyName { Name = x.Name })
+						.ToList();
+
+					Assert.Equal(1, results.Count);
+					Assert.Equal("Simple Company", results[0].Name);
+				}
+			}
+		}
+
         public class User
         {
             public LiveProjection.Address[] Addresses { get; set; }
         }
+
+
+
+		public class TheCompanyName
+		{
+			public string Name { get; set; }
+		}
     }
 }

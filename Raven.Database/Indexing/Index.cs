@@ -331,7 +331,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private PerFieldAnalyzerWrapper CreateAnalyzer(Analyzer defaultAnalyzer, ICollection<Action> toDispose)
+		public PerFieldAnalyzerWrapper CreateAnalyzer(Analyzer defaultAnalyzer, ICollection<Action> toDispose)
 		{
 			toDispose.Add(defaultAnalyzer.Close);
 			var perFieldAnalyzerWrapper = new PerFieldAnalyzerWrapper(defaultAnalyzer);
@@ -359,6 +359,8 @@ namespace Raven.Database.Indexing
 						perFieldAnalyzerWrapper.AddAnalyzer(fieldIndexing.Key, keywordAnalyzer);
 						break;
 					case FieldIndexing.Analyzed:
+						if(indexDefinition.Analyzers.ContainsKey(fieldIndexing.Key))
+							continue;
 						if (standardAnalyzer == null)
 						{
 							standardAnalyzer = new StandardAnalyzer(Version.LUCENE_29);

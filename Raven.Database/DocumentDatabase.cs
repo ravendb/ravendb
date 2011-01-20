@@ -542,8 +542,9 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 						throw new IndexDisabledException(indexFailureInformation);
 					}
 					var docRetriever = new DocumentRetriever(actions, ReadTriggers);
-					var collection = from queryResult in IndexStorage.Query(index, query, result => docRetriever.ShouldIncludeResultInQuery(result, GetIndexDefinition(index), query.FieldsToFetch,query.AggregationOperation))
-									 select docRetriever.RetrieveDocumentForQuery(queryResult, GetIndexDefinition(index), query.FieldsToFetch, query.AggregationOperation)
+					var indexDefinition = GetIndexDefinition(index);
+					var collection = from queryResult in IndexStorage.Query(index, query, result => docRetriever.ShouldIncludeResultInQuery(result, indexDefinition, query.FieldsToFetch,query.AggregationOperation))
+									 select docRetriever.RetrieveDocumentForQuery(queryResult, indexDefinition, query.FieldsToFetch, query.AggregationOperation)
 										 into doc
 										 where doc != null
 										 select doc;

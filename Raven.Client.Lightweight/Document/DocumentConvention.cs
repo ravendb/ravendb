@@ -192,6 +192,7 @@ namespace Raven.Client.Document
                         new JsonValueTypeConverter<double>(double.TryParse),
                         new JsonValueTypeConverter<float>(float.TryParse),
                         new JsonValueTypeConverter<short>(short.TryParse),
+						new JsonMultiDimensionalArrayConverter(),
 #if !NET_3_5 && !SILVERLIGHT
 						new JsonDynamicConverter()
 #endif

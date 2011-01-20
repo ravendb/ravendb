@@ -111,6 +111,7 @@
     <Compile Include="Bugs\AnalyzerPerField.cs" />
     <Compile Include="Bugs\AnonymousClasses.cs" />
     <Compile Include="Bugs\AnyQueries.cs" />
+    <Compile Include="Bugs\Arrays.cs" />
     <Compile Include="Bugs\AsyncCommit.cs" />
     <Compile Include="Bugs\Async\Querying.cs" />
     <Compile Include="Bugs\AttachmentEndoding.cs" />
@@ -163,6 +164,7 @@
     <Compile Include="Bugs\Indexing\RemoteIndexingOnDictionary.cs" />
     <Compile Include="Bugs\Indexing\ThrowingAnalyzer.cs" />
     <Compile Include="Bugs\Indexing\WillGroupValuesUsingComplexValues.cs" />
+    <Compile Include="Bugs\Indexing\WiseShrek.cs" />
     <Compile Include="Bugs\IndexNestedFields.cs" />
     <Compile Include="Bugs\IndexWithTwoProperties.cs" />
     <Compile Include="Bugs\InMemoryOnly.cs" />
