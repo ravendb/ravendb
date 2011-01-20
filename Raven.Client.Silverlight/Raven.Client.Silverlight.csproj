@@ -224,6 +224,9 @@
     <Compile Include="..\Raven.Abstractions\Json\JsonEnumConverter.cs">
       <Link>Json\JsonEnumConverter.cs</Link>
     </Compile>
+	<Compile Include="..\Raven.Abstractions\Json\JsonMultiDimensionalArrayConverter.cs">
+		<Link>Json\JsonMultiDimensionalArrayConverter.cs</Link>
+	</Compile>
     <Compile Include="..\Raven.Abstractions\Json\JTokenExtensions.cs">
       <Link>Json\JTokenExtensions.cs</Link>
     </Compile>
