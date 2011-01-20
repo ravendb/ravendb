@@ -9,6 +9,11 @@
 
 	public class AsyncLuceneQueryTests : RavenTestBase
 	{
+		public class User
+		{
+			public string Name { get; set; }
+		}
+
 		[Asynchronous]
 		public IEnumerable<Task> Can_query_using_async_session()
 		{
@@ -19,13 +24,13 @@
 
 			using (var s = documentStore.OpenAsyncSession(dbname))
 			{
-				s.Store(new {Name = "Ayende"});
+				s.Store(new User {Name = "Ayende"});
 				yield return s.SaveChangesAsync();
 			}
 
 			using (var s = documentStore.OpenAsyncSession(dbname))
 			{
-				var queryResultAsync = s.Advanced.AsyncLuceneQuery<object>()
+				var queryResultAsync = s.Advanced.AsyncLuceneQuery<User>()
 					.WhereEquals("Name", "Ayende")
 					.QueryResultAsync;
 
