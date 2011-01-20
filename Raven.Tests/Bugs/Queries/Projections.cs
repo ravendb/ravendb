@@ -70,11 +70,11 @@ namespace Raven.Tests.Bugs.Queries
 					var results = session.Query<Company>()
 						.Customize(x => x.WaitForNonStaleResults())
 						.Where(x => x.Name == "Simple Company")
-						.Select(x => new { CompanyName = x.Name })
+						.Select(x => new TheCompanyName { Name = x.Name })
 						.ToList();
 
 					Assert.Equal(1, results.Count);
-					Assert.Equal("Simple Company", results[0].CompanyName);
+					Assert.Equal("Simple Company", results[0].Name);
 				}
 			}
 		}
@@ -83,5 +83,12 @@ namespace Raven.Tests.Bugs.Queries
         {
             public LiveProjection.Address[] Addresses { get; set; }
         }
+
+
+
+		public class TheCompanyName
+		{
+			public string Name { get; set; }
+		}
     }
 }
