@@ -71,7 +71,7 @@
 				var load = session.LoadAsync<Customer>(customer.Id);
 				yield return load;
 
-				Assert.False(true, "Not sure how to test this yet. When I manually check the server, I see an additional request for loading the customer.");
+				Assert.Equal(1, session.Advanced.NumberOfRequests);
 			}
 		}
 	}
