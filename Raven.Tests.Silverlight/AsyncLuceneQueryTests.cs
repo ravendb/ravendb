@@ -63,7 +63,6 @@
 					.Include(x => x.Customer.Id)
 					.WhereEquals("Id", "orders/1")
 					.ToListAsync();
-					//.QueryResultAsync;
 				yield return query;
 
 				Assert.Equal("Hello", query.Result[0].Note);
