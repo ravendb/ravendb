@@ -55,11 +55,11 @@ namespace Raven.Database.Config
 			var cleanupThreshold = Settings["Raven/TempIndexCleanupThreshold"];
 			var maxNumberOfItemsToIndexInSingleBatch = Settings["Raven/MaxNumberOfItemsToIndexInSingleBatch"];
 			var maxNumberOfParallelIndexTasks = Settings["Raven/MaxNumberOfParallelIndexTasks"];
-			var indexingPriority = Settings["Raven/IndexingPriority"];
+			var backgroundTasksPriority = Settings["Raven/BackgroundTasksPriority"];
 
-			BackgroundTasksPriority = indexingPriority == null
+			BackgroundTasksPriority = backgroundTasksPriority == null
 			                   	? ThreadPriority.Normal
-			                   	: (ThreadPriority) Enum.Parse(typeof (ThreadPriority), indexingPriority);
+                                : (ThreadPriority)Enum.Parse(typeof(ThreadPriority), backgroundTasksPriority);
 
 			MaxPageSize = maxPageSizeStr != null ? int.Parse(maxPageSizeStr) : 1024;
 			MaxNumberOfItemsToIndexInSingleBatch = maxNumberOfItemsToIndexInSingleBatch != null ? int.Parse(maxNumberOfItemsToIndexInSingleBatch) : 2500;
