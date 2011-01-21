@@ -747,13 +747,13 @@ namespace Raven.Client.Linq
 		/// <value>The lucene query.</value>
 		public IDocumentQuery<T> GetLuceneQueryFor(Expression expression)
 		{
-			var query = queryGenerator.Query<T>(indexName);
+			luceneQuery = queryGenerator.Query<T>(indexName);
 			VisitExpression(expression);
 
 			if (customizeQuery != null)
-				customizeQuery((IDocumentQueryCustomization)query);
+				customizeQuery((IDocumentQueryCustomization)luceneQuery);
 
-			return query;
+			return luceneQuery;
 		}
 		
 		/// <summary>
