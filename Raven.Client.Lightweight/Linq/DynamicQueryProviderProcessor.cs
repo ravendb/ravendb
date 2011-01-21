@@ -43,7 +43,7 @@ namespace Raven.Client.Linq
 
 			var memberExpression = GetMemberExpression(expression);
 
-			//for stnadard queries, we take just the last part. Bu for dynamic queries, we take the whole part
+			//for standard queries, we take just the last part. But for dynamic queries, we take the whole part
 			var path = memberExpression.ToString();
 			path = path.Substring(path.IndexOf('.') + 1);
 
