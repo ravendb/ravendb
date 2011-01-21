@@ -95,10 +95,7 @@ namespace Raven.Database.Indexing
 			if (indexesToWorkOn.Count == 0)
 				return false;
 			
-			if(context.Configuration.IndexSingleThreaded == false)
-				ExecuteIndexingWorkOnMultipleThreads(indexesToWorkOn);
-			else
-				ExecuteIndexingWorkOnSingleThread(indexesToWorkOn);
+			ExecuteIndexingWorkOnMultipleThreads(indexesToWorkOn);
 
 			return true;
 		}
@@ -110,21 +107,11 @@ namespace Raven.Database.Indexing
 				// allow a maximum of 8 indexes to run at a given time, this avoids a potential error
 				// where you have N indexes all trying to read MaxNumberOfItemsToIndexInSignleBatch at the same time
 				// which might lead to an OutOfMemoryException
-				MaxDegreeOfParallelism = 8,
+				MaxDegreeOfParallelism = context.Configuration.MaxNumberOfParallelIndexTasks,
 				TaskScheduler = scheduler
 			}
 				, indexToWorkOn => transactionalStorage.Batch(actions =>
 					IndexDocuments(actions, indexToWorkOn.IndexName, indexToWorkOn.LastIndexedEtag)));
-		}
-
-		private void ExecuteIndexingWorkOnSingleThread(IEnumerable<IndexToWorkOn> indexesToWorkOn)
-		{
-			foreach (var indexToWorkOn in indexesToWorkOn)
-			{
-				var copy = indexToWorkOn;
-				transactionalStorage.Batch(
-					actions => IndexDocuments(actions, copy.IndexName, copy.LastIndexedEtag));
-			}
 		}
 
 		public class IndexToWorkOn

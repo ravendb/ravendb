@@ -30,6 +30,7 @@ namespace Raven.Database.Config
 
 			BackgroundTasksPriority = ThreadPriority.Normal;
 			MaxNumberOfItemsToIndexInSingleBatch = 2500;
+			MaxNumberOfParallelIndexTasks = 8;
 
 			Catalog = new AggregateCatalog(
 				new AssemblyCatalog(typeof(HttpServer).Assembly),
@@ -53,6 +54,7 @@ namespace Raven.Database.Config
 			var cleanupPeriod = Settings["Raven/TempIndexCleanupPeriod"];
 			var cleanupThreshold = Settings["Raven/TempIndexCleanupThreshold"];
 			var maxNumberOfItemsToIndexInSingleBatch = Settings["Raven/MaxNumberOfItemsToIndexInSingleBatch"];
+			var maxNumberOfParallelIndexTasks = Settings["Raven/MaxNumberOfParallelIndexTasks"];
 			var indexingPriority = Settings["Raven/IndexingPriority"];
 
 			BackgroundTasksPriority = indexingPriority == null
@@ -61,6 +63,7 @@ namespace Raven.Database.Config
 
 			MaxPageSize = maxPageSizeStr != null ? int.Parse(maxPageSizeStr) : 1024;
 			MaxNumberOfItemsToIndexInSingleBatch = maxNumberOfItemsToIndexInSingleBatch != null ? int.Parse(maxNumberOfItemsToIndexInSingleBatch) : 2500;
+			MaxNumberOfParallelIndexTasks = maxNumberOfParallelIndexTasks != null ? int.Parse(maxNumberOfParallelIndexTasks) : 8;
 			TempIndexPromotionMinimumQueryCount = minimumQueryCount != null ? int.Parse(minimumQueryCount) : 100;
 			TempIndexPromotionThreshold = queryThreshold != null ? int.Parse(queryThreshold) : 60000; // once a minute
 			TempIndexCleanupPeriod = cleanupPeriod != null ? TimeSpan.FromSeconds(int.Parse(cleanupPeriod)) : TimeSpan.FromMinutes(10);
@@ -194,7 +197,7 @@ namespace Raven.Database.Config
 
 		public int MaxNumberOfItemsToIndexInSingleBatch { get; set; }
 
-		public bool IndexSingleThreaded { get; set; }
+		public int MaxNumberOfParallelIndexTasks { get; set; }
 
 		public ThreadPriority BackgroundTasksPriority { get; set; }
 
