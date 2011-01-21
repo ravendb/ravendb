@@ -177,6 +177,16 @@ namespace Raven.Client.Linq
 			return (IRavenQueryable<T>)Queryable.OrderByDescending(source, keySelector, comparer);
 		}
 
+		public static IRavenQueryable<TResult> Select<TSource, TResult>(this IRavenQueryable<TSource> source, Expression<Func<TSource, TResult>> selector)
+		{
+			return (IRavenQueryable<TResult>)Queryable.Select(source, selector);
+		}
+
+		public static IRavenQueryable<TResult> Select<TSource, TResult>(this IRavenQueryable<TSource> source, Expression<Func<TSource,int, TResult>> selector)
+		{
+			return (IRavenQueryable<TResult>)Queryable.Select(source, selector);
+		}
+
 		//TODO: implement the thousand natural shocks that linq is heir to
 
 #endif

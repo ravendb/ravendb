@@ -182,33 +182,40 @@
 			}
 		}
 
-		//[Asynchronous]
-		//public IEnumerable<Task> Can_perform_a_projection_in_a_linq_query()
-		//{
-		//    var dbname = GenerateNewDatabaseName();
-		//    var documentStore = new DocumentStore { Url = Url + Port };
-		//    documentStore.Initialize();
-		//    yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+		[Asynchronous][Ignore]
+		public IEnumerable<Task> Can_perform_a_projection_in_a_linq_query()
+		{
+			var dbname = GenerateNewDatabaseName();
+			var documentStore = new DocumentStore { Url = Url + Port };
+			documentStore.Initialize();
+			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
 
-		//    var entity = new Company { Name = "Async Company #1", Id = "companies/1" };
-		//    using (var session = documentStore.OpenAsyncSession(dbname))
-		//    {
-		//        session.Store(entity);
-		//        yield return session.SaveChangesAsync();
-		//    }
+			var entity = new Company { Name = "Async Company #1", Id = "companies/1" };
+			using (var session = documentStore.OpenAsyncSession(dbname))
+			{
+				session.Store(entity);
+				yield return session.SaveChangesAsync();
+			}
 
-		//    using (var session = documentStore.OpenAsyncSession(dbname))
-		//    {
-		//        var query = session.Query<Company>()
-		//                    .Where(x => x.Name == "Async Company #1")
-		//                    .Select(x => x.Name)
-		//                    .ToListAsync();
-		//        yield return query;
+			using (var session = documentStore.OpenAsyncSession(dbname))
+			{
+				var query = session.Query<Company>()
+							.Where(x => x.Name == "Async Company #1")
+							.Select(x => new TheCompanyName { Name = x.Name })
+							.ToListAsync();
+				yield return query;
 
-		//        Assert.Equal(1, query.Result.Count);
-		//        Assert.Equal("Async Company #1", query.Result[0]);
-		//    }
-		//}
+				//TODO: there is a problem casting the type, however there are more important matters to work on first
+
+				Assert.Equal(1, query.Result.Count);
+				Assert.Equal("Async Company #1", query.Result[0].Name);
+			}
+		}
+	}
+
+	public class TheCompanyName
+	{
+		public string Name { get; set; }
 	}
 
 	public class Order
