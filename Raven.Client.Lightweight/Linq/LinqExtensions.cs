@@ -127,18 +127,18 @@ namespace Raven.Client.Linq
 			ravenQueryProvider.ProcessExpression(source.Expression);
 			var luceneQuery = ravenQueryProvider.LuceneQuery;
 			
-			var tcs = new TaskCompletionSource<IList<T>>();
+			//var tcs = new TaskCompletionSource<IList<T>>();
 
-			luceneQuery.QueryResultAsync
-			.ContinueWith(r=>
-			            {
-							// TODO: I want someone more familiar with Json.NET to review this bit. CB.
-							var serializer = new JsonSerializer();
-							var list = r.Result.Results.Select(x => (T)serializer.Deserialize(new JTokenReader(x), typeof(T))).ToList();
-							tcs.TrySetResult(list);
-			            });
+			//luceneQuery.ToListAsync()
+			//.ContinueWith(r=>
+			//            {
+			//                // TODO: I want someone more familiar with Json.NET to review this bit. CB.
+			//                var serializer = new JsonSerializer();
+			//                var list = r.Result.Results.Select(x => (T)serializer.Deserialize(new JTokenReader(x), typeof(T))).ToList();
+			//                tcs.TrySetResult(list);
+			//            });
 
-			return tcs.Task;
+			return luceneQuery.ToListAsync();
 		} 
 #endif
 

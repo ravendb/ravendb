@@ -32,11 +32,11 @@
 			{
 				var queryResultAsync = s.Advanced.AsyncLuceneQuery<User>()
 					.WhereEquals("Name", "Ayende")
-					.QueryResultAsync;
+					.ToListAsync();
 
 				yield return queryResultAsync;
 
-				Assert.Equal("Ayende", queryResultAsync.Result.Results[0].Value<string>("Name"));
+				Assert.Equal("Ayende", queryResultAsync.Result[0].Name);
 			}
 		}
 
@@ -62,10 +62,11 @@
 				var query = session.Advanced.AsyncLuceneQuery<Order>()
 					.Include(x => x.Customer.Id)
 					.WhereEquals("Id", "orders/1")
-					.QueryResultAsync;
+					.ToListAsync();
+					//.QueryResultAsync;
 				yield return query;
 
-				Assert.Equal("Hello", query.Result.Results[0].Value<string>("Note"));
+				Assert.Equal("Hello", query.Result[0].Note);
 
 				// NOTE: this call should not hit the server 
 				var load = session.LoadAsync<Customer>(customer.Id);

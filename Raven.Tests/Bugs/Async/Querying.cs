@@ -28,12 +28,12 @@ namespace Raven.Tests.Bugs.Async
                 {
                     var queryResultAsync = s.Advanced.AsyncLuceneQuery<dynamic>()
                         .WhereEquals("Name", "Ayende")
-                        .QueryResultAsync;
+                        .ToListAsync();
 
                     queryResultAsync.Wait();
 
                     Assert.Equal("Ayende",
-                        queryResultAsync.Result.Results[0].Value<string>("Name"));
+                        queryResultAsync.Result[0].Name);
                 }
             }
         }

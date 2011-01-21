@@ -1259,5 +1259,25 @@ If you really want to do in memory filtering on the data returned from the query
         {
             return lastEquality;
         }
+
+		/// <summary>
+		/// Returns a list of results for a query asynchronously. 
+		/// </summary>
+		public Task<IList<T>> ToListAsync()
+		{
+			return QueryResultAsync
+				.ContinueWith(r =>
+				{
+					var result = r.Result;
+
+					foreach (var include in result.Includes)
+					{
+						var metadata = include.Value<JObject>("@metadata");
+						theSession.TrackEntity<object>(metadata.Value<string>("@id"), include, metadata);
+					}
+
+					return (IList<T>)result.Results.Select(Deserialize).ToList();
+				});
+		}
     }
 }
