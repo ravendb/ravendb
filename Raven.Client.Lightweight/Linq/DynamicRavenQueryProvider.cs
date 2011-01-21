@@ -108,6 +108,15 @@ namespace Raven.Client.Linq
 		}
 
 		/// <summary>
+		/// Convert the expression to a Lucene query
+		/// </summary>
+		public IDocumentQuery<TResult> ToLuceneQuery<TResult>(Expression expression)
+		{
+			var processor = GetQueryProviderProcessor();
+			return (IDocumentQuery<TResult>)processor.GetLuceneQueryFor(expression);
+		}
+
+		/// <summary>
 		/// Executes the query represented by a specified expression tree.
 		/// </summary>
 		/// <param name="expression">An expression tree that represents a LINQ query.</param>
@@ -116,7 +125,12 @@ namespace Raven.Client.Linq
 		/// </returns>
 		public virtual object Execute(Expression expression)
 		{
-			return new DynamicQueryProviderProcessor<T>(queryGenerator, customizeQuery, afterQueryExecuted, indexName).Execute(expression);
+			return GetQueryProviderProcessor().Execute(expression);
+		}
+
+		DynamicQueryProviderProcessor<T> GetQueryProviderProcessor()
+		{
+			return new DynamicQueryProviderProcessor<T>(queryGenerator, customizeQuery, afterQueryExecuted, indexName);
 		}
 
 		IQueryable<S> IQueryProvider.CreateQuery<S>(Expression expression)

@@ -121,34 +121,66 @@
 			}
 		}
 
-		//[Asynchronous]
-		//public IEnumerable<Task> Can_perform_an_include_in_a_linq_query_asychronously()
-		//{
-		//    var dbname = GenerateNewDatabaseName();
-		//    var documentStore = new DocumentStore { Url = Url + Port };
-		//    documentStore.Initialize();
-		//    yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+		[Asynchronous]
+		public IEnumerable<Task> Can_perform_a_where_starts_with()
+		{
+			var dbname = GenerateNewDatabaseName();
+			var documentStore = new DocumentStore { Url = Url + Port };
+			documentStore.Initialize();
+			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
 
-		//    var customer = new Customer { Name = "Customer #1", Id = "customer/1",Email = "someone@customer.com"};
-		//    var order = new Order{BillingAddress = new Address(),ShippingAddress = new Address(),Customer = new DenormalizedReference{Id = customer.Id,Name = customer.Name}};
-		//    using (var session = documentStore.OpenAsyncSession(dbname))
-		//    {
-		//        session.Store(customer);
-		//        session.Store(order);
-		//        yield return session.SaveChangesAsync();
-		//    }
+			using (var session = documentStore.OpenAsyncSession(dbname))
+			{
+				session.Store(new Company { Name = "Async Company #1", Id = "companies/1" });
+				session.Store(new Company { Name = "Async Company #2", Id = "companies/2" });
+				yield return session.SaveChangesAsync();
+			}
 
-		//    using (var session = documentStore.OpenAsyncSession(dbname))
-		//    {
-		//        var query = session.Query<Order>()
-		//                    .Where(x => x.Customer.Name == "Customer #1")
-		//                    .ToListAsync();
-		//        yield return query;
+			using (var session = documentStore.OpenAsyncSession(dbname))
+			{
+				var query = session.Query<Company>()
+							.Where(x => x.Name.StartsWith("Async"))
+							.ToListAsync();
+				yield return query;
 
-		//        Assert.Equal(1, query.Result.Count);
-		//        //Assert.Equal("Async Company #1", query.Result[0].Name);
-		//    }
-		//}
+				Assert.Equal(2, query.Result.Count);
+			}
+		}
+
+		[Asynchronous]
+		public IEnumerable<Task> Can_perform_an_include_in_a_linq_query()
+		{
+			var dbname = GenerateNewDatabaseName();
+			var documentStore = new DocumentStore { Url = Url + Port };
+			documentStore.Initialize();
+			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+
+			var customer = new Customer { Name = "Customer #1", Id = "customer/1", Email = "someone@customer.com" };
+			var order = new Order { Id = "orders/1", Note = "Hello", Customer = new DenormalizedReference { Id = customer.Id, Name = customer.Name } };
+			using (var session = documentStore.OpenAsyncSession(dbname))
+			{
+				session.Store(customer);
+				session.Store(order);
+				yield return session.SaveChangesAsync();
+			}
+
+			using (var session = documentStore.OpenAsyncSession(dbname))
+			{
+				var query = session.Query<Order>()
+							.Include(x => x.Customer.Id)
+							.Where(x => x.Id == "orders/1")
+							.ToListAsync();
+				yield return query;
+
+				Assert.Equal("Hello", query.Result[0].Note);
+
+				// NOTE: this call should not hit the server 
+				var load = session.LoadAsync<Customer>(customer.Id);
+				yield return load;
+
+				Assert.Equal(1, session.Advanced.NumberOfRequests);
+			}
+		}
 
 		//[Asynchronous]
 		//public IEnumerable<Task> Can_perform_a_projection_in_a_linq_query()

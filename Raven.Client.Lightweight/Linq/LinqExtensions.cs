@@ -117,28 +117,8 @@ namespace Raven.Client.Linq
 		/// </summary>
 		public static Task<IList<T>> ToListAsync<T>(this IRavenQueryable<T> source)
 		{
-			var inspector = source as IRavenQueryInspector;
-			//TODO: what exception message to use here?
-			if (inspector == null) throw new InvalidOperationException("ToListAsync is only applicable for implementations of IRavenQueryInspector");
-
-			//TODO: is this the appropriate code for transforming the linq? it feels wrong to me...
 			var provider = (IRavenQueryProvider)source.Provider;
-			var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, inspector.IndexQueried);
-			ravenQueryProvider.ProcessExpression(source.Expression);
-			var luceneQuery = ravenQueryProvider.LuceneQuery;
-			
-			//var tcs = new TaskCompletionSource<IList<T>>();
-
-			//luceneQuery.ToListAsync()
-			//.ContinueWith(r=>
-			//            {
-			//                // TODO: I want someone more familiar with Json.NET to review this bit. CB.
-			//                var serializer = new JsonSerializer();
-			//                var list = r.Result.Results.Select(x => (T)serializer.Deserialize(new JTokenReader(x), typeof(T))).ToList();
-			//                tcs.TrySetResult(list);
-			//            });
-
-			return luceneQuery.ToListAsync();
+			return provider.ToLuceneQuery<T>(source.Expression).ToListAsync();
 		} 
 #endif
 
@@ -159,6 +139,12 @@ namespace Raven.Client.Linq
 		public static T[] ToArray<T>(this IRavenQueryable<T> source)
 		{
 			throw new NotSupportedException();
+		}
+
+		public static IRavenQueryable<T> Include<T>(this IRavenQueryable<T> source, Expression<Func<T, object>> path)
+		{
+			source.Customize(x => x.Include(path));
+			return source;
 		}
 
 		public static IRavenQueryable<T> Where<T>(this IRavenQueryable<T> source, Expression<Func<T, bool>> prediate)

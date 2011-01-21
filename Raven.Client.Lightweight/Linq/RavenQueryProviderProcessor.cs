@@ -28,7 +28,7 @@ namespace Raven.Client.Linq
 		private Type newExpressionType;
 		private string currentPath = string.Empty;
 		private int subClauseDepth;
-		private string indexName;
+		private readonly string indexName;
 
 		/// <summary>
 		/// Gets the current path in the case of expressions within collections
@@ -41,6 +41,7 @@ namespace Raven.Client.Linq
 		/// <param name="queryGenerator">The document query generator.</param>
 		/// <param name="customizeQuery">The customize query.</param>
 		/// <param name="afterQueryExecuted">Executed after the query run, allow access to the query results</param>
+		/// <param name="indexName">The name of the index the query is executed against.</param>
 		public RavenQueryProviderProcessor(
 			IDocumentQueryGenerator queryGenerator,
 			Action<IDocumentQueryCustomization> customizeQuery,
@@ -53,15 +54,6 @@ namespace Raven.Client.Linq
 			this.indexName = indexName;
 			this.afterQueryExecuted = afterQueryExecuted;
 			this.customizeQuery = customizeQuery;
-		}
-
-		/// <summary>
-		/// Gets the lucene query.
-		/// </summary>
-		/// <value>The lucene query.</value>
-		public IDocumentQuery<T> LuceneQuery
-		{
-			get { return luceneQuery; }
 		}
 
 		/// <summary>
@@ -750,13 +742,18 @@ namespace Raven.Client.Linq
 		}
 
 		/// <summary>
-		/// Processes the expression.
+		/// Gets the lucene query.
 		/// </summary>
-		/// <param name="expression">The expression.</param>
-		public void ProcessExpression(Expression expression)
+		/// <value>The lucene query.</value>
+		public IDocumentQuery<T> GetLuceneQueryFor(Expression expression)
 		{
-			luceneQuery = queryGenerator.Query<T>(indexName);
+			var query = queryGenerator.Query<T>(indexName);
 			VisitExpression(expression);
+
+			if (customizeQuery != null)
+				customizeQuery((IDocumentQueryCustomization)query);
+
+			return query;
 		}
 		
 		/// <summary>
@@ -767,10 +764,8 @@ namespace Raven.Client.Linq
 		public object Execute(Expression expression)
 		{
 			chainedWhere = false;
-			ProcessExpression(expression);
 
-			if (customizeQuery != null)
-				customizeQuery((IDocumentQueryCustomization)luceneQuery);
+			luceneQuery = GetLuceneQueryFor(expression);
 
 			if(newExpressionType == typeof(T))
 				return ExecuteQuery<T>();
