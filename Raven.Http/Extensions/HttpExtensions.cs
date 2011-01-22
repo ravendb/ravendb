@@ -110,6 +110,10 @@ namespace Raven.Http.Extensions
 				if (header.Name.StartsWith("@"))
 					continue;
 				context.Response.Headers[header.Name] = StripQuotesIfNeeded(header.Value.ToString(Formatting.None));
+				
+				//Can also concern Cache-Control, Transfer-Encoding, Content-Length, Location
+                if (header.Name == "Content-Type")
+					context.Response.ContentType = StripQuotesIfNeeded(header.Value.ToString(Formatting.None));
 			}
             if (headers["@Http-Status-Code"] != null)
             {
