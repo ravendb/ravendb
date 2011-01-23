@@ -12,7 +12,7 @@ namespace Raven.Storage.Managed.Impl
 {
     public class TableStorage : Munin.Database
     {
-    	private readonly ObjectCache cachedSerializedDocuments = new MemoryCache(typeof (TableStorage).FullName + ".Cache");
+		private readonly MemoryCache cachedSerializedDocuments = new MemoryCache(typeof(TableStorage).FullName + ".Cache");
 
 		public Tuple<JObject, JObject> GetCachedDocument(string key, Guid etag)
 		{
@@ -105,5 +105,11 @@ namespace Raven.Storage.Managed.Impl
         public Table Attachments { get; private set; }
 
         public Table Identity { get; private set; }
+
+		public override void Dispose()
+		{
+			cachedSerializedDocuments.Dispose();
+			base.Dispose();
+		}
     }
 }
