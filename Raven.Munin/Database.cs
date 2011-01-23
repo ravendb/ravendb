@@ -317,9 +317,14 @@ namespace Raven.Munin
 
 				persistentSource.ReplaceAtomically(tempLog);
 
-				foreach (var command in cmds)
+				using (SuppressTransaction())
 				{
-					tables[command.DictionaryId].UpdateKey(command.Key, command.Position, command.Size);
+					CurrentTransactionId.Value = Guid.NewGuid();
+					foreach (var command in cmds)
+					{
+						tables[command.DictionaryId].UpdateKey(command.Key, command.Position, command.Size);
+						tables[command.DictionaryId].CompleteCommit(CurrentTransactionId.Value);
+					}
 				}
 			});
 		}
