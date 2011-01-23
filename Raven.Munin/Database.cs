@@ -181,6 +181,8 @@ namespace Raven.Munin
 				return;
 
 			Commit(CurrentTransactionId.Value);
+
+			CurrentTransactionId.Value = Guid.Empty;
 		}
 
 		public void Rollback()
