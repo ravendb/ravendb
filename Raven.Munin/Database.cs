@@ -16,7 +16,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Raven.Munin
 {
-	public class Database : IEnumerable<Table>
+	public class Database : IEnumerable<Table>, IDisposable
 	{
 		private readonly IPersistentSource persistentSource;
 		private readonly List<Table> tables = new List<Table>();
@@ -371,6 +371,18 @@ namespace Raven.Munin
 		IEnumerator IEnumerable.GetEnumerator()
 		{
 			return GetEnumerator();
+		}
+
+		/// <summary>
+		/// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+		/// </summary>
+		/// <filterpriority>2</filterpriority>
+		public virtual void Dispose()
+		{
+			foreach (var table in Tables)
+			{
+				table.Dispose();
+			}
 		}
 	}
 }
