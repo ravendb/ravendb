@@ -21,7 +21,7 @@ namespace Raven.Client.Client
     public class EmbeddableDocumentStore : DocumentStore
     {
         private RavenConfiguration configuration;
-        private RavenDbHttpServer HttpServer;
+        private RavenDbHttpServer httpServer;
         private bool wasDisposed;
 
 		/// <summary>
@@ -35,7 +35,7 @@ namespace Raven.Client.Client
         /// <value>The identifier.</value>
         public override string Identifier
         {
-            get { return base.Identifier ?? (RunInMemory ? "memory" : DataDirectory); }
+            get { return base.Identifier ?? (RunInMemory ? "memory #" + GetHashCode() : DataDirectory); }
             set { base.Identifier = value; }
         }
 
@@ -111,8 +111,8 @@ namespace Raven.Client.Client
             base.Dispose();
             if (DocumentDatabase != null)
                 DocumentDatabase.Dispose();
-            if (HttpServer != null)
-                HttpServer.Dispose();
+            if (httpServer != null)
+                httpServer.Dispose();
 
 
         	var onDisposed = Disposed;
@@ -131,8 +131,8 @@ namespace Raven.Client.Client
                 DocumentDatabase.SpinBackgroundWorkers();
                 if (UseEmbeddedHttpServer)
                 {
-                    HttpServer = new RavenDbHttpServer(configuration, DocumentDatabase);
-                    HttpServer.Start();
+                    httpServer = new RavenDbHttpServer(configuration, DocumentDatabase);
+                    httpServer.Start();
                 }
                 databaseCommandsGenerator = () => new EmbededDatabaseCommands(DocumentDatabase, Conventions);
             }
