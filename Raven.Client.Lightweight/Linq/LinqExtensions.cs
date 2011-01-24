@@ -41,13 +41,13 @@ namespace Raven.Client.Linq
 		/// <summary>
 		/// Project using a different type
 		/// </summary>
-		public static IEnumerable<TResult> AsProjection<TResult>(this IQueryable queryable)
+		public static IRavenQueryable<TResult> AsProjection<TResult>(this IQueryable queryable)
 		{
 			var results = queryable.Provider.CreateQuery<TResult>(queryable.Expression);
 			var ravenQueryInspector = ((RavenQueryInspector<TResult>)results);
 			ravenQueryInspector.FieldsToFetch(typeof(TResult).GetProperties().Select(x => x.Name));
 			ravenQueryInspector.Customize(x => x.CreateQueryForSelectedFields<TResult>(null));
-			return results;
+			return (IRavenQueryable<TResult>)results;
 		}
 #if !SILVERLIGHT
 

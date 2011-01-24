@@ -200,11 +200,13 @@
 			{
 				var query = session.Query<Company>()
 							.Where(x => x.Name == "Async Company #1")
-							.Select(x => new TheCompanyName { Name = x.Name })
+							.AsProjection<TheCompanyName>()
 							.ToListAsync();
 				yield return query;
 
-				//TODO: there is a problem casting the type, however there are more important matters to work on first
+				//NOTE: it seems that the fields from the projection are not proprogated to the query,
+				//		 this manifests as a problem casting the type, because (since it does see the projected fields)
+				//		 it assumes that the must be the original entity (i.e., Company)
 
 				Assert.Equal(1, query.Result.Count);
 				Assert.Equal("Async Company #1", query.Result[0].Name);
