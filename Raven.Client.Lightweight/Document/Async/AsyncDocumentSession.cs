@@ -15,21 +15,24 @@ using Raven.Database;
 
 namespace Raven.Client.Document.Async
 {
+	using Linq;
+
 	/// <summary>
 	/// Implementation for async document session 
 	/// </summary>
-	public class AsyncDocumentSession : InMemoryDocumentSessionOperations, IAsyncDocumentSession, IAsyncAdvancedSessionOperations
+	public class AsyncDocumentSession : InMemoryDocumentSessionOperations, IAsyncDocumentSession, IAsyncAdvancedSessionOperations, IDocumentQueryGenerator
 	{
 		/// <summary>
 		/// Initializes a new instance of the <see cref="AsyncDocumentSession"/> class.
 		/// </summary>
-		/// <param name="documentStore">The document store.</param>
-		/// <param name="storeListeners">The store listeners.</param>
-		/// <param name="deleteListeners">The delete listeners.</param>
-		public AsyncDocumentSession(DocumentStore documentStore, IDocumentStoreListener[] storeListeners, IDocumentDeleteListener[] deleteListeners)
-			: base(documentStore, storeListeners, deleteListeners)
+		public AsyncDocumentSession(DocumentStore documentStore, 
+            IAsyncDatabaseCommands asyncDatabaseCommands, 
+            IDocumentQueryListener[] queryListeners, 
+            IDocumentStoreListener[] storeListeners, 
+            IDocumentDeleteListener[] deleteListeners)
+			: base(documentStore, queryListeners, storeListeners, deleteListeners)
 		{
-			AsyncDatabaseCommands = documentStore.AsyncDatabaseCommands;
+			AsyncDatabaseCommands = asyncDatabaseCommands;
 		}
 
 		/// <summary>
@@ -38,7 +41,31 @@ namespace Raven.Client.Document.Async
 		/// <value>The async database commands.</value>
 		public IAsyncDatabaseCommands AsyncDatabaseCommands { get; private set; }
 
-        /// <summary>
+	    /// <summary>
+	    /// Query the specified index using Lucene syntax
+	    /// </summary>
+	    public IDocumentQuery<T> AsyncLuceneQuery<T>(string index)
+	    {
+	        return new DocumentQuery<T>(this, 
+#if !SILVERLIGHT
+                null, 
+#endif
+                AsyncDatabaseCommands, index, new string[0], queryListeners);
+	    }
+
+	    /// <summary>
+	    /// Dynamically query RavenDB using Lucene syntax
+	    /// </summary>
+	    public IDocumentQuery<T> AsyncLuceneQuery<T>()
+	    {
+            return new DocumentQuery<T>(this,
+#if !SILVERLIGHT
+ null,
+#endif
+    AsyncDatabaseCommands, "dynamic", new string[0], queryListeners);
+	    }
+
+	    /// <summary>
         /// Get the accessor for advanced operations
         /// </summary>
         /// <remarks>
@@ -112,8 +139,7 @@ namespace Raven.Client.Document.Async
                 .ContinueWith(task => UpdateBatchResults(task.Result, data.Entities));
 		}
 
-
-        /// <summary>
+		/// <summary>
         /// Get the json document by key from the store
         /// </summary>
 	    protected override JsonDocument GetJsonDocument(string documentKey)
@@ -147,6 +173,45 @@ namespace Raven.Client.Document.Async
 		public override byte[] PromoteTransaction(Guid fromTxId)
 		{
 			throw new NotImplementedException();
+		}
+
+		/// <summary>
+		/// Dynamically queries RavenDB using LINQ
+		/// </summary>
+		/// <typeparam name="T">The result of the query</typeparam>
+		public IRavenQueryable<T> Query<T>()
+		{
+			string indexName = "dynamic";
+			if (typeof(T) != typeof(object))
+			{
+				indexName += "/" + Conventions.GetTypeTagName(typeof(T));
+			}
+			
+			var ravenQueryStatistics = new RavenQueryStatistics();
+
+			return new RavenQueryInspector<T>(
+				new DynamicRavenQueryProvider<T>(this, indexName, ravenQueryStatistics, 
+				#if !SILVERLIGHT
+				null,
+				#endif
+				Advanced.AsyncDatabaseCommands),
+				ravenQueryStatistics,
+				indexName,
+				null,
+#if !SILVERLIGHT
+ null,
+#endif
+				Advanced.AsyncDatabaseCommands);
+		}
+
+		IRavenQueryable<T> IAsyncDocumentSession.Query<T>(string indexName)
+		{
+			throw new NotImplementedException();
+		}
+
+		IDocumentQuery<T> IDocumentQueryGenerator.Query<T>(string indexName)
+		{
+			return Advanced.AsyncLuceneQuery<T>(indexName);
 		}
 	}
 }

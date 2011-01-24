@@ -1,0 +1,104 @@
+﻿<UserControl xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
+             x:Class="Raven.ManagementStudio.UI.Silverlight.Plugins.Statistics.Global.GlobalStatisticsScreenView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignHeight="300"
+             d:DesignWidth="400">
+
+    <Grid>
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                      VerticalScrollBarVisibility="Auto"
+                      BorderThickness="0">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Number of Documents: " />
+                    <TextBlock Text="{Binding Statistics.CountOfDocuments, FallbackValue=0}" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Number of Indexes: " />
+                    <TextBlock Text="{Binding Statistics.CountOfIndexes, FallbackValue=0}" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Number of Tasks: " />
+                    <TextBlock Text="{Binding Statistics.ApproximateTaskCount, FallbackValue=0}" />
+                </StackPanel>
+                <StackPanel Orientation="Vertical">
+                    <TextBlock Text="Stale Indexes: " />
+                    <ItemsControl ItemsSource="{Binding Statistics.StaleIndexes}"
+                                  BorderThickness="0"
+                                  Margin="30,0,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel>
+                                    <TextBlock Text="{Binding}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+                <StackPanel Orientation="Vertical">
+                    <TextBlock Text="Indexes: " />
+                    <ItemsControl ItemsSource="{Binding Statistics.Indexes}"
+                                  BorderThickness="0"
+                                  Margin="30,0,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Name}" />
+                                    <TextBlock Text="{Binding IndexingAttempts, StringFormat=IndexingAttempts: \{0\}}"
+                                               Margin="20,0,0,0" />
+                                    <TextBlock Text="{Binding IndexingSuccesses, StringFormat=IndexingSuccesses: \{0\}}"
+                                               Margin="20,0,0,0" />
+                                    <TextBlock Text="{Binding IndexingErrors, StringFormat=IndexingErrors: \{0\}}"
+                                               Margin="20,0,0,0" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+                <StackPanel Orientation="Vertical">
+                    <TextBlock Text="Triggers: " />
+                    <ItemsControl ItemsSource="{Binding Statistics.Triggers}"
+                                  BorderThickness="0"
+                                  Margin="30,0,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding Type, StringFormat='\{0\}: '}" />
+                                    <TextBlock Text="{Binding Name}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+                <StackPanel Orientation="Vertical">
+                    <TextBlock Text="Errors: " />
+                    <ItemsControl ItemsSource="{Binding Statistics.Errors}"
+                                  BorderThickness="0"
+                                  Margin="30,0,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Index}" />
+                                    <TextBlock Text="{Binding Error}"
+                                               Margin="20,0,0,0" />
+                                    <TextBlock Text="{Binding Timestamp}"
+                                               Margin="20,0,0,0" />
+                                    <TextBlock Text="{Binding Document}"
+                                               Margin="20,0,0,0" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+        
+        <toolkit:BusyIndicator IsBusy="{Binding IsBusy}"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center" />
+    </Grid>
+</UserControl>

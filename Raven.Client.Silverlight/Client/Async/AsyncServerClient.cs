@@ -11,6 +11,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Browser;
 using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -26,6 +27,8 @@ using Raven.Http.Json;
 
 namespace Raven.Client.Client.Async
 {
+	using Extensions;
+
 	/// <summary>
 	/// Access the database commands in async fashion
 	/// </summary>
@@ -43,7 +46,7 @@ namespace Raven.Client.Client.Async
 		/// <param name="credentials">The credentials.</param>
 		public AsyncServerClient(string url, DocumentConvention convention, ICredentials credentials)
 		{
-			this.url = url;
+		    this.url = url.EndsWith("/") ? url.Substring(0, url.Length - 1) : url;
 			this.convention = convention;
 			this.credentials = credentials;
 		}
@@ -135,28 +138,49 @@ namespace Raven.Client.Client.Async
 							Metadata = request.ResponseHeaders.FilterHeaders(isServerDocument: false)
 						};
 					}
-					catch (WebException e)
+					catch (AggregateException e)
 					{
-						var httpWebResponse = e.Response as HttpWebResponse;
-						if (httpWebResponse == null)
-							throw;
-						if (httpWebResponse.StatusCode == HttpStatusCode.NotFound)
-							return null;
-						if (httpWebResponse.StatusCode == HttpStatusCode.Conflict)
+						var webException = e.ExtractSingleInnerException() as WebException;
+						if (webException != null)
 						{
-							var conflicts = new StreamReader(httpWebResponse.GetResponseStream());
-							var conflictsDoc = JObject.Load(new JsonTextReader(conflicts));
-							var conflictIds = conflictsDoc.Value<JArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
-
-							throw new ConflictException("Conflict detected on " + key +
-														", conflict must be resolved before the document will be accessible")
-							{
-								ConflictedVersionIds = conflictIds
-							};
+							if (HandleWebExceptionForGetAsync(key, webException))
+								return null;
 						}
 						throw;
 					}
+					catch (WebException e)
+					{
+						if (HandleWebExceptionForGetAsync(key, e))
+							return null;
+						throw;
+					}
 				});
+		}
+
+		private static bool HandleWebExceptionForGetAsync(string key, WebException e)
+		{
+			var httpWebResponse = e.Response as HttpWebResponse;
+			if (httpWebResponse == null)
+			{
+				return false;
+			}
+			if (httpWebResponse.StatusCode == HttpStatusCode.NotFound)
+			{
+				return true;
+			}
+			if (httpWebResponse.StatusCode == HttpStatusCode.Conflict)
+			{
+				var conflicts = new StreamReader(httpWebResponse.GetResponseStream());
+				var conflictsDoc = JObject.Load(new JsonTextReader(conflicts));
+				var conflictIds = conflictsDoc.Value<JArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
+
+				throw new ConflictException("Conflict detected on " + key +
+				                            ", conflict must be resolved before the document will be accessible")
+				{
+					ConflictedVersionIds = conflictIds
+				};
+			}
+			return false;
 		}
 
 		/// <summary>
@@ -258,17 +282,28 @@ namespace Raven.Client.Client.Async
 							{
 								return JsonConvert.DeserializeObject<PutResult>(task1.Result, new JsonEnumConverter());
 							}
+							catch(AggregateException e)
+							{
+								var webexception = e.ExtractSingleInnerException() as WebException;
+								if(ShouldThrowForPutAsync(webexception)) throw;
+								throw ThrowConcurrencyException(webexception);
+							}
 							catch (WebException e)
 							{
-								var httpWebResponse = e.Response as HttpWebResponse;
-								if (httpWebResponse == null ||
-								    httpWebResponse.StatusCode != HttpStatusCode.Conflict)
-									throw;
+								if (ShouldThrowForPutAsync(e)) throw;
 								throw ThrowConcurrencyException(e);
 							}
 						});
 				})
 				.Unwrap();
+		}
+
+		static bool ShouldThrowForPutAsync(WebException e)
+		{
+			if(e == null) return true;
+			var httpWebResponse = e.Response as HttpWebResponse;
+			return (httpWebResponse == null ||
+				httpWebResponse.StatusCode != HttpStatusCode.Conflict);
 		}
 
 
@@ -281,7 +316,7 @@ namespace Raven.Client.Client.Async
 		public Task<string> PutIndexAsync(string name, IndexDefinition indexDef, bool overwrite)
 		{
 			string requestUri = url + "/indexes/" + name;
-			var webRequest = (HttpWebRequest)WebRequest.Create(requestUri);
+			var webRequest = (HttpWebRequest)WebRequestCreator.ClientHttp.Create(new Uri(requestUri));
 			AddOperationHeaders(webRequest);
 			webRequest.Method = "HEAD";
 			webRequest.Credentials = credentials;
@@ -296,10 +331,15 @@ namespace Raven.Client.Client.Async
 							throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
 
 					}
+					catch (AggregateException e)
+					{
+						var webException = e.ExtractSingleInnerException() as WebException;
+						if (ShouldThrowForPutIndexAsync(webException))
+							throw;
+					}
 					catch (WebException e)
 					{
-						var response = e.Response as HttpWebResponse;
-						if (response == null || response.StatusCode != HttpStatusCode.NotFound)
+						if (ShouldThrowForPutIndexAsync(e))
 							throw;
 					}
 
@@ -308,13 +348,51 @@ namespace Raven.Client.Client.Async
 					var serializeObject = JsonConvert.SerializeObject(indexDef, new JsonEnumConverter());
 					return request.WriteAsync(Encoding.UTF8.GetBytes(serializeObject))
 						.ContinueWith(writeTask => request.ReadResponseStringAsync()
-						                           	.ContinueWith(readStrTask =>
-						                           	{
-						                           		var obj = new { index = "" };
-						                           		obj = JsonConvert.DeserializeAnonymousType(readStrTask.Result, obj);
-						                           		return obj.index;
-						                           	})).Unwrap();
+													.ContinueWith(readStrTask =>
+													{
+														//NOTE: JsonConvert.DeserializeAnonymousType() doesn't work in Silverlight because the ctr is private!
+														var obj = JsonConvert.DeserializeObject<IndexContainer>(readStrTask.Result);
+														return obj.Index;
+													})).Unwrap();
 				}).Unwrap();
+		}
+
+		/// <summary>
+		/// Used for deserialization only :-P
+		/// </summary>
+		public class IndexContainer
+		{
+			public string Index {get;set;}
+		}
+
+		private static bool ShouldThrowForPutIndexAsync(WebException e)
+		{
+			if(e == null) return true;
+			var response = e.Response as HttpWebResponse;
+			return (response == null || response.StatusCode != HttpStatusCode.NotFound);
+		}
+
+
+		/// <summary>
+		/// Gets the index names from the server asyncronously
+		/// </summary>
+		/// <param name="start">Paging start</param>
+		/// <param name="pageSize">Size of the page.</param>
+		public Task<string[]> GetIndexNamesAsync(int start, int pageSize)
+		{
+			var request = HttpJsonRequest.CreateHttpJsonRequest(this, url + "/indexes/?namesOnly=true&start=" + start + "&pageSize=" + pageSize, "GET", credentials, convention);
+			
+			return request.ReadResponseStringAsync()
+				.ContinueWith(task =>
+				{
+					var serializer = convention.CreateSerializer();
+					using (var reader = new JsonTextReader(new StringReader(task.Result)))
+					{
+						var json = (JToken)serializer.Deserialize(reader);
+						return json.Select(x => x.Value<string>()).ToArray();
+
+					}
+				});
 		}
 
 		private void AddOperationHeaders(HttpWebRequest webRequest)
@@ -414,7 +492,7 @@ namespace Raven.Client.Client.Async
 				};
 			}
 		}
-		
+
 		private static void EnsureIsNotNullOrEmpty(string key, string argName)
 		{
 			if (string.IsNullOrEmpty(key))

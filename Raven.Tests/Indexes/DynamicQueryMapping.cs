@@ -95,7 +95,7 @@ namespace Raven.Tests.Indexes
             };
 
             var definition = mapping.CreateIndexDefinition();
-            Assert.Equal("from doc in docs\r\nfrom docTagsItem in doc.Tags\r\nselect new { docTagsName = docTagsItem.Name }", definition.Map);
+            Assert.Equal("from doc in docs\r\nfrom docTagsItem in (IEnumerable<dynamic>)doc.Tags\r\nselect new { docTagsName = docTagsItem.Name }", definition.Map);
         }
 
         [Fact]

@@ -23,7 +23,7 @@ namespace Raven.Tests.Linq
 			/// </summary>
 			public IDocumentQuery<T> Query<T>(string indexName)
 			{
-				return new DocumentQuery<T>(null, null, null, null, null);
+                return new DocumentQuery<T>(null, null, null, null, null, null);
 			}
 		}
 
@@ -136,6 +136,18 @@ namespace Raven.Tests.Linq
 			Assert.Equal("Birthday:{* TO 20100515000000000}", q.ToString());
 		}
 
+        [Fact]
+        public void NegatingSubClauses()
+        {
+            var query = ((IDocumentQuery<object>)new DocumentQuery<object>(null, null, null, null, null, null)).Not
+                .OpenSubclause()
+                .WhereEquals("IsPublished", true)
+                .AndAlso()
+                .WhereEquals("Tags.Length", 0)
+                .CloseSubclause();
+            Assert.Equal("-(IsPublished:true AND Tags.Length:0)", query.ToString());
+        }
+
 		[Fact]
 		public void CanUnderstandEqualOnDate()
 		{
@@ -246,7 +258,7 @@ namespace Raven.Tests.Linq
 			var q = indexedUsers
 				.Where(x => x.Age == 3)
 				.Where(x => x.Name == "ayende");
-			Assert.Equal("Age:3 AND Name:ayende", q.ToString());
+			Assert.Equal("(Age:3) AND Name:ayende", q.ToString());
 		}
 
 		[Fact]

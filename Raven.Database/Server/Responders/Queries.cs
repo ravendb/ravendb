@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Security.Cryptography;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
 using Raven.Http.Abstractions;
@@ -35,13 +36,12 @@ namespace Raven.Database.Server.Responders
 			var loadedIds = new HashSet<string>();
 			var includes = context.Request.QueryString.GetValues("include") ?? new string[0];
 			var transactionInformation = GetRequestTransaction(context);
-            var computedEtagBytes = new byte[16];
-		    var includedEtags = new List<Guid>();
+		    var includedEtags = new List<byte>();
             Database.TransactionalStorage.Batch(actions =>
 			{
 				var addIncludesCommand = new AddIncludesCommand(Database, transactionInformation, (etag, includedDoc) =>
 				{
-                    includedEtags.Add(etag);
+                    includedEtags.AddRange(etag.ToByteArray());
 				    result.Includes.Add(includedDoc);
 				}, includes, loadedIds);
 				foreach (JToken item in itemsToLoad)
@@ -49,37 +49,31 @@ namespace Raven.Database.Server.Responders
 					var value = item.Value<string>();
 					if(loadedIds.Add(value)==false)
 						continue;
-					var documentByKey = actions.Documents.DocumentByKey(value,
-                        transactionInformation);
+					var documentByKey = Database.Get(value, transactionInformation);
 					if (documentByKey == null)
 						continue;
 					result.Results.Add(documentByKey.ToJson());
 
-				    var etagBytes = documentByKey.Etag.ToByteArray();
-				    for (int i = 0; i < 16; i++)
-				    {
-				        computedEtagBytes[i] ^= etagBytes[i];
-				    }
-
+					includedEtags.AddRange(documentByKey.Etag.ToByteArray());
 				    addIncludesCommand.Execute(documentByKey.DataAsJson);
 				}
             });
 
-		    foreach (var includedGuid in includedEtags)
-		    {
-                var etagBytes = includedGuid.ToByteArray();
-                for (int i = 0; i < 16; i++)
-                {
-                    computedEtagBytes[i] ^= etagBytes[i];
-                }
-		    }
-		    var computedEtag = new Guid(computedEtagBytes);
-            if(context.MatchEtag(computedEtag))
-            {
-                context.SetStatusToNotModified();
-                return;
-            }
-		    context.Response.Headers["ETag"] = computedEtag.ToString();
+			Guid computedEtag;
+
+			using (var md5 = MD5.Create())
+			{
+				var computeHash = md5.ComputeHash(includedEtags.ToArray());
+				computedEtag = new Guid(computeHash);
+			}
+
+			if (context.MatchEtag(computedEtag))
+			{
+				context.SetStatusToNotModified();
+				return;
+			}
+
+			context.Response.AddHeader("ETag", computedEtag.ToString());
 			context.WriteJson(result);
 		}
 	}

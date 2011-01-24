@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Security.Cryptography;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
 using System.Linq;
@@ -126,7 +127,7 @@ namespace Raven.Database.Server.Responders
 				{
 					command.Execute(result);
 				}
-				context.Response.Headers["ETag"] = queryResult.IndexEtag.ToString();
+				context.Response.AddHeader("ETag", queryResult.IndexEtag.ToString());
 				context.WriteJson(queryResult);
 			}
 		}
@@ -187,14 +188,13 @@ namespace Raven.Database.Server.Responders
 				lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
 				indexLastUpdatedAt = accessor.Staleness.IndexLastUpdatedAt(indexName);
 			});
-			var etagBytes = lastDocEtag.ToByteArray();
-			var lastIndexedEtagBytes = indexLastUpdatedAt.Item2.ToByteArray();
-			for (int i = 0; i < 16; i++)
+			using(var md5 = MD5.Create())
 			{
-				etagBytes[i] ^= lastIndexedEtagBytes[i];
+				var list = new List<byte>(32);
+				list.AddRange(lastDocEtag.ToByteArray());
+				list.AddRange(indexLastUpdatedAt.Item2.ToByteArray());
+				return new Guid(md5.ComputeHash(list.ToArray()));
 			}
-
-			return new Guid(etagBytes);
 		}
 	}
 }

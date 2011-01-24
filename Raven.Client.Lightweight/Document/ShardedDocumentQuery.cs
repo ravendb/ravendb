@@ -67,7 +67,8 @@ namespace Raven.Client.Document
 				TotalResults = queryResults.Sum(x => x.TotalResults),
 				SkippedResults = queryResults.Sum(x => x.SkippedResults),
 				IndexTimestamp = queryResults.Min(x => x.IndexTimestamp),
-				IndexEtag = queryResults.Min(x => x.IndexEtag)
+				IndexEtag = queryResults.Min(x => x.IndexEtag),
+				IndexName = queryResults.Select(x => x.IndexName).FirstOrDefault()
 			};
 		}
 
@@ -201,9 +202,9 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// 	Matches exact value
 		/// </summary>
-		public IDocumentQuery<T> WhereEquals(string fieldName, object value, bool isAnalyzed, bool allowWildcards)
+		public IDocumentQuery<T> WhereEquals(WhereEqualsParams whereEqualsParams)
 		{
-			ApplyForAll(query => query.WhereEquals(fieldName, value, isAnalyzed, allowWildcards));
+			ApplyForAll(query => query.WhereEquals(whereEqualsParams));
 			return this;
 		}
 

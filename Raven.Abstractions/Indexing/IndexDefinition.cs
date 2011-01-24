@@ -3,7 +3,11 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace Raven.Database.Indexing
 {
@@ -12,6 +16,11 @@ namespace Raven.Database.Indexing
 	/// </summary>
 	public class IndexDefinition
 	{
+		/// <summary>
+		/// Get or set the name of the index
+		/// </summary>
+		public string Name { get; set; }
+
 		/// <summary>
 		/// Gets or sets the map function
 		/// </summary>
@@ -87,6 +96,7 @@ namespace Raven.Database.Indexing
 			if (ReferenceEquals(null, other)) return false;
 			if (ReferenceEquals(this, other)) return true;
 			return Equals(other.Map, Map) && 
+				Equals(other.Name, Name) &&
 				Equals(other.Reduce, Reduce) && 
 				Equals(other.TransformResults, TransformResults) && 
 				DictionaryEquals(other.Stores, Stores) &&

@@ -67,6 +67,16 @@ namespace Raven.Client.Client.Async
 		}
 
 		/// <summary>
+		/// Gets the index names from the server asyncronously
+		/// </summary>
+		/// <param name="start">Paging start</param>
+		/// <param name="pageSize">Size of the page.</param>
+		public Task<string[]> GetIndexNamesAsync(int start, int pageSize)
+		{
+			throw new NotImplementedException();
+		}
+
+		/// <summary>
 		/// Puts the index definition for the specified name asyncronously
 		/// </summary>
 		/// <param name="name">The name.</param>
@@ -318,6 +328,7 @@ namespace Raven.Client.Client.Async
 						IndexEtag = new Guid(request.ResponseHeaders["ETag"]),
 						Results = json["Results"].Children().Cast<JObject>().ToList(),
 						TotalResults = Convert.ToInt32(json["TotalResults"].ToString()),
+						IndexName = json.Value<string>("IndexName"),
 						SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString())
 					};
 				});

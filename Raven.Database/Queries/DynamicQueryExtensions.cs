@@ -3,11 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
-using Raven.Abstractions.Data;
 using Raven.Database.Data;
 
 namespace Raven.Database.Queries

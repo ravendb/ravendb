@@ -21,6 +21,7 @@ namespace Raven.Database.Extensions
                 Start = context.GetStart(),
                 Cutoff = context.GetCutOff(),
                 PageSize = context.GetPageSize(maxPageSize),
+                SkipTransformResults = context.GetSkipTransformResults(),
                 FieldsToFetch = context.Request.QueryString.GetValues("fetch"),
 				GroupBy = context.Request.QueryString.GetValues("groupBy"),
 				AggregationOperation = context.GetAggregationOperation(),

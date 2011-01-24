@@ -8,6 +8,7 @@ using System.Collections.Specialized;
 using System.ComponentModel.Composition.Hosting;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using log4net.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Storage;
@@ -27,7 +28,8 @@ namespace Raven.Database.Config
 		{
 			Settings = new NameValueCollection(StringComparer.InvariantCultureIgnoreCase);
 
-			MaxNumberOfItemsToIndexInSingleBatch = 500;
+			BackgroundTasksPriority = ThreadPriority.Normal;
+			MaxNumberOfItemsToIndexInSingleBatch = 2500;
 
 			Catalog = new AggregateCatalog(
 				new AssemblyCatalog(typeof(HttpServer).Assembly),
@@ -50,8 +52,15 @@ namespace Raven.Database.Config
 			var queryThreshold = Settings["Raven/TempIndexPromotionThreshold"];
 			var cleanupPeriod = Settings["Raven/TempIndexCleanupPeriod"];
 			var cleanupThreshold = Settings["Raven/TempIndexCleanupThreshold"];
+			var maxNumberOfItemsToIndexInSingleBatch = Settings["Raven/MaxNumberOfItemsToIndexInSingleBatch"];
+			var indexingPriority = Settings["Raven/IndexingPriority"];
+
+			BackgroundTasksPriority = indexingPriority == null
+			                   	? ThreadPriority.Normal
+			                   	: (ThreadPriority) Enum.Parse(typeof (ThreadPriority), indexingPriority);
 
 			MaxPageSize = maxPageSizeStr != null ? int.Parse(maxPageSizeStr) : 1024;
+			MaxNumberOfItemsToIndexInSingleBatch = maxNumberOfItemsToIndexInSingleBatch != null ? int.Parse(maxNumberOfItemsToIndexInSingleBatch) : 2500;
 			TempIndexPromotionMinimumQueryCount = minimumQueryCount != null ? int.Parse(minimumQueryCount) : 100;
 			TempIndexPromotionThreshold = queryThreshold != null ? int.Parse(queryThreshold) : 60000; // once a minute
 			TempIndexCleanupPeriod = cleanupPeriod != null ? TimeSpan.FromSeconds(int.Parse(cleanupPeriod)) : TimeSpan.FromMinutes(10);
@@ -90,11 +99,10 @@ namespace Raven.Database.Config
 
 			AnonymousUserAccessMode = GetAnonymousUserAccessMode();
 
-			//DefaultStorageTypeName = Settings["Raven/StorageTypeName"] ??
-			//    "Raven.Storage.Esent.TransactionalStorage, Raven.Storage.Esent";
-
+			
 			DefaultStorageTypeName = Settings["Raven/StorageTypeName"] ??
-				"Raven.Storage.Managed.TransactionalStorage, Raven.Storage.Managed";
+             // "esent"
+				"munin";
 		}
 
 		public NameValueCollection Settings { get; set; }
@@ -188,6 +196,8 @@ namespace Raven.Database.Config
 
 		public bool IndexSingleThreaded { get; set; }
 
+		public ThreadPriority BackgroundTasksPriority { get; set; }
+
 		protected void ResetContainer()
 		{
 			if (Container != null && containerExternallySet == false)
@@ -238,9 +248,16 @@ namespace Raven.Database.Config
 		public ITransactionalStorage CreateTransactionalStorage(Action notifyAboutWork)
 		{
 			var storageEngine = SelectStorageEngine();
-			var type =
-				Type.GetType(storageEngine.Split(',').First()) ?? // first try to find the merged one
-					Type.GetType(storageEngine); // then try full type name
+		    switch (storageEngine.ToLowerInvariant())
+		    {
+                case "esent":
+		            storageEngine = "Raven.Storage.Esent.TransactionalStorage, Raven.Storage.Esent";
+		            break;
+                case "munin":
+		            storageEngine = "Raven.Storage.Managed.TransactionalStorage, Raven.Storage.Managed";
+		            break;
+		    }
+			var type = Type.GetType(storageEngine);
 
 			if (type == null)
 				throw new InvalidOperationException("Could not find transactional storage type: " + storageEngine);

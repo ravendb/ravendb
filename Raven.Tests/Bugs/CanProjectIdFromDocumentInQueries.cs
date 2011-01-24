@@ -15,6 +15,99 @@ namespace Raven.Tests.Bugs
     public class CanProjectIdFromDocumentInQueries : LocalClientTest
     {
         [Fact]
+        public void CanProjectIdFromTransformResults()
+        {
+            using (var store = NewDocumentStore())
+            {
+            	var indexDefinition = new IndexDefinition<Shipment, Shipment>()
+            	                      	{
+            	                      		Map = docs => from doc in docs
+            	                      		              select new
+            	                      		                     	{
+            	                      		                     		doc.Id
+            	                      		                     	},
+            	                      		TransformResults = (database, results)  => from doc in results
+            	                      		                                           select new 
+            	                      		                                                  	{
+            	                      		                                                  		Id = doc.Id,
+            	                      		                                                  		Name = doc.Name
+            	                      		                                                  	}
+                                                   
+            	                      	}.ToIndexDefinition(store.Conventions);
+            	store.DatabaseCommands.PutIndex(
+                    "AmazingIndex",
+                    indexDefinition);
+
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Shipment()
+                    {
+                        Id = "shipment1",
+                        Name = "Some shipment"
+                    });
+                    session.SaveChanges();
+
+                    var shipment = session.Query<Shipment>("AmazingIndex")
+                        .Customize(x=>x.WaitForNonStaleResults())
+                        .Select(x => new Shipment
+                        {
+                            Id = x.Id,
+                            Name = x.Name
+                        }).Take(1).SingleOrDefault();
+                    
+                    Assert.NotNull(shipment.Id);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanProjectAnyOtherPropertyFromTransformResults()
+        {
+            using (var store = NewDocumentStore())
+            {
+
+                store.DatabaseCommands.PutIndex(
+                    "AmazingIndex",
+                    new IndexDefinition<Shipment, Shipment>()
+                    {
+                        Map = docs => from doc in docs
+                                      select new
+                                      {
+                                          doc.Id
+                                      },
+                        TransformResults = (database, results) => from doc in results
+                                                                  select new
+                                                                  {
+                                                                      Id = doc.Id,
+                                                                      Name = doc.Name
+                                                                  }
+
+                    }.ToIndexDefinition(store.Conventions));
+
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Shipment()
+                    {
+                        Id = "shipment1",
+                        Name = "Some shipment"
+                    });
+                    session.SaveChanges();
+
+                    var shipment = session.Query<Shipment>("AmazingIndex")
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Select(x => new Shipment
+                        {
+                            Id = x.Id,
+                            Name = x.Name
+                        }).Take(1).SingleOrDefault();
+
+                    Assert.NotNull(shipment.Name);
+                }
+            }
+        }
+        [Fact]
         public void SelectIdFromDocumentWithIndexedQuery()
         {
             using (var store = NewDocumentStore())

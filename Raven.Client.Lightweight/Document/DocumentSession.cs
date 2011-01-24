@@ -54,12 +54,16 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Initializes a new instance of the <see cref="DocumentSession"/> class.
 		/// </summary>
-		public DocumentSession(DocumentStore documentStore, IDocumentStoreListener[] storeListeners, IDocumentDeleteListener[] deleteListeners, IDatabaseCommands databaseCommands
+		public DocumentSession(DocumentStore documentStore, 
+			IDocumentQueryListener[] queryListeners,
+			IDocumentStoreListener[] storeListeners, 
+			IDocumentDeleteListener[] deleteListeners, 
+			IDatabaseCommands databaseCommands
 #if !NET_3_5
 			, IAsyncDatabaseCommands asyncDatabaseCommands
 #endif
 			)
-			: base(documentStore, storeListeners, deleteListeners)
+			: base(documentStore, queryListeners, storeListeners, deleteListeners)
 		{
 #if !NET_3_5
 			this.asyncDatabaseCommands = asyncDatabaseCommands;
@@ -339,9 +343,9 @@ namespace Raven.Client.Document
 		public IDocumentQuery<T> LuceneQuery<T>(string indexName)
 		{
 #if !NET_3_5
-			return new DocumentQuery<T>(this, DatabaseCommands, null, indexName, null);
+			return new DocumentQuery<T>(this, DatabaseCommands, null, indexName, null, queryListeners);
 #else
-			return new DocumentQuery<T>(this, DatabaseCommands, indexName, null);
+			return new DocumentQuery<T>(this, DatabaseCommands, indexName, null, queryListeners);
 #endif
 		}
 

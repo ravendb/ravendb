@@ -19,6 +19,16 @@ namespace Raven.Client
         /// </summary>
         /// <value>The async database commands.</value>
         IAsyncDatabaseCommands AsyncDatabaseCommands { get; }
+
+        /// <summary>
+        /// Query the specified index using Lucene syntax
+        /// </summary>
+        IDocumentQuery<T> AsyncLuceneQuery<T>(string index);
+
+        /// <summary>
+        /// Dynamically query RavenDB using Lucene syntax
+        /// </summary>
+		IDocumentQuery<T> AsyncLuceneQuery<T>();
     }
 }
 #endif

@@ -3,6 +3,8 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System.Collections.Generic;
+
 namespace Raven.Client.Indexes
 {
     /// <summary>
@@ -14,5 +16,10 @@ namespace Raven.Client.Indexes
         /// Loading a document during result transformers
         /// </summary>
         T Load<T>(string docId);
+
+		/// <summary>
+		/// Loading a document during result transformers
+		/// </summary>
+		T[] Load<T>(IEnumerable<string> docId);
     }
 }

@@ -64,6 +64,7 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Esent.Interop.dll</HintPath>
     </Reference>
+    <Reference Include="ICSharpCode.NRefactory, Version=3.0.0.3800, Culture=neutral, PublicKeyToken=efe927acf176eea2, processorArchitecture=MSIL" />
     <Reference Include="log4net, Version=1.2.10.0, Culture=neutral, PublicKeyToken=1b44e1d426115821, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\log4net.dll</HintPath>
@@ -110,7 +111,9 @@
     <Compile Include="Bugs\AnalyzerPerField.cs" />
     <Compile Include="Bugs\AnonymousClasses.cs" />
     <Compile Include="Bugs\AnyQueries.cs" />
+    <Compile Include="Bugs\Arrays.cs" />
     <Compile Include="Bugs\AsyncCommit.cs" />
+    <Compile Include="Bugs\Async\Querying.cs" />
     <Compile Include="Bugs\AttachmentEndoding.cs" />
     <Compile Include="Bugs\AttachmentsWithCredentials.cs" />
     <Compile Include="Bugs\AutoCreateIndexes.cs" />
@@ -128,8 +131,13 @@
     <Compile Include="Bugs\DecimalPrecision.cs" />
     <Compile Include="Bugs\DocumentToJsonAndBackTest.cs" />
     <Compile Include="Bugs\DocumentUrl.cs" />
+    <Compile Include="Bugs\DTC\UsingDTCForUpdates.cs" />
+    <Compile Include="Bugs\Entities\CanSaveUpdateAndRead_Local.cs" />
+    <Compile Include="Bugs\Entities\CanSaveUpdateAndRead_Remote.cs" />
+    <Compile Include="Bugs\Entities\JObjectEntity.cs" />
     <Compile Include="Bugs\EntityWithDate.cs" />
     <Compile Include="Bugs\EntityWithoutId.cs" />
+    <Compile Include="Bugs\Errors\CanIndexOnNull.cs" />
     <Compile Include="Bugs\Etag.cs" />
     <Compile Include="Bugs\ExplicitTransaction.cs" />
     <Compile Include="Bugs\ExtendingClientSideViaListeners.cs" />
@@ -146,12 +154,19 @@
     <Compile Include="Bugs\IndexingBehavior.cs" />
     <Compile Include="Bugs\IndexingRavenDocuments.cs" />
     <Compile Include="Bugs\Indexing\CanIndexAllDocsWhenThereAreMoreDocsThanTheBatchSize.cs" />
+    <Compile Include="Bugs\Indexing\ComplexLinq.cs" />
     <Compile Include="Bugs\Indexing\DynamicFields.cs" />
+    <Compile Include="Bugs\Indexing\DynamicQueriesCanSort.cs" />
+    <Compile Include="Bugs\Indexing\FilterOnMissingProperty.cs" />
+    <Compile Include="Bugs\Indexing\GroupingAndFiltering.cs" />
     <Compile Include="Bugs\Indexing\IndexingEachFieldInEachDocumentSeparetedly.cs" />
+    <Compile Include="Bugs\Indexing\IndexingOnDictionary.cs" />
     <Compile Include="Bugs\Indexing\MissingAnalyzer.cs" />
+    <Compile Include="Bugs\Indexing\RemoteIndexingOnDictionary.cs" />
     <Compile Include="Bugs\Indexing\ThrowingAnalyzer.cs" />
     <Compile Include="Bugs\Indexing\TransactionIndexByMrn.cs" />
     <Compile Include="Bugs\Indexing\WillGroupValuesUsingComplexValues.cs" />
+    <Compile Include="Bugs\Indexing\WiseShrek.cs" />
     <Compile Include="Bugs\IndexNestedFields.cs" />
     <Compile Include="Bugs\IndexWithTwoProperties.cs" />
     <Compile Include="Bugs\InMemoryOnly.cs" />
@@ -162,6 +177,15 @@
     <Compile Include="Bugs\LinqGitHub147.cs" />
     <Compile Include="Bugs\LinqOnUrls.cs" />
     <Compile Include="Bugs\LiveProjection.cs" />
+    <Compile Include="Bugs\LiveProjections\CanLoadMultipleItems.cs" />
+    <Compile Include="Bugs\LiveProjections\Entities\Product.cs" />
+    <Compile Include="Bugs\LiveProjections\Indexes\ProductDetailsReport_ByProductId.cs" />
+    <Compile Include="Bugs\LiveProjections\Indexes\ProductSkuListViewModelReport_ByArticleNumberAndName.cs" />
+    <Compile Include="Bugs\LiveProjections\Views\ProductDetailsReport.cs" />
+    <Compile Include="Bugs\LiveProjections\Views\ProductSkuListViewModelReport.cs" />
+    <Compile Include="Bugs\LiveProjections\Entities\ProductSku.cs" />
+    <Compile Include="Bugs\LiveProjections\Views\ProductVariant.cs" />
+    <Compile Include="Bugs\LiveProjections\LiveProjectionOnProducts.cs" />
     <Compile Include="Bugs\LuceneQueryShouldWorkWithoutExtensionMethod.cs" />
     <Compile Include="Bugs\LukeQuerying.cs" />
     <Compile Include="Bugs\MapReduceThrowsNRE.cs" />
@@ -173,18 +197,26 @@
     <Compile Include="Bugs\MultipleResultsPerDocumentAndPaging.cs" />
     <Compile Include="Bugs\MultiTenancy\Basic.cs" />
     <Compile Include="Bugs\MultiTenancy\CreatingIndexes.cs" />
+    <Compile Include="Bugs\MultiTenancy\NoCaseSensitive.cs" />
     <Compile Include="Bugs\NameAndId.cs" />
     <Compile Include="Bugs\OperationHeaders.cs" />
     <Compile Include="Bugs\OrderOfInsertionDoesNotAffectQuerying.cs" />
     <Compile Include="Bugs\OverwriteDocuments.cs" />
     <Compile Include="Bugs\Queries\DynamicMapReduce.cs" />
+    <Compile Include="Bugs\Queries\DynamicQueriesOnMetadata.cs" />
+    <Compile Include="Bugs\Queries\Fetching.cs" />
     <Compile Include="Bugs\Queries\Includes.cs" />
     <Compile Include="Bugs\Queries\Projections.cs" />
+    <Compile Include="Bugs\Queries\QueryById.cs" />
     <Compile Include="Bugs\Queries\RangeQueries.cs" />
+    <Compile Include="Bugs\Queries\StatsOnDynamicQueries.cs" />
     <Compile Include="Bugs\Queries\TermsLocal.cs" />
     <Compile Include="Bugs\Queries\TermsRemote.cs" />
+    <Compile Include="Bugs\Queries\WithAs.cs" />
     <Compile Include="Bugs\QueryAfterAdHocIndexIsReset.cs" />
     <Compile Include="Bugs\QueryingOnEqualToNull.cs" />
+    <Compile Include="Bugs\QueryOptimizer\LinqToQueryParameters.cs" />
+    <Compile Include="Bugs\QueryOptimizer\QueryOptimizeTests.cs" />
     <Compile Include="Bugs\QueryResultCountsWithProjections.cs" />
     <Compile Include="Bugs\OverwriteIndexLocally.cs" />
     <Compile Include="Bugs\OverwriteIndexRemotely.cs" />
@@ -209,6 +241,11 @@
     <Compile Include="Bugs\SortingWithWildcardQuery.cs" />
     <Compile Include="Bugs\SpatialQueries.cs" />
     <Compile Include="Bugs\StalenessWontAffectUnrelatedIndexes.cs" />
+    <Compile Include="Bugs\TransformResults\ComplexValuesFromTransformResults.cs" />
+    <Compile Include="Bugs\TransformResults\StackOverFlowIndexes.cs" />
+    <Compile Include="Bugs\TransformResults\StackOverFlowTypes.cs" />
+    <Compile Include="Bugs\TransformResults\StackOverFlowViews.cs" />
+    <Compile Include="Bugs\TransformResults\WithGuidId.cs" />
     <Compile Include="Bugs\TransitiveNull.cs" />
     <Compile Include="Bugs\TranslatingLinqQueryUsingNestedId.cs" />
     <Compile Include="Bugs\Translators.cs" />
@@ -217,11 +254,15 @@
     <Compile Include="Bugs\UsingLongAsId.cs" />
     <Compile Include="Bugs\UsingStartsWith.cs" />
     <Compile Include="Bugs\UsingSwedishCollation.cs" />
+    <Compile Include="Bugs\Vlko\QueryWithMultipleWhere.cs" />
+    <Compile Include="Bugs\Vlko\Relations.cs" />
     <Compile Include="Bugs\WhenRavenClrTypeNotFound.cs" />
     <Compile Include="Bugs\WhereEntityIs.cs" />
     <Compile Include="Bugs\WillNotFailSystemIfServerIsNotAvailableOnStartup.cs" />
     <Compile Include="Bugs\WillThrowIfQueryingForUnindexedField.cs" />
     <Compile Include="Bugs\WithPrivateProtectedSetter.cs" />
+    <Compile Include="Bugs\Zhang\UseMaxForDateTimeTypeInReduce.cs" />
+    <Compile Include="Bugs\Zhang\UseMaxForLongTypeInReduce.cs" />
     <Compile Include="Document\AsyncDocumentStoreServerTests.cs" />
     <Compile Include="Document\CasingIssue.cs" />
     <Compile Include="Document\ClientKeyGeneratorTests.cs" />

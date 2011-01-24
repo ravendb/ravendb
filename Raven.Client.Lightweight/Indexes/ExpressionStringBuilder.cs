@@ -28,11 +28,13 @@ namespace Raven.Client.Indexes
 		private StringBuilder _out = new StringBuilder();
 		ExpressionOperatorPrecedence _currentPrecedence;
 		private DocumentConvention convention;
+		private bool translateIdentityProperty;
 
 		// Methods
-		private ExpressionStringBuilder(DocumentConvention convention)
+		private ExpressionStringBuilder(DocumentConvention convention, bool translateIdentityProperty)
 		{
 			this.convention = convention;
+			this.translateIdentityProperty = translateIdentityProperty;
 		}
 
 		private void AddLabel(LabelTarget label)
@@ -63,7 +65,7 @@ namespace Raven.Client.Indexes
 
 		internal string CatchBlockToString(CatchBlock node)
 		{
-			ExpressionStringBuilder builder = new ExpressionStringBuilder(convention);
+			ExpressionStringBuilder builder = new ExpressionStringBuilder(convention, translateIdentityProperty);
 			builder.VisitCatchBlock(node);
 			return builder.ToString();
 		}
@@ -82,7 +84,7 @@ namespace Raven.Client.Indexes
 
 		internal string ElementInitBindingToString(ElementInit node)
 		{
-			ExpressionStringBuilder builder = new ExpressionStringBuilder(convention);
+			ExpressionStringBuilder builder = new ExpressionStringBuilder(convention, translateIdentityProperty);
 			builder.VisitElementInit(node);
 			return builder.ToString();
 		}
@@ -92,9 +94,9 @@ namespace Raven.Client.Indexes
 		/// </summary>
 		/// <param name="convention">The convention.</param>
 		/// <param name="node">The node.</param>
-		public static string ExpressionToString(DocumentConvention convention, Expression node)
+		public static string ExpressionToString(DocumentConvention convention, bool translateIdentityProperty, Expression node)
 		{
-			ExpressionStringBuilder builder = new ExpressionStringBuilder(convention);
+			ExpressionStringBuilder builder = new ExpressionStringBuilder(convention, translateIdentityProperty);
 			builder.Visit(node, ExpressionOperatorPrecedence.ParenthesisNotNeeded);
 			return builder.ToString();
 		}
@@ -195,7 +197,7 @@ namespace Raven.Client.Indexes
 
 		internal string MemberBindingToString(MemberBinding node)
 		{
-			ExpressionStringBuilder builder = new ExpressionStringBuilder(convention);
+			ExpressionStringBuilder builder = new ExpressionStringBuilder(convention, translateIdentityProperty);
 			builder.VisitMemberBinding(node);
 			return builder.ToString();
 		}
@@ -214,7 +216,7 @@ namespace Raven.Client.Indexes
 		{
 			var name = member.Name;
 			var identityProperty = convention.GetIdentityProperty(member.DeclaringType);
-			if (identityProperty == member && instance.NodeType == ExpressionType.Parameter)
+			if (identityProperty == member && instance.NodeType == ExpressionType.Parameter && translateIdentityProperty)
 				name = "__document_id";
 			if (instance != null)
 			{
@@ -238,7 +240,7 @@ namespace Raven.Client.Indexes
 
 		internal string SwitchCaseToString(SwitchCase node)
 		{
-			ExpressionStringBuilder builder = new ExpressionStringBuilder(convention);
+			ExpressionStringBuilder builder = new ExpressionStringBuilder(convention, translateIdentityProperty);
 			builder.VisitSwitchCase(node);
 			return builder.ToString();
 		}
@@ -1092,20 +1094,9 @@ namespace Raven.Client.Indexes
 				{
 					this.Out(", ");
 				}
-				var lambdaExpression = node.Arguments[num2] as LambdaExpression;
-#if !SILVERLIGHT
-				if (lambdaExpression != null && typeof(AbstractIndexCreationTask).IsAssignableFrom(node.Method.DeclaringType))
-				{
-					this.Out("(Func<dynamic, dynamic>)(");
-				}
-#endif
+				MaybeAddCastingToLambdaExpression(node, num2);
 				this.Visit(node.Arguments[num2]);
-#if !SILVERLIGHT
-				if (lambdaExpression != null && typeof(AbstractIndexCreationTask).IsAssignableFrom(node.Method.DeclaringType))
-				{
-					this.Out(")");
-				}
-#endif
+				MaybeCloseCastingForLambdaExpression(node,num2);
 				num2++;
 			}
 			if (node.Method.Name != "get_Item")// VB indexer
@@ -1117,6 +1108,54 @@ namespace Raven.Client.Indexes
 				this.Out("]");
 			}
 			return node;
+		}
+
+		private void MaybeCloseCastingForLambdaExpression(MethodCallExpression node, int argPos)
+		{
+			var lambdaExpression = node.Arguments[argPos] as LambdaExpression;	
+#if !SILVERLIGHT
+			if (lambdaExpression != null && typeof(AbstractIndexCreationTask).IsAssignableFrom(node.Method.DeclaringType))
+			{
+				this.Out(")");
+			}
+			if (lambdaExpression != null && node.Method.DeclaringType == typeof(Enumerable))
+			{
+				var expression = node.Arguments[argPos - 1]; // heuroistic only, might be a source of bugs, need to rethink this
+				if (expression.NodeType != ExpressionType.MemberAccess)
+					return;
+				switch (node.Method.Name)
+				{
+					case "Select":
+						this.Out(")");
+						break;
+				}
+			}
+#endif
+		}
+
+		private void MaybeAddCastingToLambdaExpression(MethodCallExpression node, int argPos)
+		{
+#if !SILVERLIGHT
+			var lambdaExpression = node.Arguments[argPos] as LambdaExpression; 
+			if (lambdaExpression != null && typeof(AbstractIndexCreationTask).IsAssignableFrom(node.Method.DeclaringType))
+			{
+				this.Out("(Func<dynamic, dynamic>)(");
+			}
+			if (lambdaExpression != null && node.Method.DeclaringType == typeof(Enumerable))
+			{
+				if (argPos == 0)
+					return;
+				var expression = node.Arguments[argPos - 1]; // heuroistic only, might be a source of bugs, need to rethink this
+				if (expression.NodeType != ExpressionType.MemberAccess)
+					return;
+				switch (node.Method.Name)
+				{
+					case "Select":
+						this.Out("(Func<dynamic, dynamic>)(");
+						break;
+				}
+			}
+#endif
 		}
 
 		private void VisitHierarchy(MethodCallExpression node, Expression expression)
@@ -1379,6 +1418,7 @@ namespace Raven.Client.Indexes
 					break;
 				case ExpressionType.Convert:
 				case ExpressionType.ConvertChecked:
+				case ExpressionType.ArrayLength:
 					// we don't want to do nothing for those
 					this.Out("(");
 					break;
@@ -1399,6 +1439,10 @@ namespace Raven.Client.Indexes
 				case ExpressionType.TypeAs:
 					this.Out(" As ");
 					this.Out(node.Type.Name);
+					break;
+
+				case ExpressionType.ArrayLength:
+					this.Out(".Length)");
 					break;
 
 				case ExpressionType.Decrement:

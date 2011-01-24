@@ -4,9 +4,11 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Security.Principal;
 using System.Web;
+using log4net;
 
 namespace Raven.Http.Abstractions
 {
@@ -53,6 +55,20 @@ namespace Raven.Http.Abstractions
 		public void SetResponseFilter(Func<Stream, Stream> responseFilter)
 		{
 			context.Response.Filter = responseFilter(context.Response.Filter);
+		}
+
+		private readonly List<Action<ILog>> loggedMessages = new List<Action<ILog>>();
+		public void OutputSavedLogItems(ILog logger)
+		{
+			foreach (var loggedMessage in loggedMessages)
+			{
+				loggedMessage(logger);
+			}
+		}
+
+		public void Log(Action<ILog> loggingAction)
+		{
+			loggedMessages.Add(loggingAction);
 		}
 	}
 }

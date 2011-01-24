@@ -95,18 +95,15 @@ namespace Raven.Storage.Managed
                     if (resultInTx.Key.Value<bool>("deleted"))
                         return null;
 
-                   if (resultInTx.Position != -1)
+					var txEtag = new Guid(resultInTx.Key.Value<byte[]>("etag"));
+					if (resultInTx.Position != -1)
+					{
+						ReadMetadataAndData(key, txEtag, resultInTx.Data, out metadata, out dataAsJson);
+					}
+                	return new JsonDocument
                     {
-                        var bufferFromTx = resultInTx.Data();
-                        using (var memoryStreamFromTx = new MemoryStream(bufferFromTx, 0, bufferFromTx.Length, writable: false, publiclyVisible: true))
-                        {
-                            ReadMetadataAndData(key, memoryStreamFromTx, out metadata, out dataAsJson);
-                        }
-                    }
-                    return new JsonDocument
-                    {
-                        Key = resultInTx.Key.Value<string>("key"),
-                        Etag = new Guid(resultInTx.Key.Value<byte[]>("etag")),
+                        Key = key,
+                        Etag = txEtag,
                         Metadata = metadata,
                         DataAsJson = dataAsJson,
                         LastModified = resultInTx.Key.Value<DateTime>("modified"),
@@ -118,13 +115,12 @@ namespace Raven.Storage.Managed
             if (readResult == null)
                 return null;
 
-            var buffer = readResult.Data();
-            var memoryStream = new MemoryStream(buffer, 0, buffer.Length, writable: false, publiclyVisible: true);
-            ReadMetadataAndData(key, memoryStream, out metadata, out dataAsJson);
-            return new JsonDocument
+			var etag = new Guid(readResult.Key.Value<byte[]>("etag"));
+			ReadMetadataAndData(key, etag, readResult.Data, out metadata, out dataAsJson);
+        	return new JsonDocument
             {
-                Key = readResult.Key.Value<string>("key"),
-                Etag = new Guid(readResult.Key.Value<byte[]>("etag")),
+                Key = key,
+                Etag = etag,
                 Metadata = metadata,
                 DataAsJson = dataAsJson,
                 LastModified = readResult.Key.Value<DateTime>("modified"),
@@ -132,15 +128,34 @@ namespace Raven.Storage.Managed
             };
         }
 
-        private void ReadMetadataAndData(string key, MemoryStream memoryStreamFromTx, out JObject metadata, out JObject dataAsJson)
+        private void ReadMetadataAndData(string key, Guid etag, Func<byte[]> getData, out JObject metadata, out JObject dataAsJson)
         {
-            metadata = memoryStreamFromTx.ToJObject();
-            var metadataCopy = metadata;
-            var dataBuffer = new byte[memoryStreamFromTx.Length - memoryStreamFromTx.Position];
-            Buffer.BlockCopy(memoryStreamFromTx.GetBuffer(), (int)memoryStreamFromTx.Position, dataBuffer, 0,
-                             dataBuffer.Length);
-            documentCodecs.Aggregate(dataBuffer, (bytes, codec) => codec.Decode(key, metadataCopy, bytes));
-            dataAsJson = dataBuffer.ToJObject();
+        	var cachedDocument = storage.GetCachedDocument(key, etag);
+        	if (cachedDocument != null)
+        	{
+        		metadata = cachedDocument.Item1;
+        		dataAsJson = cachedDocument.Item2;
+        		return;
+        	}
+
+        	var buffer = getData();
+        	var memoryStream = new MemoryStream(buffer, 0, buffer.Length);
+
+        	metadata = memoryStream.ToJObject();
+        	if (documentCodecs.Count() > 0)
+        	{
+				var metadataCopy = new JObject(metadata);
+				var dataBuffer = new byte[memoryStream.Length - memoryStream.Position];
+				Buffer.BlockCopy(buffer, (int)memoryStream.Position, dataBuffer, 0,
+								 dataBuffer.Length);
+				documentCodecs.Aggregate(dataBuffer, (bytes, codec) => codec.Decode(key, metadataCopy, bytes));
+				//copy back
+        		Buffer.BlockCopy(dataBuffer, 0, buffer, (int)memoryStream.Position, dataBuffer.Length);
+        	}
+
+    	    dataAsJson = memoryStream.ToJObject();
+
+        	storage.SetCachedDocument(key, etag, Tuple.Create(metadata, dataAsJson));
         }
 
         public bool DeleteDocument(string key, Guid? etag, out JObject metadata)

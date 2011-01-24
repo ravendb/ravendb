@@ -67,7 +67,10 @@ namespace Raven.Database
 		/// </summary>
 		public ConcurrentDictionary<object, object> ExtensionsState { get; private set; }
 
-		private System.Threading.Tasks.Task backgroundWorkerTask;
+
+        private System.Threading.Tasks.Task indexingBackgroundTask;
+		private System.Threading.Tasks.Task tasksBackgroundTask;
+	    private TaskSchedulerWithCustomPriority backgroundTaskScheduler;
 
 		private readonly ILog log = LogManager.GetLogger(typeof(DocumentDatabase));
 
@@ -75,6 +78,7 @@ namespace Raven.Database
 
 		public DocumentDatabase(InMemoryRavenConfiguration configuration)
 		{
+            backgroundTaskScheduler = new TaskSchedulerWithCustomPriority(15, configuration.BackgroundTasksPriority);
 			ExtensionsState = new ConcurrentDictionary<object, object>();
 			Configuration = configuration;
 
@@ -231,14 +235,18 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 			}
 			TransactionalStorage.Dispose();
 			IndexStorage.Dispose();
-			if (backgroundWorkerTask != null)
-				backgroundWorkerTask.Wait();
+			if (tasksBackgroundTask != null)
+				tasksBackgroundTask.Wait(); 
+			if (indexingBackgroundTask != null)
+				indexingBackgroundTask.Wait();
+            backgroundTaskScheduler.Dispose();
 		}
 
 		public void StopBackgroundWokers()
 		{
 			workContext.StopWork();
-			backgroundWorkerTask.Wait();
+			tasksBackgroundTask.Wait();
+			indexingBackgroundTask.Wait();
 		}
 
 		public WorkContext WorkContext
@@ -251,10 +259,12 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 		public void SpinBackgroundWorkers()
 		{
 			workContext.StartWork();
-			backgroundWorkerTask = new System.Threading.Tasks.Task(
-				new TaskExecuter(TransactionalStorage, workContext).Execute,
-				TaskCreationOptions.LongRunning);
-			backgroundWorkerTask.Start();
+            indexingBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
+		        new IndexingExecuter(TransactionalStorage, workContext, backgroundTaskScheduler).Execute,
+                CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
+            tasksBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
+                new TasksExecuter(TransactionalStorage, workContext).Execute,
+                CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
 		}
 
 		private static long sequentialUuidCounter;
@@ -281,8 +291,9 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				document = actions.Documents.DocumentByKey(key, transactionInformation);
 			});
 
-			return new DocumentRetriever(null, ReadTriggers).ExecuteReadTriggers(document, transactionInformation,
-																				 ReadOperation.Load);
+			return new DocumentRetriever(null, ReadTriggers)
+				.EnsureIdInMetadata(document)
+				.ExecuteReadTriggers(document, transactionInformation,ReadOperation.Load);
 		}
 
 
@@ -304,7 +315,6 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				{
 					key += actions.General.GetNextIdentityValue(key);
 				}
-				metadata.Add("@id", new JValue(key));
 				if (transactionInformation == null)
 				{
 					AssertPutOperationNotVetoed(key, metadata, document, transactionInformation);
@@ -471,6 +481,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				TransactionalStorage.Batch(actions =>
 				{
 					actions.Transactions.RollbackTransaction(txId);
+					actions.Attachments.DeleteAttachment("transactions/recoveryInformation/" + txId, null);
 					workContext.ShouldNotifyAboutWork();
 				});
 			}
@@ -485,7 +496,8 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 
 		public string PutIndex(string name, IndexDefinition definition)
 		{
-			switch (IndexDefinitionStorage.FindIndexCreationOptionsOptions(name, definition))
+			definition.Name = name = IndexDefinitionStorage.FixupIndexName(name);
+			switch (IndexDefinitionStorage.FindIndexCreationOptionsOptions(definition))
 			{
 				case IndexCreationOptions.Noop:
 					return name;
@@ -495,8 +507,8 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 					DeleteIndex(name);
 					break;
 			}
-			IndexDefinitionStorage.AddIndex(name, definition);
-			IndexStorage.CreateIndexImplementation(name, definition);
+			IndexDefinitionStorage.AddIndex(definition);
+			IndexStorage.CreateIndexImplementation(definition);
 			TransactionalStorage.Batch(actions => AddIndexAndEnqueueIndexingTasks(actions, name));
 			return name;
 		}
@@ -509,6 +521,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 
 		public QueryResult Query(string index, IndexQuery query)
 		{
+			index = IndexDefinitionStorage.FixupIndexName(index);
 			var list = new List<JObject>();
 			var stale = false;
 			Tuple<DateTime, Guid> indexTimestamp = null;
@@ -516,6 +529,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				actions =>
 				{
 					string entityName = null;
+
 
 					var viewGenerator = IndexDefinitionStorage.GetViewGenerator(index);
 					if (viewGenerator != null)
@@ -529,8 +543,9 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 						throw new IndexDisabledException(indexFailureInformation);
 					}
 					var docRetriever = new DocumentRetriever(actions, ReadTriggers);
-					var collection = from queryResult in IndexStorage.Query(index, query, result => docRetriever.ShouldIncludeResultInQuery(result, GetIndexDefinition(index), query.FieldsToFetch,query.AggregationOperation))
-									 select docRetriever.RetrieveDocumentForQuery(queryResult, GetIndexDefinition(index), query.FieldsToFetch, query.AggregationOperation)
+					var indexDefinition = GetIndexDefinition(index);
+					var collection = from queryResult in IndexStorage.Query(index, query, result => docRetriever.ShouldIncludeResultInQuery(result, indexDefinition, query.FieldsToFetch,query.AggregationOperation))
+									 select docRetriever.RetrieveDocumentForQuery(queryResult, indexDefinition, query.FieldsToFetch, query.AggregationOperation)
 										 into doc
 										 where doc != null
 										 select doc;
@@ -538,6 +553,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 					var transformerErrors = new List<string>();
 					IEnumerable<JObject> results;
 					if (viewGenerator != null &&
+						query.SkipTransformResults == false &&
 						viewGenerator.TransformResultsDefinition != null)
 					{
 						var robustEnumerator = new RobustEnumerator
@@ -569,6 +585,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				});
 			return new QueryResult
 			{
+				IndexName = index,
 				Results = list,
 				IsStale = stale,
 				SkippedResults = query.SkippedResults.Value,
@@ -580,6 +597,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 
 		public IEnumerable<string> QueryDocumentIds(string index, IndexQuery query, out bool stale)
 		{
+			index = IndexDefinitionStorage.FixupIndexName(index);
 			bool isStale = false;
 			HashSet<string> loadedIds = null;
 			TransactionalStorage.Batch(
@@ -601,6 +619,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 
 		public void DeleteIndex(string name)
 		{
+			name = IndexDefinitionStorage.FixupIndexName(name);
 			IndexDefinitionStorage.RemoveIndex(name);
 			IndexStorage.DeleteIndex(name);
 			//we may run into a conflict when trying to delete if the index is currently
@@ -741,14 +760,14 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				var documentRetriever = new DocumentRetriever(actions, ReadTriggers);
 				foreach (var doc in documents.Take(pageSize))
 				{
-					var document = documentRetriever.ExecuteReadTriggers(doc, null,
+					var document = documentRetriever
+						.EnsureIdInMetadata(doc)
+						.ExecuteReadTriggers(doc, null,
 						// here we want to have the Load semantic, not Query, because we need this to be
 						// as close as possible to the full database contents
 						ReadOperation.Load);
 					if (document == null)
 						continue;
-					if (document.Metadata.Property("@id") == null)
-						document.Metadata.Add("@id", new JValue(doc.Key));
 
 					list.Add(document.ToJson());
 				}
@@ -890,7 +909,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				Started = DateTime.UtcNow,
 				IsRunning = true,
 			}), new JObject(), null);
-
+			IndexStorage.FlushAllIndexes();
 			TransactionalStorage.StartBackupOperation(this, backupDestinationDirectory);
 		}
 
@@ -915,11 +934,12 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 
 		public void ResetIndex(string index)
 		{
+			index = IndexDefinitionStorage.FixupIndexName(index);
 			var indexDefinition = IndexDefinitionStorage.GetIndexDefinition(index);
 			if (indexDefinition == null)
 				throw new InvalidOperationException("There is no index named: " + index);
 			IndexStorage.DeleteIndex(index);
-			IndexStorage.CreateIndexImplementation(index, indexDefinition);
+			IndexStorage.CreateIndexImplementation(indexDefinition);
 			TransactionalStorage.Batch(actions =>
 			{
 				actions.Indexing.DeleteIndex(index);
@@ -929,6 +949,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 
 		public IndexDefinition GetIndexDefinition(string index)
 		{
+			index = IndexDefinitionStorage.FixupIndexName(index);
 			return IndexDefinitionStorage.GetIndexDefinition(index);
 		}
 
@@ -944,6 +965,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 		}
 
 		static string productVersion;
+
 		public static string ProductVersion
 		{
 			get

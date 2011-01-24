@@ -18,8 +18,19 @@ namespace Raven.Database.Linq
 	/// <summary>
 	/// A dynamic implementation on top of <see cref="JObject"/>
 	/// </summary>
-	public class DynamicJsonObject : DynamicObject
+	public class DynamicJsonObject : DynamicObject, IEnumerable<object>
 	{
+		public IEnumerator<dynamic> GetEnumerator()
+		{
+			foreach (var item in Inner)
+			{
+                if(item.Key[0] == '$')
+                    continue;
+
+				yield return new KeyValuePair<string,object>(item.Key, TransformToValue(item.Value));
+			}
+		}
+
 		/// <summary>
 		/// Returns a <see cref="T:System.String"/> that represents the current <see cref="T:System.Object"/>.
 		/// </summary>
@@ -57,6 +68,11 @@ namespace Raven.Database.Linq
 		public override int GetHashCode()
 		{
 			return new JTokenEqualityComparer().GetHashCode(inner);
+		}
+
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return GetEnumerator();
 		}
 
 		private readonly JObject inner;
@@ -154,6 +170,21 @@ namespace Raven.Database.Linq
 			{
 				return TransformToValue(value);
 			}
+            if(name.StartsWith("_"))
+            {
+                if (inner.TryGetValue(name.Substring(1), out value))
+                {
+                    return TransformToValue(value);
+                } 
+            }
+			if(name == "Id")
+			{
+				return GetDocumentId();
+			}
+			if(name == "Inner")
+			{
+				return Inner;
+			}
 			return new DynamicNullObject();
 		}
 
@@ -161,7 +192,7 @@ namespace Raven.Database.Linq
 		/// Gets the document id.
 		/// </summary>
 		/// <returns></returns>
-		public string GetDocumentId()
+		public object GetDocumentId()
 		{
 			var metadata = inner["@metadata"];
 			if (metadata != null)
@@ -172,7 +203,7 @@ namespace Raven.Database.Linq
 					return id.Value<string>();
 				}
 			}
-			return null;
+			return  inner["__document_id"] ?? (object)new DynamicNullObject();
 		}
 
 		/// <summary>
@@ -343,11 +374,20 @@ namespace Raven.Database.Linq
 			{
 				get { return inner.Length; }
 			}
+
+			public IEnumerable<dynamic> Select(Func<dynamic,dynamic > func)
+			{
+				return inner.Select(item => func(item));
+			}
 		}
 	}
 
 	public class DynamicNullObject : DynamicObject, IEnumerable<object>
 	{
+		public override string ToString()
+		{
+			return String.Empty;
+		}
 		public override bool TryGetIndex(GetIndexBinder binder, object[] indexes, out object result)
 		{
 			result = this;
@@ -365,10 +405,61 @@ namespace Raven.Database.Linq
 			yield break;
 		}
 
+		public override bool TryInvoke(InvokeBinder binder, object[] args, out object result)
+		{
+			result = this;
+			return true;
+		}
 
 		IEnumerator IEnumerable.GetEnumerator()
 		{
 			return GetEnumerator();
+		}
+
+		// null is false by default
+		public static implicit operator bool (DynamicNullObject o)
+		{
+			return false;
+		}
+
+		public override bool Equals(object obj)
+		{
+			return obj is DynamicNullObject;
+		}
+
+		public override int GetHashCode()
+		{
+			return 0;
+		}
+
+		public static bool operator ==(DynamicNullObject left, object right)
+		{
+			return right is DynamicNullObject || right == null;
+		}
+
+		public static bool operator !=(DynamicNullObject left, object right)
+		{
+			return (right is DynamicNullObject) == false;
+		}
+
+		public static bool operator >(DynamicNullObject left, object right)
+		{
+			return false;
+		}
+
+		public static bool operator <(DynamicNullObject left, object right)
+		{
+			return false;
+		}
+
+		public static bool operator >=(DynamicNullObject left, object right)
+		{
+			return false;
+		}
+
+		public static bool operator <=(DynamicNullObject left, object right)
+		{
+			return false;
 		}
 	}
 }

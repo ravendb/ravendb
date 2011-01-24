@@ -62,6 +62,13 @@ namespace Raven.Client.Client.Async
 		Task<SuggestionQueryResult> SuggestAsync(string index, SuggestionQuery suggestionQuery);
 
 		/// <summary>
+		/// Gets the index names from the server asyncronously
+		/// </summary>
+		/// <param name="start">Paging start</param>
+		/// <param name="pageSize">Size of the page.</param>
+		Task<string[]> GetIndexNamesAsync(int start, int pageSize);
+
+		/// <summary>
 		/// Puts the index definition for the specified name asyncronously
 		/// </summary>
 		/// <param name="name">The name.</param>

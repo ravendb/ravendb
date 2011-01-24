@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
 using Newtonsoft.Json.Linq;
@@ -85,19 +86,20 @@ namespace Raven.Database.Impl
 				}
 				if (aggregationOperation != AggregationOperation.None)
 				{
-					fieldsToFetch = fieldsToFetch.Concat(new[] {aggregationOperation.ToString()});
+					var aggOpr = aggregationOperation & ~AggregationOperation.Dynamic;
+					fieldsToFetch = fieldsToFetch.Concat(new[] {aggOpr.ToString()});
 				}
-				foreach (var fieldToFetch in fieldsToFetch)
+				var fieldsToFetchFromDocument = fieldsToFetch.Where(fieldToFetch => queryResult.Projection.Property(fieldToFetch) == null);
+				var doc = GetDocumentWithCaching(queryResult.Key);
+				if (doc != null)
 				{
-					if (queryResult.Projection.Property(fieldToFetch) != null)
-						continue;
-
-					var doc = GetDocumentWithCaching(queryResult.Key);
-					var token = doc.DataAsJson.SelectTokenWithRavenSyntax(fieldToFetch).ToArray();
-					if (token.Length == 1)
-						queryResult.Projection[fieldToFetch] = token[0];
-					else
-						queryResult.Projection[fieldToFetch] = new JArray(token);
+					var result = doc.DataAsJson.SelectTokenWithRavenSyntax(fieldsToFetchFromDocument.ToArray());
+					foreach (var property in result.Properties())
+					{
+						if(property.Value == null || property.Value.Type == JTokenType.Null)
+							continue;
+						queryResult.Projection[property.Name] = property.Value;
+					}
 				}
 			}
 
@@ -116,11 +118,26 @@ namespace Raven.Database.Impl
 			if (cache.TryGetValue(key, out doc))
 				return doc;
 			doc = actions.Documents.DocumentByKey(key, null);
+            EnsureIdInMetadata(doc);
 			cache[key] = doc;
 			return doc;
 		}
 
-		public bool ShouldIncludeResultInQuery(IndexQueryResult arg, IndexDefinition indexDefinition, string[] fieldsToFetch, AggregationOperation aggregationOperation)
+	    public DocumentRetriever EnsureIdInMetadata(JsonDocument doc)
+	    {
+            if (doc == null)
+                return this;
+
+            if (doc.Metadata == null)
+                return this;
+
+            if (doc.Metadata.Property("@id") != null)
+                doc.Metadata.Remove("@id");
+            doc.Metadata.Add("@id", new JValue(doc.Key));
+	        return this;
+	    }
+
+	    public bool ShouldIncludeResultInQuery(IndexQueryResult arg, IndexDefinition indexDefinition, string[] fieldsToFetch, AggregationOperation aggregationOperation)
 		{
 			var doc = RetrieveDocumentInternal(arg, loadedIdsForFilter, fieldsToFetch, indexDefinition, aggregationOperation);
 			if (doc == null)
@@ -185,8 +202,24 @@ namespace Raven.Database.Impl
 		{
 			var document = GetDocumentWithCaching(id);
 			if(document == null)
-				return null;
+				return new DynamicNullObject();
 			return new DynamicJsonObject(document.DataAsJson);
+		}
+
+		public dynamic Load(object maybeId)
+		{
+			if (maybeId == null || maybeId is DynamicNullObject)
+				return new DynamicNullObject();
+			var id = maybeId as string;
+			if (id != null)
+				return Load(id);
+
+			var items = new List<dynamic>();
+			foreach (var itemId in (IEnumerable)maybeId)
+			{
+				items.Add(Load(itemId));
+			}
+			return new DynamicJsonObject.DynamicList(items.ToArray());
 		}
 	}
 }

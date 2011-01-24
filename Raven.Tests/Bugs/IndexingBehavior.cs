@@ -51,7 +51,7 @@ namespace Raven.Tests.Bugs
 		{
 			db.PutIndex("test", new IndexDefinition
 			{
-				Map = "from doc in docs select new { User = doc.Name() }"
+				Map = "from doc in docs select new { User = doc.Name/1 }"
 			});
 
 			for (int i = 0; i < 15; i++)
@@ -83,10 +83,10 @@ namespace Raven.Tests.Bugs
 		{
 			db.PutIndex("test", new IndexDefinition
 			{
-				Map = "from doc in docs select new { User = doc.User() }"
+				Map = "from doc in docs select new { User = doc.User/1 }"
 			});
 
-			for (int i = 0; i < 15; i++)
+			for (int i = 0; i < 150; i++)
 			{
 				db.Put("a"+i, null, new JObject(), new JObject(),null);
 			}
@@ -116,13 +116,13 @@ namespace Raven.Tests.Bugs
 				Map = @"from doc in docs select new{ doc.Something}"
 			});
 
-			db.Put("foos/1", null, JObject.Parse("{'Something':'something'"),
+			db.Put("foos/1", null, JObject.Parse("{'Something':'something'}"),
 			  JObject.Parse("{'Raven-Entity-Name': 'Foos'}"), null);
 
 			var document = db.Get("foos/1", null);
 			db.Delete("foos/1", document.Etag, null);
 
-			db.Put("foos/1", null, JObject.Parse("{'Something':'something'"),
+			db.Put("foos/1", null, JObject.Parse("{'Something':'something'}"),
 			JObject.Parse("{'Raven-Entity-Name': 'Foos'}"), null);
 
 			db.SpinBackgroundWorkers();

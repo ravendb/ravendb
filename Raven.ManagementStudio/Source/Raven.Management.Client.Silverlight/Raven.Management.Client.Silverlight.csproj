@@ -1,0 +1,148 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.50727</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{1BE0A7B3-9DB3-49D0-B1DF-C8326D792424}</ProjectGuid>
+    <ProjectTypeGuids>{A1591282-1198-4647-A2B1-27E5FF5F6F3B};{fae04ec0-301f-11d3-bf4b-00c04f79efbc}</ProjectTypeGuids>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Raven.Management.Client.Silverlight</RootNamespace>
+    <AssemblyName>Raven.Management.Client.Silverlight</AssemblyName>
+    <TargetFrameworkIdentifier>Silverlight</TargetFrameworkIdentifier>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <SilverlightVersion>$(TargetFrameworkVersion)</SilverlightVersion>
+    <SilverlightApplication>false</SilverlightApplication>
+    <ValidateXaml>true</ValidateXaml>
+    <ThrowErrorsInValidation>true</ThrowErrorsInValidation>
+  </PropertyGroup>
+  <!-- This property group is only here to support building this project using the 
+       MSBuild 3.5 toolset. In order to work correctly with this older toolset, it needs 
+       to set the TargetFrameworkVersion to v3.5 -->
+  <PropertyGroup Condition="'$(MSBuildToolsVersion)' == '3.5'">
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>Bin\Debug</OutputPath>
+    <DefineConstants>DEBUG;TRACE;SILVERLIGHT</DefineConstants>
+    <NoStdLib>true</NoStdLib>
+    <NoConfig>true</NoConfig>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>Bin\Release</OutputPath>
+    <DefineConstants>TRACE;SILVERLIGHT</DefineConstants>
+    <NoStdLib>true</NoStdLib>
+    <NoConfig>true</NoConfig>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.CSharp, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
+    <Reference Include="mscorlib" />
+    <Reference Include="Newtonsoft.Json.Silverlight">
+      <HintPath>..\..\Components\Newtonsoft.Json.Silverlight.dll</HintPath>
+    </Reference>
+    <Reference Include="Raven.Abstractions.Silverlight">
+      <HintPath>..\..\Components\Raven.Abstractions.Silverlight.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Windows" />
+    <Reference Include="system" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Net" />
+    <Reference Include="System.Windows.Browser" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Attachments\AsyncAttachmentSession.cs" />
+    <Compile Include="Collections\AsyncCollectionSession.cs" />
+    <Compile Include="Common\Mappers\QueryResultMapper.cs" />
+    <Compile Include="Common\Mappers\StatisticsMapper.cs" />
+    <Compile Include="IAsyncAttachmentSession.cs" />
+    <Compile Include="Client\HttpJsonRequest.cs" />
+    <Compile Include="Client\JsonExtensions.cs" />
+    <Compile Include="Client\JsonLuceneDateTimeConverter.cs" />
+    <Compile Include="Client\WebRequestEventArgs.cs" />
+    <Compile Include="Common\AsyncAction.cs" />
+    <Compile Include="Client\AsyncServerClient.cs" />
+    <Compile Include="Common\CallbackFunction.cs" />
+    <Compile Include="Common\Converters\GuidConverter.cs" />
+    <Compile Include="Common\Converters\Int32Converter.cs" />
+    <Compile Include="Common\Converters\Int64Converter.cs" />
+    <Compile Include="Common\Converters\ITypeConverter.cs" />
+    <Compile Include="Common\Converters\WebHeaderCollectionConverter.cs" />
+    <Compile Include="Common\DatabaseUrl.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>DatabaseUrl.resx</DependentUpon>
+    </Compile>
+    <Compile Include="Common\DeleteResponse.cs" />
+    <Compile Include="Common\Exceptions\ConflictException.cs" />
+    <Compile Include="Common\Exceptions\NonAuthoritiveInformationException.cs" />
+    <Compile Include="Common\Exceptions\NonUniqueObjectException.cs" />
+    <Compile Include="Common\Exceptions\ReadVetoException.cs" />
+    <Compile Include="Common\Guard.cs" />
+    <Compile Include="Common\Inflector.cs" />
+    <Compile Include="Common\Mappers\AttachmentMapper.cs" />
+    <Compile Include="Common\Mappers\DocumentMapper.cs" />
+    <Compile Include="Common\Mappers\IMapper.cs" />
+    <Compile Include="Common\Mappers\IndexMapper.cs" />
+    <Compile Include="Client\IAsyncDatabaseCommands.cs" />
+    <Compile Include="Common\LoadResponse.cs" />
+    <Compile Include="Common\RequestMethod.cs" />
+    <Compile Include="Common\RequestMethodExtensions.cs" />
+    <Compile Include="Common\Response.cs" />
+    <Compile Include="Common\ResponseExtensions.cs" />
+    <Compile Include="Common\SaveResponse.cs" />
+    <Compile Include="Document\AsyncDocumentSession.cs" />
+    <Compile Include="Document\DefaultRavenContractResolver.cs" />
+    <Compile Include="Document\DocumentConvention.cs" />
+    <Compile Include="Document\DocumentMetadata.cs" />
+    <Compile Include="Document\DocumentStore.cs" />
+    <Compile Include="Document\InMemoryDocumentSessionOperations.cs" />
+    <Compile Include="Document\ReflectionUtil.cs" />
+    <Compile Include="Document\SaveChangesData.cs" />
+    <Compile Include="EntityStored.cs" />
+    <Compile Include="EntityToDocument.cs" />
+    <Compile Include="IAsyncCollectionSession.cs" />
+    <Compile Include="IAsyncDocumentSession.cs" />
+    <Compile Include="IAsyncIndexSession.cs" />
+    <Compile Include="IAsyncStatisticsSession.cs" />
+    <Compile Include="IDocumentStore.cs" />
+    <Compile Include="Indexes\AsyncIndexSession.cs" />
+    <Compile Include="Statistics\AsyncStatisticsSession.cs" />
+    <Compile Include="StoredEntityEventArgs.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Common\DatabaseUrl.resx">
+      <Generator>PublicResXFileCodeGenerator</Generator>
+      <LastGenOutput>DatabaseUrl.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Properties\" />
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />
+  <ProjectExtensions>
+    <VisualStudio>
+      <FlavorProperties GUID="{A1591282-1198-4647-A2B1-27E5FF5F6F3B}">
+        <SilverlightProjectProperties />
+      </FlavorProperties>
+    </VisualStudio>
+  </ProjectExtensions>
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

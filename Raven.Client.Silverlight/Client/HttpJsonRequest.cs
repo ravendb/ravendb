@@ -8,6 +8,7 @@ using System.Linq;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using System.Net.Browser;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,6 +19,10 @@ namespace Raven.Client.Client
 {
 	/// <summary>
 	/// A representation of an HTTP json request to the RavenDB server
+	/// Since we are using the ClientHttp stack for Silverlight, we don't need to implement
+	/// caching, it is already implemented for us.
+	/// Note: that the RavenDB server generate both an ETag and an Expires header to ensure proper
+	/// Note: behavior from the silverlight http stack
 	/// </summary>
 	public class HttpJsonRequest
 	{
@@ -25,26 +30,6 @@ namespace Raven.Client.Client
 		/// Occurs when a json request is created
 		/// </summary>
 		public static event EventHandler<WebRequestEventArgs> ConfigureRequest = delegate {  };
-
-		private static int numOfCachedRequests;
-
-		/// <summary>
-		/// The number of requests that we got 304 for 
-		/// and were able to handle purely from the cache
-		/// </summary>
-		public static int NumberOfCachedRequests
-		{
-			get { return numOfCachedRequests; }
-		}
-
-		private class CachedRequest
-		{
-			public string Etag;
-			public string Data;
-			public string LastModified;
-		}
-
-		private byte[] bytesForNextWrite;
 
 		/// <summary>
 		/// Creates the HTTP json request.
@@ -57,7 +42,7 @@ namespace Raven.Client.Client
 		/// <returns></returns>
 		public static HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, ICredentials credentials, DocumentConvention convention)
 		{
-			var request = new HttpJsonRequest(url, method, credentials, convention.ShouldCacheRequest(url));
+			var request = new HttpJsonRequest(url, method, new JObject());
 			ConfigureRequest(self, new WebRequestEventArgs { Request = request.webRequest });
 			return request;
 		}
@@ -74,30 +59,24 @@ namespace Raven.Client.Client
 		/// <returns></returns>
 		public static HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, JObject metadata, ICredentials credentials, DocumentConvention convention)
 		{
-			var request = new HttpJsonRequest(url, method, metadata, credentials, convention.ShouldCacheRequest(url));
+			var request = new HttpJsonRequest(url, method, metadata);
 			ConfigureRequest(self, new WebRequestEventArgs { Request = request.webRequest });
 			return request;
 		}
 
 		private readonly WebRequest webRequest;
-		// temporary create a strong reference to the cached data for this request
-		// avoid the potential for clearing the cache from a cached item
-		private readonly CachedRequest cachedRequest;
-
 		/// <summary>
 		/// Gets or sets the response headers.
 		/// </summary>
 		/// <value>The response headers.</value>
 		public IDictionary<string, IList<string>> ResponseHeaders { get; set; }
 
-		private HttpJsonRequest(string url, string method, ICredentials credentials, bool cacheRequest)
-			: this(url, method, new JObject(), credentials,cacheRequest)
-		{
-		}
+	
 
-		private HttpJsonRequest(string url, string method, JObject metadata, ICredentials credentials, bool cacheRequest)
+		private HttpJsonRequest(string url, string method, JObject metadata)
 		{
-			webRequest = WebRequest.Create(url);
+			webRequest = WebRequestCreator.ClientHttp.Create(new Uri(url));
+
 			WriteMetadata(metadata);
 			webRequest.Method = method;
 			if(method != "GET")
@@ -139,19 +118,6 @@ namespace Raven.Client.Client
 					httpWebResponse.StatusCode == HttpStatusCode.NotFound ||
 						httpWebResponse.StatusCode == HttpStatusCode.Conflict)
 					throw;
-
-				if (httpWebResponse.StatusCode == HttpStatusCode.NotModified 
-					&& cachedRequest != null)
-				{
-					ResponseStatusCode = HttpStatusCode.NotModified;
-					ResponseHeaders = new Dictionary<string,IList<string>>
-					{
-						{"ETag", new List<string> { cachedRequest.Etag}},
-						{"Last-Modified", new List<string>{ cachedRequest.LastModified}}
-					};
-					Interlocked.Increment(ref numOfCachedRequests);
-					return cachedRequest.Data;
-				}
 
 				using (var sr = new StreamReader(e.Response.GetResponseStream()))
 				{
@@ -226,7 +192,7 @@ namespace Raven.Client.Client
 																		   var dataStream = t.Result;
 																		   using (dataStream)
 																		   {
-																			   dataStream.Write(bytesForNextWrite, 0, bytesForNextWrite.Length);
+                                                                               dataStream.Write(byteArray, 0, byteArray.Length);
 																			   dataStream.Close();
 																		   }
 																	   });

@@ -21,13 +21,14 @@ namespace Raven.Client.Linq
 		private readonly IDocumentQueryGenerator queryGenerator;
 		private readonly Action<QueryResult> afterQueryExecuted;
 		private bool chainedWhere;
+		private int insideWhere;
 		private IDocumentQuery<T> luceneQuery;
 		private Expression<Func<T, bool>> predicate;
 		private SpecialQueryType queryType = SpecialQueryType.None;
 		private Type newExpressionType;
 		private string currentPath = string.Empty;
 		private int subClauseDepth;
-		private string indexName;
+		private readonly string indexName;
 
 		/// <summary>
 		/// Gets the current path in the case of expressions within collections
@@ -40,13 +41,16 @@ namespace Raven.Client.Linq
 		/// <param name="queryGenerator">The document query generator.</param>
 		/// <param name="customizeQuery">The customize query.</param>
 		/// <param name="afterQueryExecuted">Executed after the query run, allow access to the query results</param>
+		/// <param name="indexName">The index name to query</param>
+		/// <param name="fieldsToFetch">The fields to fetch in this query</param>
 		public RavenQueryProviderProcessor(
 			IDocumentQueryGenerator queryGenerator,
 			Action<IDocumentQueryCustomization> customizeQuery,
 			Action<QueryResult> afterQueryExecuted, 
-			string indexName)
+			string indexName,
+			HashSet<string> fieldsToFetch)
 		{
-			FieldsToFetch = new List<string>();
+			FieldsToFetch = fieldsToFetch;
 			newExpressionType = typeof (T);
 			this.queryGenerator = queryGenerator;
 			this.indexName = indexName;
@@ -67,7 +71,7 @@ namespace Raven.Client.Linq
 		/// Gets or sets the fields to fetch.
 		/// </summary>
 		/// <value>The fields to fetch.</value>
-		public List<string> FieldsToFetch { get; set; }
+		public HashSet<string> FieldsToFetch { get; set; }
 
 		/// <summary>
 		/// Visits the expression and generate the lucene query
@@ -172,23 +176,28 @@ namespace Raven.Client.Linq
 					Equals(((ConstantExpression)expression.Right).Value, 0))
 			{
 				var expressionMemberInfo = GetMember(methodCallExpression.Arguments[0]);
-				luceneQuery.WhereEquals(
-					expressionMemberInfo.Path,
-					GetValueFromExpression(methodCallExpression.Arguments[1], GetMemberType(expressionMemberInfo)),
-					true,
-					false
-					);
 
+				luceneQuery.WhereEquals(
+					new WhereEqualsParams
+					{
+						FieldName = expressionMemberInfo.Path,
+						Value = GetValueFromExpression(methodCallExpression.Arguments[1], GetMemberType(expressionMemberInfo)),
+						IsAnalyzed = true,
+						AllowWildcards = false
+					});
 				return;
 			}
 
 			var memberInfo = GetMember(expression.Left);
 
-			luceneQuery.WhereEquals(
-				memberInfo.Path,
-				GetValueFromExpression(expression.Right, GetMemberType(memberInfo)),
-				true,
-				false);
+			luceneQuery.WhereEquals(new WhereEqualsParams
+			{
+				FieldName = memberInfo.Path,
+				Value = GetValueFromExpression(expression.Right, GetMemberType(memberInfo)),
+				IsAnalyzed = true,
+				AllowWildcards = false,
+				IsNestedPath = memberInfo.IsNestedPath 
+			});
 		}
 
 		private void VisitNotEquals(BinaryExpression expression)
@@ -200,27 +209,42 @@ namespace Raven.Client.Linq
 					Equals(((ConstantExpression) expression.Right).Value, 0))
 			{
 				var expressionMemberInfo = GetMember(methodCallExpression.Arguments[0]);
-				luceneQuery.Not.WhereEquals(
-					expressionMemberInfo.Path,
-					GetValueFromExpression(methodCallExpression.Arguments[0], GetMemberType(expressionMemberInfo)),
-					true,
-					false
-					)
+				luceneQuery.Not.WhereEquals(new WhereEqualsParams
+				{
+					FieldName = expressionMemberInfo.Path,
+					Value = GetValueFromExpression(methodCallExpression.Arguments[0], GetMemberType(expressionMemberInfo)),
+					IsAnalyzed = true,
+					AllowWildcards = false
+				})
 					.AndAlso()
-					.WhereEquals(expressionMemberInfo.Path, "*", true, true);
+					.WhereEquals(new WhereEqualsParams
+					{
+						FieldName = expressionMemberInfo.Path,
+						Value = "*",
+						IsAnalyzed = true,
+						AllowWildcards = true
+					});
 
 				return;
 			}
 
 			var memberInfo = GetMember(expression.Left);
 
-			luceneQuery.Not.WhereEquals(
-				memberInfo.Path,
-				GetValueFromExpression(expression.Right, GetMemberType(memberInfo)),
-				true,
-				false)
-				.AndAlso()
-				.WhereEquals(memberInfo.Path, "*", true, true);
+			luceneQuery.Not.WhereEquals(new WhereEqualsParams
+			{
+				FieldName = memberInfo.Path,
+				Value = GetValueFromExpression(expression.Right, GetMemberType(memberInfo)),
+				IsAnalyzed = true,
+				AllowWildcards = false
+			})
+			.AndAlso()
+			.WhereEquals(new WhereEqualsParams
+			{
+				FieldName = memberInfo.Path,
+				Value = "*",
+				IsAnalyzed = true,
+				AllowWildcards = true
+			});
 		}
 
 		private static Type GetMemberType(ExpressionInfo info)
@@ -238,7 +262,7 @@ namespace Raven.Client.Linq
 			var parameterExpression = expression as ParameterExpression;
 			if(parameterExpression != null)
 			{
-				return new ExpressionInfo(CurrentPath, parameterExpression.Type);
+				return new ExpressionInfo(CurrentPath, parameterExpression.Type, false);
 			}
 			
 			MemberExpression memberExpression = GetMemberExpression(expression);
@@ -247,7 +271,7 @@ namespace Raven.Client.Linq
 			var path = memberExpression.ToString();
 			path = path.Substring(path.LastIndexOf('.') + 1);
 
-			return new ExpressionInfo(path, memberExpression.Member.GetMemberType());
+			return new ExpressionInfo(path, memberExpression.Member.GetMemberType(), memberExpression.Expression is MemberExpression);
 		}
 
 		/// <summary>
@@ -266,11 +290,13 @@ namespace Raven.Client.Linq
 		{
 			var memberInfo = GetMember(expression.Object);
 
-			luceneQuery.WhereEquals(
-				memberInfo.Path,
-				GetValueFromExpression(expression.Arguments[0], GetMemberType(memberInfo)),
-				memberInfo.Type != typeof (string),
-				false);
+			luceneQuery.WhereEquals(new WhereEqualsParams
+			{
+				FieldName = memberInfo.Path,
+				Value = GetValueFromExpression(expression.Arguments[0], GetMemberType(memberInfo)),
+				IsAnalyzed = memberInfo.Type != typeof (string),
+				AllowWildcards = false
+			});
 		}
 
 		private void VisitContains(MethodCallExpression expression)
@@ -353,11 +379,13 @@ namespace Raven.Client.Linq
 		{
 			if (memberExpression.Type == typeof (bool))
 			{
-				luceneQuery.WhereEquals(
-					memberExpression.Member.Name,
-					boolValue,
-					true,
-					false);
+				luceneQuery.WhereEquals(new WhereEqualsParams
+				{
+					FieldName = memberExpression.Member.Name,
+					Value = boolValue,
+					IsAnalyzed = true,
+					AllowWildcards = false
+				});
 			}
 			else
 			{
@@ -442,10 +470,16 @@ namespace Raven.Client.Linq
 			{
 				case "Where":
 				{
+					insideWhere++;
 					VisitExpression(expression.Arguments[0]);
 					if (chainedWhere) luceneQuery.AndAlso();
-					VisitExpression(((UnaryExpression) expression.Arguments[1]).Operand);
+					if(insideWhere > 1)
+						luceneQuery.OpenSubclause();
+					VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
+					if (insideWhere > 1)
+						luceneQuery.CloseSubclause();
 					chainedWhere = true;
+					insideWhere--;
 					break;
 				}
 				case "Select":
@@ -572,13 +606,19 @@ namespace Raven.Client.Linq
 				case ExpressionType.New:                
 					var newExpression = ((NewExpression) body);
 					newExpressionType = newExpression.Type;
-					FieldsToFetch.AddRange(newExpression.Arguments.Cast<MemberExpression>().Select(x => x.Member.Name));
+					foreach (var field in newExpression.Arguments.Cast<MemberExpression>().Select(x => x.Member.Name))
+					{
+						FieldsToFetch.Add(field);
+					}
 					break;
 				//for example .Select(x => new SomeType { x.Cost } ), it's member init because it's using the object initializer
 				case ExpressionType.MemberInit:
 					var memberInitExpression = ((MemberInitExpression)body);
 					newExpressionType = memberInitExpression.NewExpression.Type;
-					FieldsToFetch.AddRange(memberInitExpression.Bindings.Cast<MemberAssignment>().Select(x => x.Member.Name));
+					foreach (var field in memberInitExpression.Bindings.Cast<MemberAssignment>().Select(x => x.Member.Name))
+					{
+						FieldsToFetch.Add(field);
+					}
 					break;
 				case ExpressionType.Parameter: // want the full thing, so just pass it on.
 					break;
@@ -787,23 +827,10 @@ namespace Raven.Client.Linq
 
 			return executeQuery;
 		}
-#endif
-
-#if SILVERLIGHT
+#else
 		private object ExecuteQuery<TProjection>()
 		{
-			var finalQuery = luceneQuery.SelectFields<TProjection>(FieldsToFetch.ToArray());
-
-			var executeQuery = GetQueryResult(finalQuery);
-
-			var queryResultAsync = finalQuery.QueryResultAsync;
-			queryResultAsync.Wait();
-			if (afterQueryExecuted != null)
-			{
-				afterQueryExecuted(queryResultAsync.Result);
-			}
-
-			return executeQuery;
+			throw new NotImplementedException("Not done yet");
 		}
 #endif
 
@@ -844,11 +871,9 @@ namespace Raven.Client.Linq
 				}
 #else
 					case SpecialQueryType.Count:
-					{
-						var queryResultAsync = finalQuery.QueryResultAsync;
-						queryResultAsync.Wait();
-						return queryResultAsync.Result.TotalResults;
-					}
+			    {
+			        throw new NotImplementedException("not done yet");
+			    }
 #endif
 				default:
 				{

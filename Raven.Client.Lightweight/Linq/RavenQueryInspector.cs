@@ -135,7 +135,7 @@ namespace Raven.Client.Linq
 		/// </returns>
 		public override string ToString()
 		{
-			var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, null);
+			var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, null, new HashSet<string>());
 			ravenQueryProvider.ProcessExpression(expression);
 			string fields = "";
 			if (ravenQueryProvider.FieldsToFetch.Count > 0)
@@ -152,7 +152,7 @@ namespace Raven.Client.Linq
 		{
 			get
 			{
-				var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName);
+				var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>());
 				ravenQueryProvider.ProcessExpression(expression);
 				return ((IRavenQueryInspector)ravenQueryProvider.LuceneQuery).IndexQueried;
 			}
@@ -179,12 +179,44 @@ namespace Raven.Client.Linq
 #endif
 
 		///<summary>
+		/// Get the last equality term for the query
 		///</summary>
 		public KeyValuePair<string, string> GetLastEqualityTerm()
 		{
-			var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, null);
+			var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, null, new HashSet<string>());
 			ravenQueryProvider.ProcessExpression(expression);
 			return ((IRavenQueryInspector)ravenQueryProvider.LuceneQuery).GetLastEqualityTerm();
+		}
+
+#if SILVERLIGHT
+		/// <summary>
+		///   This function exists solely to forbid calling ToList() on a queryable in Silverlight.
+		/// </summary>
+		[Obsolete("You cannot execute a query synchronously from the Silverlight client. Instead, use queryable.ToListAsync().", true)]
+		public static IList<T> ToList<T>()
+		{
+			throw new NotSupportedException();
+		}
+
+		/// <summary>
+		///   This function exists solely to forbid calling ToList() on a queryable in Silverlight.
+		/// </summary>
+		[Obsolete("You cannot execute a query synchronously from the Silverlight client. Instead, use queryable.ToListAsync().", true)]
+		public static T[] ToArray<T>()
+		{
+			throw new NotSupportedException();
+		}
+#endif
+
+		/// <summary>
+		/// Set the fields to fetch
+		/// </summary>
+		public void FieldsToFetch(IEnumerable<string> fields)
+		{
+			foreach (var field in fields)
+			{
+				provider.FieldsToFetch.Add(field);
+			}
 		}
 	}
 }

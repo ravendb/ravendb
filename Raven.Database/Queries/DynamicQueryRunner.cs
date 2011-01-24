@@ -7,12 +7,10 @@ using System;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
-using Raven.Abstractions.Data;
 using Raven.Database.Data;
 using System.Diagnostics;
 using System.Threading;
-using System.Security.Cryptography;
+using Raven.Database.Indexing;
 
 namespace Raven.Database.Queries
 {
@@ -31,42 +29,63 @@ namespace Raven.Database.Queries
 		{
 			// Create the map
 			var map = DynamicQueryMapping.Create(documentDatabase, query, entityName);
+			
+			var touchTemporaryIndexResult = GetAppropriateIndexToQuery(entityName, query, map);
 
-			var touchTemporaryIndexResult = TouchTemporaryIndex(map, map.TemporaryIndexName, map.PermanentIndexName);
 			map.IndexName = touchTemporaryIndexResult.Item1;
-
 			// Re-write the query
 			string realQuery = map.Items.Aggregate(query.Query,
-												   (current, mapItem) => current.Replace(mapItem.From, mapItem.To));
+												   (current, mapItem) => current.Replace(mapItem.QueryFrom, mapItem.To));
 
+			return ExecuteActualQuery(query, map, touchTemporaryIndexResult, realQuery);
+		}
+
+		private QueryResult ExecuteActualQuery(IndexQuery query, DynamicQueryMapping map, Tuple<string, bool> touchTemporaryIndexResult, string realQuery)
+		{
 			// Perform the query until we have some results at least
 			QueryResult result;
 			var sp = Stopwatch.StartNew();
 			while (true)
 			{
 				result = documentDatabase.Query(map.IndexName,
-												new IndexQuery
-												{
-													Cutoff = query.Cutoff,
-													PageSize = query.PageSize,
-													Query = realQuery,
-													Start = query.Start,
-													FieldsToFetch = query.FieldsToFetch,
-													GroupBy = query.GroupBy,
-													AggregationOperation = query.AggregationOperation,
-													SortedFields = query.SortedFields,
-												});
+				                                new IndexQuery
+				                                {
+				                                	Cutoff = query.Cutoff,
+				                                	PageSize = query.PageSize,
+				                                	Query = realQuery,
+				                                	Start = query.Start,
+				                                	FieldsToFetch = query.FieldsToFetch,
+				                                	GroupBy = query.GroupBy,
+				                                	AggregationOperation = query.AggregationOperation,
+				                                	SortedFields = query.SortedFields,
+				                                });
 
 				if (!touchTemporaryIndexResult.Item2 ||
-					!result.IsStale ||
-					result.Results.Count >= query.PageSize ||
-					sp.Elapsed.TotalSeconds > 15)
+				    !result.IsStale ||
+				    result.Results.Count >= query.PageSize ||
+				    sp.Elapsed.TotalSeconds > 15)
 				{
 					return result;
 				}
 
 				Thread.Sleep(100);
 			}
+		}
+
+		private Tuple<string, bool> GetAppropriateIndexToQuery(string entityName, IndexQuery query, DynamicQueryMapping map)
+		{
+			var appropriateIndex = new DynamicQueryOptimizer(documentDatabase).SelectAppropriateIndex(entityName, query);
+			if (appropriateIndex != null)
+			{
+				if (appropriateIndex.StartsWith("Temp/"))// temporary index, we need to increase its usage
+				{
+					return  TouchTemporaryIndex(appropriateIndex, "Auto/" + appropriateIndex.Substring(5),
+					                                                () => documentDatabase.IndexDefinitionStorage.GetIndexDefinition(appropriateIndex));
+				}
+				return Tuple.Create(appropriateIndex, false);
+			}
+			return TouchTemporaryIndex(map.TemporaryIndexName, map.PermanentIndexName,
+			                                                map.CreateIndexDefinition);
 		}
 
 		public void CleanupCache()
@@ -83,7 +102,27 @@ namespace Raven.Database.Queries
 			}
 		}
 
-		private Tuple<string,bool> TouchTemporaryIndex(DynamicQueryMapping map, string temporaryIndexName, string permanentIndexName)
+		private Tuple<string, bool> TouchTemporaryIndex(string temporaryIndexName, string permanentIndexName, Func<IndexDefinition> createDefinition)
+		{
+			var indexInfo = IncrementUsageCount(temporaryIndexName);
+
+			if (TemporaryIndexShouldBeMadePermanent(indexInfo))
+			{
+				var indexDefinition = createDefinition();
+				documentDatabase.DeleteIndex(temporaryIndexName);
+				CreateIndex(indexDefinition, permanentIndexName);
+				TemporaryIndexInfo ignored;
+				temporaryIndexes.TryRemove(temporaryIndexName, out ignored);
+				return Tuple.Create(permanentIndexName, false);
+			}
+			var temporaryIndex = documentDatabase.GetIndexDefinition(temporaryIndexName);
+			if (temporaryIndex != null)
+				return Tuple.Create(temporaryIndexName, false);
+			CreateIndex(createDefinition(), temporaryIndexName);
+			return Tuple.Create(temporaryIndexName, true);
+		}
+
+		private TemporaryIndexInfo IncrementUsageCount(string temporaryIndexName)
 		{
 			var indexInfo = temporaryIndexes.GetOrAdd(temporaryIndexName, s => new TemporaryIndexInfo
 			{
@@ -93,20 +132,7 @@ namespace Raven.Database.Queries
 			});
 			indexInfo.LastRun = DateTime.Now;
 			indexInfo.RunCount++;
-			
-			if (TemporaryIndexShouldBeMadePermanent(indexInfo))
-			{
-				documentDatabase.DeleteIndex(temporaryIndexName);
-				CreateIndex(map, permanentIndexName);
-				TemporaryIndexInfo ignored;
-				temporaryIndexes.TryRemove(temporaryIndexName, out ignored);
-				return Tuple.Create(permanentIndexName, false);
-			}
-			var temporaryIndex = documentDatabase.GetIndexDefinition(temporaryIndexName);
-			if (temporaryIndex != null)
-				return Tuple.Create(temporaryIndexName, false);
-			CreateIndex(map, temporaryIndexName);
-			return Tuple.Create(temporaryIndexName, true);
+			return indexInfo;
 		}
 
 		private bool TemporaryIndexShouldBeMadePermanent(TemporaryIndexInfo indexInfo)
@@ -121,12 +147,10 @@ namespace Raven.Database.Queries
 		}
 
 		[MethodImpl(MethodImplOptions.Synchronized)]
-		private void CreateIndex(DynamicQueryMapping map, string indexName)
+		private void CreateIndex(IndexDefinition definition, string indexName)
 		{
 			if (documentDatabase.GetIndexDefinition(indexName) != null) // avoid race condition when creating the index
 				return;
-
-			var definition = map.CreateIndexDefinition();
 
 			documentDatabase.PutIndex(indexName, definition);
 		}

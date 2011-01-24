@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using log4net;
@@ -44,9 +45,14 @@ namespace Raven.Database.Indexing
 		private readonly object writeLock = new object();
 		private volatile bool disposed;
 
-		
+
 		protected Index(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator)
 		{
+			if (directory == null) throw new ArgumentNullException("directory");
+			if (name == null) throw new ArgumentNullException("name");
+			if (indexDefinition == null) throw new ArgumentNullException("indexDefinition");
+			if (viewGenerator == null) throw new ArgumentNullException("viewGenerator");
+
 			this.name = name;
 			this.indexDefinition = indexDefinition;
 			this.viewGenerator = viewGenerator;
@@ -64,6 +70,16 @@ namespace Raven.Database.Indexing
 			};
 		}
 
+		public void Flush()
+		{
+			if (disposed)
+				return;
+			if(indexWriter!=null)
+			{
+				indexWriter.Commit();
+			}
+		}
+
 		#region IDisposable Members
 
 		public void Dispose()
@@ -74,6 +90,12 @@ namespace Raven.Database.Indexing
 				IndexSearcher _;
 				using (searcher.Use(out _))
 					searcher.MarkForDispoal();
+				if (indexWriter != null)
+				{
+					var writer = indexWriter;
+					indexWriter = null;
+					writer.Close();
+				}
 				directory.Close();
 			}
 		}
@@ -134,7 +156,7 @@ namespace Raven.Database.Indexing
 					f = f.Substring(0, f.Length - "_Range".Length);
 				}
 				if (viewGenerator.ContainsField(f) == false)
-					throw new ArgumentException("The field '" + f  + "' is not indexed, cannot query on fields that are not indexed");
+					throw new ArgumentException("The field '" + f + "' is not indexed, cannot query on fields that are not indexed");
 			}
 
 			if (fields == null)
@@ -156,7 +178,7 @@ namespace Raven.Database.Indexing
 		{
 			Filter filter = indexQuery.GetFilter();
 			Sort sort = indexQuery.GetSort(filter, indexDefinition);
-			
+
 			if (pageSize == int.MaxValue) // we want all docs
 			{
 				var gatherAllCollector = new GatherAllCollector();
@@ -187,32 +209,40 @@ namespace Raven.Database.Indexing
 				PerFieldAnalyzerWrapper analyzer = null;
 				try
 				{
-					analyzer = CreateAnalyzer(toDispose);
+					analyzer = CreateAnalyzer(new LowerCaseAnalyzer(), toDispose);
 					analyzer = AnalyzerGenerators.Aggregate(analyzer, (currentAnalyzer, generator) =>
 					{
 						var newAnalyzer = generator.GenerateAnalzyerForQuerying(name, indexQuery.Query, currentAnalyzer);
-						if (newAnalyzer != currentAnalyzer && currentAnalyzer != analyzer)
-							currentAnalyzer.Close();
-						return currentAnalyzer;
+						if (newAnalyzer != currentAnalyzer)
+						{
+							DisposeAnalyzerAndFriends(toDispose, currentAnalyzer);
+						}
+						return CreateAnalyzer(newAnalyzer, toDispose); ;
 					});
 					luceneQuery = QueryBuilder.BuildQuery(query, analyzer);
 				}
 				finally
 				{
-					if (analyzer != null)
-						analyzer.Close();
-					foreach (var dispose in toDispose)
-					{
-						dispose();
-					}
+					DisposeAnalyzerAndFriends(toDispose, analyzer);
 				}
 			}
 			return luceneQuery;
 		}
 
+		private void DisposeAnalyzerAndFriends(List<Action> toDispose, PerFieldAnalyzerWrapper analyzer)
+		{
+			if (analyzer != null)
+				analyzer.Close();
+			foreach (var dispose in toDispose)
+			{
+				dispose();
+			}
+			toDispose.Clear();
+		}
+
 		public abstract void IndexDocuments(AbstractViewGenerator viewGenerator, IEnumerable<object> documents, WorkContext context, IStorageActionsAccessor actions, DateTime minimumTimestamp);
 
-		
+
 		protected virtual IndexQueryResult RetrieveDocument(Document document, string[] fieldsToFetch)
 		{
 			var shouldBuildProjection = fieldsToFetch == null || fieldsToFetch.Length == 0;
@@ -234,16 +264,16 @@ namespace Raven.Database.Indexing
 					.GroupBy(x => x.Name)
 					.Select(g =>
 					{
-						if (g.Count() == 1 && document.GetField(g.Key+"_IsArray") == null)
-							return g.First();
-						return new JProperty(g.Key,
-											 g.Select(x => x.Value)
-							);
+						if (g.Count() == 1 && document.GetField(g.Key + "_IsArray") == null)
+						{
+						    return g.First();
+						}
+					    return new JProperty(g.Key, g.Select(x => x.Value));
 					})
 				);
 		}
 
-		private static JProperty CreateProperty(Field fld, Document document)
+	    private static JProperty CreateProperty(Field fld, Document document)
 		{
 			if (document.GetField(fld.Name() + "_ConvertToJson") != null)
 			{
@@ -252,6 +282,8 @@ namespace Raven.Database.Indexing
 			}
 			return new JProperty(fld.Name(), fld.StringValue());
 		}
+
+		IndexWriter indexWriter;
 
 		protected void Write(WorkContext context, Func<IndexWriter, Analyzer, bool> action)
 		{
@@ -266,14 +298,15 @@ namespace Raven.Database.Indexing
 				{
 					try
 					{
-						analyzer = CreateAnalyzer(toDispose);
+						analyzer = CreateAnalyzer(new LowerCaseAnalyzer(), toDispose);
 					}
 					catch (Exception e)
 					{
 						context.AddError(name, "Creating Analyzer", e.ToString());
 						throw;
 					}
-					var indexWriter = new IndexWriter(directory, analyzer, IndexWriter.MaxFieldLength.UNLIMITED);
+					if (indexWriter == null)
+						indexWriter = new IndexWriter(directory, new StopAnalyzer(Version.LUCENE_29), IndexWriter.MaxFieldLength.UNLIMITED);
 					try
 					{
 						shouldRecreateSearcher = action(indexWriter, analyzer);
@@ -282,10 +315,6 @@ namespace Raven.Database.Indexing
 					{
 						context.AddError(name, null, e.ToString());
 						throw;
-					}
-					finally
-					{
-						indexWriter.Close();
 					}
 				}
 				finally
@@ -302,9 +331,8 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private PerFieldAnalyzerWrapper CreateAnalyzer(ICollection<Action> toDispose)
+		public PerFieldAnalyzerWrapper CreateAnalyzer(Analyzer defaultAnalyzer, ICollection<Action> toDispose)
 		{
-			var defaultAnalyzer = new LowerCaseAnalyzer();
 			toDispose.Add(defaultAnalyzer.Close);
 			var perFieldAnalyzerWrapper = new PerFieldAnalyzerWrapper(defaultAnalyzer);
 			foreach (var analyzer in indexDefinition.Analyzers)
@@ -331,6 +359,8 @@ namespace Raven.Database.Indexing
 						perFieldAnalyzerWrapper.AddAnalyzer(fieldIndexing.Key, keywordAnalyzer);
 						break;
 					case FieldIndexing.Analyzed:
+						if(indexDefinition.Analyzers.ContainsKey(fieldIndexing.Key))
+							continue;
 						if (standardAnalyzer == null)
 						{
 							standardAnalyzer = new StandardAnalyzer(Version.LUCENE_29);
@@ -382,10 +412,20 @@ namespace Raven.Database.Indexing
 			using (searcher.Use(out _))
 			{
 				searcher.MarkForDispoal();
-				searcher = new CurrentIndexSearcher
+				if (indexWriter == null)
 				{
-					Searcher = new IndexSearcher(directory, true)
-				};
+					searcher = new CurrentIndexSearcher
+					           	{
+					           		Searcher = new IndexSearcher(directory, true)
+					           	};
+				}
+				else
+				{
+					searcher = new CurrentIndexSearcher
+					{
+						Searcher = new IndexSearcher(indexWriter.GetReader())
+					};
+				}
 				Thread.MemoryBarrier(); // force other threads to see this write
 			}
 		}
@@ -431,7 +471,11 @@ namespace Raven.Database.Indexing
 				{
 					var uses = Interlocked.Decrement(ref parent.useCount);
 					if (parent.shouldDisposeWhenThereAreNoUsages && uses == 0)
+					{
+						var indexReader = parent.Searcher.GetIndexReader();
 						parent.Searcher.Close();
+						indexReader.Close();
+					}
 				}
 
 				#endregion
@@ -446,17 +490,14 @@ namespace Raven.Database.Indexing
 				(currentAnalyzer, generator) =>
 				{
 					var generateAnalyzer = generator.GenerateAnalyzerForIndexing(name, luceneDoc, currentAnalyzer);
-					if(generateAnalyzer != currentAnalyzer && currentAnalyzer != analyzer)
+					if (generateAnalyzer != currentAnalyzer && currentAnalyzer != analyzer)
 						currentAnalyzer.Close();
 					return generateAnalyzer;
 				});
 
 			try
 			{
-				if (newAnalyzer != analyzer)
-					indexWriter.AddDocument(luceneDoc, newAnalyzer);
-				else
-					indexWriter.AddDocument(luceneDoc);
+				indexWriter.AddDocument(luceneDoc, newAnalyzer);
 			}
 			finally
 			{

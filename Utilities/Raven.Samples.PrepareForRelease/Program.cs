@@ -25,6 +25,7 @@ namespace Raven.Samples.PrepareForRelease
 				var ns = XNamespace.Get("http://schemas.microsoft.com/developer/msbuild/2003");
 				foreach (var projectFile in Directory.GetFiles(Path.GetDirectoryName(slnPath), "*.csproj", SearchOption.AllDirectories))
 				{
+				    Console.WriteLine("Preparing project file: " +projectFile);
 					var prj = XDocument.Load(projectFile);
 
 					foreach (var reference in prj.Descendants(ns + "Reference").ToArray())
@@ -32,7 +33,7 @@ namespace Raven.Samples.PrepareForRelease
 						var hintPath = reference.Element(ns + "HintPath");
 						if (hintPath == null)
 							continue;
-						var guessFileName = GuessFileName(Path.GetFileName(hintPath.Value), libPath);
+						var guessFileName = GuessFileName(Path.GetFileName(hintPath.Value), libPath, true);
 						if(guessFileName == null)
 							continue;
 						hintPath.Value = Path.Combine(@"..\..", guessFileName);
@@ -55,7 +56,7 @@ namespace Raven.Samples.PrepareForRelease
 						parent.Add(
 							new XElement(ns + "Reference",
 								new XAttribute("Include", refName),
-								new XElement(ns+"HintPath", Path.Combine(@"..\..", GuessFileName(refName, libPath)))
+								new XElement(ns+"HintPath", Path.Combine(@"..\..", GuessFileName(refName, libPath, false)))
 								)
 							);
 
@@ -72,15 +73,20 @@ namespace Raven.Samples.PrepareForRelease
 			}
 		}
 
-		private static string GuessFileName(string refName, string libPath)
+		private static string GuessFileName(string refName, string libPath, bool allowMissingFiles)
 		{
 			var fullPath = Path.GetFullPath(libPath);
 			var searchPattern = Path.GetExtension(refName) == ".dll" ? refName : refName + ".*";
-			var filePath = Directory.GetFiles(libPath, searchPattern, SearchOption.AllDirectories)
+			var filePath = Directory.GetFiles(fullPath, searchPattern, SearchOption.AllDirectories)
 				.Where(x=>x.ToUpperInvariant().Contains("SAMPLES") == false)
 				.FirstOrDefault();
-			if (filePath == null)
-				return null;
+            if (filePath == null)
+            {
+                if (allowMissingFiles)
+                    return null;
+                throw new InvalidOperationException("Could not file a file matching '" + searchPattern + "' in: " +
+                    libPath);
+            }
 			filePath = Path.GetFullPath(filePath);
 			return filePath.Substring(fullPath.Length + 1);
 		}

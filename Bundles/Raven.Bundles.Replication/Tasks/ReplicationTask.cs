@@ -8,6 +8,7 @@ using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using log4net;
@@ -16,6 +17,7 @@ using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
 using Raven.Bundles.Replication.Data;
 using Raven.Database;
+using Raven.Database.Impl;
 using Raven.Database.Plugins;
 using Raven.Database.Json;
 
@@ -301,10 +303,11 @@ namespace Raven.Bundles.Replication.Tasks
             {
                 var request = (HttpWebRequest)WebRequest.Create(destination + "/replication/replicateDocs?from=" + docDb.Configuration.ServerUrl);
                 request.UseDefaultCredentials = true;
+            	request.ContentType = "application/json; charset=utf-8";
                 request.Credentials = CredentialCache.DefaultNetworkCredentials;
                 request.Method = "POST";
                 using (var stream = request.GetRequestStream())
-                using (var streamWriter = new StreamWriter(stream))
+                using (var streamWriter = new StreamWriter(stream, Encoding.UTF8))
                 {
                     jsonDocuments.WriteTo(new JsonTextWriter(streamWriter));
                     streamWriter.Flush();
@@ -348,10 +351,16 @@ namespace Raven.Bundles.Replication.Tasks
                 var instanceId = docDb.TransactionalStorage.Id.ToString();
                 docDb.TransactionalStorage.Batch(actions =>
                 {
+                    var docRetr = new DocumentRetriever(actions, Enumerable.Empty<AbstractReadTrigger>());
 					jsonDocuments = new JArray(actions.Documents.GetDocumentsAfter(etag)
                         .Where(x => x.Key.StartsWith("Raven/") == false) // don't replicate system docs
                         .Where(x => x.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource) == instanceId) // only replicate documents created on this instance
                         .Where(x=> x.Metadata[ReplicationConstants.RavenReplicationConflict] == null) // don't replicate conflicted documents, that just propgate the conflict
+                        .Select(x=>
+                        {
+                            docRetr.EnsureIdInMetadata(x);
+                            return x;
+                        })
                         .Take(100)
                         .Select(x => x.ToJson()));
                 });

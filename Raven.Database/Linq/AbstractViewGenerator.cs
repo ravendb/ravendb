@@ -16,8 +16,12 @@ namespace Raven.Database.Linq
 	{
         private readonly HashSet<string> fields = new HashSet<string>();
         private bool? containsProjection;
+		private readonly HashSet<string> mapFields = new HashSet<string>();
+		private readonly HashSet<string> reduceFields = new HashSet<string>();
 
-        public IndexingFunc MapDefinition { get; set; }
+    	public int CountOfFields { get { return fields.Count;  } }
+
+    	public IndexingFunc MapDefinition { get; set; }
 		
         public IndexingFunc ReduceDefinition { get; set; }
 
@@ -65,10 +69,25 @@ namespace Raven.Database.Linq
 			}
 		}
 
+		public void AddQueryParameterForMap(string field)
+		{
+			mapFields.Add(field);
+		}
+
+    	public void AddQueryParameterForReduce(string field)
+    	{
+    		reduceFields.Add(field);
+    	}
+
         public void AddField(string field)
         {
             fields.Add(field);
         }
+
+		public virtual bool ContainsFieldOnMap(string field)
+		{
+			return mapFields.Contains(field);
+		}
 
         public virtual bool ContainsField(string field)
         {

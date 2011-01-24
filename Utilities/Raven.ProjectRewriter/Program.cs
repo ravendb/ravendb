@@ -37,6 +37,11 @@ namespace Raven.ProjectRewriter
                     element.Remove();
                 if (element.Attribute("Include").Value == "System.ComponentModel.Composition")
                     element.Remove();
+                if (element.Attribute("Include").Value == "Newtonsoft.Json")
+                {
+                    element.Attribute("Include").Value = "Newtonsoft.Json.Net35";
+                    element.Element(xmlns+"HintPath").Value = @"..\SharedLibs\Newtonsoft.Json.Net35.dll";
+                }
             }
             foreach (var element in database.Root.Descendants(xmlns + "DocumentationFile").ToArray())
             {
@@ -84,6 +89,11 @@ namespace Raven.ProjectRewriter
                     element.Remove();
                 if (element.Attribute("Include").Value == "System.ComponentModel.Composition")
                     element.Remove();
+                if (element.Attribute("Include").Value == "Newtonsoft.Json")
+                {
+                    element.Attribute("Include").Value = "Newtonsoft.Json.Net35";
+                    element.Element(xmlns + "HintPath").Value = @"..\SharedLibs\Newtonsoft.Json.Net35.dll";
+                }
             }
 
             foreach (var element in database.Root.Descendants(xmlns + "DocumentationFile").ToArray())

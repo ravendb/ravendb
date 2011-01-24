@@ -13,6 +13,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
+using Raven.Database.Json;
 using Raven.Database.Linq;
 using Raven.Http.Abstractions;
 using Raven.Http.Exceptions;
@@ -79,7 +80,7 @@ namespace Raven.Http.Extensions
 
 		public static void WriteJson(this IHttpContext context, object obj)
 		{
-			context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
+			context.Response.AddHeader("Content-Type", "application/json; charset=utf-8");
 			var streamWriter = new StreamWriter(context.Response.OutputStream, Encoding.UTF8);
 			new JsonSerializer
 			{
@@ -93,7 +94,7 @@ namespace Raven.Http.Extensions
 
 		public static void WriteJson(this IHttpContext context, JToken obj)
 		{
-			context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
+			context.Response.AddHeader("Content-Type", "application/json; charset=utf-8");
 			var streamWriter = new StreamWriter(context.Response.OutputStream, Encoding.UTF8);
 			var jsonTextWriter = new JsonTextWriter(streamWriter)
 			{
@@ -115,14 +116,24 @@ namespace Raven.Http.Extensions
 			{
 				if (header.Name.StartsWith("@"))
 					continue;
-				context.Response.Headers[header.Name] = StripQuotesIfNeeded(header.Value.ToString(Formatting.None));
+
+				var value = StripQuotesIfNeeded(header.Value.ToString(Formatting.None));
+				switch (header.Name)
+				{
+					case "Content-Type":
+						context.Response.ContentType = value;
+						break;
+					default:
+						context.Response.AddHeader(header.Name, value);
+						break;
+				}
 			}
 			if (headers["@Http-Status-Code"] != null)
 			{
 				context.Response.StatusCode = headers.Value<int>("@Http-Status-Code");
 				context.Response.StatusDescription = headers.Value<string>("@Http-Status-Description");
 			}
-			context.Response.Headers["ETag"] = etag.ToString();
+			context.Response.AddHeader("ETag", etag.ToString());
 			context.Response.OutputStream.Write(data, 0, data.Length);
 		}
 
@@ -143,7 +154,7 @@ namespace Raven.Http.Extensions
 		{
 			context.Response.StatusCode = 201;
 			context.Response.StatusDescription = "Created";
-			context.Response.Headers["Location"] = context.Configuration.GetFullUrl(location);
+			context.Response.AddHeader("Location", context.Configuration.GetFullUrl(location));
 		}
 
 
@@ -238,6 +249,13 @@ namespace Raven.Http.Extensions
 				self.RawUrl = self.RawUrl.Substring(token.Length);
 			}
 		}
+
+        public static bool GetSkipTransformResults(this IHttpContext context)
+        {
+            bool result;
+            bool.TryParse(context.Request.QueryString["skipTransformResults"], out result);
+            return result;
+        }
 
 		public static int GetPageSize(this IHttpContext context, int maxPageSize)
 		{
@@ -359,7 +377,7 @@ namespace Raven.Http.Extensions
 					}
 					bytes = resource.ReadData();
 				}
-				context.Response.Headers["ETag"] = EmbeddedLastChangedDate;
+				context.Response.AddHeader("ETag", EmbeddedLastChangedDate);
 			}
 			else
 			{
@@ -370,7 +388,7 @@ namespace Raven.Http.Extensions
 					return;
 				}
 				bytes = File.ReadAllBytes(filePath);
-				context.Response.Headers["ETag"] = fileEtag;
+				context.Response.AddHeader("ETag", fileEtag);
 			}
 			context.Response.OutputStream.Write(bytes, 0, bytes.Length);
 		}
@@ -398,30 +416,5 @@ namespace Raven.Http.Extensions
 					return "text/plain";
 			}
 		}
-
-		#region Nested type: JsonToJsonConverter
-
-		public class JsonToJsonConverter : JsonConverter
-		{
-			public override void WriteJson (JsonWriter writer, object value, JsonSerializer serializer)
-			{
-				if (value is JObject)
-					((JObject)value).WriteTo(writer);
-				else
-					((DynamicJsonObject) value).Inner.WriteTo(writer);
-			}
-
-			public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
-			{
-				throw new NotImplementedException();
-			}
-
-			public override bool CanConvert (Type objectType)
-			{
-				return objectType == typeof(JObject) || objectType == typeof(DynamicJsonObject);
-			}
-		}
-
-		#endregion
 	}
 }

@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.Collections.Specialized;
 using System.IO;
 using System.Net;
@@ -25,12 +26,14 @@ namespace Raven.Http.Abstractions
             set;
         }
 
-        public NameValueCollection Headers
-        {
-            get { return response.Headers; }
-        }
+    	public void AddHeader(string name, string value)
+    	{
+			if(name == "ETag")
+				response.AddHeader("Expires", "Sat, 01 Jan 2000 00:00:00 GMT");
+    		response.AddHeader(name, value);
+    	}
 
-        public Stream OutputStream { get; set; }
+    	public Stream OutputStream { get; set; }
 
         public long ContentLength64
         {
@@ -66,5 +69,10 @@ namespace Raven.Http.Abstractions
             OutputStream.Dispose();
             response.Close();
         }
+
+    	public void SetPublicCachability()
+    	{
+    		response.Headers["Cache-Control"] = "Public";
+    	}
     }
 }

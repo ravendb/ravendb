@@ -36,7 +36,16 @@ namespace Raven.Client.Document
 		/// </summary>
 		protected readonly HashSet<object> deletedEntities = new HashSet<object>();
 
+#if !SILVERLIGHT
 		private bool hasEnlisted;
+		[ThreadStatic]
+		private static Dictionary<string, HashSet<string>> registeredStoresInTransaction;
+
+		private static Dictionary<string, HashSet<string>> RegisteredStoresInTransaction
+		{
+			get { return (registeredStoresInTransaction ?? (registeredStoresInTransaction = new Dictionary<string, HashSet<string>>())); }
+		}
+#endif 
 
 		/// <summary>
 		/// hold the data required to manage the data for RavenDB's Unit of Work
@@ -54,6 +63,11 @@ namespace Raven.Client.Document
 		protected DocumentStore documentStore;
 
 		/// <summary>
+		/// The query listeners allow to modify queries before it is executed
+		/// </summary>
+		protected readonly IDocumentQueryListener[] queryListeners;
+
+		/// <summary>
 		/// Gets the number of requests for this session
 		/// </summary>
 		/// <value></value>
@@ -68,9 +82,14 @@ namespace Raven.Client.Document
 		/// <param name="documentStore">The document store.</param>
 		/// <param name="storeListeners">The store listeners.</param>
 		/// <param name="deleteListeners">The delete listeners.</param>
-		protected InMemoryDocumentSessionOperations(DocumentStore documentStore, IDocumentStoreListener[] storeListeners, IDocumentDeleteListener[] deleteListeners)
+		protected InMemoryDocumentSessionOperations(
+			DocumentStore documentStore, 
+			IDocumentQueryListener[] queryListeners,
+			IDocumentStoreListener[] storeListeners, 
+			IDocumentDeleteListener[] deleteListeners)
 		{
 			this.documentStore = documentStore;
+			this.queryListeners = queryListeners;
 			this.deleteListeners = deleteListeners;
 			this.storeListeners = storeListeners;
 			ResourceManagerId = documentStore.ResourceManagerId;
@@ -359,6 +378,9 @@ more responsive application.
 		/// <returns></returns>
 		protected object ConvertToEntity<T>(string id, JObject documentFound, JObject metadata)
 		{
+			if(typeof(T) == typeof(JObject))
+				return (T) (object) documentFound;
+
 			var entity = default(T);
 			EnsureNotReadVetoed(metadata);
 			var documentType = metadata.Value<string>("Raven-Clr-Type");
@@ -673,15 +695,28 @@ more responsive application.
 			if (hasEnlisted || Transaction.Current == null) 
 				return;
 
-
-			var transactionalSession = (ITransactionalDocumentSession)this;
-			if (documentStore.DatabaseCommands.SupportsPromotableTransactions == false ||
-				Transaction.Current.EnlistPromotableSinglePhase(new PromotableRavenClientEnlistment(transactionalSession)) == false) 
+			HashSet<string> registered;
+			var localIdentifier = Transaction.Current.TransactionInformation.LocalIdentifier;
+			if(RegisteredStoresInTransaction.TryGetValue(localIdentifier, out registered) == false)
 			{
-				Transaction.Current.EnlistDurable(
-					ResourceManagerId, 
-					new RavenClientEnlistment(transactionalSession),
-					EnlistmentOptions.None);
+				RegisteredStoresInTransaction[localIdentifier] =
+					registered = new HashSet<string>();
+			}
+
+			if (registered.Add(StoreIdentifier))
+			{
+				var transactionalSession = (ITransactionalDocumentSession) this;
+				if (documentStore.DatabaseCommands.SupportsPromotableTransactions == false)
+				{
+					if (Transaction.Current.EnlistPromotableSinglePhase(new PromotableRavenClientEnlistment(transactionalSession, () => RegisteredStoresInTransaction.Remove(localIdentifier))) ==
+					    false)
+					{
+						Transaction.Current.EnlistDurable(
+							ResourceManagerId,
+							new RavenClientEnlistment(transactionalSession, () => RegisteredStoresInTransaction.Remove(localIdentifier)),
+							EnlistmentOptions.None);
+					}
+				}
 			}
 			hasEnlisted = true;
 #endif
@@ -713,9 +748,11 @@ more responsive application.
 			{
 				objectAsJson.Remove(identityProperty.Name);
 			}
-
+#if !SILVERLIGHT
 			metadata["Raven-Clr-Type"] = JToken.FromObject(ReflectionUtil.GetFullNameWithoutVersionInformation(entityType));
-
+#else
+			metadata["Raven-Clr-Type"] = JToken.FromObject(entityType.AssemblyQualifiedName);
+#endif
 			var entityConverted = OnEntityConverted;
 			if (entityConverted != null)
 				entityConverted(entity, objectAsJson, metadata);
@@ -725,6 +762,9 @@ more responsive application.
 
 		private JObject GetObjectAsJson(object entity)
 		{
+			var jObject = entity as JObject;
+			if (jObject != null)
+				return jObject;
 			return JObject.FromObject(entity, Conventions.CreateSerializer());
 		}
 
@@ -783,6 +823,7 @@ more responsive application.
 		/// <returns></returns>
 		public abstract byte[] PromoteTransaction(Guid fromTxId);
 
+#if !SILVERLIGHT
 		/// <summary>
 		/// Clears the enlistment.
 		/// </summary>
@@ -790,7 +831,7 @@ more responsive application.
 		{
 			hasEnlisted = false;
 		}
-
+#endif 
 		/// <summary>
 		/// Metadata held about an entity by the session
 		/// </summary>

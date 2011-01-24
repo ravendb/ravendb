@@ -14,6 +14,12 @@ using Raven.Database.Data;
 
 namespace Raven.Client.Extensions
 {
+#if !NET_3_5
+	using System.Threading.Tasks;
+	using Client.Async;
+#endif
+	using Database;
+
 	///<summary>
 	/// Extension methods to create mutli tenants databases
 	///</summary>
@@ -42,6 +48,33 @@ namespace Raven.Client.Extensions
 			using (new TransactionScope(TransactionScopeOption.Suppress))
 #endif
 				self.Put(docId, null, doc, new JObject());
+		}
+#endif
+
+#if !NET_3_5
+		///<summary>
+		/// Ensures that the database exists, creating it if needed
+		///</summary>
+		public static Task EnsureDatabaseExistsAsync(this IAsyncDatabaseCommands self, string name)
+		{
+			var doc = JObject.FromObject(new DatabaseDocument
+			{
+				Settings =
+					{
+						{"Raven/DataDir", Path.Combine("~", Path.Combine("Tenants", name))}
+					}
+			});
+			var docId = "Raven/Databases/" + name;
+
+			return self.GetAsync(docId)
+				.ContinueWith(get =>
+				{
+                    if (get.Result != null)
+                        return get;
+
+                    return (Task)self.PutAsync(docId, null, doc, new JObject());
+				})
+                .Unwrap();
 		}
 #endif
 	}

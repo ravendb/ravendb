@@ -69,6 +69,36 @@
     <Reference Include="System.Windows.Browser" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\Raven.Abstractions\Json\JsonToJsonConverter.cs">
+      <Link>Json\JsonToJsonConverter.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Json\JsonValueTypeConverter.cs">
+      <Link>Json\JsonValueTypeConverter.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\AbstractDocumentQuery.cs">
+      <Link>Document\AbstractDocumentQuery.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\AsyncDocumentQuery.cs">
+      <Link>Document\AsyncDocumentQuery.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\AsyncSpatialDocumentQuery.cs">
+      <Link>Document\AsyncSpatialDocumentQuery.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\IAsyncDocumentQuery.cs">
+      <Link>IAsyncDocumentQuery.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\IDocumentQueryBase.cs">
+      <Link>IDocumentQueryBase.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Extensions\ExceptionExtensions.cs">
+      <Link>Extensions\ExceptionExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\IDocumentQueryListener.cs">
+      <Link>IDocumentQueryListener.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\WhereEqualsParams.cs">
+      <Link>WhereEqualsParams.cs</Link>
+    </Compile>
     <Compile Include="Client\Async\AsyncServerClient.cs" />
     <Compile Include="Client\HttpJsonRequest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -196,6 +226,9 @@
     </Compile>
     <Compile Include="..\Raven.Abstractions\Json\JsonEnumConverter.cs">
       <Link>Json\JsonEnumConverter.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Json\JsonMultiDimensionalArrayConverter.cs">
+      <Link>Json\JsonMultiDimensionalArrayConverter.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Json\JTokenExtensions.cs">
       <Link>Json\JTokenExtensions.cs</Link>

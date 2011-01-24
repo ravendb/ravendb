@@ -6,6 +6,7 @@
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
+using System.Text;
 using Newtonsoft.Json.Linq;
 using System;
 
@@ -25,8 +26,6 @@ namespace Raven.Database.Data
 
 		private static readonly HashSet<string> HeadersToIgnoreClient = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 		{
-			// Entity headers - those are NOT ignored
-			/*
             "Allow",
             "Content-Disposition",
             "Content-Encoding",
@@ -36,8 +35,6 @@ namespace Raven.Database.Data
             "Content-Range",
             "Content-Type",
             "Expires",
-            
-             */
 			// ignoring this header, we handle this internally
 			"Last-Modified",
 			// Ignoring this header, since it may
@@ -46,7 +43,10 @@ namespace Raven.Database.Data
 			"Content-Length",
 			// Special things to ignore
 			"Keep-Alive",
+			"X-Powered-By",
+			"X-AspNet-Version",
 			"X-Requested-With",
+			"X-SourceFiles",
 			// Request headers
 			"Accept-Charset",
 			"Accept-Encoding",
@@ -107,10 +107,11 @@ namespace Raven.Database.Data
 				if(isServerDocument && HeadersToIgnoreServerDocument.Contains(header.Key))
 					continue;
             	var values = header.Value;
-                if (values.Count == 1)
-                    metadata.Add(header.Key, GetValue(values[0]));
-                else
-                    metadata.Add(header.Key, new JArray(values.Select(GetValue)));
+				var headerName = CaptureHeaderName(header.Key);
+				if (values.Count == 1)
+					metadata.Add(headerName, GetValue(values[0]));
+				else
+					metadata.Add(headerName, new JArray(values.Select(GetValue)));
             }
             return metadata;
         }
@@ -131,14 +132,30 @@ namespace Raven.Database.Data
 				if (isServerDocument && HeadersToIgnoreServerDocument.Contains(header))
 					continue;
 				var values = self.GetValues(header);
+				var headerName = CaptureHeaderName(header);
 				if (values.Length == 1)
-					metadata.Add(header, GetValue(values[0]));
+					metadata.Add(headerName, GetValue(values[0]));
 				else
-					metadata.Add(header, new JArray(values.Select(GetValue)));
+					metadata.Add(headerName, new JArray(values.Select(GetValue)));
 			}
 			return metadata;
 		}
 #endif
+
+		private static string CaptureHeaderName(string header)
+		{
+			var lastWasDash = true;
+			var sb = new StringBuilder(header.Length);
+
+			foreach (var ch in header)
+			{
+				sb.Append(lastWasDash ? char.ToUpper(ch) : ch);
+
+				lastWasDash = ch == '-';
+			}
+
+			return sb.ToString();
+		}
 
 		private static JToken GetValue(string val)
 		{

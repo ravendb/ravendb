@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using Raven.Abstractions.Data;
 using Raven.Database.Indexing;
 using Raven.Http;
@@ -19,8 +20,12 @@ namespace Raven.Database.Data
 		public bool DynamicAggregation { get; set; }
 		public string IndexName { get; set; }
 		public string ForEntityName { get; set; }
-
+		public DynamicSortInfo[] SortDescriptors { get; set; }
+		public DynamicQueryMappingItem[] Items { get; set; }
 		public AggregationOperation AggregationOperation { get; set; }
+		public string TemporaryIndexName { get; set; }
+		public string PermanentIndexName { get; set; }
+		protected DynamicQueryMappingItem[] GroupByItems { get; set; }
 
 		public DynamicQueryMapping()
 		{
@@ -28,22 +33,10 @@ namespace Raven.Database.Data
 			SortDescriptors = new DynamicSortInfo[0];
 		}
 
-		public DynamicSortInfo[] SortDescriptors
-		{
-			get;
-			set;
-		}
-
-		public DynamicQueryMappingItem[] Items
-		{
-			get;
-			set;
-		}
-
 		public IndexDefinition CreateIndexDefinition()
 		{
 			var fromClauses = new HashSet<string>();
-			var realMappings = new List<string>();
+			var realMappings = new HashSet<string>();
 
 			if (!string.IsNullOrEmpty(ForEntityName))
 			{
@@ -74,7 +67,7 @@ namespace Raven.Database.Data
 							String newDoc = string.Format("{0}Item", newDocumentSource.Replace(".", ""));
 
 							// from docNewDocItemsItem in doc.NewDoc.Items
-							String docInclude = string.Format("from {0} in {1}", newDoc, newDocumentSource);
+							String docInclude = string.Format("from {0} in (IEnumerable<dynamic>){1}", newDoc, newDocumentSource);
 							fromClauses.Add(docInclude);
 
 							// Start building the property again
@@ -90,6 +83,10 @@ namespace Raven.Database.Data
 					}
 				}
 
+				if (currentExpression.Length > 0 && currentExpression[0] != '[')
+				{
+					currentExpression.Insert(0, '.');
+				}
 				// We get rid of any _Range(s) etc
 				var indexedMember = currentExpression.ToString().Replace("_Range", "");
 				if (indexedMember.Length == 0)
@@ -101,7 +98,7 @@ namespace Raven.Database.Data
 				}
 				else
 				{
-					realMappings.Add(string.Format("{0} = {1}.{2}",
+					realMappings.Add(string.Format("{0} = {1}{2}",
 						map.To.Replace("_Range", ""),
 						currentDoc,
 						indexedMember
@@ -119,6 +116,13 @@ namespace Raven.Database.Data
 				TransformResults = DynamicAggregation ? AggregationReducePart() : null,
 			};
 
+			if(DynamicAggregation)
+			{
+				foreach (var item in GroupByItems)
+				{
+					index.Stores[item.To] = FieldStorage.Yes;
+				}
+			}
 
 			foreach (var descriptor in SortDescriptors)
 			{
@@ -219,7 +223,15 @@ namespace Raven.Database.Data
 
 		public static DynamicQueryMapping Create(DocumentDatabase database, IndexQuery query, string entityName)
 		{
-			var fields = SimpleQueryParser.GetFields(query.Query);
+			var fields = SimpleQueryParser.GetFieldsForDynamicQuery(query.Query);
+
+			if(query.SortedFields != null)
+			{
+				foreach (var sortedField in query.SortedFields)
+				{
+					fields.Add(Tuple.Create(sortedField.Field, sortedField.Field));
+				}
+			}
 
 			var dynamicQueryMapping = new DynamicQueryMapping
 			{
@@ -233,14 +245,16 @@ namespace Raven.Database.Data
 			return dynamicQueryMapping;
 		}
 
-		private void SetupFieldsToIndex(IndexQuery query, IEnumerable<string> fields)
+		static readonly Regex replaceInvalidCharacterForFields = new Regex(@"[^\w_]", RegexOptions.Compiled);
+		private void SetupFieldsToIndex(IndexQuery query, IEnumerable<Tuple<string,string>> fields)
 		{
 			if (query.GroupBy != null && query.GroupBy.Length > 0)
 			{
 				GroupByItems = query.GroupBy.Select(x => new DynamicQueryMappingItem
 				{
 					From = x,
-					To = x.Replace(".", "").Replace(",", "")
+					To = x.Replace(".", "").Replace(",", ""),
+					QueryFrom = x
 				}).ToArray();
 			}
 			if (DynamicAggregation == false && 
@@ -253,8 +267,9 @@ namespace Raven.Database.Data
 			{
 				Items = fields.Select(x => new DynamicQueryMappingItem
 				{
-					From = x,
-					To = x.Replace(".", "").Replace(",", "")
+					From = x.Item1,
+					To = replaceInvalidCharacterForFields.Replace(x.Item2, ""),
+					QueryFrom = x.Item2
 				}).ToArray();
 				if (GroupByItems != null && DynamicAggregation)
 				{
@@ -269,9 +284,7 @@ namespace Raven.Database.Data
 			
 		}
 
-		protected DynamicQueryMappingItem[] GroupByItems { get; set; }
-
-		private static DynamicSortInfo[] GetSortInfo(HashSet<string> fields)
+		private static DynamicSortInfo[] GetSortInfo(HashSet<Tuple<string, string>> fields)
 		{
 			var headers = CurrentOperationContext.Headers.Value;
 			var sortInfo = new List<DynamicSortInfo>();
@@ -280,7 +293,7 @@ namespace Raven.Database.Data
 			foreach (string sortHintHeader in sortHintHeaders)
 			{
 				String[] split = sortHintHeader.Split('_');
-				String fieldName = split[1];
+				String fieldName = Uri.UnescapeDataString(split[1]);
 				string fieldType = headers[sortHintHeader];
 
 				sortInfo.Add(new DynamicSortInfo
@@ -289,8 +302,8 @@ namespace Raven.Database.Data
 					FieldType = fieldType
 				});
 
-				if (fields.Contains(fieldName + "_Range") == false)
-					fields.Add(fieldName);
+				if (fields.Any(x=> x.Item2 == fieldName || x.Item2 == (fieldName + "_Range")) == false)
+					fields.Add(Tuple.Create(fieldName, fieldName));
 			}
 			return sortInfo.ToArray();
 		}
@@ -324,16 +337,21 @@ namespace Raven.Database.Data
 				{
 					groupBy += "/" + AggregationOperation;
 				}
+				if (DynamicAggregation)
+					groupBy += "Dynamically";
 			}
 
-
-			// Hash the name if it's too long
-			if (indexName.Length > 230)
+			if (database.Configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction == false &&
+				database.Configuration.RunInMemory == false)
 			{
-				using (var sha256 = SHA256.Create())
+				// Hash the name if it's too long (as a path)
+				if ((database.Configuration.DataDirectory.Length + indexName.Length) > 230)
 				{
-					var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(indexName));
-					indexName = Encoding.UTF8.GetString(bytes);
+					using (var sha256 = SHA256.Create())
+					{
+						var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(indexName));
+						indexName = Encoding.UTF8.GetString(bytes);
+					}
 				}
 			}
 
@@ -352,11 +370,6 @@ namespace Raven.Database.Data
 			map.TemporaryIndexName = temporaryIndexName;
 			map.IndexName = permanentIndex != null ? permanentIndexName : temporaryIndexName;
 		}
-
-		public string TemporaryIndexName { get; set; }
-
-		public string PermanentIndexName { get; set; }
-
 
 		public class DynamicSortInfo
 		{

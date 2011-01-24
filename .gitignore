@@ -1,4 +1,3 @@
-AssemblyInfo.cs
 *resharper.user
 [Dd]ebug/
 [Rr]elease/
@@ -22,7 +21,6 @@ _ReSharper.*/
 /Raven.Web/Data/
 /SharedLibs/Sources/Json-52373/trunk/Working/
 VERSION
-AssemblyInfo.cs
 /Samples/Raven.Samples.IndexReplication/Server/Esent.Interop.dll
 /Samples/Raven.Samples.IndexReplication/Server/ICSharpCode.NRefactory.dll
 /Samples/Raven.Samples.IndexReplication/Server/Lucene.Net.dll
@@ -331,3 +329,4 @@ AssemblyInfo.cs
 /Samples/Raven.Samples.IndexReplication/Server/Tenants/Sidney/Raven.ravendb
 /Samples/Raven.Samples.IndexReplication/Server/Tenants/Sidney/desktop.ini
 /Samples/Raven.Samples.IndexReplication/Server/Tenants/Sidney/raven-data.ico
+ClientBin/
