@@ -5,6 +5,9 @@
 	/// </summary>
 	public class WhereEqualsParams
 	{
+		/// <summary>
+		/// Create a new instance 
+		/// </summary>
 		public WhereEqualsParams()
 		{
 			IsNestedPath = false;
