@@ -234,6 +234,7 @@
     <Compile Include="Bugs\ReadDataFromServer.cs" />
     <Compile Include="Bugs\ReportQueryCount.cs" />
     <Compile Include="Bugs\ReuseQuery.cs" />
+    <Compile Include="Bugs\SelectManyOnNull.cs" />
     <Compile Include="Bugs\SerializingDates.cs" />
     <Compile Include="Bugs\SerializingEntities.cs" />
     <Compile Include="Bugs\SinglePropertyDocument.cs" />
