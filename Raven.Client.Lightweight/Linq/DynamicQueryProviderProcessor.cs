@@ -38,7 +38,7 @@ namespace Raven.Client.Linq
 			var parameterExpression = expression as ParameterExpression;
 			if (parameterExpression != null)
 			{
-				return new ExpressionInfo(CurrentPath, parameterExpression.Type);
+				return new ExpressionInfo(CurrentPath, parameterExpression.Type, false);
 			}
 
 			var memberExpression = GetMemberExpression(expression);
@@ -48,11 +48,12 @@ namespace Raven.Client.Linq
 			path = path.Substring(path.IndexOf('.') + 1);
 
 
-			var info = new ExpressionInfo(path, memberExpression.Member.GetMemberType());
+			var info = new ExpressionInfo(path, memberExpression.Member.GetMemberType(), memberExpression.Expression is MemberExpression);
 
 			return new ExpressionInfo(
 				CurrentPath + info.Path,
-				info.Type);
+				info.Type,
+				memberExpression.Expression is MemberExpression);
 		}
  
 		
