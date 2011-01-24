@@ -26,8 +26,6 @@ namespace Raven.Database.Data
 
 		private static readonly HashSet<string> HeadersToIgnoreClient = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 		{
-			// Entity headers - those are NOT ignored
-			/*
             "Allow",
             "Content-Disposition",
             "Content-Encoding",
@@ -37,8 +35,6 @@ namespace Raven.Database.Data
             "Content-Range",
             "Content-Type",
             "Expires",
-            
-             */
 			// ignoring this header, we handle this internally
 			"Last-Modified",
 			// Ignoring this header, since it may
@@ -50,6 +46,7 @@ namespace Raven.Database.Data
 			"X-Powered-By",
 			"X-AspNet-Version",
 			"X-Requested-With",
+			"X-SourceFiles",
 			// Request headers
 			"Accept-Charset",
 			"Accept-Encoding",
