@@ -142,6 +142,7 @@
     <Compile Include="Client\IRavenQueryInspector.cs" />
     <Compile Include="Linq\IRavenQueryProvider.cs" />
     <Compile Include="Linq\LinqExtensions.cs" />
+    <Compile Include="Linq\LinqExtensions_Obsolete.cs" />
     <Compile Include="Linq\RavenQueryInspector.cs" />
     <Compile Include="Linq\RavenQueryProvider.cs" />
     <Compile Include="Linq\RavenQueryProviderProcessor.cs" />

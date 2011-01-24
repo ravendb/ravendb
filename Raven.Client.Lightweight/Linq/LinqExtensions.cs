@@ -24,7 +24,7 @@ namespace Raven.Client.Linq
 	///<summary>
 	/// Extensions to the linq syntax
 	///</summary>
-	public static class LinqExtensions
+	public static partial class LinqExtensions
 	{
 		/// <summary>
 		/// Project using a different type
@@ -136,25 +136,6 @@ namespace Raven.Client.Linq
 		} 
 #endif
 
-#if SILVERLIGHT
-		/// <summary>
-		///   This function exists solely to forbid calling ToList() on a queryable in Silverlight.
-		/// </summary>
-		[Obsolete("You cannot execute a query synchronously from the Silverlight client. Instead, use queryable.ToListAsync().", true)]
-		public static IList<T> ToList<T>(this IRavenQueryable<T> source)
-		{
-			throw new NotSupportedException();
-		}
-
-		/// <summary>
-		///   This function exists solely to forbid calling ToList() on a queryable in Silverlight.
-		/// </summary>
-		[Obsolete("You cannot execute a query synchronously from the Silverlight client. Instead, use queryable.ToListAsync().", true)]
-		public static T[] ToArray<T>(this IRavenQueryable<T> source)
-		{
-			throw new NotSupportedException();
-		}
-
 		public static IRavenQueryable<T> Include<T>(this IRavenQueryable<T> source, Expression<Func<T, object>> path)
 		{
 			source.Customize(x => x.Include(path));
@@ -202,7 +183,5 @@ namespace Raven.Client.Linq
 		}
 
 		//TODO: implement the thousand natural shocks that linq is heir to
-
-#endif
 	}
 }

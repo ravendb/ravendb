@@ -63,6 +63,33 @@
 		}
 
 		[Asynchronous]
+		public IEnumerable<Task> Can_test_two_conditions_in_a_where_clause()
+		{
+			var dbname = GenerateNewDatabaseName();
+			var documentStore = new DocumentStore { Url = Url + Port };
+			documentStore.Initialize();
+			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+
+			using (var session = documentStore.OpenAsyncSession(dbname))
+			{
+				session.Store(new Company { Name = "Async Company", Phone = 55555, Id = "companies/1" });
+				session.Store(new Company { Name = "Async Company", Phone = 12345, Id = "companies/2" });
+				yield return session.SaveChangesAsync();
+			}
+
+			using (var session = documentStore.OpenAsyncSession(dbname))
+			{
+				var query = session.Query<Company>()
+							.Where(x => x.Name == "Async Company" && x.Phone == 12345)
+							.ToListAsync();
+				yield return query;
+
+				Assert.Equal(1, query.Result.Count);
+				Assert.Equal(12345, query.Result[0].Phone);
+			}
+		}
+
+		[Asynchronous]
 		public IEnumerable<Task> Can_query_on_not_equal()
 		{
 			var dbname = GenerateNewDatabaseName();
