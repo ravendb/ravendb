@@ -38,6 +38,13 @@ namespace Raven.Client.Document
 
 #if !SILVERLIGHT
 		private bool hasEnlisted;
+		[ThreadStatic]
+		private static Dictionary<string, HashSet<string>> registeredStoresInTransaction;
+
+		private static Dictionary<string, HashSet<string>> RegisteredStoresInTransaction
+		{
+			get { return (registeredStoresInTransaction ?? (registeredStoresInTransaction = new Dictionary<string, HashSet<string>>())); }
+		}
 #endif 
 
 		/// <summary>
@@ -688,15 +695,28 @@ more responsive application.
 			if (hasEnlisted || Transaction.Current == null) 
 				return;
 
-
-			var transactionalSession = (ITransactionalDocumentSession)this;
-			if (documentStore.DatabaseCommands.SupportsPromotableTransactions == false ||
-				Transaction.Current.EnlistPromotableSinglePhase(new PromotableRavenClientEnlistment(transactionalSession)) == false) 
+			HashSet<string> registered;
+			var localIdentifier = Transaction.Current.TransactionInformation.LocalIdentifier;
+			if(RegisteredStoresInTransaction.TryGetValue(localIdentifier, out registered) == false)
 			{
-				Transaction.Current.EnlistDurable(
-					ResourceManagerId, 
-					new RavenClientEnlistment(transactionalSession),
-					EnlistmentOptions.None);
+				RegisteredStoresInTransaction[localIdentifier] =
+					registered = new HashSet<string>();
+			}
+
+			if (registered.Add(StoreIdentifier))
+			{
+				var transactionalSession = (ITransactionalDocumentSession) this;
+				if (documentStore.DatabaseCommands.SupportsPromotableTransactions == false)
+				{
+					if (Transaction.Current.EnlistPromotableSinglePhase(new PromotableRavenClientEnlistment(transactionalSession, () => RegisteredStoresInTransaction.Remove(localIdentifier))) ==
+					    false)
+					{
+						Transaction.Current.EnlistDurable(
+							ResourceManagerId,
+							new RavenClientEnlistment(transactionalSession, () => RegisteredStoresInTransaction.Remove(localIdentifier)),
+							EnlistmentOptions.None);
+					}
+				}
 			}
 			hasEnlisted = true;
 #endif

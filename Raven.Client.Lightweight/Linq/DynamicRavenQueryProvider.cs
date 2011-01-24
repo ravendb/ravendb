@@ -67,6 +67,7 @@ namespace Raven.Client.Linq
 #endif
 			)
 		{
+			FieldsToFetch = new HashSet<string>();
 			this.queryGenerator = queryGenerator;
 			this.indexName = indexName;
 			this.ravenQueryStatistics = ravenQueryStatistics;
@@ -106,6 +107,11 @@ namespace Raven.Client.Linq
 			ravenQueryProvider.Customize(customizeQuery);
 			return ravenQueryProvider;
 		}
+		
+		/// <summary>
+		/// Set the fields to fetch
+		/// </summary>
+		public HashSet<string> FieldsToFetch { get; private set; }
 
 		/// <summary>
 		/// Convert the expression to a Lucene query
@@ -130,7 +136,7 @@ namespace Raven.Client.Linq
 
 		DynamicQueryProviderProcessor<T> GetQueryProviderProcessor()
 		{
-			return new DynamicQueryProviderProcessor<T>(queryGenerator, customizeQuery, afterQueryExecuted, indexName);
+			return new DynamicQueryProviderProcessor<T>(queryGenerator, customizeQuery, afterQueryExecuted, indexName, FieldsToFetch);
 		}
 
 		IQueryable<S> IQueryProvider.CreateQuery<S>(Expression expression)

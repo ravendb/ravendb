@@ -54,6 +54,12 @@ namespace Raven.Munin.Tests.Bugs
 			}
 
 
+			for (int i = 0; i < count; i++)
+			{
+				var readResult = database.Tables[0].Read(new JObject {{"id", i}});
+				Assert.Equal(value, readResult.Data());
+			}
+
 			database.Compact();
 
 

@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Document;
 using Raven.Database.Data;
@@ -46,8 +47,13 @@ namespace Raven.Client.Linq
 		/// <summary>
 		/// Convert the Linq query to a Lucene query
 		/// </summary>
-		/// <typeparam name="T"></typeparam>
 		/// <returns></returns>
 		IDocumentQuery<T> ToLuceneQuery<T>(Expression expression);
+
+		/// <summary>
+		/// Set the fields to fetch
+		/// </summary>
+		HashSet<string> FieldsToFetch { get; }
+
 	}
 }

@@ -19,7 +19,7 @@ using Raven.Munin.Tree;
 
 namespace Raven.Munin
 {
-    public class Table : IEnumerable<Table.ReadResult>
+    public class Table : IEnumerable<Table.ReadResult>, IDisposable
     {
         private ThreadLocal<Guid> txId;
         public string Name { get; set; }
@@ -463,6 +463,15 @@ namespace Raven.Munin
 				keysModifiedInTx.TryAdd(key, txId.Value);
 
 			return true;
+    	}
+
+    	/// <summary>
+    	/// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+    	/// </summary>
+    	/// <filterpriority>2</filterpriority>
+    	public void Dispose()
+    	{
+			cache.Dispose();
     	}
     }
 }

@@ -401,7 +401,10 @@ namespace Raven.Client.Document
         /// <param name = "fieldType">the type of the field to be sorted.</param>
         public void AddOrder(string fieldName, bool descending, Type fieldType)
         {
-            fieldName = EnsureValidFieldName(fieldName);
+            fieldName = EnsureValidFieldName(new WhereEqualsParams
+            {
+            	FieldName = fieldName
+            });
             fieldName = descending ? "-" + fieldName : fieldName;
             orderByFields = orderByFields.Concat(new[] {fieldName}).ToArray();
             sortByHints.Add(new KeyValuePair<string, Type>(fieldName, fieldType));
@@ -534,7 +537,11 @@ If you really want to do in memory filtering on the data returned from the query
         /// </remarks>
         public void WhereEquals(string fieldName, object value)
         {
-            WhereEquals(fieldName, value, true, false);
+            WhereEquals(new WhereEqualsParams
+            {
+            	FieldName = fieldName,
+				Value = value
+            });
         }
 
         /// <summary>
@@ -545,7 +552,13 @@ If you really want to do in memory filtering on the data returned from the query
         /// </remarks>
         public void WhereEquals(string fieldName, object value, bool isAnalyzed)
         {
-            WhereEquals(fieldName, value, isAnalyzed, isAnalyzed);
+            WhereEquals(new WhereEqualsParams
+            {
+            	AllowWildcards = isAnalyzed,
+				IsAnalyzed = isAnalyzed,
+				FieldName = fieldName,
+				Value = value
+            });
         }
 
 
@@ -589,10 +602,10 @@ If you really want to do in memory filtering on the data returned from the query
         /// <summary>
         ///   Matches exact value
         /// </summary>
-        public void WhereEquals(string fieldName, object value, bool isAnalyzed, bool allowWildcards)
+		public void WhereEquals(WhereEqualsParams whereEqualsParams)
         {
-            fieldName = EnsureValidFieldName(fieldName);
-            var transformToEqualValue = TransformToEqualValue(value, isAnalyzed, allowWildcards);
+            var fieldName = EnsureValidFieldName(whereEqualsParams);
+            var transformToEqualValue = TransformToEqualValue(whereEqualsParams);
             lastEquality = new KeyValuePair<string, string>(fieldName, transformToEqualValue);
             if (theQueryText.Length > 0 && theQueryText[theQueryText.Length - 1] != '(')
             {
@@ -606,18 +619,20 @@ If you really want to do in memory filtering on the data returned from the query
             theQueryText.Append(transformToEqualValue);
         }
 
-        private string EnsureValidFieldName(string fieldName)
+        private string EnsureValidFieldName(WhereEqualsParams whereEqualsParams)
         {
             if (theSession == null)
-                return fieldName;
+                return whereEqualsParams.FieldName;
             if (theSession.Conventions == null)
-                return fieldName;
+                return whereEqualsParams.FieldName;
+			if(whereEqualsParams.IsNestedPath)
+				return whereEqualsParams.FieldName;
             var identityProperty = theSession.Conventions.GetIdentityProperty(typeof (T));
-            if (identityProperty != null && identityProperty.Name == fieldName)
+            if (identityProperty != null && identityProperty.Name == whereEqualsParams.FieldName)
             {
-                fieldName = "__document_id";
+                return "__document_id";
             }
-            return fieldName;
+			return whereEqualsParams.FieldName;
         }
 
         ///<summary>
@@ -641,7 +656,13 @@ If you really want to do in memory filtering on the data returned from the query
         /// </summary>
         public void WhereContains(string fieldName, object value)
         {
-            WhereEquals(fieldName, value, true, true);
+            WhereEquals(new WhereEqualsParams
+            {
+            	AllowWildcards = true,
+				IsAnalyzed = true,
+				FieldName = fieldName,
+				Value = value
+            });
         }
 
         /// <summary>
@@ -652,7 +673,14 @@ If you really want to do in memory filtering on the data returned from the query
         public void WhereStartsWith(string fieldName, object value)
         {
             // NOTE: doesn't fully match StartsWith semantics
-            WhereEquals(fieldName, String.Concat(value, "*"), true, true);
+            WhereEquals(
+				new WhereEqualsParams
+				{
+					FieldName = fieldName,
+					Value = String.Concat(value, "*"),
+					IsAnalyzed = true,
+					AllowWildcards = true
+				});
         }
 
         /// <summary>
@@ -666,7 +694,14 @@ If you really want to do in memory filtering on the data returned from the query
             // You cannot use a * or ? symbol as the first character of a search
 
             // NOTE: doesn't fully match EndsWith semantics
-            WhereEquals(fieldName, String.Concat("*", value), true, true);
+        	WhereEquals(
+        		new WhereEqualsParams
+        		{
+        			FieldName = fieldName,
+        			Value = String.Concat("*", value),
+					AllowWildcards = true,
+					IsAnalyzed = true
+        		});
         }
 
         /// <summary>
@@ -688,7 +723,7 @@ If you really want to do in memory filtering on the data returned from the query
 
             NegateIfNeeded();
 
-            fieldName = EnsureValidFieldName(fieldName);
+            fieldName = EnsureValidFieldName(new WhereEqualsParams{FieldName = fieldName});
 
             theQueryText.Append(fieldName).Append(":{");
             theQueryText.Append(start == null ? "*" : TransformToRangeValue(start));
@@ -715,7 +750,7 @@ If you really want to do in memory filtering on the data returned from the query
 
             NegateIfNeeded();
 
-            fieldName = EnsureValidFieldName(fieldName);
+			fieldName = EnsureValidFieldName(new WhereEqualsParams { FieldName = fieldName });
             theQueryText.Append(fieldName).Append(":[");
             theQueryText.Append(start == null ? "*" : TransformToRangeValue(start));
             theQueryText.Append(" TO ");
@@ -1188,30 +1223,30 @@ If you really want to do in memory filtering on the data returned from the query
                                           metadata);
         }
 
-        private static string TransformToEqualValue(object value, bool isAnalyzed, bool allowWildcards)
+        private static string TransformToEqualValue(WhereEqualsParams whereEqualsParams)
         {
-            if (value == null)
+        	if (whereEqualsParams.Value == null)
             {
                 return "[[NULL_VALUE]]";
             }
 
-            if (value is bool)
+            if (whereEqualsParams.Value is bool)
             {
-                return (bool) value ? "true" : "false";
+                return (bool) whereEqualsParams.Value ? "true" : "false";
             }
 
-            if (value is DateTime)
+            if (whereEqualsParams.Value is DateTime)
             {
-                return DateTools.DateToString((DateTime) value, DateTools.Resolution.MILLISECOND);
+                return DateTools.DateToString((DateTime) whereEqualsParams.Value, DateTools.Resolution.MILLISECOND);
             }
 
-            var escaped = RavenQuery.Escape(Convert.ToString(value, CultureInfo.InvariantCulture),
-                                            allowWildcards && isAnalyzed);
+            var escaped = RavenQuery.Escape(Convert.ToString(whereEqualsParams.Value, CultureInfo.InvariantCulture),
+                                            whereEqualsParams.AllowWildcards && whereEqualsParams.IsAnalyzed);
 
-            if (value is string == false)
+            if (whereEqualsParams.Value is string == false)
                 return escaped;
 
-            return isAnalyzed ? escaped : String.Concat("[[", escaped, "]]");
+            return whereEqualsParams.IsAnalyzed ? escaped : String.Concat("[[", escaped, "]]");
         }
 
         private static string TransformToRangeValue(object value)

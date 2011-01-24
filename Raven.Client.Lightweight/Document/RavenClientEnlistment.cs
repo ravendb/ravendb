@@ -4,6 +4,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.Transactions;
 
 namespace Raven.Client.Document
@@ -15,16 +16,17 @@ namespace Raven.Client.Document
 	public class RavenClientEnlistment : IEnlistmentNotification
 	{
 		private readonly ITransactionalDocumentSession session;
+		private readonly Action onTxComplete;
 		private readonly TransactionInformation transaction;
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="RavenClientEnlistment"/> class.
 		/// </summary>
-		/// <param name="session">The session.</param>
-		public RavenClientEnlistment(ITransactionalDocumentSession session)
+		public RavenClientEnlistment(ITransactionalDocumentSession session, Action onTxComplete)
 		{
 			transaction = Transaction.Current.TransactionInformation;
 			this.session = session;
+			this.onTxComplete = onTxComplete;
 		}
 
 		/// <summary>
@@ -33,6 +35,7 @@ namespace Raven.Client.Document
 		/// <param name="preparingEnlistment">A <see cref="T:System.Transactions.PreparingEnlistment"/> object used to send a response to the transaction manager.</param>
 		public void Prepare(PreparingEnlistment preparingEnlistment)
 		{
+			onTxComplete();
 			session.StoreRecoveryInformation(session.ResourceManagerId, PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction), 
 				preparingEnlistment.RecoveryInformation());
 			preparingEnlistment.Prepared();
@@ -44,6 +47,7 @@ namespace Raven.Client.Document
 		/// <param name="enlistment">An <see cref="T:System.Transactions.Enlistment"/> object used to send a response to the transaction manager.</param>
 		public void Commit(Enlistment enlistment)
 		{
+			onTxComplete(); 
 			session.Commit(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction));
 			enlistment.Done();
 		}
@@ -54,6 +58,7 @@ namespace Raven.Client.Document
 		/// <param name="enlistment">A <see cref="T:System.Transactions.Enlistment"/> object used to send a response to the transaction manager.</param>
 		public void Rollback(Enlistment enlistment)
 		{
+			onTxComplete(); 
 			session.Rollback(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction));
 			enlistment.Done();
 		}
@@ -64,6 +69,7 @@ namespace Raven.Client.Document
 		/// <param name="enlistment">An <see cref="T:System.Transactions.Enlistment"/> object used to send a response to the transaction manager.</param>
 		public void InDoubt(Enlistment enlistment)
 		{
+			onTxComplete(); 
 			session.Rollback(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction));
 			enlistment.Done();
 		}
@@ -81,6 +87,7 @@ namespace Raven.Client.Document
 		/// <param name="singlePhaseEnlistment">The single phase enlistment.</param>
 		public void Rollback(SinglePhaseEnlistment singlePhaseEnlistment)
 		{
+			onTxComplete(); 
 			session.Rollback(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction));
 			singlePhaseEnlistment.Aborted();
 		}

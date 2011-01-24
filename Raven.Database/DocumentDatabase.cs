@@ -481,6 +481,7 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				TransactionalStorage.Batch(actions =>
 				{
 					actions.Transactions.RollbackTransaction(txId);
+					actions.Attachments.DeleteAttachment("transactions/recoveryInformation/" + txId, null);
 					workContext.ShouldNotifyAboutWork();
 				});
 			}

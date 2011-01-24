@@ -16,16 +16,17 @@ namespace Raven.Client.Document
 	public class PromotableRavenClientEnlistment : IPromotableSinglePhaseNotification
 	{
 		private readonly ITransactionalDocumentSession session;
+		private readonly Action onTxComplete;
 		private readonly TransactionInformation transaction;
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="PromotableRavenClientEnlistment"/> class.
 		/// </summary>
-		/// <param name="session">The session.</param>
-		public PromotableRavenClientEnlistment(ITransactionalDocumentSession session)
+		public PromotableRavenClientEnlistment(ITransactionalDocumentSession session, Action onTxComplete)
 		{
 			transaction = Transaction.Current.TransactionInformation;
 			this.session = session;
+			this.onTxComplete = onTxComplete;
 		}
 
 		/// <summary>
@@ -53,6 +54,8 @@ namespace Raven.Client.Document
 		/// <param name="singlePhaseEnlistment">A <see cref="T:System.Transactions.SinglePhaseEnlistment"/> interface used to send a response to the transaction manager.</param>
 		public void SinglePhaseCommit(SinglePhaseEnlistment singlePhaseEnlistment)
 		{
+			onTxComplete();
+
 			session.Commit(GetLocalOrDistributedTransactionId(transaction));
 			singlePhaseEnlistment.Committed();
 		}
@@ -63,6 +66,7 @@ namespace Raven.Client.Document
 		/// <param name="singlePhaseEnlistment">A <see cref="T:System.Transactions.SinglePhaseEnlistment"/> object used to send a response to the transaction manager.</param>
 		public void Rollback(SinglePhaseEnlistment singlePhaseEnlistment)
 		{
+			onTxComplete(); 
 			session.Rollback(GetLocalOrDistributedTransactionId(transaction));
 			singlePhaseEnlistment.Aborted();
 		}

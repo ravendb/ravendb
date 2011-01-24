@@ -30,10 +30,12 @@ namespace Raven.Storage.Managed
         }
         public void Batch(Action<IStorageActionsAccessor> action)
         {
-            var tableStorage = new TableStorage(persistentSource);
-            tableStorage.Initialze();
-            var accessor = new StorageActionsAccessor(tableStorage, new DummyUuidGenerator(), new AbstractDocumentCodec[0]);
-            action(accessor);
+			using (var tableStorage = new TableStorage(persistentSource))
+			{
+				tableStorage.Initialze();
+				var accessor = new StorageActionsAccessor(tableStorage, new DummyUuidGenerator(), new AbstractDocumentCodec[0]);
+				action(accessor);
+			}
         }
 
         public void Dispose()

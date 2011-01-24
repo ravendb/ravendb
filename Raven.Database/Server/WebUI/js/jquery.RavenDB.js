@@ -23,6 +23,7 @@ var indexSearchCache = null;
           // very well change due to things like encoding,
           // adding metadata, etc
           "content-length",
+		  "content-encoding",
           // Special things to ignore
           "keep-alive",
           "x-requested-with",
@@ -35,6 +36,7 @@ var indexSearchCache = null;
           "cookie",
 		  "x-aspnet-version",
 		  "x-powered-by",
+		  "x-sourcefiles",
           "expect",
           "from",
           "host",

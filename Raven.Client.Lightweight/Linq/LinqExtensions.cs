@@ -6,6 +6,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 #if !NET_3_5
 using System.Threading.Tasks;
@@ -31,10 +32,23 @@ namespace Raven.Client.Linq
 		public static IEnumerable<TResult> As<TResult>(this IQueryable queryable)
 		{
 			var results = queryable.Provider.CreateQuery<TResult>(queryable.Expression);
-			((RavenQueryInspector<TResult>)results).Customize(x => x.CreateQueryForSelectedFields<TResult>(null));
+			var ravenQueryInspector = ((RavenQueryInspector<TResult>)results);
+			ravenQueryInspector.FieldsToFetch(typeof(TResult).GetProperties().Select(x => x.Name));
+			ravenQueryInspector.Customize(x => x.CreateQueryForSelectedFields<TResult>(null));
 			return results;
 		}
 
+		/// <summary>
+		/// Project using a different type
+		/// </summary>
+		public static IEnumerable<TResult> AsProjection<TResult>(this IQueryable queryable)
+		{
+			var results = queryable.Provider.CreateQuery<TResult>(queryable.Expression);
+			var ravenQueryInspector = ((RavenQueryInspector<TResult>)results);
+			ravenQueryInspector.FieldsToFetch(typeof(TResult).GetProperties().Select(x => x.Name));
+			ravenQueryInspector.Customize(x => x.CreateQueryForSelectedFields<TResult>(null));
+			return results;
+		}
 #if !SILVERLIGHT
 
 		/// <summary>

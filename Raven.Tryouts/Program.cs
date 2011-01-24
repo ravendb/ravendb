@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Tests.Bugs.DTC;
 
 namespace Raven.Tryouts
 {
@@ -6,9 +7,23 @@ namespace Raven.Tryouts
 	{
 		static void Main()
 		{
-			Double x = 205.4f;
+			while (true)
+			{
+				try
+				{
+					Do();
+					Console.WriteLine("Passed {0:#,#}", GC.GetTotalMemory(true));
+				}
+				catch (Exception e)
+				{
+					Console.WriteLine(e);
+				}
+			}
+		}
 
-			Console.WriteLine(x);
+		private static void Do()
+		{
+			new UsingDTCForUpdates().can_update_a_doc_within_transaction_scope();
 		}
 	}
 }

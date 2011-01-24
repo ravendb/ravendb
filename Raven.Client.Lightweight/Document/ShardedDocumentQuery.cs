@@ -202,9 +202,9 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// 	Matches exact value
 		/// </summary>
-		public IDocumentQuery<T> WhereEquals(string fieldName, object value, bool isAnalyzed, bool allowWildcards)
+		public IDocumentQuery<T> WhereEquals(WhereEqualsParams whereEqualsParams)
 		{
-			ApplyForAll(query => query.WhereEquals(fieldName, value, isAnalyzed, allowWildcards));
+			ApplyForAll(query => query.WhereEquals(whereEqualsParams));
 			return this;
 		}
 
