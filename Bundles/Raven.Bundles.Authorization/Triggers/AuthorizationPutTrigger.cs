@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="AuthorizationPutTrigger.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using System.IO;
 using System.Web;
@@ -15,7 +20,7 @@ namespace Raven.Bundles.Authorization.Triggers
 
 		public override void Initialize()
 		{
-			AuthorizationDecisions = new AuthorizationDecisions(Database, HttpRuntime.Cache);
+			AuthorizationDecisions = new AuthorizationDecisions(Database);
 		}
 
 		/// <summary>
@@ -24,7 +29,7 @@ namespace Raven.Bundles.Authorization.Triggers
 		public override void AfterPut(string key, JObject document, JObject metadata, Guid etag,
 		                              TransactionInformation transactionInformation)
 		{
-			if (key.StartsWith("/Raven/Authorization", StringComparison.InvariantCultureIgnoreCase))
+			if (key.StartsWith("Authorization", StringComparison.InvariantCultureIgnoreCase))
 				AuthorizationDecisions.RemoveDocumentFromCache(key);
 		}
 

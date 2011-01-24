@@ -1,4 +1,11 @@
+//-----------------------------------------------------------------------
+// <copyright file="Queries.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
+using System.Security.Cryptography;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
 using Raven.Http.Abstractions;
@@ -29,23 +36,44 @@ namespace Raven.Database.Server.Responders
 			var loadedIds = new HashSet<string>();
 			var includes = context.Request.QueryString.GetValues("include") ?? new string[0];
 			var transactionInformation = GetRequestTransaction(context);
-			Database.TransactionalStorage.Batch(actions =>
+		    var includedEtags = new List<byte>();
+            Database.TransactionalStorage.Batch(actions =>
 			{
-				var addIncludesCommand = new AddIncludesCommand(Database, transactionInformation, result.Includes.Add, includes, loadedIds);
+				var addIncludesCommand = new AddIncludesCommand(Database, transactionInformation, (etag, includedDoc) =>
+				{
+                    includedEtags.AddRange(etag.ToByteArray());
+				    result.Includes.Add(includedDoc);
+				}, includes, loadedIds);
 				foreach (JToken item in itemsToLoad)
 				{
 					var value = item.Value<string>();
 					if(loadedIds.Add(value)==false)
 						continue;
-					var documentByKey = actions.Documents.DocumentByKey(value,
-                        transactionInformation);
+					var documentByKey = Database.Get(value, transactionInformation);
 					if (documentByKey == null)
 						continue;
 					result.Results.Add(documentByKey.ToJson());
 
-					addIncludesCommand.Execute(documentByKey.DataAsJson);
+					includedEtags.AddRange(documentByKey.Etag.ToByteArray());
+				    addIncludesCommand.Execute(documentByKey.DataAsJson);
 				}
             });
+
+			Guid computedEtag;
+
+			using (var md5 = MD5.Create())
+			{
+				var computeHash = md5.ComputeHash(includedEtags.ToArray());
+				computedEtag = new Guid(computeHash);
+			}
+
+			if (context.MatchEtag(computedEtag))
+			{
+				context.SetStatusToNotModified();
+				return;
+			}
+
+			context.Response.AddHeader("ETag", computedEtag.ToString());
 			context.WriteJson(result);
 		}
 	}

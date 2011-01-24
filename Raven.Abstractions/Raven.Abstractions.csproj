@@ -52,6 +52,7 @@
     <Compile Include="Commands\DeleteCommandData.cs" />
     <Compile Include="Commands\PatchCommandData.cs" />
     <Compile Include="Commands\PutCommandData.cs" />
+    <Compile Include="Data\AggregationOperation.cs" />
     <Compile Include="Data\Attachment.cs" />
     <Compile Include="Data\BatchResult.cs" />
     <Compile Include="Data\DatabaseDocument.cs" />
@@ -76,6 +77,8 @@
     <Compile Include="Extensions\DisposableAction.cs" />
     <Compile Include="Extensions\ExpressionExtensions.cs" />
     <Compile Include="Extensions\JsonExtensions.cs" />
+    <Compile Include="Json\JsonMultiDimensionalArrayConverter.cs" />
+    <Compile Include="Json\JsonToJsonConverter.cs" />
     <Compile Include="Extensions\MetadataExtensions.cs" />
     <Compile Include="Extensions\Reference.cs" />
     <Compile Include="Extensions\StreamExtension.cs" />
@@ -87,6 +90,8 @@
     <Compile Include="Json\DynamicUtil.cs" />
     <Compile Include="Json\JsonDynamicConverter.cs" />
     <Compile Include="Json\JsonEnumConverter.cs" />
+    <Compile Include="Json\JsonValueTypeConverter.cs" />
+    <Compile Include="Json\JTokenExtensions.cs" />
     <Compile Include="Linq\DateTools.cs" />
     <Compile Include="Linq\DynamicJsonObject.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">

@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="GuidConverter.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 
 namespace Raven.Client.Converters
@@ -30,6 +35,9 @@ namespace Raven.Client.Converters
         /// <exception cref="T:System.NotSupportedException">The conversion cannot be performed. </exception>
         public  string ConvertFrom(object value)
         {
+            var val = (Guid) value;
+            if (val == Guid.Empty)
+                return null;
             return value.ToString();
         }
 

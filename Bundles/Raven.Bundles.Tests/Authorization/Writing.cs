@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="Writing.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using Raven.Bundles.Authorization.Model;
 using Raven.Bundles.Tests.Versioning;
@@ -32,7 +37,7 @@ namespace Raven.Bundles.Tests.Authorization
 
 			using (var s = store.OpenSession())
 			{
-				s.SecureFor(UserId, "/Company/Rename");
+				s.SecureFor(UserId, "Company/Rename");
 				company.Name = "Stampading Rhinos";
 				s.Store(company);
 
@@ -65,7 +70,7 @@ namespace Raven.Bundles.Tests.Authorization
 							{
 								Allow = true,
 								User = UserId,
-								Operation = "/Company/Rename"
+								Operation = "Company/Rename"
 							}
 						}
 				});// deny everyone
@@ -75,7 +80,7 @@ namespace Raven.Bundles.Tests.Authorization
 
 			using (var s = store.OpenSession())
 			{
-				s.SecureFor(UserId, "/Company/Rename");
+				s.SecureFor(UserId, "Company/Rename");
 				company.Name = "Stampading Rhinos";
 				s.Store(company);
 

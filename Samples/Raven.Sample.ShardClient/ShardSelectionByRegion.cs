@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="ShardSelectionByRegion.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using Raven.Client.Shard.ShardStrategy.ShardSelection;
 
 namespace Raven.Sample.ShardClient
@@ -17,7 +22,7 @@ namespace Raven.Sample.ShardClient
 
         public string ShardIdForExistingObject(object obj)
         {
-            return ShardIdForExistingObject(obj);
+            return ShardIdForNewObject(obj);
         }
     }
 }

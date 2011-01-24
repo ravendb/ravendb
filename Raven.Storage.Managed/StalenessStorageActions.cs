@@ -1,4 +1,9 @@
-﻿using System;
+//-----------------------------------------------------------------------
+// <copyright file="StalenessStorageActions.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
+using System;
 using System.ComponentModel;
 using System.Linq;
 using Newtonsoft.Json.Linq;
@@ -49,7 +54,7 @@ namespace Raven.Storage.Managed
             return tasksAfterCutoffPoint.Any();
         }
 
-        public DateTime IndexLastUpdatedAt(string name)
+        public Tuple<DateTime,Guid> IndexLastUpdatedAt(string name)
         {
             var readResult = storage.IndexingStats.Read(new JObject
             {
@@ -58,8 +63,21 @@ namespace Raven.Storage.Managed
 
             if (readResult == null)
                 throw new IndexDoesNotExistsException("Could not find index named: " + name);
-            
-            return readResult.Key.Value<DateTime>("lastTimestamp");
+
+            return Tuple.Create(
+                readResult.Key.Value<DateTime>("lastTimestamp"),
+                new Guid(readResult.Key.Value<byte[]>("lastEtag"))
+                );
+        }
+
+        public Guid GetMostRecentDocumentEtag()
+        {
+            foreach (var doc in storage.Documents["ByEtag"].SkipFromEnd(0))
+            {
+                var docEtag = doc.Value<byte[]>("etag");
+                return new Guid(docEtag);
+            }
+            return Guid.Empty;
         }
 
         private bool IsStaleByEtag(string entityName, byte [] lastIndexedEtag)

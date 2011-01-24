@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="TransactionalStorage.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
@@ -50,6 +55,8 @@ namespace Raven.Storage.Managed
                     idleTimer.Dispose();
                 if (persistenceSource != null)
                     persistenceSource.Dispose();
+				if(tableStroage != null)
+					tableStroage.Dispose();
             }
             finally
             {
@@ -159,7 +166,12 @@ namespace Raven.Storage.Managed
             get { return persistenceSource.CreateRemoteAppDomainState(); }
         }
 
-        public bool HandleException(Exception exception)
+    	public string FriendlyName
+    	{
+			get { return "Munin"; }
+    	}
+
+    	public bool HandleException(Exception exception)
         {
             return false;
         }

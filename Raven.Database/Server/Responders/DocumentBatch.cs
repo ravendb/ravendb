@@ -1,6 +1,12 @@
+//-----------------------------------------------------------------------
+// <copyright file="DocumentBatch.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using log4net;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Data;
@@ -68,7 +74,19 @@ namespace Raven.Database.Server.Responders
 
     		var transactionInformation = GetRequestTransaction(context);
     		var commands = (from JObject jsonCommand in jsonCommandArray
-    		                select CommandDataFactory.CreateCommand(jsonCommand, transactionInformation)).ToList();
+    		                select CommandDataFactory.CreateCommand(jsonCommand, transactionInformation))
+    			.ToArray();
+
+			context.Log(log =>
+			{
+				if (log.IsDebugEnabled)
+				{
+					foreach (var commandData in commands)
+					{
+						log.DebugFormat("\t{0} {1}", commandData.Method, commandData.Key);
+					}
+				}
+			});
 
     		var batchResult = Database.Batch(commands);
             context.WriteJson(batchResult);

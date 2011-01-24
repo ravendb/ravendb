@@ -1,5 +1,11 @@
+//-----------------------------------------------------------------------
+// <copyright file="ShoppingCartEventsToShopingCart.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using Raven.Database.Linq;
 using Raven.Database.Indexing;
@@ -15,9 +21,10 @@ namespace Raven.Sample.EventSourcing
             MapDefinition = docs => docs.Where(document => document.For == "ShoppingCart");
             GroupByExtraction = source => source.ShoppingCartId;
             ReduceDefinition = Reduce;
-
-            Indexes.Add("Id", FieldIndexing.NotAnalyzed);
+            Indexes.Add("ShoppingCartId", FieldIndexing.NotAnalyzed);
             Indexes.Add("Aggregate", FieldIndexing.No);
+            AddField("ShoppingCartId");
+            AddField("Aggregate");
         }
 
         private static IEnumerable<object> Reduce(IEnumerable<dynamic> source)
@@ -47,7 +54,7 @@ namespace Raven.Sample.EventSourcing
                 }
                 yield return new
                 {
-                    cart.Id,
+                    ShoppingCartId = cart.Id,
                     Aggregate = JObject.FromObject(cart)
                 };
             }

@@ -8,8 +8,23 @@ properties {
   $tools_dir = "$base_dir\Tools"
   $release_dir = "$base_dir\Release"
   $uploader = "..\Uploader\S3Uploader.exe"
+  
+  $web_dlls = @( "Raven.Abstractions.???", "Raven.Web.???", "log4net.???", "Newtonsoft.Json.???", "Lucene.Net.???", "Spatial.Net.???", "SpellChecker.Net.???", "ICSharpCode.NRefactory.???", `
+    "Rhino.Licensing.???", "Esent.Interop.???", "Raven.Database.???", "Raven.Http.???", "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???" );
+    
+  $server_files = @( "Raven.Server.exe", "log4net.???", "Newtonsoft.Json.???", "Lucene.Net.???", "Spatial.Net.???", "SpellChecker.Net.???", "ICSharpCode.NRefactory.???", "Rhino.Licensing.???", `
+    "Esent.Interop.???", "Raven.Abstractions.???", "Raven.Database.???", "Raven.Http.???", "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???" );
+    
+  $client_dlls_3_5 = @( "Newtonsoft.Json.???", "Raven.Abstractions-3.5.???", "Raven.Client.Lightweight-3.5.???", "MissingBitsFromClientProfile.???" );
+     
+  $client_dlls = @( "Newtonsoft.Json.???", "Raven.Abstractions.???", "Raven.Client.Lightweight.???", "MissingBitsFromClientProfile.???", "AsyncCtpLibrary.???" );
+     
+  $all_client_dlls = @( "Raven.Client.Lightweight.???", "Raven.Client.Embedded.???", "Raven.Abstractions.???", "Raven.Http.???", "Raven.Database.???", "Raven.Http.???", `
+      "Esent.Interop.???", "ICSharpCode.NRefactory.???", "Lucene.Net.???", "Spatial.Net.???", "SpellChecker.Net.???", "log4net.???", "Newtonsoft.Json.???", `
+      "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???", "AsyncCtpLibrary.???" );
+      
+  $test_prjs = @("Raven.Munin.Tests.dll", "Raven.Tests.dll", "Raven.Scenarios.dll", "Raven.Client.VisualBasic.Tests.dll", "Raven.Bundles.Tests.dll"  );
 }
-
 include .\psake_ext.ps1
 
 task default -depends OpenSource,Release
@@ -19,6 +34,7 @@ task Verify40 {
 		throw "Building Raven requires .NET 4.0, which doesn't appear to be installed on this machine"
 	}
 }
+
 
 task Clean {
   remove-item -force -recurse $buildartifacts_dir -ErrorAction SilentlyContinue
@@ -53,11 +69,13 @@ task Init -depends Verify40, Clean {
 			-clsCompliant "true"
 	}
 		
-	new-item $release_dir -itemType directory
-	new-item $buildartifacts_dir -itemType directory
+	new-item $release_dir -itemType directory -ErrorAction SilentlyContinue
+	new-item $buildartifacts_dir -itemType directory -ErrorAction SilentlyContinue
 	
 	copy $tools_dir\xUnit\*.* $build_dir
-	 
+	
+	# exec { .\Utilities\Binaries\Raven.Silverlighter.exe .\Raven.Client.Silverlight\Raven.Client.Silverlight.csproj .\Raven.Abstractions\Raven.Abstractions.csproj .\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj}
+	
 	if($global:commercial) {
 		exec { .\Utilities\Binaries\Raven.ProjectRewriter.exe commercial }
 		cp "..\RavenDB_Commercial.snk" "Raven.Database\RavenDB.snk"
@@ -87,16 +105,17 @@ task Compile -depends Init {
     
 }
 
-task Test -depends Compile {
+task Test -depends Compile{
   $old = pwd
   cd $build_dir
-  exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\Raven.Munin.Tests.dll" } 
-  exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\Raven.Tests.dll" } 
-  exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\Raven.Scenarios.dll" }
-  exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\Raven.Client.VisualBasic.Tests.dll" }
-  exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\Raven.Bundles.Tests.dll" }
+  Write-Host $test_prjs
+  foreach($test_prj in $test_prjs) {
+    Write-Host "Testing $build_dir\$test_prj"
+    exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\$test_prj" } 
+  }
   cd $old
 }
+
 
 task ReleaseNoTests -depends OpenSource,DoRelease {
 
@@ -121,7 +140,11 @@ task Release -depends Test,DoRelease {
 }
 
 task CopySamples {
-	$samples = @("MvcMusicStore", "Raven.Sample.ShardClient", "Raven.Sample.Failover", "Raven.Sample.Replication", "Raven.Sample.EventSourcing", "Raven.Bundles.Sample.EventSourcing.ShoppingCartAggregator", "Raven.Samples.IndexReplication", "Raven.Samples.Includes", "Raven.Sample.SimpleClient", "Raven.Sample.ComplexSharding")
+	$samples = @("MvcMusicStore", "Raven.Sample.ShardClient", "Raven.Sample.Failover", "Raven.Sample.Replication", `
+               "Raven.Sample.EventSourcing", "Raven.Bundles.Sample.EventSourcing.ShoppingCartAggregator", `
+               "Raven.Samples.IndexReplication", "Raven.Samples.Includes", "Raven.Sample.SimpleClient", `
+               "Raven.Sample.ComplexSharding", "Raven.Sample.MultiTenancy", "Raven.Sample.Suggestions", `
+               "Raven.Sample.LiveProjections")
 	$exclude = @("bin", "obj", "Data", "Plugins")
 	
 	foreach ($sample in $samples) {
@@ -157,137 +180,49 @@ task CleanOutputDirectory {
 }
 
 task CopyEmbeddedClient { 
-	cp $build_dir\Raven.Client.Lightweight.dll $build_dir\Output\EmbeddedClient
-	cp $build_dir\Raven.Client.Lightweight.xml $build_dir\Output\EmbeddedClient
-	cp $build_dir\Raven.Client.Embedded.dll $build_dir\Output\EmbeddedClient
-	cp $build_dir\Raven.Client.Embedded.xml $build_dir\Output\EmbeddedClient
-	cp $build_dir\Raven.Abstractions.dll $build_dir\Output\EmbeddedClient
-	cp $build_dir\Raven.Http.dll $build_dir\Output\EmbeddedClient
-	cp $build_dir\Raven.Database.dll $build_dir\Output\EmbeddedClient
-	cp $build_dir\Raven.Http.dll $build_dir\Output\EmbeddedClient
-	cp $build_dir\Esent.Interop.dll $build_dir\Output\EmbeddedClient
-	cp $build_dir\ICSharpCode.NRefactory.dll $build_dir\Output\EmbeddedClient
-	cp $build_dir\Lucene.Net.dll $build_dir\Output\EmbeddedClient
-	cp $build_dir\Spatial.Net.dll $build_dir\Output\EmbeddedClient
-	cp $build_dir\log4net.dll $build_dir\Output\EmbeddedClient
-	cp $build_dir\Newtonsoft.Json.dll $build_dir\Output\EmbeddedClient
-  cp $build_dir\Raven.Storage.Esent.dll $build_dir\Output\EmbeddedClient
-	cp $build_dir\Raven.Storage.Managed.dll $build_dir\Output\EmbeddedClient
-	cp $build_dir\Raven.Munin.dll $build_dir\Output\EmbeddedClient
+
+  foreach($client_dll in $all_client_dlls) {
+    cp "$build_dir\$client_dll" $build_dir\Output\EmbeddedClient
+  }
 }
 
 task CopySmuggler { 
-	cp $build_dir\RavenSmuggler.exe $build_dir\Output
+	cp $build_dir\RavenSmuggler.??? $build_dir\Output
 }
 
 task CopyClient {
-	cp $build_dir\Newtonsoft.Json.dll $build_dir\Output\Client
-  cp $build_dir\Raven.Abstractions.dll $build_dir\Output\Client
-	cp $build_dir\Raven.Client.Lightweight.dll $build_dir\Output\Client
-	cp $build_dir\Raven.Client.Lightweight.xml $build_dir\Output\Client
+  foreach($client_dll in $client_dlls) {
+    cp "$build_dir\$client_dll" $build_dir\Output\Client
+  }
 }
 
 task CopyClient35 {
-	cp $build_dir\Newtonsoft.Json.dll $build_dir\Output\Client-3.5
-	cp $build_dir\Raven.Abstractions-3.5.dll $build_dir\Output\Client-3.5
-	cp $build_dir\Raven.Client.Lightweight-3.5.dll $build_dir\Output\Client-3.5
+  foreach($client_dll in $client_dlls_3_5) {
+    cp "$build_dir\$client_dll" $build_dir\Output\Client-3.5
+  }
 }
 
 task CopyWeb { 
-	cp $build_dir\Raven.Abstractions.dll $build_dir\Output\Web\bin
-	cp $build_dir\Raven.Web.dll $build_dir\Output\Web\bin
-	cp $build_dir\log4net.dll $build_dir\Output\Web\bin
-	cp $build_dir\Newtonsoft.Json.dll $build_dir\Output\Web\bin
-	cp $build_dir\Lucene.Net.dll $build_dir\Output\Web\bin
-	cp $build_dir\Spatial.Net.dll $build_dir\Output\Web\bin
-	cp $build_dir\ICSharpCode.NRefactory.dll $build_dir\Output\Web\bin
-	cp $build_dir\Rhino.Licensing.dll $build_dir\Output\Web\bin
-	cp $build_dir\Esent.Interop.dll $build_dir\Output\Web\bin
-	cp $build_dir\Raven.Database.dll $build_dir\Output\Web\bin
-	cp $build_dir\Raven.Http.dll $build_dir\Output\Web\bin
-	cp $build_dir\Raven.Storage.Esent.dll $build_dir\Output\Web\bin
-	cp $build_dir\Raven.Storage.Managed.dll $build_dir\Output\Web\bin
-	cp $build_dir\Raven.Munin.dll $build_dir\Output\Web\bin	
+  foreach($web_dll in $web_dlls) {
+    cp "$build_dir\$web_dll" $build_dir\Output\Web\bin
+  }
 	cp $base_dir\DefaultConfigs\web.config $build_dir\Output\Web\web.config
-	
 }
 
 task CopyBundles {
-	cp $build_dir\Raven.Bundles.*.dll $build_dir\Output\Bundles
-	cp $build_dir\Raven.Client.*.dll $build_dir\Output\Bundles
-	del $build_dir\Output\Bundles\Raven.Bundles.Tests.dll
+	cp $build_dir\Raven.Bundles.*.??? $build_dir\Output\Bundles
+	cp $build_dir\Raven.Client.*.??? $build_dir\Output\Bundles
+	del $build_dir\Output\Bundles\Raven.Bundles.Tests.???
 }
 
 task CopyServer {
-	cp $build_dir\Raven.Server.exe $build_dir\Output\Server
-	cp $build_dir\log4net.dll $build_dir\Output\Server
-	cp $build_dir\Newtonsoft.Json.dll $build_dir\Output\Server
-	cp $build_dir\Lucene.Net.dll $build_dir\Output\Server
-	cp $build_dir\Spatial.Net.dll $build_dir\Output\Server
-	cp $build_dir\ICSharpCode.NRefactory.dll $build_dir\Output\Server
-	cp $build_dir\Rhino.Licensing.dll $build_dir\Output\Server
-	cp $build_dir\Esent.Interop.dll $build_dir\Output\Server
-	cp $build_dir\Raven.Abstractions.dll $build_dir\Output\Server
-	cp $build_dir\Raven.Database.dll $build_dir\Output\Server
-	cp $build_dir\Raven.Http.dll $build_dir\Output\Server
-	cp $build_dir\Raven.Storage.Esent.dll $build_dir\Output\Server
-	cp $build_dir\Raven.Storage.Managed.dll $build_dir\Output\Server
-	cp $build_dir\Raven.Munin.dll $build_dir\Output\Server
+   foreach($server_file in $server_files) {
+    cp "$build_dir\$server_file" $build_dir\Output\Server
+  }
+	
 	cp $base_dir\DefaultConfigs\RavenDb.exe.config $build_dir\Output\Server\Raven.Server.exe.config
 }
 
-task CreateNupack {
-	del $base_dir\*.nupkg
-	remove-item $build_dir\NuPack -force -recurse -erroraction silentlycontinue
-	mkdir $build_dir\NuPack
-	mkdir $build_dir\NuPack\Lib
-	mkdir $build_dir\NuPack\Lib\3.5
-	mkdir $build_dir\NuPack\Lib\4.0
-	mkdir $build_dir\NuPack\Tools
-	
-	$nupack = [xml](get-content $base_dir\RavenDB.nuspec)
-	
-	$nupack.package.metadata.version = "$version.$env:buildlabel"
-
-	$writerSettings = new-object System.Xml.XmlWriterSettings
-	$writerSettings.OmitXmlDeclaration = $true
-	$writerSettings.NewLineOnAttributes = $true
-	$writerSettings.Indent = $true
-	
-	$writer = [System.Xml.XmlWriter]::Create("$build_dir\Nupack\RavenDB.nuspec", $writerSettings)
-	
-	$nupack.WriteTo($writer)
-	$writer.Flush()
-	$writer.Close()
-	
-	cp $build_dir\Newtonsoft.Json.dll $build_dir\NuPack\Lib\3.5
-	cp $build_dir\Raven.Client.Lightweight-3.5.dll $build_dir\NuPack\Lib\3.5
-	cp $build_dir\Raven.Client.Lightweight-3.5.xml $build_dir\NuPack\Lib\3.5
-	cp $build_dir\Raven.Abstractions-3.5.dll $build_dir\NuPack\Lib\3.5
-	
-	cp $build_dir\Newtonsoft.Json.dll $build_dir\NuPack\Lib\4.0
-	cp $build_dir\Raven.Client.Lightweight.dll $build_dir\NuPack\Lib\4.0
-	cp $build_dir\Raven.Abstractions.dll $build_dir\NuPack\Lib\4.0
-	cp $build_dir\Raven.Client.Lightweight.xml $build_dir\NuPack\Lib\4.0
-	
-	
-	cp $build_dir\Raven.Server.exe $build_dir\NuPack\Tools
-	cp $build_dir\log4net.dll $build_dir\NuPack\Tools
-	cp $build_dir\Newtonsoft.Json.dll $build_dir\NuPack\Tools
-	cp $build_dir\Lucene.Net.dll $build_dir\NuPack\Tools
-	cp $build_dir\Spatial.Net.dll $build_dir\NuPack\Tools
-	cp $build_dir\ICSharpCode.NRefactory.dll $build_dir\NuPack\Tools
-	cp $build_dir\Rhino.Licensing.dll $build_dir\NuPack\Toolsr
-	cp $build_dir\Esent.Interop.dll $build_dir\NuPack\Tools
-	cp $build_dir\Raven.Database.dll $build_dir\NuPack\Tools
-	cp $build_dir\Raven.Http.dll $build_dir\NuPack\Tools
-	cp $build_dir\Raven.Storage.Esent.dll $build_dir\NuPack\Tools
-	cp $build_dir\Raven.Storage.Managed.dll $build_dir\NuPack\Tools
-	cp $build_dir\Raven.Munin.dll $build_dir\NuPack\Tools
-	cp $base_dir\DefaultConfigs\RavenDb.exe.config $build_dir\NuPack\Tools\Raven.Server.exe.config
-	
-	& $tools_dir\NuPack.exe $build_dir\NuPack\RavenDB.nuspec
-}
 
 task CreateDocs {
 	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
@@ -308,20 +243,13 @@ task CopyDocFiles -depends CreateDocs {
 	cp $base_dir\acknowledgements.txt $build_dir\Output\acknowledgements.txt
 }
 
-task DoRelease -depends Compile, `
-	CleanOutputDirectory,`
-	CreateOutpuDirectories, `
-	CopyEmbeddedClient, `
-	CopySmuggler, `
-	CopyClient, `
-	CopyClient35, `
-	CopyWeb, `
-	CopyBundles, `
-	CopyServer, `
-	CopyDocFiles, `
-	CopySamples, `
-	CreateNupack {
+task ZipOutput {
 	
+	if($env:buildlabel -eq 13)
+	{
+      return 
+	}
+
 	$old = pwd
 	
 	cd $build_dir\Output
@@ -344,12 +272,31 @@ task DoRelease -depends Compile, `
 	}
 	
     cd $old
-    ExecuteTask("ResetBuildArtifcats")
+
 }
 
 task ResetBuildArtifcats {
     git checkout "Raven.Database\RavenDB.snk"
 }
+
+
+task DoRelease -depends Compile, `
+	CleanOutputDirectory,`
+	CreateOutpuDirectories, `
+	CopyEmbeddedClient, `
+	CopySmuggler, `
+	CopyClient, `
+	CopyClient35, `
+	CopyWeb, `
+	CopyBundles, `
+	CopyServer, `
+	CopyDocFiles, `
+	CopySamples, `
+	ZipOutput, `
+	ResetBuildArtifcats {	
+	Write-Host "Done building RavenDB"
+}
+
 
 task Upload -depends DoRelease {
 	Write-Host "Starting upload"

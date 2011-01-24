@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="IndexDefinition.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -48,8 +53,12 @@ namespace Raven.Client.Indexes
 		/// </summary>
 		/// <value>The sort options.</value>
 		public IDictionary<Expression<Func<TReduceResult, object>>, SortOptions> SortOptions { get; set; }
+        /// <summary>
+        /// Get os set the analyzers
+        /// </summary>
+        public IDictionary<Expression<Func<TReduceResult, object>>, string> Analyzers { get; set; }
 
-		/// <summary>
+	    /// <summary>
 		/// Initializes a new instance of the <see cref="IndexDefinition&lt;TDocument, TReduceResult&gt;"/> class.
 		/// </summary>
 		public IndexDefinition()
@@ -57,6 +66,7 @@ namespace Raven.Client.Indexes
 			Stores = new Dictionary<Expression<Func<TReduceResult, object>>, FieldStorage>();
 			Indexes = new Dictionary<Expression<Func<TReduceResult, object>>, FieldIndexing>();
 			SortOptions = new Dictionary<Expression<Func<TReduceResult, object>>, SortOptions>();
+            Analyzers = new Dictionary<Expression<Func<TReduceResult, object>>, string>();
 		}
 
 		/// <summary>
@@ -66,15 +76,20 @@ namespace Raven.Client.Indexes
 		/// <returns></returns>
 		public IndexDefinition ToIndexDefinition(DocumentConvention convention)
 		{
+			if (Map == null)
+				throw new InvalidOperationException(
+					"Map is required to generate an index, you cannot create an index without a valid Map property (in index " +
+					this.GetType().Name + ").");
 		    string querySource = (typeof(TDocument) == typeof(object) || ContainsWhereEntityIs(Map.Body)) ? "docs" : "docs." + convention.GetTypeTagName(typeof(TDocument));
 		    return new IndexDefinition
 			{
-				Map = PruneToFailureLinqQueryAsStringToWorkableCode(Map, convention, querySource),
-				Reduce = PruneToFailureLinqQueryAsStringToWorkableCode(Reduce, convention, "results"),
-                TransformResults = PruneToFailureLinqQueryAsStringToWorkableCode(TransformResults, convention, "results"),
+				Map = PruneToFailureLinqQueryAsStringToWorkableCode(Map, convention, querySource, translateIdentityProperty:true),
+				Reduce = PruneToFailureLinqQueryAsStringToWorkableCode(Reduce, convention, "results", translateIdentityProperty: false),
+                TransformResults = PruneToFailureLinqQueryAsStringToWorkableCode(TransformResults, convention, "results", translateIdentityProperty:false),
 				Indexes = ConvertToStringDictionary(Indexes),
 				Stores = ConvertToStringDictionary(Stores),
-				SortOptions = ConvertToStringDictionary(SortOptions)
+				SortOptions = ConvertToStringDictionary(SortOptions),
+                Analyzers = ConvertToStringDictionary(Analyzers)
 			};
 		}
 
@@ -125,7 +140,7 @@ namespace Raven.Client.Indexes
 		private static string PruneToFailureLinqQueryAsStringToWorkableCode(
 			LambdaExpression expr, 
 			DocumentConvention convention,
-			string querySource)
+			string querySource, bool translateIdentityProperty)
 		{
 			if (expr == null)
 				return null;
@@ -140,7 +155,7 @@ namespace Raven.Client.Indexes
 			}
 
 #if !NET_3_5
-			var linqQuery = ExpressionStringBuilder.ExpressionToString(convention, expression);
+			var linqQuery = ExpressionStringBuilder.ExpressionToString(convention,  translateIdentityProperty, expression);
 #else
             var linqQuery =expression.ToString();
 #endif

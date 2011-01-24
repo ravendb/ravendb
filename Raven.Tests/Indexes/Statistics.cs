@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="Statistics.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using System.Threading;
 using Newtonsoft.Json.Linq;
@@ -163,7 +168,7 @@ namespace Raven.Tests.Indexes
 
 			Assert.Equal("1", db.Statistics.Errors[0].Document);
 			Assert.Equal("pagesByTitle2", db.Statistics.Errors[0].Index);
-			Assert.Contains("Attempted to divide by zero.", db.Statistics.Errors[0].Error);
+			Assert.Contains(new DivideByZeroException().Message, db.Statistics.Errors[0].Error);
 		}
 	}
 }

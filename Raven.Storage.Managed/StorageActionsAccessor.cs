@@ -1,10 +1,16 @@
-﻿using System;
+//-----------------------------------------------------------------------
+// <copyright file="StorageActionsAccessor.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Raven.Database;
 using Raven.Database.Impl;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
+using Raven.Http.Exceptions;
 using Raven.Storage.Managed.Impl;
 
 namespace Raven.Storage.Managed
@@ -83,8 +89,12 @@ namespace Raven.Storage.Managed
         }
 
         public event Action OnCommit;
+    	public bool IsWriteConflict(Exception exception)
+    	{
+    		return exception is ConcurrencyException;
+    	}
 
-        [DebuggerNonUserCode]
+    	[DebuggerNonUserCode]
         public void InvokeOnCommit()
         {
             var handler = OnCommit;

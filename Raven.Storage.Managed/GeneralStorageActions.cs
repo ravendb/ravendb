@@ -1,4 +1,9 @@
-﻿using System;
+//-----------------------------------------------------------------------
+// <copyright file="GeneralStorageActions.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
+using System;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Storage;
 using Raven.Storage.Managed.Impl;
@@ -26,13 +31,10 @@ namespace Raven.Storage.Managed
                 });
                 return 1;
             }
-            else
-            {
-                var val = result.Key.Value<int>("id") + 1;
-                result.Key["id"] = val;
-                storage.Identity.UpdateKey(result.Key);
-                return val;
-            }
+            var val = result.Key.Value<int>("id") + 1;
+            result.Key["id"] = val;
+            storage.Identity.UpdateKey(result.Key);
+            return val;
         }
     }
 }

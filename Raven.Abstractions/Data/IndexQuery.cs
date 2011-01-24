@@ -1,74 +1,95 @@
+//-----------------------------------------------------------------------
+// <copyright file="IndexQuery.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using System.Text;
+using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
-using Raven.Database.Indexing;
 
 namespace Raven.Database.Data
 {
 	/// <summary>
 	/// All the information required to query a Raven index
 	/// </summary>
-    public class IndexQuery
-    {
+	public class IndexQuery
+	{
 		/// <summary>
 		/// Initializes a new instance of the <see cref="IndexQuery"/> class.
 		/// </summary>
-        public IndexQuery()
-        {
-            TotalSize = new Reference<int>();
-            SkippedResults = new Reference<int>();
-            PageSize = 128;
-        }
+		public IndexQuery()
+		{
+			TotalSize = new Reference<int>();
+			SkippedResults = new Reference<int>();
+			PageSize = 128;
+		}
 
 		/// <summary>
 		/// Gets or sets the query.
 		/// </summary>
 		/// <value>The query.</value>
-        public string Query { get; set; }
+		public string Query { get; set; }
 
 		/// <summary>
 		/// Gets or sets the total size.
 		/// </summary>
 		/// <value>The total size.</value>
-        public Reference<int> TotalSize { get; private set; }
+		public Reference<int> TotalSize { get; private set; }
 
 		/// <summary>
 		/// Gets or sets the start of records to read.
 		/// </summary>
 		/// <value>The start.</value>
-        public int Start { get; set; }
+		public int Start { get; set; }
 
 		/// <summary>
 		/// Gets or sets the size of the page.
 		/// </summary>
 		/// <value>The size of the page.</value>
-        public int PageSize { get; set; }
+		public int PageSize { get; set; }
+
+		/// <summary>
+		/// The aggregation operation for this query
+		/// </summary>
+		public AggregationOperation AggregationOperation { get; set; }
+
+		/// <summary>
+		/// The fields to group the query by
+		/// </summary>
+		public string[] GroupBy { get; set; }
 
 		/// <summary>
 		/// Gets or sets the fields to fetch.
 		/// </summary>
 		/// <value>The fields to fetch.</value>
-        public string[] FieldsToFetch { get; set; }
+		public string[] FieldsToFetch { get; set; }
 
 		/// <summary>
 		/// Gets or sets the fields to sort by
 		/// </summary>
 		/// <value>The sorted fields.</value>
-        public SortedField[] SortedFields { get; set; }
+		public SortedField[] SortedFields { get; set; }
 
 		/// <summary>
 		/// Gets or sets the cutoff date
 		/// </summary>
 		/// <value>The cutoff.</value>
-        public DateTime? Cutoff { get; set; }
+		public DateTime? Cutoff { get; set; }
+
+        /// <summary>
+        /// If set to true, RavenDB won't execute the transform results function
+        /// returning just the raw results instead
+        /// </summary>
+        public bool SkipTransformResults { get; set; }
 
 		/// <summary>
 		/// Gets or sets the number of skipped results.
 		/// </summary>
 		/// <value>The skipped results.</value>
-        public Reference<int> SkippedResults { get; set; }
+		public Reference<int> SkippedResults { get; set; }
 
 		/// <summary>
 		/// Gets the index query URL.
@@ -77,38 +98,38 @@ namespace Raven.Database.Data
 		/// <param name="index">The index.</param>
 		/// <param name="operationName">Name of the operation.</param>
 		/// <returns></returns>
-        public string GetIndexQueryUrl(string operationUrl, string index, string operationName)
-        {
-            var path = string.Format("{0}/{5}/{1}?query={2}&start={3}&pageSize={4}", operationUrl, index,
-                                     Uri.EscapeUriString(Uri.EscapeDataString(Query ?? "")),
-                                     Start, PageSize, operationName);
-            if (FieldsToFetch != null && FieldsToFetch.Length > 0)
-            {
-                path = FieldsToFetch.Aggregate(
-                    new StringBuilder(path),
-                    (sb, field) => sb.Append("&fetch=").Append(Uri.EscapeDataString(field))
-                    ).ToString();
-            }
-            if (SortedFields != null && SortedFields.Length > 0)
-            {
-                path = SortedFields.Aggregate(
-                    new StringBuilder(path),
-                    (sb, field) => sb.Append("&sort=").Append(field.Descending ? "-" : "").Append(Uri.EscapeDataString(field.Field))
-                    ).ToString();
-            }
-            if (Cutoff != null)
-            {
-                var cutOffAsString = Uri.EscapeUriString(Uri.EscapeDataString(Cutoff.Value.ToString("o", CultureInfo.InvariantCulture)));
-                path = path + "&cutOff=" + cutOffAsString;
-            }
-		    var vars = GetCustomQueryStringVariables();
+		public string GetIndexQueryUrl(string operationUrl, string index, string operationName)
+		{
+			if (operationUrl.EndsWith("/"))
+				operationUrl = operationUrl.Substring(0, operationUrl.Length - 1);
+			var path = new StringBuilder()
+				.Append(operationUrl)
+				.Append("/")
+				.Append(operationName)
+				.Append("/")
+				.Append(index)
+				.Append("?query=").Append(Uri.EscapeUriString(Uri.EscapeDataString(Query ?? "")))
+				.Append("&start=").Append(Start)
+				.Append("&pageSize=").Append(PageSize)
+				.Append("&aggregation=").Append(AggregationOperation);
+			FieldsToFetch.Apply(field => path.Append("&fetch=").Append(Uri.EscapeDataString(field)));
+			GroupBy.Apply(field => path.Append("&groupBy=").Append(Uri.EscapeDataString(field)));
+			SortedFields.Apply(field => path.Append("&sort=").Append(field.Descending ? "-" : "").Append(Uri.EscapeDataString(field.Field)));
+			
+			if (Cutoff != null)
+			{
+				var cutOffAsString =
+					Uri.EscapeUriString(Uri.EscapeDataString(Cutoff.Value.ToString("o", CultureInfo.InvariantCulture)));
+				path.Append("&cutOff=").Append(cutOffAsString);
+			}
+			var vars = GetCustomQueryStringVariables();
 
 			if (!string.IsNullOrEmpty(vars))
 			{
-				path += vars.StartsWith("&") ? vars : ("&" + vars);
+				path.Append(vars.StartsWith("&") ? vars : ("&" + vars));
 			}
-		
-			return path;
+
+			return path.ToString();
 		}
 
 		/// <summary>
@@ -118,6 +139,19 @@ namespace Raven.Database.Data
 		protected virtual string GetCustomQueryStringVariables()
 		{
 			return string.Empty;
+		}
+	}
+
+	internal static class EnumerableExtension
+	{
+		public static void Apply<T>(this IEnumerable<T> self, Action<T> action)
+		{
+			if (self == null)
+				return;
+			foreach (var item in self)
+			{
+				action(item);
+			}
 		}
 	}
 }

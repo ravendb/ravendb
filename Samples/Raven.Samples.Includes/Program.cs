@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="Program.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using System.Linq;
 using Raven.Client;
@@ -28,7 +33,7 @@ namespace Raven.Samples.Includes
                     });
                     session.SaveChanges();
                 }
-
+                Console.ReadLine();
 
                 using (IDocumentSession session = documentStore.OpenSession())
                 {
@@ -39,6 +44,8 @@ namespace Raven.Samples.Includes
                     Console.WriteLine(company.Name);
                     Console.WriteLine(parent.Name);
                 }
+
+                Console.ReadLine();
 
                 using (IDocumentSession session = documentStore.OpenSession())
                 {

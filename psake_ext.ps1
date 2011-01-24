@@ -51,13 +51,23 @@ param(
 	[string]$fileVersion,
 	[string]$file = $(throw "file is a required parameter.")
 )
-  $commit = Get-Git-Commit
+  
+  if($env:buildlabel -eq 13 -and (Test-Path $file))
+	{
+      return
+	}
+   
+   $commit = Get-Git-Commit
+ 
+  
   $asmInfo = "using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
+#if !SILVERLIGHT
 [assembly: SuppressIldasmAttribute()]
+#endif
 [assembly: CLSCompliantAttribute($clsCompliant )]
 [assembly: ComVisibleAttribute(false)]
 [assembly: AssemblyTitleAttribute(""$title"")]

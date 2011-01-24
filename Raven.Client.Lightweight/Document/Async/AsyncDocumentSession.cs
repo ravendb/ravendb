@@ -1,27 +1,38 @@
+//-----------------------------------------------------------------------
+// <copyright file="AsyncDocumentSession.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
+#if !NET_3_5
+
 using System;
 using System.Linq;
 using System.Net;
+using System.Threading.Tasks;
 using Raven.Client.Client;
 using Raven.Client.Client.Async;
 using Raven.Database;
 
 namespace Raven.Client.Document.Async
 {
+	using Linq;
+
 	/// <summary>
 	/// Implementation for async document session 
 	/// </summary>
-	public class AsyncDocumentSession : InMemoryDocumentSessionOperations, IAsyncDocumentSession, IAsyncAdvancedSessionOperations
+	public class AsyncDocumentSession : InMemoryDocumentSessionOperations, IAsyncDocumentSession, IAsyncAdvancedSessionOperations, IDocumentQueryGenerator
 	{
 		/// <summary>
 		/// Initializes a new instance of the <see cref="AsyncDocumentSession"/> class.
 		/// </summary>
-		/// <param name="documentStore">The document store.</param>
-		/// <param name="storeListeners">The store listeners.</param>
-		/// <param name="deleteListeners">The delete listeners.</param>
-		public AsyncDocumentSession(DocumentStore documentStore, IDocumentStoreListener[] storeListeners, IDocumentDeleteListener[] deleteListeners)
-			: base(documentStore, storeListeners, deleteListeners)
+		public AsyncDocumentSession(DocumentStore documentStore, 
+            IAsyncDatabaseCommands asyncDatabaseCommands, 
+            IDocumentQueryListener[] queryListeners, 
+            IDocumentStoreListener[] storeListeners, 
+            IDocumentDeleteListener[] deleteListeners)
+			: base(documentStore, queryListeners, storeListeners, deleteListeners)
 		{
-			AsyncDatabaseCommands = documentStore.AsyncDatabaseCommands;
+			AsyncDatabaseCommands = asyncDatabaseCommands;
 		}
 
 		/// <summary>
@@ -30,7 +41,31 @@ namespace Raven.Client.Document.Async
 		/// <value>The async database commands.</value>
 		public IAsyncDatabaseCommands AsyncDatabaseCommands { get; private set; }
 
-        /// <summary>
+	    /// <summary>
+	    /// Query the specified index using Lucene syntax
+	    /// </summary>
+	    public IDocumentQuery<T> AsyncLuceneQuery<T>(string index)
+	    {
+	        return new DocumentQuery<T>(this, 
+#if !SILVERLIGHT
+                null, 
+#endif
+                AsyncDatabaseCommands, index, new string[0], queryListeners);
+	    }
+
+	    /// <summary>
+	    /// Dynamically query RavenDB using Lucene syntax
+	    /// </summary>
+	    public IDocumentQuery<T> AsyncLuceneQuery<T>()
+	    {
+            return new DocumentQuery<T>(this,
+#if !SILVERLIGHT
+ null,
+#endif
+    AsyncDatabaseCommands, "dynamic", new string[0], queryListeners);
+	    }
+
+	    /// <summary>
         /// Get the accessor for advanced operations
         /// </summary>
         /// <remarks>
@@ -46,101 +81,65 @@ namespace Raven.Client.Document.Async
 		/// Begins the async load operation
 		/// </summary>
 		/// <param name="id">The id.</param>
-		/// <param name="asyncCallback">The async callback.</param>
-		/// <param name="state">The state.</param>
 		/// <returns></returns>
-		public IAsyncResult BeginLoad(string id, AsyncCallback asyncCallback, object state)
+		public Task<T> LoadAsync<T>(string id)
 		{
 			object entity;
-			if (entitiesByKey.TryGetValue(id, out entity))
-				return new SyncronousLoadResult(state, entity);
+            if (entitiesByKey.TryGetValue(id, out entity))
+            {
+                var tcs = new TaskCompletionSource<T>();
+                tcs.TrySetResult((T)entity);
+                return tcs.Task;
+            }
 			
 			IncrementRequestCount();
 
-			return AsyncDatabaseCommands.BeginGet(id, asyncCallback, state);
+			return AsyncDatabaseCommands.GetAsync(id)
+                .ContinueWith(task =>
+                {
+                    JsonDocument documentFound;
+                    try
+                    {
+                        documentFound = task.Result;
+                    }
+                    catch (WebException ex)
+                    {
+                        var httpWebResponse = ex.Response as HttpWebResponse;
+                        if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.NotFound)
+                            return default(T);
+                        throw;
+                    }
+                    if (documentFound == null)
+                        return default(T);
+
+                    return TrackEntity<T>(documentFound);
+                });
 		}
 
-		/// <summary>
-		/// Ends the async load operation
-		/// </summary>
-		/// <typeparam name="T"></typeparam>
-		/// <param name="result">The result.</param>
-		/// <returns></returns>
-		public T EndLoad<T>(IAsyncResult result)
-		{
-			var syncronousLoadResult = result as SyncronousLoadResult;
-			if (syncronousLoadResult != null)
-				return (T) syncronousLoadResult.Entity;
-
-			JsonDocument documentFound;
-			try
-			{
-				documentFound = AsyncDatabaseCommands.EndGet(result);
-			}
-			catch (WebException ex)
-			{
-				var httpWebResponse = ex.Response as HttpWebResponse;
-				if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.NotFound)
-					return default(T);
-				throw;
-			}
-			if (documentFound == null)
-				return default(T);
-
-			return TrackEntity<T>(documentFound);
-		}
-
-		/// <summary>
+	    /// <summary>
 		/// Begins the async multi load operation
 		/// </summary>
 		/// <param name="ids">The ids.</param>
-		/// <param name="asyncCallback">The async callback.</param>
-		/// <param name="state">The state.</param>
 		/// <returns></returns>
-		public IAsyncResult BeginMultiLoad(string[] ids, AsyncCallback asyncCallback, object state)
+		public Task<T[]> MultiLoadAsync<T>(string[] ids)
 		{
 			IncrementRequestCount();
-			return AsyncDatabaseCommands.BeginMultiGet(ids, asyncCallback, state);
-		}
-
-		/// <summary>
-		/// Ends the async multi load operation
-		/// </summary>
-		/// <typeparam name="T"></typeparam>
-		/// <param name="result">The result.</param>
-		/// <returns></returns>
-		public T[] EndMultiLoad<T>(IAsyncResult result)
-		{
-			var documents = AsyncDatabaseCommands.EndMultiGet(result);
-			return documents.Select(TrackEntity<T>).ToArray();
+			return AsyncDatabaseCommands.MultiGetAsync(ids)
+                .ContinueWith(task => task.Result.Select(TrackEntity<T>).ToArray());
 		}
 
 		/// <summary>
 		/// Begins the async save changes operation
 		/// </summary>
-		/// <param name="asyncCallback">The async callback.</param>
-		/// <param name="state">The state.</param>
 		/// <returns></returns>
-		public IAsyncResult BeginSaveChanges(AsyncCallback asyncCallback, object state)
+		public Task SaveChangesAsync()
 		{
 			var data = PrepareForSaveChanges();
-			var asyncResult = AsyncDatabaseCommands.BeginBatch(data.Commands.ToArray(), asyncCallback, state);
-			return new WrapperAsyncData<DocumentSession.SaveChangesData>(asyncResult, data);
+			return AsyncDatabaseCommands.BatchAsync(data.Commands.ToArray())
+                .ContinueWith(task => UpdateBatchResults(task.Result, data.Entities));
 		}
 
 		/// <summary>
-		/// Ends the async save changes operation
-		/// </summary>
-		/// <param name="result">The result.</param>
-		public void EndSaveChanges(IAsyncResult result)
-		{
-			var wrapperAsyncData = ((WrapperAsyncData<DocumentSession.SaveChangesData>)result);
-
-			var batchResults = AsyncDatabaseCommands.EndBatch(wrapperAsyncData.Inner);
-			UpdateBatchResults(batchResults, wrapperAsyncData.Wrapped.Entities);
-		}
-
-        /// <summary>
         /// Get the json document by key from the store
         /// </summary>
 	    protected override JsonDocument GetJsonDocument(string documentKey)
@@ -175,5 +174,45 @@ namespace Raven.Client.Document.Async
 		{
 			throw new NotImplementedException();
 		}
+
+		/// <summary>
+		/// Dynamically queries RavenDB using LINQ
+		/// </summary>
+		/// <typeparam name="T">The result of the query</typeparam>
+		public IRavenQueryable<T> Query<T>()
+		{
+			string indexName = "dynamic";
+			if (typeof(T) != typeof(object))
+			{
+				indexName += "/" + Conventions.GetTypeTagName(typeof(T));
+			}
+			
+			var ravenQueryStatistics = new RavenQueryStatistics();
+
+			return new RavenQueryInspector<T>(
+				new DynamicRavenQueryProvider<T>(this, indexName, ravenQueryStatistics, 
+				#if !SILVERLIGHT
+				null,
+				#endif
+				Advanced.AsyncDatabaseCommands),
+				ravenQueryStatistics,
+				indexName,
+				null,
+#if !SILVERLIGHT
+ null,
+#endif
+				Advanced.AsyncDatabaseCommands);
+		}
+
+		IRavenQueryable<T> IAsyncDocumentSession.Query<T>(string indexName)
+		{
+			throw new NotImplementedException();
+		}
+
+		IDocumentQuery<T> IDocumentQueryGenerator.Query<T>(string indexName)
+		{
+			return Advanced.AsyncLuceneQuery<T>(indexName);
+		}
 	}
 }
+#endif

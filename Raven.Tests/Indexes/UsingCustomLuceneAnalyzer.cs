@@ -1,4 +1,9 @@
-﻿using System;
+//-----------------------------------------------------------------------
+// <copyright file="UsingCustomLuceneAnalyzer.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client;
@@ -83,9 +88,15 @@ namespace Raven.Tests.Indexes
         {
             with_index_and_some_entities(delegate(IDocumentSession session)
             {
-                var result = session.Advanced.LuceneQuery<EntityCount>("someIndex").WaitForNonStaleResults()
-                    .WhereEquals("NormalizedName", searchString, true, false)
-                    .ToArray();
+            	var result = session.Advanced.LuceneQuery<EntityCount>("someIndex").WaitForNonStaleResults()
+            		.WhereEquals(new WhereEqualsParams
+            		{
+            			FieldName = "NormalizedName",
+            			Value = searchString,
+            			IsAnalyzed = true,
+            			AllowWildcards = false
+            		})
+            		.ToArray();
 
                 Assert.Equal(1, result.Length);
                 Assert.Equal(entityName, result.First().Name);
@@ -99,7 +110,13 @@ namespace Raven.Tests.Indexes
             {
                 var result = session.Advanced.LuceneQuery<EntityCount>("someIndex")
                     .WaitForNonStaleResults()
-                    .WhereEquals("NormalizedName", searchString, true, false)
+					.WhereEquals(new WhereEqualsParams
+					{
+						FieldName = "NormalizedName",
+						Value = searchString,
+						IsAnalyzed = true,
+						AllowWildcards = false
+					})
                     .ToArray();
 
                 Assert.Equal(4, result.First().Count);

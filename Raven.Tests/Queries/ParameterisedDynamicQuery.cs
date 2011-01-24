@@ -1,8 +1,14 @@
+//-----------------------------------------------------------------------
+// <copyright file="ParameterisedDynamicQuery.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Raven.Database.Config;
+using Raven.Database.Queries;
 using Raven.Database.Server;
 using Raven.Tests.Storage;
 using Xunit;
@@ -178,12 +184,10 @@ namespace Raven.Tests.Queries
         [Fact]
         public void OftenInvokedQueryShouldCreatePermanentIndex()
         {
-            int initialIndexCount = db.Statistics.CountOfIndexes;
-
             db.Configuration.TempIndexPromotionMinimumQueryCount = 2;
             db.Configuration.TempIndexPromotionThreshold = 2000;
 
-            for (int x = 0; x < 3; x++)
+            for (int x = 0; x < 4; x++)
             {
                 db.ExecuteDynamicQuery(null, new IndexQuery()
                 {

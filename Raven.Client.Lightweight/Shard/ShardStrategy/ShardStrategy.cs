@@ -1,3 +1,9 @@
+#if !SILVERLIGHT
+//-----------------------------------------------------------------------
+// <copyright file="ShardStrategy.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using Raven.Client.Shard.ShardStrategy.ShardAccess;
 using Raven.Client.Shard.ShardStrategy.ShardResolution;
 using Raven.Client.Shard.ShardStrategy.ShardSelection;
@@ -26,3 +32,4 @@ namespace Raven.Client.Shard.ShardStrategy
 		public IShardAccessStrategy ShardAccessStrategy { get; set; }
 	}
 }
+#endif

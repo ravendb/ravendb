@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="Program.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using System.Configuration.Install;
 using System.Diagnostics;
@@ -6,13 +11,16 @@ using System.Linq;
 using System.Reflection;
 using System.Security.Principal;
 using System.ServiceProcess;
+using log4net;
 using log4net.Appender;
 using log4net.Config;
 using log4net.Filter;
 using log4net.Layout;
+using log4net.Repository.Hierarchy;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
+using Raven.Database.Impl.Logging;
 using Raven.Database.Server;
 using Raven.Http;
 
@@ -76,7 +84,7 @@ namespace Raven.Server
                         PrintUsage();
                         break;
                     }
-                    RunRestoreOperation(args[0], args[1]);
+                    RunRestoreOperation(args[1], args[2]);
                     break;
                 case "debug":
                     RunInDebugMode(anonymousUserAccessMode: null, ravenConfiguration: new RavenConfiguration());
@@ -85,7 +93,6 @@ namespace Raven.Server
                     RunInDebugMode(anonymousUserAccessMode: AnonymousUserAccessMode.All, ravenConfiguration: new RavenConfiguration
                     {
                         RunInMemory = true,
-                        StorageTypeName = typeof(Storage.Managed.TransactionalStorage).AssemblyQualifiedName
                     });
                     break;
 #if DEBUG
@@ -106,7 +113,18 @@ namespace Raven.Server
         {
             try
             {
-                DocumentDatabase.Restore(new RavenConfiguration(), backupLocation, databaseLocation);
+                var ravenConfiguration = new RavenConfiguration();
+                if(File.Exists(Path.Combine(backupLocation, "Raven.ravendb")))
+                {
+                    ravenConfiguration.DefaultStorageTypeName =
+                        "Raven.Storage.Managed.TransactionalStorage, Raven.Storage.Managed";
+                }
+                else if(Directory.Exists(Path.Combine(backupLocation, "new")))
+                {
+                    ravenConfiguration.DefaultStorageTypeName = "Raven.Storage.Esent.TransactionalStorage, Raven.Storage.Esent";
+
+                }
+                DocumentDatabase.Restore(ravenConfiguration, backupLocation, databaseLocation);
             }
             catch (Exception e)
             {
@@ -156,18 +174,9 @@ namespace Raven.Server
 
         private static void RunInDebugMode(AnonymousUserAccessMode? anonymousUserAccessMode, RavenConfiguration ravenConfiguration)
         {
-			var consoleAppender = new ConsoleAppender
-			{
-				Layout = new PatternLayout(PatternLayout.DefaultConversionPattern),
-			};
-			consoleAppender.AddFilter(new LoggerMatchFilter
-			{
-				AcceptOnMatch = true,
-				LoggerToMatch = typeof(HttpServer).FullName
-			});
-			consoleAppender.AddFilter(new DenyAllFilter());
-			BasicConfigurator.Configure(consoleAppender);
-            NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Port);
+        	ConfigureDebugLogging();
+
+        	NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Port);
             if (anonymousUserAccessMode.HasValue)
                 ravenConfiguration.AnonymousUserAccessMode = anonymousUserAccessMode.Value;
             while (RunServer(ravenConfiguration))
@@ -176,9 +185,42 @@ namespace Raven.Server
             }
         }
 
-        private static bool RunServer(RavenConfiguration ravenConfiguration)
+    	private static void ConfigureDebugLogging()
+    	{
+			if (File.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "log4net.config")))
+				return;// that overrides the default config
+
+			var loggerRepository = LogManager.GetRepository(typeof(HttpServer).Assembly);
+			
+			var patternLayout = new PatternLayout(PatternLayout.DefaultConversionPattern);
+    		var consoleAppender = new ConsoleAppender
+    		                      	{
+    		                      		Layout = patternLayout,
+    		                      	};
+    		consoleAppender.ActivateOptions();
+    		((Logger)loggerRepository.GetLogger(typeof(HttpServer).FullName)).AddAppender(consoleAppender);
+    		var fileAppender = new RollingFileAppender
+    		                   	{
+    		                   		AppendToFile = false,
+    		                   		File = "Raven.Server.log",
+    		                   		Layout = patternLayout,
+    		                   		MaxSizeRollBackups = 3,
+    		                   		MaximumFileSize = "1024KB",
+    		                   		StaticLogFileName = true,
+									LockingModel = new FileAppender.MinimalLock()
+    		                   	};
+    		fileAppender.ActivateOptions();
+
+    		var asyncBufferingAppender = new AsyncBufferingAppender();
+    		asyncBufferingAppender.AddAppender(fileAppender);
+
+    		((Hierarchy) loggerRepository).Root.AddAppender(asyncBufferingAppender);
+    		loggerRepository.Configured = true;
+    	}
+
+    	private static bool RunServer(RavenConfiguration ravenConfiguration)
         {
-            using (new RavenDbServer(ravenConfiguration))
+            using (var server = new RavenDbServer(ravenConfiguration))
             {
                 var path = Path.Combine(Environment.CurrentDirectory, "default.raven");
                 if (File.Exists(path))
@@ -187,9 +229,13 @@ namespace Raven.Server
                     Smuggler.Smuggler.ImportData(ravenConfiguration.ServerUrl, path);
                 }
 
-                Console.WriteLine("Raven is ready to process requests.");
-                Console.WriteLine("Data directory: {0}, HostName: {1} Port: {2}", ravenConfiguration.DataDirectory, ravenConfiguration.HostName ?? "<any>", ravenConfiguration.Port);
-                Console.WriteLine("Press the enter key to stop the server or enter 'cls' and then enter to clear the log");
+                Console.WriteLine("Raven is ready to process requests. Build {0}, Version {1}", DocumentDatabase.BuildVersion, DocumentDatabase.ProductVersion);
+				Console.WriteLine("Data directory: {0}", ravenConfiguration.DataDirectory);
+            	Console.WriteLine("HostName: {0} Port: {1}, Storage: {2}", ravenConfiguration.HostName ?? "<any>", 
+					ravenConfiguration.Port, 
+					server.Database.TransactionalStorage.FriendlyName);
+            	Console.WriteLine("Server Url: {0}", ravenConfiguration.ServerUrl);
+                Console.WriteLine("Press <enter> to stop or 'cls' and <enter> to clear the log");
                 while (true)
                 {
                     var readLine = Console.ReadLine() ?? "";

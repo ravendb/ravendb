@@ -1,8 +1,14 @@
+//-----------------------------------------------------------------------
+// <copyright file="ReplicationTask.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using log4net;
@@ -11,6 +17,7 @@ using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
 using Raven.Bundles.Replication.Data;
 using Raven.Database;
+using Raven.Database.Impl;
 using Raven.Database.Plugins;
 using Raven.Database.Json;
 
@@ -72,13 +79,13 @@ namespace Raven.Bundles.Replication.Tasks
                                 if (Thread.VolatileRead(ref holder.Value) == 1)
                                     continue;
                                 Thread.VolatileWrite(ref holder.Value, 1);
-                                var task = new Task<bool>(() => ReplicateTo(destination), TaskCreationOptions.LongRunning);
-                                task.Start();
-                                task.ContinueWith(completedTask =>
-                                {
-                                    if (completedTask.Result) // force re-evaluation of replication again
-                                        docDb.WorkContext.NotifyAboutWork();
-                                });
+                                Task.Factory.StartNew(() => ReplicateTo(destination), TaskCreationOptions.LongRunning)
+                                    .ContinueWith(completedTask =>
+                                    {
+                                        if (completedTask.Result) // force re-evaluation of replication again
+                                            docDb.WorkContext.NotifyAboutWork();
+                                    });
+                               
                             }
                         }
                     }
@@ -151,13 +158,26 @@ namespace Raven.Bundles.Replication.Tasks
                         return false;
                     }
 
-                    if (ReplicateDocuments(destination, sourceReplicationInformation) == false)
-                        return false;
+                    bool? replicated = null;
+                    switch (ReplicateDocuments(destination, sourceReplicationInformation))
+                    {
+                        case true:
+                            replicated = true;
+                            break;
+                        case false:
+                            return false;
+                    }
 
-                    if (ReplicateAttachments(destination, sourceReplicationInformation) == false)
-                        return false;
+                    switch (ReplicateAttachments(destination, sourceReplicationInformation))
+                    {
+                        case true:
+                            replicated = true;
+                            break;
+                        case false:
+                            return false;
+                    }
 
-                    return true;
+                    return replicated ?? false;
                 }
             }
             finally 
@@ -283,10 +303,11 @@ namespace Raven.Bundles.Replication.Tasks
             {
                 var request = (HttpWebRequest)WebRequest.Create(destination + "/replication/replicateDocs?from=" + docDb.Configuration.ServerUrl);
                 request.UseDefaultCredentials = true;
+            	request.ContentType = "application/json; charset=utf-8";
                 request.Credentials = CredentialCache.DefaultNetworkCredentials;
                 request.Method = "POST";
                 using (var stream = request.GetRequestStream())
-                using (var streamWriter = new StreamWriter(stream))
+                using (var streamWriter = new StreamWriter(stream, Encoding.UTF8))
                 {
                     jsonDocuments.WriteTo(new JsonTextWriter(streamWriter));
                     streamWriter.Flush();
@@ -330,10 +351,16 @@ namespace Raven.Bundles.Replication.Tasks
                 var instanceId = docDb.TransactionalStorage.Id.ToString();
                 docDb.TransactionalStorage.Batch(actions =>
                 {
+                    var docRetr = new DocumentRetriever(actions, Enumerable.Empty<AbstractReadTrigger>());
 					jsonDocuments = new JArray(actions.Documents.GetDocumentsAfter(etag)
                         .Where(x => x.Key.StartsWith("Raven/") == false) // don't replicate system docs
                         .Where(x => x.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource) == instanceId) // only replicate documents created on this instance
                         .Where(x=> x.Metadata[ReplicationConstants.RavenReplicationConflict] == null) // don't replicate conflicted documents, that just propgate the conflict
+                        .Select(x=>
+                        {
+                            docRetr.EnsureIdInMetadata(x);
+                            return x;
+                        })
                         .Take(100)
                         .Select(x => x.ToJson()));
                 });
@@ -347,13 +374,13 @@ namespace Raven.Bundles.Replication.Tasks
 
         private JArray GetAttachments(Guid etag)
         {
-            JArray jsonDocuments = null;
+            JArray jsonAttachments = null;
             try
             {
                 var instanceId = docDb.TransactionalStorage.Id.ToString();
                 docDb.TransactionalStorage.Batch(actions =>
                 {
-                    jsonDocuments = new JArray(actions.Attachments.GetAttachmentsAfter(etag)
+                    jsonAttachments = new JArray(actions.Attachments.GetAttachmentsAfter(etag)
                         .Where(x => x.Key.StartsWith("Raven/") == false) // don't replicate system docs
                         .Where(x => x.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource) == instanceId) // only replicate documents created on this instance
                         .Where(x => x.Metadata[ReplicationConstants.RavenReplicationConflict] == null) // don't replicate conflicted documents, that just propgate the conflict
@@ -371,7 +398,7 @@ namespace Raven.Bundles.Replication.Tasks
             {
                 log.Warn("Could not get documents to replicate after: " + etag, e);
             }
-            return jsonDocuments;
+            return jsonAttachments;
         }
 
         private SourceReplicationInformation GetLastReplicatedEtagFrom(string destination)

@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="ExpressionInfo.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,7 +16,7 @@ namespace Raven.Client.Linq
     /// </summary>
     public class ExpressionInfo
     {
-        /// <summary>
+    	/// <summary>
         /// Gets the full path of the member being referred to by this node
         /// </summary>
         public string Path
@@ -32,12 +37,16 @@ namespace Raven.Client.Linq
         /// <summary>
         /// Creates an ExpressionMemberInfo
         /// </summary>
-        /// <param name="path"></param>
-        /// <param name="type"></param>
-        public ExpressionInfo(string path, Type type)
+        public ExpressionInfo(string path, Type type, bool isNestedPath)
         {
-            this.Path = path;
+        	this.IsNestedPath = isNestedPath;
+        	this.Path = path;
             this.Type = type;
         }
+
+		/// <summary>
+		/// Whatever the expression is of a nested path
+		/// </summary>
+    	public bool IsNestedPath { get; set; }
     }
 }

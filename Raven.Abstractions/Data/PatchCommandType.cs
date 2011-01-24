@@ -1,4 +1,9 @@
-﻿namespace Raven.Database.Json
+//-----------------------------------------------------------------------
+// <copyright file="PatchCommandType.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
+namespace Raven.Database.Json
 {
     /// <summary>
     /// Patch command options

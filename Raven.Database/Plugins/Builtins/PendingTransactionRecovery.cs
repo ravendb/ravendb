@@ -1,12 +1,20 @@
+//-----------------------------------------------------------------------
+// <copyright file="PendingTransactionRecovery.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
 using System.Transactions;
+using log4net;
 using Newtonsoft.Json.Linq;
 
 namespace Raven.Database.Plugins.Builtins
 {
 	public class PendingTransactionRecovery : IStartupTask
 	{
+	    private ILog logger = LogManager.GetLogger(typeof (PendingTransactionRecovery));
+
 		public void Execute(DocumentDatabase database)
 		{
 		    HashSet<Guid> resourceManagersRequiringRecovery =  new HashSet<Guid>();
@@ -28,9 +36,18 @@ namespace Raven.Database.Plugins.Builtins
 					    }
 					    else
                         {
-                            resourceManagersRequiringRecovery.Add(resourceManagerId);
-                            TransactionManager.Reenlist(resourceManagerId, attachment.Data, new InternalEnlistment(database, txId));
-					    }
+                            try
+                            {
+                                TransactionManager.Reenlist(resourceManagerId, attachment.Data, new InternalEnlistment(database, txId));
+                                resourceManagersRequiringRecovery.Add(resourceManagerId);
+                            }
+                            catch (Exception e)
+                            {
+                                logger.Error("Failed to re-enlist in distributed transaction, transaction has been rolled back", e);
+                                actions.Transactions.RollbackTransaction(txId);
+                                actions.Attachments.DeleteAttachment("transactions/recoveryInformation/" + txId, null);
+                            }
+                        }
 					}
 				}
 			});

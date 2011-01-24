@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="General.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -22,7 +27,8 @@ namespace Raven.Storage.Esent.StorageActions
 		private readonly TableColumnsCache tableColumnsCache;
 		private readonly IEnumerable<AbstractDocumentCodec> documentCodecs;
 	    private readonly IUuidGenerator uuidGenerator;
-	    protected readonly JET_DBID dbid;
+		private readonly IDocumentCacher cacher;
+		protected readonly JET_DBID dbid;
 
 		protected readonly ILog logger = LogManager.GetLogger(typeof(DocumentStorageActions));
 		protected readonly Session session;
@@ -40,12 +46,14 @@ namespace Raven.Storage.Esent.StorageActions
             string database, 
             TableColumnsCache tableColumnsCache, 
             IEnumerable<AbstractDocumentCodec> documentCodecs,
-            IUuidGenerator uuidGenerator)
+            IUuidGenerator uuidGenerator,
+			IDocumentCacher cacher)
 		{
 			this.tableColumnsCache = tableColumnsCache;
 			this.documentCodecs = documentCodecs;
 		    this.uuidGenerator = uuidGenerator;
-		    try
+			this.cacher = cacher;
+			try
 			{
 				session = new Session(instance);
 				transaction = new Transaction(session);

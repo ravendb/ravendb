@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="AuthorizationClientExtensions.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
@@ -47,7 +52,7 @@ namespace Raven.Client.Authorization
                 where OperationMatches(permission.Operation, operation)
                 select permission;
 
-            session.Load<AuthorizationRole>(user.Roles.Where(roleId=>session.IsLoaded(roleId) == false));
+            session.Load<AuthorizationRole>(user.Roles.Where(roleId=>session.Advanced.IsLoaded(roleId) == false));
 
             permissions = permissions.Concat(
                 from roleId in user.Roles

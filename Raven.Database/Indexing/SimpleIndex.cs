@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="SimpleIndex.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -9,6 +14,7 @@ using Lucene.Net.Store;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
+using Raven.Database.Linq.PrivateExtensions;
 
 namespace Raven.Database.Indexing
 {
@@ -24,7 +30,7 @@ namespace Raven.Database.Indexing
         {
             actions.Indexing.SetCurrentIndexStatsTo(name);
             var count = 0;
-            Write(context, indexWriter =>
+            Write(context, (indexWriter, analyzer) =>
             {
                 bool madeChanges = false;
                 PropertyDescriptorCollection properties = null;
@@ -57,34 +63,34 @@ namespace Raven.Database.Indexing
                 {
                     count++;
 
-                    string newDocId;
-                    IEnumerable<AbstractField> fields;
+                    IndexingResult indexingResult;
                     if (doc is DynamicJsonObject)
-                        fields = ExtractIndexDataFromDocument((DynamicJsonObject)doc, out newDocId);
+                        indexingResult = ExtractIndexDataFromDocument((DynamicJsonObject)doc);
                     else
-                        fields = ExtractIndexDataFromDocument(properties, doc, out newDocId);
+                        indexingResult = ExtractIndexDataFromDocument(properties, doc);
 
-                    if (newDocId != null)
+                    if (indexingResult.NewDocId != null && indexingResult.ShouldSkip == false)
                     {
                         var luceneDoc = new Document();
-                        luceneDoc.Add(new Field("__document_id", newDocId.ToLowerInvariant(), Field.Store.YES, Field.Index.NOT_ANALYZED));
+                        luceneDoc.Add(new Field("__document_id", indexingResult.NewDocId.ToLowerInvariant(), Field.Store.YES,
+                                                Field.Index.NOT_ANALYZED));
 
                         madeChanges = true;
-                        CopyFieldsToDocument(luceneDoc, fields);
+                        CopyFieldsToDocument(luceneDoc, indexingResult.Fields);
                         batchers.ApplyAndIgnoreAllErrors(
                             exception =>
                             {
                                 logIndexing.WarnFormat(exception,
                                                        "Error when executed OnIndexEntryCreated trigger for index '{0}', key: '{1}'",
-                                                       name, newDocId);
+                                                       name, indexingResult.NewDocId);
                                 context.AddError(name,
-                                            newDocId,
-                                            exception.Message
-                               );
+                                                 indexingResult.NewDocId,
+                                                 exception.Message
+                                    );
                             },
-                            trigger => trigger.OnIndexEntryCreated(name, newDocId, luceneDoc));
+                            trigger => trigger.OnIndexEntryCreated(name, indexingResult.NewDocId, luceneDoc));
                         logIndexing.DebugFormat("Index '{0}' resulted in: {1}", name, luceneDoc);
-                        indexWriter.AddDocument(luceneDoc);
+                        AddDocumentToIndex(indexWriter, luceneDoc, analyzer);
                     }
 
                     actions.Indexing.IncrementSuccessIndexing();
@@ -101,21 +107,39 @@ namespace Raven.Database.Indexing
             logIndexing.DebugFormat("Indexed {0} documents for {1}", count, name);
         }
 
-        private IEnumerable<AbstractField> ExtractIndexDataFromDocument(DynamicJsonObject dynamicJsonObject, out string newDocId)
+        private class IndexingResult
         {
-            newDocId = dynamicJsonObject.GetDocumentId();
-            return AnonymousObjectToLuceneDocumentConverter.Index(dynamicJsonObject.Inner, indexDefinition,
-                                                                  Field.Store.NO);
+            public string NewDocId;
+            public IEnumerable<AbstractField> Fields;
+            public bool ShouldSkip;
         }
 
-        private IEnumerable<AbstractField> ExtractIndexDataFromDocument(PropertyDescriptorCollection properties, object doc, out string newDocId)
+        private IndexingResult ExtractIndexDataFromDocument(DynamicJsonObject dynamicJsonObject)
+        {
+        	var newDocId = dynamicJsonObject.GetDocumentId();
+        	return new IndexingResult
+            {
+                Fields = AnonymousObjectToLuceneDocumentConverter.Index(dynamicJsonObject.Inner, indexDefinition,
+                                                                  Field.Store.NO),
+                NewDocId = newDocId is DynamicNullObject ? null : (string)newDocId,
+                ShouldSkip = false
+            };
+        }
+
+    	private IndexingResult ExtractIndexDataFromDocument(PropertyDescriptorCollection properties, object doc)
         {
             if (properties == null)
             {
                 properties = TypeDescriptor.GetProperties(doc);
             }
-            newDocId = properties.Find("__document_id", false).GetValue(doc) as string;
-            return AnonymousObjectToLuceneDocumentConverter.Index(doc, properties, indexDefinition, Field.Store.YES);
+            var abstractFields = AnonymousObjectToLuceneDocumentConverter.Index(doc, properties, indexDefinition, Field.Store.NO).ToList();
+            return new IndexingResult()
+            {
+                Fields = abstractFields,
+                NewDocId = properties.Find("__document_id", false).GetValue(doc) as string,
+                ShouldSkip = properties.Count > 1  // we always have at least __document_id
+                            && abstractFields.Count == 0
+            };
         }
 
         private static void CopyFieldsToDocument(Document luceneDoc, IEnumerable<AbstractField> fields)
@@ -128,7 +152,7 @@ namespace Raven.Database.Indexing
 
         public override void Remove(string[] keys, WorkContext context)
         {
-            Write(context, writer =>
+            Write(context, (writer, analyzer) =>
             {
                 if (logIndexing.IsDebugEnabled)
                 {

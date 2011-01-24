@@ -1,3 +1,9 @@
+//-----------------------------------------------------------------------
+// <copyright file="WebResponseExtensions.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
+#if !SILVERLIGHT
 using System.IO;
 using System.IO.Compression;
 using System.Net;
@@ -26,3 +32,4 @@ namespace Raven.Client.Client
 		}
 	}
 }
+#endif

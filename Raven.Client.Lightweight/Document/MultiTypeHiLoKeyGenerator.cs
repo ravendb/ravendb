@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="MultiTypeHiLoKeyGenerator.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System.Collections.Generic;
 
 namespace Raven.Client.Document
@@ -31,7 +36,10 @@ namespace Raven.Client.Document
 		/// <returns></returns>
         public string GenerateDocumentKey(DocumentConvention conventions, object entity)
         {
-            var tag = conventions.GetTypeTagName(entity.GetType()).ToLowerInvariant();
+		    var typeTagName = conventions.GetTypeTagName(entity.GetType());
+            if (string.IsNullOrEmpty(typeTagName)) //ignore empty tags
+                return null; 
+		    var tag = typeTagName.ToLowerInvariant();
             HiLoKeyGenerator value;
             if (keyGeneratorsByTag.TryGetValue(tag, out value))
 				return value.GenerateDocumentKey(conventions, entity);

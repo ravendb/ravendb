@@ -1,10 +1,17 @@
+//-----------------------------------------------------------------------
+// <copyright file="ShardedDocumentSession.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Net;
-using System.Runtime.InteropServices.ComTypes;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Client;
+#if !NET_3_5
+using Raven.Client.Client.Async;
+#endif
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
 using Raven.Client.Indexes;
@@ -16,10 +23,11 @@ using Raven.Http.Exceptions;
 
 namespace Raven.Client.Shard
 {
+#if !SILVERLIGHT
 	/// <summary>
 	/// Implements Unit of Work for accessing a set of sharded RavenDB servers
 	/// </summary>
-    public class ShardedDocumentSession : IDocumentSession, ISyncAdvancedSessionOperation
+	public class ShardedDocumentSession : IDocumentSession, ISyncAdvancedSessionOperation
 	{
 		/// <summary>
 		/// Clears this instance.
@@ -29,7 +37,7 @@ namespace Raven.Client.Shard
 		{
 			foreach (var shardSession in shardSessions)
 			{
-                shardSession.Advanced.Clear();
+				shardSession.Advanced.Clear();
 			}
 		}
 
@@ -43,7 +51,7 @@ namespace Raven.Client.Shard
 		{
 			get
 			{
-                return shardSessions.All(x => x.Advanced.UseOptimisticConcurrency);
+				return shardSessions.All(x => x.Advanced.UseOptimisticConcurrency);
 			}
 			set
 			{
@@ -67,12 +75,12 @@ namespace Raven.Client.Shard
 		/// </value>
 		public bool AllowNonAuthoritiveInformation
 		{
-            get { return shardSessions.First().Advanced.AllowNonAuthoritiveInformation; }
+			get { return shardSessions.First().Advanced.AllowNonAuthoritiveInformation; }
 			set
 			{
 				foreach (var documentSession in shardSessions)
 				{
-                    documentSession.Advanced.AllowNonAuthoritiveInformation = value;
+					documentSession.Advanced.AllowNonAuthoritiveInformation = value;
 				}
 			}
 		}
@@ -83,12 +91,12 @@ namespace Raven.Client.Shard
 		/// <value></value>
 		public TimeSpan NonAuthoritiveInformationTimeout
 		{
-            get { return shardSessions.First().Advanced.NonAuthoritiveInformationTimeout; }
+			get { return shardSessions.First().Advanced.NonAuthoritiveInformationTimeout; }
 			set
 			{
 				foreach (var documentSession in shardSessions)
 				{
-                    documentSession.Advanced.NonAuthoritiveInformationTimeout = value;
+					documentSession.Advanced.NonAuthoritiveInformationTimeout = value;
 				}
 			}
 		}
@@ -99,7 +107,7 @@ namespace Raven.Client.Shard
 		/// <value></value>
 		public int NumberOfRequests
 		{
-            get { return shardSessions.Sum(x => x.Advanced.NumberOfRequests); }
+			get { return shardSessions.Sum(x => x.Advanced.NumberOfRequests); }
 		}
 
 		/// <summary>
@@ -110,7 +118,12 @@ namespace Raven.Client.Shard
 		/// Occurs when an entity is converted to a document and metadata.
 		/// Changes made to the document / metadata instances passed to this event will be persisted.
 		/// </summary>
-	    public event EntityToDocument OnEntityConverted;
+		public event EntityToDocument OnEntityConverted;
+
+		/// <summary>
+		/// Occurs when a document and metadata are converted to an entity
+		/// </summary>
+		public event DocumentToEntity OnDocumentConverted;
 
 		/// <summary>
 		/// Gets the metadata for the specified entity.
@@ -118,11 +131,11 @@ namespace Raven.Client.Shard
 		/// <typeparam name="T"></typeparam>
 		/// <param name="instance">The instance.</param>
 		/// <returns></returns>
-	    public JObject GetMetadataFor<T>(T instance)
-	    {
-	        var shardIds = shardStrategy.ShardSelectionStrategy.ShardIdForExistingObject(instance);
-            return GetSingleShardSession(shardIds).Advanced.GetMetadataFor(instance);
-	    }
+		public JObject GetMetadataFor<T>(T instance)
+		{
+			var shardIds = shardStrategy.ShardSelectionStrategy.ShardIdForExistingObject(instance);
+			return GetSingleShardSession(shardIds).Advanced.GetMetadataFor(instance);
+		}
 
 		/// <summary>
 		/// Gets the document id.
@@ -132,7 +145,7 @@ namespace Raven.Client.Shard
 		public string GetDocumentId(object instance)
 		{
 			var shardIds = shardStrategy.ShardSelectionStrategy.ShardIdForExistingObject(instance);
-            return GetSingleShardSession(shardIds).Advanced.GetDocumentId(instance);
+			return GetSingleShardSession(shardIds).Advanced.GetDocumentId(instance);
 		}
 
 		/// <summary>
@@ -143,7 +156,7 @@ namespace Raven.Client.Shard
 		{
 			get
 			{
-                return shardSessions.Any(x => x.Advanced.HasChanges);
+				return shardSessions.Any(x => x.Advanced.HasChanges);
 			}
 		}
 
@@ -158,7 +171,7 @@ namespace Raven.Client.Shard
 		{
 			var shardIds = shardStrategy.ShardSelectionStrategy.ShardIdForExistingObject(entity);
 
-            return GetSingleShardSession(shardIds).Advanced.HasChanged(entity);
+			return GetSingleShardSession(shardIds).Advanced.HasChanged(entity);
 		}
 
 		/// <summary>
@@ -173,8 +186,9 @@ namespace Raven.Client.Shard
 
 			foreach (var shardSession in shardSessions)
 			{
-                shardSession.Advanced.Stored += Stored;
-                shardSession.Advanced.OnEntityConverted += OnEntityConverted;
+				shardSession.Advanced.Stored += Stored;
+				shardSession.Advanced.OnEntityConverted += OnEntityConverted;
+				shardSession.Advanced.OnDocumentConverted += OnDocumentConverted;
 			}
 		}
 
@@ -189,6 +203,17 @@ namespace Raven.Client.Shard
 		{
 			get { throw new NotSupportedException("You cannot ask a sharded session for its DatabaseCommands, internal sharded session each have diffeernt DatabaseCommands"); }
 		}
+
+#if !NET_3_5
+		/// <summary>
+		/// Gets the async database commands.
+		/// </summary>
+		/// <value>The async database commands.</value>
+		public IAsyncDatabaseCommands AsyncDatabaseCommands
+		{
+			get { throw new NotSupportedException("You cannot ask a sharded session for its AsyncDatabaseCommands, internal sharded session each have diffeernt AsyncDatabaseCommands"); }
+		}
+#endif
 
 		/// <summary>
 		/// Loads the specified entity with the specified id.
@@ -236,25 +261,25 @@ namespace Raven.Client.Shard
 			return shardStrategy.ShardAccessStrategy.Apply(GetAppropriateShardedSessions<T>(null), sessions => sessions.Load<T>(ids)).ToArray();
 		}
 
-	    /// <summary>
-	    /// Returns whatever a document with the specified id is loaded in the 
-	    /// current session
-	    /// </summary>
-	    public bool IsLoaded(string id)
-	    {
-	        return shardSessions.Any(s => s.IsLoaded(id));
-	    }
+		/// <summary>
+		/// Returns whatever a document with the specified id is loaded in the 
+		/// current session
+		/// </summary>
+		public bool IsLoaded(string id)
+		{
+			return shardSessions.Any(s => s.Advanced.IsLoaded(id));
+		}
 
-	    /// <summary>
-        /// Loads the specified entities with the specified ids.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="ids">The ids.</param>
-        /// <returns></returns>
-        public T[] Load<T>(IEnumerable<string> ids)
-        {
-            return shardStrategy.ShardAccessStrategy.Apply(GetAppropriateShardedSessions<T>(null), sessions => sessions.Load<T>(ids)).ToArray();
-        }
+		/// <summary>
+		/// Loads the specified entities with the specified ids.
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="ids">The ids.</param>
+		/// <returns></returns>
+		public T[] Load<T>(IEnumerable<string> ids)
+		{
+			return shardStrategy.ShardAccessStrategy.Apply(GetAppropriateShardedSessions<T>(null), sessions => sessions.Load<T>(ids)).ToArray();
+		}
 
 		/// <summary>
 		/// Begin a load while including the specified path
@@ -265,16 +290,16 @@ namespace Raven.Client.Shard
 			throw new NotSupportedException("Sharded load queries with include aren't supported currently");
 		}
 
-        /// <summary>
-        /// Begin a load while including the specified path
-        /// </summary>
-        /// <param name="path">The path.</param>
-	    public ILoaderWithInclude<T> Include<T>(Expression<Func<T, object>> path)
-	    {
-            throw new NotSupportedException("Sharded load queries with include aren't supported currently");
-        }
+		/// <summary>
+		/// Begin a load while including the specified path
+		/// </summary>
+		/// <param name="path">The path.</param>
+		public ILoaderWithInclude<T> Include<T>(Expression<Func<T, object>> path)
+		{
+			throw new NotSupportedException("Sharded load queries with include aren't supported currently");
+		}
 
-	    /// <summary>
+		/// <summary>
 		/// Gets the document URL for the specified entity.
 		/// </summary>
 		/// <param name="entity">The entity.</param>
@@ -286,23 +311,23 @@ namespace Raven.Client.Shard
 
 			var shardIds = shardStrategy.ShardSelectionStrategy.ShardIdForExistingObject(entity);
 
-            return GetSingleShardSession(shardIds).Advanced.GetDocumentUrl(entity);
+			return GetSingleShardSession(shardIds).Advanced.GetDocumentUrl(entity);
 		}
 
 
-        /// <summary>
-        /// Get the accessor for advanced operations
-        /// </summary>
-        /// <remarks>
-        /// Those operations are rarely needed, and have been moved to a separate 
-        /// property to avoid cluttering the API
-        /// </remarks>
-	    public ISyncAdvancedSessionOperation Advanced
-	    {
-            get { return this; }
-	    }
+		/// <summary>
+		/// Get the accessor for advanced operations
+		/// </summary>
+		/// <remarks>
+		/// Those operations are rarely needed, and have been moved to a separate 
+		/// property to avoid cluttering the API
+		/// </remarks>
+		public ISyncAdvancedSessionOperation Advanced
+		{
+			get { return this; }
+		}
 
-	    /// <summary>
+		/// <summary>
 		/// Marks the specified entity for deletion. The entity will be deleted when <see cref="IDocumentSession.SaveChanges"/> is called.
 		/// </summary>
 		/// <typeparam name="T"></typeparam>
@@ -323,10 +348,10 @@ namespace Raven.Client.Shard
 		/// <typeparam name="T">The result of the query</typeparam>
 		/// <param name="indexName">Name of the index.</param>
 		/// <returns></returns>
-        public IRavenQueryable<T> Query<T>(string indexName)
-	    {
-	        throw new NotSupportedException("Sharded linq queries aren't supported currently");
-	    }
+		public IRavenQueryable<T> Query<T>(string indexName)
+		{
+			throw new NotSupportedException("Sharded linq queries aren't supported currently");
+		}
 
 		/// <summary>
 		/// Queries the index specified by <typeparamref name="TIndexCreator"/> using Linq.
@@ -345,20 +370,20 @@ namespace Raven.Client.Shard
 		/// <typeparam name="T"></typeparam>
 		/// <param name="entity">The entity.</param>
 		public void Refresh<T>(T entity)
-        {
-            if (ReferenceEquals(entity, null))
-                throw new ArgumentNullException("entity");
+		{
+			if (ReferenceEquals(entity, null))
+				throw new ArgumentNullException("entity");
 
-            var shardIds = shardStrategy.ShardSelectionStrategy.ShardIdForExistingObject(entity);
+			var shardIds = shardStrategy.ShardSelectionStrategy.ShardIdForExistingObject(entity);
 
-            GetSingleShardSession(shardIds).Advanced.Refresh(entity);
-        }
+			GetSingleShardSession(shardIds).Advanced.Refresh(entity);
+		}
 
 		private IDocumentSession GetSingleShardSession(string shardId)
 		{
-            var shardSession = shardSessions.FirstOrDefault(x => x.Advanced.StoreIdentifier == shardId);
+			var shardSession = shardSessions.FirstOrDefault(x => x.Advanced.StoreIdentifier == shardId);
 			if (shardSession == null)
-				throw new ApplicationException("Can't find a shard with identifier: " + shardId);
+				throw new InvalidOperationException("Can't find a shard with identifier: " + shardId);
 			return shardSession;
 		}
 
@@ -370,7 +395,7 @@ namespace Raven.Client.Shard
 		{
 			string shardId = shardStrategy.ShardSelectionStrategy.ShardIdForNewObject(entity);
 			if (String.IsNullOrEmpty(shardId))
-				throw new ApplicationException("Can't find a shard to use for entity: " + entity);
+				throw new InvalidOperationException("Can't find a shard to use for entity: " + entity);
 
 			GetSingleShardSession(shardId).Store(entity);
 		}
@@ -381,10 +406,10 @@ namespace Raven.Client.Shard
 		/// </summary>
 		/// <param name="entity">The entity.</param>
 		/// <returns></returns>
-        public string StoreDynamic(dynamic entity)
-        {
-            return Store(entity);
-        }
+		public string StoreDynamic(dynamic entity)
+		{
+			return Store(entity);
+		}
 #endif
 
 		/// <summary>
@@ -397,9 +422,9 @@ namespace Raven.Client.Shard
 		{
 			string shardId = shardStrategy.ShardSelectionStrategy.ShardIdForExistingObject(entity);
 			if (String.IsNullOrEmpty(shardId))
-				throw new ApplicationException("Can't find a shard to use for entity: " + entity);
+				throw new InvalidOperationException("Can't find a shard to use for entity: " + entity);
 
-            GetSingleShardSession(shardId).Advanced.Evict(entity);
+			GetSingleShardSession(shardId).Advanced.Evict(entity);
 		}
 
 		/// <summary>
@@ -425,17 +450,17 @@ namespace Raven.Client.Shard
 											   GetAppropriateShardedSessions<T>(null));
 		}
 
-        /// <summary>
-        /// Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.
-        /// </summary>
-        /// <typeparam name="T">The result of the query</typeparam>
-        /// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
-        /// <returns></returns>
-        public IDocumentQuery<T> LuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
-        {
-            var index = new TIndexCreator();
-            return LuceneQuery<T>(index.IndexName);
-        }
+		/// <summary>
+		/// Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.
+		/// </summary>
+		/// <typeparam name="T">The result of the query</typeparam>
+		/// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
+		/// <returns></returns>
+		public IDocumentQuery<T> LuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
+		{
+			var index = new TIndexCreator();
+			return LuceneQuery<T>(index.IndexName);
+		}
 
 		private IDocumentSession[] GetAppropriateShardedSessions<T>(string key)
 		{
@@ -443,7 +468,7 @@ namespace Raven.Client.Shard
 				shardStrategy.ShardResolutionStrategy.SelectShardIds(ShardResolutionStrategyData.BuildFrom(typeof(T), key));
 			IDocumentSession[] documentSessions;
 			if (sessionIds != null)
-                documentSessions = shardSessions.Where(session => sessionIds.Contains(session.Advanced.StoreIdentifier)).ToArray();
+				documentSessions = shardSessions.Where(session => sessionIds.Contains(session.Advanced.StoreIdentifier)).ToArray();
 			else
 				documentSessions = shardSessions;
 			return documentSessions;
@@ -475,7 +500,8 @@ namespace Raven.Client.Shard
 
 			//dereference all event listeners
 			Stored = null;
-		    OnEntityConverted = null;
+			OnEntityConverted = null;
+			OnDocumentConverted = null;
 		}
 
 		#endregion
@@ -499,36 +525,37 @@ namespace Raven.Client.Shard
 		/// </summary>
 		/// <value>The max number of requests per session.</value>
 		public int MaxNumberOfRequestsPerSession
-	    {
-            get { return shardSessions.First().Advanced.MaxNumberOfRequestsPerSession; }
-	        set
-	        {
-	            foreach (var documentSession in shardSessions)
-	            {
-                    documentSession.Advanced.MaxNumberOfRequestsPerSession = value;
-	            }
-	        }
-	    }
+		{
+			get { return shardSessions.First().Advanced.MaxNumberOfRequestsPerSession; }
+			set
+			{
+				foreach (var documentSession in shardSessions)
+				{
+					documentSession.Advanced.MaxNumberOfRequestsPerSession = value;
+				}
+			}
+		}
 
-        /// <summary>
-        /// Executes a dynamic query against the RavenDB store
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <returns></returns>
-        public IRavenQueryable<T> Query<T>()
-        {
-            throw new NotSupportedException("Sharded linq queries aren't supported currently");
-        }
+		/// <summary>
+		/// Executes a dynamic query against the RavenDB store
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <returns></returns>
+		public IRavenQueryable<T> Query<T>()
+		{
+			throw new NotSupportedException("Sharded linq queries aren't supported currently");
+		}
 
-        /// <summary>
-        /// Executes a dynamic lucene query against the RavenDB store
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <returns></returns>
-        public IDocumentQuery<T> LuceneQuery<T>()
-        {
+		/// <summary>
+		/// Executes a dynamic lucene query against the RavenDB store
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <returns></returns>
+		public IDocumentQuery<T> LuceneQuery<T>()
+		{
 			return new ShardedDocumentQuery<T>("dynamic",
 											   GetAppropriateShardedSessions<T>(null));		
-        }
-    }
+		}
+	}
+#endif
 }

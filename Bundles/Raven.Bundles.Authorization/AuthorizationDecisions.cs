@@ -1,8 +1,11 @@
+//-----------------------------------------------------------------------
+// <copyright file="AuthorizationDecisions.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Web;
-using System.Web.Caching;
+using System.Runtime.Caching;
 using Newtonsoft.Json.Linq;
 using Raven.Bundles.Authorization.Model;
 using Raven.Database;
@@ -19,17 +22,16 @@ namespace Raven.Bundles.Authorization
 
 		private readonly DocumentDatabase database;
 
-		private readonly Cache cache;
+		private static readonly ObjectCache cache = new MemoryCache(typeof(AuthorizationDecisions).FullName);
 
 		public static void RemoveDocumentFromCache(string document)
 		{
-			HttpRuntime.Cache.Remove(CachePrefix + document);
+			cache.Remove(CachePrefix + document);
 		}
 
-		public AuthorizationDecisions(DocumentDatabase database, Cache cache)
+        public AuthorizationDecisions(DocumentDatabase database)
 		{
 			this.database = database;
-			this.cache = cache;
 		}
 
 		public bool IsAllowed(

@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="HttpContextExtensions.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System.Linq;
 using Raven.Database.Data;
 using Raven.Database.Server.Responders;
@@ -16,7 +21,10 @@ namespace Raven.Database.Extensions
                 Start = context.GetStart(),
                 Cutoff = context.GetCutOff(),
                 PageSize = context.GetPageSize(maxPageSize),
+                SkipTransformResults = context.GetSkipTransformResults(),
                 FieldsToFetch = context.Request.QueryString.GetValues("fetch"),
+				GroupBy = context.Request.QueryString.GetValues("groupBy"),
+				AggregationOperation = context.GetAggregationOperation(),
                 SortedFields = context.Request.QueryString.GetValues("sort")
                     .EmptyIfNull()
                     .Select(x => new SortedField(x))

@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="Post.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 namespace Raven.Sample.ComplexSharding
 {
 	public class Post

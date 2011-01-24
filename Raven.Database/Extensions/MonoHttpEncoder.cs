@@ -1,4 +1,9 @@
-﻿//
+//-----------------------------------------------------------------------
+// <copyright file="MonoHttpEncoder.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
+//
 // Authors:
 //   Patrik Torstensson (Patrik.Torstensson@labs2.com)
 //   Wictor Wilén (decode/encode functions) (wictor@ibizkit.se)

@@ -1,10 +1,14 @@
+//-----------------------------------------------------------------------
+// <copyright file="Reading.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System.Linq;
 using Raven.Bundles.Authorization.Model;
 using Raven.Bundles.Tests.Versioning;
 using Raven.Client.Authorization;
 using Raven.Client.Exceptions;
 using Xunit;
-using Raven.Client;
 
 namespace Raven.Bundles.Tests.Authorization
 {
@@ -34,13 +38,13 @@ namespace Raven.Bundles.Tests.Authorization
 
 			using (var s = store.OpenSession())
 			{
-				s.SecureFor(UserId, "/Company/Bid");
+				s.SecureFor(UserId, "Company/Bid");
 
 				var readVetoException = Assert.Throws<ReadVetoException>(() => s.Load<Company>(company.Id));
 
 				Assert.Equal(readVetoException.Message, @"Document could not be read because of a read veto.
 The read was vetoed by: Raven.Bundles.Authorization.Triggers.AuthorizationReadTrigger
-Veto reason: Could not find any permissions for operation: /Company/Bid on companies/1
+Veto reason: Could not find any permissions for operation: Company/Bid on companies/1
 ");
 			}
 		}
@@ -70,7 +74,7 @@ Veto reason: Could not find any permissions for operation: /Company/Bid on compa
 
 			using (var s = store.OpenSession())
 			{
-				s.SecureFor(UserId, "/Company/Bid");
+				s.SecureFor(UserId, "Company/Bid");
 
 				Assert.NotNull(s.Load<Company>(company.Id));
 			}
@@ -101,7 +105,7 @@ Veto reason: Could not find any permissions for operation: /Company/Bid on compa
 							{
 								User = UserId,
 								Allow = true,
-								Operation = "/Company/Bid"
+								Operation = "Company/Bid"
 							}
 						}
 				});
@@ -111,7 +115,7 @@ Veto reason: Could not find any permissions for operation: /Company/Bid on compa
 
 			using (var s = store.OpenSession())
 			{
-				s.SecureFor(UserId, "/Company/Bid");
+				s.SecureFor(UserId, "Company/Bid");
 
 				Assert.NotNull(s.Load<Company>(company.Id));
 			}
@@ -141,7 +145,7 @@ Veto reason: Could not find any permissions for operation: /Company/Bid on compa
 
 			using (var s = store.OpenSession())
 			{
-				s.SecureFor(UserId, "/Company/Bid");
+				s.SecureFor(UserId, "Company/Bid");
 
                 Assert.Equal(0, s.Advanced.LuceneQuery<Company>()
 									.WaitForNonStaleResults()

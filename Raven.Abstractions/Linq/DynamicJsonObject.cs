@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="DynamicJsonObject.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 #if !NET_3_5
 using System;
 using System.Collections;
@@ -5,6 +10,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Dynamic;
 using System.Linq;
+using System.Linq.Expressions;
 using Newtonsoft.Json.Linq;
 
 namespace Raven.Database.Linq
@@ -12,26 +18,81 @@ namespace Raven.Database.Linq
 	/// <summary>
 	/// A dynamic implementation on top of <see cref="JObject"/>
 	/// </summary>
-	public class DynamicJsonObject : DynamicObject
+	public class DynamicJsonObject : DynamicObject, IEnumerable<object>
 	{
-		private readonly JObject obj;
+		public IEnumerator<dynamic> GetEnumerator()
+		{
+			foreach (var item in Inner)
+			{
+                if(item.Key[0] == '$')
+                    continue;
+
+				yield return new KeyValuePair<string,object>(item.Key, TransformToValue(item.Value));
+			}
+		}
+
+		/// <summary>
+		/// Returns a <see cref="T:System.String"/> that represents the current <see cref="T:System.Object"/>.
+		/// </summary>
+		/// <returns>
+		/// A <see cref="T:System.String"/> that represents the current <see cref="T:System.Object"/>.
+		/// </returns>
+		/// <filterpriority>2</filterpriority>
+		public override string ToString()
+		{
+			return inner.ToString();
+		}
+
+		/// <summary>
+		/// Determines whether the specified <see cref="T:System.Object"/> is equal to the current <see cref="T:System.Object"/>.
+		/// </summary>
+		/// <returns>
+		/// true if the specified <see cref="T:System.Object"/> is equal to the current <see cref="T:System.Object"/>; otherwise, false.
+		/// </returns>
+		/// <param name="other">The <see cref="T:System.Object"/> to compare with the current <see cref="T:System.Object"/>. </param><filterpriority>2</filterpriority>
+		public override bool Equals(object other)
+		{
+			var dynamicJsonObject = other as DynamicJsonObject;
+			if (dynamicJsonObject != null)
+				return new JTokenEqualityComparer().Equals(inner, dynamicJsonObject.inner);
+			return base.Equals(other);
+		}
+
+		/// <summary>
+		/// Serves as a hash function for a particular type. 
+		/// </summary>
+		/// <returns>
+		/// A hash code for the current <see cref="T:System.Object"/>.
+		/// </returns>
+		/// <filterpriority>2</filterpriority>
+		public override int GetHashCode()
+		{
+			return new JTokenEqualityComparer().GetHashCode(inner);
+		}
+
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return GetEnumerator();
+		}
+
+		private readonly JObject inner;
 
 		/// <summary>
 		/// Gets the inner json object
 		/// </summary>
 		/// <value>The inner.</value>
-	    public JObject Inner
-	    {
-	        get { return obj; }
-	    }
+		public JObject Inner
+		{
+			get { return inner; }
+		}
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="DynamicJsonObject"/> class.
 		/// </summary>
-		/// <param name="obj">The obj.</param>
-	    public DynamicJsonObject(JObject obj)
+		/// <param name="inner">The obj.</param>
+		public DynamicJsonObject(JObject inner)
 		{
-			this.obj = obj;
+			this.inner = inner;
 		}
 
 		/// <summary>
@@ -70,9 +131,9 @@ namespace Raven.Database.Linq
 			switch (jToken.Type)
 			{
 				case JTokenType.Object:
-					var jObject = (JObject) jToken;
+					var jObject = (JObject)jToken;
 					var values = jObject.Value<JArray>("$values");
-					if(values != null)
+					if (values != null)
 					{
 						return new DynamicList(values.Select(TransformToValue).ToArray());
 					}
@@ -80,14 +141,14 @@ namespace Raven.Database.Linq
 				case JTokenType.Array:
 					return new DynamicList(jToken.Select(TransformToValue).ToArray());
 				case JTokenType.Date:
-			        return jToken.Value<DateTime>();
-                default:
+					return jToken.Value<DateTime>();
+				default:
 					var value = jToken.Value<object>();
-					if(value is long)
+					if (value is long)
 					{
-						var l = (long) value;
-						if(l > int.MinValue && int.MaxValue > l)
-							return (int) l;
+						var l = (long)value;
+						if (l > int.MinValue && int.MaxValue > l)
+							return (int)l;
 					}
 					return value;
 			}
@@ -105,20 +166,35 @@ namespace Raven.Database.Linq
 				return GetDocumentId();
 			}
 			JToken value;
-			if (obj.TryGetValue(name, out value))
+			if (inner.TryGetValue(name, out value))
 			{
 				return TransformToValue(value);
 			}
-			return null;
+            if(name.StartsWith("_"))
+            {
+                if (inner.TryGetValue(name.Substring(1), out value))
+                {
+                    return TransformToValue(value);
+                } 
+            }
+			if(name == "Id")
+			{
+				return GetDocumentId();
+			}
+			if(name == "Inner")
+			{
+				return Inner;
+			}
+			return new DynamicNullObject();
 		}
 
 		/// <summary>
 		/// Gets the document id.
 		/// </summary>
 		/// <returns></returns>
-	    public string GetDocumentId()
+		public object GetDocumentId()
 		{
-			var metadata = obj["@metadata"];
+			var metadata = inner["@metadata"];
 			if (metadata != null)
 			{
 				var id = metadata["@id"];
@@ -127,7 +203,7 @@ namespace Raven.Database.Linq
 					return id.Value<string>();
 				}
 			}
-			return null;
+			return  inner["__document_id"] ?? (object)new DynamicNullObject();
 		}
 
 		/// <summary>
@@ -154,38 +230,38 @@ namespace Raven.Database.Linq
 			/// </returns>
 			public override bool TryInvokeMember(InvokeMemberBinder binder, object[] args, out object result)
 			{
-			    switch (binder.Name)
-			    {
-                    case "Count":
-                        if(args.Length == 0)
-                        {
-                            result = Count;
-                            return true;
-                        }
-			            result = this.Count((Func<dynamic, bool>)args[0]);
-			            return true;
-			        case "DefaultIfEmpty":
-			            if (inner.Length > 0)
-			                result = this;
-			            else
-			                result = new object[]{null};
-			            return true;
-			    }
-			    return base.TryInvokeMember(binder, args, out result);
+				switch (binder.Name)
+				{
+					case "Count":
+						if (args.Length == 0)
+						{
+							result = Count;
+							return true;
+						}
+						result = Enumerable.Count<dynamic>(this, (Func<dynamic, bool>)args[0]);
+						return true;
+					case "DefaultIfEmpty":
+						if (inner.Length > 0)
+							result = this;
+						else
+							result = new object[] { null };
+						return true;
+				}
+				return base.TryInvokeMember(binder, args, out result);
 			}
 
-		    /// <summary>
+			/// <summary>
 			/// Gets the enumerator.
 			/// </summary>
 			/// <returns></returns>
 			public IEnumerator<object> GetEnumerator()
 			{
-				return ((IEnumerable<object>) inner).GetEnumerator();
+				return ((IEnumerable<object>)inner).GetEnumerator();
 			}
 
 			IEnumerator IEnumerable.GetEnumerator()
 			{
-				return ((IEnumerable) inner).GetEnumerator();
+				return ((IEnumerable)inner).GetEnumerator();
 			}
 
 			/// <summary>
@@ -195,7 +271,7 @@ namespace Raven.Database.Linq
 			/// <param name="index">The index.</param>
 			public void CopyTo(Array array, int index)
 			{
-				((ICollection) inner).CopyTo(array, index);
+				((ICollection)inner).CopyTo(array, index);
 			}
 
 			/// <summary>
@@ -298,6 +374,92 @@ namespace Raven.Database.Linq
 			{
 				get { return inner.Length; }
 			}
+
+			public IEnumerable<dynamic> Select(Func<dynamic,dynamic > func)
+			{
+				return inner.Select(item => func(item));
+			}
+		}
+	}
+
+	public class DynamicNullObject : DynamicObject, IEnumerable<object>
+	{
+		public override string ToString()
+		{
+			return String.Empty;
+		}
+		public override bool TryGetIndex(GetIndexBinder binder, object[] indexes, out object result)
+		{
+			result = this;
+			return true;
+		}
+
+		public override bool TryGetMember(GetMemberBinder binder, out object result)
+		{
+			result = this;
+			return true;
+		}
+
+		public IEnumerator<object> GetEnumerator()
+		{
+			yield break;
+		}
+
+		public override bool TryInvoke(InvokeBinder binder, object[] args, out object result)
+		{
+			result = this;
+			return true;
+		}
+
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return GetEnumerator();
+		}
+
+		// null is false by default
+		public static implicit operator bool (DynamicNullObject o)
+		{
+			return false;
+		}
+
+		public override bool Equals(object obj)
+		{
+			return obj is DynamicNullObject;
+		}
+
+		public override int GetHashCode()
+		{
+			return 0;
+		}
+
+		public static bool operator ==(DynamicNullObject left, object right)
+		{
+			return right is DynamicNullObject || right == null;
+		}
+
+		public static bool operator !=(DynamicNullObject left, object right)
+		{
+			return (right is DynamicNullObject) == false;
+		}
+
+		public static bool operator >(DynamicNullObject left, object right)
+		{
+			return false;
+		}
+
+		public static bool operator <(DynamicNullObject left, object right)
+		{
+			return false;
+		}
+
+		public static bool operator >=(DynamicNullObject left, object right)
+		{
+			return false;
+		}
+
+		public static bool operator <=(DynamicNullObject left, object right)
+		{
+			return false;
 		}
 	}
 }

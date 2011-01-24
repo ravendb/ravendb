@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="HttpServer.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -23,11 +28,12 @@ namespace Raven.Http
         protected readonly IResourceStore DefaultResourceStore;
         protected readonly IRaveHttpnConfiguration DefaultConfiguration;
 
+        private readonly ThreadLocal<string> currentTenantId = new ThreadLocal<string>();
         private readonly ThreadLocal<IResourceStore> currentDatabase = new ThreadLocal<IResourceStore>();
         private readonly ThreadLocal<IRaveHttpnConfiguration> currentConfiguration = new ThreadLocal<IRaveHttpnConfiguration>();
 
         protected readonly ConcurrentDictionary<string, IResourceStore> ResourcesStoresCache =
-            new ConcurrentDictionary<string, IResourceStore>();
+            new ConcurrentDictionary<string, IResourceStore>(StringComparer.InvariantCultureIgnoreCase);
 
         private readonly ConcurrentDictionary<string, DateTime> databaseLastRecentlyUsed = new ConcurrentDictionary<string, DateTime>();
 
@@ -75,7 +81,7 @@ namespace Raven.Http
         public void Dispose()
         {
             databasesCleanupTimer.Dispose();
-            if (listener != null)
+            if (listener != null && listener.IsListening)
                 listener.Stop();
             foreach (var documentDatabase in ResourcesStoresCache)
             {
@@ -193,9 +199,13 @@ namespace Raven.Http
                 if (ravenUiRequest == false)
                 {
                     var curReq = Interlocked.Increment(ref reqNum);
-                    logger.DebugFormat("Request #{0,4:#,0}: {1,-7} - {2,5:#,0} ms - {3} - {4}",
+                    logger.DebugFormat("Request #{0,4:#,0}: {1,-7} - {2,5:#,0} ms - {5,-10} - {3} - {4}",
                                        curReq, ctx.Request.HttpMethod, sw.ElapsedMilliseconds, ctx.Response.StatusCode,
-                                       ctx.Request.Url.PathAndQuery);
+                                       ctx.Request.Url.PathAndQuery,
+                                       currentTenantId.Value);
+
+					ctx.OutputSavedLogItems(logger);
+
                 }
             }
         }
@@ -285,11 +295,10 @@ namespace Raven.Http
                 return false;
 
             SetupRequestToProperDatabase(ctx);
-
             CurrentOperationContext.Headers.Value = ctx.Request.Headers;
             try
             {
-
+                OnDispatchingRequest(ctx);
 
                 if (DefaultConfiguration.HttpCompression)
                     AddHttpCompressionIfClientCanAcceptIt(ctx);
@@ -326,6 +335,8 @@ namespace Raven.Http
             return true;
         }
 
+        protected virtual void OnDispatchingRequest(IHttpContext ctx){}
+
         private void SetupRequestToProperDatabase(IHttpContext ctx)
         {
             var requestUrl = ctx.GetRequestUrl();
@@ -334,19 +345,25 @@ namespace Raven.Http
             IResourceStore resourceStore;
             if (match.Success == false)
             {
+                currentTenantId.Value = "<default>";
                 currentDatabase.Value = DefaultResourceStore;
                 currentConfiguration.Value = DefaultConfiguration;
             } 
-            else if(TryGetOrCreateResourceStore(match.Groups[1].Value, out resourceStore))
-            {
-                databaseLastRecentlyUsed.AddOrUpdate(match.Groups[1].Value, DateTime.Now, (s, time) => DateTime.Now);
-                ctx.AdjustUrl(match.Value);
-                currentDatabase.Value = resourceStore;
-                currentConfiguration.Value = resourceStore.Configuration;
-            }
             else
             {
-                throw new BadRequestException("Could not find a database named: " + match.Groups[1].Value);
+                var tenantId = match.Groups[1].Value;
+                if(TryGetOrCreateResourceStore(tenantId, out resourceStore))
+                {
+                    databaseLastRecentlyUsed.AddOrUpdate(tenantId, DateTime.Now, (s, time) => DateTime.Now);
+                    ctx.AdjustUrl(match.Value);
+                    currentTenantId.Value = tenantId;
+                    currentDatabase.Value = resourceStore;
+                    currentConfiguration.Value = resourceStore.Configuration;
+                }
+                else
+                {
+                    throw new BadRequestException("Could not find a database named: " + tenantId);
+                }
             }
         }
 
@@ -357,7 +374,7 @@ namespace Raven.Http
         {
             if (string.IsNullOrEmpty(DefaultConfiguration.AccessControlAllowOrigin))
                 return;
-            ctx.Response.Headers["Access-Control-Allow-Origin"] = DefaultConfiguration.AccessControlAllowOrigin;
+        	ctx.Response.AddHeader("Access-Control-Allow-Origin", DefaultConfiguration.AccessControlAllowOrigin);
         }
 
         private static void AddHttpCompressionIfClientCanAcceptIt(IHttpContext ctx)
@@ -372,12 +389,12 @@ namespace Raven.Http
             if ((acceptEncoding.IndexOf("gzip", StringComparison.InvariantCultureIgnoreCase) != -1))
             {
                 ctx.SetResponseFilter(s => new GZipStream(s, CompressionMode.Compress, true));
-                ctx.Response.Headers["Content-Encoding"] = "gzip";
+                ctx.Response.AddHeader("Content-Encoding","gzip");
             }
             else if (acceptEncoding.IndexOf("deflate", StringComparison.InvariantCultureIgnoreCase) != -1)
             {
                 ctx.SetResponseFilter(s => new DeflateStream(s, CompressionMode.Compress, true));
-                ctx.Response.Headers["Content-Encoding"] = "deflate";
+            	ctx.Response.AddHeader("Content-Encoding", "deflate");
             }
 
         }

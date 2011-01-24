@@ -1,8 +1,14 @@
-﻿using System;
+//-----------------------------------------------------------------------
+// <copyright file="Program.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Raven.Abstractions.Data;
+using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Database.Indexing;
@@ -21,9 +27,9 @@ namespace Raven.Sample.Suggestions
             {
                 IndexCreation.CreateIndexes(typeof(Users_ByName).Assembly, store);
 
-                using(var session = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
-                    foreach (var name in new []{"Oren Eini", "Ayende Rahien"})
+                    foreach (var name in new[] { "Oren Eini", "Ayende Rahien" })
                     {
                         session.Store(new User
                         {
@@ -41,30 +47,40 @@ namespace Raven.Sample.Suggestions
                         Console.Write("Enter user name: ");
                         var name = Console.ReadLine();
 
-                        var q = from user in session.Query<User>("Users/ByName")
-                                where user.Name == name
-                                select user;
-
-                        var foundUser = q.FirstOrDefault();
-
-                        if(foundUser == null)
-                        {
-                            var suggestionQueryResult = q.Suggest();
-                            Console.WriteLine("Did you mean?");
-                            foreach (var suggestion in suggestionQueryResult.Suggestions)
-                            {
-                                Console.WriteLine("\t{0}", suggestion);
-                            }
-
-                        }
-                        else
-                        {
-                            Console.WriteLine("Found user: {0}", foundUser.Id);
-                        }
+                        PerformQuery(session, name);
                     }
                 }
 
 
+            }
+        }
+
+        private static void PerformQuery(IDocumentSession session, string name)
+        {
+            var q = from user in session.Query<User>("Users/ByName")
+                    where user.Name == name
+                    select user;
+
+            var foundUser = q.FirstOrDefault();
+
+            if(foundUser == null)
+            {
+                var suggestionQueryResult = q.Suggest();
+                if(suggestionQueryResult.Suggestions.Length==1)
+                {
+                    PerformQuery(session, suggestionQueryResult.Suggestions[0]);
+                    return;          
+                }
+                Console.WriteLine("Did you mean?");
+                foreach (var suggestion in suggestionQueryResult.Suggestions)
+                {
+                    Console.WriteLine("\t{0}", suggestion);
+                }
+
+            }
+            else
+            {
+                Console.WriteLine("Found user: {0}", foundUser.Id);
             }
         }
     }

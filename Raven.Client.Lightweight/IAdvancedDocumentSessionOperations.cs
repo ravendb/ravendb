@@ -1,4 +1,9 @@
-﻿using System;
+//-----------------------------------------------------------------------
+// <copyright file="IAdvancedDocumentSessionOperations.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
+using System;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
@@ -11,6 +16,12 @@ namespace Raven.Client
     /// </summary>
     public interface IAdvancedDocumentSessionOperations
     {
+        /// <summary>
+        /// Returns whatever a document with the specified id is loaded in the 
+        /// current session
+        /// </summary>
+        bool IsLoaded(string id);
+
         /// <summary>
         /// Gets the store identifier for this session.
         /// The store identifier is the identifier for the particular RavenDB instance. 
@@ -90,6 +101,11 @@ namespace Raven.Client
         /// Changes made to the document / metadata instances passed to this event will be persisted.
         /// </summary>
         event EntityToDocument OnEntityConverted;
+        
+        /// <summary>
+        /// Occurs when a document and metadata are converted to an entity
+        /// </summary>
+        event DocumentToEntity OnDocumentConverted;
 
         /// <summary>
         /// Gets the metadata for the specified entity.

@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="JsonEnumConverter.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using Newtonsoft.Json;
 
@@ -29,7 +34,7 @@ namespace Raven.Http.Json
 		/// <returns>The object value.</returns>
 		public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
 		{
-			return Enum.Parse(objectType, reader.Value.ToString());
+			return Enum.Parse(objectType, reader.Value.ToString(), true);
 		}
 
 		/// <summary>

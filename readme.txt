@@ -21,15 +21,15 @@ This release contains the following:
 		  or a directory.
 
 /Bundles
-    - Bundles that extend Raven in various ways
-    
+	- Bundles that extend Raven in various ways
+	
 /Samples
-    - The sample applications for Raven
-    * Under each sample application folder there is a "Start Raven.cmd" file which will
-      starts Raven with all the data and indexes required to run the sample successfully.
-    
+	- The sample applications for Raven
+	* Under each sample application folder there is a "Start Raven.cmd" file which will
+	  starts Raven with all the data and indexes required to run the sample successfully.
+	
 /Raven.Smuggler.exe
-    - The Import/Export utility for Raven
+	- The Import/Export utility for Raven
 		  
 You can start the Raven Service by executing /server/raven.server.exe, you can then visit
 http://localhost:8080 for looking at the UI.

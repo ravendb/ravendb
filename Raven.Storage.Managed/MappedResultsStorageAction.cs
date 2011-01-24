@@ -1,4 +1,9 @@
-﻿using System;
+//-----------------------------------------------------------------------
+// <copyright file="MappedResultsStorageAction.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
 using System.IO;
 using Newtonsoft.Json.Bson;
@@ -36,14 +41,19 @@ namespace Raven.Storage.Managed
             }, ms.ToArray());
         }
 
-        public IEnumerable<JObject> GetMappedResults(string view, string reduceKey, byte[] viewAndReduceKeyHashed)
+    	public IEnumerable<JObject> GetMappedResults(params GetMappedResultsParams[] getMappedResultsParams)
+    	{
+    		return getMappedResultsParams.SelectMany(GetMappedResults);
+    	}
+
+    	public IEnumerable<JObject> GetMappedResults(GetMappedResultsParams getMappedResultsParams)
         {
             return storage.MappedResults["ByViewAndReduceKey"].SkipTo(new JObject
             {
-                {"view", view},
-                {"reduceKey", reduceKey}
-            }).TakeWhile(x => StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("view"), view) &&
-                              StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("reduceKey"), reduceKey))
+                {"view", getMappedResultsParams.View},
+                {"reduceKey", getMappedResultsParams.ReduceKey}
+            }).TakeWhile(x => StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("view"), getMappedResultsParams.View) &&
+                              StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("reduceKey"), getMappedResultsParams.ReduceKey))
                 .Select(x =>
                 {
                     var readResult = storage.MappedResults.Read(x);

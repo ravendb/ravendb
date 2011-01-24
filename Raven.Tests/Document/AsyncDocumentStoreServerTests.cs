@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="AsyncDocumentStoreServerTests.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using Raven.Client.Document;
 using Raven.Database.Extensions;
@@ -27,8 +32,8 @@ namespace Raven.Tests.Document
 
 		#endregion
 
-		[Fact]
-		public void Can_insert_sync_and_get_async()
+        [Fact]
+        public void Can_insert_sync_and_get_async()
 		{
 			using (var server = GetNewServer(port, path))
 			{
@@ -44,18 +49,15 @@ namespace Raven.Tests.Document
 
 				using (var session = documentStore.OpenAsyncSession())
 				{
-					var asyncResult = session.BeginLoad(entity.Id, null, null);
-					if (asyncResult.CompletedSynchronously == false)
-						asyncResult.AsyncWaitHandle.WaitOne();
+					var task = session.LoadAsync<Company>(entity.Id);
 
-					var company = session.EndLoad<Company>(asyncResult);
-					Assert.Equal("Async Company", company.Name);
+					Assert.Equal("Async Company", task.Result.Name);
 				}
 			}
 		}
 
-		[Fact]
-		public void Can_insert_async_and_get_sync()
+        [Fact]
+        public void Can_insert_async_and_get_sync()
 		{
 			using (var server = GetNewServer(port, path))
 			{
@@ -66,9 +68,7 @@ namespace Raven.Tests.Document
 				using (var session = documentStore.OpenAsyncSession())
 				{
 					session.Store(entity);
-					var ar = session.BeginSaveChanges(null,null);
-					ar.AsyncWaitHandle.WaitOne();
-					session.EndSaveChanges(ar);
+					session.SaveChangesAsync().Wait();
 				}
 
 				using (var session = documentStore.OpenSession())
@@ -80,7 +80,7 @@ namespace Raven.Tests.Document
 			}
 		}
 
-		[Fact]
+        [Fact]
 		public void Can_insert_async_and_multi_get_async()
 		{
 			using (var server = GetNewServer(port, path))
@@ -94,18 +94,14 @@ namespace Raven.Tests.Document
 				{
 					session.Store(entity1);
 					session.Store(entity2);
-					var ar = session.BeginSaveChanges(null, null);
-					ar.AsyncWaitHandle.WaitOne();
-					session.EndSaveChanges(ar);
+					session.SaveChangesAsync().Wait();
 				}
 
 				using (var session = documentStore.OpenAsyncSession())
 				{
-					var asyncResult = session.BeginMultiLoad(new[]{entity1.Id, entity2.Id}, null,null);
-					asyncResult.AsyncWaitHandle.WaitOne();
-					var companies = session.EndMultiLoad<Company>(asyncResult);
-					Assert.Equal(entity1.Name, companies[0].Name);
-					Assert.Equal(entity2.Name, companies[1].Name);
+					var task = session.MultiLoadAsync<Company>(new[]{entity1.Id, entity2.Id});
+					Assert.Equal(entity1.Name, task.Result[0].Name);
+					Assert.Equal(entity2.Name, task.Result[1].Name);
 				}
 			}
 		}

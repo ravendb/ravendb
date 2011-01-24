@@ -1,4 +1,9 @@
-﻿using System;
+//-----------------------------------------------------------------------
+// <copyright file="IStorageActionsAccessor.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
+using System;
 
 namespace Raven.Database.Storage
 {
@@ -14,5 +19,6 @@ namespace Raven.Database.Storage
         IGeneralStorageActions General { get; }
         IMappedResultsStorageAction MappedResults { get; }
         event Action OnCommit;
+    	bool IsWriteConflict(Exception exception);
     }
 }

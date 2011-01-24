@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="AbstractViewGenerator.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -10,8 +15,13 @@ namespace Raven.Database.Linq
 	public abstract class AbstractViewGenerator
 	{
         private readonly HashSet<string> fields = new HashSet<string>();
+        private bool? containsProjection;
+		private readonly HashSet<string> mapFields = new HashSet<string>();
+		private readonly HashSet<string> reduceFields = new HashSet<string>();
 
-		public IndexingFunc MapDefinition { get; set; }
+    	public int CountOfFields { get { return fields.Count;  } }
+
+    	public IndexingFunc MapDefinition { get; set; }
 		
         public IndexingFunc ReduceDefinition { get; set; }
 
@@ -33,6 +43,19 @@ namespace Raven.Database.Linq
             Indexes = new Dictionary<string, FieldIndexing>();
         }
 
+        protected IEnumerable<dynamic> Project(object self, Func<dynamic, dynamic> func)
+        {
+            if (self == null)
+                yield break;
+            if (self is IEnumerable == false || self is string)
+                throw new InvalidOperationException("Attempted to enumerate over " + self.GetType().Name);
+
+            foreach (var item in ((IEnumerable)self))
+            {
+                yield return func(item);
+            }
+        }
+
 		protected IEnumerable<dynamic> Hierarchy(object source, string name)
 		{
 			var djo = (DynamicJsonObject)source;
@@ -46,14 +69,35 @@ namespace Raven.Database.Linq
 			}
 		}
 
+		public void AddQueryParameterForMap(string field)
+		{
+			mapFields.Add(field);
+		}
+
+    	public void AddQueryParameterForReduce(string field)
+    	{
+    		reduceFields.Add(field);
+    	}
+
         public void AddField(string field)
         {
             fields.Add(field);
         }
 
-        public bool ContainsField(string field)
+		public virtual bool ContainsFieldOnMap(string field)
+		{
+			return mapFields.Contains(field);
+		}
+
+        public virtual bool ContainsField(string field)
         {
-            return fields.Contains(field);
+            if (fields.Contains(field))
+                return true;
+            if (containsProjection == null)
+            {
+                containsProjection = ViewText != null && ViewText.Contains("Project(");
+            }
+            return containsProjection.Value;
         }
 	}
 }

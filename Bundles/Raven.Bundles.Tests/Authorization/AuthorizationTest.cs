@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="AuthorizationTest.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 extern alias database;
 
 using System;
@@ -15,7 +20,7 @@ namespace Raven.Bundles.Tests.Authorization
 {
 	public abstract class AuthorizationTest : IDisposable
 	{
-		protected const string UserId = "/Raven/Authorization/Users/Ayende";
+		protected const string UserId = "Authorization/Users/Ayende";
 		protected DocumentStore store;
 		protected RavenDbServer server;
 

@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="RemoteClientTest.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using System.IO;
 using Raven.Database.Config;
@@ -13,6 +18,18 @@ namespace Raven.Tests
 	{
 		protected const string DbDirectory = @".\TestDb\";
 		protected const string DbName = DbDirectory + @"DocDb.esb";
+
+        protected RavenDbServer GetNewServer()
+        {
+            return
+                new RavenDbServer(new RavenConfiguration
+                {
+                    Port = 8080,
+                    RunInMemory = true,
+                    DataDirectory = "Data",
+                    AnonymousUserAccessMode = AnonymousUserAccessMode.All
+                });
+        }
 
         protected RavenDbServer GetNewServer(int port, string path)
         {
@@ -40,10 +57,15 @@ namespace Raven.Tests
 			{
 			}
 
-            IOExtensions.DeleteDirectory(DbName);
-            IOExtensions.DeleteDirectory(DbDirectory);
-			
-            Directory.CreateDirectory(DbDirectory);
+            ClearDatabaseDirectory();
+
+			Directory.CreateDirectory(DbDirectory);
+		}
+
+		protected void ClearDatabaseDirectory()
+		{
+			IOExtensions.DeleteDirectory(DbName);
+			IOExtensions.DeleteDirectory(DbDirectory);
 		}
 
 		public double Timer(Action action)

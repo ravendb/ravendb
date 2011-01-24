@@ -1,4 +1,10 @@
+//-----------------------------------------------------------------------
+// <copyright file="StorageActionsAccessor.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
+using Microsoft.Isam.Esent.Interop;
 using Raven.Database.Storage;
 using Raven.Storage.Esent.StorageActions;
 
@@ -35,10 +41,10 @@ namespace Raven.Storage.Esent
 			get { return inner; }
 		}
 
-        public IStalenessStorageActions Staleness
-        {
-            get { return inner; }
-        }
+		public IStalenessStorageActions Staleness
+		{
+			get { return inner; }
+		}
 
 		public IAttachmentsStorageActions Attachments
 		{
@@ -64,6 +70,22 @@ namespace Raven.Storage.Esent
 		{
 			add { inner.OnCommit += value; }
 			remove { inner.OnCommit -= value; }
+		}
+
+		public bool IsWriteConflict(Exception exception)
+		{
+			var esentErrorException = exception as EsentErrorException;
+			if (esentErrorException == null)
+				return false;
+			switch (esentErrorException.Error)
+			{
+				case JET_err.WriteConflict:
+				case JET_err.SessionWriteConflict:
+				case JET_err.WriteConflictPrimaryIndex:
+					return true;
+				default:
+					return false;
+			}
 		}
 	}
 }

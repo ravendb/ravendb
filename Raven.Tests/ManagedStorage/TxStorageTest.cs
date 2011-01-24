@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="TxStorageTest.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System.IO;
 using Raven.Database.Config;
 using Raven.Database.Impl;

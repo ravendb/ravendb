@@ -1,9 +1,8 @@
 ﻿Imports Raven.Client.Client
 Imports Raven.Client.Indexes
-Imports Raven.Client.Linq
 Imports Raven.Tests
 Imports Xunit
-Imports Raven.Client.Tests
+Imports Raven.Client.Linq
 
 Public Class LinqQueriesUsingVB
     Inherits LocalClientTest

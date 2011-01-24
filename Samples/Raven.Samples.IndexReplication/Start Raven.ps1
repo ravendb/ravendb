@@ -18,7 +18,7 @@ cp $raven\ICSharpCode.NRefactory.dll .\Server
 cp $raven\Rhino.Licensing.dll .\Server
 cp $raven\Esent.Interop.dll .\Server
 cp $raven\Raven.*.dll .\Server
-
+cp $raven\Spatial.net.dll .\Server
 
 mkdir .\Server\Plugins  -erroraction silentlycontinue
 

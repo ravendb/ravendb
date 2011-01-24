@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="LinqOnDynamic.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -12,7 +17,7 @@ namespace Raven.Database.Linq.PrivateExtensions
 	{
 		private static IEnumerable<dynamic> Select(this object self)
 		{
-			if (self == null)
+			if (self == null || self is DynamicNullObject)
 				yield break;
 			if (self is IEnumerable == false || self is string)
 				throw new InvalidOperationException("Attempted to enumerate over " + self.GetType().Name);
@@ -22,12 +27,12 @@ namespace Raven.Database.Linq.PrivateExtensions
 				yield return item;
 			}
 		}
-
+        
 		public static IEnumerable<dynamic> SelectMany(this object source,
 		                                              Func<dynamic, int, IEnumerable<dynamic>> collectionSelector,
 		                                              Func<dynamic, dynamic, dynamic> resultSelector)
 		{
-			return Enumerable.SelectMany(Select(source), collectionSelector, resultSelector);
+            return Enumerable.SelectMany(Select(source), collectionSelector, resultSelector);
 		}
 
 		public static IEnumerable<dynamic> SelectMany(this object source,
@@ -40,7 +45,7 @@ namespace Raven.Database.Linq.PrivateExtensions
 		public static IEnumerable<dynamic> SelectMany(this object source,
 		                                              Func<dynamic, IEnumerable<dynamic>> selector)
 		{
-			return Select(source).SelectMany<object, object>(selector);
+            return Select(source).SelectMany<object, object>(selector);
 		}
 	}
 }

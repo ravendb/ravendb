@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="Polymorphic.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System.Collections.Generic;
 using Newtonsoft.Json;
 using Xunit;

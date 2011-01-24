@@ -1,3 +1,10 @@
+//-----------------------------------------------------------------------
+// <copyright file="ITranslatorDatabaseAccessor.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
+using System.Collections.Generic;
+
 namespace Raven.Database.Linq
 {
     /// <summary>
@@ -9,6 +16,6 @@ namespace Raven.Database.Linq
         /// <summary>
         /// Returns the document matching this id, if exists, or null if it doesn't
         /// </summary>
-        dynamic Load(string id);
+        dynamic Load(object maybeId);
     }
 }

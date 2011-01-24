@@ -1,7 +1,14 @@
+//-----------------------------------------------------------------------
+// <copyright file="DynamicDocuments.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using Newtonsoft.Json.Linq;
 using Raven.Client.Client;
 using Raven.Database.Extensions;
+using Raven.Database.Linq;
 using Xunit;
 using System.Dynamic;
 using System.IO;
@@ -55,12 +62,12 @@ namespace Raven.Tests.Document
 					Assert.Equal("0772 321123", employeeLoad.Phones.Office);
 					Assert.Contains(123.4D, employeeLoad.Prices);
 					Assert.Contains(123432.54D, employeeLoad.Prices);
-					Assert.Null(employeeLoad.Address);
+					Assert.IsType<DynamicNullObject>(employeeLoad.Address);
 
                     dynamic personLoad = session.Load<object>(idPerson);
 					Assert.Equal("Ellen", personLoad.FirstName);
 					Assert.Equal("Adams", personLoad.LastName);
-					Assert.Null(personLoad.Age);
+                    Assert.IsType<DynamicNullObject>(personLoad.Age);
 
                 }
             }

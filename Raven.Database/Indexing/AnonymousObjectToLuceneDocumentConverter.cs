@@ -1,4 +1,10 @@
+//-----------------------------------------------------------------------
+// <copyright file="AnonymousObjectToLuceneDocumentConverter.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
@@ -48,6 +54,7 @@ namespace Raven.Database.Indexing
 		/// <summary>
 		/// This method generate the fields for indexing documents in lucene from the values.
 		/// Given a name and a value, it has the following behavior:
+		/// * If the value is enumerable, index all the items in the enumerable under the same field name
 		/// * If the value is null, create a single field with the supplied name with the unanalyzed value 'NULL_VALUE'
 		/// * If the value is string or was set to not analyzed, create a single field with the supplied name
 		/// * If the value is date, create a single field with millisecond precision with the supplied name
@@ -57,6 +64,15 @@ namespace Raven.Database.Indexing
 		/// </summary>
 		private static IEnumerable<AbstractField> CreateFields(string name, object value, IndexDefinition indexDefinition, Field.Store defaultStorage)
 		{
+            if(string.IsNullOrWhiteSpace(name))
+                throw new ArgumentException("Field must be not null, not empty and cannot contain whitespace", "name");
+
+            if (char.IsLetter(name[0]) == false &&
+                name[0] != '_')
+            {
+                name = "_" + name;
+            }
+
 			if (value == null)
 			{
 				yield return new Field(name, "NULL_VALUE", indexDefinition.GetStorage(name, defaultStorage),
@@ -64,12 +80,27 @@ namespace Raven.Database.Indexing
 				yield break;
 			}
 
-			var fields = value as IEnumerable<AbstractField>;
-			if(fields != null)
+            if(value is AbstractField)
+            {
+                yield return (AbstractField)value;
+                yield break;
+            }
+
+            if (value is DynamicNullObject)
+            {
+                yield break;
+            }
+
+			var itemsToIndex = value as IEnumerable;
+			if( itemsToIndex != null && ShouldTreatAsEnumerable(itemsToIndex))
 			{
-				foreach (var field in fields)
+                yield return new Field(name + "_IsArray", "true", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
+                foreach (var itemToIndex in itemsToIndex)
 				{
-					yield return field;
+                    foreach (var field in CreateFields(name, itemToIndex, indexDefinition, defaultStorage))
+                    {
+                        yield return field;
+                    }
 				}
 				yield break;
 			}
@@ -154,5 +185,25 @@ namespace Raven.Database.Indexing
 					.SetDoubleValue((double)value);
             }
 		}
+
+	    private static bool ShouldTreatAsEnumerable(IEnumerable itemsToIndex)
+	    {
+            if (itemsToIndex == null)
+                return false;
+
+			if (itemsToIndex is DynamicJsonObject)
+				return false;
+
+            if (itemsToIndex is string)
+                return false;
+
+            if (itemsToIndex is JObject)
+                return false;
+
+            if (itemsToIndex is IDictionary)
+                return false;
+
+	        return true;
+	    }
 	}
 }

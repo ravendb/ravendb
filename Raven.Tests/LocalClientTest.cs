@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="LocalClientTest.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System.IO;
 using System.Reflection;
 using System.Threading;
@@ -17,17 +22,18 @@ namespace Raven.Tests
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
 			path = Path.Combine(path, "TestDb").Substring(6);
 
-            IOExtensions.DeleteDirectory(path);
 
             var documentStore = new EmbeddableDocumentStore()
 			{
-				Configuration = new RavenConfiguration
+				Configuration = 
 				{
 					DataDirectory = path,
-					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true
+                    RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 				}
 
 			};
+			if (documentStore.Configuration.RunInMemory == false)
+				IOExtensions.DeleteDirectory(path);
 			documentStore.Initialize();
 			return documentStore;
 		}

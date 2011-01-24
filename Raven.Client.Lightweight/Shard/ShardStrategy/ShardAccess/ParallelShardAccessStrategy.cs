@@ -1,4 +1,9 @@
-#if !NET_3_5
+//-----------------------------------------------------------------------
+// <copyright file="ParallelShardAccessStrategy.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
+#if !NET_3_5 && !SILVERLIGHT
 
 using System;
 using System.Collections.Concurrent;
@@ -14,8 +19,8 @@ namespace Raven.Client.Shard.ShardStrategy.ShardAccess
 	/// <summary>
 	/// Apply an operation to all the shard session in parallel
 	/// </summary>
-    public class ParallelShardAccessStrategy: IShardAccessStrategy
-    {
+	public class ParallelShardAccessStrategy: IShardAccessStrategy
+	{
 		/// <summary>
 		/// Applies the specified action to all shard sessions in parallel
 		/// </summary>
@@ -23,9 +28,9 @@ namespace Raven.Client.Shard.ShardStrategy.ShardAccess
 		/// <param name="shardSessions">The shard sessions.</param>
 		/// <param name="operation">The operation.</param>
 		/// <returns></returns>
-        public IList<T> Apply<T>(IList<IDocumentSession> shardSessions, Func<IDocumentSession, IList<T>> operation)
-        {
-        	var returnedLists = new IList<T>[shardSessions.Count];
+		public IList<T> Apply<T>(IList<IDocumentSession> shardSessions, Func<IDocumentSession, IList<T>> operation)
+		{
+			var returnedLists = new IList<T>[shardSessions.Count];
 
 			shardSessions
 				.Select((shardSession,i) =>
@@ -38,11 +43,11 @@ namespace Raven.Client.Shard.ShardStrategy.ShardAccess
 				)
 				.WaitAll();
 
-        	return returnedLists
+			return returnedLists
 				.Where(x => x != null)
-        		.SelectMany(x => x)
+				.SelectMany(x => x)
 				.ToArray();
-        }
-    }
+		}
+	}
 }
 #endif

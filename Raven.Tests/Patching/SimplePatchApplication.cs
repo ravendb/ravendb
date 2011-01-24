@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="SimplePatchApplication.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Database.Exceptions;
@@ -47,6 +52,24 @@ namespace Raven.Tests.Patching
 			Assert.Equal(@"{""title"":""A Blog Post"",""body"":""html markup"",""comments"":[{""author"":""ayende"",""text"":""good post""}],""cmts"":[{""author"":""ayende"",""text"":""good post""}]}",
 				patchedDoc.ToString(Formatting.None));
 		}
+        
+        [Fact]
+		public void PropertyCopyNonExistingProperty()
+		{
+			var patchedDoc = new JsonPatcher(doc).Apply(
+				new[]
+        		{
+        			new PatchRequest
+        			{
+        				Type = PatchCommandType.Copy,
+        				Name = "non-existing",
+        				Value = new JValue("irrelevant")
+        			},
+        		});
+
+			Assert.Equal(@"{""title"":""A Blog Post"",""body"":""html markup"",""comments"":[{""author"":""ayende"",""text"":""good post""}]}",
+				patchedDoc.ToString(Formatting.None));
+		}
 
 		[Fact]
 		public void PropertyMove()
@@ -63,6 +86,24 @@ namespace Raven.Tests.Patching
         		});
 
 			Assert.Equal(@"{""title"":""A Blog Post"",""body"":""html markup"",""cmts"":[{""author"":""ayende"",""text"":""good post""}]}",
+				patchedDoc.ToString(Formatting.None));
+		}
+        
+        [Fact]
+		public void PropertyRenameNonExistingProperty()
+		{
+			var patchedDoc = new JsonPatcher(doc).Apply(
+				new[]
+        		{
+        			new PatchRequest
+        			{
+        				Type = PatchCommandType.Rename,
+        				Name = "doesnotexist",
+        				Value = new JValue("irrelevant")
+        			},
+        		});
+
+			Assert.Equal(@"{""title"":""A Blog Post"",""body"":""html markup"",""comments"":[{""author"":""ayende"",""text"":""good post""}]}",
 				patchedDoc.ToString(Formatting.None));
 		}
 
@@ -94,7 +135,25 @@ namespace Raven.Tests.Patching
             Assert.Equal(@"{""title"":""A Blog Post"",""body"":""html markup"",""comments"":[{""author"":""ayende"",""text"":""good post""}],""blog_id"":2}",
                 patchedDoc.ToString(Formatting.None));
         }
+        
+        [Fact]
+        public void PropertyIncrementOnNonExistingProperty()
+        {
+            var patchedDoc = new JsonPatcher(doc).Apply(
+                new[]
+        		{
+        			new PatchRequest
+        			{
+        				Type = PatchCommandType.Inc,
+        				Name = "blog_id",
+        				Value = new JValue(1)
+        			},
+        		});
 
+            Assert.Equal(@"{""title"":""A Blog Post"",""body"":""html markup"",""comments"":[{""author"":""ayende"",""text"":""good post""}],""blog_id"":1}",
+                patchedDoc.ToString(Formatting.None));
+        }
+        
         [Fact]
         public void PropertyAddition_WithConcurrenty_MissingProp()
         {

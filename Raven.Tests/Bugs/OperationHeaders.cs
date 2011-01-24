@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------
+// <copyright file="OperationHeaders.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using System.ComponentModel.Composition.Hosting;
 using System.IO;
@@ -35,7 +40,7 @@ namespace Raven.Tests.Bugs
 		{
             using (var documentStore = new EmbeddableDocumentStore
 			{
-				Configuration = new RavenConfiguration
+				Configuration = 
 				{
 					Catalog =
 						{

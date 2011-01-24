@@ -1,3 +1,9 @@
+//-----------------------------------------------------------------------
+// <copyright file="RavenTransactionAccessor.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
+#if !SILVERLIGHT
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -14,7 +20,18 @@ namespace Raven.Client.Client
 	public static class RavenTransactionAccessor
 	{
 #if !NET_3_5
-		private static readonly ThreadLocal<Stack<TransactionInformation>> currentRavenTransactions = new ThreadLocal<Stack<TransactionInformation>>(() => new Stack<TransactionInformation>());
+		[ThreadStatic]
+		private static Stack<TransactionInformation> currentRavenTransactions;
+
+		private static Stack<TransactionInformation> CurrentRavenTransactions
+		{
+			get
+			{
+				if(currentRavenTransactions == null)
+					currentRavenTransactions =  new Stack<TransactionInformation>();
+				return currentRavenTransactions;
+			}
+		}
 
 		/// <summary>
 		/// Starts a transaction
@@ -32,12 +49,12 @@ namespace Raven.Client.Client
 		/// <returns></returns>
 		public static IDisposable StartTransaction(TimeSpan timeout)
 		{
-			currentRavenTransactions.Value.Push(new TransactionInformation
+			CurrentRavenTransactions.Push(new TransactionInformation
 			{
 				Id = Guid.NewGuid(),
 				Timeout = timeout
 			});
-			return new DisposableAction(() => currentRavenTransactions.Value.Pop());
+			return new DisposableAction(() => CurrentRavenTransactions.Pop());
 		}
 #endif
 		/// <summary>
@@ -47,8 +64,8 @@ namespace Raven.Client.Client
 		public static TransactionInformation GetTransactionInformation()
 		{
 			#if !NET_3_5
-			if (currentRavenTransactions.Value.Count >0)
-				return currentRavenTransactions.Value.Peek();
+			if (CurrentRavenTransactions.Count >0)
+				return CurrentRavenTransactions.Peek();
 			#endif
 			if (Transaction.Current == null)
 				return null;
@@ -60,3 +77,4 @@ namespace Raven.Client.Client
 		}
 	}
 }
+#endif

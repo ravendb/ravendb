@@ -1,4 +1,9 @@
-﻿using System.Collections.Specialized;
+//-----------------------------------------------------------------------
+// <copyright file="IRaveHttpnConfiguration.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
+using System.Collections.Specialized;
 using System.ComponentModel.Composition.Hosting;
 
 namespace Raven.Http

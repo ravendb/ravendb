@@ -1,10 +1,14 @@
+//-----------------------------------------------------------------------
+// <copyright file="IndexStorage.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.ConstrainedExecution;
-using System.Threading;
 using log4net;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Index;
@@ -16,6 +20,7 @@ using Raven.Database.Linq;
 using Raven.Database.Storage;
 using Directory = System.IO.Directory;
 using Version = Lucene.Net.Util.Version;
+using System.ComponentModel.Composition;
 
 namespace Raven.Database.Indexing
 {
@@ -46,9 +51,9 @@ namespace Raven.Database.Indexing
 		        var indexDefinition = indexDefinitionStorage.GetIndexDefinition(indexDirectory);
 		        if (indexDefinition == null)
 		            continue;
-		        indexes.TryAdd(indexDirectory,
-		                       CreateIndexImplementation(indexDirectory, indexDefinition,
-		                                                 OpenOrCreateLuceneDirectory(indexDirectory)));
+				var luceneDirectory = OpenOrCreateLuceneDirectory(IndexDefinitionStorage.FixupIndexName(indexDefinition.Name, path));
+		    	var indexImplementation = CreateIndexImplementation(indexDirectory, indexDefinition, luceneDirectory);
+		    	indexes.TryAdd(indexDirectory, indexImplementation);
 		    }
 		}
 
@@ -74,18 +79,27 @@ namespace Raven.Database.Indexing
             return directory;
 		}
 
-		private Index CreateIndexImplementation(string name, IndexDefinition indexDefinition, Lucene.Net.Store.Directory directory)
+		private Index CreateIndexImplementation(string directoryPath, IndexDefinition indexDefinition, Lucene.Net.Store.Directory directory)
 		{
-		    var viewGenerator = indexDefinitionStorage.GetViewGenerator(name);
-		    return indexDefinition.IsMapReduce
-                ? (Index)new MapReduceIndex(directory, name, indexDefinition, viewGenerator)
-                : new SimpleIndex(directory, name, indexDefinition, viewGenerator);
+		    var viewGenerator = indexDefinitionStorage.GetViewGenerator(indexDefinition.Name);
+			var indexImplementation = indexDefinition.IsMapReduce
+			                          	? (Index)new MapReduceIndex(directory, directoryPath, indexDefinition, viewGenerator)
+			                          	: new SimpleIndex(directory, directoryPath, indexDefinition, viewGenerator);
+			
+			configuration.Container.SatisfyImportsOnce(indexImplementation);
+
+			return indexImplementation;
 		}
 
 		public string[] Indexes
 		{
 			get { return indexes.Keys.ToArray(); }
 		}
+
+        public bool HasIndex(string index)
+        {
+            return indexes.ContainsKey(index);
+        }
 
 		#region IDisposable Members
 
@@ -118,18 +132,33 @@ namespace Raven.Database.Indexing
 			IOExtensions.DeleteDirectory(dirOnDisk);
 		}
 
-		public void CreateIndexImplementation(string name, IndexDefinition indexDefinition)
+		public void CreateIndexImplementation(IndexDefinition indexDefinition)
 		{
-			log.InfoFormat("Creating index {0}", name);
+			var encodedName = IndexDefinitionStorage.FixupIndexName(indexDefinition.Name,path);
+			log.InfoFormat("Creating index {0} with encoded name {1}", indexDefinition.Name, encodedName);
 
-			indexes.AddOrUpdate(name, n =>
+		    AssertAnalyzersValid(indexDefinition);
+
+		    indexes.AddOrUpdate(indexDefinition.Name, n =>
 			{
-				var directory = OpenOrCreateLuceneDirectory(name);
-				return CreateIndexImplementation(name, indexDefinition, directory);
+				var directory = OpenOrCreateLuceneDirectory(encodedName);
+				return CreateIndexImplementation(encodedName, indexDefinition, directory);
 			}, (s, index) => index);
 		}
 
-		public IEnumerable<IndexQueryResult> Query(
+	    private static void AssertAnalyzersValid(IndexDefinition indexDefinition)
+	    {
+	        foreach (var analyzer in from analyzer in indexDefinition.Analyzers
+	                                 let analyzerType = typeof (StandardAnalyzer).Assembly.GetType(analyzer.Value) ?? Type.GetType(analyzer.Value, throwOnError: false)
+	                                 where analyzerType == null
+	                                 select analyzer)
+	        {
+	            throw new ArgumentException("Could not create analyzer for field: " + analyzer.Key +
+	                "' because the type was not found: " + analyzer.Value);
+	        }
+	    }
+
+	    public IEnumerable<IndexQueryResult> Query(
             string index, 
             IndexQuery query, 
             Func<IndexQueryResult, bool> shouldIncludeInResults)
@@ -198,5 +227,13 @@ namespace Raven.Database.Indexing
 
             return result.Searcher;
         }
+
+		public void FlushAllIndexes()
+		{
+			foreach (var value in indexes.Values)
+			{
+				value.Flush();
+			}
+		}
 	}
 }
