@@ -210,5 +210,46 @@
 				Assert.Equal("Async Company #1", query.Result[0].Name);
 			}
 		}
+
+		[Asynchronous]
+		public IEnumerable<Task> Can_perform_an_any()
+		{
+			var dbname = GenerateNewDatabaseName();
+			var documentStore = new DocumentStore { Url = Url + Port };
+			documentStore.Initialize();
+			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+
+			using (var session = documentStore.OpenAsyncSession(dbname))
+			{
+				session.Store(new Order
+				{
+					Id = "orders/1",
+					Lines = new List<OrderLine>{ new OrderLine{Quantity = 1}, new OrderLine{Quantity = 2} }
+				});
+				session.Store(new Order
+				{
+					Id = "orders/2",
+					Lines = new List<OrderLine> { new OrderLine { Quantity = 1 }, new OrderLine { Quantity = 2 } }
+				});
+				session.Store(new Order
+				{
+					Id = "orders/3",
+					Lines = new List<OrderLine> { new OrderLine { Quantity = 1 }, new OrderLine { Quantity = 1 } }
+
+				});
+
+				yield return session.SaveChangesAsync();
+			}
+
+			using (var session = documentStore.OpenAsyncSession(dbname))
+			{
+				var query = session.Query<Order>()
+							.Where( x => x.Lines.Any( line => line.Quantity > 1 ))
+							.ToListAsync();
+				yield return query;
+
+				Assert.Equal(2, query.Result.Count);
+			}
+		}
 	}
 }
