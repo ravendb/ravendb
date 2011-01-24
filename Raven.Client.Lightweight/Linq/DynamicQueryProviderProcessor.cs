@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Linq.Expressions;
 using Raven.Client.Document;
 using Raven.Database.Data;
@@ -22,8 +23,9 @@ namespace Raven.Client.Linq
 			IDocumentQueryGenerator queryGenerator,
 			Action<IDocumentQueryCustomization> customizeQuery, 
 			Action<QueryResult> afterQueryExecuted,
-			string indexName) 
-			: base(queryGenerator, customizeQuery, afterQueryExecuted, indexName)
+			string indexName,
+			HashSet<string> fieldsToFetch) 
+			: base(queryGenerator, customizeQuery, afterQueryExecuted, indexName, fieldsToFetch)
 		{
 
 		}

@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -59,6 +60,11 @@ namespace Raven.Client.Linq
 		}
 
 		/// <summary>
+		/// Set the fields to fetch
+		/// </summary>
+		public HashSet<string> FieldsToFetch { get; private set; }
+
+		/// <summary>
 		/// Change the result type for the query provider
 		/// </summary>
 		public IRavenQueryProvider For<S>()
@@ -93,6 +99,8 @@ namespace Raven.Client.Linq
 #endif
 		)
 		{
+			FieldsToFetch = new HashSet<string>();
+
 			this.queryGenerator = queryGenerator;
 			this.indexName = indexName;
 			this.ravenQueryStatistics = ravenQueryStatistics;
@@ -113,7 +121,7 @@ namespace Raven.Client.Linq
 		/// </returns>
 		public virtual object Execute(Expression expression)
 		{
-			return new RavenQueryProviderProcessor<T>(queryGenerator, customizeQuery, afterQueryExecuted, indexName).Execute(expression);
+			return new RavenQueryProviderProcessor<T>(queryGenerator, customizeQuery, afterQueryExecuted, indexName, FieldsToFetch).Execute(expression);
 		}
 
 		IQueryable<S> IQueryProvider.CreateQuery<S>(Expression expression)

@@ -67,6 +67,7 @@ namespace Raven.Client.Linq
 #endif
 			)
 		{
+			FieldsToFetch = new HashSet<string>();
 			this.queryGenerator = queryGenerator;
 			this.indexName = indexName;
 			this.ravenQueryStatistics = ravenQueryStatistics;
@@ -108,6 +109,11 @@ namespace Raven.Client.Linq
 		}
 
 		/// <summary>
+		/// Set the fields to fetch
+		/// </summary>
+		public HashSet<string> FieldsToFetch { get; private set; }
+
+		/// <summary>
 		/// Executes the query represented by a specified expression tree.
 		/// </summary>
 		/// <param name="expression">An expression tree that represents a LINQ query.</param>
@@ -116,7 +122,7 @@ namespace Raven.Client.Linq
 		/// </returns>
 		public virtual object Execute(Expression expression)
 		{
-			return new DynamicQueryProviderProcessor<T>(queryGenerator, customizeQuery, afterQueryExecuted, indexName).Execute(expression);
+			return new DynamicQueryProviderProcessor<T>(queryGenerator, customizeQuery, afterQueryExecuted, indexName, FieldsToFetch).Execute(expression);
 		}
 
 		IQueryable<S> IQueryProvider.CreateQuery<S>(Expression expression)

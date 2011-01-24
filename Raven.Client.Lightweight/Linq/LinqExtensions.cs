@@ -6,6 +6,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 #if !NET_3_5
 using System.Threading.Tasks;
@@ -31,7 +32,9 @@ namespace Raven.Client.Linq
 		public static IEnumerable<TResult> As<TResult>(this IQueryable queryable)
 		{
 			var results = queryable.Provider.CreateQuery<TResult>(queryable.Expression);
-			((RavenQueryInspector<TResult>)results).Customize(x => x.CreateQueryForSelectedFields<TResult>(null));
+			var ravenQueryInspector = ((RavenQueryInspector<TResult>)results);
+			ravenQueryInspector.FieldsToFetch(typeof(TResult).GetProperties().Select(x => x.Name));
+			ravenQueryInspector.Customize(x => x.CreateQueryForSelectedFields<TResult>(null));
 			return results;
 		}
 
@@ -123,7 +126,7 @@ namespace Raven.Client.Linq
 
 			//TODO: is this the appropriate code for transforming the linq? it feels wrong to me...
 			var provider = (IRavenQueryProvider)source.Provider;
-			var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, inspector.IndexQueried);
+			var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, inspector.IndexQueried, new HashSet<string>());
 			ravenQueryProvider.ProcessExpression(source.Expression);
 			var luceneQuery = ravenQueryProvider.LuceneQuery;
 			
