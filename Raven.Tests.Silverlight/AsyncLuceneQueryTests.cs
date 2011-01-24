@@ -4,6 +4,7 @@
 	using System.Threading.Tasks;
 	using Client.Document;
 	using Client.Extensions;
+	using Entities;
 	using Microsoft.Silverlight.Testing;
 	using Xunit;
 

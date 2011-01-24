@@ -1,15 +1,13 @@
 ﻿namespace Raven.Tests.Silverlight
 {
-	using System;
 	using System.Collections.Generic;
 	using System.Linq;
 	using System.Threading.Tasks;
 	using Client.Document;
 	using Client.Extensions;
 	using Client.Linq;
-	using Database.Data;
-	using Database.Indexing;
 	using Document;
+	using Entities;
 	using Microsoft.Silverlight.Testing;
 	using Microsoft.VisualStudio.TestTools.UnitTesting;
 	using Assert = Xunit.Assert;
@@ -133,6 +131,7 @@
 			{
 				session.Store(new Company { Name = "Async Company #1", Id = "companies/1" });
 				session.Store(new Company { Name = "Async Company #2", Id = "companies/2" });
+				session.Store(new Company { Name = "Different Company", Id = "companies/3" });
 				yield return session.SaveChangesAsync();
 			}
 
@@ -211,30 +210,5 @@
 				Assert.Equal("Async Company #1", query.Result[0].Name);
 			}
 		}
-	}
-
-	public class TheCompanyName
-	{
-		public string Name { get; set; }
-	}
-
-	public class Order
-	{
-		public string Id { get; set; }
-		public string Note { get; set; }
-		public DenormalizedReference Customer { get; set; }
-	}
-
-	public class DenormalizedReference
-	{
-		public string Id { get; set; }
-		public string Name { get; set; }
-	}
-
-	public class Customer
-	{
-		public string Id { get; set; }
-		public string Name { get; set; }
-		public string Email { get; set; }
 	}
 }
