@@ -116,7 +116,17 @@ namespace Raven.Http.Extensions
 			{
 				if (header.Name.StartsWith("@"))
 					continue;
-				context.Response.AddHeader(header.Name, StripQuotesIfNeeded(header.Value.ToString(Formatting.None)));
+
+				var value = StripQuotesIfNeeded(header.Value.ToString(Formatting.None));
+				switch (header.Name)
+				{
+					case "Content-Type":
+						context.Response.ContentType = value;
+						break;
+					default:
+						context.Response.AddHeader(header.Name, value);
+						break;
+				}
 			}
 			if (headers["@Http-Status-Code"] != null)
 			{

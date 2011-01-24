@@ -16,7 +16,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Raven.Munin
 {
-	public class Database : IEnumerable<Table>
+	public class Database : IEnumerable<Table>, IDisposable
 	{
 		private readonly IPersistentSource persistentSource;
 		private readonly List<Table> tables = new List<Table>();
@@ -181,6 +181,8 @@ namespace Raven.Munin
 				return;
 
 			Commit(CurrentTransactionId.Value);
+
+			CurrentTransactionId.Value = Guid.Empty;
 		}
 
 		public void Rollback()
@@ -315,9 +317,14 @@ namespace Raven.Munin
 
 				persistentSource.ReplaceAtomically(tempLog);
 
-				foreach (var command in cmds)
+				using (SuppressTransaction())
 				{
-					tables[command.DictionaryId].UpdateKey(command.Key, command.Position, command.Size);
+					CurrentTransactionId.Value = Guid.NewGuid();
+					foreach (var command in cmds)
+					{
+						tables[command.DictionaryId].UpdateKey(command.Key, command.Position, command.Size);
+						tables[command.DictionaryId].CompleteCommit(CurrentTransactionId.Value);
+					}
 				}
 			});
 		}
@@ -364,6 +371,18 @@ namespace Raven.Munin
 		IEnumerator IEnumerable.GetEnumerator()
 		{
 			return GetEnumerator();
+		}
+
+		/// <summary>
+		/// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+		/// </summary>
+		/// <filterpriority>2</filterpriority>
+		public virtual void Dispose()
+		{
+			foreach (var table in Tables)
+			{
+				table.Dispose();
+			}
 		}
 	}
 }

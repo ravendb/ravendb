@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Document;
 using Raven.Database.Data;
@@ -40,5 +41,10 @@ namespace Raven.Client.Linq
 		/// Change the result type for the query provider
 		/// </summary>
 		IRavenQueryProvider For<S>();
+
+		/// <summary>
+		/// Set the fields to fetch
+		/// </summary>
+		HashSet<string> FieldsToFetch { get; }
 	}
 }

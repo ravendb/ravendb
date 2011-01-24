@@ -8,6 +8,7 @@ namespace Raven.Database.Indexing
 {
 	public class TaskSchedulerWithCustomPriority : TaskScheduler, IDisposable
 	{
+		private readonly int maxThreads;
 		private readonly ThreadPriority _threadPriority;
 		private readonly List<Thread> _threads = new List<Thread>();
 		private BlockingCollection<Task> _tasks = new BlockingCollection<Task>();
@@ -16,26 +17,34 @@ namespace Raven.Database.Indexing
 		{
 			if (maxThreads < 1) throw new ArgumentOutOfRangeException("maxThreads");
 
+			this.maxThreads = maxThreads;
 			_threadPriority = threadPriority;
+		}
 
-			for (var threadNumber = 0; threadNumber < maxThreads; threadNumber++)
+		private void CreateThread()
+		{
+			var thread = new Thread(() =>
 			{
-				var thread = new Thread(() =>
+				foreach (var task in _tasks.GetConsumingEnumerable())
 				{
-					foreach (var task in _tasks.GetConsumingEnumerable())
-					{
-						TryExecuteTask(task);
-					}
-				});
-				thread.IsBackground = true;
-				thread.Priority = _threadPriority;
-				_threads.Add(thread);
-				thread.Start();
-			}
+					TryExecuteTask(task);
+				}
+			})
+			{
+				IsBackground = true, 
+				Priority = _threadPriority
+			};
+			_threads.Add(thread);
+			thread.Start();
 		}
 
 		protected override void QueueTask(Task task)
 		{
+			if(_tasks.Count > _threads.Count * 2 && 
+				_threads.Count < maxThreads)
+			{
+				CreateThread();
+			}
 			_tasks.Add(task);
 		}
 

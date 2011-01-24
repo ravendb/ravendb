@@ -55,6 +55,8 @@ namespace Raven.Storage.Managed
                     idleTimer.Dispose();
                 if (persistenceSource != null)
                     persistenceSource.Dispose();
+				if(tableStroage != null)
+					tableStroage.Dispose();
             }
             finally
             {

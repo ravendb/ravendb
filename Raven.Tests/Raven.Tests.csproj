@@ -131,6 +131,7 @@
     <Compile Include="Bugs\DecimalPrecision.cs" />
     <Compile Include="Bugs\DocumentToJsonAndBackTest.cs" />
     <Compile Include="Bugs\DocumentUrl.cs" />
+    <Compile Include="Bugs\DTC\UsingDTCForUpdates.cs" />
     <Compile Include="Bugs\Entities\CanSaveUpdateAndRead_Local.cs" />
     <Compile Include="Bugs\Entities\CanSaveUpdateAndRead_Remote.cs" />
     <Compile Include="Bugs\Entities\JObjectEntity.cs" />
@@ -163,6 +164,7 @@
     <Compile Include="Bugs\Indexing\MissingAnalyzer.cs" />
     <Compile Include="Bugs\Indexing\RemoteIndexingOnDictionary.cs" />
     <Compile Include="Bugs\Indexing\ThrowingAnalyzer.cs" />
+    <Compile Include="Bugs\Indexing\TransactionIndexByMrn.cs" />
     <Compile Include="Bugs\Indexing\WillGroupValuesUsingComplexValues.cs" />
     <Compile Include="Bugs\Indexing\WiseShrek.cs" />
     <Compile Include="Bugs\IndexNestedFields.cs" />
@@ -207,8 +209,10 @@
     <Compile Include="Bugs\Queries\Projections.cs" />
     <Compile Include="Bugs\Queries\QueryById.cs" />
     <Compile Include="Bugs\Queries\RangeQueries.cs" />
+    <Compile Include="Bugs\Queries\StatsOnDynamicQueries.cs" />
     <Compile Include="Bugs\Queries\TermsLocal.cs" />
     <Compile Include="Bugs\Queries\TermsRemote.cs" />
+    <Compile Include="Bugs\Queries\WithAs.cs" />
     <Compile Include="Bugs\QueryAfterAdHocIndexIsReset.cs" />
     <Compile Include="Bugs\QueryingOnEqualToNull.cs" />
     <Compile Include="Bugs\QueryOptimizer\LinqToQueryParameters.cs" />
@@ -230,6 +234,7 @@
     <Compile Include="Bugs\ReadDataFromServer.cs" />
     <Compile Include="Bugs\ReportQueryCount.cs" />
     <Compile Include="Bugs\ReuseQuery.cs" />
+    <Compile Include="Bugs\SelectManyOnNull.cs" />
     <Compile Include="Bugs\SerializingDates.cs" />
     <Compile Include="Bugs\SerializingEntities.cs" />
     <Compile Include="Bugs\SinglePropertyDocument.cs" />
@@ -251,6 +256,7 @@
     <Compile Include="Bugs\UsingStartsWith.cs" />
     <Compile Include="Bugs\UsingSwedishCollation.cs" />
     <Compile Include="Bugs\Vlko\QueryWithMultipleWhere.cs" />
+    <Compile Include="Bugs\Vlko\Relations.cs" />
     <Compile Include="Bugs\WhenRavenClrTypeNotFound.cs" />
     <Compile Include="Bugs\WhereEntityIs.cs" />
     <Compile Include="Bugs\WillNotFailSystemIfServerIsNotAvailableOnStartup.cs" />

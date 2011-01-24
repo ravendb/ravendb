@@ -5,7 +5,7 @@ using Raven.Abstractions.Data;
 
 namespace Raven.Client
 {
-    /// <summary>
+	/// <summary>
     /// A query against a Raven index
     /// </summary>
     public interface IDocumentQueryBase<T, out TSelf> 
@@ -79,7 +79,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// <summary>
         /// 	Matches exact value
         /// </summary>
-        TSelf WhereEquals(string fieldName, object value, bool isAnalyzed, bool allowWildcards);
+        TSelf WhereEquals(WhereEqualsParams whereEqualsParams);
 
         /// <summary>
         /// 	Matches substrings of the field
