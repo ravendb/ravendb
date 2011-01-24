@@ -155,7 +155,7 @@ namespace Raven.Storage.Managed
 
     	    dataAsJson = memoryStream.ToJObject();
 
-        	storage.SetCachedDocument(key, etag, Tuple.Create(metadata, dataAsJson));
+			storage.SetCachedDocument(key, etag, Tuple.Create(new JObject(metadata), new JObject(dataAsJson)));
         }
 
         public bool DeleteDocument(string key, Guid? etag, out JObject metadata)
