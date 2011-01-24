@@ -24,7 +24,7 @@ namespace Raven.Tests.Bugs.Queries
 				using (var session = store.OpenSession())
 				{
 					var array = session.Query<User>()
-						.As<AgeAndEmail>()
+						.AsProjection<AgeAndEmail>()
 						.ToArray();
 
 					Assert.Equal(1, array.Length);
