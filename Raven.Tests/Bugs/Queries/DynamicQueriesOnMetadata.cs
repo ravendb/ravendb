@@ -40,11 +40,16 @@ namespace Raven.Tests.Bugs.Queries
 		[Fact]
 		public void WillGenerateProperQueryForMetadata()
 		{
-			var mapping = DynamicQueryMapping.Create(new DocumentDatabase(new RavenConfiguration { RunInMemory = true }), "@metadata.Raven-Graph-Type:Edge", null);
+			using (var documentDatabase = new DocumentDatabase(new RavenConfiguration { RunInMemory = true }))
+			{
+				var mapping = DynamicQueryMapping.Create(documentDatabase, "@metadata.Raven-Graph-Type:Edge", null);
 
-			var indexDefinition = mapping.CreateIndexDefinition();
+				var indexDefinition = mapping.CreateIndexDefinition();
 
-			Assert.Equal("from doc in docs\r\nselect new { metadataRavenGraphType = doc[\"@metadata\"][\"Raven-Graph-Type\"] }", indexDefinition.Map);
+				Assert.Equal(
+					"from doc in docs\r\nselect new { metadataRavenGraphType = doc[\"@metadata\"][\"Raven-Graph-Type\"] }",
+					indexDefinition.Map);
+			}
 		}
 	}
 }
