@@ -164,6 +164,7 @@
     <Compile Include="Bugs\Indexing\MissingAnalyzer.cs" />
     <Compile Include="Bugs\Indexing\RemoteIndexingOnDictionary.cs" />
     <Compile Include="Bugs\Indexing\ThrowingAnalyzer.cs" />
+    <Compile Include="Bugs\Indexing\TransactionIndexByMrn.cs" />
     <Compile Include="Bugs\Indexing\WillGroupValuesUsingComplexValues.cs" />
     <Compile Include="Bugs\Indexing\WiseShrek.cs" />
     <Compile Include="Bugs\IndexNestedFields.cs" />
@@ -233,6 +234,7 @@
     <Compile Include="Bugs\ReadDataFromServer.cs" />
     <Compile Include="Bugs\ReportQueryCount.cs" />
     <Compile Include="Bugs\ReuseQuery.cs" />
+    <Compile Include="Bugs\SelectManyOnNull.cs" />
     <Compile Include="Bugs\SerializingDates.cs" />
     <Compile Include="Bugs\SerializingEntities.cs" />
     <Compile Include="Bugs\SinglePropertyDocument.cs" />

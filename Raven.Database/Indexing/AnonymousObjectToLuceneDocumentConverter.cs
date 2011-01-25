@@ -73,7 +73,7 @@ namespace Raven.Database.Indexing
                 name = "_" + name;
             }
 
-			if (value == null)
+			if (value == null || value is DynamicNullObject)
 			{
 				yield return new Field(name, "NULL_VALUE", indexDefinition.GetStorage(name, defaultStorage),
 								 Field.Index.NOT_ANALYZED);
