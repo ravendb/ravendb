@@ -66,9 +66,9 @@ namespace Raven.Tests.Bugs
 
 
                 var tempIndex = store.DocumentDatabase.IndexStorage.Indexes.First(x=>x.StartsWith("Temp"));
-                var results = store.DatabaseCommands.Query(tempIndex,new IndexQuery(), new string[0]);
+                var results = store.OpenSession().Advanced.LuceneQuery<dynamic>(tempIndex).WaitForNonStaleResults().ToArray();
 
-                Assert.Equal(1, results.Results.Count);
+                Assert.Equal(1, results.Length);
             }
         }
     }
