@@ -19,6 +19,10 @@ namespace Raven.Database.Indexing
 
 			this.maxThreads = maxThreads;
 			_threadPriority = threadPriority;
+			for (int i = 0; i < maxThreads; i++)
+			{
+				CreateThread();
+			}
 		}
 
 		private void CreateThread()
@@ -40,11 +44,6 @@ namespace Raven.Database.Indexing
 
 		protected override void QueueTask(Task task)
 		{
-			if(_tasks.Count > _threads.Count * 2 && 
-				_threads.Count < maxThreads)
-			{
-				CreateThread();
-			}
 			_tasks.Add(task);
 		}
 
