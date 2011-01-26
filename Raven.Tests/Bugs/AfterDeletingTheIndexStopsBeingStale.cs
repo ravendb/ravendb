@@ -27,7 +27,7 @@ namespace Raven.Tests.Bugs
 
                 using (var session = store.OpenSession())
                 {
-                    var users = session.Query<User>().Customize(x => x.WaitForNonStaleResults()).ToList();
+					var users = session.Query<User>().Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(20))).ToList();
                     Assert.NotEmpty(users);
                     foreach (var user in users)
                     {

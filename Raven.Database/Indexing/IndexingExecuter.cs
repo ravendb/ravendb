@@ -6,7 +6,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using log4net;
 using Raven.Database.Extensions;
@@ -14,7 +13,6 @@ using Raven.Database.Impl;
 using Raven.Database.Json;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
-using ThreadingTask = System.Threading.Tasks.Task;
 
 namespace Raven.Database.Indexing
 {
