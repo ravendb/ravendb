@@ -37,11 +37,14 @@ namespace Raven.Bundles.Replication.Tasks
 
         private int replicationAttempts;
         private int workCounter;
+    	private int replicationRequestTimeoutInMs;
 
-        public void Execute(DocumentDatabase database)
+    	public void Execute(DocumentDatabase database)
         {
             docDb = database;
-
+    		replicationRequestTimeoutInMs =
+    			docDb.Configuration.GetConfigurationValue<int>("Raven/Replication/ReplicationRequestTimeout") ?? 500;
+			
             new Thread(Execute)
             {
                 IsBackground = true,
@@ -406,7 +409,7 @@ namespace Raven.Bundles.Replication.Tasks
             {
                 var request = (HttpWebRequest)WebRequest.Create(destination + "/replication/lastEtag?from=" + docDb.Configuration.ServerUrl);
                 request.UseDefaultCredentials = true;
-                request.Timeout = 500;
+                request.Timeout = replicationRequestTimeoutInMs;
                 request.Credentials = CredentialCache.DefaultNetworkCredentials;
                 using (var response = request.GetResponse())
                 using (var stream = response.GetResponseStream())
