@@ -133,6 +133,11 @@ namespace Raven.Database.Indexing
 				{
 					jsonDocs = actions.Documents.GetDocumentsAfter(lastIndexedGuidForAllIndexes)
 						.Where(x => x != null)
+						.Select(doc=>
+						{
+							DocumentRetriever.EnsureIdInMetadata(doc);
+							return doc;
+						})
 						.Take(context.Configuration.MaxNumberOfItemsToIndexInSingleBatch) // ensure that we won't go overboard with reading and blow up with OOM
 						.ToArray();
 				});
@@ -140,23 +145,26 @@ namespace Raven.Database.Indexing
 				if (jsonDocs.Length > 0)
 					indexingOp(jsonDocs);
 			}
-			finally 
+			finally
 			{
-				if (jsonDocs != null && jsonDocs.Length != 0)
+				if (jsonDocs != null && jsonDocs.Length > 0)
 				{
+					var last = jsonDocs.Last();
+					var lastEtag = last.Etag;
+					var lastModified = last.LastModified;
+
+					var lastIndexedEtag = new ComparableByteArray(lastEtag.ToByteArray());
 					// whatever we succeeded in indexing or not, we have to update this
 					// because otherwise we keep trying to re-index failed documents
 					transactionalStorage.Batch(actions =>
 					{
-						var last = jsonDocs.Last();
-						var lastIndexedEtag = new ComparableByteArray(last.Etag.ToByteArray());
 						foreach (var indexToWorkOn in indexesToWorkOn)
 						{
 							if (new ComparableByteArray(indexToWorkOn.LastIndexedEtag.ToByteArray()).CompareTo(lastIndexedEtag) > 0)
 								continue;
-							actions.Indexing.UpdateLastIndexed(indexToWorkOn.IndexName, last.Etag, last.LastModified);
+							actions.Indexing.UpdateLastIndexed(indexToWorkOn.IndexName, lastEtag, lastModified);
 						}
-					}); 
+					});
 				}
 			}
 		}
@@ -187,7 +195,6 @@ namespace Raven.Database.Indexing
 				context.IndexStorage.Index(index, viewGenerator,
 					jsonDocs
 					.Select(doc => documentRetriever
-						.EnsureIdInMetadata(doc)
 						.ProcessReadVetoes(doc, null, ReadOperation.Index))
 					.Where(doc => doc != null)
 					.Select(x => JsonToExpando.Convert(x.ToJson())), context, actions, dateTime);
