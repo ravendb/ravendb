@@ -136,47 +136,75 @@ namespace Raven.Client.Linq
 		} 
 #endif
 
+		/// <summary>
+		/// Includes the specified path in the query, loading the document specified in that path
+		/// </summary>
+		/// <param name="path">The path.</param>
 		public static IRavenQueryable<T> Include<T>(this IRavenQueryable<T> source, Expression<Func<T, object>> path)
 		{
 			source.Customize(x => x.Include(path));
 			return source;
 		}
 
+		/// <summary>
+		/// Filters a sequence of values based on a predicate.
+		/// </summary>
 		public static IRavenQueryable<T> Where<T>(this IRavenQueryable<T> source, Expression<Func<T, bool>> prediate)
 		{
 			return (IRavenQueryable<T>)Queryable.Where(source, prediate);
 		}
 
+		/// <summary>
+		/// Filters a sequence of values based on a predicate.
+		/// </summary>
 		public static IRavenQueryable<T> Where<T>(this IRavenQueryable<T> source, Expression<Func<T, int, bool>> prediate)
 		{
 			return (IRavenQueryable<T>)Queryable.Where(source, prediate);
 		}
 
+		/// <summary>
+		/// Sorts the elements of a sequence in ascending order according to a key.
+		/// </summary>
 		public static IRavenQueryable<T> OrderBy<T, TK>(this IRavenQueryable<T> source, Expression<Func<T, TK>> keySelector)
 		{
 			return (IRavenQueryable<T>)Queryable.OrderBy(source, keySelector);
 		}
 
+		/// <summary>
+		/// Sorts the elements of a sequence in ascending order according to a key.
+		/// </summary>
 		public static IRavenQueryable<T> OrderBy<T, TK>(this IRavenQueryable<T> source, Expression<Func<T, TK>> keySelector, IComparer<TK> comparer)
 		{
 			return (IRavenQueryable<T>)Queryable.OrderBy(source, keySelector, comparer);
 		}
 
+		/// <summary>
+		/// Sorts the elements of a sequence in descending order according to a key.
+		/// </summary>
 		public static IRavenQueryable<T> OrderByDescending<T, TK>(this IRavenQueryable<T> source, Expression<Func<T, TK>> keySelector)
 		{
 			return (IRavenQueryable<T>)Queryable.OrderByDescending(source, keySelector);
 		}
 
+		/// <summary>
+		/// Sorts the elements of a sequence in descending order according to a key.
+		/// </summary>
 		public static IRavenQueryable<T> OrderByDescending<T, TK>(this IRavenQueryable<T> source, Expression<Func<T, TK>> keySelector, IComparer<TK> comparer)
 		{
 			return (IRavenQueryable<T>)Queryable.OrderByDescending(source, keySelector, comparer);
 		}
 
+		/// <summary>
+		/// Projects each element of a sequence into a new form.
+		/// </summary>
 		public static IRavenQueryable<TResult> Select<TSource, TResult>(this IRavenQueryable<TSource> source, Expression<Func<TSource, TResult>> selector)
 		{
 			return (IRavenQueryable<TResult>)Queryable.Select(source, selector);
 		}
 
+		/// <summary>
+		/// Projects each element of a sequence into a new form.
+		/// </summary>
 		public static IRavenQueryable<TResult> Select<TSource, TResult>(this IRavenQueryable<TSource> source, Expression<Func<TSource,int, TResult>> selector)
 		{
 			return (IRavenQueryable<TResult>)Queryable.Select(source, selector);
