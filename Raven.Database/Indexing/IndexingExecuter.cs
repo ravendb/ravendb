@@ -93,10 +93,10 @@ namespace Raven.Database.Indexing
 			if (indexesToWorkOn.Count == 0)
 				return false;
 
-			if (context.Configuration.IndexSingleThreaded == false)
-				ExecuteIndexingWorkOnMultipleThreads(indexesToWorkOn);
-			else
+			if(context.Configuration.MaxNumberOfParallelIndexTasks == 1)
 				ExecuteIndexingWorkOnSingleThread(indexesToWorkOn);
+			else
+				ExecuteIndexingWorkOnMultipleThreads(indexesToWorkOn);
 
 			return true;
 		}
@@ -105,6 +105,7 @@ namespace Raven.Database.Indexing
 		{
 			ExecuteIndexingInternal(indexesToWorkOn, documents => Parallel.ForEach(indexesToWorkOn, new ParallelOptions
 			{
+				MaxDegreeOfParallelism = context.Configuration.MaxNumberOfParallelIndexTasks,
 				TaskScheduler = scheduler
 			}, indexToWorkOn => transactionalStorage.Batch(actions => IndexDocuments(actions, indexToWorkOn.IndexName, documents))));
 		}
