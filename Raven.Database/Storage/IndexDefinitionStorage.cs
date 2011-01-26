@@ -212,12 +212,17 @@ namespace Raven.Database.Storage
 
 		public static string FixupIndexName(string index, string path)
 		{
+			string prefix = null; ;
+			if (index.StartsWith("Temp/") || index.StartsWith("Auto/"))
+			{
+				prefix = index.Substring(0, 5);
+			}
 			if (path.Length + index.Length > 230)
 			{
 				using (var md5 = MD5.Create())
 				{
 					var bytes = md5.ComputeHash(Encoding.UTF8.GetBytes(index));
-					return Convert.ToBase64String(bytes);
+					return prefix + Convert.ToBase64String(bytes);
 				}
 			}
 			return index;
