@@ -125,7 +125,7 @@ namespace Raven.Client.Client
         /// </summary>
         protected override void InitializeInternal()
         {
-            if (configuration != null)
+            if (configuration != null && Url == null)
             {
                 DocumentDatabase = new DocumentDatabase(configuration);
                 DocumentDatabase.SpinBackgroundWorkers();
