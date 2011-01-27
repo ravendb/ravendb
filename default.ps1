@@ -70,7 +70,7 @@ task Init -depends Verify40, Clean {
 	}
 		
 	new-item $release_dir -itemType directory -ErrorAction SilentlyContinue
-	new-item $buildartifacts_dir -itemType directory -ErrorAction SilentlyContinue
+	new-item $build_dir -itemType directory -ErrorAction SilentlyContinue
 	
 	copy $tools_dir\xUnit\*.* $build_dir
 	
