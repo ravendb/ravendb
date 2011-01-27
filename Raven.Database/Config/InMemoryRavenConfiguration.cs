@@ -137,7 +137,7 @@ namespace Raven.Database.Config
 					Catalog.Catalogs.Remove(directoryCatalogToRemove);
 				}
 
-				pluginsDirectory = value;
+				pluginsDirectory = value.ToFullPath();
 
 				// add new one
 				if (Directory.Exists(pluginsDirectory))

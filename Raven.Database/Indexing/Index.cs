@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Globalization;
@@ -87,6 +88,10 @@ namespace Raven.Database.Indexing
 			lock (writeLock)
 			{
 				disposed = true;
+				foreach (var indexExtension in indexExtensions)
+				{
+					indexExtension.Value.Dispose();
+				}
 				IndexSearcher _;
 				using (searcher.Use(out _))
 					searcher.MarkForDispoal();
@@ -284,6 +289,7 @@ namespace Raven.Database.Indexing
 		}
 
 		IndexWriter indexWriter;
+		private ConcurrentDictionary<string,IIndexExtension> indexExtensions = new ConcurrentDictionary<string, IIndexExtension>();
 
 		protected void Write(WorkContext context, Func<IndexWriter, Analyzer, bool> action)
 		{
@@ -310,6 +316,10 @@ namespace Raven.Database.Indexing
 					try
 					{
 						shouldRecreateSearcher = action(indexWriter, analyzer);
+						foreach (var indexExtension in indexExtensions.Values)
+						{
+							indexExtension.OnDocumentsIndexed(currentlyIndexDocumented);
+						}
 					}
 					catch (Exception e)
 					{
@@ -319,6 +329,7 @@ namespace Raven.Database.Indexing
 				}
 				finally
 				{
+					currentlyIndexDocumented.Clear();
 					if (analyzer != null)
 						analyzer.Close();
 					foreach (var dispose in toDispose)
@@ -484,7 +495,9 @@ namespace Raven.Database.Indexing
 			#endregion
 		}
 
-		protected void AddDocumentToIndex(IndexWriter indexWriter, Document luceneDoc, Analyzer analyzer)
+		private readonly List<Document> currentlyIndexDocumented = new List<Document>();
+
+		protected void AddDocumentToIndex(IndexWriter currentIndexWriter, Document luceneDoc, Analyzer analyzer)
 		{
 			var newAnalyzer = AnalyzerGenerators.Aggregate(analyzer,
 				(currentAnalyzer, generator) =>
@@ -497,7 +510,10 @@ namespace Raven.Database.Indexing
 
 			try
 			{
-				indexWriter.AddDocument(luceneDoc, newAnalyzer);
+				if(indexExtensions.Count > 0)
+					currentlyIndexDocumented.Add(luceneDoc);
+
+				currentIndexWriter.AddDocument(luceneDoc, newAnalyzer);
 			}
 			finally
 			{
@@ -506,5 +522,16 @@ namespace Raven.Database.Indexing
 			}
 		}
 
+		public IIndexExtension GetExtension(string indexExtensionKey)
+		{
+			IIndexExtension val;
+			indexExtensions.TryGetValue(indexExtensionKey, out val);
+			return val;
+		}
+
+		public void SetExtension(string indexExtensionKey, IIndexExtension extension)
+		{
+			indexExtensions.TryAdd(indexExtensionKey, extension);
+		}
 	}
 }

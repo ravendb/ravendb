@@ -15,5 +15,20 @@ namespace Raven.Tests.Bugs.Embedded
 			embeddableDocumentStore.Initialize();
 			Assert.Null(embeddableDocumentStore.DocumentDatabase);
 		}
+
+		[Fact]
+		public void WontCreateDirectoryWhenSettingStorage()
+		{
+			var embeddableDocumentStore = new EmbeddableDocumentStore()
+			{
+				Configuration =
+					{
+						DefaultStorageTypeName = "munin"
+					},
+				Url = "http://localhost:8080"
+			};
+			embeddableDocumentStore.Initialize();
+			Assert.Null(embeddableDocumentStore.DocumentDatabase);
+		}
 	}
 }
