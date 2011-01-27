@@ -216,6 +216,7 @@
     <Compile Include="Bugs\Queries\WithAs.cs" />
     <Compile Include="Bugs\QueryAfterAdHocIndexIsReset.cs" />
     <Compile Include="Bugs\QueryingOnEqualToNull.cs" />
+    <Compile Include="Bugs\QueryingWithDynamicRavenQueryInspector.cs" />
     <Compile Include="Bugs\QueryOptimizer\LinqToQueryParameters.cs" />
     <Compile Include="Bugs\QueryOptimizer\QueryOptimizeTests.cs" />
     <Compile Include="Bugs\QueryResultCountsWithProjections.cs" />
