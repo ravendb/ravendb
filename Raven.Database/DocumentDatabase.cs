@@ -78,9 +78,17 @@ namespace Raven.Database
 
 		public DocumentDatabase(InMemoryRavenConfiguration configuration)
 		{
-			backgroundTaskScheduler = new TaskSchedulerWithCustomPriority(
-				Math.Min(3, Environment.ProcessorCount), // we need a minimum of three task threads - one for indexing dispatch, one for tasks, one for indexing ops
-				configuration.BackgroundTasksPriority);
+			if (configuration.BackgroundTasksPriority != ThreadPriority.Normal)
+			{
+				backgroundTaskScheduler = new TaskSchedulerWithCustomPriority(
+					Math.Min(3, Environment.ProcessorCount),
+					// we need a minimum of three task threads - one for indexing dispatch, one for tasks, one for indexing ops
+					configuration.BackgroundTasksPriority);
+			}
+			else
+			{
+				backgroundTaskScheduler = TaskScheduler.Current;
+			}
 
 			ExtensionsState = new ConcurrentDictionary<object, object>();
 			Configuration = configuration;
