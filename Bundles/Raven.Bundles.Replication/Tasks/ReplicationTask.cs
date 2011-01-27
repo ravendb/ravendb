@@ -37,11 +37,14 @@ namespace Raven.Bundles.Replication.Tasks
 
         private int replicationAttempts;
         private int workCounter;
+    	private int replicationRequestTimeoutInMs;
 
-        public void Execute(DocumentDatabase database)
+    	public void Execute(DocumentDatabase database)
         {
             docDb = database;
-
+    		replicationRequestTimeoutInMs =
+    			docDb.Configuration.GetConfigurationValue<int>("Raven/Replication/ReplicationRequestTimeout") ?? 500;
+			
             new Thread(Execute)
             {
                 IsBackground = true,
@@ -351,14 +354,13 @@ namespace Raven.Bundles.Replication.Tasks
                 var instanceId = docDb.TransactionalStorage.Id.ToString();
                 docDb.TransactionalStorage.Batch(actions =>
                 {
-                    var docRetr = new DocumentRetriever(actions, Enumerable.Empty<AbstractReadTrigger>());
-					jsonDocuments = new JArray(actions.Documents.GetDocumentsAfter(etag)
+                    jsonDocuments = new JArray(actions.Documents.GetDocumentsAfter(etag)
                         .Where(x => x.Key.StartsWith("Raven/") == false) // don't replicate system docs
                         .Where(x => x.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource) == instanceId) // only replicate documents created on this instance
                         .Where(x=> x.Metadata[ReplicationConstants.RavenReplicationConflict] == null) // don't replicate conflicted documents, that just propgate the conflict
                         .Select(x=>
                         {
-                            docRetr.EnsureIdInMetadata(x);
+							DocumentRetriever.EnsureIdInMetadata(x);
                             return x;
                         })
                         .Take(100)
@@ -407,7 +409,7 @@ namespace Raven.Bundles.Replication.Tasks
             {
                 var request = (HttpWebRequest)WebRequest.Create(destination + "/replication/lastEtag?from=" + docDb.Configuration.ServerUrl);
                 request.UseDefaultCredentials = true;
-                request.Timeout = 500;
+                request.Timeout = replicationRequestTimeoutInMs;
                 request.Credentials = CredentialCache.DefaultNetworkCredentials;
                 using (var response = request.GetResponse())
                 using (var stream = response.GetResponseStream())

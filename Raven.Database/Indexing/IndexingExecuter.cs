@@ -6,7 +6,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using log4net;
 using Raven.Database.Extensions;
@@ -14,22 +13,21 @@ using Raven.Database.Impl;
 using Raven.Database.Json;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
-using ThreadingTask = System.Threading.Tasks.Task;
 
 namespace Raven.Database.Indexing
 {
 	public class IndexingExecuter
 	{
 		private readonly WorkContext context;
-	    private readonly TaskScheduler scheduler;
-	    private readonly ILog log = LogManager.GetLogger(typeof (IndexingExecuter));
+		private readonly TaskScheduler scheduler;
+		private readonly ILog log = LogManager.GetLogger(typeof(IndexingExecuter));
 		private readonly ITransactionalStorage transactionalStorage;
 
 		public IndexingExecuter(ITransactionalStorage transactionalStorage, WorkContext context, TaskScheduler scheduler)
 		{
 			this.transactionalStorage = transactionalStorage;
 			this.context = context;
-		    this.scheduler = scheduler;
+			this.scheduler = scheduler;
 		}
 
 		int workCounter;
@@ -61,7 +59,7 @@ namespace Raven.Database.Indexing
 
 		private void FlushIndexes()
 		{
-			if (lastFlushedWorkCounter == workCounter) 
+			if (lastFlushedWorkCounter == workCounter)
 				return;
 			lastFlushedWorkCounter = workCounter;
 			context.IndexStorage.FlushAllIndexes();
@@ -82,7 +80,7 @@ namespace Raven.Database.Indexing
 									   failureRate.FailureRate);
 						continue;
 					}
-					if (!actions.Staleness.IsIndexStale(indexesStat.Name, null, null)) 
+					if (!actions.Staleness.IsIndexStale(indexesStat.Name, null, null))
 						continue;
 					indexesToWorkOn.Add(new IndexToWorkOn
 					{
@@ -94,36 +92,81 @@ namespace Raven.Database.Indexing
 
 			if (indexesToWorkOn.Count == 0)
 				return false;
-			
-			if(context.Configuration.IndexSingleThreaded == false)
-				ExecuteIndexingWorkOnMultipleThreads(indexesToWorkOn);
-			else
+
+			if(context.Configuration.MaxNumberOfParallelIndexTasks == 1)
 				ExecuteIndexingWorkOnSingleThread(indexesToWorkOn);
+			else
+				ExecuteIndexingWorkOnMultipleThreads(indexesToWorkOn);
 
 			return true;
 		}
 
 		private void ExecuteIndexingWorkOnMultipleThreads(IEnumerable<IndexToWorkOn> indexesToWorkOn)
 		{
-			Parallel.ForEach(indexesToWorkOn, new ParallelOptions
+			ExecuteIndexingInternal(indexesToWorkOn, documents => Parallel.ForEach(indexesToWorkOn, new ParallelOptions
 			{
-				// allow a maximum of 8 indexes to run at a given time, this avoids a potential error
-				// where you have N indexes all trying to read MaxNumberOfItemsToIndexInSignleBatch at the same time
-				// which might lead to an OutOfMemoryException
-				MaxDegreeOfParallelism = 8,
+				MaxDegreeOfParallelism = context.Configuration.MaxNumberOfParallelIndexTasks,
 				TaskScheduler = scheduler
-			}
-				, indexToWorkOn => transactionalStorage.Batch(actions =>
-					IndexDocuments(actions, indexToWorkOn.IndexName, indexToWorkOn.LastIndexedEtag)));
+			}, indexToWorkOn => transactionalStorage.Batch(actions => IndexDocuments(actions, indexToWorkOn.IndexName, documents))));
 		}
 
 		private void ExecuteIndexingWorkOnSingleThread(IEnumerable<IndexToWorkOn> indexesToWorkOn)
 		{
-			foreach (var indexToWorkOn in indexesToWorkOn)
+			ExecuteIndexingInternal(indexesToWorkOn, jsonDocs =>
 			{
-				var copy = indexToWorkOn;
-				transactionalStorage.Batch(
-					actions => IndexDocuments(actions, copy.IndexName, copy.LastIndexedEtag));
+				foreach (var indexToWorkOn in indexesToWorkOn)
+				{
+					var copy = indexToWorkOn;
+					transactionalStorage.Batch(
+						actions => IndexDocuments(actions, copy.IndexName, jsonDocs));
+				}
+			});
+		}
+
+		private void ExecuteIndexingInternal(IEnumerable<IndexToWorkOn> indexesToWorkOn, Action<JsonDocument[]> indexingOp)
+		{
+			var lastIndexedGuidForAllIndexes = indexesToWorkOn.Min(x => new ComparableByteArray(x.LastIndexedEtag.ToByteArray())).ToGuid();
+
+			JsonDocument[] jsonDocs = null;
+			try
+			{
+				transactionalStorage.Batch(actions =>
+				{
+					jsonDocs = actions.Documents.GetDocumentsAfter(lastIndexedGuidForAllIndexes)
+						.Where(x => x != null)
+						.Select(doc=>
+						{
+							DocumentRetriever.EnsureIdInMetadata(doc);
+							return doc;
+						})
+						.Take(context.Configuration.MaxNumberOfItemsToIndexInSingleBatch) // ensure that we won't go overboard with reading and blow up with OOM
+						.ToArray();
+				});
+
+				if (jsonDocs.Length > 0)
+					indexingOp(jsonDocs);
+			}
+			finally
+			{
+				if (jsonDocs != null && jsonDocs.Length > 0)
+				{
+					var last = jsonDocs.Last();
+					var lastEtag = last.Etag;
+					var lastModified = last.LastModified;
+
+					var lastIndexedEtag = new ComparableByteArray(lastEtag.ToByteArray());
+					// whatever we succeeded in indexing or not, we have to update this
+					// because otherwise we keep trying to re-index failed documents
+					transactionalStorage.Batch(actions =>
+					{
+						foreach (var indexToWorkOn in indexesToWorkOn)
+						{
+							if (new ComparableByteArray(indexToWorkOn.LastIndexedEtag.ToByteArray()).CompareTo(lastIndexedEtag) > 0)
+								continue;
+							actions.Indexing.UpdateLastIndexed(indexToWorkOn.IndexName, lastEtag, lastModified);
+						}
+					});
+				}
 			}
 		}
 
@@ -138,52 +181,63 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		public bool IndexDocuments(IStorageActionsAccessor actions, string index, Guid etagToIndexFrom)
+		private void IndexDocuments(IStorageActionsAccessor actions, string index, JsonDocument[] jsonDocs)
 		{
-			log.DebugFormat("Indexing documents for {0}, etag to index from: {1}", index, etagToIndexFrom);
 			var viewGenerator = context.IndexDefinitionStorage.GetViewGenerator(index);
 			if (viewGenerator == null)
-				return false; // index was deleted, probably
+				return; // index was deleted, probably
 
-			var jsonDocs = actions.Documents.GetDocumentsAfter(etagToIndexFrom)
-				.Where(x => x != null)
-				.Take(context.Configuration.MaxNumberOfItemsToIndexInSingleBatch) // ensure that we won't go overboard with reading and blow up with OOM
-				.ToArray();
-
-			if(jsonDocs.Length == 0)
-				return false;
-
-			var dateTime = jsonDocs.Select(x=>x.LastModified).Min();
+			var dateTime = jsonDocs.Min(x => x.LastModified);
 
 			var documentRetriever = new DocumentRetriever(null, context.ReadTriggers);
 			try
 			{
 				log.DebugFormat("Indexing {0} documents for index: {1}", jsonDocs.Length, index);
-				context.IndexStorage.Index(index, viewGenerator, 
+				context.IndexStorage.Index(index, viewGenerator,
 					jsonDocs
 					.Select(doc => documentRetriever
-						.EnsureIdInMetadata(doc)
 						.ProcessReadVetoes(doc, null, ReadOperation.Index))
 					.Where(doc => doc != null)
 					.Select(x => JsonToExpando.Convert(x.ToJson())), context, actions, dateTime);
-
-				return true;
 			}
 			catch (Exception e)
 			{
 				if (actions.IsWriteConflict(e))
-					return true;
+					return;
 				log.WarnFormat(e, "Failed to index documents for index: {0}", index);
-				return false;
 			}
-			finally
+		}
+
+		private class ComparableByteArray : IComparable<ComparableByteArray>, IComparable
+		{
+			private readonly byte[] inner;
+
+			public ComparableByteArray(byte[] inner)
 			{
-				// whatever we succeeded in indexing or not, we have to update this
-				// because otherwise we keep trying to re-index failed documents
-				var last = jsonDocs.Last();
-				actions.Indexing.UpdateLastIndexed(index, last.Etag, last.LastModified);
+				this.inner = inner;
 			}
-			
+
+			public int CompareTo(ComparableByteArray other)
+			{
+				if (inner.Length != other.inner.Length)
+					return inner.Length - other.inner.Length;
+				for (int i = 0; i < inner.Length; i++)
+				{
+					if (inner[i] != other.inner[i])
+						return inner[i] - other.inner[i];
+				}
+				return 0;
+			}
+
+			public int CompareTo(object obj)
+			{
+				return CompareTo((ComparableByteArray)obj);
+			}
+
+			public Guid ToGuid()
+			{
+				return new Guid(inner);
+			}
 		}
 	}
 }

@@ -61,7 +61,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 							data = documentCodecs.Aggregate(dataBuffer, (bytes, codec) => codec.Decode(key, metadata, bytes)).ToJObject();
 
-							cacher.SetCachedDocument(key, etag, Tuple.Create(metadata, data));
+							cacher.SetCachedDocument(key, etag, Tuple.Create(new JObject(metadata), new JObject(data)));
 						}
 						
 
@@ -100,7 +100,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 				data = documentCodecs.Aggregate(dataBuffer, (bytes, codec) => codec.Decode(key, metadata, bytes)).ToJObject();
 
-				cacher.SetCachedDocument(key, existingEtag, Tuple.Create(metadata, data));
+				cacher.SetCachedDocument(key, existingEtag, Tuple.Create(new JObject(metadata), new JObject(data)));
 			}
 			logger.DebugFormat("Document with key '{0}' was found", key);
 			return new JsonDocument

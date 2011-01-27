@@ -121,6 +121,7 @@
     <Compile Include="Data\DynamicQueryMappingItem.cs" />
     <Compile Include="Impl\DocumentRetriever.cs" />
     <Compile Include="Impl\Logging\AsyncBufferingAppender.cs" />
+    <Compile Include="Indexing\IIndexExtension.cs" />
     <Compile Include="Indexing\TaskSchedulerWithCustomPriority.cs" />
     <Compile Include="Indexing\TasksExecuter.cs" />
     <Compile Include="Linq\CaptureQueryParameterNamesVisitor.cs" />
@@ -338,6 +339,7 @@
     <Compile Include="Queries\LinearQueryExtensions.cs" />
     <Compile Include="Queries\LinearQueryRunner.cs" />
     <Compile Include="Queries\SuggestionQueryExtensions.cs" />
+    <Compile Include="Queries\SuggestionQueryIndexExtension.cs" />
     <Compile Include="Queries\TermsQueryRunner.cs" />
     <Compile Include="Queries\TermsQueryRunnerExtensions.cs" />
     <Compile Include="Server\RavenDbHttpServer.cs" />

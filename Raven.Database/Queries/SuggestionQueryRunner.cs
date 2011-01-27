@@ -5,7 +5,6 @@
 //-----------------------------------------------------------------------
 using System;
 using Lucene.Net.Search;
-using Lucene.Net.Store;
 using Raven.Abstractions.Data;
 using SpellChecker.Net.Search.Spell;
 
@@ -32,35 +31,26 @@ namespace Raven.Database.Queries
             suggestionQuery.MaxSuggestions = Math.Min(suggestionQuery.MaxSuggestions,
                                                       _database.Configuration.MaxPageSize);
 
-            var currentSearcher = _database.IndexStorage.GetCurrentIndexSearcher(indexName);
+        	var indexExtensionKey = suggestionQuery.Field + "/" + suggestionQuery.Distance;
+
+        	var indexExtension = _database.IndexStorage.GetIndexExtension(indexName, indexExtensionKey) as SuggestionQueryIndexExtension;
+
+			if (indexExtension != null)
+				return indexExtension.Query(suggestionQuery);
+
+
+        	var currentSearcher = _database.IndexStorage.GetCurrentIndexSearcher(indexName);
             IndexSearcher searcher;
             using(currentSearcher.Use(out searcher))
             {
                 var indexReader = searcher.GetIndexReader();
 
-                var spellChecker = new SpellChecker.Net.Search.Spell.SpellChecker(new RAMDirectory(), GetStringDistance(suggestionQuery));
-                try
-                {
-                    spellChecker.IndexDictionary(new LuceneDictionary(indexReader, suggestionQuery.Field));
-                    spellChecker.SetAccuracy(suggestionQuery.Accuracy);
+				var suggestionQueryIndexExtension = new SuggestionQueryIndexExtension(GetStringDistance(suggestionQuery), suggestionQuery.Field);
+				suggestionQueryIndexExtension.Init(indexReader);
 
-                    var suggestions = spellChecker.SuggestSimilar(suggestionQuery.Term, 
-                        suggestionQuery.MaxSuggestions,
-                        indexReader,
-                        suggestionQuery.Field, 
-                        true);
+            	_database.IndexStorage.SetIndexExtension(indexName, indexExtensionKey, suggestionQueryIndexExtension);
 
-                    return new SuggestionQueryResult
-                    {
-                        Suggestions = suggestions
-                    };
-                }
-                finally
-                {
-                    spellChecker.Close();
-                    // this is really stupid, but it doesn't handle this in its close method!
-                    GC.SuppressFinalize(spellChecker);
-                }
+            	return suggestionQueryIndexExtension.Query(suggestionQuery);
             }
             
         }

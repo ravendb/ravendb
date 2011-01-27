@@ -143,7 +143,7 @@ namespace Raven.Database.Linq
 				case JTokenType.Date:
 					return jToken.Value<DateTime>();
 				case JTokenType.Null:
-					return new DynamicNullObject();
+					return new DynamicNullObject{IsExplicitNull = true};
 				default:
 					var value = jToken.Value<object>();
 					if (value is long)
@@ -390,6 +390,9 @@ namespace Raven.Database.Linq
 		{
 			return String.Empty;
 		}
+
+		public bool IsExplicitNull { get; set; }
+
 		public override bool TryGetIndex(GetIndexBinder binder, object[] indexes, out object result)
 		{
 			result = this;

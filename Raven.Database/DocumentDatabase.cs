@@ -70,7 +70,7 @@ namespace Raven.Database
 
         private System.Threading.Tasks.Task indexingBackgroundTask;
 		private System.Threading.Tasks.Task tasksBackgroundTask;
-	    private TaskSchedulerWithCustomPriority backgroundTaskScheduler;
+	    private readonly TaskScheduler backgroundTaskScheduler;
 
 		private readonly ILog log = LogManager.GetLogger(typeof(DocumentDatabase));
 
@@ -78,7 +78,10 @@ namespace Raven.Database
 
 		public DocumentDatabase(InMemoryRavenConfiguration configuration)
 		{
-            backgroundTaskScheduler = new TaskSchedulerWithCustomPriority(15, configuration.BackgroundTasksPriority);
+			backgroundTaskScheduler = new TaskSchedulerWithCustomPriority(
+				Math.Min(3, Environment.ProcessorCount), // we need a minimum of three task threads - one for indexing dispatch, one for tasks, one for indexing ops
+				configuration.BackgroundTasksPriority);
+
 			ExtensionsState = new ConcurrentDictionary<object, object>();
 			Configuration = configuration;
 
@@ -239,7 +242,9 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				tasksBackgroundTask.Wait(); 
 			if (indexingBackgroundTask != null)
 				indexingBackgroundTask.Wait();
-            backgroundTaskScheduler.Dispose();
+			var disposable = backgroundTaskScheduler as IDisposable;
+			if (disposable != null)
+				disposable.Dispose();
 		}
 
 		public void StopBackgroundWokers()
@@ -291,8 +296,8 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				document = actions.Documents.DocumentByKey(key, transactionInformation);
 			});
 
+			DocumentRetriever.EnsureIdInMetadata(document);
 			return new DocumentRetriever(null, ReadTriggers)
-				.EnsureIdInMetadata(document)
 				.ExecuteReadTriggers(document, transactionInformation,ReadOperation.Load);
 		}
 
@@ -760,8 +765,8 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 				var documentRetriever = new DocumentRetriever(actions, ReadTriggers);
 				foreach (var doc in documents.Take(pageSize))
 				{
+					DocumentRetriever.EnsureIdInMetadata(doc);
 					var document = documentRetriever
-						.EnsureIdInMetadata(doc)
 						.ExecuteReadTriggers(doc, null,
 						// here we want to have the Load semantic, not Query, because we need this to be
 						// as close as possible to the full database contents

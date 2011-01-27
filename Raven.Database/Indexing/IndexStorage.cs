@@ -17,6 +17,7 @@ using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
+using Raven.Database.Queries;
 using Raven.Database.Storage;
 using Directory = System.IO.Directory;
 using Version = Lucene.Net.Util.Version;
@@ -219,14 +220,18 @@ namespace Raven.Database.Indexing
 
         internal Index.CurrentIndexSearcher GetCurrentIndexSearcher(string indexName)
         {
-            var result = indexes.Where(index => string.Compare(index.Key, indexName, true) == 0)
-                .Select(x => x.Value)
-                .FirstOrDefault();
-            if (result == null)
-                throw new InvalidOperationException(string.Format("Index '{0}' does not exist", indexName));
-
-            return result.Searcher;
+        	return GetIndexByName(indexName).Searcher;
         }
+
+		private Index GetIndexByName(string indexName)
+		{
+			var result = indexes.Where(index => string.Compare(index.Key, indexName, true) == 0)
+				.Select(x => x.Value)
+				.FirstOrDefault();
+			if (result == null)
+				throw new InvalidOperationException(string.Format("Index '{0}' does not exist", indexName));
+			return result;
+		}
 
 		public void FlushAllIndexes()
 		{
@@ -234,6 +239,16 @@ namespace Raven.Database.Indexing
 			{
 				value.Flush();
 			}
+		}
+
+		public IIndexExtension GetIndexExtension(string index, string indexExtensionKey)
+		{
+			return GetIndexByName(index).GetExtension(indexExtensionKey);
+		}
+
+		public void SetIndexExtension(string indexName, string indexExtensionKey, IIndexExtension suggestionQueryIndexExtension)
+		{
+			GetIndexByName(indexName).SetExtension(indexExtensionKey, suggestionQueryIndexExtension);
 		}
 	}
 }

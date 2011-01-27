@@ -123,18 +123,18 @@ namespace Raven.Database.Impl
 			return doc;
 		}
 
-	    public DocumentRetriever EnsureIdInMetadata(JsonDocument doc)
+	    public static void EnsureIdInMetadata(JsonDocument doc)
 	    {
-            if (doc == null)
-                return this;
+			if (doc == null)
+				return;
 
-            if (doc.Metadata == null)
-                return this;
+	    	var metadata = doc.Metadata;
+	    	if (metadata == null)
+                return ;
 
-            if (doc.Metadata.Property("@id") != null)
-                doc.Metadata.Remove("@id");
-            doc.Metadata.Add("@id", new JValue(doc.Key));
-	        return this;
+            if (metadata.Property("@id") != null)
+                metadata.Remove("@id");
+            metadata.Add("@id", new JValue(doc.Key));
 	    }
 
 	    public bool ShouldIncludeResultInQuery(IndexQueryResult arg, IndexDefinition indexDefinition, string[] fieldsToFetch, AggregationOperation aggregationOperation)

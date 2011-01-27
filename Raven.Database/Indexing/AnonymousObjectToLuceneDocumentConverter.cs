@@ -73,10 +73,19 @@ namespace Raven.Database.Indexing
                 name = "_" + name;
             }
 
-			if (value == null || value is DynamicNullObject)
+			if (value == null)
 			{
 				yield return new Field(name, "NULL_VALUE", indexDefinition.GetStorage(name, defaultStorage),
 								 Field.Index.NOT_ANALYZED);
+				yield break;
+			}
+			if (value is DynamicNullObject)
+			{
+				if(((DynamicNullObject)value ).IsExplicitNull)
+				{
+					yield return new Field(name, "NULL_VALUE", indexDefinition.GetStorage(name, defaultStorage),
+							 Field.Index.NOT_ANALYZED);
+				}
 				yield break;
 			}
 
@@ -86,10 +95,6 @@ namespace Raven.Database.Indexing
                 yield break;
             }
 
-            if (value is DynamicNullObject)
-            {
-                yield break;
-            }
 
 			var itemsToIndex = value as IEnumerable;
 			if( itemsToIndex != null && ShouldTreatAsEnumerable(itemsToIndex))

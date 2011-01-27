@@ -15,7 +15,7 @@ properties {
   $server_files = @( "Raven.Server.exe", "log4net.???", "Newtonsoft.Json.???", "Lucene.Net.???", "Spatial.Net.???", "SpellChecker.Net.???", "ICSharpCode.NRefactory.???", "Rhino.Licensing.???", `
     "Esent.Interop.???", "Raven.Abstractions.???", "Raven.Database.???", "Raven.Http.???", "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???" );
     
-  $client_dlls_3_5 = @( "Newtonsoft.Json.???", "Raven.Abstractions-3.5.???", "Raven.Client.Lightweight-3.5.???", "MissingBitsFromClientProfile.???" );
+  $client_dlls_3_5 = @( "Newtonsoft.Json.Net35.???", "Raven.Abstractions-3.5.???", "Raven.Client.Lightweight-3.5.???", "MissingBitsFromClientProfile.???" );
      
   $client_dlls = @( "Newtonsoft.Json.???", "Raven.Abstractions.???", "Raven.Client.Lightweight.???", "MissingBitsFromClientProfile.???", "AsyncCtpLibrary.???" );
      
@@ -70,7 +70,7 @@ task Init -depends Verify40, Clean {
 	}
 		
 	new-item $release_dir -itemType directory -ErrorAction SilentlyContinue
-	new-item $buildartifacts_dir -itemType directory -ErrorAction SilentlyContinue
+	new-item $build_dir -itemType directory -ErrorAction SilentlyContinue
 	
 	copy $tools_dir\xUnit\*.* $build_dir
 	

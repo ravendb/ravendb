@@ -656,11 +656,9 @@ namespace Raven.Client.Indexes
 					this.Out("\"");
 					return node;
 				}
-				if (s == node.Value.GetType().ToString())
+				if(node.Value is bool)
 				{
-					this.Out("value(");
-					this.Out(s);
-					this.Out(")");
+					this.Out(node.Value.ToString().ToLower());
 					return node;
 				}
 				this.Out(s);

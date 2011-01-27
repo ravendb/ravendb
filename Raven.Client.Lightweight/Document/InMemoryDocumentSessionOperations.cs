@@ -708,8 +708,21 @@ more responsive application.
 				var transactionalSession = (ITransactionalDocumentSession) this;
 				if (documentStore.DatabaseCommands.SupportsPromotableTransactions == false)
 				{
-					if (Transaction.Current.EnlistPromotableSinglePhase(new PromotableRavenClientEnlistment(transactionalSession, () => RegisteredStoresInTransaction.Remove(localIdentifier))) ==
-					    false)
+					Transaction.Current.EnlistDurable(
+						ResourceManagerId,
+						new RavenClientEnlistment(transactionalSession, () => RegisteredStoresInTransaction.Remove(localIdentifier)),
+						EnlistmentOptions.None);
+				}
+				else
+				{
+					var promotableSinglePhaseNotification = new PromotableRavenClientEnlistment(transactionalSession,
+					                                                                            () =>
+					                                                                            RegisteredStoresInTransaction.
+					                                                                            	Remove(localIdentifier));
+					var registeredSinglePhaseNotification =
+						Transaction.Current.EnlistPromotableSinglePhase(promotableSinglePhaseNotification);
+
+					if(registeredSinglePhaseNotification == false)
 					{
 						Transaction.Current.EnlistDurable(
 							ResourceManagerId,
