@@ -13,30 +13,35 @@ using Raven.Tests.Document;
 
 namespace Raven.Tests
 {
-	public abstract class LocalClientTest
-	{
-		private string path;
-
+    public abstract class LocalClientTest
+    {
+        private string path;
         public EmbeddableDocumentStore NewDocumentStore()
-		{
-			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
-			path = Path.Combine(path, "TestDb").Substring(6);
+        {
+            return NewDocumentStore("munin", true);
+        }
+        public EmbeddableDocumentStore NewDocumentStore(string storageType, bool inMemory)
+        {
+            path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
+            path = Path.Combine(path, "TestDb").Substring(6);
 
 
             var documentStore = new EmbeddableDocumentStore()
-			{
-				Configuration = 
-				{
-					DataDirectory = path,
+            {
+                Configuration =
+                {
+                    DataDirectory = path,
                     RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-				}
+                    DefaultStorageTypeName = storageType,
+                    RunInMemory = inMemory,
+                }
 
-			};
-			if (documentStore.Configuration.RunInMemory == false)
-				IOExtensions.DeleteDirectory(path);
-			documentStore.Initialize();
-			return documentStore;
-		}
+            };
+            if (documentStore.Configuration.RunInMemory == false)
+                IOExtensions.DeleteDirectory(path);
+            documentStore.Initialize();
+            return documentStore;
+        }
 
         public void WaitForIndexing(EmbeddableDocumentStore store)
         {
@@ -45,5 +50,5 @@ namespace Raven.Tests
                 Thread.Sleep(100);
             }
         }
-	}
+    }
 }
