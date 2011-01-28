@@ -17,10 +17,11 @@ namespace Raven.Database.Queries
 		private readonly Directory directory = new RAMDirectory();
 		private readonly SpellChecker.Net.Search.Spell.SpellChecker spellChecker;
 
-		public SuggestionQueryIndexExtension(StringDistance distance, string field)
+		public SuggestionQueryIndexExtension(StringDistance distance, string field, float accuracy)
 		{
 			this.field = field;
 			this.spellChecker = new SpellChecker.Net.Search.Spell.SpellChecker(directory, distance);
+			this.spellChecker.SetAccuracy(accuracy);
 		}
 
 		public void Init(IndexReader reader)
@@ -30,8 +31,6 @@ namespace Raven.Database.Queries
 
 		public SuggestionQueryResult Query(SuggestionQuery suggestionQuery)
 		{
-			spellChecker.SetAccuracy(suggestionQuery.Accuracy);
-
 			var suggestions = spellChecker.SuggestSimilar(suggestionQuery.Term,
 			                                              suggestionQuery.MaxSuggestions,
 			                                              null,
