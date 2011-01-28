@@ -15,9 +15,8 @@ namespace Raven.Tests.Stress
         const string FilePath100KB = "Stress\\Data\\data_100KB.txt";
 
         [Fact]
-        public void stress_testing_ravendb_5mb_in_single_session()
+        public void munin_stress_testing_ravendb_5mb_in_single_session_in_memory()
         {
-
             var text = File.ReadAllText(FilePath5MB);
 
             var documentStore = NewDocumentStore();
@@ -40,7 +39,32 @@ namespace Raven.Tests.Stress
         }
 
         [Fact]
-        public void stress_testing_ravendb_5mb__in_one_session_per_document()
+        public void munin_stress_testing_ravendb_5mb_in_single_session_in_filesystem()
+        {
+
+            var text = File.ReadAllText(FilePath5MB);
+
+            var documentStore = NewDocumentStore("munin", false);
+            JObject dummy = null;
+
+            using (var session = documentStore.OpenSession())
+            {
+                for (int i = 0; i < 100; i++)
+                {
+                    dummy = new JObject();
+                    var property = new JProperty("Content", text);
+                    dummy.Add(property);
+                    dummy.Add("Id", JToken.FromObject(Guid.NewGuid()));
+                    // Create
+                    session.Store(dummy);
+                }
+                session.SaveChanges();
+            }
+            Assert.True(true);
+        }
+
+        [Fact]
+        public void munin_stress_testing_ravendb_5mb_in_memory_with_indexing()
         {
 
             var text = File.ReadAllText(FilePath5MB);
@@ -73,9 +97,8 @@ namespace Raven.Tests.Stress
             Assert.True(true);
         }
 
-
         [Fact]
-        public void stress_testing_ravendb_500kb_in_single_session()
+        public void munin_stress_testing_ravendb_500kb_in_memory()
         {
 
             var text = File.ReadAllText(FilePath500KB);
@@ -101,9 +124,37 @@ namespace Raven.Tests.Stress
             }
             Assert.True(true);
         }
+        
+        [Fact]
+        public void munin_stress_testing_ravendb_500kb_in_filesystem()
+        {
+
+            var text = File.ReadAllText(FilePath500KB);
+
+            var documentStore = NewDocumentStore("munin", false);
+            JObject dummy = null;
+
+            for (int j = 0; j < 100; j++)
+            {
+                using (var session = documentStore.OpenSession())
+                {
+                    for (int i = 0; i < 100; i++)
+                    {
+                        dummy = new JObject();
+                        var property = new JProperty("Content", text);
+                        dummy.Add(property);
+                        dummy.Add("Id", JToken.FromObject(Guid.NewGuid()));
+                        // Create
+                        session.Store(dummy);
+                    }
+                    session.SaveChanges();
+                }
+            }
+            Assert.True(true);
+        }
 
         [Fact]
-        public void esent_stress_testing_ravendb_500kb_in_single_session()
+        public void esent_stress_testing_ravendb_500kb_in_filesystem()
         {
 
             var text = File.ReadAllText(FilePath500KB);
@@ -130,5 +181,35 @@ namespace Raven.Tests.Stress
             }
             Assert.True(true);
         }
+
+        [Fact]
+        public void esent_stress_testing_ravendb_100kb_in_filesystem()
+        {
+
+            var text = File.ReadAllText(FilePath100KB);
+
+            var documentStore = NewDocumentStore("esent", false);
+
+            JObject dummy = null;
+
+            for (int j = 0; j < 100; j++)
+            {
+                using (var session = documentStore.OpenSession())
+                {
+                    for (int i = 0; i < 100; i++)
+                    {
+                        dummy = new JObject();
+                        var property = new JProperty("Content", text);
+                        dummy.Add(property);
+                        dummy.Add("Id", JToken.FromObject(Guid.NewGuid()));
+                        // Create
+                        session.Store(dummy);
+                    }
+                    session.SaveChanges();
+                }
+            }
+            Assert.True(true);
+        }
+
     }
 }
