@@ -7,24 +7,25 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Text;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 
 namespace Raven.Database.Data
 {
-	/// <summary>
-	/// Extensions for handling metadata
-	/// </summary>
-	public static class MetadataExtensions
-	{
-		private static readonly HashSet<string> HeadersToIgnoreServerDocument =
-			new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    /// <summary>
+    /// Extensions for handling metadata
+    /// </summary>
+    public static class MetadataExtensions
+    {
+        private static readonly HashSet<string> HeadersToIgnoreServerDocument =
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     		{
 				"Non-Authoritive-Information",
 				"Content-Type"
     		};
 
-		private static readonly HashSet<string> HeadersToIgnoreClient = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        private static readonly HashSet<string> HeadersToIgnoreClient = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 		{
             "Allow",
             "Content-Disposition",
@@ -116,54 +117,70 @@ namespace Raven.Database.Data
             return metadata;
         }
 #else
-		/// <summary>
-		/// Filters the headers from unwanted headers
-		/// </summary>
-		/// <param name="self">The self.</param>
-		/// <param name="isServerDocument">if set to <c>true</c> [is server document].</param>
-		/// <returns></returns>public static JObject FilterHeaders(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
-		public static JObject FilterHeaders(this NameValueCollection self, bool isServerDocument)
-		{
-			var metadata = new JObject();
-			foreach (string header in self)
-			{
-				if (HeadersToIgnoreClient.Contains(header))
-					continue;
-				if (isServerDocument && HeadersToIgnoreServerDocument.Contains(header))
-					continue;
-				var values = self.GetValues(header);
-				var headerName = CaptureHeaderName(header);
-				if (values.Length == 1)
-					metadata.Add(headerName, GetValue(values[0]));
-				else
-					metadata.Add(headerName, new JArray(values.Select(GetValue)));
-			}
-			return metadata;
-		}
+        /// <summary>
+        /// Filters the headers from unwanted headers
+        /// </summary>
+        /// <param name="self">The self.</param>
+        /// <param name="isServerDocument">if set to <c>true</c> [is server document].</param>
+        /// <returns></returns>public static JObject FilterHeaders(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
+        public static JObject FilterHeaders(this NameValueCollection self, bool isServerDocument)
+        {
+            var metadata = new JObject();
+            foreach (string header in self)
+            {
+                try
+                {
+
+                    if (HeadersToIgnoreClient.Contains(header))
+                        continue;
+                    if (isServerDocument && HeadersToIgnoreServerDocument.Contains(header))
+                        continue;
+                    var values = self.GetValues(header);
+                    var headerName = CaptureHeaderName(header);
+                    if (values.Length == 1)
+                        metadata.Add(headerName, GetValue(values[0]));
+                    else
+                        metadata.Add(headerName, new JArray(values.Select(GetValue)));
+                }
+                catch (Exception exc)
+                {
+                    throw new JsonReaderException(string.Concat("Unable to Filter Header: ", header), exc);
+                }
+            }
+            return metadata;
+        }
 #endif
 
-		private static string CaptureHeaderName(string header)
-		{
-			var lastWasDash = true;
-			var sb = new StringBuilder(header.Length);
+        private static string CaptureHeaderName(string header)
+        {
+            var lastWasDash = true;
+            var sb = new StringBuilder(header.Length);
 
-			foreach (var ch in header)
-			{
-				sb.Append(lastWasDash ? char.ToUpper(ch) : ch);
+            foreach (var ch in header)
+            {
+                sb.Append(lastWasDash ? char.ToUpper(ch) : ch);
 
-				lastWasDash = ch == '-';
-			}
+                lastWasDash = ch == '-';
+            }
 
-			return sb.ToString();
-		}
+            return sb.ToString();
+        }
 
-		private static JToken GetValue(string val)
-		{
-			if (val.StartsWith("{"))
-				return JObject.Parse(val);
-			if (val.StartsWith("["))
-				return JArray.Parse(val);
-			return new JValue(val);
-		}
-	}
+        private static JToken GetValue(string val)
+        {
+            try
+            {
+                if (val.StartsWith("{"))
+                    return JObject.Parse(val);
+                if (val.StartsWith("["))
+                    return JArray.Parse(val);
+                return new JValue(val);
+            }
+            catch (Exception exc)
+            {
+                throw new JsonReaderException(string.Concat("Unable to get value: ", val), exc);
+            }
+
+        }
+    }
 }
