@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Linq;
+using System.Linq.Expressions;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Linq;
@@ -63,6 +64,68 @@ namespace Raven.Tests.Linq
 					select user;
 			Assert.Equal("Name:ayende", q.ToString());
 		}
+
+        [Fact]
+        public void CanUnderstandSimpleContainsWithClauses()
+        {
+            var indexedUsers = GetRavenQueryInspector();
+            var q = indexedUsers
+                    .Where(x => x.Name.Contains("ayende"))
+                    .SingleOrDefault();
+
+            Assert.NotNull(q);
+            Assert.Equal("Name:ayende", q.ToString());
+        }
+
+        [Fact]
+        public void CanUnderstandSimpleContainsInExpresssion1()
+        {
+            Func<IndexedUser, bool> where = x => x.Name.Contains("ayende");
+
+            var indexedUsers = GetRavenQueryInspector();
+            var q = indexedUsers.Where(where).SingleOrDefault();
+
+            Assert.NotNull(q);
+            Assert.Equal("Name:ayende", q.ToString());
+        }
+
+        [Fact]
+        public void CanUnderstandSimpleContainsInExpresssion2()
+        {
+            Expression<Func<IndexedUser, bool>> where = x => x.Name.Contains("ayende");
+
+            var indexedUsers = GetRavenQueryInspector();
+            var q = indexedUsers.Where(where).SingleOrDefault();
+
+            Assert.NotNull(q);
+            Assert.Equal("Name:ayende", q.ToString());
+        }
+
+        [Fact]
+        public void CanUnderstandSimpleStartsWithInExpresssion1()
+        {
+            Func<IndexedUser, bool> where = x => x.Name.StartsWith("ayende");
+
+            var indexedUsers = GetRavenQueryInspector();
+            var q = indexedUsers.Where(where).SingleOrDefault();
+
+            Assert.NotNull(q);
+            Assert.Equal("Name:ayende", q.ToString());
+        }
+
+
+        [Fact]
+        public void CanUnderstandSimpleStartsWithInExpresssion2()
+        {
+            Expression<Func<IndexedUser, bool>> where = x => x.Name.StartsWith("ayende");
+
+            var indexedUsers = GetRavenQueryInspector();
+            var q = indexedUsers.Where(where).SingleOrDefault();
+
+            Assert.NotNull(q);
+            Assert.Equal("Name:ayende", q.ToString());
+        }
+
 
 		[Fact]
 		public void CanUnderstandSimpleContainsWithVariable()
