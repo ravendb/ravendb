@@ -1,5 +1,6 @@
 ﻿using System;
 using Raven.Tests.Bugs.DTC;
+using Raven.Tests.Stress;
 
 namespace Raven.Tryouts
 {
@@ -7,18 +8,7 @@ namespace Raven.Tryouts
 	{
 		static void Main()
 		{
-			while (true)
-			{
-				try
-				{
-					Do();
-					Console.WriteLine("Passed {0:#,#}", GC.GetTotalMemory(true));
-				}
-				catch (Exception e)
-				{
-					Console.WriteLine(e);
-				}
-			}
+			new StressTester().munin_stress_testing_ravendb_100kb_in_filesystem();
 		}
 
 		private static void Do()
