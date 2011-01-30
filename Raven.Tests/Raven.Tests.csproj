@@ -123,6 +123,7 @@
     <Compile Include="Bugs\CanDetectChanges.cs" />
     <Compile Include="Bugs\CanGetMetadataForTransient.cs" />
     <Compile Include="Bugs\CanHandleDocumentRemoval.cs" />
+    <Compile Include="Bugs\CanPassTypesProperlyToAggregation.cs" />
     <Compile Include="Bugs\CanProjectIdFromDocumentInQueries.cs" />
     <Compile Include="Bugs\CanSelectFieldsFromIndex.cs" />
     <Compile Include="Bugs\CanUseNonStringsForId.cs" />
