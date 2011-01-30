@@ -4,13 +4,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Linq;
-using Newtonsoft.Json.Linq;
 
 namespace Raven.Munin
 {
@@ -130,7 +127,9 @@ namespace Raven.Munin
             pool.Clear();
         }
 
-        public virtual void Dispose()
+    	public abstract void EnsureCapacity(int value);
+
+    	public virtual void Dispose()
         {
             pool.Dispose();
         }

@@ -186,5 +186,9 @@ namespace Raven.Storage.Managed
             tableStroage.PerformIdleTasks();
         }
 
+    	public void EnsureCapacity(int value)
+    	{
+    		persistenceSource.EnsureCapacity(value);
+    	}
     }
 }
