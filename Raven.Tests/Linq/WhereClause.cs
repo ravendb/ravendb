@@ -7,25 +7,27 @@ using System;
 using System.Linq;
 using System.Linq.Expressions;
 using Raven.Client;
+using Raven.Client.Client;
 using Raven.Client.Document;
 using Raven.Client.Linq;
 using Xunit;
 
 namespace Raven.Tests.Linq
 {
-	public class WhereClause
+	public class WhereClause : IDisposable
 	{
 		private readonly RavenQueryStatistics ravenQueryStatistics = new RavenQueryStatistics();
+		private IDocumentStore documentStore;
+		private IDocumentSession documentSession;
 
-		private class FakeDocumentQueryGenerator : IDocumentQueryGenerator
+
+		public WhereClause()
 		{
-			/// <summary>
-			/// Create a new query for <typeparam name="T"/>
-			/// </summary>
-			public IDocumentQuery<T> Query<T>(string indexName)
+			documentStore = new EmbeddableDocumentStore
 			{
-                return new DocumentQuery<T>(null, null, null, null, null, null);
-			}
+				RunInMemory = true
+			}.Initialize();
+			documentSession = documentStore.OpenSession();
 		}
 
 		[Fact]
@@ -40,8 +42,7 @@ namespace Raven.Tests.Linq
 
 		private RavenQueryInspector<IndexedUser> GetRavenQueryInspector()
 		{
-			return new RavenQueryInspector<IndexedUser>(
-				new RavenQueryProvider<IndexedUser>(new FakeDocumentQueryGenerator(), null, ravenQueryStatistics, null, null), ravenQueryStatistics, null, null, null, null);
+			return (RavenQueryInspector<IndexedUser>)documentSession.Query<IndexedUser>();
 		}
 
 		[Fact]
@@ -69,9 +70,10 @@ namespace Raven.Tests.Linq
         public void CanUnderstandSimpleContainsWithClauses()
         {
             var indexedUsers = GetRavenQueryInspector();
-            var q = indexedUsers
-                    .Where(x => x.Name.Contains("ayende"))
-                    .SingleOrDefault();
+        	var q = from x in indexedUsers
+        	        where x.Name.Contains("ayende")
+        	        select x;
+                    
 
             Assert.NotNull(q);
             Assert.Equal("Name:ayende", q.ToString());
@@ -80,10 +82,10 @@ namespace Raven.Tests.Linq
         [Fact]
         public void CanUnderstandSimpleContainsInExpresssion1()
         {
-            Func<IndexedUser, bool> where = x => x.Name.Contains("ayende");
-
             var indexedUsers = GetRavenQueryInspector();
-            var q = indexedUsers.Where(where).SingleOrDefault();
+        	var q = from x in indexedUsers
+        	        where x.Name.Contains("ayende")
+        	        select x;
 
             Assert.NotNull(q);
             Assert.Equal("Name:ayende", q.ToString());
@@ -92,10 +94,10 @@ namespace Raven.Tests.Linq
         [Fact]
         public void CanUnderstandSimpleContainsInExpresssion2()
         {
-            Expression<Func<IndexedUser, bool>> where = x => x.Name.Contains("ayende");
-
             var indexedUsers = GetRavenQueryInspector();
-            var q = indexedUsers.Where(where).SingleOrDefault();
+        	var q = from x in indexedUsers
+        	        where x.Name.Contains("ayende")
+        	        select x;
 
             Assert.NotNull(q);
             Assert.Equal("Name:ayende", q.ToString());
@@ -104,26 +106,26 @@ namespace Raven.Tests.Linq
         [Fact]
         public void CanUnderstandSimpleStartsWithInExpresssion1()
         {
-            Func<IndexedUser, bool> where = x => x.Name.StartsWith("ayende");
-
             var indexedUsers = GetRavenQueryInspector();
-            var q = indexedUsers.Where(where).SingleOrDefault();
+        	var q = from x in indexedUsers
+        	        where  x.Name.StartsWith("ayende")
+        	        select x;
 
             Assert.NotNull(q);
-            Assert.Equal("Name:ayende", q.ToString());
+            Assert.Equal("Name:ayende*", q.ToString());
         }
 
 
         [Fact]
         public void CanUnderstandSimpleStartsWithInExpresssion2()
         {
-            Expression<Func<IndexedUser, bool>> where = x => x.Name.StartsWith("ayende");
-
             var indexedUsers = GetRavenQueryInspector();
-            var q = indexedUsers.Where(where).SingleOrDefault();
+        	var q = from indexedUser in indexedUsers
+        	        where indexedUser.Name.StartsWith("ayende")
+        	        select indexedUser;
 
             Assert.NotNull(q);
-            Assert.Equal("Name:ayende", q.ToString());
+            Assert.Equal("Name:ayende*", q.ToString());
         }
 
 
@@ -345,6 +347,12 @@ namespace Raven.Tests.Linq
 		public class UserProperty
 		{
 			public string Key { get; set;}
+		}
+
+		public void Dispose()
+		{
+			documentSession.Dispose();
+			documentStore.Dispose();
 		}
 	}
 }
