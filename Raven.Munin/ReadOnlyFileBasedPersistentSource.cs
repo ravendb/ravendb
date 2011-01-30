@@ -73,7 +73,12 @@ namespace Raven.Munin
 
         #endregion
 
-        public override void Dispose()
+    	public override void EnsureCapacity(int value)
+    	{
+    		// nothing to do here
+    	}
+
+    	public override void Dispose()
         {
             log.Dispose();
             base.Dispose();

@@ -58,6 +58,11 @@ namespace Raven.Munin
             };
         }
 
-        #endregion
+    	public override void EnsureCapacity(int value)
+    	{
+    		log.Capacity = value;
+    	}
+
+    	#endregion
     }
 }
