@@ -440,6 +440,15 @@ namespace Raven.Client.Client.Async
 			if (string.IsNullOrEmpty(key))
 				throw new ArgumentException("Key cannot be null or empty", argName);
 		}
+
+		/// <summary>
+		/// Begins retrieving the statistics for the database
+		/// </summary>
+		/// <returns></returns>
+		public Task<DatabaseStatistics> GetStatisticsAsync()
+		{
+			throw new NotImplementedException();
+		}
 	}
 }
 

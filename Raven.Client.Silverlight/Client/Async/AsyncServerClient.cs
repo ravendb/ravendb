@@ -215,6 +215,33 @@ namespace Raven.Client.Client.Async
 				});
 		}
 
+		public Task<JsonDocument[]> MultiGetAsync()
+		{
+			throw new NotImplementedException();
+			//var request = HttpJsonRequest.CreateHttpJsonRequest(this, url + "/docs/", "GET", credentials, convention);
+			
+			//return request.WriteAsync(array)
+			//    .ContinueWith(writeTask => request.ReadResponseStringAsync())
+			//    .ContinueWith(task =>
+			//    {
+			//        JArray responses;
+			//        try
+			//        {
+			//            responses = JObject.Parse(task.Result.Result).Value<JArray>("Results");
+			//        }
+			//        catch (WebException e)
+			//        {
+			//            var httpWebResponse = e.Response as HttpWebResponse;
+			//            if (httpWebResponse == null ||
+			//                httpWebResponse.StatusCode != HttpStatusCode.Conflict)
+			//                throw;
+			//            throw ThrowConcurrencyException(e);
+			//        }
+
+			//        return SerializationHelper.JObjectsToJsonDocuments(responses.Cast<JObject>())
+			//            .ToArray();
+			//    });
+		}
 
 		/// <summary>
 		/// Begins the async query.
@@ -498,6 +525,23 @@ namespace Raven.Client.Client.Async
 		{
 			if (string.IsNullOrEmpty(key))
 				throw new ArgumentException("Key cannot be null or empty", argName);
+		}
+
+		/// <summary>
+		/// Begins retrieving the statistics for the database
+		/// </summary>
+		/// <returns></returns>
+		public Task<DatabaseStatistics> GetStatisticsAsync()
+		{
+			var request = HttpJsonRequest.CreateHttpJsonRequest(this, url + "/stats", "GET", credentials, convention);
+
+			return request.ReadResponseStringAsync()
+				.ContinueWith(task =>
+				{
+					var response = task.Result;
+					var jo = JObject.Parse(response);
+					return jo.Deserialize<DatabaseStatistics>(convention);
+				});
 		}
 	}
 }

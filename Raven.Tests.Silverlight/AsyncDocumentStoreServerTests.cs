@@ -215,5 +215,17 @@
                 Assert.AreEqual("Costello", query.Result.Results[0]["Contacts"][1].Value<string>("Surname"));
             }
         }
+
+		[Asynchronous]
+		public IEnumerable<Task> Can_retrieve_statistics_for_a_server()
+		{
+			var documentStore = new DocumentStore { Url = Url + Port };
+			documentStore.Initialize();
+
+			var getStats = documentStore.AsyncDatabaseCommands.GetStatisticsAsync();
+			yield return getStats;
+
+			Assert.IsNotNull(getStats.Result);
+		}
     }
 }
