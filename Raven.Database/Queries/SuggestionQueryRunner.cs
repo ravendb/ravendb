@@ -31,7 +31,7 @@ namespace Raven.Database.Queries
             suggestionQuery.MaxSuggestions = Math.Min(suggestionQuery.MaxSuggestions,
                                                       _database.Configuration.MaxPageSize);
 
-        	var indexExtensionKey = suggestionQuery.Field + "/" + suggestionQuery.Distance;
+        	var indexExtensionKey = suggestionQuery.Field + "/" + suggestionQuery.Distance + "/" + suggestionQuery.Accuracy;
 
         	var indexExtension = _database.IndexStorage.GetIndexExtension(indexName, indexExtensionKey) as SuggestionQueryIndexExtension;
 
@@ -45,7 +45,7 @@ namespace Raven.Database.Queries
             {
                 var indexReader = searcher.GetIndexReader();
 
-				var suggestionQueryIndexExtension = new SuggestionQueryIndexExtension(GetStringDistance(suggestionQuery), suggestionQuery.Field);
+				var suggestionQueryIndexExtension = new SuggestionQueryIndexExtension(GetStringDistance(suggestionQuery), suggestionQuery.Field, suggestionQuery.Accuracy);
 				suggestionQueryIndexExtension.Init(indexReader);
 
             	_database.IndexStorage.SetIndexExtension(indexName, indexExtensionKey, suggestionQueryIndexExtension);
