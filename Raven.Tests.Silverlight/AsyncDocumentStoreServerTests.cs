@@ -115,7 +115,7 @@
             var task = documentStore.AsyncDatabaseCommands.ForDatabase(dbname).GetIndexNamesAsync(0, 25);
             yield return task;
 
-            Assert.AreEqual(new[] {"Raven/DocumentsByEntityName"}, task.Result);
+            Assert.AreEqual("Raven/DocumentsByEntityName", task.Result[0]);
         }
 
         [Asynchronous]
