@@ -1,127 +1,135 @@
-using System.Collections.Generic;
-using System.ComponentModel.Composition;
-using System.Linq;
-using System.Net;
-using Caliburn.Micro;
-using Raven.Database;
-using Raven.ManagementStudio.Plugin;
-using Raven.ManagementStudio.UI.Silverlight.Dialogs;
-using Raven.ManagementStudio.UI.Silverlight.Messages;
-using Raven.ManagementStudio.UI.Silverlight.Models;
-using Raven.ManagementStudio.UI.Silverlight.Plugins.Common;
-
 namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Documents.Browse
 {
 	using System;
+	using System.Collections.Generic;
+	using System.ComponentModel.Composition;
+	using System.Linq;
+	using System.Net;
+	using Caliburn.Micro;
+	using Client.Linq;
+	using Common;
+	using Dialogs;
+	using Messages;
+	using Models;
+	using Newtonsoft.Json.Linq;
+	using Plugin;
+	using Raven.Database;
+	using Raven.Database.Data;
 
 	public class DocumentsScreenViewModel : Conductor<DocumentViewModel>.Collection.OneActive, IRavenScreen
-    {
-        private bool isBusy;
-        private bool isDocumentPreviewed;
-        private string lastSearchDocumentId;
+	{
+		bool isBusy;
+		bool isDocumentPreviewed;
+		string lastSearchDocumentId;
 
-        public DocumentsScreenViewModel(IDatabase database)
-        {
-            DisplayName = "Browse Documents";
-            Database = database;
-            CompositionInitializer.SatisfyImports(this);
-        }
+		public DocumentsScreenViewModel(IDatabase database)
+		{
+			DisplayName = "Browse Documents";
+			Database = database;
+			CompositionInitializer.SatisfyImports(this);
+		}
 
-        [Import]
-        public IEventAggregator EventAggregator { get; set; }
+		[Import]
+		public IEventAggregator EventAggregator { get; set; }
 
-        [Import]
-        public IWindowManager WindowManager { get; set; }
+		[Import]
+		public IWindowManager WindowManager { get; set; }
 
-        public bool IsBusy
-        {
-            get { return isBusy; }
-            set
-            {
-                isBusy = value;
-                NotifyOfPropertyChange(() => IsBusy);
-            }
-        }
+		public bool IsBusy
+		{
+			get { return isBusy; }
+			set
+			{
+				isBusy = value;
+				NotifyOfPropertyChange(() => IsBusy);
+			}
+		}
 
-        public IDatabase Database { get; set; }
+		public IDatabase Database { get; private set; }
 
-        public IRavenScreen ParentRavenScreen { get; set; }
+		public bool IsDocumentPreviewed
+		{
+			get { return isDocumentPreviewed && ActiveItem != null; }
+			set
+			{
+				isDocumentPreviewed = value;
+				NotifyOfPropertyChange(() => IsDocumentPreviewed);
+			}
+		}
 
-        public SectionType Section { get { return SectionType.Documents; } }
+		public IRavenScreen ParentRavenScreen { get; set; }
 
-        public bool IsDocumentPreviewed
-        {
-            get { return isDocumentPreviewed && ActiveItem != null; }
-            set
-            {
-                isDocumentPreviewed = value;
-                NotifyOfPropertyChange(() => IsDocumentPreviewed);
-            }
-        }
+		public SectionType Section
+		{
+			get { return SectionType.Documents; }
+		}
 
-        public void GetAll(LoadResponse<IList<JsonDocument>> response)
-        {
-			throw new NotImplementedException();
-			//IList<DocumentViewModel> result = response.Data.Select(jsonDocument => new DocumentViewModel(new Document(jsonDocument), Database, this)).ToList();
-			//Items.AddRange(result);
-			//IsBusy = false;
-        }
+		public void GetAll(IList<JsonDocument> response)
+		{
+			var result = response.Select(jsonDocument => new DocumentViewModel(new Document(jsonDocument), Database, this)).ToList();
+			Items.AddRange(result);
+			IsBusy = false;
+		}
 
-        public void ClosePreview()
-        {
-            IsDocumentPreviewed = false;
-        }
+		public void ClosePreview()
+		{
+			IsDocumentPreviewed = false;
+		}
 
-        public void ShowDocument(string documentId)
-        {
-            lastSearchDocumentId = documentId;
+		public void ShowDocument(string documentId)
+		{
+			lastSearchDocumentId = documentId;
 
-            if (!documentId.Equals("Document ID") && !documentId.Equals(string.Empty))
-            {
-                IsBusy = true;
+			if (!documentId.Equals("Document ID") && !documentId.Equals(string.Empty))
+			{
+				IsBusy = true;
 				throw new NotImplementedException();
 				//Database.Session.Load<JsonDocument>(documentId, GetDocument);
-            }
-        }
+			}
+		}
 
-        public void GetDocument(LoadResponse<JsonDocument> loadResponse)
-        {
-            IsBusy = false;
-            if (loadResponse.IsSuccess)
-            {
-                NavigateTo(new Document(loadResponse.Data));
-            }
-            else if (loadResponse.StatusCode == HttpStatusCode.NotFound)
-            {
-                WindowManager.ShowDialog(new InformationDialogViewModel("Document not found",
-                                                       string.Format("Document with key {0} doesn't exist in database.",
-                                                                     lastSearchDocumentId)));
-            }
-        }
+		public void GetDocument(LoadResponse<JsonDocument> loadResponse)
+		{
+			IsBusy = false;
+			if (loadResponse.IsSuccess)
+			{
+				NavigateTo(new Document(loadResponse.Data));
+			}
+			else if (loadResponse.StatusCode == HttpStatusCode.NotFound)
+			{
+				WindowManager.ShowDialog(new InformationDialogViewModel("Document not found",
+				                                                        string.Format(
+				                                                        	"Document with key {0} doesn't exist in database.",
+				                                                        	lastSearchDocumentId)));
+			}
+		}
 
-        private void NavigateTo(Document document)
-        {
-            EventAggregator.Publish(
-                new ReplaceActiveScreen(new DocumentViewModel(document, Database, this)));
-        }
+		void NavigateTo(Document document)
+		{
+			EventAggregator.Publish(
+				new ReplaceActiveScreen(new DocumentViewModel(document, Database, this)));
+		}
 
-        public void CreateDocument()
-        {
-            NavigateTo(new Document(new JsonDocument
-                                        {
-                                            DataAsJson = new Newtonsoft.Json.Linq.JObject(),
-                                            Metadata = new Newtonsoft.Json.Linq.JObject()
-                                        }));
-        }
+		public void CreateDocument()
+		{
+			NavigateTo(new Document(new JsonDocument
+			                        	{
+			                        		DataAsJson = new JObject(),
+			                        		Metadata = new JObject()
+			                        	}));
+		}
 
-        protected override void OnInitialize()
-        {
-            base.OnInitialize();
-            IsBusy = true;
-			throw new NotImplementedException();
-			//Database.Session.LoadMany<JsonDocument>(GetAll);
-        }
-    }
+		protected override void OnInitialize()
+		{
+			base.OnInitialize();
+			
+			IsBusy = true;
+			
+			Database.Session.Advanced.AsyncDatabaseCommands
+				.QueryAsync(string.Empty,new IndexQuery(){}, new string[]{})
+				.ContinueWith(x => GetAll(x.Result));
+		}
+	}
 
 	public class LoadResponse<T>
 	{

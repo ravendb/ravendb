@@ -5,11 +5,12 @@ using System.ComponentModel.Composition.Hosting;
 using System.ComponentModel.Composition.Primitives;
 using System.Linq;
 using Caliburn.Micro;
-using Raven.ManagementStudio.UI.Silverlight.ViewModels.Interfaces;
 
 namespace Raven.ManagementStudio.UI.Silverlight
 {
-    public class AppBootstrapper : Bootstrapper<IShell>
+	using Shell;
+
+	public class AppBootstrapper : Bootstrapper<IShell>
     {
         private CompositionContainer _container;
 

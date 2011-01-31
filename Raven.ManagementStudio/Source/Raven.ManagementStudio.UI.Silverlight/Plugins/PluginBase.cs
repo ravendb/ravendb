@@ -1,47 +1,48 @@
-using System.ComponentModel.Composition;
-using Caliburn.Micro;
-using Raven.ManagementStudio.Plugin;
-using Raven.ManagementStudio.UI.Silverlight.Messages;
-
 namespace Raven.ManagementStudio.UI.Silverlight.Plugins
 {
-    public abstract class PluginBase : PropertyChangedBase, IPlugin
-    {
-        public abstract SectionType Section { get; }
+	using System.ComponentModel.Composition;
+	using Caliburn.Micro;
+	using Messages;
+	using Plugin;
 
-        public abstract IRavenScreen RelatedScreen { get; }
+	public abstract class PluginBase : PropertyChangedBase, IPlugin
+	{
+		bool isActive;
 
-        public abstract string Name { get; }
+		[Import]
+		public IEventAggregator EventAggregator { get; set; }
 
-        public virtual object MenuView
-        {
-            get { return null; }
-        }
+		public abstract SectionType Section { get; }
 
-        public virtual int Ordinal
-        {
-            get { return 0; }
-        }
+		public abstract IRavenScreen RelatedScreen { get; }
 
-        public IDatabase Database { get; set; }
+		public abstract string Name { get; }
 
-        public void GoToScreen()
-        {
-            EventAggregator.Publish(new OpenNewScreen(RelatedScreen));
-        }
+		public virtual object MenuView
+		{
+			get { return null; }
+		}
 
-        [Import]
-        public IEventAggregator EventAggregator { get; set; }
+		public virtual int Ordinal
+		{
+			get { return 0; }
+		}
 
-        private bool _isActive;
-        public bool IsActive
-        {
-            get { return _isActive; }
-            set
-            {
-                _isActive = value;
-                NotifyOfPropertyChange(() => IsActive);
-            }
-        }
-    }
+		public IDatabase Database { get; set; }
+
+		public void GoToScreen()
+		{
+			EventAggregator.Publish(new OpenNewScreen(RelatedScreen));
+		}
+
+		public bool IsActive
+		{
+			get { return isActive; }
+			set
+			{
+				isActive = value;
+				NotifyOfPropertyChange(() => IsActive);
+			}
+		}
+	}
 }

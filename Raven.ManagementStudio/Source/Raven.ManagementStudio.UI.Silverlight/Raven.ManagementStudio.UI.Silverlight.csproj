@@ -165,9 +165,6 @@
     <Compile Include="Converters\EnumToIntConverter.cs" />
     <Compile Include="Converters\NullToVisibilityConverter.cs" />
     <Compile Include="Dialogs\InformationDialogViewModel.cs" />
-    <Compile Include="Dialogs\InformationDialogView.xaml.cs">
-      <DependentUpon>InformationDialogView.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Messages\ChangeActiveScreen.cs" />
     <Compile Include="Messages\OpenNewScreen.cs" />
     <Compile Include="Messages\ReplaceActiveScreen.cs" />
@@ -210,32 +207,19 @@
       <DependentUpon>GlobalStatisticsScreenView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Plugins\Statistics\Global\GlobalStatisticsScreenViewModel.cs" />
-    <Compile Include="ViewModels\GadgetsViewModel.cs" />
-    <Compile Include="ViewModels\Interfaces\IShell.cs" />
-    <Compile Include="ViewModels\DatabaseViewModel.cs" />
+    <Compile Include="Shell\IShell.cs" />
+    <Compile Include="Database\DatabaseViewModel.cs" />
     <Compile Include="Plugins\Documents\Browse\DocumentsScreenView.xaml.cs">
       <DependentUpon>DocumentsScreenView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Plugins\Common\DocumentView.xaml.cs">
       <DependentUpon>DocumentView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="ViewModels\Screens\HomeScreenViewModel.cs" />
-    <Compile Include="ViewModels\Screens\MenuScreenViewModel.cs">
+    <Compile Include="Database\HomeScreenViewModel.cs" />
+    <Compile Include="Database\MenuScreenViewModel.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Views\DatabaseView.xaml.cs">
-      <DependentUpon>DatabaseView.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Views\Screens\HomeScreenView.xaml.cs">
-      <DependentUpon>HomeScreenView.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Views\Screens\MenuScreenView.xaml.cs">
-      <DependentUpon>MenuScreenView.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Views\ShellView.xaml.cs">
-      <DependentUpon>ShellView.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="ViewModels\ShellViewModel.cs" />
+    <Compile Include="Shell\ShellViewModel.cs" />
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml">
@@ -358,19 +342,19 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="Views\DatabaseView.xaml">
+    <Page Include="Database\DatabaseView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Views\Screens\HomeScreenView.xaml">
+    <Page Include="Database\HomeScreenView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Views\Screens\MenuScreenView.xaml">
+    <Page Include="Database\MenuScreenView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Views\ShellView.xaml">
+    <Page Include="Shell\ShellView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -403,6 +387,7 @@
     <Resource Include="Resources\Images\save-small.png" />
     <Resource Include="Resources\Images\undo-small.png" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
