@@ -4,6 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
+using System.Threading;
 using Newtonsoft.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
@@ -209,6 +211,61 @@ namespace Raven.Tests.Storage
                 Assert.Equal("a", documents[2]);
             });
         }
+
+		[Fact]
+		public void GetDocumentAfterAnEtagWhileAddingDocsFromMultipleThreadsEnumeratesAllDocs()
+		{
+			var numberOfDocsAdded = 0;
+			var threads = new List<Thread>();
+			try
+			{
+				for (var i = 0; i < 10; i++)
+				{
+                    var thread = new Thread(() =>
+                    {
+                        db.TransactionalStorage.Batch(actions =>
+                        {
+                            for (var k = 0; k < 100; k++)
+                            {
+                                var newId = Interlocked.Increment(ref numberOfDocsAdded);
+                                actions.Documents.AddDocument(newId.ToString(), null, new JObject(), new JObject());
+                            }
+                        });
+                    });
+					threads.Add(thread);
+					thread.Start();
+				}
+
+				var lastEtag = Guid.Empty;
+				var total = 0;
+			    var stop = false;
+			    do
+			    {
+			        var etag = lastEtag;
+			        var jsonDocuments = new JsonDocument[0];
+			        db.TransactionalStorage.Batch(actions =>
+			        {
+			            jsonDocuments = actions.Documents.GetDocumentsAfter(etag).Where(x => x != null).ToArray();
+			        });
+			        total += jsonDocuments.Length;
+			        if (jsonDocuments.Length > 0)
+			            lastEtag = jsonDocuments.Last().Etag;
+                    if (stop)
+                        break;
+                    if (threads.All(x => !x.IsAlive))
+                        stop = true;
+			    } while (true);
+
+                Assert.Equal(numberOfDocsAdded, total);
+			}
+			finally
+			{
+				foreach (var thread in threads)
+				{
+					thread.Join();
+				}
+			}
+		}
 
 		[Fact]
 		public void UpdatingDocumentWillKeepSameCount()
