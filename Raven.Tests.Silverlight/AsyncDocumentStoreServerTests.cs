@@ -9,7 +9,7 @@
     using Database.Indexing;
     using Document;
     using Microsoft.Silverlight.Testing;
-    using Assert = Xunit.Assert;
+    using Microsoft.VisualStudio.TestTools.UnitTesting;
 
     public class AsyncDocumentStoreServerTests : RavenTestBase
     {
@@ -35,8 +35,8 @@
                 var task = session_for_loading.MultiLoadAsync<Company>(new[] {entity1.Id, entity2.Id});
                 yield return task;
 
-                Assert.Equal(entity1.Name, task.Result[0].Name);
-                Assert.Equal(entity2.Name, task.Result[1].Name);
+                Assert.AreEqual(entity1.Name, task.Result[0].Name);
+                Assert.AreEqual(entity2.Name, task.Result[1].Name);
             }
         }
 
@@ -60,7 +60,7 @@
                 var task = session_for_loading.LoadAsync<Company>(entity.Id);
                 yield return task;
 
-                Assert.Equal(entity.Name, task.Result.Name);
+                Assert.AreEqual(entity.Name, task.Result.Name);
             }
         }
 
@@ -83,7 +83,7 @@
             {
                 var loading = for_loading.LoadAsync<Company>(entity.Id);
                 yield return loading;
-                Assert.NotNull(loading.Result);
+                Assert.IsNotNull(loading.Result);
             }
 
             using (var for_deleting = documentStore.OpenAsyncSession(dbname))
@@ -100,7 +100,7 @@
                 var verification = for_verifying.LoadAsync<Company>(entity.Id);
                 yield return verification;
 
-                Assert.Null(verification.Result);
+                Assert.IsNull(verification.Result);
             }
         }
 
@@ -115,7 +115,7 @@
             var task = documentStore.AsyncDatabaseCommands.ForDatabase(dbname).GetIndexNamesAsync(0, 25);
             yield return task;
 
-            Assert.Equal(new[] {"Raven/DocumentsByEntityName"}, task.Result);
+            Assert.AreEqual(new[] {"Raven/DocumentsByEntityName"}, task.Result);
         }
 
         [Asynchronous]
@@ -138,7 +138,7 @@
                 .GetIndexNamesAsync(0, 25);
             yield return verification;
 
-            Assert.Contains("Test", verification.Result);
+			Assert.IsTrue(verification.Result.Contains("Test"));
         }
 
         [Asynchronous]
@@ -173,7 +173,7 @@
                 .QueryAsync("Test", new IndexQuery(), null);
             yield return (query);
 
-            Assert.NotEqual(0, query.Result.TotalResults);
+            Assert.AreNotEqual(0, query.Result.TotalResults);
         }
 
         [Asynchronous]
@@ -210,9 +210,9 @@
                                 new string[0]);
                 yield return query;
 
-                Assert.Equal(2, query.Result.Results[0]["Contacts"].Count());
-                Assert.Equal("Abbot", query.Result.Results[0]["Contacts"][0].Value<string>("Surname"));
-                Assert.Equal("Costello", query.Result.Results[0]["Contacts"][1].Value<string>("Surname"));
+                Assert.AreEqual(2, query.Result.Results[0]["Contacts"].Count());
+                Assert.AreEqual("Abbot", query.Result.Results[0]["Contacts"][0].Value<string>("Surname"));
+                Assert.AreEqual("Costello", query.Result.Results[0]["Contacts"][1].Value<string>("Surname"));
             }
         }
     }

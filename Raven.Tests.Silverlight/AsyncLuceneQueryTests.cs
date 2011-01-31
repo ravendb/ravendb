@@ -6,7 +6,7 @@
 	using Client.Extensions;
 	using Entities;
 	using Microsoft.Silverlight.Testing;
-	using Xunit;
+	using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 	public class AsyncLuceneQueryTests : RavenTestBase
 	{
@@ -37,7 +37,7 @@
 
 				yield return queryResultAsync;
 
-				Assert.Equal("Ayende", queryResultAsync.Result[0].Name);
+				Assert.AreEqual("Ayende", queryResultAsync.Result[0].Name);
 			}
 		}
 
@@ -66,13 +66,13 @@
 					.ToListAsync();
 				yield return query;
 
-				Assert.Equal("Hello", query.Result[0].Note);
+				Assert.AreEqual("Hello", query.Result[0].Note);
 
 				// NOTE: this call should not hit the server 
 				var load = session.LoadAsync<Customer>(customer.Id);
 				yield return load;
 
-				Assert.Equal(1, session.Advanced.NumberOfRequests);
+				Assert.AreEqual(1, session.Advanced.NumberOfRequests);
 			}
 		}
 	}

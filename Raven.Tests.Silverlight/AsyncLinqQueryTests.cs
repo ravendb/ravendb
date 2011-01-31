@@ -10,7 +10,6 @@
 	using Entities;
 	using Microsoft.Silverlight.Testing;
 	using Microsoft.VisualStudio.TestTools.UnitTesting;
-	using Assert = Xunit.Assert;
 
 	public class AsyncLinqQueryTests : RavenTestBase
 	{
@@ -57,8 +56,8 @@
 						.ToListAsync();
 				yield return query;
 
-				Assert.Equal(1, query.Result.Count);
-				Assert.Equal("Async Company #1", query.Result[0].Name);
+				Assert.AreEqual(1, query.Result.Count);
+				Assert.AreEqual("Async Company #1", query.Result[0].Name);
 			}
 		}
 
@@ -84,8 +83,8 @@
 							.ToListAsync();
 				yield return query;
 
-				Assert.Equal(1, query.Result.Count);
-				Assert.Equal(12345, query.Result[0].Phone);
+				Assert.AreEqual(1, query.Result.Count);
+				Assert.AreEqual(12345, query.Result[0].Phone);
 			}
 		}
 
@@ -111,7 +110,7 @@
 					.ToListAsync();
 				yield return query;
 
-				Assert.Equal(1, query.Result.Count);
+				Assert.AreEqual(1, query.Result.Count);
 			}
 		}
 
@@ -139,10 +138,10 @@
 							.ToListAsync();
 				yield return query;
 
-				Assert.Equal(4, query.Result.Count);
-				Assert.Equal("Alpha Dog", query.Result[0].Name);
-				Assert.Equal("Betty Boop", query.Result[1].Name);
-				Assert.Equal("Loony Lin", query.Result[2].Name);
+				Assert.AreEqual(4, query.Result.Count);
+				Assert.AreEqual("Alpha Dog", query.Result[0].Name);
+				Assert.AreEqual("Betty Boop", query.Result[1].Name);
+				Assert.AreEqual("Loony Lin", query.Result[2].Name);
 			}
 		}
 
@@ -169,7 +168,7 @@
 							.ToListAsync();
 				yield return query;
 
-				Assert.Equal(2, query.Result.Count);
+				Assert.AreEqual(2, query.Result.Count);
 			}
 		}
 
@@ -198,13 +197,13 @@
 							.ToListAsync();
 				yield return query;
 
-				Assert.Equal("Hello", query.Result[0].Note);
+				Assert.AreEqual("Hello", query.Result[0].Note);
 
 				// NOTE: this call should not hit the server 
 				var load = session.LoadAsync<Customer>(customer.Id);
 				yield return load;
 
-				Assert.Equal(1, session.Advanced.NumberOfRequests);
+				Assert.AreEqual(1, session.Advanced.NumberOfRequests);
 			}
 		}
 
@@ -235,8 +234,8 @@
 				//		 this manifests as a problem casting the type, because (since it does see the projected fields)
 				//		 it assumes that the must be the original entity (i.e., Company)
 
-				Assert.Equal(1, query.Result.Count);
-				Assert.Equal("Async Company #1", query.Result[0].Name);
+				Assert.AreEqual(1, query.Result.Count);
+				Assert.AreEqual("Async Company #1", query.Result[0].Name);
 			}
 		}
 
@@ -277,7 +276,7 @@
 							.ToListAsync();
 				yield return query;
 
-				Assert.Equal(2, query.Result.Count);
+				Assert.AreEqual(2, query.Result.Count);
 			}
 		}
 	}

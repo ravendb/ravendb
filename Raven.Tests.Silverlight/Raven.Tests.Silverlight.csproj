@@ -95,9 +95,6 @@
     <Reference Include="System.Net" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Windows.Browser" />
-    <Reference Include="XunitLight.Silverlight">
-      <HintPath>..\SharedLibs\Silverlight\XunitLight.Silverlight.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\Raven.Tests\Document\Company.cs">
