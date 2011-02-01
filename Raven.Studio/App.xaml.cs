@@ -6,15 +6,9 @@
 
 	public partial class App : Application
 	{
-		// ReSharper disable UnaccessedField.Local
-		readonly AppBootstrapper _bootstrapper;
-		// ReSharper restore UnaccessedField.Local
-
 		public App()
 		{
 			UnhandledException += OnUnhandledException;
-
-			_bootstrapper = new AppBootstrapper();
 
 			InitializeComponent();
 		}
