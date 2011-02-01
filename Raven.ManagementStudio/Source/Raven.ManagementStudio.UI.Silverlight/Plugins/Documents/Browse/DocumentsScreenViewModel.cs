@@ -125,9 +125,10 @@ namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Documents.Browse
 			
 			IsBusy = true;
 			
-			Database.Session.Advanced.AsyncDatabaseCommands
-				.QueryAsync(string.Empty,new IndexQuery(){}, new string[]{})
-				.ContinueWith(x => GetAll(x.Result));
+			//Database.Session.Advanced.AsyncDatabaseCommands
+			//    .QueryAsync(string.Empty,new IndexQuery(){}, new string[]{})
+			//    .ContinueWith(x => GetAll(x.Result));
+			throw new NotImplementedException();
 		}
 	}
 

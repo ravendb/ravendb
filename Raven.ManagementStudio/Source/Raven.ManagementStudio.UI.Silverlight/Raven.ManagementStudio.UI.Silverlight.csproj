@@ -199,14 +199,8 @@
     </Compile>
     <Compile Include="Plugins\Linq\LinqEditorViewModel.cs" />
     <Compile Include="Plugins\PluginBase.cs" />
-    <Compile Include="Plugins\Statistics\Global\GlobalStatistics.cs" />
-    <Compile Include="Plugins\Statistics\Global\GlobalStatisticsMenuIcon.xaml.cs">
-      <DependentUpon>GlobalStatisticsMenuIcon.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Plugins\Statistics\Global\GlobalStatisticsScreenView.xaml.cs">
-      <DependentUpon>GlobalStatisticsScreenView.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Plugins\Statistics\Global\GlobalStatisticsScreenViewModel.cs" />
+    <Compile Include="Statistics\Global\GlobalStatisticsPlugin.cs" />
+    <Compile Include="Statistics\Global\GlobalStatisticsViewModel.cs" />
     <Compile Include="Shell\IShell.cs" />
     <Compile Include="Database\DatabaseViewModel.cs" />
     <Compile Include="Plugins\Documents\Browse\DocumentsScreenView.xaml.cs">
@@ -310,11 +304,11 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Plugins\Statistics\Global\GlobalStatisticsMenuIcon.xaml">
+    <Page Include="Statistics\Global\GlobalStatisticsMenuIcon.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Plugins\Statistics\Global\GlobalStatisticsScreenView.xaml">
+    <Page Include="Statistics\Global\GlobalStatisticsView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
