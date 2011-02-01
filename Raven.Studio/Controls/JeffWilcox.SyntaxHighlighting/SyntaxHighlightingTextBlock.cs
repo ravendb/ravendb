@@ -1,0 +1,199 @@
+﻿// (c) Copyright Microsoft Corporation.
+// This source is subject to the Microsoft Public License (Ms-PL).
+// Please see http://go.microsoft.com/fwlink/?LinkID=131993 for details.
+// All other rights reserved.
+
+namespace Raven.Studio.Controls.JeffWilcox.SyntaxHighlighting
+{
+	using System;
+	using System.Windows;
+	using System.Windows.Controls;
+
+	/// <summary>
+	/// A simple text control for displaying syntax highlighted source code.
+	/// </summary>
+	[TemplatePart(Name = TextBlockName, Type = typeof (TextBlock))]
+	public class SyntaxHighlightingTextBlock : Control
+	{
+		/// <summary>
+		/// The name of the text block part.
+		/// </summary>
+		const string TextBlockName = "TextBlock";
+
+		/// <summary>
+		/// Shared static color coding system instance.
+		/// </summary>
+		static WeakReference _colorizer;
+
+		/// <summary>
+		/// Backing field for the text block.
+		/// </summary>
+		TextBlock _textBlock;
+
+		#region public SourceLanguageType SourceLanguage
+
+		/// <summary>
+		/// Identifies the SourceLanguage dependency property.
+		/// </summary>
+		public static readonly DependencyProperty SourceLanguageProperty =
+			DependencyProperty.Register(
+				"SourceLanguage",
+				typeof (SourceLanguageType),
+				typeof (SyntaxHighlightingTextBlock),
+				new PropertyMetadata(SourceLanguageType.Json, OnSourceLanguagePropertyChanged));
+
+		/// <summary>
+		/// Gets or sets the source language type.
+		/// </summary>
+		public SourceLanguageType SourceLanguage
+		{
+			get { return (SourceLanguageType) GetValue(SourceLanguageProperty); }
+			set { SetValue(SourceLanguageProperty, value); }
+		}
+
+		/// <summary>
+		/// SourceLanguageProperty property changed handler.
+		/// </summary>
+		/// <param name="d">SyntaxHighlightingTextBlock that changed its SourceLanguage.</param>
+		/// <param name="e">Event arguments.</param>
+		static void OnSourceLanguagePropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+		{
+			var source = d as SyntaxHighlightingTextBlock;
+			var value = (SourceLanguageType) e.NewValue;
+			if (value != SourceLanguageType.Cpp ||
+			    value != SourceLanguageType.CSharp ||
+			    value != SourceLanguageType.JavaScript ||
+			    value != SourceLanguageType.VisualBasic ||
+			    value != SourceLanguageType.Xaml ||
+			    value != SourceLanguageType.Xml)
+			{
+				d.SetValue(e.Property, e.OldValue);
+				throw new ArgumentException("Invalid source language type.");
+			}
+
+			if (e.NewValue != e.OldValue)
+			{
+				source.HighlightContents();
+			}
+		}
+
+		#endregion public SourceLanguageType SourceLanguage
+
+		#region public string SourceCode
+
+		/// <summary>
+		/// Identifies the SourceCode dependency property.
+		/// </summary>
+		public static readonly DependencyProperty SourceCodeProperty =
+			DependencyProperty.Register(
+				"SourceCode",
+				typeof (string),
+				typeof (SyntaxHighlightingTextBlock),
+				new PropertyMetadata(string.Empty, OnSourceCodePropertyChanged));
+
+		/// <summary>
+		/// Gets or sets the source code to display inside the syntax
+		/// highlighting text block.
+		/// </summary>
+		public string SourceCode
+		{
+			get { return GetValue(SourceCodeProperty) as string; }
+			set { SetValue(SourceCodeProperty, value); }
+		}
+
+		/// <summary>
+		/// SourceCodeProperty property changed handler.
+		/// </summary>
+		/// <param name="d">SyntaxHighlightingTextBlock that changed its SourceCode.</param>
+		/// <param name="e">Event arguments.</param>
+		static void OnSourceCodePropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+		{
+			var source = d as SyntaxHighlightingTextBlock;
+			source.HighlightContents();
+		}
+
+		#endregion public string SourceCode
+
+		/// <summary>
+		/// Initializes a new instance of the SyntaxHighlightingTextBlock
+		/// control.
+		/// </summary>
+		public SyntaxHighlightingTextBlock()
+		{
+			DefaultStyleKey = typeof (SyntaxHighlightingTextBlock);
+		}
+
+		/// <summary>
+		/// Overrides the on apply template method.
+		/// </summary>
+		public override void OnApplyTemplate()
+		{
+			base.OnApplyTemplate();
+
+			_textBlock = GetTemplateChild(TextBlockName) as TextBlock;
+			if (_textBlock != null && !string.IsNullOrEmpty(SourceCode))
+			{
+				HighlightContents();
+			}
+		}
+
+		/// <summary>
+		/// Clears and updates the contents.
+		/// </summary>
+		void HighlightContents()
+		{
+			if (_textBlock != null)
+			{
+				_textBlock.Inlines.Clear();
+				var xif = new XamlInlineFormatter(_textBlock);
+
+				CodeColorizer cc;
+				if (_colorizer != null && _colorizer.IsAlive)
+				{
+					cc = (CodeColorizer) _colorizer.Target;
+				}
+				else
+				{
+					cc = new CodeColorizer();
+					_colorizer = new WeakReference(cc);
+				}
+
+				ILanguage language = CreateLanguageInstance(SourceLanguage);
+
+				cc.Colorize(SourceCode, language, xif, new DefaultStyleSheet());
+			}
+		}
+
+		/// <summary>
+		/// Retrieves the language instance used by the highlighting system.
+		/// </summary>
+		/// <param name="type">The language type to create.</param>
+		/// <returns>Returns a new instance of the language parser.</returns>
+		ILanguage CreateLanguageInstance(SourceLanguageType type)
+		{
+			switch (type)
+			{
+				case SourceLanguageType.CSharp:
+					return Languages.CSharp;
+
+				case SourceLanguageType.Cpp:
+					return Languages.Cpp;
+
+				case SourceLanguageType.JavaScript:
+					return Languages.JavaScript;
+
+				case SourceLanguageType.VisualBasic:
+					return Languages.VbDotNet;
+
+				case SourceLanguageType.Xaml:
+				case SourceLanguageType.Xml:
+					return Languages.Xml;
+				case SourceLanguageType.Json:
+					return Languages.Json;
+
+				default:
+					throw new InvalidOperationException("Could not locate the provider.");
+			}
+		}
+	}
+}

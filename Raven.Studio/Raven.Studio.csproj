@@ -1,0 +1,389 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.50727</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{AB130CB7-E4D4-4496-BEE6-0538963475FC}</ProjectGuid>
+    <ProjectTypeGuids>{A1591282-1198-4647-A2B1-27E5FF5F6F3B};{fae04ec0-301f-11d3-bf4b-00c04f79efbc}</ProjectTypeGuids>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Raven.Studio</RootNamespace>
+    <AssemblyName>Raven.Studio</AssemblyName>
+    <TargetFrameworkIdentifier>Silverlight</TargetFrameworkIdentifier>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <SilverlightVersion>$(TargetFrameworkVersion)</SilverlightVersion>
+    <SilverlightApplication>true</SilverlightApplication>
+    <SupportedCultures>
+    </SupportedCultures>
+    <XapOutputs>true</XapOutputs>
+    <GenerateSilverlightManifest>true</GenerateSilverlightManifest>
+    <XapFilename>Raven.Studio.xap</XapFilename>
+    <SilverlightManifestTemplate>Properties\AppManifest.xml</SilverlightManifestTemplate>
+    <SilverlightAppEntry>Raven.Studio.App</SilverlightAppEntry>
+    <TestPageFileName>CaliburnMicroSilverlightTestPage.html</TestPageFileName>
+    <CreateTestPage>true</CreateTestPage>
+    <ValidateXaml>true</ValidateXaml>
+    <EnableOutOfBrowser>true</EnableOutOfBrowser>
+    <OutOfBrowserSettingsFile>Properties\OutOfBrowserSettings.xml</OutOfBrowserSettingsFile>
+    <UsePlatformExtensions>false</UsePlatformExtensions>
+    <ThrowErrorsInValidation>true</ThrowErrorsInValidation>
+    <LinkedServerProject>
+    </LinkedServerProject>
+  </PropertyGroup>
+  <!-- This property group is only here to support building this project using the 
+       MSBuild 3.5 toolset. In order to work correctly with this older toolset, it needs 
+       to set the TargetFrameworkVersion to v3.5 -->
+  <PropertyGroup Condition="'$(MSBuildToolsVersion)' == '3.5'">
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE;SILVERLIGHT</DefineConstants>
+    <NoStdLib>true</NoStdLib>
+    <NoConfig>true</NoConfig>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>Bin\Release</OutputPath>
+    <DefineConstants>TRACE;SILVERLIGHT</DefineConstants>
+    <NoStdLib>true</NoStdLib>
+    <NoConfig>true</NoConfig>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="ActiproSoftware.Shared.Silverlight, Version=10.2.105.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
+      <HintPath>..\SharedLibs\Silverlight\ActiproSoftware.Shared.Silverlight.dll</HintPath>
+    </Reference>
+    <Reference Include="ActiproSoftware.SyntaxEditor.Silverlight, Version=10.2.105.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
+      <HintPath>..\SharedLibs\Silverlight\ActiproSoftware.SyntaxEditor.Silverlight.dll</HintPath>
+    </Reference>
+    <Reference Include="ActiproSoftware.Text.Silverlight, Version=10.2.105.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
+      <HintPath>..\SharedLibs\Silverlight\ActiproSoftware.Text.Silverlight.dll</HintPath>
+    </Reference>
+    <Reference Include="AsyncCtpLibrary_Silverlight">
+      <HintPath>..\SharedLibs\AsyncCtpLibrary_Silverlight.dll</HintPath>
+    </Reference>
+    <Reference Include="Caliburn.Micro">
+      <HintPath>..\SharedLibs\Silverlight\Caliburn.Micro.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Expression.Interactions">
+      <HintPath>..\SharedLibs\Silverlight\Microsoft.Expression.Interactions.dll</HintPath>
+    </Reference>
+    <Reference Include="mscorlib" />
+    <Reference Include="Newtonsoft.Json.Silverlight">
+      <HintPath>..\SharedLibs\Newtonsoft.Json.Silverlight.dll</HintPath>
+    </Reference>
+    <Reference Include="System.ComponentModel.Composition, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
+    <Reference Include="System.ComponentModel.Composition.Initialization, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
+    <Reference Include="System.ComponentModel.DataAnnotations, Version=2.0.5.0, Culture=neutral, PublicKeyToken=ddd0da4d3e678217" />
+    <Reference Include="System.Windows" />
+    <Reference Include="system" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Net" />
+    <Reference Include="System.Windows.Controls, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
+    <Reference Include="System.Windows.Controls.Data, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
+    <Reference Include="System.Windows.Controls.Toolkit">
+      <HintPath>..\SharedLibs\Silverlight\Toolkit\System.Windows.Controls.Toolkit.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Windows.Controls.Layout.Toolkit">
+      <HintPath>..\SharedLibs\Silverlight\Toolkit\System.Windows.Controls.Layout.Toolkit.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Windows.Controls.Data.Toolkit">
+      <HintPath>..\SharedLibs\Silverlight\Toolkit\System.Windows.Controls.Data.Toolkit.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Windows.Controls.Input.Toolkit">
+      <HintPath>..\SharedLibs\Silverlight\Toolkit\System.Windows.Controls.Input.Toolkit.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Windows.Interactivity">
+      <HintPath>..\SharedLibs\Silverlight\System.Windows.Interactivity.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Windows.Browser" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="App.xaml.cs">
+      <DependentUpon>App.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="AppBootstrapper.cs" />
+    <Compile Include="Behaviors\Watermark.cs" />
+    <Compile Include="Controls\DocumentsContainer.cs" />
+    <Compile Include="Controls\DocumentThumbnail.cs" />
+    <Compile Include="Controls\DragDropPanel.cs" />
+    <Compile Include="Controls\ErrorWindow.xaml.cs">
+      <DependentUpon>ErrorWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\Gears.cs" />
+    <Compile Include="Controls\HyperlinkHelper.cs" />
+    <Compile Include="Controls\Pager.xaml.cs">
+      <DependentUpon>Pager.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\SyntaxEditor\Javascript\JavascriptOutliningSource.cs" />
+    <Compile Include="Controls\SyntaxEditor\Javascript\JavascriptSyntaxLanguage.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\CodeColorizer.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Common\ExtensionMethods.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Common\Guard.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Common\ILanguageRepository.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Common\LanguageId.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Common\LanguageRepository.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Common\ScopeName.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Compilation\CompiledLanguage.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Compilation\ILanguageCompiler.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Compilation\LanguageCompiler.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Compilation\Languages\Cpp.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Compilation\Languages\CSharp.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Compilation\Languages\JavaScript.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Compilation\Languages\Json.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Compilation\Languages\VbDotNet.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Compilation\Languages\Xml.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Formatters.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Formatting\TextInsertion.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Formatting\XamlFormatter.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Formatting\XamlInlineFormatter.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\ICodeColorizer.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\IFormatter.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\ILanguage.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\IStyleSheet.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\LanguageRule.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Languages.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Parsing\ILanguageParser.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Parsing\LanguageParser.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Parsing\Scope.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\SourceLanguageType.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Style.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\StyleDictionary.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\StyleSheets.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\Styling\StyleSheets\DefaultStyleSheet.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\SyntaxHighlightingTextBlock.cs" />
+    <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\SyntaxHighlightingTextBox.cs" />
+    <Compile Include="Controls\SyntaxEditor\MultiLineCommentNodeDefinition.cs" />
+    <Compile Include="Controls\SyntaxEditor\SyntaxEditorHelper.cs" />
+    <Compile Include="Converters\BooleanToOppositeBooleanConverter.cs" />
+    <Compile Include="Converters\BooleanToOppositeVisibilityConverter.cs" />
+    <Compile Include="Converters\BooleanToVisibilityConverter.cs" />
+    <Compile Include="Converters\CategoryIsActiveConverter.cs" />
+    <Compile Include="Converters\EnumToEnumerableConverter.cs" />
+    <Compile Include="Converters\EnumToIntConverter.cs" />
+    <Compile Include="Converters\NullToVisibilityConverter.cs" />
+    <Compile Include="Dialogs\InformationDialogViewModel.cs" />
+    <Compile Include="Messages\ChangeActiveScreen.cs" />
+    <Compile Include="Messages\OpenNewScreen.cs" />
+    <Compile Include="Messages\ReplaceActiveScreen.cs" />
+    <Compile Include="Models\Database.cs" />
+    <Compile Include="Models\Document.cs" />
+    <Compile Include="Models\FieldProperties.cs" />
+    <Compile Include="Models\Index.cs" />
+    <Compile Include="Plugins\Documents\Browse\BrowseDocuments.cs" />
+    <Compile Include="Plugins\Documents\Browse\BrowseMenuIcon.xaml.cs">
+      <DependentUpon>BrowseMenuIcon.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Plugins\Documents\Browse\CreateNewDocument.cs" />
+    <Compile Include="Plugins\Documents\Browse\DocumentsScreenViewModel.cs" />
+    <Compile Include="Plugins\Common\DocumentViewModel.cs" />
+    <Compile Include="Indexes\Browse\BrowseIndexesPlugin.cs" />
+    <Compile Include="Indexes\Browse\BrowseIndexesMenuIcon.xaml.cs">
+      <DependentUpon>BrowseIndexesMenuIcon.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Indexes\Browse\BrowseIndexesView.xaml.cs">
+      <DependentUpon>BrowseIndexesView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Indexes\Browse\BrowseIndexesViewModel.cs" />
+    <Compile Include="Indexes\Browse\CreateNewIndexPlugin.cs" />
+    <Compile Include="Messages\IndexChangeMessage.cs" />
+    <Compile Include="Indexes\Browse\IndexView.xaml.cs">
+      <DependentUpon>IndexView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Indexes\Browse\IndexViewModel.cs" />
+    <Compile Include="Plugins\Linq\LinqEditor.cs" />
+    <Compile Include="Plugins\Linq\LinqEditorView.xaml.cs">
+      <DependentUpon>LinqEditorView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Plugins\Linq\LinqEditorViewModel.cs" />
+    <Compile Include="Plugins\PluginBase.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Statistics\Global\GlobalStatisticsPlugin.cs" />
+    <Compile Include="Statistics\Global\GlobalStatisticsViewModel.cs" />
+    <Compile Include="Shell\IShell.cs" />
+    <Compile Include="Database\DatabaseViewModel.cs" />
+    <Compile Include="Plugins\Documents\Browse\DocumentsScreenView.xaml.cs">
+      <DependentUpon>DocumentsScreenView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Plugins\Common\DocumentView.xaml.cs">
+      <DependentUpon>DocumentView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Database\HomeScreenViewModel.cs" />
+    <Compile Include="Database\MenuScreenViewModel.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Shell\ShellViewModel.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ApplicationDefinition Include="App.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </ApplicationDefinition>
+    <Resource Include="Resources\Icons.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Resource>
+    <Resource Include="Resources\Images\chart.png" />
+    <Resource Include="Resources\Images\logo.png" />
+    <Resource Include="Resources\Images\refresh.png" />
+    <Resource Include="Resources\Images\search.png" />
+    <Resource Include="Resources\Manifest.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Resource>
+    <Resource Include="Resources\Templates.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Resource>
+    <Resource Include="Resources\ControlTemplates\Gears.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Resource>
+    <Resource Include="Resources\Common.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Resource>
+    <Page Include="Controls\Pager.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Indexes\Browse\IndexView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Plugins\Linq\LinqEditorView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\ErrorWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Dialogs\InformationDialogView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Plugins\Documents\Browse\BrowseMenuIcon.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Plugins\Documents\Browse\DocumentsScreenView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Plugins\Common\DocumentView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Indexes\Browse\BrowseIndexesMenuIcon.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Indexes\Browse\BrowseIndexesView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Statistics\Global\GlobalStatisticsMenuIcon.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Statistics\Global\GlobalStatisticsView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Resources\ControlTemplates\DocumentsContainer.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Resources\ControlTemplates\DocumentThumbnail.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Resources\ControlTemplates\EmptyButton.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Resources\ControlTemplates\Indexes.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Resources\ControlTemplates\JeffWilcox.SyntaxHighlighting.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Resources\ControlTemplates\Menu.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Database\DatabaseView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Database\HomeScreenView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Database\MenuScreenView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Shell\ShellView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Controls\SyntaxEditor\Definitions\JScript.langdef" />
+    <EmbeddedResource Include="Controls\SyntaxEditor\Definitions\CSharp.langdef" />
+    <None Include="Properties\AppManifest.xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Properties\OutOfBrowserSettings.xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Raven.Client.Silverlight\Raven.Client.Silverlight.csproj">
+      <Project>{8A1DB308-D56B-49BC-A421-A2AB32617215}</Project>
+      <Name>Raven.Client.Silverlight</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Studio.Plugin\Raven.Studio.Plugin.csproj">
+      <Project>{0BA36A77-F8CA-400C-8F89-3726143BFA96}</Project>
+      <Name>Raven.Studio.Plugin</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\Images\add-small.png" />
+    <Resource Include="Resources\Images\delete-small.png" />
+    <Resource Include="Resources\Images\edit-cancel-small.png" />
+    <Resource Include="Resources\Images\edit-small.png" />
+    <Resource Include="Resources\Images\save-cancel-small.png" />
+    <Resource Include="Resources\Images\save-small.png" />
+    <Resource Include="Resources\Images\undo-small.png" />
+  </ItemGroup>
+  <ItemGroup />
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+  <ProjectExtensions>
+    <VisualStudio>
+      <FlavorProperties GUID="{A1591282-1198-4647-A2B1-27E5FF5F6F3B}">
+        <SilverlightProjectProperties />
+      </FlavorProperties>
+    </VisualStudio>
+  </ProjectExtensions>
+</Project>
