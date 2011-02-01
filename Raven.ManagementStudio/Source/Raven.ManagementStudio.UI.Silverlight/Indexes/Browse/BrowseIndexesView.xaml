@@ -7,11 +7,13 @@
 			 xmlns:tk="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit"
 			 xmlns:b="clr-namespace:Raven.ManagementStudio.UI.Silverlight.Behaviors"
 			 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
+			 xmlns:c="clr-namespace:Raven.ManagementStudio.UI.Silverlight.Controls"
 			 mc:Ignorable="d">
 
 	<tk:BusyIndicator IsBusy="{Binding IsBusy}">
 		<Grid>
 			<Grid.RowDefinitions>
+				<RowDefinition Height="Auto" />
 				<RowDefinition Height="Auto" />
 				<RowDefinition Height="*" />
 			</Grid.RowDefinitions>
@@ -30,8 +32,11 @@
 				<HyperlinkButton Style="{StaticResource SearchButtonStyle}" />
 			</StackPanel>
 
-			<ListBox ItemsSource="{Binding AllItems}"
-					 Background="Yellow"
+			<c:Pager Grid.Row="1"
+					 DataContext="{Binding Indexes}" />
+
+			<ListBox Grid.Row="2"
+					 ItemsSource="{Binding Indexes}"
 					 HorizontalContentAlignment="Stretch"
 					 VerticalContentAlignment="Stretch"
 					 SelectedItem="{Binding SelectedItem, Mode=TwoWay}" />
