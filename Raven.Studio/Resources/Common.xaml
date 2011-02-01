@@ -2,9 +2,6 @@
 					xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					xmlns:converters="clr-namespace:Raven.Studio.Converters">
 
-	<SolidColorBrush x:Key="NavigationForegroundBrush"
-					 Color="Black" />
-
 	<SolidColorBrush x:Key="ToolbarBackgroundBrush"
 					 Color="White" />
 
@@ -57,4 +54,5 @@
 	<converters:BooleanToOppositeVisibilityConverter x:Key="booleanToOppositeVisibility" />
 	<converters:EnumToIntConverter x:Key="enumToInt" />
 	<converters:EnumToEnumerableConverter x:Key="enumToEnumerable" />
+
 </ResourceDictionary>

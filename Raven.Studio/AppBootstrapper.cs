@@ -11,7 +11,7 @@
 
 	public class AppBootstrapper : Bootstrapper<IShell>
 	{
-		CompositionContainer _container;
+		CompositionContainer container;
 
 		protected override void Configure()
 		{
@@ -19,22 +19,22 @@
 				AssemblySource.Instance.Select(assembly => new AssemblyCatalog(assembly))
 					.Cast<ComposablePartCatalog>());
 
-			_container = CompositionHost.Initialize(catalog);
+			container = CompositionHost.Initialize(catalog);
 
 			var batch = new CompositionBatch();
 
 			batch.AddExportedValue<IWindowManager>(new WindowManager());
 			batch.AddExportedValue<IEventAggregator>(new EventAggregator());
-			batch.AddExportedValue(_container);
+			batch.AddExportedValue(container);
 			batch.AddExportedValue(catalog);
 
-			_container.Compose(batch);
+			container.Compose(batch);
 		}
 
 		protected override object GetInstance(Type serviceType, string key)
 		{
 			string contract = string.IsNullOrEmpty(key) ? AttributedModelServices.GetContractName(serviceType) : key;
-			IEnumerable<object> exports = _container.GetExportedValues<object>(contract);
+			IEnumerable<object> exports = container.GetExportedValues<object>(contract);
 
 			if (exports.Count() > 0)
 			{
@@ -46,12 +46,12 @@
 
 		protected override IEnumerable<object> GetAllInstances(Type serviceType)
 		{
-			return _container.GetExportedValues<object>(AttributedModelServices.GetContractName(serviceType));
+			return container.GetExportedValues<object>(AttributedModelServices.GetContractName(serviceType));
 		}
 
 		protected override void BuildUp(object instance)
 		{
-			_container.SatisfyImportsOnce(instance);
+			container.SatisfyImportsOnce(instance);
 		}
 	}
 }
