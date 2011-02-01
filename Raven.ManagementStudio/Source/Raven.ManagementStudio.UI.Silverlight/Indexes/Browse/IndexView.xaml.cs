@@ -1,8 +1,8 @@
-﻿using ActiproSoftware.Windows.ProductSamples.SyntaxEditorSamples.Common;
-
-namespace Raven.ManagementStudio.UI.Silverlight.Plugins.Indexes.Browse
+﻿namespace Raven.ManagementStudio.UI.Silverlight.Indexes.Browse
 {
-    public partial class IndexView
+	using ActiproSoftware.Windows.ProductSamples.SyntaxEditorSamples.Common;
+
+	public partial class IndexView
     {
         public IndexView()
         {
