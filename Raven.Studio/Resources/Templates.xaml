@@ -305,13 +305,4 @@
 		</Setter>
 	</Style>
 
-	<DataTemplate x:Key="DocumentListItemTemplate">
-		<StackPanel cal:Message.Attach="[Event MouseLeftButtonDown] = [Action ShowDocument()]">
-			<TextBlock Text="{Binding Id}"
-					   FontWeight="Bold" />
-			<SyntaxHighlighting:SyntaxHighlightingTextBlock SourceLanguage="Json"
-															SourceCode="{Binding Summary}" />
-		</StackPanel>
-	</DataTemplate>
-
 </ResourceDictionary>

@@ -15,7 +15,7 @@
 
 	public class BindablePagedQuery<TResult, TViewModel> : BindableCollection<TViewModel>
 	{
-		const int PageSize = 8;
+		public int PageSize = 8;
 		readonly Func<int, int, Task<TResult[]>> query;
 		readonly Func<TResult, TViewModel> transform;
 		int currentPage;
@@ -27,7 +27,7 @@
 			this.transform = transform;
 		}
 
-		public Func<int> GetTotalResults { get; set; }
+		public Func<long > GetTotalResults { get; set; }
 
 		public bool HasResults
 		{
@@ -92,8 +92,8 @@
 									IsNotifying = true;
 
 				              		CurrentPage = page;
-				              		int total = GetTotalResults();
-				              		NumberOfPages = total/PageSize + (total%PageSize == 0 ? 0 : 1);
+				              		var total = GetTotalResults();
+				              		NumberOfPages = Convert.ToInt32( total/PageSize + (total%PageSize == 0 ? 0 : 1) );
 
 									Refresh();
 

@@ -6,6 +6,7 @@
 			 xmlns:tk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
 			 xmlns:cal="http://www.caliburnproject.org"
 			 xmlns:a="http://schemas.actiprosoftware.com/winfx/xaml/syntaxeditor"
+			 xmlns:SyntaxHighlighting="clr-namespace:Raven.Studio.Controls.JeffWilcox.SyntaxHighlighting"
 			 mc:Ignorable="d"
 			 d:DesignHeight="300"
 			 d:DesignWidth="400">
@@ -30,7 +31,17 @@
 				   Grid.Row="2" />
 		<ListBox x:Name="Results"
 				 Grid.Row="3"
-				 HorizontalContentAlignment="Stretch"
-				 ItemTemplate="{StaticResource DocumentListItemTemplate}" />
+				 HorizontalContentAlignment="Stretch">
+			<ListBox.ItemTemplate>
+				<DataTemplate>
+					<StackPanel cal:Message.Attach="[Event MouseLeftButtonDown] = [Action ShowDocument()]">
+						<TextBlock Text="{Binding Id}"
+								   FontWeight="Bold" />
+						<SyntaxHighlighting:SyntaxHighlightingTextBlock SourceLanguage="Json"
+																		SourceCode="{Binding Summary}" />
+					</StackPanel>
+				</DataTemplate>
+			</ListBox.ItemTemplate>
+		</ListBox>
 	</Grid>
 </UserControl>

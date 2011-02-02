@@ -3,10 +3,12 @@
 			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-			 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
+			 xmlns:tk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
 			 xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"
 			 xmlns:local="clr-namespace:Raven.Studio.Behaviors"
-			 xmlns:cal="http://www.caliburnproject.org"
+			 xmlns:cm="http://www.caliburnproject.org"
+			 xmlns:c="clr-namespace:Raven.Studio.Controls"
+			 xmlns:sh="clr-namespace:Raven.Studio.Controls.JeffWilcox.SyntaxHighlighting"
 			 mc:Ignorable="d">
 	<Grid>
 		<Grid.RowDefinitions>
@@ -26,26 +28,42 @@
 				</i:Interaction.Behaviors>
 			</TextBox>
 			<HyperlinkButton Style="{StaticResource SearchButtonStyle}"
-							 cal:Message.Attach="ShowDocument(documentId)" />
+							 cm:Message.Attach="ShowDocument(documentId)" />
 		</StackPanel>
 
+		<tk:BusyIndicator IsBusy="{Binding IsBusy}"
+						  Grid.Row="1">
 
-		<Border Grid.Row="1"
-				Background="{StaticResource LightGradient}"
-				Height="30"
-				CornerRadius="4"
-				Margin="0,0,0,0">
-			<TextBlock Text="{Binding Documents.Count, StringFormat=' {0} results', FallbackValue='No results'}"
-					   VerticalAlignment="Center"
-					   Foreground="{StaticResource ToolbarBackgroundBrush}" />
-		</Border>
+			<Grid>
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="*" />
+					<RowDefinition Height="Auto" />
+				</Grid.RowDefinitions>
 
-		<toolkit:BusyIndicator IsBusy="{Binding IsBusy}"
-							   Grid.Row="2">
-			<ListBox x:Name="Items"
-					 HorizontalContentAlignment="Stretch"
-					 ItemTemplate="{StaticResource DocumentListItemTemplate}" />
-		</toolkit:BusyIndicator>
+				<c:Pager Grid.Row="0"
+						 cm:Bind.Model="{Binding Documents}" />
+
+				<ListBox Grid.Row="1"
+						 ItemsSource="{Binding Documents}">
+
+					<ListBox.ItemTemplate>
+						<DataTemplate>
+							<StackPanel cm:Message.Attach="[Event MouseLeftButtonDown] = [Action ShowDocument()]">
+								<TextBlock Text="{Binding Key}"
+										   FontWeight="Bold" />
+								<sh:SyntaxHighlightingTextBlock SourceLanguage="Json"
+																SourceCode="{Binding DataAsJson}" />
+							</StackPanel>
+						</DataTemplate>
+					</ListBox.ItemTemplate>
+				</ListBox>
+
+				<c:Pager Grid.Row="2"
+						 cm:Bind.Model="{Binding Documents}" />
+			</Grid>
+
+		</tk:BusyIndicator>
 	</Grid>
 
 </UserControl>

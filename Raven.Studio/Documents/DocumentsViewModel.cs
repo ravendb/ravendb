@@ -7,6 +7,7 @@ namespace Raven.Studio.Documents
 	using System.Net;
 	using Caliburn.Micro;
 	using Dialogs;
+	using Framework;
 	using Messages;
 	using Newtonsoft.Json.Linq;
 	using Plugin;
@@ -18,13 +19,19 @@ namespace Raven.Studio.Documents
 		bool isBusy;
 		bool isDocumentPreviewed;
 		string lastSearchDocumentId;
+		readonly IDatabase database;
 
 		public DocumentsViewModel(IDatabase database)
 		{
 			DisplayName = "Browse Documents";
-			Database = database;
+			this.database = database;
+
+			Documents = new BindablePagedQuery<JsonDocument>(database.Session.Advanced.AsyncDatabaseCommands.GetDocumentsAsync);
+
 			CompositionInitializer.SatisfyImports(this);
 		}
+
+		public BindablePagedQuery<JsonDocument> Documents { get; private set; }
 
 		[Import]
 		public IEventAggregator EventAggregator { get; set; }
@@ -41,8 +48,6 @@ namespace Raven.Studio.Documents
 				NotifyOfPropertyChange(() => IsBusy);
 			}
 		}
-
-		public IDatabase Database { get; private set; }
 
 		public bool IsDocumentPreviewed
 		{
@@ -62,7 +67,7 @@ namespace Raven.Studio.Documents
 		public void GetAll(IList<JsonDocument> response)
 		{
 			List<DocumentViewModel> result =
-				response.Select(jsonDocument => new DocumentViewModel(new Document(jsonDocument), Database)).ToList();
+				response.Select(jsonDocument => new DocumentViewModel(new Document(jsonDocument), database)).ToList();
 			Items.AddRange(result);
 			IsBusy = false;
 		}
@@ -103,7 +108,7 @@ namespace Raven.Studio.Documents
 		void NavigateTo(Document document)
 		{
 			EventAggregator.Publish(
-				new ReplaceActiveScreen(new DocumentViewModel(document, Database)));
+				new ReplaceActiveScreen(new DocumentViewModel(document, database)));
 		}
 
 		public void CreateDocument()
@@ -115,16 +120,19 @@ namespace Raven.Studio.Documents
 			                        	}));
 		}
 
-		protected override void OnInitialize()
+		protected override void OnActivate()
 		{
-			base.OnInitialize();
-
 			IsBusy = true;
+			database.Session.Advanced.AsyncDatabaseCommands
+				.GetStatisticsAsync()
+				.ContinueWith(x => RefreshDocuments(x.Result.CountOfDocuments));
+		}
 
-			//Database.Session.Advanced.AsyncDatabaseCommands
-			//    .QueryAsync(string.Empty,new IndexQuery(){}, new string[]{})
-			//    .ContinueWith(x => GetAll(x.Result));
-			throw new NotImplementedException();
+		public void RefreshDocuments(long total)
+		{
+			Documents.GetTotalResults = () => total;
+			Documents.LoadPage();
+			IsBusy = false;
 		}
 	}
 
