@@ -1,4 +1,4 @@
-namespace Raven.Studio.Indexes.Browse
+namespace Raven.Studio.Indexes
 {
 	using System.Collections.Generic;
 	using System.ComponentModel.Composition;

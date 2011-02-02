@@ -190,11 +190,11 @@
     <Compile Include="Plugins\Documents\Browse\CreateNewDocument.cs" />
     <Compile Include="Plugins\Documents\Browse\DocumentsScreenViewModel.cs" />
     <Compile Include="Plugins\Common\DocumentViewModel.cs" />
-    <Compile Include="Indexes\Browse\BrowseIndexesPlugin.cs" />
-    <Compile Include="Indexes\Browse\BrowseIndexesViewModel.cs" />
-    <Compile Include="Indexes\Browse\CreateNewIndexPlugin.cs" />
+    <Compile Include="Indexes\BrowseIndexesPlugin.cs" />
+    <Compile Include="Indexes\BrowseIndexesViewModel.cs" />
+    <Compile Include="Indexes\CreateNewIndexPlugin.cs" />
     <Compile Include="Messages\IndexChangeMessage.cs" />
-    <Compile Include="Indexes\Browse\EditIndexViewModel.cs" />
+    <Compile Include="Indexes\EditIndexViewModel.cs" />
     <Compile Include="Plugins\Linq\LinqEditor.cs" />
     <Compile Include="Plugins\Linq\LinqEditorView.xaml.cs">
       <DependentUpon>LinqEditorView.xaml</DependentUpon>
@@ -251,7 +251,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Indexes\Browse\EditIndexView.xaml">
+    <Page Include="Indexes\EditIndexView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -279,11 +279,11 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Indexes\Browse\BrowseIndexesMenuIcon.xaml">
+    <Page Include="Indexes\BrowseIndexesMenuIcon.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Indexes\Browse\BrowseIndexesView.xaml">
+    <Page Include="Indexes\BrowseIndexesView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

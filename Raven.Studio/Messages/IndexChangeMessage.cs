@@ -1,6 +1,6 @@
 ﻿namespace Raven.Studio.Messages
 {
-	using Indexes.Browse;
+	using Indexes;
 
 	public class IndexChangeMessage
 	{
