@@ -123,9 +123,11 @@
     </Compile>
     <Compile Include="Controls\Gears.cs" />
     <Compile Include="Controls\HyperlinkHelper.cs" />
+    <Compile Include="Controls\Label.cs" />
     <Compile Include="Controls\Pager.xaml.cs">
       <DependentUpon>Pager.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Controls\SyntaxEditor.cs" />
     <Compile Include="Controls\SyntaxEditor\Javascript\JavascriptOutliningSource.cs" />
     <Compile Include="Controls\SyntaxEditor\Javascript\JavascriptSyntaxLanguage.cs" />
     <Compile Include="Controls\JeffWilcox.SyntaxHighlighting\CodeColorizer.cs" />
@@ -192,9 +194,6 @@
     <Compile Include="Indexes\Browse\BrowseIndexesViewModel.cs" />
     <Compile Include="Indexes\Browse\CreateNewIndexPlugin.cs" />
     <Compile Include="Messages\IndexChangeMessage.cs" />
-    <Compile Include="Indexes\Browse\EditIndexView.xaml.cs">
-      <DependentUpon>EditIndexView.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Indexes\Browse\EditIndexViewModel.cs" />
     <Compile Include="Plugins\Linq\LinqEditor.cs" />
     <Compile Include="Plugins\Linq\LinqEditorView.xaml.cs">
