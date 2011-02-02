@@ -10,6 +10,11 @@
 		<ResourceDictionary Source="Fonts.xaml" />
 	</ResourceDictionary.MergedDictionaries>
 
+	<Style TargetType="TextBlock">
+		<Setter Property="FontFamily"
+				Value="Segoe UI" />
+	</Style>
+
 	<Style TargetType="ContentControl">
 		<Setter Property="HorizontalContentAlignment"
 				Value="Stretch" />

@@ -115,6 +115,9 @@
     </Compile>
     <Compile Include="AppBootstrapper.cs" />
     <Compile Include="Behaviors\Watermark.cs" />
+    <Compile Include="Controls\DatabaseConnection.xaml.cs">
+      <DependentUpon>DatabaseConnection.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Controls\DocumentsContainer.cs" />
     <Compile Include="Controls\DocumentThumbnail.cs" />
     <Compile Include="Controls\DragDropPanel.cs" />
@@ -244,6 +247,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Resource>
+    <Page Include="Controls\DatabaseConnection.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Controls\Pager.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

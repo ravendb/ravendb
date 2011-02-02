@@ -6,11 +6,13 @@
 		<ResourceDictionary Source="Brushes.xaml" />
 	</ResourceDictionary.MergedDictionaries>
 
+	<!-- these font resources do not work -->
 	<FontFamily x:Key="HeaderFontFamily">Segoe UI Light, Lucida Sans Unicode, Verdana</FontFamily>
-	<FontFamily x:Key="ContentFontFamily">Segoe UI, Lucida Sans Unicode, Verdana</FontFamily>
+	<sys:String x:Key="ContentFontFamily">Lucida Grande</sys:String>
 
 	<sys:Double x:Key="ApplicationNameFontSize">50</sys:Double>
 	<sys:Double x:Key="HeaderFontSize">21.333</sys:Double>
+	<sys:Double x:Key="FooterFontSize">10.667</sys:Double>
 	<sys:Double x:Key="NavigationFontSize">28</sys:Double>
 
 	<sys:Double x:Key="ContentFontSize">14</sys:Double>

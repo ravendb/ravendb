@@ -27,6 +27,7 @@ namespace Raven.Studio.Documents
 			this.database = database;
 
 			Documents = new BindablePagedQuery<JsonDocument>(database.Session.Advanced.AsyncDatabaseCommands.GetDocumentsAsync);
+			Documents.PageSize = 25;
 
 			CompositionInitializer.SatisfyImports(this);
 		}
