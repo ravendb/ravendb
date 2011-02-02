@@ -1,19 +1,30 @@
 ﻿namespace Raven.Studio.Framework
 {
 	using System;
+	using System.Linq;
 	using System.Threading.Tasks;
 	using Caliburn.Micro;
 
-	public class BindablePagedQuery<T> : BindableCollection<T>
+
+	public class BindablePagedQuery<T> : BindablePagedQuery<T, T>
+	{
+		public BindablePagedQuery(Func<int, int, Task<T[]>> query) : base(query, t => t)
+		{
+		}
+	}
+
+	public class BindablePagedQuery<TResult, TViewModel> : BindableCollection<TViewModel>
 	{
 		const int PageSize = 8;
-		readonly Func<int, int, Task<T[]>> query;
+		readonly Func<int, int, Task<TResult[]>> query;
+		readonly Func<TResult, TViewModel> transform;
 		int currentPage;
 		bool isLoading;
 
-		public BindablePagedQuery(Func<int, int, Task<T[]>> query)
+		public BindablePagedQuery(Func<int, int, Task<TResult[]>> query, Func<TResult,TViewModel> transform)
 		{
 			this.query = query;
+			this.transform = transform;
 		}
 
 		public Func<int> GetTotalResults { get; set; }
@@ -77,7 +88,7 @@
 				              	{
 									IsNotifying = false;
 									Clear();
-									AddRange(x.Result);
+									AddRange(x.Result.Select(transform));
 									IsNotifying = true;
 
 				              		CurrentPage = page;

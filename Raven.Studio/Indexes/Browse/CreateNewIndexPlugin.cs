@@ -2,7 +2,6 @@
 {
 	using System.Collections.Generic;
 	using System.ComponentModel.Composition;
-	using Models;
 	using Plugin;
 	using Plugins;
 	using Raven.Database.Indexing;
@@ -24,13 +23,13 @@
 		{
 			get
 			{
-				return new IndexViewModel(new Index(string.Empty, new IndexDefinition
+				return new EditIndexViewModel(new IndexDefinition
 				                                                  	{
 				                                                  		Analyzers = new Dictionary<string, string>(),
 				                                                  		Indexes = new Dictionary<string, FieldIndexing>(),
 				                                                  		SortOptions = new Dictionary<string, SortOptions>(),
 				                                                  		Stores = new Dictionary<string, FieldStorage>(),
-				                                                  	}), Database, null);
+				                                                  	}, Database, null);
 			}
 		}
 

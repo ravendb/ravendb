@@ -1,4 +1,4 @@
-﻿namespace Raven.Studio.Models
+﻿namespace Raven.Studio.Indexes
 {
 	using Raven.Database.Indexing;
 

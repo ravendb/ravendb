@@ -21,7 +21,6 @@
 						HorizontalAlignment="Right"
 						Margin="0,0,0,10">
 				<TextBox x:Name="searchBox"
-						 TextChanged="SearchBoxTextChanged"
 						 Width="350">
 					<i:Interaction.Behaviors>
 						<b:Watermark Text="search by index name"
@@ -46,18 +45,16 @@
 					<c:Pager Grid.Row="1"
 							 cm:Bind.Model="{Binding Indexes}" />
 
-					<ListBox ItemsSource="{Binding Indexes}"
-							 Grid.Row="2"
-							 DisplayMemberPath="Name"
-							 HorizontalContentAlignment="Stretch"
-							 VerticalContentAlignment="Stretch"
-							 SelectedItem="{Binding ActiveIndex, Mode=TwoWay}" />
+					<ListBox Grid.Row="2"
+							 ItemsSource="{Binding Indexes}"
+							 SelectedItem="{Binding ActiveIndex, Mode=TwoWay}"
+							 DisplayMemberPath="Name"/>
 				</Grid>
 
-				<Border Grid.Column="1">
-					<ContentControl x:Name="ActiveIndex" />
+				<Border Grid.Column="1"
+						Padding="4">
+					<ContentControl x:Name="ActiveItem" />
 				</Border>
-
 
 			</Grid>
 		</Grid>

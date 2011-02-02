@@ -372,8 +372,10 @@ namespace Raven.Client.Client.Async
 
 					var request = HttpJsonRequest.CreateHttpJsonRequest(this, requestUri, "PUT", credentials, convention);
 					request.AddOperationHeaders(OperationsHeaders);
+
 					var serializeObject = JsonConvert.SerializeObject(indexDef, new JsonEnumConverter());
-					return request.WriteAsync(Encoding.UTF8.GetBytes(serializeObject))
+					return request
+						.WriteAsync(Encoding.UTF8.GetBytes(serializeObject))
 						.ContinueWith(writeTask => request.ReadResponseStringAsync()
 													.ContinueWith(readStrTask =>
 													{

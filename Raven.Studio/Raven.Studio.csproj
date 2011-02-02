@@ -180,8 +180,7 @@
     <Compile Include="Messages\ReplaceActiveScreen.cs" />
     <Compile Include="Models\Database.cs" />
     <Compile Include="Models\Document.cs" />
-    <Compile Include="Models\FieldProperties.cs" />
-    <Compile Include="Models\Index.cs" />
+    <Compile Include="Indexes\FieldProperties.cs" />
     <Compile Include="Plugins\Documents\Browse\BrowseDocuments.cs" />
     <Compile Include="Plugins\Documents\Browse\BrowseMenuIcon.xaml.cs">
       <DependentUpon>BrowseMenuIcon.xaml</DependentUpon>
@@ -190,19 +189,13 @@
     <Compile Include="Plugins\Documents\Browse\DocumentsScreenViewModel.cs" />
     <Compile Include="Plugins\Common\DocumentViewModel.cs" />
     <Compile Include="Indexes\Browse\BrowseIndexesPlugin.cs" />
-    <Compile Include="Indexes\Browse\BrowseIndexesMenuIcon.xaml.cs">
-      <DependentUpon>BrowseIndexesMenuIcon.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Indexes\Browse\BrowseIndexesView.xaml.cs">
-      <DependentUpon>BrowseIndexesView.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Indexes\Browse\BrowseIndexesViewModel.cs" />
     <Compile Include="Indexes\Browse\CreateNewIndexPlugin.cs" />
     <Compile Include="Messages\IndexChangeMessage.cs" />
-    <Compile Include="Indexes\Browse\IndexView.xaml.cs">
-      <DependentUpon>IndexView.xaml</DependentUpon>
+    <Compile Include="Indexes\Browse\EditIndexView.xaml.cs">
+      <DependentUpon>EditIndexView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Indexes\Browse\IndexViewModel.cs" />
+    <Compile Include="Indexes\Browse\EditIndexViewModel.cs" />
     <Compile Include="Plugins\Linq\LinqEditor.cs" />
     <Compile Include="Plugins\Linq\LinqEditorView.xaml.cs">
       <DependentUpon>LinqEditorView.xaml</DependentUpon>
@@ -259,7 +252,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Indexes\Browse\IndexView.xaml">
+    <Page Include="Indexes\Browse\EditIndexView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

@@ -4,7 +4,7 @@
 
 	public class IndexChangeMessage
 	{
-		public IndexViewModel Index { get; set; }
+		public EditIndexViewModel Index { get; set; }
 
 		public bool IsRemoved { get; set; }
 	}

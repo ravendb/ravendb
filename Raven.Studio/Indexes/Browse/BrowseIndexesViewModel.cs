@@ -7,11 +7,11 @@
 	using Plugin;
 	using Raven.Database.Indexing;
 
-	public class BrowseIndexesViewModel : Conductor<IndexViewModel>.Collection.OneActive,
-	                                      IRavenScreen,
+	public class BrowseIndexesViewModel : Conductor<EditIndexViewModel>, IRavenScreen,
 	                                      IHandle<IndexChangeMessage>
 	{
 		readonly IDatabase database;
+		IndexDefinition activeIndex;
 		string filter;
 		bool isBusy;
 
@@ -20,7 +20,8 @@
 			DisplayName = "Browse Indexes";
 
 			this.database = database;
-			Indexes = new BindablePagedQuery<IndexDefinition>(this.database.Session.Advanced.AsyncDatabaseCommands.GetIndexesAsync);
+
+			Indexes = new BindablePagedQuery<IndexDefinition>(database.Session.Advanced.AsyncDatabaseCommands.GetIndexesAsync);
 
 			CompositionInitializer.SatisfyImports(this);
 		}
@@ -37,11 +38,16 @@
 
 		public BindablePagedQuery<IndexDefinition> Indexes { get; private set; }
 
-		IndexDefinition activeIndex;
 		public IndexDefinition ActiveIndex
 		{
 			get { return activeIndex; }
-			set { activeIndex = value; NotifyOfPropertyChange(()=>ActiveIndex); }
+			set
+			{
+				activeIndex = value;
+				if (activeIndex != null)
+					ActiveItem = new EditIndexViewModel(activeIndex, database, this);
+				NotifyOfPropertyChange(() => ActiveIndex);
+			}
 		}
 
 		public string Filter

@@ -3,9 +3,9 @@
 	using ActiproSoftware.Text;
 	using ActiproSoftware.Windows.ProductSamples.SyntaxEditorSamples.Common;
 
-	public partial class IndexView
+	public partial class EditIndexView
 	{
-		public IndexView()
+		public EditIndexView()
 		{
 			InitializeComponent();
 
