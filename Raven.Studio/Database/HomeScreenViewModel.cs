@@ -15,8 +15,6 @@ namespace Raven.Studio.Database
 
 		public IDatabase Database { get; set; }
 
-		public IRavenScreen ParentRavenScreen { get; set; }
-
 		public SectionType Section
 		{
 			get { return SectionType.None; }

@@ -38,11 +38,6 @@ namespace Raven.Studio.Plugins.Linq
 			}
 		}
 
-		public IRavenScreen ParentRavenScreen
-		{
-			get { return null; }
-		}
-
 		public SectionType Section
 		{
 			get { return SectionType.Linq; }

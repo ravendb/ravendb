@@ -54,8 +54,6 @@ namespace Raven.Studio.Plugins.Documents.Browse
 			}
 		}
 
-		public IRavenScreen ParentRavenScreen { get; set; }
-
 		public SectionType Section
 		{
 			get { return SectionType.Documents; }
@@ -64,7 +62,7 @@ namespace Raven.Studio.Plugins.Documents.Browse
 		public void GetAll(IList<JsonDocument> response)
 		{
 			List<DocumentViewModel> result =
-				response.Select(jsonDocument => new DocumentViewModel(new Document(jsonDocument), Database, this)).ToList();
+				response.Select(jsonDocument => new DocumentViewModel(new Document(jsonDocument), Database)).ToList();
 			Items.AddRange(result);
 			IsBusy = false;
 		}
@@ -105,7 +103,7 @@ namespace Raven.Studio.Plugins.Documents.Browse
 		void NavigateTo(Document document)
 		{
 			EventAggregator.Publish(
-				new ReplaceActiveScreen(new DocumentViewModel(document, Database, this)));
+				new ReplaceActiveScreen(new DocumentViewModel(document, Database)));
 		}
 
 		public void CreateDocument()

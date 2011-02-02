@@ -33,7 +33,7 @@ namespace Raven.Studio.Plugins.Common
 		string _jsonData;
 		string _jsonMetadata;
 
-		public DocumentViewModel(Document document, IDatabase database, IRavenScreen parent)
+		public DocumentViewModel(Document document, IDatabase database)
 		{
 			DisplayName = "Edit Document";
 			_document = document;
@@ -41,7 +41,6 @@ namespace Raven.Studio.Plugins.Common
 			_jsonData = PrepareRawJsonString(document.Data, false);
 			_jsonMetadata = PrepareRawJsonString(document.Metadata, true);
 			Thumbnail = new DocumentThumbnail();
-			ParentRavenScreen = parent;
 			Database = database;
 			CompositionInitializer.SatisfyImports(this);
 			CustomizedThumbnailTemplate = CreateThumbnailTemplate(document.Metadata);
@@ -113,8 +112,6 @@ namespace Raven.Studio.Plugins.Common
 			}
 		}
 
-		public IRavenScreen ParentRavenScreen { get; set; }
-
 		public SectionType Section
 		{
 			get { return SectionType.Documents; }
@@ -127,7 +124,7 @@ namespace Raven.Studio.Plugins.Common
 
 		public void Preview()
 		{
-			var documentScreen = (DocumentsScreenViewModel) ParentRavenScreen;
+			var documentScreen = (DocumentsScreenViewModel) Parent;
 			documentScreen.ActivateItem(this);
 			documentScreen.IsDocumentPreviewed = true;
 		}

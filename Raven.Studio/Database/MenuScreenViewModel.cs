@@ -119,8 +119,6 @@ namespace Raven.Studio.Database
 			}
 		}
 
-		public IRavenScreen ParentRavenScreen { get; set; }
-
 		public SectionType Section
 		{
 			get { return SectionType.None; }

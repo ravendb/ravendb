@@ -14,21 +14,19 @@ namespace Raven.Studio.Indexes.Browse
 		bool isBusy;
 		string name;
 
-		public EditIndexViewModel(IndexDefinition index, IDatabase database, IRavenScreen parent)
+		public EditIndexViewModel(IndexDefinition index, IDatabase database)
 		{
 			DisplayName = "Edit Index";
 
 			this.index = index;
 			this.database = database;
 
-			ParentRavenScreen = parent;
 			CompositionInitializer.SatisfyImports(this);
 
 			Name = index.Name;
 			LoadFields();
 		}
 
-		public IRavenScreen ParentRavenScreen { get; set; }
 		public SectionType Section
 		{
 			get { return SectionType.Indexes; }

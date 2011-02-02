@@ -45,7 +45,7 @@
 			{
 				activeIndex = value;
 				if (activeIndex != null)
-					ActiveItem = new EditIndexViewModel(activeIndex, database, this);
+					ActiveItem = new EditIndexViewModel(activeIndex, database);
 				NotifyOfPropertyChange(() => ActiveIndex);
 			}
 		}
@@ -82,8 +82,6 @@
 			//    }
 			//}
 		}
-
-		public IRavenScreen ParentRavenScreen { get; set; }
 
 		public SectionType Section
 		{
