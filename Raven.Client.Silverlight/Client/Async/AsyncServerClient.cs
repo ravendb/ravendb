@@ -28,6 +28,7 @@ using Raven.Http.Json;
 namespace Raven.Client.Client.Async
 {
 	using Extensions;
+	using Silverlight.Client;
 
 	/// <summary>
 	/// Access the database commands in async fashion
@@ -392,6 +393,17 @@ namespace Raven.Client.Client.Async
 		public class IndexContainer
 		{
 			public string Index {get;set;}
+		}
+
+		/// <summary>
+		/// Deletes the index definition for the specified name asyncronously
+		/// </summary>
+		/// <param name="name">The name.</param>
+		public Task DeleteIndexAsync(string name)
+		{
+			return url.Indexes(name)
+				.ToRequest(OperationsHeaders, credentials, "DELETE")
+				.GetResponseAsync();
 		}
 
 		private static bool ShouldThrowForPutIndexAsync(WebException e)

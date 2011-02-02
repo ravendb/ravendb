@@ -133,6 +133,15 @@ namespace Raven.Client.Client.Async
 		}
 
 		/// <summary>
+		/// Deletes the index definition for the specified name asyncronously
+		/// </summary>
+		/// <param name="name">The name.</param>
+		public Task DeleteIndexAsync(string name)
+		{
+			throw new NotImplementedException();
+		}
+
+		/// <summary>
 		/// Puts the document with the specified key in the database
 		/// </summary>
 		/// <param name="key">The key.</param>

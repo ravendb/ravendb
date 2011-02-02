@@ -84,6 +84,12 @@ namespace Raven.Client.Client.Async
 		Task<string> PutIndexAsync(string name, IndexDefinition indexDef, bool overwrite);
 
 		/// <summary>
+		/// Deletes the index definition for the specified name asyncronously
+		/// </summary>
+		/// <param name="name">The name.</param>
+		Task DeleteIndexAsync(string name);
+
+		/// <summary>
 		/// Puts the document with the specified key in the database
 		/// </summary>
 		/// <param name="key">The key.</param>
@@ -113,6 +119,7 @@ namespace Raven.Client.Client.Async
 		/// Retrieve the statistics for the database asynchronously
 		/// </summary>
 		Task<DatabaseStatistics> GetStatisticsAsync();
+
 	}
 }
 #endif
