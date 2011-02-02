@@ -41,6 +41,16 @@ namespace Raven.Client.Client.Async
 		Task<JsonDocument[]> MultiGetAsync(string[] keys);
 
 		/// <summary>
+		/// Begins an async get operation for documents
+		/// </summary>
+		/// <param name="start">Paging start</param>
+		/// <param name="pageSize">Size of the page.</param>
+		/// <remarks>
+		/// This is primarily useful for administration of a database
+		/// </remarks>
+		Task<JsonDocument[]> GetDocumentsAsync(int start, int pageSize);
+
+		/// <summary>
 		/// Begins the async query.
 		/// </summary>
 		/// <param name="index">The index.</param>

@@ -12,7 +12,7 @@ using Raven.Database;
 
 namespace Raven.Client.Client
 {
-	internal class SerializationHelper
+	internal static class SerializationHelper
 	{
 		public static IEnumerable<JsonDocument> JObjectsToJsonDocuments(IEnumerable<JObject> responses)
 		{
@@ -30,5 +30,9 @@ namespace Raven.Client.Client
 			        });
 		}
 
+		public static IEnumerable<JsonDocument> ToJsonDocuments(this IEnumerable<JObject> responses)
+		{
+			return JObjectsToJsonDocuments(responses);
+		}
 	}
 }

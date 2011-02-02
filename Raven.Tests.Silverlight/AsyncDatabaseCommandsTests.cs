@@ -6,6 +6,7 @@
 	using Client.Document;
 	using Client.Extensions;
 	using Database.Indexing;
+	using Document;
 	using Microsoft.Silverlight.Testing;
 	using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -124,6 +125,29 @@
 			var stats = getStats.Result;
 			Assert.AreEqual(0, stats.CountOfDocuments);
 			Assert.AreEqual(1, stats.CountOfIndexes);
+		}
+
+		[Asynchronous]
+		public IEnumerable<Task> Can_get_documents_async()
+		{
+			var dbname = GenerateNewDatabaseName();
+			var store = new DocumentStore { Url = Url + Port };
+			store.Initialize();
+			var cmd =store.AsyncDatabaseCommands;
+			yield return cmd.EnsureDatabaseExistsAsync(dbname);
+
+			using (var session = store.OpenAsyncSession(dbname))
+			{
+				session.Store( new Company{ Name = "Hai"});
+				session.Store( new Company { Name = "I can haz cheezburgr?" });
+				session.Store( new Company { Name = "lol" });
+				yield return session.SaveChangesAsync(); 
+			}
+
+			var task = cmd.ForDatabase(dbname).GetDocumentsAsync(0,25);
+			yield return task;
+
+			Assert.AreEqual(3, task.Result.Length);
 		}
 	}
 }

@@ -318,6 +318,17 @@ namespace Raven.Client.Client.Async
 		}
 
 		/// <summary>
+		/// Begins an async get operation for documents
+		/// </summary>
+		/// <remarks>
+		/// This is primarily useful for administration of a database
+		/// </remarks>
+		public Task<JsonDocument[]> GetDocumentsAsync(int start, int pageSize)
+		{
+			throw new NotImplementedException();
+		}
+
+		/// <summary>
 		/// Begins the async query.
 		/// </summary>
 		/// <param name="index">The index.</param>

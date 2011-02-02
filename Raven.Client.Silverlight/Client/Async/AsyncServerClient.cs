@@ -216,32 +216,22 @@ namespace Raven.Client.Client.Async
 				});
 		}
 
-		public Task<JsonDocument[]> MultiGetAsync()
+		/// <summary>
+		/// Begins an async get operation for documents
+		/// </summary>
+		/// <param name="start">Paging start</param>
+		/// <param name="pageSize">Size of the page.</param>
+		/// <remarks>
+		/// This is primarily useful for administration of a database
+		/// </remarks>
+		public Task<JsonDocument[]> GetDocumentsAsync(int start, int pageSize)
 		{
-			throw new NotImplementedException();
-			//var request = HttpJsonRequest.CreateHttpJsonRequest(this, url + "/docs/", "GET", credentials, convention);
-			
-			//return request.WriteAsync(array)
-			//    .ContinueWith(writeTask => request.ReadResponseStringAsync())
-			//    .ContinueWith(task =>
-			//    {
-			//        JArray responses;
-			//        try
-			//        {
-			//            responses = JObject.Parse(task.Result.Result).Value<JArray>("Results");
-			//        }
-			//        catch (WebException e)
-			//        {
-			//            var httpWebResponse = e.Response as HttpWebResponse;
-			//            if (httpWebResponse == null ||
-			//                httpWebResponse.StatusCode != HttpStatusCode.Conflict)
-			//                throw;
-			//            throw ThrowConcurrencyException(e);
-			//        }
-
-			//        return SerializationHelper.JObjectsToJsonDocuments(responses.Cast<JObject>())
-			//            .ToArray();
-			//    });
+			return url.Docs(start,pageSize).ToJsonRequest(this, credentials, convention)
+				.ReadResponseStringAsync()
+				.ContinueWith(task => JArray.Parse(task.Result)
+				                      	.Cast<JObject>()
+				                      	.ToJsonDocuments()
+										.ToArray());
 		}
 
 		/// <summary>
