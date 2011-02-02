@@ -105,43 +105,6 @@
 		}
 
 		[Asynchronous]
-		public IEnumerable<Task> Can_get_index_names_async()
-		{
-			var dbname = GenerateNewDatabaseName();
-			var documentStore = new DocumentStore {Url = Url + Port};
-			documentStore.Initialize();
-			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
-
-			var task = documentStore.AsyncDatabaseCommands.ForDatabase(dbname).GetIndexNamesAsync(0, 25);
-			yield return task;
-
-			Assert.AreEqual("Raven/DocumentsByEntityName", task.Result[0]);
-		}
-
-		[Asynchronous]
-		public IEnumerable<Task> Can_put_an_index_async()
-		{
-			var dbname = GenerateNewDatabaseName();
-			var documentStore = new DocumentStore {Url = Url + Port};
-			documentStore.Initialize();
-			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
-
-			yield return documentStore.AsyncDatabaseCommands
-				.ForDatabase(dbname)
-				.PutIndexAsync("Test", new IndexDefinition
-				                       	{
-				                       		Map = "from doc in docs.Companies select new { doc.Name }"
-				                       	}, true);
-
-			var verification = documentStore.AsyncDatabaseCommands
-				.ForDatabase(dbname)
-				.GetIndexNamesAsync(0, 25);
-			yield return verification;
-
-			Assert.IsTrue(verification.Result.Contains("Test"));
-		}
-
-		[Asynchronous]
 		public IEnumerable<Task> Can_query_by_index()
 		{
 			var dbname = GenerateNewDatabaseName();
@@ -214,35 +177,6 @@
 				Assert.AreEqual("Abbot", query.Result.Results[0]["Contacts"][0].Value<string>("Surname"));
 				Assert.AreEqual("Costello", query.Result.Results[0]["Contacts"][1].Value<string>("Surname"));
 			}
-		}
-
-		[Asynchronous]
-		public IEnumerable<Task> Can_retrieve_statistics_for_a_server()
-		{
-			var documentStore = new DocumentStore {Url = Url + Port};
-			documentStore.Initialize();
-
-			var getStats = documentStore.AsyncDatabaseCommands.GetStatisticsAsync();
-			yield return getStats;
-
-			Assert.IsNotNull(getStats.Result);
-			//TODO: What's the correct way to test this?
-		}
-
-		[Asynchronous]
-		public IEnumerable<Task> Can_retrieve_statistics_for_a_database()
-		{
-			var dbname = GenerateNewDatabaseName();
-			var documentStore = new DocumentStore {Url = Url + Port};
-			documentStore.Initialize();
-			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
-
-			var getStats = documentStore.AsyncDatabaseCommands.ForDatabase(dbname).GetStatisticsAsync();
-			yield return getStats;
-
-			var stats = getStats.Result;
-			Assert.AreEqual(0, stats.CountOfDocuments);
-			Assert.AreEqual(1, stats.CountOfIndexes);
 		}
 	}
 }

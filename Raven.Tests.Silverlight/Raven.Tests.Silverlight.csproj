@@ -106,6 +106,7 @@
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
+    <Compile Include="AsyncDatabaseCommandsTests.cs" />
     <Compile Include="AsyncLinqQueryTests.cs" />
     <Compile Include="AsyncLuceneQueryTests.cs" />
     <Compile Include="Entities\Customer.cs" />

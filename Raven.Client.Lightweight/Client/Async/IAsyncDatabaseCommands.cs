@@ -69,6 +69,13 @@ namespace Raven.Client.Client.Async
 		Task<string[]> GetIndexNamesAsync(int start, int pageSize);
 
 		/// <summary>
+		/// Gets the indexes from the server asyncronously
+		/// </summary>
+		/// <param name="start">Paging start</param>
+		/// <param name="pageSize">Size of the page.</param>
+		Task<IndexDefinition[]> GetIndexesAsync(int start, int pageSize);
+
+		/// <summary>
 		/// Puts the index definition for the specified name asyncronously
 		/// </summary>
 		/// <param name="name">The name.</param>

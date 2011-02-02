@@ -334,7 +334,6 @@ namespace Raven.Client.Client.Async
 				httpWebResponse.StatusCode != HttpStatusCode.Conflict);
 		}
 
-
 		/// <summary>
 		/// Puts the index definition for the specified name asyncronously
 		/// </summary>
@@ -419,6 +418,30 @@ namespace Raven.Client.Client.Async
 						var json = (JToken)serializer.Deserialize(reader);
 						return json.Select(x => x.Value<string>()).ToArray();
 
+					}
+				});
+		}
+
+		/// <summary>
+		/// Gets the indexes from the server asyncronously
+		/// </summary>
+		/// <param name="start">Paging start</param>
+		/// <param name="pageSize">Size of the page.</param>
+		public Task<IndexDefinition[]> GetIndexesAsync(int start, int pageSize)
+		{
+			var request = HttpJsonRequest.CreateHttpJsonRequest(this, url + "/indexes/?start=" + start + "&pageSize=" + pageSize, "GET", credentials, convention);
+
+			return request.ReadResponseStringAsync()
+				.ContinueWith(task =>
+				{
+					var serializer = convention.CreateSerializer();
+					using (var reader = new JsonTextReader(new StringReader(task.Result)))
+					{
+						var json = (JToken)serializer.Deserialize(reader);
+						//NOTE: To review, I'm not confidence this is the correct way to deserialize the index definition
+						return json
+							.Select(x => JsonConvert.DeserializeObject<IndexDefinition>(x["definition"].ToString()))
+							.ToArray();
 					}
 				});
 		}
