@@ -9,7 +9,6 @@ namespace Raven.Studio.Plugins.Documents.Browse
 	using Common;
 	using Dialogs;
 	using Messages;
-	using Models;
 	using Newtonsoft.Json.Linq;
 	using Plugin;
 	using Raven.Database;

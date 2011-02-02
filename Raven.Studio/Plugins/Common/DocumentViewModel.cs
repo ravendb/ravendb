@@ -9,9 +9,9 @@ namespace Raven.Studio.Plugins.Common
 	using Caliburn.Micro;
 	using Controls;
 	using Dialogs;
+	using Documents;
 	using Documents.Browse;
 	using Messages;
-	using Models;
 	using Newtonsoft.Json.Linq;
 	using Plugin;
 

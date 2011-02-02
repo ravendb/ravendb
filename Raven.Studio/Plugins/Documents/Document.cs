@@ -1,8 +1,8 @@
-﻿namespace Raven.Studio.Models
+﻿namespace Raven.Studio.Plugins.Documents
 {
 	using System;
 	using System.Collections.Generic;
-	using Client;
+	using Raven.Client;
 	using Newtonsoft.Json;
 	using Newtonsoft.Json.Linq;
 	using Raven.Database;

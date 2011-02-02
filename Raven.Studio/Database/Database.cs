@@ -1,4 +1,4 @@
-namespace Raven.Studio.Models
+namespace Raven.Studio.Database
 {
 	using System.Collections.Generic;
 	using System.ComponentModel.Composition;

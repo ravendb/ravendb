@@ -6,7 +6,6 @@
 	using Caliburn.Micro;
 	using Database;
 	using Messages;
-	using Models;
 
 	[Export(typeof (IShell))]
 	public class ShellViewModel : Conductor<DatabaseViewModel>.Collection.OneActive, IShell, IHandle<OpenNewScreen>

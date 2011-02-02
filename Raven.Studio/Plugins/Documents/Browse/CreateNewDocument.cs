@@ -2,7 +2,6 @@
 {
 	using System.ComponentModel.Composition;
 	using Common;
-	using Models;
 	using Newtonsoft.Json.Linq;
 	using Plugin;
 	using Raven.Database;

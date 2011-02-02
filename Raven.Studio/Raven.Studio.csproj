@@ -178,8 +178,8 @@
     <Compile Include="Messages\ChangeActiveScreen.cs" />
     <Compile Include="Messages\OpenNewScreen.cs" />
     <Compile Include="Messages\ReplaceActiveScreen.cs" />
-    <Compile Include="Models\Database.cs" />
-    <Compile Include="Models\Document.cs" />
+    <Compile Include="Database\Database.cs" />
+    <Compile Include="Plugins\Documents\Document.cs" />
     <Compile Include="Indexes\FieldProperties.cs" />
     <Compile Include="Plugins\Documents\Browse\BrowseDocuments.cs" />
     <Compile Include="Plugins\Documents\Browse\BrowseMenuIcon.xaml.cs">
@@ -376,7 +376,9 @@
     <Resource Include="Resources\Images\save-small.png" />
     <Resource Include="Resources\Images\undo-small.png" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="Models\" />
+  </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
