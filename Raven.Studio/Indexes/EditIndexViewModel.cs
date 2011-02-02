@@ -139,12 +139,17 @@ namespace Raven.Studio.Indexes
 			}
 		}
 
-		void AddField()
+		public void AddField()
 		{
-			if (!Fields.Any(field => string.IsNullOrEmpty(field.Name)))
-			{
-				Fields.Add(new FieldProperties());
-			}
+			if (Fields.Any(field => string.IsNullOrEmpty(field.Name))) return;
+			
+			Fields.Add(new FieldProperties());
+		}
+
+		public void RemoveField(FieldProperties field)
+		{
+			if (field == null || !Fields.Contains(field)) return;
+			Fields.Remove(field);
 		}
 	}
 }

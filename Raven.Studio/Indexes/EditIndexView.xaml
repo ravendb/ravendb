@@ -71,9 +71,9 @@
 				<StackPanel Orientation="Horizontal"
 							Margin="0 0 4 0"
 							HorizontalAlignment="Right">
-					<Button Height="25"
-							Width="25"
-							cm:Message.Attach="AddField">
+					<Button x:Name="AddField"
+							Height="25"
+							Width="25">
 						<Image Source="../../../Resources/Images/add-small.png" />
 					</Button>
 					<Button Height="25"
