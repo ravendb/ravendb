@@ -7,7 +7,7 @@
 			 d:DesignHeight="300"
 			 d:DesignWidth="400">
 
-	<Grid Margin="0 4 0 0">
+	<Grid>
 
 		<TextBlock Text="No items."
 				   VerticalAlignment="Center"
@@ -15,20 +15,47 @@
 				   Visibility="{Binding Path=HasNoResults, Mode=OneWay, Converter={StaticResource booleanToVisibility}}" />
 
 		<Grid x:Name="HasResults">
-			<StackPanel Orientation="Horizontal"
-						HorizontalAlignment="Stretch"
-						Margin="4">
-				<Button x:Name="MovePrevious"
-						Content="&lt;-"
-						Width="50" />
-				<TextBlock x:Name="Status"
-						   VerticalAlignment="Center"
-						   Margin="4 0 4 0" />
-				<Button x:Name="MoveNext"
-						Content="-&gt;"
-						Width="50" />
-			</StackPanel>
+			<Grid.Resources>
+				<Style TargetType="Button">
+					<Setter Property="Template">
+						<Setter.Value>
+							<ControlTemplate TargetType="Button">
+								<Border Margin="0,2,2,2"
+										CornerRadius="2"
+										Background="#19000000"
+										Padding="4,2">
+									<TextBlock TextWrapping="Wrap"
+											   Text="{TemplateBinding Content}"
+											   FontSize="8" />
+								</Border>
+							</ControlTemplate>
+						</Setter.Value>
+					</Setter>
+				</Style>
+			</Grid.Resources>
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="Auto" />
+				<ColumnDefinition />
+			</Grid.ColumnDefinitions>
 
+			<TextBlock x:Name="Status"
+					   VerticalAlignment="Center"
+					   d:LayoutOverrides="Width"
+					   Margin="12,0,0,0" />
+
+			<StackPanel Orientation="Horizontal"
+						Grid.Column="1"
+						VerticalAlignment="Center"
+						HorizontalAlignment="Right">
+				<Button x:Name="MoveFirst"
+						Content="|&lt;-" />
+				<Button x:Name="MovePrevious"
+						Content="&lt;&lt;" />
+				<Button x:Name="MoveNext"
+						Content="&gt;&gt;" />
+				<Button x:Name="MoveLast"
+						Content="-&gt;|" />
+			</StackPanel>
 		</Grid>
 	</Grid>
 </UserControl>

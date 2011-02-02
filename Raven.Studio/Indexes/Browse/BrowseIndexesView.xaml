@@ -40,15 +40,19 @@
 					<Grid.RowDefinitions>
 						<RowDefinition Height="Auto" />
 						<RowDefinition Height="*" />
+						<RowDefinition Height="Auto" />
 					</Grid.RowDefinitions>
 
-					<c:Pager Grid.Row="1"
+					<c:Pager Grid.Row="0"
 							 cm:Bind.Model="{Binding Indexes}" />
 
-					<ListBox Grid.Row="2"
+					<ListBox Grid.Row="1"
 							 ItemsSource="{Binding Indexes}"
 							 SelectedItem="{Binding ActiveIndex, Mode=TwoWay}"
 							 DisplayMemberPath="Name"/>
+
+					<c:Pager Grid.Row="2"
+							 cm:Bind.Model="{Binding Indexes}" />
 				</Grid>
 
 				<Border Grid.Column="1"
