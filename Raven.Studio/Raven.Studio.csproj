@@ -183,9 +183,9 @@
     <Compile Include="Database\Database.cs" />
     <Compile Include="Documents\Document.cs" />
     <Compile Include="Indexes\FieldProperties.cs" />
-    <Compile Include="Documents\BrowseDocuments.cs" />
-    <Compile Include="Documents\CreateNewDocument.cs" />
-    <Compile Include="Documents\DocumentsScreenViewModel.cs" />
+    <Compile Include="Documents\BrowseDocumentsPlugin.cs" />
+    <Compile Include="Documents\CreateNewDocumentPlugin.cs" />
+    <Compile Include="Documents\DocumentsViewModel.cs" />
     <Compile Include="Plugins\Common\DocumentViewModel.cs" />
     <Compile Include="Indexes\BrowseIndexesPlugin.cs" />
     <Compile Include="Indexes\BrowseIndexesViewModel.cs" />
@@ -203,8 +203,8 @@
     <Compile Include="Statistics\Global\GlobalStatisticsViewModel.cs" />
     <Compile Include="Shell\IShell.cs" />
     <Compile Include="Database\DatabaseViewModel.cs" />
-    <Compile Include="Documents\DocumentsScreenView.xaml.cs">
-      <DependentUpon>DocumentsScreenView.xaml</DependentUpon>
+    <Compile Include="Documents\DocumentsView.xaml.cs">
+      <DependentUpon>DocumentsView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Plugins\Common\DocumentView.xaml.cs">
       <DependentUpon>DocumentView.xaml</DependentUpon>
@@ -268,7 +268,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Documents\DocumentsScreenView.xaml">
+    <Page Include="Documents\DocumentsView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

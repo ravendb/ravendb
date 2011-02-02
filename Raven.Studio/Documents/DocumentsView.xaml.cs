@@ -2,9 +2,9 @@
 {
 	using System.Windows.Input;
 
-	public partial class DocumentsScreenView
+	public partial class DocumentsView
 	{
-		public DocumentsScreenView()
+		public DocumentsView()
 		{
 			InitializeComponent();
 		}
@@ -13,7 +13,7 @@
 		{
 			if (e.Key == Key.Enter)
 			{
-				((DocumentsScreenViewModel) DataContext).ShowDocument(documentId.Text);
+				((DocumentsViewModel) DataContext).ShowDocument(documentId.Text);
 			}
 		}
 	}

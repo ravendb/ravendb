@@ -5,7 +5,7 @@ namespace Raven.Studio.Documents
 	using Plugins;
 
 	[Export(typeof (IPlugin))]
-	public class BrowseDocuments : PluginBase
+	public class BrowseDocumentsPlugin : PluginBase
 	{
 		public override string Name
 		{
@@ -19,7 +19,7 @@ namespace Raven.Studio.Documents
 
 		public override IRavenScreen RelatedScreen
 		{
-			get { return new DocumentsScreenViewModel(Database); }
+			get { return new DocumentsViewModel(Database); }
 		}
 
 		public override object MenuView

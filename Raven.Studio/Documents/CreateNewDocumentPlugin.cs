@@ -5,11 +5,10 @@
 	using Plugin;
 	using Plugins;
 	using Plugins.Common;
-	using Plugins.Documents;
 	using Raven.Database;
 
 	[Export(typeof (IPlugin))]
-	public class CreateNewDocument : PluginBase
+	public class CreateNewDocumentPlugin : PluginBase
 	{
 		public override SectionType Section
 		{

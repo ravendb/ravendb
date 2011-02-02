@@ -2,7 +2,7 @@
 {
 	using System;
 	using System.Collections.Generic;
-	using Raven.Client;
+	using Client;
 	using Newtonsoft.Json;
 	using Newtonsoft.Json.Linq;
 	using Raven.Database;

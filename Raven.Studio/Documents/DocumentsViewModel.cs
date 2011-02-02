@@ -13,13 +13,13 @@ namespace Raven.Studio.Documents
 	using Plugins.Common;
 	using Raven.Database;
 
-	public class DocumentsScreenViewModel : Conductor<DocumentViewModel>.Collection.OneActive, IRavenScreen
+	public class DocumentsViewModel : Conductor<DocumentViewModel>.Collection.OneActive, IRavenScreen
 	{
 		bool isBusy;
 		bool isDocumentPreviewed;
 		string lastSearchDocumentId;
 
-		public DocumentsScreenViewModel(IDatabase database)
+		public DocumentsViewModel(IDatabase database)
 		{
 			DisplayName = "Browse Documents";
 			Database = database;

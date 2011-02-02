@@ -124,7 +124,7 @@ namespace Raven.Studio.Plugins.Common
 
 		public void Preview()
 		{
-			var documentScreen = (DocumentsScreenViewModel) Parent;
+			var documentScreen = (DocumentsViewModel) Parent;
 			documentScreen.ActivateItem(this);
 			documentScreen.IsDocumentPreviewed = true;
 		}
