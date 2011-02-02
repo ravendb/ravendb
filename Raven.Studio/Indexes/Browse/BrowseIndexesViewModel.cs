@@ -5,21 +5,22 @@
 	using Framework;
 	using Messages;
 	using Plugin;
+	using Raven.Database.Indexing;
 
-	public class BrowseIndexesViewModel : Conductor<IndexViewModel>.Collection.OneActive, IRavenScreen,
+	public class BrowseIndexesViewModel : Conductor<IndexViewModel>.Collection.OneActive,
+	                                      IRavenScreen,
 	                                      IHandle<IndexChangeMessage>
 	{
-		const string WatermarkFilterString = "search by index name";
+		readonly IDatabase database;
 		string filter;
 		bool isBusy;
-		readonly IDatabase database;
 
 		public BrowseIndexesViewModel(IDatabase database)
 		{
 			DisplayName = "Browse Indexes";
 
 			this.database = database;
-			Indexes = new BindablePagedQuery<string>(this.database.Session.Advanced.AsyncDatabaseCommands.GetIndexNamesAsync);
+			Indexes = new BindablePagedQuery<IndexDefinition>(this.database.Session.Advanced.AsyncDatabaseCommands.GetIndexesAsync);
 
 			CompositionInitializer.SatisfyImports(this);
 		}
@@ -34,7 +35,14 @@
 			}
 		}
 
-		public BindablePagedQuery<string> Indexes { get; private set; }
+		public BindablePagedQuery<IndexDefinition> Indexes { get; private set; }
+
+		IndexDefinition activeIndex;
+		public IndexDefinition ActiveIndex
+		{
+			get { return activeIndex; }
+			set { activeIndex = value; NotifyOfPropertyChange(()=>ActiveIndex); }
+		}
 
 		public string Filter
 		{

@@ -14,7 +14,6 @@
 		<Grid>
 			<Grid.RowDefinitions>
 				<RowDefinition Height="Auto" />
-				<RowDefinition Height="Auto" />
 				<RowDefinition Height="*" />
 			</Grid.RowDefinitions>
 
@@ -32,15 +31,35 @@
 				<HyperlinkButton Style="{StaticResource SearchButtonStyle}" />
 			</StackPanel>
 
-			<c:Pager Grid.Row="1"
-					 cm:Bind.Model="{Binding Indexes}" />
+			<Grid Grid.Row="1">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition />
+					<ColumnDefinition />
+				</Grid.ColumnDefinitions>
 
-			<ListBox Grid.Row="2"
-					 ItemsSource="{Binding Indexes}"
-					 HorizontalContentAlignment="Stretch"
-					 VerticalContentAlignment="Stretch"
-					 SelectedItem="{Binding SelectedItem, Mode=TwoWay}" />
+				<Grid>
+					<Grid.RowDefinitions>
+						<RowDefinition Height="Auto" />
+						<RowDefinition Height="*" />
+					</Grid.RowDefinitions>
 
+					<c:Pager Grid.Row="1"
+							 cm:Bind.Model="{Binding Indexes}" />
+
+					<ListBox ItemsSource="{Binding Indexes}"
+							 Grid.Row="2"
+							 DisplayMemberPath="Name"
+							 HorizontalContentAlignment="Stretch"
+							 VerticalContentAlignment="Stretch"
+							 SelectedItem="{Binding ActiveIndex, Mode=TwoWay}" />
+				</Grid>
+
+				<Border Grid.Column="1">
+					<ContentControl x:Name="ActiveIndex" />
+				</Border>
+
+
+			</Grid>
 		</Grid>
 	</tk:BusyIndicator>
 </UserControl>

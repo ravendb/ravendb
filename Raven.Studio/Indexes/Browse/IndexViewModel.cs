@@ -24,11 +24,6 @@ namespace Raven.Studio.Indexes.Browse
 
 		public IDatabase Database { get; private set; }
 
-		[Import]
-		public IEventAggregator EventAggregator { get; set; }
-
-		[Import]
-		public IWindowManager WindowManager { get; set; }
 
 		public bool IsBusy
 		{
@@ -117,7 +112,7 @@ namespace Raven.Studio.Indexes.Browse
 
 		public void ShowIndex()
 		{
-			EventAggregator.Publish(new ReplaceActiveScreen(this));
+			//EventAggregator.Publish(new ReplaceActiveScreen(this));
 		}
 
 		public void Save()
