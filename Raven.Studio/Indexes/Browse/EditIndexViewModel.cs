@@ -90,7 +90,12 @@ namespace Raven.Studio.Indexes.Browse
 		public void Remove()
 		{
 			IsBusy = true;
-			//database.Session.Advanced.AsyncDatabaseCommands.
+			database.Session.Advanced.AsyncDatabaseCommands
+				.DeleteIndexAsync(Name)
+				.ContinueWith(task =>
+				{
+					IsBusy = false;
+				});
 		}
 
 		void LoadFields()
