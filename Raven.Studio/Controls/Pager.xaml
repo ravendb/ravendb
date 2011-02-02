@@ -7,7 +7,7 @@
 			 d:DesignHeight="300"
 			 d:DesignWidth="400">
 
-	<Grid>
+	<Grid Margin="0 2">
 
 		<TextBlock Text="No items."
 				   VerticalAlignment="Center"
@@ -39,9 +39,7 @@
 			</Grid.ColumnDefinitions>
 
 			<TextBlock x:Name="Status"
-					   VerticalAlignment="Center"
-					   d:LayoutOverrides="Width"
-					   Margin="12,0,0,0" />
+					   VerticalAlignment="Center"/>
 
 			<StackPanel Orientation="Horizontal"
 						Grid.Column="1"

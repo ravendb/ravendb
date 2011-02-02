@@ -101,6 +101,16 @@
 				              	});
 		}
 
+		public void MoveFirst()
+		{
+			LoadPage();
+		}
+		
+		public void MoveLast()
+		{
+			LoadPage(NumberOfPages - 1);
+		}
+
 		public void MoveNext()
 		{
 			LoadPage(CurrentPage + 1);
