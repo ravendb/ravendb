@@ -1,7 +1,8 @@
-namespace Raven.Studio.Plugins.Documents.Browse
+namespace Raven.Studio.Documents
 {
 	using System.ComponentModel.Composition;
 	using Plugin;
+	using Plugins;
 
 	[Export(typeof (IPlugin))]
 	public class BrowseDocuments : PluginBase

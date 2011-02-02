@@ -10,10 +10,10 @@ namespace Raven.Studio.Plugins.Common
 	using Controls;
 	using Dialogs;
 	using Documents;
-	using Documents.Browse;
 	using Messages;
 	using Newtonsoft.Json.Linq;
 	using Plugin;
+	using Studio.Documents;
 
 	public class DocumentViewModel : Screen, IRavenScreen
 	{

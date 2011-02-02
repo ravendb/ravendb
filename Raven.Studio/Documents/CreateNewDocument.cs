@@ -1,9 +1,11 @@
-﻿namespace Raven.Studio.Plugins.Documents.Browse
+﻿namespace Raven.Studio.Documents
 {
 	using System.ComponentModel.Composition;
-	using Common;
 	using Newtonsoft.Json.Linq;
 	using Plugin;
+	using Plugins;
+	using Plugins.Common;
+	using Plugins.Documents;
 	using Raven.Database;
 
 	[Export(typeof (IPlugin))]

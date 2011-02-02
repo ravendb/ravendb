@@ -1,4 +1,4 @@
-﻿namespace Raven.Studio.Plugins.Documents
+﻿namespace Raven.Studio.Documents
 {
 	using System;
 	using System.Collections.Generic;

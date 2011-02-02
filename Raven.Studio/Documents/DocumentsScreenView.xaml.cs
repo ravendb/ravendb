@@ -1,4 +1,4 @@
-﻿namespace Raven.Studio.Plugins.Documents.Browse
+﻿namespace Raven.Studio.Documents
 {
 	using System.Windows.Input;
 

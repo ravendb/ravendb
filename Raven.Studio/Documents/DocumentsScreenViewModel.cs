@@ -1,4 +1,4 @@
-namespace Raven.Studio.Plugins.Documents.Browse
+namespace Raven.Studio.Documents
 {
 	using System;
 	using System.Collections.Generic;
@@ -6,11 +6,11 @@ namespace Raven.Studio.Plugins.Documents.Browse
 	using System.Linq;
 	using System.Net;
 	using Caliburn.Micro;
-	using Common;
 	using Dialogs;
 	using Messages;
 	using Newtonsoft.Json.Linq;
 	using Plugin;
+	using Plugins.Common;
 	using Raven.Database;
 
 	public class DocumentsScreenViewModel : Conductor<DocumentViewModel>.Collection.OneActive, IRavenScreen
