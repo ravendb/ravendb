@@ -116,6 +116,38 @@ namespace Raven.Tests.Bugs.Indexing
 				}
 			}
 		}
+
+		[Fact]
+		public void CanQueryCompletelyDynamicNumericFieldsWithNegativeRange()
+		{
+			using (var store = NewDocumentStore())
+			{
+				new Product_ByNumericAttribute().Execute(store);
+
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Product
+					{
+						Attributes = new List<Attribute>
+                        {
+                            new Attribute{Name = "Color", Value = "Red", NumericValue = 30}
+                        }
+					});
+
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession())
+				{
+					var products = session.Advanced.LuceneQuery<Product, Product_ByNumericAttribute>()
+						.WhereGreaterThan("Color", -1d)
+						.WaitForNonStaleResults(TimeSpan.FromMinutes(3))
+						.ToList();
+
+					Assert.NotEmpty(products);
+				}
+			}
+		}
 	}
 
 
