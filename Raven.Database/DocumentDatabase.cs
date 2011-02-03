@@ -181,6 +181,22 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 						 Indexes = { { "Tag", FieldIndexing.NotAnalyzed } },
 						 Stores = { { "Tag", FieldStorage.No } }
 					 });
+
+			PutIndex("Raven/DocumentCollections",
+					 new IndexDefinition
+					 {
+						 Map =
+						 @"from doc in docs
+let tag = doc[""@metadata""][""Raven-Entity-Name""]
+where tag != null
+select new { tag , count = 1}
+",
+						 Reduce = @"from result in results
+group result by result.tag into g
+select new { tag = g.Key, count = g.Sum(x=>x.count) }",
+	 Indexes = { { "Tag", FieldIndexing.NotAnalyzed } },
+	 Stores = { { "Tag", FieldStorage.No } }
+					});
 		}
 
 		public DatabaseStatistics Statistics
