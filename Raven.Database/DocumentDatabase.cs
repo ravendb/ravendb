@@ -760,6 +760,30 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 
 		}
 
+		/// <summary>
+		/// HACK: This is Christopher's hack to get just the tenant documents out of the server
+		/// </summary>
+		public JArray GetTenantDocuments()
+		{
+			var list = new JArray();
+			TransactionalStorage.Batch(actions =>
+			{
+				var documents = actions.Documents.GetDocumentsByReverseUpdateOrder(0);
+				var documentRetriever = new DocumentRetriever(actions, ReadTriggers);
+				foreach (var doc in documents.Where( x => x.Key.StartsWith("Raven/Databases")))
+				{
+					DocumentRetriever.EnsureIdInMetadata(doc);
+					var document = documentRetriever
+						.ExecuteReadTriggers(doc, null, ReadOperation.Load);
+					if (document == null)
+						continue;
+
+					list.Add(document.ToJson());
+				}
+			});
+			return list;
+		}
+
 		public JArray GetDocuments(int start, int pageSize, Guid? etag)
 		{
 			var list = new JArray();

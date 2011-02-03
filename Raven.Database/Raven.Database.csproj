@@ -347,6 +347,7 @@
     <Compile Include="Server\Responders\AdminBackup.cs" />
     <Compile Include="Server\Responders\BuildVersion.cs" />
     <Compile Include="Server\Responders\ClientAccessPolicy.cs" />
+    <Compile Include="Server\Responders\Databases.cs" />
     <Compile Include="Server\Responders\Docs.cs" />
     <Compile Include="Server\Responders\Document.cs" />
     <Compile Include="Server\Responders\DocumentBatch.cs" />
