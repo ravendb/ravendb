@@ -2,9 +2,9 @@
 {
 	using System.Windows.Input;
 
-	public partial class DocumentsView
+	public partial class BrowseDocumentsView
 	{
-		public DocumentsView()
+		public BrowseDocumentsView()
 		{
 			InitializeComponent();
 		}
@@ -13,7 +13,7 @@
 		{
 			if (e.Key == Key.Enter)
 			{
-				((DocumentsViewModel) DataContext).ShowDocument(documentId.Text);
+				((BrowseDocumentsViewModel) DataContext).ShowDocument(documentId.Text);
 			}
 		}
 	}

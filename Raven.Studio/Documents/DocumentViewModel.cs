@@ -1,6 +1,5 @@
-namespace Raven.Studio.Plugins.Common
+namespace Raven.Studio.Documents
 {
-	using System;
 	using System.Collections.Generic;
 	using System.ComponentModel.Composition;
 	using System.Text;
@@ -9,11 +8,11 @@ namespace Raven.Studio.Plugins.Common
 	using Caliburn.Micro;
 	using Controls;
 	using Dialogs;
-	using Documents;
 	using Messages;
+	using Newtonsoft.Json;
 	using Newtonsoft.Json.Linq;
 	using Plugin;
-	using Studio.Documents;
+	using Raven.Database;
 
 	public class DocumentViewModel : Screen, IRavenScreen
 	{
@@ -27,37 +26,36 @@ namespace Raven.Studio.Plugins.Common
 		                                                       		"Last-Modified"
 		                                                       	};
 
-		readonly Document _document;
-		string _id;
-		bool _isSelected;
-		string _jsonData;
-		string _jsonMetadata;
+		readonly IDictionary<string, JToken> data;
+		readonly IDatabase database;
+		readonly JsonDocument jsonDocument;
+		readonly IDictionary<string, JToken> metadata;
 
-		public DocumentViewModel(Document document, IDatabase database)
+		string id;
+		bool isSelected;
+		string jsonData;
+		string jsonMetadata;
+
+		public DocumentViewModel(JsonDocument document, IDatabase database)
 		{
 			DisplayName = "Edit Document";
-			_document = document;
-			_id = document.Id;
-			_jsonData = PrepareRawJsonString(document.Data, false);
-			_jsonMetadata = PrepareRawJsonString(document.Metadata, true);
+
 			Thumbnail = new DocumentThumbnail();
-			Database = database;
+			this.database = database;
 			CompositionInitializer.SatisfyImports(this);
+
+			data = new Dictionary<string, JToken>();
+			metadata = new Dictionary<string, JToken>();
+
+			jsonData = PrepareRawJsonString(document.DataAsJson, false);
+			jsonMetadata = PrepareRawJsonString(document.Metadata, true);
 			CustomizedThumbnailTemplate = CreateThumbnailTemplate(document.Metadata);
-		}
 
-		public DocumentThumbnail Thumbnail { get; set; }
+			Id = document.Key;
+			data = ParseJsonToDictionary(document.DataAsJson);
+			metadata = ParseJsonToDictionary(document.Metadata);
 
-		public FrameworkElement CustomizedThumbnailTemplate { get; set; }
-
-		public string Id
-		{
-			get { return _id; }
-			set
-			{
-				_id = value;
-				NotifyOfPropertyChange(() => Id);
-			}
+			jsonDocument = document;
 		}
 
 		[Import]
@@ -66,24 +64,36 @@ namespace Raven.Studio.Plugins.Common
 		[Import]
 		public IWindowManager WindowManager { get; set; }
 
-		public IDatabase Database { get; set; }
+		public DocumentThumbnail Thumbnail { get; set; }
+
+		public FrameworkElement CustomizedThumbnailTemplate { get; set; }
+
+		public string Id
+		{
+			get { return id; }
+			set
+			{
+				id = value;
+				NotifyOfPropertyChange(() => Id);
+			}
+		}
 
 		public string JsonData
 		{
-			get { return _jsonData; }
+			get { return jsonData; }
 			set
 			{
-				_jsonData = value;
+				jsonData = value;
 				NotifyOfPropertyChange(() => JsonData);
 			}
 		}
 
 		public string JsonMetadata
 		{
-			get { return _jsonMetadata; }
+			get { return jsonMetadata; }
 			set
 			{
-				_jsonMetadata = value;
+				jsonMetadata = value;
 				NotifyOfPropertyChange(() => JsonMetadata);
 			}
 		}
@@ -103,18 +113,49 @@ namespace Raven.Studio.Plugins.Common
 
 		public bool IsSelected
 		{
-			get { return _isSelected; }
+			get { return isSelected; }
 
 			set
 			{
-				_isSelected = value;
+				isSelected = value;
 				NotifyOfPropertyChange(() => IsSelected);
 			}
 		}
 
+		#region not sure how these are used yet
+
+		public IDictionary<string, JToken> Data
+		{
+			get { return data; }
+		}
+
+		public IDictionary<string, JToken> Metadata
+		{
+			get { return metadata; }
+		}
+
+		public JsonDocument JsonDocument
+		{
+			get { return jsonDocument; }
+		}
+
+		#endregion
+
 		public SectionType Section
 		{
 			get { return SectionType.Documents; }
+		}
+
+		static IDictionary<string, JToken> ParseJsonToDictionary(JObject dataAsJson)
+		{
+			IDictionary<string, JToken> result = new Dictionary<string, JToken>();
+
+			foreach (var d in dataAsJson)
+			{
+				result.Add(d.Key, d.Value);
+			}
+
+			return result;
 		}
 
 		public void SelectUnselect()
@@ -124,53 +165,69 @@ namespace Raven.Studio.Plugins.Common
 
 		public void Preview()
 		{
-			var documentScreen = (DocumentsViewModel) Parent;
+			var documentScreen = (BrowseDocumentsViewModel) Parent;
 			documentScreen.ActivateItem(this);
 			documentScreen.IsDocumentPreviewed = true;
 		}
 
+		string parseExceptionMessage;
+		bool ValidateJson(string json)
+		{
+			try
+			{
+				JObject.Parse(json);
+				parseExceptionMessage = string.Empty;
+				return true;
+			}
+			catch (JsonReaderException exception)
+			{
+				parseExceptionMessage = exception.Message;
+				return false;
+			}
+		}
+
 		public void Save()
 		{
-			if (Document.ValidateJson(JsonData))
+			if (!ValidateJson(JsonData))
 			{
-				if (Document.ValidateJson(JsonMetadata))
-				{
-					_document.SetData(JsonData);
-					_document.SetMetadata(JsonMetadata);
-
-					_document.SetId(Id);
-					_document.Save(Database.Session,
-					               saveResult =>
-					               	{
-					               		throw new NotImplementedException();
-					               		//var success = false;
-
-					               		//foreach (var response in saveResult.GetSaveResponses())
-					               		//{
-					               		//    success = response.Data.Equals(_document.JsonDocument);
-					               		//    if (success)
-					               		//    {
-					               		//        Id = _document.Id;
-					               		//        break;
-					               		//    }
-					               		//}
-					               		////TO DO
-					               		//if (!success)
-					               		//{
-					               		//    WindowManager.ShowDialog(new InformationDialogViewModel("Error", ""), null);
-					               		//}
-					               	});
-				}
-				else
-				{
-					WindowManager.ShowDialog(new InformationDialogViewModel("Invalid JSON (Document Metadata)",
-					                                                        Document.ParseExceptionMessage));
-				}
+				WindowManager.ShowDialog(new InformationDialogViewModel("Invalid JSON (Document)", parseExceptionMessage));
+				return;
 			}
-			else
+
+			if (!ValidateJson(JsonMetadata))
 			{
-				WindowManager.ShowDialog(new InformationDialogViewModel("Invalid JSON (Document)", Document.ParseExceptionMessage));
+				WindowManager.ShowDialog(new InformationDialogViewModel("Invalid JSON (Document Metadata)", parseExceptionMessage));
+				return;
 			}
+
+			jsonDocument.DataAsJson = JObject.Parse(JsonData);
+			jsonDocument.Metadata = JObject.Parse(JsonMetadata);
+			jsonDocument.Key = id;
+
+			database.Session.Advanced.AsyncDatabaseCommands
+				.PutAsync(jsonDocument.Key, null, jsonDocument.DataAsJson, jsonDocument.Metadata)
+				.ContinueWith(x => { Id = x.Result.Key; });
+
+			//saveResult =>
+			//  {
+			//      throw new NotImplementedException();
+			//var success = false;
+
+			//foreach (var response in saveResult.GetSaveResponses())
+			//{
+			//    success = response.Data.Equals(_document.JsonDocument);
+			//    if (success)
+			//    {
+			//        Id = _document.Id;
+			//        break;
+			//    }
+			//}
+			////TO DO
+			//if (!success)
+			//{
+			//    WindowManager.ShowDialog(new InformationDialogViewModel("Error", ""), null);
+			//}
+			//});
 		}
 
 		public void ShowDocument()

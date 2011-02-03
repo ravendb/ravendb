@@ -1,4 +1,4 @@
-﻿namespace Raven.Studio.Plugins.Common
+﻿namespace Raven.Studio.Documents
 {
 	using System.Windows.Controls;
 	using ActiproSoftware.Windows.ProductSamples.SyntaxEditorSamples.QuickStart.CodeOutliningCollapsedText;

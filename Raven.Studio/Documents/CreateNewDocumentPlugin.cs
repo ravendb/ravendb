@@ -4,7 +4,6 @@
 	using Newtonsoft.Json.Linq;
 	using Plugin;
 	using Plugins;
-	using Plugins.Common;
 	using Raven.Database;
 
 	[Export(typeof (IPlugin))]
@@ -19,11 +18,11 @@
 		{
 			get
 			{
-				return new DocumentViewModel(new Document(new JsonDocument
+				return new DocumentViewModel(new JsonDocument
 				                                          	{
 				                                          		DataAsJson = new JObject(),
 				                                          		Metadata = new JObject()
-				                                          	}), Database);
+				                                          	}, Database);
 			}
 		}
 

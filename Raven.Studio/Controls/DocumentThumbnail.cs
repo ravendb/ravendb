@@ -4,5 +4,9 @@ namespace Raven.Studio.Controls
 
 	public class DocumentThumbnail : Button
 	{
+		public DocumentThumbnail()
+		{
+			DefaultStyleKey = typeof(DocumentThumbnail);
+		}
 	}
 }

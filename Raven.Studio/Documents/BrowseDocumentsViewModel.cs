@@ -11,17 +11,16 @@ namespace Raven.Studio.Documents
 	using Messages;
 	using Newtonsoft.Json.Linq;
 	using Plugin;
-	using Plugins.Common;
 	using Raven.Database;
 
-	public class DocumentsViewModel : Conductor<DocumentViewModel>.Collection.OneActive, IRavenScreen
+	public class BrowseDocumentsViewModel : Conductor<DocumentViewModel>.Collection.OneActive, IRavenScreen
 	{
 		bool isBusy;
 		bool isDocumentPreviewed;
 		string lastSearchDocumentId;
 		readonly IDatabase database;
 
-		public DocumentsViewModel(IDatabase database)
+		public BrowseDocumentsViewModel(IDatabase database)
 		{
 			DisplayName = "Browse Documents";
 			this.database = database;
@@ -68,7 +67,7 @@ namespace Raven.Studio.Documents
 		public void GetAll(IList<JsonDocument> response)
 		{
 			List<DocumentViewModel> result =
-				response.Select(jsonDocument => new DocumentViewModel(new Document(jsonDocument), database)).ToList();
+				response.Select(jsonDocument => new DocumentViewModel(jsonDocument, database)).ToList();
 			Items.AddRange(result);
 			IsBusy = false;
 		}
@@ -95,7 +94,7 @@ namespace Raven.Studio.Documents
 			IsBusy = false;
 			if (loadResponse.IsSuccess)
 			{
-				NavigateTo(new Document(loadResponse.Data));
+				NavigateTo(loadResponse.Data);
 			}
 			else if (loadResponse.StatusCode == HttpStatusCode.NotFound)
 			{
@@ -106,7 +105,7 @@ namespace Raven.Studio.Documents
 			}
 		}
 
-		void NavigateTo(Document document)
+		void NavigateTo(JsonDocument document)
 		{
 			EventAggregator.Publish(
 				new ReplaceActiveScreen(new DocumentViewModel(document, database)));
@@ -114,11 +113,11 @@ namespace Raven.Studio.Documents
 
 		public void CreateDocument()
 		{
-			NavigateTo(new Document(new JsonDocument
+			NavigateTo(new JsonDocument
 			                        	{
 			                        		DataAsJson = new JObject(),
 			                        		Metadata = new JObject()
-			                        	}));
+			                        	});
 		}
 
 		protected override void OnActivate()

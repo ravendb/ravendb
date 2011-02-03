@@ -184,12 +184,11 @@
     <Compile Include="Messages\OpenNewScreen.cs" />
     <Compile Include="Messages\ReplaceActiveScreen.cs" />
     <Compile Include="Database\Database.cs" />
-    <Compile Include="Documents\Document.cs" />
     <Compile Include="Indexes\FieldProperties.cs" />
     <Compile Include="Documents\BrowseDocumentsPlugin.cs" />
     <Compile Include="Documents\CreateNewDocumentPlugin.cs" />
-    <Compile Include="Documents\DocumentsViewModel.cs" />
-    <Compile Include="Plugins\Common\DocumentViewModel.cs" />
+    <Compile Include="Documents\BrowseDocumentsViewModel.cs" />
+    <Compile Include="Documents\DocumentViewModel.cs" />
     <Compile Include="Indexes\BrowseIndexesPlugin.cs" />
     <Compile Include="Indexes\BrowseIndexesViewModel.cs" />
     <Compile Include="Indexes\CreateNewIndexPlugin.cs" />
@@ -206,10 +205,10 @@
     <Compile Include="Statistics\Global\GlobalStatisticsViewModel.cs" />
     <Compile Include="Shell\IShell.cs" />
     <Compile Include="Database\DatabaseViewModel.cs" />
-    <Compile Include="Documents\DocumentsView.xaml.cs">
-      <DependentUpon>DocumentsView.xaml</DependentUpon>
+    <Compile Include="Documents\BrowseDocumentsView.xaml.cs">
+      <DependentUpon>BrowseDocumentsView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Plugins\Common\DocumentView.xaml.cs">
+    <Compile Include="Documents\DocumentView.xaml.cs">
       <DependentUpon>DocumentView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Database\HomeScreenViewModel.cs" />
@@ -275,11 +274,11 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Documents\DocumentsView.xaml">
+    <Page Include="Documents\BrowseDocumentsView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Plugins\Common\DocumentView.xaml">
+    <Page Include="Documents\DocumentView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
