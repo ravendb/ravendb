@@ -19,9 +19,9 @@ namespace Raven.Studio.Database
 		IEnumerable<IPlugin> plugins;
 		IEnumerable<IPlugin> statisticPlugins;
 
-		public MenuScreenViewModel(IDatabase database)
+		public MenuScreenViewModel(IServer server)
 		{
-			Database = database;
+			Server = server;
 			DisplayName = "Home";
 			CompositionInitializer.SatisfyImports(this);
 		}
@@ -49,7 +49,7 @@ namespace Raven.Studio.Database
 
 				foreach (IPlugin plugin in plugins)
 				{
-					plugin.Database = Database;
+					plugin.Server = Server;
 				}
 
 				NotifyOfPropertyChange(() => Plugins);
@@ -107,7 +107,7 @@ namespace Raven.Studio.Database
 			get { return otherPlugins ?? (otherPlugins = Plugins.Where(x => x.Section == SectionType.Other)); }
 		}
 
-		public IDatabase Database { get; set; }
+		public IServer Server { get; set; }
 
 		public SectionType CurrentSectionType
 		{

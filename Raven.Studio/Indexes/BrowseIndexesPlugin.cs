@@ -19,7 +19,7 @@
 
 		public override IRavenScreen RelatedScreen
 		{
-			get { return new BrowseIndexesViewModel(Database); }
+			get { return new BrowseIndexesViewModel(Server); }
 		}
 
 		public override object MenuView

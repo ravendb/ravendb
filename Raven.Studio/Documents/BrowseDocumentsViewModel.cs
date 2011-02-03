@@ -6,6 +6,7 @@ namespace Raven.Studio.Documents
 	using System.Linq;
 	using System.Net;
 	using Caliburn.Micro;
+	using Client;
 	using Dialogs;
 	using Framework;
 	using Messages;
@@ -18,17 +19,18 @@ namespace Raven.Studio.Documents
 		bool isBusy;
 		bool isDocumentPreviewed;
 		string lastSearchDocumentId;
-		readonly IDatabase database;
+		readonly IServer server;
 
-		public BrowseDocumentsViewModel(IDatabase database)
+		public BrowseDocumentsViewModel(IServer server)
 		{
 			DisplayName = "Browse Documents";
-			this.database = database;
-
-			Documents = new BindablePagedQuery<JsonDocument>(database.Session.Advanced.AsyncDatabaseCommands.GetDocumentsAsync);
-			Documents.PageSize = 25;
+			this.server = server;
 
 			CompositionInitializer.SatisfyImports(this);
+
+			var session = server.OpenSession();
+			Documents = new BindablePagedQuery<JsonDocument>(session.Advanced.AsyncDatabaseCommands.GetDocumentsAsync);
+			Documents.PageSize = 25;
 		}
 
 		public BindablePagedQuery<JsonDocument> Documents { get; private set; }
@@ -67,7 +69,7 @@ namespace Raven.Studio.Documents
 		public void GetAll(IList<JsonDocument> response)
 		{
 			List<DocumentViewModel> result =
-				response.Select(jsonDocument => new DocumentViewModel(jsonDocument, database)).ToList();
+				response.Select(jsonDocument => new DocumentViewModel(jsonDocument, server)).ToList();
 			Items.AddRange(result);
 			IsBusy = false;
 		}
@@ -108,7 +110,7 @@ namespace Raven.Studio.Documents
 		void NavigateTo(JsonDocument document)
 		{
 			EventAggregator.Publish(
-				new ReplaceActiveScreen(new DocumentViewModel(document, database)));
+				new ReplaceActiveScreen(new DocumentViewModel(document, server)));
 		}
 
 		public void CreateDocument()
@@ -123,9 +125,11 @@ namespace Raven.Studio.Documents
 		protected override void OnActivate()
 		{
 			IsBusy = true;
-			database.Session.Advanced.AsyncDatabaseCommands
+
+			using(var session = server.OpenSession())
+			session.Advanced.AsyncDatabaseCommands
 				.GetStatisticsAsync()
-				.ContinueWith(x => RefreshDocuments(x.Result.CountOfDocuments));
+				.ContinueOnSuccess(x => RefreshDocuments(x.Result.CountOfDocuments));
 		}
 
 		public void RefreshDocuments(long total)

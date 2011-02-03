@@ -19,7 +19,7 @@ namespace Raven.Studio.Documents
 
 		public override IRavenScreen RelatedScreen
 		{
-			get { return new BrowseDocumentsViewModel(Database); }
+			get { return new BrowseDocumentsViewModel(Server); }
 		}
 
 		public override object MenuView

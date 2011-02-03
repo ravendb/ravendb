@@ -13,7 +13,7 @@
 		[ImportingConstructor]
 		public ShellViewModel(IEventAggregator eventAggregator)
 		{
-			ActivateItem(new DatabaseViewModel(new Database("http://localhost:8080", "Local")));
+			ActivateItem(new DatabaseViewModel(new Server("http://localhost:8080", "Local")));
 			eventAggregator.Subscribe(this);
 		}
 

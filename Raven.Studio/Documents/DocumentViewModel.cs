@@ -8,6 +8,7 @@ namespace Raven.Studio.Documents
 	using Caliburn.Micro;
 	using Controls;
 	using Dialogs;
+	using Framework;
 	using Messages;
 	using Newtonsoft.Json;
 	using Newtonsoft.Json.Linq;
@@ -27,7 +28,7 @@ namespace Raven.Studio.Documents
 		                                                       	};
 
 		readonly IDictionary<string, JToken> data;
-		readonly IDatabase database;
+		readonly IServer server;
 		readonly JsonDocument jsonDocument;
 		readonly IDictionary<string, JToken> metadata;
 
@@ -36,12 +37,12 @@ namespace Raven.Studio.Documents
 		string jsonData;
 		string jsonMetadata;
 
-		public DocumentViewModel(JsonDocument document, IDatabase database)
+		public DocumentViewModel(JsonDocument document, IServer server)
 		{
 			DisplayName = "Edit Document";
 
 			Thumbnail = new DocumentThumbnail();
-			this.database = database;
+			this.server = server;
 			CompositionInitializer.SatisfyImports(this);
 
 			data = new Dictionary<string, JToken>();
@@ -204,30 +205,13 @@ namespace Raven.Studio.Documents
 			jsonDocument.Metadata = JObject.Parse(JsonMetadata);
 			jsonDocument.Key = id;
 
-			database.Session.Advanced.AsyncDatabaseCommands
+			using (var session = server.OpenSession())
+			session.Advanced.AsyncDatabaseCommands
 				.PutAsync(jsonDocument.Key, null, jsonDocument.DataAsJson, jsonDocument.Metadata)
-				.ContinueWith(x => { Id = x.Result.Key; });
-
-			//saveResult =>
-			//  {
-			//      throw new NotImplementedException();
-			//var success = false;
-
-			//foreach (var response in saveResult.GetSaveResponses())
-			//{
-			//    success = response.Data.Equals(_document.JsonDocument);
-			//    if (success)
-			//    {
-			//        Id = _document.Id;
-			//        break;
-			//    }
-			//}
-			////TO DO
-			//if (!success)
-			//{
-			//    WindowManager.ShowDialog(new InformationDialogViewModel("Error", ""), null);
-			//}
-			//});
+				.ContinueOnSuccess(task =>
+				{
+					Id = task.Result.Key;
+				});
 		}
 
 		public void ShowDocument()

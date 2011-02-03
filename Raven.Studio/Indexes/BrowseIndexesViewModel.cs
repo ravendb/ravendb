@@ -10,18 +10,19 @@
 	public class BrowseIndexesViewModel : Conductor<EditIndexViewModel>, IRavenScreen,
 	                                      IHandle<IndexChangeMessage>
 	{
-		readonly IDatabase database;
+		readonly IServer server;
 		IndexDefinition activeIndex;
 		string filter;
 		bool isBusy;
 
-		public BrowseIndexesViewModel(IDatabase database)
+		public BrowseIndexesViewModel(IServer server)
 		{
 			DisplayName = "Browse Indexes";
 
-			this.database = database;
+			this.server = server;
 
-			Indexes = new BindablePagedQuery<IndexDefinition>(database.Session.Advanced.AsyncDatabaseCommands.GetIndexesAsync);
+			var session = server.OpenSession();
+			Indexes = new BindablePagedQuery<IndexDefinition>(session.Advanced.AsyncDatabaseCommands.GetIndexesAsync);
 
 			CompositionInitializer.SatisfyImports(this);
 		}
@@ -45,7 +46,7 @@
 			{
 				activeIndex = value;
 				if (activeIndex != null)
-					ActiveItem = new EditIndexViewModel(activeIndex, database);
+					ActiveItem = new EditIndexViewModel(activeIndex, server);
 				NotifyOfPropertyChange(() => ActiveIndex);
 			}
 		}
@@ -92,9 +93,12 @@
 		{
 			IsBusy = true;
 
-			database.Session.Advanced.AsyncDatabaseCommands
-				.GetStatisticsAsync()
-				.ContinueWith(x => RefreshIndexes(x.Result.CountOfIndexes));
+			using (var session = server.OpenSession())
+			{
+				session.Advanced.AsyncDatabaseCommands
+					.GetStatisticsAsync()
+					.ContinueOnSuccess(x => RefreshIndexes(x.Result.CountOfIndexes));
+			}
 		}
 
 		void RefreshIndexes(int totalIndexCount)

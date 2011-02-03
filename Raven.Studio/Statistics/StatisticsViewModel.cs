@@ -1,21 +1,21 @@
-﻿namespace Raven.Studio.Statistics.Global
+﻿namespace Raven.Studio.Statistics
 {
 	using Caliburn.Micro;
+	using Framework;
 	using Plugin;
 	using Raven.Database.Data;
 
-	public class GlobalStatisticsViewModel : Screen, IRavenScreen
+	public class StatisticsViewModel : Screen, IRavenScreen
 	{
+		readonly IServer server;
 		bool isBusy;
 		DatabaseStatistics statistics;
 
-		public GlobalStatisticsViewModel(IDatabase database)
+		public StatisticsViewModel(IServer server)
 		{
-			DisplayName = "Global Statistics";
-			Database = database;
+			DisplayName = "Statistics";
+			this.server = server;
 		}
-
-		public IDatabase Database { get; set; }
 
 		public bool IsBusy
 		{
@@ -50,14 +50,17 @@
 		public void RefreshStatistics()
 		{
 			IsBusy = true;
-			Database.Session.Advanced
-				.AsyncDatabaseCommands
-				.GetStatisticsAsync()
-				.ContinueWith(x =>
-				              	{
-				              		Statistics = x.Result;
-				              		IsBusy = false;
-				              	});
+
+			using (var session = server.OpenSession())
+			{
+				session.Advanced.AsyncDatabaseCommands
+					.GetStatisticsAsync()
+					.ContinueOnSuccess(x =>
+					                   	{
+					                   		Statistics = x.Result;
+					                   		IsBusy = false;
+					                   	});
+			}
 		}
 	}
 }

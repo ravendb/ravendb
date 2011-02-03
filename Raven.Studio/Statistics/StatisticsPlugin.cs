@@ -1,11 +1,11 @@
-﻿namespace Raven.Studio.Statistics.Global
+﻿namespace Raven.Studio.Statistics
 {
 	using System.ComponentModel.Composition;
 	using Plugin;
 	using Plugins;
 
 	[Export(typeof (IPlugin))]
-	public class GlobalStatisticsPlugin : PluginBase
+	public class StatisticsPlugin : PluginBase
 	{
 		public override string Name
 		{
@@ -19,12 +19,12 @@
 
 		public override IRavenScreen RelatedScreen
 		{
-			get { return new GlobalStatisticsViewModel(Database); }
+			get { return new StatisticsViewModel(Server); }
 		}
 
 		public override object MenuView
 		{
-			get { return new GlobalStatisticsMenuIcon(); }
+			get { return new StatisticsMenuIcon(); }
 		}
 	}
 }

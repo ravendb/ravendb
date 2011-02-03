@@ -58,7 +58,7 @@
     <Reference Include="System.Windows.Browser" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="IDatabase.cs" />
+    <Compile Include="IServer.cs" />
     <Compile Include="IMenuItem.cs" />
     <Compile Include="IPlugin.cs" />
     <Compile Include="IRavenScreen.cs" />

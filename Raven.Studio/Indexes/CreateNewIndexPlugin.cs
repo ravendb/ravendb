@@ -29,7 +29,7 @@
 				                                                  		Indexes = new Dictionary<string, FieldIndexing>(),
 				                                                  		SortOptions = new Dictionary<string, SortOptions>(),
 				                                                  		Stores = new Dictionary<string, FieldStorage>(),
-				                                                  	}, Database);
+				                                                  	}, Server);
 			}
 		}
 

@@ -22,7 +22,7 @@
 				                                          	{
 				                                          		DataAsJson = new JObject(),
 				                                          		Metadata = new JObject()
-				                                          	}, Database);
+				                                          	}, Server);
 			}
 		}
 

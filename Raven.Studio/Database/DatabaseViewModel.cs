@@ -9,12 +9,12 @@ namespace Raven.Studio.Database
 
 	public class DatabaseViewModel : Conductor<IRavenScreen>.Collection.OneActive, IHandle<ReplaceActiveScreen>
 	{
-		public DatabaseViewModel(IDatabase database)
+		public DatabaseViewModel(IServer server)
 		{
-			Database = database;
-			DisplayName = Database.Name;
-			Menu = new MenuScreenViewModel(Database);
-			Home = new HomeScreenViewModel(Database);
+			Server = server;
+			DisplayName = Server.Name;
+			Menu = new MenuScreenViewModel(Server);
+			Home = new HomeScreenViewModel(Server);
 			GoHome();
 			CompositionInitializer.SatisfyImports(this);
 			EventAggregator.Subscribe(this);
@@ -26,7 +26,7 @@ namespace Raven.Studio.Database
 		[Import]
 		public IEventAggregator EventAggregator { get; set; }
 
-		public IDatabase Database { get; private set; }
+		public IServer Server { get; private set; }
 
 		public void Handle(ReplaceActiveScreen message)
 		{

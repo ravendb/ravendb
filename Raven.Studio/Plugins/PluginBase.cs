@@ -28,7 +28,7 @@ namespace Raven.Studio.Plugins
 			get { return 0; }
 		}
 
-		public IDatabase Database { get; set; }
+		public IServer Server { get; set; }
 
 		public void GoToScreen()
 		{

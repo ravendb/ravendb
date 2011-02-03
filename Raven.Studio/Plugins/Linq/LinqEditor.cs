@@ -13,7 +13,7 @@ namespace Raven.Studio.Plugins.Linq
 
 		public override IRavenScreen RelatedScreen
 		{
-			get { return new LinqEditorViewModel(Database); }
+			get { return new LinqEditorViewModel(Server); }
 		}
 
 		public override string Name

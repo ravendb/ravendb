@@ -4,7 +4,7 @@ namespace Raven.Studio.Plugin
 	{
 		string Name { get; }
 
-		IDatabase Database { get; set; }
+		IServer Server { get; set; }
 
 		void GoToScreen();
 	}

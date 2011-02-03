@@ -4,22 +4,23 @@ namespace Raven.Studio.Indexes
 	using System.ComponentModel.Composition;
 	using System.Linq;
 	using Caliburn.Micro;
+	using Framework;
 	using Plugin;
 	using Raven.Database.Indexing;
 
 	public class EditIndexViewModel : Screen, IRavenScreen
 	{
 		readonly IndexDefinition index;
-		readonly IDatabase database;
+		readonly IServer server;
 		bool isBusy;
 		string name;
 
-		public EditIndexViewModel(IndexDefinition index, IDatabase database)
+		public EditIndexViewModel(IndexDefinition index, IServer server)
 		{
 			DisplayName = "Edit Index";
 
 			this.index = index;
-			this.database = database;
+			this.server = server;
 
 			CompositionInitializer.SatisfyImports(this);
 
@@ -77,23 +78,30 @@ namespace Raven.Studio.Indexes
 			IsBusy = true;
 			SaveFields();
 
-			database.Session.Advanced.AsyncDatabaseCommands
-				.PutIndexAsync(Name,index,true)
-				.ContinueWith(task =>
-			              		{
-									IsBusy = false;
-			              		});
+			using(var session = server.OpenSession())
+			{
+				session.Advanced.AsyncDatabaseCommands
+					.PutIndexAsync(Name, index, true)
+					.ContinueOnSuccess(task =>
+					{
+						IsBusy = false;
+					});
+			}
+			
 		}
 
 		public void Remove()
 		{
 			IsBusy = true;
-			database.Session.Advanced.AsyncDatabaseCommands
-				.DeleteIndexAsync(Name)
-				.ContinueWith(task =>
-				{
-					IsBusy = false;
-				});
+			using(var session = server.OpenSession())
+			{
+				session.Advanced.AsyncDatabaseCommands
+					.DeleteIndexAsync(Name)
+					.ContinueOnSuccess(task =>
+					              	{
+					              		IsBusy = false;
+					              	});
+			}
 		}
 
 		void LoadFields()

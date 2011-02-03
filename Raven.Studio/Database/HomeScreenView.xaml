@@ -1,5 +1,25 @@
-﻿<UserControl x:Class="Raven.Studio.Database.HomeScreenView" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:d="http://schemas.microsoft.com/expression/blend/2008" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="d" d:DesignHeight="300" d:DesignWidth="400">
-	<Grid x:Name="LayoutRoot" Background="White">
-		<TextBlock Text="Welcome to Raven" />
-	</Grid>
+﻿<UserControl x:Class="Raven.Studio.Database.HomeScreenView"
+			 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+			 xmlns:tk="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit"
+			 mc:Ignorable="d"
+			 d:DesignHeight="300"
+			 d:DesignWidth="400">
+	<tk:DockPanel x:Name="LayoutRoot">
+
+		<TextBlock tk:DockPanel.Dock="Top"
+				   Text="Welcome to Raven" />
+		<Grid>
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition />
+				<ColumnDefinition Width="2*" />
+			</Grid.ColumnDefinitions>
+
+			<ListBox ItemsSource="{Binding Server.Databases}"
+					 SelectedItem="{Binding Server.CurrentDatabase, Mode=TwoWay}" />
+		</Grid>
+	</tk:DockPanel>
+
 </UserControl>

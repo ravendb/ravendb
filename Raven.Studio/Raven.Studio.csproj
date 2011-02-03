@@ -180,10 +180,11 @@
     <Compile Include="Converters\NullToVisibilityConverter.cs" />
     <Compile Include="Dialogs\InformationDialogViewModel.cs" />
     <Compile Include="Framework\BindablePagedQuery.cs" />
+    <Compile Include="Framework\TaskExtensions.cs" />
     <Compile Include="Messages\ChangeActiveScreen.cs" />
     <Compile Include="Messages\OpenNewScreen.cs" />
     <Compile Include="Messages\ReplaceActiveScreen.cs" />
-    <Compile Include="Database\Database.cs" />
+    <Compile Include="Database\Server.cs" />
     <Compile Include="Indexes\FieldProperties.cs" />
     <Compile Include="Documents\BrowseDocumentsPlugin.cs" />
     <Compile Include="Documents\CreateNewDocumentPlugin.cs" />
@@ -201,8 +202,8 @@
     <Compile Include="Plugins\Linq\LinqEditorViewModel.cs" />
     <Compile Include="Plugins\PluginBase.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Statistics\Global\GlobalStatisticsPlugin.cs" />
-    <Compile Include="Statistics\Global\GlobalStatisticsViewModel.cs" />
+    <Compile Include="Statistics\StatisticsPlugin.cs" />
+    <Compile Include="Statistics\StatisticsViewModel.cs" />
     <Compile Include="Shell\IShell.cs" />
     <Compile Include="Database\DatabaseViewModel.cs" />
     <Compile Include="Documents\BrowseDocumentsView.xaml.cs">
@@ -302,11 +303,11 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="Statistics\Global\GlobalStatisticsMenuIcon.xaml">
+    <Page Include="Statistics\GlobalStatisticsMenuIcon.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Statistics\Global\GlobalStatisticsView.xaml">
+    <Page Include="Statistics\GlobalStatisticsView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

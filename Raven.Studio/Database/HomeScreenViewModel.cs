@@ -1,19 +1,30 @@
 namespace Raven.Studio.Database
 {
+	using System.Collections.Generic;
 	using System.ComponentModel.Composition;
 	using Caliburn.Micro;
 	using Plugin;
 
 	public class HomeScreenViewModel : Screen, IRavenScreen
 	{
-		public HomeScreenViewModel(IDatabase database)
+		public HomeScreenViewModel(IServer server)
 		{
 			DisplayName = "Home";
-			Database = database;
+			Server = server;
 			CompositionInitializer.SatisfyImports(this);
 		}
 
-		public IDatabase Database { get; set; }
+		public IServer Server { get; private set; }
+
+		public IEnumerable<string> Databases
+		{
+			get { return Server.Databases; }
+		}
+
+		public string CurrentDatabase
+		{
+			get { return Server.CurrentDatabase; }
+		}
 
 		public SectionType Section
 		{

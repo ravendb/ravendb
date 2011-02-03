@@ -11,12 +11,12 @@ namespace Raven.Studio.Plugins.Linq
 		string query;
 		IList<DocumentViewModel> results;
 
-		public LinqEditorViewModel(IDatabase database)
+		public LinqEditorViewModel(IServer server)
 		{
-			Database = database;
+			Server = server;
 		}
 
-		public IDatabase Database { get; private set; }
+		public IServer Server { get; private set; }
 
 		public IList<DocumentViewModel> Results
 		{
