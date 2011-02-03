@@ -75,7 +75,7 @@
 										Orientation="Horizontal"
 										tk:DockPanel.Dock="Right">
 								<c:DatabaseConnection Margin="0 0 4 0"
-													  DataContext="{Binding ActiveItem.Database}" />
+													  DataContext="{Binding ActiveItem.Server}" />
 								<c:Gears Margin="0 0 4 0" />
 							</StackPanel>
 						</tk:DockPanel>

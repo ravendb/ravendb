@@ -1,6 +1,5 @@
 namespace Raven.Studio.Database
 {
-	using System.Collections.Generic;
 	using System.ComponentModel.Composition;
 	using Caliburn.Micro;
 	using Plugin;
@@ -15,16 +14,6 @@ namespace Raven.Studio.Database
 		}
 
 		public IServer Server { get; private set; }
-
-		public IEnumerable<string> Databases
-		{
-			get { return Server.Databases; }
-		}
-
-		public string CurrentDatabase
-		{
-			get { return Server.CurrentDatabase; }
-		}
 
 		public SectionType Section
 		{
