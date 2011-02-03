@@ -479,6 +479,14 @@ namespace Raven.Client.Client.Async
 		{
 			throw new NotImplementedException();
 		}
+
+		/// <summary>
+		/// Gets the list of databases from the server asyncronously
+		/// </summary>
+		public Task<string[]> GetDatabaseNamesAsync()
+		{
+			throw new NotImplementedException();
+		}
 	}
 }
 

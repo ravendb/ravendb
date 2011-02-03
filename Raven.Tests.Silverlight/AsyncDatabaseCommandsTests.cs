@@ -149,5 +149,19 @@
 
 			Assert.AreEqual(3, task.Result.Length);
 		}
+
+		[Asynchronous]
+		public IEnumerable<Task> Can_get_a_list_of_databases_async()
+		{
+			var dbname = GenerateNewDatabaseName();
+			var documentStore = new DocumentStore { Url = Url + Port };
+			documentStore.Initialize();
+			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+
+			var task = documentStore.AsyncDatabaseCommands.GetDatabaseNamesAsync();
+			yield return task;
+
+			Assert.IsTrue(task.Result.Contains(dbname));
+		}
 	}
 }

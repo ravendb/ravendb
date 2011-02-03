@@ -120,16 +120,15 @@ namespace Raven.Client.Client.Async
 		/// <param name="credentialsForSession">The credentials for session.</param>
 		IAsyncDatabaseCommands With(ICredentials credentialsForSession);
 
-		///// <summary>
-		///// Begins an async multi get operation with no criteria
-		///// </summary>
-		//Task<JsonDocument[]> MultiGetAsync();
-
 		/// <summary>
 		/// Retrieve the statistics for the database asynchronously
 		/// </summary>
 		Task<DatabaseStatistics> GetStatisticsAsync();
 
+		/// <summary>
+		/// Gets the list of databases from the server asyncronously
+		/// </summary>
+		Task<string[]> GetDatabaseNamesAsync();
 	}
 }
 #endif

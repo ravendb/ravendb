@@ -570,6 +570,28 @@ namespace Raven.Client.Client.Async
 					return jo.Deserialize<DatabaseStatistics>(convention);
 				});
 		}
+
+		/// <summary>
+		/// Gets the list of databases from the server asyncronously
+		/// </summary>
+		public Task<string[]> GetDatabaseNamesAsync()
+		{
+			return url.Databases()
+				.ToJsonRequest(this, credentials, convention)
+				.ReadResponseStringAsync()
+				.ContinueWith(task =>
+				{
+					var serializer = convention.CreateSerializer();
+					using (var reader = new JsonTextReader(new StringReader(task.Result)))
+					{
+						var json = (JToken)serializer.Deserialize(reader);
+						return json
+							.Children()
+							.Select(x => x.Value<JObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty))
+							.ToArray();
+					}
+				});
+		}
 	}
 }
 

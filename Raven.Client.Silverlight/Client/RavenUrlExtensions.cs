@@ -13,6 +13,11 @@
 			return url + "/indexes/" + index;
 		}
 
+		public static string Databases(this string url)
+		{
+			return url + "/databases/";
+		}
+
 		public static string Docs(this string url, string key)
 		{
 			return url + "/docs/" + key;
