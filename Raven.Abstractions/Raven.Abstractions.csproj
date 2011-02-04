@@ -55,6 +55,7 @@
     <Compile Include="Data\AggregationOperation.cs" />
     <Compile Include="Data\Attachment.cs" />
     <Compile Include="Data\BatchResult.cs" />
+    <Compile Include="Data\Collection.cs" />
     <Compile Include="Data\DatabaseDocument.cs" />
     <Compile Include="Data\DatabaseStatistics.cs" />
     <Compile Include="Commands\ICommandData.cs" />
