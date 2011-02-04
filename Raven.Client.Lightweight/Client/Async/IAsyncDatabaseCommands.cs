@@ -129,6 +129,13 @@ namespace Raven.Client.Client.Async
 		/// Gets the list of databases from the server asyncronously
 		/// </summary>
 		Task<string[]> GetDatabaseNamesAsync();
+
+		/// <summary>
+		/// Gets the list of collections from the server asyncronously
+		/// </summary>
+		/// <param name="start">Paging start</param>
+		/// <param name="pageSize">Size of the page.</param>
+		Task<Collection[]> GetCollectionsAsync(int start, int pageSize);
 	}
 }
 #endif

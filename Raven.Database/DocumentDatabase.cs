@@ -187,15 +187,15 @@ select new { Tag = doc[""@metadata""][""Raven-Entity-Name""] };
 					 {
 						 Map =
 						 @"from doc in docs
-let tag = doc[""@metadata""][""Raven-Entity-Name""]
-where tag != null
-select new { tag , count = 1}
+let Name = doc[""@metadata""][""Raven-Entity-Name""]
+where Name != null
+select new { Name , Count = 1}
 ",
 						 Reduce = @"from result in results
-group result by result.tag into g
-select new { tag = g.Key, count = g.Sum(x=>x.count) }",
-	 Indexes = { { "Tag", FieldIndexing.NotAnalyzed } },
-	 Stores = { { "Tag", FieldStorage.No } }
+group result by result.Name into g
+select new { Name = g.Key, Count = g.Sum(x=>x.Count) }",
+						 //Indexes = { { "Name", FieldIndexing.NotAnalyzed } },
+						 //Stores = { { "Name", FieldStorage.No } }
 					});
 		}
 

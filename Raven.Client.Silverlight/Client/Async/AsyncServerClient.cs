@@ -5,28 +5,28 @@
 //-----------------------------------------------------------------------
 #if !NET_3_5
 
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Net.Browser;
-using System.Text;
-using System.Threading.Tasks;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Raven.Abstractions.Data;
-using Raven.Client.Document;
-using Raven.Client.Exceptions;
-using Raven.Database;
-using Raven.Database.Data;
-using Raven.Database.Indexing;
-using Raven.Http.Exceptions;
-using Raven.Http.Json;
-
 namespace Raven.Client.Client.Async
 {
+	using System;
+	using System.Collections.Generic;
+	using System.Globalization;
+	using System.IO;
+	using System.Linq;
+	using System.Net;
+	using System.Net.Browser;
+	using System.Text;
+	using System.Threading.Tasks;
+	using Newtonsoft.Json;
+	using Newtonsoft.Json.Linq;
+	using Abstractions.Data;
+	using Client;
+	using Document;
+	using Exceptions;
+	using Database;
+	using Database.Data;
+	using Database.Indexing;
+	using Http.Exceptions;
+	using Http.Json;
 	using Extensions;
 	using Silverlight.Client;
 
@@ -591,6 +591,14 @@ namespace Raven.Client.Client.Async
 							.ToArray();
 					}
 				});
+		}
+
+		public Task<Collection[]> GetCollectionsAsync(int start, int pageSize)
+		{
+			var query =  new IndexQuery {Start = start,PageSize = pageSize, SortedFields = new[]{new SortedField("Name"), }};
+
+			return QueryAsync("Raven/DocumentCollections", query, new string[]{})
+					.ContinueWith(task => task.Result.Results.Select(x => x.Deserialize<Collection>(convention)).ToArray());
 		}
 	}
 }

@@ -487,6 +487,16 @@ namespace Raven.Client.Client.Async
 		{
 			throw new NotImplementedException();
 		}
+
+		/// <summary>
+		/// Gets the list of collections from the server asyncronously
+		/// </summary>
+		/// <param name="start">Paging start</param>
+		/// <param name="pageSize">Size of the page.</param>
+		public Task<Collection[]> GetCollectionsAsync(int start, int pageSize)
+		{
+			throw new NotImplementedException();
+		}
 	}
 }
 
