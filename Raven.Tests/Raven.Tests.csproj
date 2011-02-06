@@ -210,6 +210,7 @@
     <Compile Include="Bugs\Queries\DynamicQueriesOnMetadata.cs" />
     <Compile Include="Bugs\Queries\Fetching.cs" />
     <Compile Include="Bugs\Queries\Includes.cs" />
+    <Compile Include="Bugs\Queries\LuceneQueryCustomMetadata.cs" />
     <Compile Include="Bugs\Queries\Projections.cs" />
     <Compile Include="Bugs\Queries\QueryById.cs" />
     <Compile Include="Bugs\Queries\RangeQueries.cs" />
