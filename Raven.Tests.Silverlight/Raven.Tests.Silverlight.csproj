@@ -118,6 +118,7 @@
     <Compile Include="AsyncDocumentStoreServerTests.cs" />
     <Compile Include="RavenTestBase.cs" />
     <Compile Include="Entities\TheCompanyName.cs" />
+    <Compile Include="Statistics.cs" />
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml">

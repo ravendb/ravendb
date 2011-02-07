@@ -561,9 +561,10 @@ namespace Raven.Client.Client.Async
 		/// <returns></returns>
 		public Task<DatabaseStatistics> GetStatisticsAsync()
 		{
-			var request = HttpJsonRequest.CreateHttpJsonRequest(this, url + "/stats", "GET", credentials, convention);
-
-			return request.ReadResponseStringAsync()
+			return url.Stats()
+				.NoCache()
+				.ToJsonRequest(this, credentials, convention)
+				.ReadResponseStringAsync()
 				.ContinueWith(task =>
 				{
 					var response = task.Result;

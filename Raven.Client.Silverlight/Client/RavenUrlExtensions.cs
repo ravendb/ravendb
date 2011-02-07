@@ -18,6 +18,11 @@
 			return url + "/indexes/?namesOnly=true&start=" + start + "&pageSize=" + pageSize;
 		}
 
+		public static string Stats(this string url)
+		{
+			return url + "/stats";
+		}
+
 		public static string Databases(this string url)
 		{
 			return url + "/databases/";

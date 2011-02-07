@@ -99,35 +99,6 @@
 		}
 
 		[Asynchronous]
-		public IEnumerable<Task> Can_retrieve_statistics_for_a_server()
-		{
-			var documentStore = new DocumentStore { Url = Url + Port };
-			documentStore.Initialize();
-
-			var getStats = documentStore.AsyncDatabaseCommands.GetStatisticsAsync();
-			yield return getStats;
-
-			Assert.IsNotNull(getStats.Result);
-			//TODO: What's the correct way to test this?
-		}
-
-		[Asynchronous]
-		public IEnumerable<Task> Can_retrieve_statistics_for_a_database()
-		{
-			var dbname = GenerateNewDatabaseName();
-			var documentStore = new DocumentStore { Url = Url + Port };
-			documentStore.Initialize();
-			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
-
-			var getStats = documentStore.AsyncDatabaseCommands.ForDatabase(dbname).GetStatisticsAsync();
-			yield return getStats;
-
-			var stats = getStats.Result;
-			Assert.AreEqual(0, stats.CountOfDocuments);
-			Assert.AreEqual(2, stats.CountOfIndexes); // we expect two indexes in a brand new db (for now)
-		}
-
-		[Asynchronous]
 		public IEnumerable<Task> Can_get_documents_async()
 		{
 			var dbname = GenerateNewDatabaseName();
