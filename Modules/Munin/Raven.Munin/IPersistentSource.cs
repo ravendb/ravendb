@@ -29,5 +29,6 @@ namespace Raven.Munin
         void FlushLog();
         RemoteManagedStorageState CreateRemoteAppDomainState();
         void ClearPool();
+    	void EnsureCapacity(int value);
     }
 }

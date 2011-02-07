@@ -155,14 +155,31 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			request.AddOperationHeaders(OperationsHeaders);
 			try
 			{
+                var requestString = request.ReadResponseString();
+                JObject meta = null;
+                JObject jsonData = null;
+                try
+                {
+                    jsonData = JObject.Parse(requestString);
+                    meta = request.ResponseHeaders.FilterHeaders(isServerDocument: false);
+                }
+                catch (JsonReaderException jre)
+                {
+                    var headers = "";
+                    foreach (string header in request.ResponseHeaders)
+                    {
+                        headers = headers + string.Format("\n\r{0}:{1}", header, request.ResponseHeaders[header]);
+                    }
+                    throw new JsonReaderException("Invalid Json Response: \n\rHeaders:\n\r" + headers + "\n\rBody:" + requestString, jre);
+                }
 				return new JsonDocument
 				{
-					DataAsJson = JObject.Parse(request.ReadResponseString()),
+                    DataAsJson = jsonData,
 					NonAuthoritiveInformation = request.ResponseStatusCode == HttpStatusCode.NonAuthoritativeInformation,
 					Key = key,
 					Etag = new Guid(request.ResponseHeaders["ETag"]),
 					LastModified = DateTime.ParseExact(request.ResponseHeaders["Last-Modified"], "r", CultureInfo.InvariantCulture),
-					Metadata = request.ResponseHeaders.FilterHeaders(isServerDocument: false)
+                    Metadata = meta
 				};
 			}
 			catch (WebException e)
@@ -532,24 +549,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			EnsureIsNotNullOrEmpty(name, "name");
 
 			string requestUri = url + "/indexes/" + name;
-			try
-			{
-				var webRequest = (HttpWebRequest)WebRequest.Create(requestUri);
-				AddOperationHeaders(webRequest);
-				webRequest.Method = "HEAD";
-				webRequest.Credentials = credentials;
-
-				webRequest.GetResponse().Close();
-				if (overwrite == false)
-					throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
-			}
-			catch (WebException e)
-			{
-				var response = e.Response as HttpWebResponse;
-				if (response == null || response.StatusCode != HttpStatusCode.NotFound)
-					throw;
-			}
-
+		
 			var request = HttpJsonRequest.CreateHttpJsonRequest(this, requestUri, "PUT", credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
 			request.Write(JsonConvert.SerializeObject(definition, new JsonEnumConverter()));

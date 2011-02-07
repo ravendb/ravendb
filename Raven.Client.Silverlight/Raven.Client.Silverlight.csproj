@@ -101,6 +101,9 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Linq\LinqExtensions_Obsolete.cs">
       <Link>Linq\LinqExtensions_Obsolete.cs</Link>
+	</Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Indexes\IndexDefinitionHelper.cs">
+      <Link>Indexes\IndexDefinitionHelper.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\WhereEqualsParams.cs">
       <Link>WhereEqualsParams.cs</Link>

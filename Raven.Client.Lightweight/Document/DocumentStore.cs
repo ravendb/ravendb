@@ -178,14 +178,17 @@ namespace Raven.Client.Document
 					ProcessConnectionStringOption(networkCredential, match.Groups[1].Value.ToLower(), match.Groups[2].Value.Trim());
 				}
 
-				if (string.IsNullOrEmpty(networkCredential.UserName) && string.IsNullOrEmpty(networkCredential.Password)) 
+				if (setupUsernameInConnectionString == false && setupPasswordInConnectionString == false) 
 					return;
 
-				if (string.IsNullOrEmpty(networkCredential.UserName) || string.IsNullOrEmpty(networkCredential.Password))
+				if (setupUsernameInConnectionString == false || setupPasswordInConnectionString == false)
 					throw new ArgumentException("User and Password must both be specified in the connection string: " + connectionStringName);
 				Credentials = networkCredential;
 			}
 		}
+
+		private bool setupUsernameInConnectionString;
+		private bool setupPasswordInConnectionString;
 
 		/// <summary>
 		/// Parse the connection string option
@@ -205,9 +208,11 @@ namespace Raven.Client.Document
 					break;
 				case "user":
 					neworkCredentials.UserName = value;
+					setupUsernameInConnectionString = true;
 					break;
 				case "password":
 					neworkCredentials.Password = value;
+					setupPasswordInConnectionString = true;
 					break;
 
 				default:

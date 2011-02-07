@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.IO;
 
 namespace Raven.Munin
@@ -110,7 +111,12 @@ namespace Raven.Munin
             }
         }
 
-        public override void Dispose()
+    	public override void EnsureCapacity(int value)
+    	{
+			// not sure how we can reserve space on the file system
+    	}
+
+    	public override void Dispose()
         {
             log.Dispose();
             base.Dispose();
