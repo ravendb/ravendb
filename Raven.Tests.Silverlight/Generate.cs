@@ -14,7 +14,8 @@
 	/// </summary>
 	public class Generate : RavenTestBase
 	{
-		[Asynchronous][Ignore]
+		[Ignore]
+		[Asynchronous]
 		public IEnumerable<Task> Some_sample_data()
 		{
 			var store = new DocumentStore {Url = Url + Port};

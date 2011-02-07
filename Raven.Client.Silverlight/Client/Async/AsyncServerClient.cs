@@ -411,9 +411,10 @@ namespace Raven.Client.Client.Async
 		/// <param name="pageSize">Size of the page.</param>
 		public Task<string[]> GetIndexNamesAsync(int start, int pageSize)
 		{
-			var request = HttpJsonRequest.CreateHttpJsonRequest(this, url + "/indexes/?namesOnly=true&start=" + start + "&pageSize=" + pageSize, "GET", credentials, convention);
-			
-			return request.ReadResponseStringAsync()
+			return url.IndexNames(start, pageSize)
+				.NoCache()
+				.ToJsonRequest(this, credentials, convention)
+				.ReadResponseStringAsync()
 				.ContinueWith(task =>
 				{
 					var serializer = convention.CreateSerializer();

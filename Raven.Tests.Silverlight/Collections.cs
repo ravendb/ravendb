@@ -1,15 +1,4 @@
-﻿using System;
-using System.Net;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Documents;
-using System.Windows.Ink;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Shapes;
-
-namespace Raven.Tests.Silverlight
+﻿namespace Raven.Tests.Silverlight
 {
 	using System.Collections.Generic;
 	using System.Linq;
@@ -27,17 +16,17 @@ namespace Raven.Tests.Silverlight
 		public IEnumerable<Task> Can_get_collections_async()
 		{
 			var dbname = GenerateNewDatabaseName();
-			var store = new DocumentStore { Url = Url + Port };
+			var store = new DocumentStore {Url = Url + Port};
 			store.Initialize();
 			yield return store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
 
 			using (var session = store.OpenAsyncSession(dbname))
 			{
 				Enumerable.Range(0, 25).ToList()
-					.ForEach(i => session.Store(new Company { Id = "Companies/" + i, Name = i.ToString() }));
+					.ForEach(i => session.Store(new Company {Id = "Companies/" + i, Name = i.ToString()}));
 
 				Enumerable.Range(0, 25).ToList()
-					.ForEach(i => session.Store(new Order { Id = "Orders/" + i, Note = i.ToString() }));
+					.ForEach(i => session.Store(new Order {Id = "Orders/" + i, Note = i.ToString()}));
 
 				yield return session.SaveChangesAsync();
 			}
@@ -46,7 +35,7 @@ namespace Raven.Tests.Silverlight
 			yield return Delay(500);
 
 			var task = store.AsyncDatabaseCommands.ForDatabase(dbname)
-				.GetCollectionsAsync(0,25);
+				.GetCollectionsAsync(0, 25);
 			yield return task;
 
 			var collections = task.Result;

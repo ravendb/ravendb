@@ -13,6 +13,11 @@
 			return url + "/indexes/" + index;
 		}
 
+		public static string IndexNames(this string url, int start, int pageSize)
+		{
+			return url + "/indexes/?namesOnly=true&start=" + start + "&pageSize=" + pageSize;
+		}
+
 		public static string Databases(this string url)
 		{
 			return url + "/databases/";
@@ -31,6 +36,13 @@
 		public static string Queries(this string url)
 		{
 			return url + "/queries/";
+		}
+
+		public static string NoCache(this string  url)
+		{
+			return (url.Contains("?"))
+				? url + "&noCache=" + Guid.NewGuid().GetHashCode()
+				: url + "?noCache=" + Guid.NewGuid().GetHashCode();
 		}
 
 		public static Uri ToUri(this string url)
