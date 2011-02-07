@@ -44,6 +44,26 @@
 		</Setter>
 	</Style>
 
+	<Style TargetType="ListBox">
+
+	</Style>
+
+	<Style x:Key="Header"
+		   TargetType="TextBlock">
+		<Setter Property="FontSize"
+				Value="32" />
+		<Setter Property="Foreground"
+				Value="#FF899EB2" />
+	</Style>
+
+	<Style x:Key="Instruction"
+		   TargetType="TextBlock">
+		<Setter Property="FontSize"
+				Value="16" />
+		<Setter Property="TextWrapping"
+				Value="Wrap" />
+	</Style>
+
 	<Style x:Key="ApplicationNameStyle"
 		   TargetType="TextBlock">
 		<Setter Property="Foreground"
