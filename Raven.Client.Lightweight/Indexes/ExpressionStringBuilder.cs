@@ -214,6 +214,7 @@ namespace Raven.Client.Indexes
 
 		private void OutMember(Expression instance, MemberInfo member)
 		{
+			OutputTypeIfNeeded(member);
 			var name = member.Name;
 			var identityProperty = convention.GetIdentityProperty(member.DeclaringType);
 			if (identityProperty == member && instance.NodeType == ExpressionType.Parameter && translateIdentityProperty)
@@ -236,6 +237,50 @@ namespace Raven.Client.Indexes
 
 				this.Out(member.DeclaringType.Name + "." + name);
 			}
+		}
+
+		private void OutputTypeIfNeeded(MemberInfo member)
+		{
+			if(GetMemberType(member) == typeof(decimal))
+			{
+				this.Out("(decimal)");
+			}
+			if (GetMemberType(member) == typeof(double))
+			{
+				this.Out("(double)");
+			}
+			if (GetMemberType(member) == typeof(long))
+			{
+				this.Out("(long)");
+			}
+			if (GetMemberType(member) == typeof(float))
+			{
+				this.Out("(float)");
+			}
+			if (GetMemberType(member) == typeof(decimal?))
+			{
+				this.Out("(decimal?)");
+			}
+			if (GetMemberType(member) == typeof(double?))
+			{
+				this.Out("(double?)");
+			}
+			if (GetMemberType(member) == typeof(long?))
+			{
+				this.Out("(long?)");
+			}
+			if (GetMemberType(member) == typeof(float?))
+			{
+				this.Out("(float?)");
+			}
+		}
+
+		private static Type GetMemberType(MemberInfo member)
+		{
+			var prop = member as PropertyInfo;
+			if(prop != null)
+				return prop.PropertyType;
+			return ((FieldInfo) member).FieldType;
 		}
 
 		internal string SwitchCaseToString(SwitchCase node)

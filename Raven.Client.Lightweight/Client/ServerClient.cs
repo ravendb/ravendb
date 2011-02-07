@@ -549,24 +549,7 @@ Failed to get in touch with any of the " + 1 + threadSafeCopy.Count + " Raven in
 			EnsureIsNotNullOrEmpty(name, "name");
 
 			string requestUri = url + "/indexes/" + name;
-			try
-			{
-				var webRequest = (HttpWebRequest)WebRequest.Create(requestUri);
-				AddOperationHeaders(webRequest);
-				webRequest.Method = "HEAD";
-				webRequest.Credentials = credentials;
-
-				webRequest.GetResponse().Close();
-				if (overwrite == false)
-					throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
-			}
-			catch (WebException e)
-			{
-				var response = e.Response as HttpWebResponse;
-				if (response == null || response.StatusCode != HttpStatusCode.NotFound)
-					throw;
-			}
-
+		
 			var request = HttpJsonRequest.CreateHttpJsonRequest(this, requestUri, "PUT", credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
 			request.Write(JsonConvert.SerializeObject(definition, new JsonEnumConverter()));

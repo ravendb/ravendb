@@ -51,23 +51,22 @@ namespace Raven.Database.Indexing
     	{
     		var fieldParts = field.Split(new[]{"."}, StringSplitOptions.RemoveEmptyEntries);
 
-    		bool appendDot = false;
     		var result = new StringBuilder();
     		foreach (var fieldPart in fieldParts)
     		{
-				if (appendDot)
-					result.Append(".");
-    			if((char.IsLetter(fieldPart[0]) == false && fieldPart[0] != '_') || 
+				if ((char.IsLetter(fieldPart[0]) == false && fieldPart[0] != '_') || 
 					fieldPart.Any(c => char.IsLetterOrDigit(c) == false && c != '_' 
 						&& c != ',' /* we allow the comma operator for collections */))
     			{
     				result.Append("[\"").Append(fieldPart).Append("\"]");
-    				appendDot = false;
     			}
     			else
     			{
-    				appendDot = true;
-    				result.Append(fieldPart);
+					if (result.Length > 0)
+						result.Append('.');
+
+    				result
+						.Append(fieldPart);
     			}
     		}
     		return result.ToString();

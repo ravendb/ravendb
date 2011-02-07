@@ -123,6 +123,7 @@
     <Compile Include="Bugs\CanDetectChanges.cs" />
     <Compile Include="Bugs\CanGetMetadataForTransient.cs" />
     <Compile Include="Bugs\CanHandleDocumentRemoval.cs" />
+    <Compile Include="Bugs\CanPassTypesProperlyToAggregation.cs" />
     <Compile Include="Bugs\CanProjectIdFromDocumentInQueries.cs" />
     <Compile Include="Bugs\CanSelectFieldsFromIndex.cs" />
     <Compile Include="Bugs\CanUseNonStringsForId.cs" />
@@ -157,6 +158,7 @@
     <Compile Include="Bugs\IndexingRavenDocuments.cs" />
     <Compile Include="Bugs\Indexing\CanIndexAllDocsWhenThereAreMoreDocsThanTheBatchSize.cs" />
     <Compile Include="Bugs\Indexing\ComplexLinq.cs" />
+    <Compile Include="Bugs\Indexing\CreateIndexesOnRemoteServer.cs" />
     <Compile Include="Bugs\Indexing\DynamicFields.cs" />
     <Compile Include="Bugs\Indexing\DynamicQueriesCanSort.cs" />
     <Compile Include="Bugs\Indexing\FilterOnMissingProperty.cs" />
@@ -208,6 +210,7 @@
     <Compile Include="Bugs\Queries\DynamicQueriesOnMetadata.cs" />
     <Compile Include="Bugs\Queries\Fetching.cs" />
     <Compile Include="Bugs\Queries\Includes.cs" />
+    <Compile Include="Bugs\Queries\LuceneQueryCustomMetadata.cs" />
     <Compile Include="Bugs\Queries\Projections.cs" />
     <Compile Include="Bugs\Queries\QueryById.cs" />
     <Compile Include="Bugs\Queries\RangeQueries.cs" />
@@ -370,7 +373,6 @@
     <Compile Include="Storage\GeneralStorage.cs" />
     <Compile Include="Storage\IndexStaleViaEtags.cs" />
     <Compile Include="Storage\WithDebugging.cs" />
-    <Compile Include="Stress\StressTester.cs" />
     <Compile Include="Suggestions\Suggestions.cs" />
     <Compile Include="Suggestions\SuggestionsHelper.cs" />
     <Compile Include="Transactions\Deletes.cs" />
@@ -455,17 +457,6 @@
       <Link>RavenDB.snk</Link>
     </None>
     <None Include="App.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="Stress\Data\data_100KB.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Stress\Data\data_500KB.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Stress\Data\data_5MB.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
