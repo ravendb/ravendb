@@ -124,7 +124,7 @@
 
 			var stats = getStats.Result;
 			Assert.AreEqual(0, stats.CountOfDocuments);
-			Assert.AreEqual(1, stats.CountOfIndexes);
+			Assert.AreEqual(2, stats.CountOfIndexes); // we expect two indexes in a brand new db (for now)
 		}
 
 		[Asynchronous]
