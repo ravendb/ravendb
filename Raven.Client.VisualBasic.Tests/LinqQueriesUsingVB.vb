@@ -11,7 +11,7 @@ Public Class LinqQueriesUsingVB
     Public Sub CanUseWhereEntityIs()
         Using store As EmbeddableDocumentStore = NewDocumentStore()
             Dim x = New Data_NewIndex()
-            x.Execute(store)
+			x.Execute(store.DatabaseCommands, store.Conventions)
         End Using
     End Sub
 

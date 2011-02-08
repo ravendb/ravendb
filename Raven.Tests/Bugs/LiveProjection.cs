@@ -22,7 +22,8 @@ namespace Raven.Tests.Bugs
 		{
 			Store = NewDocumentStore();
 			var purchaseHistoryIndex = new PurchaseHistoryIndex();
-			purchaseHistoryIndex.Execute(Store);
+			IDocumentStore documentStore = Store;
+			purchaseHistoryIndex.Execute(documentStore.DatabaseCommands, documentStore.Conventions);
 		}
 
 		public EmbeddableDocumentStore Store { get; set; }
@@ -121,7 +122,7 @@ namespace Raven.Tests.Bugs
 							ProductId = item.ProductId,
 							ProductName = product.Name
 						}
-				}.ToIndexDefinition(DocumentStore.Conventions);
+				}.ToIndexDefinition(Conventions);
 			}
 		}
 

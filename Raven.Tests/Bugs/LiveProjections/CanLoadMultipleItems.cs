@@ -1,4 +1,5 @@
 using System.Linq;
+using Raven.Client;
 using Raven.Client.Indexes;
 using Xunit;
 
@@ -11,7 +12,7 @@ namespace Raven.Tests.Bugs.LiveProjections
 		{
 			using (var store = NewDocumentStore())
 			{
-				new ParentAndChildrenNames().Execute(store);	
+				new ParentAndChildrenNames().Execute(((IDocumentStore) store).DatabaseCommands, ((IDocumentStore) store).Conventions);	
 
 				using(var s = store.OpenSession())
 				{

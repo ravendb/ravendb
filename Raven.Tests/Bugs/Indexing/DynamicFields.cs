@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Lucene.Net.Documents;
+using Raven.Client;
 using Raven.Client.Indexes;
 using Xunit;
 
@@ -58,7 +59,7 @@ namespace Raven.Tests.Bugs.Indexing
 		{
 			using (var store = NewDocumentStore())
 			{
-				new Product_ByAttribute().Execute(store);
+				new Product_ByAttribute().Execute(((IDocumentStore) store).DatabaseCommands, ((IDocumentStore) store).Conventions);
 
 				using (var session = store.OpenSession())
 				{
@@ -90,7 +91,7 @@ namespace Raven.Tests.Bugs.Indexing
 		{
 			using (var store = NewDocumentStore())
 			{
-				new Product_ByNumericAttribute().Execute(store);
+				new Product_ByNumericAttribute().Execute(((IDocumentStore) store).DatabaseCommands, ((IDocumentStore) store).Conventions);
 
 				using (var session = store.OpenSession())
 				{
