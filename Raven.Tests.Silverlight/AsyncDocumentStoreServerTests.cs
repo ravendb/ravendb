@@ -128,15 +128,22 @@
 				                       	}, true);
 			yield return (task);
 
-			//TODO: need to wait until the indexing is done. BAD CODE!!!!
-			yield return Delay(500);
+			Task<QueryResult> query = null;
+			for (int i = 0; i < 50; i++)
+			{
 
-			var query = documentStore.AsyncDatabaseCommands
-				.ForDatabase(dbname)
-				.QueryAsync("Test", new IndexQuery(), null);
-			yield return (query);
-
-			Assert.AreNotEqual(0, query.Result.TotalResults);
+				query = documentStore.AsyncDatabaseCommands
+					.ForDatabase(dbname)
+					.QueryAsync("Test", new IndexQuery(), null);
+				yield return (query);
+				if (query.Result.IsStale)
+				{
+					yield return Delay(100);
+					continue;
+				}
+				Assert.AreNotEqual(0, query.Result.TotalResults);
+				yield break;
+			}
 		}
 
 		[Asynchronous]
