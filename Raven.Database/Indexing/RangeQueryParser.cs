@@ -16,7 +16,7 @@ namespace Raven.Database.Indexing
 	
 	public class RangeQueryParser : QueryParser
 	{
-		static readonly Regex rangeValue = new Regex(@"^[\w\d]x[\w\d.]+$", RegexOptions.Compiled);
+		static readonly Regex rangeValue = new Regex(@"^[\w\d]x[-\w\d.]+$", RegexOptions.Compiled);
 
 		public RangeQueryParser(Version matchVersion, string f, Analyzer a)
 			: base(matchVersion, f, a)
