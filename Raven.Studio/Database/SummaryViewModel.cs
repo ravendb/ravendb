@@ -10,6 +10,7 @@
 	using System.Windows;
 	using System.Windows.Data;
 	using System.Windows.Markup;
+	using System.Windows.Media;
 	using Abstractions.Data;
 	using Caliburn.Micro;
 	using Framework;
@@ -22,11 +23,13 @@
 	{
 		readonly IServer server;
 		readonly DocumentTemplateProvider templateProvider;
+		readonly TemplateColorProvider colorProvider;
 
 		public SummaryViewModel(IServer server)
 		{
 			this.server = server;
-			this.templateProvider = new DocumentTemplateProvider(server);
+			colorProvider = new TemplateColorProvider();
+			this.templateProvider = new DocumentTemplateProvider(server, colorProvider);
 		}
 
 		public string DatabaseName {get {return server.CurrentDatabase;}}
@@ -93,10 +96,9 @@
 			LastModified = metadata.IfPresent<DateTime>("Last-Modified");
 			CollectionType = metadata.IfPresent<string>("Raven-Entity-Name");
 			ClrType = metadata.IfPresent<string>("Raven-Clr-Type");
-			var templateKey = metadata.IfPresent<string>("Raven-View-Template");
 
 			templateProvider
-				.GetTemplateFor(templateKey)
+				.GetTemplateFor(CollectionType ?? "default")
 				.ContinueOnSuccess(x=>
 					{
 						DataTemplate = x.Result;
@@ -168,28 +170,46 @@
 	public class DocumentTemplateProvider
 	{
 		readonly IServer server;
+		readonly TemplateColorProvider colorProvider;
 		readonly Dictionary<string,DataTemplate> templates = new Dictionary<string, DataTemplate>();
 
-		public DocumentTemplateProvider(IServer server)
+		public DocumentTemplateProvider(IServer server, TemplateColorProvider colorProvider)
 		{
 			this.server = server;
+			this.colorProvider = colorProvider;
 		}
 
-		static string GetDefaultTemplateXaml()
+		static string GetDefaultTemplateXaml(Color fill)
 		{
 			return @"
-                <Border Height='150' Width='110' BorderBrush='LightGray' BorderThickness='1'>
-                    <TextBlock Text='{Binding JsonData}' TextWrapping='Wrap' />
-                </Border>";
+                <Grid Margin=""0,0,6,6""
+				      Height=""50"">
+				<Rectangle Fill=""#FFF4F4F5""
+						   Width=""100""
+						   HorizontalAlignment=""Left"" />
+				<Rectangle Fill=""" + fill + @"""
+						   HorizontalAlignment=""Left""
+						   Width=""10"" />
+				<Grid Margin=""14,0,0,0"">
+					<StackPanel Orientation=""Vertical"">
+						<TextBlock Text=""{Binding type}""
+								   HorizontalAlignment=""Left"" />
+						<TextBlock Text=""{Binding id}""
+								   FontSize=""13.333""
+								   HorizontalAlignment=""Left"" />
+					</StackPanel>
+				</Grid>
+			</Grid>";
 		}
 
 		public Task<DataTemplate> GetTemplateFor(string key)
 		{
 			var tcs = new TaskCompletionSource<DataTemplate>();
 
-			if(string.IsNullOrEmpty(key))
+			if(!string.IsNullOrEmpty(key))
 			{
-				var defaultTemplate = Create(GetDefaultTemplateXaml());
+				var fill = colorProvider.ColorFrom(key);
+				var defaultTemplate = Create(GetDefaultTemplateXaml(fill));
 				tcs.TrySetResult(defaultTemplate);
 			}
 			else if (templates.ContainsKey(key))
@@ -219,7 +239,6 @@
 
 			return tcs.Task;
 		}
-
 
 		public static DataTemplate Create(string innerXaml)
 		{
