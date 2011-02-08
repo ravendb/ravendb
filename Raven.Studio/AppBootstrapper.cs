@@ -6,6 +6,7 @@
 	using System.ComponentModel.Composition.Hosting;
 	using System.ComponentModel.Composition.Primitives;
 	using System.Linq;
+	using System.Reflection;
 	using System.Windows;
 	using System.Windows.Controls;
 	using Caliburn.Micro;
@@ -71,12 +72,11 @@
 		                             Func<Type, DependencyObject, object, UIElement> original)
 		{
 			string viewTypeName;
-
-			var name = modelType.FullName;
-
-			if (name.StartsWith("Raven.Database.Data"))
+			
+			if(modelType.Assembly != Assembly.GetExecutingAssembly())
 			{
-				name = name.Replace("Raven.Database.Data", "Raven.Studio.Data");
+				var name = "Raven.Studio.Data." + modelType.Name;
+
 				if (name.Contains("`"))
 					name = name.Substring(0, name.IndexOf("`"));
 				
