@@ -497,6 +497,38 @@ namespace Raven.Client.Client.Async
 		{
 			throw new NotImplementedException();
 		}
+
+		/// <summary>
+		/// Puts the attachment with the specified key asyncronously
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <param name="etag">The etag.</param>
+		/// <param name="data">The data.</param>
+		/// <param name="metadata">The metadata.</param>
+		public Task PutAttachmentAsync(string key, Guid? etag, byte[] data, JObject metadata)
+		{
+			throw new NotImplementedException();
+		}
+
+		/// <summary>
+		/// Gets the attachment by the specified key asyncronously
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <returns></returns>
+		public Task<Attachment> GetAttachmentAsync(string key)
+		{
+			throw new NotImplementedException();
+		}
+
+		/// <summary>
+		/// Deletes the attachment with the specified key asyncronously
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <param name="etag">The etag.</param>
+		public Task DeleteAttachmentAsync(string key, Guid? etag)
+		{
+			throw new NotImplementedException();
+		}
 	}
 }
 

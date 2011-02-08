@@ -136,6 +136,29 @@ namespace Raven.Client.Client.Async
 		/// <param name="start">Paging start</param>
 		/// <param name="pageSize">Size of the page.</param>
 		Task<Collection[]> GetCollectionsAsync(int start, int pageSize);
+
+		/// <summary>
+		/// Puts the attachment with the specified key asyncronously
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <param name="etag">The etag.</param>
+		/// <param name="data">The data.</param>
+		/// <param name="metadata">The metadata.</param>
+		Task PutAttachmentAsync(string key, Guid? etag, byte[] data, JObject metadata);
+
+		/// <summary>
+		/// Gets the attachment by the specified key asyncronously
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <returns></returns>
+		Task<Attachment> GetAttachmentAsync(string key);
+
+		/// <summary>
+		/// Deletes the attachment with the specified key asyncronously
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <param name="etag">The etag.</param>
+		Task DeleteAttachmentAsync(string key, Guid? etag);
 	}
 }
 #endif
