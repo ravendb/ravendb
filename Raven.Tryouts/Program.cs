@@ -14,12 +14,13 @@ namespace Raven.Tryouts
 	{
 		static void Main()
 		{
-			var sp = Stopwatch.StartNew();
-			var readFrom = JObject.Load(new BsonReader(File.OpenRead(@"C:\Work\test.data")));
-			Console.WriteLine(sp.ElapsedMilliseconds);
-			sp.Reset();
-			new JObject(readFrom);
-			Console.WriteLine(sp.ElapsedMilliseconds);
+			for (int i = 0; i < 15; i++)
+			{
+				var memoryStream = new MemoryStream(File.ReadAllBytes(@"c:\work\test2.data"));
+				var sp = Stopwatch.StartNew();
+				JToken.ReadFrom(new BsonReader(memoryStream));
+				Console.WriteLine(sp.ElapsedMilliseconds);
+			}
 		}
 	}
 }
