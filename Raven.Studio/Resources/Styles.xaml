@@ -54,6 +54,8 @@
 				Value="32" />
 		<Setter Property="Foreground"
 				Value="#FF899EB2" />
+		<Setter Property="TextTrimming"
+				Value="WordEllipsis" />
 	</Style>
 
 	<Style x:Key="Instruction"

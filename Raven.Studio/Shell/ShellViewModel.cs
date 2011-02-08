@@ -11,10 +11,10 @@
 	public class ShellViewModel : Conductor<DatabaseViewModel>.Collection.OneActive, IShell, IHandle<OpenNewScreen>
 	{
 		[ImportingConstructor]
-		public ShellViewModel(IEventAggregator eventAggregator)
+		public ShellViewModel(IEventAggregator events)
 		{
-			ActivateItem(new DatabaseViewModel(new Server("http://localhost:8080", "Local")));
-			eventAggregator.Subscribe(this);
+			ActivateItem(new DatabaseViewModel(new Server("http://localhost:8080", "Local"), events));
+			events.Subscribe(this);
 		}
 
 		public Window Window
