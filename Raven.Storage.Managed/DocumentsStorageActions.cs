@@ -139,6 +139,7 @@ namespace Raven.Storage.Managed
         	}
 
         	var buffer = getData();
+        	File.WriteAllBytes("test.data", buffer);
         	var memoryStream = new MemoryStream(buffer, 0, buffer.Length);
 
         	metadata = memoryStream.ToJObject();

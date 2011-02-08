@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
+using Newtonsoft.Json.Bson;
+using Newtonsoft.Json.Linq;
 using Raven.Client.Document;
 using Raven.Tests.Bugs.DTC;
 using Raven.Tests.Stress;
@@ -11,27 +14,12 @@ namespace Raven.Tryouts
 	{
 		static void Main()
 		{
-			try
-			{
-				new StressTester().munin_stress_testing_ravendb_100kb_in_filesystem();
-			}
-			catch (Exception e)
-			{
-				Console.WriteLine(GC.GetTotalMemory(false));
-				Debugger.Launch();
-				Console.WriteLine(e);
-			}
-			//foreach (var method in typeof(StressTester).GetMethods())
-			//{
-			//    if (method.DeclaringType != typeof(StressTester))
-			//        continue;
-
-			//    var stressTester = new StressTester();
-			//    Console.Write("Executing: " + method.Name);
-			//    var sp = Stopwatch.StartNew();
-			//    method.Invoke(stressTester, null);
-			//    Console.WriteLine(", took " + sp.ElapsedMilliseconds);
-			//}
+			var sp = Stopwatch.StartNew();
+			var readFrom = JObject.Load(new BsonReader(File.OpenRead(@"C:\Work\test.data")));
+			Console.WriteLine(sp.ElapsedMilliseconds);
+			sp.Reset();
+			new JObject(readFrom);
+			Console.WriteLine(sp.ElapsedMilliseconds);
 		}
 	}
 }
