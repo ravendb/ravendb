@@ -5,7 +5,10 @@
 			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 			 xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
 			 xmlns:tk="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit"
-			 xmlns:converters="clr-namespace:Raven.Studio.Converters" xmlns:ti="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Input.Toolkit" mc:Ignorable="d"
+			 xmlns:converters="clr-namespace:Raven.Studio.Converters"
+			 xmlns:ti="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Input.Toolkit"
+			 xmlns:l="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Layout.Toolkit"
+			 mc:Ignorable="d"
 			 d:DesignHeight="300"
 			 d:DesignWidth="400">
 
@@ -156,9 +159,8 @@
 									</ti:ContextMenu>
 								</ti:ContextMenuService.ContextMenu>
 								<ContentControl Content="{Binding}"
-											ContentTemplate="{Binding DataTemplate}" />
+												ContentTemplate="{Binding DataTemplate}" />
 							</Grid>
-
 						</DataTemplate>
 					</ItemsControl.ItemTemplate>
 				</ItemsControl>

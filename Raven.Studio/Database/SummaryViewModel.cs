@@ -1,23 +1,29 @@
 ﻿namespace Raven.Studio.Database
 {
+	using System;
 	using System.Collections.Generic;
+	using System.ComponentModel.Composition;
 	using System.Linq;
 	using Abstractions.Data;
 	using Caliburn.Micro;
 	using Framework;
+	using Messages;
 	using Plugin;
 
-	public class SummaryViewModel : Screen, IRavenScreen
+	[Export]
+	public class SummaryViewModel : Screen, IRavenScreen, IHandle<DocumentDeleted>
 	{
 		readonly TemplateColorProvider colorProvider;
 		readonly IServer server;
 		readonly DocumentTemplateProvider templateProvider;
 
-		public SummaryViewModel(IServer server, TemplateColorProvider colorProvider)
+		[ImportingConstructor]
+		public SummaryViewModel(IServer server, TemplateColorProvider colorProvider, IEventAggregator events)
 		{
 			this.server = server;
 			this.colorProvider = colorProvider;
 			this.templateProvider = new DocumentTemplateProvider(server, colorProvider);
+			events.Subscribe(this);
 		}
 
 		public string DatabaseName
@@ -27,7 +33,7 @@
 
 		public IServer Server { get { return server; } }
 
-		public IEnumerable<DocumentViewModel> RecentDocuments { get; private set; }
+		public BindableCollection<DocumentViewModel> RecentDocuments { get; private set; }
 
 		public IEnumerable<Collection> Collections { get; private set; }
 
@@ -63,11 +69,24 @@
 					.GetDocumentsAsync(0, 12)
 					.ContinueOnSuccess(x =>
 										{
-											RecentDocuments =
-												x.Result.Select(doc => new DocumentViewModel(doc, templateProvider)).ToArray();
+											RecentDocuments = new BindableCollection<DocumentViewModel>(
+												x.Result.Select(doc => new DocumentViewModel(doc, templateProvider)));
 											NotifyOfPropertyChange(() => RecentDocuments);
 										});
 			}
+		}
+
+		public void Handle(DocumentDeleted message)
+		{
+			RecentDocuments
+				.Where(x=>x.Id == message.DocumentId)
+				.ToList()
+				.Apply(x=>RecentDocuments.Remove(x));
+
+			//TODO: update collections
+			//Collections
+			//    .Where(x => x.Name == message.Document.CollectionType)
+			//    .Apply(x => x.Count--);
 		}
 	}
 }

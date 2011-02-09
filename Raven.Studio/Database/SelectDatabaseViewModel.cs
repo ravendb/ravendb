@@ -27,7 +27,8 @@ namespace Raven.Studio.Database
 
 		public void OpenDatabase()
 		{
-			events.Publish(new OpenNewScreen(new SummaryViewModel(Server, colorProvider)));
+			var vm = IoC.Get<SummaryViewModel>();
+			events.Publish(new OpenNewScreen(vm));
 		}
 	}
 }
