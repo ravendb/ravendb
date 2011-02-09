@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Lucene.Net.Documents;
+using Raven.Client;
 using Raven.Client.Indexes;
 using Xunit;
 
@@ -73,7 +74,7 @@ namespace Raven.Tests.Bugs.Indexing
 		{
 			using (var store = NewDocumentStore())
 			{
-				new Product_ByAttribute().Execute(store);
+				new Product_ByAttribute().Execute(((IDocumentStore) store).DatabaseCommands, ((IDocumentStore) store).Conventions);
 
 				using (var session = store.OpenSession())
 				{
@@ -105,7 +106,7 @@ namespace Raven.Tests.Bugs.Indexing
 		{
 			using (var store = NewDocumentStore())
 			{
-				new Product_ByNumericAttribute().Execute(store);
+				new Product_ByNumericAttribute().Execute(((IDocumentStore) store).DatabaseCommands, ((IDocumentStore) store).Conventions);
 
 				using (var session = store.OpenSession())
 				{
@@ -156,6 +157,38 @@ namespace Raven.Tests.Bugs.Indexing
 				{
 					var products = session.Advanced.LuceneQuery<Product, Product_ByIntAttribute>()
 						.WhereGreaterThan("Color", -1)
+						.WaitForNonStaleResults(TimeSpan.FromMinutes(3))
+						.ToList();
+
+					Assert.NotEmpty(products);
+				}
+			}
+		}
+
+		[Fact]
+		public void CanQueryCompletelyDynamicNumericFieldsWithNegativeRange()
+		{
+			using (var store = NewDocumentStore())
+			{
+				new Product_ByNumericAttribute().Execute(store);
+
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Product
+					{
+						Attributes = new List<Attribute>
+                        {
+                            new Attribute{Name = "Color", Value = "Red", NumericValue = 30}
+                        }
+					});
+
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession())
+				{
+					var products = session.Advanced.LuceneQuery<Product, Product_ByNumericAttribute>()
+						.WhereGreaterThan("Color", -1d)
 						.WaitForNonStaleResults(TimeSpan.FromMinutes(3))
 						.ToList();
 

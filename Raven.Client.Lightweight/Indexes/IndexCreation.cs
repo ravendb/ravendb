@@ -9,6 +9,9 @@ using System.ComponentModel.Composition.Hosting;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using Raven.Client.Client;
+using Raven.Client.Client.Async;
+using Raven.Client.Document;
 
 namespace Raven.Client.Indexes
 {
@@ -28,6 +31,20 @@ namespace Raven.Client.Indexes
 			var catalog = new CompositionContainer(new AssemblyCatalog(assemblyToScanForIndexingTasks));
 			CreateIndexes(catalog, documentStore);
 		}
+
+		/// <summary>
+		/// Creates the indexes found in the specified catalog
+		/// </summary>
+		/// <param name="catalogToGetnIndexingTasksFrom">The catalog to get indexing tasks from.</param>
+		public static void CreateIndexes(ExportProvider catalogToGetnIndexingTasksFrom, IDatabaseCommands databaseCommands, DocumentConvention conventions)
+		{
+			var tasks = catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>();
+			foreach (var task in tasks)
+			{
+				task.Execute(databaseCommands, conventions);
+			}
+		}
+
 		/// <summary>
 		/// Creates the indexes found in the specified catalog
 		/// </summary>
@@ -35,11 +52,7 @@ namespace Raven.Client.Indexes
 		/// <param name="documentStore">The document store.</param>
 		public static void CreateIndexes(ExportProvider catalogToGetnIndexingTasksFrom, IDocumentStore documentStore)
 		{
-			var tasks = catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>();
-			foreach (var task in tasks)
-			{
-				task.Execute(documentStore);
-			}
+			CreateIndexes(catalogToGetnIndexingTasksFrom, documentStore.DatabaseCommands, documentStore.Conventions);
 		}
 #endif
 
@@ -61,9 +74,19 @@ namespace Raven.Client.Indexes
 		/// <param name="documentStore">The document store.</param>
 		public static Task CreateIndexesAsync(ExportProvider catalogToGetnIndexingTasksFrom, IDocumentStore documentStore)
 		{
+			return CreateIndexesAsync(catalogToGetnIndexingTasksFrom, documentStore.AsyncDatabaseCommands,
+			                          documentStore.Conventions);
+		}
+
+		/// <summary>
+		/// Creates the indexes found in the specified catalog
+		/// </summary>
+		/// <param name="catalogToGetnIndexingTasksFrom">The catalog to getn indexing tasks from.</param>
+		public static Task CreateIndexesAsync(ExportProvider catalogToGetnIndexingTasksFrom, IAsyncDatabaseCommands asyncDatabaseCommands, DocumentConvention conventions)
+		{
 			var tasks = catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>();
 
-			Task[] array = tasks.Select(task => task.ExecuteAsync(documentStore)).ToArray();
+			Task[] array = tasks.Select(task => task.ExecuteAsync(asyncDatabaseCommands, conventions)).ToArray();
 			var indexesAsync = new Task(() => Task.WaitAll(array));
 			indexesAsync.Start();
 			return indexesAsync;

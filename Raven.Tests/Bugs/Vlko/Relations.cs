@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using Raven.Client;
 using Raven.Client.Indexes;
 using Xunit;
 
@@ -12,7 +13,7 @@ namespace Raven.Tests.Bugs.Vlko
 		{
 			using (var store = NewDocumentStore())
 			{
-				new ThorIndex().Execute(store);
+				new ThorIndex().Execute(((IDocumentStore) store).DatabaseCommands, ((IDocumentStore) store).Conventions);
 
 				var relId = Guid.NewGuid();
 				using (var s = store.OpenSession())

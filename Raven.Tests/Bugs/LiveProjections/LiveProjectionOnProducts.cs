@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Raven.Client;
 
 namespace Raven.Tests.Bugs.LiveProjections
 {
@@ -19,7 +20,7 @@ namespace Raven.Tests.Bugs.LiveProjections
 		{
 			using (var documentStore = NewDocumentStore())
 			{
-				new ProductSkuListViewModelReport_ByArticleNumberAndName().Execute(documentStore);
+				new ProductSkuListViewModelReport_ByArticleNumberAndName().Execute(((IDocumentStore) documentStore).DatabaseCommands, ((IDocumentStore) documentStore).Conventions);
 
 				using (var session = documentStore.OpenSession())
 				{
@@ -60,7 +61,7 @@ namespace Raven.Tests.Bugs.LiveProjections
 		{
 			using (var documentStore = NewDocumentStore())
 			{
-				new ProductDetailsReport_ByProductId().Execute(documentStore);
+				new ProductDetailsReport_ByProductId().Execute(((IDocumentStore) documentStore).DatabaseCommands, ((IDocumentStore) documentStore).Conventions);
 
 				using (var session = documentStore.OpenSession())
 				{

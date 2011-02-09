@@ -1,7 +1,12 @@
 ﻿using System;
+using System.Diagnostics;
+using System.IO;
+using Newtonsoft.Json.Bson;
+using Newtonsoft.Json.Linq;
 using Raven.Client.Document;
 using Raven.Tests.Bugs.DTC;
 using Raven.Tests.Stress;
+using Xunit;
 
 namespace Raven.Tryouts
 {
@@ -9,7 +14,13 @@ namespace Raven.Tryouts
 	{
 		static void Main()
 		{
-			new StressTester().esent_stress_testing_ravendb_100kb_in_filesystem_with_indexing_case2();
+			for (int i = 0; i < 15; i++)
+			{
+				var memoryStream = new MemoryStream(File.ReadAllBytes(@"c:\work\test2.data"));
+				var sp = Stopwatch.StartNew();
+				JToken.ReadFrom(new BsonReader(memoryStream));
+				Console.WriteLine(sp.ElapsedMilliseconds);
+			}
 		}
 	}
 }
