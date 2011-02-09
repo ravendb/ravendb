@@ -94,8 +94,7 @@ namespace Raven.Tests.Bugs
                 	dynamic dynamicNullObject = new DynamicNullObject();
 					var expectedError = Assert.Throws<RuntimeBinderException>(() => dynamicNullObject / 1);
 
-                	Assert.Equal(@"The transform results function failed.
-Doc 'users/1', Error: " + expectedError.Message, exception.Message);
+                	Assert.Equal("The transform results function failed.\r\nDoc 'users/1', Error: " + expectedError.Message, exception.Message);
                 }
             }
         }
