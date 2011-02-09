@@ -307,7 +307,6 @@ namespace Raven.Munin
 				foreach (var persistentDictionary in tables)
 				{
 					cmds.AddRange(persistentDictionary.CopyCommittedData(tempLog));
-					persistentDictionary.ClearCache();
 					persistentDictionary.ResetWaste();
 				}
 
