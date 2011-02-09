@@ -20,7 +20,7 @@ namespace Raven.Samples.Includes
                 Map = companies => from company in companies
                                    select new { company.Region }
                 ,
-            }.ToIndexDefinition(DocumentStore.Conventions);
+            }.ToIndexDefinition(Conventions);
         }
     }
 }
