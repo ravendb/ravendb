@@ -12,9 +12,9 @@ Public Class Data_NewIndex
     Inherits AbstractIndexCreationTask
 
     Public Overrides Function CreateIndexDefinition() As Raven.Database.Indexing.IndexDefinition
-        Return (New IndexDefinition(Of TestClass)() With { _
-                .Map = Function(items) From item In items.WhereEntityIs(Of TestClass)("TestClass", "TestClass2") _
-                                       Select New With {item.ResourceKey}
-        }.ToIndexDefinition(DocumentStore.Conventions))
+		Return (New IndexDefinition(Of TestClass)() With { _
+				.Map = Function(items) From item In items.WhereEntityIs(Of TestClass)("TestClass", "TestClass2") _
+									   Select New With {item.ResourceKey}
+		}.ToIndexDefinition(Conventions))
     End Function
 End Class

@@ -18,6 +18,9 @@ namespace Raven.Munin.Tests
         public SimpleFileTest()
         {
             tempPath = Path.GetTempPath();
+        	var path = Path.Combine(tempPath, "test.ravendb");
+			if (File.Exists(path))
+				File.Delete(path);
             OpenDictionary();
         }
 
