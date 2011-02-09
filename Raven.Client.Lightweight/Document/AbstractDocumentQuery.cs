@@ -499,7 +499,7 @@ Consider using session.Query<T>() instead of session.LuceneQuery<T>. The session
 If you really want to do in memory filtering on the data returned from the query, you can use: session.LuceneQuery<T>().ToList().Count(x=>x.Name == ""Ayende"")
 "
 			, true)]
-		public IEnumerable<T> Count(Func<T, bool> predicate)
+		public int Count(Func<T, bool> predicate)
 		{
 			throw new NotSupportedException();
 		}
@@ -516,7 +516,7 @@ Consider using session.Query<T>() instead of session.LuceneQuery<T>. The session
 If you really want to do in memory filtering on the data returned from the query, you can use: session.LuceneQuery<T>().ToList().Count()
 "
 			, true)]
-		public IEnumerable<T> Count()
+		public int Count()
 		{
 			throw new NotSupportedException();
 		}

@@ -55,7 +55,7 @@ Consider using session.Query<T>() instead of session.LuceneQuery<T>. The session
 If you really want to do in memory filtering on the data returned from the query, you can use: session.LuceneQuery<T>().ToList().Count()
 "
 			, true)]
-		IEnumerable<T> Count();
+		int Count();
 
     	/// <summary>
     	/// Includes the specified path in the query, loading the document specified in that path
