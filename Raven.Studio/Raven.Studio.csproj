@@ -127,6 +127,7 @@
     <Compile Include="Controls\Gears.cs" />
     <Compile Include="Controls\HyperlinkHelper.cs" />
     <Compile Include="Controls\Label.cs" />
+    <Compile Include="Controls\LabelValuePanel.cs" />
     <Compile Include="Controls\Pager.xaml.cs">
       <DependentUpon>Pager.xaml</DependentUpon>
     </Compile>
@@ -191,6 +192,7 @@
     <Compile Include="Framework\TemplateColorProvider.cs" />
     <Compile Include="Messages\ChangeActiveScreen.cs" />
     <Compile Include="Messages\OpenNewScreen.cs" />
+    <Compile Include="Messages\RefreshStatistics.cs" />
     <Compile Include="Messages\ReplaceActiveScreen.cs" />
     <Compile Include="Database\Server.cs" />
     <Compile Include="Indexes\FieldProperties.cs" />
