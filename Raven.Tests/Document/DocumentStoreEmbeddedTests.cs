@@ -81,7 +81,7 @@ namespace Raven.Tests.Document
 		{
 			using (var documentStore = NewDocumentStore())
 			{
-				Assert.Equal(new[] { "Raven/DocumentsByEntityName" },
+				Assert.Contains("Raven/DocumentsByEntityName",
 					documentStore.DatabaseCommands.GetIndexNames(0, 25));
 			}
 		}
