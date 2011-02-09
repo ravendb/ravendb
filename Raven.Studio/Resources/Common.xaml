@@ -54,5 +54,7 @@
 	<converters:BooleanToOppositeVisibilityConverter x:Key="booleanToOppositeVisibility" />
 	<converters:EnumToIntConverter x:Key="enumToInt" />
 	<converters:EnumToEnumerableConverter x:Key="enumToEnumerable" />
+	<converters:HowLongSinceConverter x:Key="howLongSince" />
+	<converters:MagnitudeToListConverter x:Key="magnitudeToList" />
 
 </ResourceDictionary>

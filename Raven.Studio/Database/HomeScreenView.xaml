@@ -14,7 +14,6 @@
 			<ColumnDefinition />
 			<ColumnDefinition Width="2*" />
 		</Grid.ColumnDefinitions>
-
 		<tk:DockPanel>
 			<TextBlock TextWrapping="Wrap"
 					   Text="DATABASES"

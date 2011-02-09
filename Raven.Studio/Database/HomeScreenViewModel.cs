@@ -1,20 +1,21 @@
 namespace Raven.Studio.Database
 {
-	using System.ComponentModel.Composition;
 	using Caliburn.Micro;
+	using Framework;
 	using Messages;
 	using Plugin;
 
 	public class HomeScreenViewModel : Screen, IRavenScreen
 	{
 		readonly IEventAggregator events;
+		readonly TemplateColorProvider colorProvider;
 
-		public HomeScreenViewModel(IServer server, IEventAggregator events)
+		public HomeScreenViewModel(IServer server, IEventAggregator events, TemplateColorProvider colorProvider)
 		{
 			this.events = events;
+			this.colorProvider = colorProvider;
 			DisplayName = "Home";
 			Server = server;
-			CompositionInitializer.SatisfyImports(this);
 		}
 
 		public IServer Server { get; private set; }
@@ -26,7 +27,7 @@ namespace Raven.Studio.Database
 
 		public void OpenDatabase()
 		{
-			events.Publish(new OpenNewScreen(new SummaryViewModel(Server)));
+			events.Publish(new OpenNewScreen(new SummaryViewModel(Server, colorProvider)));
 		}
 	}
 }

@@ -177,7 +177,13 @@
     <Compile Include="Converters\CategoryIsActiveConverter.cs" />
     <Compile Include="Converters\EnumToEnumerableConverter.cs" />
     <Compile Include="Converters\EnumToIntConverter.cs" />
+    <Compile Include="Converters\HowLongSinceConverter.cs" />
+    <Compile Include="Converters\MagnitudeToListConverter.cs" />
     <Compile Include="Converters\NullToVisibilityConverter.cs" />
+    <Compile Include="Database\DocumentTemplateProvider.cs" />
+    <Compile Include="Database\DocumentViewModel.cs" />
+    <Compile Include="Framework\DateTimeExtensions.cs" />
+    <Compile Include="Framework\DictionaryExtensions.cs" />
     <Compile Include="Database\SummaryViewModel.cs" />
     <Compile Include="Dialogs\InformationDialogViewModel.cs" />
     <Compile Include="Framework\BindablePagedQuery.cs" />
@@ -254,6 +260,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Controls\Pager.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Database\Document\Tooltip.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

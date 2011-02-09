@@ -30,6 +30,7 @@
 				<StackPanel d:LayoutOverrides="Width, Height"
 							Grid.Row="1">
 					<TextBlock Text="{Binding Name}"
+							   TextTrimming="WordEllipsis"
 							   HorizontalAlignment="Center"
 							   FontSize="16"
 							   FontFamily="Segoe UI" />
@@ -40,7 +41,8 @@
 							   FontFamily="Segoe UI"
 							   Margin="0,-6,0,0" />
 				</StackPanel>
-				<ItemsControl VerticalAlignment="Bottom">
+				<ItemsControl VerticalAlignment="Bottom"
+							  ItemsSource="{Binding Converter={StaticResource magnitudeToList}}">
 					<ItemsControl.ItemTemplate>
 						<DataTemplate>
 							<Grid Height="30"
