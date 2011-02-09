@@ -213,6 +213,9 @@ namespace Raven.Database.Impl
 			var id = maybeId as string;
 			if (id != null)
 				return Load(id);
+			var jId = maybeId as JValue;
+			if (jId != null)
+				return Load(jId.Value.ToString());
 
 			var items = new List<dynamic>();
 			foreach (var itemId in (IEnumerable)maybeId)
