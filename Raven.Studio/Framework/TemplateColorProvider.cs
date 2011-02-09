@@ -2,9 +2,12 @@
 {
 	using System;
 	using System.Collections.Generic;
+	using System.ComponentModel.Composition;
 	using System.Diagnostics;
 	using System.Windows.Media;
 
+	[Export(typeof(TemplateColorProvider))]
+	[PartCreationPolicy(CreationPolicy.Shared)]
 	public class TemplateColorProvider
 	{
 		const double GoldenAngle = 0.381966;

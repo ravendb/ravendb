@@ -1,5 +1,6 @@
 namespace Raven.Studio.Plugin
 {
+	using System;
 	using System.Collections.Generic;
 	using Client;
 
@@ -10,5 +11,6 @@ namespace Raven.Studio.Plugin
 		IAsyncDocumentSession OpenSession();
 		IEnumerable<string> Databases {get;}
 		string CurrentDatabase {get;}
+		void Connect(Uri serverAddress);
 	}
 }

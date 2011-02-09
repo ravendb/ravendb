@@ -11,37 +11,42 @@ namespace Raven.Studio.Database
 	using Plugin;
 	using Raven.Database.Data;
 
+	[Export(typeof(IServer))]
+	[PartCreationPolicy(CreationPolicy.Shared)]
 	public class Server : PropertyChangedBase, IServer
 	{
-		readonly DocumentStore store;
+		DocumentStore store;
 		bool isInitialized;
 		readonly DispatcherTimer timer;
 		readonly Dictionary<string, DatabaseStatistics> snapshots = new Dictionary<string, DatabaseStatistics>();
 		readonly TimeSpan updateFrequency = new TimeSpan(0,0,0,5,0);
-
-		public Server(string address, string name = null)
+		
+		public Server()
 		{
-			Address = address;
-			Name = name ?? address;
-
-			store = new DocumentStore {Url = Address};
-			store.Initialize();
-
 			timer = new DispatcherTimer { Interval = updateFrequency };
-			timer.Tick += delegate{RetrieveStatisticsForCurrentDatabase();};
+			timer.Tick += delegate { RetrieveStatisticsForCurrentDatabase(); };
+		}
+
+		public void Connect(Uri serverAddress)
+		{
+			Address = serverAddress.OriginalString;
+			Name = serverAddress.OriginalString;
+
+			store = new DocumentStore { Url = Address };
+			store.Initialize();
 
 			store.OpenAsyncSession().Advanced.AsyncDatabaseCommands
 				.GetDatabaseNamesAsync()
-				.ContinueOnSuccess(t => 
+				.ContinueOnSuccess(t =>
 				{
-					var databases = new List<string>{"Default"};
+					var databases = new List<string> { "Default" };
 					databases.AddRange(t.Result);
 					Databases = databases;
 
 					CurrentDatabase = databases[0];
 
 					IsInitialized = true;
-					Execute.OnUIThread( ()=>timer.Start() );
+					Execute.OnUIThread(() => timer.Start());
 				});
 		}
 
@@ -57,9 +62,6 @@ namespace Raven.Studio.Database
 				RefreshStatistics(true);
 			}
 		}
-
-		[ImportMany(AllowRecomposition = true)]
-		public IList<IPlugin> Plugins { get; set; }
 
 		IEnumerable<string> databases;
 		public IEnumerable<string> Databases

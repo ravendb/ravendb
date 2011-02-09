@@ -8,12 +8,13 @@
 	using Messages;
 
 	[Export(typeof (IShell))]
-	public class ShellViewModel : Conductor<DatabaseViewModel>.Collection.OneActive, IShell, IHandle<OpenNewScreen>
+	[PartCreationPolicy(CreationPolicy.Shared)]
+	public class ShellViewModel : Conductor<DatabaseViewModel>, IShell, IHandle<OpenNewScreen>
 	{
 		[ImportingConstructor]
-		public ShellViewModel(IEventAggregator events)
+		public ShellViewModel(DatabaseViewModel databaseViewModel, IEventAggregator events)
 		{
-			ActivateItem(new DatabaseViewModel(new Server("http://localhost:8080", "Local"), events));
+			ActivateItem(databaseViewModel);
 			events.Subscribe(this);
 		}
 
