@@ -1294,7 +1294,7 @@ If you really want to do in memory filtering on the data returned from the query
         {
             return lastEquality;
         }
-
+#if !NET_3_5
 		/// <summary>
 		/// Returns a list of results for a query asynchronously. 
 		/// </summary>
@@ -1314,5 +1314,6 @@ If you really want to do in memory filtering on the data returned from the query
 					return (IList<T>)result.Results.Select(Deserialize).ToList();
 				});
 		}
+		#endif
     }
 }
