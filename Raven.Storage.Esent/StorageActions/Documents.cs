@@ -143,15 +143,47 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-        public IEnumerable<JsonDocument> GetDocumentsAfter(Guid etag)
+
+		public IEnumerable<JsonDocument> GetDocumentsAfter(Guid etag)
+		{
+			Api.JetSetCurrentIndex(session, Documents, "by_etag");
+			Api.MakeKey(session, Documents, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
+			if (Api.TrySeek(session, Documents, SeekGrbit.SeekGT) == false)
+				yield break;
+			do
+			{
+				var data = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["data"]);
+				var key = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode);
+				var metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
+
+				data = documentCodecs.Aggregate(data, (bytes, codec) => codec.Decode(key, metadata, bytes));
+
+				yield return new JsonDocument
+				{
+					Key = key,
+					DataAsJson = data.ToJObject(),
+					NonAuthoritiveInformation = IsDocumentModifiedInsideTransaction(key),
+					LastModified = Api.RetrieveColumnAsDateTime(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"]).Value,
+					Etag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]).TransfromToGuidWithProperSorting(),
+					Metadata = metadata
+				};
+			} while (Api.TryMoveNext(session, Documents));
+		}
+
+
+		public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix)
         {
-            Api.JetSetCurrentIndex(session, Documents, "by_etag");
-        	Api.MakeKey(session, Documents, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
-            if(Api.TrySeek(session, Documents, SeekGrbit.SeekGT)==false)
+			Api.JetSetCurrentIndex(session, Documents, "by_key");
+        	Api.MakeKey(session, Documents, idPrefix,Encoding.Unicode, MakeKeyGrbit.NewKey);
+            if(Api.TrySeek(session, Documents, SeekGrbit.SeekGE)==false)
                 yield break;
             do
             {
-            	var data = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["data"]);
+				Api.MakeKey(session, Documents, idPrefix, Encoding.Unicode, MakeKeyGrbit.NewKey | MakeKeyGrbit.SubStrLimit);
+				if(Api.TrySetIndexRange(session, Documents, SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive) == false)
+					yield break;
+
+				var data = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["data"]);
             	var key = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"],Encoding.Unicode);
             	var metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
 

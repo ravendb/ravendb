@@ -776,17 +776,14 @@ select new { Name = g.Key, Count = g.Sum(x=>x.Count) }",
 
 		}
 
-		/// <summary>
-		/// HACK: This is Christopher's hack to get just the tenant documents out of the server
-		/// </summary>
-		public JArray GetTenantDocuments()
+		public JArray GetDocumentsWithIdStartingWith(string idPrefix)
 		{
 			var list = new JArray();
 			TransactionalStorage.Batch(actions =>
 			{
-				var documents = actions.Documents.GetDocumentsByReverseUpdateOrder(0);
+				var documents = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix);
 				var documentRetriever = new DocumentRetriever(actions, ReadTriggers);
-				foreach (var doc in documents.Where( x => x.Key.StartsWith("Raven/Databases")))
+				foreach (var doc in documents)
 				{
 					DocumentRetriever.EnsureIdInMetadata(doc);
 					var document = documentRetriever
