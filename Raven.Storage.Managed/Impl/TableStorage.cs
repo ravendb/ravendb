@@ -18,7 +18,7 @@ namespace Raven.Storage.Managed.Impl
 		{
 			var cachedDocument = (Tuple<JObject, JObject>)cachedSerializedDocuments.Get("Doc/" + key + "/" + etag);
 			if (cachedDocument != null)
-				return Tuple.Create((JObject)cachedDocument.Item1.DeepClone(), (JObject)cachedDocument.Item1.DeepClone());
+				return Tuple.Create(new JObject(cachedDocument.Item1), new JObject(cachedDocument.Item2));
 			return null;
 		}
 
