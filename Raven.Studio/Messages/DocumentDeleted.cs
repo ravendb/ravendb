@@ -1,12 +1,24 @@
 ﻿namespace Raven.Studio.Messages
 {
+	using Database;
+
 	public class DocumentDeleted
 	{
-		public string DocumentId { get; private set; }
+		readonly DocumentViewModel document;
 
-		public DocumentDeleted(string documentId)
+		public DocumentDeleted(DocumentViewModel document)
 		{
-			DocumentId = documentId;
+			this.document = document;
+		}
+
+		public string DocumentId
+		{
+			get { return document.Id; }
+		}
+
+		public DocumentViewModel Document
+		{
+			get { return document; }
 		}
 	}
 }

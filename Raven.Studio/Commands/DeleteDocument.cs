@@ -28,7 +28,7 @@
 			}
 
 			events.Publish(new RefreshStatistics());
-			events.Publish(new DocumentDeleted(document.Id));
+			events.Publish(new DocumentDeleted(document));
 		}
 	}
 }
