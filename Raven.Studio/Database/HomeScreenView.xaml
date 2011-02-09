@@ -14,11 +14,11 @@
 			<ColumnDefinition />
 			<ColumnDefinition Width="2*" />
 		</Grid.ColumnDefinitions>
+
 		<tk:DockPanel>
-			<TextBlock TextWrapping="Wrap"
+			<TextBlock tk:DockPanel.Dock="Top"
 					   Text="DATABASES"
-					   tk:DockPanel.Dock="Top"
-					   Foreground="#7F000000" />
+					   Style="{StaticResource PanelTitle}" />
 			<ListBox ItemsSource="{Binding Server.Databases}"
 					 SelectedItem="{Binding Server.CurrentDatabase, Mode=TwoWay}" />
 		</tk:DockPanel>
@@ -30,6 +30,7 @@
 				<RowDefinition Height="2*" />
 				<RowDefinition Height="*" />
 			</Grid.RowDefinitions>
+
 			<StackPanel Orientation="Vertical"
 						VerticalAlignment="Top">
 				<TextBlock Style="{StaticResource Header}"
@@ -41,15 +42,17 @@
 							Margin="0 12 0 0">
 					<TextBlock  Style="{StaticResource Instruction}"
 								Text="The currently selected database is" />
-					<TextBlock  Style="{StaticResource Instruction}"
-								x:Name="Server_CurrentDatabase" />
-					<ContentControl cm:View.Model="{Binding Server.Statistics}"
-									Margin="0 8 0 0" />
 
-					<StackPanel Margin="0 12 0 0">
-						<Button x:Name="OpenDatabase"
-								Content="Go to Summary" />
-					</StackPanel>
+					<TextBlock x:Name="Server_CurrentDatabase"
+							   Style="{StaticResource HighlightedValue}"
+							   Margin="12 0 0 0" />
+					<ContentControl cm:View.Model="{Binding Server.Statistics}"
+									Margin="12 8 0 0" />
+
+					<Button x:Name="OpenDatabase"
+							Margin="12 12 0 0"
+							HorizontalAlignment="Left"
+							Content="Use this database" />
 
 				</StackPanel>
 

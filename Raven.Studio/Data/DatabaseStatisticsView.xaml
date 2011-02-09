@@ -3,15 +3,58 @@
 			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+			 xmlns:c="clr-namespace:Raven.Studio.Controls"
 			 mc:Ignorable="d"
 			 d:DesignHeight="300"
 			 d:DesignWidth="400">
 
-	<StackPanel>
-		<TextBlock Text="{Binding CountOfDocuments,StringFormat='\{0\} documents'}" />
-		<TextBlock Text="{Binding CountOfIndexes,StringFormat='\{0\} indexes'}" />
-		<TextBlock Text="{Binding Errors.Length,StringFormat='\{0\} errors'}" />
-		<TextBlock Text="{Binding Triggers.Length,StringFormat='\{0\} triggers'}" />
-	</StackPanel>
+	<Grid>
+
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto" />
+			<RowDefinition />
+		</Grid.RowDefinitions>
+
+		<TextBlock Style="{StaticResource PanelTitle}"
+				   Text="STATISTICS" />
+
+		<c:LabelValuePanel Grid.Row="1"
+						   HorizontalAlignment="Left"
+						   Margin="8,0,0,0">
+			<c:LabelValuePanel.Resources>
+				<Style TargetType="TextBlock">
+					<Setter Property="FontSize"
+							Value="13.667" />
+					<Setter Property="HorizontalAlignment"
+							Value="Right" />
+				</Style>
+				<Style TargetType="c:Label"
+					   BasedOn="{StaticResource LabelBaseStyle}">
+					<Setter Property="HorizontalAlignment"
+							Value="Left" />
+				</Style>
+			</c:LabelValuePanel.Resources>
+
+			<TextBlock x:Name="CountOfDocuments" />
+			<c:Label Content="documents" />
+
+			<TextBlock x:Name="CountOfIndexes" />
+			<c:Label Content="indexes" />
+
+			<TextBlock x:Name="StaleIndexes_Length" />
+			<c:Label Content="stale" />
+
+			<TextBlock x:Name="Errors_Length" />
+			<c:Label Content="errors" />
+
+			<TextBlock x:Name="Triggers_Length" />
+			<c:Label Content="triggers" />
+
+			<TextBlock x:Name="ApproximateTaskCount" />
+			<c:Label Content="tasks" />
+
+		</c:LabelValuePanel>
+
+	</Grid>
 
 </UserControl>
