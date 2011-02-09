@@ -46,7 +46,6 @@ namespace Raven.Munin
         private IPersistentSource persistentSource;
         private readonly ICompererAndEquality<JToken> comparer;
 
-        private readonly MemoryCache cache = new MemoryCache(Guid.NewGuid().ToString());
         private Database parent;
         public int TableId { get; set; }
 
@@ -249,21 +248,9 @@ namespace Raven.Munin
             if (pos == -1)
                 return null;
 
-            var cacheKey = pos.ToString();
-            var cached = cache.Get(cacheKey);
-            if (cached != null)
-                return (byte[])cached;
-
             return persistentSource.Read(log =>
             {
-                byte[] buf;
-                cached = cache.Get(cacheKey);
-                if (cached != null)
-                    return (byte[]) cached;
-
-                buf = ReadDataNoCaching(log, pos, size, key);
-                cache[cacheKey] = buf;
-                return buf;
+            	return ReadDataNoCaching(log, pos, size, key);
             });
         }
 
@@ -368,7 +355,6 @@ namespace Raven.Munin
             KeyToFilePos = KeyToFilePos.TryRemove(key, out removed, out removedValue);
             if (removed == false)
                 return;
-            cache.Remove(removedValue.Position.ToString());
             WasteCount += 1;
             foreach (var index in SecondaryIndices)
             {
@@ -388,13 +374,6 @@ namespace Raven.Munin
                        Type = CommandType.Put
                    };
         }
-
-        public void ClearCache()
-        {
-            cache.Trim(percent: 100);
-        }
-
-
 
         public class ReadResult
         {
@@ -471,7 +450,6 @@ namespace Raven.Munin
     	/// <filterpriority>2</filterpriority>
     	public void Dispose()
     	{
-			cache.Dispose();
     	}
     }
 }
