@@ -33,6 +33,21 @@ namespace Raven.Tests.Storage
 			base.Dispose();
 		}
 
+		[Fact]
+		public void Can_query_by_id_prefix()
+		{
+			db.Put("abc", null, new JObject { { "a", "b" } }, new JObject(), null);
+			db.Put("Raven/Databases/Hello", null, new JObject {{"a", "b"}}, new JObject(), null);
+			db.Put("Raven/Databases/Northwind", null, new JObject { { "a", "b" } }, new JObject(), null);
+			db.Put("Raven/Databases/Sys", null, new JObject { { "a", "b" } }, new JObject(), null);
+			db.Put("Raven/Databases/Db", null, new JObject { { "a", "b" } }, new JObject(), null);
+			db.Put("Raven/Database", null, new JObject { { "a", "b" } }, new JObject(), null);
+
+			var dbs = db.GetDocumentsWithIdStartingWith("Raven/Databases/");
+
+			Assert.Equal(4, dbs.Count);
+		}
+
         [Fact]
         public void CanProperlyHandleDeletingThreeItemsBothFromPK_And_SecondaryIndexes()
         {
