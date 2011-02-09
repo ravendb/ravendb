@@ -5,8 +5,7 @@
 			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 			 xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
 			 xmlns:tk="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit"
-			 xmlns:converters="clr-namespace:Raven.Studio.Converters"
-			 mc:Ignorable="d"
+			 xmlns:converters="clr-namespace:Raven.Studio.Converters" xmlns:ti="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Input.Toolkit" mc:Ignorable="d"
 			 d:DesignHeight="300"
 			 d:DesignWidth="400">
 
@@ -148,8 +147,18 @@
 					</ItemsControl.ItemsPanel>
 					<ItemsControl.ItemTemplate>
 						<DataTemplate>
-							<ContentControl Content="{Binding}"
+							<Grid>
+								<ti:ContextMenuService.ContextMenu>
+									<ti:ContextMenu>
+										<ti:MenuItem Header="Delete Document"
+													 cm:Action.TargetWithoutContext="DeleteDocument"
+													 cm:Message.Attach="Click=Execute($dataContext)" />
+									</ti:ContextMenu>
+								</ti:ContextMenuService.ContextMenu>
+								<ContentControl Content="{Binding}"
 											ContentTemplate="{Binding DataTemplate}" />
+							</Grid>
+
 						</DataTemplate>
 					</ItemsControl.ItemTemplate>
 				</ItemsControl>

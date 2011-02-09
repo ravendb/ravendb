@@ -142,6 +142,15 @@ namespace Raven.Client.Client.Async
 		}
 
 		/// <summary>
+		/// Deletes the document for the specified id asyncronously
+		/// </summary>
+		/// <param name="id">The id.</param>
+		public Task DeleteDocumentAsync(string id)
+		{
+			throw new NotImplementedException();
+		}
+
+		/// <summary>
 		/// Puts the document with the specified key in the database
 		/// </summary>
 		/// <param name="key">The key.</param>

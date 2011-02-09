@@ -115,6 +115,7 @@
     </Compile>
     <Compile Include="AppBootstrapper.cs" />
     <Compile Include="Behaviors\Watermark.cs" />
+    <Compile Include="Commands\DeleteDocument.cs" />
     <Compile Include="Controls\DatabaseConnection.xaml.cs">
       <DependentUpon>DatabaseConnection.xaml</DependentUpon>
     </Compile>
@@ -191,6 +192,7 @@
     <Compile Include="Framework\TaskExtensions.cs" />
     <Compile Include="Framework\TemplateColorProvider.cs" />
     <Compile Include="Messages\ChangeActiveScreen.cs" />
+    <Compile Include="Messages\DocumentDeleted.cs" />
     <Compile Include="Messages\OpenNewScreen.cs" />
     <Compile Include="Messages\RefreshStatistics.cs" />
     <Compile Include="Messages\ReplaceActiveScreen.cs" />
@@ -222,7 +224,7 @@
     <Compile Include="Documents\DocumentView.xaml.cs">
       <DependentUpon>DocumentView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Database\HomeScreenViewModel.cs" />
+    <Compile Include="Database\SelectDatabaseViewModel.cs" />
     <Compile Include="Database\MenuScreenViewModel.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -365,7 +367,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Database\HomeScreenView.xaml">
+    <Page Include="Database\SelectDatabaseView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

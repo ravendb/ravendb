@@ -100,6 +100,12 @@ namespace Raven.Client.Client.Async
 		Task DeleteIndexAsync(string name);
 
 		/// <summary>
+		/// Deletes the document for the specified id asyncronously
+		/// </summary>
+		/// <param name="id">The id.</param>
+		Task DeleteDocumentAsync(string id);
+
+		/// <summary>
 		/// Puts the document with the specified key in the database
 		/// </summary>
 		/// <param name="key">The key.</param>

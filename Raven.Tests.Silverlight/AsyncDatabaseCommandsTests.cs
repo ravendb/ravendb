@@ -134,5 +134,32 @@
 
 			Assert.IsTrue(task.Result.Contains(dbname));
 		}
+
+		[Asynchronous]
+		public IEnumerable<Task> Can_get_delete_a_dcoument_by_id()
+		{
+			var dbname = GenerateNewDatabaseName();
+			var store = new DocumentStore { Url = Url + Port };
+			store.Initialize();
+			yield return store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+
+			var entity = new Company { Name = "Async Company #1" };
+			using (var session = store.OpenAsyncSession(dbname))
+			{
+				session.Store(entity);
+				yield return session.SaveChangesAsync();
+
+				yield return session.Advanced.AsyncDatabaseCommands
+					.DeleteDocumentAsync(entity.Id);
+			}
+
+			using (var for_verifying = store.OpenAsyncSession(dbname))
+			{
+				var verification = for_verifying.LoadAsync<Company>(entity.Id);
+				yield return verification;
+
+				Assert.IsNull(verification.Result);
+			}
+		}
 	}
 }
