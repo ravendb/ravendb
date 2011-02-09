@@ -26,8 +26,18 @@
 				Enumerable.Range(0, 25).ToList()
 					.ForEach(i => session.Store(new Company {Id = "Companies/" + i, Name = i.ToString()}));
 
-				Enumerable.Range(0, 25).ToList()
-					.ForEach(i => session.Store(new Order {Id = "Orders/" + i, Note = i.ToString()}));
+				Enumerable.Range(0, 250).ToList()
+					.ForEach(i => session.Store(new Order { Id = "Orders/" + i, Note = i.ToString() }));
+
+				Enumerable.Range(0, 100).ToList()
+					.ForEach(i => session.Store(new Customer { Name = "Joe " + i}));
+
+				Enumerable.Range(0, 75).ToList()
+					.ForEach(i => session.Store(new Contact { FirstName = "Bob" + i, Surname = i.ToString() + "0101001" }));
+
+				session.Store(new Customer { Name = "Henry"});
+				session.Store(new Order { Note = "An order" });
+				session.Store(new Company {Name = "My Company"});
 
 				yield return session.SaveChangesAsync();
 			}
