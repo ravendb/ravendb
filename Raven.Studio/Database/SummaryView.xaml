@@ -7,7 +7,7 @@
 			 xmlns:tk="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit"
 			 xmlns:converters="clr-namespace:Raven.Studio.Converters"
 			 xmlns:ti="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Input.Toolkit"
-			 xmlns:l="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Layout.Toolkit"
+			 xmlns:f="clr-namespace:Raven.Studio.Framework"
 			 mc:Ignorable="d"
 			 d:DesignHeight="300"
 			 d:DesignWidth="400">
@@ -150,7 +150,9 @@
 					</ItemsControl.ItemsPanel>
 					<ItemsControl.ItemTemplate>
 						<DataTemplate>
-							<Grid>
+							<Grid cm:Action.TargetWithoutContext="PreviewDocument"
+								  f:DoubleClickEvent.AttachAction="Execute($dataContext)"
+								  Background="Transparent">
 								<ti:ContextMenuService.ContextMenu>
 									<ti:ContextMenu>
 										<ti:MenuItem Header="Delete Document"

@@ -6,7 +6,6 @@
 	using Messages;
 	using Plugin;
 
-	[Export("DeleteDocument")]
 	public class DeleteDocument
 	{
 		readonly IEventAggregator events;

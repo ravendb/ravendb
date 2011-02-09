@@ -116,6 +116,7 @@
     <Compile Include="AppBootstrapper.cs" />
     <Compile Include="Behaviors\Watermark.cs" />
     <Compile Include="Commands\DeleteDocument.cs" />
+    <Compile Include="Commands\PreviewDocument.cs" />
     <Compile Include="Controls\DatabaseConnection.xaml.cs">
       <DependentUpon>DatabaseConnection.xaml</DependentUpon>
     </Compile>
@@ -184,11 +185,13 @@
     <Compile Include="Converters\NullToVisibilityConverter.cs" />
     <Compile Include="Database\DocumentTemplateProvider.cs" />
     <Compile Include="Database\DocumentViewModel.cs" />
+    <Compile Include="Framework\ConventionalCatalog.cs" />
     <Compile Include="Framework\DateTimeExtensions.cs" />
     <Compile Include="Framework\DictionaryExtensions.cs" />
     <Compile Include="Database\SummaryViewModel.cs" />
     <Compile Include="Dialogs\InformationDialogViewModel.cs" />
     <Compile Include="Framework\BindablePagedQuery.cs" />
+    <Compile Include="Framework\DoubleClickEvent.cs" />
     <Compile Include="Framework\TaskExtensions.cs" />
     <Compile Include="Framework\TemplateColorProvider.cs" />
     <Compile Include="Messages\ChangeActiveScreen.cs" />
@@ -264,6 +267,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Controls\Pager.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Database\Document\Preview.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
