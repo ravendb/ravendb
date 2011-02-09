@@ -3,6 +3,7 @@ namespace Raven.Studio.Plugin
 	using System;
 	using System.Collections.Generic;
 	using Client;
+	using Database.Data;
 
 	public interface IServer
 	{
@@ -12,5 +13,6 @@ namespace Raven.Studio.Plugin
 		IEnumerable<string> Databases {get;}
 		string CurrentDatabase {get;}
 		void Connect(Uri serverAddress);
+		DatabaseStatistics Statistics {get;}
 	}
 }

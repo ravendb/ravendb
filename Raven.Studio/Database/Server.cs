@@ -8,23 +8,28 @@ namespace Raven.Studio.Database
 	using Client;
 	using Client.Document;
 	using Framework;
+	using Messages;
 	using Plugin;
 	using Raven.Database.Data;
 
 	[Export(typeof(IServer))]
 	[PartCreationPolicy(CreationPolicy.Shared)]
-	public class Server : PropertyChangedBase, IServer
+	public class Server : PropertyChangedBase, IServer, IHandle<RefreshStatistics>
 	{
+		const string DefaultDatabaseName = "Default Database";
 		DocumentStore store;
 		bool isInitialized;
 		readonly DispatcherTimer timer;
 		readonly Dictionary<string, DatabaseStatistics> snapshots = new Dictionary<string, DatabaseStatistics>();
 		readonly TimeSpan updateFrequency = new TimeSpan(0,0,0,5,0);
 		
-		public Server()
+		[ImportingConstructor]
+		public Server(IEventAggregator events)
 		{
+			//TODO: Do we really need a timer? Only if we want to see update from other users working on the same database
 			timer = new DispatcherTimer { Interval = updateFrequency };
 			timer.Tick += delegate { RetrieveStatisticsForCurrentDatabase(); };
+			events.Subscribe(this);
 		}
 
 		public void Connect(Uri serverAddress)
@@ -39,14 +44,14 @@ namespace Raven.Studio.Database
 				.GetDatabaseNamesAsync()
 				.ContinueOnSuccess(t =>
 				{
-					var databases = new List<string> { "Default" };
+					var databases = new List<string> { DefaultDatabaseName };
 					databases.AddRange(t.Result);
 					Databases = databases;
 
 					CurrentDatabase = databases[0];
 
 					IsInitialized = true;
-					Execute.OnUIThread(() => timer.Start());
+					//Execute.OnUIThread(() => timer.Start());
 				});
 		}
 
@@ -84,7 +89,7 @@ namespace Raven.Studio.Database
 
 		public IAsyncDocumentSession OpenSession()
 		{
-			return (CurrentDatabase == "Default") 
+			return (CurrentDatabase == DefaultDatabaseName) 
 				? store.OpenAsyncSession()
 				: store.OpenAsyncSession(CurrentDatabase);
 		}
@@ -132,6 +137,11 @@ namespace Raven.Studio.Database
 						Statistics = x.Result;
 					});
 			}
+		}
+
+		public void Handle(RefreshStatistics message)
+		{
+			RefreshStatistics(false);
 		}
 	}
 }
