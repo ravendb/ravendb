@@ -24,12 +24,12 @@ namespace Raven.Studio.Database
 
 			Server = server;
 			Menu = new MenuScreenViewModel(server);
-			Home = new HomeScreenViewModel(server, events, colorProvider);
+			Home = new SelectDatabaseViewModel(server, events, colorProvider);
 			GoHome();
 		}
 
 		public MenuScreenViewModel Menu { get; private set; }
-		public HomeScreenViewModel Home { get; set; }
+		public SelectDatabaseViewModel Home { get; set; }
 
 		public IServer Server { get; private set; }
 

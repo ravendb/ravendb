@@ -5,12 +5,12 @@ namespace Raven.Studio.Database
 	using Messages;
 	using Plugin;
 
-	public class HomeScreenViewModel : Screen, IRavenScreen
+	public class SelectDatabaseViewModel : Screen, IRavenScreen
 	{
 		readonly IEventAggregator events;
 		readonly TemplateColorProvider colorProvider;
 
-		public HomeScreenViewModel(IServer server, IEventAggregator events, TemplateColorProvider colorProvider)
+		public SelectDatabaseViewModel(IServer server, IEventAggregator events, TemplateColorProvider colorProvider)
 		{
 			this.events = events;
 			this.colorProvider = colorProvider;
