@@ -116,6 +116,17 @@ task Test -depends Compile{
   cd $old
 }
 
+task TestSilverlight {
+	
+	try{
+    start "$build_dir\Raven.Server.exe" "/ram"
+    .\run_silverlight_tests.ps1
+	}
+	finally{
+    ps "Raven.Server" | kill
+	}
+	
+}
 
 task ReleaseNoTests -depends OpenSource,DoRelease {
 
@@ -136,7 +147,7 @@ task OpenSource {
 	$global:uploadCategory = "RavenDB"
 }
 
-task Release -depends Test,DoRelease { 
+task Release -depends Test,TestSilverlight,DoRelease { 
 }
 
 task CopySamples {
