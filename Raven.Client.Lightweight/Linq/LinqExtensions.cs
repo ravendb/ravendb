@@ -33,7 +33,6 @@ namespace Raven.Client.Linq
 		{
 			var results = queryable.Provider.CreateQuery<TResult>(queryable.Expression);
 			var ravenQueryInspector = ((RavenQueryInspector<TResult>)results);
-			ravenQueryInspector.FieldsToFetch(typeof(TResult).GetProperties().Select(x => x.Name));
 			ravenQueryInspector.Customize(x => x.CreateQueryForSelectedFields<TResult>(null));
 			return results;
 		}
