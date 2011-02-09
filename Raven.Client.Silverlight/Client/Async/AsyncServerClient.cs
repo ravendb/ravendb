@@ -226,7 +226,9 @@ namespace Raven.Client.Client.Async
 		/// </remarks>
 		public Task<JsonDocument[]> GetDocumentsAsync(int start, int pageSize)
 		{
-			return url.Docs(start,pageSize).ToJsonRequest(this, credentials, convention)
+			return url.Docs(start,pageSize)
+				.NoCache()
+				.ToJsonRequest(this, credentials, convention)
 				.ReadResponseStringAsync()
 				.ContinueWith(task => JArray.Parse(task.Result)
 				                      	.Cast<JObject>()

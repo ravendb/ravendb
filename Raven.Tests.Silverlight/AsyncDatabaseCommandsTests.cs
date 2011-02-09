@@ -11,7 +11,6 @@
 
 	public class AsyncDatabaseCommandsTests : RavenTestBase
 	{
-
 		[Asynchronous]
 		public IEnumerable<Task> Can_get_documents_async()
 		{
@@ -73,6 +72,40 @@
 				yield return verification;
 
 				Assert.IsNull(verification.Result);
+			}
+		}
+
+		[Asynchronous]
+		public IEnumerable<Task> The_response_for_getting_documents_should_not_be_cached()
+		{
+			var dbname = GenerateNewDatabaseName();
+			var store = new DocumentStore { Url = Url + Port };
+			store.Initialize();
+			var cmd = store.AsyncDatabaseCommands;
+			yield return cmd.EnsureDatabaseExistsAsync(dbname);
+
+			using (var session = store.OpenAsyncSession(dbname))
+			{
+				session.Store(new Company { Name = "Hai" });
+				session.Store(new Company { Name = "I can haz cheezburgr?" });
+				session.Store(new Company { Name = "lol" });
+				yield return session.SaveChangesAsync();
+			}
+
+			var task = cmd.ForDatabase(dbname).GetDocumentsAsync(0, 25);
+			yield return task;
+
+			Assert.AreEqual(3, task.Result.Length);
+
+			using(var session = store.OpenAsyncSession(dbname))
+			{
+				yield return session.Advanced.AsyncDatabaseCommands
+					.DeleteDocumentAsync(task.Result[0].Key);
+
+				var second = cmd.ForDatabase(dbname).GetDocumentsAsync(0, 25);
+				yield return second;
+
+				Assert.AreEqual(2, second.Result.Length);
 			}
 		}
 	}
