@@ -75,7 +75,7 @@ namespace Raven.Tests.Bugs
 
                 using (var session = s.OpenSession())
                 {
-                    var count = session.Advanced.LuceneQuery<User>().WaitForNonStaleResults().Count();
+                    var count = session.Advanced.LuceneQuery<User>().WaitForNonStaleResults().ToList().Count();
                     Assert.Equal(1, count);
                 }
             }
