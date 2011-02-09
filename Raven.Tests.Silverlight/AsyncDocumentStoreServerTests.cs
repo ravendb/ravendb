@@ -128,15 +128,22 @@
 				                       	}, true);
 			yield return (task);
 
-			//TODO: need to wait until the indexing is done. BAD CODE!!!!
-			yield return Delay(500);
+			Task<QueryResult> query = null;
+			for (int i = 0; i < 50; i++)
+			{
 
-			var query = documentStore.AsyncDatabaseCommands
-				.ForDatabase(dbname)
-				.QueryAsync("Test", new IndexQuery(), null);
-			yield return (query);
-
-			Assert.AreNotEqual(0, query.Result.TotalResults);
+				query = documentStore.AsyncDatabaseCommands
+					.ForDatabase(dbname)
+					.QueryAsync("Test", new IndexQuery(), null);
+				yield return (query);
+				if (query.Result.IsStale)
+				{
+					yield return Delay(100);
+					continue;
+				}
+				Assert.AreNotEqual(0, query.Result.TotalResults);
+				yield break;
+			}
 		}
 
 		[Asynchronous]
@@ -160,19 +167,22 @@
 				              	});
 				yield return session.SaveChangesAsync();
 
-				//TODO: need to wait until the indexing is done. BAD CODE!!!!
-				yield return Delay(500);
-
-				var query = documentStore.AsyncDatabaseCommands
-					.ForDatabase(dbname)
-					.QueryAsync("dynamic",
-					            new IndexQuery
-					            	{
-					            		FieldsToFetch = new[] {"Contacts,Surname"}
-					            	},
-					            new string[0]);
-				yield return query;
-
+				
+				Task<QueryResult> query;
+				do
+				{
+					query = documentStore.AsyncDatabaseCommands
+						.ForDatabase(dbname)
+						.QueryAsync("dynamic",
+						            new IndexQuery
+						            {
+						            	FieldsToFetch = new[] {"Contacts,Surname"}
+						            },
+						            new string[0]);
+					yield return query;
+					if (query.Result.IsStale)
+						yield return Delay(100);
+				} while (query.Result.IsStale); 
 				Assert.AreEqual(2, query.Result.Results[0]["Contacts"].Count());
 				Assert.AreEqual("Abbot", query.Result.Results[0]["Contacts"][0].Value<string>("Surname"));
 				Assert.AreEqual("Costello", query.Result.Results[0]["Contacts"][1].Value<string>("Surname"));

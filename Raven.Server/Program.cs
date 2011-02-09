@@ -93,6 +93,10 @@ namespace Raven.Server
                     RunInDebugMode(anonymousUserAccessMode: AnonymousUserAccessMode.All, ravenConfiguration: new RavenConfiguration
                     {
                         RunInMemory = true,
+						Settings =
+							{
+								{"Raven/RunInMemory", "true"}
+							}
                     });
                     break;
 #if DEBUG

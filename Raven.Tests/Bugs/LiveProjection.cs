@@ -22,7 +22,8 @@ namespace Raven.Tests.Bugs
 		{
 			Store = NewDocumentStore();
 			var purchaseHistoryIndex = new PurchaseHistoryIndex();
-			purchaseHistoryIndex.Execute(Store);
+			IDocumentStore documentStore = Store;
+			purchaseHistoryIndex.Execute(documentStore.DatabaseCommands, documentStore.Conventions);
 		}
 
 		public EmbeddableDocumentStore Store { get; set; }
@@ -35,7 +36,7 @@ namespace Raven.Tests.Bugs
 				session.Store(new Product() { Id = "product1", Name = "one" });
 				session.Store(new Product() { Id = "product2", Name = "two" });
 				session.Store(new Product() { Id = "product3", Name = "three" });
-				
+
 				session.Store(new Shipment()
 				{
 					UserId = "user1",
@@ -85,6 +86,7 @@ namespace Raven.Tests.Bugs
 					new PurchaseHistoryView()
 					{
 						Items = documentSession.Query<Shipment, PurchaseHistoryIndex>()
+									.Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(5)))
 								   .Where(x => x.UserId == userId)
 								   .As<PurchaseHistoryViewItem>()
 								   .ToArray(),
@@ -102,7 +104,7 @@ namespace Raven.Tests.Bugs
 		{
 			public override Raven.Database.Indexing.IndexDefinition CreateIndexDefinition()
 			{
-				return new IndexDefinition<Shipment,Shipment>()
+				return new IndexDefinition<Shipment, Shipment>()
 				{
 					Map = docs => from doc in docs
 								  from product in doc.Items
@@ -121,7 +123,7 @@ namespace Raven.Tests.Bugs
 							ProductId = item.ProductId,
 							ProductName = product.Name
 						}
-				}.ToIndexDefinition(DocumentStore.Conventions);
+				}.ToIndexDefinition(Conventions);
 			}
 		}
 

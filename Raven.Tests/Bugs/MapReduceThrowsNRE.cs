@@ -130,7 +130,7 @@ namespace Raven.Tests.Bugs
                                                 Melancholic = g.Count(x => x.Temperament == Temperaments.Melancholic),
                                                 Phlegmatic = g.Count(x => x.Temperament == Temperaments.Phlegmatic)
                                             }
-                }.ToIndexDefinition(DocumentStore.Conventions);
+                }.ToIndexDefinition(Conventions);
             }
         }
 

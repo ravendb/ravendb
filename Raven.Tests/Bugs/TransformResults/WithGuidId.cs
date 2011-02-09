@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Database.Indexing;
 using Xunit;
@@ -13,7 +14,7 @@ namespace Raven.Tests.Bugs.TransformResults
 		{
 			using(var store = NewDocumentStore())
 			{
-				new ThorIndex().Execute(store);
+				new ThorIndex().Execute(((IDocumentStore) store).DatabaseCommands, ((IDocumentStore) store).Conventions);
 
 				using(var s = store.OpenSession())
 				{

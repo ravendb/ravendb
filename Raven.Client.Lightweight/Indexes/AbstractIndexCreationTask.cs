@@ -9,7 +9,10 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 #if !NET_3_5
 using System.Threading.Tasks;
+using Raven.Client.Client.Async;
 #endif
+using Raven.Client.Client;
+using Raven.Client.Document;
 using Raven.Database.Indexing;
 
 namespace Raven.Client.Indexes
@@ -43,7 +46,7 @@ namespace Raven.Client.Indexes
 		/// Gets or sets the document store.
 		/// </summary>
 		/// <value>The document store.</value>
-		public IDocumentStore DocumentStore { get; private set; }
+		public DocumentConvention Conventions { get; private set; }
 
 #if !NET_3_5
 		/// <summary>
@@ -56,18 +59,26 @@ namespace Raven.Client.Indexes
 #endif
 
 #if !SILVERLIGHT
+
 		/// <summary>
 		/// Executes the index creation against the specified document store.
 		/// </summary>
-		/// <param name="documentStore">The document store.</param>
-		public virtual void Execute(IDocumentStore documentStore)
+		public void Execute(IDocumentStore store)
 		{
-			DocumentStore = documentStore;
+			Execute(store.DatabaseCommands, store.Conventions);
+		}
+
+		/// <summary>
+		/// Executes the index creation against the specified document database using the specified conventions
+		/// </summary>
+		public virtual void Execute(IDatabaseCommands databaseCommands, DocumentConvention documentConvention)
+		{
+			Conventions = documentConvention;
 			var indexDefinition = CreateIndexDefinition();
 			// This code take advantage on the fact that RavenDB will turn an index PUT
 			// to a noop of the index already exists and the stored definition matches
 			// the new defintion.
-			documentStore.DatabaseCommands.PutIndex(IndexName, indexDefinition, true);
+			databaseCommands.PutIndex(IndexName, indexDefinition, true);
 		}
 #endif
 
@@ -75,15 +86,14 @@ namespace Raven.Client.Indexes
 		/// <summary>
 		/// Executes the index creation against the specified document store.
 		/// </summary>
-		/// <param name="documentStore">The document store.</param>
-		public virtual Task ExecuteAsync(IDocumentStore documentStore)
+		public virtual Task ExecuteAsync(IAsyncDatabaseCommands asyncDatabaseCommands, DocumentConvention documentConvention)
 		{
-			DocumentStore = documentStore;
+			Conventions = documentConvention;
 			var indexDefinition = CreateIndexDefinition();
 			// This code take advantage on the fact that RavenDB will turn an index PUT
 			// to a noop of the index already exists and the stored definition matches
 			// the new defintion.
-			return documentStore.AsyncDatabaseCommands.PutIndexAsync(IndexName, indexDefinition, true);
+			return asyncDatabaseCommands.PutIndexAsync(IndexName, indexDefinition, true);
 		}
 #endif
 	}
@@ -125,7 +135,7 @@ namespace Raven.Client.Indexes
 				Reduce = Reduce,
 				TransformResults = TransformResults,
 				Stores = Stores
-			}.ToIndexDefinition(DocumentStore.Conventions);
+			}.ToIndexDefinition(Conventions);
 		}
 
 		/// <summary>

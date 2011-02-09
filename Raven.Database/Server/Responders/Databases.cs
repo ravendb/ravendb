@@ -3,9 +3,6 @@
 	using Http.Abstractions;
 	using Http.Extensions;
 
-	/// <summary>
-	/// HACK: Christopher's short term solution to getting the list of tenant databases
-	/// </summary>
 	public class Databases : RequestResponder
 	{
 		public override string UrlPattern
@@ -23,7 +20,7 @@
 			switch (context.Request.HttpMethod)
 			{
 				case "GET":
-					context.WriteJson(Database.GetTenantDocuments());
+					context.WriteJson(Database.GetDocumentsWithIdStartingWith("Raven/Databases/"));
 					break;
 			}
 		}

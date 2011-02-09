@@ -20,15 +20,16 @@ namespace Raven.Tests.Bugs
             using(var store = NewDocumentStore())
             {
                 store.DatabaseCommands.Put("ayende", null, new JObject{ {"Name", "Ayende"}}, new JObject());
+            	var baseLineIndexCount = store.DocumentDatabase.GetIndexNames(0, int.MaxValue).Count;
 
-                var queryResult = store.DatabaseCommands.Query("dynamic", new IndexQuery
+            	var queryResult = store.DatabaseCommands.Query("dynamic", new IndexQuery
                 {
                     Query = "Name:Ayende",
                 }, new string[0]);
 
                 Assert.NotEmpty(queryResult.Results);
 
-                Assert.Equal(2, store.DocumentDatabase.GetIndexNames(0, int.MaxValue).Count);
+				Assert.Equal(baseLineIndexCount+1, store.DocumentDatabase.GetIndexNames(0, int.MaxValue).Count);
                 
                 store.DocumentDatabase.StopBackgroundWokers();
 
@@ -36,7 +37,7 @@ namespace Raven.Tests.Bugs
 
                 store.DocumentDatabase.ExtensionsState.Values.OfType<DynamicQueryRunner>().First().CleanupCache();
 
-                Assert.Equal(1, store.DocumentDatabase.GetIndexNames(0, int.MaxValue).Count);
+				Assert.Equal(baseLineIndexCount, store.DocumentDatabase.GetIndexNames(0, int.MaxValue).Count);
 
                 store.Configuration.TempIndexCleanupThreshold = TimeSpan.FromMinutes(5);
  

@@ -66,7 +66,7 @@ namespace Raven.Tests.Document
 			{
 				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
 				documentStore.Initialize();
-				Assert.Equal(new[] { "Raven/DocumentsByEntityName" },
+				Assert.Contains("Raven/DocumentsByEntityName",
 					documentStore.DatabaseCommands.GetIndexNames(0, 25));
 			}
 		}

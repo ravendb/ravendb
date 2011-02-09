@@ -18,7 +18,9 @@ properties {
   $client_dlls_3_5 = @( "Newtonsoft.Json.Net35.???", "Raven.Abstractions-3.5.???", "Raven.Client.Lightweight-3.5.???", "MissingBitsFromClientProfile.???" );
      
   $client_dlls = @( "Newtonsoft.Json.???", "Raven.Abstractions.???", "Raven.Client.Lightweight.???", "MissingBitsFromClientProfile.???", "AsyncCtpLibrary.???" );
-     
+  
+  $silverlight_dlls = @( "Raven.Client.Silverlight.???", "AsyncCtpLibrary_Silverlight.???", "Newtonsoft.Json.Silverlight.???");   
+  
   $all_client_dlls = @( "Raven.Client.Lightweight.???", "Raven.Client.Embedded.???", "Raven.Abstractions.???", "Raven.Http.???", "Raven.Database.???", "Raven.Http.???", `
       "Esent.Interop.???", "ICSharpCode.NRefactory.???", "Lucene.Net.???", "Spatial.Net.???", "SpellChecker.Net.???", "log4net.???", "Newtonsoft.Json.???", `
       "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???", "AsyncCtpLibrary.???" );
@@ -116,6 +118,17 @@ task Test -depends Compile{
   cd $old
 }
 
+task TestSilverlight {
+	
+	try{
+    start "$build_dir\Raven.Server.exe" "/ram"
+    .\run_silverlight_tests.ps1
+	}
+	finally{
+    ps "Raven.Server" | kill
+	}
+	
+}
 
 task ReleaseNoTests -depends OpenSource,DoRelease {
 
@@ -136,7 +149,7 @@ task OpenSource {
 	$global:uploadCategory = "RavenDB"
 }
 
-task Release -depends Test,DoRelease { 
+task Release -depends Test,TestSilverlight,DoRelease { 
 }
 
 task CopySamples {
@@ -169,6 +182,7 @@ task CreateOutpuDirectories -depends CleanOutputDirectory {
 	mkdir $build_dir\Output\Web\bin
 	mkdir $build_dir\Output\Server
 	mkdir $build_dir\Output\EmbeddedClient
+	mkdir $build_dir\Output\Silverlight
 	mkdir $build_dir\Output\Client-3.5
 	mkdir $build_dir\Output\Client
 	mkdir $build_dir\Output\Bundles
@@ -183,6 +197,13 @@ task CopyEmbeddedClient {
 
   foreach($client_dll in $all_client_dlls) {
     cp "$build_dir\$client_dll" $build_dir\Output\EmbeddedClient
+  }
+}
+
+task CopySilverlight{ 
+
+  foreach($silverlight_dll in $silverlight_dlls) {
+    cp "$build_dir\$silverlight_dll" $build_dir\Output\Silverlight
   }
 }
 
@@ -286,6 +307,7 @@ task DoRelease -depends Compile, `
 	CopyEmbeddedClient, `
 	CopySmuggler, `
 	CopyClient, `
+	CopySilverlight, `
 	CopyClient35, `
 	CopyWeb, `
 	CopyBundles, `
