@@ -136,13 +136,11 @@ namespace Raven.Client.Linq
 		public override string ToString()
 		{
 			var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, null, new HashSet<string>());
-			ravenQueryProvider.ProcessExpression(expression);
+			var luceneQuery = ravenQueryProvider.GetLuceneQueryFor(expression);
 			string fields = "";
 			if (ravenQueryProvider.FieldsToFetch.Count > 0)
 				fields = "<" + string.Join(", ", ravenQueryProvider.FieldsToFetch.ToArray()) + ">: ";
-			return
-				fields +
-				ravenQueryProvider.LuceneQuery;
+			return fields + luceneQuery;
 		}
 
 		/// <summary>
@@ -153,8 +151,8 @@ namespace Raven.Client.Linq
 			get
 			{
 				var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>());
-				ravenQueryProvider.ProcessExpression(expression);
-				return ((IRavenQueryInspector)ravenQueryProvider.LuceneQuery).IndexQueried;
+				var luceneQuery = ravenQueryProvider.GetLuceneQueryFor(expression);
+				return ((IRavenQueryInspector)luceneQuery).IndexQueried;
 			}
 		}
 
@@ -184,8 +182,8 @@ namespace Raven.Client.Linq
 		public KeyValuePair<string, string> GetLastEqualityTerm()
 		{
 			var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, null, new HashSet<string>());
-			ravenQueryProvider.ProcessExpression(expression);
-			return ((IRavenQueryInspector)ravenQueryProvider.LuceneQuery).GetLastEqualityTerm();
+			var luceneQuery = ravenQueryProvider.GetLuceneQueryFor(expression);
+			return ((IRavenQueryInspector)luceneQuery).GetLastEqualityTerm();
 		}
 
 #if SILVERLIGHT

@@ -493,13 +493,11 @@ namespace Raven.Client.Document
 
 #if !NET_3_5
 		/// <summary>
-		/// Gets the query result
-		/// Execute the query the first time that this is called.
+		/// Returns a list of results for a query asynchronously. 
 		/// </summary>
-		/// <value>The query result.</value>
-		public Task<QueryResult> QueryResultAsync
+		public Task<IList<T>> ToListAsync()
 		{
-			get { throw new NotImplementedException(); }
+			throw new NotImplementedException();
 		}
 #endif
 

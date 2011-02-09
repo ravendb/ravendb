@@ -9,7 +9,10 @@ using Raven.Client.Client.Async;
 
 namespace Raven.Client
 {
-    /// <summary>
+	using System.Threading.Tasks;
+	using Database.Data;
+
+	/// <summary>
     /// Advanced async session operations
     /// </summary>
     public interface IAsyncAdvancedSessionOperations : IAdvancedDocumentSessionOperations

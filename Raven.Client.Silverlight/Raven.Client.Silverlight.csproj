@@ -69,6 +69,9 @@
     <Reference Include="System.Windows.Browser" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\Raven.Abstractions\Data\Collection.cs">
+      <Link>Data\Collection.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Json\JsonToJsonConverter.cs">
       <Link>Json\JsonToJsonConverter.cs</Link>
     </Compile>
@@ -96,6 +99,9 @@
     <Compile Include="..\Raven.Client.Lightweight\IDocumentQueryListener.cs">
       <Link>IDocumentQueryListener.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Linq\LinqExtensions_Obsolete.cs">
+      <Link>Linq\LinqExtensions_Obsolete.cs</Link>
+	</Compile>
     <Compile Include="..\Raven.Client.Lightweight\Indexes\IndexDefinitionHelper.cs">
       <Link>Indexes\IndexDefinitionHelper.cs</Link>
     </Compile>
@@ -104,6 +110,7 @@
     </Compile>
     <Compile Include="Client\Async\AsyncServerClient.cs" />
     <Compile Include="Client\HttpJsonRequest.cs" />
+    <Compile Include="Client\RavenUrlExtensions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="FromMono\TaskExtensions.cs" />
   </ItemGroup>

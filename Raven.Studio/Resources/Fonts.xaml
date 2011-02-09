@@ -1,0 +1,25 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+					xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+					xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+	<ResourceDictionary.MergedDictionaries>
+		<ResourceDictionary Source="Brushes.xaml" />
+	</ResourceDictionary.MergedDictionaries>
+
+	<!-- these font resources do not work -->
+	<FontFamily x:Key="HeaderFontFamily">Segoe UI Light, Lucida Sans Unicode, Verdana</FontFamily>
+	<sys:String x:Key="ContentFontFamily">Lucida Grande</sys:String>
+
+	<sys:Double x:Key="ApplicationNameFontSize">50</sys:Double>
+	<sys:Double x:Key="HeaderFontSize">21.333</sys:Double>
+	<sys:Double x:Key="FooterFontSize">10.667</sys:Double>
+	<sys:Double x:Key="NavigationFontSize">28</sys:Double>
+
+	<sys:Double x:Key="ContentFontSize">14</sys:Double>
+	<sys:Double x:Key="HyperlinkFontSize">14</sys:Double>
+	<sys:Double x:Key="LabelFontSize">12</sys:Double>
+	<sys:Double x:Key="ControlTitleFontSize">16</sys:Double>
+	<sys:Double x:Key="ControlTitleBigFontSize">18</sys:Double>
+	<sys:Double x:Key="ControlContentFontSize">10</sys:Double>
+
+</ResourceDictionary>

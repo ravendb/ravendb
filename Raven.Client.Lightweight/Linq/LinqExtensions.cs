@@ -24,7 +24,7 @@ namespace Raven.Client.Linq
 	///<summary>
 	/// Extensions to the linq syntax
 	///</summary>
-	public static class LinqExtensions
+	public static partial class LinqExtensions
 	{
 		/// <summary>
 		/// Project using a different type
@@ -33,6 +33,7 @@ namespace Raven.Client.Linq
 		{
 			var results = queryable.Provider.CreateQuery<TResult>(queryable.Expression);
 			var ravenQueryInspector = ((RavenQueryInspector<TResult>)results);
+			ravenQueryInspector.FieldsToFetch(typeof(TResult).GetProperties().Select(x => x.Name));
 			ravenQueryInspector.Customize(x => x.CreateQueryForSelectedFields<TResult>(null));
 			return results;
 		}
@@ -40,13 +41,13 @@ namespace Raven.Client.Linq
 		/// <summary>
 		/// Project using a different type
 		/// </summary>
-		public static IEnumerable<TResult> AsProjection<TResult>(this IQueryable queryable)
+		public static IRavenQueryable<TResult> AsProjection<TResult>(this IQueryable queryable)
 		{
 			var results = queryable.Provider.CreateQuery<TResult>(queryable.Expression);
 			var ravenQueryInspector = ((RavenQueryInspector<TResult>)results);
 			ravenQueryInspector.FieldsToFetch(typeof(TResult).GetProperties().Select(x => x.Name));
 			ravenQueryInspector.Customize(x => x.CreateQueryForSelectedFields<TResult>(null));
-			return results;
+			return (IRavenQueryable<TResult>)results;
 		}
 #if !SILVERLIGHT
 
@@ -130,82 +131,85 @@ namespace Raven.Client.Linq
 		/// </summary>
 		public static Task<IList<T>> ToListAsync<T>(this IRavenQueryable<T> source)
 		{
-			var inspector = source as IRavenQueryInspector;
-			//TODO: what exception message to use here?
-			if (inspector == null) throw new InvalidOperationException("ToListAsync is only applicable for implementations of IRavenQueryInspector");
-
-			//TODO: is this the appropriate code for transforming the linq? it feels wrong to me...
 			var provider = (IRavenQueryProvider)source.Provider;
-			var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, inspector.IndexQueried, new HashSet<string>());
-			ravenQueryProvider.ProcessExpression(source.Expression);
-			var luceneQuery = ravenQueryProvider.LuceneQuery;
-			
-			var tcs = new TaskCompletionSource<IList<T>>();
-
-			luceneQuery.QueryResultAsync
-			.ContinueWith(r=>
-			            {
-							// TODO: I want someone more familiar with Json.NET to review this bit. CB.
-							var serializer = new JsonSerializer();
-							var list = r.Result.Results.Select(x => (T)serializer.Deserialize(new JTokenReader(x), typeof(T))).ToList();
-							tcs.TrySetResult(list);
-			            });
-
-			return tcs.Task;
+			return provider.ToLuceneQuery<T>(source.Expression).ToListAsync();
 		} 
 #endif
 
-#if SILVERLIGHT
 		/// <summary>
-		///   This function exists solely to forbid calling ToList() on a queryable in Silverlight.
+		/// Includes the specified path in the query, loading the document specified in that path
 		/// </summary>
-		[Obsolete("You cannot execute a query synchronously from the Silverlight client. Instead, use queryable.ToListAsync().", true)]
-		public static IList<T> ToList<T>(this IRavenQueryable<T> source)
+		/// <param name="path">The path.</param>
+		public static IRavenQueryable<T> Include<T>(this IRavenQueryable<T> source, Expression<Func<T, object>> path)
 		{
-			throw new NotSupportedException();
+			source.Customize(x => x.Include(path));
+			return source;
 		}
 
 		/// <summary>
-		///   This function exists solely to forbid calling ToList() on a queryable in Silverlight.
+		/// Filters a sequence of values based on a predicate.
 		/// </summary>
-		[Obsolete("You cannot execute a query synchronously from the Silverlight client. Instead, use queryable.ToListAsync().", true)]
-		public static T[] ToArray<T>(this IRavenQueryable<T> source)
-		{
-			throw new NotSupportedException();
-		}
-
 		public static IRavenQueryable<T> Where<T>(this IRavenQueryable<T> source, Expression<Func<T, bool>> prediate)
 		{
 			return (IRavenQueryable<T>)Queryable.Where(source, prediate);
 		}
 
+		/// <summary>
+		/// Filters a sequence of values based on a predicate.
+		/// </summary>
 		public static IRavenQueryable<T> Where<T>(this IRavenQueryable<T> source, Expression<Func<T, int, bool>> prediate)
 		{
 			return (IRavenQueryable<T>)Queryable.Where(source, prediate);
 		}
 
+		/// <summary>
+		/// Sorts the elements of a sequence in ascending order according to a key.
+		/// </summary>
 		public static IRavenQueryable<T> OrderBy<T, TK>(this IRavenQueryable<T> source, Expression<Func<T, TK>> keySelector)
 		{
 			return (IRavenQueryable<T>)Queryable.OrderBy(source, keySelector);
 		}
 
+		/// <summary>
+		/// Sorts the elements of a sequence in ascending order according to a key.
+		/// </summary>
 		public static IRavenQueryable<T> OrderBy<T, TK>(this IRavenQueryable<T> source, Expression<Func<T, TK>> keySelector, IComparer<TK> comparer)
 		{
 			return (IRavenQueryable<T>)Queryable.OrderBy(source, keySelector, comparer);
 		}
 
+		/// <summary>
+		/// Sorts the elements of a sequence in descending order according to a key.
+		/// </summary>
 		public static IRavenQueryable<T> OrderByDescending<T, TK>(this IRavenQueryable<T> source, Expression<Func<T, TK>> keySelector)
 		{
 			return (IRavenQueryable<T>)Queryable.OrderByDescending(source, keySelector);
 		}
 
+		/// <summary>
+		/// Sorts the elements of a sequence in descending order according to a key.
+		/// </summary>
 		public static IRavenQueryable<T> OrderByDescending<T, TK>(this IRavenQueryable<T> source, Expression<Func<T, TK>> keySelector, IComparer<TK> comparer)
 		{
 			return (IRavenQueryable<T>)Queryable.OrderByDescending(source, keySelector, comparer);
 		}
 
-		//TODO: implement the thousand natural shocks that linq is heir to
+		/// <summary>
+		/// Projects each element of a sequence into a new form.
+		/// </summary>
+		public static IRavenQueryable<TResult> Select<TSource, TResult>(this IRavenQueryable<TSource> source, Expression<Func<TSource, TResult>> selector)
+		{
+			return (IRavenQueryable<TResult>)Queryable.Select(source, selector);
+		}
 
-#endif
+		/// <summary>
+		/// Projects each element of a sequence into a new form.
+		/// </summary>
+		public static IRavenQueryable<TResult> Select<TSource, TResult>(this IRavenQueryable<TSource> source, Expression<Func<TSource,int, TResult>> selector)
+		{
+			return (IRavenQueryable<TResult>)Queryable.Select(source, selector);
+		}
+
+		//TODO: implement the thousand natural shocks that linq is heir to
 	}
 }

@@ -1,0 +1,66 @@
+﻿<UserControl x:Class="Raven.Studio.Indexes.BrowseIndexesView"
+			 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+			 xmlns:cm="clr-namespace:Caliburn.Micro;assembly=Caliburn.Micro"
+			 xmlns:tk="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit"
+			 xmlns:b="clr-namespace:Raven.Studio.Behaviors"
+			 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
+			 xmlns:c="clr-namespace:Raven.Studio.Controls"
+			 mc:Ignorable="d">
+
+	<tk:BusyIndicator IsBusy="{Binding IsBusy}">
+		<Grid>
+			<Grid.RowDefinitions>
+				<RowDefinition Height="Auto" />
+				<RowDefinition Height="*" />
+			</Grid.RowDefinitions>
+
+			<StackPanel Orientation="Horizontal"
+						HorizontalAlignment="Right"
+						Margin="0,0,0,10">
+				<TextBox x:Name="searchBox"
+						 Width="350">
+					<i:Interaction.Behaviors>
+						<b:Watermark Text="search by index name"
+									 Foreground="LightGray" />
+					</i:Interaction.Behaviors>
+				</TextBox>
+				<HyperlinkButton Style="{StaticResource SearchButtonStyle}" />
+			</StackPanel>
+
+			<Grid Grid.Row="1">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition />
+					<ColumnDefinition Width="2*" />
+				</Grid.ColumnDefinitions>
+
+				<Grid>
+					<Grid.RowDefinitions>
+						<RowDefinition Height="Auto" />
+						<RowDefinition Height="*" />
+						<RowDefinition Height="Auto" />
+					</Grid.RowDefinitions>
+
+					<c:Pager Grid.Row="0"
+							 cm:Bind.Model="{Binding Indexes}" />
+
+					<ListBox Grid.Row="1"
+							 ItemsSource="{Binding Indexes}"
+							 SelectedItem="{Binding ActiveIndex, Mode=TwoWay}"
+							 DisplayMemberPath="Name"/>
+
+					<c:Pager Grid.Row="2"
+							 cm:Bind.Model="{Binding Indexes}" />
+				</Grid>
+
+				<Border Grid.Column="1"
+						Padding="4">
+					<ContentControl x:Name="ActiveItem" />
+				</Border>
+
+			</Grid>
+		</Grid>
+	</tk:BusyIndicator>
+</UserControl>

@@ -11,6 +11,8 @@ using Raven.Database.Data;
 
 namespace Raven.Client.Linq
 {
+	using System.Linq.Expressions;
+
 	/// <summary>
 	/// Extension for the built-in <see cref="IQueryProvider"/> allowing for Raven specific operations
 	/// </summary>
@@ -43,8 +45,15 @@ namespace Raven.Client.Linq
 		IRavenQueryProvider For<S>();
 
 		/// <summary>
+		/// Convert the Linq query to a Lucene query
+		/// </summary>
+		/// <returns></returns>
+		IDocumentQuery<T> ToLuceneQuery<T>(Expression expression);
+
+		/// <summary>
 		/// Set the fields to fetch
 		/// </summary>
 		HashSet<string> FieldsToFetch { get; }
+
 	}
 }

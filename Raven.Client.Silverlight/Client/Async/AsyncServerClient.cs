@@ -5,29 +5,30 @@
 //-----------------------------------------------------------------------
 #if !NET_3_5
 
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Net.Browser;
-using System.Text;
-using System.Threading.Tasks;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Raven.Abstractions.Data;
-using Raven.Client.Document;
-using Raven.Client.Exceptions;
-using Raven.Database;
-using Raven.Database.Data;
-using Raven.Database.Indexing;
-using Raven.Http.Exceptions;
-using Raven.Http.Json;
-
 namespace Raven.Client.Client.Async
 {
+	using System;
+	using System.Collections.Generic;
+	using System.Globalization;
+	using System.IO;
+	using System.Linq;
+	using System.Net;
+	using System.Net.Browser;
+	using System.Text;
+	using System.Threading.Tasks;
+	using Newtonsoft.Json;
+	using Newtonsoft.Json.Linq;
+	using Abstractions.Data;
+	using Client;
+	using Document;
+	using Exceptions;
+	using Database;
+	using Database.Data;
+	using Database.Indexing;
+	using Http.Exceptions;
+	using Http.Json;
 	using Extensions;
+	using Silverlight.Client;
 
 	/// <summary>
 	/// Access the database commands in async fashion
@@ -215,6 +216,23 @@ namespace Raven.Client.Client.Async
 				});
 		}
 
+		/// <summary>
+		/// Begins an async get operation for documents
+		/// </summary>
+		/// <param name="start">Paging start</param>
+		/// <param name="pageSize">Size of the page.</param>
+		/// <remarks>
+		/// This is primarily useful for administration of a database
+		/// </remarks>
+		public Task<JsonDocument[]> GetDocumentsAsync(int start, int pageSize)
+		{
+			return url.Docs(start,pageSize).ToJsonRequest(this, credentials, convention)
+				.ReadResponseStringAsync()
+				.ContinueWith(task => JArray.Parse(task.Result)
+				                      	.Cast<JObject>()
+				                      	.ToJsonDocuments()
+										.ToArray());
+		}
 
 		/// <summary>
 		/// Begins the async query.
@@ -247,7 +265,8 @@ namespace Raven.Client.Client.Async
 						IndexEtag = new Guid(request.ResponseHeaders["ETag"].First()),
 						Results = json["Results"].Children().Cast<JObject>().ToList(),
 						TotalResults = Convert.ToInt32(json["TotalResults"].ToString()),
-						SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString())
+						SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString()),
+						Includes = json["Includes"].Children().Cast<JObject>().ToList(), 
 					};
 				});
 		}
@@ -306,7 +325,6 @@ namespace Raven.Client.Client.Async
 				httpWebResponse.StatusCode != HttpStatusCode.Conflict);
 		}
 
-
 		/// <summary>
 		/// Puts the index definition for the specified name asyncronously
 		/// </summary>
@@ -345,8 +363,10 @@ namespace Raven.Client.Client.Async
 
 					var request = HttpJsonRequest.CreateHttpJsonRequest(this, requestUri, "PUT", credentials, convention);
 					request.AddOperationHeaders(OperationsHeaders);
+
 					var serializeObject = JsonConvert.SerializeObject(indexDef, new JsonEnumConverter());
-					return request.WriteAsync(Encoding.UTF8.GetBytes(serializeObject))
+					return request
+						.WriteAsync(Encoding.UTF8.GetBytes(serializeObject))
 						.ContinueWith(writeTask => request.ReadResponseStringAsync()
 													.ContinueWith(readStrTask =>
 													{
@@ -365,6 +385,17 @@ namespace Raven.Client.Client.Async
 			public string Index {get;set;}
 		}
 
+		/// <summary>
+		/// Deletes the index definition for the specified name asyncronously
+		/// </summary>
+		/// <param name="name">The name.</param>
+		public Task DeleteIndexAsync(string name)
+		{
+			return url.Indexes(name)
+				.ToRequest(OperationsHeaders, credentials, "DELETE")
+				.GetResponseAsync();
+		}
+
 		private static bool ShouldThrowForPutIndexAsync(WebException e)
 		{
 			if(e == null) return true;
@@ -380,9 +411,10 @@ namespace Raven.Client.Client.Async
 		/// <param name="pageSize">Size of the page.</param>
 		public Task<string[]> GetIndexNamesAsync(int start, int pageSize)
 		{
-			var request = HttpJsonRequest.CreateHttpJsonRequest(this, url + "/indexes/?namesOnly=true&start=" + start + "&pageSize=" + pageSize, "GET", credentials, convention);
-			
-			return request.ReadResponseStringAsync()
+			return url.IndexNames(start, pageSize)
+				.NoCache()
+				.ToJsonRequest(this, credentials, convention)
+				.ReadResponseStringAsync()
 				.ContinueWith(task =>
 				{
 					var serializer = convention.CreateSerializer();
@@ -391,6 +423,30 @@ namespace Raven.Client.Client.Async
 						var json = (JToken)serializer.Deserialize(reader);
 						return json.Select(x => x.Value<string>()).ToArray();
 
+					}
+				});
+		}
+
+		/// <summary>
+		/// Gets the indexes from the server asyncronously
+		/// </summary>
+		/// <param name="start">Paging start</param>
+		/// <param name="pageSize">Size of the page.</param>
+		public Task<IndexDefinition[]> GetIndexesAsync(int start, int pageSize)
+		{
+			var request = HttpJsonRequest.CreateHttpJsonRequest(this, url + "/indexes/?start=" + start + "&pageSize=" + pageSize, "GET", credentials, convention);
+
+			return request.ReadResponseStringAsync()
+				.ContinueWith(task =>
+				{
+					var serializer = convention.CreateSerializer();
+					using (var reader = new JsonTextReader(new StringReader(task.Result)))
+					{
+						var json = (JToken)serializer.Deserialize(reader);
+						//NOTE: To review, I'm not confidence this is the correct way to deserialize the index definition
+						return json
+							.Select(x => JsonConvert.DeserializeObject<IndexDefinition>(x["definition"].ToString()))
+							.ToArray();
 					}
 				});
 		}
@@ -497,6 +553,86 @@ namespace Raven.Client.Client.Async
 		{
 			if (string.IsNullOrEmpty(key))
 				throw new ArgumentException("Key cannot be null or empty", argName);
+		}
+
+		/// <summary>
+		/// Begins retrieving the statistics for the database
+		/// </summary>
+		/// <returns></returns>
+		public Task<DatabaseStatistics> GetStatisticsAsync()
+		{
+			return url.Stats()
+				.NoCache()
+				.ToJsonRequest(this, credentials, convention)
+				.ReadResponseStringAsync()
+				.ContinueWith(task =>
+				{
+					var response = task.Result;
+					var jo = JObject.Parse(response);
+					return jo.Deserialize<DatabaseStatistics>(convention);
+				});
+		}
+
+		/// <summary>
+		/// Gets the list of databases from the server asyncronously
+		/// </summary>
+		public Task<string[]> GetDatabaseNamesAsync()
+		{
+			return url.Databases()
+				.ToJsonRequest(this, credentials, convention)
+				.ReadResponseStringAsync()
+				.ContinueWith(task =>
+				{
+					var serializer = convention.CreateSerializer();
+					using (var reader = new JsonTextReader(new StringReader(task.Result)))
+					{
+						var json = (JToken)serializer.Deserialize(reader);
+						return json
+							.Children()
+							.Select(x => x.Value<JObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty))
+							.ToArray();
+					}
+				});
+		}
+
+		public Task<Collection[]> GetCollectionsAsync(int start, int pageSize)
+		{
+			var query =  new IndexQuery {Start = start,PageSize = pageSize, SortedFields = new[]{new SortedField("Name"), }};
+
+			return QueryAsync("Raven/DocumentCollections", query, new string[]{})
+					.ContinueWith(task => task.Result.Results.Select(x => x.Deserialize<Collection>(convention)).ToArray());
+		}
+
+		/// <summary>
+		/// Puts the attachment with the specified key asyncronously
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <param name="etag">The etag.</param>
+		/// <param name="data">The data.</param>
+		/// <param name="metadata">The metadata.</param>
+		public Task PutAttachmentAsync(string key, Guid? etag, byte[] data, JObject metadata)
+		{
+			throw new NotImplementedException();
+		}
+
+		/// <summary>
+		/// Gets the attachment by the specified key asyncronously
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <returns></returns>
+		public Task<Attachment> GetAttachmentAsync(string key)
+		{
+			throw new NotImplementedException();
+		}
+
+		/// <summary>
+		/// Deletes the attachment with the specified key asyncronously
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <param name="etag">The etag.</param>
+		public Task DeleteAttachmentAsync(string key, Guid? etag)
+		{
+			throw new NotImplementedException();
 		}
 	}
 }

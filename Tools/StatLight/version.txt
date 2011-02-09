@@ -1,0 +1,3 @@
+Built from source using
+https://github.com/staxmanade/StatLight/commit/25b3edfe15ef64e646621eeb128a9072f08bee60
+Jan 30, 2011
