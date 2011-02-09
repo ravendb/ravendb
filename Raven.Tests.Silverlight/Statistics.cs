@@ -31,7 +31,7 @@ namespace Raven.Tests.Silverlight
 			yield return getStats;
 
 			Assert.IsNotNull(getStats.Result);
-			//TODO: What's the correct way to test this?
+			Assert.AreNotEqual(0, getStats.Result.Indexes.Length);
 		}
 
 		[Asynchronous]

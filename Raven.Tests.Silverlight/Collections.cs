@@ -1,4 +1,6 @@
-﻿namespace Raven.Tests.Silverlight
+﻿using Raven.Abstractions.Data;
+
+namespace Raven.Tests.Silverlight
 {
 	using System.Collections.Generic;
 	using System.Linq;
@@ -31,12 +33,16 @@
 				yield return session.SaveChangesAsync();
 			}
 
-			//TODO: BAD BAD BAD
-			yield return Delay(500);
-
-			var task = store.AsyncDatabaseCommands.ForDatabase(dbname)
-				.GetCollectionsAsync(0, 25);
-			yield return task;
+			
+			Task<Collection[]> task;
+			do
+			{
+				task = store.AsyncDatabaseCommands.ForDatabase(dbname)
+					.GetCollectionsAsync(0, 25);
+				yield return task;
+				if (task.Result.Length == 0)
+					yield return Delay(100);
+			} while (task.Result.Length == 0); 
 
 			var collections = task.Result;
 
