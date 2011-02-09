@@ -208,7 +208,5 @@ namespace Raven.Client.Linq
 		{
 			return (IRavenQueryable<TResult>)Queryable.Select(source, selector);
 		}
-
-		//TODO: implement the thousand natural shocks that linq is heir to
 	}
 }
