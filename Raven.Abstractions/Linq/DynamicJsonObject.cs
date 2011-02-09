@@ -202,10 +202,10 @@ namespace Raven.Database.Linq
 				var id = metadata["@id"];
 				if (id != null)
 				{
-					return id.Value<string>();
+					return id.Value<string>() ?? (object)new DynamicNullObject();
 				}
 			}
-			return  inner["__document_id"] ?? (object)new DynamicNullObject();
+			return inner.Value<string>("__document_id") ?? (object)new DynamicNullObject();
 		}
 
 		/// <summary>
